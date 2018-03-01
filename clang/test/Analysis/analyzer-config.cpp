@@ -13,7 +13,7 @@ void foo() {
 class Foo {
 public:
   ~Foo() {}
-  void baz();
+  void baz() { Foo(); }
 	void bar() { const Foo &f = Foo(); }
 	void foo() { bar(); }
 };
@@ -23,13 +23,15 @@ public:
 // CHECK-NEXT: c++-inlining = destructors
 // CHECK-NEXT: c++-shared_ptr-inlining = false
 // CHECK-NEXT: c++-stdlib-inlining = true
+// CHECK-NEXT: c++-temp-dtor-inlining = false
 // CHECK-NEXT: c++-template-inlining = true
 // CHECK-NEXT: cfg-conditional-static-initializers = true
 // CHECK-NEXT: cfg-implicit-dtors = true
 // CHECK-NEXT: cfg-lifetime = false
 // CHECK-NEXT: cfg-loopexit = false
 // CHECK-NEXT: cfg-rich-constructors = true
-// CHECK-NEXT: cfg-temporary-dtors = false
+// CHECK-NEXT: cfg-temporary-dtors = true
+// CHECK-NEXT: experimental-enable-naive-ctu-analysis = false
 // CHECK-NEXT: exploration_strategy = unexplored_first_queue
 // CHECK-NEXT: faux-bodies = true
 // CHECK-NEXT: graph-trim-interval = 1000
@@ -47,4 +49,4 @@ public:
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 27
+// CHECK-NEXT: num-entries = 29

@@ -43,9 +43,15 @@ public:
   /// Maps all files matching \p RE to \p CanonicalPath
   void addRegexMapping(llvm::StringRef RE, llvm::StringRef CanonicalPath);
 
-  /// \return \p Header itself if there is no mapping for it; otherwise, return
-  /// a canonical header name.
-  llvm::StringRef mapHeader(llvm::StringRef Header) const;
+  /// Sets the canonical include for any symbol with \p QualifiedName.
+  /// Symbol mappings take precedence over header mappings.
+  void addSymbolMapping(llvm::StringRef QualifiedName,
+                        llvm::StringRef CanonicalPath);
+
+  /// Returns the canonical include for symbol with \p QualifiedName, which is
+  /// declared in \p Header
+  llvm::StringRef mapHeader(llvm::StringRef Header,
+                            llvm::StringRef QualifiedName) const;
 
 private:
   // A map from header patterns to header names. This needs to be mutable so
@@ -55,6 +61,8 @@ private:
   // arbitrary regexes.
   mutable std::vector<std::pair<llvm::Regex, std::string>>
       RegexHeaderMappingTable;
+  // A map from fully qualified symbol names to header names.
+  llvm::StringMap<std::string> SymbolMapping;
   // Guards Regex matching as it's not thread-safe.
   mutable std::mutex RegexMutex;
 };
@@ -68,8 +76,9 @@ private:
 std::unique_ptr<CommentHandler>
 collectIWYUHeaderMaps(CanonicalIncludes *Includes);
 
-/// Adds mapping for system headers. Approximately, the following system headers
-/// are handled:
+/// Adds mapping for system headers and some special symbols (e.g. STL symbols
+/// in <iosfwd> need to be mapped individually). Approximately, the following
+/// system headers are handled:
 ///   - C++ standard library e.g. bits/basic_string.h$ -> <string>
 ///   - Posix library e.g. bits/pthreadtypes.h$ -> <pthread.h>
 ///   - Compiler extensions, e.g. include/avx512bwintrin.h$ -> <immintrin.h>

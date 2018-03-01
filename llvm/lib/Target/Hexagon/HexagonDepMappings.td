@@ -26,6 +26,7 @@ def J2_jumpf_nopred_mapAlias : InstAlias<"if (!$Pu4) jump $Ii", (J2_jumpf PredRe
 def J2_jumprf_nopred_mapAlias : InstAlias<"if (!$Pu4) jumpr $Rs32", (J2_jumprf PredRegs:$Pu4, IntRegs:$Rs32)>;
 def J2_jumprt_nopred_mapAlias : InstAlias<"if ($Pu4) jumpr $Rs32", (J2_jumprt PredRegs:$Pu4, IntRegs:$Rs32)>;
 def J2_jumpt_nopred_mapAlias : InstAlias<"if ($Pu4) jump $Ii", (J2_jumpt PredRegs:$Pu4, b30_2Imm:$Ii)>;
+def J2_trap1_noregmapAlias : InstAlias<"trap1(#$Ii)", (J2_trap1 R0, u8_0Imm:$Ii)>;
 def L2_loadalignb_zomapAlias : InstAlias<"$Ryy32 = memb_fifo($Rs32)", (L2_loadalignb_io DoubleRegs:$Ryy32, IntRegs:$Rs32, 0)>;
 def L2_loadalignh_zomapAlias : InstAlias<"$Ryy32 = memh_fifo($Rs32)", (L2_loadalignh_io DoubleRegs:$Ryy32, IntRegs:$Rs32, 0)>;
 def L2_loadbsw2_zomapAlias : InstAlias<"$Rd32 = membh($Rs32)", (L2_loadbsw2_io IntRegs:$Rd32, IntRegs:$Rs32, 0)>;

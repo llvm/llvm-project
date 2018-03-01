@@ -33,24 +33,24 @@ struct WasmObjectHeader {
 };
 
 struct WasmSignature {
-  std::vector<int32_t> ParamTypes;
-  int32_t ReturnType;
+  std::vector<uint8_t> ParamTypes;
+  uint8_t ReturnType;
 };
 
 struct WasmExport {
   StringRef Name;
-  uint32_t Kind;
+  uint8_t Kind;
   uint32_t Index;
 };
 
 struct WasmLimits {
-  uint32_t Flags;
+  uint8_t Flags;
   uint32_t Initial;
   uint32_t Maximum;
 };
 
 struct WasmTable {
-  int32_t ElemType;
+  uint8_t ElemType;
   WasmLimits Limits;
 };
 
@@ -66,7 +66,7 @@ struct WasmInitExpr {
 };
 
 struct WasmGlobalType {
-  int32_t Type;
+  uint8_t Type;
   bool Mutable;
 };
 
@@ -79,7 +79,7 @@ struct WasmGlobal {
 struct WasmImport {
   StringRef Module;
   StringRef Field;
-  uint32_t Kind;
+  uint8_t Kind;
   union {
     uint32_t SigIndex;
     WasmGlobalType Global;
@@ -89,7 +89,7 @@ struct WasmImport {
 };
 
 struct WasmLocalDecl {
-  int32_t Type;
+  uint8_t Type;
   uint32_t Count;
 };
 
@@ -128,7 +128,7 @@ struct WasmDataReference {
 };
 
 struct WasmRelocation {
-  uint32_t Type;   // The type of the relocation.
+  uint8_t Type;    // The type of the relocation.
   uint32_t Index;  // Index into either symbol or type index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
@@ -141,7 +141,7 @@ struct WasmInitFunc {
 
 struct WasmSymbolInfo {
   StringRef Name;
-  uint32_t Kind;
+  uint8_t Kind;
   uint32_t Flags;
   union {
     // For function or global symbols, the index in function of global index
@@ -178,14 +178,14 @@ enum : unsigned {
 };
 
 // Type immediate encodings used in various contexts.
-enum {
-  WASM_TYPE_I32 = -0x01,
-  WASM_TYPE_I64 = -0x02,
-  WASM_TYPE_F32 = -0x03,
-  WASM_TYPE_F64 = -0x04,
-  WASM_TYPE_ANYFUNC = -0x10,
-  WASM_TYPE_FUNC = -0x20,
-  WASM_TYPE_NORESULT = -0x40, // for blocks with no result values
+enum : unsigned {
+  WASM_TYPE_I32 = 0x7F,
+  WASM_TYPE_I64 = 0x7E,
+  WASM_TYPE_F32 = 0x7D,
+  WASM_TYPE_F64 = 0x7C,
+  WASM_TYPE_ANYFUNC = 0x70,
+  WASM_TYPE_FUNC = 0x60,
+  WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
 
 // Kinds of externals (for imports and exports).

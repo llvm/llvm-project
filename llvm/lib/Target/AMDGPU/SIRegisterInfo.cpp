@@ -1226,6 +1226,10 @@ const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
     &AMDGPU::VReg_512RegClass,
     &AMDGPU::SReg_512RegClass,
     &AMDGPU::SCC_CLASSRegClass,
+    &AMDGPU::R600_Reg32RegClass,
+    &AMDGPU::R600_PredicateRegClass,
+    &AMDGPU::Pseudo_SReg_32RegClass,
+    &AMDGPU::Pseudo_SReg_128RegClass,
   };
 
   for (const TargetRegisterClass *BaseClass : BaseClasses) {
@@ -1490,7 +1494,9 @@ SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
 
 bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
                             unsigned Reg) const {
-  return hasVGPRs(getRegClassForReg(MRI, Reg));
+  const TargetRegisterClass * RC = getRegClassForReg(MRI, Reg);
+  assert(RC && "Register class for the reg not found");
+  return hasVGPRs(RC);
 }
 
 bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,

@@ -518,7 +518,9 @@ public:
         ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_GOTTPREL_LO12_NC ||
-        ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12) {
+        ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+        ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
+        ELFRefKind == AArch64MCExpr::VK_SECREL_HI12) {
       // Note that we don't range-check the addend. It's adjusted modulo page
       // size when converted, so there is no "out of range" condition when using
       // @pageoff.
@@ -607,7 +609,9 @@ public:
           || ELFRefKind == AArch64MCExpr::VK_TPREL_HI12
           || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12
           || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC
-          || ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12;
+          || ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12
+          || ELFRefKind == AArch64MCExpr::VK_SECREL_HI12
+          || ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
     }
 
     // If it's a constant, it should be a real immediate in range:
@@ -2854,6 +2858,8 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
                   .Case("gottprel_g0_nc", AArch64MCExpr::VK_GOTTPREL_G0_NC)
                   .Case("tlsdesc", AArch64MCExpr::VK_TLSDESC_PAGE)
+                  .Case("secrel_lo12", AArch64MCExpr::VK_SECREL_LO12)
+                  .Case("secrel_hi12", AArch64MCExpr::VK_SECREL_HI12)
                   .Default(AArch64MCExpr::VK_INVALID);
 
     if (RefKind == AArch64MCExpr::VK_INVALID)
@@ -3466,7 +3472,9 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
              ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
-             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12) &&
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_SECREL_HI12) &&
             (Inst.getOpcode() == AArch64::ADDXri ||
              Inst.getOpcode() == AArch64::ADDWri))
           return false;

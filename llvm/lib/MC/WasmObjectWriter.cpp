@@ -258,7 +258,7 @@ private:
   }
 
   void writeValueType(wasm::ValType Ty) {
-    encodeSLEB128(int32_t(Ty), getStream());
+    write8(static_cast<uint8_t>(Ty));
   }
 
   void writeTypeSection(ArrayRef<WasmFunctionType> FunctionTypes);
@@ -300,7 +300,7 @@ void WasmObjectWriter::startSection(SectionBookkeeping &Section,
          "Only custom sections can have names");
 
   DEBUG(dbgs() << "startSection " << SectionId << ": " << Name << "\n");
-  encodeULEB128(SectionId, getStream());
+  write8(SectionId);
 
   Section.SizeOffset = getStream().tell();
 
@@ -625,7 +625,7 @@ void WasmObjectWriter::writeRelocations(
                       RelEntry.FixupSection->getSectionOffset();
     uint32_t Index = getRelocationIndexValue(RelEntry);
 
-    encodeULEB128(RelEntry.Type, Stream);
+    write8(RelEntry.Type);
     encodeULEB128(Offset, Stream);
     encodeULEB128(Index, Stream);
     if (RelEntry.hasAddend())
@@ -644,7 +644,7 @@ void WasmObjectWriter::writeTypeSection(
   encodeULEB128(FunctionTypes.size(), getStream());
 
   for (const WasmFunctionType &FuncTy : FunctionTypes) {
-    encodeSLEB128(wasm::WASM_TYPE_FUNC, getStream());
+    write8(wasm::WASM_TYPE_FUNC);
     encodeULEB128(FuncTy.Params.size(), getStream());
     for (wasm::ValType Ty : FuncTy.Params)
       writeValueType(Ty);
@@ -671,22 +671,22 @@ void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
   for (const wasm::WasmImport &Import : Imports) {
     writeString(Import.Module);
     writeString(Import.Field);
-    encodeULEB128(Import.Kind, getStream());
+    write8(Import.Kind);
 
     switch (Import.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
       encodeULEB128(Import.SigIndex, getStream());
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
-      encodeSLEB128(Import.Global.Type, getStream());
-      encodeULEB128(uint32_t(Import.Global.Mutable), getStream());
+      write8(Import.Global.Type);
+      write8(Import.Global.Mutable ? 1 : 0);
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       encodeULEB128(0, getStream()); // flags
       encodeULEB128(NumPages, getStream()); // initial
       break;
     case wasm::WASM_EXTERNAL_TABLE:
-      encodeSLEB128(Import.Table.ElemType, getStream());
+      write8(Import.Table.ElemType);
       encodeULEB128(0, getStream()); // flags
       encodeULEB128(NumElements, getStream()); // initial
       break;
@@ -742,7 +742,7 @@ void WasmObjectWriter::writeExportSection(ArrayRef<wasm::WasmExport> Exports) {
   encodeULEB128(Exports.size(), getStream());
   for (const wasm::WasmExport &Export : Exports) {
     writeString(Export.Name);
-    encodeSLEB128(Export.Kind, getStream());
+    write8(Export.Kind);
     encodeULEB128(Export.Index, getStream());
   }
 

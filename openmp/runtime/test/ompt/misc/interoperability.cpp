@@ -3,19 +3,31 @@
 
 #include <iostream>
 #include <thread>
+
 #include "callback.h"
+#include "omp.h"
+
 int condition = 0;
+
 void f() {
+  // Call OpenMP API function to force initialization of OMPT.
+  // (omp_get_thread_num() does not work because it just returns 0 if the
+  // runtime isn't initialized yet...)
+  omp_get_num_threads();
+
   OMPT_SIGNAL(condition);
-  // wait for both pthreads to arrive
+  // Wait for both initial threads to arrive that will eventually become the
+  // master threads in the following parallel region.
   OMPT_WAIT(condition, 2);
-  int i = 0;
+
 #pragma omp parallel num_threads(2)
   {
+    // Wait for all threads to arrive so that no worker thread can be reused...
     OMPT_SIGNAL(condition);
     OMPT_WAIT(condition, 6);
   }
 }
+
 int main() {
   std::thread t1(f);
   std::thread t2(f);
