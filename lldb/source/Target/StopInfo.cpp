@@ -1094,12 +1094,23 @@ private:
   bool m_return_value_is_swift_error_value;
 };
 
+//----------------------------------------------------------------------
+// StopInfoExec
+//----------------------------------------------------------------------
+
 class StopInfoExec : public StopInfo {
 public:
   StopInfoExec(Thread &thread)
       : StopInfo(thread, LLDB_INVALID_UID), m_performed_action(false) {}
 
   ~StopInfoExec() override = default;
+
+  bool ShouldStop(Event *event_ptr) override {
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp)
+      return thread_sp->GetProcess()->GetStopOnExec();
+    return false;
+  }
 
   StopReason GetStopReason() const override { return eStopReasonExec; }
 

@@ -246,15 +246,21 @@ bool BreakpointLocationList::RemoveLocation(
 
     m_address_to_location.erase(bp_loc_sp->GetAddress());
 
-    collection::iterator pos, end = m_locations.end();
-    for (pos = m_locations.begin(); pos != end; ++pos) {
-      if ((*pos).get() == bp_loc_sp.get()) {
-        m_locations.erase(pos);
+    size_t num_locations = m_locations.size();
+    for (size_t idx = 0; idx < num_locations; idx++) {
+      if (m_locations[idx].get() == bp_loc_sp.get()) {
+        RemoveLocationByIndex(idx);
         return true;
       }
     }
   }
   return false;
+}
+
+void BreakpointLocationList::RemoveLocationByIndex(size_t idx) {
+  assert (idx < m_locations.size());
+  m_address_to_location.erase(m_locations[idx]->GetAddress());
+  m_locations.erase(m_locations.begin() + idx);
 }
 
 void BreakpointLocationList::RemoveInvalidLocations(const ArchSpec &arch) {
@@ -267,7 +273,7 @@ void BreakpointLocationList::RemoveInvalidLocations(const ArchSpec &arch) {
     if (bp_loc->GetAddress().SectionWasDeleted()) {
       // Section was deleted which means this breakpoint comes from a module
       // that is no longer valid, so we should remove it.
-      m_locations.erase(m_locations.begin() + idx);
+      RemoveLocationByIndex(idx);
       continue;
     }
     if (arch.IsValid()) {
@@ -276,7 +282,7 @@ void BreakpointLocationList::RemoveInvalidLocations(const ArchSpec &arch) {
         if (!arch.IsCompatibleMatch(module_sp->GetArchitecture())) {
           // The breakpoint was in a module whose architecture is no longer
           // compatible with "arch", so we need to remove it
-          m_locations.erase(m_locations.begin() + idx);
+          RemoveLocationByIndex(idx);
           continue;
         }
       }

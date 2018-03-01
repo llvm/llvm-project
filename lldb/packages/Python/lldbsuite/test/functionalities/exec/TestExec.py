@@ -21,13 +21,11 @@ class ExecTestCase(TestBase):
     @skipUnlessDarwin
     @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://36134350") # when building with cmake on green gragon or on ci.swift.org, this test fails.
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
-    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://29291115")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test_hitting_exec (self):
         self.do_test(False)
 
     @skipUnlessDarwin
-    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://36134350") # when building with cmake on green gragon or on ci.swift.org, this test fails.
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test_skipping_exec (self):
@@ -64,6 +62,17 @@ class ExecTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
+        if skip_exec:
+            self.dbg.HandleCommand("settings set target.process.stop-on-exec false")
+
+            def cleanup():
+                self.runCmd("settings set target.process.stop-on-exec false",
+                            check=False)
+
+            # Execute the cleanup function during test case tear down.
+            self.addTearDownHook(cleanup)
+
+            
         for i in range(6):
             # The stop reason of the thread should be breakpoint.
             self.assertTrue(process.GetState() == lldb.eStateStopped,
@@ -88,17 +97,18 @@ class ExecTestCase(TestBase):
             # Run and we should stop due to exec
             process.Continue()
 
-            self.assertTrue(process.GetState() == lldb.eStateStopped,
-                            "Process should be stopped at __dyld_start")
+            if not skip_exec:
+                self.assertTrue(process.GetState() == lldb.eStateStopped,
+                                "Process should be stopped at __dyld_start")
+                
+                threads = lldbutil.get_stopped_threads(
+                    process, lldb.eStopReasonExec)
+                self.assertTrue(
+                    len(threads) == 1,
+                    "We got a thread stopped for exec.")
 
-            threads = lldbutil.get_stopped_threads(
-                process, lldb.eStopReasonExec)
-            self.assertTrue(
-                len(threads) == 1,
-                "We got a thread stopped for exec.")
-
-            # Run and we should stop at breakpoint in main after exec
-            process.Continue()
+                # Run and we should stop at breakpoint in main after exec
+                process.Continue()
 
             threads = lldbutil.get_threads_stopped_at_breakpoint(
                 process, breakpoint)

@@ -19,6 +19,7 @@
 
 #include <climits>
 #include <cstring>
+#include <cstdlib>
 
 EXTERN int omp_get_num_devices(void) {
   RTLsMtx.lock();

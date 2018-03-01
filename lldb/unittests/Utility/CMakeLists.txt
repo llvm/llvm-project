@@ -1,4 +1,5 @@
 add_lldb_unittest(UtilityTests
+  CleanUpTest.cpp
   ArchSpecTest.cpp
   ConstStringTest.cpp
   JSONTest.cpp

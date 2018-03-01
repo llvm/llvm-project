@@ -26,6 +26,8 @@ class CppDataFormatterTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24462: Data formatters have problems on Windows")
+    @skipIf(debug_info="gmodules",
+            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

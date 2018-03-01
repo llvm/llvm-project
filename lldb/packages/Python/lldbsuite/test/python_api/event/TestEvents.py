@@ -15,6 +15,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
+@skipIfDarwin
 class EventAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

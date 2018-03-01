@@ -26,13 +26,12 @@ class SaveJITObjectsTestCase(TestBase):
         return
 
     @expectedFailureAll(oslist=["windows"])
-    @expectedFailureDarwin("rdar://35774408")
     def test_save_jit_objects(self):
         self.build()
         os.chdir(self.getBuildDir())
         src_file = "main.c"
         src_file_spec = lldb.SBFileSpec(src_file)
-  
+
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break", src_file_spec)
 

@@ -26,10 +26,7 @@ class ObjCModulesAutoImportTestCase(TestBase):
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
     @skipUnlessDarwin
-    @unittest2.expectedFailure("rdar://problem/19991953")
-    @expectedFailureDarwin  # clang: error: unknown argument: '-gmodules'
-    @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion(
-        '12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -94,8 +94,23 @@ set(lldbDebugserverCommonSources
 
 add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
 
+set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
+  CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
 
-if (APPLE)
+if(NOT LLDB_CODESIGN_IDENTITY STREQUAL "")
+  set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver> CACHE PATH "Path to debugserver.")
+else()
+  execute_process(
+    COMMAND xcode-select -p
+    OUTPUT_VARIABLE XCODE_DEV_DIR)
+  string(STRIP ${XCODE_DEV_DIR} XCODE_DEV_DIR)
+  set(DEBUGSERVER_PATH
+    "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver" CACHE PATH "Path to debugserver.")
+  set(SKIP_DEBUGSERVER True)
+endif()
+message(STATUS "Path to the lldb debugserver: ${DEBUGSERVER_PATH}")
+
+if (APPLE AND NOT SKIP_DEBUGSERVER)
   if(IOS)
     find_library(BACKBOARD_LIBRARY BackBoardServices
       PATHS ${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks)
@@ -113,6 +128,21 @@ if (APPLE)
   else()
     find_library(COCOA_LIBRARY Cocoa)
   endif()
+  
+  target_link_libraries(lldbDebugserverCommon
+                        INTERFACE ${COCOA_LIBRARY}
+                        ${CORE_FOUNDATION_LIBRARY}
+                        ${FOUNDATION_LIBRARY}
+                        lldbDebugserverArchSupport
+                        lldbDebugserverDarwin_DarwinLog)
+  
+  set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
+  add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
+    debugserver.cpp
+  
+    LINK_LIBS
+      lldbDebugserverCommon
+    )
 endif()
 
 if(HAVE_LIBCOMPRESSION)
@@ -195,6 +225,15 @@ if("${LLDB_CODESIGN_IDENTITY}" STREQUAL "lldb_codesign")
 endif()
 option(LLDB_USE_ENTITLEMENTS "Use entitlements when codesigning (Defaults Off when using lldb_codesign identity, otherwise On)" ${LLDB_USE_ENTITLEMENTS_Default})
 
+if (SKIP_DEBUGSERVER)
+  if (CMAKE_HOST_APPLE)
+    # If we haven't built a signed debugserver, copy the one from the system.
+    add_custom_target(debugserver
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEBUGSERVER_PATH} ${CMAKE_BINARY_DIR}/bin
+      VERBATIM
+      COMMENT "Copying the system debugserver to LLDB's binaries directory.")
+  endif()
+else()
 if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
   if(LLDB_USE_ENTITLEMENTS)
     set(entitlements_flags --entitlements ${entitlements_xml})

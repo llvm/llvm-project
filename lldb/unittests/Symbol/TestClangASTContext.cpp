@@ -11,6 +11,8 @@
 
 #include "gtest/gtest.h"
 
+#include "clang/AST/DeclCXX.h"
+
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangUtil.h"
@@ -375,6 +377,9 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
                    empty_derived_non_empty_vbase_cxx_decl, false));
   EXPECT_TRUE(
       ClangASTContext::RecordHasFields(empty_derived_non_empty_vbase_decl));
+
+  delete non_empty_base_spec;
+  delete non_empty_vbase_spec;
 }
 
 TEST_F(TestClangASTContext, TemplateArguments) {

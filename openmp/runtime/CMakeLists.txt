@@ -299,12 +299,17 @@ if(LIBOMP_USE_VERSION_SYMBOLS AND (NOT LIBOMP_ENABLE_SHARED) )
   set (LIBOMP_USE_VERSION_SYMBOLS FALSE)
 endif()
 
-# OMPT-support
+# OMPT-support defaults to ON for OpenMP 5.0+ and if the requirements in
+# cmake/config-ix.cmake are fulfilled.
+set(OMPT_DEFAULT FALSE)
+if ((${LIBOMP_OMP_VERSION} GREATER 49) AND (LIBOMP_HAVE_OMPT_SUPPORT))
+  set(OMPT_DEFAULT TRUE)
+endif()
+set(LIBOMP_OMPT_SUPPORT ${OMPT_DEFAULT} CACHE BOOL
+  "OMPT-support?")
+
 set(LIBOMP_OMPT_DEBUG FALSE CACHE BOOL
   "Trace OMPT initialization?")
-#after testing: turn on ompt support by default for OpenMP 5.0 and higher
-set(LIBOMP_OMPT_SUPPORT FALSE CACHE BOOL
-  "OMPT-support?")
 set(LIBOMP_OMPT_OPTIONAL TRUE CACHE BOOL
   "OMPT-optional?")
 if(LIBOMP_OMPT_SUPPORT AND (NOT LIBOMP_HAVE_OMPT_SUPPORT))

@@ -206,7 +206,7 @@ SwiftHashedContainerNativeBufferHandler::
   static ConstString g_value("value");
   static ConstString g__value("_value");
 
-  static ConstString g_capacity("capacity");
+  static ConstString g_capacity("bucketCount");
   static ConstString g_count("count");
 
   if (!m_nativeStorage)
@@ -251,10 +251,15 @@ SwiftHashedContainerNativeBufferHandler::
     if (error.Fail())
       return;
   } else {
-    m_capacity = m_nativeStorage->GetChildAtNamePath({g_capacity, g__value})
-                     ->GetValueAsUnsigned(0);
-    m_count = m_nativeStorage->GetChildAtNamePath({g_count, g__value})
-                  ->GetValueAsUnsigned(0);
+    auto capacity_sp =
+        m_nativeStorage->GetChildAtNamePath({g_capacity, g__value});
+    if (!capacity_sp)
+      return;
+    m_capacity = capacity_sp->GetValueAsUnsigned(0);
+    auto count_sp = m_nativeStorage->GetChildAtNamePath({g_count, g__value});
+    if (!count_sp)
+      return;
+    m_count = count_sp->GetValueAsUnsigned(0);
   }
 
   m_nativeStorage = nativeStorage_sp.get();

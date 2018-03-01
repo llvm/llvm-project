@@ -70,7 +70,7 @@ def use_gold_linker():
     """@return True if the gold linker should be used; False otherwise."""
     return os.path.isfile("/usr/bin/ld.gold")
 
-uname = str(subprocess.check_output(["uname", "-s"])).rstrip()
+uname = sys.platform
 
 checkout_git(
     "llvm",
@@ -183,8 +183,7 @@ else:
             "--install-swift",
             "--install-lldb",
             "--install-destdir",
-            os.getcwd() +
-            "/install",
+            os.path.join(os.getcwd(), "install"),
             "--swift-install-components=compiler;clang-builtin-headers;stdlib;stdlib-experimental;sdk-overlay;editor-integration;tools;testsuite-tools;dev"]
 
     # build_script_impl_arguments += ["--reconfigure"]
@@ -206,7 +205,7 @@ else:
     elif args.use_system_debugserver:
         build_script_impl_arguments += ['--lldb-use-system-debugserver']
 
-args = ["./swift/utils/build-script"] + \
+args = ["python", os.path.join("swift", "utils", "build-script")] + \
     build_script_arguments + ["--"] + build_script_impl_arguments
 
 print(" ".join(args))

@@ -135,6 +135,18 @@ class LLDBTestResult(unittest2.TextTestResult):
         """
         Gets all the categories for the currently running test method in test case
         """
+
+        # It isn't possible to reliably attach categories to inline tests
+        # because they all share the same instance method. Adding a category to
+        # one inline test causes all inline tests to be added to that category.
+        # This can result in an unpredictable set of tests being run when the
+        # multiprocess test runner is in use.
+        #
+        # To work around the problem, add all inline tests to the swiftpr
+        # category.
+        if any(['_InlineTest__' in field for field in dir(test)]):
+            return ['swiftpr']
+
         test_categories = []
         test_method = getattr(test, test._testMethodName)
         if test_method is not None and hasattr(test_method, "categories"):
@@ -166,10 +178,6 @@ class LLDBTestResult(unittest2.TextTestResult):
                 configuration.skip_tests, test.id()):
             self.hardMarkAsSkipped(test)
 
-        configuration.setCrashInfoHook(
-            "%s at %s" %
-            (str(test), inspect.getfile(
-                test.__class__)))
         self.counter += 1
         test.test_number = self.counter
         if self.showAll:

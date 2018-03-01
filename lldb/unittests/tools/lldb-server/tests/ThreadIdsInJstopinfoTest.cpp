@@ -48,3 +48,4 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
         << "Mismatched PC for thread: " << tid;
   }
 }
+

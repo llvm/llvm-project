@@ -367,7 +367,7 @@ static bool isRelExpr(RelExpr Expr) {
 static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
-  if (isRelExprOneOf<R_SIZE, R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
+  if (isRelExprOneOf<R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
                      R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
                      R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
                      R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_PC, R_TLSGD,
@@ -382,6 +382,10 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
   if (Sym.IsPreemptible)
     return false;
   if (!Config->Pic)
+    return true;
+
+  // The size of a non preemptible symbol is a constant.
+  if (E == R_SIZE)
     return true;
 
   // For the target and the relocation, we want to know if they are
@@ -592,6 +596,12 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
   if (IsConstant)
     return Expr;
 
+  // We can create any dynamic relocation supported by the dynamic linker if a
+  // section is writable or we are passed -z notext.
+  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
+  if (CanWrite && Target->isPicRel(Type))
+    return Expr;
+
   // If the relocation is to a weak undef, and we are producing
   // executable, give up on it and produce a non preemptible 0.
   if (!Config->Shared && Sym.isUndefWeak()) {
@@ -599,12 +609,6 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     IsConstant = true;
     return Expr;
   }
-
-  // We can create any dynamic relocation supported by the dynamic linker if a
-  // section is writable or we are passed -z notext.
-  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
-  if (CanWrite && Target->isPicRel(Type))
-    return Expr;
 
   // If we got here we know that this relocation would require the dynamic
   // linker to write a value to read only memory or use an unsupported

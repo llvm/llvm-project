@@ -20,6 +20,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24462, Data formatters have problems on Windows")
+    @decorators.skipIf(debug_info=["gmodules"]) # rdar://36996703
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()

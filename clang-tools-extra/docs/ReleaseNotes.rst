@@ -1,18 +1,12 @@
-===================================================
-Extra Clang Tools 6.0.0 (In-Progress) Release Notes
-===================================================
+=====================================
+Extra Clang Tools 6.0.0 Release Notes
+=====================================
 
 .. contents::
    :local:
    :depth: 3
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Extra Clang Tools 6 release.
-   Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -26,11 +20,6 @@ site <http://llvm.org/releases/>`_.
 For more information about Clang or LLVM, including information about
 the latest release, please see the `Clang Web Site <http://clang.llvm.org>`_ or
 the `LLVM Web Site <http://llvm.org>`_.
-
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <http://llvm.org/releases/>`_.
 
 What's New in Extra Clang Tools 6.0.0?
 ======================================

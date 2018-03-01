@@ -36,6 +36,7 @@ class TestSwiftPlaygrounds(TestBase):
     @decorators.skipIf(
         debug_info=decorators.no_match("dsym"),
         bugnumber="This test only builds one way")
+    @decorators.add_test_categories(["swiftpr"])
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
         self.buildAll()

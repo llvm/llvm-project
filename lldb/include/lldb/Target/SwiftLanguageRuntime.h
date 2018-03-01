@@ -111,18 +111,6 @@ public:
 
     llvm::StringRef GetBasename();
 
-    llvm::StringRef GetContext();
-
-    llvm::StringRef GetMetatypeReference();
-
-    llvm::StringRef GetTemplateArguments();
-
-    llvm::StringRef GetArguments();
-
-    llvm::StringRef GetQualifiers();
-
-    llvm::StringRef GetReturnType();
-
     static bool ExtractFunctionBasenameFromMangled(const ConstString &mangled,
                                                    ConstString &basename,
                                                    bool &is_method);
@@ -318,18 +306,6 @@ public:
                                                           bool stop_others);
 
   bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
-
-  // in some cases, compilers will output different names for one same type.
-  // when tht happens, it might be impossible
-  // to construct SBType objects for a valid type, because the name that is
-  // available is not the same as the name that
-  // can be used as a search key in FindTypes(). the equivalents map here is
-  // meant to return possible alternative names
-  // for a type through which a search can be conducted. Currently, this is only
-  // enabled for C++ but can be extended
-  // to ObjC or other languages if necessary
-  static uint32_t FindEquivalentNames(ConstString type_name,
-                                      std::vector<ConstString> &equivalents);
 
   // this call should return true if it could set the name and/or the type
   virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
