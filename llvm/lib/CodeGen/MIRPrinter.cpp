@@ -207,6 +207,8 @@ void MIRPrinter::print(const MachineFunction &MF) {
       MachineFunctionProperties::Property::RegBankSelected);
   YamlMF.Selected = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Selected);
+  YamlMF.FailedISel = MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::FailedISel);
 
   convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   ModuleSlotTracker MST(MF.getFunction().getParent());

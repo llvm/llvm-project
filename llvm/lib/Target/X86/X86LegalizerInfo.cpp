@@ -124,11 +124,13 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);
 
-  if (!Subtarget.is64Bit())
+  if (!Subtarget.is64Bit()) {
     getActionDefinitionsBuilder(G_PTRTOINT)
         .legalForCartesianProduct({s1, s8, s16, s32}, {p0})
         .maxScalar(0, s32)
         .widenScalarToNextPow2(0, /*Min*/ 8);
+    getActionDefinitionsBuilder(G_INTTOPTR).legalFor({s32, p0});
+  }
 
   // Control-flow
   setAction({G_BRCOND, s1}, Legal);
@@ -194,6 +196,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .legalForCartesianProduct({s1, s8, s16, s32, s64}, {p0})
       .maxScalar(0, s64)
       .widenScalarToNextPow2(0, /*Min*/ 8);
+  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({s64, p0});
 
   // Constants
   setAction({TargetOpcode::G_CONSTANT, s64}, Legal);

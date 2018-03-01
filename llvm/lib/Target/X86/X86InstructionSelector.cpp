@@ -350,6 +350,8 @@ bool X86InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC:
     return selectTruncOrPtrToInt(I, MRI, MF);
+  case TargetOpcode::G_INTTOPTR:
+    return selectCopy(I, MRI);
   case TargetOpcode::G_ZEXT:
     return selectZext(I, MRI, MF);
   case TargetOpcode::G_ANYEXT:

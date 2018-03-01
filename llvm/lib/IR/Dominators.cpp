@@ -306,23 +306,6 @@ bool DominatorTree::isReachableFromEntry(const Use &U) const {
   return isReachableFromEntry(I->getParent());
 }
 
-void DominatorTree::verifyDomTree() const {
-  // Perform the expensive checks only when VerifyDomInfo is set.
-  VerificationLevel VL = VerificationLevel::Fast;
-  if (VerifyDomInfo)
-    VL = VerificationLevel::Full;
-  else if (ExpensiveChecksEnabled)
-    VL = VerificationLevel::Basic;
-
-  if (!verify(VL)) {
-    errs() << "\n~~~~~~~~~~~\n\t\tDomTree verification failed!\n~~~~~~~~~~~\n";
-    errs() << "\nCFG:\n";
-    getRoot()->getParent()->print(errs());
-    errs().flush();
-    abort();
-  }
-}
-
 //===----------------------------------------------------------------------===//
 //  DominatorTreeAnalysis and related pass implementations
 //===----------------------------------------------------------------------===//
@@ -353,8 +336,9 @@ PreservedAnalyses DominatorTreePrinterPass::run(Function &F,
 
 PreservedAnalyses DominatorTreeVerifierPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
-  AM.getResult<DominatorTreeAnalysis>(F).verifyDomTree();
-
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  assert(DT.verify());
+  (void)DT;
   return PreservedAnalyses::all();
 }
 
@@ -377,8 +361,10 @@ bool DominatorTreeWrapperPass::runOnFunction(Function &F) {
 }
 
 void DominatorTreeWrapperPass::verifyAnalysis() const {
-  if (ExpensiveChecksEnabled || VerifyDomInfo)
-    DT.verifyDomTree();
+  if (VerifyDomInfo)
+    assert(DT.verify(DominatorTree::VerificationLevel::Full));
+  else if (ExpensiveChecksEnabled)
+    assert(DT.verify(DominatorTree::VerificationLevel::Basic));
 }
 
 void DominatorTreeWrapperPass::print(raw_ostream &OS, const Module *) const {

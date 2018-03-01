@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -61,13 +60,6 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  // No matter what happens, whether we successfully select the function or not,
-  // nothing is going to use the vreg types after us.  Make sure they disappear.
-  auto ClearVRegTypesOnReturn =
-      make_scope_exit([&]() { MRI.getVRegToType().clear(); });
-
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
@@ -85,23 +77,18 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   // FIXME: There are many other MF/MFI fields we need to initialize.
 
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 #ifndef NDEBUG
   // Check that our input is fully legal: we require the function to have the
   // Legalized property, so it should be.
-  // FIXME: This should be in the MachineVerifier, but it can't use the
-  // LegalizerInfo as it's currently in the separate GlobalISel library.
-  // The RegBankSelected property is already checked in the verifier. Note
-  // that it has the same layering problem, but we only use inline methods so
-  // end up not needing to link against the GlobalISel library.
-  if (const LegalizerInfo *MLI = MF.getSubtarget().getLegalizerInfo())
-    for (MachineBasicBlock &MBB : MF)
-      for (MachineInstr &MI : MBB)
-        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI)) {
-          reportGISelFailure(MF, TPC, MORE, "gisel-select",
-                             "instruction is not legal", MI);
-          return false;
-        }
-
+  // FIXME: This should be in the MachineVerifier, as the RegBankSelected
+  // property check already is.
+  if (!DisableGISelLegalityCheck)
+    if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
+      reportGISelFailure(MF, TPC, MORE, "gisel-select",
+                         "instruction is not legal", *MI);
+      return false;
+    }
 #endif
   // FIXME: We could introduce new blocks and will need to fix the outer loop.
   // Until then, keep track of the number of blocks to assert that we don't.
@@ -237,6 +224,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                         ->getTargetMachine()
                         .getTarget()
                         .getBackendName());
+
+  // If we successfully selected the function nothing is going to use the vreg
+  // types after us (otherwise MIRPrinter would need them). Make sure the types
+  // disappear.
+  MRI.getVRegToType().clear();
 
   // FIXME: Should we accurately track changes?
   return true;

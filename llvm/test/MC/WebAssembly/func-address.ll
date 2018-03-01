@@ -34,16 +34,16 @@ entry:
 ; CHECK:     Relocation {
 ; CHECK:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 ; CHECK:       Offset: 0x4
-; CHECK:       Index: 0x0
+; CHECK:       Index: 0x1
 ; CHECK:     }
 ; CHECK:     Relocation {
 ; CHECK:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 ; CHECK:       Offset: 0xB
-; CHECK:       Index: 0x1
+; CHECK:       Index: 0x2
 ; CHECK:     }
 ; CHECK:     Relocation {
 ; CHECK:       Type: R_WEBASSEMBLY_TABLE_INDEX_SLEB (1)
 ; CHECK:       Offset: 0x1E
-; CHECK:       Index: 0x3
+; CHECK:       Index: 0x5
 ; CHECK:     }
 ; CHECK:   }

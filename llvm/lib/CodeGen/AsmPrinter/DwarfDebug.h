@@ -258,6 +258,10 @@ class DwarfDebug : public DebugHandlerBase {
   /// Use inlined strings.
   bool UseInlineStrings = false;
 
+  /// True if the sections itself must be used as references and don't create
+  /// temp symbols inside DWARF sections.
+  bool UseSectionsAsReferences = false;
+
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
@@ -269,6 +273,10 @@ class DwarfDebug : public DebugHandlerBase {
   /// The pre-DWARF v5 string offsets table for split dwarf is, in contrast,
   /// a monolithic sequence of string offsets.
   bool UseSegmentedStringOffsetsTable;
+
+  /// Whether we have emitted any type units with split DWARF (and therefore
+  /// need to emit a line table to the .dwo file).
+  bool HasSplitTypeUnits = false;
 
   /// Separated Dwarf Variables
   /// In general these will all be for bits that are left in the
@@ -496,6 +504,11 @@ public:
 
   /// Returns whether to use inline strings.
   bool useInlineStrings() const { return UseInlineStrings; }
+
+  /// Returns whether to use sections as labels rather than temp symbols.
+  bool useSectionsAsReferences() const {
+    return UseSectionsAsReferences;
+  }
 
   // Experimental DWARF5 features.
 

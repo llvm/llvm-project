@@ -1602,7 +1602,8 @@ struct SemiNCAInfo {
     const bool Different = DT.compare(FreshTree);
 
     if (Different) {
-      errs() << "DominatorTree is different than a freshly computed one!\n"
+      errs() << (DT.isPostDominator() ? "Post" : "")
+             << "DominatorTree is different than a freshly computed one!\n"
              << "\tCurrent:\n";
       DT.print(errs());
       errs() << "\n\tFreshly computed tree:\n";
@@ -1642,34 +1643,27 @@ void ApplyUpdates(DomTreeT &DT,
 template <class DomTreeT>
 bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL) {
   SemiNCAInfo<DomTreeT> SNCA(nullptr);
-  const bool InitialChecks = SNCA.verifyRoots(DT) &&
-                             SNCA.verifyReachability(DT) &&
-                             SNCA.VerifyLevels(DT) && SNCA.VerifyDFSNumbers(DT);
 
-  if (!InitialChecks)
+  // Simplist check is to compare against a new tree. This will also
+  // usefully print the old and new trees, if they are different.
+  if (!SNCA.IsSameAsFreshTree(DT))
     return false;
 
-  switch (VL) {
-  case DomTreeT::VerificationLevel::Fast:
-    return SNCA.IsSameAsFreshTree(DT);
+  // Common checks to verify the properties of the tree. O(N log N) at worst
+  if (!SNCA.verifyRoots(DT) || !SNCA.verifyReachability(DT) ||
+      !SNCA.VerifyLevels(DT) || !SNCA.VerifyDFSNumbers(DT))
+    return false;
 
-  case DomTreeT::VerificationLevel::Basic:
-    return SNCA.verifyParentProperty(DT) && SNCA.IsSameAsFreshTree(DT);
+  // Extra checks depending on VerificationLevel. Up to O(N^3)
+  if (VL == DomTreeT::VerificationLevel::Basic ||
+      VL == DomTreeT::VerificationLevel::Full)
+    if (!SNCA.verifyParentProperty(DT))
+      return false;
+  if (VL == DomTreeT::VerificationLevel::Full)
+    if (!SNCA.verifySiblingProperty(DT))
+      return false;
 
-  case DomTreeT::VerificationLevel::Full: {
-    bool FullRes
-        = SNCA.verifyParentProperty(DT) && SNCA.verifySiblingProperty(DT);
-
-    // Postdominators depend on root selection, make sure that a fresh tree
-    // looks the same.
-    if (DT.isPostDominator())
-      FullRes &= SNCA.IsSameAsFreshTree(DT);
-
-    return FullRes;
-  }
-  }
-
-  llvm_unreachable("Unhandled DomTree VerificationLevel");
+  return true;
 }
 
 }  // namespace DomTreeBuilder

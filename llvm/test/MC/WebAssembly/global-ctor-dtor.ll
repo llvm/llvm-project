@@ -64,28 +64,28 @@ declare void @func3()
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:     
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x00000004
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
-; CHECK-NEXT:         Index:           6
+; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x0000000F
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000017
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x0000001D
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:         Index:           6
 ; CHECK-NEXT:         Offset:          0x0000002C
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
-; CHECK-NEXT:         Index:           8
+; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x00000037
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x0000003F
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x00000045
 ; CHECK-NEXT:     Functions:       
 ; CHECK-NEXT:       - Index:           5
@@ -113,71 +113,71 @@ declare void @func3()
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            func3
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        0
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Kind:            DATA
-; CHECK-NEXT:         Name:            __dso_handle
-; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN, UNDEFINED ]
-; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            __cxa_atexit
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        1
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            func2
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        2
-; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            func1
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        3
-; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            func0
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        4
-; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            .Lcall_dtors.42
 ; CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
 ; CHECK-NEXT:         Function:        5
-; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            func3
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        0
+; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.42
 ; CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
 ; CHECK-NEXT:         Function:        6
-; CHECK-NEXT:       - Index:           8
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            __dso_handle
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN, UNDEFINED ]
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            __cxa_atexit
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        1
+; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            .Lcall_dtors
 ; CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
 ; CHECK-NEXT:         Function:        7
-; CHECK-NEXT:       - Index:           9
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            func2
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        2
+; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors
 ; CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
 ; CHECK-NEXT:         Function:        8
-; CHECK-NEXT:       - Index:           10
+; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            global1
 ; CHECK-NEXT:         Flags:           [  ]
 ; CHECK-NEXT:         Segment:         0
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:     SegmentInfo:     
+; CHECK-NEXT:       - Index:           9
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            func1
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        3
+; CHECK-NEXT:       - Index:           10
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            func0
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        4
+; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.global1
 ; CHECK-NEXT:         Alignment:       8
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:     InitFunctions:     
 ; CHECK-NEXT:       - Priority: 42
-; CHECK-NEXT:         Symbol: 4
-; CHECK-NEXT:       - Priority: 42
-; CHECK-NEXT:         Symbol: 7
-; CHECK-NEXT:       - Priority: 65535
-; CHECK-NEXT:         Symbol: 5
-; CHECK-NEXT:       - Priority: 65535
 ; CHECK-NEXT:         Symbol: 9
+; CHECK-NEXT:       - Priority: 42
+; CHECK-NEXT:         Symbol: 2
+; CHECK-NEXT:       - Priority: 65535
+; CHECK-NEXT:         Symbol: 10
+; CHECK-NEXT:       - Priority: 65535
+; CHECK-NEXT:         Symbol: 7
 ; CHECK-NEXT: ...

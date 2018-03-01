@@ -2711,8 +2711,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  // Verify VOP*
-  if (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isVOPC(MI) || isSDWA(MI)) {
+  // Verify VOP*. Ignore multiple sgpr operands on writelane.
+  if (Desc.getOpcode() != AMDGPU::V_WRITELANE_B32
+      && (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isVOPC(MI) || isSDWA(MI))) {
     // Only look at the true operands. Only a real operand can use the constant
     // bus, and we don't want to check pseudo-operands like the source modifier
     // flags.
@@ -3145,6 +3146,29 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
 
     if (Src0.isReg() && RI.isSGPRReg(MRI, Src0.getReg()))
       legalizeOpWithMove(MI, Src0Idx);
+  }
+
+  // Special case: V_WRITELANE_B32 accepts only immediate or SGPR operands for
+  // both the value to write (src0) and lane select (src1).  Fix up non-SGPR
+  // src0/src1 with V_READFIRSTLANE.
+  if (Opc == AMDGPU::V_WRITELANE_B32) {
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    MachineOperand &Src0 = MI.getOperand(Src0Idx);
+    const DebugLoc &DL = MI.getDebugLoc();
+    if (Src0.isReg() && RI.isVGPR(MRI, Src0.getReg())) {
+      unsigned Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
+          .add(Src0);
+      Src0.ChangeToRegister(Reg, false);
+    }
+    if (Src1.isReg() && RI.isVGPR(MRI, Src1.getReg())) {
+      unsigned Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      const DebugLoc &DL = MI.getDebugLoc();
+      BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
+          .add(Src1);
+      Src1.ChangeToRegister(Reg, false);
+    }
+    return;
   }
 
   // VOP2 src0 instructions support all operand types, so we don't need to check

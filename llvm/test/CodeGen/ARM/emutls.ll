@@ -1,5 +1,7 @@
 ; RUN: llc -emulated-tls -mtriple=arm-linux-android \
 ; RUN:     -relocation-model=pic < %s | FileCheck -check-prefix=ARM32 %s
+; RUN: llc -mtriple=arm-linux-android \
+; RUN:     -relocation-model=pic < %s | FileCheck -check-prefix=ARM32 %s
 
 ; Copied from X86/emutls.ll
 

@@ -668,16 +668,17 @@ static bool isRelroSection(const OutputSection *Sec) {
 // * It is easy to check if a give branch was taken.
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
-  RF_NOT_ADDR_SET = 1 << 16,
-  RF_NOT_INTERP = 1 << 15,
-  RF_NOT_ALLOC = 1 << 14,
-  RF_WRITE = 1 << 13,
-  RF_EXEC_WRITE = 1 << 12,
-  RF_EXEC = 1 << 11,
-  RF_NON_TLS_BSS = 1 << 10,
-  RF_NON_TLS_BSS_RO = 1 << 9,
-  RF_NOT_TLS = 1 << 8,
-  RF_BSS = 1 << 7,
+  RF_NOT_ADDR_SET = 1 << 18,
+  RF_NOT_INTERP = 1 << 17,
+  RF_NOT_ALLOC = 1 << 16,
+  RF_WRITE = 1 << 15,
+  RF_EXEC_WRITE = 1 << 13,
+  RF_EXEC = 1 << 12,
+  RF_NON_TLS_BSS = 1 << 11,
+  RF_NON_TLS_BSS_RO = 1 << 10,
+  RF_NOT_TLS = 1 << 9,
+  RF_BSS = 1 << 8,
+  RF_NOTE = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
   RF_PPC_OPD = 1 << 5,
   RF_PPC_TOCL = 1 << 4,
@@ -765,6 +766,12 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   if (IsNoBits)
     Rank |= RF_BSS;
 
+  // We create a NOTE segment for contiguous .note sections, so make
+  // them contigous if there are more than one .note section with the
+  // same attributes.
+  if (Sec->Type == SHT_NOTE)
+    Rank |= RF_NOTE;
+
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
   if (Config->EMachine == EM_PPC64) {
@@ -790,6 +797,7 @@ static unsigned getSectionRank(const OutputSection *Sec) {
     if (Name == ".branch_lt")
       Rank |= RF_PPC_BRANCH_LT;
   }
+
   if (Config->EMachine == EM_MIPS) {
     // All sections with SHF_MIPS_GPREL flag should be grouped together
     // because data in these sections is addressable with a gp relative address.

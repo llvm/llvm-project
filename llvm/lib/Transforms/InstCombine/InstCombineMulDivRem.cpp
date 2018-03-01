@@ -251,22 +251,20 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
   }
 
+  if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
+    return FoldedMul;
+
   // Simplify mul instructions with a constant RHS.
   if (isa<Constant>(Op1)) {
-    if (Instruction *FoldedMul = foldOpWithConstantIntoOperand(I))
-      return FoldedMul;
-
     // Canonicalize (X+C1)*CI -> X*CI+C1*CI.
-    {
-      Value *X;
-      Constant *C1;
-      if (match(Op0, m_OneUse(m_Add(m_Value(X), m_Constant(C1))))) {
-        Value *Mul = Builder.CreateMul(C1, Op1);
-        // Only go forward with the transform if C1*CI simplifies to a tidier
-        // constant.
-        if (!match(Mul, m_Mul(m_Value(), m_Value())))
-          return BinaryOperator::CreateAdd(Builder.CreateMul(X, Op1), Mul);
-      }
+    Value *X;
+    Constant *C1;
+    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_Constant(C1))))) {
+      Value *Mul = Builder.CreateMul(C1, Op1);
+      // Only go forward with the transform if C1*CI simplifies to a tidier
+      // constant.
+      if (!match(Mul, m_Mul(m_Value(), m_Value())))
+        return BinaryOperator::CreateAdd(Builder.CreateMul(X, Op1), Mul);
     }
   }
 
@@ -555,23 +553,19 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
 
   bool AllowReassociate = I.isFast();
 
+  if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
+    return FoldedMul;
+
   // Simplify mul instructions with a constant RHS.
   if (auto *C = dyn_cast<Constant>(Op1)) {
-    if (Instruction *FoldedMul = foldOpWithConstantIntoOperand(I))
-      return FoldedMul;
-
     // -X * C --> X * -C
     Value *X;
     if (match(Op0, m_FNeg(m_Value(X))))
       return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
 
-    // (fmul X, -1.0) --> (fsub -0.0, X)
-    if (match(C, m_SpecificFP(-1.0))) {
-      Constant *NegZero = ConstantFP::getNegativeZero(Op1->getType());
-      Instruction *RI = BinaryOperator::CreateFSub(NegZero, Op0);
-      RI->copyFastMathFlags(&I);
-      return RI;
-    }
+    // X * -1.0 --> -X
+    if (match(C, m_SpecificFP(-1.0)))
+      return BinaryOperator::CreateFNegFMF(Op0, &I);
 
     if (AllowReassociate && C->isFiniteNonZeroFP()) {
       // Let MDC denote an expression in one of these forms:
@@ -671,14 +665,14 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   if (match(Op1, m_OneUse(m_FNeg(m_Value(X)))))
     return BinaryOperator::CreateFNegFMF(Builder.CreateFMulFMF(X, Op0, &I), &I);
 
+  // (select A, B, C) * (select A, D, E) --> select A, (B*D), (C*E)
+  if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
+    return replaceInstUsesWith(I, V);
+
   // Handle symmetric situation in a 2-iteration loop
   Value *Opnd0 = Op0;
   Value *Opnd1 = Op1;
   for (int i = 0; i < 2; i++) {
-    // Handle specials cases for FMul with selects feeding the operation
-    if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
-      return replaceInstUsesWith(I, V);
-
     // (X*Y) * X => (X*X) * Y where Y != X
     //  The purpose is two-fold:
     //   1) to form a power expression (of X).
@@ -900,7 +894,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
     }
 
     if (!C2->isNullValue()) // avoid X udiv 0
-      if (Instruction *FoldedDiv = foldOpWithConstantIntoOperand(I))
+      if (Instruction *FoldedDiv = foldBinOpIntoSelectOrPhi(I))
         return FoldedDiv;
   }
 

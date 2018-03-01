@@ -83,6 +83,11 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             // We are a C++ class, that's good.  Get the class name and look it
             // up:
             const char *class_name = name + strlen(vtable_demangled_prefix);
+            // We know the class name is absolute, so tell FindTypes that by
+            // prefixing it with the root namespace:
+            std::string lookup_name("::");
+            lookup_name.append(class_name);
+            
             type_info.SetName(class_name);
             const bool exact_match = true;
             TypeList class_types;
@@ -93,7 +98,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             llvm::DenseSet<SymbolFile *> searched_symbol_files;
             if (sc.module_sp) {
               num_matches = sc.module_sp->FindTypes(
-                  sc, ConstString(class_name), exact_match, 1,
+                  sc, ConstString(lookup_name), exact_match, 1,
                   searched_symbol_files, class_types);
             }
 
@@ -102,7 +107,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             // as possible
             if (num_matches == 0) {
               num_matches = target.GetImages().FindTypes(
-                  sc, ConstString(class_name), exact_match, UINT32_MAX,
+                  sc, ConstString(lookup_name), exact_match, UINT32_MAX,
                   searched_symbol_files, class_types);
             }
 

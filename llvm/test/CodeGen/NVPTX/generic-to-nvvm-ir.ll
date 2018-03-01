@@ -16,11 +16,11 @@ define void @func() !dbg !8 {
 ;CHECK-LABEL: @func()
 ;CHECK-SAME: !dbg [[FUNCNODE:![0-9]+]]
 entry:
-; References to the variables must be converted back to generic address space via llvm intrinsic call
-; CHECK-DAG: call i8* @llvm.nvvm.ptr.global.to.gen.p0i8.p1i8({{.*}} addrspace(1)* @.str
+; References to the variables must be converted back to generic address space.
+; CHECK-DAG: addrspacecast ([4 x i8] addrspace(1)* @.str to [4 x i8]*)
   %0 = load i8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), align 1
   call void @extfunc(i8 signext %0)
-; CHECK-DAG: call i8* @llvm.nvvm.ptr.global.to.gen.p0i8.p1i8(i8 addrspace(1)* @static_var
+; CHECK-DAG: addrspacecast (i8 addrspace(1)* @static_var to i8*)
   %1 = load i8, i8* @static_var, align 1
   call void @extfunc(i8 signext %1)
   ret void

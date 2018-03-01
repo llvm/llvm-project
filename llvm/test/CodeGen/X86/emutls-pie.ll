@@ -7,6 +7,17 @@
 ; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 %s
 
+; RUN: llc < %s -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mcpu=generic -mtriple=i386-linux-android -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=X64 %s
+
+; NoEMU-NOT: __emutls
+
 ; Use my_emutls_get_address like __emutls_get_address.
 @my_emutls_v_xyz = external global i8*, align 4
 declare i8* @my_emutls_get_address(i8*)

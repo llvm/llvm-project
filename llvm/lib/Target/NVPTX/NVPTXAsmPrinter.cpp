@@ -974,10 +974,6 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   if (NTM.getDrvInterface() == NVPTX::NVCL)
     O << ", texmode_independent";
-  else {
-    if (!STI.hasDouble())
-      O << ", map_f64_to_f32";
-  }
 
   if (MAI->doesSupportDebugInformation())
     O << ", debug";
