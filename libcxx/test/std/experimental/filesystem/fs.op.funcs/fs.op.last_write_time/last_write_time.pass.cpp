@@ -116,12 +116,31 @@ bool TestSupportsMaxTime() {
     return !ec && new_write_time > max_sec - 1;
 }
 
+bool TestSupportsMinTime() {
+    using namespace std::chrono;
+    using Lim = std::numeric_limits<std::time_t>;
+    auto min_sec = duration_cast<seconds>(file_time_type::min().time_since_epoch()).count();
+    if (min_sec < Lim::min()) return false;
+    std::error_code ec;
+    std::time_t old_write_time, new_write_time;
+    { // WARNING: Do not assert in this scope.
+      scoped_test_env env;
+      const path file = env.create_file("file", 42);
+      old_write_time = LastWriteTime(file);
+      file_time_type tp = file_time_type::min();
+      fs::last_write_time(file, tp, ec);
+      new_write_time = LastWriteTime(file);
+    }
+    return !ec && new_write_time < min_sec + 1;
+}
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 
 static const bool SupportsNegativeTimes = TestSupportsNegativeTimes();
 static const bool SupportsMaxTime = TestSupportsMaxTime();
+static const bool SupportsMinTime = TestSupportsMinTime();
 
 } // end namespace
 
@@ -140,6 +159,8 @@ static const bool SupportsMaxTime = TestSupportsMaxTime();
 // (B) 'tp' is non-negative or the filesystem supports negative times.
 // (C) 'tp' is not 'file_time_type::max()' or the filesystem supports the max
 //     value.
+// (D) 'tp' is not 'file_time_type::min()' or the filesystem supports the min
+//     value.
 inline bool TimeIsRepresentableByFilesystem(file_time_type tp) {
     using namespace std::chrono;
     using Lim = std::numeric_limits<std::time_t>;
@@ -148,6 +169,7 @@ inline bool TimeIsRepresentableByFilesystem(file_time_type tp) {
     if (sec < Lim::min() || sec > Lim::max())   return false;
     else if (microsec < 0 && !SupportsNegativeTimes) return false;
     else if (tp == file_time_type::max() && !SupportsMaxTime) return false;
+    else if (tp == file_time_type::min() && !SupportsMinTime) return false;
     return true;
 }
 
@@ -355,20 +377,20 @@ TEST_CASE(test_write_min_time)
         TEST_CHECK(!ec);
         TEST_CHECK(tt >= new_time);
         TEST_CHECK(tt < new_time + Sec(1));
-    }
 
-    ec = GetTestEC();
-    last_write_time(p, Clock::now());
+        ec = GetTestEC();
+        last_write_time(p, Clock::now());
 
-    new_time = file_time_type::min() + MicroSec(1);
+        new_time = file_time_type::min() + MicroSec(1);
 
-    last_write_time(p, new_time, ec);
-    tt = last_write_time(p);
+        last_write_time(p, new_time, ec);
+        tt = last_write_time(p);
 
-    if (TimeIsRepresentableByFilesystem(new_time)) {
-        TEST_CHECK(!ec);
-        TEST_CHECK(tt >= new_time);
-        TEST_CHECK(tt < new_time + Sec(1));
+        if (TimeIsRepresentableByFilesystem(new_time)) {
+            TEST_CHECK(!ec);
+            TEST_CHECK(tt >= new_time);
+            TEST_CHECK(tt < new_time + Sec(1));
+        }
     }
 }
 

@@ -433,6 +433,7 @@ public:
   /// base tables.
   virtual void emitVirtualInheritanceTables(const CXXRecordDecl *RD) = 0;
 
+  virtual bool exportThunk() = 0;
   virtual void setThunkLinkage(llvm::Function *Thunk, bool ForVTable,
                                GlobalDecl GD, bool ReturnAdjustment) = 0;
 

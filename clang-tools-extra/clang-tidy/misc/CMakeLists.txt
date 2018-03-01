@@ -12,15 +12,7 @@ add_clang_library(clangTidyMiscModule
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   StaticAssertCheck.cpp
-  StringIntegerAssignmentCheck.cpp
-  StringLiteralWithEmbeddedNulCheck.cpp
-  SuspiciousEnumUsageCheck.cpp
-  SuspiciousMissingCommaCheck.cpp
-  SuspiciousSemicolonCheck.cpp
-  SuspiciousStringCompareCheck.cpp
-  SwappedArgumentsCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
-  UndelegatedConstructor.cpp
   UniqueptrResetReleaseCheck.cpp
   UnusedAliasDeclsCheck.cpp
   UnusedParametersCheck.cpp

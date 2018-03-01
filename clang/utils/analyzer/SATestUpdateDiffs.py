@@ -35,6 +35,8 @@ def updateReferenceResults(ProjName, ProjBuildMode):
         sys.exit(1)
 
     BuildLogPath = SATestBuild.getBuildLogPath(RefResultsPath)
+    Dirname = os.path.dirname(os.path.abspath(BuildLogPath))
+    runCmd("mkdir -p '%s'" % Dirname)
     with open(BuildLogPath, "wb+") as PBuildLogFile:
         # Remove reference results: in git, and then again for a good measure
         # with rm, as git might not remove things fully if there are empty

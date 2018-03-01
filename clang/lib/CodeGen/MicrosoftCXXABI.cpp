@@ -357,9 +357,6 @@ public:
 
   void setThunkLinkage(llvm::Function *Thunk, bool ForVTable,
                        GlobalDecl GD, bool ReturnAdjustment) override {
-    // Never dllimport/dllexport thunks.
-    Thunk->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-
     GVALinkage Linkage =
         getContext().GetGVALinkageForFunction(cast<FunctionDecl>(GD.getDecl()));
 
@@ -370,6 +367,8 @@ public:
     else
       Thunk->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
   }
+
+  bool exportThunk() override { return false; }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,
                                      const ThisAdjustment &TA) override;
@@ -1248,7 +1247,7 @@ void MicrosoftCXXABI::EmitCXXConstructors(const CXXConstructorDecl *D) {
     if (!hasDefaultCXXMethodCC(getContext(), D) || D->getNumParams() != 0) {
       llvm::Function *Fn = getAddrOfCXXCtorClosure(D, Ctor_DefaultClosure);
       Fn->setLinkage(llvm::GlobalValue::WeakODRLinkage);
-      Fn->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+      CGM.setGVProperties(Fn, D);
     }
 }
 
