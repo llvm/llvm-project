@@ -363,10 +363,6 @@ ifneq "$(OS)" "Darwin"
     endif
 
     OBJCOPY ?= $(call replace_cc_with,objcopy)
-ifeq ($(wildcard $(OBJCOPY)),)
-    OBJCOPY = objcopy
-endif
-
     ARCHIVER ?= $(call replace_cc_with,ar)
     override AR = $(ARCHIVER)
 endif
@@ -574,23 +570,6 @@ endif
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
-# Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
-#----------------------------------------------------------------------
-ifneq "$(DYLIB_ONLY)" "YES"
-$(DSYM) : $(EXE)
-ifeq "$(OS)" "Darwin"
-ifneq "$(MAKE_DSYM)" "NO"
-	"$(DS)" $(DSFLAGS) -o "$(DSYM)" "$(EXE)"
-endif
-else
-ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
-	$(OBJCOPY) --remove-section .gnu_debuglink --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
-endif
-endif
-endif
-
-#----------------------------------------------------------------------
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
@@ -642,6 +621,11 @@ endif
 # Make the dylib
 #----------------------------------------------------------------------
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
+
+ifneq "$(OS)" "Windows_NT"
+$(DYLIB_OBJECTS) : CFLAGS += -fPIC
+$(DYLIB_OBJECTS) : CXXFLAGS += -fPIC
+endif
 
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 ifeq "$(OS)" "Darwin"
