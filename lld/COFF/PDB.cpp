@@ -1056,12 +1056,10 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
 
   // Add an Info stream.
   auto &InfoBuilder = Builder.getInfoBuilder();
-  InfoBuilder.setAge(BuildId.PDB70.Age);
-
   GUID uuid;
   memcpy(&uuid, &BuildId.PDB70.Signature, sizeof(uuid));
+  InfoBuilder.setAge(BuildId.PDB70.Age);
   InfoBuilder.setGuid(uuid);
-  InfoBuilder.setSignature(time(nullptr));
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
 
   // Add an empty DBI stream.
