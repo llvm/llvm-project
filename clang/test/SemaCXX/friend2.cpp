@@ -101,6 +101,34 @@ template<typename T> class C12 {
   friend void func_12(int x = 0);  // expected-error{{friend declaration specifying a default argument must be the only declaration}}
 };
 
+// Friend function with uninstantiated body is still a definition.
+
+template<typename T> struct C20 {
+  friend void func_20() {} // expected-note{{previous definition is here}}
+};
+C20<int> c20i;
+void func_20() {} // expected-error{{redefinition of 'func_20'}}
+
+template<typename T> struct C21a {
+  friend void func_21() {} // expected-note{{previous definition is here}}
+};
+template<typename T> struct C21b {
+  friend void func_21() {} // expected-error{{redefinition of 'func_21'}}
+};
+C21a<int> c21ai;
+C21b<int> c21bi; // expected-note{{in instantiation of template class 'C21b<int>' requested here}}
+
+template<typename T> struct C22a {
+  friend void func_22() {} // expected-note{{previous definition is here}}
+};
+template<typename T> struct C22b {
+  friend void func_22();
+};
+C22a<int> c22ai;
+C22b<int> c22bi;
+void func_22() {} // expected-error{{redefinition of 'func_22'}}
+
+
 
 namespace pr22307 {
 

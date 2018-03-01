@@ -15,7 +15,7 @@
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/Allocator.h"
 #include <cstdint>
-#include <utility>
+#include <vector>
 
 namespace llvm {
 namespace dsymutil {
@@ -41,10 +41,12 @@ public:
 
   /// Get the offset of string \p S in the string table. This can insert a new
   /// element or return the offset of a pre-existing one.
-  uint32_t getStringOffset(StringRef S);
+  uint32_t getStringOffset(StringRef S) { return getEntry(S).getOffset(); }
 
   /// Get permanent storage for \p S (but do not necessarily emit \p S in the
-  /// output section).
+  /// output section). A latter call to getStringOffset() with the same string
+  /// will chain it though.
+  ///
   /// \returns The StringRef that points to permanent storage to use
   /// in place of \p S.
   StringRef internString(StringRef S);

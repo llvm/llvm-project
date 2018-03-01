@@ -1502,7 +1502,7 @@ Stmt *RewriteObjC::RewriteObjCForCollectionStmt(ObjCForCollectionStmt *S,
   else {
     DeclRefExpr *DR = cast<DeclRefExpr>(S->getElement());
     elementName = DR->getDecl()->getName();
-    ValueDecl *VD = cast<ValueDecl>(DR->getDecl());
+    ValueDecl *VD = DR->getDecl();
     if (VD->getType()->isObjCQualifiedIdType() ||
         VD->getType()->isObjCQualifiedInterfaceType())
       // Simply use 'id' for all qualified types.

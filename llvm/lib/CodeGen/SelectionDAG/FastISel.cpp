@@ -702,7 +702,7 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
     ArgListEntry Entry;
     Entry.Val = V;
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, ArgIdx);
+    Entry.setAttributes(&CS, ArgI);
     Args.push_back(Entry);
   }
 

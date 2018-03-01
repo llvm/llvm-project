@@ -675,7 +675,7 @@ SimplifiedTypeClass clang::getSimplifiedTypeClass(CanQualType T) {
 /// \brief Get the type that a given expression will have if this declaration
 /// is used as an expression in its "typical" code-completion form.
 QualType clang::getDeclUsageType(ASTContext &C, const NamedDecl *ND) {
-  ND = cast<NamedDecl>(ND->getUnderlyingDecl());
+  ND = ND->getUnderlyingDecl();
   
   if (const TypeDecl *Type = dyn_cast<TypeDecl>(ND))
     return C.getTypeDeclType(Type);
@@ -1074,7 +1074,7 @@ void ResultBuilder::ExitScope() {
 /// \brief Determines whether this given declaration will be found by
 /// ordinary name lookup.
 bool ResultBuilder::IsOrdinaryName(const NamedDecl *ND) const {
-  ND = cast<NamedDecl>(ND->getUnderlyingDecl());
+  ND = ND->getUnderlyingDecl();
 
   // If name lookup finds a local extern declaration, then we are in a
   // context where it behaves like an ordinary name.
@@ -1092,7 +1092,7 @@ bool ResultBuilder::IsOrdinaryName(const NamedDecl *ND) const {
 /// \brief Determines whether this given declaration will be found by
 /// ordinary name lookup but is not a type name.
 bool ResultBuilder::IsOrdinaryNonTypeName(const NamedDecl *ND) const {
-  ND = cast<NamedDecl>(ND->getUnderlyingDecl());
+  ND = ND->getUnderlyingDecl();
   if (isa<TypeDecl>(ND))
     return false;
   // Objective-C interfaces names are not filtered by this method because they
@@ -1128,7 +1128,7 @@ bool ResultBuilder::IsIntegralConstantValue(const NamedDecl *ND) const {
 /// \brief Determines whether this given declaration will be found by
 /// ordinary name lookup.
 bool ResultBuilder::IsOrdinaryNonValueName(const NamedDecl *ND) const {
-  ND = cast<NamedDecl>(ND->getUnderlyingDecl());
+  ND = ND->getUnderlyingDecl();
 
   unsigned IDNS = Decl::IDNS_Ordinary | Decl::IDNS_LocalExtern;
   if (SemaRef.getLangOpts().CPlusPlus)
@@ -7453,7 +7453,7 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
   Decl *IDecl = nullptr;
   if (CurContext->isObjCContainer()) {
       ObjCContainerDecl *OCD = dyn_cast<ObjCContainerDecl>(CurContext);
-      IDecl = cast<Decl>(OCD);
+      IDecl = OCD;
   }
   // Determine where we should start searching for methods.
   ObjCContainerDecl *SearchDecl = nullptr;

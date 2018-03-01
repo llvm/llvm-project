@@ -128,11 +128,9 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       });
     }
     (void)PreCondScope.Privatize();
-    if (auto *LD = dyn_cast<OMPLoopDirective>(&S)) {
-      if (auto *PreInits = cast_or_null<DeclStmt>(LD->getPreInits())) {
-        for (const auto *I : PreInits->decls())
-          CGF.EmitVarDecl(cast<VarDecl>(*I));
-      }
+    if (auto *PreInits = cast_or_null<DeclStmt>(S.getPreInits())) {
+      for (const auto *I : PreInits->decls())
+        CGF.EmitVarDecl(cast<VarDecl>(*I));
     }
   }
 

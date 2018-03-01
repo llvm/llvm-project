@@ -106,7 +106,7 @@ public:
   void addTypedefNameForUnnamedTagDecl(TagDecl *TD,
                                        TypedefNameDecl *DD) override {
     TD = TD->getCanonicalDecl();
-    DD = cast<TypedefNameDecl>(DD->getCanonicalDecl());
+    DD = DD->getCanonicalDecl();
     TypedefNameDecl *&I = UnnamedTagDeclToTypedefNameDecl[TD];
     if (!I)
       I = DD;

@@ -3458,10 +3458,11 @@ FieldDecl *Expr::getSourceBitField() {
       if (Field->isBitField())
         return Field;
 
-  if (ObjCIvarRefExpr *IvarRef = dyn_cast<ObjCIvarRefExpr>(E))
-    if (FieldDecl *Ivar = dyn_cast<FieldDecl>(IvarRef->getDecl()))
-      if (Ivar->isBitField())
-        return Ivar;
+  if (ObjCIvarRefExpr *IvarRef = dyn_cast<ObjCIvarRefExpr>(E)) {
+    FieldDecl *Ivar = IvarRef->getDecl();
+    if (Ivar->isBitField())
+      return Ivar;
+  }
 
   if (DeclRefExpr *DeclRef = dyn_cast<DeclRefExpr>(E)) {
     if (FieldDecl *Field = dyn_cast<FieldDecl>(DeclRef->getDecl()))

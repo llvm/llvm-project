@@ -9036,7 +9036,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S,
 
     // Find enclosing context containing both using-directive and
     // nominated namespace.
-    DeclContext *CommonAncestor = cast<DeclContext>(NS);
+    DeclContext *CommonAncestor = NS;
     while (CommonAncestor && !CommonAncestor->Encloses(CurContext))
       CommonAncestor = CommonAncestor->getParent();
 
@@ -14536,7 +14536,7 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
 
   // Try to insert this class into the map.
   LoadExternalVTableUses();
-  Class = cast<CXXRecordDecl>(Class->getCanonicalDecl());
+  Class = Class->getCanonicalDecl();
   std::pair<llvm::DenseMap<CXXRecordDecl *, bool>::iterator, bool>
     Pos = VTablesUsed.insert(std::make_pair(Class, DefinitionRequired));
   if (!Pos.second) {
@@ -14648,7 +14648,7 @@ bool Sema::DefineUsedVTables() {
     // vtable for this class is required.
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
-    CXXRecordDecl *Canonical = cast<CXXRecordDecl>(Class->getCanonicalDecl());
+    CXXRecordDecl *Canonical = Class->getCanonicalDecl();
     if (VTablesUsed[Canonical])
       Consumer.HandleVTable(Class);
 

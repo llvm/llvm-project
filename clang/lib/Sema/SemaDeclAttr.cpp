@@ -113,7 +113,7 @@ static SourceRange getFunctionOrMethodParamRange(const Decl *D, unsigned Idx) {
 
 static QualType getFunctionOrMethodResultType(const Decl *D) {
   if (const FunctionType *FnTy = D->getFunctionType())
-    return cast<FunctionType>(FnTy)->getReturnType();
+    return FnTy->getReturnType();
   return cast<ObjCMethodDecl>(D)->getReturnType();
 }
 

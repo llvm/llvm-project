@@ -1591,7 +1591,7 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   }
 
   VarDecl *CanonicalVD = VD->getCanonicalDecl();
-  NamedDecl *ND = cast<NamedDecl>(CanonicalVD);
+  NamedDecl *ND = CanonicalVD;
   // OpenMP [2.9.2, Restrictions, C/C++, p.2]
   //   A threadprivate directive for file-scope variables must appear outside
   //   any definition or declaration.

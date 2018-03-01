@@ -6648,7 +6648,7 @@ static bool isHReg(unsigned Reg) {
 }
 
 // Try and copy between VR128/VR64 and GR64 registers.
-static unsigned CopyToFromAsymmetricReg(unsigned &DestReg, unsigned &SrcReg,
+static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
                                         const X86Subtarget &Subtarget) {
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();

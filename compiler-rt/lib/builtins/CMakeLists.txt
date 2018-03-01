@@ -480,6 +480,12 @@ set(powerpc64_SOURCES
   ${GENERIC_SOURCES})
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
+set(riscv_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
+set(riscv32_SOURCES
+  riscv/mulsi3.S
+  ${riscv_SOURCES})
+set(riscv64_SOURCES ${riscv_SOURCES})
+
 set(wasm32_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})

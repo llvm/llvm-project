@@ -65,9 +65,18 @@ entry:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            __heap_base
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:       - Name:            __data_end
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            alias_fn
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            direct_fn
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
@@ -77,21 +86,12 @@ entry:
 ; CHECK-NEXT:       - Name:            call_alias
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:       - Name:            alias_fn
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            call_alias_ptr
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:       - Name:            call_direct_ptr
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           5
-; CHECK-NEXT:       - Name:            __heap_base
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            __data_end
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:

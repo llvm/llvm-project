@@ -1911,7 +1911,7 @@ void ASTDeclReader::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   VisitCXXMethodDecl(D);
 
   if (auto *OperatorDelete = ReadDeclAs<FunctionDecl>()) {
-    auto *Canon = cast<CXXDestructorDecl>(D->getCanonicalDecl());
+    CXXDestructorDecl *Canon = D->getCanonicalDecl();
     auto *ThisArg = Record.readExpr();
     // FIXME: Check consistency if we have an old and new operator delete.
     if (!Canon->OperatorDelete) {

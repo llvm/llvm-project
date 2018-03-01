@@ -179,5 +179,71 @@ in.bounds2:
 ; CHECK-NOT:   br i1 false
 ; CHECK-NOT:   preloop
 
+define void @single_access_no_preloop_no_offset_phi_len(i32 *%arr, i32 *%a_len_ptr, i32 *%b_len_ptr, i32 %n, i1 %unknown_cond) {
+ entry:
+  br i1 %unknown_cond, label %if.true, label %if.false
+
+if.true:
+  %len_a = load i32, i32* %a_len_ptr, !range !0
+  br label %merge
+
+if.false:
+  %len_b = load i32, i32* %b_len_ptr, !range !0
+  br label %merge
+
+merge:
+  %len = phi i32 [ %len_a, %if.true ], [ %len_b, %if.false ]
+  %first.itr.check = icmp sgt i32 %n, 0
+  br i1 %first.itr.check, label %loop, label %exit
+
+ loop:
+  %idx = phi i32 [ 0, %merge ] , [ %idx.next, %in.bounds ]
+  %idx.next = add i32 %idx, 1
+  %abc = icmp slt i32 %idx, %len
+  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+
+ in.bounds:
+  %addr = getelementptr i32, i32* %arr, i32 %idx
+  store i32 0, i32* %addr
+  %next = icmp slt i32 %idx.next, %n
+  br i1 %next, label %loop, label %exit
+
+ out.of.bounds:
+  ret void
+
+ exit:
+  ret void
+}
+
+; CHECK-LABEL: @single_access_no_preloop_no_offset_phi_len(
+
+; CHECK: loop:
+; CHECK: br i1 true, label %in.bounds, label %out.of.bounds
+
+; CHECK: main.exit.selector:
+; CHECK-NEXT: %idx.next.lcssa = phi i32 [ %idx.next, %in.bounds ]
+; CHECK-NEXT: [[continue:%[^ ]+]] = icmp slt i32 %idx.next.lcssa, %n
+; CHECK-NEXT: br i1 [[continue]], label %main.pseudo.exit, label %exit.loopexit
+
+; CHECK: main.pseudo.exit:
+; CHECK-NEXT: %idx.copy = phi i32 [ 0, %loop.preheader ], [ %idx.next.lcssa, %main.exit.selector ]
+; CHECK-NEXT: %indvar.end = phi i32 [ 0, %loop.preheader ], [ %idx.next.lcssa, %main.exit.selector ]
+; CHECK-NEXT: br label %postloop
+
+; CHECK: postloop:
+; CHECK-NEXT: br label %loop.postloop
+
+; CHECK: loop.postloop:
+; CHECK-NEXT: %idx.postloop = phi i32 [ %idx.next.postloop, %in.bounds.postloop ], [ %idx.copy, %postloop ]
+; CHECK-NEXT: %idx.next.postloop = add i32 %idx.postloop, 1
+; CHECK-NEXT: %abc.postloop = icmp slt i32 %idx.postloop, %len
+; CHECK-NEXT: br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds
+
+; CHECK: in.bounds.postloop:
+; CHECK-NEXT: %addr.postloop = getelementptr i32, i32* %arr, i32 %idx.postloop
+; CHECK-NEXT: store i32 0, i32* %addr.postloop
+; CHECK-NEXT: %next.postloop = icmp slt i32 %idx.next.postloop, %n
+; CHECK-NEXT: br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
+
 !0 = !{i32 0, i32 2147483647}
 !1 = !{!"branch_weights", i32 64, i32 4}

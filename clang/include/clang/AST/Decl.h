@@ -1925,11 +1925,25 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
-  /// \brief Returns true if the function has a body (definition). The
-  /// function body might be in any of the (re-)declarations of this
-  /// function. The variant that accepts a FunctionDecl pointer will
-  /// set that function declaration to the actual declaration
-  /// containing the body (if there is one).
+  // Function definitions.
+  //
+  // A function declaration may be:
+  // - a non defining declaration,
+  // - a definition. A function may be defined because:
+  //   - it has a body, or will have it in the case of late parsing.
+  //   - it has an uninstantiated body. The body does not exist because the
+  //     function is not used yet, but the declaration is considered a
+  //     definition and does not allow other definition of this function.
+  //   - it does not have a user specified body, but it does not allow
+  //     redefinition, because it is deleted/defaulted or is defined through
+  //     some other mechanism (alias, ifunc).
+
+  /// Returns true if the function has a body.
+  ///
+  /// The function body might be in any of the (re-)declarations of this
+  /// function. The variant that accepts a FunctionDecl pointer will set that
+  /// function declaration to the actual declaration containing the body (if
+  /// there is one).
   bool hasBody(const FunctionDecl *&Definition) const;
 
   bool hasBody() const override {
@@ -1941,9 +1955,11 @@ public:
   /// specific codegen.
   bool hasTrivialBody() const;
 
-  /// Returns true if the function is defined at all, including a deleted
-  /// definition. Except for the behavior when the function is deleted, behaves
-  /// like hasBody.
+  /// Returns true if the function has a definition that does not need to be
+  /// instantiated.
+  ///
+  /// The variant that accepts a FunctionDecl pointer will set that function
+  /// declaration to the declaration that is a definition (if there is one).
   bool isDefined(const FunctionDecl *&Definition) const;
 
   virtual bool isDefined() const {
@@ -1985,8 +2001,7 @@ public:
            IsLateTemplateParsed || WillHaveBody || hasDefiningAttr();
   }
 
-  /// Returns whether this specific declaration of the function has a body -
-  /// that is, if it is a non-deleted definition.
+  /// Returns whether this specific declaration of the function has a body.
   bool doesThisDeclarationHaveABody() const {
     return Body || IsLateTemplateParsed;
   }

@@ -2062,8 +2062,7 @@ public:
   bool isVolatile() const { return getType()->castAs<FunctionType>()->isVolatile(); }
 
   bool isVirtual() const {
-    CXXMethodDecl *CD =
-      cast<CXXMethodDecl>(const_cast<CXXMethodDecl*>(this)->getCanonicalDecl());
+    CXXMethodDecl *CD = const_cast<CXXMethodDecl*>(this)->getCanonicalDecl();
 
     // Member function is virtual if it is marked explicitly so, or if it is
     // declared in __interface -- then it is automatically pure virtual.
