@@ -433,26 +433,3 @@ bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
         getBooleanOption("notes-as-events", /*Default=*/false);
   return DisplayNotesAsEvents.getValue();
 }
-
-StringRef AnalyzerOptions::getCTUDir() {
-  if (!CTUDir.hasValue()) {
-    CTUDir = getOptionAsString("ctu-dir", "");
-    if (!llvm::sys::fs::is_directory(*CTUDir))
-      CTUDir = "";
-  }
-  return CTUDir.getValue();
-}
-
-bool AnalyzerOptions::naiveCTUEnabled() {
-  if (!NaiveCTU.hasValue()) {
-    NaiveCTU = getBooleanOption("experimental-enable-naive-ctu-analysis",
-                                /*Default=*/false);
-  }
-  return NaiveCTU.getValue();
-}
-
-StringRef AnalyzerOptions::getCTUIndexName() {
-  if (!CTUIndexName.hasValue())
-    CTUIndexName = getOptionAsString("ctu-index-name", "externalFnMap.txt");
-  return CTUIndexName.getValue();
-}
