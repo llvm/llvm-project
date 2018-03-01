@@ -203,8 +203,8 @@ Sema::UpdateExceptionSpec(FunctionDecl *FD,
     if (auto *Listener = getASTMutationListener())
       Listener->ResolvedExceptionSpec(FD);
 
-  for (auto *Redecl : FD->redecls())
-    Context.adjustExceptionSpec(cast<FunctionDecl>(Redecl), ESI);
+  for (FunctionDecl *Redecl : FD->redecls())
+    Context.adjustExceptionSpec(Redecl, ESI);
 }
 
 static bool CheckEquivalentExceptionSpecImpl(

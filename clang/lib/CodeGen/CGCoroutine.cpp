@@ -315,7 +315,7 @@ namespace {
       GetParamRef Visitor;
       Visitor.Visit(const_cast<Expr*>(InitExpr));
       assert(Visitor.Expr);
-      auto *DREOrig = cast<DeclRefExpr>(Visitor.Expr);
+      DeclRefExpr *DREOrig = Visitor.Expr;
       auto *PD = DREOrig->getDecl();
 
       auto it = LocalDeclMap.find(PD);

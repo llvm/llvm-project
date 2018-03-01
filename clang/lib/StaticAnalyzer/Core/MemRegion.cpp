@@ -774,9 +774,9 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
       for (BlockDataRegion::referenced_vars_iterator
            I = BR->referenced_vars_begin(),
            E = BR->referenced_vars_end(); I != E; ++I) {
-        if (const VarRegion *VR = dyn_cast<VarRegion>(I.getOriginalRegion()))
-          if (VR->getDecl() == VD)
-            return cast<VarRegion>(I.getCapturedRegion());
+        const VarRegion *VR = I.getOriginalRegion();
+        if (VR->getDecl() == VD)
+          return cast<VarRegion>(I.getCapturedRegion());
       }
     }
 

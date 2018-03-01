@@ -237,7 +237,7 @@ static unsigned getDeclShowContexts(const NamedDecl *ND,
   IsNestedNameSpecifier = false;
 
   if (isa<UsingShadowDecl>(ND))
-    ND = dyn_cast<NamedDecl>(ND->getUnderlyingDecl());
+    ND = ND->getUnderlyingDecl();
   if (!ND)
     return 0;
 

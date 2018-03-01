@@ -2398,7 +2398,7 @@ Expr *ASTContext::getBlockVarCopyInits(const VarDecl*VD) {
          "getBlockVarCopyInits - not __block var");
   llvm::DenseMap<const VarDecl*, Expr*>::iterator
     I = BlockVarCopyInits.find(VD);
-  return (I != BlockVarCopyInits.end()) ? cast<Expr>(I->second) : nullptr;
+  return (I != BlockVarCopyInits.end()) ? I->second : nullptr;
 }
 
 /// \brief Set the copy inialization expression of a block var decl.
@@ -6575,7 +6575,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
       SmallVector<const ObjCIvarDecl*, 32> Ivars;
       DeepCollectObjCIvars(OI, true, Ivars);
       for (unsigned i = 0, e = Ivars.size(); i != e; ++i) {
-        const FieldDecl *Field = cast<FieldDecl>(Ivars[i]);
+        const FieldDecl *Field = Ivars[i];
         if (Field->isBitField())
           getObjCEncodingForTypeImpl(Field->getType(), S, false, true, Field);
         else
@@ -6636,7 +6636,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
         SmallVector<const ObjCIvarDecl*, 32> Ivars;
         DeepCollectObjCIvars(OI, true, Ivars);
         for (unsigned i = 0, e = Ivars.size(); i != e; ++i) {
-          if (cast<FieldDecl>(Ivars[i]) == FD) {
+          if (Ivars[i] == FD) {
             S += '{';
             S += OI->getObjCRuntimeNameAsString();
             S += '}';

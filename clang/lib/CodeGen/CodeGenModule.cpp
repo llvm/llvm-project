@@ -2814,7 +2814,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
                   GetAddrOfGlobalVar(D, InitType, IsForDefinition));
 
               // Erase the old global, since it is no longer used.
-              cast<llvm::GlobalValue>(GV)->eraseFromParent();
+              GV->eraseFromParent();
               GV = NewGV;
             } else {
               GV->setInitializer(Init);
