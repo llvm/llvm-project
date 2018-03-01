@@ -5,6 +5,9 @@
 #include <math.h>
 
 int main() {
+  //initialize the OpenMP runtime
+  omp_get_num_threads();
+
   // initial task
   print_ids(0);
 

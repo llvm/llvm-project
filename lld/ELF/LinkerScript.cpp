@@ -416,6 +416,7 @@ void LinkerScript::processSectionCommands() {
       // Any input section assigned to it is discarded.
       if (Sec->Name == "/DISCARD/") {
         discard(V);
+        Sec->SectionCommands.clear();
         continue;
       }
 
@@ -771,6 +772,24 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   }
 }
 
+static bool isDiscardable(OutputSection &Sec) {
+  // We do not remove empty sections that are explicitly
+  // assigned to any segment.
+  if (!Sec.Phdrs.empty())
+    return false;
+
+  // We do not want to remove sections that reference symbols in address and
+  // other expressions. We add script symbols as undefined, and want to ensure
+  // all of them are defined in the output, hence have to keep them.
+  if (Sec.ExpressionsUseSymbols)
+    return false;
+
+  for (BaseCommand *Base : Sec.SectionCommands)
+    if (!isa<InputSectionDescription>(*Base))
+      return false;
+  return getInputSections(&Sec).empty();
+}
+
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
@@ -798,15 +817,19 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     auto *Sec = dyn_cast<OutputSection>(Cmd);
     if (!Sec)
       continue;
-    if (Sec->Live) {
-      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
-      continue;
-    }
 
-    if (!Sec->isAllSectionDescription())
-      Sec->Flags = Flags;
+    // A live output section means that some input section was added to it. It
+    // might have been removed (gc, or empty synthetic section), but we at least
+    // know the flags.
+    if (Sec->Live)
+      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
     else
+      Sec->Flags = Flags;
+
+    if (isDiscardable(*Sec)) {
+      Sec->Live = false;
       Cmd = nullptr;
+    }
   }
 
   // It is common practice to use very generic linker scripts. So for any
@@ -874,6 +897,15 @@ static OutputSection *findFirstSection(PhdrEntry *Load) {
   return nullptr;
 }
 
+static uint64_t computeBase(uint64_t Min, bool AllocateHeaders) {
+  // If there is no SECTIONS or if the linkerscript is explicit about program
+  // headers, do our best to allocate them.
+  if (!Script->HasSectionsCommand || AllocateHeaders)
+    return 0;
+  // Otherwise only allocate program headers if that would not add a page.
+  return alignDown(Min, Config->MaxPageSize);
+}
+
 // Try to find an address for the file and program headers output sections,
 // which were unconditionally added to the first PT_LOAD segment earlier.
 //
@@ -897,16 +929,21 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
     return;
   PhdrEntry *FirstPTLoad = *It;
 
+  bool HasExplicitHeaders =
+      llvm::any_of(PhdrsCommands, [](const PhdrsCommand &Cmd) {
+        return Cmd.HasPhdrs || Cmd.HasFilehdr;
+      });
   uint64_t HeaderSize = getHeaderSize();
-  // When linker script with SECTIONS is being used, don't output headers
-  // unless there's a space for them.
-  uint64_t Base = HasSectionsCommand ? alignDown(Min, Config->MaxPageSize) : 0;
-  if (HeaderSize <= Min - Base || Script->hasPhdrsCommands()) {
+  if (HeaderSize <= Min - computeBase(Min, HasExplicitHeaders)) {
     Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
     Out::ElfHeader->Addr = Min;
     Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
     return;
   }
+
+  // Error if we were explicitly asked to allocate headers.
+  if (HasExplicitHeaders)
+    error("could not allocate headers");
 
   Out::ElfHeader->PtLoad = nullptr;
   Out::ProgramHeaders->PtLoad = nullptr;
