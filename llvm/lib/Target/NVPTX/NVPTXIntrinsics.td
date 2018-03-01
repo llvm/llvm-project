@@ -277,26 +277,22 @@ multiclass MATCH_ALLP_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic Int
   def ii : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
                      (ins i32imm:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              // If would be nice if tablegen could match multiple return values,
-              // but it does not seem to be the case. Thus we have an empty pattern and
-              // lower intrinsic to instruction manually.
-              // [(set regclass:$dest, Int1Regs:$pred, (IntOp imm:$value, imm:$mask))]>,
-              []>,
+              [(set regclass:$dest, Int1Regs:$pred, (IntOp imm:$mask, imm:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
   def ir : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              []>,
+              [(set regclass:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, imm:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
   def ri : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
                      (ins i32imm:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              []>,
+              [(set regclass:$dest, Int1Regs:$pred, (IntOp imm:$mask, regclass:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
   def rr : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              []>,
+              [(set regclass:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, regclass:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
 }
 defm MATCH_ALLP_SYNC_32 : MATCH_ALLP_SYNC<Int32Regs, "b32", int_nvvm_match_all_sync_i32p,

@@ -23,8 +23,10 @@ export function activate(context: vscode.ExtensionContext) {
         args: getConfig<string[]>('arguments')
     };
     const traceFile = getConfig<string>('trace');
-    if (traceFile != null)
-        clangd.options = {env: {CLANGD_TRACE: traceFile}};
+    if (traceFile != '') {
+      const trace = {CLANGD_TRACE : traceFile};
+      clangd.options = {env : {...process.env, ...trace}};
+    }
     const serverOptions: vscodelc.ServerOptions = clangd;
 
     const filePattern: string = '**/*.{' +

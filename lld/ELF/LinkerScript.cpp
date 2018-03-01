@@ -778,11 +778,10 @@ static bool isDiscardable(OutputSection &Sec) {
   if (!Sec.Phdrs.empty())
     return false;
 
-  // We do not want to remove sections that have custom address or align
-  // expressions set even if them are empty. We keep them because we
-  // want to be sure that any expressions can be evaluated and report
-  // an error otherwise.
-  if (Sec.AddrExpr || Sec.AlignExpr || Sec.LMAExpr)
+  // We do not want to remove sections that reference symbols in address and
+  // other expressions. We add script symbols as undefined, and want to ensure
+  // all of them are defined in the output, hence have to keep them.
+  if (Sec.ExpressionsUseSymbols)
     return false;
 
   for (BaseCommand *Base : Sec.SectionCommands)
@@ -898,6 +897,15 @@ static OutputSection *findFirstSection(PhdrEntry *Load) {
   return nullptr;
 }
 
+static uint64_t computeBase(uint64_t Min, bool AllocateHeaders) {
+  // If there is no SECTIONS or if the linkerscript is explicit about program
+  // headers, do our best to allocate them.
+  if (!Script->HasSectionsCommand || AllocateHeaders)
+    return 0;
+  // Otherwise only allocate program headers if that would not add a page.
+  return alignDown(Min, Config->MaxPageSize);
+}
+
 // Try to find an address for the file and program headers output sections,
 // which were unconditionally added to the first PT_LOAD segment earlier.
 //
@@ -921,16 +929,21 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
     return;
   PhdrEntry *FirstPTLoad = *It;
 
+  bool HasExplicitHeaders =
+      llvm::any_of(PhdrsCommands, [](const PhdrsCommand &Cmd) {
+        return Cmd.HasPhdrs || Cmd.HasFilehdr;
+      });
   uint64_t HeaderSize = getHeaderSize();
-  // When linker script with SECTIONS is being used, don't output headers
-  // unless there's a space for them.
-  uint64_t Base = HasSectionsCommand ? alignDown(Min, Config->MaxPageSize) : 0;
-  if (HeaderSize <= Min - Base || Script->hasPhdrsCommands()) {
+  if (HeaderSize <= Min - computeBase(Min, HasExplicitHeaders)) {
     Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
     Out::ElfHeader->Addr = Min;
     Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
     return;
   }
+
+  // Error if we were explicitly asked to allocate headers.
+  if (HasExplicitHeaders)
+    error("could not allocate headers");
 
   Out::ElfHeader->PtLoad = nullptr;
   Out::ProgramHeaders->PtLoad = nullptr;

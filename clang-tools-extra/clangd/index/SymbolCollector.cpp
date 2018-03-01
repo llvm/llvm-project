@@ -154,13 +154,13 @@ bool shouldCollectIncludePath(index::SymbolKind Kind) {
 /// FIXME: we should handle .inc files whose symbols are expected be exported by
 /// their containing headers.
 llvm::Optional<std::string>
-getIncludeHeader(const SourceManager &SM, SourceLocation Loc,
-                 const SymbolCollector::Options &Opts) {
+getIncludeHeader(llvm::StringRef QName, const SourceManager &SM,
+                 SourceLocation Loc, const SymbolCollector::Options &Opts) {
   llvm::StringRef FilePath = SM.getFilename(Loc);
   if (FilePath.empty())
     return llvm::None;
   if (Opts.Includes) {
-    llvm::StringRef Mapped = Opts.Includes->mapHeader(FilePath);
+    llvm::StringRef Mapped = Opts.Includes->mapHeader(FilePath, QName);
     if (Mapped != FilePath)
       return (Mapped.startswith("<") || Mapped.startswith("\""))
                  ? Mapped.str()
@@ -316,8 +316,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
     // Use the expansion location to get the #include header since this is
     // where the symbol is exposed.
-    if (auto Header =
-            getIncludeHeader(SM, SM.getExpansionLoc(ND.getLocation()), Opts))
+    if (auto Header = getIncludeHeader(
+            QName, SM, SM.getExpansionLoc(ND.getLocation()), Opts))
       Include = std::move(*Header);
   }
   S.CompletionFilterText = FilterText;

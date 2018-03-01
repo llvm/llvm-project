@@ -270,20 +270,15 @@ void DwarfCompileUnit::addRange(RangeSpan Range) {
 
 void DwarfCompileUnit::initStmtList() {
   // Define start line table label for each Compile Unit.
-  MCSymbol *LineTableStartSym;
-  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
-  if (DD->useSectionsAsReferences()) {
-    LineTableStartSym = TLOF.getDwarfLineSection()->getBeginSymbol();
-  } else {
-    LineTableStartSym =
-        Asm->OutStreamer->getDwarfLineTableSymbol(getUniqueID());
-  }
+  MCSymbol *LineTableStartSym =
+      Asm->OutStreamer->getDwarfLineTableSymbol(getUniqueID());
 
   // DW_AT_stmt_list is a offset of line number information for this
   // compile unit in debug_line section. For split dwarf this is
   // left in the skeleton CU and so not included.
   // The line table entries are not always emitted in assembly, so it
   // is not okay to use line_table_start here.
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   StmtListValue =
       addSectionLabel(getUnitDie(), dwarf::DW_AT_stmt_list, LineTableStartSym,
                       TLOF.getDwarfLineSection()->getBeginSymbol());
@@ -415,10 +410,9 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
 
 void DwarfCompileUnit::attachRangesOrLowHighPC(
     DIE &Die, SmallVector<RangeSpan, 2> Ranges) {
-  if (Ranges.size() == 1 || DD->useSectionsAsReferences()) {
-    const auto &front = Ranges.front();
-    const auto &back = Ranges.back();
-    attachLowHighPC(Die, front.getStart(), back.getEnd());
+  if (Ranges.size() == 1) {
+    const auto &single = Ranges.front();
+    attachLowHighPC(Die, single.getStart(), single.getEnd());
   } else
     addScopeRangeList(Die, std::move(Ranges));
 }
@@ -840,7 +834,7 @@ void DwarfCompileUnit::createAbstractVariable(const DILocalVariable *Var,
 
 void DwarfCompileUnit::emitHeader(bool UseOffsets) {
   // Don't bother labeling the .dwo unit, as its offset isn't used.
-  if (!Skeleton && !DD->useSectionsAsReferences()) {
+  if (!Skeleton) {
     LabelBegin = Asm->createTempSymbol("cu_begin");
     Asm->OutStreamer->EmitLabel(LabelBegin);
   }
@@ -857,8 +851,7 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
   if (CUNode->getGnuPubnames())
     return true;
 
-  return DD->tuneForGDB() && !includeMinimalInlineScopes() &&
-         !DD->useSectionsAsReferences();
+  return DD->tuneForGDB() && !includeMinimalInlineScopes();
 }
 
 /// addGlobalName - Add a new global name to the compile unit.

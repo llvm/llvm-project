@@ -50,10 +50,13 @@ AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const TargetRegisterInfo &TRI)
 
 }
 
-unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &A,
-                                           const RegisterBank &B,
-                                           unsigned Size) const {
-  return RegisterBankInfo::copyCost(A, B, Size);
+unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &Dst,
+                                          const RegisterBank &Src,
+                                          unsigned Size) const {
+  if (Dst.getID() == AMDGPU::SGPRRegBankID &&
+      Src.getID() == AMDGPU::VGPRRegBankID)
+    return std::numeric_limits<unsigned>::max();
+  return RegisterBankInfo::copyCost(Dst, Src, Size);
 }
 
 const RegisterBank &AMDGPURegisterBankInfo::getRegBankFromRegClass(
@@ -171,6 +174,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   default:
     IsComplete = false;
     break;
+  case AMDGPU::G_FCONSTANT:
   case AMDGPU::G_CONSTANT: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);

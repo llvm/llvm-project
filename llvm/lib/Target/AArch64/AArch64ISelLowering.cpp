@@ -6706,16 +6706,20 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   //             select the values we'll be overwriting for the non-constant
   //             lanes such that we can directly materialize the vector
   //             some other way (MOVI, e.g.), we can be sneaky.
+  //   5) if all operands are EXTRACT_VECTOR_ELT, check for VUZP.
   unsigned NumElts = VT.getVectorNumElements();
   bool isOnlyLowElement = true;
   bool usesOnlyOneValue = true;
   bool usesOnlyOneConstantValue = true;
   bool isConstant = true;
+  bool AllLanesExtractElt = true;
   unsigned NumConstantLanes = 0;
   SDValue Value;
   SDValue ConstantValue;
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
+    if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      AllLanesExtractElt = false;
     if (V.isUndef())
       continue;
     if (i > 0)
@@ -6746,6 +6750,61 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
                     "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value);
+  }
+
+  if (AllLanesExtractElt) {
+    SDNode *Vector = nullptr;
+    bool Even = false;
+    bool Odd = false;
+    // Check whether the extract elements match the Even pattern <0,2,4,...> or
+    // the Odd pattern <1,3,5,...>.
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue V = Op.getOperand(i);
+      const SDNode *N = V.getNode();
+      if (!isa<ConstantSDNode>(N->getOperand(1)))
+        break;
+
+      // All elements are extracted from the same vector.
+      if (!Vector)
+        Vector = N->getOperand(0).getNode();
+      else if (Vector != N->getOperand(0).getNode()) {
+        Odd = false;
+        Even = false;
+        break;
+      }
+
+      // Extracted values are either at Even indices <0,2,4,...> or at Odd
+      // indices <1,3,5,...>.
+      uint64_t Val = N->getConstantOperandVal(1);
+      if (Val == 2 * i) {
+        Even = true;
+        continue;
+      }
+      if (Val - 1 == 2 * i) {
+        Odd = true;
+        continue;
+      }
+
+      // Something does not match: abort.
+      Odd = false;
+      Even = false;
+      break;
+    }
+    if (Even || Odd) {
+      SDValue LHS =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, SDValue(Vector, 0),
+                      DAG.getConstant(0, dl, MVT::i64));
+      SDValue RHS =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, SDValue(Vector, 0),
+                      DAG.getConstant(NumElts, dl, MVT::i64));
+
+      if (Even && !Odd)
+        return DAG.getNode(AArch64ISD::UZP1, dl, DAG.getVTList(VT, VT), LHS,
+                           RHS);
+      if (Odd && !Even)
+        return DAG.getNode(AArch64ISD::UZP2, dl, DAG.getVTList(VT, VT), LHS,
+                           RHS);
+    }
   }
 
   // Use DUP for non-constant splats. For f32 constant splats, reduce to

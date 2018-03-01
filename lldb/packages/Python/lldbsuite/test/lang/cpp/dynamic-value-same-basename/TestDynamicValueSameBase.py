@@ -14,7 +14,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
-class RenameThisSampleTestTestCase(TestBase):
+class DynamicValueSameBaseTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -49,14 +49,18 @@ class RenameThisSampleTestTestCase(TestBase):
 
         frame = threads[0].frame[0]
         namesp_this = frame.FindVariable("this", lldb.eDynamicCanRunTarget)
-        self.assertEqual(namesp_this.GetTypeName(), "namesp::Virtual *", "Didn't get the right dynamic type")
+        # Clang specifies the type of this as "T *", gcc as "T * const". This
+        # erases the difference.
+        namesp_type = namesp_this.GetType().GetUnqualifiedType()
+        self.assertEqual(namesp_type.GetName(), "namesp::Virtual *", "Didn't get the right dynamic type")
 
         threads = lldbutil.continue_to_breakpoint(process, virtual_bkpt)
         self.assertEqual(len(threads), 1, "Didn't stop at virtual breakpoint")
 
         frame = threads[0].frame[0]
         virtual_this = frame.FindVariable("this", lldb.eDynamicCanRunTarget)
-        self.assertEqual(virtual_this.GetTypeName(), "Virtual *", "Didn't get the right dynamic type")
+        virtual_type = virtual_this.GetType().GetUnqualifiedType()
+        self.assertEqual(virtual_type.GetName(), "Virtual *", "Didn't get the right dynamic type")
 
         
 
