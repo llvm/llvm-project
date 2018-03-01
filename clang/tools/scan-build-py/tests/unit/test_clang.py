@@ -92,3 +92,15 @@ class ClangGetCheckersTest(unittest.TestCase):
         self.assertEqual('Checker One description', result.get('checker.one'))
         self.assertTrue('checker.two' in result)
         self.assertEqual('Checker Two description', result.get('checker.two'))
+
+
+class ClangIsCtuCapableTest(unittest.TestCase):
+    def test_ctu_not_found(self):
+        is_ctu = sut.is_ctu_capable('not-found-clang-func-mapping')
+        self.assertFalse(is_ctu)
+
+
+class ClangGetTripleArchTest(unittest.TestCase):
+    def test_arch_is_not_empty(self):
+        arch = sut.get_triple_arch(['clang', '-E', '-'], '.')
+        self.assertTrue(len(arch) > 0)
