@@ -37,7 +37,7 @@ all_categories = {
     'lldb-mi': 'lldb-mi tests',
     'darwin-log': 'Darwin log tests',
     'frame-diagnose': 'Frame diagnose tests',
-    'watchpoints': 'Tests related to watchpoints'}
+}
 
 
 def unique_string_match(yourentry, list):

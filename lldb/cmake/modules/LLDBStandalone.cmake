@@ -3,10 +3,6 @@
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lldb)
 
-  if (POLICY CMP0022)
-    cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required
-  endif()
-
   option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
   # Rely on llvm-config.

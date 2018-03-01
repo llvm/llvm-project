@@ -710,29 +710,29 @@ std::string RNBRemote::CompressString(const std::string &orig) {
       size_t compressed_size = 0;
 
 #if defined(HAVE_LIBCOMPRESSION)
-      if (compression_decode_buffer &&
-          compression_type == compression_types::lz4) {
+      if (compression_type == compression_types::lz4) {
         compressed_size = compression_encode_buffer(
-            encoded_data.data(), encoded_data_buf_size, (uint8_t *)orig.c_str(),
-            orig.size(), nullptr, COMPRESSION_LZ4_RAW);
+            encoded_data.data(), encoded_data_buf_size,
+            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            COMPRESSION_LZ4_RAW);
       }
-      if (compression_decode_buffer &&
-          compression_type == compression_types::zlib_deflate) {
+      if (compression_type == compression_types::zlib_deflate) {
         compressed_size = compression_encode_buffer(
-            encoded_data.data(), encoded_data_buf_size, (uint8_t *)orig.c_str(),
-            orig.size(), nullptr, COMPRESSION_ZLIB);
+            encoded_data.data(), encoded_data_buf_size,
+            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            COMPRESSION_ZLIB);
       }
-      if (compression_decode_buffer &&
-          compression_type == compression_types::lzma) {
+      if (compression_type == compression_types::lzma) {
         compressed_size = compression_encode_buffer(
-            encoded_data.data(), encoded_data_buf_size, (uint8_t *)orig.c_str(),
-            orig.size(), nullptr, COMPRESSION_LZMA);
+            encoded_data.data(), encoded_data_buf_size,
+            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            COMPRESSION_LZMA);
       }
-      if (compression_decode_buffer &&
-          compression_type == compression_types::lzfse) {
+      if (compression_type == compression_types::lzfse) {
         compressed_size = compression_encode_buffer(
-            encoded_data.data(), encoded_data_buf_size, (uint8_t *)orig.c_str(),
-            orig.size(), nullptr, COMPRESSION_LZFSE);
+            encoded_data.data(), encoded_data_buf_size,
+            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            COMPRESSION_LZFSE);
       }
 #endif
 
@@ -2862,7 +2862,7 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
       else {
         // the thread name contains special chars, send as hex bytes
         ostrm << std::hex << "hexname:";
-        uint8_t *u_thread_name = (uint8_t *)thread_name;
+        const uint8_t *u_thread_name = (const uint8_t *)thread_name;
         for (size_t i = 0; i < thread_name_len; i++)
           ostrm << RAWHEX8(u_thread_name[i]);
         ostrm << ';';
@@ -3621,7 +3621,7 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
 #if defined(HAVE_LIBCOMPRESSION)
   // libcompression is weak linked so test if compression_decode_buffer() is
   // available
-  if (enable_compression && compression_decode_buffer != NULL) {
+  if (enable_compression) {
     strcat(buf, ";SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;"
                 "DefaultCompressionMinSize=");
     char numbuf[16];
@@ -3667,7 +3667,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
     return RNBRemote::HandlePacket_s("s");
   } else if (strstr(p, "vCont") == p) {
     DNBThreadResumeActions thread_actions;
-    char *c = (char *)(p += strlen("vCont"));
+    char *c = const_cast<char *>(p += strlen("vCont"));
     char *c_end = c + strlen(c);
     if (*c == '?')
       return SendPacket("vCont;c;C;s;S");
@@ -4307,24 +4307,22 @@ rnb_err_t RNBRemote::HandlePacket_QEnableCompression(const char *p) {
   }
 
 #if defined(HAVE_LIBCOMPRESSION)
-  if (compression_decode_buffer != NULL) {
-    if (strstr(p, "type:zlib-deflate;") != nullptr) {
-      EnableCompressionNextSendPacket(compression_types::zlib_deflate);
-      m_compression_minsize = new_compression_minsize;
-      return SendPacket("OK");
-    } else if (strstr(p, "type:lz4;") != nullptr) {
-      EnableCompressionNextSendPacket(compression_types::lz4);
-      m_compression_minsize = new_compression_minsize;
-      return SendPacket("OK");
-    } else if (strstr(p, "type:lzma;") != nullptr) {
-      EnableCompressionNextSendPacket(compression_types::lzma);
-      m_compression_minsize = new_compression_minsize;
-      return SendPacket("OK");
-    } else if (strstr(p, "type:lzfse;") != nullptr) {
-      EnableCompressionNextSendPacket(compression_types::lzfse);
-      m_compression_minsize = new_compression_minsize;
-      return SendPacket("OK");
-    }
+  if (strstr(p, "type:zlib-deflate;") != nullptr) {
+    EnableCompressionNextSendPacket(compression_types::zlib_deflate);
+    m_compression_minsize = new_compression_minsize;
+    return SendPacket("OK");
+  } else if (strstr(p, "type:lz4;") != nullptr) {
+    EnableCompressionNextSendPacket(compression_types::lz4);
+    m_compression_minsize = new_compression_minsize;
+    return SendPacket("OK");
+  } else if (strstr(p, "type:lzma;") != nullptr) {
+    EnableCompressionNextSendPacket(compression_types::lzma);
+    m_compression_minsize = new_compression_minsize;
+    return SendPacket("OK");
+  } else if (strstr(p, "type:lzfse;") != nullptr) {
+    EnableCompressionNextSendPacket(compression_types::lzfse);
+    m_compression_minsize = new_compression_minsize;
+    return SendPacket("OK");
   }
 #endif
 

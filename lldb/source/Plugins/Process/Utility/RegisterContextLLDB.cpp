@@ -1517,8 +1517,8 @@ RegisterContextLLDB::SavedLocationForRegister(
     dwarfexpr.SetRegisterKind(unwindplan_registerkind);
     Value result;
     Status error;
-    if (dwarfexpr.Evaluate(&exe_ctx, nullptr, nullptr, this, 0, nullptr,
-                           nullptr, result, &error)) {
+    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr, result,
+                           &error)) {
       addr_t val;
       val = result.GetScalar().ULongLong();
       if (unwindplan_regloc.IsDWARFExpression()) {
@@ -1827,8 +1827,8 @@ bool RegisterContextLLDB::ReadCFAValueForRow(
     dwarfexpr.SetRegisterKind(row_register_kind);
     Value result;
     Status error;
-    if (dwarfexpr.Evaluate(&exe_ctx, nullptr, nullptr, this, 0, nullptr,
-                           nullptr, result, &error)) {
+    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr, result,
+                           &error)) {
       cfa_value = result.GetScalar().ULongLong();
 
       UnwindLogMsg("CFA value set by DWARF expression is 0x%" PRIx64,

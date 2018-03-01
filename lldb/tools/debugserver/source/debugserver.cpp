@@ -1020,6 +1020,7 @@ int main(int argc, char *argv[]) {
   optind = 1;
 #endif
 
+  bool forward_env = false;
   while ((ch = getopt_long_only(argc, argv, short_options, g_long_options,
                                 &long_option_index)) != -1) {
     DNBLogDebug("option: ch == %c (0x%2.2x) --%s%c%s\n", ch, (uint8_t)ch,
@@ -1251,14 +1252,7 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'F':
-      // Pass the current environment down to the process that gets launched
-      {
-        char **host_env = *_NSGetEnviron();
-        char *env_entry;
-        size_t i;
-        for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
-          remote->Context().PushEnvironment(env_entry);
-      }
+      forward_env = true;
       break;
 
     case '2':
@@ -1419,6 +1413,18 @@ int main(int argc, char *argv[]) {
 
   if (start_mode == eRNBRunLoopModeExit)
     return -1;
+
+  if (forward_env || start_mode == eRNBRunLoopModeInferiorLaunching) {
+    // Pass the current environment down to the process that gets launched
+    // This happens automatically in the "launching" mode. For the rest, we
+    // only do that if the user explicitly requested this via --forward-env
+    // argument.
+    char **host_env = *_NSGetEnviron();
+    char *env_entry;
+    size_t i;
+    for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
+      remote->Context().PushEnvironmentIfNeeded(env_entry);
+  }
 
   RNBRunLoopMode mode = start_mode;
   char err_str[1024] = {'\0'};

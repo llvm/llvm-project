@@ -1,12 +1,10 @@
 #ifndef liblldb_FuncUnwinders_h
 #define liblldb_FuncUnwinders_h
 
+#include "lldb/Core/AddressRange.h"
+#include "lldb/lldb-private-enumerations.h"
 #include <mutex>
 #include <vector>
-
-#include "lldb/Core/AddressRange.h"
-#include "lldb/Core/AddressRange.h"
-#include "lldb/Core/ArchSpec.h"
 
 namespace lldb_private {
 

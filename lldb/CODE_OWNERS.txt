@@ -8,10 +8,6 @@ beautification by scripts.  The fields are: name (N), email (E), web-address
 (W), PGP key ID and fingerprint (P), description (D), and snail-mail address
 (S).
 
-N: Sean Callanan
-E: scallanan@apple.com
-D: Expression evaluator, IR interpreter, Clang integration
-
 N: Greg Clayton
 E: clayborg@gmail.com
 D: Overall LLDB architecture, Host (common+macosx), Symbol, API, ABI, Mac-specific code, 
@@ -22,6 +18,7 @@ N: Jim Ingham
 E: jingham@apple.com
 D: Overall LLDB architecture, Thread plans, Expression parser, ValueObject, Breakpoints, ABI
 D: Watchpoints, Trampolines, Target, Command Interpreter, C++ / Objective C Language runtime
+D: Expression evaluator, IR interpreter, Clang integration
 D: Data Formatters
 
 N: Ilia K

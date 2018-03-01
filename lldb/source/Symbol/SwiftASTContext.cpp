@@ -19,19 +19,18 @@
 #include <sstream>
 
 #include "swift/AST/ASTContext.h"
+#include "swift/AST/ASTMangler.h"
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/ExistentialLayout.h"
-#include "swift/AST/IRGenOptions.h"
-#include "swift/AST/ASTMangler.h"
 #include "swift/AST/GenericSignature.h"
+#include "swift/AST/IRGenOptions.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/SearchPathOptions.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
-#include "swift/Demangling/Demangle.h"
 #include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Platform.h"
@@ -39,6 +38,7 @@
 #include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/ClangImporter/ClangImporterOptions.h"
+#include "swift/Demangling/Demangle.h"
 #include "swift/Driver/Util.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
@@ -51,6 +51,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -60,7 +61,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 #include "swift/../../lib/IRGen/FixedTypeInfo.h"
 #include "swift/../../lib/IRGen/GenEnum.h"
@@ -75,7 +75,6 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
@@ -97,11 +96,12 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CleanUp.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
@@ -4575,7 +4575,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
         "",        // features
         *getTargetOptions(),
         llvm::Reloc::Static, // TODO verify with Sean, Default went away
-        llvm::CodeModel::Default, optimization_level);
+        llvm::None, optimization_level);
     if (target_machine) {
       // Set the module's string representation.
       const llvm::DataLayout data_layout = target_machine->createDataLayout();
@@ -7569,35 +7569,66 @@ bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,
   return false;
 }
 
-CompilerType
-SwiftASTContext::GetTemplateArgument(void *type, size_t arg_idx,
-                                     lldb::TemplateArgumentKind &kind) {
+lldb::GenericKind SwiftASTContext::GetGenericArgumentKind(void *type,
+                                                          size_t idx) {
+  if (type) {
+    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+    if (auto *unbound_generic_type =
+            swift_can_type->getAs<swift::UnboundGenericType>())
+      return eUnboundGenericKindType;
+    if (auto *bound_generic_type =
+            swift_can_type->getAs<swift::BoundGenericType>())
+      if (idx < bound_generic_type->getGenericArgs().size())
+        return eBoundGenericKindType;
+  }
+  return eNullGenericKindType;
+}
+
+CompilerType SwiftASTContext::GetBoundGenericType(void *type, size_t idx) {
   VALID_OR_RETURN(CompilerType());
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+    if (auto *bound_generic_type =
+            swift_can_type->getAs<swift::BoundGenericType>())
+      if (idx < bound_generic_type->getGenericArgs().size())
+        return CompilerType(
+            GetASTContext(),
+            bound_generic_type->getGenericArgs()[idx].getPointer());
+  }
+  return CompilerType();
+}
 
+CompilerType SwiftASTContext::GetUnboundGenericType(void *type, size_t idx) {
+  VALID_OR_RETURN(CompilerType());
+
+  if (type) {
+    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     if (auto *unbound_generic_type =
           swift_can_type->getAs<swift::UnboundGenericType>()) {
       auto *nominal_type_decl = unbound_generic_type->getDecl();
       swift::GenericSignature *generic_sig =
           nominal_type_decl->getGenericSignature();
-      auto depTy = generic_sig->getGenericParams()[arg_idx];
+      auto depTy = generic_sig->getGenericParams()[idx];
       return CompilerType(GetASTContext(),
                           nominal_type_decl->mapTypeIntoContext(depTy)
                               ->castTo<swift::ArchetypeType>());
     }
-    if (auto *bound_generic_type =
-          swift_can_type->getAs<swift::BoundGenericType>()) {
-      if (arg_idx < bound_generic_type->getGenericArgs().size()) {
-        kind = eTemplateArgumentKindType;
-        return CompilerType(GetASTContext(),
-                            bound_generic_type->getGenericArgs()[arg_idx].getPointer());
-      }
-    }
   }
+  return CompilerType();
+}
 
-  kind = eTemplateArgumentKindNull;
+CompilerType SwiftASTContext::GetGenericArgumentType(void *type, size_t idx) {
+  VALID_OR_RETURN(CompilerType());
+
+  switch (GetGenericArgumentKind(type, idx)) {
+  case eBoundGenericKindType:
+    return GetBoundGenericType(type, idx);
+  case eUnboundGenericKindType:
+    return GetUnboundGenericType(type, idx);
+  default:
+    break;
+  }
   return CompilerType();
 }
 

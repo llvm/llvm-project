@@ -1,11 +1,13 @@
 set (FILES
   FileSpecTest.cpp
   FileSystemTest.cpp
+  HostInfoTest.cpp
   HostTest.cpp
   MainLoopTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
   SymbolsTest.cpp
+  TaskPoolTest.cpp
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")

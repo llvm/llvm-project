@@ -375,6 +375,7 @@ void FreeBSDThread::Notify(const ProcessMessage &message) {
     LimboNotify(message);
     break;
 
+  case ProcessMessage::eCrashMessage:
   case ProcessMessage::eSignalMessage:
     SignalNotify(message);
     break;
@@ -393,10 +394,6 @@ void FreeBSDThread::Notify(const ProcessMessage &message) {
 
   case ProcessMessage::eWatchpointMessage:
     WatchNotify(message);
-    break;
-
-  case ProcessMessage::eCrashMessage:
-    CrashNotify(message);
     break;
 
   case ProcessMessage::eExecMessage:
@@ -577,27 +574,19 @@ void FreeBSDThread::LimboNotify(const ProcessMessage &message) {
 
 void FreeBSDThread::SignalNotify(const ProcessMessage &message) {
   int signo = message.GetSignal();
-  SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, signo));
+  if (message.GetKind() == ProcessMessage::eCrashMessage) {
+    std::string stop_description = GetCrashReasonString(
+        message.GetCrashReason(), message.GetFaultAddress());
+    SetStopInfo(StopInfo::CreateStopReasonWithSignal(
+        *this, signo, stop_description.c_str()));
+  } else {
+    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, signo));
+  }
 }
 
 void FreeBSDThread::SignalDeliveredNotify(const ProcessMessage &message) {
   int signo = message.GetSignal();
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, signo));
-}
-
-void FreeBSDThread::CrashNotify(const ProcessMessage &message) {
-  // FIXME: Update stop reason as per bugzilla 14598
-  int signo = message.GetSignal();
-
-  assert(message.GetKind() == ProcessMessage::eCrashMessage);
-
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  if (log)
-    log->Printf("FreeBSDThread::%s () signo = %i, reason = '%s'", __FUNCTION__,
-                signo, message.PrintCrashReason());
-
-  SetStopInfo(lldb::StopInfoSP(new POSIXCrashStopInfo(
-      *this, signo, message.GetCrashReason(), message.GetFaultAddress())));
 }
 
 unsigned FreeBSDThread::GetRegisterIndexFromOffset(unsigned offset) {

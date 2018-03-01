@@ -31,8 +31,6 @@ class WatchpointSizeTestCase(TestBase):
         self.exe_name = 'a.out'
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -42,8 +40,6 @@ class WatchpointSizeTestCase(TestBase):
         """Test to selectively watch different bytes in a 8-byte array."""
         self.run_watchpoint_size_test('byteArray', 8, '1')
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -53,8 +49,6 @@ class WatchpointSizeTestCase(TestBase):
         """Test to selectively watch different words in an 8-byte word array."""
         self.run_watchpoint_size_test('wordArray', 4, '2')
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")

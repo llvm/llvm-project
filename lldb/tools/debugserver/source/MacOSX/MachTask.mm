@@ -188,7 +188,7 @@ nub_size_t MachTask::WriteMemory(nub_addr_t addr, nub_size_t size,
                      (uint64_t)addr, (uint64_t)size, buf, (uint64_t)n);
     if (DNBLogCheckLogBit(LOG_MEMORY_DATA_LONG) ||
         (DNBLogCheckLogBit(LOG_MEMORY_DATA_SHORT) && size <= 8)) {
-      DNBDataRef data((uint8_t *)buf, n, false);
+      DNBDataRef data((const uint8_t *)buf, n, false);
       data.Dump(0, static_cast<DNBDataRef::offset_t>(n), addr,
                 DNBDataRef::TypeUInt8, 16);
     }

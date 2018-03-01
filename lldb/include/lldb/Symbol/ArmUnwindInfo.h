@@ -31,7 +31,7 @@ namespace lldb_private {
 
 class ArmUnwindInfo {
 public:
-  ArmUnwindInfo(const ObjectFile &objfile, lldb::SectionSP &arm_exidx,
+  ArmUnwindInfo(ObjectFile &objfile, lldb::SectionSP &arm_exidx,
                 lldb::SectionSP &arm_extab);
 
   ~ArmUnwindInfo();

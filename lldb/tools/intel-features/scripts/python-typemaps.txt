@@ -1,0 +1,31 @@
+/* Typemap definitions to allow SWIG to properly handle some data types */
+
+// typemap for an incoming buffer
+%typemap(in) (void *buf, size_t size) {
+   if (PyInt_Check($input)) {
+      $2 = PyInt_AsLong($input);
+   } else if (PyLong_Check($input)) {
+      $2 = PyLong_AsLong($input);
+   } else {
+      PyErr_SetString(PyExc_ValueError, "Expecting an integer or long object");
+      return NULL;
+   }
+   if ($2 <= 0) {
+       PyErr_SetString(PyExc_ValueError, "Positive integer expected");
+       return NULL;
+   }
+   $1 = (void *) malloc($2);
+}
+
+// Return the buffer. Discarding any previous return result
+%typemap(argout) (void *buf, size_t size) {
+   Py_XDECREF($result);   /* Blow away any previous result */
+   if (result == 0) {
+      $result = Py_None;
+      Py_INCREF($result);
+   } else {
+      PyObject *py_bytes = PyBytes_FromStringAndSize(reinterpret_cast<const char*>($1), result);
+      $result = py_bytes;
+   }
+   free($1);
+}

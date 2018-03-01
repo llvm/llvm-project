@@ -23,7 +23,7 @@ public:
   /// of the register_info_interface pointer.
   ///
   NativeRegisterContextRegisterInfo(
-      NativeThreadProtocol &thread, uint32_t concrete_frame_idx,
+      NativeThreadProtocol &thread,
       RegisterInfoInterface *register_info_interface);
 
   uint32_t GetRegisterCount() const override;

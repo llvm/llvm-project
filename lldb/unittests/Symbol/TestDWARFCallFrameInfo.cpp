@@ -16,7 +16,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Utility/StreamString.h"
-#include "unittests/Utility/Helpers/TestUtilities.h"
+#include "TestingSupport/TestUtilities.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -98,7 +98,8 @@ void DWARFCallFrameInfoTest::TestBasic(DWARFCallFrameInfo::Type type,
 
   const char *args[] = {YAML2OBJ, yaml.c_str(), nullptr};
   llvm::StringRef obj_ref = obj;
-  const llvm::StringRef *redirects[] = {nullptr, &obj_ref, nullptr};
+  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
+                                                       llvm::None};
   ASSERT_EQ(0, llvm::sys::ExecuteAndWait(YAML2OBJ, args, nullptr, redirects));
 
   uint64_t size;

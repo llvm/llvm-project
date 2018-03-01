@@ -43,17 +43,23 @@ int RegisterContextMach_i386::DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) {
 
 int RegisterContextMach_i386::DoWriteGPR(lldb::tid_t tid, int flavor,
                                          const GPR &gpr) {
-  return ::thread_set_state(tid, flavor, (thread_state_t)&gpr, GPRWordCount);
+  return ::thread_set_state(
+      tid, flavor, reinterpret_cast<thread_state_t>(const_cast<GPR *>(&gpr)),
+      GPRWordCount);
 }
 
 int RegisterContextMach_i386::DoWriteFPU(lldb::tid_t tid, int flavor,
                                          const FPU &fpu) {
-  return ::thread_set_state(tid, flavor, (thread_state_t)&fpu, FPUWordCount);
+  return ::thread_set_state(
+      tid, flavor, reinterpret_cast<thread_state_t>(const_cast<FPU *>(&fpu)),
+      FPUWordCount);
 }
 
 int RegisterContextMach_i386::DoWriteEXC(lldb::tid_t tid, int flavor,
                                          const EXC &exc) {
-  return ::thread_set_state(tid, flavor, (thread_state_t)&exc, EXCWordCount);
+  return ::thread_set_state(
+      tid, flavor, reinterpret_cast<thread_state_t>(const_cast<EXC *>(&exc)),
+      EXCWordCount);
 }
 
 #endif

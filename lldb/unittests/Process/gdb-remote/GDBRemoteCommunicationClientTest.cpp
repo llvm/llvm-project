@@ -197,27 +197,53 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
   EXPECT_EQ(1234u, result.getValue()[0].GetObjectSize());
 }
 
+TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
+  llvm::Triple triple("i386-pc-linux");
+
+  FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
+  std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+      std::async(std::launch::async,
+                 [&] { return client.GetModulesInfo(file_spec, triple); });
+  HandlePacket(
+      server,
+      "jModulesInfo:["
+      R"({"file":"/foo/bar.so","triple":"i386-pc-linux"}])",
+      R"([{"uuid":"404142434445464748494a4b4c4d4e4f50515253","triple":"i386-pc-linux",)"
+      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}]])");
+
+  auto result = async_result.get();
+  ASSERT_TRUE(result.hasValue());
+  ASSERT_EQ(1u, result->size());
+  EXPECT_EQ("/foo/bar.so", result.getValue()[0].GetFileSpec().GetPath());
+  EXPECT_EQ(triple, result.getValue()[0].GetArchitecture().GetTriple());
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNOPQRS", 20), result.getValue()[0].GetUUID());
+  EXPECT_EQ(0u, result.getValue()[0].GetObjectOffset());
+  EXPECT_EQ(1234u, result.getValue()[0].GetObjectSize());
+}
+
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
   llvm::Triple triple("i386-pc-linux");
   FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
 
   const char *invalid_responses[] = {
-      "OK", "E47", "[]",
       // no UUID
       R"([{"triple":"i386-pc-linux",)"
-      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}])",
+      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}]])",
+      // invalid UUID
+      R"([{"uuid":"XXXXXX","triple":"i386-pc-linux",)"
+      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}]])",
       // no triple
       R"([{"uuid":"404142434445464748494a4b4c4d4e4f",)"
-      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}])",
+      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}]])",
       // no file_path
       R"([{"uuid":"404142434445464748494a4b4c4d4e4f","triple":"i386-pc-linux",)"
-      R"("file_offset":0,"file_size":1234}])",
+      R"("file_offset":0,"file_size":1234}]])",
       // no file_offset
       R"([{"uuid":"404142434445464748494a4b4c4d4e4f","triple":"i386-pc-linux",)"
-      R"("file_path":"/foo/bar.so","file_size":1234}])",
+      R"("file_path":"/foo/bar.so","file_size":1234}]])",
       // no file_size
       R"([{"uuid":"404142434445464748494a4b4c4d4e4f","triple":"i386-pc-linux",)"
-      R"("file_path":"/foo/bar.so","file_offset":0}])",
+      R"("file_path":"/foo/bar.so","file_offset":0}]])",
   };
 
   for (const char *response : invalid_responses) {
@@ -229,7 +255,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
         R"(jModulesInfo:[{"file":"/foo/bar.so","triple":"i386-pc-linux"}])",
         response);
 
-    ASSERT_FALSE(async_result.get().hasValue()) << "response was: " << response;
+    auto result = async_result.get();
+    ASSERT_TRUE(result);
+    ASSERT_EQ(0u, result->size()) << "response was: " << response;
   }
 }
 

@@ -19,7 +19,7 @@ namespace llgs_tests {
 
 Expected<ProcessInfo> ProcessInfo::Create(StringRef response) {
   ProcessInfo process_info;
-  auto elements_or_error = SplitPairList("ProcessInfo", response);
+  auto elements_or_error = SplitUniquePairList("ProcessInfo", response);
   if (!elements_or_error)
     return elements_or_error.takeError();
 
@@ -65,19 +65,16 @@ StringRef ThreadInfo::ReadRegister(unsigned int register_id) const {
   return m_registers.lookup(register_id);
 }
 
-bool ThreadInfo::ReadRegisterAsUint64(unsigned int register_id,
-                                      uint64_t &value) const {
+Expected<uint64_t>
+ThreadInfo::ReadRegisterAsUint64(unsigned int register_id) const {
+  uint64_t value;
   std::string value_str(m_registers.lookup(register_id));
-  if (!llvm::to_integer(value_str, value, 16)) {
-    GTEST_LOG_(ERROR)
-        << formatv("ThreadInfo: Unable to parse register value at {0}.",
-                   register_id)
-               .str();
-    return false;
-  }
+  if (!llvm::to_integer(value_str, value, 16))
+    return make_parsing_error("ThreadInfo value for register {0}: {1}",
+                              register_id, value_str);
 
   sys::swapByteOrder(value);
-  return true;
+  return value;
 }
 
 //====== JThreadsInfo ==========================================================
@@ -136,60 +133,96 @@ const ThreadInfoMap &JThreadsInfo::GetThreadInfos() const {
 }
 
 //====== StopReply =============================================================
-const U64Map &StopReply::GetThreadPcs() const { return m_thread_pcs; }
+Expected<std::unique_ptr<StopReply>>
+StopReply::create(StringRef Response, llvm::support::endianness Endian) {
+  if (Response.size() < 3)
+    return make_parsing_error("StopReply: Invalid packet");
+  if (Response.consume_front("T"))
+    return StopReplyStop::create(Response, Endian);
+  if (Response.consume_front("W"))
+    return StopReplyExit::create(Response);
+  return make_parsing_error("StopReply: Invalid packet");
+}
 
-Expected<StopReply> StopReply::Create(StringRef response,
-                                      llvm::support::endianness endian) {
-  StopReply stop_reply;
+Expected<std::unique_ptr<StopReplyStop>>
+StopReplyStop::create(StringRef Response, llvm::support::endianness Endian) {
+  unsigned int Signal;
+  StringRef SignalStr = Response.take_front(2);
+  Response = Response.drop_front(2);
+  if (!to_integer(SignalStr, Signal, 16))
+    return make_parsing_error("StopReply: stop signal");
 
-  auto elements_or_error = SplitPairList("StopReply", response);
-  if (auto split_error = elements_or_error.takeError()) {
-    return std::move(split_error);
+  auto Elements = SplitPairList(Response);
+  for (StringRef Field :
+       {"name", "reason", "thread", "threads", "thread-pcs"}) {
+    // This will insert an empty field if there is none. In the future, we
+    // should probably differentiate between these fields not being present and
+    // them being empty, but right now no tests depends on this.
+    if (Elements.insert({Field, {""}}).first->second.size() != 1)
+      return make_parsing_error(
+          "StopReply: got multiple responses for the {0} field", Field);
   }
+  StringRef Name = Elements["name"][0];
+  StringRef Reason = Elements["reason"][0];
 
-  auto elements = *elements_or_error;
-  stop_reply.m_name = elements["name"];
-  stop_reply.m_reason = elements["reason"];
+  lldb::tid_t Thread;
+  if (!to_integer(Elements["thread"][0], Thread, 16))
+    return make_parsing_error("StopReply: thread");
 
-  SmallVector<StringRef, 20> threads;
-  SmallVector<StringRef, 20> pcs;
-  elements["threads"].split(threads, ',');
-  elements["thread-pcs"].split(pcs, ',');
-  if (threads.size() != pcs.size())
+  SmallVector<StringRef, 20> Threads;
+  SmallVector<StringRef, 20> Pcs;
+  Elements["threads"][0].split(Threads, ',');
+  Elements["thread-pcs"][0].split(Pcs, ',');
+  if (Threads.size() != Pcs.size())
     return make_parsing_error("StopReply: thread/PC count mismatch");
 
-  for (size_t i = 0; i < threads.size(); i++) {
-    lldb::tid_t thread_id;
-    uint64_t pc;
-    if (threads[i].getAsInteger(16, thread_id))
-      return make_parsing_error("StopReply: thread ID at [{0}].", i);
-    if (pcs[i].getAsInteger(16, pc))
-      return make_parsing_error("StopReply: thread PC at [{0}].", i);
+  U64Map ThreadPcs;
+  for (auto ThreadPc : zip(Threads, Pcs)) {
+    lldb::tid_t Id;
+    uint64_t Pc;
+    if (!to_integer(std::get<0>(ThreadPc), Id, 16))
+      return make_parsing_error("StopReply: Thread id '{0}'",
+                                std::get<0>(ThreadPc));
+    if (!to_integer(std::get<1>(ThreadPc), Pc, 16))
+      return make_parsing_error("StopReply Thread Pc '{0}'",
+                                std::get<1>(ThreadPc));
 
-    stop_reply.m_thread_pcs[thread_id] = pc;
+    ThreadPcs[Id] = Pc;
   }
 
-  for (auto i = elements.begin(); i != elements.end(); i++) {
-    StringRef key = i->getKey();
-    StringRef val = i->getValue();
-    if (key.size() >= 9 && key[0] == 'T' && key.substr(3, 6) == "thread") {
-      if (val.getAsInteger(16, stop_reply.m_thread))
-        return make_parsing_error("StopReply: thread id");
-      if (key.substr(1, 2).getAsInteger(16, stop_reply.m_signal))
-        return make_parsing_error("StopReply: stop signal");
-    } else if (key.size() == 2) {
-      unsigned int reg;
-      if (!key.getAsInteger(16, reg)) {
-        stop_reply.m_registers[reg] = val.str();
-      }
-    }
+  RegisterMap Registers;
+  for (const auto &E : Elements) {
+    StringRef Key = E.getKey();
+    const auto &Val = E.getValue();
+    if (Key.size() != 2)
+      continue;
+
+    unsigned int Reg;
+    if (!to_integer(Key, Reg, 16))
+      continue;
+
+    if (Val.size() != 1)
+      return make_parsing_error(
+          "StopReply: multiple entries for register field [{0:x}]", Reg);
+
+    Registers[Reg] = Val[0].str();
   }
 
-  return stop_reply;
+  return llvm::make_unique<StopReplyStop>(Signal, Thread, Name, ThreadPcs,
+                                          Registers, Reason);
+}
+
+Expected<std::unique_ptr<StopReplyExit>>
+StopReplyExit::create(StringRef Response) {
+  uint8_t Status;
+  if (!to_integer(Response, Status, 16))
+    return make_parsing_error("StopReply: exit status");
+  return llvm::make_unique<StopReplyExit>(Status);
 }
 
 //====== Globals ===============================================================
-Expected<StringMap<StringRef>> SplitPairList(StringRef caller, StringRef str) {
+Expected<StringMap<StringRef>> SplitUniquePairList(StringRef caller,
+                                                   StringRef str) {
   SmallVector<StringRef, 20> elements;
   str.split(elements, ';');
 
@@ -199,7 +232,20 @@ Expected<StringMap<StringRef>> SplitPairList(StringRef caller, StringRef str) {
     if (pairs.count(pair.first))
       return make_parsing_error("{0}: Duplicate Key: {1}", caller, pair.first);
 
-    pairs.insert(s.split(':'));
+    pairs.insert(pair);
+  }
+
+  return pairs;
+}
+
+StringMap<SmallVector<StringRef, 2>> SplitPairList(StringRef str) {
+  SmallVector<StringRef, 20> elements;
+  str.split(elements, ';');
+
+  StringMap<SmallVector<StringRef, 2>> pairs;
+  for (StringRef s : elements) {
+    std::pair<StringRef, StringRef> pair = s.split(':');
+    pairs[pair.first].push_back(pair.second);
   }
 
   return pairs;

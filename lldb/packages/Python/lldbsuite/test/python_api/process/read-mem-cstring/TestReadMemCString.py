@@ -12,13 +12,8 @@ from lldbsuite.test import lldbutil
 class TestReadMemCString(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        TestBase.setUp(self)
-
-    # Need to have a char* pointer that points to unmapped memory to run
-    # this test on other platforms -- Darwin only for now.
-    @skipUnlessDarwin
     def test_read_memory_c_string(self):
         """Test corner case behavior of SBProcess::ReadCStringFromMemory"""
         self.build()

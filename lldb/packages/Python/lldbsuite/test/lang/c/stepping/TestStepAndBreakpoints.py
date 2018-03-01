@@ -15,16 +15,13 @@ class TestCStepping(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def getCategories(self):
-        return ['basic_process']
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers that we will step to in main:
         self.main_source = "main.c"
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(['pyapi', 'basic_process'])
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17932')
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr14437")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24777")

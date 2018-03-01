@@ -33,7 +33,6 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/AddressResolverName.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -60,6 +59,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -1469,8 +1469,8 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
       module_spec.GetUUID().SetFromCString(uuid_cstr);
 
     if (triple)
-      module_spec.GetArchitecture().SetTriple(triple,
-                                              target_sp->GetPlatform().get());
+      module_spec.GetArchitecture() = Platform::GetAugmentedArchSpec(
+          target_sp->GetPlatform().get(), triple);
     else
       module_spec.GetArchitecture() = target_sp->GetArchitecture();
 

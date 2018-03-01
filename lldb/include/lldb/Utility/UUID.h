@@ -46,7 +46,7 @@ public:
 
   const void *GetBytes() const;
 
-  size_t GetByteSize();
+  size_t GetByteSize() const;
 
   bool IsValid() const;
 

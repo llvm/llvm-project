@@ -16,8 +16,6 @@ class TestWatchpointSetEnable(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -26,7 +24,6 @@ class TestWatchpointSetEnable(TestBase):
         self.build()
         self.do_test(False)
 
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")

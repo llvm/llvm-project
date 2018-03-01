@@ -31,8 +31,6 @@ class SetWatchlocationAPITestCase(TestBase):
         self.violating_func = "do_bad_thing_with_location"
 
     @add_test_categories(['pyapi'])
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")

@@ -548,7 +548,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       char buffer[1024];
       int num_printed =
           snprintf(buffer, 1024, "%s %s", break_regexes[i][1], "-o");
-      assert(num_printed < 1024);
+      lldbassert(num_printed < 1024);
       UNUSED_IF_ASSERT_DISABLED(num_printed);
       success =
           tbreak_regex_cmd_ap->AddRegexCommand(break_regexes[i][0], buffer);
@@ -895,8 +895,8 @@ bool CommandInterpreter::AddCommand(llvm::StringRef name,
                                     const lldb::CommandObjectSP &cmd_sp,
                                     bool can_replace) {
   if (cmd_sp.get())
-    assert((this == &cmd_sp->GetCommandInterpreter()) &&
-           "tried to add a CommandObject from a different interpreter");
+    lldbassert((this == &cmd_sp->GetCommandInterpreter()) &&
+               "tried to add a CommandObject from a different interpreter");
 
   if (name.empty())
     return false;
@@ -917,8 +917,8 @@ bool CommandInterpreter::AddUserCommand(llvm::StringRef name,
                                         const lldb::CommandObjectSP &cmd_sp,
                                         bool can_replace) {
   if (cmd_sp.get())
-    assert((this == &cmd_sp->GetCommandInterpreter()) &&
-           "tried to add a CommandObject from a different interpreter");
+    lldbassert((this == &cmd_sp->GetCommandInterpreter()) &&
+               "tried to add a CommandObject from a different interpreter");
 
   if (!name.empty()) {
     // do not allow replacement of internal commands
@@ -1066,8 +1066,8 @@ CommandInterpreter::AddAlias(llvm::StringRef alias_name,
                              lldb::CommandObjectSP &command_obj_sp,
                              llvm::StringRef args_string) {
   if (command_obj_sp.get())
-    assert((this == &command_obj_sp->GetCommandInterpreter()) &&
-           "tried to add a CommandObject from a different interpreter");
+    lldbassert((this == &command_obj_sp->GetCommandInterpreter()) &&
+               "tried to add a CommandObject from a different interpreter");
 
   std::unique_ptr<CommandAlias> command_alias_up(
       new CommandAlias(*this, command_obj_sp, args_string, alias_name));
@@ -1545,6 +1545,12 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   if (!no_context_switching)
     UpdateExecutionContext(override_context);
 
+  if (WasInterrupted()) {
+    result.AppendError("interrupted");
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
   bool add_to_history;
   if (lazy_add_to_history == eLazyBoolCalculate)
     add_to_history = (m_command_source_depth == 0);
@@ -1843,7 +1849,7 @@ int CommandInterpreter::HandleCompletion(
   matches.Clear();
 
   // Only max_return_elements == -1 is supported at present:
-  assert(max_return_elements == -1);
+  lldbassert(max_return_elements == -1);
   bool word_complete;
   num_command_matches = HandleCompletionMatches(
       parsed_line, cursor_index, cursor_char_position, match_start_point,
@@ -2214,7 +2220,7 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     m_debugger.SetAsyncExecution(false);
   }
 
-  for (size_t idx = 0; idx < num_lines; idx++) {
+  for (size_t idx = 0; idx < num_lines && !WasInterrupted(); idx++) {
     const char *cmd = commands.GetStringAtIndex(idx);
     if (cmd[0] == '\0')
       continue;
@@ -2573,7 +2579,7 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
 
   while (!text.empty()) {
     if (text.front() == '\n' ||
-        (text.front() == ' ' && nextWordLength(text.ltrim(' ')) < chars_left)) {
+        (text.front() == ' ' && nextWordLength(text.ltrim(' ')) > chars_left)) {
       strm.EOL();
       strm.Indent();
       chars_left = max_columns - indent_size;
@@ -2681,8 +2687,67 @@ size_t CommandInterpreter::GetProcessOutput() {
   return total_bytes;
 }
 
+void CommandInterpreter::StartHandlingCommand() {
+  auto idle_state = CommandHandlingState::eIdle;
+  if (m_command_state.compare_exchange_strong(
+          idle_state, CommandHandlingState::eInProgress))
+    lldbassert(m_iohandler_nesting_level == 0);
+  else
+    lldbassert(m_iohandler_nesting_level > 0);
+  ++m_iohandler_nesting_level;
+}
+
+void CommandInterpreter::FinishHandlingCommand() {
+  lldbassert(m_iohandler_nesting_level > 0);
+  if (--m_iohandler_nesting_level == 0) {
+    auto prev_state = m_command_state.exchange(CommandHandlingState::eIdle);
+    lldbassert(prev_state != CommandHandlingState::eIdle);
+  }
+}
+
+bool CommandInterpreter::InterruptCommand() {
+  auto in_progress = CommandHandlingState::eInProgress;
+  return m_command_state.compare_exchange_strong(
+      in_progress, CommandHandlingState::eInterrupted);
+}
+
+bool CommandInterpreter::WasInterrupted() const {
+  bool was_interrupted =
+      (m_command_state == CommandHandlingState::eInterrupted);
+  lldbassert(!was_interrupted || m_iohandler_nesting_level > 0);
+  return was_interrupted;
+}
+
+void CommandInterpreter::PrintCommandOutput(Stream &stream,
+                                            llvm::StringRef str) {
+  // Split the output into lines and poll for interrupt requests
+  const char *data = str.data();
+  size_t size = str.size();
+  while (size > 0 && !WasInterrupted()) {
+    size_t chunk_size = 0;
+    for (; chunk_size < size; ++chunk_size) {
+      lldbassert(data[chunk_size] != '\0');
+      if (data[chunk_size] == '\n') {
+        ++chunk_size;
+        break;
+      }
+    }
+    chunk_size = stream.Write(data, chunk_size);
+    lldbassert(size >= chunk_size);
+    data += chunk_size;
+    size -= chunk_size;
+  }
+  if (size > 0) {
+    stream.Printf("\n... Interrupted.\n");
+  }
+}
+
 void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
                                                 std::string &line) {
+    // If we were interrupted, bail out...
+    if (WasInterrupted())
+      return;
+
   const bool is_interactive = io_handler.GetIsInteractive();
   if (is_interactive == false) {
     // When we are not interactive, don't execute blank lines. This will happen
@@ -2704,6 +2769,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
                                                line.c_str());
   }
 
+  StartHandlingCommand();
+
   lldb_private::CommandReturnObject result;
   HandleCommand(line.c_str(), eLazyBoolCalculate, result);
 
@@ -2714,17 +2781,17 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
     if (!result.GetImmediateOutputStream()) {
       llvm::StringRef output = result.GetOutputData();
-      if (!output.empty())
-        io_handler.GetOutputStreamFile()->PutCString(output);
+      PrintCommandOutput(*io_handler.GetOutputStreamFile(), output);
     }
 
     // Now emit the command error text from the command we just executed
     if (!result.GetImmediateErrorStream()) {
       llvm::StringRef error = result.GetErrorData();
-      if (!error.empty())
-        io_handler.GetErrorStreamFile()->PutCString(error);
+      PrintCommandOutput(*io_handler.GetErrorStreamFile(), error);
     }
   }
+
+  FinishHandlingCommand();
 
   switch (result.GetStatus()) {
   case eReturnStatusInvalid:
@@ -2780,6 +2847,9 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
   ExecutionContext exe_ctx(GetExecutionContext());
   Process *process = exe_ctx.GetProcessPtr();
+
+  if (InterruptCommand())
+    return true;
 
   if (process) {
     StateType state = process->GetState();
@@ -3002,7 +3072,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
         result.AppendRawError(error_msg.GetString());
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
-        assert(num_matches == 0);
+        lldbassert(num_matches == 0);
         result.AppendErrorWithFormat("'%s' is not a valid command.\n",
                                      next_word.c_str());
       }

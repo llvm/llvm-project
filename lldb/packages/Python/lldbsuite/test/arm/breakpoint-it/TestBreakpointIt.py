@@ -1,0 +1,45 @@
+"""
+Test that breakpoints in an IT instruction don't fire if their condition is
+false.
+"""
+from __future__ import print_function
+
+
+import lldb
+import os
+import time
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+
+
+class TestBreakpointIt(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
+
+    @skipIf(archs=no_match(["arm"]))
+    def test_false(self):
+        self.build()
+        exe = os.path.join(os.getcwd(), "a.out")
+
+        self.runCmd("target create %s" % exe)
+        lldbutil.run_break_set_by_symbol(self, "bkpt_false",
+                extra_options="--skip-prologue 0")
+
+        self.runCmd("run")
+        self.assertEqual(self.process().GetState(), lldb.eStateExited,
+                "Breakpoint does not get hit")
+
+    @skipIf(archs=no_match(["arm"]))
+    def test_true(self):
+        self.build()
+        exe = os.path.join(os.getcwd(), "a.out")
+
+        self.runCmd("target create %s" % exe)
+        bpid = lldbutil.run_break_set_by_symbol(self, "bkpt_true",
+                extra_options="--skip-prologue 0")
+
+        self.runCmd("run")
+        self.assertIsNotNone(lldbutil.get_one_thread_stopped_at_breakpoint_id(
+            self.process(), bpid))

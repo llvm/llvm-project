@@ -22,8 +22,6 @@ class TestWatchpointEvents (TestBase):
         self.main_source = "main.c"
 
     @add_test_categories(['pyapi'])
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
