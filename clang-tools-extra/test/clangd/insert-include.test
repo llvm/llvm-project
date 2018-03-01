@@ -13,7 +13,7 @@
 # CHECK-NEXT:    "params": {
 # CHECK-NEXT:      "edit": {
 # CHECK-NEXT:        "changes": {
-# CHECK-NEXT:          "file:///clangd-test/main.cpp": [
+# CHECK-NEXT:          "file://{{.*}}/main.cpp": [
 # CHECK-NEXT:            {
 # CHECK-NEXT:              "newText": "#include <vector>\n",
 # CHECK-NEXT:              "range": {

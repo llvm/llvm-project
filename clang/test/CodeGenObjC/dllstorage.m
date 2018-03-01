@@ -16,11 +16,11 @@ __declspec(dllexport)
 @interface J : I
 @end
 
-// CHECK-IR-DAG: @"OBJC_METACLASS_$_J" = dllexport global %struct._class_t
-// CHECK-IR-DAG: @"OBJC_CLASS_$_J" = dllexport global %struct._class_t
+// CHECK-IR-DAG: @"OBJC_METACLASS_$_J" = dso_local dllexport global %struct._class_t
+// CHECK-IR-DAG: @"OBJC_CLASS_$_J" = dso_local dllexport global %struct._class_t
 
-// CHECK-FW-DAG: @_OBJC_METACLASS_J = dllexport global
-// CHECK-FW-DAG: @_OBJC_CLASS_J = dllexport global
+// CHECK-FW-DAG: @_OBJC_METACLASS_J = dso_local dllexport global
+// CHECK-FW-DAG: @_OBJC_CLASS_J = dso_local dllexport global
 
 @implementation J {
   id _ivar;
@@ -32,11 +32,11 @@ __declspec(dllexport)
 @interface K : J
 @end
 
-// CHECK-IR-DAG: @"OBJC_METACLASS_$_K" = global %struct._class_t
-// CHECK-IR-DAG: @"OBJC_CLASS_$_K" = global %struct._class_t
+// CHECK-IR-DAG: @"OBJC_METACLASS_$_K" = dso_local global %struct._class_t
+// CHECK-IR-DAG: @"OBJC_CLASS_$_K" = dso_local global %struct._class_t
 
-// CHECK-FW-DAG: @_OBJC_METACLASS_K = global
-// CHECK-FW-DAG: @_OBJC_CLASS_K = global
+// CHECK-FW-DAG: @_OBJC_METACLASS_K = dso_local global
+// CHECK-FW-DAG: @_OBJC_CLASS_K = dso_local global
 
 @implementation K {
   id _ivar;
@@ -49,11 +49,11 @@ __declspec(dllexport)
 @interface L : K
 @end
 
-// CHECK-IR-DAG: @"OBJC_METACLASS_$_L" = dllexport global %struct._class_t
-// CHECK-IR-DAG: @"OBJC_CLASS_$_L" = dllexport global %struct._class_t
+// CHECK-IR-DAG: @"OBJC_METACLASS_$_L" = dso_local dllexport global %struct._class_t
+// CHECK-IR-DAG: @"OBJC_CLASS_$_L" = dso_local dllexport global %struct._class_t
 
-// CHECK-FW-DAG: @_OBJC_METACLASS_L = dllexport global
-// CHECK-FW-DAG: @_OBJC_CLASS_L = dllexport global
+// CHECK-FW-DAG: @_OBJC_METACLASS_L = dso_local dllexport global
+// CHECK-FW-DAG: @_OBJC_CLASS_L = dso_local dllexport global
 
 @implementation L {
   id _none;
@@ -94,13 +94,13 @@ __attribute__((__objc_exception__))
 @interface N : I
 @end
 
-// CHECK-FW-DAG: @_OBJC_METACLASS_N = dllexport global
-// CHECK-FW-DAG: @_OBJC_CLASS_N = dllexport global
+// CHECK-FW-DAG: @_OBJC_METACLASS_N = dso_local dllexport global
+// CHECK-FW-DAG: @_OBJC_CLASS_N = dso_local dllexport global
 
 @implementation N : I
 @end
 
-// CHECK-IR-DAG: @"OBJC_EHTYPE_$_N" = dllexport global %struct._objc_typeinfo
+// CHECK-IR-DAG: @"OBJC_EHTYPE_$_N" = dso_local dllexport global %struct._objc_typeinfo
 
 __declspec(dllimport)
 __attribute__((__objc_exception__))
@@ -113,7 +113,7 @@ __attribute__((__objc_exception__))
 @interface P : I
 @end
 
-// CHECK-IR-DAG: @"OBJC_EHTYPE_$_P" = external global %struct._objc_typeinfo
+// CHECK-IR-DAG: @"OBJC_EHTYPE_$_P" = external dso_local global %struct._objc_typeinfo
 
 @interface Q : M
 @end

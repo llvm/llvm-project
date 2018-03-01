@@ -1,6 +1,6 @@
 # RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
 # Test with invalid initialize request parameters
-{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":"","rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":"","rootUri":"test:///workspace","capabilities":{},"trace":"off"}}
 #      CHECK:  "id": 0,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {

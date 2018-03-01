@@ -1382,11 +1382,6 @@ static void removeUnusedSyntheticSections() {
       if (auto *ISD = dyn_cast<InputSectionDescription>(B))
         llvm::erase_if(ISD->Sections,
                        [=](InputSection *IS) { return IS == SS; });
-
-    // If there are no other alive sections or commands left in the output
-    // section description, we remove it from the output.
-    if (getInputSections(OS).empty() && OS->isAllSectionDescription())
-      OS->Live = false;
   }
 }
 

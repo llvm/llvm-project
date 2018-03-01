@@ -4,12 +4,12 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libear
-import libscanbuild.analyze as sut
 import unittest
 import re
 import os
 import os.path
+import libear
+import libscanbuild.analyze as sut
 
 
 class ReportDirectoryTest(unittest.TestCase):
@@ -333,3 +333,83 @@ class RequireDecoratorTest(unittest.TestCase):
 
     def test_method_exception_not_caught(self):
         self.assertRaises(Exception, method_exception_from_inside, dict())
+
+
+class PrefixWithTest(unittest.TestCase):
+
+    def test_gives_empty_on_empty(self):
+        res = sut.prefix_with(0, [])
+        self.assertFalse(res)
+
+    def test_interleaves_prefix(self):
+        res = sut.prefix_with(0, [1, 2, 3])
+        self.assertListEqual([0, 1, 0, 2, 0, 3], res)
+
+
+class MergeCtuMapTest(unittest.TestCase):
+
+    def test_no_map_gives_empty(self):
+        pairs = sut.create_global_ctu_function_map([])
+        self.assertFalse(pairs)
+
+    def test_multiple_maps_merged(self):
+        concat_map = ['c:@F@fun1#I# ast/fun1.c.ast',
+                      'c:@F@fun2#I# ast/fun2.c.ast',
+                      'c:@F@fun3#I# ast/fun3.c.ast']
+        pairs = sut.create_global_ctu_function_map(concat_map)
+        self.assertTrue(('c:@F@fun1#I#', 'ast/fun1.c.ast') in pairs)
+        self.assertTrue(('c:@F@fun2#I#', 'ast/fun2.c.ast') in pairs)
+        self.assertTrue(('c:@F@fun3#I#', 'ast/fun3.c.ast') in pairs)
+        self.assertEqual(3, len(pairs))
+
+    def test_not_unique_func_left_out(self):
+        concat_map = ['c:@F@fun1#I# ast/fun1.c.ast',
+                      'c:@F@fun2#I# ast/fun2.c.ast',
+                      'c:@F@fun1#I# ast/fun7.c.ast']
+        pairs = sut.create_global_ctu_function_map(concat_map)
+        self.assertFalse(('c:@F@fun1#I#', 'ast/fun1.c.ast') in pairs)
+        self.assertFalse(('c:@F@fun1#I#', 'ast/fun7.c.ast') in pairs)
+        self.assertTrue(('c:@F@fun2#I#', 'ast/fun2.c.ast') in pairs)
+        self.assertEqual(1, len(pairs))
+
+    def test_duplicates_are_kept(self):
+        concat_map = ['c:@F@fun1#I# ast/fun1.c.ast',
+                      'c:@F@fun2#I# ast/fun2.c.ast',
+                      'c:@F@fun1#I# ast/fun1.c.ast']
+        pairs = sut.create_global_ctu_function_map(concat_map)
+        self.assertTrue(('c:@F@fun1#I#', 'ast/fun1.c.ast') in pairs)
+        self.assertTrue(('c:@F@fun2#I#', 'ast/fun2.c.ast') in pairs)
+        self.assertEqual(2, len(pairs))
+
+    def test_space_handled_in_source(self):
+        concat_map = ['c:@F@fun1#I# ast/f un.c.ast']
+        pairs = sut.create_global_ctu_function_map(concat_map)
+        self.assertTrue(('c:@F@fun1#I#', 'ast/f un.c.ast') in pairs)
+        self.assertEqual(1, len(pairs))
+
+
+class FuncMapSrcToAstTest(unittest.TestCase):
+
+    def test_empty_gives_empty(self):
+        fun_ast_lst = sut.func_map_list_src_to_ast([])
+        self.assertFalse(fun_ast_lst)
+
+    def test_sources_to_asts(self):
+        fun_src_lst = ['c:@F@f1#I# ' + os.path.join(os.sep + 'path', 'f1.c'),
+                       'c:@F@f2#I# ' + os.path.join(os.sep + 'path', 'f2.c')]
+        fun_ast_lst = sut.func_map_list_src_to_ast(fun_src_lst)
+        self.assertTrue('c:@F@f1#I# ' +
+                        os.path.join('ast', 'path', 'f1.c.ast')
+                        in fun_ast_lst)
+        self.assertTrue('c:@F@f2#I# ' +
+                        os.path.join('ast', 'path', 'f2.c.ast')
+                        in fun_ast_lst)
+        self.assertEqual(2, len(fun_ast_lst))
+
+    def test_spaces_handled(self):
+        fun_src_lst = ['c:@F@f1#I# ' + os.path.join(os.sep + 'path', 'f 1.c')]
+        fun_ast_lst = sut.func_map_list_src_to_ast(fun_src_lst)
+        self.assertTrue('c:@F@f1#I# ' +
+                        os.path.join('ast', 'path', 'f 1.c.ast')
+                        in fun_ast_lst)
+        self.assertEqual(1, len(fun_ast_lst))

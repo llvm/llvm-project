@@ -17,8 +17,10 @@
 #include <vector>
 
 #if defined(_MSC_VER)
-#include <DbgHelp.h>
 #include <Windows.h>
+
+// DbgHelp.h must be included after Windows.h.
+#include <DbgHelp.h>
 #pragma comment(lib, "dbghelp.lib")
 #endif
 

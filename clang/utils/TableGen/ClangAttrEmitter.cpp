@@ -3851,8 +3851,8 @@ static void WriteDocumentation(RecordKeeper &Records,
     const Record &Deprecated = *Doc.Documentation->getValueAsDef("Deprecated");
     const StringRef Replacement = Deprecated.getValueAsString("Replacement");
     if (!Replacement.empty())
-      OS << "  This attribute has been superseded by ``"
-         << Replacement << "``.";
+      OS << "  This attribute has been superseded by ``" << Replacement
+         << "``.";
     OS << "\n\n";
   }
 
