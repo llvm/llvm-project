@@ -42,8 +42,6 @@ class OutputSection final : public BaseCommand, public SectionBase {
 public:
   OutputSection(StringRef Name, uint32_t Type, uint64_t Flags);
 
-  bool isAllSectionDescription() const;
-
   static bool classof(const SectionBase *S) {
     return S->kind() == SectionBase::Output;
   }

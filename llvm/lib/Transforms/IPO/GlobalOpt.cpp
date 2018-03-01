@@ -2115,8 +2115,31 @@ static void RemoveNestAttribute(Function *F) {
 /// GHC, or anyregcc.
 static bool hasChangeableCC(Function *F) {
   CallingConv::ID CC = F->getCallingConv();
+
   // FIXME: Is it worth transforming x86_stdcallcc and x86_fastcallcc?
-  return CC == CallingConv::C || CC == CallingConv::X86_ThisCall;
+  if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
+    return false;
+
+  // FIXME: Change CC for the whole chain of musttail calls when possible.
+  //
+  // Can't change CC of the function that either has musttail calls, or is a
+  // musttail callee itself
+  for (User *U : F->users()) {
+    if (isa<BlockAddress>(U))
+      continue;
+    CallInst* CI = dyn_cast<CallInst>(U);
+    if (!CI)
+      continue;
+
+    if (CI->isMustTailCall())
+      return false;
+  }
+
+  for (BasicBlock &BB : *F)
+    if (BB.getTerminatingMustTailCall())
+      return false;
+
+  return true;
 }
 
 /// Return true if the block containing the call site has a BlockFrequency of

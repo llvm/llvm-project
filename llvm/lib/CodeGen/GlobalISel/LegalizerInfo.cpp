@@ -36,6 +36,11 @@ using namespace LegalizeActions;
 
 #define DEBUG_TYPE "legalizer-info"
 
+cl::opt<bool> llvm::DisableGISelLegalityCheck(
+    "disable-gisel-legality-check",
+    cl::desc("Don't verify that MIR is fully legal between GlobalISel passes"),
+    cl::Hidden);
+
 raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
   OS << Opcode << ", {";
   for (const auto &Type : Types) {
@@ -495,3 +500,21 @@ LegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
           LLT::vector(NumElementsAndAction.first,
                       IntermediateType.getScalarSizeInBits())};
 }
+
+#ifndef NDEBUG
+// FIXME: This should be in the MachineVerifier, but it can't use the
+// LegalizerInfo as it's currently in the separate GlobalISel library.
+// Note that RegBankSelected property already checked in the verifier
+// has the same layering problem, but we only use inline methods so
+// end up not needing to link against the GlobalISel library.
+const MachineInstr *llvm::machineFunctionIsIllegal(const MachineFunction &MF) {
+  if (const LegalizerInfo *MLI = MF.getSubtarget().getLegalizerInfo()) {
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    for (const MachineBasicBlock &MBB : MF)
+      for (const MachineInstr &MI : MBB)
+        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
+	  return &MI;
+  }
+  return nullptr;
+}
+#endif

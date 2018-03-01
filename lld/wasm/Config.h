@@ -17,8 +17,6 @@
 namespace lld {
 namespace wasm {
 
-class Symbol;
-
 struct Configuration {
   bool AllowUndefined;
   bool CheckSignatures;

@@ -57,7 +57,12 @@ static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
                                   !Thunk.Return.isEmpty());
 
   // Set the right visibility.
-  CGM.setGVProperties(ThunkFn, cast<CXXMethodDecl>(GD.getDecl()));
+  CGM.setGVProperties(ThunkFn, GD);
+
+  if (!CGM.getCXXABI().exportThunk()) {
+    ThunkFn->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
+    ThunkFn->setDSOLocal(true);
+  }
 
   if (CGM.supportsCOMDAT() && ThunkFn->isWeakForLinker())
     ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));

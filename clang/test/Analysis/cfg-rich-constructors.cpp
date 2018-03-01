@@ -484,4 +484,35 @@ void referenceWithFunctionalCast() {
 void constructorInTernaryCondition() {
   const D &d = D(1) ? D(2) : D(3);
 }
+
 } // end namespace temporary_object_expr_with_dtors
+
+namespace implicit_constructor_conversion {
+
+class A {};
+A get();
+
+class B {
+public:
+  B(const A &);
+  ~B() {}
+};
+
+// FIXME: Find construction context for the implicit constructor conversion.
+// CHECK: void implicitConstructionConversionFromFunctionValue()
+// CHECK:          1: get
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class implicit_constructor_conver
+// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
+// CHECK-NEXT:     5: [B1.4]
+// CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, class implicit_constructor_conversion::B)
+// CHECK-NEXT:     7: [B1.6] (ImplicitCastExpr, ConstructorConversion, class implicit_constructor_convers
+// CHECK-NEXT:     8: [B1.7] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::B)
+// CHECK-NEXT:     9: [B1.8]
+// CHECK-NEXT:    10: const implicit_constructor_conversion::B &b = get();
+// CHECK-NEXT:    11: [B1.10].~B() (Implicit destructor)
+void implicitConstructionConversionFromFunctionValue() {
+  const B &b = get(); // no-crash
+}
+
+} // end namespace implicit_constructor_conversion

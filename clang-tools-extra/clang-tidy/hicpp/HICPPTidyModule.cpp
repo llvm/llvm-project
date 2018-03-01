@@ -21,7 +21,7 @@
 #include "../google/ExplicitConstructorCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
-#include "../misc/UndelegatedConstructor.h"
+#include "../bugprone/UndelegatedConstructorCheck.h"
 #include "../modernize/DeprecatedHeadersCheck.h"
 #include "../modernize/UseAutoCheck.h"
 #include "../modernize/UseEmplaceCheck.h"
@@ -83,7 +83,7 @@ public:
     CheckFactories.registerCheck<misc::StaticAssertCheck>(
         "hicpp-static-assert");
     CheckFactories.registerCheck<modernize::UseAutoCheck>("hicpp-use-auto");
-    CheckFactories.registerCheck<misc::UndelegatedConstructorCheck>(
+    CheckFactories.registerCheck<bugprone::UndelegatedConstructorCheck>(
         "hicpp-undelegated-constructor");
     CheckFactories.registerCheck<modernize::UseEmplaceCheck>(
         "hicpp-use-emplace");

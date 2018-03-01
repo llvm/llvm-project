@@ -81,20 +81,14 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 #ifndef NDEBUG
   // Check that our input is fully legal: we require the function to have the
   // Legalized property, so it should be.
-  // FIXME: This should be in the MachineVerifier, but it can't use the
-  // LegalizerInfo as it's currently in the separate GlobalISel library.
-  // The RegBankSelected property is already checked in the verifier. Note
-  // that it has the same layering problem, but we only use inline methods so
-  // end up not needing to link against the GlobalISel library.
-  if (const LegalizerInfo *MLI = MF.getSubtarget().getLegalizerInfo())
-    for (MachineBasicBlock &MBB : MF)
-      for (MachineInstr &MI : MBB)
-        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI)) {
-          reportGISelFailure(MF, TPC, MORE, "gisel-select",
-                             "instruction is not legal", MI);
-          return false;
-        }
-
+  // FIXME: This should be in the MachineVerifier, as the RegBankSelected
+  // property check already is.
+  if (!DisableGISelLegalityCheck)
+    if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
+      reportGISelFailure(MF, TPC, MORE, "gisel-select",
+                         "instruction is not legal", *MI);
+      return false;
+    }
 #endif
   // FIXME: We could introduce new blocks and will need to fix the outer loop.
   // Until then, keep track of the number of blocks to assert that we don't.
