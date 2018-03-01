@@ -22,7 +22,7 @@ class SettingsCommandTestCase(TestBase):
     @classmethod
     def classCleanup(cls):
         """Cleanup the test byproducts."""
-        cls.RemoveTempFile(self.getBuildArtifact("stdout.txt"))
+        cls.RemoveTempFile("stdout.txt")
 
     @no_debug_info_test
     def test_no_quote(self):

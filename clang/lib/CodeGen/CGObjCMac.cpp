@@ -6305,9 +6305,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
   llvm::GlobalVariable *MetaTClass =
     BuildClassObject(CI, /*metaclass*/ true,
                      IsAGV, SuperClassGV, CLASS_RO_GV, classIsHidden);
-  if (CGM.getTriple().isOSBinFormatCOFF())
-    if (CI->hasAttr<DLLExportAttr>())
-      MetaTClass->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+  CGM.setGVProperties(MetaTClass, CI);
   DefinedMetaClasses.push_back(MetaTClass);
 
   // Metadata for the class
@@ -6347,9 +6345,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
   llvm::GlobalVariable *ClassMD =
     BuildClassObject(CI, /*metaclass*/ false,
                      MetaTClass, SuperClassGV, CLASS_RO_GV, classIsHidden);
-  if (CGM.getTriple().isOSBinFormatCOFF())
-    if (CI->hasAttr<DLLExportAttr>())
-      ClassMD->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+  CGM.setGVProperties(ClassMD, CI);
   DefinedClasses.push_back(ClassMD);
   ImplementedClasses.push_back(CI);
 
@@ -7524,12 +7520,7 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
       Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.EHTypeTy,
                                        false, llvm::GlobalValue::ExternalLinkage,
                                        nullptr, EHTypeName);
-      if (CGM.getTriple().isOSBinFormatCOFF()) {
-        if (ID->hasAttr<DLLExportAttr>())
-          Entry->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-        else if (ID->hasAttr<DLLImportAttr>())
-          Entry->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-      }
+      CGM.setGVProperties(Entry, ID);
       return Entry;
     }
   }
@@ -7568,10 +7559,8 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
                                          CGM.getPointerAlign(),
                                          /*constant*/ false,
                                          L);
-    if (CGM.getTriple().isOSBinFormatCOFF())
-      if (hasObjCExceptionAttribute(CGM.getContext(), ID))
-        if (ID->hasAttr<DLLExportAttr>())
-          Entry->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+    if (hasObjCExceptionAttribute(CGM.getContext(), ID))
+      CGM.setGVProperties(Entry, ID);
   }
   assert(Entry->getLinkage() == L);
 

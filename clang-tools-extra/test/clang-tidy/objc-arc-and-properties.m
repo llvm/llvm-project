@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-suspicious-semicolon %t
+// RUN: %check_clang_tidy %s bugprone-suspicious-semicolon %t
 
 // This test checks if Objective-C 2.0 (@properties) and
 // Automatic Reference Counting (ARC) are enabled for .m files
@@ -16,6 +16,6 @@
 void fail(Foo *f)
 {
   if(f.shouldDoStuff); [f nop];
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: potentially unintended semicolon [misc-suspicious-semicolon]
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: potentially unintended semicolon [bugprone-suspicious-semicolon]
   // CHECK-FIXES: if(f.shouldDoStuff) [f nop];
 }

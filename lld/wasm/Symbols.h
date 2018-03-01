@@ -257,10 +257,9 @@ public:
       : Symbol(Name, LazyKind, 0, File), ArchiveSymbol(Sym) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyKind; }
+  void fetch();
 
-  const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
-
-protected:
+private:
   Archive::Symbol ArchiveSymbol;
 };
 

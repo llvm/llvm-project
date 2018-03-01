@@ -789,8 +789,7 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
   }
                                      
   // Verify that the LLVM and AST field offsets agree.
-  llvm::StructType *ST =
-    dyn_cast<llvm::StructType>(RL->getLLVMType());
+  llvm::StructType *ST = RL->getLLVMType();
   const llvm::StructLayout *SL = getDataLayout().getStructLayout(ST);
 
   const ASTRecordLayout &AST_RL = getContext().getASTRecordLayout(D);

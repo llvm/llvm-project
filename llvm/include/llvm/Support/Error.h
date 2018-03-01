@@ -882,16 +882,16 @@ Error handleErrors(Error E, HandlerTs &&... Hs) {
   return handleErrorImpl(std::move(Payload), std::forward<HandlerTs>(Hs)...);
 }
 
-/// Behaves the same as handleErrors, except that it requires that all
-/// errors be handled by the given handlers. If any unhandled error remains
-/// after the handlers have run, report_fatal_error() will be called.
+/// Behaves the same as handleErrors, except that by contract all errors
+/// *must* be handled by the given handlers (i.e. there must be no remaining
+/// errors after running the handlers, or llvm_unreachable is called).
 template <typename... HandlerTs>
 void handleAllErrors(Error E, HandlerTs &&... Handlers) {
   cantFail(handleErrors(std::move(E), std::forward<HandlerTs>(Handlers)...));
 }
 
 /// Check that E is a non-error, then drop it.
-/// If E is an error report_fatal_error will be called.
+/// If E is an error, llvm_unreachable will be called.
 inline void handleAllErrors(Error E) {
   cantFail(std::move(E));
 }

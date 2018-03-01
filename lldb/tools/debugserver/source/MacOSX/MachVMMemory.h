@@ -32,7 +32,8 @@ public:
   nub_bool_t GetMemoryProfile(DNBProfileDataScanType scanType, task_t task,
                               struct task_basic_info ti, cpu_type_t cputype,
                               nub_process_t pid, vm_statistics64_data_t &vminfo,
-                              uint64_t &physical_memory, mach_vm_size_t &anonymous, mach_vm_size_t &phys_footprint);
+                              uint64_t &physical_memory, uint64_t &anonymous,
+                              uint64_t &phys_footprint, uint64_t &memory_cap);
 
 protected:
   nub_size_t MaxBytesLeftInPage(task_t task, nub_addr_t addr, nub_size_t count);

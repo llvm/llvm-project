@@ -777,8 +777,43 @@ void CodeGenModule::setDSOLocal(llvm::GlobalValue *GV) const {
     GV->setDSOLocal(true);
 }
 
+void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
+                                          GlobalDecl GD) const {
+  const auto *D = dyn_cast<NamedDecl>(GD.getDecl());
+  if (const auto *Dtor = dyn_cast_or_null<CXXDestructorDecl>(D)) {
+    if (getCXXABI().useThunkForDtorVariant(Dtor, GD.getDtorType())) {
+      // Don't dllexport/import destructor thunks.
+      GV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
+      return;
+    }
+  }
+  setDLLImportDLLExport(GV, D);
+}
+
+void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
+                                          const NamedDecl *D) const {
+  if (D->isExternallyVisible()) {
+    if (D->hasAttr<DLLImportAttr>())
+      GV->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
+    else if (D->hasAttr<DLLExportAttr>() && !GV->isDeclarationForLinker())
+      GV->setDLLStorageClass(llvm::GlobalVariable::DLLExportStorageClass);
+  }
+}
+
+void CodeGenModule::setGVProperties(llvm::GlobalValue *GV,
+                                    GlobalDecl GD) const {
+  setDLLImportDLLExport(GV, GD);
+  setGlobalVisibilityAndLocal(GV, dyn_cast<NamedDecl>(GD.getDecl()));
+}
+
 void CodeGenModule::setGVProperties(llvm::GlobalValue *GV,
                                     const NamedDecl *D) const {
+  setDLLImportDLLExport(GV, D);
+  setGlobalVisibilityAndLocal(GV, D);
+}
+
+void CodeGenModule::setGlobalVisibilityAndLocal(llvm::GlobalValue *GV,
+                                                const NamedDecl *D) const {
   setGlobalVisibility(GV, D);
   setDSOLocal(GV);
 }
@@ -1054,35 +1089,11 @@ CodeGenModule::getFunctionLinkage(GlobalDecl GD) {
   return getLLVMLinkageForDeclarator(D, Linkage, /*isConstantVariable=*/false);
 }
 
-void CodeGenModule::setFunctionDLLStorageClass(GlobalDecl GD, llvm::Function *F) {
-  const auto *FD = cast<FunctionDecl>(GD.getDecl());
-
-  if (const auto *Dtor = dyn_cast_or_null<CXXDestructorDecl>(FD)) {
-    if (getCXXABI().useThunkForDtorVariant(Dtor, GD.getDtorType())) {
-      // Don't dllexport/import destructor thunks.
-      F->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-      return;
-    }
-  }
-
-  if (FD->hasAttr<DLLImportAttr>())
-    F->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
-  else if (FD->hasAttr<DLLExportAttr>())
-    F->setDLLStorageClass(llvm::GlobalVariable::DLLExportStorageClass);
-  else
-    F->setDLLStorageClass(llvm::GlobalVariable::DefaultStorageClass);
-}
-
 llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
   llvm::MDString *MDS = dyn_cast<llvm::MDString>(MD);
   if (!MDS) return nullptr;
 
   return llvm::ConstantInt::get(Int64Ty, llvm::MD5Hash(MDS->getString()));
-}
-
-void CodeGenModule::setFunctionDefinitionAttributes(GlobalDecl GD,
-                                                    llvm::Function *F) {
-  setNonAliasAttributes(GD.getDecl(), F);
 }
 
 void CodeGenModule::SetLLVMFunctionAttributes(const Decl *D,
@@ -1237,25 +1248,15 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       CreateFunctionTypeMetadata(FD, F);
 }
 
-void CodeGenModule::SetCommonAttributes(const Decl *D,
-                                        llvm::GlobalValue *GV) {
-  if (const auto *ND = dyn_cast_or_null<NamedDecl>(D))
-    setGVProperties(GV, ND);
+void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
+  const Decl *D = GD.getDecl();
+  if (dyn_cast_or_null<NamedDecl>(D))
+    setGVProperties(GV, GD);
   else
     GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
 
   if (D && D->hasAttr<UsedAttr>())
     addUsedGlobal(GV);
-}
-
-void CodeGenModule::setAliasAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
-  const Decl *D = GD.getDecl();
-  SetCommonAttributes(D, GV);
-
-  // Process the dllexport attribute based on whether the original definition
-  // (not necessarily the aliasee) was exported.
-  if (D->hasAttr<DLLExportAttr>())
-    GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
 }
 
 bool CodeGenModule::GetCPUAndFeaturesAttributes(const Decl *D,
@@ -1304,9 +1305,10 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(const Decl *D,
   return AddedAttr;
 }
 
-void CodeGenModule::setNonAliasAttributes(const Decl *D,
+void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
                                           llvm::GlobalObject *GO) {
-  SetCommonAttributes(D, GO);
+  const Decl *D = GD.getDecl();
+  SetCommonAttributes(GD, GO);
 
   if (D) {
     if (auto *GV = dyn_cast<llvm::GlobalVariable>(GO)) {
@@ -1341,35 +1343,27 @@ void CodeGenModule::setNonAliasAttributes(const Decl *D,
   getTargetCodeGenInfo().setTargetAttributes(D, GO, *this);
 }
 
-void CodeGenModule::SetInternalFunctionAttributes(const Decl *D,
+void CodeGenModule::SetInternalFunctionAttributes(GlobalDecl GD,
                                                   llvm::Function *F,
                                                   const CGFunctionInfo &FI) {
+  const Decl *D = GD.getDecl();
   SetLLVMFunctionAttributes(D, FI, F);
   SetLLVMFunctionAttributesForDefinition(D, F);
 
   F->setLinkage(llvm::Function::InternalLinkage);
 
-  setNonAliasAttributes(D, F);
+  setNonAliasAttributes(GD, F);
 }
 
-static void setLinkageForGV(llvm::GlobalValue *GV,
-                            const NamedDecl *ND) {
+static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
   // Set linkage and visibility in case we never see a definition.
   LinkageInfo LV = ND->getLinkageAndVisibility();
-  if (!isExternallyVisible(LV.getLinkage())) {
-    // Don't set internal linkage on declarations.
-  } else {
-    if (ND->hasAttr<DLLImportAttr>()) {
-      GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
-      GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-    } else if (ND->hasAttr<DLLExportAttr>()) {
-      GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
-    } else if (ND->hasAttr<WeakAttr>() || ND->isWeakImported()) {
-      // "extern_weak" is overloaded in LLVM; we probably should have
-      // separate linkage types for this.
-      GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
-    }
-  }
+  // Don't set internal linkage on declarations.
+  // "extern_weak" is overloaded in LLVM; we probably should have
+  // separate linkage types for this.
+  if (isExternallyVisible(LV.getLinkage()) &&
+      (ND->hasAttr<WeakAttr>() || ND->isWeakImported()))
+    GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
 
 void CodeGenModule::CreateFunctionTypeMetadata(const FunctionDecl *FD,
@@ -2820,7 +2814,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
                   GetAddrOfGlobalVar(D, InitType, IsForDefinition));
 
               // Erase the old global, since it is no longer used.
-              cast<llvm::GlobalValue>(GV)->eraseFromParent();
+              GV->eraseFromParent();
               GV = NewGV;
             } else {
               GV->setInitializer(Init);
@@ -3580,10 +3574,9 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // declarations).
   auto *Fn = cast<llvm::Function>(GV);
   setFunctionLinkage(GD, Fn);
-  setFunctionDLLStorageClass(GD, Fn);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
-  setGVProperties(Fn, D);
+  setGVProperties(Fn, GD);
 
   MaybeHandleStaticInExternC(D, Fn);
 
@@ -3591,7 +3584,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   CodeGenFunction(*this).GenerateCode(D, Fn, FI);
 
-  setFunctionDefinitionAttributes(GD, Fn);
+  setNonAliasAttributes(GD, Fn);
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
@@ -3675,7 +3668,7 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
     if (VD->getTLSKind())
       setTLSMode(GA, *VD);
 
-  setAliasAttributes(GD, GA);
+  SetCommonAttributes(GD, GA);
 }
 
 void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {
@@ -3734,7 +3727,7 @@ void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {
   } else
     GIF->setName(MangledName);
 
-  SetCommonAttributes(D, GIF);
+  SetCommonAttributes(GD, GIF);
 }
 
 llvm::Function *CodeGenModule::getIntrinsic(unsigned IID,

@@ -1827,9 +1827,10 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // We can devirtualize calls on an object accessed by a class member access
   // expression, since by C++11 [basic.life]p6 we know that it can't refer to
   // a derived class object constructed in the same location.
-  if (const MemberExpr *ME = dyn_cast<MemberExpr>(Base))
-    if (const ValueDecl *VD = dyn_cast<ValueDecl>(ME->getMemberDecl()))
-      return VD->getType()->isRecordType() ? DevirtualizedMethod : nullptr;
+  if (const MemberExpr *ME = dyn_cast<MemberExpr>(Base)) {
+    const ValueDecl *VD = ME->getMemberDecl();
+    return VD->getType()->isRecordType() ? DevirtualizedMethod : nullptr;
+  }
 
   // Likewise for calls on an object accessed by a (non-reference) pointer to
   // member access.
