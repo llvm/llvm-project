@@ -414,6 +414,13 @@ def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
   HelpText<"Check for overflows in the arguments to malloc()">,
   DescFile<"MallocOverflowSecurityChecker.cpp">;
 
+// Operating systems specific PROT_READ/PROT_WRITE values is not implemented,
+// the defaults are correct for several common operating systems though, 
+// but may need to be overridden via the related analyzer-config flags.
+def MmapWriteExecChecker : Checker<"MmapWriteExec">,
+  HelpText<"Warn on mmap() calls that are both writable and executable">,
+  DescFile<"MmapWriteExecChecker.cpp">;
+
 } // end "alpha.security"
 
 //===----------------------------------------------------------------------===//
