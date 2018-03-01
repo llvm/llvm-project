@@ -1123,45 +1123,46 @@ QualType QualType::substObjCTypeArgs(
     // Replace an Objective-C type parameter reference with the corresponding
     // type argument.
     if (const auto *typedefTy = dyn_cast<TypedefType>(splitType.Ty)) {
-      ObjCTypeParamDecl *typeParam = OTPTy->getDecl();
-      // If we have type arguments, use them.
-      if (!typeArgs.empty()) {
-        // FIXME: Introduce SubstObjCTypeParamType ?
-        QualType argType = typeArgs[typeParam->getIndex()];
-        return ctx.getQualifiedType(argType, splitType.Quals);
-      }
+      if (auto *typeParam = dyn_cast<ObjCTypeParamDecl>(typedefTy->getDecl())) {
+        // If we have type arguments, use them.
+        if (!typeArgs.empty()) {
+          // FIXME: Introduce SubstObjCTypeParamType ?
+          QualType argType = typeArgs[typeParam->getIndex()];
+          return ctx.getQualifiedType(argType, splitType.Quals);
+        }
 
-      switch (context) {
-      case ObjCSubstitutionContext::Ordinary:
-      case ObjCSubstitutionContext::Parameter:
-      case ObjCSubstitutionContext::Superclass:
-        // Substitute the bound.
-        return ctx.getQualifiedType(typeParam->getUnderlyingType(),
-                                    splitType.Quals);
-
-      case ObjCSubstitutionContext::Result:
-      case ObjCSubstitutionContext::Property: {
-        // Substitute the __kindof form of the underlying type.
-        const auto *objPtr = typeParam->getUnderlyingType()
-          ->castAs<ObjCObjectPointerType>();
-
-        // __kindof types, id, and Class don't need an additional
-        // __kindof.
-        if (objPtr->isKindOfType() || objPtr->isObjCIdOrClassType())
+        switch (context) {
+        case ObjCSubstitutionContext::Ordinary:
+        case ObjCSubstitutionContext::Parameter:
+        case ObjCSubstitutionContext::Superclass:
+          // Substitute the bound.
           return ctx.getQualifiedType(typeParam->getUnderlyingType(),
                                       splitType.Quals);
 
-        // Add __kindof.
-        const auto *obj = objPtr->getObjectType();
-        QualType resultTy = ctx.getObjCObjectType(obj->getBaseType(),
-                                                  obj->getTypeArgsAsWritten(),
-                                                  obj->getProtocols(),
-                                                  /*isKindOf=*/true);
+        case ObjCSubstitutionContext::Result:
+        case ObjCSubstitutionContext::Property: {
+          // Substitute the __kindof form of the underlying type.
+          const auto *objPtr = typeParam->getUnderlyingType()
+            ->castAs<ObjCObjectPointerType>();
 
-        // Rebuild object pointer type.
-        resultTy = ctx.getObjCObjectPointerType(resultTy);
-        return ctx.getQualifiedType(resultTy, splitType.Quals);
-      }
+          // __kindof types, id, and Class don't need an additional
+          // __kindof.
+          if (objPtr->isKindOfType() || objPtr->isObjCIdOrClassType())
+            return ctx.getQualifiedType(typeParam->getUnderlyingType(),
+                                        splitType.Quals);
+
+          // Add __kindof.
+          const auto *obj = objPtr->getObjectType();
+          QualType resultTy = ctx.getObjCObjectType(obj->getBaseType(),
+                                                    obj->getTypeArgsAsWritten(),
+                                                    obj->getProtocols(),
+                                                    /*isKindOf=*/true);
+
+          // Rebuild object pointer type.
+          resultTy = ctx.getObjCObjectPointerType(resultTy);
+          return ctx.getQualifiedType(resultTy, splitType.Quals);
+        }
+        }
       }
     }
 
