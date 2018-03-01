@@ -563,13 +563,9 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     if (match(Op0, m_FNeg(m_Value(X))))
       return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
 
-    // (fmul X, -1.0) --> (fsub -0.0, X)
-    if (match(C, m_SpecificFP(-1.0))) {
-      Constant *NegZero = ConstantFP::getNegativeZero(Op1->getType());
-      Instruction *RI = BinaryOperator::CreateFSub(NegZero, Op0);
-      RI->copyFastMathFlags(&I);
-      return RI;
-    }
+    // X * -1.0 --> -X
+    if (match(C, m_SpecificFP(-1.0)))
+      return BinaryOperator::CreateFNegFMF(Op0, &I);
 
     if (AllowReassociate && C->isFiniteNonZeroFP()) {
       // Let MDC denote an expression in one of these forms:

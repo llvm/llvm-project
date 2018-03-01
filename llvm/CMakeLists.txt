@@ -194,6 +194,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 option(LLVM_INSTALL_BINUTILS_SYMLINKS
   "Install symlinks from the binutils tool names to the corresponding LLVM tools." OFF)
 
+option(LLVM_INSTALL_CCTOOLS_SYMLINKS
+  "Install symlinks from the cctools tool names to the corresponding LLVM tools." OFF)
+
 option(LLVM_INSTALL_UTILS "Include utility binaries in the 'install' target." OFF)
 
 option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)

@@ -247,13 +247,6 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   if (D.getTLSKind())
     setTLSMode(GV, D);
 
-  if (D.isExternallyVisible()) {
-    if (D.hasAttr<DLLImportAttr>())
-      GV->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
-    else if (D.hasAttr<DLLExportAttr>())
-      GV->setDLLStorageClass(llvm::GlobalVariable::DLLExportStorageClass);
-  }
-
   setGVProperties(GV, &D);
 
   // Make sure the result is of the correct type.

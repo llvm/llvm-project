@@ -12,32 +12,32 @@ target triple = "x86_64-unknown-linux-gnu"
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kshiftrw $1, %k0, %k1
 ; KNL-NEXT:    kmovw %k1, %eax
-; KNL-NEXT:    kshiftrw $2, %k0, %k1
-; KNL-NEXT:    kshiftrw $1, %k1, %k2
-; KNL-NEXT:    kmovw %k1, %ecx
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld1
 ; KNL-NEXT:    fldz
 ; KNL-NEXT:    fld %st(0)
 ; KNL-NEXT:    fcmovne %st(2), %st(0)
-; KNL-NEXT:    testb $1, %cl
+; KNL-NEXT:    kshiftrw $2, %k0, %k1
+; KNL-NEXT:    kshiftrw $1, %k1, %k2
+; KNL-NEXT:    kmovw %k2, %eax
+; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld %st(1)
 ; KNL-NEXT:    fcmovne %st(3), %st(0)
-; KNL-NEXT:    kmovw %k2, %eax
+; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld %st(2)
 ; KNL-NEXT:    fcmovne %st(4), %st(0)
-; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fxch %st(3)
 ; KNL-NEXT:    fcmovne %st(4), %st(0)
 ; KNL-NEXT:    fstp %st(4)
 ; KNL-NEXT:    fxch %st(3)
+; KNL-NEXT:    fstpt 20(%rdi)
+; KNL-NEXT:    fxch %st(1)
 ; KNL-NEXT:    fstpt (%rdi)
 ; KNL-NEXT:    fxch %st(1)
 ; KNL-NEXT:    fstpt 30(%rdi)
-; KNL-NEXT:    fxch %st(1)
-; KNL-NEXT:    fstpt 20(%rdi)
 ; KNL-NEXT:    fstpt 10(%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -54,11 +54,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    fldz
 ; SKX-NEXT:    fld %st(0)
 ; SKX-NEXT:    fcmovne %st(2), %st(0)
-; SKX-NEXT:    kshiftrw $1, %k0, %k2
-; SKX-NEXT:    kmovd %k2, %eax
+; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(1)
 ; SKX-NEXT:    fcmovne %st(3), %st(0)
+; SKX-NEXT:    kshiftrw $1, %k0, %k1
 ; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(2)
@@ -71,9 +71,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    fxch %st(3)
 ; SKX-NEXT:    fstpt (%rdi)
 ; SKX-NEXT:    fxch %st(1)
-; SKX-NEXT:    fstpt 20(%rdi)
-; SKX-NEXT:    fxch %st(1)
 ; SKX-NEXT:    fstpt 10(%rdi)
+; SKX-NEXT:    fxch %st(1)
+; SKX-NEXT:    fstpt 20(%rdi)
 ; SKX-NEXT:    fstpt 30(%rdi)
 ; SKX-NEXT:    retq
  bb:

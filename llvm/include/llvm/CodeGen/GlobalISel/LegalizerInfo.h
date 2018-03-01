@@ -20,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
@@ -30,6 +31,8 @@
 #include <utility>
 
 namespace llvm {
+
+extern cl::opt<bool> DisableGISelLegalityCheck;
 
 class MachineInstr;
 class MachineIRBuilder;
@@ -905,6 +908,12 @@ private:
 
   LegalizeRuleSet RulesForOpcode[LastOp - FirstOp + 1];
 };
+
+#ifndef NDEBUG
+/// Checks that MIR is fully legal, returns an illegal instruction if it's not,
+/// nullptr otherwise
+const MachineInstr *machineFunctionIsIllegal(const MachineFunction &MF);
+#endif
 
 } // end namespace llvm.
 
