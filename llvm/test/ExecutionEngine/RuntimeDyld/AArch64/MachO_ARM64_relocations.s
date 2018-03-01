@@ -90,3 +90,5 @@ _ptr:
 # rtdyld-check: *{8}_subtractor_result = _test_branch_reloc - _foo
 _subtractor_result:
     .quad _test_branch_reloc - _foo
+
+.subsections_via_symbols
