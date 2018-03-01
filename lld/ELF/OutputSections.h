@@ -101,6 +101,7 @@ public:
   std::string LMARegionName;
   bool NonAlloc = false;
   bool Noload = false;
+  bool ExpressionsUseSymbols = false;
 
   template <class ELFT> void finalize();
   template <class ELFT> void writeTo(uint8_t *Buf);

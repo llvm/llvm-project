@@ -671,6 +671,8 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSection *Cmd =
       Script->createOutputSection(OutSec, getCurrentLocation());
 
+  size_t SymbolsReferenced = Script->ReferencedSymbols.size();
+
   if (peek() != ":")
     readSectionAddressType(Cmd);
   expect(":");
@@ -737,6 +739,8 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   // Consume optional comma following output section command.
   consume(",");
 
+  if (Script->ReferencedSymbols.size() > SymbolsReferenced)
+    Cmd->ExpressionsUseSymbols = true;
   return Cmd;
 }
 
@@ -885,7 +889,7 @@ Expr ScriptParser::readConstant() {
   if (S == "MAXPAGESIZE")
     return [] { return Config->MaxPageSize; };
   setError("unknown constant: " + S);
-  return {};
+  return [] { return 0; };
 }
 
 // Parses Tok as an integer. It recognizes hexadecimal (prefixed with
@@ -1048,8 +1052,10 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "LENGTH") {
     StringRef Name = readParenLiteral();
-    if (Script->MemoryRegions.count(Name) == 0)
+    if (Script->MemoryRegions.count(Name) == 0) {
       setError("memory region not defined: " + Name);
+      return [] { return 0; };
+    }
     return [=] { return Script->MemoryRegions[Name]->Length; };
   }
   if (Tok == "LOADADDR") {
@@ -1062,8 +1068,10 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "ORIGIN") {
     StringRef Name = readParenLiteral();
-    if (Script->MemoryRegions.count(Name) == 0)
+    if (Script->MemoryRegions.count(Name) == 0) {
       setError("memory region not defined: " + Name);
+      return [] { return 0; };
+    }
     return [=] { return Script->MemoryRegions[Name]->Origin; };
   }
   if (Tok == "SEGMENT_START") {

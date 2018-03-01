@@ -24,10 +24,6 @@ class CFGElement;
 class LocationContext;
 class Stmt;
 
-namespace cross_tu {
-class CrossTranslationUnitContext;
-}
-
 namespace ento {
   
 struct NodeBuilderContext;
@@ -52,9 +48,6 @@ public:
   virtual ProgramStateRef getInitialState(const LocationContext *InitLoc) = 0;
 
   virtual AnalysisManager &getAnalysisManager() = 0;
-
-  virtual cross_tu::CrossTranslationUnitContext *
-  getCrossTranslationUnitContext() = 0;
 
   virtual ProgramStateManager &getStateManager() = 0;
 

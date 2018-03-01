@@ -825,7 +825,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
   FieldVector FieldsInSymbolicSubregions;
   if (TopKey.hasSymbolicOffset()) {
     getSymbolicOffsetFields(TopKey, FieldsInSymbolicSubregions);
-    Top = cast<SubRegion>(TopKey.getConcreteOffsetRegion());
+    Top = TopKey.getConcreteOffsetRegion();
     TopKey = BindingKey::Make(Top, BindingKey::Default);
   }
 
@@ -1774,7 +1774,7 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
   // quickly result in a warning.
   bool hasPartialLazyBinding = false;
 
-  const SubRegion *SR = dyn_cast<SubRegion>(R);
+  const SubRegion *SR = R;
   while (SR) {
     const MemRegion *Base = SR->getSuperRegion();
     if (Optional<SVal> D = getBindingForDerivedDefaultValue(B, Base, R, Ty)) {

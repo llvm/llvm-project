@@ -15,7 +15,6 @@ add_clang_library(clangStaticAnalyzerFrontend
   clangAST
   clangAnalysis
   clangBasic
-  clangCrossTU
   clangFrontend
   clangLex
   clangStaticAnalyzerCheckers

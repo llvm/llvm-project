@@ -3682,9 +3682,7 @@ void CGOpenMPRuntime::loadOffloadInfoMetadata() {
   if (!MD)
     return;
 
-  for (auto I : MD->operands()) {
-    llvm::MDNode *MN = cast<llvm::MDNode>(I);
-
+  for (llvm::MDNode *MN : MD->operands()) {
     auto getMDInt = [&](unsigned Idx) {
       llvm::ConstantAsMetadata *V =
           cast<llvm::ConstantAsMetadata>(MN->getOperand(Idx));
@@ -6788,7 +6786,7 @@ public:
     const ValueDecl *VD =
         Cap->capturesThis()
             ? nullptr
-            : cast<ValueDecl>(Cap->getCapturedVar()->getCanonicalDecl());
+            : Cap->getCapturedVar()->getCanonicalDecl();
 
     // If this declaration appears in a is_device_ptr clause we just have to
     // pass the pointer by value. If it is a reference to a declaration, we just

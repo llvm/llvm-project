@@ -3526,7 +3526,7 @@ noteNonDeducibleParameters(Sema &S, TemplateParameterList *TemplateParams,
                            const llvm::SmallBitVector &DeducibleParams) {
   for (unsigned I = 0, N = DeducibleParams.size(); I != N; ++I) {
     if (!DeducibleParams[I]) {
-      NamedDecl *Param = cast<NamedDecl>(TemplateParams->getParam(I));
+      NamedDecl *Param = TemplateParams->getParam(I);
       if (Param->getDeclName())
         S.Diag(Param->getLocation(), diag::note_non_deducible_parameter)
             << Param->getDeclName();
@@ -5934,17 +5934,16 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
   }
   // A constant of pointer-to-member type.
   else if ((DRE = dyn_cast<DeclRefExpr>(Arg))) {
-    if (ValueDecl *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
-      if (VD->getType()->isMemberPointerType()) {
-        if (isa<NonTypeTemplateParmDecl>(VD)) {
-          if (Arg->isTypeDependent() || Arg->isValueDependent()) {
-            Converted = TemplateArgument(Arg);
-          } else {
-            VD = cast<ValueDecl>(VD->getCanonicalDecl());
-            Converted = TemplateArgument(VD, ParamType);
-          }
-          return Invalid;
+    ValueDecl *VD = DRE->getDecl();
+    if (VD->getType()->isMemberPointerType()) {
+      if (isa<NonTypeTemplateParmDecl>(VD)) {
+        if (Arg->isTypeDependent() || Arg->isValueDependent()) {
+          Converted = TemplateArgument(Arg);
+        } else {
+          VD = cast<ValueDecl>(VD->getCanonicalDecl());
+          Converted = TemplateArgument(VD, ParamType);
         }
+        return Invalid;
       }
     }
 
@@ -6635,7 +6634,7 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
   assert(Arg.getKind() == TemplateArgument::Declaration &&
          "Only declaration template arguments permitted here");
 
-  ValueDecl *VD = cast<ValueDecl>(Arg.getAsDecl());
+  ValueDecl *VD = Arg.getAsDecl();
 
   if (VD->getDeclContext()->isRecord() &&
       (isa<CXXMethodDecl>(VD) || isa<FieldDecl>(VD) ||
@@ -9529,8 +9528,7 @@ static bool isEnableIf(NestedNameSpecifierLoc NNS, const IdentifierInfo &II,
       EnableIfTy.getAs<TemplateSpecializationTypeLoc>();
   if (!EnableIfTSTLoc || EnableIfTSTLoc.getNumArgs() == 0)
     return false;
-  const TemplateSpecializationType *EnableIfTST =
-    cast<TemplateSpecializationType>(EnableIfTSTLoc.getTypePtr());
+  const TemplateSpecializationType *EnableIfTST = EnableIfTSTLoc.getTypePtr();
 
   // ... which names a complete class template declaration...
   const TemplateDecl *EnableIfDecl =

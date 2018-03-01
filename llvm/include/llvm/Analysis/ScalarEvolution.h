@@ -1099,6 +1099,9 @@ private:
   /// Mark predicate values currently being processed by isImpliedCond.
   SmallPtrSet<Value *, 6> PendingLoopPredicates;
 
+  /// Mark SCEVUnknown Phis currently being processed by getRangeRef.
+  SmallPtrSet<const PHINode *, 6> PendingPhiRanges;
+
   /// Set to true by isLoopBackedgeGuardedByCond when we're walking the set of
   /// conditions dominating the backedge of a loop.
   bool WalkingBEDominatingConds = false;

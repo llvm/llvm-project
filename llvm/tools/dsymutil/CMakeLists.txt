@@ -16,6 +16,7 @@ add_llvm_tool(llvm-dsymutil
   DwarfLinker.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
+  NonRelocatableStringpool.cpp
 
   DEPENDS
   intrinsics_gen

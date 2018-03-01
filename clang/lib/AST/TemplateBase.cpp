@@ -406,7 +406,7 @@ void TemplateArgument::print(const PrintingPolicy &Policy,
   }
     
   case Declaration: {
-    NamedDecl *ND = cast<NamedDecl>(getAsDecl());
+    NamedDecl *ND = getAsDecl();
     Out << '&';
     if (ND->getDeclName()) {
       // FIXME: distinguish between pointer and reference args?

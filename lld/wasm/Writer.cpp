@@ -669,13 +669,13 @@ void Writer::calculateExports() {
   if (Config->Relocatable)
     return;
 
-  auto ExportSym = [&](Symbol *Sym) {
+  for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isDefined())
-      return;
+      continue;
     if (Sym->isHidden() || Sym->isLocal())
-      return;
+      continue;
     if (!Sym->isLive())
-      return;
+      continue;
 
     DEBUG(dbgs() << "exporting sym: " << Sym->getName() << "\n");
 
@@ -684,27 +684,11 @@ void Writer::calculateExports() {
       // used only to create fake-global exports for the synthetic symbols.  Fix
       // this in a future commit
       if (Sym != WasmSym::DataEnd && Sym != WasmSym::HeapBase)
-        return;
+        continue;
       DefinedFakeGlobals.emplace_back(D);
     }
     ExportedSymbols.emplace_back(Sym);
-  };
-
-  // TODO The two loops below should be replaced with this single loop, with
-  // ExportSym inlined:
-  //  for (Symbol *Sym : Symtab->getSymbols())
-  //    ExportSym(Sym);
-  // Making that change would reorder the output though, so it should be done as
-  // a separate commit.
-
-  for (ObjFile *File : Symtab->ObjectFiles)
-    for (Symbol *Sym : File->getSymbols())
-      if (File == Sym->getFile())
-        ExportSym(Sym);
-
-  for (Symbol *Sym : Symtab->getSymbols())
-    if (Sym->getFile() == nullptr)
-      ExportSym(Sym);
+  }
 }
 
 void Writer::assignSymtab() {

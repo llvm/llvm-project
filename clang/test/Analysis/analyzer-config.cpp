@@ -30,7 +30,6 @@ public:
 // CHECK-NEXT: cfg-loopexit = false
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-temporary-dtors = false
-// CHECK-NEXT: experimental-enable-naive-ctu-analysis = false
 // CHECK-NEXT: exploration_strategy = unexplored_first_queue
 // CHECK-NEXT: faux-bodies = true
 // CHECK-NEXT: graph-trim-interval = 1000
@@ -48,4 +47,4 @@ public:
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 28
+// CHECK-NEXT: num-entries = 27
