@@ -437,7 +437,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   for (size_t set = 0; set < num_sets; ++set) {
     assert(m_sets.size() == m_set_reg_nums.size());
     m_sets[set].num_registers = m_set_reg_nums[set].size();
-    m_sets[set].registers = &m_set_reg_nums[set][0];
+    m_sets[set].registers = m_set_reg_nums[set].data();
   }
 
   // sort and unique all value registers and make sure each is terminated with
