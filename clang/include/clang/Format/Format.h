@@ -1525,6 +1525,21 @@ struct FormatStyle {
   /// \endcode
   bool SpaceBeforeAssignmentOperators;
 
+  /// \brief If ``false``, spaces will be removed before constructor initializer
+  /// colon.
+  /// \code
+  ///    true:                                  false:
+  ///    Foo::Foo() : a(a) {}                   Foo::Foo(): a(a) {}
+  /// \endcode
+  bool SpaceBeforeCtorInitializerColon;
+
+  /// \brief If ``false``, spaces will be removed before inheritance colon.
+  /// \code
+  ///    true:                                  false:
+  ///    class Foo : Bar {}             vs.     class Foo: Bar {}
+  /// \endcode
+  bool SpaceBeforeInheritanceColon;
+
   /// \brief Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensOptions {
     /// Never put a space before opening parentheses.
@@ -1562,6 +1577,14 @@ struct FormatStyle {
 
   /// \brief Defines in which cases to put a space before opening parentheses.
   SpaceBeforeParensOptions SpaceBeforeParens;
+
+  /// \brief If ``false``, spaces will be removed before range-based for loop
+  /// colon.
+  /// \code
+  ///    true:                                  false:
+  ///    for (auto v : values) {}       vs.     for(auto v: values) {}
+  /// \endcode
+  bool SpaceBeforeRangeBasedForLoopColon;
 
   /// \brief If ``true``, spaces may be inserted into ``()``.
   /// \code
@@ -1744,7 +1767,12 @@ struct FormatStyle {
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&
+           SpaceBeforeCtorInitializerColon ==
+               R.SpaceBeforeCtorInitializerColon &&
+           SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
+           SpaceBeforeRangeBasedForLoopColon ==
+               R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceInEmptyParentheses == R.SpaceInEmptyParentheses &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&

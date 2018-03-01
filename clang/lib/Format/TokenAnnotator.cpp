@@ -2575,8 +2575,15 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
   if (Right.is(tok::comma))
     return false;
-  if (Right.isOneOf(TT_CtorInitializerColon, TT_ObjCBlockLParen))
+  if (Right.is(TT_ObjCBlockLParen))
     return true;
+  if (Right.is(TT_CtorInitializerColon))
+    return Style.SpaceBeforeCtorInitializerColon;
+  if (Right.is(TT_InheritanceColon) && !Style.SpaceBeforeInheritanceColon)
+    return false;
+  if (Right.is(TT_RangeBasedForLoopColon) &&
+      !Style.SpaceBeforeRangeBasedForLoopColon)
+    return false;
   if (Right.is(tok::colon)) {
     if (Line.First->isOneOf(tok::kw_case, tok::kw_default) ||
         !Right.getNextNonComment() || Right.getNextNonComment()->is(tok::semi))

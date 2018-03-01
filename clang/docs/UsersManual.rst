@@ -2684,10 +2684,20 @@ compatibility with the Visual C++ compiler, cl.exe.
 To enable clang-cl to find system headers, libraries, and the linker when run
 from the command-line, it should be executed inside a Visual Studio Native Tools
 Command Prompt or a regular Command Prompt where the environment has been set
-up using e.g. `vcvars32.bat <http://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx>`_.
+up using e.g. `vcvarsall.bat <http://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx>`_.
 
-clang-cl can also be used from inside Visual Studio by using an LLVM Platform
-Toolset.
+clang-cl can also be used from inside Visual Studio by selecting the LLVM
+Platform Toolset. The toolset is installed by the LLVM installer, which can be
+downloaded from the `LLVM release <http://releases.llvm.org/download.html>`_ or
+`snapshot build <http://llvm.org/builds/>`_ web pages. To use the toolset,
+select a project in Solution Explorer, open its Property Page (Alt+F7), and in
+the "General" section of "Configuration Properties" change "Platform Toolset"
+to e.g. LLVM-vs2014.
+
+To use the toolset with MSBuild directly, invoke it with e.g.
+``/p:PlatformToolset=LLVM-vs2014``. This allows trying out the clang-cl
+toolchain without modifying your project files.
+
 
 Command-Line Options
 --------------------

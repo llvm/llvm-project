@@ -778,11 +778,10 @@ static bool isDiscardable(OutputSection &Sec) {
   if (!Sec.Phdrs.empty())
     return false;
 
-  // We do not want to remove sections that have custom address or align
-  // expressions set even if them are empty. We keep them because we
-  // want to be sure that any expressions can be evaluated and report
-  // an error otherwise.
-  if (Sec.AddrExpr || Sec.AlignExpr || Sec.LMAExpr)
+  // We do not want to remove sections that reference symbols in address and
+  // other expressions. We add script symbols as undefined, and want to ensure
+  // all of them are defined in the output, hence have to keep them.
+  if (Sec.ExpressionsUseSymbols)
     return false;
 
   for (BaseCommand *Base : Sec.SectionCommands)
