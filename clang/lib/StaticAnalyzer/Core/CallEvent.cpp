@@ -1260,7 +1260,7 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   if (Optional<CFGAutomaticObjDtor> AutoDtor = E.getAs<CFGAutomaticObjDtor>())
     Trigger = AutoDtor->getTriggerStmt();
   else if (Optional<CFGDeleteDtor> DeleteDtor = E.getAs<CFGDeleteDtor>())
-    Trigger = cast<Stmt>(DeleteDtor->getDeleteExpr());
+    Trigger = DeleteDtor->getDeleteExpr();
   else
     Trigger = Dtor->getBody();
 

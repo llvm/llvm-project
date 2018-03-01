@@ -618,7 +618,7 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
     TInfo = Context.getTrivialTypeSourceInfo(T, TLoc);
   }
 
-  DeclContext *DC = cast<DeclContext>(CDecl);
+  DeclContext *DC = CDecl;
   ObjCPropertyDecl *PDecl = ObjCPropertyDecl::Create(Context, DC,
                                                      FD.D.getIdentifierLoc(),
                                                      PropertyId, AtLoc, 

@@ -7341,8 +7341,7 @@ class TransformTypos : public TreeTransform<TransformTypos> {
   /// suggest the corrections. Otherwise the diagnostics will not suggest
   /// anything (having been passed an empty TypoCorrection).
   void EmitAllDiagnostics() {
-    for (auto E : TypoExprs) {
-      TypoExpr *TE = cast<TypoExpr>(E);
+    for (TypoExpr *TE : TypoExprs) {
       auto &State = SemaRef.getTypoExprState(TE);
       if (State.DiagHandler) {
         TypoCorrection TC = State.Consumer->getCurrentCorrection();

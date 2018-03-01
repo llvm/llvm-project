@@ -2169,19 +2169,19 @@ public:
   void setRHS(Expr *E) { SubExprs[RHS] = E; }
 
   Expr *getBase() {
-    return cast<Expr>(getRHS()->getType()->isIntegerType() ? getLHS():getRHS());
+    return getRHS()->getType()->isIntegerType() ? getLHS() : getRHS();
   }
 
   const Expr *getBase() const {
-    return cast<Expr>(getRHS()->getType()->isIntegerType() ? getLHS():getRHS());
+    return getRHS()->getType()->isIntegerType() ? getLHS() : getRHS();
   }
 
   Expr *getIdx() {
-    return cast<Expr>(getRHS()->getType()->isIntegerType() ? getRHS():getLHS());
+    return getRHS()->getType()->isIntegerType() ? getRHS() : getLHS();
   }
 
   const Expr *getIdx() const {
-    return cast<Expr>(getRHS()->getType()->isIntegerType() ? getRHS():getLHS());
+    return getRHS()->getType()->isIntegerType() ? getRHS() : getLHS();
   }
 
   SourceLocation getLocStart() const LLVM_READONLY {

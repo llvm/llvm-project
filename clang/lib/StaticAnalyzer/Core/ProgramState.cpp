@@ -255,7 +255,7 @@ SVal ProgramState::getSValAsScalarOrLoc(const MemRegion *R) const {
 }
 
 SVal ProgramState::getSVal(Loc location, QualType T) const {
-  SVal V = getRawSVal(cast<Loc>(location), T);
+  SVal V = getRawSVal(location, T);
 
   // If 'V' is a symbolic value that is *perfectly* constrained to
   // be a constant value, use that value instead to lessen the burden

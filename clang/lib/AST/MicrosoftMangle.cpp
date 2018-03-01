@@ -1368,7 +1368,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
     break;
   }
   case TemplateArgument::Declaration: {
-    const NamedDecl *ND = cast<NamedDecl>(TA.getAsDecl());
+    const NamedDecl *ND = TA.getAsDecl();
     if (isa<FieldDecl>(ND) || isa<IndirectFieldDecl>(ND)) {
       mangleMemberDataPointer(
           cast<CXXRecordDecl>(ND->getDeclContext())->getMostRecentDecl(),

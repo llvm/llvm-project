@@ -3016,7 +3016,7 @@ const CXXMethodDecl *ASTContext::getCurrentKeyFunction(const CXXRecordDecl *RD) 
     return nullptr;
 
   assert(RD->getDefinition() && "Cannot get key function for forward decl!");
-  RD = cast<CXXRecordDecl>(RD->getDefinition());
+  RD = RD->getDefinition();
 
   // Beware:
   //  1) computing the key function might trigger deserialization, which might

@@ -402,13 +402,13 @@ visit(const ObjCImplementationDecl *ImplD) const {
     // Find the setter and the getter.
     const ObjCMethodDecl *SetterD = PD->getSetterMethodDecl();
     if (SetterD) {
-      SetterD = cast<ObjCMethodDecl>(SetterD->getCanonicalDecl());
+      SetterD = SetterD->getCanonicalDecl();
       PropSetterToIvarMap[SetterD] = ID;
     }
 
     const ObjCMethodDecl *GetterD = PD->getGetterMethodDecl();
     if (GetterD) {
-      GetterD = cast<ObjCMethodDecl>(GetterD->getCanonicalDecl());
+      GetterD = GetterD->getCanonicalDecl();
       PropGetterToIvarMap[GetterD] = ID;
     }
   }
@@ -606,7 +606,7 @@ void IvarInvalidationCheckerImpl::MethodCrawler::checkObjCMessageExpr(
     const ObjCMessageExpr *ME) {
   const ObjCMethodDecl *MD = ME->getMethodDecl();
   if (MD) {
-    MD = cast<ObjCMethodDecl>(MD->getCanonicalDecl());
+    MD = MD->getCanonicalDecl();
     MethToIvarMapTy::const_iterator IvI = PropertyGetterToIvarMap.find(MD);
     if (IvI != PropertyGetterToIvarMap.end())
       markInvalidated(IvI->second);
@@ -630,7 +630,7 @@ void IvarInvalidationCheckerImpl::MethodCrawler::checkObjCPropertyRefExpr(
   if (PA->isImplicitProperty()) {
     const ObjCMethodDecl *MD = PA->getImplicitPropertySetter();
     if (MD) {
-      MD = cast<ObjCMethodDecl>(MD->getCanonicalDecl());
+      MD = MD->getCanonicalDecl();
       MethToIvarMapTy::const_iterator IvI =PropertyGetterToIvarMap.find(MD);
       if (IvI != PropertyGetterToIvarMap.end())
         markInvalidated(IvI->second);
@@ -702,7 +702,7 @@ void IvarInvalidationCheckerImpl::MethodCrawler::VisitObjCMessageExpr(
 
   // Check if we call a setter and set the property to 'nil'.
   if (MD && (ME->getNumArgs() == 1) && isZero(ME->getArg(0))) {
-    MD = cast<ObjCMethodDecl>(MD->getCanonicalDecl());
+    MD = MD->getCanonicalDecl();
     MethToIvarMapTy::const_iterator IvI = PropertySetterToIvarMap.find(MD);
     if (IvI != PropertySetterToIvarMap.end()) {
       markInvalidated(IvI->second);

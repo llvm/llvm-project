@@ -10985,9 +10985,9 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
 
   const NamedDecl *ND = nullptr;
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
-    ND = dyn_cast<NamedDecl>(DRE->getDecl());
+    ND = DRE->getDecl();
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(BaseExpr))
-    ND = dyn_cast<NamedDecl>(ME->getMemberDecl());
+    ND = ME->getMemberDecl();
 
   if (index.isUnsigned() || !index.isNegative()) {
     llvm::APInt size = ArrayTy->getSize();
@@ -11070,9 +11070,9 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
            dyn_cast<ArraySubscriptExpr>(BaseExpr))
       BaseExpr = ASE->getBase()->IgnoreParenCasts();
     if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
-      ND = dyn_cast<NamedDecl>(DRE->getDecl());
+      ND = DRE->getDecl();
     if (const MemberExpr *ME = dyn_cast<MemberExpr>(BaseExpr))
-      ND = dyn_cast<NamedDecl>(ME->getMemberDecl());
+      ND = ME->getMemberDecl();
   }
 
   if (ND)

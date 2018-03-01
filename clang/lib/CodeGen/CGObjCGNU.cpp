@@ -80,8 +80,7 @@ public:
     if (!Function) {
       if (!FunctionName)
         return nullptr;
-      Function =
-          cast<llvm::Constant>(CGM->CreateRuntimeFunction(FTy, FunctionName));
+      Function = CGM->CreateRuntimeFunction(FTy, FunctionName);
     }
     return Function;
   }

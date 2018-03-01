@@ -2688,9 +2688,9 @@ Decl *TemplateDeclInstantiator::VisitUnresolvedUsingValueDecl(
 Decl *TemplateDeclInstantiator::VisitUsingPackDecl(UsingPackDecl *D) {
   SmallVector<NamedDecl*, 8> Expansions;
   for (auto *UD : D->expansions()) {
-    if (auto *NewUD =
+    if (NamedDecl *NewUD =
             SemaRef.FindInstantiatedDecl(D->getLocation(), UD, TemplateArgs))
-      Expansions.push_back(cast<NamedDecl>(NewUD));
+      Expansions.push_back(NewUD);
     else
       return nullptr;
   }

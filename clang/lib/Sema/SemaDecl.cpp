@@ -1519,9 +1519,7 @@ static bool IsDisallowedCopyOrAssign(const CXXMethodDecl *D) {
 
   if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(D))
     return CD->isCopyConstructor();
-  if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D))
-    return Method->isCopyAssignmentOperator();
-  return false;
+  return D->isCopyAssignmentOperator();
 }
 
 // We need this to handle
@@ -6893,9 +6891,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   }
 
   if (D.isRedeclaration() && !Previous.empty()) {
-    checkDLLAttributeRedeclaration(
-        *this, dyn_cast<NamedDecl>(Previous.getRepresentativeDecl()), NewVD,
-        IsMemberSpecialization, D.isFunctionDefinition());
+    NamedDecl *Prev = Previous.getRepresentativeDecl();
+    checkDLLAttributeRedeclaration(*this, Prev, NewVD, IsMemberSpecialization,
+                                   D.isFunctionDefinition());
   }
 
   if (NewTemplate) {
@@ -9045,10 +9043,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   NewFD->setRangeEnd(D.getSourceRange().getEnd());
 
   if (D.isRedeclaration() && !Previous.empty()) {
-    checkDLLAttributeRedeclaration(
-        *this, dyn_cast<NamedDecl>(Previous.getRepresentativeDecl()), NewFD,
-        isMemberSpecialization || isFunctionTemplateSpecialization,
-        D.isFunctionDefinition());
+    NamedDecl *Prev = Previous.getRepresentativeDecl();
+    checkDLLAttributeRedeclaration(*this, Prev, NewFD,
+                                   isMemberSpecialization ||
+                                       isFunctionTemplateSpecialization,
+                                   D.isFunctionDefinition());
   }
 
   if (getLangOpts().CUDA) {
