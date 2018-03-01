@@ -317,10 +317,7 @@ std::vector<Chunk *> SymbolTable::getChunks() {
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  auto It = SymMap.find(CachedHashStringRef(Name));
-  if (It == SymMap.end())
-    return nullptr;
-  return It->second;
+  return SymMap.lookup(CachedHashStringRef(Name));
 }
 
 Symbol *SymbolTable::findUnderscore(StringRef Name) {

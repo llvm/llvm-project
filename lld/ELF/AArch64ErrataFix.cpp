@@ -34,11 +34,11 @@
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "Relocations.h"
-#include "Strings.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>

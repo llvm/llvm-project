@@ -44,19 +44,20 @@ namespace wasm {
 
 void debugWrite(uint64_t Offset, const Twine &Msg);
 
-void writeUleb128(raw_ostream &OS, uint32_t Number, StringRef Msg);
+void writeUleb128(raw_ostream &OS, uint32_t Number, const Twine &Msg);
 
-void writeSleb128(raw_ostream &OS, int32_t Number, StringRef Msg);
+void writeSleb128(raw_ostream &OS, int32_t Number, const Twine &Msg);
 
-void writeBytes(raw_ostream &OS, const char *Bytes, size_t count, StringRef Msg);
+void writeBytes(raw_ostream &OS, const char *Bytes, size_t count,
+                const Twine &Msg);
 
-void writeStr(raw_ostream &OS, StringRef String, StringRef Msg);
+void writeStr(raw_ostream &OS, StringRef String, const Twine &Msg);
 
-void writeU8(raw_ostream &OS, uint8_t byte, StringRef Msg);
+void writeU8(raw_ostream &OS, uint8_t byte, const Twine &Msg);
 
-void writeU32(raw_ostream &OS, uint32_t Number, StringRef Msg);
+void writeU32(raw_ostream &OS, uint32_t Number, const Twine &Msg);
 
-void writeValueType(raw_ostream &OS, int32_t Type, StringRef Msg);
+void writeValueType(raw_ostream &OS, int32_t Type, const Twine &Msg);
 
 void writeSig(raw_ostream &OS, const llvm::wasm::WasmSignature &Sig);
 

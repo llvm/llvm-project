@@ -659,31 +659,22 @@ Status ObjectFile::LoadInMemory(Target &target, bool set_pc) {
   SectionList *section_list = GetSectionList();
   if (!section_list)
     return Status("No section in object file");
-
-  std::vector<Process::WriteEntry> writeEntries;
-
-  // Create a list of write entries from loadable sections
   size_t section_count = section_list->GetNumSections(0);
   for (size_t i = 0; i < section_count; ++i) {
-    Process::WriteEntry entry;
     SectionSP section_sp = section_list->GetSectionAtIndex(i);
-    entry.Dest = target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
-    if (entry.Dest == LLDB_INVALID_ADDRESS)
-      continue;
-    // We can skip sections like bss
-    if (section_sp->GetFileSize() == 0)
-      continue;
-    DataExtractor section_data;
-    section_sp->GetSectionData(section_data);
-    entry.Contents = llvm::ArrayRef<uint8_t>(section_data.GetDataStart(),
-                                             section_data.GetByteSize());
-    writeEntries.push_back(entry);
+    addr_t addr = target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
+    if (addr != LLDB_INVALID_ADDRESS) {
+      DataExtractor section_data;
+      // We can skip sections like bss
+      if (section_sp->GetFileSize() == 0)
+        continue;
+      section_sp->GetSectionData(section_data);
+      lldb::offset_t written = process->WriteMemory(
+          addr, section_data.GetDataStart(), section_data.GetByteSize(), error);
+      if (written != section_data.GetByteSize())
+        return error;
+    }
   }
-
-  error = process->WriteObjectFile(std::move(writeEntries));
-  if (!error.Success())
-    return error;
-
   if (set_pc) {
     ThreadList &thread_list = process->GetThreadList();
     ThreadSP curr_thread(thread_list.GetSelectedThread());

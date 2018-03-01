@@ -10,11 +10,11 @@
 #include "OutputSections.h"
 #include "Config.h"
 #include "LinkerScript.h"
-#include "Strings.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Compression.h"
@@ -76,25 +76,6 @@ OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
                   /*Link*/ 0),
       SectionIndex(INT_MAX) {
   Live = false;
-}
-
-bool OutputSection::isAllSectionDescription() const {
-  // We do not remove empty sections that are explicitly
-  // assigned to any segment.
-  if (!Phdrs.empty())
-    return false;
-
-  // We do not want to remove sections that have custom address or align
-  // expressions set even if them are empty. We keep them because we
-  // want to be sure that any expressions can be evaluated and report
-  // an error otherwise.
-  if (AddrExpr || AlignExpr || LMAExpr)
-    return false;
-
-  for (BaseCommand *Base : SectionCommands)
-    if (!isa<InputSectionDescription>(*Base))
-      return false;
-  return true;
 }
 
 // We allow sections of types listed below to merged into a

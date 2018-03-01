@@ -15,13 +15,13 @@
 #include "Config.h"
 #include "InputSection.h"
 #include "OutputSections.h"
-#include "Strings.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -165,27 +165,46 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   Cmd->Sym = cast<Defined>(Sym);
 }
 
+// This function is called from LinkerScript::declareSymbols.
+// It creates a placeholder symbol if needed.
+static void declareSymbol(SymbolAssignment *Cmd) {
+  if (!shouldDefineSym(Cmd))
+    return;
+
+  // We can't calculate final value right now.
+  Symbol *Sym;
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+                                              /*CanOmitFromDynSym*/ false,
+                                              /*File*/ nullptr);
+  replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
+                         STT_NOTYPE, 0, 0, nullptr);
+  Cmd->Sym = cast<Defined>(Sym);
+  Cmd->Provide = false;
+}
+
 // Symbols defined in script should not be inlined by LTO. At the same time
 // we don't know their final values until late stages of link. Here we scan
 // over symbol assignment commands and create placeholder symbols if needed.
 void LinkerScript::declareSymbols() {
   assert(!Ctx);
   for (BaseCommand *Base : SectionCommands) {
-    auto *Cmd = dyn_cast<SymbolAssignment>(Base);
-    if (!Cmd || !shouldDefineSym(Cmd))
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
+      declareSymbol(Cmd);
       continue;
-
-    // We can't calculate final value right now.
-    Symbol *Sym;
-    uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-    std::tie(Sym, std::ignore) =
-        Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
-                       /*CanOmitFromDynSym*/ false,
-                       /*File*/ nullptr);
-    replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
-                           STT_NOTYPE, 0, 0, nullptr);
-    Cmd->Sym = cast<Defined>(Sym);
-    Cmd->Provide = false;
+    }
+    auto *Sec = dyn_cast<OutputSection>(Base);
+    if (!Sec)
+      continue;
+    // If the output section directive has constraints,
+    // we can't say for sure if it is going to be included or not.
+    // Skip such sections for now. Improve the checks if we ever
+    // need symbols from that sections to be declared early.
+    if (Sec->Constraint != ConstraintKind::NoConstraint)
+      continue;
+    for (BaseCommand *Base2 : Sec->SectionCommands)
+      if (auto *Cmd = dyn_cast<SymbolAssignment>(Base2))
+        declareSymbol(Cmd);
   }
 }
 
@@ -397,6 +416,7 @@ void LinkerScript::processSectionCommands() {
       // Any input section assigned to it is discarded.
       if (Sec->Name == "/DISCARD/") {
         discard(V);
+        Sec->SectionCommands.clear();
         continue;
       }
 
@@ -752,6 +772,25 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   }
 }
 
+static bool isDiscardable(OutputSection &Sec) {
+  // We do not remove empty sections that are explicitly
+  // assigned to any segment.
+  if (!Sec.Phdrs.empty())
+    return false;
+
+  // We do not want to remove sections that have custom address or align
+  // expressions set even if them are empty. We keep them because we
+  // want to be sure that any expressions can be evaluated and report
+  // an error otherwise.
+  if (Sec.AddrExpr || Sec.AlignExpr || Sec.LMAExpr)
+    return false;
+
+  for (BaseCommand *Base : Sec.SectionCommands)
+    if (!isa<InputSectionDescription>(*Base))
+      return false;
+  return getInputSections(&Sec).empty();
+}
+
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
@@ -779,15 +818,19 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     auto *Sec = dyn_cast<OutputSection>(Cmd);
     if (!Sec)
       continue;
-    if (Sec->Live) {
-      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
-      continue;
-    }
 
-    if (!Sec->isAllSectionDescription())
-      Sec->Flags = Flags;
+    // A live output section means that some input section was added to it. It
+    // might have been removed (gc, or empty synthetic section), but we at least
+    // know the flags.
+    if (Sec->Live)
+      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
     else
+      Sec->Flags = Flags;
+
+    if (isDiscardable(*Sec)) {
+      Sec->Live = false;
       Cmd = nullptr;
+    }
   }
 
   // It is common practice to use very generic linker scripts. So for any
@@ -824,9 +867,9 @@ void LinkerScript::adjustSectionsAfterSorting() {
   // PHDRS { seg PT_LOAD; }
   // SECTIONS { .aaa : { *(.aaa) } }
   std::vector<StringRef> DefPhdrs;
-  auto FirstPtLoad =
-      std::find_if(PhdrsCommands.begin(), PhdrsCommands.end(),
-                   [](const PhdrsCommand &Cmd) { return Cmd.Type == PT_LOAD; });
+  auto FirstPtLoad = llvm::find_if(PhdrsCommands, [](const PhdrsCommand &Cmd) {
+    return Cmd.Type == PT_LOAD;
+  });
   if (FirstPtLoad != PhdrsCommands.end())
     DefPhdrs.push_back(FirstPtLoad->Name);
 

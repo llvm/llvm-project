@@ -148,6 +148,11 @@ private:
 
   llvm::SmallString<128> NativePath;
 
+  /// A list of other PDBs which are loaded during the linking process and which
+  /// we need to keep around since the linking operation may reference pointers
+  /// inside of these PDBs.
+  llvm::SmallVector<std::unique_ptr<pdb::NativeSession>, 2> LoadedPDBs;
+
   std::vector<pdb::SecMapEntry> SectionMap;
 
   /// Type index mappings of type server PDBs that we've loaded so far.
@@ -361,10 +366,16 @@ Expected<const CVIndexMap&> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
     return std::move(E);
   }
 
-  auto ExpectedTpi = (*ExpectedSession)->getPDBFile().getPDBTpiStream();
+  pdb::NativeSession *Session = ExpectedSession->get();
+
+  // Keep a strong reference to this PDB, so that it's safe to hold pointers
+  // into the file.
+  LoadedPDBs.push_back(std::move(*ExpectedSession));
+
+  auto ExpectedTpi = Session->getPDBFile().getPDBTpiStream();
   if (auto E = ExpectedTpi.takeError())
     fatal("Type server does not have TPI stream: " + toString(std::move(E)));
-  auto ExpectedIpi = (*ExpectedSession)->getPDBFile().getPDBIpiStream();
+  auto ExpectedIpi = Session->getPDBFile().getPDBIpiStream();
   if (auto E = ExpectedIpi.takeError())
     fatal("Type server does not have TPI stream: " + toString(std::move(E)));
 
