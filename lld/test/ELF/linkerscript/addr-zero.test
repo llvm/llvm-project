@@ -1,7 +1,6 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: echo "SECTIONS { foo = ADDR(.text) - ABSOLUTE(ADDR(.text)); };" > %t.script
-# RUN: ld.lld -o %t.so --script %t.script %t.o -shared
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t.o
+# RUN: ld.lld -o %t.so --script %s %t.o -shared
 # RUN: llvm-readobj --symbols %t.so | FileCheck %s
 
 # Test that the script creates a non absolute symbol with value
@@ -16,3 +15,7 @@
 # CHECK-NEXT:   Other: 0
 # CHECK-NEXT:   Section: .text
 # CHECK-NEXT: }
+
+SECTIONS {
+  foo = ADDR(.text) - ABSOLUTE(ADDR(.text));
+};

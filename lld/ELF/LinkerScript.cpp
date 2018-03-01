@@ -416,6 +416,7 @@ void LinkerScript::processSectionCommands() {
       // Any input section assigned to it is discarded.
       if (Sec->Name == "/DISCARD/") {
         discard(V);
+        Sec->SectionCommands.clear();
         continue;
       }
 
@@ -771,6 +772,25 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   }
 }
 
+static bool isDiscardable(OutputSection &Sec) {
+  // We do not remove empty sections that are explicitly
+  // assigned to any segment.
+  if (!Sec.Phdrs.empty())
+    return false;
+
+  // We do not want to remove sections that have custom address or align
+  // expressions set even if them are empty. We keep them because we
+  // want to be sure that any expressions can be evaluated and report
+  // an error otherwise.
+  if (Sec.AddrExpr || Sec.AlignExpr || Sec.LMAExpr)
+    return false;
+
+  for (BaseCommand *Base : Sec.SectionCommands)
+    if (!isa<InputSectionDescription>(*Base))
+      return false;
+  return getInputSections(&Sec).empty();
+}
+
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
@@ -798,15 +818,19 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     auto *Sec = dyn_cast<OutputSection>(Cmd);
     if (!Sec)
       continue;
-    if (Sec->Live) {
-      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
-      continue;
-    }
 
-    if (!Sec->isAllSectionDescription())
-      Sec->Flags = Flags;
+    // A live output section means that some input section was added to it. It
+    // might have been removed (gc, or empty synthetic section), but we at least
+    // know the flags.
+    if (Sec->Live)
+      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
     else
+      Sec->Flags = Flags;
+
+    if (isDiscardable(*Sec)) {
+      Sec->Live = false;
       Cmd = nullptr;
+    }
   }
 
   // It is common practice to use very generic linker scripts. So for any
