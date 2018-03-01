@@ -13,7 +13,6 @@ import os
 import os.path
 import sys
 import shutil
-import itertools
 import plistlib
 import glob
 import json
@@ -255,24 +254,29 @@ def read_crashes(output_dir):
 
 
 def read_bugs(output_dir, html):
+    # type: (str, bool) -> Generator[Dict[str, Any], None, None]
     """ Generate a unique sequence of bugs from given output directory.
 
     Duplicates can be in a project if the same module was compiled multiple
     times with different compiler options. These would be better to show in
     the final report (cover) only once. """
 
-    parser = parse_bug_html if html else parse_bug_plist
-    pattern = '*.html' if html else '*.plist'
+    def empty(file_name):
+        return os.stat(file_name).st_size == 0
 
     duplicate = duplicate_check(
         lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
 
-    bugs = itertools.chain.from_iterable(
-        # parser creates a bug generator not the bug itself
-        parser(filename)
-        for filename in glob.iglob(os.path.join(output_dir, pattern)))
+    # get the right parser for the job.
+    parser = parse_bug_html if html else parse_bug_plist
+    # get the input files, which are not empty.
+    pattern = os.path.join(output_dir, '*.html' if html else '*.plist')
+    bug_files = (file for file in glob.iglob(pattern) if not empty(file))
 
-    return (bug for bug in bugs if not duplicate(bug))
+    for bug_file in bug_files:
+        for bug in parser(bug_file):
+            if not duplicate(bug):
+                yield bug
 
 
 def parse_bug_plist(filename):
