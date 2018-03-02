@@ -80,6 +80,40 @@
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-pruning-interval 0
 ; RUN: not ls %t.cache/llvmcache-foo
 
+; Verify that specifying max size for the cache directory prunes it to this
+; size, removing the largest files first.
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; Create cache files with different sizes.
+; Only 8B, 16B and 76B files should stay after pruning.
+; RUN: %python -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1024
+; RUN: %python -c "print(' ' * 15)" > %t.cache/llvmcache-foo-16
+; RUN: %python -c "print(' ' * 7)" > %t.cache/llvmcache-foo-8
+; RUN: %python -c "print(' ' * 75)" > %t.cache/llvmcache-foo-76
+; RUN: %python -c "print(' ' * 76)" > %t.cache/llvmcache-foo-77
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-bytes 100
+; RUN: ls %t.cache/llvmcache-foo-16
+; RUN: ls %t.cache/llvmcache-foo-8
+; RUN: ls %t.cache/llvmcache-foo-76
+; RUN: not ls %t.cache/llvmcache-foo-1024
+; RUN: not ls %t.cache/llvmcache-foo-77
+
+; Verify that specifying max number of files in the cache directory prunes
+; it to this amount, removing the largest files first.
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; Create cache files with different sizes.
+; Only 8B and 16B files should stay after pruning.
+; RUN: %python -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1024
+; RUN: %python -c "print(' ' * 15)" > %t.cache/llvmcache-foo-16
+; RUN: %python -c "print(' ' * 7)" > %t.cache/llvmcache-foo-8
+; RUN: %python -c "print(' ' * 75)" > %t.cache/llvmcache-foo-76
+; RUN: %python -c "print(' ' * 76)" > %t.cache/llvmcache-foo-77
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-files 2
+; RUN: ls %t.cache/llvmcache-foo-16
+; RUN: ls %t.cache/llvmcache-foo-8
+; RUN: not ls %t.cache/llvmcache-foo-76
+; RUN: not ls %t.cache/llvmcache-foo-1024
+; RUN: not ls %t.cache/llvmcache-foo-77
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
