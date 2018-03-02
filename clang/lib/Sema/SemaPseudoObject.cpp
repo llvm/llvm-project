@@ -989,7 +989,6 @@ ObjCSubscriptOpBuilder::buildAssignmentOperation(Scope *Sc,
                                                 SourceLocation opcLoc,
                                                 BinaryOperatorKind opcode,
                                                 Expr *LHS, Expr *RHS) {
-  assert(false);
   assert(BinaryOperator::isAssignmentOp(opcode));
   // There must be a method to do the Index'ed assignment.
   if (!findAtIndexSetter())
