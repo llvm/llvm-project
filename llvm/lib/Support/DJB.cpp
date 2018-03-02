@@ -19,16 +19,6 @@
 
 using namespace llvm;
 
-static inline uint32_t djbHashChar(unsigned char C, uint32_t H) {
-  return (H << 5) + H + C;
-}
-
-uint32_t llvm::djbHash(StringRef Buffer, uint32_t H) {
-  for (unsigned char C : Buffer.bytes())
-    H = djbHashChar(C, H);
-  return H;
-}
-
 static UTF32 chopOneUTF32(StringRef &Buffer) {
   UTF32 C;
   const UTF8 *const Begin8Const =
@@ -86,7 +76,7 @@ uint32_t llvm::caseFoldingDjbHash(StringRef Buffer, uint32_t H) {
       // This is by far the most common case, so handle this specially.
       if (C >= 'A' && C <= 'Z')
         C = 'a' + (C - 'A'); // fold uppercase into lowercase
-      H = djbHashChar(C, H);
+      H = (H << 5) + H + C;
       Buffer = Buffer.drop_front();
       continue;
     }
