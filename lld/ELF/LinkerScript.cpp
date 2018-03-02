@@ -621,6 +621,16 @@ uint64_t LinkerScript::advance(uint64_t Size, unsigned Alignment) {
   return End;
 }
 
+// Expands the memory region by the specified size.
+static void expandMemoryRegion(MemoryRegion *MemRegion, uint64_t Size,
+                               StringRef RegionName, StringRef SecName) {
+  MemRegion->CurPos += Size;
+  uint64_t NewSize = MemRegion->CurPos - MemRegion->Origin;
+  if (NewSize > MemRegion->Length)
+    error("section '" + SecName + "' will not fit in region '" + RegionName +
+          "': overflowed by " + Twine(NewSize - MemRegion->Length) + " bytes");
+}
+
 void LinkerScript::output(InputSection *S) {
   uint64_t Before = advance(0, 1);
   uint64_t Pos = advance(S->getSize(), S->Alignment);
@@ -637,17 +647,9 @@ void LinkerScript::output(InputSection *S) {
     Ctx->LMARegion->CurPos += Pos - Before;
   // FIXME: should we also produce overflow errors for LMARegion?
 
-  if (Ctx->MemRegion) {
-    uint64_t &CurOffset = Ctx->MemRegion->CurPos;
-    CurOffset += Pos - Before;
-    uint64_t CurSize = CurOffset - Ctx->MemRegion->Origin;
-    if (CurSize > Ctx->MemRegion->Length) {
-      uint64_t OverflowAmt = CurSize - Ctx->MemRegion->Length;
-      error("section '" + Ctx->OutSec->Name + "' will not fit in region '" +
-            Ctx->MemRegion->Name + "': overflowed by " + Twine(OverflowAmt) +
-            " bytes");
-    }
-  }
+  if (Ctx->MemRegion)
+    expandMemoryRegion(Ctx->MemRegion, Pos - Before, Ctx->MemRegion->Name,
+                       Ctx->OutSec->Name);
 }
 
 void LinkerScript::switchTo(OutputSection *Sec) {
@@ -738,7 +740,8 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
       Cmd->Offset = Dot - Ctx->OutSec->Addr;
       Dot += Cmd->Size;
       if (Ctx->MemRegion)
-        Ctx->MemRegion->CurPos += Cmd->Size;
+        expandMemoryRegion(Ctx->MemRegion, Cmd->Size, Ctx->MemRegion->Name,
+                           Ctx->OutSec->Name);
       if (Ctx->LMARegion)
         Ctx->LMARegion->CurPos += Cmd->Size;
       Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
