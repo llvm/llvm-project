@@ -521,21 +521,10 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   DebugLoc dl = MI.getDebugLoc();
   MachineInstrBuilder MIB(*MBB.getParent(), &MI);
 
-  unsigned FrameReg = ARM::SP;
+  unsigned FrameReg;
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
-               MF.getFrameInfo().getStackSize() + SPAdj;
-
-  if (MF.getFrameInfo().hasVarSizedObjects()) {
-    assert(SPAdj == 0 && STI.getFrameLowering()->hasFP(MF) && "Unexpected");
-    // There are alloca()'s in this function, must reference off the frame
-    // pointer or base pointer instead.
-    if (!hasBasePointer(MF)) {
-      FrameReg = getFrameRegister(MF);
-      Offset -= AFI->getFramePtrSpillOffset();
-    } else
-      FrameReg = BasePtr;
-  }
+  const ARMFrameLowering *TFI = getFrameLowering(MF);
+  int Offset = TFI->ResolveFrameIndexReference(MF, FrameIndex, FrameReg, SPAdj);
 
   // PEI::scavengeFrameVirtualRegs() cannot accurately track SPAdj because the
   // call frame setup/destroy instructions have already been eliminated.  That
