@@ -76,7 +76,8 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            unsigned AsyncThreadsCount,
                            bool StorePreamblesInMemory,
                            bool BuildDynamicSymbolIndex, SymbolIndex *StaticIdx,
-                           llvm::Optional<StringRef> ResourceDir)
+                           llvm::Optional<StringRef> ResourceDir,
+                           std::chrono::steady_clock::duration UpdateDebounce)
     : CompileArgs(CDB,
                   ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       DiagConsumer(DiagConsumer), FSProvider(FSProvider),
@@ -91,7 +92,8 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                     FileIdx
                         ? [this](PathRef Path,
                                  ParsedAST *AST) { FileIdx->update(Path, AST); }
-                        : ASTParsedCallback()) {
+                        : ASTParsedCallback(),
+                    UpdateDebounce) {
   if (FileIdx && StaticIdx) {
     MergedIndex = mergeIndex(FileIdx.get(), StaticIdx);
     Index = MergedIndex.get();

@@ -46,7 +46,6 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   Symbol *find(StringRef Name);
-  ObjFile *findComdat(StringRef Name) const;
 
   Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
                              InputFunction *Function);
@@ -63,7 +62,8 @@ public:
                              const WasmGlobalType *Type);
 
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
-  bool addComdat(StringRef Name, ObjFile *);
+
+  bool addComdat(StringRef Name, const ObjFile *File);
 
   DefinedData *addSyntheticDataSymbol(StringRef Name, uint32_t Flags);
   DefinedGlobal *addSyntheticGlobal(StringRef Name, uint32_t Flags,
@@ -75,9 +75,10 @@ public:
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 
-  llvm::DenseMap<llvm::CachedHashStringRef, ObjFile *> ComdatMap;
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
   std::vector<Symbol *> SymVector;
+
+  llvm::DenseMap<StringRef, const ObjFile *> Comdats;
 };
 
 extern SymbolTable *Symtab;
