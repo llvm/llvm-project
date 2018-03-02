@@ -17,6 +17,7 @@
 
 namespace clang {
 namespace clangd {
+
 /// Returns a number of a default async threads to use for TUScheduler.
 /// Returned value is always >= 1 (i.e. will not cause requests to be processed
 /// synchronously).
@@ -46,10 +47,12 @@ enum class WantDiagnostics {
 /// and scheduling tasks.
 /// Callbacks are run on a threadpool and it's appropriate to do slow work in
 /// them. Each task has a name, used for tracing (should be UpperCamelCase).
+/// FIXME(sammccall): pull out a scheduler options struct.
 class TUScheduler {
 public:
   TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
-              ASTParsedCallback ASTCallback);
+              ASTParsedCallback ASTCallback,
+              std::chrono::steady_clock::duration UpdateDebounce);
   ~TUScheduler();
 
   /// Returns estimated memory usage for each of the currently open files.
@@ -101,6 +104,7 @@ private:
   // asynchronously.
   llvm::Optional<AsyncTaskRunner> PreambleTasks;
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
+  std::chrono::steady_clock::duration UpdateDebounce;
 };
 } // namespace clangd
 } // namespace clang

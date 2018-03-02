@@ -168,6 +168,25 @@ public:
   }
 };
 
+/// Wrapper class to LoopBlocksDFS that provides a standard begin()/end()
+/// interface for the DFS reverse post-order traversal of blocks in a loop body.
+class LoopBlocksRPO {
+private:
+  LoopBlocksDFS DFS;
+
+public:
+  LoopBlocksRPO(Loop *Container) : DFS(Container) {}
+
+  /// Traverse the loop blocks and store the DFS result.
+  void perform(LoopInfo *LI) {
+    DFS.perform(LI);
+  }
+
+  /// Reverse iterate over the cached postorder blocks.
+  LoopBlocksDFS::RPOIterator begin() const { return DFS.beginRPO(); }
+  LoopBlocksDFS::RPOIterator end() const { return DFS.endRPO(); }
+};
+
 /// Specialize po_iterator_storage to record postorder numbers.
 template<> class po_iterator_storage<LoopBlocksTraversal, true> {
   LoopBlocksTraversal &LBT;

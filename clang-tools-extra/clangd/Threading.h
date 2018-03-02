@@ -50,18 +50,50 @@ private:
   std::size_t FreeSlots;
 };
 
-/// A point in time we may wait for, or None to wait forever.
+/// A point in time we can wait for.
+/// Can be zero (don't wait) or infinity (wait forever).
 /// (Not time_point::max(), because many std::chrono implementations overflow).
-using Deadline = llvm::Optional<std::chrono::steady_clock::time_point>;
-/// Makes a deadline from a timeout in seconds.
+class Deadline {
+public:
+  Deadline(std::chrono::steady_clock::time_point Time)
+      : Type(Finite), Time(Time) {}
+  static Deadline zero() { return Deadline(Zero); }
+  static Deadline infinity() { return Deadline(Infinite); }
+
+  std::chrono::steady_clock::time_point time() const {
+    assert(Type == Finite);
+    return Time;
+  }
+  bool expired() const {
+    return (Type == Zero) ||
+           (Type == Finite && Time < std::chrono::steady_clock::now());
+  }
+  bool operator==(const Deadline &Other) const {
+    return (Type == Other.Type) && (Type != Finite || Time == Other.Time);
+  }
+
+private:
+  enum Type { Zero, Infinite, Finite };
+
+  Deadline(enum Type Type) : Type(Type) {}
+  enum Type Type;
+  std::chrono::steady_clock::time_point Time;
+};
+
+/// Makes a deadline from a timeout in seconds. None means wait forever.
 Deadline timeoutSeconds(llvm::Optional<double> Seconds);
+/// Wait once on CV for the specified duration.
+void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
+          Deadline D);
 /// Waits on a condition variable until F() is true or D expires.
 template <typename Func>
 LLVM_NODISCARD bool wait(std::unique_lock<std::mutex> &Lock,
                          std::condition_variable &CV, Deadline D, Func F) {
-  if (D)
-    return CV.wait_until(Lock, *D, F);
-  CV.wait(Lock, F);
+  while (!F()) {
+    if (D.expired())
+      return false;
+    wait(Lock, CV, D);
+  }
   return true;
 }
 
@@ -73,7 +105,7 @@ public:
   /// Destructor waits for all pending tasks to finish.
   ~AsyncTaskRunner();
 
-  void wait() const { (void) wait(llvm::None); }
+  void wait() const { (void)wait(Deadline::infinity()); }
   LLVM_NODISCARD bool wait(Deadline D) const;
   // The name is used for tracing and debugging (e.g. to name a spawned thread).
   void runAsync(llvm::Twine Name, UniqueFunction<void()> Action);

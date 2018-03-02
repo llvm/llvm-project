@@ -89,11 +89,6 @@ Helpful Information About LLVM
 well as various user guides. The pages listed below should provide a good overview
 of LLVM's high-level design, as well as its internals:
 
-`Intro to LLVM`__
-  Book chapter providing a compiler hacker's introduction to LLVM.
-
-  .. __: http://www.aosabook.org/en/llvm.html
-
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
    Everything from unpacking and compilation of the distribution to execution
@@ -109,7 +104,17 @@ of LLVM's high-level design, as well as its internals:
 :ref:`index-subsystem-docs`
   A collection of pages documenting various subsystems of LLVM.
 
+`LLVM for Grad Students`__
+  This is an introduction to the LLVM infrastructure by Adrian Sampson. While it
+  has been written for grad students, it provides  a good, compact overview of
+  LLVM's architecture, LLVM's IR and how to write a new pass.
 
+  .. __: http://www.cs.cornell.edu/~asampson/blog/llvm.html
+
+`Intro to LLVM`__
+  Book chapter providing a compiler hacker's introduction to LLVM.
+
+  .. __: http://www.aosabook.org/en/llvm.html
 
 .. _Developer's List (llvm-dev): http://lists.llvm.org/mailman/listinfo/llvm-dev
 .. _irc.oftc.net: irc://irc.oftc.net/llvm

@@ -38,12 +38,8 @@ def : InstRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C,
       (instrs
     (instregex "VADDU(B|H|W|D)M$"),
     (instregex "VAND(C)?$"),
+    (instregex "VEXTS(B|H|W)2(D|W)(s)?$"),
     VEQV,
-    VEXTSB2D,
-    VEXTSB2W,
-    VEXTSH2D,
-    VEXTSH2W,
-    VEXTSW2D,
     VRLB,
     VRLD,
     VRLDMI,
@@ -184,7 +180,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C],
     (instregex "NOR(8)?$"),
     (instregex "OR(C)?(8)?$"),
     (instregex "EQV(8)?$"),
-    (instregex "EXTS(B|H)(8)?$"),
+    (instregex "EXTS(B|H|W)(8)?(_32)?(_64)?(o)?$"),
     (instregex "ADD(4|8)(TLS)?(_)?$"),
     (instregex "NEG(8)?$")
 )>;
@@ -973,10 +969,21 @@ def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
     MCRFS
 )>;
 
+// Cracked instruction made of two ALU ops.
+// The two ops cannot be done in parallel.
+// One of the the ALU ops is restricted and takes 3 dispatches.
 def : InstRW<[P9_ALUOpAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
     RLWINMo
+)>;
+
+// Cracked instruction made of two ALU ops.
+// The two ops cannot be done in parallel.
+def : InstRW<[P9_ALUOpAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "EXTSWSLIo$")
 )>;
 
 // FP Div instructions in IIC_FPDivD and IIC_FPDivS.
@@ -1125,13 +1132,57 @@ def : InstRW<[P9_BROpAndALUOp_7C, IP_EXEC_1C,
     ADDPCIS
 )>;
 
+// Signal Processing Engine (SPE) Instructions
+// These instructions are not supported on Power 9
+def : InstRW<[],
+    (instrs
+  BRINC,
+  EVABS,
+  EVEQV,
+  EVMRA,
+  EVNAND,
+  EVNEG,
+  (instregex "EVADD(I)?W$"),
+  (instregex "EVADD(SM|SS|UM|US)IAAW$"),
+  (instregex "EVAND(C)?$"),
+  (instregex "EVCMP(EQ|GTS|GTU|LTS|LTU)$"),
+  (instregex "EVCNTL(S|Z)W$"),
+  (instregex "EVDIVW(S|U)$"),
+  (instregex "EVEXTS(B|H)$"),
+  (instregex "EVLD(H|W|D)(X)?$"),
+  (instregex "EVLHH(E|OS|OU)SPLAT(X)?$"),
+  (instregex "EVLWHE(X)?$"),
+  (instregex "EVLWHO(S|U)(X)?$"),
+  (instregex "EVLW(H|W)SPLAT(X)?$"),
+  (instregex "EVMERGE(HI|LO|HILO|LOHI)$"),
+  (instregex "EVMHEG(S|U)M(F|I)A(A|N)$"),
+  (instregex "EVMHES(M|S)(F|I)(A|AA|AAW|ANW)?$"),
+  (instregex "EVMHEU(M|S)I(A|AA|AAW|ANW)?$"),
+  (instregex "EVMHOG(U|S)M(F|I)A(A|N)$"),
+  (instregex "EVMHOS(M|S)(F|I)(A|AA|AAW|ANW)?$"),
+  (instregex "EVMHOU(M|S)I(A|AA|ANW|AAW)?$"),
+  (instregex "EVMWHS(M|S)(F|FA|I|IA)$"),
+  (instregex "EVMWHUMI(A)?$"),
+  (instregex "EVMWLS(M|S)IA(A|N)W$"),
+  (instregex "EVMWLU(M|S)I(A|AA|AAW|ANW)?$"),
+  (instregex "EVMWSM(F|I)(A|AA|AN)?$"),
+  (instregex "EVMWSSF(A|AA|AN)?$"),
+  (instregex "EVMWUMI(A|AA|AN)?$"),
+  (instregex "EV(N|X)?OR(C)?$"),
+  (instregex "EVR(LW|LWI|NDW)$"),
+  (instregex "EVSLW(I)?$"),
+  (instregex "EVSPLAT(F)?I$"),
+  (instregex "EVSRW(I)?(S|U)$"),
+  (instregex "EVST(DD|DH|DW|WHE|WHO|WWE|WWO)(X)?$"),
+  (instregex "EVSUBF(S|U)(M|S)IAAW$"),
+  (instregex "EVSUB(I)?FW$")
+)> { let Unsupported = 1; }
 
-// Instructions without scheduling support.
+// General Instructions without scheduling support.
 def : InstRW<[],
     (instrs
   (instregex "(H)?RFI(D)?$"),
   ATTN,
-  BRINC,
   CLRBHRB,
   MFBHRBE,
   NAP,
