@@ -37,6 +37,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("sign-ext", HasSignExt)
+      .Case("exception-handling", HasExceptionHandling)
       .Default(false);
 }
 
@@ -81,6 +82,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-sign-ext") {
       HasSignExt = false;
+      continue;
+    }
+    if (Feature == "+exception-handling") {
+      HasExceptionHandling = true;
+      continue;
+    }
+    if (Feature == "-exception-handling") {
+      HasExceptionHandling = false;
       continue;
     }
 
