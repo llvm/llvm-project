@@ -1,4 +1,4 @@
-//===-- ExprEngine.h - Path-Sensitive Expression-Level Dataflow ---*- C++ -*-=//
+//===- ExprEngine.h - Path-Sensitive Expression-Level Dataflow --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,36 +18,68 @@
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
+#include "clang/Analysis/ProgramPoint.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
+#include "llvm/ADT/ArrayRef.h"
+#include <cassert>
+#include <utility>
 
 namespace clang {
 
 class AnalysisDeclContextManager;
+class AnalyzerOptions;
+class ASTContext;
+class ConstructionContext;
+class CXXBindTemporaryExpr;
 class CXXCatchStmt;
 class CXXConstructExpr;
 class CXXDeleteExpr;
 class CXXNewExpr;
-class CXXTemporaryObjectExpr;
 class CXXThisExpr;
+class Decl;
+class DeclStmt;
+class GCCAsmStmt;
+class LambdaExpr;
+class LocationContext;
 class MaterializeTemporaryExpr;
+class MSAsmStmt;
+class NamedDecl;
 class ObjCAtSynchronizedStmt;
 class ObjCForCollectionStmt;
+class ObjCIvarRefExpr;
+class ObjCMessageExpr;
+class ReturnStmt;
+class Stmt;
 
 namespace cross_tu {
+
 class CrossTranslationUnitContext;
-}
+
+} // namespace cross_tu
   
 namespace ento {
 
-class AnalysisManager;
+class BasicValueFactory;
 class CallEvent;
-class CXXConstructorCall;
+class CheckerManager;
+class ConstraintManager;
+class CXXTempObjectRegion;
+class MemRegion;
+class RegionAndSymbolInvalidationTraits;
+class SymbolManager;
 
 class ExprEngine : public SubEngine {
 public:
@@ -55,6 +87,7 @@ public:
   enum InliningModes {
     /// Follow the default settings for inlining callees.
     Inline_Regular = 0,
+
     /// Do minimal inlining of callees.
     Inline_Minimal = 0x1
   };
@@ -64,11 +97,14 @@ public:
     /// This call is a constructor or a destructor for which we do not currently
     /// compute the this-region correctly.
     bool IsCtorOrDtorWithImproperlyModeledTargetRegion = false;
+
     /// This call is a constructor or a destructor for a single element within
     /// an array, a part of array construction or destruction.
     bool IsArrayCtorOrDtor = false;
+
     /// This call is a constructor or a destructor of a temporary value.
     bool IsTemporaryCtorOrDtor = false;
+
     /// This call is a constructor for a temporary that is lifetime-extended
     /// by binding a smaller object within it to a reference, for example
     /// 'const int &x = C().x;'.
@@ -87,19 +123,19 @@ private:
   CoreEngine Engine;
 
   /// G - the simulation graph.
-  ExplodedGraph& G;
+  ExplodedGraph &G;
 
   /// StateMgr - Object that manages the data for all created states.
   ProgramStateManager StateMgr;
 
   /// SymMgr - Object that manages the symbol information.
-  SymbolManager& SymMgr;
+  SymbolManager &SymMgr;
 
   /// svalBuilder - SValBuilder object that creates SVals from expressions.
   SValBuilder &svalBuilder;
 
-  unsigned int currStmtIdx;
-  const NodeBuilderContext *currBldrCtx;
+  unsigned int currStmtIdx = 0;
+  const NodeBuilderContext *currBldrCtx = nullptr;
   
   /// Helper object to determine if an Objective-C message expression
   /// implicitly never returns.
@@ -153,7 +189,7 @@ public:
 
   SValBuilder &getSValBuilder() { return svalBuilder; }
 
-  BugReporter& getBugReporter() { return BR; }
+  BugReporter &getBugReporter() { return BR; }
 
   cross_tu::CrossTranslationUnitContext *
   getCrossTranslationUnitContext() override {
@@ -178,14 +214,14 @@ public:
 
   /// Visualize a trimmed ExplodedGraph that only contains paths to the given
   /// nodes.
-  void ViewGraph(ArrayRef<const ExplodedNode*> Nodes);
+  void ViewGraph(ArrayRef<const ExplodedNode *> Nodes);
 
   /// getInitialState - Return the initial state used for the root vertex
   ///  in the ExplodedGraph.
   ProgramStateRef getInitialState(const LocationContext *InitLoc) override;
 
-  ExplodedGraph& getGraph() { return G; }
-  const ExplodedGraph& getGraph() const { return G; }
+  ExplodedGraph &getGraph() { return G; }
+  const ExplodedGraph &getGraph() const { return G; }
 
   /// \brief Run the analyzer's garbage collection - remove dead symbols and
   /// bindings from the state.
@@ -331,22 +367,22 @@ public:
                   const char *Sep,
                   const LocationContext *LCtx = nullptr) override;
 
-  ProgramStateManager& getStateManager() override { return StateMgr; }
+  ProgramStateManager &getStateManager() override { return StateMgr; }
 
-  StoreManager& getStoreManager() { return StateMgr.getStoreManager(); }
+  StoreManager &getStoreManager() { return StateMgr.getStoreManager(); }
 
-  ConstraintManager& getConstraintManager() {
+  ConstraintManager &getConstraintManager() {
     return StateMgr.getConstraintManager();
   }
 
   // FIXME: Remove when we migrate over to just using SValBuilder.
-  BasicValueFactory& getBasicVals() {
+  BasicValueFactory &getBasicVals() {
     return StateMgr.getBasicVals();
   }
 
   // FIXME: Remove when we migrate over to just using ValueManager.
-  SymbolManager& getSymbolManager() { return SymMgr; }
-  const SymbolManager& getSymbolManager() const { return SymMgr; }
+  SymbolManager &getSymbolManager() { return SymMgr; }
+  const SymbolManager &getSymbolManager() const { return SymMgr; }
 
   // Functions for external checking of whether we have unfinished work
   bool wasBlocksExhausted() const { return Engine.wasBlocksExhausted(); }
@@ -392,7 +428,7 @@ public:
 
   /// VisitCast - Transfer function logic for all casts (implicit and explicit).
   void VisitCast(const CastExpr *CastE, const Expr *Ex, ExplodedNode *Pred,
-                ExplodedNodeSet &Dst);
+                 ExplodedNodeSet &Dst);
 
   /// VisitCompoundLiteralExpr - Transfer function logic for compound literals.
   void VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL, 
@@ -419,7 +455,7 @@ public:
 
   /// VisitMemberExpr - Transfer function for member expressions.
   void VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred, 
-                           ExplodedNodeSet &Dst);
+                       ExplodedNodeSet &Dst);
 
   /// VisitAtomicExpr - Transfer function for builtin atomic expressions
   void VisitAtomicExpr(const AtomicExpr *E, ExplodedNode *Pred,
@@ -451,7 +487,7 @@ public:
 
   /// VisitUnaryExprOrTypeTraitExpr - Transfer function for sizeof.
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
-                              ExplodedNode *Pred, ExplodedNodeSet &Dst);
+                                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// VisitUnaryOperator - Transfer function logic for unary operators.
   void VisitUnaryOperator(const UnaryOperator* B, ExplodedNode *Pred, 
@@ -501,7 +537,7 @@ public:
   void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src, 
                          const Expr *Ex);
   
-  std::pair<const ProgramPointTag *, const ProgramPointTag*>
+  std::pair<const ProgramPointTag *, const ProgramPointTag *>
     geteagerlyAssumeBinOpBifurcationTags();
 
   SVal evalMinus(SVal X) {
@@ -529,7 +565,6 @@ public:
                          StmtNodeBuilder &Bldr);
 
 public:
-
   SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                  NonLoc L, NonLoc R, QualType T) {
     return svalBuilder.evalBinOpNN(state, op, L, R, T);
@@ -775,8 +810,8 @@ struct ProgramStateTrait<ReplayWithoutInlining> :
   static void *GDMIndex() { static int index = 0; return &index; }
 };
 
-} // end ento namespace
+} // namespace ento
 
-} // end clang namespace
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_EXPRENGINE_H
