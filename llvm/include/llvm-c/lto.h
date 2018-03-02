@@ -44,7 +44,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 21
+#define LTO_API_VERSION 22
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -815,6 +815,28 @@ extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
  */
 extern void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
                                                        unsigned expiration);
+
+/**
+ * Sets the maximum size of the cache directory (in bytes). A value over the
+ * amount of available space on the disk will be reduced to the amount of
+ * available space. An unspecified default value will be applied. A value of 0
+ * will be ignored.
+ *
+ * \since LTO_API_VERSION=22
+ */
+extern void thinlto_codegen_set_cache_size_bytes(thinlto_code_gen_t cg,
+                                                 unsigned max_size_bytes);
+
+/**
+ * Sets the maximum number of files in the cache directory. An unspecified
+ * default value will be applied. A value of 0 will be ignored.
+ *
+ * \since LTO_API_VERSION=22
+ */
+extern void thinlto_codegen_set_cache_size_files(thinlto_code_gen_t cg,
+                                                 unsigned max_size_files);
+
+
 
 /**
  * @} // endgroup LLVMCTLTO_CACHING

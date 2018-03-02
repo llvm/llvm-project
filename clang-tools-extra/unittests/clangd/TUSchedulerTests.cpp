@@ -42,7 +42,8 @@ private:
 TEST_F(TUSchedulerTests, MissingFiles) {
   TUScheduler S(getDefaultAsyncThreadsCount(),
                 /*StorePreamblesInMemory=*/true,
-                /*ASTParsedCallback=*/nullptr);
+                /*ASTParsedCallback=*/nullptr,
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero());
 
   auto Added = testPath("added.cpp");
   Files[Added] = "";
@@ -94,9 +95,11 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
     // To avoid a racy test, don't allow tasks to actualy run on the worker
     // thread until we've scheduled them all.
     Notification Ready;
-    TUScheduler S(getDefaultAsyncThreadsCount(),
-                  /*StorePreamblesInMemory=*/true,
-                  /*ASTParsedCallback=*/nullptr);
+    TUScheduler S(
+        getDefaultAsyncThreadsCount(),
+        /*StorePreamblesInMemory=*/true,
+        /*ASTParsedCallback=*/nullptr,
+        /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero());
     auto Path = testPath("foo.cpp");
     S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes,
              [&](std::vector<DiagWithFixIts>) { Ready.wait(); });
@@ -118,6 +121,28 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
   EXPECT_EQ(2, CallbackCount);
 }
 
+TEST_F(TUSchedulerTests, Debounce) {
+  std::atomic<int> CallbackCount(0);
+  {
+    TUScheduler S(getDefaultAsyncThreadsCount(),
+                  /*StorePreamblesInMemory=*/true,
+                  /*ASTParsedCallback=*/nullptr,
+                  /*UpdateDebounce=*/std::chrono::milliseconds(50));
+    auto Path = testPath("foo.cpp");
+    S.update(Path, getInputs(Path, "auto (debounced)"), WantDiagnostics::Auto,
+             [&](std::vector<DiagWithFixIts> Diags) {
+               ADD_FAILURE() << "auto should have been debounced and canceled";
+             });
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    S.update(Path, getInputs(Path, "auto (timed out)"), WantDiagnostics::Auto,
+             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+    std::this_thread::sleep_for(std::chrono::milliseconds(60));
+    S.update(Path, getInputs(Path, "auto (shut down)"), WantDiagnostics::Auto,
+             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+  }
+  EXPECT_EQ(2, CallbackCount);
+}
+
 TEST_F(TUSchedulerTests, ManyUpdates) {
   const int FilesCount = 3;
   const int UpdatesPerFile = 10;
@@ -131,7 +156,8 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
   {
     TUScheduler S(getDefaultAsyncThreadsCount(),
                   /*StorePreamblesInMemory=*/true,
-                  /*ASTParsedCallback=*/nullptr);
+                  /*ASTParsedCallback=*/nullptr,
+                  /*UpdateDebounce=*/std::chrono::milliseconds(50));
 
     std::vector<std::string> Files;
     for (int I = 0; I < FilesCount; ++I) {
