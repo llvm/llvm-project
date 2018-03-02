@@ -636,7 +636,7 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
 
   // If the base object has a direct or indirect field of the subobject's type,
   // then this may be an access to that field. We need this to check now that
-  // we support aggreagtes as access types.
+  // we support aggregates as access types.
   if (NewFormat) {
     // TBAAStructTypeNode BaseAccessType(BaseTag.getAccessType());
     TBAAStructTypeNode FieldType(SubobjectTag.getBaseType());

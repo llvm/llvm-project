@@ -1,5 +1,7 @@
-// RUN: not %clang %s -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -### 2>&1 | \
+// RUN: not %clang %s -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -ifoo -imultilib dir -### 2>&1 | \
 // RUN: FileCheck %s
+// RUN: %clang %s -imultilib dir -### 2>&1 | \
+// RUN: FileCheck %s --check-prefix=MULTILIB
 // RUN: not %clang %s -stdlibs=foo -hell -version -### 2>&1 | \
 // RUN: FileCheck %s --check-prefix=DID-YOU-MEAN
 // RUN: %clang_cl -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -### -c -- %s 2>&1 | \
@@ -24,6 +26,8 @@
 // CHECK: error: unknown argument: '-munknown-to-clang-option'
 // CHECK: error: unknown argument: '-print-stats'
 // CHECK: error: unknown argument: '-funknown-to-clang-option'
+// CHECK: error: unknown argument: '-ifoo'
+// MULTILIB: warning: argument unused during compilation: '-imultilib dir'
 // DID-YOU-MEAN: error: unknown argument '-stdlibs=foo', did you mean '-stdlib=foo'?
 // DID-YOU-MEAN: error: unknown argument '-hell', did you mean '-help'?
 // DID-YOU-MEAN: error: unknown argument '-version', did you mean '--version'?

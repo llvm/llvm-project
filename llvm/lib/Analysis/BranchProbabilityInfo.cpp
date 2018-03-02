@@ -392,7 +392,7 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
   return true;
 }
 
-// Calculate Edge Weights using "Pointer Heuristics". Predict a comparsion
+// Calculate Edge Weights using "Pointer Heuristics". Predict a comparison
 // between two pointer or pointer and NULL will fail.
 bool BranchProbabilityInfo::calcPointerHeuristics(const BasicBlock *BB) {
   const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());

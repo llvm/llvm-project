@@ -85,11 +85,13 @@ bgeu a0, a1, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_branch
 
 c.jal foo
-# RELOC: R_RISCV_RVC_JUMP
+# A compressed jump (c.j) to an unresolved symbol will be relaxed to a (jal).
+# RELOC: R_RISCV_JAL
 # INSTR: c.jal foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_rvc_jump
 
 c.bnez a0, foo
-# RELOC: R_RISCV_RVC_BRANCH
+# A compressed branch (c.bnez) to an unresolved symbol will be relaxed to a (bnez).
+# RELOC: R_RISCV_BRANCH
 # INSTR: c.bnez a0, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_rvc_branch

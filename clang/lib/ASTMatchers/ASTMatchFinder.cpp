@@ -145,17 +145,22 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return (DeclNode == nullptr) || traverse(*DeclNode);
   }
-  bool TraverseStmt(Stmt *StmtNode) {
+  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr) {
+    // If we need to keep track of the depth, we can't perform data recursion.
+    if (CurrentDepth == 0 || (CurrentDepth <= MaxDepth && MaxDepth < INT_MAX))
+      Queue = nullptr;
+
     ScopedIncrement ScopedDepth(&CurrentDepth);
-    const Stmt *StmtToTraverse = StmtNode;
-    if (Traversal ==
-        ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses) {
-      const Expr *ExprNode = dyn_cast_or_null<Expr>(StmtNode);
-      if (ExprNode) {
+    Stmt *StmtToTraverse = StmtNode;
+    if (Traversal == ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses) {
+      if (Expr *ExprNode = dyn_cast_or_null<Expr>(StmtNode))
         StmtToTraverse = ExprNode->IgnoreParenImpCasts();
-      }
     }
-    return (StmtToTraverse == nullptr) || traverse(*StmtToTraverse);
+    if (!StmtToTraverse)
+      return true;
+    if (!match(*StmtToTraverse))
+      return false;
+    return VisitorBase::TraverseStmt(StmtToTraverse, Queue);
   }
   // We assume that the QualType and the contained type are on the same
   // hierarchy level. Thus, we try to match either of them.
@@ -378,7 +383,7 @@ public:
   }
 
   bool TraverseDecl(Decl *DeclNode);
-  bool TraverseStmt(Stmt *StmtNode);
+  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr);
   bool TraverseType(QualType TypeNode);
   bool TraverseTypeLoc(TypeLoc TypeNode);
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
@@ -841,12 +846,12 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseDecl(DeclNode);
 }
 
-bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode) {
+bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
   if (!StmtNode) {
     return true;
   }
   match(*StmtNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode);
+  return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode, Queue);
 }
 
 bool MatchASTVisitor::TraverseType(QualType TypeNode) {

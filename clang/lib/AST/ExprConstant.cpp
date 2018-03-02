@@ -5463,9 +5463,8 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
                                             llvm::APInt &Result) {
   const AllocSizeAttr *AllocSize = getAllocSizeAttr(Call);
 
-  // alloc_size args are 1-indexed, 0 means not present.
-  assert(AllocSize && AllocSize->getElemSizeParam() != 0);
-  unsigned SizeArgNo = AllocSize->getElemSizeParam() - 1;
+  assert(AllocSize && AllocSize->elemSizeParam().isValid());
+  unsigned SizeArgNo = AllocSize->elemSizeParam().getASTIndex();
   unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
   if (Call->getNumArgs() <= SizeArgNo)
     return false;
@@ -5483,14 +5482,13 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
   if (!EvaluateAsSizeT(Call->getArg(SizeArgNo), SizeOfElem))
     return false;
 
-  if (!AllocSize->getNumElemsParam()) {
+  if (!AllocSize->numElemsParam().isValid()) {
     Result = std::move(SizeOfElem);
     return true;
   }
 
   APSInt NumberOfElems;
-  // Argument numbers start at 1
-  unsigned NumArgNo = AllocSize->getNumElemsParam() - 1;
+  unsigned NumArgNo = AllocSize->numElemsParam().getASTIndex();
   if (!EvaluateAsSizeT(Call->getArg(NumArgNo), NumberOfElems))
     return false;
 

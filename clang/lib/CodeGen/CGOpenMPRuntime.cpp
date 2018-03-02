@@ -7861,7 +7861,7 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
 void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
                                               llvm::Function *Fn) {
   ASTContext &C = CGM.getContext();
-  FD = FD->getCanonicalDecl();
+  FD = FD->getMostRecentDecl();
   // Map params to their positions in function decl.
   llvm::DenseMap<const Decl *, unsigned> ParamPositions;
   if (isa<CXXMethodDecl>(FD))
@@ -7871,80 +7871,84 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
     ParamPositions.insert({P->getCanonicalDecl(), ParamPos});
     ++ParamPos;
   }
-  for (auto *Attr : FD->specific_attrs<OMPDeclareSimdDeclAttr>()) {
-    llvm::SmallVector<ParamAttrTy, 8> ParamAttrs(ParamPositions.size());
-    // Mark uniform parameters.
-    for (auto *E : Attr->uniforms()) {
-      E = E->IgnoreParenImpCasts();
-      unsigned Pos;
-      if (isa<CXXThisExpr>(E))
-        Pos = ParamPositions[FD];
-      else {
-        auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
-                        ->getCanonicalDecl();
-        Pos = ParamPositions[PVD];
+  while (FD) {
+    for (auto *Attr : FD->specific_attrs<OMPDeclareSimdDeclAttr>()) {
+      llvm::SmallVector<ParamAttrTy, 8> ParamAttrs(ParamPositions.size());
+      // Mark uniform parameters.
+      for (auto *E : Attr->uniforms()) {
+        E = E->IgnoreParenImpCasts();
+        unsigned Pos;
+        if (isa<CXXThisExpr>(E))
+          Pos = ParamPositions[FD];
+        else {
+          auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
+                          ->getCanonicalDecl();
+          Pos = ParamPositions[PVD];
+        }
+        ParamAttrs[Pos].Kind = Uniform;
       }
-      ParamAttrs[Pos].Kind = Uniform;
-    }
-    // Get alignment info.
-    auto NI = Attr->alignments_begin();
-    for (auto *E : Attr->aligneds()) {
-      E = E->IgnoreParenImpCasts();
-      unsigned Pos;
-      QualType ParmTy;
-      if (isa<CXXThisExpr>(E)) {
-        Pos = ParamPositions[FD];
-        ParmTy = E->getType();
-      } else {
-        auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
-                        ->getCanonicalDecl();
-        Pos = ParamPositions[PVD];
-        ParmTy = PVD->getType();
-      }
-      ParamAttrs[Pos].Alignment =
-          (*NI) ? (*NI)->EvaluateKnownConstInt(C)
+      // Get alignment info.
+      auto NI = Attr->alignments_begin();
+      for (auto *E : Attr->aligneds()) {
+        E = E->IgnoreParenImpCasts();
+        unsigned Pos;
+        QualType ParmTy;
+        if (isa<CXXThisExpr>(E)) {
+          Pos = ParamPositions[FD];
+          ParmTy = E->getType();
+        } else {
+          auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
+                          ->getCanonicalDecl();
+          Pos = ParamPositions[PVD];
+          ParmTy = PVD->getType();
+        }
+        ParamAttrs[Pos].Alignment =
+            (*NI)
+                ? (*NI)->EvaluateKnownConstInt(C)
                 : llvm::APSInt::getUnsigned(
                       C.toCharUnitsFromBits(C.getOpenMPDefaultSimdAlign(ParmTy))
                           .getQuantity());
-      ++NI;
-    }
-    // Mark linear parameters.
-    auto SI = Attr->steps_begin();
-    auto MI = Attr->modifiers_begin();
-    for (auto *E : Attr->linears()) {
-      E = E->IgnoreParenImpCasts();
-      unsigned Pos;
-      if (isa<CXXThisExpr>(E))
-        Pos = ParamPositions[FD];
-      else {
-        auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
-                        ->getCanonicalDecl();
-        Pos = ParamPositions[PVD];
+        ++NI;
       }
-      auto &ParamAttr = ParamAttrs[Pos];
-      ParamAttr.Kind = Linear;
-      if (*SI) {
-        if (!(*SI)->EvaluateAsInt(ParamAttr.StrideOrArg, C,
-                                  Expr::SE_AllowSideEffects)) {
-          if (auto *DRE = cast<DeclRefExpr>((*SI)->IgnoreParenImpCasts())) {
-            if (auto *StridePVD = cast<ParmVarDecl>(DRE->getDecl())) {
-              ParamAttr.Kind = LinearWithVarStride;
-              ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(
-                  ParamPositions[StridePVD->getCanonicalDecl()]);
+      // Mark linear parameters.
+      auto SI = Attr->steps_begin();
+      auto MI = Attr->modifiers_begin();
+      for (auto *E : Attr->linears()) {
+        E = E->IgnoreParenImpCasts();
+        unsigned Pos;
+        if (isa<CXXThisExpr>(E))
+          Pos = ParamPositions[FD];
+        else {
+          auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
+                          ->getCanonicalDecl();
+          Pos = ParamPositions[PVD];
+        }
+        auto &ParamAttr = ParamAttrs[Pos];
+        ParamAttr.Kind = Linear;
+        if (*SI) {
+          if (!(*SI)->EvaluateAsInt(ParamAttr.StrideOrArg, C,
+                                    Expr::SE_AllowSideEffects)) {
+            if (auto *DRE = cast<DeclRefExpr>((*SI)->IgnoreParenImpCasts())) {
+              if (auto *StridePVD = cast<ParmVarDecl>(DRE->getDecl())) {
+                ParamAttr.Kind = LinearWithVarStride;
+                ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(
+                    ParamPositions[StridePVD->getCanonicalDecl()]);
+              }
             }
           }
         }
+        ++SI;
+        ++MI;
       }
-      ++SI;
-      ++MI;
+      llvm::APSInt VLENVal;
+      if (const Expr *VLEN = Attr->getSimdlen())
+        VLENVal = VLEN->EvaluateKnownConstInt(C);
+      OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
+      if (CGM.getTriple().getArch() == llvm::Triple::x86 ||
+          CGM.getTriple().getArch() == llvm::Triple::x86_64)
+        emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
     }
-    llvm::APSInt VLENVal;
-    if (const Expr *VLEN = Attr->getSimdlen())
-      VLENVal = VLEN->EvaluateKnownConstInt(C);
-    OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
-    if (CGM.getTriple().getArch() == llvm::Triple::x86 ||
-        CGM.getTriple().getArch() == llvm::Triple::x86_64)
-      emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
+    FD = FD->getPreviousDecl();
   }
 }
 
