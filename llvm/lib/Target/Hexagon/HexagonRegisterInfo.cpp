@@ -145,6 +145,13 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);
   Reserved.set(Hexagon::VTMP);
+
+  // Guest registers.
+  Reserved.set(Hexagon::GELR);        // G0
+  Reserved.set(Hexagon::GSR);         // G1
+  Reserved.set(Hexagon::GOSP);        // G2
+  Reserved.set(Hexagon::G3);          // G3
+
   // Control registers.
   Reserved.set(Hexagon::SA0);         // C0
   Reserved.set(Hexagon::LC0);         // C1

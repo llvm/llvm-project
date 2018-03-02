@@ -1333,6 +1333,17 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     }
     break;
 
+  case Hexagon::J2_trap1:
+    if (!getSTI().getFeatureBits()[Hexagon::ArchV65]) {
+      MCOperand &Rx = Inst.getOperand(0);
+      MCOperand &Ry = Inst.getOperand(1);
+      if (Rx.getReg() != Hexagon::R0 || Ry.getReg() != Hexagon::R0) {
+        Error(IDLoc, "trap1 can only have register r0 as operand");
+        return Match_InvalidOperand;
+      }
+    }
+    break;
+
   case Hexagon::A2_iconst: {
     Inst.setOpcode(Hexagon::A2_addi);
     MCOperand Reg = Inst.getOperand(0);

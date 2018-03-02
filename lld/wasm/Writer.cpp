@@ -261,7 +261,7 @@ void Writer::createTableSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, 1, "table count");
-  writeSleb128(OS, WASM_TYPE_ANYFUNC, "table type");
+  writeU8(OS, WASM_TYPE_ANYFUNC, "table type");
   writeUleb128(OS, WASM_LIMITS_FLAG_HAS_MAX, "table flags");
   writeUleb128(OS, TableSize, "table initial size");
   writeUleb128(OS, TableSize, "table max size");
@@ -427,7 +427,7 @@ void Writer::createLinkingSection() {
       WasmSymbolType Kind = Sym->getWasmType();
       uint32_t Flags = getWasmFlags(Sym);
 
-      writeUleb128(Sub.OS, Kind, "sym kind");
+      writeU8(Sub.OS, Kind, "sym kind");
       writeUleb128(Sub.OS, Flags, "sym flags");
 
       switch (Kind) {
@@ -503,7 +503,7 @@ void Writer::createLinkingSection() {
       writeUleb128(Sub.OS, 0, "comdat flags"); // flags for future use
       writeUleb128(Sub.OS, C.second.size(), "num entries");
       for (const ComdatEntry &Entry : C.second) {
-        writeUleb128(Sub.OS, Entry.Kind, "entry kind");
+        writeU8(Sub.OS, Entry.Kind, "entry kind");
         writeUleb128(Sub.OS, Entry.Index, "entry index");
       }
     }

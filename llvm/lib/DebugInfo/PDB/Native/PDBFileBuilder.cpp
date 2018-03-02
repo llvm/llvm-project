@@ -178,6 +178,8 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   auto OutFileOrError = FileOutputBuffer::create(Filename, Filesize);
   if (auto E = OutFileOrError.takeError())
     return E;
+  FileOutputBuffer *FOB = OutFileOrError->get();
+
   FileBufferByteStream Buffer(std::move(*OutFileOrError),
                               llvm::support::little);
   BinaryStreamWriter Writer(Buffer);
@@ -241,6 +243,21 @@ Error PDBFileBuilder::commit(StringRef Filename) {
     if (auto EC = Gsi->commit(Layout, Buffer))
       return EC;
   }
+
+  auto InfoStreamBlocks = Layout.StreamMap[StreamPDB];
+  assert(!InfoStreamBlocks.empty());
+  uint64_t InfoStreamFileOffset =
+      blockToOffset(InfoStreamBlocks.front(), Layout.SB->BlockSize);
+  InfoStreamHeader *H = reinterpret_cast<InfoStreamHeader *>(
+      FOB->getBufferStart() + InfoStreamFileOffset);
+
+  // Set the build id at the very end, after every other byte of the PDB
+  // has been written.
+  // FIXME: Use a hash of the PDB rather than time(nullptr) for the signature.
+  H->Age = Info->getAge();
+  H->Guid = Info->getGuid();
+  Optional<uint32_t> Sig = Info->getSignature();
+  H->Signature = Sig.hasValue() ? *Sig : time(nullptr);
 
   return Buffer.commit();
 }

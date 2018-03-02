@@ -16,18 +16,14 @@
 
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 
+#define GET_REGBANK_DECLARATIONS
+#include "AMDGPUGenRegisterBank.inc"
+#undef GET_REGBANK_DECLARATIONS
+
 namespace llvm {
 
 class SIRegisterInfo;
 class TargetRegisterInfo;
-
-namespace AMDGPU {
-enum {
-  SGPRRegBankID = 0,
-  VGPRRegBankID = 1,
-  NumRegisterBanks
-};
-} // End AMDGPU namespace.
 
 /// This class provides the information for the target register banks.
 class AMDGPUGenRegisterBankInfo : public RegisterBankInfo {
@@ -46,6 +42,13 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   const RegisterBankInfo::InstructionMapping &
   getInstrMappingForLoad(const MachineInstr &MI) const;
 
+  unsigned getRegBankID(unsigned Reg, const MachineRegisterInfo &MRI,
+                        const TargetRegisterInfo &TRI,
+                        unsigned Default = AMDGPU::VGPRRegBankID) const;
+
+  bool isSALUMapping(const MachineInstr &MI) const;
+  const InstructionMapping &getDefaultMappingSOP(const MachineInstr &MI) const;
+  const InstructionMapping &getDefaultMappingVOP(const MachineInstr &MI) const;
 public:
   AMDGPURegisterBankInfo(const TargetRegisterInfo &TRI);
 

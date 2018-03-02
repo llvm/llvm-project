@@ -1,0 +1,13 @@
+c:@N@chns@F@chf1#I# ctu-other.cpp.ast
+c:@N@myns@N@embed_ns@F@fens#I# ctu-other.cpp.ast
+c:@F@g#I# ctu-other.cpp.ast
+c:@S@mycls@F@fscl#I#S ctu-other.cpp.ast
+c:@S@mycls@F@fcl#I# ctu-other.cpp.ast
+c:@N@myns@S@embed_cls@F@fecl#I# ctu-other.cpp.ast
+c:@S@mycls@S@embed_cls2@F@fecl2#I# ctu-other.cpp.ast
+c:@F@f#I# ctu-other.cpp.ast
+c:@N@myns@F@fns#I# ctu-other.cpp.ast
+c:@F@h#I# ctu-other.cpp.ast
+c:@F@h_chain#I# ctu-chain.cpp.ast
+c:@N@chns@S@chcls@F@chf4#I# ctu-chain.cpp.ast
+c:@N@chns@F@chf2#I# ctu-chain.cpp.ast

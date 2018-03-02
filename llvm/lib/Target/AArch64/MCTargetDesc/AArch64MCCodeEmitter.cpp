@@ -276,7 +276,8 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
     AArch64MCExpr::VariantKind RefKind = A64E->getKind();
     if (RefKind == AArch64MCExpr::VK_TPREL_HI12 ||
-        RefKind == AArch64MCExpr::VK_DTPREL_HI12)
+        RefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
+        RefKind == AArch64MCExpr::VK_SECREL_HI12)
       ShiftVal = 12;
   }
   return ShiftVal == 0 ? 0 : (1 << ShiftVal);

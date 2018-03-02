@@ -41,6 +41,32 @@ goes like this:
 Use `--help` to know more about the commands.
 
 
+How to use the experimental Cross Translation Unit analysis
+-----------------------------------------------------------
+
+To run the CTU analysis, a compilation database file has to be created:
+
+    $ intercept-build <your build command>
+
+To run the Clang Static Analyzer against a compilation database
+with CTU analysis enabled, execute:
+    
+    $ analyze-build --ctu
+
+For CTU analysis an additional (function-definition) collection-phase is required. 
+For debugging purposes, it is possible to separately execute the collection 
+and the analysis phase. By doing this, the intermediate files used for 
+the analysis are kept on the disk in `./ctu-dir`.
+    
+    # Collect and store the data required by the CTU analysis
+    $ analyze-build --ctu-collect-only
+    
+    # Analyze using the previously collected data
+    $ analyze-build --ctu-analyze-only
+
+Use `--help` to get more information about the commands.
+
+
 Limitations
 -----------
 

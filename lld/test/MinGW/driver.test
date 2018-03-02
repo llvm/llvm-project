@@ -124,3 +124,5 @@ ICF-NONE: -opt:noicf
 RUN: ld.lld -### -m i386pep foo.o --icf=all | FileCheck -check-prefix ICF %s
 RUN: ld.lld -### -m i386pep foo.o -icf=all | FileCheck -check-prefix ICF %s
 ICF: -opt:icf
+
+RUN: ld.lld -### -m i386pep --start-group foo.o --end-group

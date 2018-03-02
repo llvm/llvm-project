@@ -1707,7 +1707,6 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    subq $64, %rsp
 ; KNL-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
 ; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    andl $31, %esi
@@ -1739,8 +1738,7 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    andq $-32, %rsp
 ; SKX-NEXT:    subq $64, %rsp
 ; SKX-NEXT:    ## kill: def $esi killed $esi def $rsi
-; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; SKX-NEXT:    vpcmpnleub %ymm1, %ymm0, %k0
+; SKX-NEXT:    vptestmb %ymm0, %ymm0, %k0
 ; SKX-NEXT:    andl $31, %esi
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    vpmovm2b %k0, %ymm0
@@ -1772,10 +1770,8 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    subq $128, %rsp
 ; KNL-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vpminub %ymm2, %ymm0, %ymm3
-; KNL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
+; KNL-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vpminub %ymm2, %ymm1, %ymm2
 ; KNL-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
 ; KNL-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
 ; KNL-NEXT:    andl $63, %esi
@@ -1824,8 +1820,7 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
 ; SKX-NEXT:    ## kill: def $esi killed $esi def $rsi
-; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
+; SKX-NEXT:    vptestmb %zmm0, %zmm0, %k0
 ; SKX-NEXT:    andl $63, %esi
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
@@ -1955,14 +1950,11 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    vpinsrb $15, 216(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpminub %ymm3, %ymm2, %ymm4
-; KNL-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
+; KNL-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
 ; KNL-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
-; KNL-NEXT:    vpminub %ymm3, %ymm1, %ymm4
-; KNL-NEXT:    vpcmpeqb %ymm4, %ymm1, %ymm1
+; KNL-NEXT:    vpcmpeqb %ymm3, %ymm1, %ymm1
 ; KNL-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
-; KNL-NEXT:    vpminub %ymm3, %ymm0, %ymm4
-; KNL-NEXT:    vpcmpeqb %ymm4, %ymm0, %ymm0
+; KNL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    movl 744(%rbp), %eax
 ; KNL-NEXT:    andl $127, %eax
@@ -2138,9 +2130,8 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    vpinsrb $14, 720(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vpinsrb $15, 728(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm0, %k0
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm1, %k1
+; SKX-NEXT:    vptestmb %zmm0, %zmm0, %k0
+; SKX-NEXT:    vptestmb %zmm1, %zmm1, %k1
 ; SKX-NEXT:    movl 744(%rbp), %eax
 ; SKX-NEXT:    andl $127, %eax
 ; SKX-NEXT:    cmpb $0, 736(%rbp)
@@ -2178,16 +2169,12 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
 ; KNL-NEXT:    subq $256, %rsp ## imm = 0x100
 ; KNL-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; KNL-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; KNL-NEXT:    vpminub %ymm4, %ymm0, %ymm5
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm0, %ymm0
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vpminub %ymm4, %ymm1, %ymm5
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm1, %ymm1
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm1, %ymm1
 ; KNL-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
-; KNL-NEXT:    vpminub %ymm4, %ymm2, %ymm5
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm2, %ymm2
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
 ; KNL-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
-; KNL-NEXT:    vpminub %ymm4, %ymm3, %ymm4
 ; KNL-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm3
 ; KNL-NEXT:    vpternlogq $15, %zmm3, %zmm3, %zmm3
 ; KNL-NEXT:    andl $127, %esi
@@ -2264,9 +2251,8 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
 ; SKX-NEXT:    andq $-128, %rsp
 ; SKX-NEXT:    subq $256, %rsp ## imm = 0x100
 ; SKX-NEXT:    ## kill: def $esi killed $esi def $rsi
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm0, %k0
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm1, %k1
+; SKX-NEXT:    vptestmb %zmm0, %zmm0, %k0
+; SKX-NEXT:    vptestmb %zmm1, %zmm1, %k1
 ; SKX-NEXT:    andl $127, %esi
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    vpmovm2b %k1, %zmm0

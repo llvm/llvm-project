@@ -70,6 +70,8 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_GOTTPREL_G0_NC:      return ":gottprel_g0_nc:";
   case VK_TLSDESC:             return "";
   case VK_TLSDESC_PAGE:        return ":tlsdesc:";
+  case VK_SECREL_LO12:         return ":secrel_lo12:";
+  case VK_SECREL_HI12:         return ":secrel_hi12:";
   default:
     llvm_unreachable("Invalid ELF symbol kind");
   }
