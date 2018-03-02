@@ -1315,6 +1315,8 @@ def fno_operator_names : Flag<["-"], "fno-operator-names">, Group<f_Group>,
 def fno_pascal_strings : Flag<["-"], "fno-pascal-strings">, Group<f_Group>;
 def fno_rtti : Flag<["-"], "fno-rtti">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Disable generation of rtti information">;
+def fno_rtti_data : Flag<["-"], "fno-rtti-data">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Control emission of RTTI data">;
 def fno_short_enums : Flag<["-"], "fno-short-enums">, Group<f_Group>;
 def fno_show_column : Flag<["-"], "fno-show-column">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Do not include column number on diagnostics">;

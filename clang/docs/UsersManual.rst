@@ -2698,6 +2698,23 @@ To use the toolset with MSBuild directly, invoke it with e.g.
 ``/p:PlatformToolset=LLVM-vs2014``. This allows trying out the clang-cl
 toolchain without modifying your project files.
 
+It's also possible to point MSBuild at clang-cl without changing toolset by
+passing ``/p:CLToolPath=c:\llvm\bin /p:CLToolExe=clang-cl.exe``.
+
+When using CMake and the Visual Studio generators, the toolset can be set with the ``-T`` flag:
+
+  ::
+
+    cmake -G"Visual Studio 15 2017" -T LLVM-vs2014 ..
+
+When using CMake with the Ninja generator, set the ``CMAKE_C_COMPILER`` and
+``CMAKE_CXX_COMPILER`` variables to clang-cl:
+
+  ::
+
+    cmake -GNinja -DCMAKE_C_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe"
+        -DCMAKE_CXX_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe" ..
+
 
 Command-Line Options
 --------------------

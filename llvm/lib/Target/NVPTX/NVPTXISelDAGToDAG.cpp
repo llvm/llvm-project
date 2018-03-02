@@ -811,10 +811,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   switch (IID) {
   default:
     return false;
-  case Intrinsic::nvvm_match_all_sync_i32p:
-  case Intrinsic::nvvm_match_all_sync_i64p:
-    SelectMatchAll(N);
-    return true;
   case Intrinsic::nvvm_ldg_global_f:
   case Intrinsic::nvvm_ldg_global_i:
   case Intrinsic::nvvm_ldg_global_p:
@@ -1072,36 +1068,6 @@ void NVPTXDAGToDAGISel::SelectTexSurfHandle(SDNode *N) {
   SDValue GlobalVal = Wrapper.getOperand(0);
   ReplaceNode(N, CurDAG->getMachineNode(NVPTX::texsurf_handles, SDLoc(N),
                                         MVT::i64, GlobalVal));
-}
-
-void NVPTXDAGToDAGISel::SelectMatchAll(SDNode *N) {
-  SDLoc DL(N);
-  enum { IS_I64 = 4, HAS_CONST_VALUE = 2, HAS_CONST_MASK = 1 };
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-  unsigned OpcodeIndex =
-      (IID == Intrinsic::nvvm_match_all_sync_i64p) ? IS_I64 : 0;
-  SDValue MaskOp = N->getOperand(2);
-  SDValue ValueOp = N->getOperand(3);
-  if (ConstantSDNode *ValueConst = dyn_cast<ConstantSDNode>(ValueOp)) {
-    OpcodeIndex |= HAS_CONST_VALUE;
-    ValueOp = CurDAG->getTargetConstant(ValueConst->getZExtValue(), DL,
-                                        ValueConst->getValueType(0));
-  }
-  if (ConstantSDNode *MaskConst = dyn_cast<ConstantSDNode>(MaskOp)) {
-    OpcodeIndex |= HAS_CONST_MASK;
-    MaskOp = CurDAG->getTargetConstant(MaskConst->getZExtValue(), DL,
-                                       MaskConst->getValueType(0));
-  }
-  // Maps {IS_I64, HAS_CONST_VALUE, HAS_CONST_MASK} -> opcode
-  unsigned Opcodes[8] = {
-      NVPTX::MATCH_ALLP_SYNC_32rr, NVPTX::MATCH_ALLP_SYNC_32ri,
-      NVPTX::MATCH_ALLP_SYNC_32ir, NVPTX::MATCH_ALLP_SYNC_32ii,
-      NVPTX::MATCH_ALLP_SYNC_64rr, NVPTX::MATCH_ALLP_SYNC_64ri,
-      NVPTX::MATCH_ALLP_SYNC_64ir, NVPTX::MATCH_ALLP_SYNC_64ii};
-  SDNode *NewNode = CurDAG->getMachineNode(
-      Opcodes[OpcodeIndex], DL, {ValueOp->getValueType(0), MVT::i1, MVT::Other},
-      {MaskOp, ValueOp});
-  ReplaceNode(N, NewNode);
 }
 
 void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {

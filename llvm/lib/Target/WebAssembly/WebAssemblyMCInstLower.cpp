@@ -95,10 +95,11 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   // here; this method is precisely there for fetching the signatures of known
   // Clang-provided symbols.
   if (strcmp(Name, "__stack_pointer") == 0) {
-    wasm::ValType iPTR =
-        Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-    WasmSym->setGlobalType(wasm::WasmGlobalType{int32_t(iPTR), true});
+    WasmSym->setGlobalType(wasm::WasmGlobalType{
+        uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
+                                      : wasm::WASM_TYPE_I32),
+        true});
     return WasmSym;
   }
 

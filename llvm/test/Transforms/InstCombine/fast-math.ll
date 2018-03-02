@@ -361,18 +361,6 @@ define float @fmul5(float %f1, float %f2) {
   ret float %t3
 }
 
-; (X*Y) * X => (X*X) * Y
-define float @fmul6(float %f1, float %f2) {
-; CHECK-LABEL: @fmul6(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[F1:%.*]], [[F1]]
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[TMP1]], [[F2:%.*]]
-; CHECK-NEXT:    ret float [[MUL1]]
-;
-  %mul = fmul float %f1, %f2
-  %mul1 = fmul fast float %mul, %f1
-  ret float %mul1
-}
-
 ; "(X*Y) * X => (X*X) * Y" is disabled if "X*Y" has multiple uses
 define float @fmul7(float %f1, float %f2) {
 ; CHECK-LABEL: @fmul7(

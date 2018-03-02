@@ -547,6 +547,32 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
 }
 #endif
 
+TEST_F(SymbolCollectorTest, STLiosfwd) {
+  CollectorOpts.CollectIncludePath = true;
+  CanonicalIncludes Includes;
+  addSystemHeadersMapping(&Includes);
+  CollectorOpts.Includes = &Includes;
+  // Symbols from <iosfwd> should be mapped individually.
+  TestHeaderName = testPath("iosfwd");
+  TestFileName = testPath("iosfwd.cpp");
+  std::string Header = R"(
+    namespace std {
+      class no_map {};
+      class ios {};
+      class ostream {};
+      class filebuf {};
+    } // namespace std
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  QName("std"),
+                  AllOf(QName("std::no_map"), IncludeHeader("<iosfwd>")),
+                  AllOf(QName("std::ios"), IncludeHeader("<ios>")),
+                  AllOf(QName("std::ostream"), IncludeHeader("<ostream>")),
+                  AllOf(QName("std::filebuf"), IncludeHeader("<fstream>"))));
+}
+
 TEST_F(SymbolCollectorTest, IWYUPragma) {
   CollectorOpts.CollectIncludePath = true;
   CanonicalIncludes Includes;

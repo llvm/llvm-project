@@ -182,6 +182,30 @@ which gnu as does not support. For gas compatibility, sections with a name
 starting with ".debug" are implicitly discardable.
 
 
+ARM64/COFF-Dependent
+--------------------
+
+Relocations
+^^^^^^^^^^^
+
+The following additional symbol variants are supported:
+
+**:secrel_lo12:** generates a relocation that corresponds to the COFF relocation
+types ``IMAGE_REL_ARM64_SECREL_LOW12A`` or ``IMAGE_REL_ARM64_SECREL_LOW12L``.
+
+**:secrel_hi12:** generates a relocation that corresponds to the COFF relocation
+type ``IMAGE_REL_ARM64_SECREL_HIGH12A``.
+
+.. code-block:: gas
+
+    add x0, x0, :secrel_hi12:symbol
+    ldr x0, [x0, :secrel_lo12:symbol]
+
+    add x1, x1, :secrel_hi12:symbol
+    add x1, x1, :secrel_lo12:symbol
+    ...
+
+
 ELF-Dependent
 -------------
 

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyze -analyzer-checker core -analyzer-config cfg-temporary-dtors=true -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyze -analyzer-checker core -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true -analyzer-output=text -verify %s
 
 namespace test_simple_temporary {
 class C {

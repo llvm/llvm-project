@@ -4698,6 +4698,44 @@ let opNewValue = 0;
 let isFP = 1;
 let Uses = [USR];
 }
+def G4_tfrgcpp : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins GuestRegs64:$Gss32),
+"$Rdd32 = $Gss32",
+tc_6fa4db47, TypeCR>, Enc_0aa344 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01101000001;
+}
+def G4_tfrgcrr : HInst<
+(outs IntRegs:$Rd32),
+(ins GuestRegs:$Gs32),
+"$Rd32 = $Gs32",
+tc_6fa4db47, TypeCR>, Enc_44271f {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01101010001;
+let hasNewValue = 1;
+let opNewValue = 0;
+}
+def G4_tfrgpcp : HInst<
+(outs GuestRegs64:$Gdd32),
+(ins DoubleRegs:$Rss32),
+"$Gdd32 = $Rss32",
+tc_994333cd, TypeCR>, Enc_ed5027 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01100011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+}
+def G4_tfrgrcr : HInst<
+(outs GuestRegs:$Gd32),
+(ins IntRegs:$Rs32),
+"$Gd32 = $Rs32",
+tc_994333cd, TypeCR>, Enc_621fba {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01100010000;
+let hasNewValue = 1;
+let opNewValue = 0;
+}
 def J2_call : HInst<
 (outs),
 (ins a30_2Imm:$Ii),
@@ -5630,6 +5668,30 @@ let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0101010000000000;
 let isSolo = 1;
+}
+def J2_trap1 : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, u8_0Imm:$Ii),
+"trap1($Rx32,#$Ii)",
+tc_59a01ead, TypeJ>, Enc_33f8ba {
+let Inst{1-0} = 0b00;
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b01010100100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+let Uses = [GOSP];
+let Defs = [GOSP, PC];
+let Constraints = "$Rx32 = $Rx32in";
+}
+def J2_trap1_noregmap : HInst<
+(outs),
+(ins u8_0Imm:$Ii),
+"trap1(#$Ii)",
+tc_59a01ead, TypeMAPPING> {
+let isPseudo = 1;
+let isCodeGenOnly = 1;
 }
 def J4_cmpeq_f_jumpnv_nt : HInst<
 (outs),

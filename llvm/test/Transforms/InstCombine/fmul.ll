@@ -226,3 +226,75 @@ define float @fabs_x_fabs(float %x, float %y) {
   %mul = fmul float %x.fabs, %y.fabs
   ret float %mul
 }
+
+; (X*Y) * X => (X*X) * Y
+
+define float @reassoc_common_operand1(float %x, float %y) {
+; CHECK-LABEL: @reassoc_common_operand1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[MUL2]]
+;
+  %mul1 = fmul float %x, %y
+  %mul2 = fmul fast float %mul1, %x
+  ret float %mul2
+}
+
+; (Y*X) * X => (X*X) * Y
+
+define float @reassoc_common_operand2(float %x, float %y) {
+; CHECK-LABEL: @reassoc_common_operand2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[MUL2]]
+;
+  %mul1 = fmul float %y, %x
+  %mul2 = fmul fast float %mul1, %x
+  ret float %mul2
+}
+
+; X * (X*Y) => (X*X) * Y
+
+define float @reassoc_common_operand3(float %x1, float %y) {
+; CHECK-LABEL: @reassoc_common_operand3(
+; CHECK-NEXT:    [[X:%.*]] = fdiv float [[X1:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[MUL2]]
+;
+  %x = fdiv float %x1, 3.0 ; thwart complexity-based canonicalization
+  %mul1 = fmul float %x, %y
+  %mul2 = fmul fast float %x, %mul1
+  ret float %mul2
+}
+
+; X * (Y*X) => (X*X) * Y
+
+define float @reassoc_common_operand4(float %x1, float %y) {
+; CHECK-LABEL: @reassoc_common_operand4(
+; CHECK-NEXT:    [[X:%.*]] = fdiv float [[X1:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[MUL2]]
+;
+  %x = fdiv float %x1, 3.0 ; thwart complexity-based canonicalization
+  %mul1 = fmul float %y, %x
+  %mul2 = fmul fast float %x, %mul1
+  ret float %mul2
+}
+
+; No change if the first fmul has another use.
+
+define float @reassoc_common_operand_multi_use(float %x, float %y) {
+; CHECK-LABEL: @reassoc_common_operand_multi_use(
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[MUL1]], [[X]]
+; CHECK-NEXT:    call void @use_f32(float [[MUL1]])
+; CHECK-NEXT:    ret float [[MUL2]]
+;
+  %mul1 = fmul float %x, %y
+  %mul2 = fmul fast float %mul1, %x
+  call void @use_f32(float %mul1)
+  ret float %mul2
+}
+
