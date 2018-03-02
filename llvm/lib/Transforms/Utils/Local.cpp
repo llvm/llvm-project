@@ -504,6 +504,8 @@ simplifyAndDCEInstruction(Instruction *I,
                           const DataLayout &DL,
                           const TargetLibraryInfo *TLI) {
   if (isInstructionTriviallyDead(I, TLI)) {
+    salvageDebugInfo(*I);
+
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
     for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {

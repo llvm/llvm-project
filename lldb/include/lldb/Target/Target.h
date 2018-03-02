@@ -126,8 +126,6 @@ public:
 
   FileSpecList &GetDebugFileSearchPaths();
 
-  FileSpec &GetClangModulesCachePath();
-
   FileSpecList &GetClangModuleSearchPaths();
 
   bool GetEnableAutoImportClangModules() const;

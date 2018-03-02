@@ -380,7 +380,7 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
     // We still need to check that the instruction has no users before we erase
     // it, because {SExt, ZExt}Inst Instruction might have other users that was
     // not reduced, in such case, we need to keep that instruction.
-    if (!I->first->getNumUses())
+    if (I->first->use_empty())
       I->first->eraseFromParent();
   }
 }
