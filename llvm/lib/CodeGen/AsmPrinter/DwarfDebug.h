@@ -258,10 +258,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// Use inlined strings.
   bool UseInlineStrings = false;
 
-  /// True if the sections itself must be used as references and don't create
-  /// temp symbols inside DWARF sections.
-  bool UseSectionsAsReferences = false;
-
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
@@ -504,11 +500,6 @@ public:
 
   /// Returns whether to use inline strings.
   bool useInlineStrings() const { return UseInlineStrings; }
-
-  /// Returns whether to use sections as labels rather than temp symbols.
-  bool useSectionsAsReferences() const {
-    return UseSectionsAsReferences;
-  }
 
   // Experimental DWARF5 features.
 

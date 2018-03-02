@@ -19,7 +19,9 @@ enum PartialMappingIdx {
   PM_SGPR32 = 0,
   PM_SGPR64 = 1,
   PM_VGPR32 = 2,
-  PM_VGPR64 = 3
+  PM_VGPR64 = 3,
+  PM_SGPR1  = 4,
+  PM_VGPR1  = 5,
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[] {
@@ -27,7 +29,9 @@ const RegisterBankInfo::PartialMapping PartMappings[] {
   {0, 32, SGPRRegBank},
   {0, 64, SGPRRegBank},
   {0, 32, VGPRRegBank},
-  {0, 64, VGPRRegBank}
+  {0, 64, VGPRRegBank},
+  {0, 1,  SCCRegBank},
+  {0, 1,  SGPRRegBank}
 };
 
 const RegisterBankInfo::ValueMapping ValMappings[] {
@@ -38,7 +42,9 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
   // VGPR 32-bit
   {&PartMappings[2], 1},
   // VGPR 64-bit
-  {&PartMappings[3], 1}
+  {&PartMappings[3], 1},
+  {&PartMappings[4], 1},
+  {&PartMappings[5], 1}
 };
 
 enum ValueMappingIdx {
@@ -48,9 +54,14 @@ enum ValueMappingIdx {
 
 const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
                                                       unsigned Size) {
-  assert(Size % 32 == 0);
-  unsigned Idx = BankID == AMDGPU::SGPRRegBankID ? SGPRStartIdx : VGPRStartIdx;
-  Idx += (Size / 32) - 1;
+  unsigned Idx;
+  if (Size == 1) {
+    Idx = BankID == AMDGPU::SCCRegBankID ? PM_SGPR1 : PM_VGPR1;
+  } else {
+    assert(Size % 32 == 0);
+    Idx = BankID == AMDGPU::SGPRRegBankID ? SGPRStartIdx : VGPRStartIdx;
+    Idx += (Size / 32) - 1;
+  }
   return &ValMappings[Idx];
 }
 

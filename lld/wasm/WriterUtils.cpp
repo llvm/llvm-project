@@ -19,7 +19,7 @@ using namespace llvm;
 using namespace llvm::wasm;
 using namespace lld::wasm;
 
-static const char *valueTypeToString(int32_t Type) {
+static const char *valueTypeToString(uint8_t Type) {
   switch (Type) {
   case WASM_TYPE_I32:
     return "i32";
@@ -73,15 +73,14 @@ void wasm::writeU32(raw_ostream &OS, uint32_t Number, const Twine &Msg) {
   support::endian::Writer<support::little>(OS).write(Number);
 }
 
-void wasm::writeValueType(raw_ostream &OS, int32_t Type, const Twine &Msg) {
-  debugWrite(OS.tell(), Msg + "[type: " + valueTypeToString(Type) + "]");
-  encodeSLEB128(Type, OS);
+void wasm::writeValueType(raw_ostream &OS, uint8_t Type, const Twine &Msg) {
+  writeU8(OS, Type, Msg + "[type: " + valueTypeToString(Type) + "]");
 }
 
 void wasm::writeSig(raw_ostream &OS, const WasmSignature &Sig) {
-  writeSleb128(OS, WASM_TYPE_FUNC, "signature type");
+  writeU8(OS, WASM_TYPE_FUNC, "signature type");
   writeUleb128(OS, Sig.ParamTypes.size(), "param Count");
-  for (int32_t ParamType : Sig.ParamTypes) {
+  for (uint8_t ParamType : Sig.ParamTypes) {
     writeValueType(OS, ParamType, "param type");
   }
   if (Sig.ReturnType == WASM_TYPE_NORESULT) {
@@ -111,7 +110,7 @@ void wasm::writeInitExpr(raw_ostream &OS, const WasmInitExpr &InitExpr) {
 }
 
 void wasm::writeLimits(raw_ostream &OS, const WasmLimits &Limits) {
-  writeUleb128(OS, Limits.Flags, "limits flags");
+  writeU8(OS, Limits.Flags, "limits flags");
   writeUleb128(OS, Limits.Initial, "limits initial");
   if (Limits.Flags & WASM_LIMITS_FLAG_HAS_MAX)
     writeUleb128(OS, Limits.Maximum, "limits max");
@@ -119,7 +118,7 @@ void wasm::writeLimits(raw_ostream &OS, const WasmLimits &Limits) {
 
 void wasm::writeGlobalType(raw_ostream &OS, const WasmGlobalType &Type) {
   writeValueType(OS, Type.Type, "global type");
-  writeUleb128(OS, Type.Mutable, "global mutable");
+  writeU8(OS, Type.Mutable, "global mutable");
 }
 
 void wasm::writeGlobal(raw_ostream &OS, const WasmGlobal &Global) {
