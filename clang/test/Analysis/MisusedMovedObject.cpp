@@ -474,7 +474,7 @@ void differentBranchesTest(int i) {
   // A variation on the theme above.
   {
     A a;
-    a.foo() > 0 ? a.foo() : A(std::move(a)).foo(); // expected-note {{Assuming the condition is false}} expected-note {{'?' condition is false}}
+    a.foo() > 0 ? a.foo() : A(std::move(a)).foo(); // expected-note {{Assuming the condition is true}} expected-note {{'?' condition is true}}
   }
   // Same thing, but with a switch statement.
   {
