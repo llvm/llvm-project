@@ -1822,6 +1822,24 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     break;
   }
 
+  case X86::MMX_MOVQ64rm: {
+    if (!OutStreamer->isVerboseAsm())
+      break;
+    if (MI->getNumOperands() <= 4)
+      break;
+    if (auto *C = getConstantFromPool(*MI, MI->getOperand(4))) {
+      std::string Comment;
+      raw_string_ostream CS(Comment);
+      const MachineOperand &DstOp = MI->getOperand(0);
+      CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+      if (auto *CF = dyn_cast<ConstantFP>(C)) {
+        CS << "0x" << CF->getValueAPF().bitcastToAPInt().toString(16, false);
+        OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+      }
+    }
+    break;
+  }
+
 #define MOV_CASE(Prefix, Suffix)        \
   case X86::Prefix##MOVAPD##Suffix##rm: \
   case X86::Prefix##MOVAPS##Suffix##rm: \

@@ -94,6 +94,7 @@ declare <4 x i32> @llvm.x86.avx512.broadcastmw.128(i16)
 define <4 x i64> @test_x86_broadcastmb_256(i8 %a0) {
 ; CHECK-LABEL: test_x86_broadcastmb_256:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    vpbroadcastq %rax, %ymm0
 ; CHECK-NEXT:    retq
@@ -105,6 +106,7 @@ declare <4 x i64> @llvm.x86.avx512.broadcastmb.256(i8)
 define <2 x i64> @test_x86_broadcastmb_128(i8 %a0) {
 ; CHECK-LABEL: test_x86_broadcastmb_128:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    vpbroadcastq %rax, %xmm0
 ; CHECK-NEXT:    retq

@@ -4841,6 +4841,10 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                (!Param || !Param->hasAttr<CFConsumedAttr>()))
         CFAudited = true;
 
+      if (Proto->getExtParameterInfo(i).isNoEscape())
+        if (auto *BE = dyn_cast<BlockExpr>(Arg->IgnoreParenNoopCasts(Context)))
+          BE->getBlockDecl()->setDoesNotEscape();
+
       InitializedEntity Entity =
           Param ? InitializedEntity::InitializeParameter(Context, Param,
                                                          ProtoArgType)

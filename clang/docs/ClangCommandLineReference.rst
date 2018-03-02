@@ -2352,6 +2352,8 @@ WebAssembly
 
 .. option:: -msimd128, -mno-simd128
 
+.. option:: -mexception-handling, -mno-exception-handling
+
 X86
 ---
 .. option:: -m3dnow, -mno-3dnow

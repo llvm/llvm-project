@@ -13,6 +13,7 @@
 
 #include "BPFTargetMachine.h"
 #include "BPF.h"
+#include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -68,6 +69,9 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
       TLOF(make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
+
+  BPFMCAsmInfo *MAI = static_cast<BPFMCAsmInfo *>(const_cast<MCAsmInfo *>(AsmInfo));
+  MAI->setDwarfUsesRelocationsAcrossSections(!Subtarget.getUseDwarfRIS());
 }
 namespace {
 // BPF Code Generator Pass Configuration Options.

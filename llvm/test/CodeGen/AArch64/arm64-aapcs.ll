@@ -29,10 +29,10 @@ define void @test_stack_slots([8 x i32], i1 %bool, i8 %char, i16 %short,
                                 i32 %int, i64 %long) {
   %ext_bool = zext i1 %bool to i64
   store volatile i64 %ext_bool, i64* @var64, align 8
-; CHECK: ldrb w[[EXT:[0-9]+]], [sp]
-
   ; Part of last store. Blasted scheduler.
 ; CHECK: ldr [[LONG:x[0-9]+]], [sp, #32]
+
+; CHECK: ldrb w[[EXT:[0-9]+]], [sp]
 
 ; CHECK: and x[[EXTED:[0-9]+]], x[[EXT]], #0x1
 ; CHECK: str x[[EXTED]], [{{x[0-9]+}}, :lo12:var64]
@@ -64,8 +64,8 @@ define void @test_stack_slots([8 x i32], i1 %bool, i8 %char, i16 %short,
 define void @test_extension(i1 %bool, i8 %char, i16 %short, i32 %int) {
   %ext_bool = zext i1 %bool to i64
   store volatile i64 %ext_bool, i64* @var64
-; CHECK: and w[[EXT:[0-9]+]], w0, #0x1
-; CHECK: str x[[EXT]], [{{x[0-9]+}}, :lo12:var64]
+; CHECK: and [[EXT:x[0-9]+]], x0, #0x1
+; CHECK: str [[EXT]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_char = sext i8 %char to i64
   store volatile i64 %ext_char, i64* @var64
@@ -74,8 +74,8 @@ define void @test_extension(i1 %bool, i8 %char, i16 %short, i32 %int) {
 
   %ext_short = zext i16 %short to i64
   store volatile i64 %ext_short, i64* @var64
-; CHECK: and w[[EXT:[0-9]+]], w2, #0xffff
-; CHECK: str x[[EXT]], [{{x[0-9]+}}, :lo12:var64]
+; CHECK: and [[EXT:x[0-9]+]], x2, #0xffff
+; CHECK: str [[EXT]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_int = zext i32 %int to i64
   store volatile i64 %ext_int, i64* @var64

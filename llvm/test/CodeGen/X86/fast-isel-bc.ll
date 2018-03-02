@@ -7,19 +7,12 @@
 declare void @func2(x86_mmx)
 
 ; This isn't spectacular, but it's MMX code at -O0...
-; For now, handling of x86_mmx parameters in fast Isel is unimplemented,
-; so we get pretty poor code.  The below is preferable.
-; CHEK: movl $2, %eax
-; CHEK: movd %rax, %mm0
-; CHEK: movd %mm0, %rdi
 
 define void @func1() nounwind {
 ; X86-LABEL: func1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movsd %xmm0, (%esp)
-; X86-NEXT:    movq (%esp), %mm0
+; X86-NEXT:    movq LCPI0_0, %mm0 ## mm0 = 0x200000000
 ; X86-NEXT:    calll _func2
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -27,13 +20,7 @@ define void @func1() nounwind {
 ; X64-LABEL: func1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl $2, %eax
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    movq %rcx, %xmm0
-; X64-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    movq %xmm0, (%rsp)
-; X64-NEXT:    movq (%rsp), %mm0
+; X64-NEXT:    movq {{.*}}(%rip), %mm0 ## mm0 = 0x200000000
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    callq _func2
 ; X64-NEXT:    popq %rax

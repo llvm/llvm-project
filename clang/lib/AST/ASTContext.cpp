@@ -226,8 +226,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
     // for is usually among the last two comments we parsed -- check them
     // first.
     RawComment CommentAtDeclLoc(
-        SourceMgr, SourceRange(DeclLoc), false,
-        LangOpts.CommentOpts.ParseAllComments);
+        SourceMgr, SourceRange(DeclLoc), LangOpts.CommentOpts, false);
     BeforeThanCompare<RawComment> Compare(SourceMgr);
     ArrayRef<RawComment *>::iterator MaybeBeforeDecl = RawComments.end() - 1;
     bool Found = Compare(*MaybeBeforeDecl, &CommentAtDeclLoc);
@@ -253,7 +252,8 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
 
   // First check whether we have a trailing comment.
   if (Comment != RawComments.end() &&
-      (*Comment)->isDocumentation() && (*Comment)->isTrailingComment() &&
+      ((*Comment)->isDocumentation() || LangOpts.CommentOpts.ParseAllComments)
+      && (*Comment)->isTrailingComment() &&
       (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) || isa<VarDecl>(D) ||
        isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D))) {
     std::pair<FileID, unsigned> CommentBeginDecomp
@@ -275,7 +275,9 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
   --Comment;
 
   // Check that we actually have a non-member Doxygen comment.
-  if (!(*Comment)->isDocumentation() || (*Comment)->isTrailingComment())
+  if (!((*Comment)->isDocumentation() ||
+        LangOpts.CommentOpts.ParseAllComments) ||
+      (*Comment)->isTrailingComment())
     return nullptr;
 
   // Decompose the end of the comment.
@@ -428,7 +430,7 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
   }
 
   // If we found a comment, it should be a documentation comment.
-  assert(!RC || RC->isDocumentation());
+  assert(!RC || RC->isDocumentation() || LangOpts.CommentOpts.ParseAllComments);
 
   if (OriginalDecl)
     *OriginalDecl = OriginalDeclForRC;

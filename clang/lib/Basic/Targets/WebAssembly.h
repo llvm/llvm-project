@@ -32,11 +32,12 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
 
   bool HasNontrappingFPToInt;
   bool HasSignExt;
+  bool HasExceptionHandling;
 
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
       : TargetInfo(T), SIMDLevel(NoSIMD), HasNontrappingFPToInt(false),
-        HasSignExt(false) {
+        HasSignExt(false), HasExceptionHandling(false) {
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;

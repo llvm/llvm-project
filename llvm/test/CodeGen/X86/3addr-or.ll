@@ -20,6 +20,7 @@ define i32 @test1(i32 %x) nounwind ssp {
 define i64 @test2(i8 %A, i8 %B) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    shll $4, %edi
 ; CHECK-NEXT:    andl $48, %edi

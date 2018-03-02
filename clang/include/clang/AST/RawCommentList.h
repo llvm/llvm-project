@@ -41,7 +41,7 @@ public:
   RawComment() : Kind(RCK_Invalid), IsAlmostTrailingComment(false) { }
 
   RawComment(const SourceManager &SourceMgr, SourceRange SR,
-             bool Merged, bool ParseAllComments);
+             const CommentOptions &CommentOpts, bool Merged);
 
   CommentKind getKind() const LLVM_READONLY {
     return (CommentKind) Kind;
@@ -70,7 +70,6 @@ public:
   /// \code /**< stuff */ \endcode
   /// \code /*!< stuff */ \endcode
   bool isTrailingComment() const LLVM_READONLY {
-    assert(isDocumentation());
     return IsTrailingComment;
   }
 
@@ -83,18 +82,12 @@ public:
 
   /// Returns true if this comment is not a documentation comment.
   bool isOrdinary() const LLVM_READONLY {
-    return ((Kind == RCK_OrdinaryBCPL) || (Kind == RCK_OrdinaryC)) &&
-        !ParseAllComments;
+    return ((Kind == RCK_OrdinaryBCPL) || (Kind == RCK_OrdinaryC));
   }
 
   /// Returns true if this comment any kind of a documentation comment.
   bool isDocumentation() const LLVM_READONLY {
     return !isInvalid() && !isOrdinary();
-  }
-
-  /// Returns whether we are parsing all comments.
-  bool isParseAllComments() const LLVM_READONLY {
-    return ParseAllComments;
   }
 
   /// Returns raw comment text with comment markers.
@@ -139,18 +132,12 @@ private:
   bool IsTrailingComment : 1;
   bool IsAlmostTrailingComment : 1;
 
-  /// When true, ordinary comments starting with "//" and "/*" will be
-  /// considered as documentation comments.
-  bool ParseAllComments : 1;
-
   /// \brief Constructor for AST deserialization.
   RawComment(SourceRange SR, CommentKind K, bool IsTrailingComment,
-             bool IsAlmostTrailingComment,
-             bool ParseAllComments) :
+             bool IsAlmostTrailingComment) :
     Range(SR), RawTextValid(false), BriefTextValid(false), Kind(K),
     IsAttached(false), IsTrailingComment(IsTrailingComment),
-    IsAlmostTrailingComment(IsAlmostTrailingComment),
-    ParseAllComments(ParseAllComments)
+    IsAlmostTrailingComment(IsAlmostTrailingComment)
   { }
 
   StringRef getRawTextSlow(const SourceManager &SourceMgr) const;
@@ -183,7 +170,8 @@ class RawCommentList {
 public:
   RawCommentList(SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
 
-  void addComment(const RawComment &RC, llvm::BumpPtrAllocator &Allocator);
+  void addComment(const RawComment &RC, const CommentOptions &CommentOpts,
+                  llvm::BumpPtrAllocator &Allocator);
 
   ArrayRef<RawComment *> getComments() const {
     return Comments;

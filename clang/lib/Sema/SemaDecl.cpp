@@ -12303,6 +12303,15 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
       if (I != FD && !I->isInvalidDecl() &&
           I->getFriendObjectKind() != Decl::FOK_None) {
         if (FunctionDecl *Original = I->getInstantiatedFromMemberFunction()) {
+          if (FunctionDecl *OrigFD = FD->getInstantiatedFromMemberFunction()) {
+            // A merged copy of the same function, instantiated as a member of
+            // the same class, is OK.
+            if (declaresSameEntity(OrigFD, Original) &&
+                declaresSameEntity(cast<Decl>(I->getLexicalDeclContext()),
+                                   cast<Decl>(FD->getLexicalDeclContext())))
+              continue;
+          }
+
           if (Original->isThisDeclarationADefinition()) {
             Definition = I;
             break;
