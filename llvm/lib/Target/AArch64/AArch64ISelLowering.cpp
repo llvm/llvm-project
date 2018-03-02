@@ -6463,14 +6463,13 @@ SDValue AArch64TargetLowering::LowerVectorAND(SDValue Op,
         (NewOp = tryAdvSIMDModImm16(AArch64ISD::BICi, Op, DAG,
                                     DefBits, &LHS)))
       return NewOp;
-    else {
-      DefBits = ~UndefBits;
-      if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::BICi, Op, DAG,
-                                      DefBits, &LHS)) ||
-          (NewOp = tryAdvSIMDModImm16(AArch64ISD::BICi, Op, DAG,
-                                      DefBits, &LHS)))
-        return NewOp;
-    }
+
+    UndefBits = ~UndefBits;
+    if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::BICi, Op, DAG,
+                                    UndefBits, &LHS)) ||
+        (NewOp = tryAdvSIMDModImm16(AArch64ISD::BICi, Op, DAG,
+                                    UndefBits, &LHS)))
+      return NewOp;
   }
 
   // We can always fall back to a non-immediate AND.
@@ -6607,14 +6606,12 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
         (NewOp = tryAdvSIMDModImm16(AArch64ISD::ORRi, Op, DAG,
                                     DefBits, &LHS)))
       return NewOp;
-    else {
-      DefBits = UndefBits;
-      if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::ORRi, Op, DAG,
-                                      DefBits, &LHS)) ||
-          (NewOp = tryAdvSIMDModImm16(AArch64ISD::ORRi, Op, DAG,
-                                      DefBits, &LHS)))
-        return NewOp;
-    }
+
+    if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::ORRi, Op, DAG,
+                                    UndefBits, &LHS)) ||
+        (NewOp = tryAdvSIMDModImm16(AArch64ISD::ORRi, Op, DAG,
+                                    UndefBits, &LHS)))
+      return NewOp;
   }
 
   // We can always fall back to a non-immediate OR.

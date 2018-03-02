@@ -33,25 +33,18 @@ define void @test1() {
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    pxor %mm0, %mm0
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    movsd %xmm0, (%esp)
-; X32-NEXT:    movq (%esp), %mm1
+; X32-NEXT:    movq LCPI1_0, %mm1 ## mm1 = 0x7070606040400000
 ; X32-NEXT:    xorl %edi, %edi
 ; X32-NEXT:    maskmovq %mm1, %mm0
-; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    pxor %mm0, %mm0
-; X64-NEXT:    movq {{.*}}(%rip), %rax
-; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1
+; X64-NEXT:    movq {{.*}}(%rip), %mm1 ## mm1 = 0x7070606040400000
 ; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    maskmovq %mm1, %mm0
 ; X64-NEXT:    retq

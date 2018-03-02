@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=hexagon -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mv65 -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
 # Hexagon Programmer's Reference Manual 11.9.1 SYSTEM/USER
 
 # Load locked
@@ -57,3 +57,9 @@ syncht
 
 # CHECK: 18 df 00 54
 trap0(#254)
+
+# CHECK: 14 df 80 54
+trap1(r0, #253)
+
+# CHECK: 14 df 80 54
+trap1(#253)

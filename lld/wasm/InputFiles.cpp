@@ -117,9 +117,6 @@ void ObjFile::parse() {
   TypeMap.resize(getWasmObj()->types().size());
   TypeIsUsed.resize(getWasmObj()->types().size(), false);
 
-  for (StringRef Name : WasmObj->comdats())
-    Symtab->addComdat(Name, this);
-
   // Populate `Segments`.
   for (const WasmSegment &S : WasmObj->dataSegments()) {
     InputSegment *Seg = make<InputSegment>(S, this);
@@ -156,8 +153,10 @@ void ObjFile::parse() {
 }
 
 bool ObjFile::isExcludedByComdat(InputChunk *Chunk) const {
-  StringRef Comdat = Chunk->getComdat();
-  return !Comdat.empty() && Symtab->findComdat(Comdat) != this;
+  StringRef S = Chunk->getComdat();
+  if (S.empty())
+    return false;
+  return !Symtab->addComdat(S, this);
 }
 
 FunctionSymbol *ObjFile::getFunctionSymbol(uint32_t Index) const {

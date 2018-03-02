@@ -37,14 +37,16 @@ public:
     ExceptionsType = ExceptionHandling::DwarfCFI;
     MinInstAlignment = 8;
 
-    DwarfUsesRelocationsAcrossSections = false;
-
     // the default is 4 and it only affects dwarf elf output
     // so if not set correctly, the dwarf data will be
     // messed up in random places by 4 bytes. .debug_line
     // section will be parsable, but with odd offsets and
     // line numbers, etc.
     CodePointerSize = 8;
+  }
+
+  void setDwarfUsesRelocationsAcrossSections(bool enable) {
+    DwarfUsesRelocationsAcrossSections = enable;
   }
 };
 }

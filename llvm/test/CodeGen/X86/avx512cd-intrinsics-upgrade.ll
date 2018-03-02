@@ -60,6 +60,7 @@ declare <16 x i32> @llvm.x86.avx512.broadcastmw.512(i16)
 define <8 x i64> @test_x86_broadcastmb_512(i8 %a0) {
 ; CHECK-LABEL: test_x86_broadcastmb_512:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    vpbroadcastq %rax, %zmm0
 ; CHECK-NEXT:    retq

@@ -31,7 +31,7 @@ define void @test_extendb64(i8 %var) {
 ; correct.
   %uxt64 = zext i8 %var to i64
   store volatile i64 %uxt64, i64* @var64
-; CHECK: and {{w[0-9]+}}, {{w[0-9]+}}, #0xff
+; CHECK: and {{x[0-9]+}}, {{x[0-9]+}}, #0xff
   ret void
 }
 
@@ -63,7 +63,7 @@ define void @test_extendh64(i16 %var) {
 ; correct.
   %uxt64 = zext i16 %var to i64
   store volatile i64 %uxt64, i64* @var64
-; CHECK: and {{w[0-9]+}}, {{w[0-9]+}}, #0xffff
+; CHECK: and {{x[0-9]+}}, {{x[0-9]+}}, #0xffff
   ret void
 }
 

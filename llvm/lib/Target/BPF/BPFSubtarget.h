@@ -50,6 +50,9 @@ protected:
   // whether the cpu supports alu32 instructions.
   bool HasAlu32;
 
+  // whether we should enable MCAsmInfo DwarfUsesRelocationsAcrossSections
+  bool UseDwarfRIS;
+
 public:
   // This constructor initializes the data members to match that
   // of the specified triple.
@@ -63,6 +66,7 @@ public:
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
   bool getHasJmpExt() const { return HasJmpExt; }
   bool getHasAlu32() const { return HasAlu32; }
+  bool getUseDwarfRIS() const { return UseDwarfRIS; }
 
   const BPFInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const BPFFrameLowering *getFrameLowering() const override {
