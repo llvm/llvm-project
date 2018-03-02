@@ -405,7 +405,7 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
     : Out(Out), CDB(std::move(CompileCommandsDir)), CCOpts(CCOpts),
       Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
              StorePreamblesInMemory, BuildDynamicSymbolIndex, StaticIdx,
-             ResourceDir) {}
+             ResourceDir, /*UpdateDebounce=*/std::chrono::milliseconds(500)) {}
 
 bool ClangdLSPServer::run(std::istream &In, JSONStreamStyle InputStyle) {
   assert(!IsDone && "Run was called before");

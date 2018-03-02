@@ -482,7 +482,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       printPCRelImm(*this, MI, OpNo, O);
       return false;
 
-    case 'n':  // Negate the immediate or print a '-' before the operand.
+    case 'n': // Negate the immediate or print a '-' before the operand.
       // Note: this is a temporary solution. It should be handled target
       // independently as part of the 'MC' work.
       if (MO.isImm()) {

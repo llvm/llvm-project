@@ -53,6 +53,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -413,41 +414,6 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
   }
 }
 
-/// Check whether the edge (\p SrcBB, \p DestBB) is a backedge according to MLI.
-/// I.e., check if it exists a loop that contains SrcBB and where DestBB is the
-/// loop header.
-static bool isProperBackedge(const MachineLoopInfo &MLI,
-                             const MachineBasicBlock *SrcBB,
-                             const MachineBasicBlock *DestBB) {
-  for (const MachineLoop *Loop = MLI.getLoopFor(SrcBB); Loop;
-       Loop = Loop->getParentLoop()) {
-    if (Loop->getHeader() == DestBB)
-      return true;
-  }
-  return false;
-}
-
-/// Check if the CFG of \p MF is irreducible.
-static bool isIrreducibleCFG(const MachineFunction &MF,
-                             const MachineLoopInfo &MLI) {
-  const MachineBasicBlock *Entry = &*MF.begin();
-  ReversePostOrderTraversal<const MachineBasicBlock *> RPOT(Entry);
-  BitVector VisitedBB(MF.getNumBlockIDs());
-  for (const MachineBasicBlock *MBB : RPOT) {
-    VisitedBB.set(MBB->getNumber());
-    for (const MachineBasicBlock *SuccBB : MBB->successors()) {
-      if (!VisitedBB.test(SuccBB->getNumber()))
-        continue;
-      // We already visited SuccBB, thus MBB->SuccBB must be a backedge.
-      // Check that the head matches what we have in the loop information.
-      // Otherwise, we have an irreducible graph.
-      if (!isProperBackedge(MLI, MBB, SuccBB))
-        return true;
-    }
-  }
-  return false;
-}
-
 bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()) || MF.empty() || !isShrinkWrapEnabled(MF))
     return false;
@@ -456,7 +422,8 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
 
   init(MF);
 
-  if (isIrreducibleCFG(MF, *MLI)) {
+  ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
+  if (containsIrreducibleCFG<MachineBasicBlock *>(RPOT, *MLI)) {
     // If MF is irreducible, a block may be in a loop without
     // MachineLoopInfo reporting it. I.e., we may use the
     // post-dominance property in loops, which lead to incorrect

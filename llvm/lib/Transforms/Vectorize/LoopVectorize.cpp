@@ -56,7 +56,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -69,6 +68,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -282,24 +282,6 @@ namespace {
 class LoopVectorizationRequirements;
 
 } // end anonymous namespace
-
-/// Returns true if the given loop body has a cycle, excluding the loop
-/// itself.
-static bool hasCyclesInLoopBody(const Loop &L) {
-  if (!L.empty())
-    return true;
-
-  for (const auto &SCC :
-       make_range(scc_iterator<Loop, LoopBodyTraits>::begin(L),
-                  scc_iterator<Loop, LoopBodyTraits>::end(L))) {
-    if (SCC.size() > 1) {
-      DEBUG(dbgs() << "LVL: Detected a cycle in the loop body:\n");
-      DEBUG(L.dump());
-      return true;
-    }
-  }
-  return false;
-}
 
 /// A helper function for converting Scalar types to vector types.
 /// If the incoming type is void, we return void. If the VF is 1, we return
@@ -2302,14 +2284,17 @@ private:
 
 } // end anonymous namespace
 
-static void addAcyclicInnerLoop(Loop &L, SmallVectorImpl<Loop *> &V) {
+static void addAcyclicInnerLoop(Loop &L, LoopInfo &LI,
+                                SmallVectorImpl<Loop *> &V) {
   if (L.empty()) {
-    if (!hasCyclesInLoopBody(L))
+    LoopBlocksRPO RPOT(&L);
+    RPOT.perform(&LI);
+    if (!containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
       V.push_back(&L);
     return;
   }
   for (Loop *InnerL : L)
-    addAcyclicInnerLoop(*InnerL, V);
+    addAcyclicInnerLoop(*InnerL, LI, V);
 }
 
 namespace {
@@ -8637,7 +8622,7 @@ bool LoopVectorizePass::runImpl(
   SmallVector<Loop *, 8> Worklist;
 
   for (Loop *L : *LI)
-    addAcyclicInnerLoop(*L, Worklist);
+    addAcyclicInnerLoop(*L, *LI, Worklist);
 
   LoopsAnalyzed += Worklist.size();
 
