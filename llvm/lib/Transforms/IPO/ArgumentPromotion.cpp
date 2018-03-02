@@ -853,9 +853,19 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     if (CS.getInstruction() == nullptr || !CS.isCallee(&U))
       return nullptr;
 
+    // Can't change signature of musttail callee
+    if (CS.isMustTailCall())
+      return nullptr;
+
     if (CS.getInstruction()->getParent()->getParent() == F)
       isSelfRecursive = true;
   }
+
+  // Can't change signature of musttail caller
+  // FIXME: Support promoting whole chain of musttail functions
+  for (BasicBlock &BB : *F)
+    if (BB.getTerminatingMustTailCall())
+      return nullptr;
 
   const DataLayout &DL = F->getParent()->getDataLayout();
 

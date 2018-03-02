@@ -10,10 +10,10 @@
 define void @PR35763() {
 ; CHECK-LABEL: PR35763:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %eax
-; CHECK-NEXT:    movzwl z+{{.*}}(%rip), %ecx
-; CHECK-NEXT:    orl %eax, %ecx
-; CHECK-NEXT:    movq %rcx, {{.*}}(%rip)
+; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    orl z+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movl z+{{.*}}(%rip), %eax
 ; CHECK-NEXT:    movzbl z+{{.*}}(%rip), %ecx
 ; CHECK-NEXT:    shlq $32, %rcx

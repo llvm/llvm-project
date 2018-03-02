@@ -586,6 +586,16 @@ void thinlto_codegen_set_final_cache_size_relative_to_available_space(
   return unwrap(cg)->setMaxCacheSizeRelativeToAvailableSpace(Percentage);
 }
 
+void thinlto_codegen_set_cache_size_bytes(
+    thinlto_code_gen_t cg, unsigned MaxSizeBytes) {
+  return unwrap(cg)->setCacheMaxSizeBytes(MaxSizeBytes);
+}
+
+void thinlto_codegen_set_cache_size_files(
+    thinlto_code_gen_t cg, unsigned MaxSizeFiles) {
+  return unwrap(cg)->setCacheMaxSizeFiles(MaxSizeFiles);
+}
+
 void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
                                        const char *save_temps_dir) {
   return unwrap(cg)->setSaveTempsDir(save_temps_dir);

@@ -1405,6 +1405,8 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     assert(!T.isNull() && "Unable to auto-detect binding type!");
     assert(!T->isVoidType() && "Attempting to dereference a void pointer!");
     MR = GetElementZeroRegion(cast<SubRegion>(MR), T);
+  } else {
+    T = cast<TypedValueRegion>(MR)->getValueType();
   }
 
   // FIXME: Perhaps this method should just take a 'const MemRegion*' argument

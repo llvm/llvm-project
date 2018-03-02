@@ -676,7 +676,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   //  latency of the instruction Y is amortized by the expression of X*X,
   //  and therefore Y is in a "less critical" position compared to what it
   //  was before the transformation.
-  if (I.isFast()) {
+  if (I.hasAllowReassoc()) {
     if (match(Op0, m_OneUse(m_c_FMul(m_Specific(Op1), m_Value(Y)))) &&
         Op1 != Y) {
       Value *XX = Builder.CreateFMulFMF(Op1, Op1, &I);

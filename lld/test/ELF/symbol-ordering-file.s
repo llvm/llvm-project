@@ -21,6 +21,8 @@
 
 # RUN: ld.lld --symbol-ordering-file %t_order.txt %t.o -o %t2.out
 # RUN: llvm-objdump -s %t2.out| FileCheck %s --check-prefix=AFTER
+# RUN: ld.lld --symbol-ordering-file=%t_order.txt %t.o -o %t2.out
+# RUN: llvm-objdump -s %t2.out| FileCheck %s --check-prefix=AFTER
 
 # AFTER:      Contents of section .foo:
 # AFTER-NEXT:  201000 44335566 2211

@@ -284,11 +284,19 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return getInvalidInstructionMapping();
+  case AMDGPU::G_AND:
   case AMDGPU::G_OR:
+  case AMDGPU::G_XOR:
+  case AMDGPU::G_SHL:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
+    // Fall-through
+
+  case AMDGPU::G_FADD:
+  case AMDGPU::G_FPTOSI:
+  case AMDGPU::G_FPTOUI:
+  case AMDGPU::G_FMUL:
     return getDefaultMappingVOP(MI);
-    break;
   case AMDGPU::G_IMPLICIT_DEF: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
