@@ -35,6 +35,12 @@ sections with improvements to Clang's support for those languages.
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Support for `retpolines <https://support.google.com/faqs/answer/7625886>`_
+  was added to help mitigate "branch target injection" (variant #2) of the
+  "Spectre" speculative side channels described by `Project Zero
+  <https://googleprojectzero.blogspot.com/2018/01/reading-privileged-memory-with-side.html>`_
+  and the `Spectre paper <https://spectreattack.com/spectre.pdf>`_.
+
 - Bitrig OS was merged back into OpenBSD, so Bitrig support has been
   removed from Clang/LLVM.
 
@@ -108,6 +114,18 @@ Improvements to Clang's diagnostics
 
 New Compiler Flags
 ------------------
+
+- Clang supports the ``-mretpoline`` flag to enable `retpolines
+  <https://support.google.com/faqs/answer/7625886>`_. Code compiled with this
+  flag will be hardened against variant #2 of the Spectre attack. Indirect
+  branches from switches or gotos removed from the code, and indirect calls
+  will be made through a "retpoline" thunk. The necessary thunks will
+  automatically be inserted into the generated code. Clang also supports
+  ``-mretpoline-external-thunk`` which works like ``-mretpoline`` but requires
+  the user to provide their own thunk definitions. The external thunk names
+  start with ``__x86_indirect_thunk_`` and end in a register name. For 64-bit
+  platforms, only an ``r11`` thunk is used, but for 32-bit platforms ``eax``,
+  ``ecx``, ``edx``, and ``edi`` thunks are used.
 
 - Clang now supports configuration files. These are collections of driver
   options, which can be applied by specifying the configuration file, either
