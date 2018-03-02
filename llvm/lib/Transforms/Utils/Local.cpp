@@ -431,6 +431,7 @@ llvm::RecursivelyDeleteTriviallyDeadInstructions(Value *V,
 
   do {
     I = DeadInsts.pop_back_val();
+    salvageDebugInfo(*I);
 
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
