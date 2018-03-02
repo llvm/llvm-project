@@ -1383,8 +1383,8 @@ bool SwiftASTManipulator::AddExternalVariables(
 
       if (var_type->getAs<swift::WeakStorageType>()) {
         redirected_var_decl->getAttrs().add(
-            new (ast_context) swift::OwnershipAttr(swift::SourceRange(),
-                                                   swift::Ownership::Weak));
+            new (ast_context) swift::ReferenceOwnershipAttr(
+                swift::SourceRange(), swift::ReferenceOwnership::Weak));
       }
 
       if (is_self) {
