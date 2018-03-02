@@ -301,18 +301,6 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
   }
 }
 
-bool SymbolTable::addComdat(StringRef Name, ObjFile *F) {
-  DEBUG(dbgs() << "addComdat: " << Name << "\n");
-  ObjFile *&File = ComdatMap[CachedHashStringRef(Name)];
-  if (File) {
-    DEBUG(dbgs() << "COMDAT already defined\n");
-    return false;
-  }
-  File = F;
-  return true;
-}
-
-ObjFile *SymbolTable::findComdat(StringRef Name) const {
-  auto It = ComdatMap.find(CachedHashStringRef(Name));
-  return It == ComdatMap.end() ? nullptr : It->second;
+bool SymbolTable::addComdat(StringRef Name, const ObjFile *File) {
+  return Comdats.insert({Name, File}).first->second == File;
 }

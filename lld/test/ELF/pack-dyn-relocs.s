@@ -5,7 +5,7 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.a32
 // RUN: ld.lld -pie --pack-dyn-relocs=none %t.a32 %t.a32.so -o %t2.a32
 // RUN: llvm-readobj -relocations %t2.a32 | FileCheck --check-prefix=UNPACKED32 %s
-// RUN: ld.lld -pie --pack-dyn-relocs=android %t.a32 %t.a32.so -o %t3.a32
+// RUN: ld.lld -pie --pack-dyn-relocs android %t.a32 %t.a32.so -o %t3.a32
 // RUN: llvm-readobj -s -dynamic-table %t3.a32 | FileCheck --check-prefix=PACKED32-HEADERS %s
 // RUN: llvm-readobj -relocations %t3.a32 | FileCheck --check-prefix=PACKED32 %s
 
