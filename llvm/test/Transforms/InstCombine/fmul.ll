@@ -228,15 +228,17 @@ define float @fabs_x_fabs(float %x, float %y) {
 }
 
 ; (X*Y) * X => (X*X) * Y
+; The transform only requires 'reassoc', but test other FMF in
+; the commuted variants to make sure FMF propagates as expected.
 
 define float @reassoc_common_operand1(float %x, float %y) {
 ; CHECK-LABEL: @reassoc_common_operand1(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc float [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul reassoc float [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
   %mul1 = fmul float %x, %y
-  %mul2 = fmul fast float %mul1, %x
+  %mul2 = fmul reassoc float %mul1, %x
   ret float %mul2
 }
 
@@ -258,13 +260,13 @@ define float @reassoc_common_operand2(float %x, float %y) {
 define float @reassoc_common_operand3(float %x1, float %y) {
 ; CHECK-LABEL: @reassoc_common_operand3(
 ; CHECK-NEXT:    [[X:%.*]] = fdiv float [[X1:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X]], [[X]]
-; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan float [[X]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul reassoc nnan float [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
   %x = fdiv float %x1, 3.0 ; thwart complexity-based canonicalization
   %mul1 = fmul float %x, %y
-  %mul2 = fmul fast float %x, %mul1
+  %mul2 = fmul reassoc nnan float %x, %mul1
   ret float %mul2
 }
 
@@ -273,13 +275,13 @@ define float @reassoc_common_operand3(float %x1, float %y) {
 define float @reassoc_common_operand4(float %x1, float %y) {
 ; CHECK-LABEL: @reassoc_common_operand4(
 ; CHECK-NEXT:    [[X:%.*]] = fdiv float [[X1:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X]], [[X]]
-; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc ninf float [[X]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul reassoc ninf float [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
   %x = fdiv float %x1, 3.0 ; thwart complexity-based canonicalization
   %mul1 = fmul float %y, %x
-  %mul2 = fmul fast float %x, %mul1
+  %mul2 = fmul reassoc ninf float %x, %mul1
   ret float %mul2
 }
 

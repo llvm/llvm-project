@@ -5669,6 +5669,30 @@ let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0101010000000000;
 let isSolo = 1;
 }
+def J2_trap1 : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, u8_0Imm:$Ii),
+"trap1($Rx32,#$Ii)",
+tc_59a01ead, TypeJ>, Enc_33f8ba {
+let Inst{1-0} = 0b00;
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b01010100100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+let Uses = [GOSP];
+let Defs = [GOSP, PC];
+let Constraints = "$Rx32 = $Rx32in";
+}
+def J2_trap1_noregmap : HInst<
+(outs),
+(ins u8_0Imm:$Ii),
+"trap1(#$Ii)",
+tc_59a01ead, TypeMAPPING> {
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+}
 def J4_cmpeq_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),

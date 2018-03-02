@@ -7,13 +7,13 @@ define zeroext i8 @test_add1(<16 x i8> %a, i32 signext %index, i8 zeroext %c) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vextubrx 3, 5, 2
 ; CHECK-LE-NEXT:    add 3, 3, 6
-; CHECK-LE-NEXT:    rlwinm 3, 3, 0, 24, 31
+; CHECK-LE-NEXT:    clrldi 3, 3, 56
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: test_add1:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    vextublx 3, 5, 2
 ; CHECK-BE-NEXT:    add 3, 3, 6
-; CHECK-BE-NEXT:    rlwinm 3, 3, 0, 24, 31
+; CHECK-BE-NEXT:    clrldi 3, 3, 56
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <16 x i8> %a, i32 %index
@@ -52,14 +52,14 @@ define zeroext i16 @test_add3(<8 x i16> %a, i32 signext %index, i16 zeroext %c) 
 ; CHECK-LE-NEXT:    rlwinm 3, 5, 1, 28, 30
 ; CHECK-LE-NEXT:    vextuhrx 3, 3, 2
 ; CHECK-LE-NEXT:    add 3, 3, 6
-; CHECK-LE-NEXT:    rlwinm 3, 3, 0, 16, 31
+; CHECK-LE-NEXT:    clrldi 3, 3, 48
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: test_add3:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    rlwinm 3, 5, 1, 28, 30
 ; CHECK-BE-NEXT:    vextuhlx 3, 3, 2
 ; CHECK-BE-NEXT:    add 3, 3, 6
-; CHECK-BE-NEXT:    rlwinm 3, 3, 0, 16, 31
+; CHECK-BE-NEXT:    clrldi 3, 3, 48
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <8 x i16> %a, i32 %index

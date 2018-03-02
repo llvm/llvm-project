@@ -46,6 +46,9 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
                         const TargetRegisterInfo &TRI,
                         unsigned Default = AMDGPU::VGPRRegBankID) const;
 
+  bool isSALUMapping(const MachineInstr &MI) const;
+  const InstructionMapping &getDefaultMappingSOP(const MachineInstr &MI) const;
+  const InstructionMapping &getDefaultMappingVOP(const MachineInstr &MI) const;
 public:
   AMDGPURegisterBankInfo(const TargetRegisterInfo &TRI);
 
