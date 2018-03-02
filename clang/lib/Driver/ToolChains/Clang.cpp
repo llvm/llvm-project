@@ -3454,6 +3454,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
                     options::OPT_fno_optimize_sibling_calls))
     CmdArgs.push_back("-mdisable-tail-calls");
+  if (Args.hasFlag(options::OPT_fno_escaping_block_tail_calls,
+                   options::OPT_fescaping_block_tail_calls))
+    CmdArgs.push_back("-fno-escaping-block-tail-calls");
 
   Args.AddLastArg(CmdArgs, options::OPT_ffine_grained_bitfield_accesses,
                   options::OPT_fno_fine_grained_bitfield_accesses);
@@ -3937,13 +3940,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_femit_all_decls);
   Args.AddLastArg(CmdArgs, options::OPT_fheinous_gnu_extensions);
   Args.AddLastArg(CmdArgs, options::OPT_fno_operator_names);
-  // Emulated TLS is enabled by default on Android and OpenBSD, and can be enabled
-  // manually with -femulated-tls.
-  bool EmulatedTLSDefault = Triple.isAndroid() || Triple.isOSOpenBSD() ||
-                            Triple.isWindowsCygwinEnvironment();
-  if (Args.hasFlag(options::OPT_femulated_tls, options::OPT_fno_emulated_tls,
-                   EmulatedTLSDefault))
-    CmdArgs.push_back("-femulated-tls");
+  Args.AddLastArg(CmdArgs, options::OPT_femulated_tls,
+                  options::OPT_fno_emulated_tls);
+
   // AltiVec-like language extensions aren't relevant for assembling.
   if (!isa<PreprocessJobAction>(JA) || Output.getType() != types::TY_PP_Asm)
     Args.AddLastArg(CmdArgs, options::OPT_fzvector);

@@ -57,19 +57,17 @@ def BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
 }
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
-// Placemarkers to indicate the start or end of a block, loop, or try scope.
+// Placemarkers to indicate the start or end of a block or loop scope.
 // These use/clobber VALUE_STACK to prevent them from being moved into the
 // middle of an expression tree.
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
 def BLOCK     : I<(outs), (ins Signature:$sig), [], "block   \t$sig", 0x02>;
 def LOOP      : I<(outs), (ins Signature:$sig), [], "loop    \t$sig", 0x03>;
-def TRY       : I<(outs), (ins Signature:$sig), [], "try     \t$sig", 0x06>;
 
-// END_BLOCK, END_LOOP, END_TRY, and END_FUNCTION are represented with the same
-// opcode in wasm.
+// END_BLOCK, END_LOOP, and END_FUNCTION are represented with the same opcode in
+// wasm.
 def END_BLOCK : I<(outs), (ins), [], "end_block", 0x0b>;
 def END_LOOP  : I<(outs), (ins), [], "end_loop", 0x0b>;
-def END_TRY   : I<(outs), (ins), [], "end_try", 0x0b>;
 let isTerminator = 1, isBarrier = 1 in
 def END_FUNCTION : I<(outs), (ins), [], "end_function", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
@@ -113,17 +111,29 @@ let isReturn = 1 in {
 } // isReturn = 1
 
 def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable", 0x00>;
+} // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
-def THROW_I32 : I<(outs), (ins i32imm:$tag, I32:$obj),
-                  [(int_wasm_throw imm:$tag, I32:$obj)], "throw   \t$tag, $obj",
+//===----------------------------------------------------------------------===//
+// Exception handling instructions
+//===----------------------------------------------------------------------===//
+
+// Throwing an exception: throw / rethrow
+let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
+def THROW_I32 : I<(outs), (ins i32imm:$tag, I32:$val),
+                  [(int_wasm_throw imm:$tag, I32:$val)], "throw   \t$tag, $val",
                   0x08>;
-def THROW_I64 : I<(outs), (ins i32imm:$tag, I64:$obj),
-                  [(int_wasm_throw imm:$tag, I64:$obj)], "throw   \t$tag, $obj",
+def THROW_I64 : I<(outs), (ins i32imm:$tag, I64:$val),
+                  [(int_wasm_throw imm:$tag, I64:$val)], "throw   \t$tag, $val",
                   0x08>;
 def RETHROW : I<(outs), (ins i32imm:$rel_depth), [], "rethrow \t$rel_depth",
                 0x09>;
-
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
+
+// Region within which an exception is caught: try / end_try
+let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
+def TRY     : I<(outs), (ins Signature:$sig), [], "try     \t$sig", 0x06>;
+def END_TRY : I<(outs), (ins), [], "end_try", 0x0b>;
+} // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
 } // Defs = [ARGUMENTS]
 

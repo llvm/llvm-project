@@ -184,6 +184,21 @@ public:
       CacheOptions.Policy.MaxSizePercentageOfAvailableSpace = Percentage;
   }
 
+  /// Cache policy: the maximum size for the cache directory in bytes. A value
+  /// over the amount of available space on the disk will be reduced to the
+  /// amount of available space. A value of 0 will be ignored.
+  void setCacheMaxSizeBytes(unsigned MaxSizeBytes) {
+    if (MaxSizeBytes)
+      CacheOptions.Policy.MaxSizeBytes = MaxSizeBytes;
+  }
+
+  /// Cache policy: the maximum number of files in the cache directory. A value
+  /// of 0 will be ignored.
+  void setCacheMaxSizeFiles(unsigned MaxSizeFiles) {
+    if (MaxSizeFiles)
+      CacheOptions.Policy.MaxSizeFiles = MaxSizeFiles;
+  }
+
   /**@}*/
 
   /// Set the path to a directory where to save temporaries at various stages of

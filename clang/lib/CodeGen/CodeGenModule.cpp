@@ -716,6 +716,12 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
 
 static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
                                  llvm::GlobalValue *GV) {
+  if (GV->hasLocalLinkage())
+    return true;
+
+  if (!GV->hasDefaultVisibility() && !GV->hasExternalWeakLinkage())
+    return true;
+
   // DLLImport explicitly marks the GV as external.
   if (GV->hasDLLImportStorageClass())
     return false;
@@ -773,8 +779,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
 }
 
 void CodeGenModule::setDSOLocal(llvm::GlobalValue *GV) const {
-  if (shouldAssumeDSOLocal(*this, GV))
-    GV->setDSOLocal(true);
+  GV->setDSOLocal(shouldAssumeDSOLocal(*this, GV));
 }
 
 void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
