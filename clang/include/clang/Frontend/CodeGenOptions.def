@@ -62,6 +62,8 @@ CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
+CODEGENOPT(NoEscapingBlockTailCalls, 1, 0) ///< Do not emit tail calls from
+                                           ///< escaping blocks.
 CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what
                                      ///< Decl* various IR entities came from.
                                      ///< Only useful when running CodeGen as a

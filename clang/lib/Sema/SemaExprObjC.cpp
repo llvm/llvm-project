@@ -1613,6 +1613,11 @@ bool Sema::CheckMessageArgumentTypes(QualType ReceiverType,
     ParmVarDecl *param = Method->parameters()[i];
     assert(argExpr && "CheckMessageArgumentTypes(): missing expression");
 
+    if (param->hasAttr<NoEscapeAttr>())
+      if (auto *BE = dyn_cast<BlockExpr>(
+              argExpr->IgnoreParenNoopCasts(Context)))
+        BE->getBlockDecl()->setDoesNotEscape();
+
     // Strip the unbridged-cast placeholder expression off unless it's
     // a consumed argument.
     if (argExpr->hasPlaceholderType(BuiltinType::ARCUnbridgedCast) &&

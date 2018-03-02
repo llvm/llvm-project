@@ -3454,6 +3454,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
                     options::OPT_fno_optimize_sibling_calls))
     CmdArgs.push_back("-mdisable-tail-calls");
+  if (Args.hasFlag(options::OPT_fno_escaping_block_tail_calls,
+                   options::OPT_fescaping_block_tail_calls))
+    CmdArgs.push_back("-fno-escaping-block-tail-calls");
 
   Args.AddLastArg(CmdArgs, options::OPT_ffine_grained_bitfield_accesses,
                   options::OPT_fno_fine_grained_bitfield_accesses);
