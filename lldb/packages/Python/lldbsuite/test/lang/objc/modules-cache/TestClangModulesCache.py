@@ -22,6 +22,7 @@ class ObjCModulesTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    @skipUnlessDarwin
     def test_expr(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.m")
@@ -36,5 +37,5 @@ class ObjCModulesTestCase(TestBase):
                     % self.getSourceDir())
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set breakpoint here", self.main_source_file)
-        self.runCmd("expr @import Darwin")
+        self.runCmd("expr @import Foo")
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
