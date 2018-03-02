@@ -238,7 +238,7 @@ bool llvm::isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 }
 
 /// \brief Tests if a value is a call or invoke to a library function that
-/// allocates memory similiar to malloc or calloc.
+/// allocates memory similar to malloc or calloc.
 bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                                   bool LookThroughBitCast) {
   return getAllocationData(V, MallocOrCallocLike, TLI,

@@ -304,15 +304,12 @@ def add_test_categories(cat):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
             raise Exception(
                 "@add_test_categories can only be used to decorate a test method")
-
-        # Update or set the categories attribute. For instance methods, the
-        # attribute must be set on the actual function.
-        func_for_attr = func
-        if inspect.ismethod(func_for_attr):
-            func_for_attr = func.__func__
-        if hasattr(func_for_attr, "categories"):
-            cat.extend(func_for_attr.categories)
-        setattr(func_for_attr, "categories", cat)
+        try:
+            if hasattr(func, "categories"):
+                cat.extend(func.categories)
+            setattr(func, "categories", cat)
+        except AttributeError:
+            raise Exception('Cannot assign categories to inline tests.')
 
         return func
 

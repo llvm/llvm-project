@@ -241,6 +241,19 @@ bool Constant::hasExactInverseFP() const {
   return true;
 }
 
+bool Constant::isNaN() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return CFP->isNaN();
+  if (!getType()->isVectorTy())
+    return false;
+  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
+    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
+    if (!CFP || !CFP->isNaN())
+      return false;
+  }
+  return true;
+}
+
 /// Constructor to create a '0' constant of arbitrary type.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {

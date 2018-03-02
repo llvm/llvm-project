@@ -447,35 +447,6 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
-/// Detect pattern log2(Y * 0.5) with corresponding fast math flags.
-static void detectLog2OfHalf(Value *&Op, Value *&Y, IntrinsicInst *&Log2) {
-  if (!Op->hasOneUse())
-    return;
-
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op);
-  if (!II)
-    return;
-  if (II->getIntrinsicID() != Intrinsic::log2 || !II->isFast())
-    return;
-  Log2 = II;
-
-  Value *OpLog2Of = II->getArgOperand(0);
-  if (!OpLog2Of->hasOneUse())
-    return;
-
-  Instruction *I = dyn_cast<Instruction>(OpLog2Of);
-  if (!I)
-    return;
-
-  if (I->getOpcode() != Instruction::FMul || !I->isFast())
-    return;
-
-  if (match(I->getOperand(0), m_SpecificFP(0.5)))
-    Y = I->getOperand(1);
-  else if (match(I->getOperand(1), m_SpecificFP(0.5)))
-    Y = I->getOperand(0);
-}
-
 /// Helper function of InstCombiner::visitFMul(). Return true iff the given
 /// value is FMul or FDiv with one and only one operand being a finite-non-zero
 /// constant (i.e. not Zero/NaN/Infinity).
@@ -617,30 +588,24 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::fabs>(m_Value(X))))
     return BinaryOperator::CreateFMulFMF(X, X, &I);
 
-  // Under unsafe algebra do:
-  // X * log2(0.5*Y) = X*log2(Y) - X
-  if (AllowReassociate) {
-    Value *OpX = nullptr;
-    Value *OpY = nullptr;
-    IntrinsicInst *Log2;
-    detectLog2OfHalf(Op0, OpY, Log2);
-    if (OpY) {
-      OpX = Op1;
-    } else {
-      detectLog2OfHalf(Op1, OpY, Log2);
-      if (OpY) {
-        OpX = Op0;
-      }
+  // log2(X * 0.5) * Y = log2(X) * Y - Y
+  if (I.isFast()) {
+    IntrinsicInst *Log2 = nullptr;
+    if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::log2>(
+            m_OneUse(m_FMul(m_Value(X), m_SpecificFP(0.5))))))) {
+      Log2 = cast<IntrinsicInst>(Op0);
+      Y = Op1;
     }
-    // if pattern detected emit alternate sequence
-    if (OpX && OpY) {
-      BuilderTy::FastMathFlagGuard Guard(Builder);
-      Builder.setFastMathFlags(Log2->getFastMathFlags());
-      Log2->setArgOperand(0, OpY);
-      Value *FMulVal = Builder.CreateFMul(OpX, Log2);
-      Value *FSub = Builder.CreateFSub(FMulVal, OpX);
-      FSub->takeName(&I);
-      return replaceInstUsesWith(I, FSub);
+    if (match(Op1, m_OneUse(m_Intrinsic<Intrinsic::log2>(
+            m_OneUse(m_FMul(m_Value(X), m_SpecificFP(0.5))))))) {
+      Log2 = cast<IntrinsicInst>(Op1);
+      Y = Op0;
+    }
+    if (Log2) {
+      Log2->setArgOperand(0, X);
+      Log2->copyFastMathFlags(&I);
+      Value *LogXTimesY = Builder.CreateFMulFMF(Log2, Y, &I);
+      return BinaryOperator::CreateFSubFMF(LogXTimesY, Y, &I);
     }
   }
 

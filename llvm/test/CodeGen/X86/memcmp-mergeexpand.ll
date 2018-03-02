@@ -8,22 +8,37 @@
 
 define zeroext i1 @opeq1(
 ; X86-LABEL: opeq1:
-; X86:       # %bb.0: # %opeq1.exit
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %edx
+; X86-NEXT:    cmpl (%eax), %edx
+; X86-NEXT:    jne .LBB0_1
+; X86-NEXT:  # %bb.2: # %land.rhs.i
 ; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    xorl 4(%eax), %ecx
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    cmpl 4(%eax), %ecx
 ; X86-NEXT:    sete %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_1:
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opeq1:
-; X64:       # %bb.0: # %opeq1.exit
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    cmpq (%rsi), %rax
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    cmpl (%rsi), %eax
+; X64-NEXT:    jne .LBB0_1
+; X64-NEXT:  # %bb.2: # %land.rhs.i
+; X64-NEXT:    movl 4(%rdi), %eax
+; X64-NEXT:    cmpl 4(%rsi), %eax
 ; X64-NEXT:    sete %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB0_1:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %"struct.std::pair"* nocapture readonly dereferenceable(8) %a,
   %"struct.std::pair"* nocapture readonly dereferenceable(8) %b) local_unnamed_addr #0 {

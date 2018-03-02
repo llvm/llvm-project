@@ -919,15 +919,17 @@ ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
           return FPOffset;
         }
       }
-    } else if (AFI->isThumb2Function()) {
+    } else if (AFI->isThumbFunction()) {
+      // Prefer SP to base pointer, if the offset is suitably aligned and in
+      // range as the effective range of the immediate offset is bigger when
+      // basing off SP.
       // Use  add <rd>, sp, #<imm8>
       //      ldr <rd>, [sp, #<imm8>]
-      // if at all possible to save space.
       if (Offset >= 0 && (Offset & 3) == 0 && Offset <= 1020)
         return Offset;
       // In Thumb2 mode, the negative offset is very limited. Try to avoid
       // out of range references. ldr <rt>,[<rn>, #-<imm8>]
-      if (FPOffset >= -255 && FPOffset < 0) {
+      if (AFI->isThumb2Function() && FPOffset >= -255 && FPOffset < 0) {
         FrameReg = RegInfo->getFrameRegister(MF);
         return FPOffset;
       }

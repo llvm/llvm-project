@@ -83,6 +83,10 @@ public:
   /// vector has an exact multiplicative inverse for each element in the vector.
   bool hasExactInverseFP() const;
 
+  /// Return true if this is a floating-point NaN constant or a vector
+  /// floating-point constant with all NaN elements.
+  bool isNaN() const;
+
   /// Return true if evaluation of this constant could trap. This is true for
   /// things like constant expressions that could divide by zero.
   bool canTrap() const;

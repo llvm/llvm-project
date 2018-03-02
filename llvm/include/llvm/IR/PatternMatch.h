@@ -173,7 +173,7 @@ inline match_any_zero m_AnyZero() { return match_any_zero(); }
 
 struct match_nan {
   template <typename ITy> bool match(ITy *V) {
-    if (const auto *C = dyn_cast<ConstantFP>(V))
+    if (const auto *C = dyn_cast<Constant>(V))
       return C->isNaN();
     return false;
   }

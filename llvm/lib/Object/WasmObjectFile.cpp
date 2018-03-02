@@ -670,8 +670,13 @@ Error WasmObjectFile::parseImportSection(const uint8_t *Ptr, const uint8_t *End)
 Error WasmObjectFile::parseFunctionSection(const uint8_t *Ptr, const uint8_t *End) {
   uint32_t Count = readVaruint32(Ptr);
   FunctionTypes.reserve(Count);
+  uint32_t NumTypes = Signatures.size();
   while (Count--) {
-    FunctionTypes.push_back(readVaruint32(Ptr));
+    uint32_t Type = readVaruint32(Ptr);
+    if (Type >= NumTypes)
+      return make_error<GenericBinaryError>("Invalid function type",
+                                            object_error::parse_failed);
+    FunctionTypes.push_back(Type);
   }
   if (Ptr != End)
     return make_error<GenericBinaryError>("Function section ended prematurely",

@@ -4508,7 +4508,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
 ///
 /// The function processes the case when type of true and false values of a
 /// select instruction differs from type of the cmp instruction operands because
-/// of a cast instructon. The function checks if it is legal to move the cast
+/// of a cast instruction. The function checks if it is legal to move the cast
 /// operation after "select". If yes, it returns the new second value of
 /// "select" (with the assumption that cast is moved):
 /// 1. As operand of cast instruction when both values of "select" are same cast

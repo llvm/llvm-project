@@ -3,6 +3,11 @@
 FileHeader:
   Version:         0x00000001
 Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ReturnType:      NORESULT
+        ParamTypes:
   - Type:            FUNCTION
     FunctionTypes: [ 0, 0 ]
   - Type:            GLOBAL

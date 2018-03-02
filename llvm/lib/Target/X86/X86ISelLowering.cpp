@@ -39160,6 +39160,15 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     return Res;
   }
 
+  // Make sure it isn't a register that requires AVX512.
+  if (!Subtarget.hasAVX512() && isFRClass(*Res.second) &&
+      TRI->getEncodingValue(Res.first) & 0x10) {
+    // Register requires EVEX prefix.
+    Res.first = 0;
+    Res.second = nullptr;
+    return Res;
+  }
+
   // Otherwise, check to see if this is a register class of the wrong value
   // type.  For example, we want to map "{ax},i32" -> {eax}, we don't want it to
   // turn into {ax},{dx}.
