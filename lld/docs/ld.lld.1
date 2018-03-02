@@ -117,7 +117,7 @@ Keep all symbols in the symbol table.
 Specify the dynamic linker to be used for a dynamically linked executable.
 This is recorded in an ELF segment of type
 .Dv PT_INTERP .
-.It Fl -dynamic-list Ar file
+.It Fl -dynamic-list Ns = Ns Ar file
 Read a list of dynamic symbols from
 .Ar file .
 .It Fl -eh-frame-hdr
@@ -133,16 +133,16 @@ Enable new dynamic tags.
 .It Fl -end-lib
 End a grouping of objects that should be treated as if they were together
 in an archive.
-.It Fl -entry Ar entry
+.It Fl -entry Ns = Ns Ar entry
 Name of entry point symbol.
-.It Fl -error-limit Ar value
+.It Fl -error-limit Ns = Ns Ar value
 Maximum number of errors to emit before stopping.
 A value of zero indicates that there is no limit.
 .It Fl -error-unresolved-symbols
 Report unresolved symbols as errors.
-.It Fl -exclude-libs Ar value
+.It Fl -exclude-libs Ns = Ns Ar value
 Exclude static libraries from automatic export.
-.It Fl -export-dynamic-symbol Ar symbol
+.It Fl -export-dynamic-symbol Ns = Ns Ar symbol
 Include
 .Ar symbol
 in the dynamic symbol table.
@@ -154,7 +154,7 @@ Treat warnings as errors.
 Set the
 .Dv DT_FILTER
 field to the specified value.
-.It Fl -fini Ar symbol
+.It Fl -fini Ns = Ns Ar symbol
 Specify a finalizer function.
 .It Fl -format Ns = Ns Ar input-format
 Specify the format of the inputs following this option.
@@ -173,7 +173,7 @@ Enable garbage collection of unused sections.
 Generate
 .Li .gdb_index
 section.
-.It Fl -hash-style Ar value
+.It Fl -hash-style Ns = Ns Ar value
 Specify hash style.
 .Ar value
 may be
@@ -192,7 +192,7 @@ Disable identical code folding.
 .It Fl -image-base Ns = Ns Ar value
 Set the base address to
 .Ar value .
-.It Fl -init Ar symbol
+.It Fl -init Ns = Ns Ar symbol
 Specify an initializer function.
 .It Fl -lto-aa-pipeline Ns = Ns Ar value
 AA pipeline to run during LTO.
@@ -208,7 +208,7 @@ Number of LTO codegen partitions.
 Add a directory to the library search path.
 .It Fl l Ar libName
 Root name of library to use.
-.It Fl -Map Ar file
+.It Fl -Map Ns = Ns Ar file
 Print a link map to
 .Ar file .
 .It Fl m Ar value
@@ -291,11 +291,11 @@ List removed unused sections.
 Print a link map to the standard output.
 .It Fl -relocatable
 Create relocatable object file.
-.It Fl -reproduce Ar value
+.It Fl -reproduce Ns = Ns Ar value
 Dump linker invocation and input files for debugging.
 .It Fl -retain-symbols-file Ns = Ns Ar file
 Retain only the symbols listed in the file.
-.It Fl -rpath Ar value
+.It Fl -rpath Ns = Ns Ar value
 Add a
 .Dv DT_RUNPATH
 to the output.
@@ -305,10 +305,10 @@ The supported values are
 .Cm windows
 and
 .Cm posix .
-.It Fl -script Ar file
+.It Fl -script Ns = Ns Ar file
 Read linker script from
 .Ar file .
-.It Fl -section-start Ar address
+.It Fl -section-start Ar section Ns = Ns Ar address
 Set address of section.
 .It Fl -shared
 Build a shared object.
@@ -317,7 +317,7 @@ Set
 .Dv DT_SONAME
 to
 .Ar value .
-.It Fl -sort-section Ar value
+.It Fl -sort-section Ns = Ns Ar value
 Specifies sections sorting rule when linkerscript is used.
 .It Fl -start-lib
 Start a grouping of objects that should be treated as if they were together
@@ -353,13 +353,13 @@ is one of
 .Cm abs ,
 or
 .Cm got-rel .
-.It Fl -Tbss Ar value
+.It Fl -Tbss Ns = Ns Ar value
 Same as
 .Fl -section-start
 with
 .Li .bss
 as the sectionname.
-.It Fl -Tdata Ar value
+.It Fl -Tdata Ns = Ns Ar value
 Same as
 .Fl -section-start
 with
@@ -374,18 +374,18 @@ Number of ThinLTO jobs.
 .It Fl -threads
 Run the linker multi-threaded.
 This option is enabled by default.
-.It Fl -trace-symbol Ar symbol
+.It Fl -trace-symbol Ns = Ns Ar symbol
 Trace references to
 .Ar symbol .
 .It Fl -trace
 Print the names of the input files.
-.It Fl -Ttext Ar value
+.It Fl -Ttext Ns = Ns Ar value
 Same as
 .Fl -section-start
 with
 .Li .text
 as the sectionname.
-.It Fl -undefined Ar symbol
+.It Fl -undefined Ns = Ns Ar symbol
 Force
 .Ar symbol
 to be an undefined symbol during linking.
@@ -393,7 +393,7 @@ to be an undefined symbol during linking.
 Determine how to handle unresolved symbols.
 .It Fl -verbose
 Verbose mode.
-.It Fl -version-script Ar file
+.It Fl -version-script Ns = Ns Ar file
 Read version script from
 .Ar file .
 .It Fl V , Fl -version
@@ -407,7 +407,7 @@ Warn about duplicate common symbols.
 Report unresolved symbols as warnings.
 .It Fl -whole-archive
 Force load of all members in a static library.
-.It Fl -wrap Ar symbol
+.It Fl -wrap Ns = Ns Ar symbol
 Use wrapper functions for symbol.
 .It Fl z Ar option
 Linker option extensions.

@@ -124,39 +124,46 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
 
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
                              bool WholeArchive) {
+  StringRef Filename = MB->getBufferIdentifier();
+
   MemoryBufferRef MBRef = takeBuffer(std::move(MB));
-  FilePaths.push_back(MBRef.getBufferIdentifier());
+  FilePaths.push_back(Filename);
 
   // File type is detected by contents, not by file extension.
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::windows_resource:
     Resources.push_back(MBRef);
     break;
-
   case file_magic::archive:
     if (WholeArchive) {
       std::unique_ptr<Archive> File =
-          CHECK(Archive::create(MBRef),
-                MBRef.getBufferIdentifier() + ": failed to parse archive");
+          CHECK(Archive::create(MBRef), Filename + ": failed to parse archive");
 
       for (MemoryBufferRef M : getArchiveMembers(File.get()))
-        addArchiveBuffer(M, "<whole-archive>", MBRef.getBufferIdentifier());
+        addArchiveBuffer(M, "<whole-archive>", Filename);
       return;
     }
     Symtab->addFile(make<ArchiveFile>(MBRef));
     break;
-
   case file_magic::bitcode:
     Symtab->addFile(make<BitcodeFile>(MBRef));
     break;
-
-  case file_magic::coff_cl_gl_object:
-    error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
-          "Recompile without /GL");
-    break;
-
-  default:
+  case file_magic::coff_object:
+  case file_magic::coff_import_library:
     Symtab->addFile(make<ObjFile>(MBRef));
+    break;
+  case file_magic::coff_cl_gl_object:
+    error(Filename + ": is not a native COFF file. Recompile without /GL");
+    break;
+  case file_magic::pecoff_executable:
+    if (Filename.endswith_lower(".dll")) {
+      error(Filename + ": bad file type. Did you specify a DLL instead of an "
+                       "import library?");
+      break;
+    }
+    LLVM_FALLTHROUGH;
+  default:
+    error(MBRef.getBufferIdentifier() + ": unknown file type");
     break;
   }
 }

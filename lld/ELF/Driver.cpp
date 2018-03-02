@@ -626,7 +626,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->EhFrameHdr =
       Args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
-  Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
+  Config->EnableNewDtags =
+      Args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   Config->Entry = Args.getLastArgValue(OPT_entry);
   Config->ExportDynamic =
       Args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
@@ -771,7 +772,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   std::tie(Config->BuildId, Config->BuildIdVector) = getBuildId(Args);
 
-  if (auto *Arg = Args.getLastArg(OPT_pack_dyn_relocs_eq)) {
+  if (auto *Arg = Args.getLastArg(OPT_pack_dyn_relocs)) {
     StringRef S = Arg->getValue();
     if (S == "android")
       Config->AndroidPackDynRelocs = true;
