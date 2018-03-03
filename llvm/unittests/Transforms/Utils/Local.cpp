@@ -332,11 +332,14 @@ TEST(Local, ConstantFoldTerminator) {
   runWithDomTree(*M, "indirectbr_unreachable", CFAllTerminators);
 }
 
-TEST(Local, SalvageDebugValuesInRecursiveInstDeletion) {
+struct SalvageDebugInfoTest : ::testing::Test {
   LLVMContext C;
+  std::unique_ptr<Module> M;
+  Function *F = nullptr;
 
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"(
+  void SetUp() {
+    M = parseIR(C,
+                R"(
       define void @f() !dbg !8 {
       entry:
         %x = add i32 0, 1
@@ -361,34 +364,68 @@ TEST(Local, SalvageDebugValuesInRecursiveInstDeletion) {
       !13 = !DILocation(line: 2, column: 7, scope: !8)
       !14 = !DILocation(line: 3, column: 1, scope: !8)
       )");
-  auto *GV = M->getNamedValue("f");
-  ASSERT_TRUE(GV);
-  auto *F = dyn_cast<Function>(GV);
-  ASSERT_TRUE(F);
+
+    auto *GV = M->getNamedValue("f");
+    ASSERT_TRUE(GV);
+    F = dyn_cast<Function>(GV);
+    ASSERT_TRUE(F);
+  }
+
+  bool doesDebugValueDescribeX(const DbgValueInst &DI) {
+    const auto &CI = *cast<ConstantInt>(DI.getValue());
+    if (CI.isZero())
+      return DI.getExpression()->getElements().equals(
+          {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_stack_value});
+    else if (CI.isOneValue())
+      return DI.getExpression()->getElements().empty();
+    return false;
+  }
+
+  bool doesDebugValueDescribeY(const DbgValueInst &DI) {
+    const auto &CI = *cast<ConstantInt>(DI.getValue());
+    if (CI.isZero())
+      return DI.getExpression()->getElements().equals(
+          {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_plus_uconst, 2,
+           dwarf::DW_OP_stack_value});
+    else if (CI.isOneValue())
+      return DI.getExpression()->getElements().equals(
+          {dwarf::DW_OP_plus_uconst, 2, dwarf::DW_OP_stack_value});
+    return false;
+  }
+
+  void verifyDebugValuesAreSalvaged() {
+    // Check that the debug values for %x and %y are preserved.
+    bool FoundX = false;
+    bool FoundY = false;
+    for (const Instruction &I : F->front()) {
+      auto DI = dyn_cast<DbgValueInst>(&I);
+      if (!DI) {
+        // The function should only contain debug values and a terminator.
+        ASSERT_TRUE(isa<TerminatorInst>(&I));
+        continue;
+      }
+      EXPECT_EQ(DI->getVariable()->getName(), "x");
+      FoundX |= doesDebugValueDescribeX(*DI);
+      FoundY |= doesDebugValueDescribeY(*DI);
+    }
+    ASSERT_TRUE(FoundX);
+    ASSERT_TRUE(FoundY);
+  }
+};
+
+TEST_F(SalvageDebugInfoTest, RecursiveInstDeletion) {
   Instruction *Inst = &F->front().front();
-  Inst = Inst->getNextNode();
+  Inst = Inst->getNextNode(); // Get %y = add ...
   ASSERT_TRUE(Inst);
   bool Deleted = RecursivelyDeleteTriviallyDeadInstructions(Inst);
   ASSERT_TRUE(Deleted);
+  verifyDebugValuesAreSalvaged();
+}
 
-  // The debug values should have been salvaged.
-  bool FoundX = false;
-  bool FoundY = false;
-  uint64_t X_expr[] = {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_stack_value};
-  uint64_t Y_expr[] = {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_plus_uconst, 2,
-                       dwarf::DW_OP_stack_value};
-  for (const Instruction &I : F->front()) {
-    auto DI = dyn_cast<DbgValueInst>(&I);
-    if (!DI)
-      continue;
-    EXPECT_EQ(DI->getVariable()->getName(), "x");
-    ASSERT_TRUE(cast<ConstantInt>(DI->getValue())->isZero());
-    ArrayRef<uint64_t> ExprElts = DI->getExpression()->getElements();
-    if (ExprElts.equals(X_expr))
-      FoundX = true;
-    else if (ExprElts.equals(Y_expr))
-      FoundY = true;
-  }
-  ASSERT_TRUE(FoundX);
-  ASSERT_TRUE(FoundY);
+TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
+  BasicBlock *BB = &F->front();
+  ASSERT_TRUE(BB);
+  bool Deleted = SimplifyInstructionsInBlock(BB);
+  ASSERT_TRUE(Deleted);
+  verifyDebugValuesAreSalvaged();
 }

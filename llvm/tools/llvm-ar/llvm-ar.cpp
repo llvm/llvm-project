@@ -758,7 +758,7 @@ static int performOperation(ArchiveOperation Operation,
 }
 
 static void runMRIScript() {
-  enum class MRICommand { AddLib, AddMod, Create, Save, End, Invalid };
+  enum class MRICommand { AddLib, AddMod, Create, Delete, Save, End, Invalid };
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getSTDIN();
   failIfError(Buf.getError());
@@ -779,6 +779,7 @@ static void runMRIScript() {
                        .Case("addlib", MRICommand::AddLib)
                        .Case("addmod", MRICommand::AddMod)
                        .Case("create", MRICommand::Create)
+                       .Case("delete", MRICommand::Delete)
                        .Case("save", MRICommand::Save)
                        .Case("end", MRICommand::End)
                        .Default(MRICommand::Invalid);
@@ -813,6 +814,12 @@ static void runMRIScript() {
         fail("File already saved");
       ArchiveName = Rest;
       break;
+    case MRICommand::Delete: {
+      StringRef Name = sys::path::filename(Rest);
+      llvm::erase_if(NewMembers,
+                     [=](NewArchiveMember &M) { return M.MemberName == Name; });
+      break;
+    }
     case MRICommand::Save:
       Saved = true;
       break;
