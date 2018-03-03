@@ -12,6 +12,7 @@
 
 #include "lldb/Core/Address.h"     // for Address
 #include "lldb/Core/ModuleSpec.h"  // for ModuleSpec
+#include "lldb/Core/UserSettingsController.h"
 #include "lldb/Utility/FileSpec.h" // for FileSpec
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h" // for Status
@@ -73,6 +74,14 @@ class VariableList;
 }
 
 namespace lldb_private {
+
+class ModuleListProperties : public Properties {
+public:
+  ModuleListProperties();
+
+  FileSpec GetClangModulesCachePath() const;
+  bool SetClangModulesCachePath(llvm::StringRef path);
+}; 
 
 //----------------------------------------------------------------------
 /// @class ModuleList ModuleList.h "lldb/Core/ModuleList.h"
@@ -534,6 +543,8 @@ public:
                                       Stream *feedback_stream = nullptr,
                                       bool continue_on_error = true);
 
+  static ModuleListProperties &GetGlobalModuleListProperties();
+
   static bool ModuleIsInCache(const Module *module_ptr);
 
   static Status GetSharedModule(const ModuleSpec &module_spec,
@@ -551,7 +562,7 @@ public:
   static size_t RemoveOrphanSharedModules(bool mandatory);
 
   static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
-
+  
   void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
                    &callback) const;
 
