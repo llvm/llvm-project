@@ -83,6 +83,9 @@ def LocalVar : SubsetSubject<Var,
 def NonParmVar : SubsetSubject<Var,
                                [{S->getKind() != Decl::ParmVar}],
                                "variables">;
+def NonLocalVar : SubsetSubject<Var,
+                                [{!S->hasLocalStorage()}],
+                                "variables with non-local storage">;
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
@@ -2007,6 +2010,7 @@ def Unused : InheritableAttr {
 
 def Used : InheritableAttr {
   let Spellings = [GCC<"used">];
+  let Subjects = SubjectList<[Function, ObjCMethod, NonLocalVar]>;
   let Documentation = [Undocumented];
 }
 

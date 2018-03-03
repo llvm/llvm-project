@@ -209,8 +209,46 @@ static bool canSplitCallSite(CallSite CS, TargetTransformInfo &TTI) {
   return CallSiteBB->canSplitPredecessors();
 }
 
-/// Return true if the CS is split into its new predecessors.
+static Instruction *cloneInstForMustTail(Instruction *I, Instruction *Before,
+                                         Value *V) {
+  Instruction *Copy = I->clone();
+  Copy->setName(I->getName());
+  Copy->insertBefore(Before);
+  if (V)
+    Copy->setOperand(0, V);
+  return Copy;
+}
+
+/// Copy mandatory `musttail` return sequence that follows original `CI`, and
+/// link it up to `NewCI` value instead:
 ///
+///   * (optional) `bitcast NewCI to ...`
+///   * `ret bitcast or NewCI`
+///
+/// Insert this sequence right before `SplitBB`'s terminator, which will be
+/// cleaned up later in `splitCallSite` below.
+static void copyMustTailReturn(BasicBlock *SplitBB, Instruction *CI,
+                               Instruction *NewCI) {
+  bool IsVoid = SplitBB->getParent()->getReturnType()->isVoidTy();
+  auto II = std::next(CI->getIterator());
+
+  BitCastInst* BCI = dyn_cast<BitCastInst>(&*II);
+  if (BCI)
+    ++II;
+
+  ReturnInst* RI = dyn_cast<ReturnInst>(&*II);
+  assert(RI && "`musttail` call must be followed by `ret` instruction");
+
+  TerminatorInst *TI = SplitBB->getTerminator();
+  Value *V = NewCI;
+  if (BCI)
+    V = cloneInstForMustTail(BCI, TI, V);
+  cloneInstForMustTail(RI, TI, IsVoid ? nullptr : V);
+
+  // FIXME: remove TI here, `DuplicateInstructionsInSplitBetween` has a bug
+  // that prevents doing this now.
+}
+
 /// For each (predecessor, conditions from predecessors) pair, it will split the
 /// basic block containing the call site, hook it up to the predecessor and
 /// replace the call instruction with new call instructions, which contain
@@ -257,9 +295,14 @@ static void splitCallSite(
     const SmallVectorImpl<std::pair<BasicBlock *, ConditionsTy>> &Preds) {
   Instruction *Instr = CS.getInstruction();
   BasicBlock *TailBB = Instr->getParent();
+  bool IsMustTailCall = CS.isMustTailCall();
 
   PHINode *CallPN = nullptr;
-  if (Instr->getNumUses())
+
+  // `musttail` calls must be followed by optional `bitcast`, and `ret`. The
+  // split blocks will be terminated right after that so there're no users for
+  // this phi in a `TailBB`.
+  if (!IsMustTailCall && Instr->getNumUses())
     CallPN = PHINode::Create(Instr->getType(), Preds.size(), "phi.call");
 
   DEBUG(dbgs() << "split call-site : " << *Instr << " into \n");
@@ -293,6 +336,23 @@ static void splitCallSite(
                  << "\n");
     if (CallPN)
       CallPN->addIncoming(NewCI, SplitBlock);
+
+    // Clone and place bitcast and return instructions before `TI`
+    if (IsMustTailCall)
+      copyMustTailReturn(SplitBlock, Instr, NewCI);
+  }
+
+  NumCallSiteSplit++;
+
+  // FIXME: remove TI in `copyMustTailReturn`
+  if (IsMustTailCall) {
+    // Remove superfluous `br` terminators from the end of the Split blocks
+    for (BasicBlock *SplitBlock : predecessors(TailBB))
+      SplitBlock->getTerminator()->eraseFromParent();
+
+    // Erase the tail block once done with musttail patching
+    TailBB->eraseFromParent();
+    return;
   }
 
   auto *OriginalBegin = &*TailBB->begin();
@@ -329,8 +389,6 @@ static void splitCallSite(
     if (CurrentI == OriginalBegin)
       break;
   }
-
-  NumCallSiteSplit++;
 }
 
 // Return true if the call-site has an argument which is a PHI with only
@@ -415,7 +473,17 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
       Function *Callee = CS.getCalledFunction();
       if (!Callee || Callee->isDeclaration())
         continue;
+
+      // Successful musttail call-site splits result in erased CI and erased BB.
+      // Check if such path is possible before attempting the splitting.
+      bool IsMustTail = CS.isMustTailCall();
+
       Changed |= tryToSplitCallSite(CS, TTI);
+
+      // There're no interesting instructions after this. The call site
+      // itself might have been erased on splitting.
+      if (IsMustTail)
+        break;
     }
   }
   return Changed;

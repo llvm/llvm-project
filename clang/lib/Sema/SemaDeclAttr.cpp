@@ -2086,23 +2086,6 @@ static void handleDisableTailCallsAttr(Sema &S, Decl *D,
       AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
 }
 
-static void handleUsedAttr(Sema &S, Decl *D, const AttributeList &AL) {
-  if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (VD->hasLocalStorage()) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL.getName();
-      return;
-    }
-  } else if (!isFunctionOrMethod(D)) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
-      << AL.getName() << ExpectedVariableOrFunction;
-    return;
-  }
-
-  D->addAttr(::new (S.Context)
-             UsedAttr(AL.getRange(), S.Context,
-                      AL.getAttributeSpellingListIndex()));
-}
-
 static void handleUnusedAttr(Sema &S, Decl *D, const AttributeList &AL) {
   bool IsCXX17Attr = AL.isCXX11Attribute() && !AL.getScopeName();
 
@@ -6248,7 +6231,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleDisableTailCallsAttr(S, D, AL);
     break;
   case AttributeList::AT_Used:
-    handleUsedAttr(S, D, AL);
+    handleSimpleAttribute<UsedAttr>(S, D, AL);
     break;
   case AttributeList::AT_Visibility:
     handleVisibilityAttr(S, D, AL, false);

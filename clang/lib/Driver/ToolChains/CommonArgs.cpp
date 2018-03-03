@@ -542,12 +542,14 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   // There's no libpthread or librt on RTEMS.
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS) {
     CmdArgs.push_back("-lpthread");
-    CmdArgs.push_back("-lrt");
+    if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+      CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
   if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
       TC.getTriple().getOS() != llvm::Triple::NetBSD &&
+      TC.getTriple().getOS() != llvm::Triple::OpenBSD &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes

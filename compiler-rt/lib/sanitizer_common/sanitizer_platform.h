@@ -14,8 +14,8 @@
 #define SANITIZER_PLATFORM_H
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
-  !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) && \
-  !(defined(__sun__) && defined(__svr4__))
+  !defined(__OpenBSD__) && !defined(__APPLE__) && !defined(_WIN32) && \
+  !defined(__Fuchsia__) && !(defined(__sun__) && defined(__srv4__))
 # error "This operating system is not supported"
 #endif
 
@@ -35,6 +35,12 @@
 # define SANITIZER_NETBSD 1
 #else
 # define SANITIZER_NETBSD 0
+#endif
+
+#if defined(__OpenBSD__)
+# define SANITIZER_OPENBSD 1
+#else
+# define SANITIZER_OPENBSD 0
 #endif
 
 #if defined(__sun__) && defined(__svr4__)
@@ -100,7 +106,7 @@
 
 #define SANITIZER_POSIX \
   (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC || \
-    SANITIZER_NETBSD || SANITIZER_SOLARIS)
+    SANITIZER_NETBSD || SANITIZER_OPENBSD || SANITIZER_SOLARIS)
 
 #if __LP64__ || defined(_WIN64)
 #  define SANITIZER_WORDSIZE 64
@@ -296,7 +302,8 @@
 # define SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT 0
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_NETBSD || SANITIZER_SOLARIS
+#if SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_NETBSD || \
+  SANITIZER_OPENBSD || SANITIZER_SOLARIS
 # define SANITIZER_MADVISE_DONTNEED MADV_FREE
 #else
 # define SANITIZER_MADVISE_DONTNEED MADV_DONTNEED

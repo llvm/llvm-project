@@ -84,6 +84,7 @@ extern "C" {
 // FreeBSD 9.2 and 10.0.
 #include <sys/umtx.h>
 }
+#include <sys/thr.h>
 extern char **environ;  // provided by crt1
 #endif  // SANITIZER_FREEBSD
 
@@ -453,11 +454,13 @@ bool FileExists(const char *filename) {
 
 tid_t GetTid() {
 #if SANITIZER_FREEBSD
-  return (uptr)pthread_self();
+  long Tid;
+  thr_self(&Tid);
+  return Tid;
 #elif SANITIZER_NETBSD
   return _lwp_self();
 #elif SANITIZER_SOLARIS
-  return (uptr)thr_self();
+  return thr_self();
 #else
   return internal_syscall(SYSCALL(gettid));
 #endif

@@ -1190,10 +1190,21 @@ void ScopBuilder::buildDomain(ScopStmt &Stmt) {
 
 void ScopBuilder::collectSurroundingLoops(ScopStmt &Stmt) {
   isl::set Domain = Stmt.getDomain();
-  for (unsigned u = 0, e = Domain.dim(isl::dim::set); u < e; u++) {
-    isl::id DimId = Domain.get_dim_id(isl::dim::set, u);
-    Stmt.NestLoops.push_back(static_cast<Loop *>(DimId.get_user()));
+  BasicBlock *BB = Stmt.getEntryBlock();
+
+  Loop *L = LI.getLoopFor(BB);
+
+  while (L && Stmt.isRegionStmt() && Stmt.getRegion()->contains(L))
+    L = L->getParentLoop();
+
+  SmallVector<llvm::Loop *, 8> Loops;
+
+  while (L && Stmt.getParent()->getRegion().contains(L)) {
+    Loops.push_back(L);
+    L = L->getParentLoop();
   }
+
+  Stmt.NestLoops.insert(Stmt.NestLoops.begin(), Loops.rbegin(), Loops.rend());
 }
 
 /// Return the reduction type for a given binary operator.
