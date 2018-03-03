@@ -1847,10 +1847,9 @@ void CodeGenModule::ConstructAttributeList(
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
     if (auto *AllocSize = TargetDecl->getAttr<AllocSizeAttr>()) {
       Optional<unsigned> NumElemsParam;
-      // alloc_size args are base-1, 0 means not present.
-      if (unsigned N = AllocSize->getNumElemsParam())
-        NumElemsParam = N - 1;
-      FuncAttrs.addAllocSizeAttr(AllocSize->getElemSizeParam() - 1,
+      if (AllocSize->numElemsParam().isValid())
+        NumElemsParam = AllocSize->numElemsParam().getLLVMIndex();
+      FuncAttrs.addAllocSizeAttr(AllocSize->elemSizeParam().getLLVMIndex(),
                                  NumElemsParam);
     }
   }
@@ -4395,7 +4394,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               OffsetValue);
     } else if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
       llvm::Value *ParamVal =
-          CallArgs[AA->getParamIndex() - 1].RV.getScalarVal();
+          CallArgs[AA->paramIndex().getLLVMIndex()].RV.getScalarVal();
       EmitAlignmentAssumption(Ret.getScalarVal(), ParamVal);
     }
   }

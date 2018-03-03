@@ -803,7 +803,7 @@ LIBBUILTIN(_setjmpex, "iJ", "fj",   "setjmpex.h", ALL_MS_LANGUAGES)
 
 // C99 library functions
 // C99 stdarg.h
-LIBBUILTIN(va_start, "vA.",       "fnt",   "stdarg.h", ALL_LANGUAGES)
+LIBBUILTIN(va_start, "vA.",       "fn",    "stdarg.h", ALL_LANGUAGES)
 LIBBUILTIN(va_end, "vA",          "fn",    "stdarg.h", ALL_LANGUAGES)
 LIBBUILTIN(va_copy, "vAA",        "fn",    "stdarg.h", ALL_LANGUAGES)
 // C99 stdlib.h
