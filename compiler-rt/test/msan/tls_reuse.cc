@@ -1,6 +1,7 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t
 
 // Check that when TLS block is reused between threads, its shadow is cleaned.
+// XFAIL: freebsd
 
 #include <pthread.h>
 #include <stdio.h>

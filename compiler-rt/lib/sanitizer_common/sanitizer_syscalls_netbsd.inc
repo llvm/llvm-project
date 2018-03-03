@@ -43,7 +43,7 @@
 // DO NOT EDIT! THIS FILE HAS BEEN GENERATED!
 //
 // Generated with: generate_netbsd_syscalls.awk
-// Generated date: 2018-02-15
+// Generated date: 2018-03-03
 // Generated from: syscalls.master,v 1.291 2018/01/06 16:41:23 kamil Exp
 //
 //===----------------------------------------------------------------------===//
@@ -324,10 +324,6 @@ PRE_SYSCALL(ptrace)
     PRE_READ(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
   } else if (req_ == ptrace_pt_get_siginfo) {
     PRE_WRITE(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
-  } else if (req_ == ptrace_pt_set_sigmask) {
-    PRE_READ(addr_, sizeof(__sanitizer_sigset_t));
-  } else if (req_ == ptrace_pt_get_sigmask) {
-    PRE_WRITE(addr_, sizeof(__sanitizer_sigset_t));
   } else if (req_ == ptrace_pt_setregs) {
     PRE_READ(addr_, struct_ptrace_reg_struct_sz);
   } else if (req_ == ptrace_pt_getregs) {
@@ -371,10 +367,6 @@ POST_SYSCALL(ptrace)
       POST_READ(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
     } else if (req_ == ptrace_pt_get_siginfo) {
       POST_WRITE(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
-    } else if (req_ == ptrace_pt_set_sigmask) {
-      POST_READ(addr_, sizeof(__sanitizer_sigset_t));
-    } else if (req_ == ptrace_pt_get_sigmask) {
-      POST_WRITE(addr_, sizeof(__sanitizer_sigset_t));
     } else if (req_ == ptrace_pt_setregs) {
       POST_READ(addr_, struct_ptrace_reg_struct_sz);
     } else if (req_ == ptrace_pt_getregs) {

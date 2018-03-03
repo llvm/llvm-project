@@ -15,7 +15,7 @@ int main(void) {
   char inbuf_[100];
   strcpy(inbuf_, "sample text");
   char outbuf_[100];
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__NetBSD__)
   // Some OSes expect the 2nd argument of iconv(3) to be of type const char **
   const char *inbuf = inbuf_;
 #else

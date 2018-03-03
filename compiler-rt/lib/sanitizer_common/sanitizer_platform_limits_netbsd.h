@@ -384,8 +384,6 @@ extern int ptrace_pt_get_event_mask;
 extern int ptrace_pt_get_process_state;
 extern int ptrace_pt_set_siginfo;
 extern int ptrace_pt_get_siginfo;
-extern int ptrace_pt_set_sigmask;
-extern int ptrace_pt_get_sigmask;
 extern int ptrace_piod_read_d;
 extern int ptrace_piod_write_d;
 extern int ptrace_piod_read_i;
