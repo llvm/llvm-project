@@ -80,9 +80,6 @@ public:
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
 
-  // This symbol version was found in a version script.
-  unsigned InVersionScript : 1;
-
   // The file from which this symbol was created.
   InputFile *File;
 
@@ -368,7 +365,6 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   S->ExportDynamic = Sym.ExportDynamic;
   S->CanInline = Sym.CanInline;
   S->Traced = Sym.Traced;
-  S->InVersionScript = Sym.InVersionScript;
 
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.

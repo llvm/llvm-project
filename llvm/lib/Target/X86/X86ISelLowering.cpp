@@ -35571,10 +35571,10 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
   // truncate 2 x v4i32 to v8i16.
   if (Subtarget.hasSSE41() || OutSVT == MVT::i8)
     return combineVectorTruncationWithPACKUS(N, DAG, SubVec);
-  else if (InSVT == MVT::i32)
+  if (InSVT == MVT::i32)
     return combineVectorTruncationWithPACKSS(N, Subtarget, DAG, SubVec);
-  else
-    return SDValue();
+
+  return SDValue();
 }
 
 /// This function transforms vector truncation of 'extended sign-bits' or
