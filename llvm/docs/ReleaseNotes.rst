@@ -23,6 +23,12 @@ them.
 Non-comprehensive list of changes in this release
 =================================================
 
+* Support for `retpolines <https://support.google.com/faqs/answer/7625886>`_
+  was added to help mitigate "branch target injection" (variant #2) of the
+  "Spectre" speculative side channels described by `Project Zero
+  <https://googleprojectzero.blogspot.com/2018/01/reading-privileged-memory-with-side.html>`_
+  and the `Spectre paper <https://spectreattack.com/spectre.pdf>`_.
+
 * The ``Redirects`` argument of ``llvm::sys::ExecuteAndWait`` and
   ``llvm::sys::ExecuteNoWait`` was changed to an ``ArrayRef`` of optional
   ``StringRef``'s to make it safer and more convenient to use.
@@ -41,12 +47,6 @@ Non-comprehensive list of changes in this release
 
 * Preliminary support for Sanitizers and sibling features on X86(_64) NetBSD
   (ASan, UBsan, TSan, MSan, SafeStack, libFuzzer).
-
-* Support for `retpolines <https://support.google.com/faqs/answer/7625886>`_
-  was added to help mitigate "branch target injection" (variant #2) of the
-  "Spectre" speculative side channels described by `Project Zero
-  <https://googleprojectzero.blogspot.com/2018/01/reading-privileged-memory-with-side.html>`_
-  and the `Spectre paper <https://spectreattack.com/spectre.pdf>`_.
 
 
 Changes to the LLVM IR
