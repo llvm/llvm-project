@@ -2118,7 +2118,7 @@ def Unused : InheritableAttr {
 
 def Used : InheritableAttr {
   let Spellings = [GCC<"used">];
-  let Subjects = SubjectList<[Function, ObjCMethod, NonLocalVar]>;
+  let Subjects = SubjectList<[NonLocalVar, Function, ObjCMethod]>;
   let Documentation = [Undocumented];
 }
 
