@@ -2816,40 +2816,15 @@ let Predicates = [HasDQI] in {
   def : Pat<(store VK1:$src, addr:$dst),
             (KMOVBmk addr:$dst, (COPY_TO_REGCLASS VK1:$src, VK8))>;
 
+  def : Pat<(v1i1 (load addr:$src)),
+            (COPY_TO_REGCLASS (KMOVBkm addr:$src), VK1)>;
   def : Pat<(v2i1 (load addr:$src)),
             (COPY_TO_REGCLASS (KMOVBkm addr:$src), VK2)>;
   def : Pat<(v4i1 (load addr:$src)),
             (COPY_TO_REGCLASS (KMOVBkm addr:$src), VK4)>;
 }
-let Predicates = [HasAVX512, NoDQI] in {
-  def : Pat<(store VK1:$src, addr:$dst),
-            (MOV8mr addr:$dst,
-             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK1:$src, GR32)),
-              sub_8bit)))>;
-  def : Pat<(store VK2:$src, addr:$dst),
-            (MOV8mr addr:$dst,
-             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK2:$src, GR32)),
-              sub_8bit)))>;
-  def : Pat<(store VK4:$src, addr:$dst),
-            (MOV8mr addr:$dst,
-             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK4:$src, GR32)),
-              sub_8bit)))>;
-  def : Pat<(store VK8:$src, addr:$dst),
-            (MOV8mr addr:$dst,
-             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK8:$src, GR32)),
-              sub_8bit)))>;
-
-  def : Pat<(v8i1 (load addr:$src)),
-            (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK8)>;
-  def : Pat<(v2i1 (load addr:$src)),
-            (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK2)>;
-  def : Pat<(v4i1 (load addr:$src)),
-            (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK4)>;
-}
 
 let Predicates = [HasAVX512] in {
-  def : Pat<(v1i1 (load addr:$src)),
-            (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK1)>;
   def : Pat<(v8i1 (bitconvert (i8 (load addr:$src)))),
             (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK8)>;
 }

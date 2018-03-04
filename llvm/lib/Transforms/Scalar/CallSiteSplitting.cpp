@@ -347,8 +347,13 @@ static void splitCallSite(
   // FIXME: remove TI in `copyMustTailReturn`
   if (IsMustTailCall) {
     // Remove superfluous `br` terminators from the end of the Split blocks
-    for (BasicBlock *SplitBlock : predecessors(TailBB))
-      SplitBlock->getTerminator()->eraseFromParent();
+    // NOTE: Removing terminator removes the SplitBlock from the TailBB's
+    // predecessors. Therefore we must get complete list of Splits before
+    // attempting removal.
+    SmallVector<BasicBlock *, 2> Splits(predecessors((TailBB)));
+    assert(Splits.size() == 2 && "Expected exactly 2 splits!");
+    for (unsigned i = 0; i < Splits.size(); i++)
+      Splits[i]->getTerminator()->eraseFromParent();
 
     // Erase the tail block once done with musttail patching
     TailBB->eraseFromParent();
