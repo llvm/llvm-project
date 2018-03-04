@@ -40,32 +40,3 @@ _qux:
         movl    %edx, 4(%eax)
         addl    $12, %esp
         ret     $4
-
-//===---------------------------------------------------------------------===//
-
-We generate crappy code for this:
-
-__m64 t() {
-  return _mm_cvtsi32_si64(1);
-}
-
-_t:
-	subl	$12, %esp
-	movl	$1, %eax
-	movd	%eax, %mm0
-	movq	%mm0, (%esp)
-	movl	(%esp), %eax
-	movl	4(%esp), %edx
-	addl	$12, %esp
-	ret
-
-The extra stack traffic is covered in the previous entry. But the other reason
-is we are not smart about materializing constants in MMX registers. With -m64
-
-	movl	$1, %eax
-	movd	%eax, %mm0
-	movd	%mm0, %rax
-	ret
-
-We should be using a constantpool load instead:
-	movq	LC0(%rip), %rax

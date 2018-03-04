@@ -6943,16 +6943,14 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 define i8 @conv1(<8 x i1>* %R) {
 ; GENERIC-LABEL: conv1:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    kxnorw %k0, %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    movb $-1, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    movb $-2, -{{[0-9]+}}(%rsp) # sched: [5:1.00]
 ; GENERIC-NEXT:    movb $-2, %al # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: conv1:
 ; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    kxnorw %k0, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
+; SKX-NEXT:    movb $-1, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    movb $-2, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; SKX-NEXT:    movb $-2, %al # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]

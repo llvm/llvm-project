@@ -1842,22 +1842,6 @@ static void handleAliasAttr(Sema &S, Decl *D, const AttributeList &AL) {
                                          AL.getAttributeSpellingListIndex()));
 }
 
-static void handleColdAttr(Sema &S, Decl *D, const AttributeList &AL) {
-  if (checkAttrMutualExclusion<HotAttr>(S, D, AL.getRange(), AL.getName()))
-    return;
-
-  D->addAttr(::new (S.Context) ColdAttr(AL.getRange(), S.Context,
-                                        AL.getAttributeSpellingListIndex()));
-}
-
-static void handleHotAttr(Sema &S, Decl *D, const AttributeList &AL) {
-  if (checkAttrMutualExclusion<ColdAttr>(S, D, AL.getRange(), AL.getName()))
-    return;
-
-  D->addAttr(::new (S.Context) HotAttr(AL.getRange(), S.Context,
-                                       AL.getAttributeSpellingListIndex()));
-}
-
 static void handleTLSModelAttr(Sema &S, Decl *D,
                                const AttributeList &AL) {
   StringRef Model;
@@ -2064,26 +2048,6 @@ static void handleDependencyAttr(Sema &S, Scope *Scope, Decl *D,
   D->addAttr(::new (S.Context) CarriesDependencyAttr(
                                    AL.getRange(), S.Context,
                                    AL.getAttributeSpellingListIndex()));
-}
-
-static void handleNotTailCalledAttr(Sema &S, Decl *D,
-                                    const AttributeList &AL) {
-  if (checkAttrMutualExclusion<AlwaysInlineAttr>(S, D, AL.getRange(),
-                                                 AL.getName()))
-    return;
-
-  D->addAttr(::new (S.Context) NotTailCalledAttr(
-      AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
-}
-
-static void handleDisableTailCallsAttr(Sema &S, Decl *D,
-                                       const AttributeList &AL) {
-  if (checkAttrMutualExclusion<NakedAttr>(S, D, AL.getRange(),
-                                          AL.getName()))
-    return;
-
-  D->addAttr(::new (S.Context) DisableTailCallsAttr(
-      AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
 }
 
 static void handleUnusedAttr(Sema &S, Decl *D, const AttributeList &AL) {
@@ -4807,28 +4771,6 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
       Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
 }
 
-static void handleCFAuditedTransferAttr(Sema &S, Decl *D,
-                                        const AttributeList &AL) {
-  if (checkAttrMutualExclusion<CFUnknownTransferAttr>(S, D, AL.getRange(),
-                                                      AL.getName()))
-    return;
-
-  D->addAttr(::new (S.Context)
-             CFAuditedTransferAttr(AL.getRange(), S.Context,
-                                   AL.getAttributeSpellingListIndex()));
-}
-
-static void handleCFUnknownTransferAttr(Sema &S, Decl *D,
-                                        const AttributeList &AL) {
-  if (checkAttrMutualExclusion<CFAuditedTransferAttr>(S, D, AL.getRange(),
-                                                      AL.getName()))
-    return;
-
-  D->addAttr(::new (S.Context)
-             CFUnknownTransferAttr(AL.getRange(), S.Context,
-             AL.getAttributeSpellingListIndex()));
-}
-
 static void handleObjCBridgeAttr(Sema &S, Decl *D, const AttributeList &AL) {
   IdentifierLoc *Parm = AL.isArgIdent(0) ? AL.getArgAsIdent(0) : nullptr;
 
@@ -6100,10 +6042,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleOwnershipAttr(S, D, AL);
     break;
   case AttributeList::AT_Cold:
-    handleColdAttr(S, D, AL);
+    handleSimpleAttributeWithExclusions<ColdAttr, HotAttr>(S, D, AL);
     break;
   case AttributeList::AT_Hot:
-    handleHotAttr(S, D, AL);
+    handleSimpleAttributeWithExclusions<HotAttr, ColdAttr>(S, D, AL);
     break;
   case AttributeList::AT_Naked:
     handleNakedAttr(S, D, AL);
@@ -6154,10 +6096,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleObjCBoxable(S, D, AL);
     break;
   case AttributeList::AT_CFAuditedTransfer:
-    handleCFAuditedTransferAttr(S, D, AL);
+    handleSimpleAttributeWithExclusions<CFAuditedTransferAttr,
+                                        CFUnknownTransferAttr>(S, D, AL);
     break;
   case AttributeList::AT_CFUnknownTransfer:
-    handleCFUnknownTransferAttr(S, D, AL);
+    handleSimpleAttributeWithExclusions<CFUnknownTransferAttr,
+                                        CFAuditedTransferAttr>(S, D, AL);
     break;
   case AttributeList::AT_CFConsumed:
   case AttributeList::AT_NSConsumed:
@@ -6225,10 +6169,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttribute<ReturnsTwiceAttr>(S, D, AL);
     break;
   case AttributeList::AT_NotTailCalled:
-    handleNotTailCalledAttr(S, D, AL);
+    handleSimpleAttributeWithExclusions<NotTailCalledAttr,
+                                        AlwaysInlineAttr>(S, D, AL);
     break;
   case AttributeList::AT_DisableTailCalls:
-    handleDisableTailCallsAttr(S, D, AL);
+    handleSimpleAttributeWithExclusions<DisableTailCallsAttr,
+                                        NakedAttr>(S, D, AL);
     break;
   case AttributeList::AT_Used:
     handleSimpleAttribute<UsedAttr>(S, D, AL);
