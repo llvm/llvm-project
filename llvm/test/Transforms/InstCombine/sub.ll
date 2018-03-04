@@ -40,6 +40,53 @@ define i32 @test4(i32 %A, i32 %x) {
   ret i32 %C
 }
 
+; (~X) - (~Y) --> Y - X
+; Also, show that we can handle extra uses and vectors.
+
+declare void @use8(i8)
+
+define i8 @notnotsub(i8 %x, i8 %y) {
+; CHECK-LABEL: @notnotsub(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[Y]], [[X]]
+; CHECK-NEXT:    call void @use8(i8 [[NX]])
+; CHECK-NEXT:    call void @use8(i8 [[NY]])
+; CHECK-NEXT:    ret i8 [[SUB]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  %sub = sub i8 %nx, %ny
+  call void @use8(i8 %nx)
+  call void @use8(i8 %ny)
+  ret i8 %sub
+}
+
+define <2 x i8> @notnotsub_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @notnotsub_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %nx = xor <2 x i8> %x, <i8 -1, i8 -1>
+  %ny = xor <2 x i8> %y, <i8 -1, i8 -1>
+  %sub = sub <2 x i8> %nx, %ny
+  ret <2 x i8> %sub
+}
+
+; FIXME:
+define <2 x i8> @notnotsub_vec_undef_elts(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @notnotsub_vec_undef_elts(
+; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], <i8 undef, i8 -1>
+; CHECK-NEXT:    [[NY:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> [[NX]], [[NY]]
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %nx = xor <2 x i8> %x, <i8 undef, i8 -1>
+  %ny = xor <2 x i8> %y, <i8 -1, i8 undef>
+  %sub = sub <2 x i8> %nx, %ny
+  ret <2 x i8> %sub
+}
+
 define i32 @test5(i32 %A, i32 %B, i32 %C) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[D1:%.*]] = sub i32 [[C:%.*]], [[B:%.*]]

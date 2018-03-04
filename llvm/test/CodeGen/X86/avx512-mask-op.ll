@@ -348,9 +348,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 define i8 @conv1(<8 x i1>* %R) {
 ; KNL-LABEL: conv1:
 ; KNL:       ## %bb.0: ## %entry
-; KNL-NEXT:    kxnorw %k0, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    movb $-1, (%rdi)
 ; KNL-NEXT:    movb $-2, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    movb $-2, %al
 ; KNL-NEXT:    retq
@@ -365,9 +363,7 @@ define i8 @conv1(<8 x i1>* %R) {
 ;
 ; AVX512BW-LABEL: conv1:
 ; AVX512BW:       ## %bb.0: ## %entry
-; AVX512BW-NEXT:    kxnorw %k0, %k0, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, (%rdi)
+; AVX512BW-NEXT:    movb $-1, (%rdi)
 ; AVX512BW-NEXT:    movb $-2, -{{[0-9]+}}(%rsp)
 ; AVX512BW-NEXT:    movb $-2, %al
 ; AVX512BW-NEXT:    retq

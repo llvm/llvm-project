@@ -1177,6 +1177,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT,         MVT::v2i1,  Custom);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i1,  Custom);
 
+    // There is no byte sized k-register load or store without AVX512DQ.
+    if (!Subtarget.hasDQI()) {
+      setOperationAction(ISD::LOAD, MVT::v1i1, Custom);
+      setOperationAction(ISD::LOAD, MVT::v2i1, Custom);
+      setOperationAction(ISD::LOAD, MVT::v4i1, Custom);
+      setOperationAction(ISD::LOAD, MVT::v8i1, Custom);
+
+      setOperationAction(ISD::STORE, MVT::v1i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v2i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v4i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v8i1, Custom);
+    }
+
     // Extends of v16i1/v8i1/v4i1/v2i1 to 128-bit vectors.
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
@@ -18983,6 +18996,31 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
 
+static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
+                          SelectionDAG &DAG) {
+  StoreSDNode *St = cast<StoreSDNode>(Op.getNode());
+  SDLoc dl(St);
+  SDValue StoredVal = St->getValue();
+
+  // Without AVX512DQ, we need to use a scalar type for v2i1/v4i1/v8i1 loads.
+  assert(StoredVal.getValueType().isVector() &&
+         StoredVal.getValueType().getVectorElementType() == MVT::i1 &&
+         StoredVal.getValueType().getVectorNumElements() <= 8 &&
+         "Unexpected VT");
+  assert(!St->isTruncatingStore() && "Expected non-truncating store");
+  assert(Subtarget.hasAVX512() && !Subtarget.hasDQI() &&
+         "Expected AVX512F without AVX512DQI");
+
+  StoredVal = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
+                          DAG.getUNDEF(MVT::v8i1), StoredVal,
+                          DAG.getIntPtrConstant(0, dl));
+  StoredVal = DAG.getBitcast(MVT::i8, StoredVal);
+
+  return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
+                      St->getPointerInfo(), St->getAlignment(),
+                      St->getMemOperand()->getFlags());
+}
+
 // Lower vector extended loads using a shuffle. If SSSE3 is not available we
 // may emit an illegal shuffle but the expansion is still better than scalar
 // code. We generate X86ISD::VSEXT for SEXTLOADs if it's available, otherwise
@@ -18990,19 +19028,40 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
 // FIXME: Is the expansion actually better than scalar code? It doesn't seem so.
 // TODO: It is possible to support ZExt by zeroing the undef values during
 // the shuffle phase or after the shuffle.
-static SDValue LowerExtendedLoad(SDValue Op, const X86Subtarget &Subtarget,
+static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
                                  SelectionDAG &DAG) {
   MVT RegVT = Op.getSimpleValueType();
   assert(RegVT.isVector() && "We only custom lower vector sext loads.");
   assert(RegVT.isInteger() &&
          "We only custom lower integer vector sext loads.");
 
-  // Nothing useful we can do without SSE2 shuffles.
-  assert(Subtarget.hasSSE2() && "We only custom lower sext loads with SSE2.");
-
   LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
   SDLoc dl(Ld);
   EVT MemVT = Ld->getMemoryVT();
+
+  // Without AVX512DQ, we need to use a scalar type for v2i1/v4i1/v8i1 loads.
+  if (RegVT.isVector() && RegVT.getVectorElementType() == MVT::i1) {
+    assert(EVT(RegVT) == MemVT && "Expected non-extending load");
+    assert(RegVT.getVectorNumElements() <= 8 && "Unexpected VT");
+    assert(Subtarget.hasAVX512() && !Subtarget.hasDQI() &&
+           "Expected AVX512F without AVX512DQI");
+
+    SDValue NewLd = DAG.getLoad(MVT::i8, dl, Ld->getChain(), Ld->getBasePtr(),
+                                Ld->getPointerInfo(), Ld->getAlignment(),
+                                Ld->getMemOperand()->getFlags());
+
+    // Replace chain users with the new chain.
+    assert(NewLd->getNumValues() == 2 && "Loads must carry a chain!");
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), NewLd.getValue(1));
+
+    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, RegVT,
+                                  DAG.getBitcast(MVT::v8i1, NewLd),
+                                  DAG.getIntPtrConstant(0, dl));
+    return DAG.getMergeValues({Extract, NewLd.getValue(1)}, dl);
+  }
+
+  // Nothing useful we can do without SSE2 shuffles.
+  assert(Subtarget.hasSSE2() && "We only custom lower sext loads with SSE2.");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned RegSz = RegVT.getSizeInBits();
@@ -24766,7 +24825,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:         return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
-  case ISD::LOAD:               return LowerExtendedLoad(Op, Subtarget, DAG);
+  case ISD::LOAD:               return LowerLoad(Op, Subtarget, DAG);
+  case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
@@ -34961,6 +35021,16 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(St);
   SDValue StoredVal = St->getOperand(1);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // If this is a store of a scalar_to_vector to v1i1, just use a scalar store.
+  // This will avoid a copy to k-register.
+  if (VT == MVT::v1i1 && VT == StVT && Subtarget.hasAVX512() &&
+      StoredVal.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+      StoredVal.getOperand(0).getValueType() == MVT::i8) {
+    return DAG.getStore(St->getChain(), dl, StoredVal.getOperand(0),
+                        St->getBasePtr(), St->getPointerInfo(),
+                        St->getAlignment(), St->getMemOperand()->getFlags());
+  }
 
   // If we are saving a concatenation of two XMM registers and 32-byte stores
   // are slow, such as on Sandy Bridge, perform two 16-byte stores.

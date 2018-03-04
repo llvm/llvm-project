@@ -1511,6 +1511,11 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (match(Op0, m_AllOnes()))
     return BinaryOperator::CreateNot(Op1);
 
+  // (~X) - (~Y) --> Y - X
+  Value *X, *Y;
+  if (match(Op0, m_Not(m_Value(X))) && match(Op1, m_Not(m_Value(Y))))
+    return BinaryOperator::CreateSub(Y, X);
+
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     Value *X;
     // C - zext(bool) -> bool ? C - 1 : C
