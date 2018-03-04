@@ -11,7 +11,7 @@
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT: [o, m, n] -> {  :  }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT: [o, m, n] -> { : o < 0 or m < 0 or (o >= 0 and m >= 0 and n <= 0) or (m = 0 and o >= 0 and n > 0) or (o = 0 and m > 0 and n > 0) }
+; CHECK-NEXT: [o, m, n] -> { : o < 0 or m < 0 or n <= 0 or (m <= 0 and n > 0) or (o <= 0 and m > 0 and n > 0) }
 
 ;
 ; CHECK:      p0: %o
