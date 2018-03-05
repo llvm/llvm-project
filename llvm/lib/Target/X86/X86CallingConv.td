@@ -535,7 +535,7 @@ def CC_X86_64_C : CallingConv<[
   // fixed arguments to vararg functions are supposed to be passed in
   // registers.  Actually modeling that would be a lot of work, though.
   CCIfNotVarArg<CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-                          CCIfSubtarget<"hasFp256()",
+                          CCIfSubtarget<"hasAVX()",
                           CCAssignToReg<[YMM0, YMM1, YMM2, YMM3,
                                          YMM4, YMM5, YMM6, YMM7]>>>>,
 
@@ -731,7 +731,7 @@ def CC_X86_32_Vector_Standard : CallingConv<[
 
   // AVX 256-bit vector arguments are passed in YMM registers.
   CCIfNotVarArg<CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-                CCIfSubtarget<"hasFp256()",
+                CCIfSubtarget<"hasAVX()",
                 CCAssignToReg<[YMM0, YMM1, YMM2]>>>>,
 
   // AVX 512-bit vector arguments are passed in ZMM registers.
@@ -750,7 +750,7 @@ def CC_X86_32_Vector_Darwin : CallingConv<[
 
   // AVX 256-bit vector arguments are passed in YMM registers.
   CCIfNotVarArg<CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-                CCIfSubtarget<"hasFp256()",
+                CCIfSubtarget<"hasAVX()",
                 CCAssignToReg<[YMM0, YMM1, YMM2, YMM3]>>>>,
 
   // AVX 512-bit vector arguments are passed in ZMM registers.
