@@ -1,10 +1,16 @@
 // RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
+// RUN: %clang_analyze_cc1  -DFILE_IS_STRUCT -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
 
 int scanf(const char *restrict format, ...);
 int getchar(void);
 
 typedef struct _FILE FILE;
+#ifdef FILE_IS_STRUCT
+extern struct _FILE *stdin;
+#else
 extern FILE *stdin;
+#endif
+
 int fscanf(FILE *restrict stream, const char *restrict format, ...);
 int sprintf(char *str, const char *format, ...);
 void setproctitle(const char *fmt, ...);
