@@ -215,6 +215,7 @@ class LinkerScript final {
   void addSymbol(SymbolAssignment *Cmd);
   void assignSymbol(SymbolAssignment *Cmd, bool InSec);
   void setDot(Expr E, const Twine &Loc, bool InSec);
+  void expandOutputSection(uint64_t Size);
 
   std::vector<InputSection *>
   computeInputSections(const InputSectionDescription *);
