@@ -175,6 +175,9 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
   if (!Sym.isDefined())
     return nullptr;
 
+  StringRef Name = Sym.Info.Name;
+  uint32_t Flags = Sym.Info.Flags;
+
   switch (Sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION: {
     InputFunction *Func =
@@ -185,9 +188,8 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
     }
 
     if (Sym.isBindingLocal())
-      return make<DefinedFunction>(Sym.Info.Name, Sym.Info.Flags, this, Func);
-    return Symtab->addDefinedFunction(Sym.Info.Name, Sym.Info.Flags, this,
-                                      Func);
+      return make<DefinedFunction>(Name, Flags, this, Func);
+    return Symtab->addDefinedFunction(Name, Flags, this, Func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
     InputSegment *Seg = Segments[Sym.Info.DataRef.Segment];
@@ -200,18 +202,15 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
     uint32_t Size = Sym.Info.DataRef.Size;
 
     if (Sym.isBindingLocal())
-      return make<DefinedData>(Sym.Info.Name, Sym.Info.Flags, this, Seg, Offset,
-                               Size);
-    return Symtab->addDefinedData(Sym.Info.Name, Sym.Info.Flags, this, Seg,
-                                  Offset, Size);
+      return make<DefinedData>(Name, Flags, this, Seg, Offset, Size);
+    return Symtab->addDefinedData(Name, Flags, this, Seg, Offset, Size);
   }
   case WASM_SYMBOL_TYPE_GLOBAL:
     InputGlobal *Global =
         Globals[Sym.Info.ElementIndex - WasmObj->getNumImportedGlobals()];
     if (Sym.isBindingLocal())
-      return make<DefinedGlobal>(Sym.Info.Name, Sym.Info.Flags, this, Global);
-    return Symtab->addDefinedGlobal(Sym.Info.Name, Sym.Info.Flags, this,
-                                    Global);
+      return make<DefinedGlobal>(Name, Flags, this, Global);
+    return Symtab->addDefinedGlobal(Name, Flags, this, Global);
   }
   llvm_unreachable("unkown symbol kind");
 }

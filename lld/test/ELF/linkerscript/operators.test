@@ -91,7 +91,13 @@ SECTIONS {
 # RUN: echo "SECTIONS { . = 1 / 0; }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=DIVZERO %s
-# DIVZERO: division by zero
+# DIVZERO: {{.*}}.script:1: division by zero
+
+## Mod by zero error.
+# RUN: echo "SECTIONS { . = 1 % 0; }" > %t.script
+# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN:  FileCheck --check-prefix=MODZERO %s
+# MODZERO: {{.*}}.script:1: modulo by zero
 
 ## Broken ternary operator expression.
 # RUN: echo "SECTIONS { . = 1 ? 2; }" > %t.script
