@@ -3286,3 +3286,16 @@ define i32 @abs_preserve(i32 %x) {
   %abs = select i1 %c, i32 %a, i32 %nega
   ret i32 %abs
 }
+
+; Don't crash by assuming the compared values are integers.
+define <2 x i1> @PR36583(<2 x i8*>)  {
+; CHECK-LABEL: @PR36583(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8*> %0, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+entry:
+  %cast = ptrtoint <2 x i8*> %0 to <2 x i64>
+  %res = icmp eq <2 x i64> %cast, zeroinitializer
+  ret <2 x i1> %res
+}
