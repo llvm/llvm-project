@@ -547,3 +547,13 @@ FunctionLoweringInfo::getOrCreateSwiftErrorVRegUseAt(const Instruction *I, const
   }
   return std::make_pair(It->second, false);
 }
+
+const Value *
+FunctionLoweringInfo::getValueFromVirtualReg(unsigned Vreg) {
+  if (VirtReg2Value.empty()) {
+    for (auto &P : ValueMap) {
+      VirtReg2Value[P.second] = P.first;
+    }
+  }
+  return VirtReg2Value[Vreg];
+}

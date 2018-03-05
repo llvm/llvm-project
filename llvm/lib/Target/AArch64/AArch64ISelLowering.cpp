@@ -6339,8 +6339,8 @@ static SDValue tryAdvSIMDModImm16(unsigned NewOp, SDValue Op, SelectionDAG &DAG,
 
       if (LHS)
         Mov = DAG.getNode(NewOp, dl, MovTy, *LHS,
-                                DAG.getConstant(Value, dl, MVT::i32),
-                                DAG.getConstant(Shift, dl, MVT::i32));
+                          DAG.getConstant(Value, dl, MVT::i32),
+                          DAG.getConstant(Shift, dl, MVT::i32));
       else
         Mov = DAG.getNode(NewOp, dl, MovTy,
                           DAG.getConstant(Value, dl, MVT::i32),
@@ -6583,9 +6583,9 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
       return Res;
   }
 
-  SDValue LHS = Op.getOperand(0);
   EVT VT = Op.getValueType();
 
+  SDValue LHS = Op.getOperand(0);
   BuildVectorSDNode *BVN =
       dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode());
   if (!BVN) {
@@ -6642,25 +6642,13 @@ static SDValue NormalizeBuildVector(SDValue Op,
   return DAG.getBuildVector(VT, dl, Ops);
 }
 
-SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
-                                                 SelectionDAG &DAG) const {
-  SDLoc dl(Op);
+static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
 
-  Op = NormalizeBuildVector(Op, DAG);
-  BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
   APInt DefBits(VT.getSizeInBits(), 0);
   APInt UndefBits(VT.getSizeInBits(), 0);
+  BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
   if (resolveBuildVector(BVN, DefBits, UndefBits)) {
-    // Certain magic vector constants (used to express things like NOT
-    // and NEG) are passed through unmodified.  This allows codegen patterns
-    // for these operations to match.  Special-purpose patterns will lower
-    // these immediates to MOVI if it proves necessary.
-    uint64_t DefVal = DefBits.zextOrTrunc(64).getZExtValue();
-    if (DefBits.getHiBits(64) == DefBits.getLoBits(64) &&
-        VT.isInteger() && (DefVal == 0 || DefVal == UINT64_MAX))
-      return Op;
-
     SDValue NewOp;
     if ((NewOp = tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
         (NewOp = tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
@@ -6692,6 +6680,34 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return NewOp;
   }
 
+  return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+
+  // Try to build a simple constant vector.
+  Op = NormalizeBuildVector(Op, DAG);
+  if (VT.isInteger()) {
+    // Certain vector constants, used to express things like logical NOT and
+    // arithmetic NEG, are passed through unmodified.  This allows special
+    // patterns for these operations to match, which will lower these constants
+    // to whatever is proven necessary.
+    BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
+    if (BVN->isConstant())
+      if (ConstantSDNode *Const = BVN->getConstantSplatNode()) {
+        unsigned BitSize = VT.getVectorElementType().getSizeInBits();
+        APInt Val(BitSize,
+                  Const->getAPIntValue().zextOrTrunc(BitSize).getZExtValue());
+        if (Val.isNullValue() || Val.isAllOnesValue())
+          return Op;
+      }
+  }
+
+  if (SDValue V = ConstantBuildVector(Op, DAG))
+    return V;
+
   // Scan through the operands to find some interesting properties we can
   // exploit:
   //   1) If only one value is used, we can use a DUP, or
@@ -6704,6 +6720,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   //             lanes such that we can directly materialize the vector
   //             some other way (MOVI, e.g.), we can be sneaky.
   //   5) if all operands are EXTRACT_VECTOR_ELT, check for VUZP.
+  SDLoc dl(Op);
   unsigned NumElts = VT.getVectorNumElements();
   bool isOnlyLowElement = true;
   bool usesOnlyOneValue = true;
@@ -6760,11 +6777,17 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       const SDNode *N = V.getNode();
       if (!isa<ConstantSDNode>(N->getOperand(1)))
         break;
+      SDValue N0 = N->getOperand(0);
 
       // All elements are extracted from the same vector.
-      if (!Vector)
-        Vector = N->getOperand(0).getNode();
-      else if (Vector != N->getOperand(0).getNode()) {
+      if (!Vector) {
+        Vector = N0.getNode();
+        // Check that the type of EXTRACT_VECTOR_ELT matches the type of
+        // BUILD_VECTOR.
+        if (VT.getVectorElementType() !=
+            N0.getValueType().getVectorElementType())
+          break;
+      } else if (Vector != N0.getNode()) {
         Odd = false;
         Even = false;
         break;
@@ -6855,16 +6878,23 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // is better than the default, which will perform a separate initialization
   // for each lane.
   if (NumConstantLanes > 0 && usesOnlyOneConstantValue) {
-    SDValue Val = DAG.getNode(AArch64ISD::DUP, dl, VT, ConstantValue);
+    // Firstly, try to materialize the splat constant.
+    SDValue Vec = DAG.getSplatBuildVector(VT, dl, ConstantValue),
+            Val = ConstantBuildVector(Vec, DAG);
+    if (!Val) {
+      // Otherwise, materialize the constant and splat it.
+      Val = DAG.getNode(AArch64ISD::DUP, dl, VT, ConstantValue);
+      DAG.ReplaceAllUsesWith(Vec.getNode(), &Val);
+    }
+
     // Now insert the non-constant lanes.
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
       SDValue LaneIdx = DAG.getConstant(i, dl, MVT::i64);
-      if (!isa<ConstantSDNode>(V) && !isa<ConstantFPSDNode>(V)) {
+      if (!isa<ConstantSDNode>(V) && !isa<ConstantFPSDNode>(V))
         // Note that type legalization likely mucked about with the VT of the
         // source operand, so we may have to convert it here before inserting.
         Val = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Val, V, LaneIdx);
-      }
     }
     return Val;
   }

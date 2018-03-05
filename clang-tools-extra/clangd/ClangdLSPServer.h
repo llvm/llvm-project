@@ -31,13 +31,9 @@ public:
   /// If \p CompileCommandsDir has a value, compile_commands.json will be
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
   /// for compile_commands.json in all parent directories of each file.
-  ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
-                  bool StorePreamblesInMemory,
-                  const clangd::CodeCompleteOptions &CCOpts,
-                  llvm::Optional<StringRef> ResourceDir,
+  ClangdLSPServer(JSONOutput &Out, const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<Path> CompileCommandsDir,
-                  bool BuildDynamicSymbolIndex,
-                  SymbolIndex *StaticIdx = nullptr);
+                  const ClangdServer::Options &Opts);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be
   /// opened in binary mode. Output will be written using Out variable passed to

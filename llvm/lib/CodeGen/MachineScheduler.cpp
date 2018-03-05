@@ -762,10 +762,6 @@ void ScheduleDAGMI::schedule() {
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);
 
-  // Initialize the strategy before modifying the DAG.
-  // This may initialize a DFSResult to be used for queue priority.
-  SchedImpl->initialize(this);
-
   DEBUG(
     if (EntrySU.getInstr() != nullptr)
       EntrySU.dumpAll(this);
@@ -775,6 +771,10 @@ void ScheduleDAGMI::schedule() {
       ExitSU.dumpAll(this);
   );
   if (ViewMISchedDAGs) viewGraph();
+
+  // Initialize the strategy before modifying the DAG.
+  // This may initialize a DFSResult to be used for queue priority.
+  SchedImpl->initialize(this);
 
   // Initialize ready queues now that the DAG and priority data are finalized.
   initQueues(TopRoots, BotRoots);

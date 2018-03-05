@@ -252,6 +252,9 @@ void FunctionDumper::dump(const PDBSymbolTypePointer &Symbol) {
       WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
     PointeeType->dump(*this);
     Printer << (Symbol.isReference() ? "&" : "*");
+
+    if (Symbol.getRawSymbol().isRestrictedType())
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << " __restrict";
   }
 }
 

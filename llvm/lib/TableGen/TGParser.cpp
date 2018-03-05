@@ -175,26 +175,27 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Loop over all of the template arguments, setting them to the specified
   // value or leaving them as the default if necessary.
+  MapResolver R(CurRec);
+
   for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
     if (i < SubClass.TemplateArgs.size()) {
       // If a value is specified for this template arg, set it now.
       if (SetValue(CurRec, SubClass.RefRange.Start, TArgs[i],
                    None, SubClass.TemplateArgs[i]))
         return true;
-
-      // Resolve it next.
-      CurRec->resolveReferencesTo(CurRec->getValue(TArgs[i]));
-
-      // Now remove it.
-      CurRec->removeValue(TArgs[i]);
-
     } else if (!CurRec->getValue(TArgs[i])->getValue()->isComplete()) {
       return Error(SubClass.RefRange.Start,
                    "Value not specified for template argument #" +
                    Twine(i) + " (" + TArgs[i]->getAsUnquotedString() +
                    ") of subclass '" + SC->getNameInitAsString() + "'!");
     }
+
+    R.set(TArgs[i], CurRec->getValue(TArgs[i])->getValue());
+
+    CurRec->removeValue(TArgs[i]);
   }
+
+  CurRec->resolveReferences(R);
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
@@ -251,6 +252,8 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
 
   // Loop over all of the template arguments, setting them to the specified
   // value or leaving them as the default if necessary.
+  MapResolver CurRecResolver(CurRec);
+
   for (unsigned i = 0, e = SMCTArgs.size(); i != e; ++i) {
     if (i < SubMultiClass.TemplateArgs.size()) {
       // If a value is specified for this template arg, set it in the
@@ -259,12 +262,6 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
                    None, SubMultiClass.TemplateArgs[i]))
         return true;
 
-      // Resolve it next.
-      CurRec->resolveReferencesTo(CurRec->getValue(SMCTArgs[i]));
-
-      // Now remove it.
-      CurRec->removeValue(SMCTArgs[i]);
-
       // If a value is specified for this template arg, set it in the
       // new defs now.
       for (const auto &Def :
@@ -272,12 +269,6 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
         if (SetValue(Def.get(), SubMultiClass.RefRange.Start, SMCTArgs[i],
                      None, SubMultiClass.TemplateArgs[i]))
           return true;
-
-        // Resolve it next.
-        Def->resolveReferencesTo(Def->getValue(SMCTArgs[i]));
-
-        // Now remove it
-        Def->removeValue(SMCTArgs[i]);
       }
     } else if (!CurRec->getValue(SMCTArgs[i])->getValue()->isComplete()) {
       return Error(SubMultiClass.RefRange.Start,
@@ -285,6 +276,24 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
                    Twine(i) + " (" + SMCTArgs[i]->getAsUnquotedString() +
                    ") of subclass '" + SMC->Rec.getNameInitAsString() + "'!");
     }
+
+    CurRecResolver.set(SMCTArgs[i], CurRec->getValue(SMCTArgs[i])->getValue());
+
+    CurRec->removeValue(SMCTArgs[i]);
+  }
+
+  CurRec->resolveReferences(CurRecResolver);
+
+  for (const auto &Def :
+       makeArrayRef(CurMC->DefPrototypes).slice(newDefStart)) {
+    MapResolver R(Def.get());
+
+    for (Init *SMCTArg : SMCTArgs) {
+      R.set(SMCTArg, Def->getValue(SMCTArg)->getValue());
+      Def->removeValue(SMCTArg);
+    }
+
+    Def->resolveReferences(R);
   }
 
   return false;
@@ -320,7 +329,8 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
 
     // Process each value.
     for (unsigned i = 0; i < List->size(); ++i) {
-      Init *ItemVal = List->getElement(i)->resolveReferences(*CurRec, nullptr);
+      RecordResolver R(*CurRec);
+      Init *ItemVal = List->getElement(i)->resolveReferences(R);
       IterVals.push_back(IterRecord(CurLoop.IterVar, ItemVal));
       if (ProcessForeachDefs(CurRec, Loc, IterVals))
         return true;
@@ -984,8 +994,109 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return nullptr;
   }
 
+  case tgtok::XForEach: { // Value ::= !foreach '(' Id ',' Value ',' Value ')'
+    SMLoc OpLoc = Lex.getLoc();
+    Lex.Lex(); // eat the operation
+    if (Lex.getCode() != tgtok::l_paren) {
+      TokError("expected '(' after !foreach");
+      return nullptr;
+    }
+
+    if (Lex.Lex() != tgtok::Id) { // eat the '('
+      TokError("first argument of !foreach must be an identifier");
+      return nullptr;
+    }
+
+    Init *LHS = StringInit::get(Lex.getCurStrVal());
+
+    if (CurRec->getValue(LHS)) {
+      TokError((Twine("iteration variable '") + LHS->getAsString() +
+                "' already defined")
+                   .str());
+      return nullptr;
+    }
+
+    if (Lex.Lex() != tgtok::comma) { // eat the id
+      TokError("expected ',' in ternary operator");
+      return nullptr;
+    }
+    Lex.Lex();  // eat the ','
+
+    Init *MHS = ParseValue(CurRec);
+    if (!MHS)
+      return nullptr;
+
+    if (Lex.getCode() != tgtok::comma) {
+      TokError("expected ',' in ternary operator");
+      return nullptr;
+    }
+    Lex.Lex();  // eat the ','
+
+    TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+    if (!MHSt) {
+      TokError("could not get type of !foreach input");
+      return nullptr;
+    }
+
+    RecTy *InEltType = nullptr;
+    RecTy *OutEltType = nullptr;
+    bool IsDAG = false;
+
+    if (ListRecTy *InListTy = dyn_cast<ListRecTy>(MHSt->getType())) {
+      InEltType = InListTy->getElementType();
+      if (ItemType) {
+        if (ListRecTy *OutListTy = dyn_cast<ListRecTy>(ItemType)) {
+          OutEltType = OutListTy->getElementType();
+        } else {
+          Error(OpLoc,
+                "expected value of type '" + Twine(ItemType->getAsString()) +
+                "', but got !foreach of list type");
+          return nullptr;
+        }
+      }
+    } else if (DagRecTy *InDagTy = dyn_cast<DagRecTy>(MHSt->getType())) {
+      InEltType = InDagTy;
+      if (ItemType && !isa<DagRecTy>(ItemType)) {
+        Error(OpLoc,
+              "expected value of type '" + Twine(ItemType->getAsString()) +
+              "', but got !foreach of dag type");
+        return nullptr;
+      }
+      IsDAG = true;
+    } else {
+      TokError("!foreach must have list or dag input");
+      return nullptr;
+    }
+
+    CurRec->addValue(RecordVal(LHS, InEltType, false));
+    Init *RHS = ParseValue(CurRec, OutEltType);
+    CurRec->removeValue(LHS);
+    if (!RHS)
+      return nullptr;
+
+    if (Lex.getCode() != tgtok::r_paren) {
+      TokError("expected ')' in binary operator");
+      return nullptr;
+    }
+    Lex.Lex();  // eat the ')'
+
+    RecTy *OutType;
+    if (IsDAG) {
+      OutType = InEltType;
+    } else {
+      TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
+      if (!RHSt) {
+        TokError("could not get type of !foreach result");
+        return nullptr;
+      }
+      OutType = RHSt->getType()->getListTy();
+    }
+
+    return (TernOpInit::get(TernOpInit::FOREACH, LHS, MHS, RHS, OutType))
+               ->Fold(CurRec, CurMultiClass);
+  }
+
   case tgtok::XIf:
-  case tgtok::XForEach:
   case tgtok::XSubst: {  // Value ::= !ternop '(' Value ',' Value ',' Value ')'
     TernOpInit::TernaryOp Code;
     RecTy *Type = nullptr;
@@ -996,9 +1107,6 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XIf:
       Code = TernOpInit::IF;
-      break;
-    case tgtok::XForEach:
-      Code = TernOpInit::FOREACH;
       break;
     case tgtok::XSubst:
       Code = TernOpInit::SUBST;
@@ -1077,23 +1185,6 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       } else {
         TokError("inconsistent types for !if");
         return nullptr;
-      }
-      break;
-    }
-    case tgtok::XForEach: {
-      TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
-      if (!MHSt) {
-        TokError("could not get type for !foreach");
-        return nullptr;
-      }
-      Type = MHSt->getType();
-      if (isa<ListRecTy>(Type)) {
-        TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
-        if (!RHSt) {
-          TokError("could not get type of !foreach list elements");
-          return nullptr;
-        }
-        Type = RHSt->getType()->getListTy();
       }
       break;
     }
@@ -2485,29 +2576,30 @@ bool TGParser::ResolveMulticlassDefArgs(MultiClass &MC, Record *CurRec,
                                         ArrayRef<Init *> TArgs,
                                         ArrayRef<Init *> TemplateVals,
                                         bool DeleteArgs) {
-  // Loop over all of the template arguments, setting them to the specified
-  // value or leaving them as the default if necessary.
+  // Set all template arguments to the specified value or leave them as the
+  // default if necessary, then resolve them all simultaneously.
+  MapResolver R(CurRec);
+
   for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
     // Check if a value is specified for this temp-arg.
     if (i < TemplateVals.size()) {
-      // Set it now.
       if (SetValue(CurRec, DefmPrefixLoc, TArgs[i], None, TemplateVals[i]))
         return true;
-
-      // Resolve it next.
-      CurRec->resolveReferencesTo(CurRec->getValue(TArgs[i]));
-
-      if (DeleteArgs)
-        // Now remove it.
-        CurRec->removeValue(TArgs[i]);
-
     } else if (!CurRec->getValue(TArgs[i])->getValue()->isComplete()) {
       return Error(SubClassLoc, "value not specified for template argument #" +
                    Twine(i) + " (" + TArgs[i]->getAsUnquotedString() +
                    ") of multiclassclass '" + MC.Rec.getNameInitAsString() +
                    "'");
     }
+
+    R.set(TArgs[i], CurRec->getValue(TArgs[i])->getValue());
+
+    if (DeleteArgs)
+      CurRec->removeValue(TArgs[i]);
   }
+
+  CurRec->resolveReferences(R);
+
   return false;
 }
 
