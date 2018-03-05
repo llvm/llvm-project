@@ -27,7 +27,6 @@ class ObjCModulesAutoImportTestCase(TestBase):
 
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
-    @expectedFailureAll(debug_info="dsym") # rdar://36914859
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
