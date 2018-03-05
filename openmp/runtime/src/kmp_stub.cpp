@@ -15,9 +15,9 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#include "omp.h" // omp_* declarations, must be included before "kmp.h"
 #include "kmp.h" // KMP_DEFAULT_STKSIZE
 #include "kmp_stub.h"
-#include "omp.h" // Function renamings.
 
 #if KMP_OS_WINDOWS
 #include <windows.h>

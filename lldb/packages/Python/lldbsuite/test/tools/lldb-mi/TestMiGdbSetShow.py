@@ -19,6 +19,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_set_target_async_default(self):
@@ -41,6 +42,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFlakeyLinux("llvm.org/pr26028")  # Fails in ~1% of cases
     @skipIfRemote   # We do not currently support remote debugging via the MI.
@@ -74,6 +76,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="Failing in ~11/600 dosep runs (build 3120-3122)")
@@ -103,6 +106,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_show_target_async(self):
@@ -117,6 +121,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_show_language(self):
@@ -142,6 +147,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @unittest2.expectedFailure("-gdb-set ignores unknown properties")
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_set_unknown(self):
@@ -156,6 +162,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @unittest2.expectedFailure("-gdb-show ignores unknown properties")
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_show_unknown(self):
@@ -170,6 +177,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
     @skipIfRemote   # We do not currently support remote debugging via the MI.
@@ -219,6 +227,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @expectedFailureAll(
         bugnumber="llvm.org/pr31485: data-disassemble doesn't follow flavor settings")
