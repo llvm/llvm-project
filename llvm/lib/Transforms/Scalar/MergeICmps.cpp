@@ -291,8 +291,8 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
     if (Comparison.doesOtherWork()) {
       DEBUG(dbgs() << "block '" << Comparison.BB->getName()
                    << "' does extra work besides compare\n");
-      if (BlockIdx == 0) {  // First block.
-        // TODO(courbet): The first block can do other things, and we should
+      if (Comparisons.empty()) {
+        // TODO(courbet): The initial block can do other things, and we should
         // split them apart in a separate block before the comparison chain.
         // Right now we just discard it and make the chain shorter.
         DEBUG(dbgs()
@@ -333,7 +333,12 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
     DEBUG(dbgs() << "\n");
     Comparisons.push_back(Comparison);
   }
-  assert(!Comparisons.empty() && "chain with no BCE basic blocks");
+
+  // It is possible we have no suitable comparison to merge.
+  if (Comparisons.empty()) {
+    DEBUG(dbgs() << "chain with no BCE basic blocks, no merge\n");
+    return;
+  }
   EntryBlock_ = Comparisons[0].BB;
   Comparisons_ = std::move(Comparisons);
 #ifdef MERGEICMPS_DOT_ON

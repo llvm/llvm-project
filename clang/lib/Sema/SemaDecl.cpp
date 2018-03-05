@@ -13473,7 +13473,7 @@ static FixItHint createFriendTagNNSFixIt(Sema &SemaRef, NamedDecl *ND, Scope *S,
 }
 
 /// \brief Determine whether a tag originally declared in context \p OldDC can
-/// be redeclared with an unqualfied name in \p NewDC (assuming name lookup
+/// be redeclared with an unqualified name in \p NewDC (assuming name lookup
 /// found a declaration in \p OldDC as a previous decl, perhaps through a
 /// using-declaration).
 static bool isAcceptableTagRedeclContext(Sema &S, DeclContext *OldDC,

@@ -13,6 +13,8 @@
 // better decisions.
 //
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
+#define LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Function.h"
@@ -46,3 +48,5 @@ private:
   DenseSet<const Value *> DivergentValues;
 };
 } // End llvm namespace
+
+#endif //LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H

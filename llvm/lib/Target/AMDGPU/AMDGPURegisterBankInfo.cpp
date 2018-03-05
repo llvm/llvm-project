@@ -308,6 +308,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
     break;
   }
+  case AMDGPU::G_EXTRACT: {
+    unsigned BankID = getRegBankID(MI.getOperand(1).getReg(), MRI, *TRI);
+    unsigned DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+    unsigned SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
+    OpdsMapping[0] = AMDGPU::getValueMapping(BankID, DstSize);
+    OpdsMapping[1] = AMDGPU::getValueMapping(BankID, SrcSize);
+    OpdsMapping[2] = nullptr;
+    break;
+  }
   case AMDGPU::G_BITCAST: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     unsigned BankID = getRegBankID(MI.getOperand(1).getReg(), MRI, *TRI);

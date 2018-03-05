@@ -77,4 +77,9 @@
 /* LLVM version string */
 #define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
 
+/* Whether LLVM records statistics for use with GetStatistics(),
+ * PrintStatistics() or PrintStatisticsJSON()
+ */
+#cmakedefine01 LLVM_ENABLE_STATS
+
 #endif

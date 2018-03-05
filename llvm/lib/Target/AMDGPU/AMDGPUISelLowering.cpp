@@ -25,6 +25,7 @@
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -746,6 +747,101 @@ bool AMDGPUTargetLowering::isCheapToSpeculateCttz() const {
 
 bool AMDGPUTargetLowering::isCheapToSpeculateCtlz() const {
   return true;
+}
+
+bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
+  switch (N->getOpcode()) {
+    default:
+    return false;
+    case ISD::EntryToken:
+    case ISD::TokenFactor:
+      return true;
+    case ISD::INTRINSIC_WO_CHAIN:
+    {
+      unsigned IntrID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+      switch (IntrID) {
+        default:
+        return false;
+        case Intrinsic::amdgcn_readfirstlane:
+        case Intrinsic::amdgcn_readlane:
+          return true;
+      }
+    }
+    break;
+    case ISD::LOAD:
+    {
+      const LoadSDNode * L = dyn_cast<LoadSDNode>(N);
+      if (L->getMemOperand()->getAddrSpace()
+      == Subtarget->getAMDGPUAS().CONSTANT_ADDRESS_32BIT)
+        return true;
+      return false;
+    }
+    break;
+  }
+}
+
+bool AMDGPUTargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
+  FunctionLoweringInfo * FLI, DivergenceAnalysis * DA) const
+{
+  switch (N->getOpcode()) {
+    case ISD::Register:
+    case ISD::CopyFromReg:
+    {
+      const RegisterSDNode *R = nullptr;
+      if (N->getOpcode() == ISD::Register) {
+        R = dyn_cast<RegisterSDNode>(N);
+      }
+      else {
+        R = dyn_cast<RegisterSDNode>(N->getOperand(1));
+      }
+      if (R)
+      {
+        const MachineFunction * MF = FLI->MF;
+        const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
+        const MachineRegisterInfo &MRI = MF->getRegInfo();
+        const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
+        unsigned Reg = R->getReg();
+        if (TRI.isPhysicalRegister(Reg))
+          return TRI.isVGPR(MRI, Reg);
+
+        if (MRI.isLiveIn(Reg)) {
+          // workitem.id.x workitem.id.y workitem.id.z
+          if ((MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_X) ||
+              (MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_Y) ||
+              (MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_Z)||
+              (MRI.getLiveInPhysReg(Reg) == AMDGPU::VGPR0) ||
+            (MRI.getLiveInPhysReg(Reg) == AMDGPU::VGPR1) ||
+            (MRI.getLiveInPhysReg(Reg) == AMDGPU::VGPR2))
+              return true;
+          // Formal arguments of non-entry functions
+          // are conservatively considered divergent
+          else if (!AMDGPU::isEntryFunctionCC(FLI->Fn->getCallingConv()))
+            return true;
+        }
+        return !DA || DA->isDivergent(FLI->getValueFromVirtualReg(Reg));
+      }
+    }
+    break;
+    case ISD::LOAD: {
+      const LoadSDNode *L = dyn_cast<LoadSDNode>(N);
+      if (L->getMemOperand()->getAddrSpace() ==
+          Subtarget->getAMDGPUAS().PRIVATE_ADDRESS)
+        return true;
+    } break;
+    case ISD::CALLSEQ_END:
+    return true;
+    break;
+    case ISD::INTRINSIC_WO_CHAIN:
+    {
+
+    }
+      return AMDGPU::isIntrinsicSourceOfDivergence(
+      cast<ConstantSDNode>(N->getOperand(0))->getZExtValue());
+    case ISD::INTRINSIC_W_CHAIN:
+      return AMDGPU::isIntrinsicSourceOfDivergence(
+      cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
+  }
+  return false;
 }
 
 //===---------------------------------------------------------------------===//

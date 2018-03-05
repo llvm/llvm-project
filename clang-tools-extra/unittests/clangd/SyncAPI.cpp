@@ -11,6 +11,12 @@
 namespace clang {
 namespace clangd {
 
+void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents) {
+  Server.addDocument(File, Contents);
+  if (!Server.blockUntilIdleForTest())
+    llvm_unreachable("not idle after addDocument");
+}
+
 namespace {
 /// A helper that waits for async callbacks to fire and exposes their result in
 /// the output variable. Intended to be used in the following way:

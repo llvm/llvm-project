@@ -243,13 +243,13 @@ int baz = f^oo;
   IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB(/*UseRelPaths=*/true);
   MockFSProvider FS;
-  ClangdServer Server(CDB, DiagConsumer, FS, /*AsyncThreadsCount=*/0,
-                      /*StorePreambleInMemory=*/true);
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   auto FooCpp = testPath("foo.cpp");
   FS.Files[FooCpp] = "";
 
   Server.addDocument(FooCpp, SourceAnnotations.code());
+  runAddDocument(Server, FooCpp, SourceAnnotations.code());
   auto Locations =
       runFindDefinitions(Server, FooCpp, SourceAnnotations.point());
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
@@ -568,9 +568,7 @@ TEST(GoToInclude, All) {
   MockFSProvider FS;
   IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB;
-
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true);
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   auto FooCpp = testPath("foo.cpp");
   const char *SourceContents = R"cpp(

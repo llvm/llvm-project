@@ -881,3 +881,7 @@ function(get_compile_definitions)
   set(LLVM_DEFINITIONS "${result}" PARENT_SCOPE)
 endfunction()
 get_compile_definitions()
+
+# The default for LLVM_ENABLE_STATS depends on whether NDEBUG is defined or not.
+# LLVM_ENABLE_ASSERTIONS controls that so re-use it as the default.
+option(LLVM_ENABLE_STATS "Enable statistics collection" ${LLVM_ENABLE_ASSERTIONS})

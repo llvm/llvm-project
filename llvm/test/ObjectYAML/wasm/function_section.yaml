@@ -14,6 +14,14 @@ Sections:
           - I32
   - Type:            FUNCTION
     FunctionTypes: [ 1, 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            0B
+      - Index:           1
+        Locals:
+        Body:            0B
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:

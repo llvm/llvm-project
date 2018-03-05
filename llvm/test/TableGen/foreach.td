@@ -12,26 +12,22 @@
 // CHECK:   list<string> x = ["0", "1", "2"];
 // CHECK: }
 
+// CHECK: def DY {
+// CHECK:   list<int> y = [5, 7];
+// CHECK: }
+
 // CHECK: Jr
 // CHECK: Sr
-
-// Variables for foreach
-class decls {
-  string name;
-  int num;
-}
-
-def Decls : decls;
 
 class A<list<string> names> {
   list<string> Names = names;
 }
 
-class B<list<string> names> : A<!foreach(Decls.name, names, !strconcat(Decls.name, ", Sr."))>;
+class B<list<string> names> : A<!foreach(name, names, !strconcat(name, ", Sr."))>;
 
-class C<list<string> names> : A<!foreach(Decls.name, names, !strconcat(Decls.name, ", Jr."))>;
+class C<list<string> names> : A<!foreach(name, names, !strconcat(name, ", Jr."))>;
 
-class D<list<string> names> : A<!foreach(Decls.name, names, !subst("NAME", "John Smith", Decls.name))>;
+class D<list<string> names> : A<!foreach(name, names, !subst("NAME", "John Smith", name))>;
 
 class Names {
   list<string> values = ["Ken Griffey", "Seymour Cray"];
@@ -45,7 +41,13 @@ def Smiths : D<["NAME", "Jane Smith"]>;
 def Unprocessed : D<People.values>;
 
 class X<list<int> a> {
-    list<string> x = !foreach(Decls.num, a, !cast<string>(Decls.num));
+    list<string> x = !foreach(num, a, !cast<string>(num));
 }
 
 def DX : X<[0, 1, 2]>;
+
+class Y<list<int> a> {
+  list<int> y = !foreach(num, a, !add(!add(4, num), !add(1, num)));
+}
+
+def DY: Y<[0, 1]>;

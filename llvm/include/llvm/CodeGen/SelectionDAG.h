@@ -28,8 +28,10 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineValueType.h"
@@ -217,6 +219,9 @@ class SelectionDAG {
   LLVMContext *Context;
   CodeGenOpt::Level OptLevel;
 
+  DivergenceAnalysis * DA = nullptr;
+  FunctionLoweringInfo * FLI = nullptr;
+
   /// The function-level optimization remark emitter.  Used to emit remarks
   /// whenever manipulating the DAG.
   OptimizationRemarkEmitter *ORE;
@@ -346,19 +351,7 @@ private:
          .getRawSubclassData();
   }
 
-  void createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
-    assert(!Node->OperandList && "Node already has operands");
-    SDUse *Ops = OperandRecycler.allocate(
-        ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
-
-    for (unsigned I = 0; I != Vals.size(); ++I) {
-      Ops[I].setUser(Node);
-      Ops[I].setInitial(Vals[I]);
-    }
-    Node->NumOperands = Vals.size();
-    Node->OperandList = Ops;
-    checkForCycles(Node);
-  }
+  void createOperands(SDNode *Node, ArrayRef<SDValue> Vals);
 
   void removeOperands(SDNode *Node) {
     if (!Node->OperandList)
@@ -369,7 +362,7 @@ private:
     Node->NumOperands = 0;
     Node->OperandList = nullptr;
   }
-
+  void CreateTopologicalOrder(std::vector<SDNode*>& Order);
 public:
   explicit SelectionDAG(const TargetMachine &TM, CodeGenOpt::Level);
   SelectionDAG(const SelectionDAG &) = delete;
@@ -378,7 +371,12 @@ public:
 
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
-            Pass *PassPtr, const TargetLibraryInfo *LibraryInfo);
+            Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
+            DivergenceAnalysis * DA);
+
+  void setFunctionLoweringInfo(FunctionLoweringInfo * FuncInfo) {
+    FLI = FuncInfo;
+  }
 
   /// Clear state and free memory necessary to make this
   /// SelectionDAG ready to process a new block.
@@ -462,6 +460,8 @@ public:
       checkForCycles(this);
     return Root;
   }
+
+  void VerifyDAGDiverence();
 
   /// This iterates over the nodes in the SelectionDAG, folding
   /// certain types of nodes together, or eliminating superfluous nodes.  The
@@ -1127,6 +1127,9 @@ public:
   SDNode *UpdateNodeOperands(SDNode *N, SDValue Op1, SDValue Op2,
                                SDValue Op3, SDValue Op4, SDValue Op5);
   SDNode *UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops);
+
+  // Propagates the change in divergence to users
+  void updateDivergence(SDNode * N);
 
   /// These are used for target selectors to *mutate* the
   /// specified node to have the specified return type, Target opcode, and

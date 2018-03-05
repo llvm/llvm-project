@@ -116,14 +116,6 @@ TEST(MemIndexTest, MemIndexSymbolsRecycled) {
   EXPECT_TRUE(Symbols.expired());
 }
 
-TEST(MemIndexTest, MemIndexMatchSubstring) {
-  MemIndex I;
-  I.build(generateNumSymbols(5, 25));
-  FuzzyFindRequest Req;
-  Req.Query = "5";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("5", "15", "25"));
-}
-
 TEST(MemIndexTest, MemIndexDeduplicate) {
   auto Symbols = generateNumSymbols(0, 10);
 
@@ -166,46 +158,46 @@ TEST(MemIndexTest, FuzzyMatch) {
 
 TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
   MemIndex I;
-  I.build(generateSymbols({"a::xyz", "b::yz", "yz"}));
+  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "b::yz", "yz"));
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithGlobalScope) {
   MemIndex I;
-  I.build(generateSymbols({"a::xyz", "b::yz", "yz"}));
+  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("yz"));
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("y3"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
   MemIndex I;
-  I.build(generateSymbols({"a::xyz", "a::yy", "a::xz", "b::yz", "yz"}));
+  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "a::yy"));
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
   MemIndex I;
-  I.build(generateSymbols({"a::xyz", "a::yy", "a::xz", "b::yz", "yz"}));
+  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a", "b"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "a::yy", "b::yz"));
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
 }
 
 TEST(MemIndexTest, NoMatchNestedScopes) {
   MemIndex I;
-  I.build(generateSymbols({"a::xyz", "a::b::yy"}));
+  I.build(generateSymbols({"a::y1", "a::b::y2"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz"));
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1"));
 }
 
 TEST(MemIndexTest, IgnoreCases) {
