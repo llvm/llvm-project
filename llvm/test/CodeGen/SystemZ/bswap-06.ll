@@ -86,14 +86,3 @@ define i16 @f7(i64 %src, i64 %index) {
   ret i16 %swapped
 }
 
-; Check that volatile accesses do not use LRVH, which might access the
-; storage multple times.
-define i16 @f8(i16 *%src) {
-; CHECK-LABEL: f8:
-; CHECK: lh [[REG:%r[0-5]]], 0(%r2)
-; CHECK: lrvr %r2, [[REG]]
-; CHECK: br %r14
-  %a = load volatile i16 , i16 *%src
-  %swapped = call i16 @llvm.bswap.i16(i16 %a)
-  ret i16 %swapped
-}

@@ -1372,16 +1372,6 @@ partitionSetParts(__isl_take isl_set *S, unsigned Dim) {
   return std::make_pair(UnboundedParts, BoundedParts);
 }
 
-/// Set the dimension Ids from @p From in @p To.
-static __isl_give isl_set *setDimensionIds(__isl_keep isl_set *From,
-                                           __isl_take isl_set *To) {
-  for (unsigned u = 0, e = isl_set_n_dim(From); u < e; u++) {
-    isl_id *DimId = isl_set_get_dim_id(From, isl_dim_set, u);
-    To = isl_set_set_dim_id(To, isl_dim_set, u, DimId);
-  }
-  return To;
-}
-
 /// Create the conditions under which @p L @p Pred @p R is true.
 static __isl_give isl_set *buildConditionSet(ICmpInst::Predicate Pred,
                                              __isl_take isl_pw_aff *L,
@@ -1410,18 +1400,6 @@ static __isl_give isl_set *buildConditionSet(ICmpInst::Predicate Pred,
   default:
     llvm_unreachable("Non integer predicate not supported");
   }
-}
-
-/// Create the conditions under which @p L @p Pred @p R is true.
-///
-/// Helper function that will make sure the dimensions of the result have the
-/// same isl_id's as the @p Domain.
-static __isl_give isl_set *buildConditionSet(ICmpInst::Predicate Pred,
-                                             __isl_take isl_pw_aff *L,
-                                             __isl_take isl_pw_aff *R,
-                                             __isl_keep isl_set *Domain) {
-  isl_set *ConsequenceCondSet = buildConditionSet(Pred, L, R);
-  return setDimensionIds(Domain, ConsequenceCondSet);
 }
 
 /// Compute the isl representation for the SCEV @p E in this BB.
@@ -1468,7 +1446,7 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, SwitchInst *SI, Loop *L,
 
     RHS = getPwAff(S, BB, InvalidDomainMap, SE.getSCEV(CaseValue));
     isl_set *CaseConditionSet =
-        buildConditionSet(ICmpInst::ICMP_EQ, isl_pw_aff_copy(LHS), RHS, Domain);
+        buildConditionSet(ICmpInst::ICMP_EQ, isl_pw_aff_copy(LHS), RHS);
     ConditionSets[Idx] = isl_set_coalesce(
         isl_set_intersect(CaseConditionSet, isl_set_copy(Domain)));
   }
@@ -1478,8 +1456,7 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, SwitchInst *SI, Loop *L,
   for (unsigned u = 2; u < NumSuccessors; u++)
     ConditionSetUnion =
         isl_set_union(ConditionSetUnion, isl_set_copy(ConditionSets[u]));
-  ConditionSets[0] = setDimensionIds(
-      Domain, isl_set_subtract(isl_set_copy(Domain), ConditionSetUnion));
+  ConditionSets[0] = isl_set_subtract(isl_set_copy(Domain), ConditionSetUnion);
 
   isl_pw_aff_free(LHS);
 
@@ -1522,7 +1499,6 @@ buildUnsignedConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
     Second = isl_pw_aff_le_set(TestVal, UpperBound);
 
   isl_set *ConsequenceCondSet = isl_set_intersect(First, Second);
-  ConsequenceCondSet = setDimensionIds(Domain, ConsequenceCondSet);
   return ConsequenceCondSet;
 }
 
@@ -1547,8 +1523,7 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
     bool NonNeg = false;
     isl_pw_aff *LHS = getPwAff(S, BB, InvalidDomainMap, LHSSCEV, NonNeg);
     isl_pw_aff *RHS = getPwAff(S, BB, InvalidDomainMap, RHSSCEV, NonNeg);
-    ConsequenceCondSet =
-        buildConditionSet(ICmpInst::ICMP_SLE, LHS, RHS, Domain);
+    ConsequenceCondSet = buildConditionSet(ICmpInst::ICMP_SLE, LHS, RHS);
   } else if (auto *PHI = dyn_cast<PHINode>(Condition)) {
     auto *Unique = dyn_cast<ConstantInt>(
         getUniqueNonErrorValue(PHI, &S.getRegion(), *S.getLI(), *S.getDT()));
@@ -1629,8 +1604,7 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
     default:
       LHS = getPwAff(S, BB, InvalidDomainMap, LeftOperand, NonNeg);
       RHS = getPwAff(S, BB, InvalidDomainMap, RightOperand, NonNeg);
-      ConsequenceCondSet =
-          buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
+      ConsequenceCondSet = buildConditionSet(ICond->getPredicate(), LHS, RHS);
       break;
     }
   }
@@ -2518,14 +2492,6 @@ static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
 
 ///}
 
-static inline __isl_give isl_set *addDomainDimId(__isl_take isl_set *Domain,
-                                                 unsigned Dim, Loop *L) {
-  Domain = isl_set_lower_bound_si(Domain, isl_dim_set, Dim, -1);
-  isl_id *DimId =
-      isl_id_alloc(isl_set_get_ctx(Domain), nullptr, static_cast<void *>(L));
-  return isl_set_set_dim_id(Domain, isl_dim_set, Dim, DimId);
-}
-
 isl::set Scop::getDomainConditions(const ScopStmt *Stmt) const {
   return getDomainConditions(Stmt->getEntryBlock());
 }
@@ -2551,7 +2517,6 @@ bool Scop::buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI,
   auto *S = isl_set_universe(isl_space_set_alloc(getIslCtx().get(), 0, LD + 1));
 
   while (LD-- >= 0) {
-    S = addDomainDimId(S, LD + 1, L);
     L = L->getParentLoop();
   }
 
@@ -2614,7 +2579,6 @@ static __isl_give isl_set *adjustDomainDimensions(Scop &S,
     assert(OldL->getParentLoop() == NewL->getParentLoop());
     Dom = isl_set_project_out(Dom, isl_dim_set, NewDepth, 1);
     Dom = isl_set_add_dims(Dom, isl_dim_set, 1);
-    Dom = addDomainDimId(Dom, NewDepth, NewL);
   } else if (OldDepth < NewDepth) {
     assert(OldDepth + 1 == NewDepth);
     auto &R = S.getRegion();
@@ -2622,7 +2586,6 @@ static __isl_give isl_set *adjustDomainDimensions(Scop &S,
     assert(NewL->getParentLoop() == OldL ||
            ((!OldL || !R.contains(OldL)) && R.contains(NewL)));
     Dom = isl_set_add_dims(Dom, isl_dim_set, 1);
-    Dom = addDomainDimId(Dom, NewDepth, NewL);
   } else {
     assert(OldDepth > NewDepth);
     int Diff = OldDepth - NewDepth;

@@ -14,6 +14,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Listener.h" // for Listener
 #include "lldb/Core/Mangled.h"  // for Mangled
+#include "lldb/Core/ModuleList.h"  // for Mangled
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
@@ -774,6 +775,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       ConstString("platform"), ConstString("Platform settings."), true,
       Platform::GetGlobalPlatformProperties()->GetValueProperties());
+  m_collection_sp->AppendProperty(
+      ConstString("clang"), ConstString("Settings specific to Clang."), true,
+      ModuleList::GetGlobalModuleListProperties().GetValueProperties());
   if (m_command_interpreter_ap) {
     m_collection_sp->AppendProperty(
         ConstString("interpreter"),

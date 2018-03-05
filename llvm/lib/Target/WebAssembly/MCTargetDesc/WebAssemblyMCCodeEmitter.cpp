@@ -93,7 +93,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         } else if (Info.OperandType == WebAssembly::OPERAND_GLOBAL) {
           llvm_unreachable("wasm globals should only be accessed symbolicly");
         } else if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
-          encodeSLEB128(int64_t(MO.getImm()), OS);
+          OS << uint8_t(MO.getImm());
         } else {
           encodeULEB128(uint64_t(MO.getImm()), OS);
         }

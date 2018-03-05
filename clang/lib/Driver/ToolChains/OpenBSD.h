@@ -64,6 +64,8 @@ public:
   }
   unsigned GetDefaultDwarfVersion() const override { return 2; }
 
+  SanitizerMask getSupportedSanitizers() const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

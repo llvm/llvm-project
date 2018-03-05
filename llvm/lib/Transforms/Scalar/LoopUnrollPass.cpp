@@ -729,7 +729,7 @@ static bool computeUnrollCount(
     UP.Runtime = true;
     UP.AllowExpensiveTripCount = true;
     UP.Force = true;
-    if (UP.AllowRemainder &&
+    if ((UP.AllowRemainder || (TripMultiple % PragmaCount == 0)) &&
         getUnrolledLoopSize(LoopSize, UP) < PragmaUnrollThreshold)
       return true;
   }

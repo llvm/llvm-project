@@ -242,11 +242,13 @@ static void linkXRayRuntimeDeps(const ToolChain &TC, const ArgList &Args,
                                 ArgStringList &CmdArgs) {
   CmdArgs.push_back("--no-as-needed");
   CmdArgs.push_back("-lpthread");
-  CmdArgs.push_back("-lrt");
+  if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+    CmdArgs.push_back("-lrt");
   CmdArgs.push_back("-lm");
 
   if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD)
+      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
+      TC.getTriple().getOS() != llvm::Triple::OpenBSD)
     CmdArgs.push_back("-ldl");
 }
 

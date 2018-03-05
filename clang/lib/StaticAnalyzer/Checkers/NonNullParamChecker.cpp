@@ -58,10 +58,11 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
       AttrNonNull.set(0, NumArgs);
       break;
     }
-    for (unsigned Val : NonNull->args()) {
-      if (Val >= NumArgs)
+    for (const ParamIdx &Idx : NonNull->args()) {
+      unsigned IdxAST = Idx.getASTIndex();
+      if (IdxAST >= NumArgs)
         continue;
-      AttrNonNull.set(Val);
+      AttrNonNull.set(IdxAST);
     }
   }
 

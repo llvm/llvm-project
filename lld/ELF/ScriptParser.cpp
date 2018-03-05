@@ -98,6 +98,7 @@ private:
   uint64_t readMemoryAssignment(StringRef, StringRef, StringRef);
   std::pair<uint32_t, uint32_t> readMemoryAttributes();
 
+  Expr combine(StringRef Op, Expr L, Expr R);
   Expr readExpr();
   Expr readExpr1(Expr Lhs, int MinPrec);
   StringRef readParenLiteral();
@@ -155,20 +156,6 @@ static ExprValue sub(ExprValue A, ExprValue B) {
   if (!A.isAbsolute() && !B.isAbsolute())
     return A.getValue() - B.getValue();
   return {A.Sec, false, A.getSectionOffset() - B.getValue(), A.Loc};
-}
-
-static ExprValue div(ExprValue A, ExprValue B) {
-  if (uint64_t BV = B.getValue())
-    return A.getValue() / BV;
-  error("division by zero");
-  return 0;
-}
-
-static ExprValue mod(ExprValue A, ExprValue B) {
-  if (uint64_t BV = B.getValue())
-    return A.getValue() % BV;
-  error("modulo by zero");
-  return 0;
 }
 
 static ExprValue bitAnd(ExprValue A, ExprValue B) {
@@ -809,17 +796,31 @@ Expr ScriptParser::readExpr() {
   return E;
 }
 
-static Expr combine(StringRef Op, Expr L, Expr R) {
+Expr ScriptParser::combine(StringRef Op, Expr L, Expr R) {
   if (Op == "+")
     return [=] { return add(L(), R()); };
   if (Op == "-")
     return [=] { return sub(L(), R()); };
   if (Op == "*")
     return [=] { return L().getValue() * R().getValue(); };
-  if (Op == "/")
-    return [=] { return div(L(), R()); };
-  if (Op == "%")
-    return [=] { return mod(L(), R()); };
+  if (Op == "/") {
+    std::string Loc = getCurrentLocation();
+    return [=]() -> uint64_t {
+      if (uint64_t RV = R().getValue())
+        return L().getValue() / RV;
+      error(Loc + ": division by zero");
+      return (uint64_t)0;
+    };
+  }
+  if (Op == "%") {
+    std::string Loc = getCurrentLocation();
+    return [=]() -> uint64_t {
+      if (uint64_t RV = R().getValue())
+        return L().getValue() % RV;
+      error(Loc + ": modulo by zero");
+      return (uint64_t)0;
+    };
+  }
   if (Op == "<<")
     return [=] { return L().getValue() << R().getValue(); };
   if (Op == ">>")

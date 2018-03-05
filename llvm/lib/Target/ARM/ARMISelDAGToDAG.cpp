@@ -1794,15 +1794,17 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
     Ops.push_back(Align);
     if (isUpdating) {
       SDValue Inc = N->getOperand(AddrOpIdx + 1);
-      // FIXME: VLD1/VLD2 fixed increment doesn't need Reg0. Remove the reg0
-      // case entirely when the rest are updated to that form, too.
       bool IsImmUpdate = isPerfectIncrement(Inc, VT, NumVecs);
-      if ((NumVecs <= 2) && !IsImmUpdate)
-        Opc = getVLDSTRegisterUpdateOpcode(Opc);
-      // FIXME: We use a VLD1 for v1i64 even if the pseudo says vld2/3/4, so
-      // check for that explicitly too. Horribly hacky, but temporary.
-      if ((NumVecs > 2 && !isVLDfixed(Opc)) || !IsImmUpdate)
-        Ops.push_back(IsImmUpdate ? Reg0 : Inc);
+      if (!IsImmUpdate) {
+        // We use a VLD1 for v1i64 even if the pseudo says vld2/3/4, so
+        // check for the opcode rather than the number of vector elements.
+        if (isVLDfixed(Opc))
+          Opc = getVLDSTRegisterUpdateOpcode(Opc);
+        Ops.push_back(Inc);
+      // VLD1/VLD2 fixed increment does not need Reg0 so only include it in
+      // the operands if not such an opcode.
+      } else if (!isVLDfixed(Opc))
+        Ops.push_back(Reg0);
     }
     Ops.push_back(Pred);
     Ops.push_back(Reg0);
@@ -1948,16 +1950,17 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
     Ops.push_back(Align);
     if (isUpdating) {
       SDValue Inc = N->getOperand(AddrOpIdx + 1);
-      // FIXME: VST1/VST2 fixed increment doesn't need Reg0. Remove the reg0
-      // case entirely when the rest are updated to that form, too.
       bool IsImmUpdate = isPerfectIncrement(Inc, VT, NumVecs);
-      if (NumVecs <= 2 && !IsImmUpdate)
-        Opc = getVLDSTRegisterUpdateOpcode(Opc);
-      // FIXME: We use a VST1 for v1i64 even if the pseudo says vld2/3/4, so
-      // check for that explicitly too. Horribly hacky, but temporary.
-      if  (!IsImmUpdate)
+      if (!IsImmUpdate) {
+        // We use a VST1 for v1i64 even if the pseudo says VST2/3/4, so
+        // check for the opcode rather than the number of vector elements.
+        if (isVSTfixed(Opc))
+          Opc = getVLDSTRegisterUpdateOpcode(Opc);
         Ops.push_back(Inc);
-      else if (NumVecs > 2 && !isVSTfixed(Opc))
+      }
+      // VST1/VST2 fixed increment does not need Reg0 so only include it in
+      // the operands if not such an opcode.
+      else if (!isVSTfixed(Opc))
         Ops.push_back(Reg0);
     }
     Ops.push_back(SrcReg);

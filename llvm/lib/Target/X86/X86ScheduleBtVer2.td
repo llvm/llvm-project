@@ -508,6 +508,26 @@ def : InstRW<[WriteCVTPH2PSYLd], (instrs VCVTPH2PSYrm)>;
 // AVX instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
+def WriteLogicY: SchedWriteRes<[JFPU01]> {
+  let Latency = 1;
+  let ResourceCycles = [2];
+  let NumMicroOps = 2;
+}
+def : InstRW<[WriteLogicY], (instrs VORPDYrr, VORPSYrr,
+                                    VXORPDYrr, VXORPSYrr,
+                                    VANDPDYrr, VANDPSYrr,
+                                    VANDNPDYrr, VANDNPSYrr)>;
+
+def WriteLogicYLd: SchedWriteRes<[JLAGU, JFPU01]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 2];
+  let NumMicroOps = 3;
+}
+def : InstRW<[WriteLogicYLd], (instrs VORPDYrm, VORPSYrm,
+                                      VXORPDYrm, VXORPSYrm,
+                                      VANDPDYrm, VANDPSYrm,
+                                      VANDNPDYrm, VANDNPSYrm)>;
+
 def WriteVDPPSY: SchedWriteRes<[JFPU1, JFPU0]> {
   let Latency = 12;
   let ResourceCycles = [6, 6];

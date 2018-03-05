@@ -4,6 +4,7 @@
 // RUN: MSAN_OPTIONS=allocator_may_return_null=0 not %run %t psm1 2>&1 | FileCheck %s
 // RUN: MSAN_OPTIONS=allocator_may_return_null=1     %run %t psm1 2>&1
 
+// pvalloc is Linux only
 // UNSUPPORTED: win32, freebsd, netbsd
 
 // Checks that pvalloc overflows are caught. If the allocator is allowed to

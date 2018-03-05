@@ -1419,42 +1419,55 @@ static void PrintDiagnosticCategories(raw_ostream &OS) {
     OS << i << ',' << DiagnosticIDs::getCategoryNameFromID(i) << '\n';
 }
 
-void Driver::handleAutocompletions(StringRef PassedFlags) const {
+void Driver::HandleAutocompletions(StringRef PassedFlags) const {
+  if (PassedFlags == "")
+    return;
   // Print out all options that start with a given argument. This is used for
   // shell autocompletion.
   std::vector<std::string> SuggestedCompletions;
+  std::vector<std::string> Flags;
 
   unsigned short DisableFlags =
       options::NoDriverOption | options::Unsupported | options::Ignored;
-  // We want to show cc1-only options only when clang is invoked as "clang
-  // -cc1". When clang is invoked as "clang -cc1", we add "#" to the beginning
-  // of an --autocomplete  option so that the clang driver can distinguish
-  // whether it is requested to show cc1-only options or not.
-  if (PassedFlags.size() > 0 && PassedFlags[0] == '#') {
-    DisableFlags &= ~options::NoDriverOption;
-    PassedFlags = PassedFlags.substr(1);
+
+  // Parse PassedFlags by "," as all the command-line flags are passed to this
+  // function separated by ","
+  StringRef TargetFlags = PassedFlags;
+  while (TargetFlags != "") {
+    StringRef CurFlag;
+    std::tie(CurFlag, TargetFlags) = TargetFlags.split(",");
+    Flags.push_back(std::string(CurFlag));
   }
 
-  if (PassedFlags.find(',') == StringRef::npos) {
+  // We want to show cc1-only options only when clang is invoked with -cc1 or
+  // -Xclang.
+  if (std::find(Flags.begin(), Flags.end(), "-Xclang") != Flags.end() ||
+      std::find(Flags.begin(), Flags.end(), "-cc1") != Flags.end())
+    DisableFlags &= ~options::NoDriverOption;
+
+  StringRef Cur;
+  Cur = Flags.at(Flags.size() - 1);
+  StringRef Prev;
+  if (Flags.size() >= 2) {
+    Prev = Flags.at(Flags.size() - 2);
+    SuggestedCompletions = Opts->suggestValueCompletions(Prev, Cur);
+  }
+
+  if (SuggestedCompletions.empty())
+    SuggestedCompletions = Opts->suggestValueCompletions(Cur, "");
+
+  if (SuggestedCompletions.empty()) {
     // If the flag is in the form of "--autocomplete=-foo",
     // we were requested to print out all option names that start with "-foo".
     // For example, "--autocomplete=-fsyn" is expanded to "-fsyntax-only".
-    SuggestedCompletions = Opts->findByPrefix(PassedFlags, DisableFlags);
+    SuggestedCompletions = Opts->findByPrefix(Cur, DisableFlags);
 
     // We have to query the -W flags manually as they're not in the OptTable.
     // TODO: Find a good way to add them to OptTable instead and them remove
     // this code.
     for (StringRef S : DiagnosticIDs::getDiagnosticFlags())
-      if (S.startswith(PassedFlags))
+      if (S.startswith(Cur))
         SuggestedCompletions.push_back(S);
-  } else {
-    // If the flag is in the form of "--autocomplete=foo,bar", we were
-    // requested to print out all option values for "-foo" that start with
-    // "bar". For example,
-    // "--autocomplete=-stdlib=,l" is expanded to "libc++" and "libstdc++".
-    StringRef Option, Arg;
-    std::tie(Option, Arg) = PassedFlags.split(',');
-    SuggestedCompletions = Opts->suggestValueCompletions(Option, Arg);
   }
 
   // Sort the autocomplete candidates so that shells print them out in a
@@ -1574,7 +1587,7 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
 
   if (Arg *A = C.getArgs().getLastArg(options::OPT_autocomplete)) {
     StringRef PassedFlags = A->getValue();
-    handleAutocompletions(PassedFlags);
+    HandleAutocompletions(PassedFlags);
     return false;
   }
 
