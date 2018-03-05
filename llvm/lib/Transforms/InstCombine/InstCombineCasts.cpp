@@ -1435,6 +1435,36 @@ static Type *shrinkFPConstant(ConstantFP *CFP) {
   return nullptr;
 }
 
+// Determine if this is a vector of ConstantFPs and if so, return the minimal
+// type we can safely truncate all elements to.
+// TODO: Make these support undef elements.
+static Type *shrinkFPConstantVector(Value *V) {
+  auto *CV = dyn_cast<Constant>(V);
+  if (!CV || !CV->getType()->isVectorTy())
+    return nullptr;
+
+  Type *MinType = nullptr;
+
+  unsigned NumElts = CV->getType()->getVectorNumElements();
+  for (unsigned i = 0; i != NumElts; ++i) {
+    auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
+    if (!CFP)
+      return nullptr;
+
+    Type *T = shrinkFPConstant(CFP);
+    if (!T)
+      return nullptr;
+
+    // If we haven't found a type yet or this type has a larger mantissa than
+    // our previous type, this is our new minimal type.
+    if (!MinType || T->getFPMantissaWidth() > MinType->getFPMantissaWidth())
+      MinType = T;
+  }
+
+  // Make a vector type from the minimal type.
+  return VectorType::get(MinType, NumElts);
+}
+
 /// Find the minimum FP type we can safely truncate to.
 static Type *getMinimumFPType(Value *V) {
   if (auto *FPExt = dyn_cast<FPExtInst>(V))
@@ -1446,6 +1476,10 @@ static Type *getMinimumFPType(Value *V) {
   if (auto *CFP = dyn_cast<ConstantFP>(V))
     if (Type *T = shrinkFPConstant(CFP))
       return T;
+
+  // Try to shrink a vector of FP constants.
+  if (Type *T = shrinkFPConstantVector(V))
+    return T;
 
   return V->getType();
 }

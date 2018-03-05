@@ -70,37 +70,41 @@ RealFileSystemProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(vfs::getRealFileSystem(), VFSTag());
 }
 
+ClangdServer::Options ClangdServer::optsForTest() {
+  ClangdServer::Options Opts;
+  Opts.UpdateDebounce = std::chrono::steady_clock::duration::zero(); // Faster!
+  Opts.StorePreamblesInMemory = true;
+  Opts.AsyncThreadsCount = 4; // Consistent!
+  return Opts;
+}
+
 ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
-                           DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
-                           unsigned AsyncThreadsCount,
-                           bool StorePreamblesInMemory,
-                           bool BuildDynamicSymbolIndex, SymbolIndex *StaticIdx,
-                           llvm::Optional<StringRef> ResourceDir,
-                           std::chrono::steady_clock::duration UpdateDebounce)
-    : CompileArgs(CDB,
-                  ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
+                           DiagnosticsConsumer &DiagConsumer,
+                           const Options &Opts)
+    : CompileArgs(CDB, Opts.ResourceDir ? Opts.ResourceDir->str()
+                                        : getStandardResourceDir()),
       DiagConsumer(DiagConsumer), FSProvider(FSProvider),
-      FileIdx(BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      FileIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
-      WorkScheduler(AsyncThreadsCount, StorePreamblesInMemory,
+      WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
                     FileIdx
                         ? [this](PathRef Path,
                                  ParsedAST *AST) { FileIdx->update(Path, AST); }
                         : ASTParsedCallback(),
-                    UpdateDebounce) {
-  if (FileIdx && StaticIdx) {
-    MergedIndex = mergeIndex(FileIdx.get(), StaticIdx);
+                    Opts.UpdateDebounce) {
+  if (FileIdx && Opts.StaticIndex) {
+    MergedIndex = mergeIndex(FileIdx.get(), Opts.StaticIndex);
     Index = MergedIndex.get();
   } else if (FileIdx)
     Index = FileIdx.get();
-  else if (StaticIdx)
-    Index = StaticIdx;
+  else if (Opts.StaticIndex)
+    Index = Opts.StaticIndex;
   else
     Index = nullptr;
 }

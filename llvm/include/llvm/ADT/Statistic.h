@@ -26,14 +26,17 @@
 #ifndef LLVM_ADT_STATISTIC_H
 #define LLVM_ADT_STATISTIC_H
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <memory>
+#include <vector>
 
 namespace llvm {
 
 class raw_ostream;
 class raw_fd_ostream;
+class StringRef;
 
 class Statistic {
 public:
@@ -60,7 +63,7 @@ public:
   // Allow use of this class as the value itself.
   operator unsigned() const { return getValue(); }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
+#if LLVM_ENABLE_STATS
    const Statistic &operator=(unsigned Val) {
     Value.store(Val, std::memory_order_relaxed);
     return init();
@@ -142,7 +145,7 @@ public:
 
   void updateMax(unsigned V) {}
 
-#endif  // !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
+#endif  // LLVM_ENABLE_STATS
 
 protected:
   Statistic &init() {
@@ -179,6 +182,15 @@ void PrintStatistics(raw_ostream &OS);
 /// not be printed in human readable form or in a second call of
 /// PrintStatisticsJSON().
 void PrintStatisticsJSON(raw_ostream &OS);
+
+/// \brief Get the statistics. This can be used to look up the value of
+/// statistics without needing to parse JSON.
+///
+/// This function does not prevent statistics being updated by other threads
+/// during it's execution. It will return the value at the point that it is
+/// read. However, it will prevent new statistics from registering until it
+/// completes.
+const std::vector<std::pair<StringRef, unsigned>> GetStatistics();
 
 } // end namespace llvm
 

@@ -59,9 +59,7 @@ entry:
 define <2 x float> @test5(<2 x float> %x) nounwind  {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP34:%.*]] = fptrunc <2 x double> [[TMP3]] to <2 x float>
+; CHECK-NEXT:    [[TMP34:%.*]] = fadd <2 x float> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x float> [[TMP34]]
 ;
 entry:
@@ -75,9 +73,7 @@ entry:
 define <2 x float> @test6(<2 x float> %x) nounwind  {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], <double 0.000000e+00, double -0.000000e+00>
-; CHECK-NEXT:    [[TMP34:%.*]] = fptrunc <2 x double> [[TMP3]] to <2 x float>
+; CHECK-NEXT:    [[TMP34:%.*]] = fadd <2 x float> [[X:%.*]], <float 0.000000e+00, float -0.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[TMP34]]
 ;
 entry:
@@ -87,11 +83,26 @@ entry:
   ret <2 x float> %tmp34
 }
 
+; Test with an undef element
+; TODO: Support undef elements.
+define <2 x float> @test6_undef(<2 x float> %x) nounwind  {
+; CHECK-LABEL: @test6_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], <double 0.000000e+00, double undef>
+; CHECK-NEXT:    [[TMP34:%.*]] = fptrunc <2 x double> [[TMP3]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[TMP34]]
+;
+entry:
+  %tmp1 = fpext <2 x float> %x to <2 x double>
+  %tmp3 = fadd <2 x double> %tmp1, <double 0.000000e+00, double undef>
+  %tmp34 = fptrunc <2 x double> %tmp3 to <2 x float>
+  ret <2 x float> %tmp34
+}
+
 define <2 x float> @not_half_shrinkable(<2 x float> %x) {
 ; CHECK-LABEL: @not_half_shrinkable(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x double> [[EXT]], <double 0.000000e+00, double 2.049000e+03>
-; CHECK-NEXT:    [[R:%.*]] = fptrunc <2 x double> [[ADD]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], <float 0.000000e+00, float 2.049000e+03>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %ext = fpext <2 x float> %x to <2 x double>

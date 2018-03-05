@@ -2,7 +2,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
-; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @use_dispatch_ptr() #1 {
   %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
@@ -19,7 +21,9 @@ define amdgpu_kernel void @kern_indirect_use_dispatch_ptr(i32) #1 {
 }
 
 ; GCN-LABEL: {{^}}use_queue_ptr:
-; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @use_queue_ptr() #1 {
   %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
@@ -37,11 +41,12 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
 }
 
 ; GCN-LABEL: {{^}}use_queue_ptr_addrspacecast:
-; CIVI: s_load_dword [[APERTURE_LOAD:s[0-9]+]], s[6:7], 0x10
+; CIVI: flat_load_dword v[[HI:[0-9]+]], v[0:1]
 ; GFX9: s_getreg_b32 [[APERTURE_LOAD:s[0-9]+]]
-
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
-; GCN: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
+; CIVI: v_mov_b32_e32 v[[LO:[0-9]+]], 16
+; GFX9: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
+; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
+; CIVI: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @use_queue_ptr_addrspacecast() #1 {
   %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32*
   store volatile i32 0, i32* %asc
@@ -60,7 +65,9 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr_addrspacecast(i32) #1 {
 }
 
 ; GCN-LABEL: {{^}}use_kernarg_segment_ptr:
-; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @use_kernarg_segment_ptr() #1 {
   %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
@@ -424,9 +431,15 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_z() #1 {
 
 ; GCN-LABEL: {{^}}use_every_sgpr_input:
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:4
-; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
-; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
-; GCN: s_load_dword s{{[0-9]+}}, s[10:11], 0x0
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s8
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s9
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s10
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s11
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 ; GCN: ; use s[12:13]
 ; GCN: ; use s14
 ; GCN: ; use s15
@@ -557,12 +570,23 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 ; GCN-DAG: s_mov_b32 s6, s14
 ; GCN-DAG: s_mov_b32 s7, s15
 ; GCN-DAG: s_mov_b32 s8, s16
+
+; GCN-DAG: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[6:7]
+; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[8:9]
+; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[10:11]
+
 ; GCN: s_swappc_b64
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:4
-; GCN: s_load_dword s{{[0-9]+}},
-; GCN: s_load_dword s{{[0-9]+}},
-; GCN: s_load_dword s{{[0-9]+}},
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s[[LO_X]]
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s[[HI_X]]
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s[[LO_Y]]
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s[[HI_Y]]
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s[[LO_Z]]
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s[[HI_Z]]
+; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 ; GCN: ; use
 ; GCN: ; use [[SAVE_X]]
 ; GCN: ; use [[SAVE_Y]]

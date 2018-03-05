@@ -433,8 +433,7 @@ static bool hasPositiveOperands(BinaryOperator *SDI, LazyValueInfo *LVI) {
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() ||
-      !hasPositiveOperands(SDI, LVI))
+  if (SDI->getType()->isVectorTy() || !hasPositiveOperands(SDI, LVI))
     return false;
 
   ++NumSRems;
@@ -451,8 +450,7 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
 static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() ||
-      !hasPositiveOperands(SDI, LVI))
+  if (SDI->getType()->isVectorTy() || !hasPositiveOperands(SDI, LVI))
     return false;
 
   ++NumSDivs;
