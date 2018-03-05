@@ -5,6 +5,8 @@
    Regression test for a bug in msan/glibc integration,
    see https://sourceware.org/bugzilla/show_bug.cgi?id=16291
    and https://github.com/google/sanitizers/issues/547
+
+   XFAIL: freebsd
 */
 
 #ifndef BUILD_SO

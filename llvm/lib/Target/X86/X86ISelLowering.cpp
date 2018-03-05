@@ -978,7 +978,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, VT, Custom);
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasFp256()) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasAVX()) {
     bool HasInt256 = Subtarget.hasInt256();
 
     addRegisterClass(MVT::v32i8,  Subtarget.hasVLX() ? &X86::VR256XRegClass
@@ -1176,6 +1176,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v4i1,  MVT::v4i32);
     setOperationAction(ISD::FP_TO_SINT,         MVT::v2i1,  Custom);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i1,  Custom);
+
+    // There is no byte sized k-register load or store without AVX512DQ.
+    if (!Subtarget.hasDQI()) {
+      setOperationAction(ISD::LOAD, MVT::v1i1, Custom);
+      setOperationAction(ISD::LOAD, MVT::v2i1, Custom);
+      setOperationAction(ISD::LOAD, MVT::v4i1, Custom);
+      setOperationAction(ISD::LOAD, MVT::v8i1, Custom);
+
+      setOperationAction(ISD::STORE, MVT::v1i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v2i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v4i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v8i1, Custom);
+    }
 
     // Extends of v16i1/v8i1/v4i1/v2i1 to 128-bit vectors.
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
@@ -16601,7 +16614,7 @@ static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   if (SVT.getVectorElementType() == MVT::i1)
     return LowerZERO_EXTEND_Mask(Op, Subtarget, DAG);
 
-  assert(Subtarget.hasFp256() && "Expected AVX support");
+  assert(Subtarget.hasAVX() && "Expected AVX support");
   return LowerAVXExtend(Op, DAG, Subtarget);
 }
 
@@ -16904,7 +16917,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   // Handle truncation of V256 to V128 using shuffles.
   assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
 
-  assert(Subtarget.hasFp256() && "256-bit vector without AVX!");
+  assert(Subtarget.hasAVX() && "256-bit vector without AVX!");
 
   unsigned NumElems = VT.getVectorNumElements();
   MVT NVT = MVT::getVectorVT(VT.getVectorElementType(), NumElems * 2);
@@ -18834,7 +18847,7 @@ static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   if (InVT.getVectorElementType() == MVT::i1)
     return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
 
-  assert(Subtarget.hasFp256() && "Expected AVX support");
+  assert(Subtarget.hasAVX() && "Expected AVX support");
   return LowerAVXExtend(Op, DAG, Subtarget);
 }
 
@@ -18983,6 +18996,31 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
 
+static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
+                          SelectionDAG &DAG) {
+  StoreSDNode *St = cast<StoreSDNode>(Op.getNode());
+  SDLoc dl(St);
+  SDValue StoredVal = St->getValue();
+
+  // Without AVX512DQ, we need to use a scalar type for v2i1/v4i1/v8i1 loads.
+  assert(StoredVal.getValueType().isVector() &&
+         StoredVal.getValueType().getVectorElementType() == MVT::i1 &&
+         StoredVal.getValueType().getVectorNumElements() <= 8 &&
+         "Unexpected VT");
+  assert(!St->isTruncatingStore() && "Expected non-truncating store");
+  assert(Subtarget.hasAVX512() && !Subtarget.hasDQI() &&
+         "Expected AVX512F without AVX512DQI");
+
+  StoredVal = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
+                          DAG.getUNDEF(MVT::v8i1), StoredVal,
+                          DAG.getIntPtrConstant(0, dl));
+  StoredVal = DAG.getBitcast(MVT::i8, StoredVal);
+
+  return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
+                      St->getPointerInfo(), St->getAlignment(),
+                      St->getMemOperand()->getFlags());
+}
+
 // Lower vector extended loads using a shuffle. If SSSE3 is not available we
 // may emit an illegal shuffle but the expansion is still better than scalar
 // code. We generate X86ISD::VSEXT for SEXTLOADs if it's available, otherwise
@@ -18990,19 +19028,40 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
 // FIXME: Is the expansion actually better than scalar code? It doesn't seem so.
 // TODO: It is possible to support ZExt by zeroing the undef values during
 // the shuffle phase or after the shuffle.
-static SDValue LowerExtendedLoad(SDValue Op, const X86Subtarget &Subtarget,
+static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
                                  SelectionDAG &DAG) {
   MVT RegVT = Op.getSimpleValueType();
   assert(RegVT.isVector() && "We only custom lower vector sext loads.");
   assert(RegVT.isInteger() &&
          "We only custom lower integer vector sext loads.");
 
-  // Nothing useful we can do without SSE2 shuffles.
-  assert(Subtarget.hasSSE2() && "We only custom lower sext loads with SSE2.");
-
   LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
   SDLoc dl(Ld);
   EVT MemVT = Ld->getMemoryVT();
+
+  // Without AVX512DQ, we need to use a scalar type for v2i1/v4i1/v8i1 loads.
+  if (RegVT.isVector() && RegVT.getVectorElementType() == MVT::i1) {
+    assert(EVT(RegVT) == MemVT && "Expected non-extending load");
+    assert(RegVT.getVectorNumElements() <= 8 && "Unexpected VT");
+    assert(Subtarget.hasAVX512() && !Subtarget.hasDQI() &&
+           "Expected AVX512F without AVX512DQI");
+
+    SDValue NewLd = DAG.getLoad(MVT::i8, dl, Ld->getChain(), Ld->getBasePtr(),
+                                Ld->getPointerInfo(), Ld->getAlignment(),
+                                Ld->getMemOperand()->getFlags());
+
+    // Replace chain users with the new chain.
+    assert(NewLd->getNumValues() == 2 && "Loads must carry a chain!");
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), NewLd.getValue(1));
+
+    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, RegVT,
+                                  DAG.getBitcast(MVT::v8i1, NewLd),
+                                  DAG.getIntPtrConstant(0, dl));
+    return DAG.getMergeValues({Extract, NewLd.getValue(1)}, dl);
+  }
+
+  // Nothing useful we can do without SSE2 shuffles.
+  assert(Subtarget.hasSSE2() && "We only custom lower sext loads with SSE2.");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned RegSz = RegVT.getSizeInBits();
@@ -24766,7 +24825,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:         return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
-  case ISD::LOAD:               return LowerExtendedLoad(Op, Subtarget, DAG);
+  case ISD::LOAD:               return LowerLoad(Op, Subtarget, DAG);
+  case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
@@ -26416,7 +26476,7 @@ MachineBasicBlock *X86TargetLowering::EmitVAStartSaveXMMRegsWithCustomInserter(
           !MI.getOperand(MI.getNumOperands() - 1).isReg() ||
           MI.getOperand(MI.getNumOperands() - 1).getReg() == X86::EFLAGS) &&
          "Expected last argument to be EFLAGS");
-  unsigned MOVOpc = Subtarget.hasFp256() ? X86::VMOVAPSmr : X86::MOVAPSmr;
+  unsigned MOVOpc = Subtarget.hasAVX() ? X86::VMOVAPSmr : X86::MOVAPSmr;
   // In the XMM save block, save all the XMM argument registers.
   for (int i = 3, e = MI.getNumOperands() - 1; i != e; ++i) {
     int64_t Offset = (i - 3) * 16 + VarArgsFPOffset;
@@ -34962,6 +35022,63 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   SDValue StoredVal = St->getOperand(1);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  // If this is a store of a scalar_to_vector to v1i1, just use a scalar store.
+  // This will avoid a copy to k-register.
+  if (VT == MVT::v1i1 && VT == StVT && Subtarget.hasAVX512() &&
+      StoredVal.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+      StoredVal.getOperand(0).getValueType() == MVT::i8) {
+    return DAG.getStore(St->getChain(), dl, StoredVal.getOperand(0),
+                        St->getBasePtr(), St->getPointerInfo(),
+                        St->getAlignment(), St->getMemOperand()->getFlags());
+  }
+
+  // Widen v2i1/v4i1 stores to v8i1.
+  if ((VT == MVT::v2i1 || VT == MVT::v4i1) && VT == StVT &&
+      Subtarget.hasAVX512()) {
+    unsigned NumConcats = 8 / VT.getVectorNumElements();
+    SmallVector<SDValue, 4> Ops(NumConcats, DAG.getUNDEF(VT));
+    Ops[0] = StoredVal;
+    StoredVal = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i1, Ops);
+    return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
+                        St->getPointerInfo(), St->getAlignment(),
+                        St->getMemOperand()->getFlags());
+  }
+
+  // Turn vXi1 stores of constants into a scalar store.
+  if ((VT == MVT::v8i1 || VT == MVT::v16i1 || VT == MVT::v32i1 ||
+       VT == MVT::v64i1) && VT == StVT && TLI.isTypeLegal(VT) &&
+      ISD::isBuildVectorOfConstantSDNodes(StoredVal.getNode())) {
+    // If its a v64i1 store without 64-bit support, we need two stores.
+    if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
+      SDValue Lo = DAG.getBuildVector(MVT::v32i1, dl,
+                                      StoredVal->ops().slice(0, 32));
+      Lo = combinevXi1ConstantToInteger(Lo, DAG);
+      SDValue Hi = DAG.getBuildVector(MVT::v32i1, dl,
+                                      StoredVal->ops().slice(32, 32));
+      Hi = combinevXi1ConstantToInteger(Hi, DAG);
+
+      unsigned Alignment = St->getAlignment();
+
+      SDValue Ptr0 = St->getBasePtr();
+      SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, 4, dl);
+
+      SDValue Ch0 =
+          DAG.getStore(St->getChain(), dl, Lo, Ptr0, St->getPointerInfo(),
+                       Alignment, St->getMemOperand()->getFlags());
+      SDValue Ch1 =
+          DAG.getStore(St->getChain(), dl, Hi, Ptr1,
+                       St->getPointerInfo().getWithOffset(4),
+                       MinAlign(Alignment, 4U),
+                       St->getMemOperand()->getFlags());
+      return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Ch0, Ch1);
+    }
+
+    StoredVal = combinevXi1ConstantToInteger(StoredVal, DAG);
+    return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
+                        St->getPointerInfo(), St->getAlignment(),
+                        St->getMemOperand()->getFlags());
+  }
+
   // If we are saving a concatenation of two XMM registers and 32-byte stores
   // are slow, such as on Sandy Bridge, perform two 16-byte stores.
   bool Fast;
@@ -35330,7 +35447,7 @@ static SDValue combineFaddFsub(SDNode *N, SelectionDAG &DAG,
 
   // Try to synthesize horizontal add/sub from adds/subs of shuffles.
   if (((Subtarget.hasSSE3() && (VT == MVT::v4f32 || VT == MVT::v2f64)) ||
-       (Subtarget.hasFp256() && (VT == MVT::v8f32 || VT == MVT::v4f64))) &&
+       (Subtarget.hasAVX() && (VT == MVT::v8f32 || VT == MVT::v4f64))) &&
       isHorizontalBinOp(LHS, RHS, IsFadd)) {
     auto NewOpcode = IsFadd ? X86ISD::FHADD : X86ISD::FHSUB;
     return DAG.getNode(NewOpcode, SDLoc(N), VT, LHS, RHS);
@@ -35571,10 +35688,10 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
   // truncate 2 x v4i32 to v8i16.
   if (Subtarget.hasSSE41() || OutSVT == MVT::i8)
     return combineVectorTruncationWithPACKUS(N, DAG, SubVec);
-  else if (InSVT == MVT::i32)
+  if (InSVT == MVT::i32)
     return combineVectorTruncationWithPACKSS(N, Subtarget, DAG, SubVec);
-  else
-    return SDValue();
+
+  return SDValue();
 }
 
 /// This function transforms vector truncation of 'extended sign-bits' or
@@ -38669,7 +38786,7 @@ TargetLowering::ConstraintWeight
     LLVM_FALLTHROUGH;
   case 'x':
     if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
-        ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasFp256()))
+        ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()))
       weight = CW_Register;
     break;
   case 'k':
@@ -39157,6 +39274,15 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       return Res;
     }
+    return Res;
+  }
+
+  // Make sure it isn't a register that requires AVX512.
+  if (!Subtarget.hasAVX512() && isFRClass(*Res.second) &&
+      TRI->getEncodingValue(Res.first) & 0x10) {
+    // Register requires EVEX prefix.
+    Res.first = 0;
+    Res.second = nullptr;
     return Res;
   }
 

@@ -18,7 +18,7 @@
 //
 // The algorithm used here is based on recursive state machine matching scheme
 // proposed in "Demand-driven alias analysis for C" by Xin Zheng and Radu
-// Rugina. The general idea is to extend the tranditional transitive closure
+// Rugina. The general idea is to extend the traditional transitive closure
 // algorithm to perform CFL matching along the way: instead of recording
 // "whether X is reachable from Y", we keep track of "whether X is reachable
 // from Y at state Z", where the "state" field indicates where we are in the CFL
@@ -645,7 +645,7 @@ static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
   // relations that are symmetric, we could actually cut the storage by half by
   // sorting FromNode and ToNode before insertion happens.
 
-  // The newly added value alias pair may pontentially generate more memory
+  // The newly added value alias pair may potentially generate more memory
   // alias pairs. Check for them here.
   auto FromNodeBelow = getNodeBelow(Graph, FromNode);
   auto ToNodeBelow = getNodeBelow(Graph, ToNode);

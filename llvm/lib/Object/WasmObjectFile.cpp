@@ -403,7 +403,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
         Info.Name = readString(Ptr);
         unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
         FunctionType = &Signatures[FunctionTypes[FuncIndex]];
-        auto &Function = Functions[FuncIndex];
+        wasm::WasmFunction &Function = Functions[FuncIndex];
         if (Function.Name.empty()) {
           // Use the symbol's name to set a name for the Function, but only if
           // one hasn't already been set.
@@ -425,7 +425,13 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
       if (IsDefined) {
         Info.Name = readString(Ptr);
         unsigned GlobalIndex = Info.ElementIndex - NumImportedGlobals;
-        GlobalType = &Globals[GlobalIndex].Type;
+        wasm::WasmGlobal &Global = Globals[GlobalIndex];
+        GlobalType = &Global.Type;
+        if (Global.Name.empty()) {
+          // Use the symbol's name to set a name for the Global, but only if
+          // one hasn't already been set.
+          Global.Name = Info.Name;
+        }
       } else {
         wasm::WasmImport &Import = *ImportedGlobals[Info.ElementIndex];
         Info.Name = Import.Field;

@@ -195,6 +195,120 @@ public:
    }
 };
 
+/// A single parameter index whose accessors require each use to make explicit
+/// the parameter index encoding needed.
+class ParamIdx {
+  // Idx is exposed only via accessors that specify specific encodings.
+  unsigned Idx : 30;
+  unsigned HasThis : 1;
+  unsigned IsValid : 1;
+
+  void assertComparable(const ParamIdx &I) const {
+    assert(isValid() && I.isValid() &&
+           "ParamIdx must be valid to be compared");
+    // It's possible to compare indices from separate functions, but so far
+    // it's not proven useful.  Moreover, it might be confusing because a
+    // comparison on the results of getASTIndex might be inconsistent with a
+    // comparison on the ParamIdx objects themselves.
+    assert(HasThis == I.HasThis &&
+           "ParamIdx must be for the same function to be compared");
+  }
+
+public:
+  /// Construct an invalid parameter index (\c isValid returns false and
+  /// accessors fail an assert).
+  ParamIdx() : Idx(0), HasThis(false), IsValid(false) {}
+
+  /// \param Idx is the parameter index as it is normally specified in
+  /// attributes in the source: one-origin including any C++ implicit this
+  /// parameter.
+  ///
+  /// \param D is the declaration containing the parameters.  It is used to
+  /// determine if there is a C++ implicit this parameter.
+  ParamIdx(unsigned Idx, const Decl *D)
+      : Idx(Idx), HasThis(false), IsValid(true) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      HasThis = FD->isCXXInstanceMember();
+  }
+
+  /// \param Idx is the parameter index as it is normally specified in
+  /// attributes in the source: one-origin including any C++ implicit this
+  /// parameter.
+  ///
+  /// \param HasThis specifies whether the function has a C++ implicit this
+  /// parameter.
+  ParamIdx(unsigned Idx, bool HasThis)
+      : Idx(Idx), HasThis(HasThis), IsValid(true) {}
+
+  /// Is this parameter index valid?
+  bool isValid() const { return IsValid; }
+
+  /// Is there a C++ implicit this parameter?
+  bool hasThis() const {
+    assert(isValid() && "ParamIdx must be valid");
+    return HasThis;
+  }
+
+  /// Get the parameter index as it would normally be encoded for attributes at
+  /// the source level of representation: one-origin including any C++ implicit
+  /// this parameter.
+  ///
+  /// This encoding thus makes sense for diagnostics, pretty printing, and
+  /// constructing new attributes from a source-like specification.
+  unsigned getSourceIndex() const {
+    assert(isValid() && "ParamIdx must be valid");
+    return Idx;
+  }
+
+  /// Get the parameter index as it would normally be encoded at the AST level
+  /// of representation: zero-origin not including any C++ implicit this
+  /// parameter.
+  ///
+  /// This is the encoding primarily used in Sema.  However, in diagnostics,
+  /// Sema uses \c getSourceIndex instead.
+  unsigned getASTIndex() const {
+    assert(isValid() && "ParamIdx must be valid");
+    assert(Idx >= 1 + HasThis &&
+           "stored index must be base-1 and not specify C++ implicit this");
+    return Idx - 1 - HasThis;
+  }
+
+  /// Get the parameter index as it would normally be encoded at the LLVM level
+  /// of representation: zero-origin including any C++ implicit this parameter.
+  ///
+  /// This is the encoding primarily used in CodeGen.
+  unsigned getLLVMIndex() const {
+    assert(isValid() && "ParamIdx must be valid");
+    assert(Idx >= 1 && "stored index must be base-1");
+    return Idx - 1;
+  }
+
+  bool operator==(const ParamIdx &I) const {
+    assertComparable(I);
+    return Idx == I.Idx;
+  }
+  bool operator!=(const ParamIdx &I) const {
+    assertComparable(I);
+    return Idx != I.Idx;
+  }
+  bool operator<(const ParamIdx &I) const {
+    assertComparable(I);
+    return Idx < I.Idx;
+  }
+  bool operator>(const ParamIdx &I) const {
+    assertComparable(I);
+    return Idx > I.Idx;
+  }
+  bool operator<=(const ParamIdx &I) const {
+    assertComparable(I);
+    return Idx <= I.Idx;
+  }
+  bool operator>=(const ParamIdx &I) const {
+    assertComparable(I);
+    return Idx >= I.Idx;
+  }
+};
+
 #include "clang/AST/Attrs.inc"
 
 inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,

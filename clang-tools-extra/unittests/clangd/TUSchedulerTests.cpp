@@ -127,16 +127,17 @@ TEST_F(TUSchedulerTests, Debounce) {
     TUScheduler S(getDefaultAsyncThreadsCount(),
                   /*StorePreamblesInMemory=*/true,
                   /*ASTParsedCallback=*/nullptr,
-                  /*UpdateDebounce=*/std::chrono::milliseconds(50));
+                  /*UpdateDebounce=*/std::chrono::seconds(1));
+    // FIXME: we could probably use timeouts lower than 1 second here.
     auto Path = testPath("foo.cpp");
     S.update(Path, getInputs(Path, "auto (debounced)"), WantDiagnostics::Auto,
              [&](std::vector<DiagWithFixIts> Diags) {
                ADD_FAILURE() << "auto should have been debounced and canceled";
              });
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     S.update(Path, getInputs(Path, "auto (timed out)"), WantDiagnostics::Auto,
              [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
-    std::this_thread::sleep_for(std::chrono::milliseconds(60));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     S.update(Path, getInputs(Path, "auto (shut down)"), WantDiagnostics::Auto,
              [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
   }

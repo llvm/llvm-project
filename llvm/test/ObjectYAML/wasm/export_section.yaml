@@ -38,6 +38,14 @@ Sections:
       - Name:            table_export
         Kind:            TABLE
         Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            0B
+      - Index:           1
+        Locals:
+        Body:            0B
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:

@@ -681,7 +681,7 @@ INTERCEPTOR(int, putenv, char *string) {
   return res;
 }
 
-#if SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
 INTERCEPTOR(int, fstat, int fd, void *buf) {
   ENSURE_MSAN_INITED();
   int res = REAL(fstat)(fd, buf);

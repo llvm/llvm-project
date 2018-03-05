@@ -2108,8 +2108,12 @@ void X86FrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
   // Spill the BasePtr if it's used.
-  if (TRI->hasBasePointer(MF))
-    SavedRegs.set(TRI->getBaseRegister());
+  if (TRI->hasBasePointer(MF)){
+    unsigned BasePtr = TRI->getBaseRegister();
+    if (STI.isTarget64BitILP32())
+      BasePtr = getX86SubSuperRegister(BasePtr, 64);
+    SavedRegs.set(BasePtr);
+  }
 }
 
 static bool

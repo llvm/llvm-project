@@ -29,8 +29,14 @@ def should_add_line_to_output(input_line, prefix_set):
 # Invoke the tool that is being tested.
 def invoke_tool(exe, cmd_args, ir):
   with open(ir) as ir_file:
-    stdout = subprocess.check_output(exe + ' ' + cmd_args,
-                                     shell=True, stdin=ir_file)
+    # TODO Remove the str form which is used by update_test_checks.py and
+    # update_llc_test_checks.py
+    # The safer list form is used by update_cc_test_checks.py
+    if isinstance(cmd_args, list):
+      stdout = subprocess.check_output([exe] + cmd_args, stdin=ir_file)
+    else:
+      stdout = subprocess.check_output(exe + ' ' + cmd_args,
+                                       shell=True, stdin=ir_file)
     if sys.version_info[0] > 2:
       stdout = stdout.decode()
   # Fix line endings to unix CR style.

@@ -90,7 +90,7 @@ parseRegisterValue(const lldb_private::RegisterInfo &Info,
                    llvm::StringRef HexValue, llvm::support::endianness Endian,
                    bool ZeroPad = false);
 
-class StopReply {
+class StopReply : public Parser<std::unique_ptr<StopReply>> {
 public:
   StopReply() = default;
   virtual ~StopReply() = default;

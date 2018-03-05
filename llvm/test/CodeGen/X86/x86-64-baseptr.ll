@@ -39,6 +39,7 @@ define void @base() #0 {
 ; X32ABI:       # %bb.0: # %entry
 ; X32ABI-NEXT:    pushq %rbp
 ; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    pushq  %rbx
 ; X32ABI-NEXT:    andl $-32, %esp
 ; X32ABI-NEXT:    subl $32, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
@@ -52,7 +53,8 @@ define void @base() #0 {
 ; X32ABI-NEXT:    movl %edx, %esp
 ; X32ABI-NEXT:    negl %eax
 ; X32ABI-NEXT:    movl $0, (%ecx,%eax)
-; X32ABI-NEXT:    movl %ebp, %esp
+; X32ABI-NEXT:    leal -8(%ebp), %esp
+; X32ABI-NEXT:    popq %rbx
 ; X32ABI-NEXT:    popq %rbp
 ; X32ABI-NEXT:    retq
 entry:

@@ -102,8 +102,7 @@ define <2 x float> @not_half_shrinkable(<2 x float> %x) {
 
 define half @test7(float %a) nounwind {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[Y:%.*]] = fpext float [[A:%.*]] to double
-; CHECK-NEXT:    [[Z:%.*]] = fptrunc double [[Y]] to half
+; CHECK-NEXT:    [[Z:%.*]] = fptrunc float [[A:%.*]] to half
 ; CHECK-NEXT:    ret half [[Z]]
 ;
   %y = fpext float %a to double
@@ -113,8 +112,7 @@ define half @test7(float %a) nounwind {
 
 define float @test8(half %a) nounwind {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[Y:%.*]] = fpext half [[A:%.*]] to double
-; CHECK-NEXT:    [[Z:%.*]] = fptrunc double [[Y]] to float
+; CHECK-NEXT:    [[Z:%.*]] = fpext half [[A:%.*]] to float
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = fpext half %a to double
