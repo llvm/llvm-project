@@ -740,6 +740,9 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
   }
 
   if (CurMultiClass) {
+    if (Name->getValue() == "NAME")
+      return VarInit::get(Name, StringRecTy::get());
+
     Init *MCName = QualifyName(CurMultiClass->Rec, CurMultiClass, Name, "::");
 
     if (CurMultiClass->Rec.isTemplateArg(MCName)) {
