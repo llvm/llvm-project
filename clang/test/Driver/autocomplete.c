@@ -3,13 +3,8 @@
 // add/modify flags, change HelpTexts or the values of some flags.
 
 // Some corner cases.
-// RUN: %clang --autocomplete= | FileCheck %s -check-prefix=ALL_FLAGS
-// RUN: %clang --autocomplete=# | FileCheck %s -check-prefix=ALL_FLAGS
-// Let's pick some example flags that are hopefully unlikely to change.
-// ALL_FLAGS: -fast
-// ALL_FLAGS: -fastcp
-// ALL_FLAGS: -fastf
 // Just test that this doesn't crash:
+// RUN: %clang --autocomplete=
 // RUN: %clang --autocomplete=,
 // RUN: %clang --autocomplete==
 // RUN: %clang --autocomplete=,,
@@ -17,27 +12,27 @@
 
 // RUN: %clang --autocomplete=-fsyn | FileCheck %s -check-prefix=FSYN
 // FSYN: -fsyntax-only
-// RUN: %clang --autocomplete=-std= | FileCheck %s -check-prefix=STD
+// RUN: %clang --autocomplete=-std | FileCheck %s -check-prefix=STD
 // STD: -std= Language standard to compile for
 // RUN: %clang --autocomplete=foo | FileCheck %s -check-prefix=FOO
 // FOO-NOT: foo
 // RUN: %clang --autocomplete=-stdlib=,l | FileCheck %s -check-prefix=STDLIB
 // STDLIB: libc++
 // STDLIB-NEXT: libstdc++
-// RUN: %clang --autocomplete=-stdlib=, | FileCheck %s -check-prefix=STDLIBALL
+// RUN: %clang --autocomplete=-stdlib= | FileCheck %s -check-prefix=STDLIBALL
 // STDLIBALL: libc++
 // STDLIBALL-NEXT: libstdc++
 // STDLIBALL-NEXT: platform
 // RUN: %clang --autocomplete=-meabi,d | FileCheck %s -check-prefix=MEABI
 // MEABI: default
-// RUN: %clang --autocomplete=-meabi, | FileCheck %s -check-prefix=MEABIALL
+// RUN: %clang --autocomplete=-meabi | FileCheck %s -check-prefix=MEABIALL
 // MEABIALL: 4
 // MEABIALL-NEXT: 5
 // MEABIALL-NEXT: default
 // MEABIALL-NEXT: gnu
 // RUN: %clang --autocomplete=-cl-std=,CL2 | FileCheck %s -check-prefix=CLSTD
 // CLSTD: CL2.0
-// RUN: %clang --autocomplete=-cl-std=, | FileCheck %s -check-prefix=CLSTDALL
+// RUN: %clang --autocomplete=-cl-std= | FileCheck %s -check-prefix=CLSTDALL
 // CLSTDALL: cl
 // CLSTDALL-NEXT: CL
 // CLSTDALL-NEXT: cl1.1
@@ -48,7 +43,7 @@
 // CLSTDALL-NEXT: CL2.0
 // RUN: %clang --autocomplete=-fno-sanitize-coverage=,f | FileCheck %s -check-prefix=FNOSANICOVER
 // FNOSANICOVER: func
-// RUN: %clang --autocomplete=-fno-sanitize-coverage=, | FileCheck %s -check-prefix=FNOSANICOVERALL
+// RUN: %clang --autocomplete=-fno-sanitize-coverage= | FileCheck %s -check-prefix=FNOSANICOVERALL
 // FNOSANICOVERALL: 8bit-counters
 // FNOSANICOVERALL-NEXT: bb
 // FNOSANICOVERALL-NEXT: edge
@@ -62,41 +57,37 @@
 // FNOSANICOVERALL-NEXT: trace-gep
 // FNOSANICOVERALL-NEXT: trace-pc
 // FNOSANICOVERALL-NEXT: trace-pc-guard
-// RUN: %clang --autocomplete=-ffp-contract=, | FileCheck %s -check-prefix=FFPALL
+// RUN: %clang --autocomplete=-ffp-contract= | FileCheck %s -check-prefix=FFPALL
 // FFPALL: fast
 // FFPALL-NEXT: off
 // FFPALL-NEXT: on
-// RUN: %clang --autocomplete=-flto=, | FileCheck %s -check-prefix=FLTOALL
+// RUN: %clang --autocomplete=-flto= | FileCheck %s -check-prefix=FLTOALL
 // FLTOALL: full
 // FLTOALL-NEXT: thin
-// RUN: %clang --autocomplete=-fveclib=, | FileCheck %s -check-prefix=FVECLIBALL
+// RUN: %clang --autocomplete=-fveclib= | FileCheck %s -check-prefix=FVECLIBALL
 // FVECLIBALL: Accelerate
 // FVECLIBALL-NEXT: none
 // FVECLIBALL-NEXT: SVML
-// RUN: %clang --autocomplete=-fshow-overloads=, | FileCheck %s -check-prefix=FSOVERALL
+// RUN: %clang --autocomplete=-fshow-overloads= | FileCheck %s -check-prefix=FSOVERALL
 // FSOVERALL: all
 // FSOVERALL-NEXT: best
-// RUN: %clang --autocomplete=-fvisibility=, | FileCheck %s -check-prefix=FVISIBILITYALL
+// RUN: %clang --autocomplete=-fvisibility= | FileCheck %s -check-prefix=FVISIBILITYALL
 // FVISIBILITYALL: default
 // FVISIBILITYALL-NEXT: hidden
-// RUN: %clang --autocomplete=-mfloat-abi=, | FileCheck %s -check-prefix=MFLOATABIALL
+// RUN: %clang --autocomplete=-mfloat-abi= | FileCheck %s -check-prefix=MFLOATABIALL
 // MFLOATABIALL: hard
 // MFLOATABIALL-NEXT: soft
 // MFLOATABIALL-NEXT: softfp
-// RUN: %clang --autocomplete=-mthread-model, | FileCheck %s -check-prefix=MTHREADMODELALL
+// RUN: %clang --autocomplete=-mthread-model | FileCheck %s -check-prefix=MTHREADMODELALL
 // MTHREADMODELALL: posix
 // MTHREADMODELALL-NEXT: single
-// RUN: %clang --autocomplete=-mrelocation-model, | FileCheck %s -check-prefix=MRELOCMODELALL
+// RUN: %clang --autocomplete=-mrelocation-model | FileCheck %s -check-prefix=MRELOCMODELALL
 // MRELOCMODELALL: dynamic-no-pic
 // MRELOCMODELALL-NEXT: pic
 // MRELOCMODELALL-NEXT: ropi
 // MRELOCMODELALL-NEXT: ropi-rwpi
 // MRELOCMODELALL-NEXT: rwpi
 // MRELOCMODELALL-NEXT: static
-// RUN: %clang --autocomplete=-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CLANG
-// MRELOCMODEL_CLANG-NOT: -mrelocation-model
-// RUN: %clang --autocomplete=#-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CC1
-// MRELOCMODEL_CC1: -mrelocation-model
 // RUN: %clang --autocomplete=-Wma | FileCheck %s -check-prefix=WARNING
 // WARNING: -Wmacro-redefined
 // WARNING-NEXT: -Wmain
@@ -106,7 +97,20 @@
 // WARNING-NEXT: -Wmax-unsigned-zero
 // RUN: %clang --autocomplete=-Wno-invalid-pp- | FileCheck %s -check-prefix=NOWARNING
 // NOWARNING: -Wno-invalid-pp-token
-// RUN: %clang --autocomplete=-analyzer-checker, | FileCheck %s -check-prefix=ANALYZER
+// RUN: %clang --autocomplete=-analyzer-checker | FileCheck %s -check-prefix=ANALYZER
 // ANALYZER: unix.Malloc
-// RUN: %clang --autocomplete=-std=, | FileCheck %s -check-prefix=STDVAL
+// RUN: %clang --autocomplete=-std= | FileCheck %s -check-prefix=STDVAL
 // STDVAL: c99
+//
+// Clang shouldn't autocomplete CC1 options unless -cc1 or -Xclang were provided
+// RUN: %clang --autocomplete=-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CLANG
+// MRELOCMODEL_CLANG-NOT: -mrelocation-model
+// RUN: %clang --autocomplete=-Xclang,-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CC1
+// RUN: %clang --autocomplete=-cc1,-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CC1
+// MRELOCMODEL_CC1: -mrelocation-model
+// Make sure it ignores passed flags unlesss they are -Xclang or -cc1
+// RUN: %clang --autocomplete=foo,bar,,-fsyn | FileCheck %s -check-prefix=FSYN-CORON
+// FSYN-CORON: -fsyntax-only
+// Check if they can autocomplete values with coron
+// RUN: %clang --autocomplete=foo,bar,,,-fno-sanitize-coverage=,f | FileCheck %s -check-prefix=FNOSANICOVER-CORON
+// FNOSANICOVER-CORON: func

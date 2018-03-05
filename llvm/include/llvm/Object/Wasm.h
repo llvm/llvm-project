@@ -203,7 +203,9 @@ private:
   bool isDefinedFunctionIndex(uint32_t Index) const;
   bool isValidGlobalIndex(uint32_t Index) const;
   bool isDefinedGlobalIndex(uint32_t Index) const;
-  bool isValidFunctionSymbolIndex(uint32_t Index) const;
+  bool isValidFunctionSymbol(uint32_t Index) const;
+  bool isValidGlobalSymbol(uint32_t Index) const;
+  bool isValidDataSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
   wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
 

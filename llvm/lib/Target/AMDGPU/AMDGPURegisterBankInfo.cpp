@@ -314,6 +314,45 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = OpdsMapping[1] = AMDGPU::getValueMapping(BankID, Size);
     break;
   }
+  case AMDGPU::G_TRUNC: {
+    unsigned Dst = MI.getOperand(0).getReg();
+    unsigned Src = MI.getOperand(1).getReg();
+    unsigned Bank = getRegBankID(Src, MRI, *TRI);
+    unsigned DstSize = getSizeInBits(Dst, MRI, *TRI);
+    unsigned SrcSize = getSizeInBits(Src, MRI, *TRI);
+    OpdsMapping[0] = AMDGPU::getValueMapping(Bank, DstSize);
+    OpdsMapping[1] = AMDGPU::getValueMapping(Bank, SrcSize);
+    break;
+  }
+  case AMDGPU::G_ZEXT: {
+    unsigned Dst = MI.getOperand(0).getReg();
+    unsigned Src = MI.getOperand(1).getReg();
+    unsigned DstSize = getSizeInBits(Dst, MRI, *TRI);
+    unsigned SrcSize = getSizeInBits(Src, MRI, *TRI);
+    unsigned SrcBank = getRegBankID(Src, MRI, *TRI,
+                                    SrcSize == 1 ? AMDGPU::SGPRRegBankID :
+                                    AMDGPU::VGPRRegBankID);
+    unsigned DstBank = SrcBank;
+    if (SrcSize == 1) {
+      if (SrcBank == AMDGPU::SGPRRegBankID)
+        DstBank = AMDGPU::VGPRRegBankID;
+      else
+        DstBank = AMDGPU::SGPRRegBankID;
+    }
+
+    OpdsMapping[0] = AMDGPU::getValueMapping(DstBank, DstSize);
+    OpdsMapping[1] = AMDGPU::getValueMapping(SrcBank, SrcSize);
+    break;
+  }
+  case AMDGPU::G_FCMP: {
+    unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+    unsigned Op2Bank = getRegBankID(MI.getOperand(2).getReg(), MRI, *TRI);
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 1);
+    OpdsMapping[1] = nullptr; // Predicate Operand.
+    OpdsMapping[2] = AMDGPU::getValueMapping(Op2Bank, Size);
+    OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+    break;
+  }
   case AMDGPU::G_GEP: {
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
       if (!MI.getOperand(i).isReg())
@@ -360,6 +399,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     default:
       return getInvalidInstructionMapping();
     case Intrinsic::maxnum:
+    case Intrinsic::minnum:
     case Intrinsic::amdgcn_cvt_pkrtz:
       return getDefaultMappingVOP(MI);
     }

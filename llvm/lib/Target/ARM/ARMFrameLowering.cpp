@@ -1068,6 +1068,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
           !isTrap && STI.hasV5TOps()) {
         if (MBB.succ_empty()) {
           Reg = ARM::PC;
+          // Fold the return instruction into the LDM.
           DeleteRet = true;
           LdmOpc = AFI->isThumbFunction() ? ARM::t2LDMIA_RET : ARM::LDMIA_RET;
           // We 'restore' LR into PC so it is not live out of the return block:
@@ -1075,7 +1076,6 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
           Info.setRestored(false);
         } else
           LdmOpc = AFI->isThumbFunction() ? ARM::t2LDMIA_UPD : ARM::LDMIA_UPD;
-        // Fold the return instruction into the LDM.
       }
 
       // If NoGap is true, pop consecutive registers and then leave the rest

@@ -1231,9 +1231,10 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallExpr *CE,
   if (Att->getModule() != II_malloc)
     return nullptr;
 
-  OwnershipAttr::args_iterator I = Att->args_begin(), E = Att->args_end();
+  ParamIdx *I = Att->args_begin(), *E = Att->args_end();
   if (I != E) {
-    return MallocMemAux(C, CE, CE->getArg(*I), UndefinedVal(), State);
+    return MallocMemAux(C, CE, CE->getArg(I->getASTIndex()), UndefinedVal(),
+                        State);
   }
   return MallocMemAux(C, CE, UnknownVal(), UndefinedVal(), State);
 }
@@ -1331,9 +1332,9 @@ ProgramStateRef MallocChecker::FreeMemAttr(CheckerContext &C,
   bool ReleasedAllocated = false;
 
   for (const auto &Arg : Att->args()) {
-    ProgramStateRef StateI = FreeMemAux(C, CE, State, Arg,
-                               Att->getOwnKind() == OwnershipAttr::Holds,
-                               ReleasedAllocated);
+    ProgramStateRef StateI = FreeMemAux(
+        C, CE, State, Arg.getASTIndex(),
+        Att->getOwnKind() == OwnershipAttr::Holds, ReleasedAllocated);
     if (StateI)
       State = StateI;
   }

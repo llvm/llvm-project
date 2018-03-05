@@ -43,15 +43,10 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   bool hasFP(const MachineFunction &MF) const override;
-  int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
-
-  // Return the number of bytes in the callee-allocated part of the frame.
-  uint64_t getAllocatedStackSize(const MachineFunction &MF) const;
 
   // Return the byte offset from the incoming stack pointer of Reg's
   // ABI-defined save slot.  Return 0 if no slot is defined for Reg.

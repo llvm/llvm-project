@@ -936,10 +936,11 @@ DSAStackTy::getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
 
 bool DSAStackTy::isOpenMPLocal(VarDecl *D, StackTy::reverse_iterator Iter) {
   D = D->getCanonicalDecl();
-  if (!isStackEmpty() && Stack.back().first.size() > 1) {
+  if (!isStackEmpty()) {
     reverse_iterator I = Iter, E = Stack.back().first.rend();
     Scope *TopScope = nullptr;
-    while (I != E && !isParallelOrTaskRegion(I->Directive))
+    while (I != E && !isParallelOrTaskRegion(I->Directive) &&
+           !isOpenMPTargetExecutionDirective(I->Directive))
       ++I;
     if (I == E)
       return false;
@@ -956,20 +957,7 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
   D = getCanonicalDecl(D);
   DSAVarData DVar;
 
-  // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
-  // in a Construct, C/C++, predetermined, p.1]
-  //  Variables appearing in threadprivate directives are threadprivate.
   auto *VD = dyn_cast<VarDecl>(D);
-  if ((VD && VD->getTLSKind() != VarDecl::TLS_None &&
-       !(VD->hasAttr<OMPThreadPrivateDeclAttr>() &&
-         SemaRef.getLangOpts().OpenMPUseTLS &&
-         SemaRef.getASTContext().getTargetInfo().isTLSSupported())) ||
-      (VD && VD->getStorageClass() == SC_Register &&
-       VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl())) {
-    addDSA(D, buildDeclRefExpr(SemaRef, VD, D->getType().getNonReferenceType(),
-                               D->getLocation()),
-           OMPC_threadprivate);
-  }
   auto TI = Threadprivates.find(D);
   if (TI != Threadprivates.end()) {
     DVar.RefExpr = TI->getSecond().RefExpr.getPointer();
@@ -981,6 +969,62 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
         VD->getAttr<OMPThreadPrivateDeclAttr>()->getLocation());
     DVar.CKind = OMPC_threadprivate;
     addDSA(D, DVar.RefExpr, OMPC_threadprivate);
+    return DVar;
+  }
+  // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
+  // in a Construct, C/C++, predetermined, p.1]
+  //  Variables appearing in threadprivate directives are threadprivate.
+  if ((VD && VD->getTLSKind() != VarDecl::TLS_None &&
+       !(VD->hasAttr<OMPThreadPrivateDeclAttr>() &&
+         SemaRef.getLangOpts().OpenMPUseTLS &&
+         SemaRef.getASTContext().getTargetInfo().isTLSSupported())) ||
+      (VD && VD->getStorageClass() == SC_Register &&
+       VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl())) {
+    DVar.RefExpr = buildDeclRefExpr(
+        SemaRef, VD, D->getType().getNonReferenceType(), D->getLocation());
+    DVar.CKind = OMPC_threadprivate;
+    addDSA(D, DVar.RefExpr, OMPC_threadprivate);
+    return DVar;
+  }
+  if (SemaRef.getLangOpts().OpenMPCUDAMode && VD &&
+      VD->isLocalVarDeclOrParm() && !isStackEmpty() &&
+      !isLoopControlVariable(D).first) {
+    auto IterTarget =
+        std::find_if(Stack.back().first.rbegin(), Stack.back().first.rend(),
+                     [](const SharingMapTy &Data) {
+                       return isOpenMPTargetExecutionDirective(Data.Directive);
+                     });
+    if (IterTarget != Stack.back().first.rend()) {
+      auto ParentIterTarget = std::next(IterTarget, 1);
+      auto Iter = Stack.back().first.rbegin();
+      while (Iter != ParentIterTarget) {
+        if (isOpenMPLocal(VD, Iter)) {
+          DVar.RefExpr =
+              buildDeclRefExpr(SemaRef, VD, D->getType().getNonReferenceType(),
+                               D->getLocation());
+          DVar.CKind = OMPC_threadprivate;
+          return DVar;
+        }
+        std::advance(Iter, 1);
+      }
+      if (!isClauseParsingMode() || IterTarget != Stack.back().first.rbegin()) {
+        auto DSAIter = IterTarget->SharingMap.find(D);
+        if (DSAIter != IterTarget->SharingMap.end() &&
+            isOpenMPPrivate(DSAIter->getSecond().Attributes)) {
+          DVar.RefExpr = DSAIter->getSecond().RefExpr.getPointer();
+          DVar.CKind = OMPC_threadprivate;
+          return DVar;
+        } else if (!SemaRef.IsOpenMPCapturedByRef(
+                       D, std::distance(ParentIterTarget,
+                                        Stack.back().first.rend()))) {
+          DVar.RefExpr =
+              buildDeclRefExpr(SemaRef, VD, D->getType().getNonReferenceType(),
+                               IterTarget->ConstructLoc);
+          DVar.CKind = OMPC_threadprivate;
+          return DVar;
+        }
+      }
+    }
   }
 
   if (isStackEmpty())

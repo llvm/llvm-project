@@ -1,6 +1,7 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins -O0 %s -o %t && %run %t
 
 // Regression test for a deadlock in pthread_getattr_np
+// UNSUPPORTED: freebsd
 
 #include <assert.h>
 #include <pthread.h>

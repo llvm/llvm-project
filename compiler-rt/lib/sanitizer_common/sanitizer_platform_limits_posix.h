@@ -24,7 +24,7 @@
 // FreeBSD's dlopen() returns a pointer to an Obj_Entry structure that
 // incorporates the map structure.
 # define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-    ((link_map*)((handle) == nullptr ? nullptr : ((char*)(handle) + 544)))
+    ((link_map*)((handle) == nullptr ? nullptr : ((char*)(handle) + 560)))
 // Get sys/_types.h, because that tells us whether 64-bit inodes are
 // used in struct dirent below.
 #include <sys/_types.h>

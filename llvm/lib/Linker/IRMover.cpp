@@ -1051,10 +1051,14 @@ void IRLinker::prepareCompileUnitsForImport() {
     ValueMap.MD()[CU->getRawEnumTypes()].reset(nullptr);
     ValueMap.MD()[CU->getRawMacros()].reset(nullptr);
     ValueMap.MD()[CU->getRawRetainedTypes()].reset(nullptr);
-    // We import global variables only temporarily in order for instcombine
-    // and globalopt to perform constant folding and static constructor
-    // evaluation. After that elim-avail-extern will covert imported globals
-    // back to declarations, so we don't need debug info for them.
+    // If we ever start importing global variable defs, we'll need to
+    // add their DIGlobalVariable to the globals list on the imported
+    // DICompileUnit. Confirm none are imported, and then we can
+    // map the list of global variables to nullptr.
+    assert(none_of(
+               ValuesToLink,
+               [](const GlobalValue *GV) { return isa<GlobalVariable>(GV); }) &&
+           "Unexpected importing of a GlobalVariable definition");
     ValueMap.MD()[CU->getRawGlobalVariables()].reset(nullptr);
 
     // Imported entities only need to be mapped in if they have local

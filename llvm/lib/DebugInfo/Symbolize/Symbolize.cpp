@@ -185,7 +185,7 @@ bool findDebugBinary(const std::string &OrigPath,
     return true;
   }
   // Try /path/to/original_binary/.debug/debuglink_name
-  DebugPath = OrigRealPath;
+  DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
     Result = DebugPath.str();

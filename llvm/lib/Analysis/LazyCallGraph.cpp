@@ -427,7 +427,7 @@ bool LazyCallGraph::RefSCC::isAncestorOf(const RefSCC &RC) const {
 ///   source to target.
 ///
 /// This helper routine, in addition to updating the postorder sequence itself
-/// will also update a map from SCCs to indices within that sequecne.
+/// will also update a map from SCCs to indices within that sequence.
 ///
 /// The sequence and the map must operate on pointers to the SCC type.
 ///
@@ -713,7 +713,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
   //
   // However, we specially handle the target node. The target node is known to
   // reach all other nodes in the original SCC by definition. This means that
-  // we want the old SCC to be replaced with an SCC contaning that node as it
+  // we want the old SCC to be replaced with an SCC containing that node as it
   // will be the root of whatever SCC DAG results from the DFS. Assumptions
   // about an SCC such as the set of functions called will continue to hold,
   // etc.
@@ -822,7 +822,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
         // Cleared the DFS early, start another round.
         break;
 
-      // We've finished processing N and its descendents, put it on our pending
+      // We've finished processing N and its descendants, put it on our pending
       // SCC stack to eventually get merged into an SCC of nodes.
       PendingSCCStack.push_back(N);
 
@@ -1234,7 +1234,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
         ++I;
       }
 
-      // We've finished processing N and its descendents, put it on our pending
+      // We've finished processing N and its descendants, put it on our pending
       // stack to eventually get merged into a RefSCC.
       PendingRefSCCStack.push_back(N);
 
@@ -1617,7 +1617,7 @@ void LazyCallGraph::buildGenericSCCs(RootsT &&Roots, GetBeginT &&GetBegin,
         ++I;
       }
 
-      // We've finished processing N and its descendents, put it on our pending
+      // We've finished processing N and its descendants, put it on our pending
       // SCC stack to eventually get merged into an SCC of nodes.
       PendingSCCStack.push_back(N);
 

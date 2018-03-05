@@ -525,7 +525,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp(SDNode *N) {
                            N->getValueType(0).getScalarType(), Elt);
   // Revectorize the result so the types line up with what the uses of this
   // expression expect.
-  return DAG.getBuildVector(N->getValueType(0), SDLoc(N), Op);
+  return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Op);
 }
 
 /// The vectors to concatenate have length one - use a BUILD_VECTOR instead.

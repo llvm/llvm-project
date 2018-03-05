@@ -1307,9 +1307,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeElemSection(TableElems);
   writeCodeSection(Asm, Layout, Functions);
   writeDataSection();
+  writeLinkingMetaDataSection(SymbolInfos, InitFuncs, Comdats);
   writeCodeRelocSection();
   writeDataRelocSection();
-  writeLinkingMetaDataSection(SymbolInfos, InitFuncs, Comdats);
 
   // TODO: Translate the .comment section to the output.
   // TODO: Translate debug sections to the output.

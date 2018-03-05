@@ -45,9 +45,7 @@ public:
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
-  }
+                            const MCAsmLayout &Layout) const override;
 
   unsigned getNumFixupKinds() const override {
     return RISCV::NumTargetFixupKinds;
@@ -79,16 +77,91 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst) const override;
+  unsigned getRelaxedOpcode(unsigned Op) const;
 
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override {
+                        MCInst &Res) const override;
 
-    report_fatal_error("RISCVAsmBackend::relaxInstruction() unimplemented");
-  }
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };
+
+
+bool RISCVAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                           uint64_t Value,
+                                           const MCRelaxableFragment *DF,
+                                           const MCAsmLayout &Layout) const {
+  int64_t Offset = int64_t(Value);
+  switch ((unsigned)Fixup.getKind()) {
+  default:
+    return false;
+  case RISCV::fixup_riscv_rvc_branch:
+    // For compressed branch instructions the immediate must be
+    // in the range [-256, 254].
+    return Offset > 254 || Offset < -256;
+  case RISCV::fixup_riscv_rvc_jump:
+    // For compressed jump instructions the immediate must be
+    // in the range [-2048, 2046].
+    return Offset > 2046 || Offset < -2048;
+  }
+}
+
+void RISCVAsmBackend::relaxInstruction(const MCInst &Inst,
+                                       const MCSubtargetInfo &STI,
+                                       MCInst &Res) const {
+  // TODO: replace this with call to auto generated uncompressinstr() function.
+  switch (Inst.getOpcode()) {
+  default:
+    llvm_unreachable("Opcode not expected!");
+  case RISCV::C_BEQZ:
+    // c.beqz $rs1, $imm -> beq $rs1, X0, $imm.
+    Res.setOpcode(RISCV::BEQ);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(MCOperand::createReg(RISCV::X0));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case RISCV::C_BNEZ:
+    // c.bnez $rs1, $imm -> bne $rs1, X0, $imm.
+    Res.setOpcode(RISCV::BNE);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(MCOperand::createReg(RISCV::X0));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case RISCV::C_J:
+    // c.j $imm -> jal X0, $imm.
+    Res.setOpcode(RISCV::JAL);
+    Res.addOperand(MCOperand::createReg(RISCV::X0));
+    Res.addOperand(Inst.getOperand(0));
+    break;
+  case RISCV::C_JAL:
+    // c.jal $imm -> jal X1, $imm.
+    Res.setOpcode(RISCV::JAL);
+    Res.addOperand(MCOperand::createReg(RISCV::X1));
+    Res.addOperand(Inst.getOperand(0));
+    break;
+  }
+}
+
+// Given a compressed control flow instruction this function returns
+// the expanded instruction.
+unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
+  switch (Op) {
+  default:
+    return Op;
+  case RISCV::C_BEQZ:
+    return RISCV::BEQ;
+  case RISCV::C_BNEZ:
+    return RISCV::BNE;
+  case RISCV::C_J:
+  case RISCV::C_JAL: // fall through.
+    return RISCV::JAL;
+  }
+}
+
+bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
+  return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
+}
 
 bool RISCVAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];

@@ -1,4 +1,5 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t
+// XFAIL: freebsd
 
 #include <stdlib.h>
 #include <string.h>

@@ -219,7 +219,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
-      if (Val.startswith(Arg))
+      if (Val.startswith(Arg) && Arg.compare(Val))
         Result.push_back(Val);
     return Result;
   }
@@ -240,7 +240,7 @@ OptTable::findByPrefix(StringRef Cur, unsigned short DisableFlags) const {
       std::string S = std::string(In.Prefixes[I]) + std::string(In.Name) + "\t";
       if (In.HelpText)
         S += In.HelpText;
-      if (StringRef(S).startswith(Cur))
+      if (StringRef(S).startswith(Cur) && S.compare(std::string(Cur) + "\t"))
         Ret.push_back(S);
     }
   }

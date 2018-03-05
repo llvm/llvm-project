@@ -2843,8 +2843,10 @@ AST_MATCHER_P_OVERLOAD(CallExpr, callee, internal::Matcher<Decl>, InnerMatcher,
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     hasType, AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, TypedefNameDecl, ValueDecl),
     internal::Matcher<QualType>, InnerMatcher, 0) {
-  return InnerMatcher.matches(internal::getUnderlyingType(Node),
-                              Finder, Builder);
+  QualType QT = internal::getUnderlyingType(Node);
+  if (!QT.isNull())
+    return InnerMatcher.matches(QT, Finder, Builder);
+  return false;
 }
 
 /// \brief Overloaded to match the declaration of the expression's or value

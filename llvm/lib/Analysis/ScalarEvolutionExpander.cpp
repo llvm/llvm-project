@@ -1387,7 +1387,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
       // IVUsers tries to prevent this case, so it is rare. However, it can
       // happen when an IVUser outside the loop is not dominated by the latch
       // block. Adjusting IVIncInsertPos before expansion begins cannot handle
-      // all cases. Consider a phi outide whose operand is replaced during
+      // all cases. Consider a phi outside whose operand is replaced during
       // expansion with the value of the postinc user. Without fundamentally
       // changing the way postinc users are tracked, the only remedy is
       // inserting an extra IV increment. StepV might fold into PostLoopOffset,
@@ -1407,7 +1407,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   }
 
   // We have decided to reuse an induction variable of a dominating loop. Apply
-  // truncation and/or invertion of the step.
+  // truncation and/or inversion of the step.
   if (TruncTy) {
     Type *ResTy = Result->getType();
     // Normalize the result type.
@@ -2209,7 +2209,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
 
   // If the backedge taken count type is larger than the AR type,
   // check that we don't drop any bits by truncating it. If we are
-  // droping bits, then we have overflow (unless the step is zero).
+  // dropping bits, then we have overflow (unless the step is zero).
   if (SE.getTypeSizeInBits(CountTy) > SE.getTypeSizeInBits(Ty)) {
     auto MaxVal = APInt::getMaxValue(DstBits).zext(SrcBits);
     auto *BackedgeCheck =
