@@ -11,6 +11,13 @@ add_lldb_tool(repl_swift
   main.c
   )
 
+# The dummy repl executable is a C program, but we always look for a mangled
+# swift symbol (corresponding to main). If we build the repl with debug info,
+# the debugger looks at the frame language (looking up the compile unit) and gets
+# confused.
+set_target_properties(repl_swift PROPERTIES
+    COMPILE_FLAGS "-g0")
+
 if (LLDB_BUILD_FRAMEWORK)
   # lldb --repl expects the dummy executable to be located in the framework resource dir,
   # so we copy it.
