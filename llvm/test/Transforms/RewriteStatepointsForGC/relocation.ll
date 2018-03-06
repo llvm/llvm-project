@@ -103,6 +103,10 @@ join:                                             ; preds = %else_branch, %if_br
   ret void
 }
 
+declare void @goo(i64)
+
+declare i32 @moo(i64 addrspace(1)*)
+
 ; Make sure a use in a statepoint gets properly relocated at a previous one.  
 ; This is basically just making sure that statepoints aren't accidentally 
 ; treated specially.
@@ -113,10 +117,12 @@ define void @test3(i64 addrspace(1)* %obj) gc "statepoint-example" {
 ; CHECK-NEXT: bitcast
 ; CHECK-NEXT: gc.statepoint
 entry:
-  call void undef(i64 undef) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
-  %0 = call i32 undef(i64 addrspace(1)* %obj) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
+  call void @goo(i64 undef) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
+  %0 = call i32 @moo(i64 addrspace(1)* %obj) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   ret void
 }
+
+declare i8 addrspace(1)* @boo()
 
 ; Check specifically for the case where the result of a statepoint needs to 
 ; be relocated itself
@@ -127,17 +133,17 @@ define void @test4() gc "statepoint-example" {
 ; CHECK: gc.statepoint
 ; CHECK: [[RELOCATED:%[^ ]+]] = call {{.*}}gc.relocate
 ; CHECK: @use(i8 addrspace(1)* [[RELOCATED]])
-  %1 = call i8 addrspace(1)* undef() [ "deopt"() ]
-  %2 = call i8 addrspace(1)* undef() [ "deopt"() ]
+  %1 = call i8 addrspace(1)* @boo() [ "deopt"() ]
+  %2 = call i8 addrspace(1)* @boo() [ "deopt"() ]
   call void (...) @use(i8 addrspace(1)* %1)
-  unreachable
+  ret void
 }
 
 ; Test updating a phi where not all inputs are live to begin with
 define void @test5(i8 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-LABEL: test5
 entry:
-  %0 = call i8 addrspace(1)* undef() [ "deopt"() ]
+  %0 = call i8 addrspace(1)* @boo() [ "deopt"() ]
   switch i32 undef, label %kill [
     i32 10, label %merge
     i32 13, label %merge
@@ -154,7 +160,7 @@ merge:                                            ; preds = %kill, %entry, %entr
 ; CHECK-DAG: [ %arg.relocated, %entry ]
   %test = phi i8 addrspace(1)* [ null, %kill ], [ %arg, %entry ], [ %arg, %entry ]
   call void (...) @use(i8 addrspace(1)* %test)
-  unreachable
+  ret void
 }
 
 ; Check to make sure we handle values live over an entry statepoint

@@ -15,7 +15,7 @@
 namespace llvm {
 class CrashRecoveryContextCleanup;
 
-/// \brief Crash recovery helper object.
+/// Crash recovery helper object.
 ///
 /// This class implements support for running operations in a safe context so
 /// that crashes (memory errors, stack overflow, assertion violations) can be
@@ -27,6 +27,7 @@ class CrashRecoveryContextCleanup;
 /// CrashRecoveryContext::Enable(), and then executing unsafe operations via a
 /// CrashRecoveryContext object. For example:
 ///
+/// \code
 ///    void actual_work(void *);
 ///
 ///    void foo() {
@@ -38,6 +39,11 @@ class CrashRecoveryContextCleanup;
 ///
 ///      ... no crash was detected ...
 ///    }
+/// \endcode
+///
+/// To assist recovery the class allows specifying set of actions that will be
+/// executed in any case, whether crash occurs or not. These actions may be used
+/// to reclaim resources in the case of crash.
 class CrashRecoveryContext {
   void *Impl;
   CrashRecoveryContextCleanup *head;
@@ -46,24 +52,27 @@ public:
   CrashRecoveryContext() : Impl(nullptr), head(nullptr) {}
   ~CrashRecoveryContext();
 
+  /// Register cleanup handler, which is used when the recovery context is
+  /// finished.
+  /// The recovery context owns the the handler.
   void registerCleanup(CrashRecoveryContextCleanup *cleanup);
+
   void unregisterCleanup(CrashRecoveryContextCleanup *cleanup);
 
-  /// \brief Enable crash recovery.
+  /// Enable crash recovery.
   static void Enable();
 
-  /// \brief Disable crash recovery.
+  /// Disable crash recovery.
   static void Disable();
 
-  /// \brief Return the active context, if the code is currently executing in a
+  /// Return the active context, if the code is currently executing in a
   /// thread which is in a protected context.
   static CrashRecoveryContext *GetCurrent();
 
-  /// \brief Return true if the current thread is recovering from a
-  /// crash.
+  /// Return true if the current thread is recovering from a crash.
   static bool isRecoveringFromCrash();
 
-  /// \brief Execute the provide callback function (with the given arguments) in
+  /// Execute the provided callback function (with the given arguments) in
   /// a protected context.
   ///
   /// \return True if the function completed successfully, and false if the
@@ -75,7 +84,7 @@ public:
     return RunSafely([&]() { Fn(UserData); });
   }
 
-  /// \brief Execute the provide callback function (with the given arguments) in
+  /// Execute the provide callback function (with the given arguments) in
   /// a protected context which is run in another thread (optionally with a
   /// requested stack size).
   ///
@@ -89,11 +98,18 @@ public:
     return RunSafelyOnThread([&]() { Fn(UserData); }, RequestedStackSize);
   }
 
-  /// \brief Explicitly trigger a crash recovery in the current process, and
+  /// Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
   void HandleCrash();
 };
 
+/// Abstract base class of cleanup handlers.
+///
+/// Derived classes override method recoverResources, which makes actual work on
+/// resource recovery.
+///
+/// Cleanup handlers are stored in a double list, which is owned and managed by
+/// a crash recovery context.
 class CrashRecoveryContextCleanup {
 protected:
   CrashRecoveryContext *context;
@@ -115,7 +131,18 @@ private:
   CrashRecoveryContextCleanup *prev, *next;
 };
 
-template<typename DERIVED, typename T>
+/// Base class of cleanup handler that controls recovery of resources of the
+/// given type.
+///
+/// \tparam Derived Class that uses this class as a base.
+/// \tparam T Type of controlled resource.
+///
+/// This class serves as a base for its template parameter as implied by
+/// Curiously Recurring Template Pattern.
+///
+/// This class factors out creation of a cleanup handler. The latter requires
+/// knowledge of the current recovery context, which is provided by this class.
+template<typename Derived, typename T>
 class CrashRecoveryContextCleanupBase : public CrashRecoveryContextCleanup {
 protected:
   T *resource;
@@ -123,15 +150,20 @@ protected:
       : CrashRecoveryContextCleanup(context), resource(resource) {}
 
 public:
-  static DERIVED *create(T *x) {
+  /// Creates cleanup handler.
+  /// \param x Pointer to the resource recovered by this handler.
+  /// \return New handler or null if the method was called outside a recovery
+  ///         context.
+  static Derived *create(T *x) {
     if (x) {
       if (CrashRecoveryContext *context = CrashRecoveryContext::GetCurrent())
-        return new DERIVED(context, x);
+        return new Derived(context, x);
     }
     return nullptr;
   }
 };
 
+/// Cleanup handler that reclaims resource by calling destructor on it.
 template <typename T>
 class CrashRecoveryContextDestructorCleanup : public
   CrashRecoveryContextCleanupBase<CrashRecoveryContextDestructorCleanup<T>, T> {
@@ -146,6 +178,7 @@ public:
   }
 };
 
+/// Cleanup handler that reclaims resource by calling 'delete' on it.
 template <typename T>
 class CrashRecoveryContextDeleteCleanup : public
   CrashRecoveryContextCleanupBase<CrashRecoveryContextDeleteCleanup<T>, T> {
@@ -157,10 +190,10 @@ public:
   void recoverResources() override { delete this->resource; }
 };
 
+/// Cleanup handler that reclaims resource by calling its method 'Release'.
 template <typename T>
 class CrashRecoveryContextReleaseRefCleanup : public
-  CrashRecoveryContextCleanupBase<CrashRecoveryContextReleaseRefCleanup<T>, T>
-{
+  CrashRecoveryContextCleanupBase<CrashRecoveryContextReleaseRefCleanup<T>, T> {
 public:
   CrashRecoveryContextReleaseRefCleanup(CrashRecoveryContext *context,
                                         T *resource)
@@ -170,6 +203,37 @@ public:
   void recoverResources() override { this->resource->Release(); }
 };
 
+/// Helper class for managing resource cleanups.
+///
+/// \tparam T Type of resource been reclaimed.
+/// \tparam Cleanup Class that defines how the resource is reclaimed.
+///
+/// Clients create objects of this type in the code executed in a crash recovery
+/// context to ensure that the resource will be reclaimed even in the case of
+/// crash. For example:
+///
+/// \code
+///    void actual_work(void *) {
+///      ...
+///      std::unique_ptr<Resource> R(new Resource());
+///      CrashRecoveryContextCleanupRegistrar D(R.get());
+///      ...
+///    }
+///
+///    void foo() {
+///      CrashRecoveryContext CRC;
+///
+///      if (!CRC.RunSafely(actual_work, 0)) {
+///         ... a crash was detected, report error to user ...
+///      }
+/// \endcode
+///
+/// If the code of `actual_work` in the example above does not crash, the
+/// destructor of CrashRecoveryContextCleanupRegistrar removes cleanup code from
+/// the current CrashRecoveryContext and the resource is reclaimed by the
+/// destructor of std::unique_ptr. If crash happens, destructors are not called
+/// and the resource is reclaimed by cleanup object registered in the recovery
+/// context by the constructor of CrashRecoveryContextCleanupRegistrar.
 template <typename T, typename Cleanup = CrashRecoveryContextDeleteCleanup<T> >
 class CrashRecoveryContextCleanupRegistrar {
   CrashRecoveryContextCleanup *cleanup;
