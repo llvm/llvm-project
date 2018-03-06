@@ -66,7 +66,7 @@ uptr internal_getpid() {
 
 uptr GetThreadSelf() { return reinterpret_cast<uptr>(thrd_current()); }
 
-uptr GetTid() { return GetThreadSelf(); }
+tid_t GetTid() { return GetThreadSelf(); }
 
 void Abort() { abort(); }
 

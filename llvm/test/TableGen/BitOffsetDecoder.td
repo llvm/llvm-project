@@ -55,17 +55,7 @@ def baz : Instruction {
     field bits<16> SoftFail = 0;
     }
 
-def bum : Instruction {
-    let InOperandList = (ins i32imm:$factor);
-    field bits<16> Inst;
-    bits<32> factor;
-    let Inst{7-0} = 0xEE;
-    let Inst{15-8} = !srl(factor,5);
-    let AsmString = "bum  $factor";
-    field bits<16> SoftFail = 0;
-    }
 }
-
 
 // CHECK: tmp = fieldFromInstruction(insn, 8, 7);
 // CHECK: tmp = fieldFromInstruction(insn, 8, 8) << 3;

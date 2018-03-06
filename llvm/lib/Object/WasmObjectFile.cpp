@@ -554,7 +554,6 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
     return make_error<GenericBinaryError>("Invalid section code",
                                           object_error::parse_failed);
   uint32_t RelocCount = readVaruint32(Ptr);
-  uint32_t LastOffset = 0;
   uint32_t EndOffset = Section->Content.size();
   while (RelocCount--) {
     wasm::WasmRelocation Reloc = {};
@@ -600,10 +599,9 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
     if (Reloc.Type == wasm::R_WEBASSEMBLY_TABLE_INDEX_I32 ||
         Reloc.Type == wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32)
       Size = 4;
-    if (Reloc.Offset < LastOffset || Reloc.Offset + Size > EndOffset)
+    if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("Bad relocation offset",
                                             object_error::parse_failed);
-    LastOffset = Reloc.Offset;
 
     Section->Relocations.push_back(Reloc);
   }
