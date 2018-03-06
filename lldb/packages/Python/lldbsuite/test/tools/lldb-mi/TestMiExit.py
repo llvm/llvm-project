@@ -17,6 +17,7 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_exit(self):
@@ -44,6 +45,7 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_quit(self):
@@ -70,6 +72,7 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_q(self):

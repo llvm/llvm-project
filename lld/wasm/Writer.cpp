@@ -631,8 +631,8 @@ void Writer::createSections() {
 
   // Custom sections
   if (Config->Relocatable) {
-    createRelocSections();
     createLinkingSection();
+    createRelocSections();
   }
   if (!Config->StripDebug && !Config->StripAll)
     createNameSection();

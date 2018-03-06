@@ -1444,6 +1444,8 @@ typedef void *(*kmpc_cctor_vec)(void *, void *,
 /* keeps tracked of threadprivate cache allocations for cleanup later */
 typedef struct kmp_cached_addr {
   void **addr; /* address of allocated cache */
+  void ***compiler_cache; /* pointer to compiler's cache */
+  void *data; /* pointer to global data */
   struct kmp_cached_addr *next; /* pointer to next cached address */
 } kmp_cached_addr_t;
 
@@ -3774,6 +3776,8 @@ void kmp_threadprivate_insert_private_data(int gtid, void *pc_addr,
 struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
                                                 void *data_addr,
                                                 size_t pc_size);
+void __kmp_threadprivate_resize_cache(int newCapacity);
+void __kmp_cleanup_threadprivate_caches();
 
 // ompc_, kmpc_ entries moved from omp.h.
 #if KMP_OS_WINDOWS

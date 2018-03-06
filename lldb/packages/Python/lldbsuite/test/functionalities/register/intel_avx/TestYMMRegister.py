@@ -21,8 +21,9 @@ class TestYMMRegister(TestBase):
     @skipIfiOSSimulator
     @skipIfTargetAndroid()
     @skipIf(archs=no_match(['i386', 'x86_64']))
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://30523153")
     def test(self):
-        self.build()
+        self.build(dictionary={"CFLAGS_EXTRAS": "-march=haswell"})
         self.setTearDownCleanup()
 
         exe = self.getBuildArtifact("a.out")
@@ -56,9 +57,10 @@ class TestYMMRegister(TestBase):
         else:
             register_range = 8
         for i in range(register_range):
+            j = i - ((i / 8) * 8)
             self.runCmd("thread step-inst")
 
-            register_byte = (byte_pattern1 | i)
+            register_byte = (byte_pattern1 | j)
             pattern = "ymm" + str(i) + " = " + str('{') + (
                 str(hex(register_byte)) + ' ') * 31 + str(hex(register_byte)) + str('}')
 
@@ -66,7 +68,7 @@ class TestYMMRegister(TestBase):
                 "register read ymm" + str(i),
                 substrs=[pattern])
 
-            register_byte = (byte_pattern2 | i)
+            register_byte = (byte_pattern2 | j)
             pattern = "ymm" + str(i) + " = " + str('{') + (
                 str(hex(register_byte)) + ' ') * 31 + str(hex(register_byte)) + str('}')
 
