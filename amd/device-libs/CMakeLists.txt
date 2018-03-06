@@ -25,19 +25,9 @@ if (NOT DEFINED AMDGPU_TARGET_TRIPLE)
   set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa")
 endif (NOT DEFINED AMDGPU_TARGET_TRIPLE)
 
-# Introduce GENERIC_IS_ZERO CMake option
-option(GENERIC_IS_ZERO "Teach LLVM/Clang that generic address space IS address space 0 for AMDGPU target" OFF)
-if (GENERIC_IS_ZERO)
-  # set the target triple to amdgizcl to show to the compiler
-  # that we are using a newer address space mapping
-  set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa-amdgizcl")
-  # HCC will execute utils/change-addr-space.sh
-  # and apply utils/add_amdgiz.sed on all .ll files in subdirectory hc/, irif/, opencl/
-  if (CUDA_TRIPLE)
-    set(AMDGPU_TARGET_TRIPLE "amdgcn--cuda")
-  endif (CUDA_TRIPLE)
-
-endif (GENERIC_IS_ZERO)
+if (CUDA_TRIPLE)
+  set(AMDGPU_TARGET_TRIPLE "amdgcn--cuda")
+endif (CUDA_TRIPLE)
 
 option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
 option(ROCM_DEVICELIB_INCLUDE_TESTS "Build tests" ON)

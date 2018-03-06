@@ -25,32 +25,7 @@ file(GLOB ll_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup/*.ll
 )
 
-if (GENERIC_IS_ZERO)
-  # HCC: Move .ll files to build directory and
-  # adopt generic addr space as addr space 0
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/transformed_src)
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/transformed_src/workgroup)
-  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/transformed_src)
-  foreach(f ${ll_sources} )
-    file(COPY ${f}
-         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/transformed_src/workgroup)
-  endforeach(f)
-
-  # Perform transformation
-  execute_process(COMMAND "${CMAKE_SOURCE_DIR}/../utils/change-addr-space.sh" "${AMDGPU_TARGET_TRIPLE}" "${CMAKE_SOURCE_DIR}/../utils"
-                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-  file(GLOB ll_srcs
-    ${CMAKE_CURRENT_BINARY_DIR}/transformed_src/workgroup/*.ll
-  )
-else (GENERIC_IS_ZERO)
-  file(GLOB ll_srcs
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup/*.ll
-  )
-
-endif (GENERIC_IS_ZERO)
-
-file(GLOB sources ${cl_sources} ${ll_srcs})
+file(GLOB sources ${cl_sources} ${ll_sources})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/integer)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup)

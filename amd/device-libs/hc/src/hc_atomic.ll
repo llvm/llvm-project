@@ -1,7 +1,7 @@
 ; ModuleID = 'hc_atomic.bc'
 
-target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
-target triple = "amdgcn--amdhsa"
+target datalayout = "e-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:32:32-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5"
+target triple = "amdgcn-amd-amdhsa"
 
 ; Function Attrs: alwaysinline nounwind
 define i32 @atomic_exchange_unsigned_global(i32 addrspace(1)* %x, i32 %y) #2 {
@@ -18,9 +18,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_exchange_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_exchange_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile xchg i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile xchg i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -41,9 +41,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_compare_exchange_unsigned(i32 addrspace(4)* %x, i32 %y, i32 %z) #2 {
+define i32 @atomic_compare_exchange_unsigned(i32* %x, i32 %y, i32 %z) #2 {
 entry:
-  %val_success = cmpxchg volatile i32 addrspace(4)* %x, i32 %y, i32 %z seq_cst monotonic
+  %val_success = cmpxchg volatile i32* %x, i32 %y, i32 %z seq_cst monotonic
   %value_loaded = extractvalue { i32, i1 } %val_success, 0
   ret i32 %value_loaded
 }
@@ -63,9 +63,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_add_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_add_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile add i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile add i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -84,9 +84,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_sub_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_sub_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile sub i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile sub i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -105,9 +105,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_exchange_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_exchange_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile xchg i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile xchg i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -128,9 +128,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_compare_exchange_int(i32 addrspace(4)* %x, i32 %y, i32 %z) #2 {
+define i32 @atomic_compare_exchange_int(i32* %x, i32 %y, i32 %z) #2 {
 entry:
-  %val_success = cmpxchg volatile i32 addrspace(4)* %x, i32 %y, i32 %z seq_cst monotonic
+  %val_success = cmpxchg volatile i32* %x, i32 %y, i32 %z seq_cst monotonic
   %value_loaded = extractvalue { i32, i1 } %val_success, 0
   ret i32 %value_loaded
 }
@@ -150,9 +150,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_add_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_add_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile add i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile add i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -171,9 +171,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_sub_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_sub_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile sub i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile sub i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -216,17 +216,17 @@ do.end:                                           ; preds = %do.body
 }
 
 ; Function Attrs: alwaysinline nounwind
-define float @atomic_exchange_float(float addrspace(4)* %x, float %y) #2 {
+define float @atomic_exchange_float(float* %x, float %y) #2 {
 entry:
-  %0 = bitcast float addrspace(4)* %x to i32 addrspace(4)*
+  %0 = bitcast float* %x to i32 addrspace(0)*
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
-  %1 = load volatile float, float addrspace(4)* %x, align 4
+  %1 = load volatile float, float* %x, align 4
   %2 = bitcast float %1 to i32
   %xchg = fadd float %y, 0.000000e+00
   %3 = bitcast float %xchg to i32
-  %val_success = cmpxchg volatile i32 addrspace(4)* %0, i32 %2, i32 %3 seq_cst monotonic
+  %val_success = cmpxchg volatile i32* %0, i32 %2, i32 %3 seq_cst monotonic
   %success = extractvalue { i32, i1 } %val_success, 1
   br i1 %success, label %do.end, label %do.body
 
@@ -273,17 +273,17 @@ do.end:                                           ; preds = %do.body
 }
 
 ; Function Attrs: alwaysinline nounwind
-define float @atomic_add_float(float addrspace(4)* %x, float %y) #2 {
+define float @atomic_add_float(float* %x, float %y) #2 {
 entry:
-  %0 = bitcast float addrspace(4)* %x to i32 addrspace(4)*
+  %0 = bitcast float* %x to i32 addrspace(0)*
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
-  %1 = load volatile float, float addrspace(4)* %x, align 4
+  %1 = load volatile float, float* %x, align 4
   %2 = bitcast float %1 to i32
   %add = fadd float %1, %y
   %3 = bitcast float %add to i32
-  %val_success = cmpxchg volatile i32 addrspace(4)* %0, i32 %2, i32 %3 seq_cst monotonic
+  %val_success = cmpxchg volatile i32* %0, i32 %2, i32 %3 seq_cst monotonic
   %success = extractvalue { i32, i1 } %val_success, 1
   br i1 %success, label %do.end, label %do.body
 
@@ -330,17 +330,17 @@ do.end:                                           ; preds = %do.body
 }
 
 ; Function Attrs: alwaysinline nounwind
-define float @atomic_sub_float(float addrspace(4)* %x, float %y) #2 {
+define float @atomic_sub_float(float* %x, float %y) #2 {
 entry:
-  %0 = bitcast float addrspace(4)* %x to i32 addrspace(4)*
+  %0 = bitcast float* %x to i32 addrspace(0)*
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
-  %1 = load volatile float, float addrspace(4)* %x, align 4
+  %1 = load volatile float, float* %x, align 4
   %2 = bitcast float %1 to i32
   %sub = fsub float %1, %y
   %3 = bitcast float %sub to i32
-  %val_success = cmpxchg volatile i32 addrspace(4)* %0, i32 %2, i32 %3 seq_cst monotonic
+  %val_success = cmpxchg volatile i32* %0, i32 %2, i32 %3 seq_cst monotonic
   %success = extractvalue { i32, i1 } %val_success, 1
   br i1 %success, label %do.end, label %do.body
 
@@ -363,9 +363,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_exchange_uint64(i64 addrspace(4)* %x, i64 %y) #2 {
+define i64 @atomic_exchange_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile xchg i64 addrspace(4)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile xchg i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
@@ -386,9 +386,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_compare_exchange_uint64(i64 addrspace(4)* %x, i64 %y, i64 %z) #2 {
+define i64 @atomic_compare_exchange_uint64(i64* %x, i64 %y, i64 %z) #2 {
 entry:
-  %val_success = cmpxchg volatile i64 addrspace(4)* %x, i64 %y, i64 %z seq_cst monotonic
+  %val_success = cmpxchg volatile i64* %x, i64 %y, i64 %z seq_cst monotonic
   %value_loaded = extractvalue { i64, i1 } %val_success, 0
   ret i64 %value_loaded
 }
@@ -408,9 +408,9 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_add_uint64(i64 addrspace(4)* %x, i64 %y) #2 {
+define i64 @atomic_add_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile add i64 addrspace(4)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile add i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
@@ -485,37 +485,37 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_and_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_and_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile and i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile and i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_or_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_or_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile or i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile or i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_xor_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_xor_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile xor i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile xor i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_max_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_max_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile max i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_min_unsigned(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_min_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile min i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -590,37 +590,37 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_and_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_and_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile and i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile and i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_or_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_or_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile or i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile or i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_xor_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_xor_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile xor i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile xor i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_max_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_max_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile max i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_min_int(i32 addrspace(4)* %x, i32 %y) #2 {
+define i32 @atomic_min_int(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i32 addrspace(4)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile min i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -695,37 +695,37 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_and_uint64(i64 addrspace(4)* %x, i64 %y) #2 {
+define i64 @atomic_and_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile and i64 addrspace(4)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile and i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_or_uint64(i64 addrspace(4)* %x, i64 %y) #2 {
+define i64 @atomic_or_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile or i64 addrspace(4)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile or i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_xor_uint64(i64 addrspace(4)* %x, i64 %y) #2 {
+define i64 @atomic_xor_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile xor i64 addrspace(4)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile xor i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_max_uint64(i64 addrspace(4)* %x, i64 %y) #2 {
+define i64 @atomic_max_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i64 addrspace(4)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile max i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i64 @atomic_min_uint64(i64 addrspace(4)* %x, i64 %y) #2 {
+define i64 @atomic_min_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i64 addrspace(4)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile min i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
@@ -758,16 +758,16 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_inc_unsigned(i32 addrspace(4)* %x) #2 {
+define i32 @atomic_inc_unsigned(i32* %x) #2 {
 entry:
-  %ret = atomicrmw volatile add i32 addrspace(4)* %x, i32 1 seq_cst
+  %ret = atomicrmw volatile add i32* %x, i32 1 seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_dec_unsigned(i32 addrspace(4)* %x) #2 {
+define i32 @atomic_dec_unsigned(i32* %x) #2 {
 entry:
-  %ret = atomicrmw volatile sub i32 addrspace(4)* %x, i32 1 seq_cst
+  %ret = atomicrmw volatile sub i32* %x, i32 1 seq_cst
   ret i32 %ret
 }
 
@@ -800,16 +800,16 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_inc_int(i32 addrspace(4)* %x) #2 {
+define i32 @atomic_inc_int(i32* %x) #2 {
 entry:
-  %ret = atomicrmw volatile add i32 addrspace(4)* %x, i32 1 seq_cst
+  %ret = atomicrmw volatile add i32* %x, i32 1 seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
-define i32 @atomic_dec_int(i32 addrspace(4)* %x) #2 {
+define i32 @atomic_dec_int(i32* %x) #2 {
 entry:
-  %ret = atomicrmw volatile sub i32 addrspace(4)* %x, i32 1 seq_cst
+  %ret = atomicrmw volatile sub i32* %x, i32 1 seq_cst
   ret i32 %ret
 }
 attributes #0 = { alwaysinline nounwind readnone }
