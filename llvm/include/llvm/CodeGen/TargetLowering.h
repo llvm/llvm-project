@@ -2798,7 +2798,7 @@ public:
 
     bool isBeforeLegalize() const { return Level == BeforeLegalizeTypes; }
     bool isBeforeLegalizeOps() const { return Level < AfterLegalizeVectorOps; }
-    bool isAfterLegalizeVectorOps() const {
+    bool isAfterLegalizeDAG() const {
       return Level == AfterLegalizeDAG;
     }
     CombineLevel getDAGCombineLevel() { return Level; }

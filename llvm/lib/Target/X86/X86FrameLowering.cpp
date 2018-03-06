@@ -1213,30 +1213,34 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     bool isEAXAlive = isEAXLiveIn(MBB);
 
     if (isEAXAlive) {
-      // Sanity check that EAX is not livein for this function.
-      // It should not be, so throw an assert.
-      assert(!Is64Bit && "EAX is livein in x64 case!");
-
-      // Save EAX
-      BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH32r))
-        .addReg(X86::EAX, RegState::Kill)
-        .setMIFlag(MachineInstr::FrameSetup);
+      if (Is64Bit) {
+        // Save RAX
+        BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
+          .addReg(X86::RAX, RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+      } else {
+        // Save EAX
+        BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH32r))
+          .addReg(X86::EAX, RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+      }
     }
 
     if (Is64Bit) {
       // Handle the 64-bit Windows ABI case where we need to call __chkstk.
       // Function prologue is responsible for adjusting the stack pointer.
-      if (isUInt<32>(NumBytes)) {
+      int Alloc = isEAXAlive ? NumBytes - 8 : NumBytes;
+      if (isUInt<32>(Alloc)) {
         BuildMI(MBB, MBBI, DL, TII.get(X86::MOV32ri), X86::EAX)
-            .addImm(NumBytes)
+            .addImm(Alloc)
             .setMIFlag(MachineInstr::FrameSetup);
-      } else if (isInt<32>(NumBytes)) {
+      } else if (isInt<32>(Alloc)) {
         BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri32), X86::RAX)
-            .addImm(NumBytes)
+            .addImm(Alloc)
             .setMIFlag(MachineInstr::FrameSetup);
       } else {
         BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri), X86::RAX)
-            .addImm(NumBytes)
+            .addImm(Alloc)
             .setMIFlag(MachineInstr::FrameSetup);
       }
     } else {
@@ -1251,10 +1255,14 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     emitStackProbe(MF, MBB, MBBI, DL, true);
 
     if (isEAXAlive) {
-      // Restore EAX
-      MachineInstr *MI =
-          addRegOffset(BuildMI(MF, DL, TII.get(X86::MOV32rm), X86::EAX),
-                       StackPtr, false, NumBytes - 4);
+      // Restore RAX/EAX
+      MachineInstr *MI;
+      if (Is64Bit)
+        MI = addRegOffset(BuildMI(MF, DL, TII.get(X86::MOV64rm), X86::RAX),
+                          StackPtr, false, NumBytes - 8);
+      else
+        MI = addRegOffset(BuildMI(MF, DL, TII.get(X86::MOV32rm), X86::EAX),
+                          StackPtr, false, NumBytes - 4);
       MI->setFlag(MachineInstr::FrameSetup);
       MBB.insert(MBBI, MI);
     }

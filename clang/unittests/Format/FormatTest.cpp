@@ -742,6 +742,12 @@ TEST_F(FormatTest, FormatsForLoop) {
                "     aaaaaaaaaaaaaaaaaaaaaaaaaaa != bbbbbbbbbbbbbbbbbbbbbbb;\n"
                "     ++aaaaaaaaaaaaaaaaaaaaaaaaaaa) {");
 
+  // These should not be formatted as Objective-C for-in loops.
+  verifyFormat("for (Foo *x = 0; x != in; x++) {\n}");
+  verifyFormat("Foo *x;\nfor (x = 0; x != in; x++) {\n}");
+  verifyFormat("Foo *x;\nfor (x in y) {\n}");
+  verifyFormat("for (const Foo<Bar> &baz = in.value(); !baz.at_end(); ++baz) {\n}");
+
   FormatStyle NoBinPacking = getLLVMStyle();
   NoBinPacking.BinPackParameters = false;
   verifyFormat("for (int aaaaaaaaaaa = 1;\n"
@@ -5655,6 +5661,8 @@ TEST_F(FormatTest, UnderstandsUnaryOperators) {
   verifyFormat("(a->f())++;");
   verifyFormat("a[42]++;");
   verifyFormat("if (!(a->f())) {\n}");
+  verifyFormat("if (!+i) {\n}");
+  verifyFormat("~&a;");
 
   verifyFormat("a-- > b;");
   verifyFormat("b ? -a : c;");
@@ -12078,6 +12086,31 @@ TEST_F(FormatTest, FileAndCode) {
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.h", "@interface Foo\n@end\n"));
   EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo", "@interface Foo\n@end\n"));
+}
+
+TEST_F(FormatTest, GuessLanguageWithForIn) {
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "for (Foo *x = 0; x != in; x++) {}"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "for (Foo *x in bar) {}"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "for (Foo *x in [bar baz]) {}"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "for (Foo *x in [bar baz:blech]) {}"));
+  EXPECT_EQ(
+      FormatStyle::LK_ObjC,
+      guessLanguage("foo.h", "for (Foo *x in [bar baz:blech, 1, 2, 3, 0]) {}"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "for (Foo *x in [bar baz:^{[uh oh];}]) {}"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "Foo *x; for (x = 0; x != in; x++) {}"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "Foo *x; for (x in y) {}"));
+  EXPECT_EQ(
+      FormatStyle::LK_Cpp,
+      guessLanguage(
+          "foo.h",
+          "for (const Foo<Bar>& baz = in.value(); !baz.at_end(); ++baz) {}"));
 }
 
 } // end namespace

@@ -697,8 +697,9 @@ void SymbolTable::assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
     if (Sym->getName().contains('@'))
       continue;
 
-    if (Sym->VersionId != Config->DefaultSymbolVersion)
-      warn("duplicate symbol '" + Ver.Name + "' in version script");
+    if (Sym->VersionId != Config->DefaultSymbolVersion &&
+        Sym->VersionId != VersionId)
+      error("duplicate symbol '" + Ver.Name + "' in version script");
     Sym->VersionId = VersionId;
   }
 }

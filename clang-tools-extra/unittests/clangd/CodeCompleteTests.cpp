@@ -595,6 +595,18 @@ TEST(CodeCompleteTest, DisableTypoCorrection) {
   EXPECT_TRUE(Results.items.empty());
 }
 
+TEST(CodeCompleteTest, NoColonColonAtTheEnd) {
+  auto Results = completions(R"cpp(
+    namespace clang { }
+    void f() {
+      clan^
+    }
+  )cpp");
+
+  EXPECT_THAT(Results.items, Contains(Labeled("clang")));
+  EXPECT_THAT(Results.items, Not(Contains(Labeled("clang::"))));
+}
+
 SignatureHelp signatures(StringRef Text) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;

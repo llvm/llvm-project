@@ -4149,7 +4149,6 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val,
     case 0x8a: // msplim_ns
     case 0x8b: // psplim_ns
     case 0x91: // basepri_ns
-    case 0x92: // basepri_max_ns
     case 0x93: // faultmask_ns
       if (!(FeatureBits[ARM::HasV8MMainlineOps]))
         return MCDisassembler::Fail;
@@ -4165,7 +4164,9 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val,
         return MCDisassembler::Fail;
       break;
     default:
-      return MCDisassembler::Fail;
+      // Architecturally defined as unpredictable
+      S = MCDisassembler::SoftFail;
+      break;
     }
 
     if (Inst.getOpcode() == ARM::t2MSR_M) {

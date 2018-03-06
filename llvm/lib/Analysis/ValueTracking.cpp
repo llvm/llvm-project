@@ -4661,6 +4661,30 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
                               LHS, RHS, Depth);
 }
 
+CmpInst::Predicate llvm::getMinMaxPred(SelectPatternFlavor SPF, bool Ordered) {
+  if (SPF == SPF_SMIN) return ICmpInst::ICMP_SLT;
+  if (SPF == SPF_UMIN) return ICmpInst::ICMP_ULT;
+  if (SPF == SPF_SMAX) return ICmpInst::ICMP_SGT;
+  if (SPF == SPF_UMAX) return ICmpInst::ICMP_UGT;
+  if (SPF == SPF_FMINNUM)
+    return Ordered ? FCmpInst::FCMP_OLT : FCmpInst::FCMP_ULT;
+  if (SPF == SPF_FMAXNUM)
+    return Ordered ? FCmpInst::FCMP_OGT : FCmpInst::FCMP_UGT;
+  llvm_unreachable("unhandled!");
+}
+
+SelectPatternFlavor llvm::getInverseMinMaxFlavor(SelectPatternFlavor SPF) {
+  if (SPF == SPF_SMIN) return SPF_SMAX;
+  if (SPF == SPF_UMIN) return SPF_UMAX;
+  if (SPF == SPF_SMAX) return SPF_SMIN;
+  if (SPF == SPF_UMAX) return SPF_UMIN;
+  llvm_unreachable("unhandled!");
+}
+
+CmpInst::Predicate llvm::getInverseMinMaxPred(SelectPatternFlavor SPF) {
+  return getMinMaxPred(getInverseMinMaxFlavor(SPF));
+}
+
 /// Return true if "icmp Pred LHS RHS" is always true.
 static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
                             const Value *RHS, const DataLayout &DL,

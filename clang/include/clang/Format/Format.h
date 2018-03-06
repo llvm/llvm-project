@@ -1506,7 +1506,7 @@ struct FormatStyle {
   /// \brief If ``true``, a space is inserted after C style casts.
   /// \code
   ///    true:                                  false:
-  ///    (int)i;                        vs.     (int) i;
+  ///    (int) i;                       vs.     (int)i;
   /// \endcode
   bool SpaceAfterCStyleCast;
 

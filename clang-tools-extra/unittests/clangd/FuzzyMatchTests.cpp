@@ -30,13 +30,15 @@ struct ExpectedMatch {
   bool accepts(StringRef ActualAnnotated) const {
     return !Annotated || ActualAnnotated == *Annotated;
   }
-  std::string Word;
 
   friend raw_ostream &operator<<(raw_ostream &OS, const ExpectedMatch &M) {
-    return OS << "'" << M.Word;
+    OS << "'" << M.Word;
     if (M.Annotated)
       OS << "' as " << *M.Annotated;
+    return OS;
   }
+
+  std::string Word;
 
 private:
   Optional<StringRef> Annotated;

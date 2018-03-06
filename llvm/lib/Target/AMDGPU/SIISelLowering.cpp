@@ -5904,7 +5904,7 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
   // easier if i8 vectors weren't promoted to i32 vectors, particularly after
   // types are legalized. v4i8 -> v4f32 is probably the only case to worry
   // about in practice.
-  if (DCI.isAfterLegalizeVectorOps() && SrcVT == MVT::i32) {
+  if (DCI.isAfterLegalizeDAG() && SrcVT == MVT::i32) {
     if (DAG.MaskedValueIsZero(Src, APInt::getHighBitsSet(32, 24))) {
       SDValue Cvt = DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0, DL, VT, Src);
       DCI.AddToWorklist(Cvt.getNode());

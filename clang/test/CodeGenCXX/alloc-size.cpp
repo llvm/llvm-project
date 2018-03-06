@@ -88,3 +88,15 @@ int callMemberCalloc() {
   // CHECK: ret i32 32
   return __builtin_object_size(C().my_calloc(16, 2), 0);
 }
+
+struct D {
+  ~D();
+  void *my_malloc(int N) __attribute__((alloc_size(2)));
+};
+
+// CHECK-LABEL: define i32 @_Z20callExprWithCleanupsv
+int callExprWithCleanups() {
+  int *const p = (int *)D().my_malloc(3);
+  // CHECK: ret i32 3
+  return __builtin_object_size(p, 0);
+}

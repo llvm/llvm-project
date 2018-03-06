@@ -10,7 +10,7 @@
 // An implementation of the Swing Modulo Scheduling (SMS) software pipeliner.
 //
 // Software pipelining (SWP) is an instruction scheduling technique for loops
-// that overlap loop iterations and explioits ILP via a compiler transformation.
+// that overlap loop iterations and exploits ILP via a compiler transformation.
 //
 // Swing Modulo Scheduling is an implementation of software pipelining
 // that generates schedules that are near optimal in terms of initiation

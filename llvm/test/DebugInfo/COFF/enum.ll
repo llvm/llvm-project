@@ -23,6 +23,17 @@
 ; CHECK-NEXT:    FieldListType: <field list> (0x1000)
 ; CHECK-NEXT:    Name: E
 ; CHECK-NEXT:  }
+; CHECK-NEXT:  StringId (0x1002) {
+; CHECK-NEXT:    TypeLeafKind: LF_STRING_ID (0x1605)
+; CHECK-NEXT:    Id: 0x0
+; CHECK-NEXT:    StringData: \<stdin>
+; CHECK-NEXT:  }
+; CHECK-NEXT:  UdtSourceLine (0x1003) {
+; CHECK-NEXT:    TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; CHECK-NEXT:    UDT: E (0x1001)
+; CHECK-NEXT:    SourceFile: \<stdin> (0x1002)
+; CHECK-NEXT:    LineNumber: 1
+; CHECK_NEXT  }
 
 source_filename = "test/DebugInfo/COFF/enum.ll"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"

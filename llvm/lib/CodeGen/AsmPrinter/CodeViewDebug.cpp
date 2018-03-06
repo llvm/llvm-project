@@ -1769,6 +1769,26 @@ static ClassOptions getCommonClassOptions(const DICompositeType *Ty) {
   return CO;
 }
 
+void CodeViewDebug::addUDTSrcLine(const DIType *Ty, TypeIndex TI) {
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+  case dwarf::DW_TAG_enumeration_type:
+    break;
+  default:
+    return;
+  }
+
+  if (const auto *File = Ty->getFile()) {
+    StringIdRecord SIDR(TypeIndex(0x0), getFullFilepath(File));
+    TypeIndex SIDI = TypeTable.writeLeafType(SIDR);
+
+    UdtSourceLineRecord USLR(TI, SIDI, Ty->getLine());
+    TypeTable.writeLeafType(USLR);
+  }
+}
+
 TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
   ClassOptions CO = getCommonClassOptions(Ty);
   TypeIndex FTI;
@@ -1797,7 +1817,11 @@ TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
 
   EnumRecord ER(EnumeratorCount, CO, FTI, FullName, Ty->getIdentifier(),
                 getTypeIndex(Ty->getBaseType()));
-  return TypeTable.writeLeafType(ER);
+  TypeIndex EnumTI = TypeTable.writeLeafType(ER);
+
+  addUDTSrcLine(Ty, EnumTI);
+
+  return EnumTI;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1949,13 +1973,7 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
                  SizeInBytes, FullName, Ty->getIdentifier());
   TypeIndex ClassTI = TypeTable.writeLeafType(CR);
 
-  if (const auto *File = Ty->getFile()) {
-    StringIdRecord SIDR(TypeIndex(0x0), getFullFilepath(File));
-    TypeIndex SIDI = TypeTable.writeLeafType(SIDR);
-
-    UdtSourceLineRecord USLR(ClassTI, SIDI, Ty->getLine());
-    TypeTable.writeLeafType(USLR);
-  }
+  addUDTSrcLine(Ty, ClassTI);
 
   addToUDTs(Ty);
 
@@ -1991,11 +2009,7 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
                  Ty->getIdentifier());
   TypeIndex UnionTI = TypeTable.writeLeafType(UR);
 
-  StringIdRecord SIR(TypeIndex(0x0), getFullFilepath(Ty->getFile()));
-  TypeIndex SIRI = TypeTable.writeLeafType(SIR);
-
-  UdtSourceLineRecord USLR(UnionTI, SIRI, Ty->getLine());
-  TypeTable.writeLeafType(USLR);
+  addUDTSrcLine(Ty, UnionTI);
 
   addToUDTs(Ty);
 

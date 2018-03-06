@@ -3,13 +3,12 @@
 
 // CHECK: --- Defs ---
 
-// TODO: Both of these should result in CodeInits, i.e. print [{...}].
 // CHECK: def A0 {
-// CHECK:   code Code = "Simple";
+// CHECK:   code Code = [{Simple}];
 // CHECK: }
 
 // CHECK: def B0 {
-// CHECK:   code Code = "With paste 7";
+// CHECK:   code Code = [{With paste 7}];
 // CHECK: }
 
 class A<code c> {

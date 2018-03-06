@@ -10,7 +10,7 @@
 @d = external global i64
 
 define zeroext i8 @absStoreByte() nounwind {
-; CHECK: memb(##b1){{ *}}={{ *}}r{{[0-9]+}}
+; CHECK: memb(##b1) = r{{[0-9]+}}
 entry:
   %0 = load i8, i8* @b0, align 1
   %conv = zext i8 %0 to i32
@@ -21,7 +21,7 @@ entry:
 }
 
 define signext i16 @absStoreHalf() nounwind {
-; CHECK: memh(##c1){{ *}}={{ *}}r{{[0-9]+}}
+; CHECK: memh(##c1) = r{{[0-9]+}}
 entry:
   %0 = load i16, i16* @c0, align 2
   %conv = sext i16 %0 to i32
@@ -32,7 +32,7 @@ entry:
 }
 
 define i32 @absStoreWord() nounwind {
-; CHECK: memw(##a1){{ *}}={{ *}}r{{[0-9]+}}
+; CHECK: memw(##a1) = r{{[0-9]+}}
 entry:
   %0 = load i32, i32* @a0, align 4
   %mul = mul nsw i32 100, %0
@@ -41,7 +41,7 @@ entry:
 }
 
 define void @absStoreDouble() nounwind {
-; CHECK: memd(##d){{ *}}={{ *}}r{{[0-9]+}}:{{[0-9]+}}
+; CHECK: memd(##d) = r{{[0-9]+}}:{{[0-9]+}}
 entry:
   store i64 100, i64* @d, align 8
   ret void
