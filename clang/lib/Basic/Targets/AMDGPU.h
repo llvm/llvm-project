@@ -28,24 +28,15 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   static const Builtin::Info BuiltinInfo[];
   static const char *const GCCRegNames[];
 
-  struct LLVM_LIBRARY_VISIBILITY AddrSpace {
-    unsigned Generic, Global, Local, Constant, Private;
-    AddrSpace(bool IsGenericZero_ = false) {
-      if (IsGenericZero_) {
-        Generic = 0;
-        Global = 1;
-        Local = 3;
-        Constant = 2;
-        Private = 5;
-      } else {
-        Generic = 4;
-        Global = 1;
-        Local = 3;
-        Constant = 2;
-        Private = 0;
-      }
-    }
+  enum AddrSpace {
+    Generic = 0,
+    Global = 1,
+    Local = 3,
+    Constant = 4,
+    Private = 5
   };
+  static const LangASMap AMDGPUDefIsGenMap;
+  static const LangASMap AMDGPUDefIsPrivMap;
 
   /// \brief GPU kinds supported by the AMDGPU target.
   enum GPUKind : uint32_t {
@@ -178,14 +169,11 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   GPUInfo parseGPUName(StringRef Name) const;
 
-  const AddrSpace AS;
   GPUInfo GPU;
 
   static bool isAMDGCN(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::amdgcn;
   }
-
-  static bool isGenericZero(const llvm::Triple &TT) { return true; }
 
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
@@ -197,7 +185,7 @@ public:
   uint64_t getPointerWidthV(unsigned AddrSpace) const override {
     if (GPU.Kind <= GK_R600_LAST)
       return 32;
-    if (AddrSpace == AS.Private || AddrSpace == AS.Local)
+    if (AddrSpace == Private || AddrSpace == Local)
       return 32;
     return 64;
   }
@@ -374,11 +362,13 @@ public:
   }
 
   llvm::Optional<LangAS> getConstantAddressSpace() const override {
-    return getLangASFromTargetAS(AS.Constant);
+    return getLangASFromTargetAS(Constant);
   }
 
   /// \returns Target specific vtbl ptr address space.
-  unsigned getVtblPtrAddressSpace() const override { return AS.Constant; }
+  unsigned getVtblPtrAddressSpace() const override {
+    return static_cast<unsigned>(Constant);
+  }
 
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the
@@ -390,9 +380,9 @@ public:
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     const unsigned DWARF_Private = 1;
     const unsigned DWARF_Local = 2;
-    if (AddressSpace == AS.Private) {
+    if (AddressSpace == Private) {
       return DWARF_Private;
-    } else if (AddressSpace == AS.Local) {
+    } else if (AddressSpace == Local) {
       return DWARF_Local;
     } else {
       return None;

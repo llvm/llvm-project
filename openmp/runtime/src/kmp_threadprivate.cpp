@@ -594,6 +594,13 @@ void *__kmpc_threadprivate(ident_t *loc, kmp_int32 global_tid, void *data,
   return ret;
 }
 
+static kmp_cached_addr_t *__kmp_find_cache(void *data) {
+  kmp_cached_addr_t *ptr = __kmp_threadpriv_cache_list;
+  while (ptr && ptr->data != data)
+    ptr = ptr->next;
+  return ptr;
+}
+
 /*!
  @ingroup THREADPRIVATE
  @param loc source location information
@@ -620,35 +627,40 @@ __kmpc_threadprivate_cached(ident_t *loc,
 
     if (TCR_PTR(*cache) == 0) {
       __kmp_acquire_bootstrap_lock(&__kmp_tp_cached_lock);
-      __kmp_tp_cached = 1;
-      __kmp_release_bootstrap_lock(&__kmp_tp_cached_lock);
+      // Compiler often passes in NULL cache, even if it's already been created
       void **my_cache;
-      KMP_ITT_IGNORE(
-          my_cache = (void **)__kmp_allocate(
-              sizeof(void *) * __kmp_tp_capacity + sizeof(kmp_cached_addr_t)););
-      // No need to zero the allocated memory; __kmp_allocate does that.
-      KC_TRACE(
-          50,
-          ("__kmpc_threadprivate_cached: T#%d allocated cache at address %p\n",
-           global_tid, my_cache));
-
-      /* TODO: free all this memory in __kmp_common_destroy using
-       * __kmp_threadpriv_cache_list */
-      /* Add address of mycache to linked list for cleanup later  */
       kmp_cached_addr_t *tp_cache_addr;
-
-      tp_cache_addr = (kmp_cached_addr_t *)&my_cache[__kmp_tp_capacity];
-      tp_cache_addr->addr = my_cache;
-      tp_cache_addr->next = __kmp_threadpriv_cache_list;
-      __kmp_threadpriv_cache_list = tp_cache_addr;
-
+      // Look for an existing cache
+      tp_cache_addr = __kmp_find_cache(data);
+      if (!tp_cache_addr) { // Cache was never created; do it now
+        __kmp_tp_cached = 1;
+        KMP_ITT_IGNORE(my_cache = (void **)__kmp_allocate(
+                           sizeof(void *) * __kmp_tp_capacity +
+                           sizeof(kmp_cached_addr_t)););
+        // No need to zero the allocated memory; __kmp_allocate does that.
+        KC_TRACE(50, ("__kmpc_threadprivate_cached: T#%d allocated cache at "
+                      "address %p\n",
+                      global_tid, my_cache));
+        /* TODO: free all this memory in __kmp_common_destroy using
+         * __kmp_threadpriv_cache_list */
+        /* Add address of mycache to linked list for cleanup later  */
+        tp_cache_addr = (kmp_cached_addr_t *)&my_cache[__kmp_tp_capacity];
+        tp_cache_addr->addr = my_cache;
+        tp_cache_addr->data = data;
+        tp_cache_addr->compiler_cache = cache;
+        tp_cache_addr->next = __kmp_threadpriv_cache_list;
+        __kmp_threadpriv_cache_list = tp_cache_addr;
+      } else { // A cache was already created; use it
+        my_cache = tp_cache_addr->addr;
+        tp_cache_addr->compiler_cache = cache;
+      }
       KMP_MB();
 
       TCW_PTR(*cache, my_cache);
+      __kmp_release_bootstrap_lock(&__kmp_tp_cached_lock);
 
       KMP_MB();
     }
-
     __kmp_release_lock(&__kmp_global_lock, global_tid);
   }
 
@@ -661,8 +673,66 @@ __kmpc_threadprivate_cached(ident_t *loc,
   KC_TRACE(10,
            ("__kmpc_threadprivate_cached: T#%d exiting; return value = %p\n",
             global_tid, ret));
-
   return ret;
+}
+
+// This function should only be called when both __kmp_tp_cached_lock and
+// kmp_forkjoin_lock are held.
+void __kmp_threadprivate_resize_cache(int newCapacity) {
+  KC_TRACE(10, ("__kmp_threadprivate_resize_cache: called with size: %d\n",
+                newCapacity));
+
+  kmp_cached_addr_t *ptr = __kmp_threadpriv_cache_list;
+
+  while (ptr) {
+    if (ptr->data) { // this location has an active cache; resize it
+      void **my_cache;
+      KMP_ITT_IGNORE(my_cache =
+                         (void **)__kmp_allocate(sizeof(void *) * newCapacity +
+                                                 sizeof(kmp_cached_addr_t)););
+      // No need to zero the allocated memory; __kmp_allocate does that.
+      KC_TRACE(50, ("__kmp_threadprivate_resize_cache: allocated cache at %p\n",
+                    my_cache));
+      // Now copy old cache into new cache
+      void **old_cache = ptr->addr;
+      for (int i = 0; i < __kmp_tp_capacity; ++i) {
+        my_cache[i] = old_cache[i];
+      }
+
+      // Add address of new my_cache to linked list for cleanup later
+      kmp_cached_addr_t *tp_cache_addr;
+      tp_cache_addr = (kmp_cached_addr_t *)&my_cache[newCapacity];
+      tp_cache_addr->addr = my_cache;
+      tp_cache_addr->data = ptr->data;
+      tp_cache_addr->compiler_cache = ptr->compiler_cache;
+      tp_cache_addr->next = __kmp_threadpriv_cache_list;
+      __kmp_threadpriv_cache_list = tp_cache_addr;
+
+      // Copy new cache to compiler's location: We can copy directly
+      // to (*compiler_cache) if compiler guarantees it will keep
+      // using the same location for the cache. This is not yet true
+      // for some compilers, in which case we have to check if
+      // compiler_cache is still pointing at old cache, and if so, we
+      // can point it at the new cache with an atomic compare&swap
+      // operation. (Old method will always work, but we should shift
+      // to new method (commented line below) when Intel and Clang
+      // compilers use new method.)
+      (void)KMP_COMPARE_AND_STORE_PTR(tp_cache_addr->compiler_cache, old_cache,
+                                      my_cache);
+      //TCW_PTR(*(tp_cache_addr->compiler_cache), my_cache);
+
+      // If the store doesn't happen here, the compiler's old behavior will
+      // inevitably call __kmpc_threadprivate_cache with a new location for the
+      // cache, and that function will store the resized cache there at that
+      // point.
+
+      // Nullify old cache's data pointer so we skip it next time
+      ptr->data = NULL;
+    }
+    ptr = ptr->next;
+  }
+  // After all caches are resized, update __kmp_tp_capacity to the new size
+  *(volatile int *)&__kmp_tp_capacity = newCapacity;
 }
 
 /*!
@@ -701,14 +771,30 @@ void __kmpc_threadprivate_register_vec(ident_t *loc, void *data,
     d_tn->dt.dtorv = dtor;
     d_tn->is_vec = TRUE;
     d_tn->vec_len = (size_t)vector_length;
-    /*
-            d_tn->obj_init = 0;  // AC: commented out because __kmp_allocate
-       zeroes the memory
-            d_tn->pod_init = 0;
-    */
+    // d_tn->obj_init = 0;  // AC: __kmp_allocate zeroes the memory
+    // d_tn->pod_init = 0;
     lnk_tn = &(__kmp_threadprivate_d_table.data[KMP_HASH(data)]);
 
     d_tn->next = *lnk_tn;
     *lnk_tn = d_tn;
+  }
+}
+
+void __kmp_cleanup_threadprivate_caches() {
+  kmp_cached_addr_t *ptr = __kmp_threadpriv_cache_list;
+
+  while (ptr) {
+    void **cache = ptr->addr;
+    __kmp_threadpriv_cache_list = ptr->next;
+    if (*ptr->compiler_cache)
+      *ptr->compiler_cache = NULL;
+    ptr->compiler_cache = NULL;
+    ptr->data = NULL;
+    ptr->addr = NULL;
+    ptr->next = NULL;
+    // Threadprivate data pointed at by cache entries are destroyed at end of
+    // __kmp_launch_thread with __kmp_common_destroy_gtid.
+    __kmp_free(cache); // implicitly frees ptr too
+    ptr = __kmp_threadpriv_cache_list;
   }
 }

@@ -133,3 +133,182 @@ entry:
   store i64 %shl13, i64* %arrayidx14, align 8
   ret void
 }
+
+define void @store15(float* %p1, i32 %p2, i64* %p3, float* %p4) {
+; CHECK-LABEL: @store15(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 5, i64* [[P3:%.*]], align 8
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[P2:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[P1:%.*]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, float* [[ADD_PTR]], i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[P4:%.*]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP3]], <i64 5, i64 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[P3]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP5]], align 8
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, i64* [[ARRAYIDX6]], align 8
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i64 [[TMP6]], 5
+; CHECK-NEXT:    store i64 [[SHR7]], i64* [[ARRAYIDX6]], align 8
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, i64* [[ARRAYIDX8]], align 8
+; CHECK-NEXT:    [[SHR9:%.*]] = lshr i64 [[TMP7]], 5
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 [[SHR9]], i64* [[ARRAYIDX8]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 5, i64* %p3, align 8
+  %idx.ext = sext i32 %p2 to i64
+  %add.ptr = getelementptr inbounds float, float* %p1, i64 %idx.ext
+  %arrayidx1 = getelementptr inbounds float, float* %add.ptr, i64 5
+  %0 = load float, float* %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %p4, i64 3
+  %1 = load float, float* %arrayidx2, align 4
+  %add = fadd float %0, %1
+  store float %add, float* %arrayidx2, align 4
+  %2 = load i64, i64* %p3, align 8
+  %shr = lshr i64 %2, 5
+  store i64 %shr, i64* %p3, align 8
+  %arrayidx4 = getelementptr inbounds i64, i64* %p3, i64 1
+  %3 = load i64, i64* %arrayidx4, align 8
+  %shr5 = lshr i64 %3, 5
+  store i64 %shr5, i64* %arrayidx4, align 8
+  %arrayidx6 = getelementptr inbounds i64, i64* %p3, i64 2
+  %4 = load i64, i64* %arrayidx6, align 8
+  %shr7 = lshr i64 %4, 5
+  store i64 %shr7, i64* %arrayidx6, align 8
+  %arrayidx8 = getelementptr inbounds i64, i64* %p3, i64 3
+  %5 = load i64, i64* %arrayidx8, align 8
+  %shr9 = lshr i64 %5, 5
+  %arrayidx9 = getelementptr inbounds i64, i64* %p3, i64 5
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 %shr9, i64* %arrayidx8, align 8
+  ret void
+}
+
+define void @store16(float* %p1, i32 %p2, i64* %p3, float* %p4) {
+; CHECK-LABEL: @store16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 5, i64* [[P3:%.*]], align 8
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[P2:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[P1:%.*]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, float* [[ADD_PTR]], i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[P4:%.*]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP3]], <i64 5, i64 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[P3]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP5]], align 8
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, i64* [[ARRAYIDX6]], align 8
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i64 [[TMP6]], 5
+; CHECK-NEXT:    store i64 [[SHR7]], i64* [[ARRAYIDX6]], align 8
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, i64* [[ARRAYIDX8]], align 8
+; CHECK-NEXT:    [[SHR9:%.*]] = lshr i64 [[TMP7]], 5
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    store i64 [[SHR9]], i64* [[ARRAYIDX8]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 5, i64* %p3, align 8
+  %idx.ext = sext i32 %p2 to i64
+  %add.ptr = getelementptr inbounds float, float* %p1, i64 %idx.ext
+  %arrayidx1 = getelementptr inbounds float, float* %add.ptr, i64 5
+  %0 = load float, float* %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %p4, i64 3
+  %1 = load float, float* %arrayidx2, align 4
+  %add = fadd float %0, %1
+  store float %add, float* %arrayidx2, align 4
+  %2 = load i64, i64* %p3, align 8
+  %shr = lshr i64 %2, 5
+  store i64 %shr, i64* %p3, align 8
+  %arrayidx4 = getelementptr inbounds i64, i64* %p3, i64 1
+  %3 = load i64, i64* %arrayidx4, align 8
+  %shr5 = lshr i64 %3, 5
+  store i64 %shr5, i64* %arrayidx4, align 8
+  %arrayidx6 = getelementptr inbounds i64, i64* %p3, i64 2
+  %4 = load i64, i64* %arrayidx6, align 8
+  %shr7 = lshr i64 %4, 5
+  store i64 %shr7, i64* %arrayidx6, align 8
+  %arrayidx8 = getelementptr inbounds i64, i64* %p3, i64 3
+  %5 = load i64, i64* %arrayidx8, align 8
+  %shr9 = lshr i64 %5, 5
+  %arrayidx9 = getelementptr inbounds i64, i64* %p3, i64 5
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 5, i64* %arrayidx9, align 8
+  store i64 %shr9, i64* %arrayidx8, align 8
+  ret void
+}
+

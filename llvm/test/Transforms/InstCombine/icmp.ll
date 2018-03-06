@@ -3302,3 +3302,15 @@ define i1 @PR35794(i32* %a) {
   ret i1 %cmp
 }
 
+; Don't crash by assuming the compared values are integers.
+define <2 x i1> @PR36583(<2 x i8*>)  {
+; CHECK-LABEL: @PR36583(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8*> %0, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+entry:
+  %cast = ptrtoint <2 x i8*> %0 to <2 x i64>
+  %res = icmp eq <2 x i64> %cast, zeroinitializer
+  ret <2 x i1> %res
+}

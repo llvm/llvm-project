@@ -1644,12 +1644,7 @@ static bool tryToReplaceWithConstantRange(SCCPSolver &Solver, Value *V) {
     ValueLatticeElement A = getIcmpLatticeValue(Icmp->getOperand(0));
     ValueLatticeElement B = getIcmpLatticeValue(Icmp->getOperand(1));
 
-    Constant *C = nullptr;
-    if (A.satisfiesPredicate(Icmp->getPredicate(), B))
-      C = ConstantInt::getTrue(Icmp->getType());
-    else if (A.satisfiesPredicate(Icmp->getInversePredicate(), B))
-      C = ConstantInt::getFalse(Icmp->getType());
-
+    Constant *C = A.getCompare(Icmp->getPredicate(), Icmp->getType(), B);
     if (C) {
       Icmp->replaceAllUsesWith(C);
       DEBUG(dbgs() << "Replacing " << *Icmp << " with " << *C

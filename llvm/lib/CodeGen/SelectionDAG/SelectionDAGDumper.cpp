@@ -629,6 +629,8 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
     if (getNodeId() != -1)
       OS << " [ID=" << getNodeId() << ']';
+    if (!(isa<ConstantSDNode>(this) || (isa<ConstantFPSDNode>(this))))
+      OS << "# D:" << isDivergent();
 
     if (!G)
       return;

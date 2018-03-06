@@ -34,7 +34,13 @@ define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) #0 {
 
 ; GCN-LABEL: {{^}}func_implicitarg_ptr:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_load_dword s{{[0-9]+}}, s[6:7], 0x0{{$}}
+; MESA: s_mov_b64 s[8:9], s[6:7]
+; MESA: s_mov_b32 s11, 0xf000
+; MESA: s_mov_b32 s10, -1
+; MESA: buffer_load_dword v0, off, s[8:11], 0
+; HSA: v_mov_b32_e32 v0, s6
+; HSA: v_mov_b32_e32 v1, s7
+; HSA: flat_load_dword v0, v[0:1]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @func_implicitarg_ptr() #1 {
@@ -83,8 +89,21 @@ define void @func_call_implicitarg_ptr_func() #1 {
 
 ; GCN-LABEL: {{^}}func_kernarg_implicitarg_ptr:
 ; GCN: s_waitcnt
-; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0{{$}}
-; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0{{$}}
+; MESA: s_mov_b64 s[12:13], s[6:7]
+; MESA: s_mov_b32 s15, 0xf000
+; MESA: s_mov_b32 s14, -1
+; MESA: buffer_load_dword v0, off, s[12:15], 0
+; HSA: v_mov_b32_e32 v0, s6
+; HSA: v_mov_b32_e32 v1, s7
+; HSA: flat_load_dword v0, v[0:1]
+; MESA: s_mov_b32 s10, s14
+; MESA: s_mov_b32 s11, s15
+; MESA: buffer_load_dword v0, off, s[8:11], 0
+; HSA: v_mov_b32_e32 v0, s8
+; HSA: v_mov_b32_e32 v1, s9
+; HSA: flat_load_dword v0, v[0:1]
+
+; GCN: s_waitcnt vmcnt(0)
 define void @func_kernarg_implicitarg_ptr() #1 {
   %kernarg.segment.ptr = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()

@@ -286,24 +286,32 @@ public:
     return cast<ConstantInt>(getConstant());
   }
 
-  bool satisfiesPredicate(CmpInst::Predicate Pred,
-                          const ValueLatticeElement &Other) const {
-    // TODO: share with LVI getPredicateResult.
-
+  /// Compares this symbolic value with Other using Pred and returns either
+  /// true, false or undef constants, or nullptr if the comparison cannot be
+  /// evaluated.
+  Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
+                       const ValueLatticeElement &Other) const {
     if (isUndefined() || Other.isUndefined())
-      return true;
+      return UndefValue::get(Ty);
 
-    if (isConstant() && Other.isConstant() && Pred == CmpInst::FCMP_OEQ)
-      return getConstant() == Other.getConstant();
+    if (isConstant() && Other.isConstant())
+      return ConstantExpr::getCompare(Pred, getConstant(), Other.getConstant());
 
     // Integer constants are represented as ConstantRanges with single
     // elements.
     if (!isConstantRange() || !Other.isConstantRange())
-      return false;
+      return nullptr;
 
     const auto &CR = getConstantRange();
     const auto &OtherCR = Other.getConstantRange();
-    return ConstantRange::makeSatisfyingICmpRegion(Pred, OtherCR).contains(CR);
+    if (ConstantRange::makeSatisfyingICmpRegion(Pred, OtherCR).contains(CR))
+      return ConstantInt::getTrue(Ty);
+    if (ConstantRange::makeSatisfyingICmpRegion(
+            CmpInst::getInversePredicate(Pred), OtherCR)
+            .contains(CR))
+      return ConstantInt::getFalse(Ty);
+
+    return nullptr;
   }
 };
 

@@ -55,6 +55,8 @@ STATISTIC(CmpIselsConverted,
           "Number of ISELs that depend on comparison of constants converted");
 STATISTIC(MissedConvertibleImmediateInstrs,
           "Number of compare-immediate instructions fed by constants");
+STATISTIC(NumRcRotatesConvertedToRcAnd,
+          "Number of record-form rotates converted to record-form andi");
 
 static cl::
 opt<bool> DisableCTRLoopAnal("disable-ppc-ctrloop-analysis", cl::Hidden,
@@ -1896,6 +1898,31 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
     // an iterator to this instruction, and so we can't delete it (this is
     // specifically the case if this is the instruction directly after the
     // compare).
+
+    // Rotates are expensive instructions. If we're emitting a record-form
+    // rotate that can just be an andi, we should just emit the andi.
+    if ((MIOpC == PPC::RLWINM || MIOpC == PPC::RLWINM8) &&
+        MI->getOperand(2).getImm() == 0) {
+      int64_t MB = MI->getOperand(3).getImm();
+      int64_t ME = MI->getOperand(4).getImm();
+      if (MB < ME && MB >= 16) {
+        uint64_t Mask = ((1LLU << (32 - MB)) - 1) & ~((1LLU << (31 - ME)) - 1);
+        NewOpC = MIOpC == PPC::RLWINM ? PPC::ANDIo : PPC::ANDIo8;
+        MI->RemoveOperand(4);
+        MI->RemoveOperand(3);
+        MI->getOperand(2).setImm(Mask);
+        NumRcRotatesConvertedToRcAnd++;
+      }
+    } else if (MIOpC == PPC::RLDICL && MI->getOperand(2).getImm() == 0) {
+      int64_t MB = MI->getOperand(3).getImm();
+      if (MB >= 48) {
+        uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
+        NewOpC = PPC::ANDIo8;
+        MI->RemoveOperand(3);
+        MI->getOperand(2).setImm(Mask);
+        NumRcRotatesConvertedToRcAnd++;
+      }
+    }
 
     const MCInstrDesc &NewDesc = get(NewOpC);
     MI->setDesc(NewDesc);

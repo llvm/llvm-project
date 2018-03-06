@@ -610,6 +610,13 @@ def ObjCSuperDeallocChecker : Checker<"SuperDealloc">,
 
 } // end "osx.cocoa"
 
+let ParentPackage = OSXAlpha in {
+
+def GCDAsyncSemaphoreChecker : Checker<"GCDAsyncSemaphore">,
+  HelpText<"Checker for performance anti-pattern when using semaphors from async API">,
+  DescFile<"GCDAsyncSemaphoreChecker.cpp">;
+} // end "alpha.osx"
+
 let ParentPackage = CocoaAlpha in {
 
 def InstanceVariableInvalidation : Checker<"InstanceVariableInvalidation">,

@@ -10,6 +10,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -629,6 +630,40 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
 TEST(CommandLineTest, ArgumentLimit) {
   std::string args(32 * 4096, 'a');
   EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+}
+
+TEST(CommandLineTest, ResponseFileWindows) {
+  if (!Triple(sys::getProcessTriple()).isOSWindows())
+    return;
+
+  static cl::list<std::string>
+	  InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
+  StackOption<bool> TopLevelOpt("top-level", cl::init(false));
+
+  // Create response file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  std::error_code EC =
+      llvm::sys::fs::createTemporaryFile("resp-", ".txt", FileDescriptor, TempPath);
+  EXPECT_TRUE(!EC);
+
+  std::ofstream RspFile(TempPath.c_str());
+  EXPECT_TRUE(RspFile.is_open());
+  RspFile << "-top-level\npath\\dir\\file1\npath/dir/file2";
+  RspFile.close();
+
+  llvm::SmallString<128> RspOpt;
+  RspOpt.append(1, '@');
+  RspOpt.append(TempPath.c_str());
+  const char *args[] = {"prog", RspOpt.c_str()};
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(TopLevelOpt);
+  EXPECT_TRUE(InputFilenames[0] == "path\\dir\\file1");
+  EXPECT_TRUE(InputFilenames[1] == "path/dir/file2");
+
+  llvm::sys::fs::remove(TempPath.c_str());
 }
 
 TEST(CommandLineTest, ResponseFiles) {

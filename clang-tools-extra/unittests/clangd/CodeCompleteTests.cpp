@@ -117,12 +117,10 @@ CompletionList completions(StringRef Text,
   MockFSProvider FS;
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true);
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   auto File = testPath("foo.cpp");
   Annotations Test(Text);
-  Server.addDocument(File, Test.code());
-  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
+  runAddDocument(Server, File, Test.code());
   auto CompletionList = runCodeComplete(Server, File, Test.point(), Opts).Value;
   // Sanity-check that filterText is valid.
   EXPECT_THAT(CompletionList.items, Each(NameContainsFilter()));
@@ -522,8 +520,7 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true);
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   FS.Files[testPath("bar.h")] =
       R"cpp(namespace ns { struct preamble { int member; }; })cpp";
@@ -534,8 +531,7 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
       void f() { ns::^; }
       void f() { ns::preamble().$2^; }
   )cpp");
-  Server.addDocument(File, Test.code());
-  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
+  runAddDocument(Server, File, Test.code());
   clangd::CodeCompleteOptions Opts = {};
 
   auto I = memIndex({var("ns::index")});
@@ -558,17 +554,16 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      /*BuildDynamicSymbolIndex=*/true);
+  auto Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
 
   FS.Files[testPath("foo.h")] = R"cpp(
       namespace ns { class XYZ {}; void foo(int x) {} }
   )cpp";
-  Server.addDocument(testPath("foo.cpp"), R"cpp(
+  runAddDocument(Server, testPath("foo.cpp"), R"cpp(
       #include "foo.h"
   )cpp");
-  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
 
   auto File = testPath("bar.cpp");
   Annotations Test(R"cpp(
@@ -579,8 +574,7 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
       }
       void f() { ns::^ }
   )cpp");
-  Server.addDocument(File, Test.code());
-  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
+  runAddDocument(Server, File, Test.code());
 
   auto Results = runCodeComplete(Server, File, Test.point(), {}).Value;
   // "XYZ" and "foo" are not included in the file being completed but are still
@@ -605,12 +599,10 @@ SignatureHelp signatures(StringRef Text) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true);
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   auto File = testPath("foo.cpp");
   Annotations Test(Text);
-  Server.addDocument(File, Test.code());
-  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
+  runAddDocument(Server, File, Test.code());
   auto R = runSignatureHelp(Server, File, Test.point());
   assert(R);
   return R.get().Value;

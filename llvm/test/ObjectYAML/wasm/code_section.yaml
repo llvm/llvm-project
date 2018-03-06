@@ -37,6 +37,19 @@ Sections:
          - Type:            I32
            Count:           1
         Body:            108180808000210020000F0B
+  - Type:            CUSTOM
+    Name:            linking
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            func1
+        Flags:           [  ]
+        Function:        0
+      - Index:           1
+        Kind:            FUNCTION
+        Name:            func2
+        Flags:           [  ]
+        Function:        1
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:

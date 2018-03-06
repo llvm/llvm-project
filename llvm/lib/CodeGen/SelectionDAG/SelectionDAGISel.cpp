@@ -29,6 +29,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -329,6 +330,7 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<StackProtector>();
   AU.addPreserved<GCModuleInfo>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
   if (UseMBPI && OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -414,7 +416,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
-  CurDAG->init(*MF, *ORE, this, LibInfo);
+  CurDAG->init(*MF, *ORE, this, LibInfo,
+   getAnalysisIfAvailable<DivergenceAnalysis>());
   FuncInfo->set(Fn, *MF, CurDAG);
 
   // Now get the optional analyzes if we want to.
@@ -711,6 +714,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   int BlockNumber = -1;
   (void)BlockNumber;
   bool MatchFilterBB = false; (void)MatchFilterBB;
+  TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*FuncInfo->Fn);
 
   // Pre-type legalization allow creation of any node types.
   CurDAG->NewNodesMustHaveLegalTypes = false;
@@ -744,6 +749,9 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Combine(BeforeLegalizeTypes, AA, OptLevel);
   }
 
+  if (TTI.hasBranchDivergence())
+    CurDAG->VerifyDAGDiverence();
+
   DEBUG(dbgs() << "Optimized lowered selection DAG: "
                << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                << "'\n";
@@ -760,6 +768,9 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                        GroupDescription, TimePassesIsEnabled);
     Changed = CurDAG->LegalizeTypes();
   }
+
+  if (TTI.hasBranchDivergence())
+    CurDAG->VerifyDAGDiverence();
 
   DEBUG(dbgs() << "Type-legalized selection DAG: "
                << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
@@ -779,6 +790,9 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                          GroupName, GroupDescription, TimePassesIsEnabled);
       CurDAG->Combine(AfterLegalizeTypes, AA, OptLevel);
     }
+
+    if (TTI.hasBranchDivergence())
+      CurDAG->VerifyDAGDiverence();
 
     DEBUG(dbgs() << "Optimized type-legalized selection DAG: "
                  << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
@@ -823,6 +837,9 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                  << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                  << "'\n";
           CurDAG->dump());
+
+    if (TTI.hasBranchDivergence())
+      CurDAG->VerifyDAGDiverence();
   }
 
   if (ViewLegalizeDAGs && MatchFilterBB)
@@ -833,6 +850,9 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                        GroupDescription, TimePassesIsEnabled);
     CurDAG->Legalize();
   }
+
+  if (TTI.hasBranchDivergence())
+    CurDAG->VerifyDAGDiverence();
 
   DEBUG(dbgs() << "Legalized selection DAG: "
                << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
@@ -848,6 +868,9 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                        GroupDescription, TimePassesIsEnabled);
     CurDAG->Combine(AfterLegalizeDAG, AA, OptLevel);
   }
+
+  if (TTI.hasBranchDivergence())
+    CurDAG->VerifyDAGDiverence();
 
   DEBUG(dbgs() << "Optimized legalized selection DAG: "
                << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
@@ -1400,6 +1423,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   // Set up FuncInfo for ISel. Entry blocks never have PHIs.
   FuncInfo->MBB = FuncInfo->MBBMap[&Fn.getEntryBlock()];
   FuncInfo->InsertPt = FuncInfo->MBB->begin();
+
+  CurDAG->setFunctionLoweringInfo(FuncInfo);
 
   if (!FastIS) {
     LowerArguments(Fn);

@@ -33,6 +33,8 @@
 //    Legal if the characters match.
 //  - Moving down (consuming a pattern character) is never legal.
 //    Never legal: all pattern characters must match something.
+// Characters are matched case-insensitively.
+// The first pattern character may only match the start of a word segment.
 //
 // The scoring is based on heuristics:
 //  - when matching a character, apply a bonus or penalty depending on the
@@ -74,13 +76,11 @@ static bool isAwful(int S) { return S < AwfulScore / 2; }
 static constexpr int PerfectBonus = 3; // Perfect per-pattern-char score.
 
 FuzzyMatcher::FuzzyMatcher(StringRef Pattern)
-    : PatN(std::min<int>(MaxPat, Pattern.size())), CaseSensitive(false),
+    : PatN(std::min<int>(MaxPat, Pattern.size())),
       ScoreScale(PatN ? float{1} / (PerfectBonus * PatN) : 0), WordN(0) {
   std::copy(Pattern.begin(), Pattern.begin() + PatN, Pat);
-  for (int I = 0; I < PatN; ++I) {
+  for (int I = 0; I < PatN; ++I)
     LowPat[I] = lower(Pat[I]);
-    CaseSensitive |= LowPat[I] != Pat[I];
-  }
   Scores[0][0][Miss] = {0, Miss};
   Scores[0][0][Match] = {AwfulScore, Miss};
   for (int P = 0; P <= PatN; ++P)
@@ -88,7 +88,7 @@ FuzzyMatcher::FuzzyMatcher(StringRef Pattern)
       for (Action A : {Miss, Match})
         Scores[P][W][A] = {AwfulScore, Miss};
   if (PatN > 0)
-    calculateRoles(Pat, PatRole, PatN);
+    calculateRoles(Pat, PatRole, PatTypeSet, PatN);
 }
 
 Optional<float> FuzzyMatcher::match(StringRef Word) {
@@ -177,16 +177,21 @@ constexpr static uint8_t CharRoles[] = {
 template <typename T> static T packedLookup(const uint8_t *Data, int I) {
   return static_cast<T>((Data[I >> 2] >> ((I & 3) * 2)) & 3);
 }
-void FuzzyMatcher::calculateRoles(const char *Text, CharRole *Out, int N) {
+void FuzzyMatcher::calculateRoles(const char *Text, CharRole *Out, int &TypeSet,
+                                  int N) {
   assert(N > 0);
+  CharType Type = packedLookup<CharType>(CharTypes, Text[0]);
+  TypeSet = 1 << Type;
   // Types holds a sliding window of (Prev, Curr, Next) types.
   // Initial value is (Empty, Empty, type of Text[0]).
-  int Types = packedLookup<CharType>(CharTypes, Text[0]);
+  int Types = Type;
   // Rotate slides in the type of the next character.
   auto Rotate = [&](CharType T) { Types = ((Types << 2) | T) & 0x3f; };
   for (int I = 0; I < N - 1; ++I) {
     // For each character, rotate in the next, and look up the role.
-    Rotate(packedLookup<CharType>(CharTypes, Text[I + 1]));
+    Type = packedLookup<CharType>(CharTypes, Text[I + 1]);
+    TypeSet |= 1 << Type;
+    Rotate(Type);
     *Out++ = packedLookup<CharRole>(CharRoles, Types);
   }
   // For the last character, the "next character" is Empty.
@@ -214,7 +219,10 @@ bool FuzzyMatcher::init(StringRef NewWord) {
       ++P;
   }
 
-  calculateRoles(Word, WordRole, WordN);
+  // FIXME: some words are hard to tokenize algorithmically.
+  // e.g. vsprintf is V S Print F, and should match [pri] but not [int].
+  // We could add a tokenization dictionary for common stdlib names.
+  calculateRoles(Word, WordRole, WordTypeSet, WordN);
   return true;
 }
 
@@ -247,7 +255,7 @@ void FuzzyMatcher::buildGraph() {
                         ? ScoreInfo{MatchMissScore, Match}
                         : ScoreInfo{MissMissScore, Miss};
 
-      if (LowPat[P] != LowWord[W]) { // No match possible.
+      if (!allowMatch(P, W)) {
         Score[Match] = {AwfulScore, Miss};
       } else {
         auto &PreMatch = Scores[P][W];
@@ -261,7 +269,22 @@ void FuzzyMatcher::buildGraph() {
   }
 }
 
-int FuzzyMatcher::skipPenalty(int W, Action Last) {
+bool FuzzyMatcher::allowMatch(int P, int W) const {
+  if (LowPat[P] != LowWord[W])
+    return false;
+  // We require a "strong" match for the first pattern character only.
+  if (P > 0)
+    return true;
+  // Obvious "strong match" for first char: match against a word head.
+  // We're banning matches outright, so conservatively accept some other cases
+  // where our segmentation might be wrong:
+  //  - allow matching B in ABCDef (but not in NDEBUG)
+  //  - we'd like to accept print in sprintf, but too many false positives
+  return WordRole[W] != Tail ||
+         (Word[W] != LowWord[W] && WordTypeSet & 1 << Lower);
+}
+
+int FuzzyMatcher::skipPenalty(int W, Action Last) const {
   int S = 0;
   if (WordRole[W] == Head) // Skipping a segment.
     S += 1;
@@ -270,14 +293,14 @@ int FuzzyMatcher::skipPenalty(int W, Action Last) {
   return S;
 }
 
-int FuzzyMatcher::matchBonus(int P, int W, Action Last) {
+int FuzzyMatcher::matchBonus(int P, int W, Action Last) const {
   assert(LowPat[P] == LowWord[W]);
   int S = 1;
   // Bonus: pattern so far is a (case-insensitive) prefix of the word.
   if (P == W) // We can't skip pattern characters, so we must have matched all.
     ++S;
   // Bonus: case matches, or a Head in the pattern aligns with one in the word.
-  if ((Pat[P] == Word[W] && (CaseSensitive || P == W)) ||
+  if ((Pat[P] == Word[W] && ((PatTypeSet & 1 << Upper) || P == W)) ||
       (PatRole[P] == Head && WordRole[W] == Head))
     ++S;
   // Penalty: matching inside a segment (and previous char wasn't matched).
@@ -312,7 +335,7 @@ llvm::SmallString<256> FuzzyMatcher::dumpLast(llvm::raw_ostream &OS) const {
                               Scores[PatN][WordN][Miss].Score))) {
     OS << "Substring check passed, but all matches are forbidden\n";
   }
-  if (!CaseSensitive)
+  if (!(PatTypeSet & 1 << Upper))
     OS << "Lowercase query, so scoring ignores case\n";
 
   // Traverse Matched table backwards to reconstruct the Pattern/Word mapping.
