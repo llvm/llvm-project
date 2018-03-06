@@ -21,7 +21,7 @@
 #include "MachThread.h"
 
 extern "C" bool CPUHasAVX(); // Defined over in DNBArchImplX86_64.cpp
-
+extern "C" bool CPUHasAVX512f(); // Defined over in DNBArchImplX86_64.cpp
 #if defined(LLDB_DEBUGSERVER_RELEASE) || defined(LLDB_DEBUGSERVER_DEBUG)
 enum debugState { debugStateUnknown, debugStateOff, debugStateOn };
 
@@ -132,6 +132,22 @@ enum {
   fpu_ymm5,
   fpu_ymm6,
   fpu_ymm7,
+  fpu_k0,
+  fpu_k1,
+  fpu_k2,
+  fpu_k3,
+  fpu_k4,
+  fpu_k5,
+  fpu_k6,
+  fpu_k7,
+  fpu_zmm0,
+  fpu_zmm1,
+  fpu_zmm2,
+  fpu_zmm3,
+  fpu_zmm4,
+  fpu_zmm5,
+  fpu_zmm6,
+  fpu_zmm7,
   k_num_fpu_regs,
 
   // Aliases
@@ -205,6 +221,22 @@ enum {
   dwarf_ymm5 = dwarf_xmm5,
   dwarf_ymm6 = dwarf_xmm6,
   dwarf_ymm7 = dwarf_xmm7,
+  dwarf_zmm0 = dwarf_xmm0,
+  dwarf_zmm1 = dwarf_xmm1,
+  dwarf_zmm2 = dwarf_xmm2,
+  dwarf_zmm3 = dwarf_xmm3,
+  dwarf_zmm4 = dwarf_xmm4,
+  dwarf_zmm5 = dwarf_xmm5,
+  dwarf_zmm6 = dwarf_xmm6,
+  dwarf_zmm7 = dwarf_xmm7,
+  dwarf_k0 = 118,
+  dwarf_k1,
+  dwarf_k2,
+  dwarf_k3,
+  dwarf_k4,
+  dwarf_k5,
+  dwarf_k6,
+  dwarf_k7,
 };
 
 enum {
@@ -271,7 +303,23 @@ enum {
   debugserver_ymm4 = debugserver_xmm4,
   debugserver_ymm5 = debugserver_xmm5,
   debugserver_ymm6 = debugserver_xmm6,
-  debugserver_ymm7 = debugserver_xmm7
+  debugserver_ymm7 = debugserver_xmm7,
+  debugserver_zmm0 = debugserver_xmm0,
+  debugserver_zmm1 = debugserver_xmm1,
+  debugserver_zmm2 = debugserver_xmm2,
+  debugserver_zmm3 = debugserver_xmm3,
+  debugserver_zmm4 = debugserver_xmm4,
+  debugserver_zmm5 = debugserver_xmm5,
+  debugserver_zmm6 = debugserver_xmm6,
+  debugserver_zmm7 = debugserver_xmm7,
+  debugserver_k0 = 118,
+  debugserver_k1 = 119,
+  debugserver_k2 = 120,
+  debugserver_k3 = 121,
+  debugserver_k4 = 122,
+  debugserver_k5 = 123,
+  debugserver_k6 = 124,
+  debugserver_k7 = 125,
 };
 
 uint64_t DNBArchImplI386::GetPC(uint64_t failValue) {
@@ -390,7 +438,8 @@ kern_return_t DNBArchImplI386::GetFPUState(bool force) {
       m_state.context.fpu.no_avx.__fpu_reserved1 = -1;
 
       if (CPUHasAVX() || FORCE_AVX_REGS) {
-        for (int i = 0; i < sizeof(m_state.context.fpu.avx.__avx_reserved1); ++i)
+        for (int i = 0; i < sizeof(m_state.context.fpu.avx.__avx_reserved1);
+             ++i)
           m_state.context.fpu.avx.__avx_reserved1[i] = INT8_MIN;
 
         for (int i = 0; i < 16; ++i) {
@@ -404,12 +453,54 @@ kern_return_t DNBArchImplI386::GetFPUState(bool force) {
           m_state.context.fpu.avx.__fpu_ymmh7.__xmm_reg[i] = '7';
         }
       }
+      if (CPUHasAVX512f() || FORCE_AVX_REGS) {
+        for (int i = 0; i < 8; ++i) {
+          m_state.context.fpu.avx512f.__fpu_k0.__opmask_reg[i] = '0';
+          m_state.context.fpu.avx512f.__fpu_k1.__opmask_reg[i] = '1';
+          m_state.context.fpu.avx512f.__fpu_k2.__opmask_reg[i] = '2';
+          m_state.context.fpu.avx512f.__fpu_k3.__opmask_reg[i] = '3';
+          m_state.context.fpu.avx512f.__fpu_k4.__opmask_reg[i] = '4';
+          m_state.context.fpu.avx512f.__fpu_k5.__opmask_reg[i] = '5';
+          m_state.context.fpu.avx512f.__fpu_k6.__opmask_reg[i] = '6';
+          m_state.context.fpu.avx512f.__fpu_k7.__opmask_reg[i] = '7';
+        }
+
+        for (int i = 0; i < 32; ++i) {
+          m_state.context.fpu.avx512f.__fpu_zmmh0.__ymm_reg[i] = '0';
+          m_state.context.fpu.avx512f.__fpu_zmmh1.__ymm_reg[i] = '1';
+          m_state.context.fpu.avx512f.__fpu_zmmh2.__ymm_reg[i] = '2';
+          m_state.context.fpu.avx512f.__fpu_zmmh3.__ymm_reg[i] = '3';
+          m_state.context.fpu.avx512f.__fpu_zmmh4.__ymm_reg[i] = '4';
+          m_state.context.fpu.avx512f.__fpu_zmmh5.__ymm_reg[i] = '5';
+          m_state.context.fpu.avx512f.__fpu_zmmh6.__ymm_reg[i] = '6';
+          m_state.context.fpu.avx512f.__fpu_zmmh7.__ymm_reg[i] = '7';
+        }
+      }
       m_state.SetError(e_regSetFPU, Read, 0);
     } else {
       mach_msg_type_number_t count = e_regSetWordSizeFPU;
       int flavor = __i386_FLOAT_STATE;
 
-      if (CPUHasAVX() || FORCE_AVX_REGS) {
+      // On a machine with the AVX512 register set, a process only gets a
+      // full AVX512 register context after it uses the AVX512 registers;
+      // if the process has not yet triggered this change, trying to fetch
+      // the AVX512 registers will fail.  Fall through to fetching the AVX
+      // registers.
+      if (CPUHasAVX512f() || FORCE_AVX_REGS) {
+        count = e_regSetWordSizeAVX512f;
+        flavor = __i386_AVX512F_STATE;
+        m_state.SetError(e_regSetFPU, Read,
+                         ::thread_get_state(m_thread->MachPortNumber(), flavor,
+                                            (thread_state_t)&m_state.context.fpu,
+                                            &count));
+        DNBLogThreadedIf(LOG_THREAD,
+                         "::thread_get_state (0x%4.4x, %u, &fpu, %u => 0x%8.8x",
+                         m_thread->MachPortNumber(), flavor, (uint32_t)count,
+                         m_state.GetError(e_regSetFPU, Read));
+        if (m_state.GetError(e_regSetFPU, Read) == KERN_SUCCESS)
+          return m_state.GetError(e_regSetFPU, Read);
+      }
+      if (CPUHasAVX()) {
         count = e_regSetWordSizeAVX;
         flavor = __i386_AVX_STATE;
       }
@@ -457,18 +548,21 @@ kern_return_t DNBArchImplI386::SetFPUState() {
     m_state.SetError(e_regSetFPU, Write, 0);
     return m_state.GetError(e_regSetFPU, Write);
   } else {
-    if (CPUHasAVX() || FORCE_AVX_REGS)
-      m_state.SetError(
-          e_regSetFPU, Write,
-          ::thread_set_state(m_thread->MachPortNumber(), __i386_AVX_STATE,
-                             (thread_state_t)&m_state.context.fpu.avx,
-                             e_regSetWordSizeAVX));
-    else
-      m_state.SetError(
-          e_regSetFPU, Write,
-          ::thread_set_state(m_thread->MachPortNumber(), __i386_FLOAT_STATE,
-                             (thread_state_t)&m_state.context.fpu.no_avx,
-                             e_regSetWordSizeFPU));
+    int flavor = __i386_FLOAT_STATE;
+    mach_msg_type_number_t count = e_regSetWordSizeFPU;
+    if (CPUHasAVX512f() || FORCE_AVX_REGS) {
+      flavor = __i386_AVX512F_STATE;
+      count = e_regSetWordSizeAVX512f;
+    } else 
+    if (CPUHasAVX()) {
+      flavor = __i386_AVX_STATE;
+      count = e_regSetWordSizeAVX;
+    }
+
+    m_state.SetError(e_regSetFPU, Write,
+                     ::thread_set_state(m_thread->MachPortNumber(), flavor,
+                                        (thread_state_t)&m_state.context.fpu,
+                                        count));
     return m_state.GetError(e_regSetFPU, Write);
   }
 }
@@ -965,6 +1059,9 @@ kern_return_t DNBArchImplI386::EnableHardwareSingleStep(bool enable) {
 #define AVX_OFFSET(reg)                                                        \
   (offsetof(DNBArchImplI386::AVX, __fpu_##reg) +                               \
    offsetof(DNBArchImplI386::Context, fpu.avx))
+#define AVX512F_OFFSET(reg)                                                    \
+  (offsetof(DNBArchImplI386::AVX512F, __fpu_##reg) +                           \
+   offsetof(DNBArchImplI386::Context, fpu.avx512f))
 #define EXC_OFFSET(reg)                                                        \
   (offsetof(DNBArchImplI386::EXC, __##reg) +                                   \
    offsetof(DNBArchImplI386::Context, exc))
@@ -976,6 +1073,7 @@ kern_return_t DNBArchImplI386::EnableHardwareSingleStep(bool enable) {
 #define FPU_SIZE_XMM(reg)                                                      \
   (sizeof(((DNBArchImplI386::FPU *)NULL)->__fpu_##reg.__xmm_reg))
 #define FPU_SIZE_YMM(reg) (32)
+#define FPU_SIZE_ZMM(reg) (64)
 #define EXC_SIZE(reg) (sizeof(((DNBArchImplI386::EXC *)NULL)->__##reg))
 
 // This does not accurately identify the location of ymm0...7 in
@@ -984,6 +1082,9 @@ kern_return_t DNBArchImplI386::EnableHardwareSingleStep(bool enable) {
 // the register state that Debugserver transmits to the debugger
 // -- not to interpret the thread_get_state info.
 #define AVX_OFFSET_YMM(n) (AVX_OFFSET(xmm7) + FPU_SIZE_XMM(xmm7) + (32 * n))
+
+// TODO: Test this and come back.
+#define AVX512F_OFFSET_ZMM(n) (AVX_OFFSET_YMM(7) + FPU_SIZE_XMM(xmm7) + (64 * n))
 
 // These macros will auto define the register name, alt name, register size,
 // register offset, encoding, format and native register. This ensures that
@@ -1279,6 +1380,141 @@ const DNBRegisterInfo DNBArchImplI386::g_fpu_registers_avx[] = {
 
 };
 
+
+#define STR(s) #s
+
+#define ZMM_REG_DEF(reg)                                                       \
+  {                                                                            \
+    e_regSetFPU, fpu_zmm##reg, STR(zmm##reg), NULL, Vector, VectorOfUInt8,        \
+        FPU_SIZE_ZMM(zmm##reg), AVX512F_OFFSET_ZMM(reg), INVALID_NUB_REGNUM,   \
+        dwarf_zmm##reg, INVALID_NUB_REGNUM, debugserver_zmm##reg, NULL, NULL   \
+  }
+
+#define YMM_REG_ALIAS(reg)                                                     \
+  {                                                                            \
+    e_regSetFPU, fpu_ymm##reg, STR(ymm##reg), NULL, Vector, VectorOfUInt8,        \
+        FPU_SIZE_YMM(ymm##reg), 0, INVALID_NUB_REGNUM, dwarf_ymm##reg,         \
+        INVALID_NUB_REGNUM, debugserver_ymm##reg, g_contained_zmm##reg, NULL   \
+  }
+
+#define XMM_REG_ALIAS(reg)                                                     \
+  {                                                                            \
+    e_regSetFPU, fpu_xmm##reg, STR(xmm##reg), NULL, Vector, VectorOfUInt8,        \
+        FPU_SIZE_XMM(xmm##reg), 0, INVALID_NUB_REGNUM, dwarf_xmm##reg,         \
+        INVALID_NUB_REGNUM, debugserver_xmm##reg, g_contained_zmm##reg, NULL   \
+  }
+
+#define AVX512_K_REG_DEF(reg)                                                  \
+  {                                                                            \
+    e_regSetFPU, fpu_k##reg, STR(k##reg), NULL, Vector, VectorOfUInt8, 8,      \
+        AVX512F_OFFSET(k##reg), dwarf_k##reg, dwarf_k##reg, -1U,               \
+        debugserver_k##reg, NULL, NULL                                         \
+  }
+
+static const char *g_contained_zmm0[] = {"zmm0", NULL};
+static const char *g_contained_zmm1[] = {"zmm1", NULL};
+static const char *g_contained_zmm2[] = {"zmm2", NULL};
+static const char *g_contained_zmm3[] = {"zmm3", NULL};
+static const char *g_contained_zmm4[] = {"zmm4", NULL};
+static const char *g_contained_zmm5[] = {"zmm5", NULL};
+static const char *g_contained_zmm6[] = {"zmm6", NULL};
+static const char *g_contained_zmm7[] = {"zmm7", NULL};
+
+const DNBRegisterInfo DNBArchImplI386::g_fpu_registers_avx512f[] = {
+    {e_regSetFPU, fpu_fcw, "fctrl", NULL, Uint, Hex, FPU_SIZE_UINT(fcw),
+     AVX_OFFSET(fcw), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_fsw, "fstat", NULL, Uint, Hex, FPU_SIZE_UINT(fsw),
+     AVX_OFFSET(fsw), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_ftw, "ftag", NULL, Uint, Hex, 2 /* sizeof __fpu_ftw + sizeof __fpu_rsrv1 */,
+     FPU_OFFSET(ftw), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_fop, "fop", NULL, Uint, Hex, FPU_SIZE_UINT(fop),
+     AVX_OFFSET(fop), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_ip, "fioff", NULL, Uint, Hex, FPU_SIZE_UINT(ip),
+     AVX_OFFSET(ip), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_cs, "fiseg", NULL, Uint, Hex, FPU_SIZE_UINT(cs),
+     AVX_OFFSET(cs), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_dp, "fooff", NULL, Uint, Hex, FPU_SIZE_UINT(dp),
+     AVX_OFFSET(dp), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_ds, "foseg", NULL, Uint, Hex, FPU_SIZE_UINT(ds),
+     AVX_OFFSET(ds), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_mxcsr, "mxcsr", NULL, Uint, Hex, FPU_SIZE_UINT(mxcsr),
+     AVX_OFFSET(mxcsr), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
+    {e_regSetFPU, fpu_mxcsrmask, "mxcsrmask", NULL, Uint, Hex,
+     FPU_SIZE_UINT(mxcsrmask), AVX_OFFSET(mxcsrmask), INVALID_NUB_REGNUM,
+     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
+
+    {e_regSetFPU, fpu_stmm0, "stmm0", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm0), AVX_OFFSET(stmm0), INVALID_NUB_REGNUM, dwarf_stmm0,
+     INVALID_NUB_REGNUM, debugserver_stmm0, NULL, NULL},
+    {e_regSetFPU, fpu_stmm1, "stmm1", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm1), AVX_OFFSET(stmm1), INVALID_NUB_REGNUM, dwarf_stmm1,
+     INVALID_NUB_REGNUM, debugserver_stmm1, NULL, NULL},
+    {e_regSetFPU, fpu_stmm2, "stmm2", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm2), AVX_OFFSET(stmm2), INVALID_NUB_REGNUM, dwarf_stmm2,
+     INVALID_NUB_REGNUM, debugserver_stmm2, NULL, NULL},
+    {e_regSetFPU, fpu_stmm3, "stmm3", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm3), AVX_OFFSET(stmm3), INVALID_NUB_REGNUM, dwarf_stmm3,
+     INVALID_NUB_REGNUM, debugserver_stmm3, NULL, NULL},
+    {e_regSetFPU, fpu_stmm4, "stmm4", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm4), AVX_OFFSET(stmm4), INVALID_NUB_REGNUM, dwarf_stmm4,
+     INVALID_NUB_REGNUM, debugserver_stmm4, NULL, NULL},
+    {e_regSetFPU, fpu_stmm5, "stmm5", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm5), AVX_OFFSET(stmm5), INVALID_NUB_REGNUM, dwarf_stmm5,
+     INVALID_NUB_REGNUM, debugserver_stmm5, NULL, NULL},
+    {e_regSetFPU, fpu_stmm6, "stmm6", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm6), AVX_OFFSET(stmm6), INVALID_NUB_REGNUM, dwarf_stmm6,
+     INVALID_NUB_REGNUM, debugserver_stmm6, NULL, NULL},
+    {e_regSetFPU, fpu_stmm7, "stmm7", NULL, Vector, VectorOfUInt8,
+     FPU_SIZE_MMST(stmm7), AVX_OFFSET(stmm7), INVALID_NUB_REGNUM, dwarf_stmm7,
+     INVALID_NUB_REGNUM, debugserver_stmm7, NULL, NULL},
+
+    AVX512_K_REG_DEF(0),
+    AVX512_K_REG_DEF(1),
+    AVX512_K_REG_DEF(2),
+    AVX512_K_REG_DEF(3),
+    AVX512_K_REG_DEF(4),
+    AVX512_K_REG_DEF(5),
+    AVX512_K_REG_DEF(6),
+    AVX512_K_REG_DEF(7),
+
+    ZMM_REG_DEF(0),
+    ZMM_REG_DEF(1),
+    ZMM_REG_DEF(2),
+    ZMM_REG_DEF(3),
+    ZMM_REG_DEF(4),
+    ZMM_REG_DEF(5),
+    ZMM_REG_DEF(6),
+    ZMM_REG_DEF(7),
+
+    YMM_REG_ALIAS(0),
+    YMM_REG_ALIAS(1),
+    YMM_REG_ALIAS(2),
+    YMM_REG_ALIAS(3),
+    YMM_REG_ALIAS(4),
+    YMM_REG_ALIAS(5),
+    YMM_REG_ALIAS(6),
+    YMM_REG_ALIAS(7),
+
+    XMM_REG_ALIAS(0),
+    XMM_REG_ALIAS(1),
+    XMM_REG_ALIAS(2),
+    XMM_REG_ALIAS(3),
+    XMM_REG_ALIAS(4),
+    XMM_REG_ALIAS(5),
+    XMM_REG_ALIAS(6),
+    XMM_REG_ALIAS(7)
+
+};
+
 const DNBRegisterInfo DNBArchImplI386::g_exc_registers[] = {
     {e_regSetEXC, exc_trapno, "trapno", NULL, Uint, Hex, EXC_SIZE(trapno),
      EXC_OFFSET(trapno), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
@@ -1297,12 +1533,16 @@ const size_t DNBArchImplI386::k_num_fpu_registers_no_avx =
     sizeof(g_fpu_registers_no_avx) / sizeof(DNBRegisterInfo);
 const size_t DNBArchImplI386::k_num_fpu_registers_avx =
     sizeof(g_fpu_registers_avx) / sizeof(DNBRegisterInfo);
+const size_t DNBArchImplI386::k_num_fpu_registers_avx512f =
+    sizeof(g_fpu_registers_avx512f) / sizeof(DNBRegisterInfo);
 const size_t DNBArchImplI386::k_num_exc_registers =
     sizeof(g_exc_registers) / sizeof(DNBRegisterInfo);
 const size_t DNBArchImplI386::k_num_all_registers_no_avx =
     k_num_gpr_registers + k_num_fpu_registers_no_avx + k_num_exc_registers;
 const size_t DNBArchImplI386::k_num_all_registers_avx =
     k_num_gpr_registers + k_num_fpu_registers_avx + k_num_exc_registers;
+const size_t DNBArchImplI386::k_num_all_registers_avx512f =
+    k_num_gpr_registers + k_num_fpu_registers_avx512f + k_num_exc_registers;
 
 //----------------------------------------------------------------------
 // Register set definitions. The first definitions at register set index
@@ -1322,9 +1562,16 @@ const DNBRegisterSetInfo DNBArchImplI386::g_reg_sets_avx[] = {
     {"Floating Point Registers", g_fpu_registers_avx, k_num_fpu_registers_avx},
     {"Exception State Registers", g_exc_registers, k_num_exc_registers}};
 
+const DNBRegisterSetInfo DNBArchImplI386::g_reg_sets_avx512f[] = {
+    {"i386 Registers", NULL, k_num_all_registers_avx512f},
+    {"General Purpose Registers", g_gpr_registers, k_num_gpr_registers},
+    {"Floating Point Registers", g_fpu_registers_avx512f,
+    k_num_fpu_registers_avx512f},
+    {"Exception State Registers", g_exc_registers, k_num_exc_registers}};
+
 // Total number of register sets for this architecture
 const size_t DNBArchImplI386::k_num_register_sets =
-    sizeof(g_reg_sets_no_avx) / sizeof(DNBRegisterSetInfo);
+    sizeof(g_reg_sets_avx) / sizeof(DNBRegisterSetInfo);
 
 DNBArchProtocol *DNBArchImplI386::Create(MachThread *thread) {
   DNBArchImplI386 *obj = new DNBArchImplI386(thread);
@@ -1341,7 +1588,9 @@ const uint8_t *DNBArchImplI386::SoftwareBreakpointOpcode(nub_size_t byte_size) {
 const DNBRegisterSetInfo *
 DNBArchImplI386::GetRegisterSetInfo(nub_size_t *num_reg_sets) {
   *num_reg_sets = k_num_register_sets;
-  if (CPUHasAVX() || FORCE_AVX_REGS)
+  if (CPUHasAVX512f() || FORCE_AVX_REGS)
+    return g_reg_sets_avx512f;
+  if (CPUHasAVX())
     return g_reg_sets_avx;
   else
     return g_reg_sets_no_avx;
@@ -1403,6 +1652,8 @@ bool DNBArchImplI386::GetRegisterValue(uint32_t set, uint32_t reg,
 
     case e_regSetFPU:
       if (reg > fpu_xmm7 && !(CPUHasAVX() || FORCE_AVX_REGS))
+        return false;
+      if (reg > fpu_ymm7 && !(CPUHasAVX512f() || FORCE_AVX_REGS))
         return false;
       switch (reg) {
       case fpu_fcw:
@@ -1534,6 +1785,33 @@ bool DNBArchImplI386::GetRegisterValue(uint32_t set, uint32_t reg,
         MEMCPY_YMM(7);
         return true;
 #undef MEMCPY_YMM
+
+      case fpu_k0:
+      case fpu_k1:
+      case fpu_k2:
+      case fpu_k3:
+      case fpu_k4:
+      case fpu_k5:
+      case fpu_k6:
+      case fpu_k7:
+        memcpy((&value->value.uint8),
+               &m_state.context.fpu.avx512f.__fpu_k0 + (reg - fpu_k0), 8);
+        return true;
+      case fpu_zmm0:
+      case fpu_zmm1:
+      case fpu_zmm2:
+      case fpu_zmm3:
+      case fpu_zmm4:
+      case fpu_zmm5:
+      case fpu_zmm6:
+      case fpu_zmm7:
+        memcpy(&value->value.uint8,
+               &m_state.context.fpu.avx512f.__fpu_xmm0 + (reg - fpu_zmm0), 16);
+        memcpy(&value->value.uint8 + 16,
+               &m_state.context.fpu.avx512f.__fpu_ymmh0 + (reg - fpu_zmm0), 16);
+        memcpy(&value->value.uint8 + 32,
+               &m_state.context.fpu.avx512f.__fpu_zmmh0 + (reg - fpu_zmm0), 32);
+        return true;
       }
       break;
 
@@ -1594,6 +1872,8 @@ bool DNBArchImplI386::SetRegisterValue(uint32_t set, uint32_t reg,
 
     case e_regSetFPU:
       if (reg > fpu_xmm7 && !(CPUHasAVX() || FORCE_AVX_REGS))
+        return false;
+      if (reg > fpu_ymm7 && !(CPUHasAVX512f() || FORCE_AVX_REGS))
         return false;
       switch (reg) {
       case fpu_fcw:
@@ -1751,6 +2031,33 @@ bool DNBArchImplI386::SetRegisterValue(uint32_t set, uint32_t reg,
         MEMCPY_YMM(7);
         return true;
 #undef MEMCPY_YMM
+
+      case fpu_k0:
+      case fpu_k1:
+      case fpu_k2:
+      case fpu_k3:
+      case fpu_k4:
+      case fpu_k5:
+      case fpu_k6:
+      case fpu_k7:
+        memcpy(&m_state.context.fpu.avx512f.__fpu_k0 + (reg - fpu_k0),
+               &value->value.uint8, 8);
+        return true;
+      case fpu_zmm0:
+      case fpu_zmm1:
+      case fpu_zmm2:
+      case fpu_zmm3:
+      case fpu_zmm4:
+      case fpu_zmm5:
+      case fpu_zmm6:
+      case fpu_zmm7:
+        memcpy(&m_state.context.fpu.avx512f.__fpu_xmm0 + (reg - fpu_zmm0),
+               &value->value.uint8, 16);
+        memcpy(&m_state.context.fpu.avx512f.__fpu_ymmh0 + (reg - fpu_zmm0),
+               &value->value.uint8 + 16, 16);
+        memcpy(&m_state.context.fpu.avx512f.__fpu_zmmh0 + (reg - fpu_zmm0),
+               &value->value.uint8 + 32, 32);
+        return true;
       }
       break;
 
@@ -1771,7 +2078,13 @@ bool DNBArchImplI386::SetRegisterValue(uint32_t set, uint32_t reg,
 uint32_t DNBArchImplI386::GetRegisterContextSize() {
   static uint32_t g_cached_size = 0;
   if (g_cached_size == 0) {
-    if (CPUHasAVX() || FORCE_AVX_REGS) {
+    if(CPUHasAVX512f() || FORCE_AVX_REGS) {
+      for (size_t i = 0; i < k_num_fpu_registers_avx512f; ++i) {
+        if (g_fpu_registers_avx512f[i].value_regs == NULL)
+          g_cached_size += g_fpu_registers_avx512f[i].size;
+      }
+    } else 
+    if (CPUHasAVX()) {
       for (size_t i = 0; i < k_num_fpu_registers_avx; ++i) {
         if (g_fpu_registers_avx[i].value_regs == NULL)
           g_cached_size += g_fpu_registers_avx[i].size;
@@ -1844,6 +2157,13 @@ nub_size_t DNBArchImplI386::GetRegisterContext(void *buf, nub_size_t buf_len) {
         p += 10;
       }
 
+      if (CPUHasAVX512f() || FORCE_AVX_REGS) {
+        for (size_t i = 0; i < 8; ++i) {
+          memcpy(p, &m_state.context.fpu.avx512f.__fpu_k0 + i, 8);
+          p += 8;
+        }
+      }
+
       if (CPUHasAVX() || FORCE_AVX_REGS) {
         // Interleave the XMM and YMMH registers to make the YMM registers
         for (size_t i = 0; i < 8; ++i) {
@@ -1851,6 +2171,12 @@ nub_size_t DNBArchImplI386::GetRegisterContext(void *buf, nub_size_t buf_len) {
           p += 16;
           memcpy(p, &m_state.context.fpu.avx.__fpu_ymmh0 + i, 16);
           p += 16;
+        }
+        if(CPUHasAVX512f() || FORCE_AVX_REGS) {
+          for (size_t i = 0; i < 8; ++i) {
+            memcpy(p, &m_state.context.fpu.avx512f.__fpu_zmmh0 + i, 32);
+            p += 32;
+          }
         }
       } else {
         // Copy the XMM registers in a single block
@@ -1908,6 +2234,13 @@ nub_size_t DNBArchImplI386::SetRegisterContext(const void *buf,
       p += 10;
     }
 
+    if(CPUHasAVX512f() || FORCE_AVX_REGS) {
+      for (size_t i = 0; i < 8; ++i) {
+        memcpy(&m_state.context.fpu.avx512f.__fpu_k0 + i, p, 8);
+        p += 8;
+      }
+    }
+
     if (CPUHasAVX() || FORCE_AVX_REGS) {
       // Interleave the XMM and YMMH registers to make the YMM registers
       for (size_t i = 0; i < 8; ++i) {
@@ -1915,6 +2248,13 @@ nub_size_t DNBArchImplI386::SetRegisterContext(const void *buf,
         p += 16;
         memcpy(&m_state.context.fpu.avx.__fpu_ymmh0 + i, p, 16);
         p += 16;
+      }
+
+      if(CPUHasAVX512f() || FORCE_AVX_REGS) {
+        for (size_t i = 0; i < 8; ++i) {
+          memcpy(&m_state.context.fpu.avx512f.__fpu_zmmh0 + i, p, 32);
+          p += 32;
+        }
       }
     } else {
       // Copy the XMM registers in a single block
