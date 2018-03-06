@@ -1,4 +1,6 @@
-; RUN: llc  -mtriple=aarch64-none-linux-gnu -mattr=+neon < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+neon < %s | FileCheck %s
+
+declare <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8>, <16 x i8>)
 
 ; CHECK-LABEL: fun1:
 ; CHECK: uzp1 {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
@@ -48,4 +50,15 @@ entry:
   ret i32 undef
 }
 
-declare <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8>, <16 x i8>)
+; CHECK-LABEL: pr36582:
+; Check that this does not ICE.
+define void @pr36582(i8* %p1, i32* %p2) {
+entry:
+  %x = bitcast i8* %p1 to <8 x i8>*
+  %wide.vec = load <8 x i8>, <8 x i8>* %x, align 1
+  %strided.vec = shufflevector <8 x i8> %wide.vec, <8 x i8> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %y = zext <4 x i8> %strided.vec to <4 x i32>
+  %z = bitcast i32* %p2 to <4 x i32>*
+  store <4 x i32> %y, <4 x i32>* %z, align 4
+  ret void
+}

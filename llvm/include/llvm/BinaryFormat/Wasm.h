@@ -74,6 +74,7 @@ struct WasmGlobal {
   uint32_t Index;
   WasmGlobalType Type;
   WasmInitExpr InitExpr;
+  StringRef Name; // from the "linking" or "names" section
 };
 
 struct WasmImport {
@@ -99,7 +100,7 @@ struct WasmFunction {
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;
   uint32_t Size;
-  StringRef Name; // from the "names" section
+  StringRef Name; // from the "linking" or "names" section
   StringRef Comdat; // from the "comdat info" section
 };
 

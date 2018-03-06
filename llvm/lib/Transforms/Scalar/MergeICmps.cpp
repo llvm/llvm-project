@@ -159,22 +159,16 @@ class BCECmpBlock {
 
 bool BCECmpBlock::doesOtherWork() const {
   AssertConsistent();
+  // All the instructions we care about in the BCE cmp block.
+  DenseSet<Instruction *> BlockInsts(
+      {Lhs_.GEP, Rhs_.GEP, Lhs_.LoadI, Rhs_.LoadI, CmpI, BranchI});
   // TODO(courbet): Can we allow some other things ? This is very conservative.
   // We might be able to get away with anything does does not have any side
   // effects outside of the basic block.
   // Note: The GEPs and/or loads are not necessarily in the same block.
   for (const Instruction &Inst : *BB) {
-    if (const auto *const GEP = dyn_cast<GetElementPtrInst>(&Inst)) {
-      if (!(Lhs_.GEP == GEP || Rhs_.GEP == GEP)) return true;
-    } else if (const auto *const L = dyn_cast<LoadInst>(&Inst)) {
-      if (!(Lhs_.LoadI == L || Rhs_.LoadI == L)) return true;
-    } else if (const auto *const C = dyn_cast<ICmpInst>(&Inst)) {
-      if (C != CmpI) return true;
-    } else if (const auto *const Br = dyn_cast<BranchInst>(&Inst)) {
-      if (Br != BranchI) return true;
-    } else {
+    if (!BlockInsts.count(&Inst))
       return true;
-    }
   }
   return false;
 }
@@ -291,12 +285,12 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
     if (Comparison.doesOtherWork()) {
       DEBUG(dbgs() << "block '" << Comparison.BB->getName()
                    << "' does extra work besides compare\n");
-      if (BlockIdx == 0) {  // First block.
-        // TODO(courbet): The first block can do other things, and we should
+      if (Comparisons.empty()) {
+        // TODO(courbet): The initial block can do other things, and we should
         // split them apart in a separate block before the comparison chain.
         // Right now we just discard it and make the chain shorter.
         DEBUG(dbgs()
-              << "ignoring first block '" << Comparison.BB->getName()
+              << "ignoring initial block '" << Comparison.BB->getName()
               << "' that does extra work besides compare\n");
         continue;
       }
@@ -333,7 +327,12 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
     DEBUG(dbgs() << "\n");
     Comparisons.push_back(Comparison);
   }
-  assert(!Comparisons.empty() && "chain with no BCE basic blocks");
+
+  // It is possible we have no suitable comparison to merge.
+  if (Comparisons.empty()) {
+    DEBUG(dbgs() << "chain with no BCE basic blocks, no merge\n");
+    return;
+  }
   EntryBlock_ = Comparisons[0].BB;
   Comparisons_ = std::move(Comparisons);
 #ifdef MERGEICMPS_DOT_ON

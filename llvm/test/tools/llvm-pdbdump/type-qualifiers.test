@@ -1,0 +1,25 @@
+; RUN: llvm-pdbutil pretty -all -class-recurse-depth=1 \
+; RUN:   %p/Inputs/TypeQualifiersTest.pdb > %t
+; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBALS_FUNC
+; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBALS_DATA
+; RUN: FileCheck -input-file=%t %s -check-prefix=QUALS
+
+; GLOBALS_FUNC: ---GLOBALS---
+; GLOBALS_FUNC-DAG: int __cdecl f(const volatile int* __restrict arg_crv)
+; GLOBALS_FUNC-DAG: void __cdecl g(int& __restrict arg_ref)
+
+; GLOBALS_DATA: ---GLOBALS---
+; GLOBALS_DATA-DAG: static volatile int* __restrict ArrayVar[10][100]
+; GLOBALS_DATA-DAG: static long* __restrict RestrictVar
+; GLOBALS_DATA-DAG: static const int* __restrict NS::p_object
+; GLOBALS_DATA-DAG: static NS::Foo NS::s
+; GLOBALS_DATA-DAG: static volatile int* __restrict NS::p_data_member
+
+; QUALS: ---TYPES---
+; QUALS-DAG: typedef RankNArray
+; QUALS-DAG: typedef long* __restrict RestrictTypedef
+; QUALS: union Union
+; QUALS-DAG: int* __restrict x_member
+; QUALS-DAG: float* __restrict y_member
+; QUALS-DAG: int* volatile __restrict m_volatile
+; QUALS-DAG: const char* m_const

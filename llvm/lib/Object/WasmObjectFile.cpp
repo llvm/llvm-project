@@ -339,7 +339,7 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
         wasm::WasmInitFunc Init;
         Init.Priority = readVaruint32(Ptr);
         Init.Symbol = readVaruint32(Ptr);
-        if (!isValidFunctionSymbolIndex(Init.Symbol))
+        if (!isValidFunctionSymbol(Init.Symbol))
           return make_error<GenericBinaryError>("Invalid function symbol: " +
                                                     Twine(Init.Symbol),
                                                 object_error::parse_failed);
@@ -403,7 +403,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
         Info.Name = readString(Ptr);
         unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
         FunctionType = &Signatures[FunctionTypes[FuncIndex]];
-        auto &Function = Functions[FuncIndex];
+        wasm::WasmFunction &Function = Functions[FuncIndex];
         if (Function.Name.empty()) {
           // Use the symbol's name to set a name for the Function, but only if
           // one hasn't already been set.
@@ -425,7 +425,13 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
       if (IsDefined) {
         Info.Name = readString(Ptr);
         unsigned GlobalIndex = Info.ElementIndex - NumImportedGlobals;
-        GlobalType = &Globals[GlobalIndex].Type;
+        wasm::WasmGlobal &Global = Globals[GlobalIndex];
+        GlobalType = &Global.Type;
+        if (Global.Name.empty()) {
+          // Use the symbol's name to set a name for the Global, but only if
+          // one hasn't already been set.
+          Global.Name = Info.Name;
+        }
       } else {
         wasm::WasmImport &Import = *ImportedGlobals[Info.ElementIndex];
         Info.Name = Import.Field;
@@ -548,9 +554,9 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
     return make_error<GenericBinaryError>("Invalid section code",
                                           object_error::parse_failed);
   uint32_t RelocCount = readVaruint32(Ptr);
+  uint32_t EndOffset = Section->Content.size();
   while (RelocCount--) {
-    wasm::WasmRelocation Reloc;
-    memset(&Reloc, 0, sizeof(Reloc));
+    wasm::WasmRelocation Reloc = {};
     Reloc.Type = readVaruint32(Ptr);
     Reloc.Offset = readVaruint32(Ptr);
     Reloc.Index = readVaruint32(Ptr);
@@ -558,12 +564,26 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
     case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
     case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
     case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+      if (!isValidFunctionSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation function index",
+                                              object_error::parse_failed);
+      break;
     case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
+      if (Reloc.Index >= Signatures.size())
+        return make_error<GenericBinaryError>("Bad relocation type index",
+                                              object_error::parse_failed);
+      break;
     case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+      if (!isValidGlobalSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation global index",
+                                              object_error::parse_failed);
       break;
     case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
     case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
+      if (!isValidDataSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation data index",
+                                              object_error::parse_failed);
       Reloc.Addend = readVarint32(Ptr);
       break;
     default:
@@ -571,6 +591,18 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
                                                 Twine(Reloc.Type),
                                             object_error::parse_failed);
     }
+
+    // Relocations must fit inside the section, and must appear in order.  They
+    // also shouldn't overlap a function/element boundary, but we don't bother
+    // to check that.
+    uint64_t Size = 5;
+    if (Reloc.Type == wasm::R_WEBASSEMBLY_TABLE_INDEX_I32 ||
+        Reloc.Type == wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32)
+      Size = 4;
+    if (Reloc.Offset + Size > EndOffset)
+      return make_error<GenericBinaryError>("Bad relocation offset",
+                                            object_error::parse_failed);
+
     Section->Relocations.push_back(Reloc);
   }
   if (Ptr != End)
@@ -781,8 +813,16 @@ bool WasmObjectFile::isDefinedGlobalIndex(uint32_t Index) const {
   return Index >= NumImportedGlobals && isValidGlobalIndex(Index);
 }
 
-bool WasmObjectFile::isValidFunctionSymbolIndex(uint32_t Index) const {
+bool WasmObjectFile::isValidFunctionSymbol(uint32_t Index) const {
   return Index < Symbols.size() && Symbols[Index].isTypeFunction();
+}
+
+bool WasmObjectFile::isValidGlobalSymbol(uint32_t Index) const {
+  return Index < Symbols.size() && Symbols[Index].isTypeGlobal();
+}
+
+bool WasmObjectFile::isValidDataSymbol(uint32_t Index) const {
+  return Index < Symbols.size() && Symbols[Index].isTypeData();
 }
 
 wasm::WasmFunction &WasmObjectFile::getDefinedFunction(uint32_t Index) {

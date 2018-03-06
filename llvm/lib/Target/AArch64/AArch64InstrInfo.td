@@ -4644,21 +4644,6 @@ def MOVIv16b_ns  : SIMDModifiedImmVectorNoShift<1, 0, 0, 0b1110, V128, imm0_255,
                        [(set (v16i8 V128:$Rd), (AArch64movi imm0_255:$imm8))]>;
 }
 
-// Use the more efficient MOVI instead of DUP from ZR to zero up vectors
-def : Pat<(v2f32 (AArch64dup (f32 fpimm0))), (MOVIv2i32  (i32 0), (i32 0))>;
-
-def : Pat<(v2i32 (AArch64dup (i32 0))), (MOVIv2i32  (i32 0), (i32 0))>;
-def : Pat<(v4i16 (AArch64dup (i32 0))), (MOVIv4i16  (i32 0), (i32 0))>;
-def : Pat<(v8i8  (AArch64dup (i32 0))), (MOVIv8b_ns (i32 0))>;
-
-def : Pat<(v2f64 (AArch64dup (f64 fpimm0))), (MOVIv2d_ns (i32 0))>;
-def : Pat<(v4f32 (AArch64dup (f32 fpimm0))), (MOVIv4i32  (i32 0), (i32 0))>;
-
-def : Pat<(v2i64 (AArch64dup (i64 0))), (MOVIv2d_ns  (i32 0))>;
-def : Pat<(v4i32 (AArch64dup (i32 0))), (MOVIv4i32   (i32 0), (i32 0))>;
-def : Pat<(v8i16 (AArch64dup (i32 0))), (MOVIv8i16   (i32 0), (i32 0))>;
-def : Pat<(v16i8 (AArch64dup (i32 0))), (MOVIv16b_ns (i32 0))>;
-
 // AdvSIMD MVNI
 
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h

@@ -7,14 +7,23 @@ Sections:
   - Type:            TYPE
     Signatures:
       - Index:           0
-        ReturnType:      I32
+        ReturnType:      NORESULT
         ParamTypes:
-          - F32
-          - F32
   - Type:            FUNCTION
     FunctionTypes: [ 0, 0, 0 ]
   - Type:            START
     StartFunction:   1
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            0B
+      - Index:           1
+        Locals:
+        Body:            0B
+      - Index:           2
+        Locals:
+        Body:            0B
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
