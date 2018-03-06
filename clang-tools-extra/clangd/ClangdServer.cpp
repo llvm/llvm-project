@@ -320,7 +320,7 @@ static llvm::Expected<HeaderFile> toHeaderFile(StringRef Header,
   if (!Resolved)
     return Resolved.takeError();
   return HeaderFile{std::move(*Resolved), /*Verbatim=*/false};
-};
+}
 
 Expected<tooling::Replacements>
 ClangdServer::insertInclude(PathRef File, StringRef Code,
