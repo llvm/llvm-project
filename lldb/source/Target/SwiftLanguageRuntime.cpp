@@ -2136,41 +2136,39 @@ SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
 
 CompilerType
 SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
-                                                CompilerType base_type,
-                                                SwiftASTContext *ast_context) {
+                                                CompilerType base_type) {
+  SwiftASTContext *ast_context =
+      llvm::dyn_cast_or_null<SwiftASTContext>(base_type.GetTypeSystem());
+  lldbassert(ast_context && "null AST Context");
+  if (!ast_context)
+    return base_type;
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
-    if (!ast_context)
-      ast_context =
-          llvm::dyn_cast_or_null<SwiftASTContext>(base_type.GetTypeSystem());
+    swift::Type target_swift_type(GetSwiftType(base_type));
 
-    if (ast_context) {
-      swift::Type target_swift_type(GetSwiftType(base_type));
+    target_swift_type = target_swift_type.transform(
+        [this, &stack_frame,
+         ast_context](swift::Type candidate_type) -> swift::Type {
+          if (swift::ArchetypeType *candidate_archetype =
+                  llvm::dyn_cast_or_null<swift::ArchetypeType>(
+                      candidate_type.getPointer())) {
+            ConstString candidate_name(candidate_archetype->getFullName());
 
-      target_swift_type = target_swift_type.transform(
-          [this, &stack_frame,
-           ast_context](swift::Type candidate_type) -> swift::Type {
-            if (swift::ArchetypeType *candidate_archetype =
-                    llvm::dyn_cast_or_null<swift::ArchetypeType>(
-                        candidate_type.getPointer())) {
-              ConstString candidate_name(candidate_archetype->getFullName());
+            CompilerType concrete_type = this->GetConcreteType(
+                &stack_frame, candidate_name);
+            Status import_error;
+            CompilerType target_concrete_type =
+                ast_context->ImportType(concrete_type, import_error);
 
-              CompilerType concrete_type = this->GetConcreteType(
-                  &stack_frame, candidate_name);
-              Status import_error;
-              CompilerType target_concrete_type =
-                  ast_context->ImportType(concrete_type, import_error);
-
-              if (target_concrete_type.IsValid())
-                return swift::Type(GetSwiftType(target_concrete_type));
-              else
-                return candidate_type;
-            } else
+            if (target_concrete_type.IsValid())
+              return swift::Type(GetSwiftType(target_concrete_type));
+            else
               return candidate_type;
-          });
+          } else
+            return candidate_type;
+        });
 
-      return CompilerType(ast_context->GetASTContext(),
-                          target_swift_type.getPointer());
-    }
+    return CompilerType(ast_context->GetASTContext(),
+                        target_swift_type.getPointer());
   }
   return base_type;
 }
@@ -2263,12 +2261,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
 
   // this will be a BoundGenericStruct, bound to archetypes
   CompilerType struct_type(in_value.GetCompilerType());
-
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(struct_type.GetTypeSystem());
-
-  CompilerType resolved_type(
-      DoArchetypeBindingForType(*frame, struct_type, swift_ast_ctx));
+  CompilerType resolved_type(DoArchetypeBindingForType(*frame, struct_type));
   if (!resolved_type)
     return false;
 
@@ -2302,12 +2295,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
 
   // this will be a BoundGenericEnum, bound to archetypes
   CompilerType enum_type(in_value.GetCompilerType());
-
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(enum_type.GetTypeSystem());
-
-  CompilerType resolved_type(
-      DoArchetypeBindingForType(*frame, enum_type, swift_ast_ctx));
+  CompilerType resolved_type(DoArchetypeBindingForType(*frame, enum_type));
   if (!resolved_type)
     return false;
 

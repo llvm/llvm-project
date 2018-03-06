@@ -319,9 +319,8 @@ public:
 
   bool IsRuntimeSupportValue(ValueObject &valobj) override;
 
-  virtual CompilerType
-  DoArchetypeBindingForType(StackFrame &stack_frame, CompilerType base_type,
-                            SwiftASTContext *ast_context = nullptr);
+  virtual CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
+                                                 CompilerType base_type);
 
   virtual CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
                                        ConstString abstract_type_name) override;
