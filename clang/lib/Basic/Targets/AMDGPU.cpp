@@ -32,62 +32,33 @@ static const char *const DataLayoutStringR600 =
     "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5";
 
-static const char *const DataLayoutStringSIPrivateIsZero =
-    "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-    "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
-    "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64";
-
-static const char *const DataLayoutStringSIGenericIsZero =
+static const char *const DataLayoutStringAMDGCN =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
     "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5";
 
-static const LangASMap AMDGPUPrivIsZeroDefIsGenMap = {
-    4, // Default
-    1, // opencl_global
-    3, // opencl_local
-    4, // opencl_constant
-    0, // opencl_private
-    4, // opencl_generic
-    1, // cuda_device
-    4, // cuda_constant
-    3  // cuda_shared
+const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
+    Generic,  // Default
+    Global,   // opencl_global
+    Local,    // opencl_local
+    Constant, // opencl_constant
+    Private,  // opencl_private
+    Generic,  // opencl_generic
+    Global,   // cuda_device
+    Constant, // cuda_constant
+    Local     // cuda_shared
 };
 
-static const LangASMap AMDGPUGenIsZeroDefIsGenMap = {
-    0, // Default
-    1, // opencl_global
-    3, // opencl_local
-    4, // opencl_constant
-    5, // opencl_private
-    0, // opencl_generic
-    1, // cuda_device
-    4, // cuda_constant
-    3  // cuda_shared
-};
-
-static const LangASMap AMDGPUPrivIsZeroDefIsPrivMap = {
-    0, // Default
-    1, // opencl_global
-    3, // opencl_local
-    4, // opencl_constant
-    0, // opencl_private
-    4, // opencl_generic
-    1, // cuda_device
-    4, // cuda_constant
-    3  // cuda_shared
-};
-
-static const LangASMap AMDGPUGenIsZeroDefIsPrivMap = {
-    5, // Default
-    1, // opencl_global
-    3, // opencl_local
-    4, // opencl_constant
-    5, // opencl_private
-    0, // opencl_generic
-    1, // cuda_device
-    4, // cuda_constant
-    3  // cuda_shared
+const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
+    Private,  // Default
+    Global,   // opencl_global
+    Local,    // opencl_local
+    Constant, // opencl_constant
+    Private,  // opencl_private
+    Generic,  // opencl_generic
+    Global,   // cuda_device
+    Constant, // cuda_constant
+    Local     // cuda_shared
 };
 } // namespace targets
 } // namespace clang
@@ -282,29 +253,18 @@ void AMDGPUTargetInfo::fillValidCPUList(
 }
 
 void AMDGPUTargetInfo::setAddressSpaceMap(bool DefaultIsPrivate) {
-  if (isGenericZero(getTriple())) {
-    AddrSpaceMap = DefaultIsPrivate ? &AMDGPUGenIsZeroDefIsPrivMap
-                                    : &AMDGPUGenIsZeroDefIsGenMap;
-  } else {
-    AddrSpaceMap = DefaultIsPrivate ? &AMDGPUPrivIsZeroDefIsPrivMap
-                                    : &AMDGPUPrivIsZeroDefIsGenMap;
-  }
+  AddrSpaceMap = DefaultIsPrivate ? &AMDGPUDefIsPrivMap : &AMDGPUDefIsGenMap;
 }
 
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
-  : TargetInfo(Triple), AS(isGenericZero(Triple)),
-    GPU(isAMDGCN(Triple) ? AMDGCNGPUs[0] : parseR600Name(Opts.CPU)) {
-  auto IsGenericZero = isGenericZero(Triple);
-  resetDataLayout(isAMDGCN(getTriple())
-                      ? (IsGenericZero ? DataLayoutStringSIGenericIsZero
-                                       : DataLayoutStringSIPrivateIsZero)
-                      : DataLayoutStringR600);
-  assert(DataLayout->getAllocaAddrSpace() == AS.Private);
+    : TargetInfo(Triple),
+      GPU(isAMDGCN(Triple) ? AMDGCNGPUs[0] : parseR600Name(Opts.CPU)) {
+  resetDataLayout(isAMDGCN(getTriple()) ? DataLayoutStringAMDGCN
+                                        : DataLayoutStringR600);
+  assert(DataLayout->getAllocaAddrSpace() == Private);
 
   setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
-                     Triple.getEnvironment() == llvm::Triple::OpenCL ||
-                     Triple.getEnvironmentName() == "amdgizcl" ||
                      !isAMDGCN(Triple));
   UseAddrSpaceMapMangling = true;
 
@@ -322,7 +282,11 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
 void AMDGPUTargetInfo::adjust(LangOptions &Opts) {
   TargetInfo::adjust(Opts);
-  setAddressSpaceMap(Opts.OpenCL || !isAMDGCN(getTriple()));
+  // ToDo: There are still a few places using default address space as private
+  // address space in OpenCL, which needs to be cleaned up, then Opts.OpenCL
+  // can be removed from the following line.
+  setAddressSpaceMap(/*DefaultIsPrivate=*/Opts.OpenCL ||
+                     !isAMDGCN(getTriple()));
 }
 
 ArrayRef<Builtin::Info> AMDGPUTargetInfo::getTargetBuiltins() const {

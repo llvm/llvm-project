@@ -78,17 +78,17 @@ std::initializer_list<int> thread_local x = {1, 2, 3, 4};
 // X86: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE.*]] = internal global [2 x i32] zeroinitializer, align 4
 // X86: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE.*]] = internal constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
 // AMDGCN: @_ZN15partly_constant1kE = addrspace(1) global i32 0, align 4
-// AMDGCN: @_ZN15partly_constant2ilE = addrspace(2) global {{.*}} null, align 8
-// AMDGCN: @[[PARTLY_CONSTANT_OUTER:_ZGRN15partly_constant2ilE.*]] = internal addrspace(2) global {{.*}} zeroinitializer, align 8
-// AMDGCN: @[[PARTLY_CONSTANT_INNER:_ZGRN15partly_constant2ilE.*]] = internal addrspace(2) global [3 x {{.*}}] zeroinitializer, align 8
-// AMDGCN: @[[PARTLY_CONSTANT_FIRST:_ZGRN15partly_constant2ilE.*]] = internal addrspace(2) constant [3 x i32] [i32 1, i32 2, i32 3], align 4
-// AMDGCN: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE.*]] = internal addrspace(2) global [2 x i32] zeroinitializer, align 4
-// AMDGCN: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE.*]] = internal addrspace(2) constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
+// AMDGCN: @_ZN15partly_constant2ilE = addrspace(4) global {{.*}} null, align 8
+// AMDGCN: @[[PARTLY_CONSTANT_OUTER:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) global {{.*}} zeroinitializer, align 8
+// AMDGCN: @[[PARTLY_CONSTANT_INNER:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) global [3 x {{.*}}] zeroinitializer, align 8
+// AMDGCN: @[[PARTLY_CONSTANT_FIRST:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) constant [3 x i32] [i32 1, i32 2, i32 3], align 4
+// AMDGCN: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) global [2 x i32] zeroinitializer, align 4
+// AMDGCN: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
 
 // X86: @[[REFTMP1:.*]] = private constant [2 x i32] [i32 42, i32 43], align 4
 // X86: @[[REFTMP2:.*]] = private constant [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], align 4
-// AMDGCN: @[[REFTMP1:.*]] = private addrspace(2) constant [2 x i32] [i32 42, i32 43], align 4
-// AMDGCN: @[[REFTMP2:.*]] = private addrspace(2) constant [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], align 4
+// AMDGCN: @[[REFTMP1:.*]] = private addrspace(4) constant [2 x i32] [i32 42, i32 43], align 4
+// AMDGCN: @[[REFTMP2:.*]] = private addrspace(4) constant [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], align 4
 
 // CHECK: appending global
 
@@ -518,7 +518,7 @@ namespace B19773010 {
     // CHECK-LABEL: @_ZN9B197730102f1Ev
     testcase a{{"", ENUM_CONSTANT}};
     // X86: store %"struct.B19773010::pair"* getelementptr inbounds ([1 x %"struct.B19773010::pair"], [1 x %"struct.B19773010::pair"]* bitcast ([1 x { i8*, i32 }]* @.ref.tmp{{.*}} to [1 x %"struct.B19773010::pair"]*), i64 0, i64 0), %"struct.B19773010::pair"** %{{.*}}, align 8
-    // AMDGCN: store %"struct.B19773010::pair"* getelementptr inbounds ([1 x %"struct.B19773010::pair"], [1 x %"struct.B19773010::pair"]* addrspacecast{{.*}} bitcast ([1 x { i8*, i32 }] addrspace(2)* @.ref.tmp{{.*}} to [1 x %"struct.B19773010::pair"] addrspace(2)*){{.*}}, i64 0, i64 0), %"struct.B19773010::pair"** %{{.*}}, align 8
+    // AMDGCN: store %"struct.B19773010::pair"* getelementptr inbounds ([1 x %"struct.B19773010::pair"], [1 x %"struct.B19773010::pair"]* addrspacecast{{.*}} bitcast ([1 x { i8*, i32 }] addrspace(4)* @.ref.tmp{{.*}} to [1 x %"struct.B19773010::pair"] addrspace(4)*){{.*}}, i64 0, i64 0), %"struct.B19773010::pair"** %{{.*}}, align 8
   }
   void f2() {
     // CHECK-LABEL: @_ZN9B197730102f2Ev

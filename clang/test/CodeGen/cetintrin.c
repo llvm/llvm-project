@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=i386-apple-darwin -target-feature +shstk -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +shstk  -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=X86_64
+// RUN: %clang_cc1 -ffreestanding %s -triple=i386-apple-darwin -target-feature +shstk -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=I386 --check-prefix=CHECK
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +shstk  -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=X86_64  --check-prefix=CHECK
 
 #include <immintrin.h>
 
@@ -15,6 +15,20 @@ void test_incsspq(int a) {
   // X86_64:       call void @llvm.x86.incsspq(i64 %{{[a-z0-9.]+}})
   _incsspq(a);
 }
+
+void test_inc_ssp(unsigned int a) {
+  // X86_64-LABEL: @test_inc_ssp
+  // X86_64:       call void @llvm.x86.incsspq(i64 %{{[a-z0-9.]+}})
+  _inc_ssp(a);
+}
+#else
+
+void test_inc_ssp(unsigned int a) {
+  // I386-LABEL: @test_inc_ssp
+  // I386:       call void @llvm.x86.incsspd(i32 %{{[0-9]+}})
+  _inc_ssp(a);
+}
+
 #endif
 
 unsigned int test_rdsspd(unsigned int a) {
@@ -29,6 +43,21 @@ unsigned long long test_rdsspq(unsigned long long a) {
   // X86_64:       call i64 @llvm.x86.rdsspq(i64 %{{[a-z0-9.]+}})
   return _rdsspq(a);
 }
+
+unsigned long long test_get_ssp(void) {
+  // X86_64-LABEL: @test_get_ssp
+  // X86_64:       call i64 @llvm.x86.rdsspq(i64 0)
+  return _get_ssp();
+}
+
+#else
+
+unsigned int test_get_ssp(void) {
+  // I386-LABEL: @test_get_ssp
+  // I386:       call i32 @llvm.x86.rdsspd(i32 0)
+  return _get_ssp();
+}
+
 #endif
 
 void  test_saveprevssp() {
