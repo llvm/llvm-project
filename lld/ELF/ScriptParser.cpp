@@ -809,7 +809,7 @@ Expr ScriptParser::combine(StringRef Op, Expr L, Expr R) {
       if (uint64_t RV = R().getValue())
         return L().getValue() / RV;
       error(Loc + ": division by zero");
-      return (uint64_t)0;
+      return 0;
     };
   }
   if (Op == "%") {
@@ -818,7 +818,7 @@ Expr ScriptParser::combine(StringRef Op, Expr L, Expr R) {
       if (uint64_t RV = R().getValue())
         return L().getValue() % RV;
       error(Loc + ": modulo by zero");
-      return (uint64_t)0;
+      return 0;
     };
   }
   if (Op == "<<")
