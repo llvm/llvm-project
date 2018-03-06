@@ -566,9 +566,14 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   if (GV.isDeclarationForLinker())
     Assert(!GV.hasComdat(), "Declaration may not be in a Comdat!", &GV);
 
-  if (GV.hasDLLImportStorageClass())
+  if (GV.hasDLLImportStorageClass()) {
     Assert(!GV.isDSOLocal(),
            "GlobalValue with DLLImport Storage is dso_local!", &GV);
+
+    Assert((GV.isDeclaration() && GV.hasExternalLinkage()) ||
+               GV.hasAvailableExternallyLinkage(),
+           "Global is marked as dllimport, but not external", &GV);
+  }
 
   if (GV.hasLocalLinkage())
     Assert(GV.isDSOLocal(),
@@ -664,11 +669,6 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       }
     }
   }
-
-  Assert(!GV.hasDLLImportStorageClass() ||
-             (GV.isDeclaration() && GV.hasExternalLinkage()) ||
-             GV.hasAvailableExternallyLinkage(),
-         "Global is marked as dllimport, but not external", &GV);
 
   // Visit any debug info attachments.
   SmallVector<MDNode *, 1> MDs;
@@ -2192,11 +2192,6 @@ void Verifier::visitFunction(const Function &F) {
     if (F.hasAddressTaken(&U))
       Assert(false, "Invalid user of intrinsic instruction!", U);
   }
-
-  Assert(!F.hasDLLImportStorageClass() ||
-             (F.isDeclaration() && F.hasExternalLinkage()) ||
-             F.hasAvailableExternallyLinkage(),
-         "Function is marked as dllimport, but not external.", &F);
 
   auto *N = F.getSubprogram();
   HasDebugInfo = (N != nullptr);

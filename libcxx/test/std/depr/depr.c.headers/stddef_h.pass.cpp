@@ -13,6 +13,8 @@
 #include <cassert>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef NULL
 #error NULL not defined
 #endif
@@ -42,8 +44,14 @@ int main()
                   "decltype(nullptr) == nullptr_t");
     static_assert(sizeof(nullptr_t) == sizeof(void*),
                   "sizeof(nullptr_t) == sizeof(void*)");
+#if TEST_STD_VER > 17
+//   P0767
+    static_assert(std::is_trivial<max_align_t>::value,
+                  "std::is_trivial<max_align_t>::value");
+#else
     static_assert(std::is_pod<max_align_t>::value,
                   "std::is_pod<max_align_t>::value");
+#endif
     static_assert((std::alignment_of<max_align_t>::value >=
                   std::alignment_of<long long>::value),
                   "std::alignment_of<max_align_t>::value >= "

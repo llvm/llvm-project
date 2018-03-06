@@ -12,6 +12,9 @@
 #ifndef HEADER
 #define HEADER
 
+// CHECK-DAG: @reduction_size.[[ID:.+]]_[[CID:[0-9]+]].artificial.
+// CHECK-DAG: @reduction_size.[[ID]]_[[CID]].artificial..cache.
+
 struct S {
   int a;
   S() : a(0) {}
@@ -20,7 +23,6 @@ struct S {
   ~S() {}
   friend S operator+(const S&a, const S&b) {return a;}
 };
-
 
 int main(int argc, char **argv) {
   int a;

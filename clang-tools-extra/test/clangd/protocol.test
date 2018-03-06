@@ -38,7 +38,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertText": "fake",
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
-# CHECK-NEXT:        "label": "fake::",
+# CHECK-NEXT:        "label": "fake",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
@@ -67,7 +67,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertText": "fake",
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
-# CHECK-NEXT:        "label": "fake::",
+# CHECK-NEXT:        "label": "fake",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
@@ -96,7 +96,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertText": "fake",
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
-# CHECK-NEXT:        "label": "fake::",
+# CHECK-NEXT:        "label": "fake",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }

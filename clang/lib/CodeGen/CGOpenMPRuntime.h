@@ -191,6 +191,8 @@ public:
   }
   /// Returns the base declaration of the reduction item.
   const VarDecl *getBaseDecl(unsigned N) const { return BaseDecls[N]; }
+  /// Returns the base declaration of the reduction item.
+  const Expr *getRefExpr(unsigned N) const { return ClausesData[N].Ref; }
   /// Returns true if the initialization of the reduction item uses initializer
   /// from declare reduction construct.
   bool usesReductionInitializer(unsigned N) const;

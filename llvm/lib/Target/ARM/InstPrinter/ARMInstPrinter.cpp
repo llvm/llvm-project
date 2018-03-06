@@ -825,7 +825,8 @@ void ARMInstPrinter::printMSRMaskOperand(const MCInst *MI, unsigned OpNum,
       return;
     }
 
-    llvm_unreachable("Unexpected mask value!");
+    O << SYSm; 
+
     return;
   }
 
