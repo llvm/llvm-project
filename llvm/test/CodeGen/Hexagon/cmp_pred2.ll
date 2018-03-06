@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5  < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Make sure that the assembler mapped compare instructions are correctly generated.
 
 @c = common global i32 0, align 4

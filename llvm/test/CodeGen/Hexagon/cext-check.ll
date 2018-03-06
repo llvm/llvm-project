@@ -2,10 +2,10 @@
 ; Check that we constant extended instructions only when necessary.
 
 define i32 @cext_test1(i32* %a) nounwind {
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memw(r{{[0-9]+}}{{ *}}+{{ *}}##8000)
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}add(r{{[0-9]+}}{{ *}},{{ *}}##300000)
-; CHECK-NOT: r{{[0-9]+}}{{ *}}={{ *}}memw(r{{[0-9]+}}{{ *}}+{{ *}}##4092)
-; CHECK-NOT: r{{[0-9]+}}{{ *}}={{ *}}add(r{{[0-9]+}}{{ *}},{{ *}}##300)
+; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}+##8000)
+; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}},##300000)
+; CHECK-NOT: r{{[0-9]+}} = memw(r{{[0-9]+}}+##4092)
+; CHECK-NOT: r{{[0-9]+}} = add(r{{[0-9]+}},##300)
 entry:
   %0 = load i32, i32* %a, align 4
   %tobool = icmp ne i32 %0, 0
@@ -29,10 +29,10 @@ return:
 }
 
 define i32 @cext_test2(i8* %a) nounwind {
-; CHECK-NOT: r{{[0-9]+}}{{ *}}={{ *}}memub(r{{[0-9]+}}+{{ *}}##1023)
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}add(r{{[0-9]+}}{{ *}},{{ *}}##300000)
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memub(r{{[0-9]+}}{{ *}}+{{ *}}##1024)
-; CHECK-NOT: r{{[0-9]+}}{{ *}}={{ *}}add(r{{[0-9]+}}{{ *}},{{ *}}##6000)
+; CHECK-NOT: r{{[0-9]+}} = memub(r{{[0-9]+}}+##1023)
+; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}},##300000)
+; CHECK: r{{[0-9]+}} = memub(r{{[0-9]+}}+##1024)
+; CHECK-NOT: r{{[0-9]+}} = add(r{{[0-9]+}},##6000)
 entry:
   %tobool = icmp ne i8* %a, null
   br i1 %tobool, label %if.then, label %if.end

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-post-ra < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Make sure that if there's only one store to the stack, it gets packetized
 ; with allocframe as there's a latency of 2 cycles between allocframe and

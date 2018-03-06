@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
 
 ; Check that post-increment store instructions are being generated.
-; CHECK: memw(r{{[0-9]+}}{{ *}}++{{ *}}#4{{ *}}){{ *}}={{ *}}r{{[0-9]+}}
+; CHECK: memw(r{{[0-9]+}}++#4) = r{{[0-9]+}}
 
 define i32 @sum(i32* nocapture %a, i16* nocapture %b, i32 %n) nounwind {
 entry:

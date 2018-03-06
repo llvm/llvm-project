@@ -230,8 +230,6 @@ declare void @g.f1()
 ; Aliases -- DLLStorageClass
 @a.dlldefault = default alias i32, i32* @g.dlldefault
 ; CHECK: @a.dlldefault = alias i32, i32* @g.dlldefault
-@a.dllimport = dllimport alias i32, i32* @g1
-; CHECK: @a.dllimport = dllimport alias i32, i32* @g1
 @a.dllexport = dllexport alias i32, i32* @g.dllexport
 ; CHECK: @a.dllexport = dllexport alias i32, i32* @g.dllexport
 

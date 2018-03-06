@@ -94,35 +94,33 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
   bool Changed = false;
   for (auto &F : M.functions()) {
     if (F.hasFnAttribute("enqueued-block")) {
-      if (!F.hasOneUse() || !F.user_begin()->hasOneUse() ||
-          !isa<ConstantExpr>(*F.user_begin()) ||
-          !isa<ConstantExpr>(*F.user_begin()->user_begin())) {
-        continue;
-      }
-      auto *BitCast = cast<ConstantExpr>(*F.user_begin());
-      auto *AddrCast = cast<ConstantExpr>(*BitCast->user_begin());
-      auto RuntimeHandle = (F.getName() + "_runtime_handle").str();
-      auto *GV = new GlobalVariable(
-          M, Type::getInt8Ty(C)->getPointerTo(AMDGPUAS::GLOBAL_ADDRESS),
-          /*IsConstant=*/true, GlobalValue::ExternalLinkage,
-          /*Initializer=*/nullptr, RuntimeHandle, /*InsertBefore=*/nullptr,
-          GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS,
-          /*IsExternallyInitialized=*/true);
-      DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
-      auto *NewPtr = ConstantExpr::getPointerCast(GV, AddrCast->getType());
-      AddrCast->replaceAllUsesWith(NewPtr);
-      F.addFnAttr("runtime-handle", RuntimeHandle);
-      F.setLinkage(GlobalValue::ExternalLinkage);
+      for (auto U : F.users()) {
+        if (!isa<ConstantExpr>(&*U))
+          continue;
+        auto *BitCast = cast<ConstantExpr>(&*U);
+        auto RuntimeHandle = (F.getName() + "_runtime_handle").str();
+        auto *GV = new GlobalVariable(
+            M, Type::getInt8Ty(C)->getPointerTo(AMDGPUAS::GLOBAL_ADDRESS),
+            /*IsConstant=*/true, GlobalValue::ExternalLinkage,
+            /*Initializer=*/nullptr, RuntimeHandle, /*InsertBefore=*/nullptr,
+            GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS,
+            /*IsExternallyInitialized=*/true);
+        DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
+        auto *NewPtr = ConstantExpr::getPointerCast(GV, BitCast->getType());
+        BitCast->replaceAllUsesWith(NewPtr);
+        F.addFnAttr("runtime-handle", RuntimeHandle);
+        F.setLinkage(GlobalValue::ExternalLinkage);
 
-      // Collect direct or indirect callers of enqueue_kernel.
-      for (auto U : NewPtr->users()) {
-        if (auto *I = dyn_cast<Instruction>(&*U)) {
-          auto *F = I->getParent()->getParent();
-          Callers.insert(F);
-          collectCallers(F, Callers);
+        // Collect direct or indirect callers of enqueue_kernel.
+        for (auto U : NewPtr->users()) {
+          if (auto *I = dyn_cast<Instruction>(&*U)) {
+            auto *F = I->getParent()->getParent();
+            Callers.insert(F);
+            collectCallers(F, Callers);
+          }
         }
+        Changed = true;
       }
-      Changed = true;
     }
   }
 

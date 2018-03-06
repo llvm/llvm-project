@@ -3,7 +3,7 @@
 ; CHECK: vmem(r{{[0-9]+}}+#3) = v{{[0-9]+}}
 ; CHECK: call puts
 ; CHECK: call print_vecpred
-; CHECK: v{{[0-9]+}}{{ *}}={{ *}}vmem(r{{[0-9]+}}+#3)
+; CHECK: v{{[0-9]+}} = vmem(r{{[0-9]+}}+#3)
 
 target triple = "hexagon"
 

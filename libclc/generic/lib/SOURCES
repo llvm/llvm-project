@@ -189,6 +189,7 @@ relational/isnormal.cl
 relational/isnotequal.cl
 relational/isordered.cl
 relational/isunordered.cl
+relational/select.cl
 relational/signbit.cl
 shared/clamp.cl
 shared/max.cl

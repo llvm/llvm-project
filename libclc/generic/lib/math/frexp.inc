@@ -20,91 +20,55 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+#define __CLC_AS_GENTYPE __CLC_XCONCAT(as_, __CLC_GENTYPE)
+#define __CLC_AS_INTN __CLC_XCONCAT(as_, __CLC_INTN)
+
 #if __CLC_FPSIZE == 32
-#ifdef __CLC_SCALAR
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE frexp(float x, private int *ep) {
-    int i = as_int(x);
-    int ai = i & 0x7fffffff;
-    int d = ai > 0 & ai < 0x00800000;
-    // scale subnormal by 2^26 without multiplying
-    float s = as_float(ai | 0x0d800000) - 0x1.0p-100F;
-    ai = d ? as_int(s) : ai;
-    int e = (ai >> 23) - 126 - (d ? 26 : 0);
-    int t = ai == 0 | e == 129;
-    i = (i & 0x80000000) | 0x3f000000 | (ai & 0x007fffff);
-    *ep = t ? 0 : e;
-    return t ? x : as_float(i);
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
+    __CLC_INTN i = __CLC_AS_INTN(x);
+    __CLC_INTN ai = i & 0x7fffffff;
+    __CLC_INTN d = ai > 0 & ai < 0x00800000;
+    /* scale subnormal by 2^26 without multiplying */
+    __CLC_GENTYPE s = __CLC_AS_GENTYPE(ai | 0x0d800000) - 0x1.0p-100f;
+    ai = select(ai, __CLC_AS_INTN(s), d);
+    __CLC_INTN e = (ai >> 23) - 126 - select((__CLC_INTN)0, (__CLC_INTN)26, d);
+    __CLC_INTN t = ai == (__CLC_INTN)0 | e == (__CLC_INTN)129;
+    i = (i & (__CLC_INTN)0x80000000) | (__CLC_INTN)0x3f000000 | (ai & 0x007fffff);
+    *ep = select(e, (__CLC_INTN)0, t);
+    return select(__CLC_AS_GENTYPE(i), x, t);
 }
-#define __CLC_FREXP_VEC(width) \
-_CLC_OVERLOAD _CLC_DEF float##width frexp(float##width x, private int##width *ep) { \
-    int##width i = as_int##width(x); \
-    int##width ai = i & 0x7fffffff; \
-    int##width d = ai > 0 & ai < 0x00800000; \
-    /* scale subnormal by 2^26 without multiplying */ \
-    float##width s = as_float##width(ai | 0x0d800000) - 0x1.0p-100F; \
-    ai = bitselect(ai, as_int##width(s), d); \
-    int##width e = (ai >> 23) - 126 - bitselect((int##width)0, (int##width)26, d); \
-    int##width t = ai == (int##width)0 | e == (int##width)129; \
-    i = (i & (int##width)0x80000000) | (int##width)0x3f000000 | (ai & 0x007fffff); \
-    *ep = bitselect(e, (int##width)0, t); \
-    return bitselect(as_float##width(i), x, as_float##width(t)); \
-}
-__CLC_FREXP_VEC(2)
-__CLC_FREXP_VEC(3)
-__CLC_FREXP_VEC(4)
-__CLC_FREXP_VEC(8)
-__CLC_FREXP_VEC(16)
-#undef __CLC_FREXP_VEC
-#endif
 #endif
 
 #if __CLC_FPSIZE == 64
 #ifdef __CLC_SCALAR
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE frexp(__CLC_GENTYPE x, private __CLC_INTN *ep) {
-    long i = as_long(x);
-    long ai = i & 0x7fffffffffffffffL;
-    int d = ai > 0 & ai < 0x0010000000000000L;
+#define __CLC_AS_LONGN as_long
+#define __CLC_LONGN long
+#define __CLC_CONVERT_INTN convert_int
+#else
+#define __CLC_AS_LONGN __CLC_XCONCAT(as_long, __CLC_VECSIZE)
+#define __CLC_LONGN __CLC_XCONCAT(long, __CLC_VECSIZE)
+#define __CLC_CONVERT_INTN __CLC_XCONCAT(convert_int, __CLC_VECSIZE)
+#endif
+
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
+    __CLC_LONGN i = __CLC_AS_LONGN(x);
+    __CLC_LONGN ai = i & 0x7fffffffffffffffL;
+    __CLC_LONGN d = ai > 0 & ai < 0x0010000000000000L;
     // scale subnormal by 2^54 without multiplying
-    double s = as_double(ai | 0x0370000000000000L) - 0x1.0p-968;
-    ai = d ? as_long(s) : ai;
-    int e = (int)(ai >> 52) - 1022 - (d ? 54 : 0);
-    int t = ai == 0 | e == 1025;
-    i = (i & 0x8000000000000000L) | 0x3fe0000000000000L | (ai & 0x000fffffffffffffL);
-    *ep = t ? 0 : e;
-    return t ? x : as_double(i);
+    __CLC_GENTYPE s = __CLC_AS_GENTYPE(ai | 0x0370000000000000L) - 0x1.0p-968;
+    ai = select(ai, __CLC_AS_LONGN(s), d);
+    __CLC_LONGN e = (ai >> 52) - (__CLC_LONGN)1022 - select((__CLC_LONGN)0, (__CLC_LONGN)54, d);
+    __CLC_LONGN t = ai == 0 | e == 1025;
+    i = (i & (__CLC_LONGN)0x8000000000000000L) | (__CLC_LONGN)0x3fe0000000000000L | (ai & (__CLC_LONGN)0x000fffffffffffffL);
+    *ep = __CLC_CONVERT_INTN(select(e, 0L, t));
+    return select(__CLC_AS_GENTYPE(i), x, t);
 }
-#define __CLC_FREXP_VEC(width) \
-_CLC_OVERLOAD _CLC_DEF double##width frexp(double##width x, private int##width *ep) { \
-    long##width i = as_long##width(x); \
-    long##width ai = i & 0x7fffffffffffffffL; \
-    long##width d = ai > 0 & ai < 0x0010000000000000L; \
-    /* scale subnormal by 2^54 without multiplying */ \
-    double##width s = as_double##width(ai | 0x0370000000000000L) - 0x1.0p-968; \
-    ai = bitselect(ai, as_long##width(s), d); \
-    int##width e = convert_int##width(ai >> 52) - 1022 - bitselect((int##width)0, (int##width)54, convert_int##width(d)); \
-    int##width t = convert_int##width(ai == (long##width)0) | (e == (int##width)129); \
-    i = (i & (long##width)0x8000000000000000L) | (long##width)0x3fe0000000000000L | (ai & 0x000fffffffffffffL); \
-    *ep = bitselect(e, (int##width)0, t); \
-    return bitselect(as_double##width(i), x, as_double##width(convert_long##width(t))); \
-}
-__CLC_FREXP_VEC(2)
-__CLC_FREXP_VEC(3)
-__CLC_FREXP_VEC(4)
-__CLC_FREXP_VEC(8)
-__CLC_FREXP_VEC(16)
-#undef __CLC_FREXP_VEC
-#endif
+
+#undef __CLC_AS_LONGN
+#undef __CLC_LONGN
+#undef __CLC_CONVERT_INTN
 #endif
 
-#define __CLC_FREXP_DEF(addrspace) \
-  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE frexp(__CLC_GENTYPE x, addrspace __CLC_INTN *iptr) { \
-    __CLC_INTN private_iptr; \
-    __CLC_GENTYPE ret = frexp(x, &private_iptr); \
-    *iptr = private_iptr; \
-    return ret; \
-}
-
-__CLC_FREXP_DEF(local);
-__CLC_FREXP_DEF(global);
-
-#undef __CLC_FREXP_DEF
+#undef __CLC_AS_GENTYPE
+#undef __CLC_AS_INTN

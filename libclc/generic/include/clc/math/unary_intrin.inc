@@ -6,6 +6,7 @@ _CLC_OVERLOAD float8 __CLC_FUNCTION(float8 f) __asm(__CLC_INTRINSIC ".v8f32");
 _CLC_OVERLOAD float16 __CLC_FUNCTION(float16 f) __asm(__CLC_INTRINSIC ".v16f32");
 
 #ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
 _CLC_OVERLOAD double __CLC_FUNCTION(double d) __asm(__CLC_INTRINSIC ".f64");
 _CLC_OVERLOAD double2 __CLC_FUNCTION(double2 d) __asm(__CLC_INTRINSIC ".v2f64");
 _CLC_OVERLOAD double3 __CLC_FUNCTION(double3 d) __asm(__CLC_INTRINSIC ".v3f64");

@@ -191,9 +191,11 @@ static void dumpModules(Debugger &Dbg) {
 
   for (const auto &File : opts::module::InputFilenames) {
     ModuleSpec Spec{FileSpec(File, false)};
-    Spec.GetSymbolFileSpec().SetFile(File, false);
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
+    // Fetch symbol vendor before we get the section list to give the symbol
+    // vendor a chance to populate it.
+    ModulePtr->GetSymbolVendor();
     SectionList *Sections = ModulePtr->GetSectionList();
     if (!Sections) {
       llvm::errs() << "Could not load sections for module " << File << "\n";

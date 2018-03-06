@@ -154,15 +154,6 @@ static bool beforeThanCompareGroups(const GroupInfo *LHS, const GroupInfo *RHS){
                            RHS->DiagsInGroup.front());
 }
 
-static SMRange findSuperClassRange(const Record *R, StringRef SuperName) {
-  ArrayRef<std::pair<Record *, SMRange>> Supers = R->getSuperClasses();
-  auto I = std::find_if(Supers.begin(), Supers.end(),
-                        [&](const std::pair<Record *, SMRange> &SuperPair) {
-                          return SuperPair.first->getName() == SuperName;
-                        });
-  return (I != Supers.end()) ? I->second : SMRange();
-}
-
 /// \brief Invert the 1-[0/1] mapping of diags to group into a one to many
 /// mapping of groups to diags in the group.
 static void groupDiagnostics(const std::vector<Record*> &Diags,
@@ -236,22 +227,10 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
         if (NextDiagGroup == (*I)->ExplicitDef)
           continue;
 
-        SMRange InGroupRange = findSuperClassRange(*DI, "InGroup");
-        SmallString<64> Replacement;
-        if (InGroupRange.isValid()) {
-          Replacement += "InGroup<";
-          Replacement += (*I)->ExplicitDef->getName();
-          Replacement += ">";
-        }
-        SMFixIt FixIt(InGroupRange, Replacement);
-
-        SrcMgr.PrintMessage(NextDiagGroup->getLoc().front(),
+        SrcMgr.PrintMessage((*DI)->getLoc().front(),
                             SourceMgr::DK_Error,
                             Twine("group '") + Name +
-                              "' is referred to anonymously",
-                            None,
-                            InGroupRange.isValid() ? FixIt
-                                                   : ArrayRef<SMFixIt>());
+                              "' is referred to anonymously");
         SrcMgr.PrintMessage((*I)->ExplicitDef->getLoc().front(),
                             SourceMgr::DK_Note, "group defined here");
       }
@@ -266,19 +245,14 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
       const Record *NextDiagGroup = GroupInit->getDef();
       std::string Name = NextDiagGroup->getValueAsString("GroupName");
 
-      SMRange InGroupRange = findSuperClassRange(*DI, "InGroup");
-      SrcMgr.PrintMessage(NextDiagGroup->getLoc().front(),
+      SrcMgr.PrintMessage((*DI)->getLoc().front(),
                           SourceMgr::DK_Error,
                           Twine("group '") + Name +
-                            "' is referred to anonymously",
-                          InGroupRange);
+                            "' is referred to anonymously");
 
       for (++DI; DI != DE; ++DI) {
-        GroupInit = cast<DefInit>((*DI)->getValueInit("Group"));
-        InGroupRange = findSuperClassRange(*DI, "InGroup");
-        SrcMgr.PrintMessage(GroupInit->getDef()->getLoc().front(),
-                            SourceMgr::DK_Note, "also referenced here",
-                            InGroupRange);
+        SrcMgr.PrintMessage((*DI)->getLoc().front(),
+                            SourceMgr::DK_Note, "also referenced here");
       }
     }
   }

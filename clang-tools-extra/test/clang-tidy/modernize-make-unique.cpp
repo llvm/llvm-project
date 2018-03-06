@@ -50,6 +50,7 @@ struct G {
 
 struct H {
   H(std::vector<int>);
+  H(std::vector<int> &, double);
   H(MyVector<int>, int);
 };
 
@@ -343,6 +344,13 @@ void initialization(int T, Base b) {
   PH2.reset(new H({1, 2, 3}, 1));
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
   // CHECK-FIXES: PH2.reset(new H({1, 2, 3}, 1));
+
+  std::unique_ptr<H> PH3 = std::unique_ptr<H>(new H({1, 2, 3}, 1.0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<H> PH3 = std::unique_ptr<H>(new H({1, 2, 3}, 1.0));
+  PH3.reset(new H({1, 2, 3}, 1.0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PH3.reset(new H({1, 2, 3}, 1.0));
 
   std::unique_ptr<I> PI1 = std::unique_ptr<I>(new I(G({1, 2, 3})));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead

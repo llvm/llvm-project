@@ -1,13 +1,12 @@
-; RUN: llc -O2 -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
 ; Check if the three stores in the loop were predicated.
 ; CHECK: if{{.*}}memw
 ; CHECK: if{{.*}}memw
 ; CHECK: if{{.*}}memw
 
-target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 
-define void @fred(i32 %n, i32* %bp) nounwind {
+define void @fred(i32 %n, i32* %bp) #0 {
 entry:
   %cmp16 = icmp eq i32 %n, 0
   br i1 %cmp16, label %for.end, label %for.body.lr.ph
@@ -51,6 +50,8 @@ for.end:                                          ; preds = %for.end.loopexit, %
 declare i32 @foo(i32*) nounwind
 
 declare i32 @bar(i32*) nounwind
+
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }
 
 !0 = !{!"int", !1}
 !1 = !{!"omnipotent char", !2}

@@ -469,7 +469,13 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
   bool Changed = false;
   for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE;) {
     BasicBlock &BB = *BI++;
-    for (BasicBlock::iterator II = BB.begin(), IE = BB.end(); II != IE;) {
+    auto II = BB.getFirstNonPHIOrDbg()->getIterator();
+    auto IE = BB.getTerminator()->getIterator();
+    // Iterate until we reach the terminator instruction. tryToSplitCallSite
+    // can replace BB's terminator in case BB is a successor of itself. In that
+    // case, IE will be invalidated and we also have to check the current
+    // terminator.
+    while (II != IE && &*II != BB.getTerminator()) {
       Instruction *I = &*II++;
       CallSite CS(cast<Value>(I));
       if (!CS || isa<IntrinsicInst>(I) || isInstructionTriviallyDead(I, &TLI))
