@@ -480,6 +480,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("cast", tgtok::XCast)
     .Case("empty", tgtok::XEmpty)
     .Case("subst", tgtok::XSubst)
+    .Case("foldl", tgtok::XFoldl)
     .Case("foreach", tgtok::XForEach)
     .Case("listconcat", tgtok::XListConcat)
     .Case("strconcat", tgtok::XStrConcat)

@@ -14,6 +14,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/SMLoc.h"
 #include <algorithm>
 #include <cassert>
@@ -128,6 +129,9 @@ public:
            "This token isn't an integer!");
     return IntVal;
   }
+
+  void dump(raw_ostream &OS) const;
+  void dump() const { dump(dbgs()); }
 };
 
 /// A callback class which is notified of each comment in an assembly file as

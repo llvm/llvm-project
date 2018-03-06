@@ -634,10 +634,17 @@ namespace llvm {
     }
 
     void defineMacro(StringRef Name, MCAsmMacro Macro) {
+      DEBUG_WITH_TYPE("asm-macros", dbgs() << "Defining new macro:\n";
+                      Macro.dump());
       MacroMap.insert(std::make_pair(Name, std::move(Macro)));
     }
 
-    void undefineMacro(StringRef Name) { MacroMap.erase(Name); }
+    void undefineMacro(StringRef Name) {
+      if (MacroMap.erase(Name)) {
+        DEBUG_WITH_TYPE("asm-macros",
+                        dbgs() << "Un-defining macro: " << Name << "\n");
+      }
+    }
   };
 
 } // end namespace llvm

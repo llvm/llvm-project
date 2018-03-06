@@ -1531,10 +1531,8 @@ private:
     if (!PrevToken)
       return TT_UnaryOperator;
 
-    if (PrevToken->isOneOf(TT_CastRParen, TT_UnaryOperator) &&
-        !PrevToken->is(tok::exclaim))
-      // There aren't any trailing unary operators except for TypeScript's
-      // non-null operator (!). Thus, this must be squence of leading operators.
+    if (PrevToken->isOneOf(TT_CastRParen, TT_UnaryOperator))
+      // This must be a sequence of leading unary operators.
       return TT_UnaryOperator;
 
     // Use heuristics to recognize unary operators.

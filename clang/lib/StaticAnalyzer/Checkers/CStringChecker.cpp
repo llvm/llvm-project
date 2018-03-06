@@ -1033,21 +1033,6 @@ void CStringChecker::evalCopyCommon(CheckerContext &C,
   if (stateNonZeroSize) {
     state = stateNonZeroSize;
 
-    // Ensure the destination is not null. If it is NULL there will be a
-    // NULL pointer dereference.
-    state = checkNonNull(C, state, Dest, destVal);
-    if (!state)
-      return;
-
-    // Get the value of the Src.
-    SVal srcVal = state->getSVal(Source, LCtx);
-
-    // Ensure the source is not null. If it is NULL there will be a
-    // NULL pointer dereference.
-    state = checkNonNull(C, state, Source, srcVal);
-    if (!state)
-      return;
-
     // Ensure the accesses are valid and that the buffers do not overlap.
     const char * const writeWarning =
       "Memory copy function overflows destination buffer";
@@ -2032,12 +2017,6 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
     C.addTransition(StateZeroSize);
     return;
   }
-
-  // Ensure the memory area is not null.
-  // If it is NULL there will be a NULL pointer dereference.
-  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal);
-  if (!State)
-    return;
 
   State = CheckBufferAccess(C, State, Size, Mem);
   if (!State)
