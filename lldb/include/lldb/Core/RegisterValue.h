@@ -35,7 +35,7 @@ namespace lldb_private {
 
 class RegisterValue {
 public:
-  enum { kMaxRegisterByteSize = 32u };
+  enum { kMaxRegisterByteSize = 64u };
 
   enum Type {
     eTypeInvalid,

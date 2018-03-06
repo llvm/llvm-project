@@ -716,6 +716,45 @@ bool MachProcess::GetMachOInformationFromMemory(
         inf.min_version_os_version += std::to_string(zz);
       }
     }
+#if defined (LC_BUILD_VERSION)
+    if (lc.cmd == LC_BUILD_VERSION)
+    {
+        struct build_version_command build_vers;
+        if (ReadMemory(load_cmds_p, sizeof(struct build_version_command),
+                       &build_vers) != sizeof(struct build_version_command)) {
+          return false;
+        }
+        switch (build_vers.platform)
+        {
+            case PLATFORM_MACOS:
+                inf.min_version_os_name = "macosx";
+                break;
+            case PLATFORM_IOS:
+                inf.min_version_os_name = "iphoneos";
+                break;
+            case PLATFORM_TVOS:
+                inf.min_version_os_name = "tvos";
+                break;
+            case PLATFORM_WATCHOS:
+                inf.min_version_os_name = "watchos";
+                break;
+            case PLATFORM_BRIDGEOS:
+                inf.min_version_os_name = "bridgeos";
+                break;
+        }
+        uint32_t xxxx = build_vers.sdk >> 16;;
+        uint32_t yy = (build_vers.sdk >> 8) & 0xffu;
+        uint32_t zz = build_vers.sdk & 0xffu;
+        inf.min_version_os_version = "";
+        inf.min_version_os_version += std::to_string(xxxx);
+        inf.min_version_os_version += ".";
+        inf.min_version_os_version += std::to_string(yy);
+        if (zz != 0) {
+            inf.min_version_os_version += ".";
+            inf.min_version_os_version += std::to_string(zz);
+        }
+    }
+#endif
     load_cmds_p += lc.cmdsize;
   }
   return true;

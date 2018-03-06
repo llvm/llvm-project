@@ -230,6 +230,35 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ASSERT_EQ(Src1, Copies[1]);
 }
 
+TEST(PatternMatchInstr, MatchFPUnaryOp) {
+  LLVMContext Context;
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  if (!TM)
+    return;
+  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
+  MachineFunction *MF =
+      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+  MachineBasicBlock *EntryMBB = &*MF->begin();
+  MachineIRBuilder B(*MF);
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
+  // Truncate s64 to s32.
+  LLT s32 = LLT::scalar(32);
+  auto Copy0s32 = B.buildFPTrunc(s32, Copies[0]);
+
+  // Match G_FABS.
+  auto MIBFabs = B.buildInstr(TargetOpcode::G_FABS, s32, Copy0s32);
+  bool match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg()));
+  ASSERT_TRUE(match);
+  unsigned Src;
+  match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg(Src)));
+  ASSERT_TRUE(match);
+  ASSERT_EQ(Src, Copy0s32->getOperand(0).getReg());
+}
+
 TEST(PatternMatchInstr, MatchExtendsTrunc) {
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM = createTargetMachine();
