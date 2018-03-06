@@ -11,6 +11,7 @@
 #define LLVM_MC_MCASMMACRO_H
 
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/Support/Debug.h"
 
 namespace llvm {
 
@@ -21,6 +22,9 @@ struct MCAsmMacroParameter {
   bool Vararg = false;
 
   MCAsmMacroParameter() = default;
+
+  void dump() const { dump(dbgs()); }
+  void dump(raw_ostream &OS) const;
 };
 
 typedef std::vector<MCAsmMacroParameter> MCAsmMacroParameters;
@@ -32,6 +36,9 @@ struct MCAsmMacro {
 public:
   MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P)
       : Name(N), Body(B), Parameters(std::move(P)) {}
+
+  void dump() const { dump(dbgs()); }
+  void dump(raw_ostream &OS) const;
 };
 } // namespace llvm
 

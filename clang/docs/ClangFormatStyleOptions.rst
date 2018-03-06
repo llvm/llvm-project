@@ -629,7 +629,9 @@ the configuration (without a prefix: ``Auto``).
       int bar();
       }
 
-  * ``bool AfterObjCDeclaration`` Wrap ObjC definitions (``@autoreleasepool``, interfaces, ..).
+  * ``bool AfterObjCDeclaration`` Wrap ObjC definitions (interfaces, implementations...).
+    @autoreleasepool and @synchronized blocks are wrapped
+    according to `AfterControlStatement` flag.
 
   * ``bool AfterStruct`` Wrap struct definitions.
 
@@ -1508,6 +1510,52 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**ObjCBinPackProtocolList** (``BinPackStyle``)
+  Controls bin-packing Objective-C protocol conformance list
+  items into as few lines as possible when they go over ``ColumnLimit``.
+
+  If ``Auto`` (the default), delegates to the value in
+  ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  protocol conformance list items into as few lines as possible
+  whenever they go over ``ColumnLimit``.
+
+  If ``Always``, always bin-packs Objective-C protocol conformance
+  list items into as few lines as possible whenever they go over
+  ``ColumnLimit``.
+
+  If ``Never``, lays out Objective-C protocol conformance list items
+  onto individual lines whenever they go over ``ColumnLimit``.
+
+
+  .. code-block:: c++
+
+     Always (or Auto, if BinPackParameters=true):
+     @interface ccccccccccccc () <
+         ccccccccccccc, ccccccccccccc,
+         ccccccccccccc, ccccccccccccc> {
+     }
+
+     Never (or Auto, if BinPackParameters=false):
+     @interface ddddddddddddd () <
+         ddddddddddddd,
+         ddddddddddddd,
+         ddddddddddddd,
+         ddddddddddddd> {
+     }
+
+  Possible values:
+
+  * ``BPS_Auto`` (in configuration: ``Auto``)
+    Automatically determine parameter bin-packing behavior.
+
+  * ``BPS_Always`` (in configuration: ``Always``)
+    Always bin-pack parameters.
+
+  * ``BPS_Never`` (in configuration: ``Never``)
+    Never bin-pack parameters.
+
+
+
 **ObjCBlockIndentWidth** (``unsigned``)
   The number of characters to use for indentation of ObjC blocks.
 
@@ -1662,7 +1710,7 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
      true:                                  false:
-     (int)i;                        vs.     (int) i;
+     (int) i;                       vs.     (int)i;
 
 **SpaceAfterTemplateKeyword** (``bool``)
   If ``true``, a space will be inserted after the 'template' keyword.

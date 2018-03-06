@@ -1165,6 +1165,7 @@ void CFGBuilder::consumeConstructionContext(
     const ConstructionContextLayer *Layer, CXXConstructExpr *CE) {
   if (const ConstructionContextLayer *PreviouslyStoredLayer =
           ConstructionContextMap.lookup(CE)) {
+    (void)PreviouslyStoredLayer;
     // We might have visited this child when we were finding construction
     // contexts within its parents.
     assert(PreviouslyStoredLayer->isStrictlyMoreSpecificThan(Layer) &&

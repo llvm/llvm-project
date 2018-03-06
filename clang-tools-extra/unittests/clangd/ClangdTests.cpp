@@ -945,6 +945,7 @@ TEST_F(ClangdVFSTest, InsertIncludes) {
 
   auto FooCpp = testPath("foo.cpp");
   const auto Code = R"cpp(
+#include "z.h"
 #include "x.h"
 
 void f() {}
@@ -952,15 +953,18 @@ void f() {}
   FS.Files[FooCpp] = Code;
   runAddDocument(Server, FooCpp, Code);
 
-  auto Inserted = [&](llvm::StringRef Original, llvm::StringRef Preferred,
-                      llvm::StringRef Expected) {
+  auto ChangedCode = [&](llvm::StringRef Original, llvm::StringRef Preferred) {
     auto Replaces = Server.insertInclude(
         FooCpp, Code, Original, Preferred.empty() ? Original : Preferred);
     EXPECT_TRUE(static_cast<bool>(Replaces));
     auto Changed = tooling::applyAllReplacements(Code, *Replaces);
     EXPECT_TRUE(static_cast<bool>(Changed));
-    return llvm::StringRef(*Changed).contains(
-        (llvm::Twine("#include ") + Expected + "").str());
+    return *Changed;
+  };
+  auto Inserted = [&](llvm::StringRef Original, llvm::StringRef Preferred,
+                      llvm::StringRef Expected) {
+    return llvm::StringRef(ChangedCode(Original, Preferred))
+        .contains((llvm::Twine("#include ") + Expected + "").str());
   };
 
   EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"","\"y.h\""));
@@ -976,6 +980,45 @@ void f() {}
                        /*Preferred=*/"<Y.h>", "<Y.h>"));
   EXPECT_TRUE(Inserted(OriginalHeader, PreferredHeader, "\"Y.h\""));
   EXPECT_TRUE(Inserted("<y.h>", PreferredHeader, "\"Y.h\""));
+
+  // Check that includes are sorted.
+  const auto Expected = R"cpp(
+#include "x.h"
+#include "y.h"
+#include "z.h"
+
+void f() {}
+)cpp";
+  EXPECT_EQ(Expected, ChangedCode("\"y.h\"", /*Preferred=*/""));
+}
+
+TEST_F(ClangdVFSTest, FormatCode) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto Path = testPath("foo.cpp");
+  std::string Code = R"cpp(
+#include "y.h"
+#include "x.h"
+
+void f(  )  {}
+)cpp";
+  std::string Expected = R"cpp(
+#include "x.h"
+#include "y.h"
+
+void f() {}
+)cpp";
+  FS.Files[Path] = Code;
+  runAddDocument(Server, Path, Code);
+
+  auto Replaces = Server.formatFile(Code, Path);
+  EXPECT_TRUE(static_cast<bool>(Replaces));
+  auto Changed = tooling::applyAllReplacements(Code, *Replaces);
+  EXPECT_TRUE(static_cast<bool>(Changed));
+  EXPECT_EQ(Expected, *Changed);
 }
 
 } // namespace

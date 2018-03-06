@@ -31,6 +31,8 @@
   _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 164)
 #endif
 
+#define RLIMIT_AS RLIMIT_DATA
+
 namespace __sanitizer {
 extern unsigned struct_utsname_sz;
 extern unsigned struct_stat_sz;
