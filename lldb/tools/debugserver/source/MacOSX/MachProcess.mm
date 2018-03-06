@@ -747,7 +747,6 @@ bool MachProcess::GetMachOInformationFromMemory(
         inf.min_version_os_version += std::to_string(patch_version);
       }
     }
-<<<<<<< HEAD
 #if defined (LC_BUILD_VERSION)
     if (lc.cmd == LC_BUILD_VERSION)
     {
@@ -787,9 +786,6 @@ bool MachProcess::GetMachOInformationFromMemory(
         }
     }
 #endif
-=======
-
->>>>>>> 0e71ef35a... [debugserver] Fix LC_BUILD_VERSION load command handling.
     load_cmds_p += lc.cmdsize;
   }
   return true;
