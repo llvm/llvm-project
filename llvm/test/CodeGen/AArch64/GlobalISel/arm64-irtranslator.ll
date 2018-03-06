@@ -1318,6 +1318,17 @@ define float @test_log2_intrin(float %a) {
   %res = call float @llvm.log2.f32(float %a)
   ret float %res
 }
+
+declare float @llvm.fabs.f32(float)
+define float @test_fabs_intrin(float %a) {
+; CHECK-LABEL: name: test_fabs_intrin
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FABS [[A]]
+; CHECK: $s0 = COPY [[RES]]
+  %res = call float @llvm.fabs.f32(float %a)
+  ret float %res
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8*)
 declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_lifetime_intrin() {

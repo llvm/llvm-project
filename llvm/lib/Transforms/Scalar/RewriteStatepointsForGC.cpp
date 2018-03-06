@@ -2529,29 +2529,30 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
     return false;
   };
 
+
+  // Delete any unreachable statepoints so that we don't have unrewritten
+  // statepoints surviving this pass.  This makes testing easier and the
+  // resulting IR less confusing to human readers.
+  DeferredDominance DD(DT);
+  bool MadeChange = removeUnreachableBlocks(F, nullptr, &DD);
+  DD.flush();
+
   // Gather all the statepoints which need rewritten.  Be careful to only
   // consider those in reachable code since we need to ask dominance queries
   // when rewriting.  We'll delete the unreachable ones in a moment.
   SmallVector<CallSite, 64> ParsePointNeeded;
-  bool HasUnreachableStatepoint = false;
   for (Instruction &I : instructions(F)) {
     // TODO: only the ones with the flag set!
     if (NeedsRewrite(I)) {
-      if (DT.isReachableFromEntry(I.getParent()))
-        ParsePointNeeded.push_back(CallSite(&I));
-      else
-        HasUnreachableStatepoint = true;
+      // NOTE removeUnreachableBlocks() is stronger than
+      // DominatorTree::isReachableFromEntry(). In other words
+      // removeUnreachableBlocks can remove some blocks for which
+      // isReachableFromEntry() returns true.
+      assert(DT.isReachableFromEntry(I.getParent()) &&
+            "no unreachable blocks expected");
+      ParsePointNeeded.push_back(CallSite(&I));
     }
   }
-
-  bool MadeChange = false;
-
-  // Delete any unreachable statepoints so that we don't have unrewritten
-  // statepoints surviving this pass.  This makes testing easier and the
-  // resulting IR less confusing to human readers.  Rather than be fancy, we
-  // just reuse a utility function which removes the unreachable blocks.
-  if (HasUnreachableStatepoint)
-    MadeChange |= removeUnreachableBlocks(F);
 
   // Return early if no work to do.
   if (ParsePointNeeded.empty())

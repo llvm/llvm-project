@@ -3624,24 +3624,6 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                               TrueVal, FalseVal))
     return V;
 
-  if (CondVal->hasOneUse()) {
-    const APInt *C;
-    if (match(CmpRHS, m_APInt(C))) {
-      // X < MIN ? T : F  -->  F
-      if (Pred == ICmpInst::ICMP_SLT && C->isMinSignedValue())
-        return FalseVal;
-      // X < MIN ? T : F  -->  F
-      if (Pred == ICmpInst::ICMP_ULT && C->isMinValue())
-        return FalseVal;
-      // X > MAX ? T : F  -->  F
-      if (Pred == ICmpInst::ICMP_SGT && C->isMaxSignedValue())
-        return FalseVal;
-      // X > MAX ? T : F  -->  F
-      if (Pred == ICmpInst::ICMP_UGT && C->isMaxValue())
-        return FalseVal;
-    }
-  }
-
   // If we have an equality comparison, then we know the value in one of the
   // arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.

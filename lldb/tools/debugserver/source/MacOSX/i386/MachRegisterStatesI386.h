@@ -21,6 +21,7 @@
 #define __i386_EXCEPTION_STATE 3
 #define __i386_DEBUG_STATE 10
 #define __i386_AVX_STATE 16
+#define __i386_AVX512F_STATE 19
 
 typedef struct {
   uint32_t __eax;
@@ -157,6 +158,69 @@ typedef struct {
   __i386_xmm_reg __fpu_ymmh6;
   __i386_xmm_reg __fpu_ymmh7;
 } __i386_avx_state_t;
+
+typedef struct { uint8_t __ymm_reg[32]; } __i386_ymm_reg;
+typedef struct { uint8_t __opmask_reg[8]; } __i386_opmask_reg;
+
+typedef struct {
+  uint32_t __fpu_reserved[2];
+  __i386_fp_control_t __fpu_fcw;
+  __i386_fp_status_t __fpu_fsw;
+  uint8_t __fpu_ftw;
+  uint8_t __fpu_rsrv1;
+  uint16_t __fpu_fop;
+  uint32_t __fpu_ip;
+  uint16_t __fpu_cs;
+  uint16_t __fpu_rsrv2;
+  uint32_t __fpu_dp;
+  uint16_t __fpu_ds;
+  uint16_t __fpu_rsrv3;
+  uint32_t __fpu_mxcsr;
+  uint32_t __fpu_mxcsrmask;
+  __i386_mmst_reg __fpu_stmm0;
+  __i386_mmst_reg __fpu_stmm1;
+  __i386_mmst_reg __fpu_stmm2;
+  __i386_mmst_reg __fpu_stmm3;
+  __i386_mmst_reg __fpu_stmm4;
+  __i386_mmst_reg __fpu_stmm5;
+  __i386_mmst_reg __fpu_stmm6;
+  __i386_mmst_reg __fpu_stmm7;
+  __i386_xmm_reg __fpu_xmm0;
+  __i386_xmm_reg __fpu_xmm1;
+  __i386_xmm_reg __fpu_xmm2;
+  __i386_xmm_reg __fpu_xmm3;
+  __i386_xmm_reg __fpu_xmm4;
+  __i386_xmm_reg __fpu_xmm5;
+  __i386_xmm_reg __fpu_xmm6;
+  __i386_xmm_reg __fpu_xmm7;
+  uint8_t __fpu_rsrv4[14 * 16];
+  uint32_t __fpu_reserved1;
+  uint8_t __avx_reserved1[64];
+  __i386_xmm_reg __fpu_ymmh0;
+  __i386_xmm_reg __fpu_ymmh1;
+  __i386_xmm_reg __fpu_ymmh2;
+  __i386_xmm_reg __fpu_ymmh3;
+  __i386_xmm_reg __fpu_ymmh4;
+  __i386_xmm_reg __fpu_ymmh5;
+  __i386_xmm_reg __fpu_ymmh6;
+  __i386_xmm_reg __fpu_ymmh7;
+  __i386_opmask_reg __fpu_k0;
+  __i386_opmask_reg __fpu_k1;
+  __i386_opmask_reg __fpu_k2;
+  __i386_opmask_reg __fpu_k3;
+  __i386_opmask_reg __fpu_k4;
+  __i386_opmask_reg __fpu_k5;
+  __i386_opmask_reg __fpu_k6;
+  __i386_opmask_reg __fpu_k7;
+  __i386_ymm_reg __fpu_zmmh0;
+  __i386_ymm_reg __fpu_zmmh1;
+  __i386_ymm_reg __fpu_zmmh2;
+  __i386_ymm_reg __fpu_zmmh3;
+  __i386_ymm_reg __fpu_zmmh4;
+  __i386_ymm_reg __fpu_zmmh5;
+  __i386_ymm_reg __fpu_zmmh6;
+  __i386_ymm_reg __fpu_zmmh7;
+} __i386_avx512f_state_t;
 
 typedef struct {
   uint32_t __trapno;

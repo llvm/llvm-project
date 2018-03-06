@@ -427,6 +427,9 @@ HANDLE_TARGET_OPCODE(G_SITOFP)
 /// Generic unsigned-int to float conversion
 HANDLE_TARGET_OPCODE(G_UITOFP)
 
+/// Generic FP absolute value.
+HANDLE_TARGET_OPCODE(G_FABS)
+
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_GEP)
 

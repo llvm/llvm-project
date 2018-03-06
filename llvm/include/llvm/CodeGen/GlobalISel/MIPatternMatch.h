@@ -287,6 +287,11 @@ m_GFPTrunc(const SrcTy &Src) {
 }
 
 template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_FABS> m_GFabs(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_FABS>(Src);
+}
+
+template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::COPY> m_Copy(SrcTy &&Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::COPY>(std::forward<SrcTy>(Src));
 }
