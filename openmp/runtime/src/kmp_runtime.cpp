@@ -3508,8 +3508,14 @@ static int __kmp_reclaim_dead_roots(void) {
    If any argument is negative, the behavior is undefined. */
 static int __kmp_expand_threads(int nNeed) {
   int added = 0;
-  int old_tp_cached;
-  int __kmp_actual_max_nth;
+  int minimumRequiredCapacity;
+  int newCapacity;
+  kmp_info_t **newThreads;
+  kmp_root_t **newRoot;
+
+// All calls to __kmp_expand_threads should be under __kmp_forkjoin_lock, so
+// resizing __kmp_threads does not need additional protection if foreign
+// threads are present
 
 #if KMP_OS_WINDOWS && !defined KMP_DYNAMIC_LIB
   /* only for Windows static library */
@@ -3525,91 +3531,64 @@ static int __kmp_expand_threads(int nNeed) {
   if (nNeed <= 0)
     return added;
 
-  while (1) {
-    int nTarget;
-    int minimumRequiredCapacity;
-    int newCapacity;
-    kmp_info_t **newThreads;
-    kmp_root_t **newRoot;
+  // Note that __kmp_threads_capacity is not bounded by __kmp_max_nth. If
+  // __kmp_max_nth is set to some value less than __kmp_sys_max_nth by the
+  // user via KMP_DEVICE_THREAD_LIMIT, then __kmp_threads_capacity may become
+  // > __kmp_max_nth in one of two ways:
+  //
+  // 1) The initialization thread (gtid = 0) exits.  __kmp_threads[0]
+  //    may not be resused by another thread, so we may need to increase
+  //    __kmp_threads_capacity to __kmp_max_nth + 1.
+  //
+  // 2) New foreign root(s) are encountered.  We always register new foreign
+  //    roots. This may cause a smaller # of threads to be allocated at
+  //    subsequent parallel regions, but the worker threads hang around (and
+  //    eventually go to sleep) and need slots in the __kmp_threads[] array.
+  //
+  // Anyway, that is the reason for moving the check to see if
+  // __kmp_max_nth was exceeded into __kmp_reserve_threads()
+  // instead of having it performed here. -BB
 
-    // Note that __kmp_threads_capacity is not bounded by __kmp_max_nth. If
-    // __kmp_max_nth is set to some value less than __kmp_sys_max_nth by the
-    // user via KMP_DEVICE_THREAD_LIMIT, then __kmp_threads_capacity may become
-    // > __kmp_max_nth in one of two ways:
-    //
-    // 1) The initialization thread (gtid = 0) exits.  __kmp_threads[0]
-    //    may not be resused by another thread, so we may need to increase
-    //    __kmp_threads_capacity to __kmp_max_nth + 1.
-    //
-    // 2) New foreign root(s) are encountered.  We always register new foreign
-    //    roots. This may cause a smaller # of threads to be allocated at
-    //    subsequent parallel regions, but the worker threads hang around (and
-    //    eventually go to sleep) and need slots in the __kmp_threads[] array.
-    //
-    // Anyway, that is the reason for moving the check to see if
-    // __kmp_max_nth was exceeded into __kmp_reserve_threads()
-    // instead of having it performed here. -BB
-    old_tp_cached = __kmp_tp_cached;
-    __kmp_actual_max_nth =
-        old_tp_cached ? __kmp_tp_capacity : __kmp_sys_max_nth;
-    KMP_DEBUG_ASSERT(__kmp_actual_max_nth >= __kmp_threads_capacity);
+  KMP_DEBUG_ASSERT(__kmp_sys_max_nth >= __kmp_threads_capacity);
 
-    /* compute expansion headroom to check if we can expand */
-    nTarget = nNeed;
-    if (__kmp_actual_max_nth - __kmp_threads_capacity < nTarget) {
-      /* possible expansion too small -- give up */
-      break;
-    }
-    minimumRequiredCapacity = __kmp_threads_capacity + nTarget;
-
-    newCapacity = __kmp_threads_capacity;
-    do {
-      newCapacity = newCapacity <= (__kmp_actual_max_nth >> 1)
-                        ? (newCapacity << 1)
-                        : __kmp_actual_max_nth;
-    } while (newCapacity < minimumRequiredCapacity);
-    newThreads = (kmp_info_t **)__kmp_allocate(
-        (sizeof(kmp_info_t *) + sizeof(kmp_root_t *)) * newCapacity +
-        CACHE_LINE);
-    newRoot = (kmp_root_t **)((char *)newThreads +
-                              sizeof(kmp_info_t *) * newCapacity);
-    KMP_MEMCPY(newThreads, __kmp_threads,
-               __kmp_threads_capacity * sizeof(kmp_info_t *));
-    KMP_MEMCPY(newRoot, __kmp_root,
-               __kmp_threads_capacity * sizeof(kmp_root_t *));
-    memset(newThreads + __kmp_threads_capacity, 0,
-           (newCapacity - __kmp_threads_capacity) * sizeof(kmp_info_t *));
-    memset(newRoot + __kmp_threads_capacity, 0,
-           (newCapacity - __kmp_threads_capacity) * sizeof(kmp_root_t *));
-
-    if (!old_tp_cached && __kmp_tp_cached && newCapacity > __kmp_tp_capacity) {
-      /* __kmp_tp_cached has changed, i.e. __kmpc_threadprivate_cached has
-         allocated a threadprivate cache while we were allocating the expanded
-         array, and our new capacity is larger than the threadprivate cache
-         capacity, so we should deallocate the expanded arrays and try again.
-         This is the first check of a double-check pair. */
-      __kmp_free(newThreads);
-      continue; /* start over and try again */
-    }
-    __kmp_acquire_bootstrap_lock(&__kmp_tp_cached_lock);
-    if (!old_tp_cached && __kmp_tp_cached && newCapacity > __kmp_tp_capacity) {
-      /* Same check as above, but this time with the lock so we can be sure if
-         we can succeed. */
-      __kmp_release_bootstrap_lock(&__kmp_tp_cached_lock);
-      __kmp_free(newThreads);
-      continue; /* start over and try again */
-    } else {
-      /* success */
-      // __kmp_free( __kmp_threads ); // ATT: It leads to crash. Need to be
-      // investigated.
-      *(kmp_info_t * *volatile *)&__kmp_threads = newThreads;
-      *(kmp_root_t * *volatile *)&__kmp_root = newRoot;
-      added += newCapacity - __kmp_threads_capacity;
-      *(volatile int *)&__kmp_threads_capacity = newCapacity;
-      __kmp_release_bootstrap_lock(&__kmp_tp_cached_lock);
-      break; /* succeeded, so we can exit the loop */
-    }
+  /* compute expansion headroom to check if we can expand */
+  if (__kmp_sys_max_nth - __kmp_threads_capacity < nNeed) {
+    /* possible expansion too small -- give up */
+    return added;
   }
+  minimumRequiredCapacity = __kmp_threads_capacity + nNeed;
+
+  newCapacity = __kmp_threads_capacity;
+  do {
+    newCapacity = newCapacity <= (__kmp_sys_max_nth >> 1) ? (newCapacity << 1)
+                                                          : __kmp_sys_max_nth;
+  } while (newCapacity < minimumRequiredCapacity);
+  newThreads = (kmp_info_t **)__kmp_allocate(
+      (sizeof(kmp_info_t *) + sizeof(kmp_root_t *)) * newCapacity + CACHE_LINE);
+  newRoot =
+      (kmp_root_t **)((char *)newThreads + sizeof(kmp_info_t *) * newCapacity);
+  KMP_MEMCPY(newThreads, __kmp_threads,
+             __kmp_threads_capacity * sizeof(kmp_info_t *));
+  KMP_MEMCPY(newRoot, __kmp_root,
+             __kmp_threads_capacity * sizeof(kmp_root_t *));
+
+  kmp_info_t **temp_threads = __kmp_threads;
+  *(kmp_info_t * *volatile *)&__kmp_threads = newThreads;
+  *(kmp_root_t * *volatile *)&__kmp_root = newRoot;
+  __kmp_free(temp_threads);
+  added += newCapacity - __kmp_threads_capacity;
+  *(volatile int *)&__kmp_threads_capacity = newCapacity;
+
+  if (newCapacity > __kmp_tp_capacity) {
+    __kmp_acquire_bootstrap_lock(&__kmp_tp_cached_lock);
+    if (__kmp_tp_cached && newCapacity > __kmp_tp_capacity) {
+      __kmp_threadprivate_resize_cache(newCapacity);
+    } else { // increase __kmp_tp_capacity to correspond with kmp_threads size
+      *(volatile int *)&__kmp_tp_capacity = newCapacity;
+    }
+    __kmp_release_bootstrap_lock(&__kmp_tp_cached_lock);
+  }
+
   return added;
 }
 
@@ -7332,6 +7311,8 @@ void __kmp_cleanup(void) {
     __kmp_runtime_destroy();
     __kmp_init_serial = FALSE;
   }
+
+  __kmp_cleanup_threadprivate_caches();
 
   for (f = 0; f < __kmp_threads_capacity; f++) {
     if (__kmp_root[f] != NULL) {

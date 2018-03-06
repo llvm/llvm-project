@@ -353,8 +353,11 @@ ClangdServer::insertInclude(PathRef File, StringRef Code,
   // Replacement with offset UINT_MAX and length 0 will be treated as include
   // insertion.
   tooling::Replacement R(File, /*Offset=*/UINT_MAX, 0, "#include " + ToInclude);
-  return format::cleanupAroundReplacements(Code, tooling::Replacements(R),
-                                           *Style);
+  auto Replaces = format::cleanupAroundReplacements(
+      Code, tooling::Replacements(R), *Style);
+  if (!Replaces)
+    return Replaces;
+  return formatReplacements(Code, *Replaces, *Style);
 }
 
 llvm::Optional<std::string> ClangdServer::getDocument(PathRef File) {
@@ -465,13 +468,21 @@ ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
                          ArrayRef<tooling::Range> Ranges) {
   // Call clang-format.
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  auto StyleOrError =
+  auto Style =
       format::getStyle("file", File, "LLVM", Code, TaggedFS.Value.get());
-  if (!StyleOrError) {
-    return StyleOrError.takeError();
-  } else {
-    return format::reformat(StyleOrError.get(), Code, Ranges, File);
-  }
+  if (!Style)
+    return Style.takeError();
+
+  tooling::Replacements IncludeReplaces =
+      format::sortIncludes(*Style, Code, Ranges, File);
+  auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
+  if (!Changed)
+    return Changed.takeError();
+
+  return IncludeReplaces.merge(format::reformat(
+      Style.get(), *Changed,
+      tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
+      File));
 }
 
 void ClangdServer::findDocumentHighlights(
