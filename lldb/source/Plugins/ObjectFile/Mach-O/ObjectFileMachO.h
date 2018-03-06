@@ -185,6 +185,18 @@ protected:
 
   size_t ParseSymtab();
 
+  typedef lldb_private::RangeArray<uint32_t, uint32_t, 8> EncryptedFileRanges;
+  EncryptedFileRanges GetEncryptedFileRanges();
+
+  struct SegmentParsingContext;
+  void ProcessDysymtabCommand(const llvm::MachO::load_command &load_cmd,
+                              lldb::offset_t offset);
+  void ProcessSegmentCommand(const llvm::MachO::load_command &load_cmd,
+                             lldb::offset_t offset, uint32_t cmd_idx,
+                             SegmentParsingContext &context);
+  void SanitizeSegmentCommand(llvm::MachO::segment_command_64 &seg_cmd,
+                              uint32_t cmd_idx);
+
   llvm::MachO::mach_header m_header;
   static const lldb_private::ConstString &GetSegmentNameTEXT();
   static const lldb_private::ConstString &GetSegmentNameDATA();
