@@ -225,6 +225,12 @@ MSR FAULTMASK_NS, r14
 // CHECK-MAINLINE: msr faultmask_ns, lr  @ encoding: [0x8e,0xf3,0x93,0x88]
 // UNDEF-BASELINE: error: invalid operand for instruction
 
+// Unpredictable SYSm's
+MRS r8, 146
+// CHECK: mrs r8, 146 @ encoding: [0xef,0xf3,0x92,0x88]
+MSR 146, r8
+// CHECK: msr 146, r8 @ encoding: [0x88,0xf3,0x92,0x80]
+
 // Invalid operand tests
 // UNDEF: error: too many operands for instruction
 // UNDEF:     sg #0

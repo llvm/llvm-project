@@ -1,10 +1,9 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK-DAG: memh(r{{[0-9]+}}+#0) = r{{[0-9]+}}
 ; CHECK-DAG: memh(r{{[0-9]+}}+#2) = r{{[0-9]+}}.h
 ; CHECK-DAG: memh(r{{[0-9]+}}+#4) = r{{[0-9]+}}
 ; CHECK-DAG: memh(r{{[0-9]+}}+#6) = r{{[0-9]+}}.h
 
-target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 target triple = "hexagon"
 
 ; Function Attrs: nounwind

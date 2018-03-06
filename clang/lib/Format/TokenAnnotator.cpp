@@ -216,6 +216,7 @@ private:
     bool HasMultipleParametersOnALine = false;
     bool MightBeObjCForRangeLoop =
         Left->Previous && Left->Previous->is(tok::kw_for);
+    FormatToken *PossibleObjCForInToken = nullptr;
     while (CurrentToken) {
       // LookForDecls is set when "if (" has been seen. Check for
       // 'identifier' '*' 'identifier' followed by not '=' -- this
@@ -301,10 +302,17 @@ private:
            CurrentToken->Previous->isSimpleTypeSpecifier()) &&
           !CurrentToken->is(tok::l_brace))
         Contexts.back().IsExpression = false;
-      if (CurrentToken->isOneOf(tok::semi, tok::colon))
+      if (CurrentToken->isOneOf(tok::semi, tok::colon)) {
         MightBeObjCForRangeLoop = false;
-      if (MightBeObjCForRangeLoop && CurrentToken->is(Keywords.kw_in))
-        CurrentToken->Type = TT_ObjCForIn;
+        if (PossibleObjCForInToken) {
+          PossibleObjCForInToken->Type = TT_Unknown;
+          PossibleObjCForInToken = nullptr;
+        }
+      }
+      if (MightBeObjCForRangeLoop && CurrentToken->is(Keywords.kw_in)) {
+        PossibleObjCForInToken = CurrentToken;
+        PossibleObjCForInToken->Type = TT_ObjCForIn;
+      }
       // When we discover a 'new', we set CanBeExpression to 'false' in order to
       // parse the type correctly. Reset that after a comma.
       if (CurrentToken->is(tok::comma))

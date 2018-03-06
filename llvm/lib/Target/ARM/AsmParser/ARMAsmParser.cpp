@@ -4238,6 +4238,18 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
+
+  if (Tok.is(AsmToken::Integer)) {
+    int64_t Val = Tok.getIntVal();
+    if (Val > 255 || Val < 0) {
+      return MatchOperand_NoMatch;
+    }
+    unsigned SYSmvalue = Val & 0xFF;
+    Parser.Lex(); 
+    Operands.push_back(ARMOperand::CreateMSRMask(SYSmvalue, S));
+    return MatchOperand_Success;
+  }
+
   if (!Tok.is(AsmToken::Identifier))
     return MatchOperand_NoMatch;
   StringRef Mask = Tok.getString();

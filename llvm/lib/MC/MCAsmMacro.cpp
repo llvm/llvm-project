@@ -25,7 +25,7 @@ void MCAsmMacroParameter::dump(raw_ostream &OS) const {
       if (!first)
         OS << ", ";
       first = false;
-      T.dump();
+      OS << T.getString();
     }
   }
   OS << "\n";

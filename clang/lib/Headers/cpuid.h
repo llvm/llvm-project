@@ -166,7 +166,7 @@
 #define bit_CLFLUSHOPT  0x00800000
 #define bit_CLWB        0x01000000
 #define bit_AVX512PF    0x04000000
-#define bit_AVX51SER    0x08000000
+#define bit_AVX512ER    0x08000000
 #define bit_AVX512CD    0x10000000
 #define bit_SHA         0x20000000
 #define bit_AVX512BW    0x40000000

@@ -279,6 +279,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void addToUDTs(const DIType *Ty);
 
+  void addUDTSrcLine(const DIType *Ty, codeview::TypeIndex TI);
+
   codeview::TypeIndex lowerType(const DIType *Ty, const DIType *ClassTy);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeArray(const DICompositeType *Ty);

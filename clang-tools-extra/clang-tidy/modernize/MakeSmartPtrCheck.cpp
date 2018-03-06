@@ -295,16 +295,8 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
           }
           return false;
         };
-        // Check the implicit conversion from the std::initializer_list type to
-        // a class type.
-        if (IsStdInitListInitConstructExpr(Arg))
+        if (IsStdInitListInitConstructExpr(Arg->IgnoreImplicit()))
           return false;
-        // The Arg can be a CXXBindTemporaryExpr, checking its underlying
-        // construct expr.
-        if (const auto * CTE = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
-          if (IsStdInitListInitConstructExpr(CTE->getSubExpr()))
-            return false;
-        }
       }
     }
     if (ArraySizeExpr.empty()) {

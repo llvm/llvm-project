@@ -893,6 +893,13 @@ TEST_F(FormatTestObjC, ObjCForIn) {
                "    foo(n);\n"
                "  }\n"
                "}");
+  verifyFormat("for (Foo *x in bar) {\n}");
+  verifyFormat("for (Foo *x in [bar baz]) {\n}");
+  verifyFormat("for (Foo *x in [bar baz:blech]) {\n}");
+  verifyFormat("for (Foo *x in [bar baz:blech, 1, 2, 3, 0]) {\n}");
+  verifyFormat("for (Foo *x in [bar baz:^{\n"
+               "       [uh oh];\n"
+               "     }]) {\n}");
 }
 
 TEST_F(FormatTestObjC, ObjCLiterals) {

@@ -1101,11 +1101,9 @@ static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
   return Address(Addr, BaseLVAlignment);
 }
 
-Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
-                                               Address PrivateAddr) {
-  const DeclRefExpr *DE;
+static const VarDecl *getBaseDecl(const Expr *Ref, const DeclRefExpr *&DE) {
   const VarDecl *OrigVD = nullptr;
-  if (auto *OASE = dyn_cast<OMPArraySectionExpr>(ClausesData[N].Ref)) {
+  if (auto *OASE = dyn_cast<OMPArraySectionExpr>(Ref)) {
     auto *Base = OASE->getBase()->IgnoreParenImpCasts();
     while (auto *TempOASE = dyn_cast<OMPArraySectionExpr>(Base))
       Base = TempOASE->getBase()->IgnoreParenImpCasts();
@@ -1113,14 +1111,20 @@ Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
       Base = TempASE->getBase()->IgnoreParenImpCasts();
     DE = cast<DeclRefExpr>(Base);
     OrigVD = cast<VarDecl>(DE->getDecl());
-  } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(ClausesData[N].Ref)) {
+  } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Ref)) {
     auto *Base = ASE->getBase()->IgnoreParenImpCasts();
     while (auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base))
       Base = TempASE->getBase()->IgnoreParenImpCasts();
     DE = cast<DeclRefExpr>(Base);
     OrigVD = cast<VarDecl>(DE->getDecl());
   }
-  if (OrigVD) {
+  return OrigVD;
+}
+
+Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
+                                               Address PrivateAddr) {
+  const DeclRefExpr *DE;
+  if (const VarDecl *OrigVD = ::getBaseDecl(ClausesData[N].Ref, DE)) {
     BaseDecls.emplace_back(OrigVD);
     auto OriginalBaseLValue = CGF.EmitLValue(DE);
     LValue BaseLValue =
@@ -5355,12 +5359,19 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 }
 
 /// Generates unique name for artificial threadprivate variables.
-/// Format is: <Prefix> "." <Loc_raw_encoding> "_" <N>
-static std::string generateUniqueName(StringRef Prefix, SourceLocation Loc,
-                                      unsigned N) {
+/// Format is: <Prefix> "." <Decl_mangled_name> "_" "<Decl_start_loc_raw_enc>"
+static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
+                                      const Expr *Ref) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << Prefix << "." << Loc.getRawEncoding() << "_" << N;
+  const clang::DeclRefExpr *DE;
+  const VarDecl *D = ::getBaseDecl(Ref, DE);
+  if (!D)
+    D = cast<VarDecl>(cast<DeclRefExpr>(Ref)->getDecl());
+  D = D->getCanonicalDecl();
+  Out << Prefix << "."
+      << (D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D))
+      << "_" << D->getCanonicalDecl()->getLocStart().getRawEncoding();
   return Out.str();
 }
 
@@ -5397,7 +5408,7 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   if (RCG.getSizes(N).second) {
     Address SizeAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
         CGF, CGM.getContext().getSizeType(),
-        generateUniqueName("reduction_size", Loc, N));
+        generateUniqueName(CGM, "reduction_size", RCG.getRefExpr(N)));
     Size = CGF.EmitLoadOfScalar(SizeAddr, /*Volatile=*/false,
                                 CGM.getContext().getSizeType(), Loc);
   }
@@ -5410,7 +5421,7 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
     Address SharedAddr =
         CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
             CGF, CGM.getContext().VoidPtrTy,
-            generateUniqueName("reduction", Loc, N));
+            generateUniqueName(CGM, "reduction", RCG.getRefExpr(N)));
     SharedLVal = CGF.MakeAddrLValue(SharedAddr, CGM.getContext().VoidPtrTy);
   } else {
     SharedLVal = CGF.MakeNaturalAlignAddrLValue(
@@ -5466,7 +5477,7 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   if (RCG.getSizes(N).second) {
     Address SizeAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
         CGF, CGM.getContext().getSizeType(),
-        generateUniqueName("reduction_size", Loc, N));
+        generateUniqueName(CGM, "reduction_size", RCG.getRefExpr(N)));
     Size = CGF.EmitLoadOfScalar(SizeAddr, /*Volatile=*/false,
                                 CGM.getContext().getSizeType(), Loc);
   }
@@ -5537,7 +5548,7 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   if (RCG.getSizes(N).second) {
     Address SizeAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
         CGF, CGM.getContext().getSizeType(),
-        generateUniqueName("reduction_size", Loc, N));
+        generateUniqueName(CGM, "reduction_size", RCG.getRefExpr(N)));
     Size = CGF.EmitLoadOfScalar(SizeAddr, /*Volatile=*/false,
                                 CGM.getContext().getSizeType(), Loc);
   }
@@ -5666,14 +5677,14 @@ void CGOpenMPRuntime::emitTaskReductionFixups(CodeGenFunction &CGF,
                                                      /*isSigned=*/false);
     Address SizeAddr = getAddrOfArtificialThreadPrivate(
         CGF, CGM.getContext().getSizeType(),
-        generateUniqueName("reduction_size", Loc, N));
+        generateUniqueName(CGM, "reduction_size", RCG.getRefExpr(N)));
     CGF.Builder.CreateStore(SizeVal, SizeAddr, /*IsVolatile=*/false);
   }
   // Store address of the original reduction item if custom initializer is used.
   if (RCG.usesReductionInitializer(N)) {
     Address SharedAddr = getAddrOfArtificialThreadPrivate(
         CGF, CGM.getContext().VoidPtrTy,
-        generateUniqueName("reduction", Loc, N));
+        generateUniqueName(CGM, "reduction", RCG.getRefExpr(N)));
     CGF.Builder.CreateStore(
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
             RCG.getSharedLValue(N).getPointer(), CGM.VoidPtrTy),

@@ -249,7 +249,7 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   OutStreamer->InitSections(false);
 
-  // Emit the version-min deplyment target directive if needed.
+  // Emit the version-min deployment target directive if needed.
   //
   // FIXME: If we end up with a collection of these sorts of Darwin-specific
   // or ELF-specific things, it may make sense to have a platform helper class

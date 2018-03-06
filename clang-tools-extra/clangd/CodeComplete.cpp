@@ -470,6 +470,8 @@ struct CompletionRecorder : public CodeCompleteConsumer {
       // (s.^ completes ~string, but s.~st^ is an error).
       if (dyn_cast_or_null<CXXDestructorDecl>(Result.Declaration))
         continue;
+      // We choose to never append '::' to completion results in clangd.
+      Result.StartsNestedNameSpecifier = false;
       Results.push_back(Result);
     }
     ResultsCallback();
