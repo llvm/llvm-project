@@ -3779,7 +3779,11 @@ private:
   bool BlockMissingReturnType : 1;
   bool IsConversionFromLambda : 1;
 
-  /// ParamInfo - new[]'d array of pointers to ParmVarDecls for the formal
+  /// A bit that indicates this block is passed directly to a function as a
+  /// non-escaping parameter.
+  bool DoesNotEscape : 1;
+
+  /// A new[]'d array of pointers to ParmVarDecls for the formal
   /// parameters of this function.  This is null if a prototype or if there are
   /// no formals.
   ParmVarDecl **ParamInfo = nullptr;
@@ -3798,7 +3802,7 @@ protected:
   BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
       : Decl(Block, DC, CaretLoc), DeclContext(Block), IsVariadic(false),
         CapturesCXXThis(false), BlockMissingReturnType(true),
-        IsConversionFromLambda(false) {}
+        IsConversionFromLambda(false), DoesNotEscape(false) {}
 
 public:
   static BlockDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L); 
@@ -3869,6 +3873,9 @@ public:
 
   bool isConversionFromLambda() const { return IsConversionFromLambda; }
   void setIsConversionFromLambda(bool val) { IsConversionFromLambda = val; }
+
+  bool doesNotEscape() const { return DoesNotEscape; }
+  void setDoesNotEscape() { DoesNotEscape = true; }
 
   bool capturesVariable(const VarDecl *var) const;
 
