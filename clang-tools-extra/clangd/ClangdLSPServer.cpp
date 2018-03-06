@@ -395,17 +395,12 @@ void ClangdLSPServer::onChangeConfiguration(
   }
 }
 
-ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
-                                 bool StorePreamblesInMemory,
+ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,
                                  const clangd::CodeCompleteOptions &CCOpts,
-                                 llvm::Optional<StringRef> ResourceDir,
                                  llvm::Optional<Path> CompileCommandsDir,
-                                 bool BuildDynamicSymbolIndex,
-                                 SymbolIndex *StaticIdx)
+                                 const ClangdServer::Options &Opts)
     : Out(Out), CDB(std::move(CompileCommandsDir)), CCOpts(CCOpts),
-      Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
-             StorePreamblesInMemory, BuildDynamicSymbolIndex, StaticIdx,
-             ResourceDir, /*UpdateDebounce=*/std::chrono::milliseconds(500)) {}
+      Server(CDB, FSProvider, /*DiagConsumer=*/*this, Opts) {}
 
 bool ClangdLSPServer::run(std::istream &In, JSONStreamStyle InputStyle) {
   assert(!IsDone && "Run was called before");

@@ -4651,6 +4651,8 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
     strm << "ostype:tvos;";
 #elif defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
     strm << "ostype:watchos;";
+#elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
+    strm << "ostype:bridgeos;";
 #else
     strm << "ostype:ios;";
 #endif
@@ -6130,8 +6132,61 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
         }
         load_command_addr = load_command_addr + lc.cmdsize;
       }
+
+// Test that the PLATFORM_* defines are available from mach-o/loader.h
+#if defined (PLATFORM_MACOS)
+      for (uint32_t i = 0; i < mh.ncmds && !os_handled; ++i) 
+      {
+        nub_size_t bytes_read =
+            DNBProcessMemoryRead(pid, load_command_addr, sizeof(lc), &lc);
+        uint32_t raw_cmd = lc.cmd & ~LC_REQ_DYLD;
+        if (bytes_read != sizeof(lc))
+          break;
+
+        if (raw_cmd == LC_BUILD_VERSION)
+        {
+          uint32_t platform; // first field of 'struct build_version_command'
+          bytes_read = DNBProcessMemoryRead(pid, load_command_addr + 8, sizeof(platform), &platform);
+          if (bytes_read != sizeof (platform))
+              break;
+          switch (platform)
+          {
+              case PLATFORM_MACOS:
+                  os_handled = true;
+                  rep << "ostype:macosx;";
+                  DNBLogThreadedIf(LOG_RNB_PROC,
+                           "LC_BUILD_VERSION PLATFORM_MACOS -> 'ostype:macosx;'");
+                  break;
+              case PLATFORM_IOS:
+                  os_handled = true;
+                  rep << "ostype:ios;";
+                  DNBLogThreadedIf(LOG_RNB_PROC,
+                           "LC_BUILD_VERSION PLATFORM_IOS -> 'ostype:ios;'");
+                  break;
+              case PLATFORM_TVOS:
+                  os_handled = true;
+                  rep << "ostype:tvos;";
+                  DNBLogThreadedIf(LOG_RNB_PROC,
+                           "LC_BUILD_VERSION PLATFORM_TVOS -> 'ostype:tvos;'");
+                  break;
+              case PLATFORM_WATCHOS:
+                  os_handled = true;
+                  rep << "ostype:watchos;";
+                  DNBLogThreadedIf(LOG_RNB_PROC,
+                           "LC_BUILD_VERSION PLATFORM_WATCHOS -> 'ostype:watchos;'");
+                  break;
+              case PLATFORM_BRIDGEOS:
+                  os_handled = true;
+                  rep << "ostype:bridgeos;";
+                  DNBLogThreadedIf(LOG_RNB_PROC,
+                           "LC_BUILD_VERSION PLATFORM_BRIDGEOS -> 'ostype:bridgeos;'");
+                  break;
+          }
     }
-#endif
+      }
+#endif // PLATFORM_MACOS
+    }
+#endif // when compiling this on x86 targets
   }
 
   // If we weren't able to find the OS in a LC_VERSION_MIN load command, try
@@ -6145,6 +6200,8 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
       rep << "ostype:tvos;";
 #elif defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
       rep << "ostype:watchos;";
+#elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
+      rep << "ostype:bridgeos;";
 #else
       rep << "ostype:ios;";
 #endif
@@ -6196,6 +6253,8 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
         rep << "ostype:tvos;";
 #elif defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
         rep << "ostype:watchos;";
+#elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
+        rep << "ostype:bridgeos;";
 #else
         rep << "ostype:ios;";
 #endif

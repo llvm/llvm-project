@@ -18,6 +18,9 @@
 namespace clang {
 namespace clangd {
 
+// Calls addDocument and then blockUntilIdleForTest.
+void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents);
+
 Tagged<CompletionList> runCodeComplete(ClangdServer &Server, PathRef File,
                                        Position Pos,
                                        clangd::CodeCompleteOptions Opts);

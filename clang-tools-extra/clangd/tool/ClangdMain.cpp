@@ -188,9 +188,7 @@ int main(int argc, char *argv[]) {
   if (Tracer)
     TracingSession.emplace(*Tracer);
 
-  llvm::raw_ostream &Outs = llvm::outs();
-  llvm::raw_ostream &Logs = llvm::errs();
-  JSONOutput Out(Outs, Logs,
+  JSONOutput Out(llvm::outs(), llvm::errs(),
                  InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
                  PrettyPrint);
 
@@ -199,7 +197,6 @@ int main(int argc, char *argv[]) {
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
   llvm::Optional<Path> CompileCommandsDirPath;
-
   if (CompileCommandsDir.empty()) {
     CompileCommandsDirPath = llvm::None;
   } else if (!llvm::sys::path::is_absolute(CompileCommandsDir) ||
@@ -212,34 +209,34 @@ int main(int argc, char *argv[]) {
     CompileCommandsDirPath = CompileCommandsDir;
   }
 
-  bool StorePreamblesInMemory;
+  ClangdServer::Options Opts;
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:
-    StorePreamblesInMemory = true;
+    Opts.StorePreamblesInMemory = true;
     break;
   case PCHStorageFlag::Disk:
-    StorePreamblesInMemory = false;
+    Opts.StorePreamblesInMemory = false;
     break;
   }
-
-  llvm::Optional<StringRef> ResourceDirRef = None;
   if (!ResourceDir.empty())
-    ResourceDirRef = ResourceDir;
-
-  // Change stdin to binary to not lose \r\n on windows.
-  llvm::sys::ChangeStdinToBinary();
-
+    Opts.ResourceDir = ResourceDir;
+  Opts.BuildDynamicSymbolIndex = EnableIndexBasedCompletion;
   std::unique_ptr<SymbolIndex> StaticIdx;
-  if (EnableIndexBasedCompletion && !YamlSymbolFile.empty())
+  if (EnableIndexBasedCompletion && !YamlSymbolFile.empty()) {
     StaticIdx = BuildStaticIndex(YamlSymbolFile);
+    Opts.StaticIndex = StaticIdx.get();
+  }
+  Opts.AsyncThreadsCount = WorkerThreadsCount;
+
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
   CCOpts.Limit = LimitCompletionResult;
+
   // Initialize and run ClangdLSPServer.
-  ClangdLSPServer LSPServer(Out, WorkerThreadsCount, StorePreamblesInMemory,
-                            CCOpts, ResourceDirRef, CompileCommandsDirPath,
-                            EnableIndexBasedCompletion, StaticIdx.get());
+  ClangdLSPServer LSPServer(Out, CCOpts, CompileCommandsDirPath, Opts);
   constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
+  // Change stdin to binary to not lose \r\n on windows.
+  llvm::sys::ChangeStdinToBinary();
   return LSPServer.run(std::cin, InputStyle) ? 0 : NoShutdownRequestErrorCode;
 }
