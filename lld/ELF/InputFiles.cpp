@@ -1175,6 +1175,42 @@ std::vector<StringRef> LazyObjFile::getSymbolNames() {
   }
 }
 
+// This is for --just-symbols.
+//
+// This option allows you to link your output against other existing
+// program, so that if you load both your program and the other program
+// into memory, your output can use program's symbols.
+//
+// What we are doing here is to read defined symbols from a given ELF
+// file and add them as absolute symbols.
+template <class ELFT> void elf::readJustSymbolsFile(MemoryBufferRef MB) {
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::SymRange Elf_Sym_Range;
+
+  StringRef ObjName = MB.getBufferIdentifier();
+  ELFFile<ELFT> Obj = check(ELFFile<ELFT>::create(MB.getBuffer()));
+  ArrayRef<Elf_Shdr> Sections = CHECK(Obj.sections(), ObjName);
+
+  for (const Elf_Shdr &Sec : Sections) {
+    if (Sec.sh_type != SHT_SYMTAB)
+      continue;
+
+    Elf_Sym_Range Syms = CHECK(Obj.symbols(&Sec), ObjName);
+    uint32_t FirstNonLocal = Sec.sh_info;
+    StringRef StringTable =
+        CHECK(Obj.getStringTableForSymtab(Sec, Sections), ObjName);
+
+    std::vector<std::pair<StringRef, uint64_t>> Ret;
+    for (const Elf_Sym &Sym : Syms.slice(FirstNonLocal))
+      if (Sym.st_shndx != SHN_UNDEF)
+        Symtab->addRegular(CHECK(Sym.getName(StringTable), ObjName),
+                           Sym.st_other, Sym.getType(), Sym.st_value,
+                           Sym.st_size, Sym.getBinding(), nullptr, nullptr);
+    return;
+  }
+}
+
 template void ArchiveFile::parse<ELF32LE>();
 template void ArchiveFile::parse<ELF32BE>();
 template void ArchiveFile::parse<ELF64LE>();
@@ -1204,3 +1240,8 @@ template class elf::SharedFile<ELF32LE>;
 template class elf::SharedFile<ELF32BE>;
 template class elf::SharedFile<ELF64LE>;
 template class elf::SharedFile<ELF64BE>;
+
+template void elf::readJustSymbolsFile<ELF32LE>(MemoryBufferRef);
+template void elf::readJustSymbolsFile<ELF32BE>(MemoryBufferRef);
+template void elf::readJustSymbolsFile<ELF64LE>(MemoryBufferRef);
+template void elf::readJustSymbolsFile<ELF64BE>(MemoryBufferRef);
