@@ -71,19 +71,24 @@ advanceTo(MachineBasicBlock::iterator NextBegin) {
   }
 }
 
+void SystemZPostRASchedStrategy::initialize(ScheduleDAGMI *dag) {
+  DEBUG(HazardRec->dumpState(););
+}
+
 void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
   assert ((SchedStates.find(NextMBB) == SchedStates.end()) &&
           "Entering MBB twice?");
-  DEBUG(dbgs() << "+++ Entering " << printMBBReference(*NextMBB));
+  DEBUG(dbgs() << "** Entering " << printMBBReference(*NextMBB));
 
   MBB = NextMBB;
+
   /// Create a HazardRec for MBB, save it in SchedStates and set HazardRec to
   /// point to it.
   HazardRec = SchedStates[MBB] = new SystemZHazardRecognizer(TII, &SchedModel);
-  DEBUG (const MachineLoop *Loop = MLI->getLoopFor(MBB);
-         if(Loop && Loop->getHeader() == MBB)
-           dbgs() << " (Loop header)";
-         dbgs() << ":\n";);
+  DEBUG(const MachineLoop *Loop = MLI->getLoopFor(MBB);
+        if(Loop && Loop->getHeader() == MBB)
+          dbgs() << " (Loop header)";
+        dbgs() << ":\n";);
 
   // Try to take over the state from a single predecessor, if it has been
   // scheduled. If this is not possible, we are done.
@@ -93,16 +98,17 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
       SchedStates.find(SinglePredMBB) == SchedStates.end())
     return;
 
-  DEBUG(dbgs() << "+++ Continued scheduling from "
-               << printMBBReference(*SinglePredMBB) << "\n";);
+  DEBUG(dbgs() << "** Continued scheduling from "
+        << printMBBReference(*SinglePredMBB) << "\n";);
 
   HazardRec->copyState(SchedStates[SinglePredMBB]);
+  DEBUG(HazardRec->dumpState(););
 
   // Emit incoming terminator(s). Be optimistic and assume that branch
   // prediction will generally do "the right thing".
   for (MachineBasicBlock::iterator I = SinglePredMBB->getFirstTerminator();
        I != SinglePredMBB->end(); I++) {
-    DEBUG (dbgs() << "+++ Emitting incoming branch: "; I->dump(););
+    DEBUG(dbgs() << "** Emitting incoming branch: "; I->dump(););
     bool TakenBranch = (I->isBranch() &&
       (TII->getBranchInfo(*I).Target->isReg() || // Relative branch
        TII->getBranchInfo(*I).Target->getMBB() == MBB));
@@ -113,7 +119,7 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
 }
 
 void SystemZPostRASchedStrategy::leaveMBB() {
-  DEBUG(dbgs() << "+++ Leaving " << printMBBReference(*MBB) << "\n";);
+  DEBUG(dbgs() << "** Leaving " << printMBBReference(*MBB) << "\n";);
 
   // Advance to first terminator. The successor block will handle terminators
   // dependent on CFG layout (T/NT branch etc).
@@ -159,14 +165,14 @@ SUnit *SystemZPostRASchedStrategy::pickNode(bool &IsTopNode) {
 
   // If only one choice, return it.
   if (Available.size() == 1) {
-    DEBUG (dbgs() << "+++ Only one: ";
-           HazardRec->dumpSU(*Available.begin(), dbgs()); dbgs() << "\n";);
+    DEBUG(dbgs() << "** Only one: ";
+          HazardRec->dumpSU(*Available.begin(), dbgs()); dbgs() << "\n";);
     return *Available.begin();
   }
 
   // All nodes that are possible to schedule are stored by in the
   // Available set.
-  DEBUG(dbgs() << "+++ Available: "; Available.dump(*HazardRec););
+  DEBUG(dbgs() << "** Available: "; Available.dump(*HazardRec););
 
   Candidate Best;
   for (auto *SU : Available) {
@@ -177,15 +183,13 @@ SUnit *SystemZPostRASchedStrategy::pickNode(bool &IsTopNode) {
     // Remeber which SU is the best candidate.
     if (Best.SU == nullptr || c < Best) {
       Best = c;
-      DEBUG(dbgs() << "+++ Best sofar: ";
-            HazardRec->dumpSU(Best.SU, dbgs());
-            if (Best.GroupingCost != 0)
-              dbgs() << "\tGrouping cost:" << Best.GroupingCost;
-            if (Best.ResourcesCost != 0)
-              dbgs() << " Resource cost:" << Best.ResourcesCost;
-            dbgs() << " Height:" << Best.SU->getHeight();
-            dbgs() << "\n";);
-    }
+      DEBUG(dbgs() << "** Best so far: ";);
+    } else
+      DEBUG(dbgs() << "** Tried      : ";);
+    DEBUG(HazardRec->dumpSU(c.SU, dbgs());
+          c.dumpCosts();
+          dbgs() << " Height:" << c.SU->getHeight();
+          dbgs() << "\n";);
 
     // Once we know we have seen all SUs that affect grouping or use unbuffered
     // resources, we can stop iterating if Best looks good.
@@ -206,7 +210,7 @@ Candidate(SUnit *SU_, SystemZHazardRecognizer &HazardRec) : Candidate() {
   // if it would fit naturally into the schedule.
   GroupingCost = HazardRec.groupingCost(SU);
 
-    // Check the resources cost for this SU.
+  // Check the resources cost for this SU.
   ResourcesCost = HazardRec.resourcesCost(SU);
 }
 
@@ -239,7 +243,12 @@ operator<(const Candidate &other) {
 }
 
 void SystemZPostRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
-  DEBUG(dbgs() << "+++ Scheduling SU(" << SU->NodeNum << ")\n";);
+  DEBUG(dbgs() << "** Scheduling SU(" << SU->NodeNum << ") ";
+        if (Available.size() == 1)
+          dbgs() << "(only one) ";
+        Candidate c(SU, *HazardRec);
+        c.dumpCosts();
+        dbgs() << "\n";);
 
   // Remove SU from Available set and update HazardRec.
   Available.erase(SU);

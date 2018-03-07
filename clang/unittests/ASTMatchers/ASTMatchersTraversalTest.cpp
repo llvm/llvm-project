@@ -403,11 +403,18 @@ TEST(Matcher, Argument) {
 }
 
 TEST(Matcher, AnyArgument) {
-  StatementMatcher CallArgumentY = callExpr(
-    hasAnyArgument(
-      ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y")))))));
+  auto HasArgumentY = hasAnyArgument(
+      ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y"))))));
+  StatementMatcher CallArgumentY = callExpr(HasArgumentY);
+  StatementMatcher ObjCCallArgumentY = objcMessageExpr(HasArgumentY);
   EXPECT_TRUE(matches("void x(int, int) { int y; x(1, y); }", CallArgumentY));
   EXPECT_TRUE(matches("void x(int, int) { int y; x(y, 42); }", CallArgumentY));
+  EXPECT_TRUE(matchesObjC("@interface I -(void)f:(int) y; @end "
+                          "void x(I* i) { int y; [i f:y]; }",
+                          ObjCCallArgumentY));
+  EXPECT_FALSE(matchesObjC("@interface I -(void)f:(int) z; @end "
+                           "void x(I* i) { int z; [i f:z]; }",
+                           ObjCCallArgumentY));
   EXPECT_TRUE(notMatches("void x(int, int) { x(1, 2); }", CallArgumentY));
 
   StatementMatcher ImplicitCastedArgument = callExpr(

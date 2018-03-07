@@ -10,6 +10,8 @@
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
+// CHECK: "-fsanitize=safe-stack"
+// CHECK: "-stack-protector" "2"
 // CHECK: "-fno-common"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic"
 // CHECK: "--sysroot=[[SYSROOT]]"
@@ -84,31 +86,31 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=fuzzer 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FUZZER-X86
-// CHECK-FUZZER-X86: "-fsanitize=fuzzer,fuzzer-no-link"
+// CHECK-FUZZER-X86: "-fsanitize=fuzzer,fuzzer-no-link,safe-stack"
 // CHECK-FUZZER-X86: "{{.*[/\\]}}libclang_rt.fuzzer-x86_64.a"
 
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=fuzzer 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FUZZER-AARCH64
-// CHECK-FUZZER-AARCH64: "-fsanitize=fuzzer,fuzzer-no-link"
+// CHECK-FUZZER-AARCH64: "-fsanitize=fuzzer,fuzzer-no-link,safe-stack"
 // CHECK-FUZZER-AARCH64: "{{.*[/\\]}}libclang_rt.fuzzer-aarch64.a"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-X86
-// CHECK-SCUDO-X86: "-fsanitize=scudo"
+// CHECK-SCUDO-X86: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-X86: "-pie"
 // CHECK-SCUDO-X86: "{{.*[/\\]}}libclang_rt.scudo-x86_64.so"
 
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-AARCH64
-// CHECK-SCUDO-AARCH64: "-fsanitize=scudo"
+// CHECK-SCUDO-AARCH64: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-AARCH64: "-pie"
 // CHECK-SCUDO-AARCH64: "{{.*[/\\]}}libclang_rt.scudo-aarch64.so"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=scudo -fPIC -shared 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
-// CHECK-SCUDO-SHARED: "-fsanitize=scudo"
+// CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-SHARED: "{{.*[/\\]}}libclang_rt.scudo-x86_64.so"

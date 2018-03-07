@@ -115,6 +115,8 @@ public:
   virtual uint32_t getSizeInUdt() const = 0;
   virtual uint32_t getSlot() const = 0;
   virtual std::string getSourceFileName() const = 0;
+  virtual std::unique_ptr<IPDBLineNumber>
+  getSrcLineOnTypeDefn() const = 0;
   virtual uint32_t getStride() const = 0;
   virtual uint32_t getSubTypeId() const = 0;
   virtual std::string getSymbolsFileName() const = 0;

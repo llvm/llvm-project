@@ -108,9 +108,8 @@ void CodeSection::writeTo(uint8_t *Buf) {
   memcpy(Buf, CodeSectionHeader.data(), CodeSectionHeader.size());
 
   // Write code section bodies
-  parallelForEach(Functions, [&](const InputChunk *Chunk) {
-    Chunk->writeTo(Buf);
-  });
+  parallelForEach(Functions,
+                  [&](const InputChunk *Chunk) { Chunk->writeTo(Buf); });
 }
 
 uint32_t CodeSection::numRelocations() const {

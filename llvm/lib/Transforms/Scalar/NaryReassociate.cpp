@@ -429,6 +429,9 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
 
 Instruction *NaryReassociatePass::tryReassociateBinaryOp(BinaryOperator *I) {
   Value *LHS = I->getOperand(0), *RHS = I->getOperand(1);
+  // There is no need to reassociate 0.
+  if (SE->getSCEV(I)->isZero())
+    return nullptr;
   if (auto *NewI = tryReassociateBinaryOp(LHS, RHS, I))
     return NewI;
   if (auto *NewI = tryReassociateBinaryOp(RHS, LHS, I))

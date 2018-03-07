@@ -284,3 +284,7 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   Res |= SanitizerKind::Scudo;
   return Res;
 }
+
+SanitizerMask Fuchsia::getDefaultSanitizers() const {
+  return SanitizerKind::SafeStack;
+}

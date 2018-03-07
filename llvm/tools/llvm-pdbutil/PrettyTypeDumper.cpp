@@ -135,7 +135,6 @@ filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
 TypeDumper::TypeDumper(LinePrinter &P) : PDBSymDumper(true), Printer(P) {}
 
 void TypeDumper::start(const PDBSymbolExe &Exe) {
-  auto Children = Exe.findAllChildren();
   if (opts::pretty::Enums) {
     if (auto Enums = Exe.findAllChildren<PDBSymbolTypeEnum>()) {
       Printer.NewLine();

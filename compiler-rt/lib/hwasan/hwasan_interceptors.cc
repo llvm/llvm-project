@@ -264,12 +264,9 @@ INTERCEPTOR(void *, malloc, SIZE_T size) {
   return hwasan_malloc(size, &stack);
 }
 
-
-INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
-            int fd, OFF_T offset) {
-  if (hwasan_init_is_running)
-    return REAL(mmap)(addr, length, prot, flags, fd, offset);
-  ENSURE_HWASAN_INITED();
+template <class Mmap>
+static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T sz, int prot,
+                              int flags, int fd, OFF64_T off) {
   if (addr && !MEM_IS_APP(addr)) {
     if (flags & map_fixed) {
       errno = errno_EINVAL;
@@ -278,29 +275,8 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
       addr = nullptr;
     }
   }
-  void *res = REAL(mmap)(addr, length, prot, flags, fd, offset);
-  return res;
+  return real_mmap(addr, sz, prot, flags, fd, off);
 }
-
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
-            int fd, OFF64_T offset) {
-  ENSURE_HWASAN_INITED();
-  if (addr && !MEM_IS_APP(addr)) {
-    if (flags & map_fixed) {
-      errno = errno_EINVAL;
-      return (void *)-1;
-    } else {
-      addr = nullptr;
-    }
-  }
-  void *res = REAL(mmap64)(addr, length, prot, flags, fd, offset);
-  return res;
-}
-#define HWASAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
-#else
-#define HWASAN_MAYBE_INTERCEPT_MMAP64
-#endif
 
 extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
@@ -436,6 +412,13 @@ int OnExit() {
     return REAL(memset)(dst, v, size);                    \
   }
 
+#define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, fd, \
+                                     offset)                                   \
+  do {                                                                         \
+    return mmap_interceptor(REAL(mmap), addr, length, prot, flags, fd,         \
+                            offset);                                           \
+  } while (false)
+
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
@@ -469,8 +452,6 @@ void InitializeInterceptors() {
   InitializeCommonInterceptors();
   InitializeSignalInterceptors();
 
-  INTERCEPT_FUNCTION(mmap);
-  HWASAN_MAYBE_INTERCEPT_MMAP64;
   INTERCEPT_FUNCTION(posix_memalign);
   HWASAN_MAYBE_INTERCEPT_MEMALIGN;
   INTERCEPT_FUNCTION(__libc_memalign);
