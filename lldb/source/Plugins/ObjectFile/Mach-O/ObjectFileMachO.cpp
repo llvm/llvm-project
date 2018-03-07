@@ -1521,7 +1521,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   if (section_name == g_sect_name_cfstring)
     return eSectionTypeDataObjCCFStrings;
   if (section_name == g_sect_name_swift_ast)
-    sect_type = eSectionTypeSwiftModules;
+    return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_go_symtab)
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_objc_data ||
