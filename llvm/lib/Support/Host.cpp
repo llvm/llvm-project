@@ -1009,7 +1009,7 @@ StringRef sys::getHostCPUName() {
 #include "llvm/Support/X86TargetParser.def"
 
   // Now check types.
-#define X86_CPU_SUBTYPE(ARCHNAME, ENUM) \
+#define X86_CPU_TYPE(ARCHNAME, ENUM) \
   if (Type == X86::ENUM) \
     return ARCHNAME;
 #include "llvm/Support/X86TargetParser.def"

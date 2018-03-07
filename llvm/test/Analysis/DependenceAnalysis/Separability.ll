@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -basicaa -da | FileCheck %s
+; RUN: opt < %s -analyze -basicaa -da -da-delinearize | FileCheck %s
 
 ; ModuleID = 'Separability.bc'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -16,10 +16,10 @@ define void @sep0([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable ssp
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - output [0 * * S]!
-; CHECK: da analyze - flow [-10 * * *]!
+; CHECK: da analyze - output [= * * S]!
+; CHECK: da analyze - flow [* * * *|<]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - input [0 * S *]!
+; CHECK: da analyze - input [* * S *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
@@ -91,10 +91,10 @@ define void @sep1([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable ssp
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - output [0 * * S]!
-; CHECK: da analyze - flow [> * * *]!
+; CHECK: da analyze - output [= * * S]!
+; CHECK: da analyze - flow [* * * *|<]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - input [0 * S *]!
+; CHECK: da analyze - input [* * S *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
@@ -165,10 +165,10 @@ define void @sep2([100 x [100 x [100 x i32]]]* %A, i32* %B, i32 %n) nounwind uwt
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - consistent output [0 S 0 0]!
-; CHECK: da analyze - flow [> * * -10]!
+; CHECK: da analyze - output [= S = =]!
+; CHECK: da analyze - flow [* * * <>]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - input [0 * * 0]!
+; CHECK: da analyze - input [= * * *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
@@ -239,10 +239,10 @@ define void @sep3([100 x [100 x [100 x i32]]]* %A, i32* %B, i32 %n) nounwind uwt
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - consistent output [0 S 0 0]!
-; CHECK: da analyze - flow [> * * *]!
+; CHECK: da analyze - output [= S = =]!
+; CHECK: da analyze - flow [* * * *|<]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - input [0 * * 0]!
+; CHECK: da analyze - input [= * * *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 

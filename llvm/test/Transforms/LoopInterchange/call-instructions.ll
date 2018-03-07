@@ -1,5 +1,5 @@
-; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
-;; We test the complete .ll for adjustment in outer loop header/latch and inner loop header/latch.
+; REQUIRES: asserts
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S -debug 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -19,6 +19,8 @@ declare void @bar(i64 %a) readnone
 ;;      A[j][i] = A[j][i]+k;
 ;;    }
 ;; }
+
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 define void @interchange_01(i32 %k, i32 %N) {
 entry:
@@ -65,24 +67,6 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: @interchange_01
-; CHECK: for1.ph:
-; CHECK: br label %for1.header
-
-; CHECK: for1.header:
-; CHECK-NEXT: %indvars.iv23 = phi i64 [ 0, %for1.ph ], [ %indvars.iv.next24, %for1.inc10 ]
-; CHECK-NEXT: br i1 %cmp219, label %for2.ph, label %for1.inc10
-
-; CHECK: for2:
-; CHECK: br i1 %exitcond, label %for2.loopexit, label %for2
-
-; CHECK: for1.inc10:
-; CHECK: br i1 %exitcond26, label %for1.loopexit, label %for1.header
-
-; CHECK: for1.loopexit:
-; CHECK-NEXT: br label %exit
-
-
 ;;--------------------------------------Test case 02------------------------------------
 ;; Safe to interchange, because the called function `bar` is marked as readnone,
 ;; so it cannot introduce dependences.
@@ -93,6 +77,8 @@ exit:
 ;;      A[j][i] = A[j][i]+k;
 ;;    }
 ;; }
+
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 define void @interchange_02(i32 %k, i32 %N) {
 entry:
@@ -138,21 +124,3 @@ for1.loopexit:
 exit:
   ret void
 }
-
-; CHECK-LABEL: @interchange_02
-; CHECK: for1.header:
-; CHECK-NEXT: %indvars.iv23 = phi i64 [ 0, %for1.ph ], [ %indvars.iv.next24, %for1.inc10 ]
-; CHECK-NEXT: br i1 %cmp219, label %for2.split1, label %for1.loopexit
-
-; CHECK: for2.split1:
-; CHECK: br label %for2.loopexit
-
-; CHECK: for2.split:
-; CHECK-NEXT: %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK: br i1 %exitcond, label %for1.loopexit, label %for2
-
-; CHECK: for2.loopexit:
-; CHECK-NEXT:  br label %for1.inc10
-
-; CHECK: for1.inc10:
-; CHECK: br i1 %exitcond26, label %for2.split, label %for1.header

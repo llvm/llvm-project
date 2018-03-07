@@ -1,5 +1,5 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
-;; We test the complete .ll for adjustment in outer loop header/latch and inner loop header/latch.
+; REQUIRES: asserts
+; RUN: opt < %s -basicaa -loop-interchange -S -debug 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -12,6 +12,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;     for(gi=1;gi<N;gi++)
 ;;       for(gj=1;gj<M;gj++)
 ;;         A[gj][gi] = A[gj - 1][gi] + C[gj][gi];
+
+; CHECK: PHI Nodes in loop nest exit is not handled for now since on failure all loops branch to loop nest exit.
 
 @gi = common global i32 0
 @gj = common global i32 0
@@ -66,11 +68,3 @@ for.cond.for.end16_crit_edge:
 for.end16:
   ret void
 }
-
-; CHECK-LABEL: @interchange_07
-; CHECK: for.body3:                                        ; preds = %for.body3.preheader, %for.body3
-; CHECK:   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3 ], [ 1, %for.body3.preheader ]
-; CHECK:   %5 = add nsw i64 %indvars.iv, -1
-; CHECK:   %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %5, i64 %indvars.iv25
-; CHECK:   %6 = load i32, i32* %arrayidx5
-; CHECK:   %arrayidx9 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @C, i64 0, i64 %indvars.iv, i64 %indvars.iv25

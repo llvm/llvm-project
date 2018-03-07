@@ -4010,13 +4010,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         auto scalarSize = CGM.getDataLayout().getTypeAllocSize(scalarType);
         auto scalarAlign = CGM.getDataLayout().getPrefTypeAlignment(scalarType);
 
-        tempSize = llvm::ConstantInt::get(CGM.Int64Ty, scalarSize);
-
         // Materialize to a temporary.
         addr = CreateTempAlloca(RV.getScalarVal()->getType(),
                  CharUnits::fromQuantity(std::max(layout->getAlignment(),
                                                   scalarAlign)));
-        EmitLifetimeStart(scalarSize, addr.getPointer());
+        tempSize = EmitLifetimeStart(scalarSize, addr.getPointer());
 
         Builder.CreateStore(RV.getScalarVal(), addr);
       }
