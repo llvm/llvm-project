@@ -177,7 +177,9 @@ void warn_with_cast() {
 
 @interface Test1 : NSObject
 -(void)use_method_warn;
+-(void)use_objc_callback_warn;
 -(void)testNoWarn;
+-(void)acceptBlock:(block_t)callback;
 @end
 
 @implementation Test1
@@ -198,6 +200,35 @@ void warn_with_cast() {
       dispatch_semaphore_signal(sema);
   });
   dispatch_semaphore_wait(sema, 100);
+}
+
+-(void)acceptBlock:(block_t) callback {
+  callback();
+}
+
+-(void)use_objc_callback_warn {
+  dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+
+  [self acceptBlock:^{
+      dispatch_semaphore_signal(sema);
+  }];
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+}
+
+void use_objc_and_c_callback(Test1 *t) {
+  dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+
+  func(^{
+      dispatch_semaphore_signal(sema);
+  });
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+
+  dispatch_semaphore_t sema1 = dispatch_semaphore_create(0);
+
+  [t acceptBlock:^{
+      dispatch_semaphore_signal(sema1);
+  }];
+  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
 }
 
 @end
