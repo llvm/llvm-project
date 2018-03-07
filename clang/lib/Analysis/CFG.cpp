@@ -1200,7 +1200,9 @@ void CFGBuilder::findConstructionContexts(
   }
   case Stmt::ImplicitCastExprClass: {
     auto *Cast = cast<ImplicitCastExpr>(Child);
-    findConstructionContexts(Layer, Cast->getSubExpr());
+    // TODO: We need to support CK_ConstructorConversion, maybe other kinds?
+    if (Cast->getCastKind() == CK_NoOp)
+      findConstructionContexts(Layer, Cast->getSubExpr());
     break;
   }
   case Stmt::CXXBindTemporaryExprClass: {
