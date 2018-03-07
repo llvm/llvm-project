@@ -59,6 +59,8 @@ lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {
   case PDB_BuiltinType::Int:
   case PDB_BuiltinType::Long:
   case PDB_BuiltinType::Char:
+  case PDB_BuiltinType::Char16:
+  case PDB_BuiltinType::Char32:
     return lldb::eEncodingSint;
   case PDB_BuiltinType::Bool:
   case PDB_BuiltinType::UInt:
@@ -126,6 +128,10 @@ CompilerType GetBuiltinTypeForPDBEncodingAndBitSize(
     if (width == ast->getTypeSize(ast->WCharTy))
       return CompilerType(ast, ast->WCharTy);
     break;
+  case PDB_BuiltinType::Char16:
+    return CompilerType(ast, ast->Char16Ty);
+  case PDB_BuiltinType::Char32:
+    return CompilerType(ast, ast->Char32Ty);
   case PDB_BuiltinType::Float:
     // Note: types `long double` and `double` have same bit size in MSVC and there
     // is no information in the PDB to distinguish them. So when falling back
@@ -162,6 +168,10 @@ ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin *pdb_type,
     return ConstString("HRESULT");
   case PDB_BuiltinType::BCD:
     return ConstString("BCD");
+  case PDB_BuiltinType::Char16:
+    return ConstString("char16_t");
+  case PDB_BuiltinType::Char32:
+    return ConstString("char32_t");
   case PDB_BuiltinType::None:
     return ConstString("...");
   }

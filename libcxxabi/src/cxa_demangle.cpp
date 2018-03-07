@@ -4788,8 +4788,8 @@ Node *Db::parse() {
     Node *Encoding = parseEncoding();
     if (Encoding == nullptr || !consumeIf("_block_invoke"))
       return nullptr;
-    consumeIf('_');
-    if (parseNumber().empty())
+    bool RequireNumber = consumeIf('_');
+    if (parseNumber().empty() && RequireNumber)
       return nullptr;
     if (numLeft() != 0)
       return nullptr;
