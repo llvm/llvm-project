@@ -17,6 +17,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -92,8 +93,7 @@ private:
   void layoutMemory();
   void createHeader();
   void createSections();
-  SyntheticSection *createSyntheticSection(uint32_t Type,
-                                           StringRef Name = "");
+  SyntheticSection *createSyntheticSection(uint32_t Type, StringRef Name = "");
 
   // Builtin sections
   void createTypeSection();
@@ -471,8 +471,11 @@ void Writer::createLinkingSection() {
     Sub.writeTo(OS);
   }
 
-  struct ComdatEntry { unsigned Kind; uint32_t Index; };
-  std::map<StringRef,std::vector<ComdatEntry>> Comdats;
+  struct ComdatEntry {
+    unsigned Kind;
+    uint32_t Index;
+  };
+  std::map<StringRef, std::vector<ComdatEntry>> Comdats;
 
   for (const InputFunction *F : InputFunctions) {
     StringRef Comdat = F->getComdat();
@@ -693,8 +696,9 @@ void Writer::assignSymtab() {
     for (Symbol *Sym : File->getSymbols()) {
       if (Sym->getFile() != File)
         continue;
-      if (!Sym->isLive())
-        return;
+      // (Since this is relocatable output, GC is not performed so symbols must
+      // be live.)
+      assert(Sym->isLive());
       Sym->setOutputSymbolIndex(SymbolIndex++);
       SymtabEntries.emplace_back(Sym);
     }
@@ -849,7 +853,6 @@ static const int OPCODE_END = 0xb;
 // in input object.
 void Writer::createCtorFunction() {
   uint32_t FunctionIndex = NumImportedFunctions + InputFunctions.size();
-  WasmSym::CallCtors->setOutputIndex(FunctionIndex);
 
   // First write the body's contents to a string.
   std::string BodyContent;
@@ -872,8 +875,9 @@ void Writer::createCtorFunction() {
   }
 
   const WasmSignature *Sig = WasmSym::CallCtors->getFunctionType();
-  SyntheticFunction *F = make<SyntheticFunction>(
-      *Sig, std::move(FunctionBody), WasmSym::CallCtors->getName());
+  SyntheticFunction *F =
+      make<SyntheticFunction>(*Sig, toArrayRef(Saver.save(FunctionBody)),
+                              WasmSym::CallCtors->getName());
 
   F->setOutputIndex(FunctionIndex);
   F->Live = true;

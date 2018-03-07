@@ -16,9 +16,9 @@
 
 using llvm::object::Archive;
 using llvm::object::WasmSymbol;
-using llvm::wasm::WasmSignature;
 using llvm::wasm::WasmGlobal;
 using llvm::wasm::WasmGlobalType;
+using llvm::wasm::WasmSignature;
 using llvm::wasm::WasmSymbolType;
 
 namespace lld {
@@ -48,8 +48,8 @@ public:
   Kind kind() const { return SymbolKind; }
 
   bool isDefined() const {
-    return SymbolKind == DefinedFunctionKind ||
-           SymbolKind == DefinedDataKind || SymbolKind == DefinedGlobalKind;
+    return SymbolKind == DefinedFunctionKind || SymbolKind == DefinedDataKind ||
+           SymbolKind == DefinedGlobalKind;
   }
 
   bool isUndefined() const {

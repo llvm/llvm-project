@@ -117,9 +117,9 @@ void LinkerScript::expandOutputSection(uint64_t Size) {
   if (Ctx->MemRegion)
     expandMemoryRegion(Ctx->MemRegion, Size, Ctx->MemRegion->Name,
                        Ctx->OutSec->Name);
-  // FIXME: check LMA region overflow too.
   if (Ctx->LMARegion)
-    Ctx->LMARegion->CurPos += Size;
+    expandMemoryRegion(Ctx->LMARegion, Size, Ctx->LMARegion->Name,
+                       Ctx->OutSec->Name);
 }
 
 void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
@@ -379,6 +379,14 @@ void LinkerScript::discard(ArrayRef<InputSection *> V) {
     if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
         S == InX::DynStrTab)
       error("discarding " + S->Name + " section is not allowed");
+
+    // You can discard .hash and .gnu.hash sections by linker scripts. Since
+    // they are synthesized sections, we need to handle them differently than
+    // other regular sections.
+    if (S == InX::GnuHashTab)
+      InX::GnuHashTab = nullptr;
+    if (S == InX::HashTab)
+      InX::HashTab = nullptr;
 
     S->Assigned = false;
     S->Live = false;
