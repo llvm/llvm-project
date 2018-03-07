@@ -197,6 +197,7 @@ Clang-Tidy Checks
    performance-type-promotion-in-math-fn
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param
+   portability-simd-intrinsics
    readability-avoid-const-params-in-decls
    readability-braces-around-statements
    readability-container-size-empty
@@ -218,7 +219,6 @@ Clang-Tidy Checks
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
    readability-redundant-string-init
-   readability-simd-intrinsics
    readability-simplify-boolean-expr
    readability-static-accessed-through-instance
    readability-static-definition-in-anonymous-namespace
