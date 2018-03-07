@@ -310,7 +310,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
                                               &NullSignature);
 
     // Handle the `--undefined <sym>` options.
-    for (auto* Arg : Args.filtered(OPT_undefined))
+    for (auto *Arg : Args.filtered(OPT_undefined))
       Symtab->addUndefinedFunction(Arg->getValue(), 0, nullptr, nullptr);
   }
 
@@ -331,7 +331,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // -u/--undefined since these undefined symbols have only names and no
     // function signature, which means they cannot be written to the final
     // output.
-    for (auto* Arg : Args.filtered(OPT_undefined)) {
+    for (auto *Arg : Args.filtered(OPT_undefined)) {
       Symbol *Sym = Symtab->find(Arg->getValue());
       if (!Sym->isDefined())
         error("function forced with --undefined not found: " + Sym->getName());

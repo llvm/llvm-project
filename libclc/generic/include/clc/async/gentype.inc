@@ -180,6 +180,7 @@
 #undef __CLC_GENTYPE
 
 #ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
 #define __CLC_GENTYPE double
 #include __CLC_BODY
@@ -202,3 +203,5 @@
 #undef __CLC_GENTYPE
 
 #endif
+
+#undef __CLC_BODY

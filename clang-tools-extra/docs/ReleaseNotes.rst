@@ -57,6 +57,8 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New module ``portability``.
+
 - New `bugprone-throw-keyword-missing
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-throw-keyword-missing.html>`_ check
 
@@ -95,10 +97,10 @@ Improvements to clang-tidy
   Finds and replaces deprecated uses of ``std::uncaught_exception`` to
   ``std::uncaught_exceptions``.
 
-- New `readability-simd-intrinsics
-  <http://clang.llvm.org/extra/clang-tidy/checks/readability-simd-intrinsics.html>`_ check
+- New `portability-simd-intrinsics
+  <http://clang.llvm.org/extra/clang-tidy/checks/portability-simd-intrinsics.html>`_ check
 
-  Warns if SIMD intrinsics are used which can be replaced by
+  Warns or suggests alternatives if SIMD intrinsics are used which can be replaced by
   ``std::experimental::simd`` operations.
 
 - New alias `hicpp-avoid-goto

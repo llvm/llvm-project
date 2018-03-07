@@ -332,6 +332,9 @@ InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
                             uint64_t OffsetInArchive = 0);
 InputFile *createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName);
 
+// For --just-symbols
+template <class ELFT> void readJustSymbolsFile(MemoryBufferRef MB);
+
 extern std::vector<BinaryFile *> BinaryFiles;
 extern std::vector<BitcodeFile *> BitcodeFiles;
 extern std::vector<InputFile *> ObjectFiles;
