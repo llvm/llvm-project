@@ -1,4 +1,4 @@
-//===-- AnalyzerOptions.cpp - Analysis Engine Options -----------*- C++ -*-===//
+//===- AnalyzerOptions.cpp - Analysis Engine Options ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,8 +16,15 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstddef>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 using namespace ento;
@@ -81,7 +88,6 @@ AnalyzerOptions::getExplorationStrategy() {
 
 IPAKind AnalyzerOptions::getIPAMode() {
   if (IPAMode == IPAK_NotSet) {
-
     // Use the User Mode to set the default IPA value.
     // Note, we have to add the string to the Config map for the ConfigDumper
     // checker to function properly.
@@ -340,7 +346,6 @@ unsigned AnalyzerOptions::getAlwaysInlineSize() {
 
 unsigned AnalyzerOptions::getMaxInlinableSize() {
   if (!MaxInlinableSize.hasValue()) {
-
     int DefaultValue = 0;
     UserModeKind HighLevelMode = getUserMode();
     switch (HighLevelMode) {

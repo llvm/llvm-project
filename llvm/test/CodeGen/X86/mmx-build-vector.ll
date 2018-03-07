@@ -637,42 +637,28 @@ define void @build_v4i16_012u(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
 ; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    retl
 ;
-; X64-SSE2-LABEL: build_v4i16_012u:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movd %edx, %xmm0
-; X64-SSE2-NEXT:    movd %esi, %xmm1
-; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-SSE2-NEXT:    movd %ecx, %xmm0
-; X64-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
-; X64-SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-SSE2-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
-; X64-SSE2-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
-; X64-SSE2-NEXT:    paddd %mm0, %mm0
-; X64-SSE2-NEXT:    movq %mm0, (%rdi)
-; X64-SSE2-NEXT:    retq
-;
-; X64-SSSE3-LABEL: build_v4i16_012u:
-; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movd %edx, %xmm0
-; X64-SSSE3-NEXT:    movd %esi, %xmm1
-; X64-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-SSSE3-NEXT:    movd %ecx, %xmm0
-; X64-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; X64-SSSE3-NEXT:    movq %xmm1, -{{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
-; X64-SSSE3-NEXT:    paddd %mm0, %mm0
-; X64-SSSE3-NEXT:    movq %mm0, (%rdi)
-; X64-SSSE3-NEXT:    retq
+; X64-SSE-LABEL: build_v4i16_012u:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movd %edx, %xmm0
+; X64-SSE-NEXT:    movd %esi, %xmm1
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-SSE-NEXT:    movd %ecx, %xmm0
+; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X64-SSE-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
+; X64-SSE-NEXT:    paddd %mm0, %mm0
+; X64-SSE-NEXT:    movq %mm0, (%rdi)
+; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: build_v4i16_012u:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovd %esi, %xmm0
 ; X64-AVX-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X64-AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; X64-AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-AVX-NEXT:    paddd %mm0, %mm0
@@ -762,7 +748,7 @@ define void @build_v4i16_0u00(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
 ; X64-SSSE3-LABEL: build_v4i16_0u00:
 ; X64-SSSE3:       # %bb.0:
 ; X64-SSSE3-NEXT:    movd %esi, %xmm0
-; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,u,u,0,1,0,1,0,1,0,1,0,1,2,3]
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,0,1,0,1,0,1,0,1,0,1,2,3]
 ; X64-SSSE3-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-SSSE3-NEXT:    paddd %mm0, %mm0
@@ -772,7 +758,7 @@ define void @build_v4i16_0u00(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
 ; X64-AVX1-LABEL: build_v4i16_0u00:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovd %esi, %xmm0
-; X64-AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,u,u,0,1,0,1,0,1,0,1,0,1,2,3]
+; X64-AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,0,1,0,1,0,1,0,1,0,1,2,3]
 ; X64-AVX1-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX1-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-AVX1-NEXT:    paddd %mm0, %mm0
@@ -783,7 +769,8 @@ define void @build_v4i16_0u00(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovd %esi, %xmm0
 ; X64-AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X64-AVX2-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
+; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX2-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX2-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-AVX2-NEXT:    paddd %mm0, %mm0
@@ -794,7 +781,8 @@ define void @build_v4i16_0u00(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovd %esi, %xmm0
 ; X64-AVX512-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X64-AVX512-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
+; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX512-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX512-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-AVX512-NEXT:    paddd %mm0, %mm0
@@ -1029,7 +1017,7 @@ define void @build_v8i8_0u2345z7(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X86-SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; X86-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,xmm0[4,6,8,10],zero,xmm0[14,u,u,u,u,u,u,u,u]
+; X86-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,4,6,8,10],zero,xmm0[14,u,u,u,u,u,u,u,u]
 ; X86-SSSE3-NEXT:    movq %xmm0, (%esp)
 ; X86-SSSE3-NEXT:    movq (%esp), %mm0
 ; X86-SSSE3-NEXT:    paddd %mm0, %mm0
@@ -1076,7 +1064,7 @@ define void @build_v8i8_0u2345z7(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X64-SSSE3-NEXT:    movd %esi, %xmm1
 ; X64-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X64-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0],zero,xmm1[4,6,8,10],zero,xmm1[14,u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,u,4,6,8,10],zero,xmm1[14,u,u,u,u,u,u,u,u]
 ; X64-SSSE3-NEXT:    movq %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-SSSE3-NEXT:    paddd %mm0, %mm0
@@ -1094,7 +1082,7 @@ define void @build_v8i8_0u2345z7(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X64-AVX-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
 ; X64-AVX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-AVX-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0],zero,xmm0[4,6,8,10],zero,xmm0[14,u,u,u,u,u,u,u,u]
+; X64-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,u,4,6,8,10],zero,xmm0[14,u,u,u,u,u,u,u,u]
 ; X64-AVX-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-AVX-NEXT:    paddd %mm0, %mm0
@@ -1186,7 +1174,7 @@ define void @build_v8i8_0123zzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X86-SSSE3-NEXT:    pinsrw $2, %ecx, %xmm0
 ; X86-SSSE3-NEXT:    movl 24(%ebp), %ecx
 ; X86-SSSE3-NEXT:    pinsrw $3, %ecx, %xmm0
-; X86-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6],zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; X86-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u]
 ; X86-SSSE3-NEXT:    movq %xmm0, (%esp)
 ; X86-SSSE3-NEXT:    movq (%esp), %mm0
 ; X86-SSSE3-NEXT:    paddd %mm0, %mm0
@@ -1217,7 +1205,7 @@ define void @build_v8i8_0123zzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X64-SSSE3-NEXT:    pinsrw $1, %edx, %xmm0
 ; X64-SSSE3-NEXT:    pinsrw $2, %ecx, %xmm0
 ; X64-SSSE3-NEXT:    pinsrw $3, %r8d, %xmm0
-; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6],zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u]
 ; X64-SSSE3-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-SSSE3-NEXT:    paddd %mm0, %mm0
@@ -1231,7 +1219,7 @@ define void @build_v8i8_0123zzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X64-AVX-NEXT:    vpinsrw $1, %edx, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpinsrw $3, %r8d, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6],zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; X64-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u]
 ; X64-AVX-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
 ; X64-AVX-NEXT:    paddd %mm0, %mm0

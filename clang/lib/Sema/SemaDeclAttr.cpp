@@ -311,7 +311,7 @@ static bool checkAttrMutualExclusion(Sema &S, Decl *D, SourceRange Range,
 template <typename AttrInfo>
 static bool checkFunctionOrMethodParameterIndex(
     Sema &S, const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
-    const Expr *IdxExpr, ParamIdx &Idx, bool CanIndexImplicitThis = false) {
+    const Expr *IdxExpr, uint64_t &Idx, bool AllowImplicitThis = false) {
   assert(isFunctionOrMethodOrBlock(D));
 
   // In C++ the implicit 'this' function parameter also counts.
@@ -331,20 +331,21 @@ static bool checkFunctionOrMethodParameterIndex(
     return false;
   }
 
-  Idx = ParamIdx(IdxInt.getLimitedValue(UINT_MAX), D);
-  unsigned IdxSource = Idx.getSourceIndex();
-  if (IdxSource < 1 || (!IV && IdxSource > NumParams)) {
+  Idx = IdxInt.getLimitedValue();
+  if (Idx < 1 || (!IV && Idx > NumParams)) {
     S.Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
-        << getAttrName(AI) << AttrArgNum << IdxExpr->getSourceRange();
+      << getAttrName(AI) << AttrArgNum << IdxExpr->getSourceRange();
     return false;
   }
-  if (HasImplicitThisParam && !CanIndexImplicitThis) {
-    if (IdxSource == 1) {
+  Idx--; // Convert to zero-based.
+  if (HasImplicitThisParam && !AllowImplicitThis) {
+    if (Idx == 0) {
       S.Diag(getAttrLoc(AI),
              diag::err_attribute_invalid_implicit_this_argument)
-          << getAttrName(AI) << IdxExpr->getSourceRange();
+        << getAttrName(AI) << IdxExpr->getSourceRange();
       return false;
     }
+    --Idx;
   }
 
   return true;
@@ -771,15 +772,18 @@ static void handleAssertExclusiveLockAttr(Sema &S, Decl *D,
 /// AttrArgNo is used to actually retrieve the argument, so it's base-0.
 template <typename AttrInfo>
 static bool checkParamIsIntegerType(Sema &S, const FunctionDecl *FD,
-                                    const AttrInfo &AI, unsigned AttrArgNo) {
+                                    const AttrInfo &AI, unsigned AttrArgNo,
+                                    bool AllowDependentType = false) {
   assert(AI.isArgExpr(AttrArgNo) && "Expected expression argument");
   Expr *AttrArg = AI.getArgAsExpr(AttrArgNo);
-  ParamIdx Idx;
+  uint64_t Idx;
   if (!checkFunctionOrMethodParameterIndex(S, FD, AI, AttrArgNo + 1, AttrArg,
                                            Idx))
     return false;
 
-  const ParmVarDecl *Param = FD->getParamDecl(Idx.getASTIndex());
+  const ParmVarDecl *Param = FD->getParamDecl(Idx);
+  if (AllowDependentType && Param->getType()->isDependentType())
+    return true;
   if (!Param->getType()->isIntegerType() && !Param->getType()->isCharType()) {
     SourceLocation SrcLoc = AttrArg->getLocStart();
     S.Diag(SrcLoc, diag::err_attribute_integers_only)
@@ -802,23 +806,22 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &AL) {
   }
 
   const Expr *SizeExpr = AL.getArgAsExpr(0);
-  int SizeArgNoVal;
+  int SizeArgNo;
   // Parameter indices are 1-indexed, hence Index=1
-  if (!checkPositiveIntArgument(S, AL, SizeExpr, SizeArgNoVal, /*Index=*/1))
+  if (!checkPositiveIntArgument(S, AL, SizeExpr, SizeArgNo, /*Index=*/1))
     return;
-  ParamIdx SizeArgNo(SizeArgNoVal, D);
 
   if (!checkParamIsIntegerType(S, FD, AL, /*AttrArgNo=*/0))
     return;
 
-  ParamIdx NumberArgNo;
+  // Args are 1-indexed, so 0 implies that the arg was not present
+  int NumberArgNo = 0;
   if (AL.getNumArgs() == 2) {
     const Expr *NumberExpr = AL.getArgAsExpr(1);
-    int Val;
     // Parameter indices are 1-based, hence Index=2
-    if (!checkPositiveIntArgument(S, AL, NumberExpr, Val, /*Index=*/2))
+    if (!checkPositiveIntArgument(S, AL, NumberExpr, NumberArgNo,
+                                  /*Index=*/2))
       return;
-    NumberArgNo = ParamIdx(Val, D);
 
     if (!checkParamIsIntegerType(S, FD, AL, /*AttrArgNo=*/1))
       return;
@@ -1421,19 +1424,18 @@ static bool attrNonNullArgCheck(Sema &S, QualType T, const AttributeList &AL,
 }
 
 static void handleNonNullAttr(Sema &S, Decl *D, const AttributeList &AL) {
-  SmallVector<ParamIdx, 8> NonNullArgs;
+  SmallVector<unsigned, 8> NonNullArgs;
   for (unsigned I = 0; I < AL.getNumArgs(); ++I) {
     Expr *Ex = AL.getArgAsExpr(I);
-    ParamIdx Idx;
+    uint64_t Idx;
     if (!checkFunctionOrMethodParameterIndex(S, D, AL, I + 1, Ex, Idx))
       return;
 
     // Is the function argument a pointer type?
-    if (Idx.getASTIndex() < getFunctionOrMethodNumParams(D) &&
-        !attrNonNullArgCheck(
-            S, getFunctionOrMethodParamType(D, Idx.getASTIndex()), AL,
-            Ex->getSourceRange(),
-            getFunctionOrMethodParamRange(D, Idx.getASTIndex())))
+    if (Idx < getFunctionOrMethodNumParams(D) &&
+        !attrNonNullArgCheck(S, getFunctionOrMethodParamType(D, Idx), AL,
+                             Ex->getSourceRange(),
+                             getFunctionOrMethodParamRange(D, Idx)))
       continue;
 
     NonNullArgs.push_back(Idx);
@@ -1457,12 +1459,12 @@ static void handleNonNullAttr(Sema &S, Decl *D, const AttributeList &AL) {
       S.Diag(AL.getLoc(), diag::warn_attribute_nonnull_no_pointers);
   }
 
-  ParamIdx *Start = NonNullArgs.data();
+  unsigned *Start = NonNullArgs.data();
   unsigned Size = NonNullArgs.size();
   llvm::array_pod_sort(Start, Start + Size);
   D->addAttr(::new (S.Context)
-                 NonNullAttr(AL.getRange(), S.Context, Start, Size,
-                             AL.getAttributeSpellingListIndex()));
+             NonNullAttr(AL.getRange(), S.Context, Start, Size,
+                         AL.getAttributeSpellingListIndex()));
 }
 
 static void handleNonNullAttrParameter(Sema &S, ParmVarDecl *D,
@@ -1483,8 +1485,8 @@ static void handleNonNullAttrParameter(Sema &S, ParmVarDecl *D,
     return;
 
   D->addAttr(::new (S.Context)
-                 NonNullAttr(AL.getRange(), S.Context, nullptr, 0,
-                             AL.getAttributeSpellingListIndex()));
+             NonNullAttr(AL.getRange(), S.Context, nullptr, 0,
+                         AL.getAttributeSpellingListIndex()));
 }
 
 static void handleReturnsNonNullAttr(Sema &S, Decl *D,
@@ -1585,7 +1587,7 @@ void Sema::AddAllocAlignAttr(SourceRange AttrRange, Decl *D, Expr *ParamExpr,
                              unsigned SpellingListIndex) {
   QualType ResultType = getFunctionOrMethodResultType(D);
 
-  AllocAlignAttr TmpAttr(AttrRange, Context, ParamIdx(), SpellingListIndex);
+  AllocAlignAttr TmpAttr(AttrRange, Context, 0, SpellingListIndex);
   SourceLocation AttrLoc = AttrRange.getBegin();
 
   if (!ResultType->isDependentType() &&
@@ -1595,22 +1597,28 @@ void Sema::AddAllocAlignAttr(SourceRange AttrRange, Decl *D, Expr *ParamExpr,
     return;
   }
 
-  ParamIdx Idx;
+  uint64_t IndexVal;
   const auto *FuncDecl = cast<FunctionDecl>(D);
   if (!checkFunctionOrMethodParameterIndex(*this, FuncDecl, TmpAttr,
-                                           /*AttrArgNo=*/1, ParamExpr, Idx))
+                                           /*AttrArgNo=*/1, ParamExpr,
+                                           IndexVal))
     return;
 
-  QualType Ty = getFunctionOrMethodParamType(D, Idx.getASTIndex());
+  QualType Ty = getFunctionOrMethodParamType(D, IndexVal);
   if (!Ty->isDependentType() && !Ty->isIntegralType(Context)) {
     Diag(ParamExpr->getLocStart(), diag::err_attribute_integers_only)
-        << &TmpAttr
-        << FuncDecl->getParamDecl(Idx.getASTIndex())->getSourceRange();
+        << &TmpAttr << FuncDecl->getParamDecl(IndexVal)->getSourceRange();
     return;
   }
 
-  D->addAttr(::new (Context)
-                 AllocAlignAttr(AttrRange, Context, Idx, SpellingListIndex));
+  // We cannot use the Idx returned from checkFunctionOrMethodParameterIndex
+  // because that has corrected for the implicit this parameter, and is zero-
+  // based.  The attribute expects what the user wrote explicitly.
+  llvm::APSInt Val;
+  ParamExpr->EvaluateAsInt(Val, Context);
+
+  D->addAttr(::new (Context) AllocAlignAttr(
+      AttrRange, Context, Val.getZExtValue(), SpellingListIndex));
 }
 
 /// Normalize the attribute, __foo__ becomes foo.
@@ -1670,15 +1678,15 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const AttributeList &AL) {
     Module = &S.PP.getIdentifierTable().get(ModuleName);
   }
 
-  SmallVector<ParamIdx, 8> OwnershipArgs;
+  SmallVector<unsigned, 8> OwnershipArgs;
   for (unsigned i = 1; i < AL.getNumArgs(); ++i) {
     Expr *Ex = AL.getArgAsExpr(i);
-    ParamIdx Idx;
+    uint64_t Idx;
     if (!checkFunctionOrMethodParameterIndex(S, D, AL, i, Ex, Idx))
       return;
 
     // Is the function argument a pointer type?
-    QualType T = getFunctionOrMethodParamType(D, Idx.getASTIndex());
+    QualType T = getFunctionOrMethodParamType(D, Idx);
     int Err = -1;  // No error
     switch (K) {
       case OwnershipAttr::Takes:
@@ -1709,13 +1717,14 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const AttributeList &AL) {
       } else if (K == OwnershipAttr::Returns &&
                  I->getOwnKind() == OwnershipAttr::Returns) {
         // A returns attribute conflicts with any other returns attribute using
-        // a different index.
+        // a different index. Note, diagnostic reporting is 1-based, but stored
+        // argument indexes are 0-based.
         if (std::find(I->args_begin(), I->args_end(), Idx) == I->args_end()) {
           S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
-              << I->args_begin()->getSourceIndex();
+              << *(I->args_begin()) + 1;
           if (I->args_size())
             S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
-                << Idx.getSourceIndex() << Ex->getSourceRange();
+                << (unsigned)Idx + 1 << Ex->getSourceRange();
           return;
         }
       }
@@ -1723,12 +1732,13 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const AttributeList &AL) {
     OwnershipArgs.push_back(Idx);
   }
 
-  ParamIdx *Start = OwnershipArgs.data();
-  unsigned Size = OwnershipArgs.size();
-  llvm::array_pod_sort(Start, Start + Size);
+  unsigned* start = OwnershipArgs.data();
+  unsigned size = OwnershipArgs.size();
+  llvm::array_pod_sort(start, start + size);
+
   D->addAttr(::new (S.Context)
-                 OwnershipAttr(AL.getLoc(), S.Context, Module, Start, Size,
-                               AL.getAttributeSpellingListIndex()));
+             OwnershipAttr(AL.getLoc(), S.Context, Module, start, size,
+                           AL.getAttributeSpellingListIndex()));
 }
 
 static void handleWeakRefAttr(Sema &S, Decl *D, const AttributeList &AL) {
@@ -3046,12 +3056,12 @@ static void handleEnumExtensibilityAttr(Sema &S, Decl *D,
 /// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
 static void handleFormatArgAttr(Sema &S, Decl *D, const AttributeList &AL) {
   Expr *IdxExpr = AL.getArgAsExpr(0);
-  ParamIdx Idx;
+  uint64_t Idx;
   if (!checkFunctionOrMethodParameterIndex(S, D, AL, 1, IdxExpr, Idx))
     return;
 
   // Make sure the format string is really a string.
-  QualType Ty = getFunctionOrMethodParamType(D, Idx.getASTIndex());
+  QualType Ty = getFunctionOrMethodParamType(D, Idx);
 
   bool NotNSStringTy = !isNSStringType(Ty, S.Context);
   if (NotNSStringTy &&
@@ -3074,8 +3084,15 @@ static void handleFormatArgAttr(Sema &S, Decl *D, const AttributeList &AL) {
     return;
   }
 
-  D->addAttr(::new (S.Context) FormatArgAttr(
-      AL.getRange(), S.Context, Idx, AL.getAttributeSpellingListIndex()));
+  // We cannot use the Idx returned from checkFunctionOrMethodParameterIndex
+  // because that has corrected for the implicit this parameter, and is zero-
+  // based.  The attribute expects what the user wrote explicitly.
+  llvm::APSInt Val;
+  IdxExpr->EvaluateAsInt(Val, S.Context);
+
+  D->addAttr(::new (S.Context)
+             FormatArgAttr(AL.getRange(), S.Context, Val.getZExtValue(),
+                           AL.getAttributeSpellingListIndex()));
 }
 
 enum FormatAttrKind {
@@ -4469,13 +4486,13 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
       << AL.getName() << /* arg num = */ 1 << AANT_ArgumentIdentifier;
     return;
   }
-
-  ParamIdx ArgumentIdx;
+  
+  uint64_t ArgumentIdx;
   if (!checkFunctionOrMethodParameterIndex(S, D, AL, 2, AL.getArgAsExpr(1),
                                            ArgumentIdx))
     return;
 
-  ParamIdx TypeTagIdx;
+  uint64_t TypeTagIdx;
   if (!checkFunctionOrMethodParameterIndex(S, D, AL, 3, AL.getArgAsExpr(2),
                                            TypeTagIdx))
     return;
@@ -4483,9 +4500,8 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
   bool IsPointer = AL.getName()->getName() == "pointer_with_type_tag";
   if (IsPointer) {
     // Ensure that buffer has a pointer type.
-    unsigned ArgumentIdxAST = ArgumentIdx.getASTIndex();
-    if (ArgumentIdxAST >= getFunctionOrMethodNumParams(D) ||
-        !getFunctionOrMethodParamType(D, ArgumentIdxAST)->isPointerType())
+    if (ArgumentIdx >= getFunctionOrMethodNumParams(D) ||
+        !getFunctionOrMethodParamType(D, ArgumentIdx)->isPointerType())
       S.Diag(AL.getLoc(), diag::err_attribute_pointers_only)
           << AL.getName() << 0;
   }
@@ -4525,18 +4541,19 @@ static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
                                     AL.getAttributeSpellingListIndex()));
 }
 
-static void handleXRayLogArgsAttr(Sema &S, Decl *D, const AttributeList &AL) {
-  ParamIdx ArgCount;
+static void handleXRayLogArgsAttr(Sema &S, Decl *D,
+                                  const AttributeList &AL) {
+  uint64_t ArgCount;
 
   if (!checkFunctionOrMethodParameterIndex(S, D, AL, 1, AL.getArgAsExpr(0),
                                            ArgCount,
-                                           true /* CanIndexImplicitThis */))
+                                           true /* AllowImplicitThis*/))
     return;
 
-  // ArgCount isn't a parameter index [0;n), it's a count [1;n]
-  D->addAttr(::new (S.Context) XRayLogArgsAttr(
-      AL.getRange(), S.Context, ArgCount.getSourceIndex(),
-      AL.getAttributeSpellingListIndex()));
+  // ArgCount isn't a parameter index [0;n), it's a count [1;n] - hence + 1.
+  D->addAttr(::new (S.Context)
+                 XRayLogArgsAttr(AL.getRange(), S.Context, ++ArgCount,
+                                 AL.getAttributeSpellingListIndex()));
 }
 
 //===----------------------------------------------------------------------===//

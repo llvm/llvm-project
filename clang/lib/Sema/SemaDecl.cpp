@@ -13176,7 +13176,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     // We already have a __builtin___CFStringMakeConstantString,
     // but builds that use -fno-constant-cfstrings don't go through that.
     if (!FD->hasAttr<FormatArgAttr>())
-      FD->addAttr(FormatArgAttr::CreateImplicit(Context, ParamIdx(1, FD),
+      FD->addAttr(FormatArgAttr::CreateImplicit(Context, 1,
                                                 FD->getLocation()));
   }
 }

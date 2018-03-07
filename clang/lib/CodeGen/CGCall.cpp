@@ -1847,9 +1847,10 @@ void CodeGenModule::ConstructAttributeList(
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
     if (auto *AllocSize = TargetDecl->getAttr<AllocSizeAttr>()) {
       Optional<unsigned> NumElemsParam;
-      if (AllocSize->numElemsParam().isValid())
-        NumElemsParam = AllocSize->numElemsParam().getLLVMIndex();
-      FuncAttrs.addAllocSizeAttr(AllocSize->elemSizeParam().getLLVMIndex(),
+      // alloc_size args are base-1, 0 means not present.
+      if (unsigned N = AllocSize->getNumElemsParam())
+        NumElemsParam = N - 1;
+      FuncAttrs.addAllocSizeAttr(AllocSize->getElemSizeParam() - 1,
                                  NumElemsParam);
     }
   }
@@ -4010,13 +4011,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         auto scalarSize = CGM.getDataLayout().getTypeAllocSize(scalarType);
         auto scalarAlign = CGM.getDataLayout().getPrefTypeAlignment(scalarType);
 
-        tempSize = llvm::ConstantInt::get(CGM.Int64Ty, scalarSize);
-
         // Materialize to a temporary.
         addr = CreateTempAlloca(RV.getScalarVal()->getType(),
                  CharUnits::fromQuantity(std::max(layout->getAlignment(),
                                                   scalarAlign)));
-        EmitLifetimeStart(scalarSize, addr.getPointer());
+        tempSize = EmitLifetimeStart(scalarSize, addr.getPointer());
 
         Builder.CreateStore(RV.getScalarVal(), addr);
       }
@@ -4394,7 +4393,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               OffsetValue);
     } else if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
       llvm::Value *ParamVal =
-          CallArgs[AA->paramIndex().getLLVMIndex()].RV.getScalarVal();
+          CallArgs[AA->getParamIndex() - 1].RV.getScalarVal();
       EmitAlignmentAssumption(Ret.getScalarVal(), ParamVal);
     }
   }

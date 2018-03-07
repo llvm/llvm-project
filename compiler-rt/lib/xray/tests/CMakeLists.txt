@@ -3,6 +3,12 @@ include_directories(..)
 add_custom_target(XRayUnitTests)
 set_target_properties(XRayUnitTests PROPERTIES FOLDER "XRay unittests")
 
+# Create an XRAY_IMPL_FILES variable which will include all the implementation
+# files that are in the lib directory. Unfortunately, when new files are added
+# to the implementation, CMake must be run so that this variable is
+# re-generated.
+file(GLOB XRAY_IMPL_FILES "../*.cc" "../*.h")
+
 set(XRAY_UNITTEST_CFLAGS
   ${XRAY_CFLAGS}
   ${COMPILER_RT_UNITTEST_CFLAGS}
@@ -24,6 +30,11 @@ macro(add_xray_unittest testname)
       generate_compiler_rt_tests(TEST_OBJECTS
         XRayUnitTests "${testname}-${arch}-Test" "${arch}"
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
+        # Note that any change in the implementations will cause all the unit
+        # tests to be re-built. This is by design, but may be cumbersome during
+        # the build/test cycle.
+        COMPILE_DEPS ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
+        ${XRAY_HEADERS} ${XRAY_IMPL_FILES}
         DEPS gtest xray llvm-xray
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS -fxray-instrument

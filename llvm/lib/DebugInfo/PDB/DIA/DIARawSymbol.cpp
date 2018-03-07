@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSymbols.h"
+#include "llvm/DebugInfo/PDB/DIA/DIALineNumber.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
@@ -746,6 +747,15 @@ uint32_t DIARawSymbol::getSlot() const {
 
 std::string DIARawSymbol::getSourceFileName() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_sourceFileName);
+}
+
+std::unique_ptr<IPDBLineNumber>
+DIARawSymbol::getSrcLineOnTypeDefn() const {
+  CComPtr<IDiaLineNumber> LineNumber;
+  if (FAILED(Symbol->getSrcLineOnTypeDefn(&LineNumber)) || !LineNumber)
+    return nullptr;
+
+  return llvm::make_unique<DIALineNumber>(LineNumber);
 }
 
 uint32_t DIARawSymbol::getStride() const {
