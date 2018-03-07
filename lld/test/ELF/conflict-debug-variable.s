@@ -7,14 +7,14 @@
 # INPUT-NEXT:    DW_AT_name      ("foo")
 # INPUT-NEXT:    DW_AT_decl_file ("1.c")
 # INPUT-NEXT:    DW_AT_decl_line (1)
-# INPUT-NEXT:    DW_AT_type      (cu + 0x0032 "int")
+# INPUT-NEXT:    DW_AT_type      (0x00000032 "int")
 # INPUT-NEXT:    DW_AT_external  (true)
 # INPUT-NEXT:    DW_AT_location  (DW_OP_addr 0x0)
 # INPUT:       DW_TAG_variable
 # INPUT-NEXT:    DW_AT_name      ("bar")
 # INPUT-NEXT:    DW_AT_decl_file ("1.c")
 # INPUT-NEXT:    DW_AT_decl_line (2)
-# INPUT-NEXT:    DW_AT_type      (cu + 0x0032 "int")
+# INPUT-NEXT:    DW_AT_type      (0x00000032 "int")
 # INPUT-NEXT:    DW_AT_external  (true)
 # INPUT-NEXT:    DW_AT_location  (DW_OP_addr 0x0)
 

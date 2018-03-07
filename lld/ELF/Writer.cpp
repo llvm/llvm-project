@@ -1187,7 +1187,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto E = Script->SectionCommands.end();
   auto NonScriptI = std::find_if(I, E, [](BaseCommand *Base) {
     if (auto *Sec = dyn_cast<OutputSection>(Base))
-      return Sec->SectionIndex == INT_MAX;
+      return Sec->SectionIndex == UINT32_MAX;
     return false;
   });
 
