@@ -28,6 +28,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cstdio>
 #include <map>
@@ -71,11 +72,18 @@ public:
       uint64_t Offs = OS->getFileOff() + (Record->getRVA() - OS->getRVA());
       D->PointerToRawData = Offs;
 
+      TimeDateStamps.push_back(&D->TimeDateStamp);
       ++D;
     }
   }
 
+  void setTimeDateStamp(uint32_t TimeDateStamp) {
+    for (support::ulittle32_t *TDS : TimeDateStamps)
+      *TDS = TimeDateStamp;
+  }
+
 private:
+  mutable std::vector<support::ulittle32_t *> TimeDateStamps;
   const std::vector<Chunk *> &Records;
 };
 
@@ -157,7 +165,7 @@ private:
   RVATableChunk *GuardFidsTable = nullptr;
   RVATableChunk *SEHTable = nullptr;
 
-  Chunk *DebugDirectory = nullptr;
+  DebugDirectoryChunk *DebugDirectory = nullptr;
   std::vector<Chunk *> DebugRecords;
   CVDebugRecordChunk *BuildId = nullptr;
   Optional<codeview::DebugInfo> PreviousBuildId;
@@ -1026,22 +1034,50 @@ void Writer::writeSections() {
 }
 
 void Writer::writeBuildId() {
-  // If we're not writing a build id (e.g. because /debug is not specified),
-  // then just return;
-  if (!Config->Debug)
-    return;
-
-  assert(BuildId && "BuildId is not set!");
-
-  if (PreviousBuildId.hasValue()) {
-    *BuildId->BuildId = *PreviousBuildId;
-    BuildId->BuildId->PDB70.Age = BuildId->BuildId->PDB70.Age + 1;
-    return;
+  // There are two important parts to the build ID.
+  // 1) If building with debug info, the COFF debug directory contains a
+  //    timestamp as well as a Guid and Age of the PDB.
+  // 2) In all cases, the PE COFF file header also contains a timestamp.
+  // For reproducibility, instead of a timestamp we want to use a hash of the
+  // binary, however when building with debug info the hash needs to take into
+  // account the debug info, since it's possible to add blank lines to a file
+  // which causes the debug info to change but not the generated code.
+  //
+  // To handle this, we first set the Guid and Age in the debug directory (but
+  // only if we're doing a debug build).  Then, we hash the binary (thus causing
+  // the hash to change if only the debug info changes, since the Age will be
+  // different).  Finally, we write that hash into the debug directory (if
+  // present) as well as the COFF file header (always).
+  if (Config->Debug) {
+    assert(BuildId && "BuildId is not set!");
+    if (PreviousBuildId.hasValue()) {
+      *BuildId->BuildId = *PreviousBuildId;
+      BuildId->BuildId->PDB70.Age = BuildId->BuildId->PDB70.Age + 1;
+    } else {
+      BuildId->BuildId->Signature.CVSignature = OMF::Signature::PDB70;
+      BuildId->BuildId->PDB70.Age = 1;
+      llvm::getRandomBytes(BuildId->BuildId->PDB70.Signature, 16);
+    }
   }
 
-  BuildId->BuildId->Signature.CVSignature = OMF::Signature::PDB70;
-  BuildId->BuildId->PDB70.Age = 1;
-  llvm::getRandomBytes(BuildId->BuildId->PDB70.Signature, 16);
+  // At this point the only fields in the COFF file which remain unset are the
+  // "timestamp" in the COFF file header, and the ones in the coff debug
+  // directory.  Now we can hash the file and write that hash to the various
+  // timestamp fields in the file.
+  StringRef OutputFileData(
+      reinterpret_cast<const char *>(Buffer->getBufferStart()),
+      Buffer->getBufferSize());
+
+  uint32_t Hash = static_cast<uint32_t>(xxHash64(OutputFileData));
+
+  if (DebugDirectory)
+    DebugDirectory->setTimeDateStamp(Hash);
+
+  uint8_t *Buf = Buffer->getBufferStart();
+  Buf += DOSStubSize + sizeof(PEMagic);
+  object::coff_file_header *CoffHeader =
+      reinterpret_cast<coff_file_header *>(Buf);
+  CoffHeader->TimeDateStamp = Hash;
 }
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.

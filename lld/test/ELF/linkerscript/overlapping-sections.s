@@ -63,8 +63,8 @@
 # RUN: }" > %t-lma.script
 # RUN: not ld.lld -o %t.so --script %t-lma.script %t.o -shared 2>&1 | FileCheck %s -check-prefix LMA-OVERLAP-ERR
 # LMA-OVERLAP-ERR:      error: section .sec1 load address range overlaps with .sec2
-# LMA-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000 -> 0x80FF]
-# LMA-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8080 -> 0x817F]
+# LMA-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
+# LMA-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8080, 0x817F]
 
 # Check that we create the expected binary with --noinhibit-exec or --no-check-sections:
 # RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --noinhibit-exec
@@ -95,8 +95,8 @@
 # RUN: }" > %t-vaddr.script
 # RUN: not ld.lld -o %t.so --script %t-vaddr.script %t.o -shared 2>&1 | FileCheck %s -check-prefix VADDR-OVERLAP-ERR
 # VADDR-OVERLAP-ERR:      error: section .sec1 virtual address range overlaps with .sec2
-# VADDR-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000 -> 0x80FF]
-# VADDR-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8020 -> 0x811F]
+# VADDR-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
+# VADDR-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8020, 0x811F]
 
 # Check that the expected binary was created with --noinhibit-exec:
 # RUN: ld.lld -o %t.so --script %t-vaddr.script %t.o -shared --noinhibit-exec
@@ -123,14 +123,14 @@
 # RUN: not ld.lld -o %t.so --script %t-both-overlap.script %t.o -shared 2>&1 | FileCheck %s -check-prefix BOTH-OVERLAP-ERR
 
 # BOTH-OVERLAP-ERR:      error: section .sec1 file range overlaps with .sec2
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x18000 -> 0x180FF]
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x18040 -> 0x1813F]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x18000, 0x180FF]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x18040, 0x1813F]
 # BOTH-OVERLAP-ERR:      error: section .sec1 virtual address range overlaps with .sec2
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000 -> 0x80FF]
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8040 -> 0x813F]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8040, 0x813F]
 # BOTH-OVERLAP-ERR:      error: section .sec1 load address range overlaps with .sec2
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000 -> 0x80FF]
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8040 -> 0x813F]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8040, 0x813F]
 
 # RUN: ld.lld -o %t.so --script %t-both-overlap.script %t.o -shared --noinhibit-exec
 # Note: I case everything overlaps we create a binary with overlapping file
