@@ -492,33 +492,35 @@ void CheckerManager::runCheckersForBranchCondition(const Stmt *Condition,
 }
 
 namespace {
-
   struct CheckNewAllocatorContext {
-    using CheckersTy = std::vector<CheckerManager::CheckNewAllocatorFunc>;
-
+    typedef std::vector<CheckerManager::CheckNewAllocatorFunc> CheckersTy;
     const CheckersTy &Checkers;
     const CXXNewExpr *NE;
     SVal Target;
     bool WasInlined;
     ExprEngine &Eng;
 
+    CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
+    CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
+
     CheckNewAllocatorContext(const CheckersTy &Checkers, const CXXNewExpr *NE,
                              SVal Target, bool WasInlined, ExprEngine &Eng)
         : Checkers(Checkers), NE(NE), Target(Target), WasInlined(WasInlined),
           Eng(Eng) {}
 
-    CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
-    CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
-
     void runChecker(CheckerManager::CheckNewAllocatorFunc checkFn,
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
-      ProgramPoint L = PostAllocatorCall(NE, Pred->getLocationContext());
+      // TODO: Does this deserve a custom program point? For now we're re-using
+      // PostImplicitCall because we're guaranteed to use the non-implicit
+      // PostStmt for the PostCall callback, because we have some sort of
+      // call site (CXXNewExpr) in this scenario.
+      ProgramPoint L = PostImplicitCall(NE->getOperatorNew(), NE->getLocStart(),
+                                        Pred->getLocationContext());
       CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
       checkFn(NE, Target, C);
     }
   };
-
-} // namespace
+}
 
 void CheckerManager::runCheckersForNewAllocator(
     const CXXNewExpr *NE, SVal Target, ExplodedNodeSet &Dst, ExplodedNode *Pred,
