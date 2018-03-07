@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -basicaa -da | FileCheck %s
+; RUN: opt < %s -analyze -basicaa -da -da-delinearize | FileCheck %s
 
 ; ModuleID = 'Propagating.bc'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -14,8 +14,9 @@ define void @prop0([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop0
 ; CHECK: da analyze - none!
-; CHECK: da analyze - consistent flow [1 -1]!
+; CHECK: da analyze - flow [< >]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -64,10 +65,11 @@ define void @prop1([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable ss
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - none!
-; CHECK: da analyze - consistent flow [1 1 -1]!
+; CHECK-LABEL: prop1
+; CHECK: da analyze - output [* * *]!
+; CHECK: da analyze - flow [<> <> *]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - none!
+; CHECK: da analyze - input [* * *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
@@ -126,8 +128,9 @@ define void @prop2([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop2
 ; CHECK: da analyze - consistent output [0 S]!
-; CHECK: da analyze - none!
+; CHECK: da analyze - flow [> *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -176,10 +179,11 @@ define void @prop3([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - none!
-; CHECK: da analyze - none!
+; CHECK-LABEL: prop3
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - flow [<> *]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - none!
+; CHECK: da analyze - input [* *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
@@ -227,8 +231,9 @@ define void @prop4([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop4
 ; CHECK: da analyze - none!
-; CHECK: da analyze - consistent flow [2 -3]!
+; CHECK: da analyze - flow [< <>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -279,9 +284,9 @@ define void @prop5([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable ss
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop5
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [< -16] splitable!
-; CHECK: da analyze - split level = 1, iteration = 11!
+; CHECK: da analyze - flow [* *|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -333,8 +338,9 @@ define void @prop6([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop6
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [=> -2]!
+; CHECK: da analyze - flow [=> <>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -386,9 +392,9 @@ define void @prop7([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop7
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [* -38] splitable!
-; CHECK: da analyze - split level = 1, iteration = 4!
+; CHECK: da analyze - flow [* <>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -442,8 +448,9 @@ define void @prop8([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop8
 ; CHECK: da analyze - consistent output [S 0]!
-; CHECK: da analyze - flow [p<= 2]!
+; CHECK: da analyze - flow [=> <]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -493,8 +500,9 @@ define void @prop9([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
+; CHECK-LABEL: prop9
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [p<= 2]!
+; CHECK: da analyze - flow [<= <]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - consistent input [S 0]!
 ; CHECK: da analyze - confused!

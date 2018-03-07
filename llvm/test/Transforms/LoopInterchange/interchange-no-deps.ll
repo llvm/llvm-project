@@ -1,6 +1,8 @@
-; RUN: opt < %s -loop-interchange -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -loop-interchange -simplifycfg -S -pass-remarks=loop-interchange 2>&1 | FileCheck %s
+; CHECK: Loop interchanged with enclosing loop.
 
 ; no_deps_interchange just access a single nested array and can be interchange.
+
 define i32 @no_deps_interchange([1024 x i32]* nocapture %Arr, i32 %k) local_unnamed_addr #0 {
 entry:
   br label %for.body
@@ -26,19 +28,3 @@ for.cond.cleanup3:                                ; preds = %for.body4
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
   ret i32 0
 }
-
-; CHECK-LABEL: @no_deps_interchange
-; CHECK-LABEL: entry:
-; CHECK-NEXT: br label %for.body4
-
-; CHECK-LABEL: for.body:                                         ; preds = %for.body4, %for.body
-; CHECK: %indvars.iv19 = phi i64 [ %indvars.iv.next20, %for.body ], [ 0, %for.body4 ]
-; CHECK: br i1 %exitcond21, label %for.body, label %for.body4.split
-
-; CHECK-LABEL: for.body4:                                        ; preds = %entry, %for.body4.split
-; CHECK: %indvars.iv = phi i64 [ %indvars.iv.next, %for.body4.split ], [ 0, %entry ]
-; CHECK: br label %for.body
-
-; CHECK-LABEL: for.body4.split:                                  ; preds = %for.body
-; CHECK: %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK: br i1 %exitcond, label %for.body4, label %for.cond.cleanup

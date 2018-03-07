@@ -1340,6 +1340,74 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef.setHighBits(NumElts - 1);
     break;
   }
+  case ISD::BITCAST: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+
+    // We only handle vectors here.
+    // TODO - investigate calling SimplifyDemandedBits/ComputeKnownBits?
+    if (!SrcVT.isVector())
+      break;
+
+    // Fast handling of 'identity' bitcasts.
+    unsigned NumSrcElts = SrcVT.getVectorNumElements();
+    if (NumSrcElts == NumElts)
+      return SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef,
+                                        KnownZero, TLO, Depth + 1);
+
+    APInt SrcZero, SrcUndef;
+    APInt SrcDemandedElts = APInt::getNullValue(NumSrcElts);
+
+    // Bitcast from 'large element' src vector to 'small element' vector, we
+    // must demand a source element if any DemandedElt maps to it.
+    if ((NumElts % NumSrcElts) == 0) {
+      unsigned Scale = NumElts / NumSrcElts;
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i])
+          SrcDemandedElts.setBit(i / Scale);
+
+      if (SimplifyDemandedVectorElts(Src, SrcDemandedElts, SrcUndef, SrcZero,
+                                     TLO, Depth + 1))
+        return true;
+
+      // If the src element is zero/undef then all the output elements will be -
+      // only demanded elements are guaranteed to be correct.
+      for (unsigned i = 0; i != NumSrcElts; ++i) {
+        if (SrcDemandedElts[i]) {
+          if (SrcZero[i])
+            KnownZero.setBits(i * Scale, (i + 1) * Scale);
+          if (SrcUndef[i])
+            KnownUndef.setBits(i * Scale, (i + 1) * Scale);
+        }
+      }
+    }
+
+    // Bitcast from 'small element' src vector to 'large element' vector, we
+    // demand all smaller source elements covered by the larger demanded element
+    // of this vector.
+    if ((NumSrcElts % NumElts) == 0) {
+      unsigned Scale = NumSrcElts / NumElts;
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i])
+          SrcDemandedElts.setBits(i * Scale, (i + 1) * Scale);
+
+      if (SimplifyDemandedVectorElts(Src, SrcDemandedElts, SrcUndef, SrcZero,
+                                     TLO, Depth + 1))
+        return true;
+
+      // If all the src elements covering an output element are zero/undef, then
+      // the output element will be as well, assuming it was demanded.
+      for (unsigned i = 0; i != NumElts; ++i) {
+        if (DemandedElts[i]) {
+          if (SrcZero.extractBits(Scale, i * Scale).isAllOnesValue())
+            KnownZero.setBit(i);
+          if (SrcUndef.extractBits(Scale, i * Scale).isAllOnesValue())
+            KnownUndef.setBit(i);
+        }
+      }
+    }
+    break;
+  }
   case ISD::BUILD_VECTOR: {
     // Check all elements and simplify any unused elements with UNDEF.
     if (!DemandedElts.isAllOnesValue()) {

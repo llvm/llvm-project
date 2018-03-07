@@ -403,7 +403,7 @@ int main(int argc, char **argv) {
       int wordsize;
       uint64_t pc = get_current_pc(thread_list[i], &wordsize);
 
-      printf("thread #%d, system-wide-unique-tid %lld, suspend count is %d, ",
+      printf("thread #%d, system-wide-unique-tid 0x%llx, suspend count is %d, ",
              i, identifier_info.thread_id, basic_info->suspend_count);
       if (wordsize == 8)
         printf("pc 0x%016llx, ", pc);

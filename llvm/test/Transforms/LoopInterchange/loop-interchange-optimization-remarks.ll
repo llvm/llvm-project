@@ -54,14 +54,10 @@ for.end19:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:          'Interchanging loops is too costly (cost='
-; CHECK-NEXT:  - Cost:            '2'
-; CHECK-NEXT:  - String:          ', threshold='
-; CHECK-NEXT:  - Threshold:       '0'
-; CHECK-NEXT:  - String:          ') and it does not improve parallelism.'
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
 
 ;;--------------------------------------Test case 02------------------------------------
@@ -110,10 +106,10 @@ define void @test02(i32 %k, i32 %N) {
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedInsBetweenInduction
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test02
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Found unsupported instruction between induction variable increment and branch.
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
 
 ;;-----------------------------------Test case 03-------------------------------
@@ -156,12 +152,12 @@ for.body4:                                        ; preds = %for.body4, %for.con
   br i1 %exitcond, label %for.body4, label %for.cond.loopexit
 }
 
-; CHECK: --- !Passed
+; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Interchanged
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test03
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Loop interchanged with enclosing loop.
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
 
 ;;--------------------------------------Test case 04-------------------------------------
@@ -213,8 +209,8 @@ for.end17:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            NotTightlyNested
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test04
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot interchange loops because they are not tightly nested.
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...

@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -basicaa -da -da-delinearize=false | FileCheck %s
 ; RUN: opt < %s -analyze -basicaa -da -da-delinearize | FileCheck %s -check-prefix=DELIN
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -13,15 +12,11 @@ target triple = "x86_64-apple-macosx10.6.0"
 ; other subscript. DependenceAnalysis before the fix crashed due to this
 ; mismatch.
 define void @i32_subscript([100 x [100 x i32]]* %a, i32* %b) {
-; CHECK-LABEL: 'Dependence Analysis' for function 'i32_subscript'
 ; DELIN-LABEL: 'Dependence Analysis' for function 'i32_subscript'
 entry:
   br label %for.body
 
 for.body:
-; CHECK: da analyze - none!
-; CHECK: da analyze - anti [=|<]!
-; CHECK: da analyze - none!
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - anti [=|<]!
 ; DELIN: da analyze - none!
@@ -55,16 +50,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
 define void @coupled_miv_type_mismatch(i32 %n) #0 {
-; CHECK-LABEL: 'Dependence Analysis' for function 'coupled_miv_type_mismatch'
 ; DELIN-LABEL: 'Dependence Analysis' for function 'coupled_miv_type_mismatch'
 entry:
   br label %for.cond
 
-; CHECK: da analyze - input [0 *]!
-; CHECK: da analyze - anti [1 *]!
-; CHECK: da analyze - none!
-; DELIN: da analyze - input [0 *]!
-; DELIN: da analyze - anti [1 *]!
+; DELIN: da analyze - input [* *]!
+; DELIN: da analyze - anti [* *|<]!
 ; DELIN: da analyze - none!
 for.cond:                                         ; preds = %for.inc11, %entry
   %indvars.iv11 = phi i64 [ %indvars.iv.next12, %for.inc11 ], [ 1, %entry ]

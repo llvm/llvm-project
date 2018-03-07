@@ -24,8 +24,7 @@
 // Both of these are conservative weaknesses;
 // that is, not a source of correctness problems.
 //
-// The implementation depends on the GEP instruction to differentiate
-// subscripts. Since Clang linearizes some array subscripts, the dependence
+// Since Clang linearizes some array subscripts, the dependence
 // analysis is using SCEV->delinearize to recover the representation of multiple
 // subscripts, and thus avoid the more expensive and less precise MIV tests. The
 // delinearization is controlled by the flag -da-delinearize.
@@ -3329,50 +3328,18 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   FullDependence Result(Src, Dst, PossiblyLoopIndependent, CommonLevels);
   ++TotalArrayPairs;
 
-  // See if there are GEPs we can use.
-  bool UsefulGEP = false;
-  GEPOperator *SrcGEP = dyn_cast<GEPOperator>(SrcPtr);
-  GEPOperator *DstGEP = dyn_cast<GEPOperator>(DstPtr);
-  if (SrcGEP && DstGEP &&
-      SrcGEP->getPointerOperandType() == DstGEP->getPointerOperandType()) {
-    const SCEV *SrcPtrSCEV = SE->getSCEV(SrcGEP->getPointerOperand());
-    const SCEV *DstPtrSCEV = SE->getSCEV(DstGEP->getPointerOperand());
-    DEBUG(dbgs() << "    SrcPtrSCEV = " << *SrcPtrSCEV << "\n");
-    DEBUG(dbgs() << "    DstPtrSCEV = " << *DstPtrSCEV << "\n");
+  unsigned Pairs = 1;
+  SmallVector<Subscript, 2> Pair(Pairs);
+  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
+  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
+  DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
+  DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
+  Pair[0].Src = SrcSCEV;
+  Pair[0].Dst = DstSCEV;
 
-    UsefulGEP = isLoopInvariant(SrcPtrSCEV, LI->getLoopFor(Src->getParent())) &&
-                isLoopInvariant(DstPtrSCEV, LI->getLoopFor(Dst->getParent())) &&
-                (SrcGEP->getNumOperands() == DstGEP->getNumOperands()) &&
-                isKnownPredicate(CmpInst::ICMP_EQ, SrcPtrSCEV, DstPtrSCEV);
-  }
-  unsigned Pairs = UsefulGEP ? SrcGEP->idx_end() - SrcGEP->idx_begin() : 1;
-  SmallVector<Subscript, 4> Pair(Pairs);
-  if (UsefulGEP) {
-    DEBUG(dbgs() << "    using GEPs\n");
-    unsigned P = 0;
-    for (GEPOperator::const_op_iterator SrcIdx = SrcGEP->idx_begin(),
-           SrcEnd = SrcGEP->idx_end(),
-           DstIdx = DstGEP->idx_begin();
-         SrcIdx != SrcEnd;
-         ++SrcIdx, ++DstIdx, ++P) {
-      Pair[P].Src = SE->getSCEV(*SrcIdx);
-      Pair[P].Dst = SE->getSCEV(*DstIdx);
-      unifySubscriptType(&Pair[P]);
-    }
-  }
-  else {
-    DEBUG(dbgs() << "    ignoring GEPs\n");
-    const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
-    const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-    DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
-    DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
-    Pair[0].Src = SrcSCEV;
-    Pair[0].Dst = DstSCEV;
-  }
-
-  if (Delinearize && CommonLevels > 1) {
+  if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
-      DEBUG(dbgs() << "    delinearized GEP\n");
+      DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
     }
   }
@@ -3763,41 +3730,16 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
 
   FullDependence Result(Src, Dst, false, CommonLevels);
 
-  // See if there are GEPs we can use.
-  bool UsefulGEP = false;
-  GEPOperator *SrcGEP = dyn_cast<GEPOperator>(SrcPtr);
-  GEPOperator *DstGEP = dyn_cast<GEPOperator>(DstPtr);
-  if (SrcGEP && DstGEP &&
-      SrcGEP->getPointerOperandType() == DstGEP->getPointerOperandType()) {
-    const SCEV *SrcPtrSCEV = SE->getSCEV(SrcGEP->getPointerOperand());
-    const SCEV *DstPtrSCEV = SE->getSCEV(DstGEP->getPointerOperand());
-    UsefulGEP = isLoopInvariant(SrcPtrSCEV, LI->getLoopFor(Src->getParent())) &&
-                isLoopInvariant(DstPtrSCEV, LI->getLoopFor(Dst->getParent())) &&
-                (SrcGEP->getNumOperands() == DstGEP->getNumOperands());
-  }
-  unsigned Pairs = UsefulGEP ? SrcGEP->idx_end() - SrcGEP->idx_begin() : 1;
-  SmallVector<Subscript, 4> Pair(Pairs);
-  if (UsefulGEP) {
-    unsigned P = 0;
-    for (GEPOperator::const_op_iterator SrcIdx = SrcGEP->idx_begin(),
-           SrcEnd = SrcGEP->idx_end(),
-           DstIdx = DstGEP->idx_begin();
-         SrcIdx != SrcEnd;
-         ++SrcIdx, ++DstIdx, ++P) {
-      Pair[P].Src = SE->getSCEV(*SrcIdx);
-      Pair[P].Dst = SE->getSCEV(*DstIdx);
-    }
-  }
-  else {
-    const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
-    const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-    Pair[0].Src = SrcSCEV;
-    Pair[0].Dst = DstSCEV;
-  }
+  unsigned Pairs = 1;
+  SmallVector<Subscript, 2> Pair(Pairs);
+  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
+  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
+  Pair[0].Src = SrcSCEV;
+  Pair[0].Dst = DstSCEV;
 
-  if (Delinearize && CommonLevels > 1) {
+  if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
-      DEBUG(dbgs() << "    delinearized GEP\n");
+      DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
     }
   }

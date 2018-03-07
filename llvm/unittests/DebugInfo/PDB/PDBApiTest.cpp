@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
@@ -193,6 +194,10 @@ public:
 
   std::string getUndecoratedNameEx(PDB_UndnameFlags Flags) const override {
     return {};
+  }
+
+  std::unique_ptr<IPDBLineNumber> getSrcLineOnTypeDefn() const override {
+    return nullptr;
   }
 
   MOCK_SYMBOL_ACCESSOR(getAccess)

@@ -1,5 +1,5 @@
-; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
-;; We test the complete .ll for adjustment in outer loop header/latch and inner loop header/latch.
+; REQUIRES: asserts
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S -debug 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -19,6 +19,12 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;        Arr[j][i] = Arr[j][i]+k;
 ;;    fn2(T[k]);
 ;;  }
+
+; CHECK: Processing Inner Loop Id = 2 and OuterLoopId = 1
+; CHECK: Loops interchanged.
+
+; CHECK: Processing Inner Loop Id = 1 and OuterLoopId = 0
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 @T = internal global [100 x double] zeroinitializer, align 4
 @Arr = internal global [1000 x [1000 x i32]] zeroinitializer, align 4
@@ -67,52 +73,3 @@ for.body9:                                        ; preds = %for.body9, %for.con
 
 declare double @fn1() readnone
 declare void @fn2(double) readnone
-
-
-;; After interchange %indvars.iv (j) should increment as the middle loop.
-;; After interchange %indvars.iv42 (i) should increment with the inner most loop.
-
-; CHECK-LABEL: @interchange_09
-
-; CHECK: for.body:
-; CHECK:   %indvars.iv45 = phi i64 [ %indvars.iv.next46, %for.cond.cleanup4 ], [ 0, %for.body.preheader ]
-; CHECK:   %call = call double @fn1()
-; CHECK:   %arrayidx = getelementptr inbounds [100 x double], [100 x double]* @T, i64 0, i64 %indvars.iv45
-; CHECK:   store double %call, double* %arrayidx, align 8
-; CHECK:   br label %for.body9.preheader
-
-; CHECK: for.cond6.preheader.preheader:
-; CHECK:   br label %for.cond6.preheader
-
-; CHECK: for.cond6.preheader:
-; CHECK:   %indvars.iv42 = phi i64 [ %indvars.iv.next43, %for.cond.cleanup8 ], [ 0, %for.cond6.preheader.preheader ]
-; CHECK:   br label %for.body9.split1
-
-; CHECK: for.body9.preheader:
-; CHECK:   br label %for.body9
-
-; CHECK: for.cond.cleanup4:
-; CHECK:   %tmp = load double, double* %arrayidx, align 8
-; CHECK:   call void @fn2(double %tmp)
-; CHECK:   %indvars.iv.next46 = add nuw nsw i64 %indvars.iv45, 1
-; CHECK:   %exitcond47 = icmp ne i64 %indvars.iv.next46, 100
-; CHECK:   br i1 %exitcond47, label %for.body, label %for.cond.cleanup
-
-; CHECK: for.cond.cleanup8:
-; CHECK:   %indvars.iv.next43 = add nuw nsw i64 %indvars.iv42, 1
-; CHECK:   %exitcond44 = icmp ne i64 %indvars.iv.next43, 1000
-; CHECK:   br i1 %exitcond44, label %for.cond6.preheader, label %for.body9.split
-
-; CHECK: for.body9:
-; CHECK:   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body9.split ], [ 1, %for.body9.preheader ]
-; CHECK:   br label %for.cond6.preheader.preheader
-
-; CHECK: for.body9.split1:
-; CHECK:   %arrayidx13 = getelementptr inbounds [1000 x [1000 x i32]], [1000 x [1000 x i32]]* @Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv42
-; CHECK:   store i32 %add, i32* %arrayidx13, align 4
-; CHECK:   br label %for.cond.cleanup8
-
-; CHECK: for.body9.split:
-; CHECK:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK:   %exitcond = icmp ne i64 %indvars.iv.next, 1000
-; CHECK:   br i1 %exitcond, label %for.body9, label %for.cond.cleanup4

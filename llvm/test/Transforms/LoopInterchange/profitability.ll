@@ -1,4 +1,5 @@
-; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S -debug 2>&1 | FileCheck %s
 ;; We test profitability model in these test cases.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -12,6 +13,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;   for(int i=1;i<N;i++)
 ;;     for(int j=1;j<N;j++)
 ;;       A[j][i] = A[j - 1][i] + B[j][i];
+
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 define void @interchange_01(i32 %N) {
 entry:
@@ -50,30 +53,6 @@ for.inc14:
 for.end16:
   ret void
 }
-;; Here we are checking partial .ll to check if loop are interchanged.
-; CHECK-LABEL: @interchange_01
-; CHECK:  for.body3.preheader:                              ; preds = %for.inc14, %for.cond1.preheader.lr.ph
-; CHECK:    %indvars.iv30 = phi i64 [ 1, %for.cond1.preheader.lr.ph ], [ %indvars.iv.next31, %for.inc14 ]
-; CHECK:    br label %for.body3.split2
-
-; CHECK:  for.body3.preheader1:                             ; preds = %entry
-; CHECK:    br label %for.body3
-
-; CHECK:  for.body3:                                        ; preds = %for.body3.preheader1, %for.body3.split
-; CHECK:    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3.split ], [ 1, %for.body3.preheader1 ]
-; CHECK:    br label %for.cond1.preheader.lr.ph
-
-; CHECK:  for.body3.split2:                                 ; preds = %for.body3.preheader
-; CHECK:    %1 = add nsw i64 %indvars.iv, -1
-; CHECK:    %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %1, i64 %indvars.iv30
-; CHECK:    %2 = load i32, i32* %arrayidx5
-; CHECK:    %arrayidx9 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @B, i64 0, i64 %indvars.iv, i64 %indvars.iv30
-; CHECK:    %3 = load i32, i32* %arrayidx9
-; CHECK:    %add = add nsw i32 %3, %2
-; CHECK:    %arrayidx13 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv, i64 %indvars.iv30
-; CHECK:    store i32 %add, i32* %arrayidx13
-; CHECK:    br label %for.inc14
-
 
 ;; ---------------------------------------Test case 02---------------------------------
 ;; Check loop interchange profitability model. 
@@ -82,6 +61,8 @@ for.end16:
 ;;   for(int i=1;i<N;i++)
 ;;    for(int j=1;j<N;j++)
 ;;       A[j-1][i-1] = A[j - 1][i-1] + B[j-1][i-1];
+
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 define void @interchange_02(i32 %N) {
 entry:
@@ -120,36 +101,14 @@ for.inc19:
 for.end21:
   ret void
 }
-; CHECK-LABEL: @interchange_02
-; CHECK:  for.body3.lr.ph:                                  ; preds = %for.inc19, %for.cond1.preheader.lr.ph
-; CHECK:    %indvars.iv35 = phi i64 [ 1, %for.cond1.preheader.lr.ph ], [ %indvars.iv.next36, %for.inc19 ]
-; CHECK:    %0 = add nsw i64 %indvars.iv35, -1
-; CHECK:    br label %for.body3.split1
-
-; CHECK:  for.body3.preheader:                              ; preds = %entry
-; CHECK:    %1 = add i32 %N, -1
-; CHECK:    br label %for.body3
-
-; CHECK:  for.body3:                                        ; preds = %for.body3.preheader, %for.body3.split
-; CHECK:    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3.split ], [ 1, %for.body3.preheader ]
-; CHECK:    br label %for.cond1.preheader.lr.ph
-
-; CHECK:  for.body3.split1:                                 ; preds = %for.body3.lr.ph
-; CHECK:    %2 = add nsw i64 %indvars.iv, -1
-; CHECK:    %arrayidx6 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %2, i64 %0
-; CHECK:    %3 = load i32, i32* %arrayidx6
-; CHECK:    %arrayidx12 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @B, i64 0, i64 %2, i64 %0
-; CHECK:    %4 = load i32, i32* %arrayidx12
-; CHECK:    %add = add nsw i32 %4, %3
-; CHECK:    store i32 %add, i32* %arrayidx6
-; CHECK:    br label %for.inc19
-
 
 ;;---------------------------------------Test case 03---------------------------------
 ;; Loops interchange is not profitable.
 ;;   for(int i=1;i<N;i++)
 ;;     for(int j=1;j<N;j++)
 ;;       A[i-1][j-1] = A[i - 1][j-1] + B[i][j];
+
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 define void @interchange_03(i32 %N){
 entry:
@@ -188,18 +147,3 @@ for.inc17:
 for.end19:
   ret void
 }
-
-; CHECK-LABEL: @interchange_03
-; CHECK:  for.body3.lr.ph:
-; CHECK:    %indvars.iv34 = phi i64 [ 1, %for.cond1.preheader.lr.ph ], [ %indvars.iv.next35, %for.inc17 ]
-; CHECK:    %1 = add nsw i64 %indvars.iv34, -1
-; CHECK:    br label %for.body3.preheader
-; CHECK:  for.body3.preheader:
-; CHECK:    br label %for.body3
-; CHECK:  for.body3:
-; CHECK:    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3 ], [ 1, %for.body3.preheader ]
-; CHECK:    %2 = add nsw i64 %indvars.iv, -1
-; CHECK:    %arrayidx6 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %1, i64 %2
-; CHECK:    %3 = load i32, i32* %arrayidx6
-; CHECK:    %arrayidx10 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @B, i64 0, i64 %indvars.iv34, i64 %indvars.iv
-; CHECK:    %4 = load i32, i32* %arrayidx10

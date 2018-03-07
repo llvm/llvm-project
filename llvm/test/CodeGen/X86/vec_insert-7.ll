@@ -18,13 +18,8 @@ define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
 ;
 ; X64-LABEL: mmx_movzl:
 ; X64:       ## %bb.0:
-; X64-NEXT:    movdq2q %xmm0, %mm0
-; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    pmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
 ; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    pinsrq $0, %rax, %xmm1
-; X64-NEXT:    pxor %xmm0, %xmm0
-; X64-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
+; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    retq
   %tmp = bitcast x86_mmx %x to <2 x i32>
   %tmp3 = insertelement <2 x i32> %tmp, i32 32, i32 0

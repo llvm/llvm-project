@@ -6,79 +6,81 @@
 
 # Check that a warning is emitted for entries in the file that are not present in any used input.
 # RUN: echo "missing" > %t-order-missing.txt
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,MISSING
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,MISSING
 
 # Check that the warning can be disabled.
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt --unresolved-symbols=ignore-all --no-warn-symbol-ordering 2>&1 | \
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt \
+# RUN:   --unresolved-symbols=ignore-all --no-warn-symbol-ordering 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=WARN --allow-empty
 
 # Check that the warning can be re-enabled
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt --unresolved-symbols=ignore-all --no-warn-symbol-ordering --warn-symbol-ordering 2>&1 | \
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt \
+# RUN:   --unresolved-symbols=ignore-all --no-warn-symbol-ordering --warn-symbol-ordering 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=WARN,MISSING
 
 # Check that a warning is emitted for undefined symbols.
 # RUN: echo "undefined" > %t-order-undef.txt
-# RUN: ld.lld %t1.o %t3.o -o %t --symbol-ordering-file %t-order-undef.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,UNDEFINED
+# RUN: ld.lld %t1.o %t3.o -o %t --symbol-ordering-file %t-order-undef.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,UNDEFINED
 
 # Check that a warning is emitted for imported shared symbols.
 # RUN: echo "shared" > %t-order-shared.txt
-# RUN: ld.lld %t1.o %t.so -o %t --symbol-ordering-file %t-order-shared.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,SHARED
+# RUN: ld.lld %t1.o %t.so -o %t --symbol-ordering-file %t-order-shared.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,SHARED
 
 # Check that a warning is emitted for absolute symbols.
 # RUN: echo "absolute" > %t-order-absolute.txt
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-absolute.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,ABSOLUTE
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-absolute.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,ABSOLUTE
 
 # Check that a warning is emitted for symbols discarded due to --gc-sections.
 # RUN: echo "gc" > %t-order-gc.txt
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-gc.txt --gc-sections --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,GC
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-gc.txt --gc-sections \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,GC
 
 # Check that a warning is emitted for the symbol removed due to --icf.
 # RUN: echo "icf1" > %t-order-icf.txt
 # RUN: echo "icf2" >> %t-order-icf.txt
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-icf.txt --icf=all --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,ICF
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-icf.txt --icf=all \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,ICF
 
 # Check that a warning is emitted for symbols discarded due to a linker script /DISCARD/ section.
 # RUN: echo "discard" > %t-order-discard.txt
 # RUN: echo "SECTIONS { /DISCARD/ : { *(.text.discard) } }" > %t.script
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-discard.txt -T %t.script --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,DISCARD
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-discard.txt -T %t.script \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,DISCARD
 
 # Check that LLD does not warn for discarded COMDAT symbols, if they are present in the kept instance.
 # RUN: echo "comdat" > %t-order-comdat.txt
-# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-comdat.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN --allow-empty
+# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-comdat.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN --allow-empty
 
 # Check that if a COMDAT was unused and discarded via --gc-sections, warn for each instance.
-# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-comdat.txt --gc-sections --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,COMDAT
+# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-comdat.txt --gc-sections \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,COMDAT
 
 # Check that if a weak symbol is not kept, because of an equivalent global symbol, no warning is emitted.
 # RUN: echo "glob_or_wk" > %t-order-weak.txt
-# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-weak.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN --allow-empty
+# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-weak.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN --allow-empty
 
 # Check that symbols only in unused archive members result in a warning.
 # RUN: rm -f %t.a
 # RUN: llvm-ar rc %t.a %t3.o
-# RUN: ld.lld %t1.o %t.a -o %t --symbol-ordering-file %t-order-missing.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,MISSING --allow-empty
+# RUN: ld.lld %t1.o %t.a -o %t --symbol-ordering-file %t-order-missing.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,MISSING --allow-empty
 
 # Check that a warning for each same-named symbol with an issue.
 # RUN: echo "multi" > %t-order-same-name.txt
-# RUN: ld.lld %t1.o %t2.o %t3.o -o %t --symbol-ordering-file %t-order-same-name.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,MULTI
+# RUN: ld.lld %t1.o %t2.o %t3.o -o %t --symbol-ordering-file %t-order-same-name.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,MULTI
 
 # Check that a warning is emitted if the same symbol is mentioned multiple times in the ordering file.
 # RUN: echo "_start" > %t-order-multiple-same.txt
 # RUN: echo "_start" >> %t-order-multiple-same.txt
-# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-multiple-same.txt --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,SAMESYM
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-multiple-same.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,SAMESYM
 
 # Check that all warnings can be emitted from the same input.
 # RUN: echo "missing_sym" > %t-order-multi.txt
@@ -89,8 +91,8 @@
 # RUN: echo "gc" >> %t-order-multi.txt
 # RUN: echo "discard" >> %t-order-multi.txt
 # RUN: echo "_start" >> %t-order-multi.txt
-# RUN: ld.lld %t1.o %t3.o %t.so -o %t --symbol-ordering-file %t-order-multi.txt --gc-sections -T %t.script --unresolved-symbols=ignore-all 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN,SAMESYM,ABSOLUTE,SHARED,UNDEFINED,GC,DISCARD,MISSING2
+# RUN: ld.lld %t1.o %t3.o %t.so -o %t --symbol-ordering-file %t-order-multi.txt --gc-sections -T %t.script \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,SAMESYM,ABSOLUTE,SHARED,UNDEFINED,GC,DISCARD,MISSING2
 
 # WARN-NOT:    warning:
 # SAMESYM:     warning: {{.*}}.txt: duplicate ordered symbol: _start

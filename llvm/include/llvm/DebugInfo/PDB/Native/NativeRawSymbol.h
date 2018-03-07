@@ -108,6 +108,7 @@ public:
   uint32_t getSizeInUdt() const override;
   uint32_t getSlot() const override;
   std::string getSourceFileName() const override;
+  std::unique_ptr<IPDBLineNumber> getSrcLineOnTypeDefn() const override;
   uint32_t getStride() const override;
   uint32_t getSubTypeId() const override;
   std::string getSymbolsFileName() const override;

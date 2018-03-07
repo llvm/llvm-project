@@ -111,23 +111,26 @@ void GCDAsyncSemaphoreChecker::checkASTCodeBody(const Decl *D,
       )
     ).bind(WarningBinding));
 
-  auto AcceptsBlockM =
-    forEachDescendant(callExpr(hasAnyArgument(hasType(
+  auto HasBlockArgumentM = hasAnyArgument(hasType(
             hasCanonicalType(blockPointerType())
-            ))));
+            ));
 
-  auto BlockSignallingM =
-    forEachDescendant(callExpr(hasAnyArgument(hasDescendant(callExpr(
+  auto ArgCallsSignalM = hasArgument(0, hasDescendant(callExpr(
           allOf(
               callsName("dispatch_semaphore_signal"),
               equalsBoundArgDecl(0, SemaphoreBinding)
-              ))))));
+              ))));
 
-  auto FinalM = compoundStmt(
-      SemaphoreBindingM,
-      SemaphoreWaitM,
-      AcceptsBlockM,
-      BlockSignallingM);
+  auto HasBlockAndCallsSignalM = allOf(HasBlockArgumentM, ArgCallsSignalM);
+
+  auto AcceptsBlockM =
+    forEachDescendant(
+      stmt(anyOf(
+        callExpr(HasBlockAndCallsSignalM),
+        objcMessageExpr(HasBlockAndCallsSignalM)
+           )));
+
+  auto FinalM = compoundStmt(SemaphoreBindingM, SemaphoreWaitM, AcceptsBlockM);
 
   MatchFinder F;
   Callback CB(BR, AM.getAnalysisDeclContext(D), this);
