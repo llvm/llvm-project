@@ -606,6 +606,7 @@ public:
   struct EvalCallOptions {
     bool IsConstructorWithImproperlyModeledTargetRegion = false;
     bool IsArrayConstructorOrDestructor = false;
+    bool IsConstructorIntoTemporary = false;
 
     EvalCallOptions() {}
   };
