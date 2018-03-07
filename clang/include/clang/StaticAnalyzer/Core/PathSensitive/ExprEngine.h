@@ -603,6 +603,13 @@ public:
                                   const LocationContext *LCtx,
                                   ProgramStateRef State);
 
+  struct EvalCallOptions {
+    bool IsConstructorWithImproperlyModeledTargetRegion = false;
+    bool IsArrayConstructorOrDestructor = false;
+
+    EvalCallOptions() {}
+  };
+
   /// Evaluate a call, running pre- and post-call checks and allowing checkers
   /// to be responsible for handling the evaluation of the call itself.
   void evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -716,7 +723,8 @@ private:
   /// When the lookahead fails, a temporary region is returned, and the
   /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
   const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                                 ExplodedNode *Pred);
+                                                 ExplodedNode *Pred,
+                                                 EvalCallOptions &CallOpts);
 
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be
