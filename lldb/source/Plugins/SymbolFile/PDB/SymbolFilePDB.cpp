@@ -282,15 +282,11 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(
   if (!func_range.GetBaseAddress().IsValid())
     return nullptr;
 
-  user_id_t func_type_uid = pdb_func->getSignatureId();
-  // TODO: Function symbol with invalid signature won't be handled. We'll set up
-  // a white list to trace them.
-  if (!pdb_func->getSignature())
-    return nullptr;
-
   lldb_private::Type* func_type = ResolveTypeUID(pdb_func->getSymIndexId());
   if (!func_type)
     return nullptr;
+
+  user_id_t func_type_uid = pdb_func->getSignatureId();
 
   Mangled mangled = GetMangledForPDBFunc(pdb_func);
 
@@ -500,7 +496,8 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   if (result.get()) {
     m_types.insert(std::make_pair(type_uid, result));
     auto type_list = GetTypeList();
-    type_list->Insert(result);
+    if (type_list)
+      type_list->Insert(result);
   }
   return result.get();
 }
@@ -607,8 +604,8 @@ std::string SymbolFilePDB::GetSourceFileNameForPDBCompiland(
   std::string file_name = pdb_compiland->getSourceFileName();
   if (!file_name.empty()) {
     auto one_src_file_up =
-      m_session_up->findOneSourceFile(pdb_compiland, file_name,
-                                      PDB_NameSearchFlags::NS_CaseInsensitive);
+        m_session_up->findOneSourceFile(pdb_compiland, file_name,
+                                        PDB_NameSearchFlags::NS_CaseInsensitive);
     if (one_src_file_up)
       source_file_name = one_src_file_up->getFileName();
   }
@@ -622,7 +619,7 @@ std::string SymbolFilePDB::GetSourceFileNameForPDBCompiland(
   auto details_up = pdb_compiland->findOneChild<PDBSymbolCompilandDetails>();
   PDB_Lang pdb_lang = details_up ? details_up->getLanguage() : PDB_Lang::Cpp;
   auto src_files_up =
-    m_session_up->getSourceFilesForCompiland(*pdb_compiland);
+      m_session_up->getSourceFilesForCompiland(*pdb_compiland);
   if (src_files_up) {
     while (auto file_up = src_files_up->getNext()) {
       FileSpec file_spec(file_up->getFileName(), false,
@@ -700,9 +697,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         if ((resolve_scope & eSymbolContextLineEntry) && !has_line_table) {
           // The query asks for line entries, but we can't get them for the
           // compile unit. This is not normal for `line` = 0. So just assert it.
-          if (line == 0) {
-            assert(0 && "Couldn't get all line entries!\n");
-          }
+          assert(line && "Couldn't get all line entries!\n");
 
           // Current compiland does not have the requested line. Search next.
           continue;
@@ -825,14 +820,15 @@ void SymbolFilePDB::CacheFunctionNames() {
 
   if (auto results_up = m_global_scope_up->findAllChildren<PDBSymbolFunc>()) {
     while (auto pdb_func_up = results_up->getNext()) {
-      auto uid = pdb_func_up->getSymIndexId();
+      if (pdb_func_up->isCompilerGenerated())
+        continue;
+
       auto name = pdb_func_up->getName();
       auto demangled_name = pdb_func_up->getUndecoratedName();
       if (name.empty() && demangled_name.empty())
         continue;
-      if (pdb_func_up->isCompilerGenerated())
-        continue;
 
+      auto uid = pdb_func_up->getSymIndexId();
       if (!demangled_name.empty() && pdb_func_up->getVirtualAddress())
         addr_ids.insert(std::make_pair(pdb_func_up->getVirtualAddress(), uid));
 
@@ -902,8 +898,6 @@ void SymbolFilePDB::CacheFunctionNames() {
         continue;
 
       if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
-        auto demangled_name = pub_sym_up->getUndecoratedName();
-        std::vector<uint32_t> ids;
         auto vm_addr = pub_sym_up->getVirtualAddress();
 
         // PDB public symbol has mangled name for its associated function.
@@ -1092,6 +1086,8 @@ void SymbolFilePDB::FindTypesByName(const std::string &name,
                                     uint32_t max_matches,
                                     lldb_private::TypeMap &types) {
   std::unique_ptr<IPDBEnumSymbols> results;
+  if (name.empty())
+    return;
   results = m_global_scope_up->findChildren(PDB_SymType::None, name,
                                             PDB_NameSearchFlags::NS_Default);
   if (!results)
@@ -1254,9 +1250,6 @@ SymbolFilePDB::ParseCompileUnitForUID(uint32_t id, uint32_t index) {
   auto compiland_up = GetPDBCompilandByUID(id);
   if (!compiland_up)
     return CompUnitSP();
-  std::string path = GetSourceFileNameForPDBCompiland(compiland_up.get());
-  if (path.empty())
-    return CompUnitSP();
 
   lldb::LanguageType lang;
   auto details = compiland_up->findOneChild<PDBSymbolCompilandDetails>();
@@ -1264,6 +1257,13 @@ SymbolFilePDB::ParseCompileUnitForUID(uint32_t id, uint32_t index) {
     lang = lldb::eLanguageTypeC_plus_plus;
   else
     lang = TranslateLanguage(details->getLanguage());
+
+  if (lang == lldb::LanguageType::eLanguageTypeUnknown)
+    return CompUnitSP();
+
+  std::string path = GetSourceFileNameForPDBCompiland(compiland_up.get());
+  if (path.empty())
+    return CompUnitSP();
 
   // Don't support optimized code for now, DebugInfoPDB does not return this
   // information.
@@ -1451,9 +1451,10 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc *pdb_func) {
         // For a public symbol, it is unique.
         lldbassert(result_up->getChildCount() == 1);
         if (auto *pdb_public_sym =
-            llvm::dyn_cast<PDBSymbolPublicSymbol>(symbol_up.get())) {
+            llvm::dyn_cast_or_null<PDBSymbolPublicSymbol>(symbol_up.get())) {
           if (pdb_public_sym->isFunction()) {
             func_decorated_name = pdb_public_sym->getName();
+            break;
           }
         }
       }
