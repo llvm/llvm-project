@@ -19,7 +19,7 @@ CHECK:      DW_AT_name ("main")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
 CHECK:      DW_AT_decl_line (23)
 CHECK:      DW_AT_prototyped (0x01)
-CHECK:      DW_AT_type (cu + 0x0063
+CHECK:      DW_AT_type (0x00000063
 CHECK:      DW_AT_external (0x01)
 CHECK:      DW_AT_accessibility (DW_ACCESS_public)
 CHECK:      DW_AT_low_pc (0x0000000100000f40)
@@ -27,11 +27,11 @@ CHECK:      DW_AT_high_pc (0x0000000100000f4b)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("argc")
-CHECK:        DW_AT_type (cu + 0x0063
+CHECK:        DW_AT_type (0x00000063
 CHECK:        DW_AT_location (DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("argv")
-CHECK:        DW_AT_type (cu + 0x006a
+CHECK:        DW_AT_type (0x0000006a
 CHECK:        DW_AT_location (DW_OP_reg4 RSI)
 CHECK:      NULL
 CHECK:    DW_TAG_base_type
@@ -39,11 +39,11 @@ CHECK:      DW_AT_name ("int")
 CHECK:      DW_AT_encoding (DW_ATE_signed)
 CHECK:      DW_AT_byte_size (0x04)
 CHECK:    DW_TAG_pointer_type
-CHECK:      DW_AT_type (cu + 0x006f
+CHECK:      DW_AT_type (0x0000006f
 CHECK:    DW_TAG_pointer_type
-CHECK:      DW_AT_type (cu + 0x0074
+CHECK:      DW_AT_type (0x00000074
 CHECK:    DW_TAG_const_type
-CHECK:      DW_AT_type (cu + 0x0079
+CHECK:      DW_AT_type (0x00000079
 CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("char")
 CHECK:      DW_AT_encoding (DW_ATE_signed_char)
@@ -79,7 +79,7 @@ CHECK:        DW_AT_type (0x0000000000000063
 CHECK:        DW_AT_location (0x00000000
 CHECK:          [0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:[[INC1:0x[0-9a-f]*]]{{.*}}DW_TAG_inlined_subroutine
-CHECK:        DW_AT_abstract_origin (cu + 0x00a7 "inc")
+CHECK:        DW_AT_abstract_origin (0x00000128 "inc")
 CHECK:        DW_AT_low_pc (0x0000000100000f63)
 CHECK:        DW_AT_high_pc (0x0000000100000f72)
 CHECK:        DW_AT_call_line (20)
@@ -100,7 +100,7 @@ CHECK:    DW_AT_comp_dir ("/Inputs")
 CHECK:    DW_AT_low_pc (0x0000000100000f90)
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("val")
-CHECK:      DW_AT_type (cu + 0x003c
+CHECK:      DW_AT_type (0x00000176
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic3.c")
 CHECK:      DW_AT_location (DW_OP_addr 0x100001004)
 CHECK:    DW_TAG_volatile_type
@@ -121,7 +121,7 @@ CHECK:      DW_TAG_lexical_block
 CHECK:        DW_AT_low_pc (0x0000000100000f94)
 CHECK:        DW_AT_high_pc (0x0000000100000fa7)
 CHECK:[[INC2:0x[0-9a-f]*]]{{.*}}DW_TAG_inlined_subroutine
-CHECK:          DW_AT_abstract_origin (cu + 0x009a "inc")
+CHECK:          DW_AT_abstract_origin (0x000001d4 "inc")
 CHECK:          DW_AT_ranges (0x00000000
 CHECK:             [0x0000000100000f94, 0x0000000100000f9a)
 CHECK:             [0x0000000100000f9f, 0x0000000100000fa7))
