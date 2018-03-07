@@ -2463,7 +2463,12 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
                                           currBldrCtx->blockCount());
     state = state->assume(V.castAs<DefinedOrUnknownSVal>(), true);
     Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V), nullptr,
-		      ProgramPoint::PostLValueKind);
+                      ProgramPoint::PostLValueKind);
+    return;
+  }
+  if (const auto* BD = dyn_cast<BindingDecl>(D)) {
+    // FIXME: proper support for bound declarations.
+    // For now, let's just prevent crashing.
     return;
   }
 

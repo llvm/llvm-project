@@ -2717,7 +2717,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
   } else if (Style.Language == FormatStyle::LK_Cpp ||
              Style.Language == FormatStyle::LK_ObjC ||
-             Style.Language == FormatStyle::LK_Proto) {
+             Style.Language == FormatStyle::LK_Proto ||
+             Style.Language == FormatStyle::LK_TextProto) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
   }

@@ -12420,8 +12420,13 @@ static void RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator,
 
 Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
                                     SkipBodyInfo *SkipBody) {
-  if (!D)
+  if (!D) {
+    // Parsing the function declaration failed in some way. Push on a fake scope
+    // anyway so we can try to parse the function body.
+    PushFunctionScope();
     return D;
+  }
+
   FunctionDecl *FD = nullptr;
 
   if (FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(D))
@@ -12830,6 +12835,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       getCurFunction()->ObjCWarnForNoInitDelegation = false;
     }
   } else {
+    // Parsing the function declaration failed in some way. Pop the fake scope
+    // we pushed on.
+    PopFunctionScopeInfo(ActivePolicy, dcl);
     return nullptr;
   }
 

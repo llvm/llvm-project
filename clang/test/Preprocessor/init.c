@@ -8965,6 +8965,9 @@
 // PS4:#define __x86_64__ 1
 // PS4:#define unix 1
 //
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=x86_64-scei-ps4 < /dev/null | FileCheck -match-full-lines -check-prefix PS4-CXX %s
+// PS4-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 32UL
+//
 // RUN: %clang_cc1 -E -dM -triple=x86_64-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
 // RUN: %clang_cc1 -E -dM -fms-extensions -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
 // X86-64-DECLSPEC: #define __declspec{{.*}}

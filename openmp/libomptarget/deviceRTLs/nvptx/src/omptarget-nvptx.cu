@@ -54,9 +54,6 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   PRINT(LD_IO, "call to __kmpc_kernel_init with version %f\n",
         OMPTARGET_NVPTX_VERSION);
 
-  // init parallel work arguments
-  omptarget_nvptx_sharedArgs.Init();
-
   if (!RequiresOMPRuntime) {
     // If OMP runtime is not required don't initialize OMP state.
     setExecutionParameters(Generic, RuntimeUninitialized);
@@ -110,9 +107,6 @@ EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
   }
   // Done with work.  Kill the workers.
   omptarget_nvptx_workFn = 0;
-
-  // Deinit parallel work arguments
-  omptarget_nvptx_sharedArgs.DeInit();
 }
 
 EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
