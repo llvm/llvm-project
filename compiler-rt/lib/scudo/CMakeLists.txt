@@ -9,6 +9,10 @@ append_rtti_flag(OFF SCUDO_CFLAGS)
 
 set(SCUDO_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
+# Use gc-sections by default to avoid unused code being pulled in.
+list(APPEND SCUDO_CFLAGS -ffunction-sections -fdata-sections)
+list(APPEND SCUDO_DYNAMIC_LINK_FLAGS -Wl,--gc-sections)
+
 set(SCUDO_SOURCES
   scudo_allocator.cpp
   scudo_crc32.cpp
