@@ -1937,7 +1937,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 static std::string rangeToString(uint64_t Addr, uint64_t Len) {
   if (Len == 0)
     return "<empty range at 0x" + utohexstr(Addr) + ">";
-  return "[0x" + utohexstr(Addr) + " -> 0x" + utohexstr(Addr + Len - 1) + "]";
+  return "[0x" + utohexstr(Addr) + ", 0x" + utohexstr(Addr + Len - 1) + "]";
 }
 
 // Check whether sections overlap for a specific address range (file offsets,
