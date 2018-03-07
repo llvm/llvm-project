@@ -3258,8 +3258,8 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     FileNumber = getTok().getIntVal();
     Lex();
 
-    if (FileNumber < 0)
-      return TokError("negative file number");
+    if (FileNumber < 1)
+      return TokError("file number less than one");
   }
 
   std::string Path = getTok().getString();
@@ -3338,8 +3338,6 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     // we turn off -g option, directly use the existing debug info instead.
     if (getContext().getGenDwarfForAssembly())
       getContext().setGenDwarfForAssembly(false);
-    else if (FileNumber == 0)
-      getStreamer().emitDwarfFile0Directive(Directory, Filename, CKMem, Source);
     else {
       Expected<unsigned> FileNumOrErr = getStreamer().tryEmitDwarfFileDirective(
           FileNumber, Directory, Filename, CKMem, Source);

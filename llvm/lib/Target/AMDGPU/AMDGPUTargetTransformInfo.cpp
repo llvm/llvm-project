@@ -234,12 +234,38 @@ unsigned AMDGPUTTIImpl::getMinVectorRegisterBitWidth() const {
   return 32;
 }
 
+unsigned AMDGPUTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
+                                            unsigned ChainSizeInBytes,
+                                            VectorType *VecTy) const {
+  unsigned VecRegBitWidth = VF * LoadSize;
+  if (VecRegBitWidth > 128 && VecTy->getScalarSizeInBits() < 32)
+    // TODO: Support element-size less than 32bit?
+    return 128 / LoadSize;
+
+  return VF;
+}
+
+unsigned AMDGPUTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
+                                             unsigned ChainSizeInBytes,
+                                             VectorType *VecTy) const {
+  unsigned VecRegBitWidth = VF * StoreSize;
+  if (VecRegBitWidth > 128)
+    return 128 / StoreSize;
+
+  return VF;
+}
+
 unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   AMDGPUAS AS = ST->getAMDGPUAS();
   if (AddrSpace == AS.GLOBAL_ADDRESS ||
       AddrSpace == AS.CONSTANT_ADDRESS ||
-      AddrSpace == AS.CONSTANT_ADDRESS_32BIT ||
-      AddrSpace == AS.FLAT_ADDRESS)
+      AddrSpace == AS.CONSTANT_ADDRESS_32BIT) {
+    if (ST->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS)
+      return 128;
+    return 512;
+  }
+
+  if (AddrSpace == AS.FLAT_ADDRESS)
     return 128;
   if (AddrSpace == AS.LOCAL_ADDRESS ||
       AddrSpace == AS.REGION_ADDRESS)
@@ -250,8 +276,8 @@ unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (ST->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS &&
       (AddrSpace == AS.PARAM_D_ADDRESS ||
       AddrSpace == AS.PARAM_I_ADDRESS ||
-      (AddrSpace >= AS.CONSTANT_BUFFER_0 &&
-      AddrSpace <= AS.CONSTANT_BUFFER_15)))
+       (AddrSpace >= AS.CONSTANT_BUFFER_0 &&
+        AddrSpace <= AS.CONSTANT_BUFFER_15)))
     return 128;
   llvm_unreachable("unhandled address space");
 }

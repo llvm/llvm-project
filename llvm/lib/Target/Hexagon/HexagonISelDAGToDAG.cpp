@@ -93,12 +93,16 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
       Opcode = IsValidInc ? Hexagon::L2_loadrh_pi : Hexagon::L2_loadrh_io;
     break;
   case MVT::i32:
+  case MVT::v2i16:
+  case MVT::v4i8:
     Opcode = IsValidInc ? Hexagon::L2_loadri_pi : Hexagon::L2_loadri_io;
     break;
   case MVT::i64:
+  case MVT::v2i32:
+  case MVT::v4i16:
+  case MVT::v8i8:
     Opcode = IsValidInc ? Hexagon::L2_loadrd_pi : Hexagon::L2_loadrd_io;
     break;
-  // 64B
   case MVT::v64i8:
   case MVT::v32i16:
   case MVT::v16i32:
@@ -377,9 +381,14 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
     Opcode = IsValidInc ? Hexagon::S2_storerh_pi : Hexagon::S2_storerh_io;
     break;
   case MVT::i32:
+  case MVT::v2i16:
+  case MVT::v4i8:
     Opcode = IsValidInc ? Hexagon::S2_storeri_pi : Hexagon::S2_storeri_io;
     break;
   case MVT::i64:
+  case MVT::v2i32:
+  case MVT::v4i16:
+  case MVT::v8i8:
     Opcode = IsValidInc ? Hexagon::S2_storerd_pi : Hexagon::S2_storerd_io;
     break;
   case MVT::v64i8:
@@ -657,6 +666,57 @@ void HexagonDAGToDAGISel::SelectBitcast(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
+void HexagonDAGToDAGISel::SelectVAlign(SDNode *N) {
+  MVT ResTy = N->getValueType(0).getSimpleVT();
+  if (HST->isHVXVectorType(ResTy, true))
+    return SelectHvxVAlign(N);
+
+  const SDLoc &dl(N);
+  unsigned VecLen = ResTy.getSizeInBits();
+  if (VecLen == 32) {
+    SDValue Ops[] = {
+      CurDAG->getTargetConstant(Hexagon::DoubleRegsRegClassID, dl, MVT::i32),
+      N->getOperand(0),
+      CurDAG->getTargetConstant(Hexagon::isub_hi, dl, MVT::i32),
+      N->getOperand(1),
+      CurDAG->getTargetConstant(Hexagon::isub_lo, dl, MVT::i32)
+    };
+    SDNode *R = CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, dl,
+                                       MVT::i64, Ops);
+
+    // Shift right by "(Addr & 0x3) * 8" bytes.
+    SDValue M0 = CurDAG->getTargetConstant(0x18, dl, MVT::i32);
+    SDValue M1 = CurDAG->getTargetConstant(0x03, dl, MVT::i32);
+    SDNode *C = CurDAG->getMachineNode(Hexagon::S4_andi_asl_ri, dl, MVT::i32,
+                                       M0, N->getOperand(2), M1);
+    SDNode *S = CurDAG->getMachineNode(Hexagon::S2_lsr_r_p, dl, MVT::i64,
+                                       SDValue(R, 0), SDValue(C, 0));
+    SDValue E = CurDAG->getTargetExtractSubreg(Hexagon::isub_lo, dl, ResTy,
+                                               SDValue(S, 0));
+    ReplaceNode(N, E.getNode());
+  } else {
+    assert(VecLen == 64);
+    SDNode *Pu = CurDAG->getMachineNode(Hexagon::C2_tfrrp, dl, MVT::v8i1,
+                                        N->getOperand(2));
+    SDNode *VA = CurDAG->getMachineNode(Hexagon::S2_valignrb, dl, ResTy,
+                                        N->getOperand(0), N->getOperand(1),
+                                        SDValue(Pu,0));
+    ReplaceNode(N, VA);
+  }
+}
+
+void HexagonDAGToDAGISel::SelectVAlignAddr(SDNode *N) {
+  const SDLoc &dl(N);
+  SDValue A = N->getOperand(1);
+  int Mask = -cast<ConstantSDNode>(A.getNode())->getSExtValue();
+  assert(isPowerOf2_32(-Mask));
+
+  SDValue M = CurDAG->getTargetConstant(Mask, dl, MVT::i32);
+  SDNode *AA = CurDAG->getMachineNode(Hexagon::A2_andir, dl, MVT::i32,
+                                      N->getOperand(0), M);
+  ReplaceNode(N, AA);
+}
+
 // Handle these nodes here to avoid having to write patterns for all
 // combinations of input/output types. In all cases, the resulting
 // instruction is the same.
@@ -721,6 +781,8 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case ISD::STORE:                return SelectStore(N);
   case ISD::INTRINSIC_W_CHAIN:    return SelectIntrinsicWChain(N);
   case ISD::INTRINSIC_WO_CHAIN:   return SelectIntrinsicWOChain(N);
+  case HexagonISD::VALIGN:        return SelectVAlign(N);
+  case HexagonISD::VALIGNADDR:    return SelectVAlignAddr(N);
   case HexagonISD::TYPECAST:      return SelectTypecast(N);
   case HexagonISD::P2D:           return SelectP2D(N);
   case HexagonISD::D2P:           return SelectD2P(N);

@@ -4,8 +4,8 @@
 ; Multiply and accumulate
 ; CHECK: mpyi([[REG0:r([0-9]+)]],[[REG1:r([0-9]+)]])
 ; CHECK-NEXT: add(r{{[0-9]+}},#4)
-; CHECK-NEXT: [[REG0]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
-; CHECK-NEXT: [[REG1]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
+; CHECK-DAG: [[REG1]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
+; CHECK-DAG: [[REG0]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
 ; CHECK-NEXT: endloop0
 
 define i32 @foo(i32* %a, i32* %b, i32 %n) {

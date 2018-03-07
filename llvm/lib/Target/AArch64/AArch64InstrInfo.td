@@ -6183,20 +6183,25 @@ def : Pat<(v1i64 (extract_subvector (v2i64 FPR128:$Rn), (i64 1))),
 
 // A 64-bit subvector insert to the first 128-bit vector position
 // is a subregister copy that needs no instruction.
-def : Pat<(insert_subvector undef, (v1i64 FPR64:$src), (i32 0)),
-          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
-def : Pat<(insert_subvector undef, (v1f64 FPR64:$src), (i32 0)),
-          (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
-def : Pat<(insert_subvector undef, (v2i32 FPR64:$src), (i32 0)),
-          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
-def : Pat<(insert_subvector undef, (v2f32 FPR64:$src), (i32 0)),
-          (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
-def : Pat<(insert_subvector undef, (v4i16 FPR64:$src), (i32 0)),
-          (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
-def : Pat<(insert_subvector undef, (v4f16 FPR64:$src), (i32 0)),
-          (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
-def : Pat<(insert_subvector undef, (v8i8 FPR64:$src), (i32 0)),
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+multiclass InsertSubvectorUndef<ValueType Ty> {
+  def : Pat<(insert_subvector undef, (v1i64 FPR64:$src), (Ty 0)),
+            (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+  def : Pat<(insert_subvector undef, (v1f64 FPR64:$src), (Ty 0)),
+            (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+  def : Pat<(insert_subvector undef, (v2i32 FPR64:$src), (Ty 0)),
+            (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+  def : Pat<(insert_subvector undef, (v2f32 FPR64:$src), (Ty 0)),
+            (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+  def : Pat<(insert_subvector undef, (v4i16 FPR64:$src), (Ty 0)),
+            (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+  def : Pat<(insert_subvector undef, (v4f16 FPR64:$src), (Ty 0)),
+            (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+  def : Pat<(insert_subvector undef, (v8i8 FPR64:$src), (Ty 0)),
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
+}
+
+defm : InsertSubvectorUndef<i32>;
+defm : InsertSubvectorUndef<i64>;
 
 // Use pair-wise add instructions when summing up the lanes for v2f64, v2i64
 // or v2f32.

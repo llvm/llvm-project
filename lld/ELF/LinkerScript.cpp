@@ -622,7 +622,7 @@ void LinkerScript::addOrphanSections() {
 
     if (OutputSection *OS = addInputSec(Map, S, Name))
       V.push_back(OS);
-    assert(S->getOutputSection()->SectionIndex == INT_MAX);
+    assert(S->getOutputSection()->SectionIndex == UINT32_MAX);
   }
 
   // If no SECTIONS command was given, we should insert sections commands

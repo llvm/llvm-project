@@ -38,4 +38,4 @@ int main(int argc, char **argv)
   return 0;
 }
 
-// CHECK: ERROR: invalid sized delete on chunk at address
+// CHECK: ERROR: invalid sized delete when deallocating address

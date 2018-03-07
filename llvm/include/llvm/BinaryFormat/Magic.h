@@ -45,7 +45,8 @@ struct file_magic {
     coff_import_library, ///< COFF import library
     pecoff_executable,   ///< PECOFF executable file
     windows_resource,    ///< Windows compiled resource file (.res)
-    wasm_object          ///< WebAssembly Object file
+    wasm_object,         ///< WebAssembly Object file
+    pdb,                 ///< Windows PDB debug info file
   };
 
   bool is_object() const { return V != unknown; }
