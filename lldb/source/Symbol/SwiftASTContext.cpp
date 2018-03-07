@@ -1102,17 +1102,14 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
       m_initialized_clang_importer_options(false),
       m_reported_fatal_error(false), m_fatal_errors(), m_negative_type_cache(),
       m_extra_type_info_cache(), m_swift_type_map() {
-  // Set the module-cache path if it has been specified:
-  if (target) {
-    FileSpec &module_cache = target->GetClangModulesCachePath();
-    if (module_cache && module_cache.Exists()) {
+  // Set the clang modules cache path.
+  llvm::SmallString<128> path;
+  auto props = ModuleList::GetGlobalModuleListProperties();
+  props.GetClangModulesCachePath().GetPath(path);
+  m_compiler_invocation_ap->setClangModuleCachePath(path);
 
-      std::string module_cache_path = module_cache.GetPath();
-      llvm::StringRef module_cache_ref(module_cache_path);
-      m_compiler_invocation_ap->setClangModuleCachePath(module_cache_ref);
-    }
+  if (target)
     m_target_wp = target->shared_from_this();
-  }
 
   if (triple)
     SetTriple(triple);
