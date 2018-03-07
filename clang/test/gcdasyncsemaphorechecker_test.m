@@ -1,5 +1,14 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.osx.GCDAsyncSemaphore %s -fblocks -verify
-//
+typedef signed char BOOL;
+@protocol NSObject  - (BOOL)isEqual:(id)object; @end
+@interface NSObject <NSObject> {}
++(id)alloc;
+-(id)init;
+-(id)autorelease;
+-(id)copy;
+-(id)retain;
+@end
+
 typedef int dispatch_semaphore_t;
 typedef void (^block_t)();
 
@@ -166,4 +175,29 @@ void warn_with_cast() {
   dispatch_semaphore_wait((int)sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
 }
 
+@interface Test1 : NSObject
+-(void)use_method_warn;
+-(void)testNoWarn;
+@end
 
+@implementation Test1
+
+-(void)use_method_warn {
+  dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+
+  func(^{
+      dispatch_semaphore_signal(sema);
+  });
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+}
+
+-(void)testNoWarn {
+  dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+
+  func(^{
+      dispatch_semaphore_signal(sema);
+  });
+  dispatch_semaphore_wait(sema, 100);
+}
+
+@end

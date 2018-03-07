@@ -88,9 +88,11 @@ void GCDAsyncSemaphoreChecker::checkASTCodeBody(const Decl *D,
                                                BugReporter &BR) const {
 
   // The pattern is very common in tests, and it is OK to use it there.
-  if (const auto* ND = dyn_cast<NamedDecl>(D))
-    if (ND->getName().startswith("test"))
+  if (const auto* ND = dyn_cast<NamedDecl>(D)) {
+    std::string DeclName = ND->getNameAsString();
+    if (StringRef(DeclName).startswith("test"))
       return;
+  }
 
   const char *SemaphoreBinding = "semaphore_name";
   auto SemaphoreCreateM = callExpr(callsName("dispatch_semaphore_create"));
