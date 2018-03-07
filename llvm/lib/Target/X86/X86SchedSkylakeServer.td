@@ -1758,7 +1758,7 @@ def SKXWriteResGroup31 : SchedWriteRes<[SKXPort1]> {
 }
 def: InstRW<[SKXWriteResGroup31], (instregex "BSF(16|32|64)rr")>;
 def: InstRW<[SKXWriteResGroup31], (instregex "BSR(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup31], (instrs IMUL64rr, IMUL64rri32, IMUL64rri8)>;
+def: InstRW<[SKXWriteResGroup31], (instrs IMUL16rr, IMUL32rr, IMUL32rri, IMUL32rri8, IMUL64rr, IMUL64rri32, IMUL64rri8)>;
 def: InstRW<[SKXWriteResGroup31], (instrs IMUL8r)>;
 def: InstRW<[SKXWriteResGroup31], (instregex "LZCNT(16|32|64)rr")>;
 def: InstRW<[SKXWriteResGroup31], (instrs MUL8r)>;
@@ -1769,18 +1769,13 @@ def: InstRW<[SKXWriteResGroup31], (instregex "SHLD(16|32|64)rri8")>;
 def: InstRW<[SKXWriteResGroup31], (instregex "SHRD(16|32|64)rri8")>;
 def: InstRW<[SKXWriteResGroup31], (instregex "TZCNT(16|32|64)rr")>;
 
-def SKXWriteResGroup31_16 : SchedWriteRes<[SKXPort1, SKXPort0156]> {
+def SKXWriteResGroup31_16i : SchedWriteRes<[SKXPort1, SKXPort0156]> {
   let Latency = 3;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup31_16], (instrs IMUL16rr, IMUL16rri, IMUL16rri8)>;
+def: InstRW<[SKXWriteResGroup31_16i], (instrs IMUL16rri, IMUL16rri8)>;
 
-def SKXWriteResGroup31_32 : SchedWriteRes<[SKXPort1]> {
-  let Latency = 3;
-  let NumMicroOps = 1;
-}
-def: InstRW<[SKXWriteResGroup31_32], (instrs IMUL32rr, IMUL32rri, IMUL32rri8)>;
 
 def SKXWriteResGroup32 : SchedWriteRes<[SKXPort5]> {
   let Latency = 3;

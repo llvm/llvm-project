@@ -35,6 +35,12 @@ EnumClass EnumClassVar;
 enum struct EnumStruct { red, blue, black };
 EnumStruct EnumStructVar;
 
+typedef char16_t WChar16Typedef;
+WChar16Typedef WC16Var;
+
+typedef char32_t WChar32Typedef;
+WChar32Typedef WC32Var;
+
 int main() {
   return 0;
 }
