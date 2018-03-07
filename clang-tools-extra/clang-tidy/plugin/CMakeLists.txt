@@ -19,6 +19,7 @@ add_clang_library(clangTidyPlugin
   clangTidyMPIModule
   clangTidyObjCModule
   clangTidyPerformanceModule
+  clangTidyPortabilityModule
   clangTidyReadabilityModule
   clangTooling
   )

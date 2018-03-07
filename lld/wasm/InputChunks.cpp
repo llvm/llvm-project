@@ -104,13 +104,15 @@ void InputChunk::writeRelocations(raw_ostream &OS) const {
 }
 
 void InputFunction::setOutputIndex(uint32_t Index) {
-  DEBUG(dbgs() << "InputFunction::setOutputIndex: " << getName() << " -> " << Index << "\n");
+  DEBUG(dbgs() << "InputFunction::setOutputIndex: " << getName() << " -> "
+               << Index << "\n");
   assert(!hasOutputIndex());
   OutputIndex = Index;
 }
 
 void InputFunction::setTableIndex(uint32_t Index) {
-  DEBUG(dbgs() << "InputFunction::setTableIndex: " << getName() << " -> " << Index << "\n");
+  DEBUG(dbgs() << "InputFunction::setTableIndex: " << getName() << " -> "
+               << Index << "\n");
   assert(!hasTableIndex());
   TableIndex = Index;
 }

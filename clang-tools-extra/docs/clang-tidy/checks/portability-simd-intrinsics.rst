@@ -1,6 +1,6 @@
-.. title:: clang-tidy - readability-simd-intrinsics
+.. title:: clang-tidy - portability-simd-intrinsics
 
-readability-simd-intrinsics
+portability-simd-intrinsics
 ===========================
 
 Finds SIMD intrinsics calls and suggests ``std::experimental::simd`` (`P0214`_)
@@ -40,5 +40,10 @@ Options
    If this option is set to non-zero (default is `0`), the check will suggest
    `P0214`_ alternatives, otherwise it only points out the intrinsic function is
    non-portable.
+
+.. option:: Std
+
+   The namespace used to suggest `P0214`_ alternatives. If not specified, `std::`
+   for `-std=c++2a` and `std::experimental::` for `-std=c++11`.
 
 .. _P0214: http://wg21.link/p0214

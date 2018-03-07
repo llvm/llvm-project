@@ -1,6 +1,6 @@
-// RUN: %check_clang_tidy %s readability-simd-intrinsics %t -- \
+// RUN: %check_clang_tidy %s portability-simd-intrinsics %t -- \
 // RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: readability-simd-intrinsics.Suggest, value: 1} \
+// RUN:    {key: portability-simd-intrinsics.Suggest, value: 1} \
 // RUN:  ]}' -- -target x86_64 -std=c++11
 
 typedef long long __m128i __attribute__((vector_size(16)));
@@ -17,7 +17,7 @@ void X86() {
   __m256 d0;
 
   _mm_add_epi32(i0, i1);
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: '_mm_add_epi32' can be replaced by operator+ on std::experimental::simd objects [readability-simd-intrinsics]
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: '_mm_add_epi32' can be replaced by operator+ on std::experimental::simd objects [portability-simd-intrinsics]
   d0 = _mm256_load_pd(0);
   _mm256_store_pd(0, d0);
 

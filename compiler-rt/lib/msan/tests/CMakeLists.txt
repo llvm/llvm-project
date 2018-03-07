@@ -109,7 +109,7 @@ macro(add_msan_tests_for_arch arch kind cflags)
                    DEPS ${MSAN_INST_LOADABLE_OBJECTS})
 
   set(MSAN_TEST_OBJECTS ${MSAN_INST_TEST_OBJECTS} ${MSAN_INST_GTEST})
-  set(MSAN_TEST_DEPS ${MSAN_TEST_OBJECTS} libcxx_msan_${arch}-install
+  set(MSAN_TEST_DEPS ${MSAN_TEST_OBJECTS} libcxx_msan_${arch}-build
                      ${MSAN_LOADABLE_SO})
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND MSAN_TEST_DEPS msan)

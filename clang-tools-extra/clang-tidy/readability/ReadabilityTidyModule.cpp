@@ -31,7 +31,6 @@
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
-#include "SIMDIntrinsicsCheck.h"
 #include "SimplifyBooleanExprCheck.h"
 #include "StaticAccessedThroughInstanceCheck.h"
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
@@ -93,8 +92,6 @@ public:
         "readability-redundant-string-cstr");
     CheckFactories.registerCheck<RedundantStringInitCheck>(
         "readability-redundant-string-init");
-    CheckFactories.registerCheck<SIMDIntrinsicsCheck>(
-        "readability-simd-intrinsics");
     CheckFactories.registerCheck<SimplifyBooleanExprCheck>(
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
