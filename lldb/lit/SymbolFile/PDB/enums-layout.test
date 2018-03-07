@@ -8,35 +8,35 @@ RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck %s
 
 CHECK: Module [[CU:.*]]
 CHECK-DAG: {{^[0-9A-F]+}}: SymbolVendor ([[CU]])
-CHECK:      Type{{.*}} , name = "Enum", size = 4, compiler_type = {{.*}} enum Enum {
+CHECK:      Type{{.*}} , name = "Enum", size = 4, decl = SimpleTypesTest.cpp:19, compiler_type = {{.*}} enum Enum {
 CHECK-NEXT:    RED,
 CHECK-NEXT:    GREEN,
 CHECK-NEXT:    BLUE
 CHECK-NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumConst", size = 4, compiler_type = {{.*}} enum EnumConst {
+CHECK:      Type{{.*}} , name = "EnumConst", size = 4,  decl = SimpleTypesTest.cpp:22, compiler_type = {{.*}} enum EnumConst {
 CHECK-NEXT:    LOW,
 CHECK-NEXT:    NORMAL,
 CHECK-NEXT:    HIGH
 CHECK-NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumEmpty", size = 4, compiler_type = {{.*}} enum EnumEmpty {
+CHECK:      Type{{.*}} , name = "EnumEmpty", size = 4,  decl = SimpleTypesTest.cpp:25, compiler_type = {{.*}} enum EnumEmpty {
 CHECK-NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumUChar", size = 1, compiler_type = {{.*}} enum EnumUChar {
+CHECK:      Type{{.*}} , name = "EnumUChar", size = 1,  decl = SimpleTypesTest.cpp:28, compiler_type = {{.*}} enum EnumUChar {
 CHECK-NEXT:    ON,
 CHECK-NEXT:    OFF,
 CHECK-NEXT:    AUTO
 CHECK-NEXT:}
 
 ; Note that `enum EnumClass` is tested instead of `enum class EnumClass`
-CHECK:      Type{{.*}} , name = "EnumClass", size = 4, compiler_type = {{.*}} enum EnumClass {
+CHECK:      Type{{.*}} , name = "EnumClass", size = 4,  decl = SimpleTypesTest.cpp:32, compiler_type = {{.*}} enum EnumClass {
 CHECK-NEXT:    YES,
 CHECK-NEXT:    NO,
 CHECK-NEXT:    DEFAULT
 CHECK-NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumStruct", size = 4, compiler_type = {{.*}} enum EnumStruct {
+CHECK:      Type{{.*}} , name = "EnumStruct", size = 4,  decl = SimpleTypesTest.cpp:35, compiler_type = {{.*}} enum EnumStruct {
 CHECK-NEXT:    red,
 CHECK-NEXT:    blue,
 CHECK-NEXT:    black

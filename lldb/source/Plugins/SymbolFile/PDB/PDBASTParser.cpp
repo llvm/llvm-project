@@ -170,14 +170,17 @@ ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin *pdb_type,
 
 bool GetDeclarationForSymbol(const PDBSymbol &symbol, Declaration &decl) {
   auto &raw_sym = symbol.getRawSymbol();
-  auto lines_up = symbol.getSession().findLineNumbersByAddress(
-      raw_sym.getVirtualAddress(), raw_sym.getLength());
-  if (!lines_up)
-    return false;
-  auto first_line_up = lines_up->getNext();
-  if (!first_line_up)
-    return false;
+  auto first_line_up = raw_sym.getSrcLineOnTypeDefn();
 
+  if (!first_line_up) {
+    auto lines_up = symbol.getSession().findLineNumbersByAddress(
+        raw_sym.getVirtualAddress(), raw_sym.getLength());
+    if (!lines_up)
+      return false;
+    first_line_up = lines_up->getNext();
+    if (!first_line_up)
+      return false;
+  }
   uint32_t src_file_id = first_line_up->getSourceFileId();
   auto src_file_up = symbol.getSession().getSourceFileById(src_file_id);
   if (!src_file_up)
@@ -269,6 +272,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (ClangASTContext::StartTagDeclarationDefinition(ast_enum))
       ClangASTContext::CompleteTagDeclarationDefinition(ast_enum);
 
+    GetDeclarationForSymbol(type, decl);
     return std::make_shared<lldb_private::Type>(
         type.getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name), bytes,
         nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
