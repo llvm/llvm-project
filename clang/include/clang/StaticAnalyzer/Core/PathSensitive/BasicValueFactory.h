@@ -193,8 +193,8 @@ public:
     return getValue(X, Ctx.getTypeSize(Ctx.VoidPtrTy), isUnsigned);
   }
 
-  inline const llvm::APSInt& getTruthValue(bool b, QualType T) {
-    return getValue(b ? 1 : 0, Ctx.getTypeSize(T), false);
+  const llvm::APSInt &getTruthValue(bool b, QualType T) {
+    return getValue(b ? 1 : 0, Ctx.getIntWidth(T), true);
   }
 
   inline const llvm::APSInt& getTruthValue(bool b) {

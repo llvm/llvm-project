@@ -1066,6 +1066,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     // constant value. If the UnaryOperator has location type, create the
     // constant with int type and pointer width.
     SVal RHS;
+    SVal Result;
 
     if (U->getType()->isAnyPointerType())
       RHS = svalBuilder.makeArrayIndex(1);
@@ -1074,7 +1075,14 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     else
       RHS = UnknownVal();
 
-    SVal Result = evalBinOp(state, Op, V2, RHS, U->getType());
+    // The use of an operand of type bool with the ++ operators is deprecated
+    // but valid until C++17. And if the operand of the ++ operator is of type
+    // bool, it is set to true until C++17. Note that for '_Bool', it is also
+    // set to true when it encounters ++ operator.
+    if (U->getType()->isBooleanType() && U->isIncrementOp())
+      Result = svalBuilder.makeTruthVal(true, U->getType());
+    else
+      Result = evalBinOp(state, Op, V2, RHS, U->getType());
 
     // Conjure a new symbol if necessary to recover precision.
     if (Result.isUnknown()){
@@ -1095,7 +1103,6 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
           // Propagate this constraint.
           Constraint = svalBuilder.evalEQ(state, SymVal,
                                        svalBuilder.makeZeroVal(U->getType()));
-
 
           state = state->assume(Constraint, false);
           assert(state);
