@@ -21,9 +21,10 @@ ExternalSymbolDumper::ExternalSymbolDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}
 
 void ExternalSymbolDumper::start(const PDBSymbolExe &Symbol) {
-  auto Vars = Symbol.findAllChildren<PDBSymbolPublicSymbol>();
-  while (auto Var = Vars->getNext())
-    Var->dump(*this);
+  if (auto Vars = Symbol.findAllChildren<PDBSymbolPublicSymbol>()) {
+    while (auto Var = Vars->getNext())
+      Var->dump(*this);
+  }
 }
 
 void ExternalSymbolDumper::dump(const PDBSymbolPublicSymbol &Symbol) {

@@ -844,18 +844,17 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
 ; SSE-NEXT:    mulpd %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE-NEXT:    addpd %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    cvtdq2pd %xmm1, %xmm5
-; SSE-NEXT:    mulpd %xmm2, %xmm5
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    cvtdq2pd %xmm4, %xmm1
-; SSE-NEXT:    addpd %xmm5, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm4
+; SSE-NEXT:    mulpd %xmm2, %xmm4
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm3
+; SSE-NEXT:    cvtdq2pd %xmm3, %xmm1
+; SSE-NEXT:    addpd %xmm4, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_4i32_to_4f64:
@@ -2927,7 +2926,7 @@ define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; SSE-LABEL: uitofp_load_2i32_to_2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,0,0,0,0]
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm0
@@ -2940,7 +2939,7 @@ define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; VEX:       # %bb.0:
 ; VEX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; VEX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VEX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; VEX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3,4,5,6,7]
 ; VEX-NEXT:    vcvtdq2pd %xmm1, %xmm1
 ; VEX-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; VEX-NEXT:    vcvtdq2pd %xmm0, %xmm0
@@ -3129,18 +3128,17 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
 ; SSE-NEXT:    mulpd %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE-NEXT:    addpd %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    cvtdq2pd %xmm1, %xmm5
-; SSE-NEXT:    mulpd %xmm2, %xmm5
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    cvtdq2pd %xmm4, %xmm1
-; SSE-NEXT:    addpd %xmm5, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm4
+; SSE-NEXT:    mulpd %xmm2, %xmm4
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm3
+; SSE-NEXT:    cvtdq2pd %xmm3, %xmm1
+; SSE-NEXT:    addpd %xmm4, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_load_4i32_to_4f64:

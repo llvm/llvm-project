@@ -1863,7 +1863,7 @@ define <4 x float> @shuffle_v4f32_bitcast_4401(<4 x float> %a, <4 x i32> %b) {
 ;
 ; AVX512VL-LABEL: shuffle_v4f32_bitcast_4401:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; AVX512VL-NEXT:    vbroadcastss %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512VL-NEXT:    retq
   %1 = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>

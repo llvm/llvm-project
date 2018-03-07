@@ -760,16 +760,14 @@ static bool fix_mmap_addr(void **addr, long_t sz, int flags) {
   return true;
 }
 
-TSAN_INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
-                 int fd, OFF_T off) {
-  SCOPED_TSAN_INTERCEPTOR(mmap, addr, sz, prot, flags, fd, off);
-  if (!fix_mmap_addr(&addr, sz, flags))
-    return MAP_FAILED;
-  void *res = REAL(mmap)(addr, sz, prot, flags, fd, off);
+template <class Mmap>
+static void *mmap_interceptor(ThreadState *thr, uptr pc, Mmap real_mmap,
+                              void *addr, SIZE_T sz, int prot, int flags,
+                              int fd, OFF64_T off) {
+  if (!fix_mmap_addr(&addr, sz, flags)) return MAP_FAILED;
+  void *res = real_mmap(addr, sz, prot, flags, fd, off);
   if (res != MAP_FAILED) {
-    if (fd > 0)
-      FdAccess(thr, pc, fd);
-
+    if (fd > 0) FdAccess(thr, pc, fd);
     if (thr->ignore_reads_and_writes == 0)
       MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
     else
@@ -777,29 +775,6 @@ TSAN_INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
   }
   return res;
 }
-
-#if SANITIZER_LINUX
-TSAN_INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
-                 int fd, OFF64_T off) {
-  SCOPED_TSAN_INTERCEPTOR(mmap64, addr, sz, prot, flags, fd, off);
-  if (!fix_mmap_addr(&addr, sz, flags))
-    return MAP_FAILED;
-  void *res = REAL(mmap64)(addr, sz, prot, flags, fd, off);
-  if (res != MAP_FAILED) {
-    if (fd > 0)
-      FdAccess(thr, pc, fd);
-
-    if (thr->ignore_reads_and_writes == 0)
-      MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
-    else
-      MemoryResetRange(thr, pc, (uptr)res, sz);
-  }
-  return res;
-}
-#define TSAN_MAYBE_INTERCEPT_MMAP64 TSAN_INTERCEPT(mmap64)
-#else
-#define TSAN_MAYBE_INTERCEPT_MMAP64
-#endif
 
 TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
   SCOPED_TSAN_INTERCEPTOR(munmap, addr, sz);
@@ -2311,6 +2286,13 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
   MutexInvalidAccess(((TsanInterceptorContext *)ctx)->thr, \
                      ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
 
+#define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, sz, prot, flags, fd,  \
+                                     off)                                   \
+  do {                                                                      \
+    return mmap_interceptor(thr, pc, REAL(mmap), addr, sz, prot, flags, fd, \
+                            off);                                           \
+  } while (false)
+
 #if !SANITIZER_MAC
 #define COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, msg) \
   HandleRecvmsg(((TsanInterceptorContext *)ctx)->thr, \
@@ -2635,8 +2617,6 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(realloc);
   TSAN_INTERCEPT(free);
   TSAN_INTERCEPT(cfree);
-  TSAN_INTERCEPT(mmap);
-  TSAN_MAYBE_INTERCEPT_MMAP64;
   TSAN_INTERCEPT(munmap);
   TSAN_MAYBE_INTERCEPT_MEMALIGN;
   TSAN_INTERCEPT(valloc);
