@@ -344,7 +344,7 @@ if (APPLE)
        ${SECURITY_LIBRARY}
        ${DEBUG_SYMBOLS_LIBRARY})
 
-  include_directories(AFTER /usr/include/libxml2)
+  include_directories(AFTER "${CMAKE_OSX_SYSROOT}/usr/include/libxml2")
 else()
   if (LIBXML2_FOUND)
     add_definitions( -DLIBXML2_DEFINED )
