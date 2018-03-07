@@ -277,19 +277,12 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       state = state->BindExpr(CCE, callerCtx, ThisV);
     }
 
-    if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
+    if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(CE)) {
       // We are currently evaluating a CXXNewAllocator CFGElement. It takes a
       // while to reach the actual CXXNewExpr element from here, so keep the
       // region for later use.
-      // Additionally cast the return value of the inlined operator new
-      // (which is of type 'void *') to the correct object type.
-      SVal AllocV = state->getSVal(CNE, callerCtx);
-      AllocV = svalBuilder.evalCast(
-          AllocV, CNE->getType(),
-          getContext().getPointerType(getContext().VoidTy));
-
-      state =
-          setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(), AllocV);
+      state = setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(),
+                                      state->getSVal(CE, callerCtx));
     }
   }
 
@@ -330,6 +323,9 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallExitEnd Loc(calleeCtx, callerCtx);
     bool isNew;
     ProgramStateRef CEEState = (*I == CEBNode) ? state : (*I)->getState();
+
+    // See if we have any stale C++ allocator values.
+    assert(areCXXNewAllocatorValuesClear(CEEState, calleeCtx, callerCtx));
 
     ExplodedNode *CEENode = G.getNode(Loc, CEEState, false, &isNew);
     CEENode->addPredecessor(*I, G);
@@ -636,11 +632,12 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
 
     const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
 
-    auto CCE = getCurrentCFGElement().getAs<CFGConstructor>();
-    const ConstructionContext *CC = CCE ? CCE->getConstructionContext()
-                                        : nullptr;
+    // FIXME: ParentMap is slow and ugly. The callee should provide the
+    // necessary context. Ideally as part of the call event, or maybe as part of
+    // location context.
+    const Stmt *ParentExpr = CurLC->getParentMap().getParent(CtorExpr);
 
-    if (CC && isa<NewAllocatedObjectConstructionContext>(CC) &&
+    if (ParentExpr && isa<CXXNewExpr>(ParentExpr) &&
         !Opts.mayInlineCXXAllocator())
       return CIP_DisallowedOnce;
 
@@ -649,8 +646,18 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // initializers for array fields in default move/copy constructors.
     // We still allow construction into ElementRegion targets when they don't
     // represent array elements.
-    if (CallOpts.IsArrayCtorOrDtor)
-      return CIP_DisallowedOnce;
+    const MemRegion *Target = Ctor.getCXXThisVal().getAsRegion();
+    if (Target && isa<ElementRegion>(Target)) {
+      if (ParentExpr)
+        if (const CXXNewExpr *NewExpr = dyn_cast<CXXNewExpr>(ParentExpr))
+          if (NewExpr->isArray())
+            return CIP_DisallowedOnce;
+
+      if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(
+              cast<SubRegion>(Target)->getSuperRegion()))
+        if (TR->getValueType()->isArrayType())
+          return CIP_DisallowedOnce;
+    }
 
     // Inlining constructors requires including initializers in the CFG.
     const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
@@ -666,22 +673,10 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     if (!Opts.mayInlineCXXMemberFunction(CIMK_Destructors))
       return CIP_DisallowedAlways;
 
-    if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete) {
-      // If we don't handle temporary destructors, we shouldn't inline
-      // their constructors.
-      if (CallOpts.IsTemporaryCtorOrDtor &&
-          !Opts.includeTemporaryDtorsInCFG())
-        return CIP_DisallowedOnce;
-
-      // If we did not find the correct this-region, it would be pointless
-      // to inline the constructor. Instead we will simply invalidate
-      // the fake temporary target.
-      if (CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion)
-        return CIP_DisallowedOnce;
-
-      // If the temporary is lifetime-extended by binding a smaller object
-      // within it to a reference, automatic destructors don't work properly.
-      if (CallOpts.IsTemporaryLifetimeExtendedViaSubobject)
+    // FIXME: This is a hack. We don't handle temporary destructors
+    // right now, so we shouldn't inline their constructors.
+    if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete)
+      if (!Target || isa<CXXTempObjectRegion>(Target))
         return CIP_DisallowedOnce;
     }
 
