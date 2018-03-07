@@ -4,7 +4,6 @@ declare <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8>, <16 x i8>)
 
 ; CHECK-LABEL: fun1:
 ; CHECK: uzp1 {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
-; CHECK-NOT: mov
 define i32 @fun1() {
 entry:
   %vtbl1.i.1 = tail call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> <i8 0, i8 16, i8 19, i8 4, i8 -65, i8 -65, i8 -71, i8 -71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> undef)
@@ -16,7 +15,6 @@ entry:
 
 ; CHECK-LABEL: fun2:
 ; CHECK: uzp2 {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
-; CHECK-NOT: mov
 define i32 @fun2() {
 entry:
   %vtbl1.i.1 = tail call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> <i8 0, i8 16, i8 19, i8 4, i8 -65, i8 -65, i8 -71, i8 -71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> undef)
@@ -28,7 +26,6 @@ entry:
 
 ; CHECK-LABEL: fun3:
 ; CHECK-NOT: uzp1
-; CHECK: mov
 define i32 @fun3() {
 entry:
   %vtbl1.i.1 = tail call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> <i8 0, i8 16, i8 19, i8 4, i8 -65, i8 -65, i8 -71, i8 -71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> undef)
@@ -40,7 +37,6 @@ entry:
 
 ; CHECK-LABEL: fun4:
 ; CHECK-NOT: uzp2
-; CHECK: mov
 define i32 @fun4() {
 entry:
   %vtbl1.i.1 = tail call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> <i8 0, i8 16, i8 19, i8 4, i8 -65, i8 -65, i8 -71, i8 -71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> undef)

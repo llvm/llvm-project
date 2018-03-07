@@ -23,7 +23,7 @@ polly.loop_header:                                ; preds = %polly.loop_after45,
   br i1 %0, label %polly.loop_body, label %do.cond
 
 polly.loop_body:                                  ; preds = %polly.loop_header
-  %p_25 = call i32 @llvm.hexagon.SI.to.SXTHI.asrh(i32 undef)
+  %p_25 = call i32 @llvm.hexagon.A2.asrh(i32 undef)
   %1 = insertelement <4 x i32> undef, i32 %p_25, i32 3
   %2 = trunc <4 x i32> %1 to <4 x i16>
   store <4 x i16> %2, <4 x i16>* undef, align 8
@@ -39,4 +39,4 @@ polly.loop_body44:                                ; preds = %polly.loop_header43
   br label %polly.loop_header43
 }
 
-declare i32 @llvm.hexagon.SI.to.SXTHI.asrh(i32) nounwind readnone
+declare i32 @llvm.hexagon.A2.asrh(i32) nounwind readnone

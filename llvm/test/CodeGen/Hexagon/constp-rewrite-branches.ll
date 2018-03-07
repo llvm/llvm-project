@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march hexagon < %s | FileCheck %s
+; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
 
 define i32 @foo(i32 %x) {
   %p = icmp eq i32 %x, 0

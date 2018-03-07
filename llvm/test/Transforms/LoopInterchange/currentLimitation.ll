@@ -1,5 +1,5 @@
-; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
-;; These are test that fail to interchange due to current limitation. This will go off once we extend the loop interchange pass.
+; REQUIRES: asserts
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S -debug 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,6 +13,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;  for(int i=0;i<N-1;i++)
 ;;    for(int j=1;j<N-1;j++)
 ;;      A[j+1][i+1] = A[j+1][i+1] + k;
+
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 define void @interchange_01(i32 %k, i32 %N) {
  entry:
@@ -49,10 +51,3 @@ define void @interchange_01(i32 %k, i32 %N) {
  for.end17: 
    ret void
 }
-;; Inner loop not split so it is not interchanged.
-; CHECK-LABEL: @interchange_01
-; CHECK:      for.body4:
-; CHECK-NEXT:   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body4 ], [ 1, %for.body4.preheader ]
-; CHECK-NEXT:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK-NEXT:   %arrayidx7 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv.next, i64 %indvars.iv.next29
- 

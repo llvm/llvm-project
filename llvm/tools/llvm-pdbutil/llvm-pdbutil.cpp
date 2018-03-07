@@ -857,6 +857,8 @@ static void dumpPretty(StringRef Path) {
   LinePrinter Printer(2, UseColor, Stream);
 
   auto GlobalScope(Session->getGlobalScope());
+  if (!GlobalScope)
+    return;
   std::string FileName(GlobalScope->getSymbolsFileName());
 
   WithColor(Printer, PDB_ColorItem::None).get() << "Summary for ";
@@ -893,15 +895,16 @@ static void dumpPretty(StringRef Path) {
     Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::SectionHeader).get()
         << "---COMPILANDS---";
-    Printer.Indent();
-    auto Compilands = GlobalScope->findAllChildren<PDBSymbolCompiland>();
-    CompilandDumper Dumper(Printer);
-    CompilandDumpFlags options = CompilandDumper::Flags::None;
-    if (opts::pretty::Lines)
-      options = options | CompilandDumper::Flags::Lines;
-    while (auto Compiland = Compilands->getNext())
-      Dumper.start(*Compiland, options);
-    Printer.Unindent();
+    if (auto Compilands = GlobalScope->findAllChildren<PDBSymbolCompiland>()) {
+      Printer.Indent();
+      CompilandDumper Dumper(Printer);
+      CompilandDumpFlags options = CompilandDumper::Flags::None;
+      if (opts::pretty::Lines)
+        options = options | CompilandDumper::Flags::Lines;
+      while (auto Compiland = Compilands->getNext())
+        Dumper.start(*Compiland, options);
+      Printer.Unindent();
+    }
   }
 
   if (opts::pretty::Classes || opts::pretty::Enums || opts::pretty::Typedefs) {
@@ -916,12 +919,13 @@ static void dumpPretty(StringRef Path) {
   if (opts::pretty::Symbols) {
     Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::SectionHeader).get() << "---SYMBOLS---";
-    Printer.Indent();
-    auto Compilands = GlobalScope->findAllChildren<PDBSymbolCompiland>();
-    CompilandDumper Dumper(Printer);
-    while (auto Compiland = Compilands->getNext())
-      Dumper.start(*Compiland, true);
-    Printer.Unindent();
+    if (auto Compilands = GlobalScope->findAllChildren<PDBSymbolCompiland>()) {
+      Printer.Indent();
+      CompilandDumper Dumper(Printer);
+      while (auto Compiland = Compilands->getNext())
+        Dumper.start(*Compiland, true);
+      Printer.Unindent();
+    }
   }
 
   if (opts::pretty::Globals) {
@@ -929,45 +933,49 @@ static void dumpPretty(StringRef Path) {
     WithColor(Printer, PDB_ColorItem::SectionHeader).get() << "---GLOBALS---";
     Printer.Indent();
     if (shouldDumpSymLevel(opts::pretty::SymLevel::Functions)) {
-      FunctionDumper Dumper(Printer);
-      auto Functions = GlobalScope->findAllChildren<PDBSymbolFunc>();
-      if (opts::pretty::SymbolOrder == opts::pretty::SymbolSortMode::None) {
-        while (auto Function = Functions->getNext()) {
-          Printer.NewLine();
-          Dumper.start(*Function, FunctionDumper::PointerType::None);
-        }
-      } else {
-        std::vector<std::unique_ptr<PDBSymbolFunc>> Funcs;
-        while (auto Func = Functions->getNext())
-          Funcs.push_back(std::move(Func));
-        std::sort(Funcs.begin(), Funcs.end(),
-                  opts::pretty::compareFunctionSymbols);
-        for (const auto &Func : Funcs) {
-          Printer.NewLine();
-          Dumper.start(*Func, FunctionDumper::PointerType::None);
+      if (auto Functions = GlobalScope->findAllChildren<PDBSymbolFunc>()) {
+        FunctionDumper Dumper(Printer);
+        if (opts::pretty::SymbolOrder == opts::pretty::SymbolSortMode::None) {
+          while (auto Function = Functions->getNext()) {
+            Printer.NewLine();
+            Dumper.start(*Function, FunctionDumper::PointerType::None);
+          }
+        } else {
+          std::vector<std::unique_ptr<PDBSymbolFunc>> Funcs;
+          while (auto Func = Functions->getNext())
+            Funcs.push_back(std::move(Func));
+          std::sort(Funcs.begin(), Funcs.end(),
+                    opts::pretty::compareFunctionSymbols);
+          for (const auto &Func : Funcs) {
+            Printer.NewLine();
+            Dumper.start(*Func, FunctionDumper::PointerType::None);
+          }
         }
       }
     }
     if (shouldDumpSymLevel(opts::pretty::SymLevel::Data)) {
-      auto Vars = GlobalScope->findAllChildren<PDBSymbolData>();
-      VariableDumper Dumper(Printer);
-      if (opts::pretty::SymbolOrder == opts::pretty::SymbolSortMode::None) {
-        while (auto Var = Vars->getNext())
-          Dumper.start(*Var);
-      } else {
-        std::vector<std::unique_ptr<PDBSymbolData>> Datas;
-        while (auto Var = Vars->getNext())
-          Datas.push_back(std::move(Var));
-        std::sort(Datas.begin(), Datas.end(), opts::pretty::compareDataSymbols);
-        for (const auto &Var : Datas)
-          Dumper.start(*Var);
+      if (auto Vars = GlobalScope->findAllChildren<PDBSymbolData>()) {
+        VariableDumper Dumper(Printer);
+        if (opts::pretty::SymbolOrder == opts::pretty::SymbolSortMode::None) {
+          while (auto Var = Vars->getNext())
+            Dumper.start(*Var);
+        } else {
+          std::vector<std::unique_ptr<PDBSymbolData>> Datas;
+          while (auto Var = Vars->getNext())
+            Datas.push_back(std::move(Var));
+          std::sort(Datas.begin(), Datas.end(),
+                    opts::pretty::compareDataSymbols);
+          for (const auto &Var : Datas)
+            Dumper.start(*Var);
+        }
       }
     }
     if (shouldDumpSymLevel(opts::pretty::SymLevel::Thunks)) {
-      auto Thunks = GlobalScope->findAllChildren<PDBSymbolThunk>();
-      CompilandDumper Dumper(Printer);
-      while (auto Thunk = Thunks->getNext())
-        Dumper.dump(*Thunk);
+      if (auto Thunks = GlobalScope->findAllChildren<PDBSymbolThunk>()) {
+        CompilandDumper Dumper(Printer);
+        while (auto Thunk = Thunks->getNext())
+          Dumper.dump(*Thunk);
+      }
     }
     Printer.Unindent();
   }

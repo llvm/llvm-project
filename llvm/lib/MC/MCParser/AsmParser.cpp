@@ -3258,8 +3258,8 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     FileNumber = getTok().getIntVal();
     Lex();
 
-    if (FileNumber < 1)
-      return TokError("file number less than one");
+    if (FileNumber < 0)
+      return TokError("negative file number");
   }
 
   std::string Path = getTok().getString();
@@ -3338,6 +3338,8 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     // we turn off -g option, directly use the existing debug info instead.
     if (getContext().getGenDwarfForAssembly())
       getContext().setGenDwarfForAssembly(false);
+    else if (FileNumber == 0)
+      getStreamer().emitDwarfFile0Directive(Directory, Filename, CKMem, Source);
     else {
       Expected<unsigned> FileNumOrErr = getStreamer().tryEmitDwarfFileDirective(
           FileNumber, Directory, Filename, CKMem, Source);
@@ -4257,7 +4259,10 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
   const char *BodyEnd = EndToken.getLoc().getPointer();
   StringRef Body = StringRef(BodyStart, BodyEnd - BodyStart);
   checkForBadMacro(DirectiveLoc, Name, Body, Parameters);
-  getContext().defineMacro(Name, MCAsmMacro(Name, Body, std::move(Parameters)));
+  MCAsmMacro Macro(Name, Body, std::move(Parameters));
+  DEBUG_WITH_TYPE("asm-macros", dbgs() << "Defining new macro:\n";
+                  Macro.dump());
+  getContext().defineMacro(Name, std::move(Macro));
   return false;
 }
 
@@ -4420,6 +4425,8 @@ bool AsmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
     return Error(DirectiveLoc, "macro '" + Name + "' is not defined");
 
   getContext().undefineMacro(Name);
+  DEBUG_WITH_TYPE("asm-macros", dbgs()
+                                    << "Un-defining macro: " << Name << "\n");
   return false;
 }
 

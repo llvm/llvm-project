@@ -14,11 +14,18 @@
 //   great as that of every scalar type
 
 #include <stdio.h>
+#include "test_macros.h"
 
 int main()
 {
+#if TEST_STD_VER > 17
+//  P0767
+    static_assert(std::is_trivial<std::max_align_t>::value,
+                  "std::is_trivial<std::max_align_t>::value");
+#else
     static_assert(std::is_pod<std::max_align_t>::value,
                   "std::is_pod<std::max_align_t>::value");
+#endif
     static_assert((std::alignment_of<std::max_align_t>::value >=
                   std::alignment_of<long long>::value),
                   "std::alignment_of<std::max_align_t>::value >= "

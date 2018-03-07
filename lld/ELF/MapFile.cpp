@@ -38,14 +38,15 @@ using namespace lld::elf;
 
 typedef DenseMap<const SectionBase *, SmallVector<Symbol *, 4>> SymbolMapTy;
 
+static const std::string Indent1 = "        ";         // 8 spaces
+static const std::string Indent2 = "                "; // 16 spaces
+
 // Print out the first three columns of a line.
 static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
                         uint64_t Align) {
   int W = Config->Is64 ? 16 : 8;
   OS << format("%0*llx %0*llx %5lld ", W, Addr, W, Size, Align);
 }
-
-static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 
 // Returns a list of all symbols that we want to print out.
 static std::vector<Symbol *> getSymbols() {
@@ -100,7 +101,7 @@ getSymbolStrings(ArrayRef<Symbol *> Syms) {
   parallelForEachN(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
     writeHeader(OS, Syms[I]->getVA(), Syms[I]->getSize(), 0);
-    OS << indent(2) << toString(*Syms[I]);
+    OS << Indent2 << toString(*Syms[I]);
   });
 
   DenseMap<Symbol *, std::string> Ret;
@@ -139,7 +140,7 @@ void elf::writeMapFile() {
     // Dump symbols for each input section.
     for (InputSection *IS : getInputSections(OSec)) {
       writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(), IS->Alignment);
-      OS << indent(1) << toString(IS) << '\n';
+      OS << Indent1 << toString(IS) << '\n';
       for (Symbol *Sym : SectionSyms[IS])
         OS << SymStr[Sym] << '\n';
     }

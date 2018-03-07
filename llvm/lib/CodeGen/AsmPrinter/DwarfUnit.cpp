@@ -284,7 +284,7 @@ void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
     addUInt(Die, Attribute, dwarf::DW_FORM_data4, Integer);
 }
 
-MD5::MD5Result *DwarfUnit::getMD5AsBytes(const DIFile *File) {
+MD5::MD5Result *DwarfUnit::getMD5AsBytes(const DIFile *File) const {
   assert(File);
   Optional<DIFile::ChecksumInfo<StringRef>> Checksum = File->getChecksum();
   if (!Checksum || Checksum->Kind != DIFile::CSK_MD5)

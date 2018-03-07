@@ -24,6 +24,7 @@
 
 #ifndef __FLOAT_ONLY
 #ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
 #define __CLC_FLOAT double
 #define __CLC_FPSIZE 64

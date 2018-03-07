@@ -166,6 +166,7 @@ void llvm::PrintStatistics(raw_ostream &OS) {
 }
 
 void llvm::PrintStatisticsJSON(raw_ostream &OS) {
+  sys::SmartScopedLock<true> Reader(*StatLock);
   StatisticInfo &Stats = *StatInfo;
 
   Stats.sort();
@@ -192,6 +193,7 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
 
 void llvm::PrintStatistics() {
 #if LLVM_ENABLE_STATS
+  sys::SmartScopedLock<true> Reader(*StatLock);
   StatisticInfo &Stats = *StatInfo;
 
   // Statistics not enabled?

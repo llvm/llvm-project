@@ -1,8 +1,8 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
 ; Check that we are able to predicate instructions.
 
-; CHECK: if{{ *}}({{!*}}p{{[0-3]}}{{[.new]*}}){{ *}}r{{[0-9]+}}{{ *}}={{ *}}{{and|aslh}}
-; CHECK: if{{ *}}({{!*}}p{{[0-3]}}{{[.new]*}}){{ *}}r{{[0-9]+}}{{ *}}={{ *}}{{and|aslh}}
+; CHECK: if ({{!?}}p{{[0-3]}}{{(.new)?}}) r{{[0-9]+}} = {{and|aslh}}
+; CHECK: if ({{!?}}p{{[0-3]}}{{(.new)?}}) r{{[0-9]+}} = {{and|aslh}}
 @a = external global i32
 @d = external global i32
 

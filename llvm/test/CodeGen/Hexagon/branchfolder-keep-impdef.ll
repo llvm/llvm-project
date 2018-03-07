@@ -3,7 +3,7 @@
 ; Check that the testcase compiles successfully. Expect that if-conversion
 ; took place.
 ; CHECK-LABEL: fred:
-; CHECK: if (!p0) r1 = memw(r0+#0)
+; CHECK: if (!p0) r{{[0-9]+}} = memw(r{{[0-9]+}}+#0)
 
 target triple = "hexagon"
 

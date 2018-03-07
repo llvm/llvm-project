@@ -1036,33 +1036,10 @@ template <typename Op_t> struct LoadClass_match {
 template <typename OpTy> inline LoadClass_match<OpTy> m_Load(const OpTy &Op) {
   return LoadClass_match<OpTy>(Op);
 }
+
 //===----------------------------------------------------------------------===//
 // Matchers for unary operators
 //
-
-template <typename LHS_t> struct not_match {
-  LHS_t L;
-
-  not_match(const LHS_t &LHS) : L(LHS) {}
-
-  template <typename OpTy> bool match(OpTy *V) {
-    if (auto *O = dyn_cast<Operator>(V))
-      if (O->getOpcode() == Instruction::Xor) {
-        if (isAllOnes(O->getOperand(1)))
-          return L.match(O->getOperand(0));
-        if (isAllOnes(O->getOperand(0)))
-          return L.match(O->getOperand(1));
-      }
-    return false;
-  }
-
-private:
-  bool isAllOnes(Value *V) {
-    return isa<Constant>(V) && cast<Constant>(V)->isAllOnesValue();
-  }
-};
-
-template <typename LHS> inline not_match<LHS> m_Not(const LHS &L) { return L; }
 
 template <typename LHS_t> struct neg_match {
   LHS_t L;
@@ -1588,6 +1565,13 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, Instruction::Xor, true> m_c_Xor(const LHS &L,
                                                                 const RHS &R) {
   return BinaryOp_match<LHS, RHS, Instruction::Xor, true>(L, R);
+}
+
+/// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
+template <typename ValTy>
+inline BinaryOp_match<ValTy, cst_pred_ty<is_all_ones>, Instruction::Xor, true>
+m_Not(const ValTy &V) {
+  return m_c_Xor(V, m_AllOnes());
 }
 
 /// Matches an SMin with LHS and RHS in either order.

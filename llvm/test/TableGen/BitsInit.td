@@ -69,7 +69,7 @@ def {
 // CHECK: bits<3> D4;
 // CHECK: bits<1> D5 = { 0 };
 // CHECK: bits<1> D6 = { 1 };
-// CHECK: bits<1> D7 = { ? };
+// CHECK: bits<1> D7 = { !cast<bit>(3) };
 // CHECK: bits<2> D8;
 // CHECK: bits<8> E = { 0, 0, 1, ?, 0, 0, 1, 0 };
 // CHECK: bits<8> F1 = { 0, 1, 1, 0, 0, 1, 0, 0 };

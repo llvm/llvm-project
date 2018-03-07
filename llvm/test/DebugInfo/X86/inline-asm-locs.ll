@@ -22,7 +22,7 @@
 ; CHECK: .file 2 "B.asm"
 ; CHECK: .loc  1 111
 ; CHECK: .loc  2 222
-; CHECK: .file 3 "test.c"
+; CHECK: .file 3 "{{.*[/\\]}}test.c"
 ; CHECK: .loc  3 14 0  
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

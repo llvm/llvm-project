@@ -1,6 +1,9 @@
-; RUN: opt < %s -loop-interchange -verify-dom-info -S | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt < %s -loop-interchange -verify-dom-info -S -debug 2>&1 | FileCheck %s
 ;; Checks the order of the inner phi nodes does not cause havoc.
 ;; The inner loop has a reduction into c. The IV is not the first phi.
+
+; CHECK: Not interchanging loops. Cannot prove legality.
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv8--linux-gnueabihf"
@@ -61,30 +64,3 @@ for.end21.loopexit:                               ; preds = %for.inc19
 for.end21:                                        ; preds = %for.end21.loopexit, %entry
   ret void
 }
-
-
-; CHECK-LABEL: test
-; CHECK: entry:
-; CHECK:   br i1 %cmp45, label %for.body6.preheader, label %for.end21
-; CHECK: for.body3.lr.ph.preheader:
-; CHECK:   br label %for.body3.lr.ph
-; CHECK: for.body3.lr.ph:
-; CHECK:   br label %for.body6.lr.ph.preheader
-; CHECK: for.body6.lr.ph.preheader:
-; CHECK:   br label %for.body6.lr.ph
-; CHECK: for.body6.lr.ph:
-; CHECK:   br label %for.body6.split1
-; CHECK: for.body6.preheader:
-; CHECK:   br label %for.body6
-; CHECK: for.body6:
-; CHECK:   br label %for.body3.lr.ph.preheader
-; CHECK: for.body6.split1:
-; CHECK:   br label %for.inc16
-; CHECK: for.body6.split:
-; CHECK:   add nuw nsw i32 %k.040, 1
-; CHECK:   br i1 %exitcond, label %for.end21.loopexit, label %for.body6
-; CHECK: for.inc16:
-; CHECK:   br i1 %exitcond47, label %for.inc19, label %for.body6.lr.ph
-; CHECK: for.inc19:
-; CHECK:   br i1 %exitcond48, label %for.body6.split, label %for.body3.lr.ph
-; CHECK: for.end21:

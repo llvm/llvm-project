@@ -54,9 +54,9 @@ b:
 // DWARF-DL: .debug_line contents:
 // DWARF-DL: version: [[DWVER]]
 // DWARF-DL-5:    address_size: 4
-// DWARF-DL-5:    include_directories[  0] = ""
+// DWARF-DL-5:    include_directories[  0] = "/tmp"
 // DWARF-DL:      file_names[  [[DWFILE]]]:
-// DWARF-DL:      name: "<stdin>"
+// DWARF-DL:      name: "{{(<stdin>|-)}}"
 // DWARF-DL:      0x0000000000000000     17      0      1   0   0  is_stmt
 // DWARF-DL-NEXT: 0x0000000000000004     17      0      1   0   0  is_stmt end_sequence
 // DWARF-DL-NEXT: 0x0000000000000000     21      0      1   0   0  is_stmt

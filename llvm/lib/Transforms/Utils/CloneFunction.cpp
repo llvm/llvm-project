@@ -811,7 +811,9 @@ llvm::DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
 
   // Clone the non-phi instructions of BB into NewBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
-  for (; StopAt != &*BI; ++BI) {
+  // Stop once we see the terminator too. This covers the case where BB's
+  // terminator gets replaced and StopAt == BB's terminator.
+  for (; StopAt != &*BI && BB->getTerminator() != &*BI; ++BI) {
     Instruction *New = BI->clone();
     New->setName(BI->getName());
     New->insertBefore(NewTerm);

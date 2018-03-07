@@ -73,12 +73,9 @@ define <2 x i8> @notnotsub_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %sub
 }
 
-; FIXME:
 define <2 x i8> @notnotsub_vec_undef_elts(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @notnotsub_vec_undef_elts(
-; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], <i8 undef, i8 -1>
-; CHECK-NEXT:    [[NY:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> [[NX]], [[NY]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
   %nx = xor <2 x i8> %x, <i8 undef, i8 -1>

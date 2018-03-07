@@ -50,6 +50,7 @@ static const uint32_t g_gpr_regnums_ppc64le[] = {
     gpr_pc_ppc64le,   gpr_msr_ppc64le, gpr_origr3_ppc64le, gpr_ctr_ppc64le,
     gpr_lr_ppc64le,   gpr_xer_ppc64le, gpr_cr_ppc64le,     gpr_softe_ppc64le,
     gpr_trap_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_fpr_regnums_ppc64le[] = {
@@ -62,6 +63,7 @@ static const uint32_t g_fpr_regnums_ppc64le[] = {
     fpr_f24_ppc64le,   fpr_f25_ppc64le, fpr_f26_ppc64le, fpr_f27_ppc64le,
     fpr_f28_ppc64le,   fpr_f29_ppc64le, fpr_f30_ppc64le, fpr_f31_ppc64le,
     fpr_fpscr_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_vmx_regnums_ppc64le[] = {
@@ -74,6 +76,7 @@ static const uint32_t g_vmx_regnums_ppc64le[] = {
     vmx_vr24_ppc64le, vmx_vr25_ppc64le,   vmx_vr26_ppc64le, vmx_vr27_ppc64le,
     vmx_vr28_ppc64le, vmx_vr29_ppc64le,   vmx_vr30_ppc64le, vmx_vr31_ppc64le,
     vmx_vscr_ppc64le, vmx_vrsave_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_vsx_regnums_ppc64le[] = {
@@ -93,6 +96,7 @@ static const uint32_t g_vsx_regnums_ppc64le[] = {
     vsx_vs52_ppc64le, vsx_vs53_ppc64le, vsx_vs54_ppc64le, vsx_vs55_ppc64le,
     vsx_vs56_ppc64le, vsx_vs57_ppc64le, vsx_vs58_ppc64le, vsx_vs59_ppc64le,
     vsx_vs60_ppc64le, vsx_vs61_ppc64le, vsx_vs62_ppc64le, vsx_vs63_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 namespace {

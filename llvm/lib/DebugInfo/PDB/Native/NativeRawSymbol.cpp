@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
@@ -276,6 +277,11 @@ uint32_t NativeRawSymbol::getSlot() const {
 
 std::string NativeRawSymbol::getSourceFileName() const {
   return {};
+}
+
+std::unique_ptr<IPDBLineNumber>
+NativeRawSymbol::getSrcLineOnTypeDefn() const {
+  return nullptr;
 }
 
 uint32_t NativeRawSymbol::getStride() const {
