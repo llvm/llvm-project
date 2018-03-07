@@ -70,3 +70,19 @@ int testIt() {
          __builtin_object_size(dependent_calloc2<int, 9>(), 0);
 }
 } // namespace templated_alloc_size
+
+// Be sure that an ExprWithCleanups doesn't deter us.
+namespace alloc_size_with_cleanups {
+struct Foo {
+  ~Foo();
+};
+
+void *my_malloc(const Foo &, int N) __attribute__((alloc_size(2)));
+
+// CHECK-LABEL: define i32 @_ZN24alloc_size_with_cleanups6testItEv
+int testIt() {
+  int *const p = (int *)my_malloc(Foo{}, 3);
+  // CHECK: ret i32 3
+  return __builtin_object_size(p, 0);
+}
+} // namespace alloc_size_with_cleanups
