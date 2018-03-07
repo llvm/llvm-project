@@ -10442,7 +10442,14 @@ static SDValue PerformSHLSimplify(SDNode *N,
     case ISD::XOR:
     case ISD::SETCC:
     case ARMISD::CMP:
-      // Check that its not already using a shl.
+      // Check that the user isn't already using a constant because there
+      // aren't any instructions that support an immediate operand and a
+      // shifted operand.
+      if (isa<ConstantSDNode>(U->getOperand(0)) ||
+          isa<ConstantSDNode>(U->getOperand(1)))
+        return SDValue();
+
+      // Check that it's not already using a shift.
       if (U->getOperand(0).getOpcode() == ISD::SHL ||
           U->getOperand(1).getOpcode() == ISD::SHL)
         return SDValue();
@@ -10464,8 +10471,6 @@ static SDValue PerformSHLSimplify(SDNode *N,
   if (!C1ShlC2 || !C2)
     return SDValue();
 
-  DEBUG(dbgs() << "Trying to simplify shl: "; N->dump());
-
   APInt C2Int = C2->getAPIntValue();
   APInt C1Int = C1ShlC2->getAPIntValue();
 
@@ -10479,12 +10484,12 @@ static SDValue PerformSHLSimplify(SDNode *N,
   C1Int.lshrInPlace(C2Int);
 
   // The immediates are encoded as an 8-bit value that can be rotated.
-  unsigned Zeros = C1Int.countLeadingZeros() + C1Int.countTrailingZeros();
-  if (C1Int.getBitWidth() - Zeros > 8)
-    return SDValue();
+  auto LargeImm = [](const APInt &Imm) {
+    unsigned Zeros = Imm.countLeadingZeros() + Imm.countTrailingZeros();
+    return Imm.getBitWidth() - Zeros > 8;
+  };
 
-  Zeros = C2Int.countLeadingZeros() + C2Int.countTrailingZeros();
-  if (C2Int.getBitWidth() - Zeros > 8)
+  if (LargeImm(C1Int) || LargeImm(C2Int))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -10494,6 +10499,10 @@ static SDValue PerformSHLSimplify(SDNode *N,
                               DAG.getConstant(C1Int, dl, MVT::i32));
   // Shift left to compensate for the lshr of C1Int.
   SDValue Res = DAG.getNode(ISD::SHL, dl, MVT::i32, BinOp, SHL.getOperand(1));
+
+  DEBUG(dbgs() << "Simplify shl use:\n"; SHL.getOperand(0).dump(); SHL.dump();
+        N->dump());
+  DEBUG(dbgs() << "Into:\n"; X.dump(); BinOp.dump(); Res.dump());
 
   DAG.ReplaceAllUsesWith(SDValue(N, 0), Res);
   return SDValue(N, 0);

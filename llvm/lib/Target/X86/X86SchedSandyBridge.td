@@ -925,6 +925,7 @@ def: InstRW<[SBWriteResGroup21], (instregex "CRC32r(16|32|64)r64")>;
 def: InstRW<[SBWriteResGroup21], (instregex "CVTDQ2PSrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "CVTPS2DQrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "CVTTPS2DQrr")>;
+def: InstRW<[SBWriteResGroup21], (instrs IMUL16rr, IMUL32rr, IMUL32rri, IMUL32rri8, IMUL64rr, IMUL64rri32, IMUL64rri8)>;
 def: InstRW<[SBWriteResGroup21], (instregex "MAX(C?)PDrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "MAX(C?)PSrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "MAX(C?)SDrr")>;
@@ -999,6 +1000,13 @@ def: InstRW<[SBWriteResGroup21], (instregex "VSUBPSYrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "VSUBPSrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "VSUBSDrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "VSUBSSrr")>;
+
+def SBWriteResGroup21_16i : SchedWriteRes<[SBPort1, SBPort015]> {
+  let Latency = 3;
+  let NumMicroOps = 2;
+  let ResourceCycles = [1,1];
+}
+def: InstRW<[SBWriteResGroup21_16i], (instrs IMUL16rri, IMUL16rri8)>;
 
 def SBWriteResGroup22 : SchedWriteRes<[SBPort0,SBPort5]> {
   let Latency = 3;

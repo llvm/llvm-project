@@ -316,6 +316,7 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   Type *PtrATy = PtrA->getType()->getPointerElementType();
   Type *PtrBTy = PtrB->getType()->getPointerElementType();
   if (PtrA == PtrB ||
+      PtrATy->isVectorTy() != PtrBTy->isVectorTy() ||
       DL.getTypeStoreSize(PtrATy) != DL.getTypeStoreSize(PtrBTy) ||
       DL.getTypeStoreSize(PtrATy->getScalarType()) !=
           DL.getTypeStoreSize(PtrBTy->getScalarType()))
