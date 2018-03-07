@@ -17,6 +17,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -693,8 +694,9 @@ void Writer::assignSymtab() {
     for (Symbol *Sym : File->getSymbols()) {
       if (Sym->getFile() != File)
         continue;
-      if (!Sym->isLive())
-        return;
+      // (Since this is relocatable output, GC is not performed so symbols must
+      // be live.)
+      assert(Sym->isLive());
       Sym->setOutputSymbolIndex(SymbolIndex++);
       SymtabEntries.emplace_back(Sym);
     }
@@ -849,7 +851,6 @@ static const int OPCODE_END = 0xb;
 // in input object.
 void Writer::createCtorFunction() {
   uint32_t FunctionIndex = NumImportedFunctions + InputFunctions.size();
-  WasmSym::CallCtors->setOutputIndex(FunctionIndex);
 
   // First write the body's contents to a string.
   std::string BodyContent;
@@ -873,7 +874,8 @@ void Writer::createCtorFunction() {
 
   const WasmSignature *Sig = WasmSym::CallCtors->getFunctionType();
   SyntheticFunction *F = make<SyntheticFunction>(
-      *Sig, std::move(FunctionBody), WasmSym::CallCtors->getName());
+      *Sig, toArrayRef(Saver.save(FunctionBody)),
+      WasmSym::CallCtors->getName());
 
   F->setOutputIndex(FunctionIndex);
   F->Live = true;

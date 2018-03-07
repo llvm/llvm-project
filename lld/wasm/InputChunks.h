@@ -24,7 +24,6 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Strings.h"
 #include "llvm/Object/Wasm.h"
 
 using llvm::object::WasmSegment;
@@ -152,16 +151,18 @@ protected:
 
 class SyntheticFunction : public InputFunction {
 public:
-  SyntheticFunction(const WasmSignature &S, std::string Body, StringRef Name)
-      : InputFunction(S, nullptr, nullptr), Name(Name), Body(std::move(Body)) {}
+  SyntheticFunction(const WasmSignature &S, ArrayRef<uint8_t> Body,
+                    StringRef Name)
+      : InputFunction(S, nullptr, nullptr), Name(Name), Body(Body) {}
 
   StringRef getName() const override { return Name; }
+  StringRef getComdat() const override { return StringRef(); }
 
 protected:
-  ArrayRef<uint8_t> data() const override { return toArrayRef(Body); }
+  ArrayRef<uint8_t> data() const override { return Body; }
 
   StringRef Name;
-  std::string Body;
+  ArrayRef<uint8_t> Body;
 };
 
 } // namespace wasm

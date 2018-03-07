@@ -1,4 +1,5 @@
 // RUN: %clang -O0 %s -o %t && %run %t
+// UNSUPPORTED: darwin
 
 #include <assert.h>
 #include <locale.h>
