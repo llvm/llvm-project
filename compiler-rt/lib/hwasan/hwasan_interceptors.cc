@@ -275,7 +275,7 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T sz, int prot,
       addr = nullptr;
     }
   }
-  return real_mmap(addr, length, prot, flags, fd, offset);
+  return real_mmap(addr, sz, prot, flags, fd, off);
 }
 
 extern "C" int pthread_attr_init(void *attr);

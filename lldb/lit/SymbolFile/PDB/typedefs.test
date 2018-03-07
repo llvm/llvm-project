@@ -14,6 +14,8 @@ RUN: lldb-test symbols %T/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s
 
 CHECK: Module [[MOD:.*]]
 CHECK: {{^[0-9A-F]+}}: SymbolVendor ([[MOD]])
+CHECK-DAG: name = "char32_t", size = 4, compiler_type = {{.*}} char32_t
+CHECK-DAG: name = "char16_t", size = 2, compiler_type = {{.*}} char16_t
 CHECK-DAG: Type{{.*}} , name = "unsigned long", size = 4, compiler_type = {{.*}} unsigned long
 CHECK-DAG: Type{{.*}} , size = 40, compiler_type = {{.*}} unsigned long [10]
 CHECK-DAG: Type{{.*}} , name = "ULongArrayTypedef", compiler_type = {{.*}} typedef ULongArrayTypedef
