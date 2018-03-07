@@ -16,12 +16,6 @@ def HwLen2: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(ST.getVectorLength()/2, SDLoc(N), MVT::i32);
 }]>;
 
-def NHwLen: SDNodeXForm<imm, [{
-  const auto &ST = static_cast<const HexagonSubtarget&>(CurDAG->getSubtarget());
-  return CurDAG->getTargetConstant(-int(ST.getVectorLength()), SDLoc(N),
-                                   MVT::i32);
-}]>;
-
 def Q2V: OutPatFrag<(ops node:$Qs), (V6_vandqrt $Qs, (A2_tfrsi -1))>;
 
 def Combinev: OutPatFrag<(ops node:$Vs, node:$Vt),
@@ -42,7 +36,6 @@ def HexagonVZERO:      SDNode<"HexagonISD::VZERO",      SDTVecLeaf>;
 def HexagonQCAT:       SDNode<"HexagonISD::QCAT",       SDTVecBinOp>;
 def HexagonQTRUE:      SDNode<"HexagonISD::QTRUE",      SDTVecLeaf>;
 def HexagonQFALSE:     SDNode<"HexagonISD::QFALSE",     SDTVecLeaf>;
-def HexagonVALIGNADDR: SDNode<"HexagonISD::VALIGNADDR", SDTIntUnaryOp>;
 
 def vzero:  PatFrag<(ops), (HexagonVZERO)>;
 def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
@@ -51,7 +44,6 @@ def qcat:   PatFrag<(ops node:$Qs, node:$Qt),
                     (HexagonQCAT node:$Qs, node:$Qt)>;
 
 def qnot: PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
-def valignaddr: PatFrag<(ops node:$Addr), (HexagonVALIGNADDR node:$Addr)>;
 
 def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
@@ -174,8 +166,6 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecPI8  vzero), (Combinev (V6_vd0), (V6_vd0))>;
   def: Pat<(VecPI16 vzero), (Combinev (V6_vd0), (V6_vd0))>;
   def: Pat<(VecPI32 vzero), (Combinev (V6_vd0), (V6_vd0))>;
-
-  def: Pat<(valignaddr I32:$Rs), (A2_andir I32:$Rs, (NHwLen (i32 0)))>;
 
   def: Pat<(VecPI8 (concat_vectors HVI8:$Vs, HVI8:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;

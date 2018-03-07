@@ -8,41 +8,41 @@
 ;}
 ;
 ; CHECK:        DW_TAG_array_type
-; CHECK-NEXT:     DW_AT_type	(cu + 0x00f8 "int")
-; CHECK-NOT: TAG      
-; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}}"sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:     DW_AT_type	(0x000000f8 "int")
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}}"sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NOT: TAG
+; CHECK:          DW_TAG_subrange_type
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
 ; CHECK:        DW_TAG_array_type
-; CHECK-NEXT:     DW_AT_type	(cu + 0x00f8 "int")
-; CHECK-NOT: TAG      
-; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}}"sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:     DW_AT_type	(0x000000f8 "int")
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}}"sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
-; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NOT: TAG
+; CHECK:          DW_TAG_subrange_type
+; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
 
 
 source_filename = "/tmp/test.c"

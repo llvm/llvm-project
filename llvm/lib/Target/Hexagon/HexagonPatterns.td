@@ -100,6 +100,17 @@ def HWI8:   PatLeaf<(VecPI8  HvxWR:$R)>;
 def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
 def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
 
+def SDTVecVecIntOp:
+  SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>,
+                       SDTCisVT<3,i32>]>;
+
+def HexagonVALIGN:     SDNode<"HexagonISD::VALIGN",     SDTVecVecIntOp>;
+def HexagonVALIGNADDR: SDNode<"HexagonISD::VALIGNADDR", SDTIntUnaryOp>;
+
+def valign: PatFrag<(ops node:$Vt, node:$Vs, node:$Ru),
+                    (HexagonVALIGN node:$Vt, node:$Vs, node:$Ru)>;
+def valignaddr: PatFrag<(ops node:$Addr), (HexagonVALIGNADDR node:$Addr)>;
+
 // Pattern fragments to extract the low and high subregisters from a
 // 64-bit value.
 def LoReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_lo)>;
@@ -1829,7 +1840,12 @@ let AddedComplexity = 20 in {
   defm: Loadxi_pat<zextloadv2i8,    v2i16, anyimm1, L2_loadbzw2_io>;
   defm: Loadxi_pat<zextloadv4i8,    v4i16, anyimm2, L2_loadbzw4_io>;
   defm: Loadxi_pat<load,            i32,   anyimm2, L2_loadri_io>;
+  defm: Loadxi_pat<load,            v2i16, anyimm2, L2_loadri_io>;
+  defm: Loadxi_pat<load,            v4i8,  anyimm2, L2_loadri_io>;
   defm: Loadxi_pat<load,            i64,   anyimm3, L2_loadrd_io>;
+  defm: Loadxi_pat<load,            v2i32, anyimm3, L2_loadrd_io>;
+  defm: Loadxi_pat<load,            v4i16, anyimm3, L2_loadrd_io>;
+  defm: Loadxi_pat<load,            v8i8,  anyimm3, L2_loadrd_io>;
   defm: Loadxi_pat<load,            f32,   anyimm2, L2_loadri_io>;
   defm: Loadxi_pat<load,            f64,   anyimm3, L2_loadrd_io>;
   // No sextloadi1.
@@ -1867,10 +1883,15 @@ let AddedComplexity  = 60 in {
   def: Loadxu_pat<zextloadi16,  i32,   anyimm1, L4_loadruh_ur>;
   def: Loadxu_pat<zextloadv2i8, v2i16, anyimm1, L4_loadbzw2_ur>;
   def: Loadxu_pat<zextloadv4i8, v4i16, anyimm2, L4_loadbzw4_ur>;
+  def: Loadxu_pat<load,         i32,   anyimm2, L4_loadri_ur>;
+  def: Loadxu_pat<load,         v2i16, anyimm2, L4_loadri_ur>;
+  def: Loadxu_pat<load,         v4i8,  anyimm2, L4_loadri_ur>;
+  def: Loadxu_pat<load,         i64,   anyimm3, L4_loadrd_ur>;
+  def: Loadxu_pat<load,         v2i32, anyimm3, L4_loadrd_ur>;
+  def: Loadxu_pat<load,         v4i16, anyimm3, L4_loadrd_ur>;
+  def: Loadxu_pat<load,         v8i8,  anyimm3, L4_loadrd_ur>;
   def: Loadxu_pat<load,         f32,   anyimm2, L4_loadri_ur>;
   def: Loadxu_pat<load,         f64,   anyimm3, L4_loadrd_ur>;
-  def: Loadxu_pat<load,         i32,   anyimm2, L4_loadri_ur>;
-  def: Loadxu_pat<load,         i64,   anyimm3, L4_loadrd_ur>;
 
   def: Loadxum_pat<sextloadi8,  i64, anyimm0, ToSext64, L4_loadrb_ur>;
   def: Loadxum_pat<zextloadi8,  i64, anyimm0, ToZext64, L4_loadrub_ur>;
@@ -1884,29 +1905,39 @@ let AddedComplexity  = 60 in {
 }
 
 let AddedComplexity = 40 in {
-  def: Loadxr_shl_pat<extloadi8,     i32, L4_loadrub_rr>;
-  def: Loadxr_shl_pat<zextloadi8,    i32, L4_loadrub_rr>;
-  def: Loadxr_shl_pat<sextloadi8,    i32, L4_loadrb_rr>;
-  def: Loadxr_shl_pat<extloadi16,    i32, L4_loadruh_rr>;
-  def: Loadxr_shl_pat<zextloadi16,   i32, L4_loadruh_rr>;
-  def: Loadxr_shl_pat<sextloadi16,   i32, L4_loadrh_rr>;
-  def: Loadxr_shl_pat<load,          i32, L4_loadri_rr>;
-  def: Loadxr_shl_pat<load,          i64, L4_loadrd_rr>;
-  def: Loadxr_shl_pat<load,          f32, L4_loadri_rr>;
-  def: Loadxr_shl_pat<load,          f64, L4_loadrd_rr>;
+  def: Loadxr_shl_pat<extloadi8,     i32,   L4_loadrub_rr>;
+  def: Loadxr_shl_pat<zextloadi8,    i32,   L4_loadrub_rr>;
+  def: Loadxr_shl_pat<sextloadi8,    i32,   L4_loadrb_rr>;
+  def: Loadxr_shl_pat<extloadi16,    i32,   L4_loadruh_rr>;
+  def: Loadxr_shl_pat<zextloadi16,   i32,   L4_loadruh_rr>;
+  def: Loadxr_shl_pat<sextloadi16,   i32,   L4_loadrh_rr>;
+  def: Loadxr_shl_pat<load,          i32,   L4_loadri_rr>;
+  def: Loadxr_shl_pat<load,          v2i16, L4_loadri_rr>;
+  def: Loadxr_shl_pat<load,          v4i8,  L4_loadri_rr>;
+  def: Loadxr_shl_pat<load,          i64,   L4_loadrd_rr>;
+  def: Loadxr_shl_pat<load,          v2i32, L4_loadrd_rr>;
+  def: Loadxr_shl_pat<load,          v4i16, L4_loadrd_rr>;
+  def: Loadxr_shl_pat<load,          v8i8,  L4_loadrd_rr>;
+  def: Loadxr_shl_pat<load,          f32,   L4_loadri_rr>;
+  def: Loadxr_shl_pat<load,          f64,   L4_loadrd_rr>;
 }
 
 let AddedComplexity = 20 in {
-  def: Loadxr_add_pat<extloadi8,     i32, L4_loadrub_rr>;
-  def: Loadxr_add_pat<zextloadi8,    i32, L4_loadrub_rr>;
-  def: Loadxr_add_pat<sextloadi8,    i32, L4_loadrb_rr>;
-  def: Loadxr_add_pat<extloadi16,    i32, L4_loadruh_rr>;
-  def: Loadxr_add_pat<zextloadi16,   i32, L4_loadruh_rr>;
-  def: Loadxr_add_pat<sextloadi16,   i32, L4_loadrh_rr>;
-  def: Loadxr_add_pat<load,          i32, L4_loadri_rr>;
-  def: Loadxr_add_pat<load,          i64, L4_loadrd_rr>;
-  def: Loadxr_add_pat<load,          f32, L4_loadri_rr>;
-  def: Loadxr_add_pat<load,          f64, L4_loadrd_rr>;
+  def: Loadxr_add_pat<extloadi8,     i32,   L4_loadrub_rr>;
+  def: Loadxr_add_pat<zextloadi8,    i32,   L4_loadrub_rr>;
+  def: Loadxr_add_pat<sextloadi8,    i32,   L4_loadrb_rr>;
+  def: Loadxr_add_pat<extloadi16,    i32,   L4_loadruh_rr>;
+  def: Loadxr_add_pat<zextloadi16,   i32,   L4_loadruh_rr>;
+  def: Loadxr_add_pat<sextloadi16,   i32,   L4_loadrh_rr>;
+  def: Loadxr_add_pat<load,          i32,   L4_loadri_rr>;
+  def: Loadxr_add_pat<load,          v2i16, L4_loadri_rr>;
+  def: Loadxr_add_pat<load,          v4i8,  L4_loadri_rr>;
+  def: Loadxr_add_pat<load,          i64,   L4_loadrd_rr>;
+  def: Loadxr_add_pat<load,          v2i32, L4_loadrd_rr>;
+  def: Loadxr_add_pat<load,          v4i16, L4_loadrd_rr>;
+  def: Loadxr_add_pat<load,          v8i8,  L4_loadrd_rr>;
+  def: Loadxr_add_pat<load,          f32,   L4_loadri_rr>;
+  def: Loadxr_add_pat<load,          f64,   L4_loadrd_rr>;
 }
 
 let AddedComplexity = 40 in {
@@ -1936,17 +1967,22 @@ let AddedComplexity = 20 in {
 // Absolute address
 
 let AddedComplexity  = 60 in {
-  def: Loada_pat<zextloadi1,      i32, anyimm0, PS_loadrubabs>;
-  def: Loada_pat<sextloadi8,      i32, anyimm0, PS_loadrbabs>;
-  def: Loada_pat<extloadi8,       i32, anyimm0, PS_loadrubabs>;
-  def: Loada_pat<zextloadi8,      i32, anyimm0, PS_loadrubabs>;
-  def: Loada_pat<sextloadi16,     i32, anyimm1, PS_loadrhabs>;
-  def: Loada_pat<extloadi16,      i32, anyimm1, PS_loadruhabs>;
-  def: Loada_pat<zextloadi16,     i32, anyimm1, PS_loadruhabs>;
-  def: Loada_pat<load,            i32, anyimm2, PS_loadriabs>;
-  def: Loada_pat<load,            i64, anyimm3, PS_loadrdabs>;
-  def: Loada_pat<load,            f32, anyimm2, PS_loadriabs>;
-  def: Loada_pat<load,            f64, anyimm3, PS_loadrdabs>;
+  def: Loada_pat<zextloadi1,      i32,   anyimm0, PS_loadrubabs>;
+  def: Loada_pat<sextloadi8,      i32,   anyimm0, PS_loadrbabs>;
+  def: Loada_pat<extloadi8,       i32,   anyimm0, PS_loadrubabs>;
+  def: Loada_pat<zextloadi8,      i32,   anyimm0, PS_loadrubabs>;
+  def: Loada_pat<sextloadi16,     i32,   anyimm1, PS_loadrhabs>;
+  def: Loada_pat<extloadi16,      i32,   anyimm1, PS_loadruhabs>;
+  def: Loada_pat<zextloadi16,     i32,   anyimm1, PS_loadruhabs>;
+  def: Loada_pat<load,            i32,   anyimm2, PS_loadriabs>;
+  def: Loada_pat<load,            v2i16, anyimm2, PS_loadriabs>;
+  def: Loada_pat<load,            v4i8,  anyimm2, PS_loadriabs>;
+  def: Loada_pat<load,            i64,   anyimm3, PS_loadrdabs>;
+  def: Loada_pat<load,            v2i32, anyimm3, PS_loadrdabs>;
+  def: Loada_pat<load,            v4i16, anyimm3, PS_loadrdabs>;
+  def: Loada_pat<load,            v8i8,  anyimm3, PS_loadrdabs>;
+  def: Loada_pat<load,            f32,   anyimm2, PS_loadriabs>;
+  def: Loada_pat<load,            f64,   anyimm3, PS_loadrdabs>;
 
   def: Loada_pat<atomic_load_8,   i32, anyimm0, PS_loadrubabs>;
   def: Loada_pat<atomic_load_16,  i32, anyimm1, PS_loadruhabs>;
@@ -1972,18 +2008,23 @@ let AddedComplexity  = 30 in {
 // GP-relative address
 
 let AddedComplexity  = 100 in {
-  def: Loada_pat<extloadi1,       i32, addrgp,  L2_loadrubgp>;
-  def: Loada_pat<zextloadi1,      i32, addrgp,  L2_loadrubgp>;
-  def: Loada_pat<extloadi8,       i32, addrgp,  L2_loadrubgp>;
-  def: Loada_pat<sextloadi8,      i32, addrgp,  L2_loadrbgp>;
-  def: Loada_pat<zextloadi8,      i32, addrgp,  L2_loadrubgp>;
-  def: Loada_pat<extloadi16,      i32, addrgp,  L2_loadruhgp>;
-  def: Loada_pat<sextloadi16,     i32, addrgp,  L2_loadrhgp>;
-  def: Loada_pat<zextloadi16,     i32, addrgp,  L2_loadruhgp>;
-  def: Loada_pat<load,            i32, addrgp,  L2_loadrigp>;
-  def: Loada_pat<load,            i64, addrgp,  L2_loadrdgp>;
-  def: Loada_pat<load,            f32, addrgp,  L2_loadrigp>;
-  def: Loada_pat<load,            f64, addrgp,  L2_loadrdgp>;
+  def: Loada_pat<extloadi1,       i32,   addrgp,  L2_loadrubgp>;
+  def: Loada_pat<zextloadi1,      i32,   addrgp,  L2_loadrubgp>;
+  def: Loada_pat<extloadi8,       i32,   addrgp,  L2_loadrubgp>;
+  def: Loada_pat<sextloadi8,      i32,   addrgp,  L2_loadrbgp>;
+  def: Loada_pat<zextloadi8,      i32,   addrgp,  L2_loadrubgp>;
+  def: Loada_pat<extloadi16,      i32,   addrgp,  L2_loadruhgp>;
+  def: Loada_pat<sextloadi16,     i32,   addrgp,  L2_loadrhgp>;
+  def: Loada_pat<zextloadi16,     i32,   addrgp,  L2_loadruhgp>;
+  def: Loada_pat<load,            i32,   addrgp,  L2_loadrigp>;
+  def: Loada_pat<load,            v2i16, addrgp,  L2_loadrigp>;
+  def: Loada_pat<load,            v4i8,  addrgp,  L2_loadrigp>;
+  def: Loada_pat<load,            i64,   addrgp,  L2_loadrdgp>;
+  def: Loada_pat<load,            v2i32, addrgp,  L2_loadrdgp>;
+  def: Loada_pat<load,            v4i16, addrgp,  L2_loadrdgp>;
+  def: Loada_pat<load,            v8i8,  addrgp,  L2_loadrdgp>;
+  def: Loada_pat<load,            f32,   addrgp,  L2_loadrigp>;
+  def: Loada_pat<load,            f64,   addrgp,  L2_loadrdgp>;
 
   def: Loada_pat<atomic_load_8,   i32, addrgp,  L2_loadrubgp>;
   def: Loada_pat<atomic_load_16,  i32, addrgp,  L2_loadruhgp>;

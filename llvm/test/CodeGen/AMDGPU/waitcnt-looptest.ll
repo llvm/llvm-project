@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -amdgpu-load-store-vectorizer=0 | FileCheck --check-prefix=GCN %s
 
 ; Check that the waitcnt insertion algorithm correctly propagates wait counts
 ; from before a loop to the loop header.

@@ -538,23 +538,28 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DW_FORM_ref1:
     CURelativeOffset = true;
-    AddrOS << format("cu + 0x%2.2x", (uint8_t)UValue);
+    if (DumpOpts.Verbose)
+      AddrOS << format("cu + 0x%2.2x", (uint8_t)UValue);
     break;
   case DW_FORM_ref2:
     CURelativeOffset = true;
-    AddrOS << format("cu + 0x%4.4x", (uint16_t)UValue);
+    if (DumpOpts.Verbose)
+      AddrOS << format("cu + 0x%4.4x", (uint16_t)UValue);
     break;
   case DW_FORM_ref4:
     CURelativeOffset = true;
-    AddrOS << format("cu + 0x%4.4x", (uint32_t)UValue);
+    if (DumpOpts.Verbose)
+      AddrOS << format("cu + 0x%4.4x", (uint32_t)UValue);
     break;
   case DW_FORM_ref8:
     CURelativeOffset = true;
-    AddrOS << format("cu + 0x%8.8" PRIx64, UValue);
+    if (DumpOpts.Verbose)
+      AddrOS << format("cu + 0x%8.8" PRIx64, UValue);
     break;
   case DW_FORM_ref_udata:
     CURelativeOffset = true;
-    AddrOS << format("cu + 0x%" PRIx64, UValue);
+    if (DumpOpts.Verbose)
+      AddrOS << format("cu + 0x%" PRIx64, UValue);
     break;
   case DW_FORM_GNU_ref_alt:
     AddrOS << format("<alt 0x%" PRIx64 ">", UValue);
@@ -576,11 +581,13 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   }
 
-  if (CURelativeOffset && DumpOpts.Verbose) {
-    OS << " => {";
+  if (CURelativeOffset) {
+    if (DumpOpts.Verbose)
+      OS << " => {";
     WithColor(OS, syntax::Address).get()
         << format("0x%8.8" PRIx64, UValue + (U ? U->getOffset() : 0));
-    OS << "}";
+    if (DumpOpts.Verbose)
+      OS << "}";
   }
 }
 
