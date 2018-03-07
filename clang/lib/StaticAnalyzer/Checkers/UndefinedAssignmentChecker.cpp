@@ -74,7 +74,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     if (const BinaryOperator *B = dyn_cast<BinaryOperator>(StoreE)) {
       if (B->isCompoundAssignmentOp()) {
         if (C.getSVal(B->getLHS()).isUndef()) {
-          str = "The left expression of the compound assignment is an "
+          OS << "The left expression of the compound assignment is an "
                 "uninitialized value. The computed value will also be garbage";
           ex = B->getLHS();
           break;
