@@ -66,6 +66,17 @@ typedef llvm::ImmutableMap<std::pair<const CXXBindTemporaryExpr *,
 REGISTER_TRAIT_WITH_PROGRAMSTATE(InitializedTemporaries,
                                  InitializedTemporariesMap)
 
+typedef llvm::ImmutableMap<std::pair<const MaterializeTemporaryExpr *,
+                                     const StackFrameContext *>,
+                           const CXXTempObjectRegion *>
+        TemporaryMaterializationMap;
+
+// Keeps track of temporaries that will need to be materialized later.
+// The StackFrameContext assures that nested calls due to inlined recursive
+// functions do not interfere.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(TemporaryMaterializations,
+                                 TemporaryMaterializationMap)
+
 typedef llvm::ImmutableMap<std::pair<const CXXNewExpr *,
                                      const LocationContext *>,
                            SVal>
@@ -380,6 +391,29 @@ bool ExprEngine::areInitializedTemporariesClear(ProgramStateRef State,
   return true;
 }
 
+ProgramStateRef ExprEngine::addTemporaryMaterialization(
+    ProgramStateRef State, const MaterializeTemporaryExpr *MTE,
+    const LocationContext *LC, const CXXTempObjectRegion *R) {
+  const auto &Key = std::make_pair(MTE, LC->getCurrentStackFrame());
+  assert(!State->contains<TemporaryMaterializations>(Key));
+  return State->set<TemporaryMaterializations>(Key, R);
+}
+
+bool ExprEngine::areTemporaryMaterializationsClear(
+    ProgramStateRef State, const LocationContext *FromLC,
+    const LocationContext *ToLC) {
+  const LocationContext *LC = FromLC;
+  while (LC != ToLC) {
+    assert(LC && "ToLC must be a parent of FromLC!");
+    for (auto I : State->get<TemporaryMaterializations>())
+      if (I.first.second == LC)
+        return false;
+
+    LC = LC->getParent();
+  }
+  return true;
+}
+
 ProgramStateRef
 ExprEngine::setCXXNewAllocatorValue(ProgramStateRef State,
                                     const CXXNewExpr *CNE,
@@ -461,6 +495,24 @@ static void printInitializedTemporariesForContext(raw_ostream &Out,
   }
 }
 
+static void printTemporaryMaterializationsForContext(
+    raw_ostream &Out, ProgramStateRef State, const char *NL, const char *Sep,
+    const LocationContext *LC) {
+  PrintingPolicy PP =
+      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+  for (auto I : State->get<TemporaryMaterializations>()) {
+    std::pair<const MaterializeTemporaryExpr *, const LocationContext *> Key =
+        I.first;
+    const MemRegion *Value = I.second;
+    if (Key.second != LC)
+      continue;
+    Out << '(' << Key.second << ',' << Key.first << ") ";
+    Key.first->printPretty(Out, nullptr, PP);
+    assert(Value);
+    Out << " : " << Value << NL;
+  }
+}
+
 static void printCXXNewAllocatorValuesForContext(raw_ostream &Out,
                                                  ProgramStateRef State,
                                                  const char *NL,
@@ -489,6 +541,14 @@ void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
 
       LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
         printInitializedTemporariesForContext(Out, State, NL, Sep, LC);
+      });
+    }
+
+    if (!State->get<TemporaryMaterializations>().isEmpty()) {
+      Out << Sep << "Temporaries to be materialized:" << NL;
+
+      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
+        printTemporaryMaterializationsForContext(Out, State, NL, Sep, LC);
       });
     }
 
@@ -599,6 +659,10 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   SymbolReaper SymReaper(SFC, ReferenceStmt, SymMgr, getStoreManager());
 
   for (auto I : CleanedState->get<InitializedTemporaries>())
+    if (I.second)
+      SymReaper.markLive(I.second);
+
+  for (auto I : CleanedState->get<TemporaryMaterializations>())
     if (I.second)
       SymReaper.markLive(I.second);
 
@@ -2132,11 +2196,12 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
                                        Pred->getStackFrame()->getParent()));
 
   // FIXME: We currently assert that temporaries are clear, as lifetime extended
-  // temporaries are not modelled correctly. When we materialize the temporary,
-  // we do createTemporaryRegionIfNeeded(), and the region changes, and also
-  // the respective destructor becomes automatic from temporary.
-  // So for now clean up the state manually before asserting. Ideally, the code
-  // above the assertion should go away, but the assertion should remain.
+  // temporaries are not always modelled correctly. In some cases when we
+  // materialize the temporary, we do createTemporaryRegionIfNeeded(), and
+  // the region changes, and also the respective destructor becomes automatic
+  // from temporary. So for now clean up the state manually before asserting.
+  // Ideally, the code above the assertion should go away, but the assertion
+  // should remain.
   {
     ExplodedNodeSet CleanUpTemporaries;
     NodeBuilder Bldr(Pred, CleanUpTemporaries, BC);
@@ -2161,6 +2226,9 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
   assert(areInitializedTemporariesClear(Pred->getState(),
                                         Pred->getLocationContext(),
                                         Pred->getStackFrame()->getParent()));
+  assert(areTemporaryMaterializationsClear(Pred->getState(),
+                                           Pred->getLocationContext(),
+                                           Pred->getStackFrame()->getParent()));
 
   PrettyStackTraceLocationContext CrashInfo(Pred->getLocationContext());
   StateMgr.EndPath(Pred->getState());
