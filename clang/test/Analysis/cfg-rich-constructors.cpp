@@ -105,7 +105,6 @@ void simpleVariableInitializedByValue() {
   C c = C::get();
 }
 
-// TODO: Should find construction target for the elidable constructors as well.
 // CHECK: void simpleVariableWithTernaryOperator(bool coin)
 // CHECK:        [B1]
 // CHECK-NEXT:     1: [B4.2] ? [B2.5] : [B3.6]
@@ -117,14 +116,14 @@ void simpleVariableInitializedByValue() {
 // CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
 // CHECK-NEXT:     3: [B2.2]()
 // CHECK-NEXT:     4: [B2.3]
-// CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, class C)
+// CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.2], class C)
 // CHECK:        [B3]
 // CHECK-NEXT:     1: 0
 // CHECK-NEXT:     2: [B3.1] (ImplicitCastExpr, NullToPointer, class C *)
 // CHECK-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], class C)
 // CHECK-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CHECK-NEXT:     5: [B3.4]
-// CHECK-NEXT:     6: [B3.5] (CXXConstructExpr, class C)
+// CHECK-NEXT:     6: [B3.5] (CXXConstructExpr, [B1.2], class C)
 // CHECK:        [B4]
 // CHECK-NEXT:     1: coin
 // CHECK-NEXT:     2: [B4.1] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -164,7 +163,6 @@ void referenceVariableWithInitializer() {
   const C &c = C();
 }
 
-// TODO: Should find construction targets for the elidable constructors as well.
 // CHECK: void referenceVariableWithTernaryOperator(bool coin)
 // CHECK:        [B1]
 // CHECK-NEXT:     1: [B4.2] ? [B2.5] : [B3.6]
@@ -176,14 +174,14 @@ void referenceVariableWithInitializer() {
 // CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
 // CHECK-NEXT:     3: [B2.2]()
 // CHECK-NEXT:     4: [B2.3]
-// CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, class C)
+// CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.3], class C)
 // CHECK:        [B3]
 // CHECK-NEXT:     1: 0
 // CHECK-NEXT:     2: [B3.1] (ImplicitCastExpr, NullToPointer, class C *)
 // CHECK-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], class C)
 // CHECK-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CHECK-NEXT:     5: [B3.4]
-// CHECK-NEXT:     6: [B3.5] (CXXConstructExpr, class C)
+// CHECK-NEXT:     6: [B3.5] (CXXConstructExpr, [B1.3], class C)
 // CHECK:        [B4]
 // CHECK-NEXT:     1: coin
 // CHECK-NEXT:     2: [B4.1] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -441,7 +439,7 @@ void referenceVariableWithInitializer() {
 // CHECK-NEXT:     4: [B5.3] (BindTemporary)
 // CHECK-NEXT:     5: [B5.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     6: [B5.5]
-// CHECK-NEXT:     7: [B5.6] (CXXConstructExpr, [B5.8], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     7: [B5.6] (CXXConstructExpr, [B5.8], [B4.3], class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     8: [B5.7] (BindTemporary)
 // CHECK:        [B6]
 // CHECK-NEXT:     1: 0
@@ -450,7 +448,7 @@ void referenceVariableWithInitializer() {
 // CHECK-NEXT:     4: temporary_object_expr_with_dtors::D([B6.3]) (CXXFunctionalCastExpr, ConstructorConversion, class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     5: [B6.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     6: [B6.5]
-// CHECK-NEXT:     7: [B6.6] (CXXConstructExpr, [B6.8], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     7: [B6.6] (CXXConstructExpr, [B6.8], [B4.3], class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     8: [B6.7] (BindTemporary)
 // CHECK:        [B7]
 // CHECK-NEXT:     1: coin
@@ -470,5 +468,20 @@ void referenceVariableWithTernaryOperator(bool coin) {
 // CHECK-NEXT:     7: [B1.6].~D() (Implicit destructor)
 void referenceWithFunctionalCast() {
   D &&d = D(1);
+}
+
+// Test the condition constructor, we don't care about branch constructors here.
+// CHECK: void constructorInTernaryCondition()
+// CHECK:          1: 1
+// CHECK-NEXT:     2: [B7.1] (CXXConstructExpr, [B7.3], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     3: [B7.2] (BindTemporary)
+// CHECK-NEXT:     4: temporary_object_expr_with_dtors::D([B7.3]) (CXXFunctionalCastExpr, ConstructorConv
+// CHECK-NEXT:     5: [B7.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     6: [B7.5].operator bool
+// CHECK-NEXT:     7: [B7.5]
+// CHECK-NEXT:     8: [B7.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:     T: [B7.8] ? ... : ...
+void constructorInTernaryCondition() {
+  const D &d = D(1) ? D(2) : D(3);
 }
 } // end namespace temporary_object_expr_with_dtors
