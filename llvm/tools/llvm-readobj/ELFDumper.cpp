@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMEHABIPrinter.h"
+#include "DwarfCFIEHPrinter.h"
 #include "Error.h"
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
@@ -1808,6 +1809,11 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
 
 template<class ELFT>
 void ELFDumper<ELFT>::printUnwindInfo() {
+  const unsigned Machine = Obj->getHeader()->e_machine;
+  if (Machine == EM_386 || Machine == EM_X86_64) {
+    DwarfCFIEH::PrinterContext<ELFT> Ctx(W, Obj);
+    return Ctx.printUnwindInformation();
+  }
   W.startLine() << "UnwindInfo not implemented.\n";
 }
 

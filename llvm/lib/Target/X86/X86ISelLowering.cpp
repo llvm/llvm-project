@@ -32909,7 +32909,6 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
 // If the upper 17 bits of each element are zero then we can use PMADDWD,
 // which is always at least as quick as PMULLD, expect on KNL.
 static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
-                                   TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget &Subtarget) {
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -32953,7 +32952,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
 
-  if (SDValue V = combineMulToPMADDWD(N, DAG, DCI, Subtarget))
+  if (SDValue V = combineMulToPMADDWD(N, DAG, Subtarget))
     return V;
 
   if (DCI.isBeforeLegalize() && VT.isVector())

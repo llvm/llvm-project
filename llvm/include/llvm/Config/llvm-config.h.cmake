@@ -80,6 +80,6 @@
 /* Whether LLVM records statistics for use with GetStatistics(),
  * PrintStatistics() or PrintStatisticsJSON()
  */
-#cmakedefine01 LLVM_ENABLE_STATS
+#cmakedefine01 LLVM_FORCE_ENABLE_STATS
 
 #endif

@@ -409,7 +409,7 @@ bool ClangdLSPServer::run(std::istream &In, JSONStreamStyle InputStyle) {
   JSONRPCDispatcher Dispatcher([](const json::Expr &Params) {
     replyError(ErrorCode::MethodNotFound, "method not found");
   });
-  registerCallbackHandlers(Dispatcher, Out, /*Callbacks=*/*this);
+  registerCallbackHandlers(Dispatcher, /*Callbacks=*/*this);
 
   // Run the Language Server loop.
   runLanguageServerLoop(In, Out, InputStyle, Dispatcher, IsDone);
