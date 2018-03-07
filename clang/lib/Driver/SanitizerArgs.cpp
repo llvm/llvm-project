@@ -332,8 +332,30 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
   }
 
+  std::pair<SanitizerMask, SanitizerMask> IncompatibleGroups[] = {
+      std::make_pair(Address, Thread | Memory),
+      std::make_pair(Thread, Memory),
+      std::make_pair(Leak, Thread | Memory),
+      std::make_pair(KernelAddress, Address | Leak | Thread | Memory),
+      std::make_pair(HWAddress, Address | Thread | Memory | KernelAddress),
+      std::make_pair(Efficiency, Address | HWAddress | Leak | Thread | Memory |
+                                     KernelAddress),
+      std::make_pair(Scudo, Address | HWAddress | Leak | Thread | Memory |
+                                KernelAddress | Efficiency),
+      std::make_pair(SafeStack, Address | HWAddress | Leak | Thread | Memory |
+                                    KernelAddress | Efficiency)};
+
   // Enable toolchain specific default sanitizers if not explicitly disabled.
-  Kinds |= TC.getDefaultSanitizers() & ~AllRemove;
+  SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
+
+  // Disable default sanitizers that are incompatible with the default ones.
+  for (auto G : IncompatibleGroups) {
+    SanitizerMask Group = G.first;
+    if ((Default & Group) && (Kinds & G.second))
+      Default &= ~Group;
+  }
+
+  Kinds |= Default;
 
   // We disable the vptr sanitizer if it was enabled by group expansion but RTTI
   // is disabled.
@@ -369,18 +391,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   // Warn about incompatible groups of sanitizers.
-  std::pair<SanitizerMask, SanitizerMask> IncompatibleGroups[] = {
-      std::make_pair(Address, Thread | Memory),
-      std::make_pair(Thread, Memory),
-      std::make_pair(Leak, Thread | Memory),
-      std::make_pair(KernelAddress, Address | Leak | Thread | Memory),
-      std::make_pair(HWAddress, Address | Thread | Memory | KernelAddress),
-      std::make_pair(Efficiency, Address | HWAddress | Leak | Thread | Memory |
-                                     KernelAddress),
-      std::make_pair(Scudo, Address | HWAddress | Leak | Thread | Memory |
-                                KernelAddress | Efficiency),
-      std::make_pair(SafeStack, Address | HWAddress | Leak | Thread | Memory |
-                                    KernelAddress | Efficiency)};
   for (auto G : IncompatibleGroups) {
     SanitizerMask Group = G.first;
     if (Kinds & Group) {

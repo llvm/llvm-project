@@ -2619,13 +2619,12 @@ static void CheckNonNullArguments(Sema &S,
         return;
       }
 
-      for (const ParamIdx &Idx : NonNull->args()) {
-        unsigned IdxAST = Idx.getASTIndex();
-        if (IdxAST >= Args.size())
+      for (unsigned Val : NonNull->args()) {
+        if (Val >= Args.size())
           continue;
         if (NonNullArgs.empty())
           NonNullArgs.resize(Args.size());
-        NonNullArgs.set(IdxAST);
+        NonNullArgs.set(Val);
       }
     }
   }
@@ -5003,7 +5002,12 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
     const CallExpr *CE = cast<CallExpr>(E);
     if (const NamedDecl *ND = dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl())) {
       if (const FormatArgAttr *FA = ND->getAttr<FormatArgAttr>()) {
-        const Expr *Arg = CE->getArg(FA->formatIdx().getASTIndex());
+        unsigned ArgIndex = FA->getFormatIdx();
+        if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(ND))
+          if (MD->isInstance())
+            --ArgIndex;
+        const Expr *Arg = CE->getArg(ArgIndex - 1);
+
         return checkFormatStringExpr(S, Arg, Args,
                                      HasVAListArg, format_idx, firstDataArg,
                                      Type, CallType, InFunctionCall,
@@ -5028,7 +5032,8 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
     const auto *ME = cast<ObjCMessageExpr>(E);
     if (const auto *ND = ME->getMethodDecl()) {
       if (const auto *FA = ND->getAttr<FormatArgAttr>()) {
-        const Expr *Arg = ME->getArg(FA->formatIdx().getASTIndex());
+        unsigned ArgIndex = FA->getFormatIdx();
+        const Expr *Arg = ME->getArg(ArgIndex - 1);
         return checkFormatStringExpr(
             S, Arg, Args, HasVAListArg, format_idx, firstDataArg, Type,
             CallType, InFunctionCall, CheckedVarArgs, UncoveredArg, Offset);
@@ -10081,8 +10086,8 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
               return;
           }
 
-          for (const ParamIdx &ArgNo : NonNull->args()) {
-            if (ArgNo.getASTIndex() == ParamNo) {
+          for (unsigned ArgNo : NonNull->args()) {
+            if (ArgNo == ParamNo) {
               ComplainAboutNonnullParamOrCall(NonNull);
               return;
             }
@@ -12237,13 +12242,13 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
   bool IsPointerAttr = Attr->getIsPointer();
 
   // Retrieve the argument representing the 'type_tag'.
-  unsigned TypeTagIdxAST = Attr->typeTagIdx().getASTIndex();
-  if (TypeTagIdxAST >= ExprArgs.size()) {
+  if (Attr->getTypeTagIdx() >= ExprArgs.size()) {
+    // Add 1 to display the user's specified value.
     Diag(CallSiteLoc, diag::err_tag_index_out_of_range)
-        << 0 << Attr->typeTagIdx().getSourceIndex();
+        << 0 << Attr->getTypeTagIdx() + 1;
     return;
   }
-  const Expr *TypeTagExpr = ExprArgs[TypeTagIdxAST];
+  const Expr *TypeTagExpr = ExprArgs[Attr->getTypeTagIdx()];
   bool FoundWrongKind;
   TypeTagData TypeInfo;
   if (!GetMatchingCType(ArgumentKind, TypeTagExpr, Context,
@@ -12257,13 +12262,13 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
   }
 
   // Retrieve the argument representing the 'arg_idx'.
-  unsigned ArgumentIdxAST = Attr->argumentIdx().getASTIndex();
-  if (ArgumentIdxAST >= ExprArgs.size()) {
+  if (Attr->getArgumentIdx() >= ExprArgs.size()) {
+    // Add 1 to display the user's specified value.
     Diag(CallSiteLoc, diag::err_tag_index_out_of_range)
-        << 1 << Attr->argumentIdx().getSourceIndex();
+        << 1 << Attr->getArgumentIdx() + 1;
     return;
   }
-  const Expr *ArgumentExpr = ExprArgs[ArgumentIdxAST];
+  const Expr *ArgumentExpr = ExprArgs[Attr->getArgumentIdx()];
   if (IsPointerAttr) {
     // Skip implicit cast of pointer to `void *' (as a function argument).
     if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(ArgumentExpr))
