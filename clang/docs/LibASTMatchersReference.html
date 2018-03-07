@@ -4342,7 +4342,7 @@ and parmVarDecl(...)
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument1')"><a name="hasAnyArgument1Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyArgument1"><pre>Matches any argument of a call expression or a constructor call
-expression.
+expression, or an ObjC-message-send expression.
 
 Given
   void x(int, int, int) { int y; x(1, y, 42); }
@@ -4350,6 +4350,12 @@ callExpr(hasAnyArgument(declRefExpr()))
   matches x(1, y, 42)
 with hasAnyArgument(...)
   matching y
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+  void foo(I *i) { [i f:12] }
+objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
+  matches [i f:12]
 </pre></td></tr>
 
 
@@ -4689,7 +4695,7 @@ and parmVarDecl(...)
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument0')"><a name="hasAnyArgument0Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyArgument0"><pre>Matches any argument of a call expression or a constructor call
-expression.
+expression, or an ObjC-message-send expression.
 
 Given
   void x(int, int, int) { int y; x(1, y, 42); }
@@ -4697,6 +4703,12 @@ callExpr(hasAnyArgument(declRefExpr()))
   matches x(1, y, 42)
 with hasAnyArgument(...)
   matching y
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+  void foo(I *i) { [i f:12] }
+objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
+  matches [i f:12]
 </pre></td></tr>
 
 
@@ -5631,6 +5643,25 @@ nestedNameSpecifier(specifiesType(
   hasDeclaration(cxxRecordDecl(hasName("A")))
 ))
   matches "A::"
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument2')"><a name="hasAnyArgument2Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyArgument2"><pre>Matches any argument of a call expression or a constructor call
+expression, or an ObjC-message-send expression.
+
+Given
+  void x(int, int, int) { int y; x(1, y, 42); }
+callExpr(hasAnyArgument(declRefExpr()))
+  matches x(1, y, 42)
+with hasAnyArgument(...)
+  matching y
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+  void foo(I *i) { [i f:12] }
+objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
+  matches [i f:12]
 </pre></td></tr>
 
 

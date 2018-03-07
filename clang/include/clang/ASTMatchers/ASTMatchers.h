@@ -3412,7 +3412,7 @@ AST_MATCHER(CXXCtorInitializer, isMemberInitializer) {
 }
 
 /// \brief Matches any argument of a call expression or a constructor call
-/// expression.
+/// expression, or an ObjC-message-send expression.
 ///
 /// Given
 /// \code
@@ -3422,9 +3422,18 @@ AST_MATCHER(CXXCtorInitializer, isMemberInitializer) {
 ///   matches x(1, y, 42)
 /// with hasAnyArgument(...)
 ///   matching y
+///
+/// For ObjectiveC, given
+/// \code
+///   @interface I - (void) f:(int) y; @end
+///   void foo(I *i) { [i f:12]; }
+/// \endcode
+/// objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
+///   matches [i f:12]
 AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
-                                                          CXXConstructExpr),
+                                                          CXXConstructExpr,
+                                                          ObjCMessageExpr),
                           internal::Matcher<Expr>, InnerMatcher) {
   for (const Expr *Arg : Node.arguments()) {
     BoundNodesTreeBuilder Result(*Builder);

@@ -18,9 +18,20 @@
 #include "xray/xray_interface.h"
 #include "xray_defs.h"
 
-__sanitizer::SpinMutex XRayImplMutex;
-XRayLogImpl CurrentXRayImpl{nullptr, nullptr, nullptr, nullptr};
-XRayLogImpl *GlobalXRayImpl = nullptr;
+namespace __xray {
+static __sanitizer::SpinMutex XRayImplMutex;
+static XRayLogImpl CurrentXRayImpl{nullptr, nullptr, nullptr, nullptr};
+static XRayLogImpl *GlobalXRayImpl = nullptr;
+
+// This is the default implementation of a buffer iterator, which always yields
+// a null buffer.
+XRayBuffer NullBufferIterator(XRayBuffer) XRAY_NEVER_INSTRUMENT {
+  return {nullptr, 0};
+}
+
+// This is the global function responsible for iterating through given buffers.
+__sanitizer::atomic_uintptr_t XRayBufferIterator{
+    reinterpret_cast<uintptr_t>(&NullBufferIterator)};
 
 // We use a linked list of Mode to XRayLogImpl mappings. This is a linked list
 // when it should be a map because we're avoiding having to depend on C++
@@ -31,9 +42,25 @@ struct ModeImpl {
   XRayLogImpl Impl;
 };
 
-ModeImpl SentinelModeImpl{
+static ModeImpl SentinelModeImpl{
     nullptr, nullptr, {nullptr, nullptr, nullptr, nullptr}};
-ModeImpl *ModeImpls = &SentinelModeImpl;
+static ModeImpl *ModeImpls = &SentinelModeImpl;
+static const ModeImpl *CurrentMode = nullptr;
+
+} // namespace __xray
+
+using namespace __xray;
+
+void __xray_log_set_buffer_iterator(XRayBuffer (*Iterator)(XRayBuffer))
+    XRAY_NEVER_INSTRUMENT {
+  __sanitizer::atomic_store(&__xray::XRayBufferIterator,
+                            reinterpret_cast<uintptr_t>(Iterator),
+                            __sanitizer::memory_order_release);
+}
+
+void __xray_log_remove_buffer_iterator() XRAY_NEVER_INSTRUMENT {
+  __xray_log_set_buffer_iterator(&NullBufferIterator);
+}
 
 XRayLogRegisterStatus
 __xray_log_register_mode(const char *Mode,
@@ -62,6 +89,7 @@ __xray_log_select_mode(const char *Mode) XRAY_NEVER_INSTRUMENT {
   __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
   for (ModeImpl *it = ModeImpls; it != &SentinelModeImpl; it = it->Next) {
     if (!__sanitizer::internal_strcmp(Mode, it->Mode)) {
+      CurrentMode = it;
       CurrentXRayImpl = it->Impl;
       GlobalXRayImpl = &CurrentXRayImpl;
       __xray_set_handler(it->Impl.handle_arg0);
@@ -71,11 +99,19 @@ __xray_log_select_mode(const char *Mode) XRAY_NEVER_INSTRUMENT {
   return XRayLogRegisterStatus::XRAY_MODE_NOT_FOUND;
 }
 
+const char *__xray_log_get_current_mode() XRAY_NEVER_INSTRUMENT {
+  __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
+  if (CurrentMode != nullptr)
+    return CurrentMode->Mode;
+  return nullptr;
+}
+
 void __xray_set_log_impl(XRayLogImpl Impl) XRAY_NEVER_INSTRUMENT {
   if (Impl.log_init == nullptr || Impl.log_finalize == nullptr ||
       Impl.handle_arg0 == nullptr || Impl.flush_log == nullptr) {
     __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
     GlobalXRayImpl = nullptr;
+    CurrentMode = nullptr;
     __xray_remove_handler();
     __xray_remove_handler_arg1();
     return;
@@ -115,4 +151,21 @@ XRayLogFlushStatus __xray_log_flushLog() XRAY_NEVER_INSTRUMENT {
   if (!GlobalXRayImpl)
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
   return GlobalXRayImpl->flush_log();
+}
+
+XRayLogFlushStatus __xray_log_process_buffers(
+    void (*Processor)(const char *, XRayBuffer)) XRAY_NEVER_INSTRUMENT {
+  // We want to make sure that there will be no changes to the global state for
+  // the log by synchronising on the XRayBufferIteratorMutex.
+  if (!GlobalXRayImpl)
+    return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
+  auto Iterator = reinterpret_cast<XRayBuffer (*)(XRayBuffer)>(
+      atomic_load(&XRayBufferIterator, __sanitizer::memory_order_acquire));
+  auto Buffer = (*Iterator)(XRayBuffer{nullptr, 0});
+  auto Mode = CurrentMode ? CurrentMode->Mode : nullptr;
+  while (Buffer.Data != nullptr) {
+    (*Processor)(Mode, Buffer);
+    Buffer = (*Iterator)(Buffer);
+  }
+  return XRayLogFlushStatus::XRAY_LOG_FLUSHED;
 }
