@@ -31,7 +31,6 @@ class TestSwiftReturns(TestBase):
         oslist=["ios"],
         archs=["arm64"],
         bugnumber="rdar://27002915")
-    @decorators.add_test_categories(["swiftpr"])
     def test_swift_returns(self):
         """Test getting return values"""
         self.build()
