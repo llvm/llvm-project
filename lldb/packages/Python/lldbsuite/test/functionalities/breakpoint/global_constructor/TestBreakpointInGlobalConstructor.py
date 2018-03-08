@@ -25,7 +25,7 @@ class TestBreakpointInGlobalConstructors(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr35480", oslist=["linux"])
     def test(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file %s" % exe)
 
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
