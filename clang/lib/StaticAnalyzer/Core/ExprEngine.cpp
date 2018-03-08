@@ -2466,7 +2466,7 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
                       ProgramPoint::PostLValueKind);
     return;
   }
-  if (const auto* BD = dyn_cast<BindingDecl>(D)) {
+  if (isa<BindingDecl>(D)) {
     // FIXME: proper support for bound declarations.
     // For now, let's just prevent crashing.
     return;

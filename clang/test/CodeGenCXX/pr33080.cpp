@@ -21,6 +21,10 @@ void hb(__unaligned struct A *, __unaligned const struct A *) {}
 void ja(__unaligned struct A *, __unaligned struct A *__unaligned *, __unaligned struct A *__unaligned *__unaligned *) {}
 // CHECK: define {{(dso_local )?}}void @_Z2jaPU11__unaligned1APU11__unalignedS1_PU11__unalignedS3_(
 
+struct A;
+void memptr(void (A::*a)(int) __unaligned) {}
+// CHECK: define {{.*}} @_Z6memptrM1AU11__unalignedFviE(
+
 void jb(__unaligned struct A *, __unaligned struct A **, __unaligned struct A *__unaligned *__unaligned *) {}
 // CHECK: @_Z2jbPU11__unaligned1APS1_PU11__unalignedPU11__unalignedS1_(
 

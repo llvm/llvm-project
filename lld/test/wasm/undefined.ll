@@ -6,9 +6,12 @@
 ; CHECK: error: {{.*}}.o: undefined symbol: foo
 ; CHECK: error: undefined symbol: baz
 
-; But succeeds if we pass a file containing 'foo' as --allow-undefined-file.
+; Succeeds if we pass a file containing 'foo' as --allow-undefined-file.
 ; RUN: echo 'foo' > %t.txt
 ; RUN: wasm-ld --check-signatures --allow-undefined-file=%t.txt -o %t.wasm %t.o
+
+; Succeeds even if a missing symbol is added via --export
+; RUN: wasm-ld --check-signatures --allow-undefined --export=xxx -o %t.wasm %t.o
 
 target triple = "wasm32-unknown-unknown-wasm"
 

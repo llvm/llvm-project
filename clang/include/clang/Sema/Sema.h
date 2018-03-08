@@ -31,7 +31,6 @@
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/ExpressionTraits.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PragmaKinds.h"
@@ -46,7 +45,6 @@
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
-#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -203,6 +201,7 @@ namespace clang {
 namespace sema {
   class AccessedEntity;
   class BlockScopeInfo;
+  class Capture;
   class CapturedRegionScopeInfo;
   class CapturingScopeInfo;
   class CompoundScopeInfo;
@@ -1329,23 +1328,7 @@ public:
     return FunctionScopes.back();
   }
 
-  sema::FunctionScopeInfo *getEnclosingFunction() const {
-    if (FunctionScopes.empty())
-      return nullptr;
-
-    for (int e = FunctionScopes.size()-1; e >= 0; --e) {
-      if (isa<sema::BlockScopeInfo>(FunctionScopes[e]))
-        continue;
-      return FunctionScopes[e];
-    }
-    return nullptr;
-  }
-
-  template <typename ExprT>
-  void recordUseOfEvaluatedWeak(const ExprT *E, bool IsRead=true) {
-    if (!isUnevaluatedContext())
-      getCurFunction()->recordUseOfWeak(E, IsRead);
-  }
+  sema::FunctionScopeInfo *getEnclosingFunction() const;
 
   void PushCompoundScope(bool IsStmtExpr);
   void PopCompoundScope();
@@ -5594,10 +5577,10 @@ public:
                              Scope *CurScope);
 
   /// \brief Does copying/destroying the captured variable have side effects?
-  bool CaptureHasSideEffects(const sema::LambdaScopeInfo::Capture &From);
+  bool CaptureHasSideEffects(const sema::Capture &From);
 
   /// \brief Diagnose if an explicit lambda capture is unused.
-  void DiagnoseUnusedLambdaCapture(const sema::LambdaScopeInfo::Capture &From);
+  void DiagnoseUnusedLambdaCapture(const sema::Capture &From);
 
   /// \brief Complete a lambda-expression having processed and attached the
   /// lambda body.
@@ -6418,9 +6401,8 @@ public:
                                    QualType InstantiatedParamType, Expr *Arg,
                                    TemplateArgument &Converted,
                                CheckTemplateArgumentKind CTAK = CTAK_Specified);
-  bool CheckTemplateArgument(TemplateTemplateParmDecl *Param,
-                             TemplateArgumentLoc &Arg,
-                             unsigned ArgumentPackIndex);
+  bool CheckTemplateTemplateArgument(TemplateParameterList *Params,
+                                     TemplateArgumentLoc &Arg);
 
   ExprResult
   BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
@@ -7755,6 +7737,10 @@ public:
 
   StmtResult SubstStmt(Stmt *S,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
+
+  TemplateParameterList *
+  SubstTemplateParams(TemplateParameterList *Params, DeclContext *Owner,
+                      const MultiLevelTemplateArgumentList &TemplateArgs);
 
   Decl *SubstDecl(Decl *D, DeclContext *Owner,
                   const MultiLevelTemplateArgumentList &TemplateArgs);

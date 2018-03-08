@@ -1479,8 +1479,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         IsArrow);
 
     if (IV->getType().getObjCLifetime() == Qualifiers::OCL_Weak) {
-      if (!S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, MemberLoc))
-        S.recordUseOfEvaluatedWeak(Result);
+      if (!S.isUnevaluatedContext() &&
+          !S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, MemberLoc))
+        S.getCurFunction()->recordUseOfWeak(Result);
     }
 
     return Result;
