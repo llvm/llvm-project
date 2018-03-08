@@ -24,9 +24,7 @@ struct InstrItinerary;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const char *Name;
-#endif
   unsigned NumUnits; // Number of resource of this kind
   unsigned SuperIdx; // Index of the resources kind that contains this kind.
 

@@ -185,6 +185,7 @@ enum : unsigned {
   WASM_TYPE_F32 = 0x7D,
   WASM_TYPE_F64 = 0x7C,
   WASM_TYPE_ANYFUNC = 0x70,
+  WASM_TYPE_EXCEPT_REF = 0x68,
   WASM_TYPE_FUNC = 0x60,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
@@ -217,6 +218,7 @@ enum class ValType {
   I64 = WASM_TYPE_I64,
   F32 = WASM_TYPE_F32,
   F64 = WASM_TYPE_F64,
+  EXCEPT_REF = WASM_TYPE_EXCEPT_REF,
 };
 
 // Kind codes used in the custom "name" section

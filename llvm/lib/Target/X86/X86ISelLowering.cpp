@@ -20702,6 +20702,24 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
 
+  case Intrinsic::x86_sse41_pmuldq:
+  case Intrinsic::x86_avx2_pmul_dq:
+  case Intrinsic::x86_avx512_pmul_dq_512: {
+    MVT OpVT = Op.getSimpleValueType();
+    return DAG.getNode(X86ISD::PMULDQ, dl, OpVT,
+                       DAG.getBitcast(OpVT, Op.getOperand(1)),
+                       DAG.getBitcast(OpVT, Op.getOperand(2)));
+  }
+
+  case Intrinsic::x86_sse2_pmulu_dq:
+  case Intrinsic::x86_avx2_pmulu_dq:
+  case Intrinsic::x86_avx512_pmulu_dq_512: {
+    MVT OpVT = Op.getSimpleValueType();
+    return DAG.getNode(X86ISD::PMULUDQ, dl, OpVT,
+                       DAG.getBitcast(OpVT, Op.getOperand(1)),
+                       DAG.getBitcast(OpVT, Op.getOperand(2)));
+  }
+
   case Intrinsic::x86_avx2_permd:
   case Intrinsic::x86_avx2_permps:
     // Operands intentionally swapped. Mask is last operand to intrinsic,
@@ -22350,9 +22368,13 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Bodds = DAG.getVectorShuffle(VT, dl, B, B, UnpackMask);
 
     // Multiply the even parts.
-    SDValue Evens = DAG.getNode(X86ISD::PMULUDQ, dl, MVT::v2i64, A, B);
+    SDValue Evens = DAG.getNode(X86ISD::PMULUDQ, dl, MVT::v2i64,
+                                DAG.getBitcast(MVT::v2i64, A),
+                                DAG.getBitcast(MVT::v2i64, B));
     // Now multiply odd parts.
-    SDValue Odds = DAG.getNode(X86ISD::PMULUDQ, dl, MVT::v2i64, Aodds, Bodds);
+    SDValue Odds = DAG.getNode(X86ISD::PMULUDQ, dl, MVT::v2i64,
+                               DAG.getBitcast(MVT::v2i64, Aodds),
+                               DAG.getBitcast(MVT::v2i64, Bodds));
 
     Evens = DAG.getBitcast(VT, Evens);
     Odds = DAG.getBitcast(VT, Odds);
@@ -22366,15 +22388,11 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   assert((VT == MVT::v2i64 || VT == MVT::v4i64 || VT == MVT::v8i64) &&
          "Only know how to lower V2I64/V4I64/V8I64 multiply");
 
-  // 32-bit vector types used for MULDQ/MULUDQ.
-  MVT MulVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
-
   // MULDQ returns the 64-bit result of the signed multiplication of the lower
   // 32-bits. We can lower with this if the sign bits stretch that far.
   if (Subtarget.hasSSE41() && DAG.ComputeNumSignBits(A) > 32 &&
       DAG.ComputeNumSignBits(B) > 32) {
-    return DAG.getNode(X86ISD::PMULDQ, dl, VT, DAG.getBitcast(MulVT, A),
-                       DAG.getBitcast(MulVT, B));
+    return DAG.getNode(X86ISD::PMULDQ, dl, VT, A, B);
   }
 
   //  Ahi = psrlqi(a, 32);
@@ -22399,29 +22417,23 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   if (Subtarget.hasDQI() && (!AHiIsZero || !BHiIsZero))
     return Op;
 
-  // Bit cast to 32-bit vectors for MULUDQ.
-  SDValue Alo = DAG.getBitcast(MulVT, A);
-  SDValue Blo = DAG.getBitcast(MulVT, B);
-
   SDValue Zero = getZeroVector(VT, Subtarget, DAG, dl);
 
   // Only multiply lo/hi halves that aren't known to be zero.
   SDValue AloBlo = Zero;
   if (!ALoIsZero && !BLoIsZero)
-    AloBlo = DAG.getNode(X86ISD::PMULUDQ, dl, VT, Alo, Blo);
+    AloBlo = DAG.getNode(X86ISD::PMULUDQ, dl, VT, A, B);
 
   SDValue AloBhi = Zero;
   if (!ALoIsZero && !BHiIsZero) {
     SDValue Bhi = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, VT, B, 32, DAG);
-    Bhi = DAG.getBitcast(MulVT, Bhi);
-    AloBhi = DAG.getNode(X86ISD::PMULUDQ, dl, VT, Alo, Bhi);
+    AloBhi = DAG.getNode(X86ISD::PMULUDQ, dl, VT, A, Bhi);
   }
 
   SDValue AhiBlo = Zero;
   if (!AHiIsZero && !BLoIsZero) {
     SDValue Ahi = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, VT, A, 32, DAG);
-    Ahi = DAG.getBitcast(MulVT, Ahi);
-    AhiBlo = DAG.getNode(X86ISD::PMULUDQ, dl, VT, Ahi, Blo);
+    AhiBlo = DAG.getNode(X86ISD::PMULUDQ, dl, VT, Ahi, B);
   }
 
   SDValue Hi = DAG.getNode(ISD::ADD, dl, VT, AloBhi, AhiBlo);
@@ -22679,10 +22691,14 @@ static SDValue LowerMUL_LOHI(SDValue Op, const X86Subtarget &Subtarget,
       (!IsSigned || !Subtarget.hasSSE41()) ? X86ISD::PMULUDQ : X86ISD::PMULDQ;
   // PMULUDQ <4 x i32> <a|b|c|d>, <4 x i32> <e|f|g|h>
   // => <2 x i64> <ae|cg>
-  SDValue Mul1 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT, Op0, Op1));
+  SDValue Mul1 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT,
+                                                DAG.getBitcast(MulVT, Op0),
+                                                DAG.getBitcast(MulVT, Op1)));
   // PMULUDQ <4 x i32> <b|undef|d|undef>, <4 x i32> <f|undef|h|undef>
   // => <2 x i64> <bf|dh>
-  SDValue Mul2 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT, Odd0, Odd1));
+  SDValue Mul2 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT,
+                                                DAG.getBitcast(MulVT, Odd0),
+                                                DAG.getBitcast(MulVT, Odd1)));
 
   // Shuffle it back into the right order.
   SmallVector<int, 16> HighMask(NumElts);
