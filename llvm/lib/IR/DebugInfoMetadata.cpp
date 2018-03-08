@@ -19,6 +19,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 using namespace llvm;
 
@@ -79,6 +80,11 @@ DILocation::getMergedLocation(const DILocation *LocA, const DILocation *LocB,
 
   if (!dyn_cast_or_null<CallInst>(ForInst))
     return nullptr;
+
+  // We cannot change the scope for debug info intrinsics.
+  if (isa<DbgInfoIntrinsic>(ForInst))
+    return DILocation::get(LocA->getContext(), 0, 0, LocA->getScope(),
+                           LocA->getInlinedAt());
 
   SmallPtrSet<DILocation *, 5> InlinedLocationsA;
   for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
