@@ -142,6 +142,10 @@ static opt<bool> InputIsYAMLDebugMap(
 static opt<bool> Verify("verify", desc("Verify the linked DWARF debug info."),
                         cat(DsymCategory));
 
+static opt<std::string>
+    Toolchain("toolchain", desc("Embed toolchain information in dSYM bundle."),
+              cat(DsymCategory));
+
 static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (NoOutput)
     return true;
@@ -189,8 +193,13 @@ static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
        << "\t\t<string>" << BI.ShortVersionStr << "</string>\n";
 
   PL << "\t\t<key>CFBundleVersion</key>\n"
-     << "\t\t<string>" << BI.VersionStr << "</string>\n"
-     << "\t</dict>\n"
+     << "\t\t<string>" << BI.VersionStr << "</string>\n";
+
+  if (!Toolchain.empty())
+    PL << "\t\t<key>Toolchain</key>\n"
+       << "\t\t<string>" << Toolchain << "</string>\n";
+
+  PL << "\t</dict>\n"
      << "</plist>\n";
 
   PL.close();

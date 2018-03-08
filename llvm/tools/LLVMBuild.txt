@@ -37,6 +37,7 @@ subdirectories =
  llvm-link
  llvm-lto
  llvm-mc
+ llvm-mca
  llvm-mcmarkup
  llvm-modextract
  llvm-mt

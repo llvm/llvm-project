@@ -10,7 +10,9 @@ set(LLVM_LINK_COMPONENTS
 
 set(DebugInfoSources
   DwarfGenerator.cpp
+  DwarfUtils.cpp
   DWARFDebugInfoTest.cpp
+  DWARFDebugLineTest.cpp
   DWARFFormValueTest.cpp
   )
 
