@@ -4617,6 +4617,8 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
     if (NTTP->isParameterPack() && NTTP->isExpandedParameterPack())
       NTTPType = NTTP->getExpansionType(ArgumentPackIndex);
 
+    // FIXME: Do we need to substitute into parameters here if they're
+    // instantiation-dependent but not dependent?
     if (NTTPType->isDependentType() &&
         !isa<TemplateTemplateParmDecl>(Template) &&
         !Template->getDeclContext()->isDependentContext()) {
@@ -4756,9 +4758,15 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
   // Check template template parameters.
   TemplateTemplateParmDecl *TempParm = cast<TemplateTemplateParmDecl>(Param);
 
+  TemplateParameterList *Params = TempParm->getTemplateParameters();
+  if (TempParm->isExpandedParameterPack())
+    Params = TempParm->getExpansionTemplateParameters(ArgumentPackIndex);
+
   // Substitute into the template parameter list of the template
   // template parameter, since previously-supplied template arguments
   // may appear within the template template parameter.
+  //
+  // FIXME: Skip this if the parameters aren't instantiation-dependent.
   {
     // Set up a template instantiation context.
     LocalInstantiationScope Scope(*this);
@@ -4769,10 +4777,9 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
       return true;
 
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
-    TempParm = cast_or_null<TemplateTemplateParmDecl>(
-                      SubstDecl(TempParm, CurContext,
-                                MultiLevelTemplateArgumentList(TemplateArgs)));
-    if (!TempParm)
+    Params = SubstTemplateParams(Params, CurContext,
+                                 MultiLevelTemplateArgumentList(TemplateArgs));
+    if (!Params)
       return true;
   }
 
@@ -4793,7 +4800,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
 
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion:
-    if (CheckTemplateArgument(TempParm, Arg, ArgumentPackIndex))
+    if (CheckTemplateTemplateArgument(Params, Arg))
       return true;
 
     Converted.push_back(Arg.getArgument());
@@ -6536,9 +6543,8 @@ static void DiagnoseTemplateParameterListArityMismatch(
 ///
 /// This routine implements the semantics of C++ [temp.arg.template].
 /// It returns true if an error occurred, and false otherwise.
-bool Sema::CheckTemplateArgument(TemplateTemplateParmDecl *Param,
-                                 TemplateArgumentLoc &Arg,
-                                 unsigned ArgumentPackIndex) {
+bool Sema::CheckTemplateTemplateArgument(TemplateParameterList *Params,
+                                         TemplateArgumentLoc &Arg) {
   TemplateName Name = Arg.getArgument().getAsTemplateOrTemplatePattern();
   TemplateDecl *Template = Name.getAsTemplateDecl();
   if (!Template) {
@@ -6572,10 +6578,6 @@ bool Sema::CheckTemplateArgument(TemplateTemplateParmDecl *Param,
     Diag(Template->getLocation(), diag::note_template_arg_refers_here_func)
       << Template;
   }
-
-  TemplateParameterList *Params = Param->getTemplateParameters();
-  if (Param->isExpandedParameterPack())
-    Params = Param->getExpansionTemplateParameters(ArgumentPackIndex);
 
   // C++1z [temp.arg.template]p3: (DR 150)
   //   A template-argument matches a template template-parameter P when P

@@ -127,6 +127,7 @@ private:
     case MVT::i64:
     case MVT::f32:
     case MVT::f64:
+    case MVT::ExceptRef:
       return VT;
     case MVT::f16:
       return MVT::f32;
@@ -681,6 +682,10 @@ bool WebAssemblyFastISel::fastLowerArguments() {
       Opc = WebAssembly::ARGUMENT_v4f32;
       RC = &WebAssembly::V128RegClass;
       break;
+    case MVT::ExceptRef:
+      Opc = WebAssembly::ARGUMENT_EXCEPT_REF;
+      RC = &WebAssembly::EXCEPT_REFRegClass;
+      break;
     default:
       return false;
     }
@@ -769,6 +774,11 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
       Opc =
           IsDirect ? WebAssembly::CALL_v4f32 : WebAssembly::PCALL_INDIRECT_v4f32;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
+      break;
+    case MVT::ExceptRef:
+      Opc = IsDirect ? WebAssembly::CALL_EXCEPT_REF
+                     : WebAssembly::PCALL_INDIRECT_EXCEPT_REF;
+      ResultReg = createResultReg(&WebAssembly::EXCEPT_REFRegClass);
       break;
     default:
       return false;
@@ -867,6 +877,10 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
   case MVT::f64:
     Opc = WebAssembly::SELECT_F64;
     RC = &WebAssembly::F64RegClass;
+    break;
+  case MVT::ExceptRef:
+    Opc = WebAssembly::SELECT_EXCEPT_REF;
+    RC = &WebAssembly::EXCEPT_REFRegClass;
     break;
   default:
     return false;
@@ -1273,6 +1287,9 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
     break;
   case MVT::v4f32:
     Opc = WebAssembly::RETURN_v4f32;
+    break;
+  case MVT::ExceptRef:
+    Opc = WebAssembly::RETURN_EXCEPT_REF;
     break;
   default: return false;
   }

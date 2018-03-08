@@ -187,7 +187,7 @@ RValue CodeGenFunction::EmitAnyExpr(const Expr *E,
   llvm_unreachable("bad evaluation kind");
 }
 
-/// EmitAnyExprToTemp - Similary to EmitAnyExpr(), however, the result will
+/// EmitAnyExprToTemp - Similar to EmitAnyExpr(), however, the result will
 /// always be accessible even if no aggregate location is provided.
 RValue CodeGenFunction::EmitAnyExprToTemp(const Expr *E) {
   AggValueSlot AggSlot = AggValueSlot::ignored();

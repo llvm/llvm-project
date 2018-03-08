@@ -4040,32 +4040,29 @@ Sema::CreateCapturedStmtRecordDecl(CapturedDecl *&CD, SourceLocation Loc,
   return RD;
 }
 
-static void buildCapturedStmtCaptureList(
-    SmallVectorImpl<CapturedStmt::Capture> &Captures,
-    SmallVectorImpl<Expr *> &CaptureInits,
-    ArrayRef<CapturingScopeInfo::Capture> Candidates) {
-
-  typedef ArrayRef<CapturingScopeInfo::Capture>::const_iterator CaptureIter;
-  for (CaptureIter Cap = Candidates.begin(); Cap != Candidates.end(); ++Cap) {
-
-    if (Cap->isThisCapture()) {
-      Captures.push_back(CapturedStmt::Capture(Cap->getLocation(),
+static void
+buildCapturedStmtCaptureList(SmallVectorImpl<CapturedStmt::Capture> &Captures,
+                             SmallVectorImpl<Expr *> &CaptureInits,
+                             ArrayRef<sema::Capture> Candidates) {
+  for (const sema::Capture &Cap : Candidates) {
+    if (Cap.isThisCapture()) {
+      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
                                                CapturedStmt::VCK_This));
-      CaptureInits.push_back(Cap->getInitExpr());
+      CaptureInits.push_back(Cap.getInitExpr());
       continue;
-    } else if (Cap->isVLATypeCapture()) {
+    } else if (Cap.isVLATypeCapture()) {
       Captures.push_back(
-          CapturedStmt::Capture(Cap->getLocation(), CapturedStmt::VCK_VLAType));
+          CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_VLAType));
       CaptureInits.push_back(nullptr);
       continue;
     }
 
-    Captures.push_back(CapturedStmt::Capture(Cap->getLocation(),
-                                             Cap->isReferenceCapture()
+    Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
+                                             Cap.isReferenceCapture()
                                                  ? CapturedStmt::VCK_ByRef
                                                  : CapturedStmt::VCK_ByCopy,
-                                             Cap->getVariable()));
-    CaptureInits.push_back(Cap->getInitExpr());
+                                             Cap.getVariable()));
+    CaptureInits.push_back(Cap.getInitExpr());
   }
 }
 

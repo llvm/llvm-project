@@ -74,11 +74,12 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
-- Before Clang 7.0, we prepended the "#" character to the --autocomplete argument to
-enable cc1 flags. For example, when the -cc1 or -Xclang flag is in the clang invocation,
-the shell executed clang --autocomplete=#-<flag to be completed>. Clang 7.0 now
-requires the whole invocation including all flags to be passed to the --autocomplete
-like this: clang --autocomplete=-cc1,-xc++,-fsyn.
+- Before Clang 7.0, we prepended the `#` character to the `--autocomplete`
+  argument to enable cc1 flags. For example, when the `-cc1` or `-Xclang` flag
+  is in the :program:`clang` invocation, the shell executed
+  `clang --autocomplete=#-<flag to be completed>`. Clang 7.0 now requires the
+  whole invocation including all flags to be passed to the `--autocomplete` like
+  this: `clang --autocomplete=-cc1,-xc++,-fsyn`.
 
 New Pragmas in Clang
 -----------------------
@@ -95,6 +96,7 @@ Attribute Changes in Clang
   sanity, however it is otherwise compatible with existing code using this
   feature for GCC. Consult the documentation for the target attribute for more
   information.
+
 - ...
 
 Windows Support

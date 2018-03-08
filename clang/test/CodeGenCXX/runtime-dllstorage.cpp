@@ -114,6 +114,7 @@ void l() {
 // CHECK-MS-DAG: declare void @_Init_thread_header(i32*)
 // CHECK-MS-DAG: declare void @_Init_thread_footer(i32*)
 
+// CHECK-IA-DAG: @_ZTH1t = dso_local alias void (), void ()* @__tls_init
 // CHECK-IA-DAG: declare i32 @__gxx_personality_v0(...)
 // CHECK-IA-DAG: define linkonce_odr hidden void @__clang_call_terminate(i8*)
 

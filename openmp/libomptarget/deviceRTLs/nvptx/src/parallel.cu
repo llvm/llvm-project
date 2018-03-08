@@ -214,15 +214,9 @@ EXTERN void __kmpc_kernel_end_convergent_parallel(void *buffer) {
 //
 // This routine is always called by the team master..
 EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
-                                           void ***SharedArgs, int32_t nArgs,
                                            int16_t IsOMPRuntimeInitialized) {
   PRINT0(LD_IO, "call to __kmpc_kernel_prepare_parallel\n");
   omptarget_nvptx_workFn = WorkFn;
-
-  if (nArgs > 0) {
-    omptarget_nvptx_sharedArgs.EnsureSize(nArgs);
-    *SharedArgs = omptarget_nvptx_sharedArgs.GetArgs();
-  }
 
   if (!IsOMPRuntimeInitialized)
     return;
@@ -323,13 +317,11 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
 //
 // Only the worker threads call this routine.
 EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
-                                   void ***SharedArgs,
                                    int16_t IsOMPRuntimeInitialized) {
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_parallel\n");
 
   // Work function and arguments for L1 parallel region.
   *WorkFn = omptarget_nvptx_workFn;
-  *SharedArgs = omptarget_nvptx_sharedArgs.GetArgs();
 
   if (!IsOMPRuntimeInitialized)
     return true;

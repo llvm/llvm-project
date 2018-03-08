@@ -346,7 +346,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Symbol *Sym = Symtab->find(Name);
     if (Sym && Sym->isDefined())
       Sym->setHidden(false);
-    else
+    else if (!Config->AllowUndefined)
       error("symbol exported via --export not found: " + Name);
   }
 

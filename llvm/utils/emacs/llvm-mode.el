@@ -20,6 +20,14 @@
 
 (defvar llvm-font-lock-keywords
   (list
+   ;; Attributes
+   `(,(regexp-opt
+       '("alwaysinline" "argmemonly" "builtin" "cold" "convergent" "inaccessiblememonly"
+         "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "naked" "nobuiltin"
+         "noduplicate" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
+         "norecurse" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
+         "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress"
+         "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "writeonly") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
    ;; Labels
@@ -35,11 +43,21 @@
    ;; Hex constants
    '("\\b0x[0-9A-Fa-f]+\\b" . font-lock-preprocessor-face)
    ;; Keywords
-   `(,(regexp-opt '("begin" "end" "true" "false" "zeroinitializer" "declare"
-                    "define" "global" "constant" "const" "internal" "linkonce" "linkonce_odr"
-                    "weak" "weak_odr" "appending" "uninitialized" "implementation" "..."
-                    "null" "undef" "to" "except" "not" "target" "endian" "little" "big"
-                    "pointersize" "volatile" "fastcc" "coldcc" "cc" "personality") 'symbols) . font-lock-keyword-face)
+   `(,(regexp-opt
+       '(;; Toplevel entities
+         "declare" "define" "module" "target" "source_filename" "global" "constant" "const"
+         "attributes" "uselistorder" "uselistorder_bb"
+         ;; Linkage types
+         "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
+         "uninitialized" "implementation" "..."
+         ;; Values
+         "true" "false" "null" "undef" "zeroinitializer" "none" "c" "asm" "blockaddress"
+
+         ;; Calling conventions
+         "ccc" "fastcc" "coldcc" "webkit_jscc" "anyregcc" "preserve_mostcc" "preserve_allcc"
+         "cxx_fast_tlscc" "swiftcc"
+
+         "atomic" "volatile" "personality" "prologue" "section") 'symbols) . font-lock-keyword-face)
    ;; Arithmetic and Logical Operators
    `(,(regexp-opt '("add" "sub" "mul" "sdiv" "udiv" "urem" "srem" "and" "or" "xor"
                     "setne" "seteq" "setlt" "setgt" "setle" "setge") 'symbols) . font-lock-keyword-face)

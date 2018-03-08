@@ -63,7 +63,6 @@ namespace llvm {
 extern cl::opt<bool> LTODiscardValueNames;
 extern cl::opt<std::string> LTORemarksFilename;
 extern cl::opt<bool> LTOPassRemarksWithHotness;
-extern cl::opt<unsigned> LTOPassRemarksHotnessThreshold;
 }
 
 namespace {
@@ -999,8 +998,7 @@ void ThinLTOCodeGenerator::run() {
         Context.setDiscardValueNames(LTODiscardValueNames);
         Context.enableDebugTypeODRUniquing();
         auto DiagFileOrErr = lto::setupOptimizationRemarks(
-            Context, LTORemarksFilename, LTOPassRemarksWithHotness,
-            LTOPassRemarksHotnessThreshold, count);
+            Context, LTORemarksFilename, LTOPassRemarksWithHotness, count);
         if (!DiagFileOrErr) {
           errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
           report_fatal_error("ThinLTO: Can't get an output file for the "

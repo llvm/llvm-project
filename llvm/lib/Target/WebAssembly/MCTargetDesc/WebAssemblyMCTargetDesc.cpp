@@ -135,6 +135,7 @@ wasm::ValType WebAssembly::toValType(const MVT &Ty) {
   case MVT::i64: return wasm::ValType::I64;
   case MVT::f32: return wasm::ValType::F32;
   case MVT::f64: return wasm::ValType::F64;
+  case MVT::ExceptRef: return wasm::ValType::EXCEPT_REF;
   default: llvm_unreachable("unexpected type");
   }
 }

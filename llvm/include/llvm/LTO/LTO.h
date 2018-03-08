@@ -73,9 +73,7 @@ std::string getThinLTOOutputFile(const std::string &Path,
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>>
 setupOptimizationRemarks(LLVMContext &Context, StringRef LTORemarksFilename,
-                         bool LTOPassRemarksWithHotness,
-                         unsigned LTOPassRemarksHotnessThreshold,
-                         int Count = -1);
+                         bool LTOPassRemarksWithHotness, int Count = -1);
 
 class LTO;
 struct SymbolResolution;
