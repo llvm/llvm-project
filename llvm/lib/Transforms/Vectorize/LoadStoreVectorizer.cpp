@@ -666,8 +666,12 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       unsigned AS = Ptr->getType()->getPointerAddressSpace();
       unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
 
+      unsigned VF = VecRegSize / TySize;
+      VectorType *VecTy = dyn_cast<VectorType>(Ty);
+
       // No point in looking at these if they're too big to vectorize.
-      if (TySize > VecRegSize / 2)
+      if (TySize > VecRegSize / 2 ||
+          (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
         continue;
 
       // Make sure all the users of a vector are constant-index extracts.
@@ -709,8 +713,12 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       unsigned AS = Ptr->getType()->getPointerAddressSpace();
       unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
 
+      unsigned VF = VecRegSize / TySize;
+      VectorType *VecTy = dyn_cast<VectorType>(Ty);
+
       // No point in looking at these if they're too big to vectorize.
-      if (TySize > VecRegSize / 2)
+      if (TySize > VecRegSize / 2 ||
+          (VecTy && TTI.getStoreVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
         continue;
 
       if (isa<VectorType>(Ty) && !llvm::all_of(SI->users(), [](const User *U) {

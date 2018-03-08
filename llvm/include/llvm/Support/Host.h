@@ -88,9 +88,9 @@ constexpr bool IsBigEndianHost = false;
 
   namespace detail {
   /// Helper functions to extract HostCPUName from /proc/cpuinfo on linux.
-  StringRef getHostCPUNameForPowerPC(const StringRef &ProcCpuinfoContent);
-  StringRef getHostCPUNameForARM(const StringRef &ProcCpuinfoContent);
-  StringRef getHostCPUNameForS390x(const StringRef &ProcCpuinfoContent);
+  StringRef getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent);
+  StringRef getHostCPUNameForARM(StringRef ProcCpuinfoContent);
+  StringRef getHostCPUNameForS390x(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForBPF();
   }
 }

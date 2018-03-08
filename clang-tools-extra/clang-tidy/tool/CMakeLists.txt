@@ -31,6 +31,7 @@ target_link_libraries(clang-tidy
   clangTidyMPIModule
   clangTidyObjCModule
   clangTidyPerformanceModule
+  clangTidyPortabilityModule
   clangTidyReadabilityModule
   clangTooling
   clangToolingCore

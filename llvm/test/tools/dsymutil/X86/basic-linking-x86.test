@@ -26,7 +26,7 @@ CHECK:    DW_AT_name ("main")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
 CHECK:      DW_AT_decl_line (23)
 CHECK:      DW_AT_prototyped (0x01)
-CHECK:      DW_AT_type (cu + 0x0063
+CHECK:      DW_AT_type (0x00000063
 CHECK:      DW_AT_external (0x01)
 CHECK:      DW_AT_accessibility (DW_ACCESS_public)
 CHECK:      DW_AT_low_pc (0x0000000100000ea0)
@@ -36,13 +36,13 @@ CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("argc")
 CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
 CHECK:        DW_AT_decl_line (23)
-CHECK:        DW_AT_type (cu + 0x0063
+CHECK:        DW_AT_type (0x00000063
 CHECK:        DW_AT_location (DW_OP_fbreg -8)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("argv")
 CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
 CHECK:        DW_AT_decl_line (23)
-CHECK:        DW_AT_type (cu + 0x006a
+CHECK:        DW_AT_type (0x0000006a
 CHECK:        DW_AT_location (DW_OP_fbreg -16)
 CHECK:      NULL
 CHECK:    DW_TAG_base_type
@@ -50,11 +50,11 @@ CHECK:      DW_AT_name ("int")
 CHECK:      DW_AT_encoding (DW_ATE_signed)
 CHECK:      DW_AT_byte_size (0x04)
 CHECK:    DW_TAG_pointer_type
-CHECK:      DW_AT_type (cu + 0x006f
+CHECK:      DW_AT_type (0x0000006f
 CHECK:    DW_TAG_pointer_type
-CHECK:      DW_AT_type (cu + 0x0074
+CHECK:      DW_AT_type (0x00000074
 CHECK:    DW_TAG_const_type
-CHECK:      DW_AT_type (cu + 0x0079
+CHECK:      DW_AT_type (0x00000079
 CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("char")
 CHECK:      DW_AT_encoding (DW_ATE_signed_char)
@@ -73,30 +73,30 @@ CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("int")
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("private_int")
-CHECK:      DW_AT_type (cu + 0x0026
+CHECK:      DW_AT_type (0x000000a7
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
 BASIC:      DW_AT_location (DW_OP_addr 0x100001008)
 ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001004)
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("baz")
-CHECK:      DW_AT_type (cu + 0x0026
+CHECK:      DW_AT_type (0x000000a7
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
 CHECK:      DW_AT_location (DW_OP_addr 0x100001000)
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("foo")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
-CHECK:      DW_AT_type (cu + 0x0026
+CHECK:      DW_AT_type (0x000000a7
 CHECK:      DW_AT_low_pc (0x0000000100000ed0)
 CHECK:      DW_AT_high_pc (0x0000000100000f19)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
-CHECK:        DW_AT_type (cu + 0x0026
+CHECK:        DW_AT_type (0x000000a7
 CHECK:        DW_AT_location (DW_OP_fbreg -4)
 CHECK:      NULL
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("inc")
-CHECK:      DW_AT_type (cu + 0x0026
+CHECK:      DW_AT_type (0x000000a7
 CHECK:      DW_AT_low_pc (0x0000000100000f20)
 CHECK:      DW_AT_high_pc (0x0000000100000f37)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
@@ -112,28 +112,28 @@ CHECK:    DW_AT_comp_dir ("/Inputs")
 CHECK:    DW_AT_low_pc (0x0000000100000f40)
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("val")
-CHECK:      DW_AT_type (cu + 0x003c
+CHECK:      DW_AT_type (0x00000162
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic3.c")
 BASIC:      DW_AT_location (DW_OP_addr 0x100001004)
 ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001008)
 CHECK:    DW_TAG_volatile_type
-CHECK:      DW_AT_type (cu + 0x0041
+CHECK:      DW_AT_type (0x00000167
 CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("int")
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("bar")
-CHECK:      DW_AT_type (cu + 0x0041
+CHECK:      DW_AT_type (0x00000167
 CHECK:      DW_AT_low_pc (0x0000000100000f40)
 CHECK:      DW_AT_high_pc (0x0000000100000f84)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
-CHECK:        DW_AT_type (cu + 0x0041
+CHECK:        DW_AT_type (0x00000167
 CHECK:        DW_AT_location (DW_OP_fbreg -8)
 CHECK:      NULL
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("inc")
-CHECK:      DW_AT_type (cu + 0x0041
+CHECK:      DW_AT_type (0x00000167
 CHECK:      DW_AT_low_pc (0x0000000100000f90)
 CHECK:      DW_AT_high_pc (0x0000000100000fa9)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)

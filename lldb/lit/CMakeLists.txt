@@ -41,6 +41,7 @@ set(LLDB_TEST_DEPS
   lldb
   lldb-test
   llvm-config
+  llvm-objcopy
   )
 
 if(NOT LLDB_BUILT_STANDALONE)

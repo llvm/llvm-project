@@ -2,11 +2,11 @@
 ; CHECK: 0x00000[[G:.*]]:     DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("g")
 ; CHECK: DW_TAG_array_type
-; CHECK-NEXT:  DW_AT_type	(cu + {{.*}} "int")
+; CHECK-NEXT:  DW_AT_type	({{.*}} "int")
 ; CHECK-NOT: DW_TAG
 ; CHECK:       DW_TAG_subrange_type
-; CHECK-NEXT:     DW_AT_type	(cu + {{.*}} "sizetype")
-; CHECK-NEXT:      DW_AT_count	(cu + 0x0[[G]])
+; CHECK-NEXT:     DW_AT_type	({{.*}} "sizetype")
+; CHECK-NEXT:      DW_AT_count	(0x00000[[G]])
 ; Test that a VLA referring to a global variable is handled correctly.
 ; Clang doesn't generate this, but the verifier allows it.
 source_filename = "/tmp/test.c"

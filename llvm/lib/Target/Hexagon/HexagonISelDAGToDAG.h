@@ -104,6 +104,8 @@ public:
   void SelectV65Gather(SDNode *N);
   void SelectV65GatherPred(SDNode *N);
   void SelectHVXDualOutput(SDNode *N);
+  void SelectVAlign(SDNode *N);
+  void SelectVAlignAddr(SDNode *N);
   void SelectTypecast(SDNode *N);
   void SelectP2D(SDNode *N);
   void SelectD2P(SDNode *N);
@@ -127,6 +129,7 @@ private:
 
   void SelectHvxShuffle(SDNode *N);
   void SelectHvxRor(SDNode *N);
+  void SelectHvxVAlign(SDNode *N);
 
   bool keepsLowBits(const SDValue &Val, unsigned NumBits, SDValue &Src);
   bool isAlignedMemNode(const MemSDNode *N) const;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
@@ -25,8 +25,20 @@
 
 // CHECK-LABEL: loop_with_counter_collapse
 void loop_with_counter_collapse() {
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
   // CHECK: call void @__kmpc_for_static_init_8(%ident_t* @
   // CHECK: call void @__kmpc_for_static_fini(%ident_t* @
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
+  // LIFETIME: call void @llvm.lifetime.end
   #pragma omp for collapse(2)
   for (int i = 0; i < 4; i++) {
     for (int j = i; j < 4; j++) {

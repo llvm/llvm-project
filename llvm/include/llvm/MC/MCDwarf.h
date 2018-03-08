@@ -214,7 +214,6 @@ struct MCDwarfLineTableHeader {
   SmallVector<MCDwarfFile, 3> MCDwarfFiles;
   StringMap<unsigned> SourceIdMap;
   StringRef CompilationDir;
-  MCDwarfFile RootFile;
   bool HasMD5 = false;
   bool HasSource = false;
 
@@ -242,17 +241,8 @@ class MCDwarfDwoLineTable {
   MCDwarfLineTableHeader Header;
 
 public:
-  void maybeSetRootFile(StringRef Directory, StringRef FileName,
-                        MD5::MD5Result *Checksum, Optional<StringRef> Source) {
-    if (!Header.RootFile.Name.empty())
-      return;
-    Header.CompilationDir = Directory;
-    Header.RootFile.Name = FileName;
-    Header.RootFile.DirIndex = 0;
-    Header.RootFile.Checksum = Checksum;
-    Header.RootFile.Source = Source;
-    Header.HasMD5 = (Checksum != nullptr);
-    Header.HasSource = Source.hasValue();
+  void setCompilationDir(StringRef CompilationDir) {
+    Header.CompilationDir = CompilationDir;
   }
 
   unsigned getFile(StringRef Directory, StringRef FileName,
@@ -286,23 +276,16 @@ public:
                                FileNumber));
   }
 
-  void setRootFile(StringRef Directory, StringRef FileName,
-                   MD5::MD5Result *Checksum, Optional<StringRef> Source) {
-    Header.CompilationDir = Directory;
-    Header.RootFile.Name = FileName;
-    Header.RootFile.DirIndex = 0;
-    Header.RootFile.Checksum = Checksum;
-    Header.RootFile.Source = Source;
-    Header.HasMD5 = (Checksum != nullptr);
-    Header.HasSource = Source.hasValue();
-  }
-
   MCSymbol *getLabel() const {
     return Header.Label;
   }
 
   void setLabel(MCSymbol *Label) {
     Header.Label = Label;
+  }
+
+  void setCompilationDir(StringRef CompilationDir) {
+    Header.CompilationDir = CompilationDir;
   }
 
   const SmallVectorImpl<std::string> &getMCDwarfDirs() const {

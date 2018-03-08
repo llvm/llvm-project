@@ -1537,8 +1537,7 @@ CGCXXABI::AddedStructorArgs MicrosoftCXXABI::addImplicitConstructorArgs(
   }
   RValue RV = RValue::get(MostDerivedArg);
   if (FPT->isVariadic()) {
-    Args.insert(Args.begin() + 1,
-                CallArg(RV, getContext().IntTy, /*needscopy=*/false));
+    Args.insert(Args.begin() + 1, CallArg(RV, getContext().IntTy));
     return AddedStructorArgs::prefix(1);
   }
   Args.add(RV, getContext().IntTy);

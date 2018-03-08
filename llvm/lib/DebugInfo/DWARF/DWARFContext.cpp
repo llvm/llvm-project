@@ -349,11 +349,11 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
                  DObj->getDebugFrameSection()))
-    getDebugFrame()->dump(OS, DumpOffset);
+    getDebugFrame()->dump(OS, getRegisterInfo(), DumpOffset);
 
   if (shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
                  DObj->getEHFrameSection()))
-    getEHFrame()->dump(OS, DumpOffset);
+    getEHFrame()->dump(OS, getRegisterInfo(), DumpOffset);
 
   if (DumpType & DIDT_DebugMacro) {
     if (Explicit || !getDebugMacro()->empty()) {
@@ -712,8 +712,8 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // provides this information). This problem is fixed in DWARFv4
   // See this dwarf-discuss discussion for more details:
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
-  DataExtractor debugFrameData(DObj->getDebugFrameSection(), isLittleEndian(),
-                               DObj->getAddressSize());
+  DWARFDataExtractor debugFrameData(DObj->getDebugFrameSection(),
+                                    isLittleEndian(), DObj->getAddressSize());
   DebugFrame.reset(new DWARFDebugFrame(false /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
@@ -723,8 +723,8 @@ const DWARFDebugFrame *DWARFContext::getEHFrame() {
   if (EHFrame)
     return EHFrame.get();
 
-  DataExtractor debugFrameData(DObj->getEHFrameSection(), isLittleEndian(),
-                               DObj->getAddressSize());
+  DWARFDataExtractor debugFrameData(DObj->getEHFrameSection(), isLittleEndian(),
+                                    DObj->getAddressSize());
   DebugFrame.reset(new DWARFDebugFrame(true /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();

@@ -38,8 +38,8 @@ using namespace lld::elf;
 
 typedef DenseMap<const SectionBase *, SmallVector<Symbol *, 4>> SymbolMapTy;
 
-static const std::string Indent1 = "        ";         // 8 spaces
-static const std::string Indent2 = "                "; // 16 spaces
+static const std::string Indent8 = "        ";          // 8 spaces
+static const std::string Indent16 = "                "; // 16 spaces
 
 // Print out the first three columns of a line.
 static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
@@ -101,7 +101,7 @@ getSymbolStrings(ArrayRef<Symbol *> Syms) {
   parallelForEachN(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
     writeHeader(OS, Syms[I]->getVA(), Syms[I]->getSize(), 0);
-    OS << Indent2 << toString(*Syms[I]);
+    OS << Indent16 << toString(*Syms[I]);
   });
 
   DenseMap<Symbol *, std::string> Ret;
@@ -140,7 +140,7 @@ void elf::writeMapFile() {
     // Dump symbols for each input section.
     for (InputSection *IS : getInputSections(OSec)) {
       writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(), IS->Alignment);
-      OS << Indent1 << toString(IS) << '\n';
+      OS << Indent8 << toString(IS) << '\n';
       for (Symbol *Sym : SectionSyms[IS])
         OS << SymStr[Sym] << '\n';
     }

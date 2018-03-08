@@ -18,7 +18,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace readability {
+namespace portability {
 
 namespace {
 
@@ -84,17 +84,21 @@ static StringRef TrySuggestX86(StringRef Name) {
 
 SIMDIntrinsicsCheck::SIMDIntrinsicsCheck(StringRef Name,
                                          ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), Suggest(Options.get("Suggest", 0) != 0) {}
+    : ClangTidyCheck(Name, Context), Std(Options.get("Std", "")),
+      Suggest(Options.get("Suggest", 0) != 0) {}
 
 void SIMDIntrinsicsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "Std", "");
   Options.store(Opts, "Suggest", 0);
 }
 
 void SIMDIntrinsicsCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
     return;
+  // If Std is not specified, infer it from the language options.
   // libcxx implementation backports it to C++11 std::experimental::simd.
-  Std = getLangOpts().CPlusPlus2a ? "std" : "std::experimental";
+  if (Std.empty())
+    Std = getLangOpts().CPlusPlus2a ? "std" : "std::experimental";
 
   Finder->addMatcher(callExpr(callee(functionDecl(allOf(
                                   matchesName("^::(_mm_|_mm256_|_mm512_|vec_)"),
@@ -116,20 +120,23 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
   llvm::Triple::ArchType Arch =
       Result.Context->getTargetInfo().getTriple().getArch();
 
+  // We warn or suggest if this SIMD intrinsic function has a std::simd
+  // replacement.
   switch (Arch) {
-    default:
-      break;
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
-      New = TrySuggestPPC(Old);
-      break;
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      New = TrySuggestX86(Old);
-      break;
+  default:
+    break;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    New = TrySuggestPPC(Old);
+    break;
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    New = TrySuggestX86(Old);
+    break;
   }
 
+  // We have found a std::simd replacement.
   if (!New.empty()) {
     std::string Message;
     // If Suggest is true, give a P0214 alternative, otherwise point it out it
@@ -137,7 +144,8 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
     if (Suggest) {
       Message = (Twine("'") + Old + "' can be replaced by " + New).str();
       Message = llvm::Regex("\\$std").sub(Std, Message);
-      Message = llvm::Regex("\\$simd").sub(Std.str() + "::simd", Message);
+      Message =
+          llvm::Regex("\\$simd").sub((Std.str() + "::simd").str(), Message);
     } else {
       Message = (Twine("'") + Old + "' is a non-portable " +
                  llvm::Triple::getArchTypeName(Arch) + " intrinsic function")
@@ -147,6 +155,6 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace readability
+} // namespace portability
 } // namespace tidy
 } // namespace clang

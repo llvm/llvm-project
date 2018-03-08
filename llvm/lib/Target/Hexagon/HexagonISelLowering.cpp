@@ -103,6 +103,10 @@ static cl::opt<int> MaxStoresPerMemsetOptSizeCL("max-store-memset-Os",
   cl::Hidden, cl::ZeroOrMore, cl::init(4),
   cl::desc("Max #stores to inline memset"));
 
+static cl::opt<bool> AlignLoads("hexagon-align-loads",
+  cl::Hidden, cl::init(false),
+  cl::desc("Rewrite unaligned loads as a pair of aligned loads"));
+
 
 namespace {
 
@@ -544,8 +548,9 @@ bool HexagonTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
   EVT VT = LSN->getMemoryVT();
   if (!VT.isSimple())
     return false;
-  bool IsLegalType = VT == MVT::i8 || VT == MVT::i16 ||
-                     VT == MVT::i32 || VT == MVT::i64 ||
+  bool IsLegalType = VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 ||
+                     VT == MVT::i64 || VT == MVT::v2i16 || MVT::v2i32 ||
+                     VT == MVT::v4i8 || VT == MVT::v4i16 || MVT::v8i8 ||
                      Subtarget.isHVXVectorType(VT.getSimpleVT());
   if (!IsLegalType)
     return false;
@@ -1495,6 +1500,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::XOR, NativeVT, Legal);
   }
 
+  // Custom lower unaligned loads.
+  for (MVT VecVT : {MVT::i32, MVT::v4i8, MVT::i64, MVT::v8i8,
+                    MVT::v2i16, MVT::v4i16, MVT::v2i32}) {
+    setOperationAction(ISD::LOAD, VecVT, Custom);
+  }
+
   // Custom-lower bitcasts from i8 to v8i1.
   setOperationAction(ISD::BITCAST,        MVT::i8,    Custom);
   setOperationAction(ISD::SETCC,          MVT::v2i16, Custom);
@@ -1559,7 +1570,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   // Handling of indexed loads/stores: default is "expand".
   //
-  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64, MVT::v2i16,
+                 MVT::v2i32, MVT::v4i8, MVT::v4i16, MVT::v8i8}) {
     setIndexedLoadAction(ISD::POST_INC, VT, Legal);
     setIndexedStoreAction(ISD::POST_INC, VT, Legal);
   }
@@ -1718,6 +1730,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::QTRUE:         return "HexagonISD::QTRUE";
   case HexagonISD::QFALSE:        return "HexagonISD::QFALSE";
   case HexagonISD::TYPECAST:      return "HexagonISD::TYPECAST";
+  case HexagonISD::VALIGN:        return "HexagonISD::VALIGN";
   case HexagonISD::VALIGNADDR:    return "HexagonISD::VALIGNADDR";
   case HexagonISD::OP_END:        break;
   }
@@ -2519,6 +2532,90 @@ HexagonTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
 }
 
 SDValue
+HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
+      const {
+  LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
+  unsigned HaveAlign = LN->getAlignment();
+  MVT LoadTy = ty(Op);
+  unsigned NeedAlign = Subtarget.getTypeAlignment(LoadTy);
+  if (HaveAlign >= NeedAlign)
+    return Op;
+  // Indexed loads/stores are created after legalizing operations, so we
+  // shouldn't be getting unaligned post-incrementing loads at this point.
+  assert(LN->isUnindexed() && "Expecting only unindexed loads");
+
+  const SDLoc &dl(Op);
+  const DataLayout &DL = DAG.getDataLayout();
+  LLVMContext &Ctx = *DAG.getContext();
+  unsigned AS = LN->getAddressSpace();
+
+  // If the load aligning is disabled or the load can be broken up into two
+  // smaller legal loads, do the default (target-independent) expansion.
+  bool DoDefault = false;
+  if (!AlignLoads) {
+    if (allowsMemoryAccess(Ctx, DL, LN->getMemoryVT(), AS, HaveAlign))
+      return Op;
+    DoDefault = true;
+  }
+  if (!DoDefault && 2*HaveAlign == NeedAlign) {
+    // The PartTy is the equivalent of "getLoadableTypeOfSize(HaveAlign)".
+    MVT PartTy = HaveAlign <= 8 ? MVT::getIntegerVT(8*HaveAlign)
+                                : MVT::getVectorVT(MVT::i8, HaveAlign);
+    DoDefault = allowsMemoryAccess(Ctx, DL, PartTy, AS, HaveAlign);
+  }
+  if (DoDefault) {
+    std::pair<SDValue, SDValue> P = expandUnalignedLoad(LN, DAG);
+    return DAG.getMergeValues({P.first, P.second}, dl);
+  }
+
+  // The code below generates two loads, both aligned as NeedAlign, and
+  // with the distance of NeedAlign between them. For that to cover the
+  // bits that need to be loaded (and without overlapping), the size of
+  // the loads should be equal to NeedAlign. This is true for all loadable
+  // types, but add an assertion in case something changes in the future.
+  assert(LoadTy.getSizeInBits() == 8*NeedAlign);
+
+  unsigned LoadLen = NeedAlign;
+  SDValue Base = LN->getBasePtr();
+  SDValue Chain = LN->getChain();
+  auto BO = getBaseAndOffset(Base);
+  unsigned BaseOpc = BO.first.getOpcode();
+  if (BaseOpc == HexagonISD::VALIGNADDR && BO.second % LoadLen == 0)
+    return Op;
+
+  if (BO.second % LoadLen != 0) {
+    BO.first = DAG.getNode(ISD::ADD, dl, MVT::i32, BO.first,
+                           DAG.getConstant(BO.second % LoadLen, dl, MVT::i32));
+    BO.second -= BO.second % LoadLen;
+  }
+  SDValue BaseNoOff = (BaseOpc != HexagonISD::VALIGNADDR)
+      ? DAG.getNode(HexagonISD::VALIGNADDR, dl, MVT::i32, BO.first,
+                    DAG.getConstant(NeedAlign, dl, MVT::i32))
+      : BO.first;
+  SDValue Base0 = DAG.getMemBasePlusOffset(BaseNoOff, BO.second, dl);
+  SDValue Base1 = DAG.getMemBasePlusOffset(BaseNoOff, BO.second+LoadLen, dl);
+
+  MachineMemOperand *WideMMO = nullptr;
+  if (MachineMemOperand *MMO = LN->getMemOperand()) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    WideMMO = MF.getMachineMemOperand(MMO->getPointerInfo(), MMO->getFlags(),
+                    2*LoadLen, LoadLen, MMO->getAAInfo(), MMO->getRanges(),
+                    MMO->getSyncScopeID(), MMO->getOrdering(),
+                    MMO->getFailureOrdering());
+  }
+
+  SDValue Load0 = DAG.getLoad(LoadTy, dl, Chain, Base0, WideMMO);
+  SDValue Load1 = DAG.getLoad(LoadTy, dl, Chain, Base1, WideMMO);
+
+  SDValue Aligned = DAG.getNode(HexagonISD::VALIGN, dl, LoadTy,
+                                {Load1, Load0, BaseNoOff.getOperand(0)});
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                                 Load0.getValue(1), Load1.getValue(1));
+  SDValue M = DAG.getMergeValues({Aligned, NewChain}, dl);
+  return M;
+}
+
+SDValue
 HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain     = Op.getOperand(0);
   SDValue Offset    = Op.getOperand(1);
@@ -2553,8 +2650,11 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   if (Opc == ISD::INLINEASM)
     return LowerINLINEASM(Op, DAG);
 
-  if (isHvxOperation(Op))
-    return LowerHvxOperation(Op, DAG);
+  if (isHvxOperation(Op)) {
+    // If HVX lowering returns nothing, try the default lowering.
+    if (SDValue V = LowerHvxOperation(Op, DAG))
+      return V;
+  }
 
   switch (Opc) {
     default:
@@ -2572,6 +2672,7 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::BUILD_VECTOR:         return LowerBUILD_VECTOR(Op, DAG);
     case ISD::VECTOR_SHUFFLE:       return LowerVECTOR_SHUFFLE(Op, DAG);
     case ISD::BITCAST:              return LowerBITCAST(Op, DAG);
+    case ISD::LOAD:                 return LowerUnalignedLoad(Op, DAG);
     case ISD::SRA:
     case ISD::SHL:
     case ISD::SRL:                  return LowerVECTOR_SHIFT(Op, DAG);
