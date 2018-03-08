@@ -199,6 +199,21 @@ void PrintStatisticsJSON(raw_ostream &OS);
 /// completes.
 const std::vector<std::pair<StringRef, unsigned>> GetStatistics();
 
+/// \brief Reset the statistics. This can be used to zero and de-register the
+/// statistics in order to measure a compilation.
+///
+/// When this function begins to call destructors prior to returning, all
+/// statistics will be zero and unregistered. However, that might not remain the
+/// case by the time this function finishes returning. Whether update from other
+/// threads are lost or merely deferred until during the function return is
+/// timing sensitive.
+///
+/// Callers who intend to use this to measure statistics for a single
+/// compilation should ensure that no compilations are in progress at the point
+/// this function is called and that only one compilation executes until calling
+/// GetStatistics().
+void ResetStatistics();
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_STATISTIC_H
