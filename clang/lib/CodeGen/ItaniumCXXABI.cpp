@@ -1474,8 +1474,7 @@ CGCXXABI::AddedStructorArgs ItaniumCXXABI::addImplicitConstructorArgs(
   llvm::Value *VTT =
       CGF.GetVTTParameter(GlobalDecl(D, Type), ForVirtualBase, Delegating);
   QualType VTTTy = getContext().getPointerType(getContext().VoidPtrTy);
-  Args.insert(Args.begin() + 1,
-              CallArg(RValue::get(VTT), VTTTy, /*needscopy=*/false));
+  Args.insert(Args.begin() + 1, CallArg(RValue::get(VTT), VTTTy));
   return AddedStructorArgs::prefix(1);  // Added one arg.
 }
 
@@ -2399,8 +2398,10 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
       CGM.SetLLVMFunctionAttributes(nullptr, FI, cast<llvm::Function>(Init));
     }
 
-    if (Init)
+    if (Init) {
       Init->setVisibility(Var->getVisibility());
+      Init->setDSOLocal(Var->isDSOLocal());
+    }
 
     llvm::LLVMContext &Context = CGM.getModule().getContext();
     llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Wrapper);

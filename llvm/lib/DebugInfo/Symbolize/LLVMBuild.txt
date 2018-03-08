@@ -19,4 +19,4 @@
 type = Library
 name = Symbolize
 parent = DebugInfo
-required_libraries = DebugInfoDWARF DebugInfoPDB Object Support
+required_libraries = DebugInfoDWARF DebugInfoPDB Object Support Demangle

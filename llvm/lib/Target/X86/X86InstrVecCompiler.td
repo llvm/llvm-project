@@ -261,10 +261,10 @@ let Predicates = [HasVLX] in {
 // will zero the upper bits.
 // TODO: Is there a safe way to detect whether the producing instruction
 // already zeroed the upper bits?
-multiclass subvector_zero_lowering<string MoveStr, RegisterClass RC,
-                                   ValueType DstTy, ValueType SrcTy,
-                                   ValueType ZeroTy, PatFrag memop,
-                                   SubRegIndex SubIdx> {
+multiclass subvector_zero_lowering<string MoveStr, string LoadStr,
+                                   RegisterClass RC, ValueType DstTy,
+                                   ValueType SrcTy, ValueType ZeroTy,
+                                   PatFrag memop, SubRegIndex SubIdx> {
   def : Pat<(DstTy (insert_subvector (bitconvert (ZeroTy immAllZerosV)),
                                      (SrcTy RC:$src), (iPTR 0))),
             (SUBREG_TO_REG (i64 0),
@@ -274,91 +274,91 @@ multiclass subvector_zero_lowering<string MoveStr, RegisterClass RC,
                                      (SrcTy (bitconvert (memop addr:$src))),
                                      (iPTR 0))),
             (SUBREG_TO_REG (i64 0),
-             (!cast<Instruction>("VMOV"#MoveStr#"rm") addr:$src), SubIdx)>;
+             (!cast<Instruction>("VMOV"#LoadStr#"rm") addr:$src), SubIdx)>;
 }
 
 let Predicates = [HasAVX, NoVLX] in {
-  defm : subvector_zero_lowering<"APD", VR128, v4f64, v2f64, v8i32, loadv2f64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"APS", VR128, v8f32, v4f32, v8i32, loadv4f32,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v4i64, v2i64, v8i32, loadv2i64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v8i32, v4i32, v8i32, loadv2i64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v16i16, v8i16, v8i32, loadv2i64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v32i8, v16i8, v8i32, loadv2i64,
-                                 sub_xmm>;
+  defm : subvector_zero_lowering<"APD", "UPD", VR128, v4f64, v2f64, v8i32,
+                                 loadv2f64, sub_xmm>;
+  defm : subvector_zero_lowering<"APS", "UPS", VR128, v8f32, v4f32, v8i32,
+                                 loadv4f32, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v4i64, v2i64, v8i32,
+                                 loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v8i32, v4i32, v8i32,
+                                 loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v16i16, v8i16, v8i32,
+                                 loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v32i8, v16i8, v8i32,
+                                 loadv2i64, sub_xmm>;
 }
 
 let Predicates = [HasVLX] in {
-  defm : subvector_zero_lowering<"APDZ128", VR128X, v4f64, v2f64, v8i32,
-                                 loadv2f64, sub_xmm>;
-  defm : subvector_zero_lowering<"APSZ128", VR128X, v8f32, v4f32, v8i32,
-                                 loadv4f32, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v4i64, v2i64, v8i32,
-                                 loadv2i64, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v8i32, v4i32, v8i32,
-                                 loadv2i64, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v16i16, v8i16, v8i32,
-                                 loadv2i64, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v32i8, v16i8, v8i32,
-                                 loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"APDZ128", "UPDZ128", VR128X, v4f64,
+                                 v2f64, v8i32, loadv2f64, sub_xmm>;
+  defm : subvector_zero_lowering<"APSZ128", "UPSZ128", VR128X, v8f32,
+                                 v4f32, v8i32, loadv4f32, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v4i64,
+                                 v2i64, v8i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v8i32,
+                                 v4i32, v8i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v16i16,
+                                 v8i16, v8i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v32i8,
+                                 v16i8, v8i32, loadv2i64, sub_xmm>;
 
-  defm : subvector_zero_lowering<"APDZ128", VR128X, v8f64, v2f64, v16i32,
-                                 loadv2f64, sub_xmm>;
-  defm : subvector_zero_lowering<"APSZ128", VR128X, v16f32, v4f32, v16i32,
-                                 loadv4f32, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v8i64, v2i64, v16i32,
-                                 loadv2i64, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v16i32, v4i32, v16i32,
-                                 loadv2i64, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v32i16, v8i16, v16i32,
-                                 loadv2i64, sub_xmm>;
-  defm : subvector_zero_lowering<"DQA64Z128", VR128X, v64i8, v16i8, v16i32,
-                                 loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"APDZ128", "UPDZ128", VR128X, v8f64,
+                                 v2f64, v16i32, loadv2f64, sub_xmm>;
+  defm : subvector_zero_lowering<"APSZ128", "UPSZ128", VR128X, v16f32,
+                                 v4f32, v16i32, loadv4f32, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v8i64,
+                                 v2i64, v16i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v16i32,
+                                 v4i32, v16i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v32i16,
+                                 v8i16, v16i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA64Z128", "DQU64Z128", VR128X, v64i8,
+                                 v16i8, v16i32, loadv2i64, sub_xmm>;
 
-  defm : subvector_zero_lowering<"APDZ256", VR256X, v8f64, v4f64, v16i32,
-                                 loadv4f64, sub_ymm>;
-  defm : subvector_zero_lowering<"APSZ256", VR256X, v16f32, v8f32, v16i32,
-                                 loadv8f32, sub_ymm>;
-  defm : subvector_zero_lowering<"DQA64Z256", VR256X, v8i64, v4i64, v16i32,
-                                 loadv4i64, sub_ymm>;
-  defm : subvector_zero_lowering<"DQA64Z256", VR256X, v16i32, v8i32, v16i32,
-                                 loadv4i64, sub_ymm>;
-  defm : subvector_zero_lowering<"DQA64Z256", VR256X, v32i16, v16i16, v16i32,
-                                 loadv4i64, sub_ymm>;
-  defm : subvector_zero_lowering<"DQA64Z256", VR256X, v64i8, v32i8, v16i32,
-                                 loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"APDZ256", "UPDZ256", VR256X, v8f64,
+                                 v4f64, v16i32, loadv4f64, sub_ymm>;
+  defm : subvector_zero_lowering<"APSZ256", "UPDZ256", VR256X, v16f32,
+                                 v8f32, v16i32, loadv8f32, sub_ymm>;
+  defm : subvector_zero_lowering<"DQA64Z256", "DQU64Z256", VR256X, v8i64,
+                                 v4i64, v16i32, loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"DQA64Z256", "DQU64Z256", VR256X, v16i32,
+                                 v8i32, v16i32, loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"DQA64Z256", "DQU64Z256", VR256X, v32i16,
+                                 v16i16, v16i32, loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"DQA64Z256", "DQU64Z256", VR256X, v64i8,
+                                 v32i8, v16i32, loadv4i64, sub_ymm>;
 }
 
 let Predicates = [HasAVX512, NoVLX] in {
-  defm : subvector_zero_lowering<"APD", VR128, v8f64, v2f64, v16i32, loadv2f64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"APS", VR128, v16f32, v4f32, v16i32, loadv4f32,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v8i64, v2i64, v16i32, loadv2i64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v16i32, v4i32, v16i32, loadv2i64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v32i16, v8i16, v16i32, loadv2i64,
-                                 sub_xmm>;
-  defm : subvector_zero_lowering<"DQA", VR128, v64i8, v16i8, v16i32, loadv2i64,
-                                 sub_xmm>;
+  defm : subvector_zero_lowering<"APD", "UPD", VR128, v8f64, v2f64,
+                                 v16i32,loadv2f64, sub_xmm>;
+  defm : subvector_zero_lowering<"APS", "UPS", VR128, v16f32, v4f32,
+                                 v16i32, loadv4f32, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v8i64, v2i64,
+                                 v16i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v16i32, v4i32,
+                                 v16i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v32i16, v8i16,
+                                 v16i32, loadv2i64, sub_xmm>;
+  defm : subvector_zero_lowering<"DQA", "DQU", VR128, v64i8, v16i8,
+                                 v16i32, loadv2i64, sub_xmm>;
 
-  defm : subvector_zero_lowering<"APDY", VR256, v8f64, v4f64, v16i32,
-                                 loadv4f64, sub_ymm>;
-  defm : subvector_zero_lowering<"APSY", VR256, v16f32, v8f32, v16i32,
-                                 loadv8f32, sub_ymm>;
-  defm : subvector_zero_lowering<"DQAY", VR256, v8i64, v4i64, v16i32,
-                                 loadv4i64, sub_ymm>;
-  defm : subvector_zero_lowering<"DQAY", VR256, v16i32, v8i32, v16i32,
-                                 loadv4i64, sub_ymm>;
-  defm : subvector_zero_lowering<"DQAY", VR256, v32i16, v16i16, v16i32,
-                                 loadv4i64, sub_ymm>;
-  defm : subvector_zero_lowering<"DQAY", VR256, v64i8, v32i8, v16i32,
-                                 loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"APDY", "UPDY", VR256, v8f64, v4f64,
+                                 v16i32, loadv4f64, sub_ymm>;
+  defm : subvector_zero_lowering<"APSY", "UPSY", VR256, v16f32, v8f32,
+                                 v16i32, loadv8f32, sub_ymm>;
+  defm : subvector_zero_lowering<"DQAY", "DQUY", VR256, v8i64, v4i64,
+                                 v16i32, loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"DQAY", "DQUY", VR256, v16i32, v8i32,
+                                 v16i32, loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"DQAY", "DQUY", VR256, v32i16, v16i16,
+                                 v16i32, loadv4i64, sub_ymm>;
+  defm : subvector_zero_lowering<"DQAY", "DQUY", VR256, v64i8, v32i8,
+                                 v16i32, loadv4i64, sub_ymm>;
 }
 
 // List of opcodes that guaranteed to zero the upper elements of vector regs.

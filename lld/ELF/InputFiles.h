@@ -242,9 +242,7 @@ public:
   InputFile *fetch();
 
 private:
-  std::vector<StringRef> getSymbolNames();
-  template <class ELFT> std::vector<StringRef> getElfSymbols();
-  std::vector<StringRef> getBitcodeSymbols();
+  template <class ELFT> void addElfSymbols();
 
   bool Seen = false;
   uint64_t OffsetInArchive;

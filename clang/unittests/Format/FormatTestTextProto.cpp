@@ -452,5 +452,11 @@ TEST_F(FormatTestTextProto, AcceptsOperatorAsKey) {
                "  >\n"
                ">");
 }
+
+TEST_F(FormatTestTextProto, BreaksConsecutiveStringLiterals) {
+  verifyFormat("ala: \"str1\"\n"
+               "     \"str2\"\n");
+}
+
 } // end namespace tooling
 } // end namespace clang

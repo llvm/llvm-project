@@ -6930,7 +6930,7 @@ static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
 /// variable \p VD, or an invalid source location otherwise.
 static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
                                          const VarDecl *VD) {
-  for (const LambdaScopeInfo::Capture &Capture : LSI->Captures) {
+  for (const Capture &Capture : LSI->Captures) {
     if (Capture.isVariableCapture() && Capture.getVariable() == VD)
       return Capture.getLocation();
   }

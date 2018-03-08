@@ -15,9 +15,13 @@
 
 #ifndef LLVM_CLANG_SEMA_SEMALAMBDA_H
 #define LLVM_CLANG_SEMA_SEMALAMBDA_H
+
 #include "clang/AST/ASTLambda.h"
-#include "clang/Sema/ScopeInfo.h"
+
 namespace clang {
+namespace sema {
+class FunctionScopeInfo;
+}
 class Sema;
 
 /// \brief Examines the FunctionScopeInfo stack to determine the nearest

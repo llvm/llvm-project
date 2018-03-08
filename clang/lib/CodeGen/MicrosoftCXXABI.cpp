@@ -1196,15 +1196,16 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
   unsigned AS = getThisAddress(CGF).getAddressSpace();
   llvm::Value *Int8This = nullptr;  // Initialize lazily.
 
-  for (VBOffsets::const_iterator I = VBaseMap.begin(), E = VBaseMap.end();
-        I != E; ++I) {
+  for (const CXXBaseSpecifier &S : RD->vbases()) {
+    const CXXRecordDecl *VBase = S.getType()->getAsCXXRecordDecl();
+    auto I = VBaseMap.find(VBase);
+    assert(I != VBaseMap.end());
     if (!I->second.hasVtorDisp())
       continue;
 
     llvm::Value *VBaseOffset =
-        GetVirtualBaseClassOffset(CGF, getThisAddress(CGF), RD, I->first);
-    uint64_t ConstantVBaseOffset =
-        Layout.getVBaseClassOffset(I->first).getQuantity();
+        GetVirtualBaseClassOffset(CGF, getThisAddress(CGF), RD, VBase);
+    uint64_t ConstantVBaseOffset = I->second.VBaseOffset.getQuantity();
 
     // vtorDisp_for_vbase = vbptr[vbase_idx] - offsetof(RD, vbase).
     llvm::Value *VtorDispValue = Builder.CreateSub(
@@ -1537,8 +1538,7 @@ CGCXXABI::AddedStructorArgs MicrosoftCXXABI::addImplicitConstructorArgs(
   }
   RValue RV = RValue::get(MostDerivedArg);
   if (FPT->isVariadic()) {
-    Args.insert(Args.begin() + 1,
-                CallArg(RV, getContext().IntTy, /*needscopy=*/false));
+    Args.insert(Args.begin() + 1, CallArg(RV, getContext().IntTy));
     return AddedStructorArgs::prefix(1);
   }
   Args.add(RV, getContext().IntTy);

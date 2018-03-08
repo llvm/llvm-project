@@ -1040,42 +1040,49 @@ void CodeGenFunction::ExpandTypeFromArgs(
 }
 
 void CodeGenFunction::ExpandTypeToArgs(
-    QualType Ty, RValue RV, llvm::FunctionType *IRFuncTy,
+    QualType Ty, CallArg Arg, llvm::FunctionType *IRFuncTy,
     SmallVectorImpl<llvm::Value *> &IRCallArgs, unsigned &IRCallArgPos) {
   auto Exp = getTypeExpansion(Ty, getContext());
   if (auto CAExp = dyn_cast<ConstantArrayExpansion>(Exp.get())) {
-    forConstantArrayExpansion(*this, CAExp, RV.getAggregateAddress(),
-                              [&](Address EltAddr) {
-      RValue EltRV =
-          convertTempToRValue(EltAddr, CAExp->EltTy, SourceLocation());
-      ExpandTypeToArgs(CAExp->EltTy, EltRV, IRFuncTy, IRCallArgs, IRCallArgPos);
-    });
+    Address Addr = Arg.hasLValue() ? Arg.getKnownLValue().getAddress()
+                                   : Arg.getKnownRValue().getAggregateAddress();
+    forConstantArrayExpansion(
+        *this, CAExp, Addr, [&](Address EltAddr) {
+          CallArg EltArg = CallArg(
+              convertTempToRValue(EltAddr, CAExp->EltTy, SourceLocation()),
+              CAExp->EltTy);
+          ExpandTypeToArgs(CAExp->EltTy, EltArg, IRFuncTy, IRCallArgs,
+                           IRCallArgPos);
+        });
   } else if (auto RExp = dyn_cast<RecordExpansion>(Exp.get())) {
-    Address This = RV.getAggregateAddress();
+    Address This = Arg.hasLValue() ? Arg.getKnownLValue().getAddress()
+                                   : Arg.getKnownRValue().getAggregateAddress();
     for (const CXXBaseSpecifier *BS : RExp->Bases) {
       // Perform a single step derived-to-base conversion.
       Address Base =
           GetAddressOfBaseClass(This, Ty->getAsCXXRecordDecl(), &BS, &BS + 1,
                                 /*NullCheckValue=*/false, SourceLocation());
-      RValue BaseRV = RValue::getAggregate(Base);
+      CallArg BaseArg = CallArg(RValue::getAggregate(Base), BS->getType());
 
       // Recurse onto bases.
-      ExpandTypeToArgs(BS->getType(), BaseRV, IRFuncTy, IRCallArgs,
+      ExpandTypeToArgs(BS->getType(), BaseArg, IRFuncTy, IRCallArgs,
                        IRCallArgPos);
     }
 
     LValue LV = MakeAddrLValue(This, Ty);
     for (auto FD : RExp->Fields) {
-      RValue FldRV = EmitRValueForField(LV, FD, SourceLocation());
-      ExpandTypeToArgs(FD->getType(), FldRV, IRFuncTy, IRCallArgs,
+      CallArg FldArg =
+          CallArg(EmitRValueForField(LV, FD, SourceLocation()), FD->getType());
+      ExpandTypeToArgs(FD->getType(), FldArg, IRFuncTy, IRCallArgs,
                        IRCallArgPos);
     }
   } else if (isa<ComplexExpansion>(Exp.get())) {
-    ComplexPairTy CV = RV.getComplexVal();
+    ComplexPairTy CV = Arg.getKnownRValue().getComplexVal();
     IRCallArgs[IRCallArgPos++] = CV.first;
     IRCallArgs[IRCallArgPos++] = CV.second;
   } else {
     assert(isa<NoExpansion>(Exp.get()));
+    auto RV = Arg.getKnownRValue();
     assert(RV.isScalar() &&
            "Unexpected non-scalar rvalue during struct expansion.");
 
@@ -3418,13 +3425,17 @@ void CodeGenFunction::EmitCallArgs(
     assert(InitialArgSize + 1 == Args.size() &&
            "The code below depends on only adding one arg per EmitCallArg");
     (void)InitialArgSize;
-    RValue RVArg = Args.back().RV;
-    EmitNonNullArgCheck(RVArg, ArgTypes[Idx], (*Arg)->getExprLoc(), AC,
-                        ParamsToSkip + Idx);
-    // @llvm.objectsize should never have side-effects and shouldn't need
-    // destruction/cleanups, so we can safely "emit" it after its arg,
-    // regardless of right-to-leftness
-    MaybeEmitImplicitObjectSize(Idx, *Arg, RVArg);
+    // Since pointer argument are never emitted as LValue, it is safe to emit
+    // non-null argument check for r-value only.
+    if (!Args.back().hasLValue()) {
+      RValue RVArg = Args.back().getKnownRValue();
+      EmitNonNullArgCheck(RVArg, ArgTypes[Idx], (*Arg)->getExprLoc(), AC,
+                          ParamsToSkip + Idx);
+      // @llvm.objectsize should never have side-effects and shouldn't need
+      // destruction/cleanups, so we can safely "emit" it after its arg,
+      // regardless of right-to-leftness
+      MaybeEmitImplicitObjectSize(Idx, *Arg, RVArg);
+    }
   }
 
   if (!LeftToRight) {
@@ -3470,6 +3481,31 @@ struct DisableDebugLocationUpdates {
 };
 
 } // end anonymous namespace
+
+RValue CallArg::getRValue(CodeGenFunction &CGF) const {
+  if (!HasLV)
+    return RV;
+  LValue Copy = CGF.MakeAddrLValue(CGF.CreateMemTemp(Ty), Ty);
+  CGF.EmitAggregateCopy(Copy, LV, Ty, LV.isVolatile());
+  IsUsed = true;
+  return RValue::getAggregate(Copy.getAddress());
+}
+
+void CallArg::copyInto(CodeGenFunction &CGF, Address Addr) const {
+  LValue Dst = CGF.MakeAddrLValue(Addr, Ty);
+  if (!HasLV && RV.isScalar())
+    CGF.EmitStoreOfScalar(RV.getScalarVal(), Dst, /*init=*/true);
+  else if (!HasLV && RV.isComplex())
+    CGF.EmitStoreOfComplex(RV.getComplexVal(), Dst, /*init=*/true);
+  else {
+    auto Addr = HasLV ? LV.getAddress() : RV.getAggregateAddress();
+    LValue SrcLV = CGF.MakeAddrLValue(Addr, Ty);
+    CGF.EmitAggregateCopy(Dst, SrcLV, Ty,
+                          HasLV ? LV.isVolatileQualified()
+                                : RV.isVolatileQualified());
+  }
+  IsUsed = true;
+}
 
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
                                   QualType type) {
@@ -3536,15 +3572,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
       cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue) {
     LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
     assert(L.isSimple());
-    if (L.getAlignment() >= getContext().getTypeAlignInChars(type)) {
-      args.add(L.asAggregateRValue(), type, /*NeedsCopy*/true);
-    } else {
-      // We can't represent a misaligned lvalue in the CallArgList, so copy
-      // to an aligned temporary now.
-      LValue Dest = MakeAddrLValue(CreateMemTemp(type), type);
-      EmitAggregateCopy(Dest, L, type, L.isVolatile());
-      args.add(RValue::getAggregate(Dest.getAddress()), type);
-    }
+    args.addUncopiedAggregate(L, type);
     return;
   }
 
@@ -3702,16 +3730,6 @@ CodeGenFunction::EmitCallOrInvoke(llvm::Value *Callee,
   return llvm::CallSite(Inst);
 }
 
-/// \brief Store a non-aggregate value to an address to initialize it.  For
-/// initialization, a non-atomic store will be used.
-static void EmitInitStoreOfNonAggregate(CodeGenFunction &CGF, RValue Src,
-                                        LValue Dst) {
-  if (Src.isScalar())
-    CGF.EmitStoreOfScalar(Src.getScalarVal(), Dst, /*init=*/true);
-  else
-    CGF.EmitStoreOfComplex(Src.getComplexVal(), Dst, /*init=*/true);
-}
-
 void CodeGenFunction::deferPlaceholderReplacement(llvm::Instruction *Old,
                                                   llvm::Value *New) {
   DeferredReplacements.push_back(std::make_pair(Old, New));
@@ -3804,7 +3822,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   for (CallArgList::const_iterator I = CallArgs.begin(), E = CallArgs.end();
        I != E; ++I, ++info_it, ++ArgNo) {
     const ABIArgInfo &ArgInfo = info_it->info;
-    RValue RV = I->RV;
 
     // Insert a padding argument to ensure proper alignment.
     if (IRFunctionArgs.hasPaddingArg(ArgNo))
@@ -3818,13 +3835,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::InAlloca: {
       assert(NumIRArgs == 0);
       assert(getTarget().getTriple().getArch() == llvm::Triple::x86);
-      if (RV.isAggregate()) {
+      if (I->isAggregate()) {
         // Replace the placeholder with the appropriate argument slot GEP.
+        Address Addr = I->hasLValue()
+                           ? I->getKnownLValue().getAddress()
+                           : I->getKnownRValue().getAggregateAddress();
         llvm::Instruction *Placeholder =
-            cast<llvm::Instruction>(RV.getAggregatePointer());
+            cast<llvm::Instruction>(Addr.getPointer());
         CGBuilderTy::InsertPoint IP = Builder.saveIP();
         Builder.SetInsertPoint(Placeholder);
-        Address Addr = createInAllocaStructGEP(ArgInfo.getInAllocaFieldIndex());
+        Addr = createInAllocaStructGEP(ArgInfo.getInAllocaFieldIndex());
         Builder.restoreIP(IP);
         deferPlaceholderReplacement(Placeholder, Addr.getPointer());
       } else {
@@ -3837,22 +3857,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // from {}* to (%struct.foo*)*.
         if (Addr.getType() != MemType)
           Addr = Builder.CreateBitCast(Addr, MemType);
-        LValue argLV = MakeAddrLValue(Addr, I->Ty);
-        EmitInitStoreOfNonAggregate(*this, RV, argLV);
+        I->copyInto(*this, Addr);
       }
       break;
     }
 
     case ABIArgInfo::Indirect: {
       assert(NumIRArgs == 1);
-      if (RV.isScalar() || RV.isComplex()) {
+      if (!I->isAggregate()) {
         // Make a temporary alloca to pass the argument.
         Address Addr = CreateMemTemp(I->Ty, ArgInfo.getIndirectAlign(),
                                      "indirect-arg-temp", false);
         IRCallArgs[FirstIRArg] = Addr.getPointer();
 
-        LValue argLV = MakeAddrLValue(Addr, I->Ty);
-        EmitInitStoreOfNonAggregate(*this, RV, argLV);
+        I->copyInto(*this, Addr);
       } else {
         // We want to avoid creating an unnecessary temporary+copy here;
         // however, we need one in three cases:
@@ -3860,32 +3878,51 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         //    source.  (This case doesn't occur on any common architecture.)
         // 2. If the argument is byval, RV is not sufficiently aligned, and
         //    we cannot force it to be sufficiently aligned.
-        // 3. If the argument is byval, but RV is located in an address space
-        //    different than that of the argument (0).
-        Address Addr = RV.getAggregateAddress();
+        // 3. If the argument is byval, but RV is not located in default
+        //    or alloca address space.
+        Address Addr = I->hasLValue()
+                           ? I->getKnownLValue().getAddress()
+                           : I->getKnownRValue().getAggregateAddress();
+        llvm::Value *V = Addr.getPointer();
         CharUnits Align = ArgInfo.getIndirectAlign();
         const llvm::DataLayout *TD = &CGM.getDataLayout();
-        const unsigned RVAddrSpace = Addr.getType()->getAddressSpace();
-        const unsigned ArgAddrSpace =
-            (FirstIRArg < IRFuncTy->getNumParams()
-                 ? IRFuncTy->getParamType(FirstIRArg)->getPointerAddressSpace()
-                 : 0);
-        if ((!ArgInfo.getIndirectByVal() && I->NeedsCopy) ||
-            (ArgInfo.getIndirectByVal() && Addr.getAlignment() < Align &&
-             llvm::getOrEnforceKnownAlignment(Addr.getPointer(),
-                                              Align.getQuantity(), *TD)
-               < Align.getQuantity()) ||
-            (ArgInfo.getIndirectByVal() && (RVAddrSpace != ArgAddrSpace))) {
+
+        assert((FirstIRArg >= IRFuncTy->getNumParams() ||
+                IRFuncTy->getParamType(FirstIRArg)->getPointerAddressSpace() ==
+                    TD->getAllocaAddrSpace()) &&
+               "indirect argument must be in alloca address space");
+
+        bool NeedCopy = false;
+
+        if (Addr.getAlignment() < Align &&
+            llvm::getOrEnforceKnownAlignment(V, Align.getQuantity(), *TD) <
+                Align.getQuantity()) {
+          NeedCopy = true;
+        } else if (I->hasLValue()) {
+          auto LV = I->getKnownLValue();
+          auto AS = LV.getAddressSpace();
+          if ((!ArgInfo.getIndirectByVal() &&
+               (LV.getAlignment() >=
+                getContext().getTypeAlignInChars(I->Ty))) ||
+              (ArgInfo.getIndirectByVal() &&
+               ((AS != LangAS::Default && AS != LangAS::opencl_private &&
+                 AS != CGM.getASTAllocaAddressSpace())))) {
+            NeedCopy = true;
+          }
+        }
+        if (NeedCopy) {
           // Create an aligned temporary, and copy to it.
           Address AI = CreateMemTemp(I->Ty, ArgInfo.getIndirectAlign(),
                                      "byval-temp", false);
           IRCallArgs[FirstIRArg] = AI.getPointer();
-          LValue Dest = MakeAddrLValue(AI, I->Ty);
-          LValue Src = MakeAddrLValue(Addr, I->Ty);
-          EmitAggregateCopy(Dest, Src, I->Ty, RV.isVolatileQualified());
+          I->copyInto(*this, AI);
         } else {
           // Skip the extra memcpy call.
-          IRCallArgs[FirstIRArg] = Addr.getPointer();
+          auto *T = V->getType()->getPointerElementType()->getPointerTo(
+              CGM.getDataLayout().getAllocaAddrSpace());
+          IRCallArgs[FirstIRArg] = getTargetHooks().performAddrSpaceCast(
+              *this, V, LangAS::Default, CGM.getASTAllocaAddressSpace(), T,
+              true);
         }
       }
       break;
@@ -3902,10 +3939,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           ArgInfo.getDirectOffset() == 0) {
         assert(NumIRArgs == 1);
         llvm::Value *V;
-        if (RV.isScalar())
-          V = RV.getScalarVal();
+        if (!I->isAggregate())
+          V = I->getKnownRValue().getScalarVal();
         else
-          V = Builder.CreateLoad(RV.getAggregateAddress());
+          V = Builder.CreateLoad(
+              I->hasLValue() ? I->getKnownLValue().getAddress()
+                             : I->getKnownRValue().getAggregateAddress());
 
         // Implement swifterror by copying into a new swifterror argument.
         // We'll write back in the normal path out of the call.
@@ -3943,12 +3982,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // FIXME: Avoid the conversion through memory if possible.
       Address Src = Address::invalid();
-      if (RV.isScalar() || RV.isComplex()) {
+      if (!I->isAggregate()) {
         Src = CreateMemTemp(I->Ty, "coerce");
-        LValue SrcLV = MakeAddrLValue(Src, I->Ty);
-        EmitInitStoreOfNonAggregate(*this, RV, SrcLV);
+        I->copyInto(*this, Src);
       } else {
-        Src = RV.getAggregateAddress();
+        Src = I->hasLValue() ? I->getKnownLValue().getAddress()
+                             : I->getKnownRValue().getAggregateAddress();
       }
 
       // If the value is offset in memory, apply the offset now.
@@ -4002,9 +4041,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       llvm::Value *tempSize = nullptr;
       Address addr = Address::invalid();
-      if (RV.isAggregate()) {
-        addr = RV.getAggregateAddress();
+      if (I->isAggregate()) {
+        addr = I->hasLValue() ? I->getKnownLValue().getAddress()
+                              : I->getKnownRValue().getAggregateAddress();
+
       } else {
+        RValue RV = I->getKnownRValue();
         assert(RV.isScalar()); // complex should always just be direct
 
         llvm::Type *scalarType = RV.getScalarVal()->getType();
@@ -4041,7 +4083,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
     case ABIArgInfo::Expand:
       unsigned IRArgPos = FirstIRArg;
-      ExpandTypeToArgs(I->Ty, RV, IRFuncTy, IRCallArgs, IRArgPos);
+      ExpandTypeToArgs(I->Ty, *I, IRFuncTy, IRCallArgs, IRArgPos);
       assert(IRArgPos == FirstIRArg + NumIRArgs);
       break;
     }
@@ -4393,7 +4435,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               OffsetValue);
     } else if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
       llvm::Value *ParamVal =
-          CallArgs[AA->getParamIndex() - 1].RV.getScalarVal();
+          CallArgs[AA->getParamIndex() - 1].getRValue(*this).getScalarVal();
       EmitAlignmentAssumption(Ret.getScalarVal(), ParamVal);
     }
   }

@@ -424,3 +424,10 @@ struct S {
   S(T);
 } f([] {});
 }
+
+namespace pr36638 {
+// Make sure we accept __unaligned method qualifiers on member function
+// pointers.
+struct A;
+void (A::*mp1)(int) __unaligned;
+}

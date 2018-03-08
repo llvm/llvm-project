@@ -1708,7 +1708,7 @@ struct NullReturnState {
            e = Method->param_end(); i != e; ++i, ++I) {
         const ParmVarDecl *ParamDecl = (*i);
         if (ParamDecl->hasAttr<NSConsumedAttr>()) {
-          RValue RV = I->RV;
+          RValue RV = I->getRValue(CGF);
           assert(RV.isScalar() && 
                  "NullReturnState::complete - arg not on object");
           CGF.EmitARCRelease(RV.getScalarVal(), ARCImpreciseLifetime);
@@ -7071,7 +7071,7 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
             CGF.getPointerAlign());
 
   // Update the message ref argument.
-  args[1].RV = RValue::get(mref.getPointer());
+  args[1].setRValue(RValue::get(mref.getPointer()));
 
   // Load the function to call from the message ref table.
   Address calleeAddr =
