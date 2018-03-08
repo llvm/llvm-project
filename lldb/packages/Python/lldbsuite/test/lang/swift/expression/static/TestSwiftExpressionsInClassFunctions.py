@@ -27,7 +27,6 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
     @decorators.swiftTest
     @decorators.swiftTest
     #@unittest2.skip("bugs.swift.org/SR-798")
-    @decorators.expectedFailureAll(bugnumber="rdar://33857571")
     def test_expressions_in_class_functions(self):
         """Test expressions in class func contexts"""
         self.build()
