@@ -1679,9 +1679,9 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   MarkDeclRefReferenced(E);
 
   if (getLangOpts().ObjCWeak && isa<VarDecl>(D) &&
-      Ty.getObjCLifetime() == Qualifiers::OCL_Weak &&
+      Ty.getObjCLifetime() == Qualifiers::OCL_Weak && !isUnevaluatedContext() &&
       !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, E->getLocStart()))
-      recordUseOfEvaluatedWeak(E);
+    getCurFunction()->recordUseOfWeak(E);
 
   FieldDecl *FD = dyn_cast<FieldDecl>(D);
   if (IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(D))
@@ -2431,8 +2431,9 @@ Sema::LookupInObjCMethod(LookupResult &Lookup, Scope *S,
                           IV->getLocation(), SelfExpr.get(), true, true);
 
       if (IV->getType().getObjCLifetime() == Qualifiers::OCL_Weak) {
-        if (!Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
-          recordUseOfEvaluatedWeak(Result);
+        if (!isUnevaluatedContext() &&
+            !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
+          getCurFunction()->recordUseOfWeak(Result);
       }
       if (getLangOpts().ObjCAutoRefCount) {
         if (CurContext->isClosure())
@@ -13045,7 +13046,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   // Set the captured variables on the block.
   // FIXME: Share capture structure between BlockDecl and CapturingScopeInfo!
   SmallVector<BlockDecl::Capture, 4> Captures;
-  for (CapturingScopeInfo::Capture &Cap : BSI->Captures) {
+  for (Capture &Cap : BSI->Captures) {
     if (Cap.isThisCapture())
       continue;
     BlockDecl::Capture NewCap(Cap.getVariable(), Cap.isBlockCapture(),
@@ -14144,7 +14145,7 @@ static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI, VarDec
     // Similarly to mutable captures in lambda, all the OpenMP captures by copy
     // are mutable in the sense that user can change their value - they are
     // private instances of the captured declarations.
-    const CapturingScopeInfo::Capture &Cap = CSI->getCapture(Var);
+    const Capture &Cap = CSI->getCapture(Var);
     if (Cap.isCopyCapture() &&
         !(isa<LambdaScopeInfo>(CSI) && cast<LambdaScopeInfo>(CSI)->Mutable) &&
         !(isa<CapturedRegionScopeInfo>(CSI) &&

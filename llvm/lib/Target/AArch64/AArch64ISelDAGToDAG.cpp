@@ -1512,7 +1512,7 @@ static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
 
   // Because of simplify-demanded-bits in DAGCombine, the mask may have been
   // simplified. Try to undo that
-  AndImm |= (1 << NumberOfIgnoredLowBits) - 1;
+  AndImm |= maskTrailingOnes<uint64_t>(NumberOfIgnoredLowBits);
 
   // The immediate is a mask of the low bits iff imm & (imm+1) == 0
   if (AndImm & (AndImm + 1))

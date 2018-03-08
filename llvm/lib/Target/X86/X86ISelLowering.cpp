@@ -7957,6 +7957,14 @@ LowerBUILD_VECTORAsVariablePermute(SDValue V, SelectionDAG &DAG,
         ShuffleVT = MVT::v2f64;
       }
       break;
+    case MVT::v32i8:
+      if (Subtarget.hasVLX() && Subtarget.hasVBMI())
+        Opcode = X86ISD::VPERMV;
+      break;
+    case MVT::v16i16:
+      if (Subtarget.hasVLX() && Subtarget.hasBWI())
+        Opcode = X86ISD::VPERMV;
+      break;
     case MVT::v8f32:
     case MVT::v8i32:
       if (Subtarget.hasAVX2())
@@ -7971,27 +7979,19 @@ LowerBUILD_VECTORAsVariablePermute(SDValue V, SelectionDAG &DAG,
         ShuffleVT = MVT::v8f32;
       }
       break;
-    case MVT::v16f32:
-    case MVT::v8f64:
-    case MVT::v16i32:
-    case MVT::v8i64:
-      if (Subtarget.hasAVX512())
+    case MVT::v64i8:
+      if (Subtarget.hasVBMI())
         Opcode = X86ISD::VPERMV;
       break;
     case MVT::v32i16:
       if (Subtarget.hasBWI())
         Opcode = X86ISD::VPERMV;
       break;
-    case MVT::v16i16:
-      if (Subtarget.hasVLX() && Subtarget.hasBWI())
-        Opcode = X86ISD::VPERMV;
-      break;
-    case MVT::v64i8:
-      if (Subtarget.hasVBMI())
-        Opcode = X86ISD::VPERMV;
-      break;
-    case MVT::v32i8:
-      if (Subtarget.hasVLX() && Subtarget.hasVBMI())
+    case MVT::v16f32:
+    case MVT::v16i32:
+    case MVT::v8f64:
+    case MVT::v8i64:
+      if (Subtarget.hasAVX512())
         Opcode = X86ISD::VPERMV;
       break;
     }

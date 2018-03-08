@@ -503,6 +503,11 @@ The AMDGPU backend uses the following ELF header:
                                                   target feature is
                                                   enabled for all code
                                                   contained in the code object.
+                                                  If the processor
+                                                  does not support the
+                                                  ``xnack`` target
+                                                  feature then must
+                                                  be 0.
                                                   See
                                                   :ref:`amdgpu-target-features`.
      ================================= ========== =============================
@@ -1455,7 +1460,7 @@ address to physical address is:
 There are different ways that the wavefront scratch base address is determined
 by a wavefront (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). This
 memory can be accessed in an interleaved manner using buffer instruction with
-the scratch buffer descriptor and per wave scratch offset, by the scratch
+the scratch buffer descriptor and per wavefront scratch offset, by the scratch
 instructions, or by flat instructions. If each lane of a wavefront accesses the
 same private address, the interleaving results in adjacent dwords being accessed
 and hence requires fewer cache lines to be fetched. Multi-dword access is not
@@ -1796,7 +1801,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
      0       1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
-                     _WAVE_OFFSET                    SGPR wave scratch offset
+                     _WAVEFRONT_OFFSET               SGPR wavefront scratch offset
                                                      system register (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -1883,7 +1888,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      exceptions exceptions
                                                      enabled which are generated
                                                      when a memory violation has
-                                                     occurred for this wave from
+                                                     occurred for this wavefront from
                                                      L1 or LDS
                                                      (write-to-read-only-memory,
                                                      mis-aligned atomic, LDS
@@ -2007,10 +2012,10 @@ SGPR0, the next enabled register is SGPR1 etc.; disabled registers do not have
 an SGPR number.
 
 The initial SGPRs comprise up to 16 User SRGPs that are set by CP and apply to
-all waves of the grid. It is possible to specify more than 16 User SGPRs using
+all wavefronts of the grid. It is possible to specify more than 16 User SGPRs using
 the ``enable_sgpr_*`` bit fields, in which case only the first 16 are actually
 initialized. These are then immediately followed by the System SGPRs that are
-set up by ADC/SPI and can have different values for each wave of the grid
+set up by ADC/SPI and can have different values for each wavefront of the grid
 dispatch.
 
 SGPR register initial state is defined in
@@ -2025,10 +2030,10 @@ SGPR register initial state is defined in
                 field)                     SGPRs
      ========== ========================== ====== ==============================
      First      Private Segment Buffer     4      V# that can be used, together
-                (enable_sgpr_private              with Scratch Wave Offset as an
-                _segment_buffer)                  offset, to access the private
-                                                  memory space using a segment
-                                                  address.
+                (enable_sgpr_private              with Scratch Wavefront Offset
+                _segment_buffer)                  as an offset, to access the
+                                                  private memory space using a
+                                                  segment address.
 
                                                   CP uses the value provided by
                                                   the runtime.
@@ -2068,7 +2073,7 @@ SGPR register initial state is defined in
                                                     address is
                                                     ``SH_HIDDEN_PRIVATE_BASE_VIMID``
                                                     plus this offset.) The value
-                                                    of Scratch Wave Offset must
+                                                    of Scratch Wavefront Offset must
                                                     be added to this offset by
                                                     the kernel machine code,
                                                     right shifted by 8, and
@@ -2078,13 +2083,13 @@ SGPR register initial state is defined in
                                                     to SGPRn-4 on GFX7, and
                                                     SGPRn-6 on GFX8 (where SGPRn
                                                     is the highest numbered SGPR
-                                                    allocated to the wave).
+                                                    allocated to the wavefront).
                                                     FLAT_SCRATCH_HI is
                                                     multiplied by 256 (as it is
                                                     in units of 256 bytes) and
                                                     added to
                                                     ``SH_HIDDEN_PRIVATE_BASE_VIMID``
-                                                    to calculate the per wave
+                                                    to calculate the per wavefront
                                                     FLAT SCRATCH BASE in flat
                                                     memory instructions that
                                                     access the scratch
@@ -2124,7 +2129,7 @@ SGPR register initial state is defined in
                                                     divides it if there are
                                                     multiple Shader Arrays each
                                                     with its own SPI). The value
-                                                    of Scratch Wave Offset must
+                                                    of Scratch Wavefront Offset must
                                                     be added by the kernel
                                                     machine code and the result
                                                     moved to the FLAT_SCRATCH
@@ -2193,12 +2198,12 @@ SGPR register initial state is defined in
      then       Work-Group Id Z            1      32 bit work-group id in Z
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _Z)                               wavefront.
-     then       Work-Group Info            1      {first_wave, 14'b0000,
+     then       Work-Group Info            1      {first_wavefront, 14'b0000,
                 (enable_sgpr_workgroup            ordered_append_term[10:0],
-                _info)                            threadgroup_size_in_waves[5:0]}
-     then       Scratch Wave Offset        1      32 bit byte offset from base
+                _info)                            threadgroup_size_in_wavefronts[5:0]}
+     then       Scratch Wavefront Offset   1      32 bit byte offset from base
                 (enable_sgpr_private              of scratch base of queue
-                _segment_wave_offset)             executing the kernel
+                _segment_wavefront_offset)        executing the kernel
                                                   dispatch. Must be used as an
                                                   offset with Private
                                                   segment address when using
@@ -2244,8 +2249,8 @@ The setting of registers is is done by GPU CP/ADC/SPI hardware as follows:
    registers.
 2. Work-group Id registers X, Y, Z are set by ADC which supports any
    combination including none.
-3. Scratch Wave Offset is set by SPI in a per wave basis which is why its value
-   cannot included with the flat scratch init value which is per queue.
+3. Scratch Wavefront Offset is set by SPI in a per wavefront basis which is why
+   its value cannot included with the flat scratch init value which is per queue.
 4. The VGPRs are set by SPI which only supports specifying either (X), (X, Y)
    or (X, Y, Z).
 
@@ -2293,7 +2298,7 @@ Flat Scratch
 
 If the kernel may use flat operations to access scratch memory, the prolog code
 must set up FLAT_SCRATCH register pair (FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which
-are in SGPRn-4/SGPRn-3). Initialization uses Flat Scratch Init and Scratch Wave
+are in SGPRn-4/SGPRn-3). Initialization uses Flat Scratch Init and Scratch Wavefront
 Offset SGPR registers (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
 
 GFX6
@@ -2304,7 +2309,7 @@ GFX7-GFX8
      ``SH_HIDDEN_PRIVATE_BASE_VIMID`` to the base of scratch backing memory
      being managed by SPI for the queue executing the kernel dispatch. This is
      the same value used in the Scratch Segment Buffer V# base address. The
-     prolog must add the value of Scratch Wave Offset to get the wave's byte
+     prolog must add the value of Scratch Wavefront Offset to get the wavefront's byte
      scratch backing memory offset from ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since
      FLAT_SCRATCH_LO is in units of 256 bytes, the offset must be right shifted
      by 8 before moving into FLAT_SCRATCH_LO.
@@ -2318,7 +2323,7 @@ GFX7-GFX8
 GFX9
   The Flat Scratch Init is the 64 bit address of the base of scratch backing
   memory being managed by SPI for the queue executing the kernel dispatch. The
-  prolog must add the value of Scratch Wave Offset and moved to the FLAT_SCRATCH
+  prolog must add the value of Scratch Wavefront Offset and moved to the FLAT_SCRATCH
   pair for use as the flat scratch base in flat memory instructions.
 
 .. _amdgpu-amdhsa-memory-model:
@@ -2384,12 +2389,12 @@ For GFX6-GFX9:
   global order and involve no caching. Completion is reported to a wavefront in
   execution order.
 * The LDS memory has multiple request queues shared by the SIMDs of a
-  CU. Therefore, the LDS operations performed by different waves of a work-group
+  CU. Therefore, the LDS operations performed by different wavefronts of a work-group
   can be reordered relative to each other, which can result in reordering the
   visibility of vector memory operations with respect to LDS operations of other
   wavefronts in the same work-group. A ``s_waitcnt lgkmcnt(0)`` is required to
   ensure synchronization between LDS operations and vector memory operations
-  between waves of a work-group, but not between operations performed by the
+  between wavefronts of a work-group, but not between operations performed by the
   same wavefront.
 * The vector memory operations are performed as wavefront wide operations and
   completion is reported to a wavefront in execution order. The exception is
@@ -2399,7 +2404,7 @@ For GFX6-GFX9:
 * The vector memory operations access a single vector L1 cache shared by all
   SIMDs a CU. Therefore, no special action is required for coherence between the
   lanes of a single wavefront, or for coherence between wavefronts in the same
-  work-group. A ``buffer_wbinvl1_vol`` is required for coherence between waves
+  work-group. A ``buffer_wbinvl1_vol`` is required for coherence between wavefronts
   executing in different work-groups as they may be executing on different CUs.
 * The scalar memory operations access a scalar L1 cache shared by all wavefronts
   on a group of CUs. The scalar and vector L1 caches are not coherent. However,
@@ -2410,7 +2415,7 @@ For GFX6-GFX9:
 * The L2 cache has independent channels to service disjoint ranges of virtual
   addresses.
 * Each CU has a separate request queue per channel. Therefore, the vector and
-  scalar memory operations performed by waves executing in different work-groups
+  scalar memory operations performed by wavefronts executing in different work-groups
   (which may be executing on different CUs) of an agent can be reordered
   relative to each other. A ``s_waitcnt vmcnt(0)`` is required to ensure
   synchronization between vector memory operations of different CUs. It ensures a
@@ -2460,7 +2465,7 @@ case the AMDGPU backend ensures the memory location used to spill is never
 accessed by vector memory operations at the same time. If scalar writes are used
 then a ``s_dcache_wb`` is inserted before the ``s_endpgm`` and before a function
 return since the locations may be used for vector memory instructions by a
-future wave that uses the same scratch area, or a function call that creates a
+future wavefront that uses the same scratch area, or a function call that creates a
 frame at the same address, respectively. There is no need for a ``s_dcache_inv``
 as all scalar writes are write-before-read in the same thread.
 

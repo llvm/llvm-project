@@ -312,33 +312,9 @@ void AArch64MachObjectWriter::recordRelocation(
     }
 
     const MCSymbol *Base = Asm.getAtom(*Symbol);
-
-    // If the symbol is a variable and we weren't able to get a Base for it
-    // (i.e., it's not in the symbol table associated with a section) resolve
-    // the relocation based its expansion instead.
-    if (Symbol->isVariable() && !Base) {
-      // If the evaluation is an absolute value, just use that directly
-      // to keep things easy.
-      int64_t Res;
-      if (Symbol->getVariableValue()->evaluateAsAbsolute(
-              Res, Layout, Writer->getSectionAddressMap())) {
-        FixedValue = Res;
-        return;
-      }
-
-      // FIXME: Will the Target we already have ever have any data in it
-      // we need to preserve and merge with the new Target? How about
-      // the FixedValue?
-      if (!Symbol->getVariableValue()->evaluateAsRelocatable(Target, &Layout,
-                                                             &Fixup)) {
-        Asm.getContext().reportError(Fixup.getLoc(),
-                                     "unable to resolve variable '" +
-                                         Symbol->getName() + "'");
-        return;
-      }
-      return recordRelocation(Writer, Asm, Layout, Fragment, Fixup, Target,
-                              FixedValue);
-    }
+    // If the symbol is a variable it can either be in a section and
+    // we have a base or it is absolute and should have been expanded.
+    assert(!Symbol->isVariable() || Base);
 
     // Relocations inside debug sections always use local relocations when
     // possible. This seems to be done because the debugger doesn't fully
@@ -377,19 +353,8 @@ void AArch64MachObjectWriter::recordRelocation(
         Value -= Writer->getFragmentAddress(Fragment, Layout) +
                  Fixup.getOffset() + (1ULL << Log2Size);
     } else {
-      // Resolve constant variables.
-      if (Symbol->isVariable()) {
-        int64_t Res;
-        if (Symbol->getVariableValue()->evaluateAsAbsolute(
-                Res, Layout, Writer->getSectionAddressMap())) {
-          FixedValue = Res;
-          return;
-        }
-      }
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                  "unsupported relocation of variable '" +
-                                      Symbol->getName() + "'");
-      return;
+      llvm_unreachable(
+          "This constant variable should have been expanded during evaluation");
     }
   }
 

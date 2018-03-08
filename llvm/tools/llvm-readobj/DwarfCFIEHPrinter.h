@@ -123,17 +123,17 @@ void PrinterContext<ELFT>::printEHFrameHdr(uint64_t EHFrameHdrOffset,
   if (Version != 1)
     reportError("only version 1 of .eh_frame_hdr is supported");
 
-  auto EHFramePtrEnc = DE.getU8(&Offset);
+  uint64_t EHFramePtrEnc = DE.getU8(&Offset);
   W.startLine() << format("eh_frame_ptr_enc: 0x%" PRIx64 "\n", EHFramePtrEnc);
   if (EHFramePtrEnc != (dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4))
     reportError("unexpected encoding eh_frame_ptr_enc");
 
-  auto FDECountEnc = DE.getU8(&Offset);
+  uint64_t FDECountEnc = DE.getU8(&Offset);
   W.startLine() << format("fde_count_enc: 0x%" PRIx64 "\n", FDECountEnc);
   if (FDECountEnc != dwarf::DW_EH_PE_udata4)
     reportError("unexpected encoding fde_count_enc");
 
-  auto TableEnc = DE.getU8(&Offset);
+  uint64_t TableEnc = DE.getU8(&Offset);
   W.startLine() << format("table_enc: 0x%" PRIx64 "\n", TableEnc);
   if (TableEnc != (dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata4))
     reportError("unexpected encoding table_enc");
