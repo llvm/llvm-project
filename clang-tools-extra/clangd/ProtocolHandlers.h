@@ -55,7 +55,7 @@ public:
   virtual void onChangeConfiguration(DidChangeConfigurationParams &Params) = 0;
 };
 
-void registerCallbackHandlers(JSONRPCDispatcher &Dispatcher, JSONOutput &Out,
+void registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
                               ProtocolCallbacks &Callbacks);
 
 } // namespace clangd

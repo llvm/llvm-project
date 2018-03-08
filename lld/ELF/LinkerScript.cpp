@@ -117,9 +117,9 @@ void LinkerScript::expandOutputSection(uint64_t Size) {
   if (Ctx->MemRegion)
     expandMemoryRegion(Ctx->MemRegion, Size, Ctx->MemRegion->Name,
                        Ctx->OutSec->Name);
-  // FIXME: check LMA region overflow too.
   if (Ctx->LMARegion)
-    Ctx->LMARegion->CurPos += Size;
+    expandMemoryRegion(Ctx->LMARegion, Size, Ctx->LMARegion->Name,
+                       Ctx->OutSec->Name);
 }
 
 void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
@@ -380,6 +380,14 @@ void LinkerScript::discard(ArrayRef<InputSection *> V) {
         S == InX::DynStrTab)
       error("discarding " + S->Name + " section is not allowed");
 
+    // You can discard .hash and .gnu.hash sections by linker scripts. Since
+    // they are synthesized sections, we need to handle them differently than
+    // other regular sections.
+    if (S == InX::GnuHashTab)
+      InX::GnuHashTab = nullptr;
+    if (S == InX::HashTab)
+      InX::HashTab = nullptr;
+
     S->Assigned = false;
     S->Live = false;
     discard(S->DependentSections);
@@ -614,7 +622,7 @@ void LinkerScript::addOrphanSections() {
 
     if (OutputSection *OS = addInputSec(Map, S, Name))
       V.push_back(OS);
-    assert(S->getOutputSection()->SectionIndex == INT_MAX);
+    assert(S->getOutputSection()->SectionIndex == UINT32_MAX);
   }
 
   // If no SECTIONS command was given, we should insert sections commands

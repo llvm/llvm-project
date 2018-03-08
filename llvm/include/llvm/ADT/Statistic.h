@@ -32,6 +32,13 @@
 #include <memory>
 #include <vector>
 
+// Determine whether statistics should be enabled. We must do it here rather
+// than in CMake because multi-config generators cannot determine this at
+// configure time.
+#if !defined(NDEBUG) || LLVM_FORCE_ENABLE_STATS
+#define LLVM_ENABLE_STATS 1
+#endif
+
 namespace llvm {
 
 class raw_ostream;

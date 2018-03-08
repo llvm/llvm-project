@@ -820,6 +820,7 @@ namespace llvm {
 
     void selectShuffle(SDNode *N);
     void selectRor(SDNode *N);
+    void selectVAlign(SDNode *N);
 
   private:
     void materialize(const ResultStack &Results);
@@ -2011,12 +2012,26 @@ void HvxSelector::selectRor(SDNode *N) {
   DAG.RemoveDeadNode(N);
 }
 
+void HvxSelector::selectVAlign(SDNode *N) {
+  SDValue Vv = N->getOperand(0);
+  SDValue Vu = N->getOperand(1);
+  SDValue Rt = N->getOperand(2);
+  SDNode *NewN = DAG.getMachineNode(Hexagon::V6_valignb, SDLoc(N),
+                                    N->getValueType(0), {Vv, Vu, Rt});
+  ISel.ReplaceNode(N, NewN);
+  DAG.RemoveDeadNode(N);
+}
+
 void HexagonDAGToDAGISel::SelectHvxShuffle(SDNode *N) {
   HvxSelector(*this, *CurDAG).selectShuffle(N);
 }
 
 void HexagonDAGToDAGISel::SelectHvxRor(SDNode *N) {
   HvxSelector(*this, *CurDAG).selectRor(N);
+}
+
+void HexagonDAGToDAGISel::SelectHvxVAlign(SDNode *N) {
+  HvxSelector(*this, *CurDAG).selectVAlign(N);
 }
 
 void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {

@@ -86,7 +86,7 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
     set(cxx_${arch}_merge_dir "${CMAKE_CURRENT_BINARY_DIR}/cxx_${arch}_merge.dir")
     file(MAKE_DIRECTORY ${cxx_${arch}_merge_dir})
     add_custom_command(TARGET clang_rt.${name}-${arch} POST_BUILD
-      COMMAND ${CMAKE_LINKER} --whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" --no-whole-archive ${dir}/src/libcxx_fuzzer_${arch}-build/lib/libc++.a -r -o ${name}.o
+      COMMAND ${CMAKE_LINKER} --whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" --no-whole-archive ${dir}/lib/libc++.a -r -o ${name}.o
       COMMAND ${CMAKE_OBJCOPY} --localize-hidden ${name}.o
       COMMAND ${CMAKE_COMMAND} -E remove "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>"
       COMMAND ${CMAKE_AR} qcs "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" ${name}.o
@@ -104,9 +104,9 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
              -fvisibility=hidden
       CMAKE_ARGS -DLIBCXX_ENABLE_EXCEPTIONS=OFF
                  -DLIBCXX_CXX_ABI=none)
-    target_compile_options(RTfuzzer.${arch} PRIVATE -isystem ${COMPILER_RT_LIBCXX_PATH}/include)
+    target_compile_options(RTfuzzer.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     add_dependencies(RTfuzzer.${arch} libcxx_fuzzer_${arch}-build)
-    target_compile_options(RTfuzzer_main.${arch} PRIVATE -isystem ${COMPILER_RT_LIBCXX_PATH}/include)
+    target_compile_options(RTfuzzer_main.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     add_dependencies(RTfuzzer_main.${arch} libcxx_fuzzer_${arch}-build)
     partially_link_libcxx(fuzzer_no_main ${LIBCXX_${arch}_PREFIX} ${arch})
     partially_link_libcxx(fuzzer ${LIBCXX_${arch}_PREFIX} ${arch})

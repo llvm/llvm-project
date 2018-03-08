@@ -16,8 +16,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 
-using llvm::wasm::WasmSignature;
 using llvm::wasm::WasmGlobalType;
+using llvm::wasm::WasmSignature;
 
 namespace lld {
 namespace wasm {

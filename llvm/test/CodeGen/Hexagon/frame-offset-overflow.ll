@@ -1,8 +1,13 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; REQUIRES: asserts
+; RUN: llc -march=hexagon --stats -o - 2>&1 < %s | FileCheck %s
 
-; In reality, check that the compilation succeeded and that some code was
-; generated.
+; Check that the compilation succeeded and that some code was generated.
 ; CHECK: vadd
+
+; Check that the loop is pipelined and that a valid node order is used.
+; CHECK-NOT: Number of node order issues found
+; CHECK: Number of loops software pipelined
+; CHECK-NOT: Number of node order issues found
 
 target triple = "hexagon"
 

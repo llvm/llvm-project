@@ -127,19 +127,52 @@ static bool ParseLine(const StringRef &Input, bool &IsCallsite, uint32_t &Depth,
       if (Rest.substr(0, n3).getAsInteger(10, NumSamples))
         return false;
     }
+    // Find call targets and their sample counts.
+    // Note: In some cases, there are symbols in the profile which are not
+    // mangled. To accommodate such cases, use colon + integer pairs as the
+    // anchor points.
+    // An example:
+    // _M_construct<char *>:1000 string_view<std::allocator<char> >:437
+    // ":1000" and ":437" are used as anchor points so the string above will
+    // be interpreted as
+    // target: _M_construct<char *>
+    // count: 1000
+    // target: string_view<std::allocator<char> >
+    // count: 437
     while (n3 != StringRef::npos) {
       n3 += Rest.substr(n3).find_first_not_of(' ');
       Rest = Rest.substr(n3);
-      n3 = Rest.find(' ');
-      StringRef pair = Rest;
-      if (n3 != StringRef::npos) {
-        pair = Rest.substr(0, n3);
-      }
-      size_t n4 = pair.find(':');
-      uint64_t count;
-      if (pair.substr(n4 + 1).getAsInteger(10, count))
+      n3 = Rest.find_first_of(':');
+      if (n3 == StringRef::npos || n3 == 0)
         return false;
-      TargetCountMap[pair.substr(0, n4)] = count;
+
+      StringRef Target;
+      uint64_t count, n4;
+      while (true) {
+        // Get the segment after the current colon.
+        StringRef AfterColon = Rest.substr(n3 + 1);
+        // Get the target symbol before the current colon.
+        Target = Rest.substr(0, n3);
+        // Check if the word after the current colon is an integer.
+        n4 = AfterColon.find_first_of(' ');
+        n4 = (n4 != StringRef::npos) ? n3 + n4 + 1 : Rest.size();
+        StringRef WordAfterColon = Rest.substr(n3 + 1, n4 - n3 - 1);
+        if (!WordAfterColon.getAsInteger(10, count))
+          break;
+
+        // Try to find the next colon.
+        uint64_t n5 = AfterColon.find_first_of(':');
+        if (n5 == StringRef::npos)
+          return false;
+        n3 += n5 + 1;
+      }
+
+      // An anchor point is found. Save the {target, count} pair
+      TargetCountMap[Target] = count;
+      if (n4 == Rest.size())
+        break;
+      // Change n3 to the next blank space after colon + integer pair.
+      n3 = n4;
     }
   } else {
     IsCallsite = true;

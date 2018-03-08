@@ -93,8 +93,7 @@ private:
   void layoutMemory();
   void createHeader();
   void createSections();
-  SyntheticSection *createSyntheticSection(uint32_t Type,
-                                           StringRef Name = "");
+  SyntheticSection *createSyntheticSection(uint32_t Type, StringRef Name = "");
 
   // Builtin sections
   void createTypeSection();
@@ -472,8 +471,11 @@ void Writer::createLinkingSection() {
     Sub.writeTo(OS);
   }
 
-  struct ComdatEntry { unsigned Kind; uint32_t Index; };
-  std::map<StringRef,std::vector<ComdatEntry>> Comdats;
+  struct ComdatEntry {
+    unsigned Kind;
+    uint32_t Index;
+  };
+  std::map<StringRef, std::vector<ComdatEntry>> Comdats;
 
   for (const InputFunction *F : InputFunctions) {
     StringRef Comdat = F->getComdat();
@@ -873,9 +875,9 @@ void Writer::createCtorFunction() {
   }
 
   const WasmSignature *Sig = WasmSym::CallCtors->getFunctionType();
-  SyntheticFunction *F = make<SyntheticFunction>(
-      *Sig, toArrayRef(Saver.save(FunctionBody)),
-      WasmSym::CallCtors->getName());
+  SyntheticFunction *F =
+      make<SyntheticFunction>(*Sig, toArrayRef(Saver.save(FunctionBody)),
+                              WasmSym::CallCtors->getName());
 
   F->setOutputIndex(FunctionIndex);
   F->Live = true;

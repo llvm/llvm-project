@@ -241,6 +241,12 @@ public:
     return llvm::any_of(ElemTypes, [ElemTy] (MVT T) { return ElemTy == T; });
   }
 
+  unsigned getTypeAlignment(MVT Ty) const {
+    if (isHVXVectorType(Ty, true))
+      return getVectorLength();
+    return Ty.getSizeInBits() / 8;
+  }
+
   unsigned getL1CacheLineSize() const;
   unsigned getL1PrefetchDistance() const;
 

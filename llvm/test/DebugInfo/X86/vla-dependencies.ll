@@ -8,20 +8,20 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK:        DW_TAG_subrange_type
 ; CHECK-NEXT:     DW_AT_type {{.*}}"sizetype"
-; CHECK-NEXT:     DW_AT_count	(cu + 0x0[[VLAEXPR]])
+; CHECK-NEXT:     DW_AT_count	(0x00000[[VLAEXPR]]
 ;
 ;
 ; Generated from (and then modified):
 ;
 ; #define DECLARE_ARRAY(type, var_name, size) type var_name[size]
-;  
+;
 ; void h(void);
 ; void k(void *);
-;  
+;
 ; void g() {
 ;   h();
 ; }
-;  
+;
 ; void h() {
 ;   int count = 2;
 ;   DECLARE_ARRAY(int, array, count);
