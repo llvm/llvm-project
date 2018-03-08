@@ -1901,7 +1901,6 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
     return SwiftASTContext::CreateInstance(language, *module);
   } else if (target) {
     assert(!module);
-    assert(StringRef(extra_options).empty());
     return SwiftASTContext::CreateInstance(language, *target, extra_options);
   }
 }

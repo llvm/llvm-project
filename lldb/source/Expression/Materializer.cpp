@@ -948,7 +948,6 @@ public:
     if (lang == lldb::eLanguageTypeSwift) {
       SwiftLanguageRuntime *language_runtime =
           process_sp->GetSwiftLanguageRuntime();
-
       if (language_runtime && frame_sp)
         m_type = language_runtime->DoArchetypeBindingForType(*frame_sp, m_type);
     }
