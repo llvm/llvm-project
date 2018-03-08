@@ -80,17 +80,47 @@ DILocation::getMergedLocation(const DILocation *LocA, const DILocation *LocB,
   if (!dyn_cast_or_null<CallInst>(ForInst))
     return nullptr;
 
+  // Find closest common scope for LocA and LocB.
+  DIScope *CommonScope = nullptr;
+  SmallPtrSet<DIScope *, 5> ScopesA;
+  for (DIScope *S = LocA->getScope(); S; S = S->getScope().resolve())
+    ScopesA.insert(S);
+  for (DIScope *S = LocB->getScope(); S; S = S->getScope().resolve())
+    if (ScopesA.count(S)) {
+      CommonScope = S;
+      break;
+    }
+
+  // If no common scope exists, make up a new compiler-generated location.
+  // At this point the inlinedAt field will be meaningless as well.
+  if (!CommonScope)
+    return DILocation::get(LocA->getContext(),
+                           0, 0, LocA->getInlinedAtScope());
+
+  // If either LocA or LocB is not inlined, the merged location does not
+  // need to be inlined either.
+  if (LocA->getInlinedAt() == nullptr || LocB->getInlinedAt() == nullptr)
+    return DILocation::get(LocA->getContext(), 0, 0, CommonScope);
+
+  // Otherwise find the closest common inlined-at location for LocA and LocB.
+  DILocation *CommonInlinedAt = nullptr;
   SmallPtrSet<DILocation *, 5> InlinedLocationsA;
   for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
     InlinedLocationsA.insert(L);
-  const DILocation *Result = LocB;
-  for (DILocation *L = LocB->getInlinedAt(); L; L = L->getInlinedAt()) {
-    Result = L;
-    if (InlinedLocationsA.count(L))
+  for (DILocation *L = LocB->getInlinedAt(); L; L = L->getInlinedAt())
+    if (InlinedLocationsA.count(L)) {
+      CommonInlinedAt = L;
       break;
-  }
-  return DILocation::get(Result->getContext(), 0, 0, Result->getScope(),
-                         Result->getInlinedAt());
+    }
+
+  // If no common inlined-at location exists, mark as inlined at a
+  // compiler-generated location in the current function.
+  if (!CommonInlinedAt)
+    CommonInlinedAt = DILocation::get(LocA->getContext(),
+                                      0, 0, LocA->getInlinedAtScope());
+
+  return DILocation::get(LocA->getContext(),
+                         0, 0, CommonScope, CommonInlinedAt);
 }
 
 DINode::DIFlags DINode::getFlag(StringRef Flag) {

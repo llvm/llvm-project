@@ -883,6 +883,81 @@ TEST_F(DILocationTest, cloneTemporary) {
   EXPECT_TRUE(L2->isTemporary());
 }
 
+TEST_F(DILocationTest, getMergedLocation) {
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Context), false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage);
+  const CallInst *Call = CallInst::Create(F, None);
+
+  // Merging two identical locations should result in the same location.
+  {
+    DISubprogram *Prg = getSubprogram();
+    DILocation *L1 = DILocation::get(Context, 2, 7, Prg);
+    DILocation *L2 = DILocation::get(Context, 2, 7, Prg);
+    const DILocation *L = DILocation::getMergedLocation(L1, L2, nullptr);
+    EXPECT_EQ(2u, L->getLine());
+    EXPECT_EQ(7u, L->getColumn());
+    EXPECT_EQ(Prg, L->getScope());
+  }
+  // If the two locations are incompatible, there should be a null result.
+  {
+    DISubprogram *Prg = getSubprogram();
+    DILocation *L1 = DILocation::get(Context, 2, 7, Prg);
+    DILocation *L2 = DILocation::get(Context, 3, 7, Prg);
+    const DILocation *L = DILocation::getMergedLocation(L1, L2, nullptr);
+    EXPECT_EQ(nullptr, L);
+  }
+  // Unless we are merging locations for a call instruction.  If the
+  // scopes agree, the result should be a compiler-generated location
+  // in that same scope.
+  {
+    DISubprogram *Prg = getSubprogram();
+    DILocation *L1 = DILocation::get(Context, 2, 7, Prg);
+    DILocation *L2 = DILocation::get(Context, 3, 7, Prg);
+    const DILocation *L = DILocation::getMergedLocation(L1, L2, Call);
+    EXPECT_EQ(0u, L->getLine());
+    EXPECT_EQ(Prg, L->getScope());
+  }
+  // Likewise if the one scope is a sub-scope of the other.
+  {
+    DISubprogram *Prg = getSubprogram();
+    DILexicalBlock *B = DILexicalBlock::get(Context, Prg, getFile(), 5, 7);
+    DILocation *L1 = DILocation::get(Context, 2, 7, Prg);
+    DILocation *L2 = DILocation::get(Context, 3, 7, B);
+    const DILocation *L = DILocation::getMergedLocation(L1, L2, Call);
+    EXPECT_EQ(0u, L->getLine());
+    EXPECT_EQ(Prg, L->getScope());
+  }
+  // Even if the calls were inlined (possibly into different places),
+  // if they originate from the same scope, the result should also be
+  // a compiler-generated location in that same scope.
+  {
+    DISubprogram *IPrg = getSubprogram();
+    DILocation *I1 = DILocation::get(Context, 10, 7, IPrg);
+    DILocation *I2 = DILocation::get(Context, 11, 7, IPrg);
+    DISubprogram *Prg = getSubprogram();
+    DILocation *L1 = DILocation::get(Context, 2, 7, Prg, I1);
+    DILocation *L2 = DILocation::get(Context, 3, 7, Prg, I2);
+    const DILocation *L = DILocation::getMergedLocation(L1, L2, Call);
+    EXPECT_EQ(0u, L->getLine());
+    EXPECT_EQ(Prg, L->getScope());
+    EXPECT_NE(nullptr, L->getInlinedAt());
+  }
+  // Likewise if the one scope is a sub-scope of the other.
+  {
+    DISubprogram *IPrg = getSubprogram();
+    DILocation *I1 = DILocation::get(Context, 10, 7, IPrg);
+    DILocation *I2 = DILocation::get(Context, 11, 7, IPrg);
+    DISubprogram *Prg = getSubprogram();
+    DILexicalBlock *B = DILexicalBlock::get(Context, Prg, getFile(), 5, 7);
+    DILocation *L1 = DILocation::get(Context, 2, 7, Prg, I1);
+    DILocation *L2 = DILocation::get(Context, 3, 7, B, I2);
+    const DILocation *L = DILocation::getMergedLocation(L1, L2, Call);
+    EXPECT_EQ(0u, L->getLine());
+    EXPECT_EQ(Prg, L->getScope());
+    EXPECT_NE(nullptr, L->getInlinedAt());
+  }
+}
+
 typedef MetadataTest GenericDINodeTest;
 
 TEST_F(GenericDINodeTest, get) {
