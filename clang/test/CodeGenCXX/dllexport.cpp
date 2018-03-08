@@ -290,6 +290,16 @@ struct FuncFriend {
 __declspec(dllexport) void friend1() {}
                       void friend2() {}
 
+// MSC-DAG: define dso_local dllexport void @"\01?func@Befriended@@SAXXZ"()
+// GNU-DAG: define dso_local dllexport void @_ZN10Befriended4funcEv()
+struct __declspec(dllexport) Befriended {
+  static void func();
+  struct Befriending {
+    friend void Befriended::func();
+  };
+};
+void Befriended::func() {}
+
 // Implicit declarations can be redeclared with dllexport.
 // MSC-DAG: define dso_local dllexport noalias i8* @"\01??2@{{YAPAXI|YAPEAX_K}}@Z"(
 // GNU-DAG: define dso_local dllexport noalias i8* @_Znw{{[yj]}}(
