@@ -14,6 +14,7 @@ HELP: -num-threads=<n>
 HELP: -o=<filename>
 HELP: -oso-prepend-path=<path>
 HELP: -symtab
+HELP: -toolchain
 HELP: -update
 HELP: -verbose
 HELP: -verify
