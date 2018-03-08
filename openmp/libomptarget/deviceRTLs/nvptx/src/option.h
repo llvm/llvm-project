@@ -28,10 +28,6 @@
 // region to synchronize with each other.
 #define L1_BARRIER (1)
 
-// Maximum number of preallocated arguments to an outlined parallel/simd function.
-// Anything more requires dynamic memory allocation.
-#define MAX_SHARED_ARGS 20
-
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
 #if __CUDA_ARCH__ >= 600

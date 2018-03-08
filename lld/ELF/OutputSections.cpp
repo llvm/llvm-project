@@ -72,9 +72,7 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
 OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
     : BaseCommand(OutputSectionKind),
       SectionBase(Output, Name, Flags, /*Entsize*/ 0, /*Alignment*/ 1, Type,
-                  /*Info*/ 0,
-                  /*Link*/ 0),
-      SectionIndex(INT_MAX) {
+                  /*Info*/ 0, /*Link*/ 0) {
   Live = false;
 }
 
@@ -100,7 +98,8 @@ void OutputSection::addSection(InputSection *IS) {
     Flags = IS->Flags;
   } else {
     // Otherwise, check if new type or flags are compatible with existing ones.
-    if ((Flags & (SHF_ALLOC | SHF_TLS)) != (IS->Flags & (SHF_ALLOC | SHF_TLS)))
+    unsigned Mask = SHF_ALLOC | SHF_TLS | SHF_LINK_ORDER;
+    if ((Flags & Mask) != (IS->Flags & Mask))
       error("incompatible section flags for " + Name + "\n>>> " + toString(IS) +
             ": 0x" + utohexstr(IS->Flags) + "\n>>> output section " + Name +
             ": 0x" + utohexstr(Flags));

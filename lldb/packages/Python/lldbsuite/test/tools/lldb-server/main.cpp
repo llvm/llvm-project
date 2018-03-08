@@ -303,18 +303,22 @@ int main(int argc, char **argv) {
       printf("code address: %p\n", func_p);
       pthread_mutex_unlock(&g_print_mutex);
     } else if (std::strstr(argv[i], CALL_FUNCTION_PREFIX)) {
+      void (*func_p)() = nullptr;
+
       // Defaut to providing the address of main.
       if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX), "hello") == 0)
-        hello();
+        func_p = hello;
       else if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX),
                            "swap_chars") == 0)
-        swap_chars();
+        func_p = swap_chars;
       else {
         pthread_mutex_lock(&g_print_mutex);
         printf("unknown function: %s\n",
                argv[i] + strlen(CALL_FUNCTION_PREFIX));
         pthread_mutex_unlock(&g_print_mutex);
       }
+      if (func_p)
+        func_p();
     } else if (std::strstr(argv[i], THREAD_PREFIX)) {
       // Check if we're creating a new thread.
       if (std::strstr(argv[i] + strlen(THREAD_PREFIX), THREAD_COMMAND_NEW)) {

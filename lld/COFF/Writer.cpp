@@ -42,8 +42,40 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::coff;
 
+/* To re-generate DOSProgram:
+$ cat > /tmp/DOSProgram.asm
+org 0
+        ; Copy cs to ds.
+        push cs
+        pop ds
+        ; Point ds:dx at the $-terminated string.
+        mov dx, str
+        ; Int 21/AH=09h: Write string to standard output.
+        mov ah, 0x9
+        int 0x21
+        ; Int 21/AH=4Ch: Exit with return code (in AL).
+        mov ax, 0x4C01
+        int 0x21
+str:
+        db 'This program cannot be run in DOS mode.$'
+align 8, db 0
+$ nasm -fbin /tmp/DOSProgram.asm -o /tmp/DOSProgram.bin
+$ xxd -i /tmp/DOSProgram.bin
+*/
+static unsigned char DOSProgram[] = {
+  0x0e, 0x1f, 0xba, 0x0e, 0x00, 0xb4, 0x09, 0xcd, 0x21, 0xb8, 0x01, 0x4c,
+  0xcd, 0x21, 0x54, 0x68, 0x69, 0x73, 0x20, 0x70, 0x72, 0x6f, 0x67, 0x72,
+  0x61, 0x6d, 0x20, 0x63, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x20, 0x62, 0x65,
+  0x20, 0x72, 0x75, 0x6e, 0x20, 0x69, 0x6e, 0x20, 0x44, 0x4f, 0x53, 0x20,
+  0x6d, 0x6f, 0x64, 0x65, 0x2e, 0x24, 0x00, 0x00
+};
+static_assert(sizeof(DOSProgram) % 8 == 0,
+              "DOSProgram size must be multiple of 8");
+
 static const int SectorSize = 512;
-static const int DOSStubSize = 64;
+static const int DOSStubSize = sizeof(dos_header) + sizeof(DOSProgram);
+static_assert(DOSStubSize % 8 == 0, "DOSStub size must be multiple of 8");
+
 static const int NumberfOfDataDirectory = 16;
 
 namespace {
@@ -657,14 +689,26 @@ void Writer::assignAddresses() {
 }
 
 template <typename PEHeaderTy> void Writer::writeHeader() {
-  // Write DOS stub
+  // Write DOS header. For backwards compatibility, the first part of a PE/COFF
+  // executable consists of an MS-DOS MZ executable. If the executable is run
+  // under DOS, that program gets run (usually to just print an error message).
+  // When run under Windows, the loader looks at AddressOfNewExeHeader and uses
+  // the PE header instead.
   uint8_t *Buf = Buffer->getBufferStart();
   auto *DOS = reinterpret_cast<dos_header *>(Buf);
-  Buf += DOSStubSize;
+  Buf += sizeof(dos_header);
   DOS->Magic[0] = 'M';
   DOS->Magic[1] = 'Z';
+  DOS->UsedBytesInTheLastPage = DOSStubSize % 512;
+  DOS->FileSizeInPages = divideCeil(DOSStubSize, 512);
+  DOS->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
+
   DOS->AddressOfRelocationTable = sizeof(dos_header);
   DOS->AddressOfNewExeHeader = DOSStubSize;
+
+  // Write DOS program.
+  memcpy(Buf, DOSProgram, sizeof(DOSProgram));
+  Buf += sizeof(DOSProgram);
 
   // Write PE magic
   memcpy(Buf, PEMagic, sizeof(PEMagic));

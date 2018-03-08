@@ -267,6 +267,9 @@ public:
   void processSectionCommands();
   void declareSymbols();
 
+  // Used to handle INSERT AFTER statements.
+  void processInsertCommands();
+
   // SECTIONS command list.
   std::vector<BaseCommand *> SectionCommands;
 
@@ -285,6 +288,10 @@ public:
 
   // A list of symbols referenced by the script.
   std::vector<llvm::StringRef> ReferencedSymbols;
+
+  // Used to implement INSERT AFTER. Contains commands that need
+  // to be inserted into SECTIONS commands list.
+  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> InsertAfterCommands;
 };
 
 extern LinkerScript *Script;
