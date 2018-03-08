@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -459,28 +460,22 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 
 } // end anonymous namespace
 
-#if !defined(_MSC_VER)
-// Assume that __cxa_demangle is provided by libcxxabi (except for Windows).
-extern "C" char *__cxa_demangle(const char *mangled_name, char *output_buffer,
-                                size_t *length, int *status);
-#endif
-
 std::string
 LLVMSymbolizer::DemangleName(const std::string &Name,
                              const SymbolizableModule *DbiModuleDescriptor) {
-#if !defined(_MSC_VER)
   // We can spoil names of symbols with C linkage, so use an heuristic
   // approach to check if the name should be demangled.
   if (Name.substr(0, 2) == "_Z") {
     int status = 0;
-    char *DemangledName = __cxa_demangle(Name.c_str(), nullptr, nullptr, &status);
+    char *DemangledName = itaniumDemangle(Name.c_str(), nullptr, nullptr, &status);
     if (status != 0)
       return Name;
     std::string Result = DemangledName;
     free(DemangledName);
     return Result;
   }
-#else
+
+#if defined(_MSC_VER)
   if (!Name.empty() && Name.front() == '?') {
     // Only do MSVC C++ demangling on symbols starting with '?'.
     char DemangledName[1024] = {0};

@@ -2688,7 +2688,7 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
 
   // Mangle CV-qualifiers, if present.  These are 'this' qualifiers,
   // e.g. "const" in "int (A::*)() const".
-  mangleQualifiers(Qualifiers::fromCVRMask(T->getTypeQuals()));
+  mangleQualifiers(Qualifiers::fromCVRUMask(T->getTypeQuals()));
 
   // Mangle instantiation-dependent exception-specification, if present,
   // per cxx-abi-dev proposal on 2016-10-11.

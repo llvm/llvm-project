@@ -3118,6 +3118,13 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
   return InstL;
 }
 
+TemplateParameterList *
+Sema::SubstTemplateParams(TemplateParameterList *Params, DeclContext *Owner,
+                          const MultiLevelTemplateArgumentList &TemplateArgs) {
+  TemplateDeclInstantiator Instantiator(*this, Owner, TemplateArgs);
+  return Instantiator.SubstTemplateParams(Params);
+}
+
 /// \brief Instantiate the declaration of a class template partial
 /// specialization.
 ///

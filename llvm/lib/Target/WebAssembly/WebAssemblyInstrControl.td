@@ -98,6 +98,7 @@ let isReturn = 1 in {
   defm : RETURN<I64>;
   defm : RETURN<F32>;
   defm : RETURN<F64>;
+  defm : RETURN<EXCEPT_REF>;
   defm : SIMD_RETURN<v16i8>;
   defm : SIMD_RETURN<v8i16>;
   defm : SIMD_RETURN<v4i32>;

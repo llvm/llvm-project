@@ -86,6 +86,8 @@ static unsigned getDropOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::DROP_F64;
   if (RC == &WebAssembly::V128RegClass)
     return WebAssembly::DROP_V128;
+  if (RC == &WebAssembly::EXCEPT_REFRegClass)
+    return WebAssembly::DROP_EXCEPT_REF;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -101,6 +103,8 @@ static unsigned getGetLocalOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::GET_LOCAL_F64;
   if (RC == &WebAssembly::V128RegClass)
     return WebAssembly::GET_LOCAL_V128;
+  if (RC == &WebAssembly::EXCEPT_REFRegClass)
+    return WebAssembly::GET_LOCAL_EXCEPT_REF;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -116,6 +120,8 @@ static unsigned getSetLocalOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::SET_LOCAL_F64;
   if (RC == &WebAssembly::V128RegClass)
     return WebAssembly::SET_LOCAL_V128;
+  if (RC == &WebAssembly::EXCEPT_REFRegClass)
+    return WebAssembly::SET_LOCAL_EXCEPT_REF;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -131,6 +137,8 @@ static unsigned getTeeLocalOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::TEE_LOCAL_F64;
   if (RC == &WebAssembly::V128RegClass)
     return WebAssembly::TEE_LOCAL_V128;
+  if (RC == &WebAssembly::EXCEPT_REFRegClass)
+    return WebAssembly::TEE_LOCAL_EXCEPT_REF;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -144,6 +152,8 @@ static MVT typeForRegClass(const TargetRegisterClass *RC) {
     return MVT::f32;
   if (RC == &WebAssembly::F64RegClass)
     return MVT::f64;
+  if (RC == &WebAssembly::EXCEPT_REFRegClass)
+    return MVT::ExceptRef;
   llvm_unreachable("unrecognized register class");
 }
 

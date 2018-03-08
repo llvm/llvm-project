@@ -3790,7 +3790,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // If the call returns a temporary with struct return, create a temporary
   // alloca to hold the result, unless one is given to us.
   Address SRetPtr = Address::invalid();
-  size_t UnusedReturnSize = 0;
+  llvm::Value *UnusedReturnSizePtr = nullptr;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
     if (!ReturnValue.isNull()) {
       SRetPtr = ReturnValue.getValue();
@@ -3799,8 +3799,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       if (HaveInsertPoint() && ReturnValue.isUnused()) {
         uint64_t size =
             CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(RetTy));
-        if (EmitLifetimeStart(size, SRetPtr.getPointer()))
-          UnusedReturnSize = size;
+        UnusedReturnSizePtr = EmitLifetimeStart(size, SRetPtr.getPointer());
       }
     }
     if (IRFunctionArgs.hasSRetArg()) {
@@ -4231,6 +4230,15 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     CannotThrow = Attrs.hasAttribute(llvm::AttributeList::FunctionIndex,
                                      llvm::Attribute::NoUnwind);
   }
+
+  // If we made a temporary, be sure to clean up after ourselves. Note that we
+  // can't depend on being inside of an ExprWithCleanups, so we need to manually
+  // pop this cleanup later on. Being eager about this is OK, since this
+  // temporary is 'invisible' outside of the callee.
+  if (UnusedReturnSizePtr)
+    pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, SRetPtr,
+                                         UnusedReturnSizePtr);
+
   llvm::BasicBlock *InvokeDest = CannotThrow ? nullptr : getInvokeDest();
 
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
@@ -4284,9 +4292,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // insertion point; this allows the rest of IRGen to discard
   // unreachable code.
   if (CS.doesNotReturn()) {
-    if (UnusedReturnSize)
-      EmitLifetimeEnd(llvm::ConstantInt::get(Int64Ty, UnusedReturnSize),
-                      SRetPtr.getPointer());
+    if (UnusedReturnSizePtr)
+      PopCleanupBlock();
 
     // Strip away the noreturn attribute to better diagnose unreachable UB.
     if (SanOpts.has(SanitizerKind::Unreachable)) {
@@ -4355,9 +4362,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::InAlloca:
     case ABIArgInfo::Indirect: {
       RValue ret = convertTempToRValue(SRetPtr, RetTy, SourceLocation());
-      if (UnusedReturnSize)
-        EmitLifetimeEnd(llvm::ConstantInt::get(Int64Ty, UnusedReturnSize),
-                        SRetPtr.getPointer());
+      if (UnusedReturnSizePtr)
+        PopCleanupBlock();
       return ret;
     }
 

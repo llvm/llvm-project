@@ -191,8 +191,10 @@ namespace llvm {
                                // unspecified type.  The register class
                                // will be determined by the opcode.
 
+      ExceptRef      = 113,    // WebAssembly's except_ref type
+
       FIRST_VALUETYPE = 1,     // This is always the beginning of the list.
-      LAST_VALUETYPE =  113,   // This always remains at the end of the list.
+      LAST_VALUETYPE =  114,   // This always remains at the end of the list.
 
       // This is the current maximum for LAST_VALUETYPE.
       // MVT::MAX_ALLOWED_VALUETYPE is used for asserts and to size bit vectors
@@ -746,6 +748,7 @@ namespace llvm {
       case v64i32:
       case v32i64:
       case nxv32i64: return 2048;
+      case ExceptRef: return 0; // opaque type
       }
     }
 

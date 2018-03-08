@@ -220,6 +220,7 @@ WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
   case WebAssembly::ExprType::B8x16: O << "b8x16"; break;
   case WebAssembly::ExprType::B16x8: O << "b16x8"; break;
   case WebAssembly::ExprType::B32x4: O << "b32x4"; break;
+  case WebAssembly::ExprType::ExceptRef: O << "except_ref"; break;
   }
 }
 
@@ -238,6 +239,8 @@ const char *llvm::WebAssembly::TypeToString(MVT Ty) {
   case MVT::v4i32:
   case MVT::v4f32:
     return "v128";
+  case MVT::ExceptRef:
+    return "except_ref";
   default:
     llvm_unreachable("unsupported type");
   }
@@ -253,6 +256,8 @@ const char *llvm::WebAssembly::TypeToString(wasm::ValType Type) {
     return "f32";
   case wasm::ValType::F64:
     return "f64";
+  case wasm::ValType::EXCEPT_REF:
+    return "except_ref";
   }
   llvm_unreachable("unsupported type");
 }

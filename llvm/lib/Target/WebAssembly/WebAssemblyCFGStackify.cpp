@@ -249,6 +249,7 @@ static void FixEndsAtEndOfFunction(
   case MVT::v8i16: retType = WebAssembly::ExprType::I16x8; break;
   case MVT::v4i32: retType = WebAssembly::ExprType::I32x4; break;
   case MVT::v4f32: retType = WebAssembly::ExprType::F32x4; break;
+  case MVT::ExceptRef: retType = WebAssembly::ExprType::ExceptRef; break;
   default: llvm_unreachable("unexpected return type");
   }
 
