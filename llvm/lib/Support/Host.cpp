@@ -65,8 +65,7 @@ static std::unique_ptr<llvm::MemoryBuffer>
   return std::move(*Text);
 }
 
-StringRef sys::detail::getHostCPUNameForPowerPC(
-    const StringRef &ProcCpuinfoContent) {
+StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
   // Access to the Processor Version Register (PVR) on PowerPC is privileged,
   // and so we must use an operating-system interface to determine the current
   // processor type. On Linux, this is exposed through the /proc/cpuinfo file.
@@ -145,8 +144,7 @@ StringRef sys::detail::getHostCPUNameForPowerPC(
       .Default(generic);
 }
 
-StringRef sys::detail::getHostCPUNameForARM(
-    const StringRef &ProcCpuinfoContent) {
+StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   // The cpuid register on arm is not accessible from user space. On Linux,
   // it is exposed through the /proc/cpuinfo file.
 
@@ -250,8 +248,7 @@ StringRef sys::detail::getHostCPUNameForARM(
   return "generic";
 }
 
-StringRef sys::detail::getHostCPUNameForS390x(
-    const StringRef &ProcCpuinfoContent) {
+StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // STIDP is a privileged operation, so use /proc/cpuinfo instead.
 
   // The "processor 0:" line comes after a fair amount of other information,
@@ -1062,19 +1059,19 @@ StringRef sys::getHostCPUName() {
 #elif defined(__linux__) && (defined(__ppc__) || defined(__powerpc__))
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
-  const StringRef& Content = P ? P->getBuffer() : "";
+  StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForPowerPC(Content);
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
-  const StringRef& Content = P ? P->getBuffer() : "";
+  StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForARM(Content);
 }
 #elif defined(__linux__) && defined(__s390x__)
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
-  const StringRef& Content = P ? P->getBuffer() : "";
+  StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForS390x(Content);
 }
 #else

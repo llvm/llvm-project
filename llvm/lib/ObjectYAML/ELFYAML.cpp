@@ -50,6 +50,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_PT>::enumeration(
   ECase(PT_SHLIB);
   ECase(PT_PHDR);
   ECase(PT_TLS);
+  ECase(PT_GNU_EH_FRAME);
 #undef ECase
   IO.enumFallback<Hex32>(Value);
 }

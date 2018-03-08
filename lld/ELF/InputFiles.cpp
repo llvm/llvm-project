@@ -126,6 +126,8 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   // CU (object file), so offset is always 0.
   const DWARFDebugLine::LineTable *LT =
       DwarfLine->getOrParseLineTable(LineData, 0, Dwarf, nullptr);
+  if (!LT)
+    return;
 
   // Return if there is no debug information about CU available.
   if (!Dwarf.getNumCompileUnits())

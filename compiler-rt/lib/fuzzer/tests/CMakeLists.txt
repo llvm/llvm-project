@@ -40,7 +40,7 @@ foreach(arch ${FUZZER_SUPPORTED_ARCH})
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
     set(LIBFUZZER_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch}-build)
     set(LIBFUZZER_TEST_RUNTIME_CFLAGS -isystem ${COMPILER_RT_LIBCXX_PATH}/include)
-    set(LIBFUZZER_TEST_RUNTIME_LINK_FLAGS ${LIBCXX_${arch}_PREFIX}/src/libcxx_fuzzer_${arch}-build/lib/libc++.a)
+    set(LIBFUZZER_TEST_RUNTIME_LINK_FLAGS ${LIBCXX_${arch}_PREFIX}/lib/libc++.a)
   endif()
 
   set(FuzzerTestObjects)

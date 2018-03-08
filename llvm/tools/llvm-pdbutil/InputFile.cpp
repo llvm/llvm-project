@@ -263,7 +263,7 @@ Expected<InputFile> InputFile::open(StringRef Path) {
     return std::move(IF);
   }
 
-  if (Magic == file_magic::unknown) {
+  if (Magic == file_magic::pdb) {
     std::unique_ptr<IPDBSession> Session;
     if (auto Err = loadDataForPDB(PDB_ReaderType::Native, Path, Session))
       return std::move(Err);

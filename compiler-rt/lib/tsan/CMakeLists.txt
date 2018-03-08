@@ -214,7 +214,7 @@ if(COMPILER_RT_LIBCXX_PATH AND
       DEPS ${TSAN_RUNTIME_LIBRARIES}
       CFLAGS ${TARGET_CFLAGS} -fsanitize=thread
       USE_TOOLCHAIN)
-    list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-install)
+    list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-build)
   endforeach()
 
   add_custom_target(libcxx_tsan DEPENDS ${libcxx_tsan_deps})

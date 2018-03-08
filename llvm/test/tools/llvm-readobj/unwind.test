@@ -1,0 +1,170 @@
+RUN: yaml2obj %p/Inputs/dwarf-exprs.exe-x86-64.yaml > %t.exe
+RUN: llvm-readobj -unwind %t.exe | FileCheck %s
+
+CHECK:      EH_FRAME Header [
+CHECK-NEXT:  Address: 0x4013c0
+CHECK-NEXT:  Offset: 0x27c
+CHECK-NEXT:  Size: 0x3c
+CHECK-NEXT:  Corresponding Section: .eh_frame_hdr
+CHECK-NEXT:  Header {
+CHECK-NEXT:    version: 1
+CHECK-NEXT:    eh_frame_ptr_enc: 0x1b
+CHECK-NEXT:    fde_count_enc: 0x3
+CHECK-NEXT:    table_enc: 0x3b
+CHECK-NEXT:    eh_frame_ptr: 0x401400
+CHECK-NEXT:    fde_count: 6
+CHECK-NEXT:    entry 0 {
+CHECK-NEXT:      initial_location: 0x4004a0
+CHECK-NEXT:      address: 0x401448
+CHECK-NEXT:    }
+CHECK-NEXT:    entry 1 {
+CHECK-NEXT:      initial_location: 0x4004d0
+CHECK-NEXT:      address: 0x401418
+CHECK-NEXT:    }
+CHECK-NEXT:    entry 2 {
+CHECK-NEXT:      initial_location: 0x4005b6
+CHECK-NEXT:      address: 0x401470
+CHECK-NEXT:    }
+CHECK-NEXT:    entry 3 {
+CHECK-NEXT:      initial_location: 0x4005d0
+CHECK-NEXT:      address: 0x401490
+CHECK-NEXT:    }
+CHECK-NEXT:    entry 4 {
+CHECK-NEXT:      initial_location: 0x401250
+CHECK-NEXT:      address: 0x4014c0
+CHECK-NEXT:    }
+CHECK-NEXT:    entry 5 {
+CHECK-NEXT:      initial_location: 0x4012c0
+CHECK-NEXT:      address: 0x4014f0
+CHECK-NEXT:    }
+CHECK-NEXT:  }
+CHECK-NEXT:]
+
+CHECK:      .eh_frame section at offset 0x2b8 address 0x401400:
+CHECK-NEXT:  [0x401400] CIE length=20
+CHECK-NEXT:    version: 1
+CHECK-NEXT:    augmentation: zR
+CHECK-NEXT:    code_alignment_factor: 1
+CHECK-NEXT:    data_alignment_factor: -8
+CHECK-NEXT:    return_address_register: 16
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+CHECK-NEXT:      DW_CFA_offset: reg16 -8
+CHECK-NEXT:      DW_CFA_undefined: reg16
+
+CHECK:       [0x401418] FDE length=20 cie=[0x401400]
+CHECK-NEXT:    initial_location: 0x4004d0
+CHECK-NEXT:    address_range: 0x2a (end : 0x4004fa)
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+
+CHECK:       [0x401430] CIE length=20
+CHECK-NEXT:    version: 1
+CHECK-NEXT:    augmentation: zR
+CHECK-NEXT:    code_alignment_factor: 1
+CHECK-NEXT:    data_alignment_factor: -8
+CHECK-NEXT:    return_address_register: 16
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+CHECK-NEXT:      DW_CFA_offset: reg16 -8
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+
+CHECK:       [0x401448] FDE length=36 cie=[0x401430]
+CHECK-NEXT:    initial_location: 0x4004a0
+CHECK-NEXT:    address_range: 0x20 (end : 0x4004c0)
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
+CHECK-NEXT:      DW_CFA_advance_loc: 6
+CHECK-NEXT:      DW_CFA_def_cfa_offset: +24
+CHECK-NEXT:      DW_CFA_advance_loc: 10
+CHECK-NEXT:      DW_CFA_def_cfa_expression: DW_OP_breg7 +8, DW_OP_breg16 +0, DW_OP_lit15, DW_OP_and, DW_OP_lit11, DW_OP_ge, DW_OP_lit3, DW_OP_shl, DW_OP_plus
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+
+CHECK:       [0x401470] FDE length=28 cie=[0x401430]
+CHECK-NEXT:    initial_location: 0x4005b6
+CHECK-NEXT:    address_range: 0x10 (end : 0x4005c6)
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_advance_loc: 1
+CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
+CHECK-NEXT:      DW_CFA_offset: reg6 -16
+CHECK-NEXT:      DW_CFA_advance_loc: 3
+CHECK-NEXT:      DW_CFA_def_cfa_register: reg6
+CHECK-NEXT:      DW_CFA_advance_loc: 11
+CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+
+CHECK:       [0x401490] FDE length=44 cie=[0x401430]
+CHECK-NEXT:    initial_location: 0x4005d0
+CHECK-NEXT:    address_range: 0xc7f (end : 0x40124f)
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_advance_loc: 5
+CHECK-NEXT:      DW_CFA_def_cfa: reg10 +0
+CHECK-NEXT:      DW_CFA_advance_loc: 9
+CHECK-NEXT:      DW_CFA_expression: reg6 DW_OP_breg6 +0
+CHECK-NEXT:      DW_CFA_advance_loc: 5
+CHECK-NEXT:      DW_CFA_def_cfa_expression: DW_OP_breg6 -8, DW_OP_deref
+CHECK-NEXT:      DW_CFA_advance_loc2: 3174
+CHECK-NEXT:      DW_CFA_def_cfa: reg10 +0
+CHECK-NEXT:      DW_CFA_advance_loc: 5
+CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+
+CHECK:       [0x4014c0] FDE length=44 cie=[0x401430]
+CHECK-NEXT:    initial_location: 0x401250
+CHECK-NEXT:    address_range: 0x66 (end : 0x4012b6)
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_advance_loc: 1
+CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
+CHECK-NEXT:      DW_CFA_offset: reg6 -16
+CHECK-NEXT:      DW_CFA_advance_loc: 3
+CHECK-NEXT:      DW_CFA_def_cfa_register: reg6
+CHECK-NEXT:      DW_CFA_advance_loc: 2
+CHECK-NEXT:      DW_CFA_offset: reg15 -24
+CHECK-NEXT:      DW_CFA_advance_loc: 5
+CHECK-NEXT:      DW_CFA_offset: reg14 -32
+CHECK-NEXT:      DW_CFA_advance_loc: 7
+CHECK-NEXT:      DW_CFA_offset: reg13 -40
+CHECK-NEXT:      DW_CFA_offset: reg12 -48
+CHECK-NEXT:      DW_CFA_advance_loc: 8
+CHECK-NEXT:      DW_CFA_offset: reg3 -56
+CHECK-NEXT:      DW_CFA_advance_loc1: 75
+CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+
+CHECK:       [0x4014f0] FDE length=20 cie=[0x401430]
+CHECK-NEXT:    initial_location: 0x4012c0
+CHECK-NEXT:    address_range: 0x1 (end : 0x4012c1)
+
+CHECK:         Program:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:
+CHECK-NEXT:      DW_CFA_nop:

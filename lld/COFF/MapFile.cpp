@@ -36,8 +36,8 @@ using namespace lld::coff;
 typedef DenseMap<const SectionChunk *, SmallVector<DefinedRegular *, 4>>
     SymbolMapTy;
 
-static const std::string Indent1 = "        ";         // 8 spaces
-static const std::string Indent2 = "                "; // 16 spaces
+static const std::string Indent8 = "        ";          // 8 spaces
+static const std::string Indent16 = "                "; // 16 spaces
 
 // Print out the first three columns of a line.
 static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
@@ -79,7 +79,7 @@ getSymbolStrings(ArrayRef<DefinedRegular *> Syms) {
   for_each_n(parallel::par, (size_t)0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
     writeHeader(OS, Syms[I]->getRVA(), 0, 0);
-    OS << Indent2 << toString(*Syms[I]);
+    OS << Indent16 << toString(*Syms[I]);
   });
 
   DenseMap<DefinedRegular *, std::string> Ret;
@@ -116,7 +116,7 @@ void coff::writeMapFile(ArrayRef<OutputSection *> OutputSections) {
         continue;
 
       writeHeader(OS, SC->getRVA(), SC->getSize(), SC->Alignment);
-      OS << Indent1 << SC->File->getName() << ":(" << SC->getSectionName()
+      OS << Indent8 << SC->File->getName() << ":(" << SC->getSectionName()
          << ")\n";
       for (DefinedRegular *Sym : SectionSyms[SC])
         OS << SymStr[Sym] << '\n';
