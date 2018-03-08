@@ -35,7 +35,7 @@ class TestExclusivitySuppression(TestBase):
     def test_basic_exclusivity_suppression(self):
         """Test that exclusively owned values can still be accessed"""
 
-        self.buildAll()
+        self.build()
 
         target = self.create_target()
 
@@ -70,7 +70,7 @@ class TestExclusivitySuppression(TestBase):
     @decorators.add_test_categories(["swiftpr"])
     def test_exclusivity_suppression_for_concurrent_expressions(self):
         """Test that exclusivity suppression works with concurrent expressions"""
-        self.buildAll()
+        self.build()
 
         target = self.create_target()
 
@@ -110,13 +110,6 @@ class TestExclusivitySuppression(TestBase):
         TestBase.setUp(self)
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def buildAll(self):
-        execute_command("make everything")
-        def cleanup():
-            execute_command("make cleanup")
-
-        self.addTearDownHook(cleanup)
 
     def check_expression(self, frame, expression, expected_result, use_summary=True):
         value = frame.EvaluateExpression(expression)
