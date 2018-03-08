@@ -152,7 +152,7 @@ class REPLTest(TestBase):
         self.using_dsym = False
         self.BuildSourceFile()
         self.BuildMakefile()
-        self.buildDwarf()
+        self.buildDefault()
         self.do_test()
 
     def __test_with_dwo(self):
