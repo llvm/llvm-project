@@ -75,5 +75,64 @@ void BackendStatistics::printSchedulerStatistics(llvm::raw_ostream &OS) const {
   OS << Buffer;
 }
 
+void BackendStatistics::printRATStatistics(raw_ostream &OS,
+                                        unsigned TotalMappings,
+                                        unsigned MaxUsedMappings) const {
+  std::string Buffer;
+  raw_string_ostream TempStream(Buffer);
+  TempStream << "\n\nRegister Alias Table:";
+  TempStream << "\nTotal number of mappings created: " << TotalMappings;
+  TempStream << "\nMax number of mappings used:      " << MaxUsedMappings
+             << '\n';
+  TempStream.flush();
+  OS << Buffer;
+}
+
+void BackendStatistics::printDispatchStalls(raw_ostream &OS,
+                                         unsigned RATStalls, unsigned RCUStalls,
+                                         unsigned SCHEDQStalls,
+                                         unsigned LDQStalls, unsigned STQStalls,
+                                         unsigned DGStalls) const {
+  std::string Buffer;
+  raw_string_ostream TempStream(Buffer);
+  TempStream << "\n\nDynamic Dispatch Stall Cycles:\n";
+  TempStream << "RAT     - Register unavailable:                      "
+             << RATStalls;
+  TempStream << "\nRCU     - Retire tokens unavailable:                 "
+             << RCUStalls;
+  TempStream << "\nSCHEDQ  - Scheduler full:                            "
+             << SCHEDQStalls;
+  TempStream << "\nLQ      - Load queue full:                           "
+             << LDQStalls;
+  TempStream << "\nSQ      - Store queue full:                          "
+             << STQStalls;
+  TempStream << "\nGROUP   - Static restrictions on the dispatch group: "
+             << DGStalls;
+  TempStream << '\n';
+  TempStream.flush();
+  OS << Buffer;
+}
+
+void BackendStatistics::printSchedulerUsage(raw_ostream &OS,
+    const MCSchedModel &SM, const ArrayRef<BufferUsageEntry> &Usage) const {
+  std::string Buffer;
+  raw_string_ostream TempStream(Buffer);
+  TempStream << "\n\nScheduler's queue usage:\n";
+  const ArrayRef<uint64_t> ResourceMasks = B.getProcResourceMasks();
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
+    if (!ProcResource.BufferSize)
+      continue;
+
+    for (const BufferUsageEntry &Entry : Usage)
+      if (ResourceMasks[I] == Entry.first)
+        TempStream << ProcResource.Name << ",  " << Entry.second << '/'
+                   << ProcResource.BufferSize << '\n';
+  }
+
+  TempStream.flush();
+  OS << Buffer;
+}
+
 } // namespace mca
 

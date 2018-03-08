@@ -58,7 +58,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_RESOURCEPRESSUREVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_RESOURCEPRESSUREVIEW_H
 
-#include "HWEventListener.h"
+#include "View.h"
 #include "SourceMgr.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -70,7 +70,7 @@ class Backend;
 
 /// This class collects resource pressure statistics and it is able to print
 /// out all the collected information as a table to an output stream.
-class ResourcePressureView : public HWEventListener {
+class ResourcePressureView : public View {
   const llvm::MCSubtargetInfo &STI;
   llvm::MCInstPrinter &MCIP;
   const SourceMgr &Source;
@@ -101,7 +101,7 @@ public:
       unsigned Index,
       const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> &Used) override;
 
-  void printResourcePressure(llvm::raw_ostream &OS, unsigned Cycles) const {
+  void printView(llvm::raw_ostream &OS) const override {
     unsigned Executions = Source.getNumIterations();
     printResourcePressurePerIteration(OS, Executions);
     printResourcePressurePerInstruction(OS, Executions);

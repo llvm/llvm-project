@@ -26,6 +26,7 @@ class DWARFDie;
 class DWARFUnit;
 class DWARFDataExtractor;
 class DWARFDebugAbbrev;
+class DWARFDebugNames;
 class DataExtractor;
 struct DWARFSection;
 
@@ -231,6 +232,23 @@ private:
   unsigned verifyAppleAccelTable(const DWARFSection *AccelSection,
                                  DataExtractor *StrData,
                                  const char *SectionName);
+
+  unsigned verifyDebugNamesCULists(const DWARFDebugNames &AccelTable);
+
+  /// Verify that the DWARF v5 accelerator table is valid.
+  ///
+  /// This function currently checks that:
+  /// - Headers and abbreviation tables of individual Name Indices fit into the
+  ///   section and can be parsed.
+  /// - The CU lists reference existing compile units.
+  /// - The buckets have a valid index, or they are empty.
+  ///
+  /// \param AccelSection section containing the acceleration table
+  /// \param StrData string section
+  ///
+  /// \returns The number of errors occurred during verification
+  unsigned verifyDebugNames(const DWARFSection &AccelSection,
+                            const DataExtractor &StrData);
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,

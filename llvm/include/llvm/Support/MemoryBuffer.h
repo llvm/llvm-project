@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -49,7 +50,8 @@ protected:
   void init(const char *BufStart, const char *BufEnd,
             bool RequiresNullTerminator);
 
-  static constexpr bool Writable = false;
+  static constexpr sys::fs::mapped_file_region::mapmode Mapmode =
+      sys::fs::mapped_file_region::readonly;
 
 public:
   MemoryBuffer(const MemoryBuffer &) = delete;
@@ -148,15 +150,16 @@ public:
   MemoryBufferRef getMemBufferRef() const;
 };
 
-/// This class is an extension of MemoryBuffer, which allows writing to the
-/// underlying contents.  It only supports creation methods that are guaranteed
-/// to produce a writable buffer.  For example, mapping a file read-only is not
-/// supported.
+/// This class is an extension of MemoryBuffer, which allows copy-on-write
+/// access to the underlying contents.  It only supports creation methods that
+/// are guaranteed to produce a writable buffer.  For example, mapping a file
+/// read-only is not supported.
 class WritableMemoryBuffer : public MemoryBuffer {
 protected:
   WritableMemoryBuffer() = default;
 
-  static constexpr bool Writable = true;
+  static constexpr sys::fs::mapped_file_region::mapmode Mapmode =
+      sys::fs::mapped_file_region::priv;
 
 public:
   using MemoryBuffer::getBuffer;
@@ -195,6 +198,54 @@ public:
   /// The memory is owned by the MemoryBuffer object.
   static std::unique_ptr<WritableMemoryBuffer>
   getNewMemBuffer(size_t Size, const Twine &BufferName = "");
+
+private:
+  // Hide these base class factory function so one can't write
+  //   WritableMemoryBuffer::getXXX()
+  // and be surprised that he got a read-only Buffer.
+  using MemoryBuffer::getFileAsStream;
+  using MemoryBuffer::getFileOrSTDIN;
+  using MemoryBuffer::getMemBuffer;
+  using MemoryBuffer::getMemBufferCopy;
+  using MemoryBuffer::getOpenFile;
+  using MemoryBuffer::getOpenFileSlice;
+  using MemoryBuffer::getSTDIN;
+};
+
+/// This class is an extension of MemoryBuffer, which allows write access to
+/// the underlying contents and committing those changes to the original source.
+/// It only supports creation methods that are guaranteed to produce a writable
+/// buffer.  For example, mapping a file read-only is not supported.
+class WriteThroughMemoryBuffer : public MemoryBuffer {
+protected:
+  WriteThroughMemoryBuffer() = default;
+
+  static constexpr sys::fs::mapped_file_region::mapmode Mapmode =
+      sys::fs::mapped_file_region::readwrite;
+
+public:
+  using MemoryBuffer::getBuffer;
+  using MemoryBuffer::getBufferEnd;
+  using MemoryBuffer::getBufferStart;
+
+  // const_cast is well-defined here, because the underlying buffer is
+  // guaranteed to have been initialized with a mutable buffer.
+  char *getBufferStart() {
+    return const_cast<char *>(MemoryBuffer::getBufferStart());
+  }
+  char *getBufferEnd() {
+    return const_cast<char *>(MemoryBuffer::getBufferEnd());
+  }
+  MutableArrayRef<char> getBuffer() {
+    return {getBufferStart(), getBufferEnd()};
+  }
+
+  static ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+  getFile(const Twine &Filename, int64_t FileSize = -1);
+
+  /// Map a subrange of the specified file as a ReadWriteMemoryBuffer.
+  static ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+  getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset);
 
 private:
   // Hide these base class factory function so one can't write

@@ -14,6 +14,20 @@
 /// Example:
 /// ========
 ///
+/// Dynamic Dispatch Stall Cycles:
+/// RAT     - Register unavailable:                      0
+/// RCU     - Retire tokens unavailable:                 0
+/// SCHEDQ  - Scheduler full:                            42
+/// LQ      - Load queue full:                           0
+/// SQ      - Store queue full:                          0
+/// GROUP   - Static restrictions on the dispatch group: 0
+///
+///
+/// Register Alias Table:
+/// Total number of mappings created: 210
+/// Max number of mappings used:      35
+///
+///
 /// Dispatch Logic - number of cycles where we saw N instructions dispatched:
 /// [# dispatched], [# cycles]
 ///  0,              15  (11.5%)
@@ -32,18 +46,28 @@
 ///  2,           1  (0.8%)
 ///  4,           3  (2.3%)
 ///
+///
+/// Scheduler's queue usage:
+/// JALU01,  0/20
+/// JFPU01,  18/18
+/// JLSAGU,  0/12
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TOOLS_LLVM_MCA_BACKENDSTATISTICS_H
 #define LLVM_TOOLS_LLVM_MCA_BACKENDSTATISTICS_H
 
-#include "HWEventListener.h"
+#include "Backend.h"
+#include "View.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 
 namespace mca {
 
-class BackendStatistics : public HWEventListener {
+class BackendStatistics : public View {
+  // TODO: remove the dependency from Backend.
+  const Backend &B;
+
   using Histogram = std::map<unsigned, unsigned>;
   Histogram DispatchGroupSizePerCycle;
   Histogram RetiredPerCycle;
@@ -67,8 +91,24 @@ class BackendStatistics : public HWEventListener {
   void printDispatchUnitStatistics(llvm::raw_ostream &OS) const;
   void printSchedulerStatistics(llvm::raw_ostream &OS) const;
 
+  void printDispatchStalls(llvm::raw_ostream &OS, unsigned RATStalls,
+                           unsigned RCUStalls, unsigned SQStalls,
+                           unsigned LDQStalls, unsigned STQStalls,
+                           unsigned DGStalls) const;
+  void printRATStatistics(llvm::raw_ostream &OS, unsigned Mappings,
+                          unsigned MaxUsedMappings) const;
+  void printRCUStatistics(llvm::raw_ostream &OS, const Histogram &Histogram,
+                          unsigned Cycles) const;
+  void printDispatchUnitUsage(llvm::raw_ostream &OS, const Histogram &Stats,
+                              unsigned Cycles) const;
+  void printIssuePerCycle(const Histogram &IssuePerCycle,
+                          unsigned TotalCycles) const;
+  void printSchedulerUsage(llvm::raw_ostream &OS, const llvm::MCSchedModel &SM,
+                           const llvm::ArrayRef<BufferUsageEntry> &Usage) const;
+
 public:
-  BackendStatistics() : NumDispatched(0), NumIssued(0), NumRetired(0) {}
+  BackendStatistics(const Backend &backend)
+      : B(backend), NumDispatched(0), NumIssued(0), NumRetired(0) {}
 
   void onInstructionDispatched(unsigned Index) override { NumDispatched++; }
   void
@@ -83,10 +123,18 @@ public:
 
   void onCycleEnd(unsigned Cycle) override { updateHistograms(); }
 
-  void printHistograms(llvm::raw_ostream &OS) {
+  void printView(llvm::raw_ostream &OS) const override {
+    printDispatchStalls(OS, B.getNumRATStalls(), B.getNumRCUStalls(), B.getNumSQStalls(),
+                        B.getNumLDQStalls(), B.getNumSTQStalls(), B.getNumDispatchGroupStalls());
+    printRATStatistics(OS, B.getTotalRegisterMappingsCreated(),
+                           B.getMaxUsedRegisterMappings());
     printDispatchUnitStatistics(OS);
     printSchedulerStatistics(OS);
     printRetireUnitStatistics(OS);
+
+    std::vector<BufferUsageEntry> Usage;
+    B.getBuffersUsage(Usage);
+    printSchedulerUsage(OS, B.getSchedModel(), Usage);
   }
 };
 

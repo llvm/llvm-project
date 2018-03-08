@@ -184,10 +184,8 @@ class MemoryBufferMMapFile : public MB {
 public:
   MemoryBufferMMapFile(bool RequiresNullTerminator, int FD, uint64_t Len,
                        uint64_t Offset, std::error_code &EC)
-      : MFR(FD,
-            MB::Writable ? sys::fs::mapped_file_region::priv
-                         : sys::fs::mapped_file_region::readonly,
-            getLegalMapSize(Len, Offset), getLegalMapOffset(Offset), EC) {
+      : MFR(FD, MB::Mapmode, getLegalMapSize(Len, Offset),
+            getLegalMapOffset(Offset), EC) {
     if (!EC) {
       const char *Start = getStart(Len, Offset);
       MemoryBuffer::init(Start, Start + Len, RequiresNullTerminator);
@@ -359,6 +357,59 @@ static bool shouldUseMmap(int FD,
 #endif
 
   return true;
+}
+
+static ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+getReadWriteFile(const Twine &Filename, uint64_t FileSize, uint64_t MapSize,
+                 uint64_t Offset) {
+  int FD;
+  std::error_code EC = sys::fs::openFileForWrite(
+      Filename, FD, sys::fs::F_RW | sys::fs::F_NoTrunc);
+
+  if (EC)
+    return EC;
+
+  // Default is to map the full file.
+  if (MapSize == uint64_t(-1)) {
+    // If we don't know the file size, use fstat to find out.  fstat on an open
+    // file descriptor is cheaper than stat on a random path.
+    if (FileSize == uint64_t(-1)) {
+      sys::fs::file_status Status;
+      std::error_code EC = sys::fs::status(FD, Status);
+      if (EC)
+        return EC;
+
+      // If this not a file or a block device (e.g. it's a named pipe
+      // or character device), we can't mmap it, so error out.
+      sys::fs::file_type Type = Status.type();
+      if (Type != sys::fs::file_type::regular_file &&
+          Type != sys::fs::file_type::block_file)
+        return make_error_code(errc::invalid_argument);
+
+      FileSize = Status.getSize();
+    }
+    MapSize = FileSize;
+  }
+
+  std::unique_ptr<WriteThroughMemoryBuffer> Result(
+      new (NamedBufferAlloc(Filename))
+          MemoryBufferMMapFile<WriteThroughMemoryBuffer>(false, FD, MapSize,
+                                                         Offset, EC));
+  if (EC)
+    return EC;
+  return std::move(Result);
+}
+
+ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+WriteThroughMemoryBuffer::getFile(const Twine &Filename, int64_t FileSize) {
+  return getReadWriteFile(Filename, FileSize, FileSize, 0);
+}
+
+/// Map a subrange of the specified file as a WritableMemoryBuffer.
+ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+WriteThroughMemoryBuffer::getFileSlice(const Twine &Filename, uint64_t MapSize,
+                                       uint64_t Offset) {
+  return getReadWriteFile(Filename, -1, MapSize, Offset);
 }
 
 template <typename MB>

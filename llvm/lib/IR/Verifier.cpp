@@ -959,6 +959,14 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
            N.getRawVTableHolder());
   AssertDI(!hasConflictingReferenceFlags(N.getFlags()),
            "invalid reference flags", &N);
+
+  if (N.isVector()) {
+    const DINodeArray Elements = N.getElements();
+    AssertDI(Elements.size() == 1 &&
+             Elements[0]->getTag() == dwarf::DW_TAG_subrange_type,
+             "invalid vector, expected one element of type subrange", &N);
+  }
+
   if (auto *Params = N.getRawTemplateParams())
     visitTemplateParams(N, *Params);
 

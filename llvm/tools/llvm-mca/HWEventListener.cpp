@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines a vtable anchor for struct HWEventListener.
+/// This file defines a vtable anchor for class HWEventListener.
 ///
 //===----------------------------------------------------------------------===//
 

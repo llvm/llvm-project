@@ -264,6 +264,7 @@ Instruction *Scheduler::scheduleInstruction(unsigned Idx, Instruction *MCIS) {
   // eliminated at register renaming stage, since we know in advance that those
   // clear their output register.
   if (MCIS->isZeroLatency()) {
+    notifyInstructionReady(Idx);
     MCIS->forceExecuted();
     notifyInstructionIssued(Idx, {});
     notifyInstructionExecuted(Idx);

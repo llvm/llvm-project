@@ -436,6 +436,7 @@ void ScriptParser::readSections() {
   Config->SingleRoRx = true;
 
   expect("{");
+  std::vector<BaseCommand *> V;
   while (!errorCount() && !consume("}")) {
     StringRef Tok = next();
     BaseCommand *Cmd = readProvideOrAssignment(Tok);
@@ -445,8 +446,18 @@ void ScriptParser::readSections() {
       else
         Cmd = readOutputSectionDescription(Tok);
     }
-    Script->SectionCommands.push_back(Cmd);
+    V.push_back(Cmd);
   }
+
+  if (!atEOF() && consume("INSERT")) {
+    consume("AFTER");
+    std::vector<BaseCommand *> &Dest = Script->InsertAfterCommands[next()];
+    Dest.insert(Dest.end(), V.begin(), V.end());
+    return;
+  }
+
+  Script->SectionCommands.insert(Script->SectionCommands.end(), V.begin(),
+                                 V.end());
 }
 
 static int precedence(StringRef Op) {

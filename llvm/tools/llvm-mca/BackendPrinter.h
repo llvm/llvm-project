@@ -9,9 +9,11 @@
 /// \file
 ///
 /// This file implements class BackendPrinter.
-/// BackendPrinter is able to collect statistics related to the code executed
-/// by the Backend class. Information is then printed out with the help of
-/// a MCInstPrinter (to pretty print MCInst objects) and other helper classes.
+///
+/// BackendPrinter allows the customization of the performance report.  With the
+/// help of this class, users can specify their own custom sequence of views.
+/// Each view is then printed out in sequence when method printReport() is
+/// called.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,20 +21,15 @@
 #define LLVM_TOOLS_LLVM_MCA_BACKENDPRINTER_H
 
 #include "Backend.h"
-#include "BackendStatistics.h"
-#include "ResourcePressureView.h"
-#include "TimelineView.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
 
 namespace mca {
 
-class ResourcePressureView;
-class TimelineView;
+class View;
 
 /// \brief A printer class that knows how to collects statistics on the
 /// code analyzed by the llvm-mca tool.
@@ -42,59 +39,24 @@ class TimelineView;
 /// classes the task of printing out timeline information as well as
 /// resource pressure.
 class BackendPrinter {
-  Backend &B;
-  bool EnableVerboseOutput;
+  const Backend &B;
+  llvm::MCInstPrinter &MCIP;
+  llvm::SmallVector<std::unique_ptr<View>, 8> Views;
 
-  std::unique_ptr<llvm::MCInstPrinter> MCIP;
-  std::unique_ptr<llvm::ToolOutputFile> File;
-
-  std::unique_ptr<ResourcePressureView> RPV;
-  std::unique_ptr<TimelineView> TV;
-  std::unique_ptr<BackendStatistics> BS;
-
-  using Histogram = std::map<unsigned, unsigned>;
-  void printDUStatistics(const Histogram &Stats, unsigned Cycles) const;
-  void printDispatchStalls(unsigned RATStalls, unsigned RCUStalls,
-                           unsigned SQStalls, unsigned LDQStalls,
-                           unsigned STQStalls, unsigned DGStalls) const;
-  void printRATStatistics(unsigned Mappings, unsigned MaxUsedMappings) const;
-  void printRCUStatistics(const Histogram &Histogram, unsigned Cycles) const;
-  void printIssuePerCycle(const Histogram &IssuePerCycle,
-                          unsigned TotalCycles) const;
-  void printSchedulerUsage(const llvm::MCSchedModel &SM,
-                           const llvm::ArrayRef<BufferUsageEntry> &Usage) const;
-  void printGeneralStatistics(unsigned Iterations, unsigned Cycles,
+  void printGeneralStatistics(llvm::raw_ostream &OS,
+                              unsigned Iterations, unsigned Cycles,
                               unsigned Instructions,
                               unsigned DispatchWidth) const;
-  void printInstructionInfo() const;
-
-  std::unique_ptr<llvm::ToolOutputFile> getOutputStream(std::string OutputFile);
-  void initialize(std::string OputputFileName);
+  void printInstructionInfo(llvm::raw_ostream &OS) const;
 
 public:
-  BackendPrinter(Backend &backend, std::string OutputFileName,
-                 std::unique_ptr<llvm::MCInstPrinter> IP, bool EnableVerbose)
-      : B(backend), EnableVerboseOutput(EnableVerbose), MCIP(std::move(IP)) {
-    initialize(OutputFileName);
-  }
+  BackendPrinter(const Backend &backend, llvm::MCInstPrinter &IP)
+      : B(backend), MCIP(IP) {}
 
-  ~BackendPrinter() {
-    if (File)
-      File->keep();
-  }
+  llvm::MCInstPrinter &getMCInstPrinter() const { return MCIP; }
 
-  bool isFileValid() const { return File.get(); }
-  llvm::raw_ostream &getOStream() const {
-    assert(isFileValid());
-    return File->os();
-  }
-
-  llvm::MCInstPrinter &getMCInstPrinter() const { return *MCIP; }
-
-  void addResourcePressureView();
-  void addTimelineView(unsigned MaxIterations = 3, unsigned MaxCycles = 80);
-
-  void printReport() const;
+  void addView(std::unique_ptr<View> V) { Views.emplace_back(std::move(V)); }
+  void printReport(llvm::raw_ostream &OS) const;
 };
 
 } // namespace mca

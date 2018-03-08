@@ -78,9 +78,11 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:  call i8* @__kmpc_task_reduction_get_th_data(i32 [[GTID]], i8* [[TD1]], i8* [[A_PTR]])
 // CHECK:       [[D_REF:%.+]] = getelementptr inbounds %
 // CHECK-NEXT:  [[D_ADDR:%.+]] = load i16*, i16** [[D_REF]],
+// CHECK:       call i8* @__kmpc_threadprivate_cached(
 // CHECK:       [[TD2:%.+]] = load i8*, i8** [[TD2_ADDR]],
 // CHECK-NEXT:  [[D_PTR:%.+]] = bitcast i16* [[D_ADDR]] to i8*
 // CHECK-NEXT:  call i8* @__kmpc_task_reduction_get_th_data(i32 [[GTID]], i8* [[TD2]], i8* [[D_PTR]])
 // CHECK:       add nsw i32
 // CHECK:       store i32 %
+// CHECK-NOT:   call i8* @__kmpc_threadprivate_cached(
 #endif

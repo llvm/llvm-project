@@ -100,7 +100,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_TIMELINEVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_TIMELINEVIEW_H
 
-#include "HWEventListener.h"
+#include "View.h"
 #include "SourceMgr.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -116,7 +116,7 @@ namespace mca {
 /// a TimelineViewEntry object. TimelineViewEntry objects are then used
 /// to print the timeline information, as well as the "average wait times"
 /// for every instruction in the input assembly sequence.
-class TimelineView : public HWEventListener {
+class TimelineView : public View {
   const llvm::MCSubtargetInfo &STI;
   llvm::MCInstPrinter &MCIP;
   const SourceMgr &AsmSequence;
@@ -174,6 +174,10 @@ public:
   // print functionalities.
   void printTimeline(llvm::raw_ostream &OS) const;
   void printAverageWaitTimes(llvm::raw_ostream &OS) const;
+  void printView(llvm::raw_ostream &OS) const override {
+    printTimeline(OS);
+    printAverageWaitTimes(OS);
+  }
 };
 
 } // namespace mca

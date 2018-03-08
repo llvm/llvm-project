@@ -21,7 +21,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BackendPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -29,12 +28,20 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "BackendPrinter.h"
+#include "BackendStatistics.h"
+#include "ResourcePressureView.h"
+#include "TimelineView.h"
+
 
 using namespace llvm;
 
@@ -51,7 +58,7 @@ static cl::opt<std::string>
 
 static cl::opt<std::string>
     TripleName("mtriple", cl::desc("Target triple to assemble for, "
-                                  "see -version for available targets"));
+                                   "see -version for available targets"));
 
 static cl::opt<std::string>
     MCPU("mcpu",
@@ -101,10 +108,10 @@ static cl::opt<bool> PrintModeVerbose("verbose",
                                       cl::desc("Enable verbose output"),
                                       cl::init(false));
 
-static cl::opt<bool>
-    AssumeNoAlias("noalias",
-                  cl::desc("If set, it assumes that loads and stores do not alias"),
-                  cl::init(true));
+static cl::opt<bool> AssumeNoAlias(
+    "noalias",
+    cl::desc("If set, it assumes that loads and stores do not alias"),
+    cl::init(true));
 
 static cl::opt<unsigned>
     LoadQueueSize("lqueue", cl::desc("Size of the load queue"), cl::init(0));
@@ -146,6 +153,17 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
 
   Parser->setTargetParser(*TAP);
   return Parser->Run(false);
+}
+
+static ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
+  if (OutputFilename == "")
+    OutputFilename = "-";
+  std::error_code EC;
+  auto Out =
+      llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
+  if (!EC)
+    return std::move(Out);
+  return EC;
 }
 
 namespace {
@@ -284,6 +302,15 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Now initialize the output file.
+  auto OF = getOutputStream();
+  if (std::error_code EC = OF.getError()) {
+    errs() << EC.message() << '\n';
+    return 1;
+  }
+
+  std::unique_ptr<llvm::ToolOutputFile> TOF = std::move(*OF);
+
   const MCSchedModel &SM = STI->getSchedModel();
 
   unsigned Width = SM.IssueWidth;
@@ -291,17 +318,36 @@ int main(int argc, char **argv) {
     Width = DispatchWidth;
 
   std::unique_ptr<mca::Backend> B = llvm::make_unique<mca::Backend>(
-      *STI, *MCII, *MRI, std::move(S), Width, RegisterFileSize, MaxRetirePerCycle,
+      *STI, *MCII, *MRI, *S, Width, RegisterFileSize, MaxRetirePerCycle,
       LoadQueueSize, StoreQueueSize, AssumeNoAlias);
 
   std::unique_ptr<mca::BackendPrinter> Printer =
-      llvm::make_unique<mca::BackendPrinter>(*B, OutputFilename, std::move(IP),
-                                             PrintModeVerbose);
-  Printer->addResourcePressureView();
-  if (PrintTimelineView)
-    Printer->addTimelineView(TimelineMaxIterations, TimelineMaxCycles);
+      llvm::make_unique<mca::BackendPrinter>(*B, *IP);
+
+  if (PrintModeVerbose) {
+    std::unique_ptr<mca::BackendStatistics> BS =
+        llvm::make_unique<mca::BackendStatistics>(*B);
+    B->addEventListener(BS.get());
+    Printer->addView(std::move(BS));
+  }
+
+  std::unique_ptr<mca::ResourcePressureView> RPV =
+      llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S,
+                                                   B->getProcResourceMasks());
+  B->addEventListener(RPV.get());
+  Printer->addView(std::move(RPV));
+
+  if (PrintTimelineView) {
+    std::unique_ptr<mca::TimelineView> TV =
+        llvm::make_unique<mca::TimelineView>(
+            *STI, *IP, *S, TimelineMaxIterations, TimelineMaxCycles);
+    B->addEventListener(TV.get());
+    Printer->addView(std::move(TV));
+  }
 
   B->run();
-  Printer->printReport();
+  Printer->printReport(TOF->os());
+  TOF->keep();
+
   return 0;
 }

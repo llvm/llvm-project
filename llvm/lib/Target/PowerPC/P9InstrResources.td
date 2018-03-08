@@ -39,6 +39,8 @@ def : InstRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C,
     (instregex "VADDU(B|H|W|D)M$"),
     (instregex "VAND(C)?$"),
     (instregex "VEXTS(B|H|W)2(D|W)(s)?$"),
+    (instregex "V_SET0(B|H)?$"),
+    MTVSRDD,
     VEQV,
     VRLB,
     VRLD,
@@ -76,9 +78,6 @@ def : InstRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C,
     VSUBUHM,
     VSUBUWM,
     VXOR,
-    V_SET0B,
-    V_SET0H,
-    V_SET0,
     XVABSDP,
     XVABSSP,
     XVCPSGNDP,
@@ -100,6 +99,9 @@ def : InstRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C,
     XXLORf,
     XXLORC,
     XXLXOR,
+    XXLXORdpz,
+    XXLXORspz,
+    XXLXORz,
     XXSEL,
     XSABSQP,
     XSCPSGNQP,
@@ -121,6 +123,9 @@ def : InstRW<[P9_ALU_3C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
     FTDIV,
     FTSQRT,
     CMPEQB,
+    (instregex "TABORT(D|W)C(I)?$"),
+    (instregex "MTFSB(0|1)$"),
+    (instregex "MFFSC(D)?RN(I)?$"),
     (instregex "CMPRB(8)?$"),
     (instregex "TD(I)?$"),
     (instregex "TW(I)?$")
@@ -158,10 +163,16 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C],
     (instregex "S(L|R)D$"),
     (instregex "SRAD(I)?$"),
     (instregex "EXTSWSLI$"),
+    (instregex "MFV(S)?RD$"),
+    (instregex "MTVSRD$"),
+    (instregex "MTVSRW(A|Z)$"),
+    MFVSRWZ,
     SRADI_32,
     RLDIC,
     RFEBB,
     LA,
+    TBEGIN,
+    TRECHKPT,
     (instregex "CMP(WI|LWI|W|LW)(8)?$"),
     (instregex "CMP(L)?D(I)?$"),
     (instregex "SUBF(I)?C(8)?$"),
@@ -170,17 +181,17 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C],
     (instregex "ADDIC(8)?(o)?$"),
     (instregex "ADD(8|4)(o)?$"),
     (instregex "ADD(E|ME|ZE)(8)?(o)?$"),
-    (instregex "SUBF(E|ME|ZE)?(8)?$"),
-    (instregex "NEG(8)?$"),
+    (instregex "SUBF(E|ME|ZE)?(8)?(o)?$"),
+    (instregex "NEG(8)?(o)?$"),
     (instregex "POPCNTB$"),
     (instregex "ADD(I|IS)?(8)?$"),
     (instregex "LI(S)?(8)?$"),
-    (instregex "(X)?OR(I|IS)?(8)?$"),
+    (instregex "(X)?OR(I|IS)?(8)?(o)?$"),
     NOP,
-    (instregex "NAND(8)?$"),
+    (instregex "NAND(8)?(o)?$"),
     (instregex "AND(C)?(8)?(o)?$"),
-    (instregex "NOR(8)?$"),
-    (instregex "OR(C)?(8)?$"),
+    (instregex "NOR(8)?(o)?$"),
+    (instregex "OR(C)?(8)?(o)?$"),
     (instregex "EQV(8)?(o)?$"),
     (instregex "EXTS(B|H|W)(8)?(_32)?(_64)?(o)?$"),
     (instregex "ADD(4|8)(TLS)?(_)?$"),
@@ -205,6 +216,10 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
     FMR,
     CREQV,
     CRXOR,
+    TRECLAIM,
+    TSR,
+    TABORT,
+    (instregex "MFOCRF(8)?$"),
     (instregex "CR(6)?(UN)?SET$"),
     (instregex "CR(N)?(OR|AND)(C)?$"),
     (instregex "S(L|R)W(8)?$"),
@@ -222,6 +237,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
 def : InstRW<[P9_ALUE_3C, P9_ALUO_3C, IP_EXECE_1C, IP_EXECO_1C,
               DISP_1C, DISP_1C, DISP_1C],
       (instrs
+    (instregex "M(T|F)VSCR$"),
     (instregex "VCMPNEZ(B|H|W)$"),
     VCMPEQUB,
     VCMPEQUD,
@@ -457,6 +473,15 @@ def : InstRW<[P9_DPE_7C, P9_DPO_7C, IP_EXECE_1C, IP_EXECO_1C,
     VSUMSWS
 )>;
 
+
+// 5 cycle Restricted DP operation. One DP unit, one EXEC pipeline and all three
+//  dispatch units for the superslice.
+def : InstRW<[P9_DP_5C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "MADD(HD|HDU|LD)$"),
+    (instregex "MUL(HD|HW|LD|LI|LI8|LW)(U)?$")
+)>;
+
 // 7 cycle Restricted DP operation. One DP unit, one EXEC pipeline and all three
 //  dispatch units for the superslice.
 def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
@@ -510,6 +535,13 @@ def : InstRW<[P9_DP_7C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
     (instregex "FSEL(D|S)o$")
 )>;
 
+// 5 Cycle Restricted DP operation and one 2 cycle ALU operation.
+def : InstRW<[P9_DPOpAndALUOp_7C, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "MUL(H|L)(D|W)(U)?o$")
+)>;
+
 // 7 cycle Restricted DP operation and one 3 cycle ALU operation.
 // These operations must be done sequentially.
 //  The DP is restricted so we need a full 5 dispatches.
@@ -543,6 +575,8 @@ def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C],
     XSCVDPUXDS,
     XSCVDPUXDSs,
     XSCVDPUXWS,
+    XSCVDPSXWSs,
+    XSCVDPUXWSs,
     XSCVHPDP,
     XSCVSPDP,
     XSCVSXDDP,
@@ -556,7 +590,6 @@ def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C],
     XSRDPIZ,
     XSREDP,
     XSRESP,
-    //XSRSP,
     XSRSQRTEDP,
     XSRSQRTESP,
     XSSUBDP,
@@ -569,13 +602,17 @@ def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C],
 //  dispatches.
 def : InstRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
+    (instregex "LVS(L|R)$"),
+    (instregex "VSPLTIS(W|H|B)$"),
+    (instregex "VSPLT(W|H|B)(s)?$"),
+    (instregex "V_SETALLONES(B|H)?$"),
+    (instregex "VEXTRACTU(B|H|W)$"),
+    MFVSRLD,
+    MTVSRWS,
     VBPERMQ,
     VCLZLSBB,
     VCTZLSBB,
     VEXTRACTD,
-    VEXTRACTUB,
-    VEXTRACTUH,
-    VEXTRACTUW,
     VEXTUBLX,
     VEXTUBRX,
     VEXTUHLX,
@@ -614,14 +651,6 @@ def : InstRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C, DISP_1C, DISP_1C],
     VSLDOI,
     VSLO,
     VSLV,
-    VSPLTB,
-    VSPLTBs,
-    VSPLTH,
-    VSPLTHs,
-    VSPLTISB,
-    VSPLTISH,
-    VSPLTISW,
-    VSPLTW,
     VSR,
     VSRO,
     VSRV,
@@ -696,6 +725,7 @@ def : InstRW<[P9_DFU_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C, DISP_1C, DISP_1C],
     XSCVSDQP,
     XSCVUDQP,
     XSRQPI,
+    XSRQPIX,
     XSRQPXP,
     XSSUBQP,
     XSSUBQPO
@@ -752,10 +782,20 @@ def : InstRW<[P9_DFU_76C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C, DISP_1C, DISP_1C],
     XSSQRTQPO
 )>;
 
+// 6 Cycle load uses a single slice.
+def : InstRW<[P9_LS_6C, IP_AGEN_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "LXVL(L)?")
+)>;
+
 // 5 Cycle load uses a single slice.
 def : InstRW<[P9_LS_5C, IP_AGEN_1C, DISP_1C, DISP_1C],
       (instrs
+    (instregex "LVE(B|H|W)X$"),
+    (instregex "LVX(L)?"),
+    (instregex "LXSI(B|H)ZX$"),
     LXSDX,
+    LXVB16X,
     LXVD2X,
     LXVWSX,
     LXSIWZX,
@@ -775,6 +815,9 @@ def : InstRW<[P9_LS_4C, IP_AGEN_1C, DISP_1C, DISP_1C],
     DARN,
     EnforceIEIO,
     ISYNC,
+    MSGSYNC,
+    TLBSYNC,
+    SYNC,
     (instregex "DCB(F|T|ST)(EP)?$"),
     (instregex "DCBZ(L)?(EP)?$"),
     (instregex "DCBTST(EP)?$"),
@@ -784,7 +827,18 @@ def : InstRW<[P9_LS_4C, IP_AGEN_1C, DISP_1C, DISP_1C],
     (instregex "ICBT(LS)?$"),
     (instregex "LBARX(L)?$"),
     (instregex "LBZ(CIX|8|X|X8)?$"),
-    (instregex "LD(ARX|ARXL|BRX|CIX|X)?$")
+    (instregex "LD(ARX|ARXL|BRX|CIX|X)?$"),
+    (instregex "LH(A|B)RX(L)?(8)?$"),
+    (instregex "LWARX(L)?$"),
+    (instregex "LWBRX(8)?$"),
+    (instregex "LWZ(8|CIX|X|X8)?$"),
+    LHZ,
+    LHZ8,
+    LHZCIX,
+    LHZX,
+    LHZX8,
+    LMW,
+    LSWI
 )>;
 
 // 4 Cycle Restricted load uses a single slice but the dispatch for the whole
@@ -796,14 +850,45 @@ def : InstRW<[P9_LS_4C, IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C],
     LFD
 )>;
 
+// Cracked load instructions.
+// Load instruction that can be done in parallel.
+def : InstRW<[P9_LS_4C, P9_LS_4C, IP_AGEN_1C, IP_AGEN_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    SLBIA,
+    SLBIE,
+    SLBMFEE,
+    SLBMFEV,
+    SLBMTE,
+    TLBIEL
+)>;
+
+// Cracked Load instruction.
+// Requires Load and ALU pieces totaling 6 cycles. The Load and ALU
+// operations can be run in parallel.
+def : InstRW<[P9_LS_4C, P9_ALU_2C, IP_EXEC_1C, IP_AGEN_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "L(W|H)ZU(X)?(8)?$"),
+    TEND
+)>;
+
+def : InstRW<[P9_StoreAndALUOp_3C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "ST(B|H|W|D)CX$")
+)>;
+
 // Cracked Load instruction.
 // Requires consecutive Load and ALU pieces totaling 6 cycles. The Load and ALU
 //  operations cannot be done at the same time and so their latencies are added.
 def : InstRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
-    (instregex "LHA(8)?$"),
-    (instregex "CP_PASTE(8)?o$")
+    (instregex "LHA(X)?(8)?$"),
+    (instregex "CP_PASTE(8)?o$"),
+    (instregex "LWA(X)?(_32)?$"),
+    TCHECK
 )>;
 
 // Cracked Restricted Load instruction.
@@ -852,6 +937,15 @@ def : InstRW<[P9_LoadAndALU2Op_8C, IP_AGEN_1C, IP_EXEC_1C,
     DFLOADf32
 )>;
 
+// Cracked 3-Way Load Instruction
+// Load with two ALU operations that depend on each other
+def : InstRW<[P9_LoadAndALUOp_6C, P9_ALU_2C, IP_AGEN_1C, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "LHAU(X)?(8)?$"),
+    LWAUX
+)>;
+
 // Cracked Load that requires the PM resource.
 // Since the Load and the PM cannot be done at the same time the latencies are
 //  added. Requires 8 cycles.
@@ -861,6 +955,7 @@ def : InstRW<[P9_LoadAndALU2Op_8C, IP_AGEN_1C, IP_EXEC_1C,
 def : InstRW<[P9_LoadAndPMOp_8C, IP_AGEN_1C, IP_EXECE_1C, IP_EXECO_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
+    LXVH8X,
     LXVDSX,
     LXVW4X
 )>;
@@ -870,27 +965,45 @@ def : InstRW<[P9_LoadAndPMOp_8C, IP_AGEN_1C, IP_EXECE_1C, IP_EXECO_1C,
 def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
     (instregex "STF(S|D|IWX|SX|DX)$"),
-    (instregex "STXS(DX|SPX|IWX)$"),
+    (instregex "STXS(D|DX|SPX|IWX|IBX|IHX|SP)(v)?$"),
+    (instregex "STW(8)?$"),
     DFSTOREf32,
     DFSTOREf64,
     XFSTOREf32,
     XFSTOREf64,
-    STIWX
+    STIWX,
+    SLBIEG,
+    STMW,
+    STSWI,
+    TLBIE,
+    (instregex "ST(W|H|D)BRX$"),
+    (instregex "ST(B|H|D)(8)?$"),
+    (instregex "ST(B|W|H|D)(CI)?X(8)?$")
 )>;
 
 // Store operation that requires the whole superslice.
 def : InstRW<[P9_LS_1C, IP_EXECE_1C, IP_EXECO_1C, IP_AGEN_1C,
               DISP_1C, DISP_1C, DISP_1C],
       (instrs
-    STXVD2X,
-    STXVW4X
+    (instregex "STVE(B|H|W)X$"),
+    (instregex "STVX(L)?$"),
+    (instregex "STXV(B16X|H8X|W4X|D2X|L|LL|X)?$")
 )>;
 
 // Cracked instruction made up up two restriced stores.
-def : InstRW<[P9_LS_1C, P9_LS_1C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
-              IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+//def : InstRW<[P9_LS_1C, P9_LS_1C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
+//              IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+//      (instrs
+//      STFDEPX
+//)>;
+
+// 5 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
+// superslice. That includes both exec pipelines (EXECO, EXECE) and all three
+// dispatches.
+def : InstRW<[P9_DIV_5C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
-      STFDEPX
+    (instregex "MTCTR(8)?(loop)?$"),
+    (instregex "MTLR(8)?$")
 )>;
 
 // 12 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
@@ -899,8 +1012,11 @@ def : InstRW<[P9_LS_1C, P9_LS_1C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
 def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
     (instregex "M(T|F)VRSAVE(v)?$"),
+    (instregex "M(T|F)PMR$"),
+    (instregex "M(T|F)TB(8)?$"),
     (instregex "MF(SPR|CTR|LR)(8)?$"),
-    MFDCR
+    (instregex "M(T|F)MSR(D)?$"),
+    (instregex "MTSPR(8)?$")
 )>;
 
 // 16 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
@@ -994,7 +1110,8 @@ def : InstRW<[P9_ALU_2C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
 def : InstRW<[P9_ALU_2C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
-    (instregex "ADDC(8)?o$")
+    (instregex "ADDC(8)?o$"),
+    (instregex "SUBFC(8)?o$")
 )>;
 
 // Cracked ALU operations.
@@ -1022,13 +1139,47 @@ def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
     MCRFS
 )>;
 
+// Cracked Restricted ALU operations.
+// Here the two ALU ops can actually be done in parallel and therefore the
+//  latencies are not added together. Otherwise this is like having two
+//  instructions running together on two pipelines and 6 dispatches.
+// ALU ops are 3 cycles each.
+def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "MTFSF(b|o)?$"),
+    (instregex "MTFSFI(o)?$")
+)>;
+
 // Cracked instruction made of two ALU ops.
 // The two ops cannot be done in parallel.
-// One of the the ALU ops is restricted and takes 3 dispatches.
+// One of the ALU ops is restricted and takes 3 dispatches.
 def : InstRW<[P9_ALUOpAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
-    RLWINMo
+    (instregex "RLD(I)?C(R|L)o$"),
+    (instregex "RLW(IMI|INM|NM)(8)?o$"),
+    (instregex "SLW(8)?o$"),
+    (instregex "SRAW(I)?o$"),
+    (instregex "SRW(8)?o$"),
+    RLDICL_32o,
+    RLDIMIo
+)>;
+
+// Cracked instruction made of two ALU ops.
+// The two ops cannot be done in parallel.
+// Both of the ALU ops are restricted and take 3 dispatches.
+def : InstRW<[P9_ALU2OpAndALU2Op_6C, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    (instregex "MFFS(L|CE|o)?$")
+)>;
+
+def : InstRW<[P9_ALUOpAndALUOpAndALUOp_6C, IP_EXEC_1C, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C,
+              DISP_1C, DISP_1C],
+      (instrs
+    (instregex "MFCR(8)?$")
 )>;
 
 // Cracked instruction made of two ALU ops.
@@ -1036,7 +1187,11 @@ def : InstRW<[P9_ALUOpAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C,
 def : InstRW<[P9_ALUOpAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
-    (instregex "EXTSWSLIo$")
+    (instregex "EXTSWSLIo$"),
+    (instregex "SRAD(I)?o$"),
+    SLDo,
+    SRDo,
+    RLDICo
 )>;
 
 // FP Div instructions in IIC_FPDivD and IIC_FPDivS.
@@ -1054,10 +1209,30 @@ def : InstRW<[P9_DPOpAndALU2Op_36C_8, IP_EXEC_1C, IP_EXEC_1C,
     FDIVo
 )>;
 
+// 36 Cycle DP Instruction.
+def : InstRW<[P9_DP_36C_10, IP_EXEC_1C, DISP_1C, DISP_1C],
+      (instrs
+    XSSQRTDP
+)>;
+
 // 36 Cycle DP Instruction Restricted. Takes one slice and 3 dispatches.
 def : InstRW<[P9_DP_36C_10, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
     FSQRT
+)>;
+
+// 36 Cycle DP Vector Instruction.
+def : InstRW<[P9_DPE_36C_10, P9_DPO_36C_10, IP_EXECE_1C, IP_EXECO_1C,
+              DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    XVSQRTDP
+)>;
+
+// 27 Cycle DP Vector Instruction.
+def : InstRW<[P9_DPE_27C_10, P9_DPO_27C_10, IP_EXECE_1C, IP_EXECO_1C,
+              DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    XVSQRTSP
 )>;
 
 // 36 Cycle DP Instruction Restricted and Cracked with 3 Cycle ALU.
@@ -1065,6 +1240,12 @@ def : InstRW<[P9_DPOpAndALU2Op_39C_10, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
     FSQRTo
+)>;
+
+// 26 Cycle DP Instruction.
+def : InstRW<[P9_DP_26C_5, IP_EXEC_1C, DISP_1C, DISP_1C],
+      (instrs
+    XSSQRTSP
 )>;
 
 // 26 Cycle DP Instruction Restricted. Takes one slice and 3 dispatches.
@@ -1145,7 +1326,8 @@ def : InstRW<[P9_LoadAndALU2Op_7C, P9_ALU_2C,
 def : InstRW<[P9_LS_1C, P9_ALU_2C, IP_AGEN_1C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
-    (instregex "STF(SU|SUX|DU|DUX)$")
+    (instregex "STF(S|D)U(X)?$"),
+    (instregex "ST(B|H|W|D)U(X)?(8)?$")
 )>;
 
 // Cracked instruction made up of a Load and an ALU. The ALU does not depend on
@@ -1230,7 +1412,15 @@ def : InstRW<[P9_LS_1C, P9_LS_1C, P9_LS_4C, P9_LS_4C, P9_LS_4C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C,
               DISP_1C],
       (instrs
-    LDAT
+    (instregex "L(D|W)AT$")
+)>;
+
+// Atomic Store
+def : InstRW<[P9_LS_1C, P9_LS_4C, P9_LS_4C, IP_EXEC_1C, IP_AGEN_1C, IP_AGEN_1C,
+              IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C,
+              DISP_1C],
+      (instrs
+    (instregex "ST(D|W)AT$")
 )>;
 
 // Signal Processing Engine (SPE) Instructions
@@ -1286,10 +1476,24 @@ def : InstRW<[],
   (instregex "DSS(ALL)?$"),
   (instregex "DST(ST)?(T)?(64)?$"),
   (instregex "ICBL(C|Q)$"),
+  (instregex "L(W|H|B)EPX$"),
+  (instregex "ST(W|H|B)EPX$"),
+  (instregex "(L|ST)FDEPX$"),
+  (instregex "M(T|F)SR(IN)?$"),
+  (instregex "M(T|F)DCR$"),
+  (instregex "NOP_GT_PWR(6|7)$"),
+  (instregex "TLB(IA|IVAX|SX|SX2|SX2D|LD|LI|RE|RE2|WE|WE2)$"),
+  (instregex "WRTEE(I)?$"),
   ATTN,
   CLRBHRB,
   MFBHRBE,
+  MBAR,
+  MSYNC,
+  SLBSYNC,
   NAP,
+  STOP,
+  TRAP,
+  LDMX,
   RFCI,
   RFDI,
   RFMCI,
@@ -1298,6 +1502,5 @@ def : InstRW<[],
   DCBA,
   DCBI,
   DCCCI,
-  ICCCI,
-  LBEPX
+  ICCCI
 )> { let Unsupported = 1; }

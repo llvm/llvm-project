@@ -1491,10 +1491,8 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
   SafetyInfo->MayThrow = false;
   SafetyInfo->HeaderMayThrow = false;
   // Iterate over header and compute safety info.
-  for (BasicBlock::iterator I = Header->begin(), E = Header->end();
-       (I != E) && !SafetyInfo->HeaderMayThrow; ++I)
-    SafetyInfo->HeaderMayThrow |=
-        !isGuaranteedToTransferExecutionToSuccessor(&*I);
+  SafetyInfo->HeaderMayThrow =
+    !isGuaranteedToTransferExecutionToSuccessor(Header);
 
   SafetyInfo->MayThrow = SafetyInfo->HeaderMayThrow;
   // Iterate over loop instructions and compute safety info.
@@ -1505,9 +1503,8 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
   for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
                             BBE = CurLoop->block_end();
        (BB != BBE) && !SafetyInfo->MayThrow; ++BB)
-    for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end();
-         (I != E) && !SafetyInfo->MayThrow; ++I)
-      SafetyInfo->MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(&*I);
+    SafetyInfo->MayThrow |=
+      !isGuaranteedToTransferExecutionToSuccessor(*BB);
 
   // Compute funclet colors if we might sink/hoist in a function with a funclet
   // personality routine.

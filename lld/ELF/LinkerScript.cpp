@@ -203,6 +203,26 @@ static void declareSymbol(SymbolAssignment *Cmd) {
   Cmd->Provide = false;
 }
 
+// This method is used to handle INSERT AFTER statement. Here we rebuild
+// the list of script commands to mix sections inserted into.
+void LinkerScript::processInsertCommands() {
+  std::vector<BaseCommand *> V;
+  for (BaseCommand *Base : SectionCommands) {
+    V.push_back(Base);
+    if (auto *Cmd = dyn_cast<OutputSection>(Base)) {
+      std::vector<BaseCommand *> &W = InsertAfterCommands[Cmd->Name];
+      V.insert(V.end(), W.begin(), W.end());
+      W.clear();
+    }
+  }
+  for (std::pair<StringRef, std::vector<BaseCommand *>> &P :
+       InsertAfterCommands)
+    if (!P.second.empty())
+      error("unable to INSERT AFTER " + P.first + ": section not defined");
+
+  SectionCommands = std::move(V);
+}
+
 // Symbols defined in script should not be inlined by LTO. At the same time
 // we don't know their final values until late stages of link. Here we scan
 // over symbol assignment commands and create placeholder symbols if needed.
