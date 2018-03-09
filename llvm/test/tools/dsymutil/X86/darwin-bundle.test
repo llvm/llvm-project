@@ -8,6 +8,9 @@ RUN: cat %p/../Inputs/Info.plist > %t/Info.plist
 RUN: llvm-dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -o %t/dsymdest/basic.macho.x86_64.dSYM
 RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist
 
+RUN: llvm-dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -toolchain "toolchain" -o %t/dsymdest/basic.macho.x86_64.dSYM
+RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist --check-prefix=CHECK --check-prefix=TOOLCHAIN
+
 CHECK: <?xml version="1.0" encoding="UTF-8"?>
 CHECK-NEXT: <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 CHECK-NEXT: <plist version="1.0">
@@ -26,5 +29,7 @@ CHECK-NEXT:                 <key>CFBundleShortVersionString</key>
 CHECK-NEXT:                 <string>2.0</string>
 CHECK-NEXT:                 <key>CFBundleVersion</key>
 CHECK-NEXT:                 <string>2</string>
-CHECK-NEXT:         </dict>
+TOOLCHAIN:                  <key>Toolchain</key>
+TOOLCHAIN-NEXT:             <string>toolchain</string>
+CHECK:              </dict>
 CHECK-NEXT: </plist>

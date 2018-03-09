@@ -4526,6 +4526,10 @@ defm VPMULHRSW : avx512_binop_rm_vl_w<0x0B, "vpmulhrsw", X86mulhrs, SSE_INTMUL_I
                                       HasBWI, 1>, T8PD;
 defm VPAVG : avx512_binop_rm_vl_bw<0xE0, 0xE3, "vpavg", X86avg,
                                    SSE_INTALU_ITINS_P, HasBWI, 1>;
+defm VPMULDQ : avx512_binop_rm_vl_q<0x28, "vpmuldq", X86pmuldq,
+                                    SSE_INTMUL_ITINS_P, HasAVX512, 1>, T8PD;
+defm VPMULUDQ : avx512_binop_rm_vl_q<0xF4, "vpmuludq", X86pmuludq,
+                                     SSE_INTMUL_ITINS_P, HasAVX512, 1>;
 
 multiclass avx512_binop_all<bits<8> opc, string OpcodeStr, OpndItins itins,
                             AVX512VLVectorVTInfo _SrcVTInfo, AVX512VLVectorVTInfo _DstVTInfo,
@@ -4547,12 +4551,6 @@ multiclass avx512_binop_all<bits<8> opc, string OpcodeStr, OpndItins itins,
   }
 }
 
-defm VPMULDQ : avx512_binop_all<0x28, "vpmuldq", SSE_INTMUL_ITINS_P,
-                                avx512vl_i32_info, avx512vl_i64_info,
-                                X86pmuldq, HasAVX512, 1>,T8PD;
-defm VPMULUDQ : avx512_binop_all<0xF4, "vpmuludq", SSE_INTMUL_ITINS_P,
-                                avx512vl_i32_info, avx512vl_i64_info,
-                                X86pmuludq, HasAVX512, 1>;
 defm VPMULTISHIFTQB : avx512_binop_all<0x83, "vpmultishiftqb", SSE_INTALU_ITINS_P,
                                 avx512vl_i8_info, avx512vl_i8_info,
                                 X86multishift, HasVBMI, 0>, T8PD;

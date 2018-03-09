@@ -206,15 +206,9 @@ void InputSectionBase::maybeDecompress() {
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
-  if ((Flags & SHF_LINK_ORDER) && Link != 0) {
-    InputSectionBase *L = File->getSections()[Link];
-    if (auto *IS = dyn_cast<InputSection>(L))
-      return IS;
-    error("a section with SHF_LINK_ORDER should not refer a non-regular "
-          "section: " +
-          toString(L));
-  }
-  return nullptr;
+  assert(Link);
+  assert(Flags & SHF_LINK_ORDER);
+  return cast<InputSection>(File->getSections()[Link]);
 }
 
 // Returns a source location string. Used to construct an error message.

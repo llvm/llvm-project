@@ -74,6 +74,10 @@ OPTIONS
 
  Dumps the symbol table found in *executable* or object file(s) and exits.
 
+.. option:: --toolchain
+
+ Embed the toolchain in the dSYM bundle's property list.
+
 .. option:: -u, --update
 
  Update an existing dSYM file to contain the latest accelerator tables and
