@@ -26,6 +26,8 @@
 // RUN: echo "interceptor_name:strcat" > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t
 
+// UNSUPPORTED: win32
+
 #include <string.h>
 
 
