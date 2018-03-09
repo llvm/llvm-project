@@ -389,6 +389,8 @@ public:
   //------------------------------------------------------------------
   // Subclasses can implement the functions below.
   //------------------------------------------------------------------
+  virtual ConstString GetMangledTypeName();
+
   virtual ConstString GetTypeName();
 
   virtual ConstString GetDisplayTypeName();

@@ -1717,6 +1717,10 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
+ConstString ValueObject::GetMangledTypeName() {
+  return GetCompilerType().GetMangledTypeName();
+}
+
 ConstString ValueObject::GetTypeName() {
   return GetCompilerType().GetConstTypeName();
 }

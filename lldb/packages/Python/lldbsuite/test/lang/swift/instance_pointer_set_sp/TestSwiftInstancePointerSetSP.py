@@ -25,6 +25,7 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_instancepointerset_sp(self):
         """Test that we correctly track instance pointers in ValueObjectPrinter"""
         self.build()

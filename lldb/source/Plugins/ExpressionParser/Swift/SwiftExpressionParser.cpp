@@ -931,7 +931,7 @@ static void CountLocals(
 
       if (language_runtime && stack_frame_sp)
         target_type = language_runtime->DoArchetypeBindingForType(
-            *stack_frame_sp, target_type, &ast_context);
+            *stack_frame_sp, target_type);
 
       // If we couldn't fully realize the type, then we aren't going to get very
       // far making a local out of it,

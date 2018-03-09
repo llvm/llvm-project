@@ -31,7 +31,7 @@ class MTCSwiftTestCase(TestBase):
 
     def mtc_tests(self):
         # Load the test
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe, patterns=["Current executable set to .*a.out"])
 
         self.runCmd("env DYLD_INSERT_LIBRARIES=%s" % self.mtc_dylib_path)

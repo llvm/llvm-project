@@ -1,0 +1,50 @@
+// Test that dictionaries work in the REPL.
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=DICT
+
+[1:2, 2:3, 3:9]
+// DICT: Welcome to Swift version {{.*}} (LLVM {{.*}}, Clang {{.*}}, Swift {{.*}})
+// DICT-NEXT: $R0: [Int : Int] = 3 key/value pairs {
+// DICT-NEXT:   [0] = {
+// DICT-NEXT:     key = 2
+// DICT-NEXT:     value = 3
+// DICT-NEXT:   }
+// DICT-NEXT:   [1] = {
+// DICT-NEXT:     key = 3
+// DICT-NEXT:     value = 9
+// DICT-NEXT:   }
+// DICT-NEXT:   [2] = {
+// DICT-NEXT:     key = 1
+// DICT-NEXT:     value = 2
+// DICT-NEXT:   }
+// DICT-NEXT: }
+
+$R0.count
+// DICT: $R1: Int = 3
+
+var x = $R0
+// DICT: x: [Int : Int] = 3 key/value pairs {
+// DICT-NEXT:   [0] = {
+// DICT-NEXT:     key = 2
+// DICT-NEXT:     value = 3
+// DICT-NEXT:   }
+// DICT-NEXT:   [1] = {
+// DICT-NEXT:     key = 3
+// DICT-NEXT:     value = 9
+// DICT-NEXT:   }
+// DICT-NEXT:   [2] = {
+// DICT-NEXT:     key = 1
+// DICT-NEXT:     value = 2
+// DICT-NEXT:   }
+// DICT-NEXT: }
+
+x.updateValue(8, forKey : 4)
+x
+// DICT: key = 4
+// DICT-NEXT: value = 8
+
+x[3] = 5
+x
+// DICT: key = 3
+// DICT-NEXT: value = 5

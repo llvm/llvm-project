@@ -748,7 +748,6 @@ def run_to_breakpoint_make_target(test, exe_name, in_cwd):
     return target
 
 def run_to_breakpoint_do_run(test, target, bkpt, launch_info):
-
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
         launch_info = lldb.SBLaunchInfo(None)

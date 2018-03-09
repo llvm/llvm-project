@@ -65,6 +65,3 @@ TAGS
 # Ignore test trace directories.
 20??-??-??-??_??_??/
 
-# Ignore crashlog support files.
-crashinfo.lock
-crashinfo.so
