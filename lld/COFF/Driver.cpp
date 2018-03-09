@@ -804,8 +804,10 @@ static void parseOrderFile(StringRef Arg) {
     if (Config->Machine == I386 && !isDecorated(S))
       S = "_" + S;
 
-    if (Set.count(S) == 0)
-      warn("/order:" + Arg + ": missing symbol: " + S);
+    if (Set.count(S) == 0) {
+      if (Config->WarnMissingOrderSymbol)
+        warn("/order:" + Arg + ": missing symbol: " + S);
+    }
     else
       Config->Order[S] = INT_MIN + Config->Order.size();
   }
@@ -899,7 +901,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /ignore
   for (auto *Arg : Args.filtered(OPT_ignore)) {
-    if (StringRef(Arg->getValue()) == "4217")
+    if (StringRef(Arg->getValue()) == "4037")
+      Config->WarnMissingOrderSymbol = false;
+    else if (StringRef(Arg->getValue()) == "4217")
       Config->WarnLocallyDefinedImported = false;
     // Other warning numbers are ignored.
   }
