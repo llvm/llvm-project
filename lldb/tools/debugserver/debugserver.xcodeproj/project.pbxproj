@@ -747,61 +747,13 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*internal]" = "-DLLDB_ENERGY";
 				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
 				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
 				LLDB_USE_OS_LOG = 0;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"-DDT_VARIANT_$(DT_VARIANT)",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
-					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-Wparentheses",
-					"-DWITH_LOCKDOWN",
-					"-DWITH_FBS",
-					"-DWITH_BKS",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
-					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-					"-isystem",
-					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				OTHER_LDFLAGS = "";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
-				);
+				OTHER_CFLAGS = "";
 				STRIPFLAGS = "-x";
 				STRIP_STYLE = debugging;
 				VERSIONING_SYSTEM = "apple-generic";
