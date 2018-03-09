@@ -2314,7 +2314,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           return DAG.getSetCC(dl, VT, N0, N1, ISD::SETNE);
 
         // If we have setugt X, Max-1, turn it into seteq X, Max
-        if ((Cond == ISD::SETGT || Cond == ISD::SETUGT) && C1 == MaxVal-1)
+        if (C1 == MaxVal-1)
           return DAG.getSetCC(dl, VT, N0,
                               DAG.getConstant(MaxVal, dl, N0.getValueType()),
                               ISD::SETEQ);

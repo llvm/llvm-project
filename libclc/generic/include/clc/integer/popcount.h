@@ -1,6 +1,5 @@
-#undef popcount
-#define popcount __clc_popcount
-
-#define __CLC_FUNCTION __clc_popcount
-#define __CLC_INTRINSIC "llvm.ctpop"
-#include <clc/integer/unary_intrin.inc>
+#define __CLC_FUNCTION popcount
+#define __CLC_BODY <clc/integer/unary.inc>
+#include <clc/integer/gentype.inc>
+#undef __CLC_FUNCTION
+#undef __CLC_BODY

@@ -33,7 +33,7 @@ static Error createError(char const *Fmt, const Ts &... Vals) {
 Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
                                   uint32_t *OffsetPtr) {
   clear();
-  uint32_t TableOffset = *OffsetPtr;
+  HeaderOffset = *OffsetPtr;
 
   // Read and verify the length field.
   if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, sizeof(uint32_t)))
@@ -42,17 +42,21 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
                        *OffsetPtr);
   // TODO: Add support for DWARF64.
   HeaderData.Length = Data.getU32(OffsetPtr);
+  if (HeaderData.Length == 0xffffffffu)
+    return createError(
+        "DWARF64 is not supported in .debug_rnglists at offset 0x%" PRIx32,
+        HeaderOffset);
   if (HeaderData.Length + sizeof(uint32_t) < sizeof(Header))
     return createError(".debug_rnglists table at offset 0x%" PRIx32
                        " has too small length (0x%" PRIx32
                        ") to contain a complete header",
-                       TableOffset, length());
-  uint32_t End = TableOffset + length();
-  if (!Data.isValidOffsetForDataOfSize(TableOffset, End - TableOffset))
+                       HeaderOffset, length());
+  uint32_t End = HeaderOffset + length();
+  if (!Data.isValidOffsetForDataOfSize(HeaderOffset, End - HeaderOffset))
     return createError(
         "section is not large enough to contain a .debug_rnglists table "
         "of length 0x%" PRIx32 " at offset 0x%" PRIx32,
-        length(), TableOffset);
+        length(), HeaderOffset);
 
   HeaderData.Version = Data.getU16(OffsetPtr);
   HeaderData.AddrSize = Data.getU8(OffsetPtr);
@@ -63,33 +67,38 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
   if (HeaderData.Version != 5)
     return createError("unrecognised .debug_rnglists table version %" PRIu16
                        " in table at offset 0x%" PRIx32,
-                       HeaderData.Version, TableOffset);
+                       HeaderData.Version, HeaderOffset);
   if (HeaderData.AddrSize != 4 && HeaderData.AddrSize != 8)
     return createError(".debug_rnglists table at offset 0x%" PRIx32
                        " has unsupported address size %hhu",
-                       TableOffset, HeaderData.AddrSize);
+                       HeaderOffset, HeaderData.AddrSize);
   if (HeaderData.SegSize != 0)
     return createError(".debug_rnglists table at offset 0x%" PRIx32
                        " has unsupported segment selector size %" PRIu8,
-                       TableOffset, HeaderData.SegSize);
-  if (End < TableOffset + sizeof(HeaderData) +
+                       HeaderOffset, HeaderData.SegSize);
+  if (End < HeaderOffset + sizeof(HeaderData) +
                 HeaderData.OffsetEntryCount * sizeof(uint32_t))
     return createError(".debug_rnglists table at offset 0x%" PRIx32
                        " has more offset entries (%" PRIu32
                        ") than there is space for",
-                       TableOffset, HeaderData.OffsetEntryCount);
+                       HeaderOffset, HeaderData.OffsetEntryCount);
 
   Data.setAddressSize(HeaderData.AddrSize);
 
   for (uint32_t I = 0; I < HeaderData.OffsetEntryCount; ++I)
     Offsets.push_back(Data.getU32(OffsetPtr));
 
-  DWARFAddressRangesVector CurrentRanges;
+  DWARFRangeList CurrentRanges;
   while (*OffsetPtr < End) {
+    uint32_t EntryOffset = *OffsetPtr;
     uint8_t Encoding = Data.getU8(OffsetPtr);
+    MaxEncodingStringLength =
+        std::max(MaxEncodingStringLength,
+                 (uint8_t)dwarf::RangeListEncodingString(Encoding).size());
     switch (Encoding) {
     case dwarf::DW_RLE_end_of_list:
-      Ranges.insert(Ranges.end(), CurrentRanges);
+      CurrentRanges.push_back(RangeListEntry{ EntryOffset, Encoding, 0, 0 });
+      Ranges.insert(Ranges.end(), std::move(CurrentRanges));
       CurrentRanges.clear();
       break;
     // TODO: Support other encodings.
@@ -121,7 +130,8 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
                            *OffsetPtr - 1);
       uint64_t Start = Data.getAddress(OffsetPtr);
       uint64_t End = Data.getAddress(OffsetPtr);
-      CurrentRanges.emplace_back(Start, End);
+      CurrentRanges.push_back(
+          RangeListEntry{EntryOffset, Encoding, Start, End});
       break;
     }
     case dwarf::DW_RLE_start_length: {
@@ -132,11 +142,12 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
         return createError("read past end of table when reading "
                            "DW_RLE_start_length encoding at offset 0x%" PRIx32,
                            PreviousOffset);
-      CurrentRanges.emplace_back(Start, Start + Length);
+      CurrentRanges.push_back(
+          RangeListEntry{EntryOffset, Encoding, Start, Length});
       break;
     }
     default:
-      Ranges.insert(Ranges.end(), CurrentRanges);
+      Ranges.insert(Ranges.end(), std::move(CurrentRanges));
       return createError("unknown rnglists encoding 0x%" PRIx32
                          " at offset 0x%" PRIx32,
                          uint32_t(Encoding), *OffsetPtr - 1);
@@ -155,12 +166,55 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
     return createError(
         "no end of list marker detected at end of .debug_rnglists table "
         "starting at offset 0x%" PRIx32,
-        TableOffset);
+        HeaderOffset);
   return Error::success();
 }
 
-void DWARFDebugRnglists::dump(raw_ostream &OS) const {
-  // TODO: Add verbose printing of the raw encodings.
+static void dumpRangeEntry(raw_ostream &OS,
+                           DWARFDebugRnglists::RangeListEntry Entry,
+                           uint8_t AddrSize, uint8_t MaxEncodingStringLength,
+                           DIDumpOptions DumpOpts) {
+  if (DumpOpts.Verbose) {
+    // Print the section offset in verbose mode.
+    OS << format("0x%8.8" PRIx32 ":", Entry.Offset);
+    auto EncodingString = dwarf::RangeListEncodingString(Entry.EntryKind);
+    // Unsupported encodings should have been reported during parsing.
+    assert(!EncodingString.empty() && "Unknown range entry encoding");
+    OS << format(" [%s%*c", EncodingString.data(),
+                 MaxEncodingStringLength - EncodingString.size() + 1, ']');
+    if (Entry.EntryKind != dwarf::DW_RLE_end_of_list)
+      OS << ": ";
+  }
+
+  switch (Entry.EntryKind) {
+  case dwarf::DW_RLE_end_of_list:
+    OS << (DumpOpts.Verbose ? "" : "<End of list>");
+    break;
+  case dwarf::DW_RLE_start_length:
+    if (DumpOpts.Verbose) {
+      // Make the address range display its contents in raw form rather than
+      // as an interval (i.e. without brackets).
+      DumpOpts.DisplayRawContents = true;
+      DWARFAddressRange(Entry.Value0, Entry.Value1)
+          .dump(OS, AddrSize, DumpOpts);
+      OS << " => ";
+    }
+    DumpOpts.DisplayRawContents = false;
+    DWARFAddressRange(Entry.Value0, Entry.Value0 + Entry.Value1)
+        .dump(OS, AddrSize, DumpOpts);
+    break;
+  case dwarf::DW_RLE_start_end:
+    DWARFAddressRange(Entry.Value0, Entry.Value1).dump(OS, AddrSize, DumpOpts);
+    break;
+  default:
+    llvm_unreachable("Unsupported range list encoding");
+  }
+  OS << "\n";
+}
+
+void DWARFDebugRnglists::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+  if (DumpOpts.Verbose)
+    OS << format("0x%8.8" PRIx32 ": ", HeaderOffset);
   OS << format("Range List Header: length = 0x%8.8" PRIx32
                ", version = 0x%4.4" PRIx16 ", "
                "addr_size = 0x%2.2" PRIx8 ", seg_size = 0x%2.2" PRIx8
@@ -171,19 +225,20 @@ void DWARFDebugRnglists::dump(raw_ostream &OS) const {
 
   if (HeaderData.OffsetEntryCount > 0) {
     OS << "Offsets: [";
-    for (const auto &Off : Offsets)
+    for (const auto &Off : Offsets) {
       OS << format("\n0x%8.8" PRIx32, Off);
+      if (DumpOpts.Verbose)
+        OS << format(" => 0x%8.8" PRIx32,
+                     Off + HeaderOffset + sizeof(HeaderData));
+    }
     OS << "\n]\n";
   }
   OS << "Ranges:\n";
 
-  const uint32_t HexWidth = HeaderData.AddrSize * 2;
-  for (const auto &List : Ranges) {
+  for (const auto &List : Ranges)
     for (const auto &Entry : List)
-      OS << format("[0x%*.*" PRIx64 ", 0x%*.*" PRIx64 ")\n", HexWidth, HexWidth,
-                   Entry.LowPC, HexWidth, HexWidth, Entry.HighPC);
-    OS << "<End of list>\n";
-  }
+      dumpRangeEntry(OS, Entry, HeaderData.AddrSize, MaxEncodingStringLength,
+                     DumpOpts);
 }
 
 uint32_t DWARFDebugRnglists::length() const {

@@ -1257,6 +1257,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY bool __invariants() const;
 
+    _LIBCPP_INLINE_VISIBILITY void __clear_and_shrink();
+    
     _LIBCPP_INLINE_VISIBILITY
     bool __is_long() const _NOEXCEPT
         {return bool(__r_.first().__s.__size_ & __short_mask);}
@@ -1426,16 +1428,14 @@ private:
             {
                 if (!__str.__is_long())
                 {
-                    clear();
-                    shrink_to_fit();
+                    __clear_and_shrink();
                     __alloc() = __str.__alloc();
                 }
                 else
                 {
                     allocator_type __a = __str.__alloc();
                     pointer __p = __alloc_traits::allocate(__a, __str.__get_long_cap());
-                    clear();
-                    shrink_to_fit();
+                    __clear_and_shrink();
                     __alloc() = _VSTD::move(__a);
                     __set_long_pointer(__p);
                     __set_long_cap(__str.__get_long_cap());
@@ -2125,8 +2125,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value)
 #endif
 {
-    clear();
-    shrink_to_fit();
+    __clear_and_shrink();
     __r_.first() = __str.__r_.first();
     __move_assign_alloc(__str);
     __str.__zero();
@@ -3578,6 +3577,22 @@ basic_string<_CharT, _Traits, _Allocator>::__invariants() const
         return false;
     return true;
 }
+
+// __clear_and_shrink
+
+template<class _CharT, class _Traits, class _Allocator>
+inline _LIBCPP_INLINE_VISIBILITY
+void 
+basic_string<_CharT, _Traits, _Allocator>::__clear_and_shrink()
+{
+    clear();
+    if(__is_long())
+    {
+        __alloc_traits::deallocate(__alloc(), __get_long_pointer(), capacity() + 1);
+        __set_long_cap(0);
+        __set_short_size(0);
+    }
+} 
 
 // operator==
 

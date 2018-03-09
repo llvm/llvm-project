@@ -14,10 +14,13 @@
 
 using namespace llvm;
 
-void DWARFAddressRange::dump(raw_ostream &OS, uint32_t AddressSize) const {
+void DWARFAddressRange::dump(raw_ostream &OS, uint32_t AddressSize,
+                             DIDumpOptions DumpOpts) const {
 
-  OS << format("[0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2, LowPC)
-     << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2, HighPC);
+  OS << (DumpOpts.DisplayRawContents ? " " : "[");
+  OS << format("0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2, LowPC)
+     << format("0x%*.*" PRIx64, AddressSize * 2, AddressSize * 2, HighPC);
+  OS << (DumpOpts.DisplayRawContents ? "" : ")");
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const DWARFAddressRange &R) {

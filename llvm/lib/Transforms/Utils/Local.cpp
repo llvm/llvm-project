@@ -1322,25 +1322,36 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // stored on the stack, while the dbg.declare can only describe
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
-    if (AI && !isArray(AI)) {
-      for (auto &AIUse : AI->uses()) {
-        User *U = AIUse.getUser();
-        if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-          if (AIUse.getOperandNo() == 1)
-            ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
-        } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
-          ConvertDebugDeclareToDebugValue(DDI, LI, DIB);
-        } else if (CallInst *CI = dyn_cast<CallInst>(U)) {
-          // This is a call by-value or some other instruction that
-          // takes a pointer to the variable. Insert a *value*
-          // intrinsic that describes the alloca.
-          DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(),
-                                      DDI->getExpression(), DDI->getDebugLoc(),
-                                      CI);
-        }
+    if (!AI || isArray(AI))
+      continue;
+
+    // A volatile load/store means that the alloca can't be elided anyway.
+    if (llvm::any_of(AI->users(), [](User *U) -> bool {
+          if (LoadInst *LI = dyn_cast<LoadInst>(U))
+            return LI->isVolatile();
+          if (StoreInst *SI = dyn_cast<StoreInst>(U))
+            return SI->isVolatile();
+          return false;
+        }))
+      continue;
+
+    for (auto &AIUse : AI->uses()) {
+      User *U = AIUse.getUser();
+      if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+        if (AIUse.getOperandNo() == 1)
+          ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
+      } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
+        ConvertDebugDeclareToDebugValue(DDI, LI, DIB);
+      } else if (CallInst *CI = dyn_cast<CallInst>(U)) {
+        // This is a call by-value or some other instruction that
+        // takes a pointer to the variable. Insert a *value*
+        // intrinsic that describes the alloca.
+        DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(),
+                                    DDI->getExpression(), DDI->getDebugLoc(),
+                                    CI);
       }
-      DDI->eraseFromParent();
     }
+    DDI->eraseFromParent();
   }
   return true;
 }

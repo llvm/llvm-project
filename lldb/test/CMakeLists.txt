@@ -113,6 +113,10 @@ if(CMAKE_HOST_APPLE)
   list(APPEND LLDB_TEST_COMMON_ARGS --server ${DEBUGSERVER_PATH})
 endif()
 
+if(SKIP_DEBUGSERVER)
+  list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
+endif()
+
 set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS})
 
 add_python_test_target(check-lldb-single

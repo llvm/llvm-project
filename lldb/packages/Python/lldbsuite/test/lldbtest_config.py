@@ -16,5 +16,8 @@ channels = []
 # leave logs/traces even for successful test runs
 log_success = False
 
+# Indicate whether we're testing with an out-of-tree debugserver
+out_of_tree_debugserver = False
+
 # path to the lldb command line executable tool
 lldbExec = None

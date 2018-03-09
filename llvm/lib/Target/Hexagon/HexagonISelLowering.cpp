@@ -2540,9 +2540,6 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
   unsigned NeedAlign = Subtarget.getTypeAlignment(LoadTy);
   if (HaveAlign >= NeedAlign)
     return Op;
-  // Indexed loads/stores are created after legalizing operations, so we
-  // shouldn't be getting unaligned post-incrementing loads at this point.
-  assert(LN->isUnindexed() && "Expecting only unindexed loads");
 
   const SDLoc &dl(Op);
   const DataLayout &DL = DAG.getDataLayout();
@@ -2552,6 +2549,10 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
   // If the load aligning is disabled or the load can be broken up into two
   // smaller legal loads, do the default (target-independent) expansion.
   bool DoDefault = false;
+  // Handle it in the default way if this is an indexed load.
+  if (!LN->isUnindexed())
+    DoDefault = true;
+
   if (!AlignLoads) {
     if (allowsMemoryAccess(Ctx, DL, LN->getMemoryVT(), AS, HaveAlign))
       return Op;

@@ -155,7 +155,7 @@ entry:
 define i8 @sub_compare_folding_swapPD256_undef(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @sub_compare_folding_swapPD256_undef(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = call <4 x i1> @llvm.x86.avx512.mask.cmp.pd.256(<4 x double> fsub (<4 x double> undef, <4 x double> undef), <4 x double> zeroinitializer, i32 5)
+; CHECK-NEXT:    [[TMP:%.*]] = call <4 x i1> @llvm.x86.avx512.mask.cmp.pd.256(<4 x double> undef, <4 x double> zeroinitializer, i32 5)
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i1> [[TMP]], <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[TMP0]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP1]]

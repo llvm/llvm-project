@@ -423,6 +423,7 @@ StringRef ArrayOrderString(unsigned Order);
 StringRef LNStandardString(unsigned Standard);
 StringRef LNExtendedString(unsigned Encoding);
 StringRef MacinfoString(unsigned Encoding);
+StringRef RangeListEncodingString(unsigned Encoding);
 StringRef CallFrameString(unsigned Encoding);
 StringRef ApplePropertyString(unsigned);
 StringRef UnitTypeString(unsigned);

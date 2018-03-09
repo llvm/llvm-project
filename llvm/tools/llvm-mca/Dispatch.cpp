@@ -242,6 +242,7 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst) {
 
   // Reserve slots in the RCU.
   unsigned RCUTokenID = RCU->reserveSlot(IID, NumMicroOps);
+  NewInst->setRCUTokenID(RCUTokenID);
   Owner->notifyInstructionDispatched(IID);
 
   SC->scheduleInstruction(IID, NewInst);

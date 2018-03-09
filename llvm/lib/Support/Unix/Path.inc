@@ -792,7 +792,7 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 
   if (Flags & F_Append)
     OpenFlags |= O_APPEND;
-  else
+  else if (!(Flags & F_NoTrunc))
     OpenFlags |= O_TRUNC;
 
   if (Flags & F_Excl)

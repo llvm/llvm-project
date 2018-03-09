@@ -9328,6 +9328,26 @@ static void PrintThreadCommand(MachO::thread_command t, const char *Ptr,
           outs() << "\t    esh.flavor " << es.esh.flavor << "  esh.count "
                  << es.esh.count << "\n";
         }
+      } else if (flavor == MachO::x86_EXCEPTION_STATE64) {
+        outs() << "     flavor x86_EXCEPTION_STATE64\n";
+        if (count == MachO::x86_EXCEPTION_STATE64_COUNT)
+          outs() << "      count x86_EXCEPTION_STATE64_COUNT\n";
+        else
+          outs() << "      count " << count
+                 << " (not x86_EXCEPTION_STATE64_COUNT)\n";
+        struct MachO::x86_exception_state64_t es64;
+        left = end - begin;
+        if (left >= sizeof(MachO::x86_exception_state64_t)) {
+          memcpy(&es64, begin, sizeof(MachO::x86_exception_state64_t));
+          begin += sizeof(MachO::x86_exception_state64_t);
+        } else {
+          memset(&es64, '\0', sizeof(MachO::x86_exception_state64_t));
+          memcpy(&es64, begin, left);
+          begin += left;
+        }
+        if (isLittleEndian != sys::IsLittleEndianHost)
+          swapStruct(es64);
+        Print_x86_exception_state_t(es64);
       } else {
         outs() << "     flavor " << flavor << " (unknown)\n";
         outs() << "      count " << count << "\n";

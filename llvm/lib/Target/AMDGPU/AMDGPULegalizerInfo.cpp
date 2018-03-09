@@ -23,7 +23,8 @@
 using namespace llvm;
 using namespace LegalizeActions;
 
-AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
+AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
+                                         const GCNTargetMachine &TM) {
   using namespace TargetOpcode;
 
   const LLT S1= LLT::scalar(1);

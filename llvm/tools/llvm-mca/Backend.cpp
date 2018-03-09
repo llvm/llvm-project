@@ -31,30 +31,25 @@ void Backend::addEventListener(HWEventListener *Listener) {
 void Backend::runCycle(unsigned Cycle) {
   notifyCycleBegin(Cycle);
 
-  if (!SM->hasNext()) {
+  if (!SM.hasNext()) {
     notifyCycleEnd(Cycle);
     return;
   }
 
-  InstRef IR = SM->peekNext();
+  InstRef IR = SM.peekNext();
   const InstrDesc *Desc = &IB->getOrCreateInstrDesc(STI, *IR.second);
   while (DU->isAvailable(Desc->NumMicroOps) && DU->canDispatch(*Desc)) {
     Instruction *NewIS = IB->createInstruction(STI, *DU, IR.first, *IR.second);
     Instructions[IR.first] = std::unique_ptr<Instruction>(NewIS);
     NewIS->setRCUTokenID(DU->dispatch(IR.first, NewIS));
 
-    // If this is a zero latency instruction, then we don't need to dispatch
-    // it. Instead, we can mark it as executed.
-    if (NewIS->isZeroLatency())
-      notifyInstructionExecuted(IR.first);
-
     // Check if we have dispatched all the instructions.
-    SM->updateNext();
-    if (!SM->hasNext())
+    SM.updateNext();
+    if (!SM.hasNext())
       break;
 
     // Prepare for the next round.
-    IR = SM->peekNext();
+    IR = SM.peekNext();
     Desc = &IB->getOrCreateInstrDesc(STI, *IR.second);
   }
 

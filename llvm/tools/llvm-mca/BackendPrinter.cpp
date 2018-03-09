@@ -13,25 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "BackendPrinter.h"
+#include "View.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace mca {
 
 using namespace llvm;
 
-std::unique_ptr<ToolOutputFile>
-BackendPrinter::getOutputStream(std::string OutputFile) {
-  if (OutputFile == "")
-    OutputFile = "-";
-  std::error_code EC;
-  auto Out = llvm::make_unique<ToolOutputFile>(OutputFile, EC, sys::fs::F_None);
-  if (!EC)
-    return Out;
-  errs() << EC.message() << '\n';
-  return nullptr;
-}
-
-void BackendPrinter::printGeneralStatistics(unsigned Iterations,
+void BackendPrinter::printGeneralStatistics(raw_ostream &OS,
+                                            unsigned Iterations,
                                             unsigned Cycles,
                                             unsigned Instructions,
                                             unsigned DispatchWidth) const {
@@ -46,67 +36,10 @@ void BackendPrinter::printGeneralStatistics(unsigned Iterations,
   TempStream << "\nDispatch Width: " << DispatchWidth;
   TempStream << "\nIPC:            " << format("%.2f", IPC) << '\n';
   TempStream.flush();
-  File->os() << Buffer;
+  OS << Buffer;
 }
 
-void BackendPrinter::printRATStatistics(unsigned TotalMappings,
-                                        unsigned MaxUsedMappings) const {
-  std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
-  TempStream << "\n\nRegister Alias Table:";
-  TempStream << "\nTotal number of mappings created: " << TotalMappings;
-  TempStream << "\nMax number of mappings used:      " << MaxUsedMappings
-             << '\n';
-  TempStream.flush();
-  File->os() << Buffer;
-}
-
-void BackendPrinter::printDispatchStalls(unsigned RATStalls, unsigned RCUStalls,
-                                         unsigned SCHEDQStalls,
-                                         unsigned LDQStalls, unsigned STQStalls,
-                                         unsigned DGStalls) const {
-  std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
-  TempStream << "\n\nDynamic Dispatch Stall Cycles:\n";
-  TempStream << "RAT     - Register unavailable:                      "
-             << RATStalls;
-  TempStream << "\nRCU     - Retire tokens unavailable:                 "
-             << RCUStalls;
-  TempStream << "\nSCHEDQ  - Scheduler full:                            "
-             << SCHEDQStalls;
-  TempStream << "\nLQ      - Load queue full:                           "
-             << LDQStalls;
-  TempStream << "\nSQ      - Store queue full:                          "
-             << STQStalls;
-  TempStream << "\nGROUP   - Static restrictions on the dispatch group: "
-             << DGStalls;
-  TempStream << '\n';
-  TempStream.flush();
-  File->os() << Buffer;
-}
-
-void BackendPrinter::printSchedulerUsage(
-    const MCSchedModel &SM, const ArrayRef<BufferUsageEntry> &Usage) const {
-  std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
-  TempStream << "\n\nScheduler's queue usage:\n";
-  const ArrayRef<uint64_t> ResourceMasks = B.getProcResourceMasks();
-  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
-    if (!ProcResource.BufferSize)
-      continue;
-
-    for (const BufferUsageEntry &Entry : Usage)
-      if (ResourceMasks[I] == Entry.first)
-        TempStream << ProcResource.Name << ",  " << Entry.second << '/'
-                   << ProcResource.BufferSize << '\n';
-  }
-
-  TempStream.flush();
-  File->os() << Buffer;
-}
-
-void BackendPrinter::printInstructionInfo() const {
+void BackendPrinter::printInstructionInfo(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
 
@@ -143,67 +76,22 @@ void BackendPrinter::printInstructionInfo() const {
     TempStream << (ID.MayLoad ? " *     " : "       ");
     TempStream << (ID.MayStore ? " *     " : "       ");
     TempStream << (ID.HasSideEffects ? " * " : "   ");
-    MCIP->printInst(&Inst, TempStream, "", B.getSTI());
+    MCIP.printInst(&Inst, TempStream, "", B.getSTI());
     TempStream << '\n';
   }
 
   TempStream.flush();
-  File->os() << Buffer;
+  OS << Buffer;
 }
 
-void BackendPrinter::printReport() const {
-  assert(isFileValid());
+void BackendPrinter::printReport(llvm::raw_ostream &OS) const {
   unsigned Cycles = B.getNumCycles();
-  printGeneralStatistics(B.getNumIterations(), Cycles, B.getNumInstructions(),
+  printGeneralStatistics(OS, B.getNumIterations(), Cycles, B.getNumInstructions(),
                          B.getDispatchWidth());
-  if (EnableVerboseOutput) {
-    printDispatchStalls(B.getNumRATStalls(), B.getNumRCUStalls(),
-                        B.getNumSQStalls(), B.getNumLDQStalls(),
-                        B.getNumSTQStalls(), B.getNumDispatchGroupStalls());
-    printRATStatistics(B.getTotalRegisterMappingsCreated(),
-                       B.getMaxUsedRegisterMappings());
-    BS->printHistograms(File->os());
+  printInstructionInfo(OS);
 
-    std::vector<BufferUsageEntry> Usage;
-    B.getBuffersUsage(Usage);
-    printSchedulerUsage(B.getSchedModel(), Usage);
-  }
-
-  if (RPV) {
-    RPV->printResourcePressure(getOStream(), Cycles);
-    printInstructionInfo();
-  }
-
-  if (TV) {
-    TV->printTimeline(getOStream());
-    TV->printAverageWaitTimes(getOStream());
-  }
-}
-
-void BackendPrinter::addResourcePressureView() {
-  if (!RPV) {
-    RPV = llvm::make_unique<ResourcePressureView>(
-        B.getSTI(), *MCIP, B.getSourceMgr(), B.getProcResourceMasks());
-    B.addEventListener(RPV.get());
-  }
-}
-
-void BackendPrinter::addTimelineView(unsigned MaxIterations,
-                                     unsigned MaxCycles) {
-  if (!TV) {
-    TV = llvm::make_unique<TimelineView>(B.getSTI(), *MCIP, B.getSourceMgr(),
-                                         MaxIterations, MaxCycles);
-    B.addEventListener(TV.get());
-  }
-}
-
-void BackendPrinter::initialize(std::string OutputFileName) {
-  File = getOutputStream(OutputFileName);
-  MCIP->setPrintImmHex(false);
-  if (EnableVerboseOutput) {
-    BS = llvm::make_unique<BackendStatistics>();
-    B.addEventListener(BS.get());
-  }
+  for (const auto &V : Views)
+    V->printView(OS);
 }
 
 } // namespace mca.

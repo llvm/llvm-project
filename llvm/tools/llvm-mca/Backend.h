@@ -22,7 +22,7 @@
 
 namespace mca {
 
-struct HWEventListener;
+class HWEventListener;
 
 /// \brief An out of order backend for a specific subtarget.
 ///
@@ -48,7 +48,7 @@ class Backend {
   std::unique_ptr<InstrBuilder> IB;
   std::unique_ptr<Scheduler> HWS;
   std::unique_ptr<DispatchUnit> DU;
-  std::unique_ptr<SourceMgr> SM;
+  SourceMgr &SM;
   unsigned Cycles;
 
   llvm::DenseMap<unsigned, std::unique_ptr<Instruction>> Instructions;
@@ -58,7 +58,7 @@ class Backend {
 
 public:
   Backend(const llvm::MCSubtargetInfo &Subtarget, const llvm::MCInstrInfo &MCII,
-          const llvm::MCRegisterInfo &MRI, std::unique_ptr<SourceMgr> Source,
+          const llvm::MCRegisterInfo &MRI, SourceMgr &Source,
           unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
           unsigned MaxRetirePerCycle = 0, unsigned LoadQueueSize = 0,
           unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
@@ -69,17 +69,17 @@ public:
         DU(llvm::make_unique<DispatchUnit>(
             this, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
             RegisterFileSize, MaxRetirePerCycle, DispatchWidth, HWS.get())),
-        SM(std::move(Source)), Cycles(0) {
+        SM(Source), Cycles(0) {
     IB = llvm::make_unique<InstrBuilder>(MCII, getProcResourceMasks());
   }
 
   void run() {
-    while (SM->hasNext() || !DU->isRCUEmpty())
+    while (SM.hasNext() || !DU->isRCUEmpty())
       runCycle(Cycles++);
   }
 
-  unsigned getNumIterations() const { return SM->getNumIterations(); }
-  unsigned getNumInstructions() const { return SM->size(); }
+  unsigned getNumIterations() const { return SM.getNumIterations(); }
+  unsigned getNumInstructions() const { return SM.size(); }
   unsigned getNumCycles() const { return Cycles; }
   unsigned getTotalRegisterMappingsCreated() const {
     return DU->getTotalRegisterMappingsCreated();
@@ -114,14 +114,14 @@ public:
   }
 
   const llvm::MCInst &getMCInstFromIndex(unsigned Index) const {
-    return SM->getMCInstFromIndex(Index);
+    return SM.getMCInstFromIndex(Index);
   }
 
   const InstrDesc &getInstrDesc(const llvm::MCInst &Inst) const {
     return IB->getOrCreateInstrDesc(STI, Inst);
   }
 
-  const SourceMgr &getSourceMgr() const { return *SM; }
+  const SourceMgr &getSourceMgr() const { return SM; }
 
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);

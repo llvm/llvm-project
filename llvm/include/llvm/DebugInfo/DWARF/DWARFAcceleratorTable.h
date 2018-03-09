@@ -364,11 +364,6 @@ public:
     uint32_t EntryOffsetsBase;
     uint32_t EntriesBase;
 
-    /// Reads an entry in the Bucket Array for the given Bucket. The returned
-    /// value is a (1-based) index into the Names, StringOffsets and
-    /// EntryOffsets arrays. The input Bucket index is 0-based.
-    uint32_t getBucketArrayEntry(uint32_t Bucket) const;
-
     /// Reads an entry in the Hash Array for the given Index. The input Index
     /// is 1-based.
     uint32_t getHashArrayEntry(uint32_t Index) const;
@@ -413,7 +408,16 @@ public:
     uint64_t getForeignTUSignature(uint32_t TU) const;
     uint32_t getForeignTUCount() const { return Hdr.ForeignTypeUnitCount; }
 
+    /// Reads an entry in the Bucket Array for the given Bucket. The returned
+    /// value is a (1-based) index into the Names, StringOffsets and
+    /// EntryOffsets arrays. The input Bucket index is 0-based.
+    uint32_t getBucketArrayEntry(uint32_t Bucket) const;
+    uint32_t getBucketCount() const { return Hdr.BucketCount; }
+
+    uint32_t getNameCount() const { return Hdr.NameCount; }
+
     llvm::Error extract();
+    uint32_t getUnitOffset() const { return Base; }
     uint32_t getNextUnitOffset() const { return Base + 4 + Hdr.UnitLength; }
     void dump(ScopedPrinter &W) const;
 
@@ -470,7 +474,7 @@ public:
   };
 
 private:
-  llvm::SmallVector<NameIndex, 0> NameIndices;
+  SmallVector<NameIndex, 0> NameIndices;
 
 public:
   DWARFDebugNames(const DWARFDataExtractor &AccelSection,
@@ -482,6 +486,10 @@ public:
 
   /// Look up all entries in the accelerator table matching \c Key.
   iterator_range<ValueIterator> equal_range(StringRef Key) const;
+
+  using const_iterator = SmallVector<NameIndex, 0>::const_iterator;
+  const_iterator begin() const { return NameIndices.begin(); }
+  const_iterator end() const { return NameIndices.end(); }
 };
 
 } // end namespace llvm
