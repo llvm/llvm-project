@@ -16,4 +16,4 @@ READOBJ: |SWIFTMODULE DATA|
 READOBJ-NEXT: |.|
 
 RUN: llvm-dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -no-output -verbose 2>&1 | FileCheck %s --check-prefix=TIMESTAMP
-TIMESTAMP: Warning: Timestamp mismatch
+TIMESTAMP: warning: Timestamp mismatch
