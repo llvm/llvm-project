@@ -132,11 +132,11 @@ COMMON_FLAG(uptr, soft_rss_limit_mb, 0,
             " This limit does not affect memory allocations other than"
             " malloc/new.")
 COMMON_FLAG(bool, heap_profile, false, "Experimental heap profiler, asan-only")
-COMMON_FLAG(s32, allocator_release_to_os_interval_ms, kReleaseToOSIntervalNever,
-            "Experimental. Only affects a 64-bit allocator. If set, tries to "
-            "release unused memory to the OS, but not more often than this "
-            "interval (in milliseconds). Negative values mean do not attempt "
-            "to release memory to the OS.\n")
+COMMON_FLAG(s32, allocator_release_to_os_interval_ms, 5000,
+            "Only affects a 64-bit allocator. If set, tries to release unused "
+            "memory to the OS, but not more often than this interval (in "
+            "milliseconds). Negative values mean do not attempt to release "
+            "memory to the OS.\n")
 COMMON_FLAG(bool, can_use_proc_maps_statm, true,
             "If false, do not attempt to read /proc/maps/statm."
             " Mostly useful for testing sanitizers.")
@@ -232,3 +232,8 @@ COMMON_FLAG(bool, print_cmdline, false, "Print command line on crash "
             "(asan only).")
 COMMON_FLAG(bool, html_cov_report, false, "Generate html coverage report.")
 COMMON_FLAG(const char *, sancov_path, "sancov", "Sancov tool location.")
+COMMON_FLAG(bool, dump_instruction_bytes, false,
+          "If true, dump 16 bytes starting at the instruction that caused SEGV")
+COMMON_FLAG(bool, dump_registers, true,
+          "If true, dump values of CPU registers when SEGV happens. Only "
+          "available on OS X for now.")

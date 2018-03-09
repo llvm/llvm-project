@@ -14,6 +14,7 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
@@ -101,8 +102,8 @@ Context::Context()
   , thread_registry(new(thread_registry_placeholder) ThreadRegistry(
       CreateThreadContext, kMaxTid, kThreadQuarantineSize, kMaxTidReuse))
   , racy_mtx(MutexTypeRacy, StatMtxRacy)
-  , racy_stacks(MBlockRacyStacks)
-  , racy_addresses(MBlockRacyAddresses)
+  , racy_stacks()
+  , racy_addresses()
   , fired_suppressions_mtx(MutexTypeFired, StatMtxFired)
   , fired_suppressions(8)
   , clock_alloc("clock allocator") {
@@ -120,7 +121,7 @@ ThreadState::ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
   // , ignore_interceptors()
   , clock(tid, reuse_count)
 #if !SANITIZER_GO
-  , jmp_bufs(MBlockJmpBuf)
+  , jmp_bufs()
 #endif
   , tid(tid)
   , unique_id(unique_id)
@@ -213,7 +214,7 @@ static void BackgroundThread(void *arg) {
                              memory_order_relaxed);
       if (last != 0 && last + flags()->flush_symbolizer_ms * kMs2Ns < now) {
         Lock l(&ctx->report_mtx);
-        SpinMutexLock l2(&CommonSanitizerReportMutex);
+        ScopedErrorReportLock l2;
         SymbolizeFlush();
         atomic_store(&ctx->last_symbolize_time_ns, 0, memory_order_relaxed);
       }
@@ -323,6 +324,21 @@ static void CheckShadowMapping() {
   }
 }
 
+#if !SANITIZER_GO
+static void OnStackUnwind(const SignalContext &sig, const void *,
+                          BufferedStackTrace *stack) {
+  uptr top = 0;
+  uptr bottom = 0;
+  bool fast = common_flags()->fast_unwind_on_fatal;
+  if (fast) GetThreadStackTopAndBottom(false, &top, &bottom);
+  stack->Unwind(kStackTraceMax, sig.pc, sig.bp, sig.context, top, bottom, fast);
+}
+
+static void TsanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
+}
+#endif
+
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
   static bool is_initialized = false;
@@ -360,6 +376,7 @@ void Initialize(ThreadState *thr) {
 #if !SANITIZER_GO
   InitializeShadowMemory();
   InitializeAllocatorLate();
+  InstallDeadlySignalHandlers(TsanOnDeadlySignal);
 #endif
   // Setup correct file descriptor for error reports.
   __sanitizer_set_report_path(common_flags()->log_path);
@@ -367,13 +384,6 @@ void Initialize(ThreadState *thr) {
 #if !SANITIZER_GO
   InitializeLibIgnore();
   Symbolizer::GetOrInit()->AddHooks(EnterSymbolizer, ExitSymbolizer);
-  // On MIPS, TSan initialization is run before
-  // __pthread_initialize_minimal_internal() is finished, so we can not spawn
-  // new threads.
-#ifndef __mips__
-  StartBackgroundThread();
-  SetSandboxingCallback(StopBackgroundThread);
-#endif
 #endif
 
   VPrintf(1, "***** Running under ThreadSanitizer v2 (pid %d) *****\n",
@@ -402,6 +412,21 @@ void Initialize(ThreadState *thr) {
   OnInitialize();
 }
 
+void MaybeSpawnBackgroundThread() {
+  // On MIPS, TSan initialization is run before
+  // __pthread_initialize_minimal_internal() is finished, so we can not spawn
+  // new threads.
+#if !SANITIZER_GO && !defined(__mips__)
+  static atomic_uint32_t bg_thread = {};
+  if (atomic_load(&bg_thread, memory_order_relaxed) == 0 &&
+      atomic_exchange(&bg_thread, 1, memory_order_relaxed) == 0) {
+    StartBackgroundThread();
+    SetSandboxingCallback(StopBackgroundThread);
+  }
+#endif
+}
+
+
 int Finalize(ThreadState *thr) {
   bool failed = false;
 
@@ -412,8 +437,7 @@ int Finalize(ThreadState *thr) {
 
   // Wait for pending reports.
   ctx->report_mtx.Lock();
-  CommonSanitizerReportMutex.Lock();
-  CommonSanitizerReportMutex.Unlock();
+  { ScopedErrorReportLock l; }
   ctx->report_mtx.Unlock();
 
 #if !SANITIZER_GO

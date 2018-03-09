@@ -217,7 +217,7 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
       uptr __bad = __asan_region_is_poisoned(__p, __size);    \
       __asan_report_error(pc, bp, sp, __bad, isWrite, __size, 0);\
     }                                                         \
-  } while (false);                                            \
+  } while (false)
 
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE

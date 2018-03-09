@@ -56,14 +56,14 @@ int main(int argc, char *argv[]) {
   // CHECK:      in esan::initializeLibrary
   // CHECK:      Testing child with infinite stack
   // CHECK-NEXT: in esan::initializeLibrary
-  // CHECK-NEXT: =={{[0-9]+}}==The stack size limit is beyond the maximum supported.
+  // CHECK-NEXT: =={{[0-9:]+}}==The stack size limit is beyond the maximum supported.
   // CHECK-NEXT: Re-execing with a stack size below 1TB.
   // CHECK-NEXT: in esan::initializeLibrary
   // CHECK:      done
   // CHECK:      in esan::finalizeLibrary
   // CHECK:      Testing child with 1TB stack
   // CHECK-NEXT: in esan::initializeLibrary
-  // CHECK-NEXT: =={{[0-9]+}}==The stack size limit is beyond the maximum supported.
+  // CHECK-NEXT: =={{[0-9:]+}}==The stack size limit is beyond the maximum supported.
   // CHECK-NEXT: Re-execing with a stack size below 1TB.
   // CHECK-NEXT: in esan::initializeLibrary
   // CHECK:      done

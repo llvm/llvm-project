@@ -16,7 +16,7 @@
 // REQUIRES: asan-dynamic-runtime
 
 // This way of setting LD_PRELOAD does not work with Android test runner.
-// REQUIRES: not-android
+// REQUIRES: !android
 // clang-format on
 
 #include <assert.h>
@@ -32,8 +32,14 @@ void SigHandler(int signum) { handler = "TestSigHandler"; }
 void SigAction(int, siginfo_t *, void *) { handler = "TestSigAction"; }
 
 struct KernelSigaction {
+
+#if defined(__mips__)
+  unsigned long flags;
+  __sighandler_t handler;
+#else
   __sighandler_t handler;
   unsigned long flags;
+#endif
   void (*restorer)();
   char unused[1024];
 };
@@ -98,10 +104,10 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK-NOT: TestSig
-// CHECK: ASAN:DEADLYSIGNAL
+// CHECK: AddressSanitizer:DEADLYSIGNAL
 
-// CHECK-HANDLER-NOT: ASAN:DEADLYSIGNAL
+// CHECK-HANDLER-NOT: AddressSanitizer:DEADLYSIGNAL
 // CHECK-HANDLER: TestSigHandler
 
-// CHECK-ACTION-NOT: ASAN:DEADLYSIGNAL
+// CHECK-ACTION-NOT: AddressSanitizer:DEADLYSIGNAL
 // CHECK-ACTION: TestSigAction

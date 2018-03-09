@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -lstdc++ -o %t
+// RUN: %clangxx_scudo %s -lstdc++ -o %t
 // RUN: %run %t 2>&1
 
 // Tests that a regular workflow of allocation, memory fill and free works as

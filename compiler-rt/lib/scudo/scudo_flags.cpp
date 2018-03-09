@@ -17,12 +17,11 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-const char* __scudo_default_options();
+SANITIZER_INTERFACE_WEAK_DEF(const char*, __scudo_default_options, void);
 
 namespace __scudo {
 
-Flags ScudoFlags;  // Use via getFlags().
+static Flags ScudoFlags;  // Use via getFlags().
 
 void Flags::setDefaults() {
 #define SCUDO_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
@@ -37,7 +36,7 @@ static void RegisterScudoFlags(FlagParser *parser, Flags *f) {
 #undef SCUDO_FLAG
 }
 
-static const char *callGetScudoDefaultOptions() {
+static const char *getScudoDefaultOptions() {
   return (&__scudo_default_options) ? __scudo_default_options() : "";
 }
 
@@ -57,8 +56,7 @@ void initFlags() {
   RegisterCommonFlags(&ScudoParser);
 
   // Override from user-specified string.
-  const char *ScudoDefaultOptions = callGetScudoDefaultOptions();
-  ScudoParser.ParseString(ScudoDefaultOptions);
+  ScudoParser.ParseString(getScudoDefaultOptions());
 
   // Override from environment.
   ScudoParser.ParseString(GetEnv("SCUDO_OPTIONS"));
@@ -67,27 +65,52 @@ void initFlags() {
 
   // Sanity checks and default settings for the Quarantine parameters.
 
-  if (f->QuarantineSizeMb < 0) {
-    const int DefaultQuarantineSizeMb = FIRST_32_SECOND_64(4, 16);
-    f->QuarantineSizeMb = DefaultQuarantineSizeMb;
+  if (f->QuarantineSizeMb >= 0) {
+    // Backward compatible logic if QuarantineSizeMb is set.
+    if (f->QuarantineSizeKb >= 0) {
+      dieWithMessage("ERROR: please use either QuarantineSizeMb (deprecated) "
+          "or QuarantineSizeKb, but not both\n");
+    }
+    if (f->QuarantineChunksUpToSize >= 0) {
+      dieWithMessage("ERROR: QuarantineChunksUpToSize cannot be used in "
+          " conjunction with the deprecated QuarantineSizeMb option\n");
+    }
+    // If everything is in order, update QuarantineSizeKb accordingly.
+    f->QuarantineSizeKb = f->QuarantineSizeMb * 1024;
+  } else {
+    // Otherwise proceed with the new options.
+    if (f->QuarantineSizeKb < 0) {
+      const int DefaultQuarantineSizeKb = FIRST_32_SECOND_64(64, 256);
+      f->QuarantineSizeKb = DefaultQuarantineSizeKb;
+    }
+    if (f->QuarantineChunksUpToSize < 0) {
+      const int DefaultQuarantineChunksUpToSize = FIRST_32_SECOND_64(512, 2048);
+      f->QuarantineChunksUpToSize = DefaultQuarantineChunksUpToSize;
+    }
   }
-  // We enforce an upper limit for the quarantine size of 4Gb.
-  if (f->QuarantineSizeMb > (4 * 1024)) {
+
+  // We enforce an upper limit for the chunk quarantine threshold of 4Mb.
+  if (f->QuarantineChunksUpToSize > (4 * 1024 * 1024)) {
+    dieWithMessage("ERROR: the chunk quarantine threshold is too large\n");
+  }
+
+  // We enforce an upper limit for the quarantine size of 32Mb.
+  if (f->QuarantineSizeKb > (32 * 1024)) {
     dieWithMessage("ERROR: the quarantine size is too large\n");
   }
+
   if (f->ThreadLocalQuarantineSizeKb < 0) {
-    const int DefaultThreadLocalQuarantineSizeKb =
-        FIRST_32_SECOND_64(64, 256);
+    const int DefaultThreadLocalQuarantineSizeKb = FIRST_32_SECOND_64(16, 64);
     f->ThreadLocalQuarantineSizeKb = DefaultThreadLocalQuarantineSizeKb;
   }
-  // And an upper limit of 128Mb for the thread quarantine cache.
-  if (f->ThreadLocalQuarantineSizeKb > (128 * 1024)) {
+  // And an upper limit of 8Mb for the thread quarantine cache.
+  if (f->ThreadLocalQuarantineSizeKb > (8 * 1024)) {
     dieWithMessage("ERROR: the per thread quarantine cache size is too "
-                   "large\n");
+        "large\n");
   }
-  if (f->ThreadLocalQuarantineSizeKb == 0 && f->QuarantineSizeMb > 0) {
+  if (f->ThreadLocalQuarantineSizeKb == 0 && f->QuarantineSizeKb > 0) {
     dieWithMessage("ERROR: ThreadLocalQuarantineSizeKb can be set to 0 only "
-                   "when QuarantineSizeMb is set to 0\n");
+        "when QuarantineSizeKb is set to 0\n");
   }
 }
 

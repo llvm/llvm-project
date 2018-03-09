@@ -45,13 +45,11 @@ __fixdfdi(fp_t a) {
 #endif
 
 #if defined(__ARM_EABI__)
-AEABI_RTABI di_int
-#if defined(__SOFT_FP__)
-__aeabi_d2lz(fp_t a) {
-#else
-__aeabi_d2lz(double a) {
-#endif
+#if defined(COMPILER_RT_ARMHF_TARGET)
+AEABI_RTABI di_int __aeabi_d2lz(fp_t a) {
   return __fixdfdi(a);
 }
+#else
+AEABI_RTABI di_int __aeabi_d2lz(fp_t a) COMPILER_RT_ALIAS(__fixdfdi);
 #endif
-
+#endif

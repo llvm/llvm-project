@@ -95,7 +95,7 @@ function get_device_arch { # OUT OUT64
     local _ARCH=
     local _ARCH64=
     if [[ $_ABI == x86* ]]; then
-        _ARCH=i686
+        _ARCH=i386
     elif [[ $_ABI == armeabi* ]]; then
         _ARCH=arm
     elif [[ $_ABI == arm64-v8a* ]]; then
@@ -181,6 +181,17 @@ if [[ -n $ARCH64 ]]; then
   ASAN_RT64="libclang_rt.asan-$ARCH64-android.so"
 fi
 
+RELEASE=$(adb_shell getprop ro.build.version.release)
+PRE_L=0
+if echo "$RELEASE" | grep '^4\.' >&/dev/null; then
+    PRE_L=1
+fi
+ANDROID_O=0
+if echo "$RELEASE" | grep '^8\.0\.' >&/dev/null; then
+    # 8.0.x is for Android O
+    ANDROID_O=1
+fi
+
 if [[ x$revert == xyes ]]; then
     echo '>> Uninstalling ASan'
 
@@ -200,6 +211,10 @@ if [[ x$revert == xyes ]]; then
       adb_shell rm /system/bin/asanwrapper
       adb_shell rm /system/bin/app_process
       adb_shell ln -s /system/bin/app_process32 /system/bin/app_process
+    fi
+
+    if [[ ANDROID_O -eq 1 ]]; then
+      adb_shell mv /system/etc/ld.config.txt.saved /system/etc/ld.config.txt
     fi
 
     echo '>> Restarting shell'
@@ -250,12 +265,6 @@ TMPDIRBASE=$(mktemp -d)
 TMPDIROLD="$TMPDIRBASE/old"
 TMPDIR="$TMPDIRBASE/new"
 mkdir "$TMPDIROLD"
-
-RELEASE=$(adb_shell getprop ro.build.version.release)
-PRE_L=0
-if echo "$RELEASE" | grep '^4\.' >&/dev/null; then
-    PRE_L=1
-fi
 
 if ! adb_shell ls -l /system/bin/app_process | grep -o '\->.*app_process' >&/dev/null; then
 
@@ -326,6 +335,13 @@ exec $_to \$@
 
 EOF
 }
+
+# On Android-L not allowing user segv handler breaks some applications.
+# Since ~May 2017 this is the default setting; included for compatibility with
+# older library versions.
+if [[ PRE_L -eq 0 ]]; then
+    ASAN_OPTIONS="$ASAN_OPTIONS,allow_user_segv_handler=1"
+fi
 
 if [[ x$extra_options != x ]] ; then
     ASAN_OPTIONS="$ASAN_OPTIONS,$extra_options"
@@ -410,15 +426,18 @@ if ! ( cd "$TMPDIRBASE" && diff -qr old/ new/ ) ; then
       install "$TMPDIR/asanwrapper" /system/bin 755
       install "$TMPDIR/asanwrapper64" /system/bin 755
 
-      adb_shell ln -sf $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
-      adb_shell ln -sf $ASAN_RT64 /system/lib64/$ASAN_RT_SYMLINK
+      adb_shell rm -f /system/lib/$ASAN_RT_SYMLINK
+      adb_shell ln -s $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
+      adb_shell rm -f /system/lib64/$ASAN_RT_SYMLINK
+      adb_shell ln -s $ASAN_RT64 /system/lib64/$ASAN_RT_SYMLINK
     else
       install "$TMPDIR/$ASAN_RT" /system/lib 644
       install "$TMPDIR/app_process32" /system/bin 755 $CTX
       install "$TMPDIR/app_process.wrap" /system/bin 755 $CTX
       install "$TMPDIR/asanwrapper" /system/bin 755 $CTX
 
-      adb_shell ln -sf $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
+      adb_shell rm -f /system/lib/$ASAN_RT_SYMLINK
+      adb_shell ln -s $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
 
       adb_shell rm /system/bin/app_process
       adb_shell ln -s /system/bin/app_process.wrap /system/bin/app_process
@@ -426,6 +445,11 @@ if ! ( cd "$TMPDIRBASE" && diff -qr old/ new/ ) ; then
 
     adb_shell cp /system/bin/sh /system/bin/sh-from-zygote
     adb_shell chcon $CTX /system/bin/sh-from-zygote
+
+    if [[ ANDROID_O -eq 1 ]]; then
+      # For Android O, the linker namespace is temporarily disabled.
+      adb_shell mv /system/etc/ld.config.txt /system/etc/ld.config.txt.saved
+    fi
 
     if [ $ENFORCING == 1 ]; then
         adb_shell setenforce 1

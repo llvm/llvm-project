@@ -97,6 +97,11 @@ struct BufferedStackTrace : public StackTrace {
   void Unwind(u32 max_depth, uptr pc, uptr bp, void *context, uptr stack_top,
               uptr stack_bottom, bool request_fast_unwind);
 
+  void Reset() {
+    *static_cast<StackTrace *>(this) = StackTrace(trace_buffer, 0);
+    top_frame_bp = 0;
+  }
+
  private:
   void FastUnwindStack(uptr pc, uptr bp, uptr stack_top, uptr stack_bottom,
                        u32 max_depth);
@@ -106,8 +111,8 @@ struct BufferedStackTrace : public StackTrace {
   void PopStackFrames(uptr count);
   uptr LocatePcInTrace(uptr pc);
 
-  BufferedStackTrace(const BufferedStackTrace &);
-  void operator=(const BufferedStackTrace &);
+  BufferedStackTrace(const BufferedStackTrace &) = delete;
+  void operator=(const BufferedStackTrace &) = delete;
 };
 
 // Check if given pointer points into allocated stack area.

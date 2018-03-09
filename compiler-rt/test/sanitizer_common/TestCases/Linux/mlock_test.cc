@@ -1,5 +1,5 @@
 // RUN: %clang  %s -o %t && %run %t
-// XFAIL: lsan
+// XFAIL: ubsan,lsan
 
 #include <assert.h>
 #include <sys/mman.h>

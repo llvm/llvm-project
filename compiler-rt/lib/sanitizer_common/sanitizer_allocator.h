@@ -56,6 +56,19 @@ struct NoOpMapUnmapCallback {
 // Callback type for iterating over chunks.
 typedef void (*ForEachChunkCallback)(uptr chunk, void *arg);
 
+INLINE u32 Rand(u32 *state) {  // ANSI C linear congruential PRNG.
+  return (*state = *state * 1103515245 + 12345) >> 16;
+}
+
+INLINE u32 RandN(u32 *state, u32 n) { return Rand(state) % n; }  // [0, n)
+
+template<typename T>
+INLINE void RandomShuffle(T *a, u32 n, u32 *rand_state) {
+  if (n <= 1) return;
+  for (u32 i = n - 1; i > 0; i--)
+    Swap(a[i], a[RandN(rand_state, i + 1)]);
+}
+
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
 #include "sanitizer_allocator_primary64.h"

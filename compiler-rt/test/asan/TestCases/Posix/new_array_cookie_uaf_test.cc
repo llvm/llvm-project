@@ -2,6 +2,9 @@
 // RUN: %clangxx_asan -O3 %s -o %t
 // RUN: %env_asan_opts=poison_array_cookie=1 not %run %t 2>&1  | FileCheck %s --check-prefix=COOKIE
 // RUN: %env_asan_opts=poison_array_cookie=0 not %run %t 2>&1  | FileCheck %s --check-prefix=NO_COOKIE
+
+// UNSUPPORTED: ios
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>

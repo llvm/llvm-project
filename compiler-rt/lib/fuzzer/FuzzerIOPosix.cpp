@@ -9,7 +9,7 @@
 // IO functions implementation using Posix API.
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
-#if LIBFUZZER_POSIX
+#if LIBFUZZER_POSIX || LIBFUZZER_FUCHSIA
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
@@ -32,8 +32,22 @@ bool IsFile(const std::string &Path) {
   return S_ISREG(St.st_mode);
 }
 
+static bool IsDirectory(const std::string &Path) {
+  struct stat St;
+  if (stat(Path.c_str(), &St))
+    return false;
+  return S_ISDIR(St.st_mode);
+}
+
+size_t FileSize(const std::string &Path) {
+  struct stat St;
+  if (stat(Path.c_str(), &St))
+    return 0;
+  return St.st_size;
+}
+
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
-                             std::vector<std::string> *V, bool TopDir) {
+                             Vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);
   if (Epoch)
     if (E && *Epoch >= E) return;
@@ -45,9 +59,12 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
   }
   while (auto E = readdir(D)) {
     std::string Path = DirPlusFile(Dir, E->d_name);
-    if (E->d_type == DT_REG || E->d_type == DT_LNK)
+    if (E->d_type == DT_REG || E->d_type == DT_LNK ||
+        (E->d_type == DT_UNKNOWN && IsFile(Path)))
       V->push_back(Path);
-    else if (E->d_type == DT_DIR && *E->d_name != '.')
+    else if ((E->d_type == DT_DIR ||
+             (E->d_type == DT_UNKNOWN && IsDirectory(Path))) &&
+             *E->d_name != '.')
       ListFilesInDirRecursive(Path, Epoch, V, false);
   }
   closedir(D);

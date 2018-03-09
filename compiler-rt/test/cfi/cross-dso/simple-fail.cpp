@@ -1,37 +1,37 @@
-// RUN: %clangxx_cfi_dso -DSHARED_LIB %s -fPIC -shared -o %t1-so.so
-// RUN: %clangxx_cfi_dso %s -o %t1 %t1-so.so
-// RUN: %expect_crash %t1 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t1 x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_dso %s -o %t %ld_flags_rpath_exe
+// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
-// RUN: %clangxx_cfi_dso -DB32 -DSHARED_LIB %s -fPIC -shared -o %t2-so.so
-// RUN: %clangxx_cfi_dso -DB32 %s -o %t2 %t2-so.so
-// RUN: %expect_crash %t2 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t2 x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso -DB32 -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_dso -DB32 %s -o %t %ld_flags_rpath_exe
+// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
-// RUN: %clangxx_cfi_dso -DB64 -DSHARED_LIB %s -fPIC -shared -o %t3-so.so
-// RUN: %clangxx_cfi_dso -DB64 %s -o %t3 %t3-so.so
-// RUN: %expect_crash %t3 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t3 x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso -DB64 -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_dso -DB64 %s -o %t %ld_flags_rpath_exe
+// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
-// RUN: %clangxx_cfi_dso -DBM -DSHARED_LIB %s -fPIC -shared -o %t4-so.so
-// RUN: %clangxx_cfi_dso -DBM %s -o %t4 %t4-so.so
-// RUN: %expect_crash %t4 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t4 x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso -DBM -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_dso -DBM %s -o %t %ld_flags_rpath_exe
+// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
-// RUN: %clangxx -DBM -DSHARED_LIB %s -fPIC -shared -o %t5-so.so
-// RUN: %clangxx -DBM %s -o %t5 %t5-so.so
-// RUN: %t5 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t5 x 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %clangxx -DBM -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx -DBM %s -o %t %ld_flags_rpath_exe
+// RUN: %t 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %t x 2>&1 | FileCheck --check-prefix=NCFI %s
 
-// RUN: %clangxx -DBM -DSHARED_LIB %s -fPIC -shared -o %t6-so.so
-// RUN: %clangxx_cfi_dso -DBM %s -o %t6 %t6-so.so
-// RUN: %t6 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t6 x 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %clangxx -DBM -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_dso -DBM %s -o %t %ld_flags_rpath_exe
+// RUN: %t 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %t x 2>&1 | FileCheck --check-prefix=NCFI %s
 
-// RUN: %clangxx_cfi_dso_diag -DSHARED_LIB %s -fPIC -shared -o %t7-so.so
-// RUN: %clangxx_cfi_dso_diag %s -o %t7 %t7-so.so
-// RUN: %t7 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL %s
-// RUN: %t7 x 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL --check-prefix=CFI-DIAG-CAST %s
+// RUN: %clangxx_cfi_dso_diag -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_dso_diag %s -o %t %ld_flags_rpath_exe
+// RUN: %t 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL %s
+// RUN: %t x 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL --check-prefix=CFI-DIAG-CAST %s
 
 // Tests that the CFI mechanism crashes the program when making a virtual call
 // to an object of the wrong class but with a compatible vtable, by casting a

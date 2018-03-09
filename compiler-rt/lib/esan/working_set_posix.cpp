@@ -34,7 +34,7 @@ bool processWorkingSetSignal(int SigNum, void (*Handler)(int),
   VPrintf(2, "%s: %d\n", __FUNCTION__, SigNum);
   if (SigNum == SIGSEGV) {
     *Result = AppSigAct.handler;
-    AppSigAct.sigaction = (void (*)(int, void*, void*))Handler;
+    AppSigAct.sigaction = (decltype(AppSigAct.sigaction))Handler;
     return false; // Skip real call.
   }
   return true;
@@ -73,7 +73,7 @@ bool processWorkingSetSigprocmask(int How, void *Set, void *OldSet) {
 static void reinstateDefaultHandler(int SigNum) {
   __sanitizer_sigaction SigAct;
   internal_memset(&SigAct, 0, sizeof(SigAct));
-  SigAct.sigaction = (void (*)(int, void*, void*)) SIG_DFL;
+  SigAct.sigaction = (decltype(SigAct.sigaction))SIG_DFL;
   int Res = internal_sigaction(SigNum, &SigAct, nullptr);
   CHECK(Res == 0);
   VPrintf(1, "Unregistered for %d handler\n", SigNum);
@@ -81,7 +81,8 @@ static void reinstateDefaultHandler(int SigNum) {
 
 // If this is a shadow fault, we handle it here; otherwise, we pass it to the
 // app to handle it just as the app would do without our tool in place.
-static void handleMemoryFault(int SigNum, void *Info, void *Ctx) {
+static void handleMemoryFault(int SigNum, __sanitizer_siginfo *Info,
+                              void *Ctx) {
   if (SigNum == SIGSEGV) {
     // We rely on si_addr being filled in (thus we do not support old kernels).
     siginfo_t *SigInfo = (siginfo_t *)Info;

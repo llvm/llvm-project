@@ -14,6 +14,7 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
+#include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_interface_ann.h"
 #include "tsan_mutex.h"
 #include "tsan_report.h"
@@ -21,7 +22,6 @@
 #include "tsan_mman.h"
 #include "tsan_flags.h"
 #include "tsan_platform.h"
-#include "tsan_vector.h"
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
@@ -185,10 +185,10 @@ void PrintMatchedBenignRaces() {
   int unique_count = 0;
   int hit_count = 0;
   int add_count = 0;
-  Vector<ExpectRace> hit_matched(MBlockScopedBuf);
+  Vector<ExpectRace> hit_matched;
   CollectMatchedBenignRaces(&hit_matched, &unique_count, &hit_count,
       &ExpectRace::hitcount);
-  Vector<ExpectRace> add_matched(MBlockScopedBuf);
+  Vector<ExpectRace> add_matched;
   CollectMatchedBenignRaces(&add_matched, &unique_count, &add_count,
       &ExpectRace::addcount);
   if (hit_matched.Size()) {

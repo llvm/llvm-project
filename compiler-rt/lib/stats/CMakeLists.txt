@@ -6,6 +6,8 @@ set_target_properties(stats PROPERTIES FOLDER "Compiler-RT Misc")
 if(APPLE)
   set(STATS_LIB_FLAVOR SHARED)
 
+  set(STATS_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
+
   add_weak_symbols("asan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
@@ -23,7 +25,8 @@ add_compiler_rt_runtime(clang_rt.stats
   OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc
   CFLAGS ${SANITIZER_COMMON_CFLAGS}
-  LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
+  LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
+  LINK_LIBS ${STATS_LINK_LIBS}
   PARENT_TARGET stats)
 
 add_compiler_rt_runtime(clang_rt.stats_client

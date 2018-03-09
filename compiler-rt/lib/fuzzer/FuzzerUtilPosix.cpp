@@ -18,7 +18,6 @@
 #include <errno.h>
 #include <iomanip>
 #include <signal.h>
-#include <sstream>
 #include <stdio.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
@@ -39,6 +38,10 @@ static void CrashHandler(int, siginfo_t *, void *) {
 
 static void InterruptHandler(int, siginfo_t *, void *) {
   Fuzzer::StaticInterruptCallback();
+}
+
+static void GracefulExitHandler(int, siginfo_t *, void *) {
+  Fuzzer::StaticGracefulExitCallback();
 }
 
 static void FileSizeExceedHandler(int, siginfo_t *, void *) {
@@ -99,6 +102,10 @@ void SetSignalHandler(const FuzzingOptions& Options) {
     SetSigaction(SIGFPE, CrashHandler);
   if (Options.HandleXfsz)
     SetSigaction(SIGXFSZ, FileSizeExceedHandler);
+  if (Options.HandleUsr1)
+    SetSigaction(SIGUSR1, GracefulExitHandler);
+  if (Options.HandleUsr2)
+    SetSigaction(SIGUSR2, GracefulExitHandler);
 }
 
 void SleepSeconds(int Seconds) {

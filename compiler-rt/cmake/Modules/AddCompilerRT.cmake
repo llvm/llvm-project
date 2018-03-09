@@ -93,6 +93,25 @@ function(add_compiler_rt_component name)
   add_dependencies(compiler-rt ${name})
 endfunction()
 
+function(add_asm_sources output)
+  set(${output} ${ARGN} PARENT_SCOPE)
+  # Xcode will try to compile asm files as C ('clang -x c'), and that will fail.
+  if (${CMAKE_GENERATOR} STREQUAL "Xcode")
+    enable_language(ASM)
+  else()
+    # Pass ASM file directly to the C++ compiler.
+    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE C)
+  endif()
+endfunction()
+
+macro(set_output_name output name arch)
+  if(ANDROID AND ${arch} STREQUAL "i386")
+    set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")
+  else()
+    set(${output} "${name}-${arch}${COMPILER_RT_OS_SUFFIX}")
+  endif()
+endmacro()
+
 # Adds static or shared runtime for a list of architectures and operating
 # systems and puts it in the proper directory in the build and install trees.
 # add_compiler_rt_runtime(<name>
@@ -155,15 +174,15 @@ function(add_compiler_rt_runtime name type)
       endif()
       if(type STREQUAL "STATIC")
         set(libname "${name}-${arch}")
-        set(output_name_${libname} ${libname}${COMPILER_RT_OS_SUFFIX})
+        set_output_name(output_name_${libname} ${name} ${arch})
       else()
         set(libname "${name}-dynamic-${arch}")
         set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${LIB_CFLAGS})
         set(extra_link_flags_${libname} ${TARGET_${arch}_LINK_FLAGS} ${LIB_LINK_FLAGS})
         if(WIN32)
-          set(output_name_${libname} ${name}_dynamic-${arch}${COMPILER_RT_OS_SUFFIX})
+          set_output_name(output_name_${libname} ${name}_dynamic ${arch})
         else()
-          set(output_name_${libname} ${name}-${arch}${COMPILER_RT_OS_SUFFIX})
+          set_output_name(output_name_${libname} ${name} ${arch})
         endif()
       endif()
       set(sources_${libname} ${LIB_SOURCES})
@@ -191,9 +210,18 @@ function(add_compiler_rt_runtime name type)
                         COMMAND "${CMAKE_COMMAND}"
                                 -DCMAKE_INSTALL_COMPONENT=${LIB_PARENT_TARGET}
                                 -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      add_custom_target(install-${LIB_PARENT_TARGET}-stripped
+                        DEPENDS ${LIB_PARENT_TARGET}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${LIB_PARENT_TARGET}
+                                -DCMAKE_INSTALL_DO_STRIP=1
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
       set_target_properties(install-${LIB_PARENT_TARGET} PROPERTIES
                             FOLDER "Compiler-RT Misc")
+      set_target_properties(install-${LIB_PARENT_TARGET}-stripped PROPERTIES
+                            FOLDER "Compiler-RT Misc")
       add_dependencies(install-compiler-rt install-${LIB_PARENT_TARGET})
+      add_dependencies(install-compiler-rt-stripped install-${LIB_PARENT_TARGET}-stripped)
     endif()
   endif()
 
@@ -248,10 +276,17 @@ function(add_compiler_rt_runtime name type)
                         COMMAND "${CMAKE_COMMAND}"
                                 -DCMAKE_INSTALL_COMPONENT=${libname}
                                 -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      add_custom_target(install-${libname}-stripped
+                        DEPENDS ${libname}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${libname}
+                                -DCMAKE_INSTALL_DO_STRIP=1
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
       # If you have a parent target specified, we bind the new install target
       # to the parent install target.
       if(LIB_PARENT_TARGET)
         add_dependencies(install-${LIB_PARENT_TARGET} install-${libname})
+        add_dependencies(install-${LIB_PARENT_TARGET}-stripped install-${libname}-stripped)
       endif()
     endif()
     if(APPLE)
@@ -430,11 +465,11 @@ endmacro(add_compiler_rt_script src name)
 #                   DEPS <list of build deps>
 #                   CFLAGS <list of compile flags>)
 macro(add_custom_libcxx name prefix)
-  if(NOT COMPILER_RT_HAS_LIBCXX_SOURCES)
+  if(NOT COMPILER_RT_LIBCXX_PATH)
     message(FATAL_ERROR "libcxx not found!")
   endif()
 
-  cmake_parse_arguments(LIBCXX "" "" "DEPS;CFLAGS" ${ARGN})
+  cmake_parse_arguments(LIBCXX "" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
   foreach(flag ${LIBCXX_CFLAGS})
     set(flagstr "${flagstr} ${flag}")
   endforeach()
@@ -456,6 +491,7 @@ macro(add_custom_libcxx name prefix)
                -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLIBCXX_STANDALONE_BUILD=On
+               ${LIBCXX_CMAKE_ARGS}
     LOG_BUILD 1
     LOG_CONFIGURE 1
     LOG_INSTALL 1
@@ -499,4 +535,15 @@ function(rt_externalize_debuginfo name)
   else()
     message(FATAL_ERROR "COMPILER_RT_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()
+endfunction()
+
+
+# Configure lit configuration files, including compiler-rt specific variables.
+function(configure_compiler_rt_lit_site_cfg input output)
+  set_llvm_build_mode()
+
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+
+  configure_lit_site_cfg(${input} ${output})
 endfunction()

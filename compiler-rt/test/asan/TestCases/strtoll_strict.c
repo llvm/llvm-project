@@ -23,6 +23,7 @@
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test7 2>&1 | FileCheck %s --check-prefix=CHECK7
 
 // FIXME: Enable strtoll interceptor.
+// REQUIRES: shadow-scale-3
 // XFAIL: win32
 
 #include <assert.h>

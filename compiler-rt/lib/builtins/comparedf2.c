@@ -143,8 +143,11 @@ __gtdf2(fp_t a, fp_t b) {
 }
 
 #if defined(__ARM_EABI__)
+#if defined(COMPILER_RT_ARMHF_TARGET)
 AEABI_RTABI int __aeabi_dcmpun(fp_t a, fp_t b) {
   return __unorddf2(a, b);
 }
+#else
+AEABI_RTABI int __aeabi_dcmpun(fp_t a, fp_t b) COMPILER_RT_ALIAS(__unorddf2);
 #endif
-
+#endif

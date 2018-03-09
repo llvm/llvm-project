@@ -16,6 +16,9 @@
 /*! \brief Create a directory tree. */
 void __llvm_profile_recursive_mkdir(char *Pathname);
 
+int lprofLockFd(int fd);
+int lprofUnlockFd(int fd);
+
 /*! Open file \c Filename for read+write with write
  * lock for exclusive access. The caller will block
  * if the lock is already held by another process. */

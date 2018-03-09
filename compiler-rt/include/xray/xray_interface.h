@@ -106,6 +106,14 @@ extern uintptr_t __xray_function_address(int32_t FuncId);
 /// encounter errors (when there are no instrumented functions, etc.).
 extern size_t __xray_max_function_id();
 
+/// Initialize the required XRay data structures. This is useful in cases where
+/// users want to control precisely when the XRay instrumentation data
+/// structures are initialized, for example when the XRay library is built with
+/// the XRAY_NO_PREINIT preprocessor definition.
+///
+/// Calling __xray_init() more than once is safe across multiple threads.
+extern void __xray_init();
+
 } // end extern "C"
 
 #endif // XRAY_XRAY_INTERFACE_H

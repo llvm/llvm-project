@@ -231,10 +231,19 @@ bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET);
     GET_CALLER_PC_BP; \
     ReportOptions Opts = {unrecoverable_handler, pc, bp}
 
+void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
+                   void *context, bool fast);
+
 /// \brief Instantiate this class before printing diagnostics in the error
 /// report. This class ensures that reports from different threads and from
 /// different sanitizers won't be mixed.
 class ScopedReport {
+  struct Initializer {
+    Initializer();
+  };
+  Initializer initializer_;
+  ScopedErrorReportLock report_lock_;
+
   ReportOptions Opts;
   Location SummaryLoc;
   ErrorType Type;
@@ -242,6 +251,8 @@ class ScopedReport {
 public:
   ScopedReport(ReportOptions Opts, Location SummaryLoc, ErrorType Type);
   ~ScopedReport();
+
+  static void CheckLocked() { ScopedErrorReportLock::CheckLocked(); }
 };
 
 void InitializeSuppressions();

@@ -26,7 +26,7 @@ using namespace __tsan;
 #define COMMON_MALLOC_FORCE_UNLOCK()
 #define COMMON_MALLOC_MEMALIGN(alignment, size) \
   void *p =                                     \
-      user_alloc(cur_thread(), StackTrace::GetCurrentPc(), size, alignment)
+      user_memalign(cur_thread(), StackTrace::GetCurrentPc(), alignment, size)
 #define COMMON_MALLOC_MALLOC(size)                             \
   if (cur_thread()->in_symbolizer) return InternalAlloc(size); \
   SCOPED_INTERCEPTOR_RAW(malloc, size);                        \
@@ -43,7 +43,7 @@ using namespace __tsan;
   if (cur_thread()->in_symbolizer)                            \
     return InternalAlloc(size, nullptr, GetPageSizeCached()); \
   SCOPED_INTERCEPTOR_RAW(valloc, size);                       \
-  void *p = user_alloc(thr, pc, size, GetPageSizeCached())
+  void *p = user_valloc(thr, pc, size)
 #define COMMON_MALLOC_FREE(ptr)                              \
   if (cur_thread()->in_symbolizer) return InternalFree(ptr); \
   SCOPED_INTERCEPTOR_RAW(free, ptr);                         \

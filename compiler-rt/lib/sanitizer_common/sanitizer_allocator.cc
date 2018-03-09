@@ -178,11 +178,13 @@ void InternalFree(void *addr, InternalAllocatorCache *cache) {
 }
 
 // LowLevelAllocator
+constexpr uptr kLowLevelAllocatorDefaultAlignment = 8;
+static uptr low_level_alloc_min_alignment = kLowLevelAllocatorDefaultAlignment;
 static LowLevelAllocateCallback low_level_alloc_callback;
 
 void *LowLevelAllocator::Allocate(uptr size) {
   // Align allocation size.
-  size = RoundUpTo(size, 8);
+  size = RoundUpTo(size, low_level_alloc_min_alignment);
   if (allocated_end_ - allocated_current_ < (sptr)size) {
     uptr size_to_allocate = Max(size, GetPageSizeCached());
     allocated_current_ =
@@ -197,6 +199,11 @@ void *LowLevelAllocator::Allocate(uptr size) {
   void *res = allocated_current_;
   allocated_current_ += size;
   return res;
+}
+
+void SetLowLevelAllocateMinAlignment(uptr alignment) {
+  CHECK(IsPowerOfTwo(alignment));
+  low_level_alloc_min_alignment = Max(alignment, low_level_alloc_min_alignment);
 }
 
 void SetLowLevelAllocateCallback(LowLevelAllocateCallback callback) {

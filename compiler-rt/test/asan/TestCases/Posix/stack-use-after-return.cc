@@ -17,6 +17,9 @@
 // This test runs out of stack on AArch64.
 // UNSUPPORTED: aarch64
 
+// FIXME: Fix this test for dynamic runtime on armhf-linux.
+// UNSUPPORTED: armhf-linux && asan-dynamic-runtime
+
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>

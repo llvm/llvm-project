@@ -87,15 +87,14 @@ class Quarantine {
     // is zero (it allows us to perform just one atomic read per Put() call).
     CHECK((size == 0 && cache_size == 0) || cache_size != 0);
 
-    atomic_store(&max_size_, size, memory_order_relaxed);
-    atomic_store(&min_size_, size / 10 * 9,
-                 memory_order_relaxed);  // 90% of max size.
-    atomic_store(&max_cache_size_, cache_size, memory_order_relaxed);
+    atomic_store_relaxed(&max_size_, size);
+    atomic_store_relaxed(&min_size_, size / 10 * 9);  // 90% of max size.
+    atomic_store_relaxed(&max_cache_size_, cache_size);
   }
 
-  uptr GetSize() const { return atomic_load(&max_size_, memory_order_relaxed); }
+  uptr GetSize() const { return atomic_load_relaxed(&max_size_); }
   uptr GetCacheSize() const {
-    return atomic_load(&max_cache_size_, memory_order_relaxed);
+    return atomic_load_relaxed(&max_cache_size_);
   }
 
   void Put(Cache *c, Callback cb, Node *ptr, uptr size) {
@@ -117,7 +116,16 @@ class Quarantine {
       cache_.Transfer(c);
     }
     if (cache_.Size() > GetSize() && recycle_mutex_.TryLock())
-      Recycle(cb);
+      Recycle(atomic_load_relaxed(&min_size_), cb);
+  }
+
+  void NOINLINE DrainAndRecycle(Cache *c, Callback cb) {
+    {
+      SpinMutexLock l(&cache_mutex_);
+      cache_.Transfer(c);
+    }
+    recycle_mutex_.Lock();
+    Recycle(0, cb);
   }
 
   void PrintStats() const {
@@ -139,9 +147,8 @@ class Quarantine {
   Cache cache_;
   char pad2_[kCacheLineSize];
 
-  void NOINLINE Recycle(Callback cb) {
+  void NOINLINE Recycle(uptr min_size, Callback cb) {
     Cache tmp;
-    uptr min_size = atomic_load(&min_size_, memory_order_relaxed);
     {
       SpinMutexLock l(&cache_mutex_);
       // Go over the batches and merge partially filled ones to
@@ -201,7 +208,7 @@ class QuarantineCache {
 
   // Total memory used, including internal accounting.
   uptr Size() const {
-    return atomic_load(&size_, memory_order_relaxed);
+    return atomic_load_relaxed(&size_);
   }
 
   // Memory used for internal accounting.
@@ -225,7 +232,7 @@ class QuarantineCache {
     list_.append_back(&from_cache->list_);
     SizeAdd(from_cache->Size());
 
-    atomic_store(&from_cache->size_, 0, memory_order_relaxed);
+    atomic_store_relaxed(&from_cache->size_, 0);
   }
 
   void EnqueueBatch(QuarantineBatch *b) {
@@ -296,10 +303,10 @@ class QuarantineCache {
   atomic_uintptr_t size_;
 
   void SizeAdd(uptr add) {
-    atomic_store(&size_, Size() + add, memory_order_relaxed);
+    atomic_store_relaxed(&size_, Size() + add);
   }
   void SizeSub(uptr sub) {
-    atomic_store(&size_, Size() - sub, memory_order_relaxed);
+    atomic_store_relaxed(&size_, Size() - sub);
   }
 };
 

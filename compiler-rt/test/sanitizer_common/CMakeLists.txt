@@ -4,13 +4,14 @@ set(SANITIZER_COMMON_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 set(SANITIZER_COMMON_TESTSUITES)
 
 set(SUPPORTED_TOOLS)
-if(CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux|FreeBSD" AND NOT ANDROID)
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD")
   list(APPEND SUPPORTED_TOOLS asan)
 endif()
 if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT ANDROID)
   list(APPEND SUPPORTED_TOOLS tsan)
   list(APPEND SUPPORTED_TOOLS msan)
   list(APPEND SUPPORTED_TOOLS lsan)
+  list(APPEND SUPPORTED_TOOLS ubsan)
 endif()
 
 # Create a separate config for each tool we support.
@@ -42,8 +43,11 @@ if(COMPILER_RT_INCLUDE_TESTS)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
-  list(APPEND SANITIZER_COMMON_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
-  list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerUnitTests)
+  # FIXME: support unit test in the android test runner
+  if (NOT ANDROID)
+    list(APPEND SANITIZER_COMMON_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
+    list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerUnitTests)
+  endif()
 endif()
 
 if(SANITIZER_COMMON_TESTSUITES)

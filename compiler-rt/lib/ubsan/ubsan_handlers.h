@@ -192,6 +192,13 @@ struct CFICheckFailData {
 /// \brief Handle control flow integrity failures.
 RECOVERABLE(cfi_check_fail, CFICheckFailData *Data, ValueHandle Function,
             uptr VtableIsValid)
+
+struct ReportOptions;
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_handle_cfi_bad_type(
+    CFICheckFailData *Data, ValueHandle Vtable, bool ValidVtable,
+    ReportOptions Opts);
+
 }
 
 #endif // UBSAN_HANDLERS_H

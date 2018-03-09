@@ -14,11 +14,12 @@
 
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
@@ -216,9 +217,9 @@ void InitializePlatformEarly() {
     Die();
   }
 #elif defined(__powerpc64__)
-  if (vmaSize != 44 && vmaSize != 46) {
+  if (vmaSize != 44 && vmaSize != 46 && vmaSize != 47) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
-    Printf("FATAL: Found %d - Supported 44 and 46\n", vmaSize);
+    Printf("FATAL: Found %d - Supported 44, 46, and 47\n", vmaSize);
     Die();
   }
 #endif
@@ -401,4 +402,4 @@ void cur_thread_finalize() {
 
 }  // namespace __tsan
 
-#endif  // SANITIZER_LINUX || SANITIZER_FREEBSD
+#endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD

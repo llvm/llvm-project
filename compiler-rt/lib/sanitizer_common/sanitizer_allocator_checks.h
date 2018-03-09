@@ -15,17 +15,22 @@
 #ifndef SANITIZER_ALLOCATOR_CHECKS_H
 #define SANITIZER_ALLOCATOR_CHECKS_H
 
-#include "sanitizer_errno.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_common.h"
 #include "sanitizer_platform.h"
 
 namespace __sanitizer {
 
+// The following is defined in a separate compilation unit to avoid pulling in
+// sanitizer_errno.h in this header, which leads to conflicts when other system
+// headers include errno.h. This is usually the result of an unlikely event,
+// and as such we do not care as much about having it inlined.
+void SetErrnoToENOMEM();
+
 // A common errno setting logic shared by almost all sanitizer allocator APIs.
 INLINE void *SetErrnoOnNull(void *ptr) {
   if (UNLIKELY(!ptr))
-    errno = errno_ENOMEM;
+    SetErrnoToENOMEM();
   return ptr;
 }
 
@@ -57,6 +62,12 @@ INLINE bool CheckForCallocOverflow(uptr size, uptr n) {
     return false;
   uptr max = (uptr)-1L;
   return (max / size) < n;
+}
+
+// Returns true if the size passed to pvalloc overflows when rounded to the next
+// multiple of page_size.
+INLINE bool CheckForPvallocOverflow(uptr size, uptr page_size) {
+  return RoundUpTo(size, page_size) < size;
 }
 
 } // namespace __sanitizer

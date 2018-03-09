@@ -1,6 +1,9 @@
 // RUN: %clang %s -o %t && %run %t
 // Verify that even if iconv returned -1
 // we still treat the initialized part of outbuf as properly initialized.
+
+// UNSUPPORTED: android
+
 #include <iconv.h>
 #include <assert.h>
 #include <stdio.h>
