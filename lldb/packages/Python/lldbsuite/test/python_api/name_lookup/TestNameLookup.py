@@ -28,7 +28,7 @@ class TestNameLookup(TestBase):
         and that using a function basename with eFunctionNameTypeFull works for all
         C++ functions that are at the global namespace level."""
         self.build();
-        exe = os.path.join(os.getcwd(), 'a.out')
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

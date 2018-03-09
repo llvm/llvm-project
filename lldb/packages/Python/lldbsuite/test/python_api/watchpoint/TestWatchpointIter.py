@@ -33,15 +33,13 @@ class WatchpointIteratorTestCase(TestBase):
             self.source, '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_watch_iter(self):
         """Exercise SBTarget.watchpoint_iter() API to iterate on the available watchpoints."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

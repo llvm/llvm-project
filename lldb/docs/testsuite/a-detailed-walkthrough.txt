@@ -135,15 +135,16 @@ see test/array_types/TestArrayTypes.py:
         self.array_types()
 
 This method is decorated with a skipUnless decorator so that it will only gets
-included into the test suite if the platform it is running on is 'darwin', aka
-Mac OS X.
+included into the test suite if the platform it is running on is 'darwin', a.k.a.
+macOS.
 
 Type 'man dsymutil' for more details. 
 
 After the binary is built, it is time to specify the file to be used as the main
 executable by lldb:
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        # Construct the path to a file "a.out" inside the test's build folder.
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
 This is where the attribute assignment:
@@ -174,10 +175,11 @@ execution.  This can be accomplished by passing the keyword argument pair
 After the current executable is set, we'll then execute two more commands:
 
         # Set the output-path and verify it is set.
-        self.runCmd("settings set target.process.output-path 'stdout.txt'")
+        stdout = self.getBuildArtifact('stdout.txt')
+        self.runCmd("settings set target.process.output-path '%s'" %stdout)
         self.expect("settings show target.process.output-path",
                     SETTING_MSG("target.process.output-path"),
-            startstr = "target.process.output-path (string) = 'stdout.txt'")
+            startstr = "target.process.output-path (string) = '.*stdout.txt'")
 
 The first uses the 'settings set' command to set the static setting
 target.process.output-path to be 'stdout.txt', instead of the default
@@ -188,7 +190,7 @@ door and grabs the output from the command execution and expects to match the
 start string of the output against what we pass in as the value of the keyword
 argument pair:
 
-            startstr = "target.process.output-path (string) = 'stdout.txt'"
+            startstr = "target.process.output-path (string) = '%s'" %stdout
 
 Take a look at TestBase.expect() within lldbtest.py for more details.  Among
 other things, it can also match against a list of regexp patterns as well as a
@@ -204,15 +206,15 @@ And this asserts that the file 'stdout.txt' should be present after running the
 program.
 
         # The 'stdout.txt' file should now exist.
-        self.assertTrue(os.path.isfile("stdout.txt"),
-                        "'stdout.txt' exists due to target.process.output-path.")
+        self.assertTrue(os.path.isfile(stdout),
+                        "stdout.txt' exists due to target.process.output-path.")
 
 Also take a look at main.cpp which emits some message to the stdout.  Now, if we
 pass this assertion, it's time to examine the contents of the file to make sure
 it contains the same message as programmed in main.cpp:
 
         # Read the output file produced by running the program.
-        with open('stdout.txt', 'r') as f:
+        with open(stdout, 'r') as f:
             output = f.read()
 
         self.expect(output, exe=False,
@@ -235,8 +237,8 @@ file:
 
     @classmethod
     def classCleanup(cls):
-        system(["/bin/sh", "-c", "rm -f output.txt"])
-        system(["/bin/sh", "-c", "rm -f stdout.txt"])
+        system(["/bin/sh", "-c", "rm -f "+self.getBuildArtifact("output.txt")])
+        system(["/bin/sh", "-c", "rm -f "+self.getBuildArtifact("stdout.txt")])
 
 This is a classmethod (as shown by the @classmethod decorator) which allows the
 individual test class to perform cleanup actions after the test harness finishes

@@ -220,7 +220,7 @@ int ListApplications(std::string &plist, bool opt_runningApps,
     CFIndex size = ::CFDataGetLength(plistData.get());
     const UInt8 *bytes = ::CFDataGetBytePtr(plistData.get());
     if (bytes != NULL && size > 0) {
-      plist.assign((char *)bytes, size);
+      plist.assign((const char *)bytes, size);
       return 0; // Success
     } else {
       DNBLogError("empty application property list.");

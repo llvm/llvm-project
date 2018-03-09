@@ -38,7 +38,7 @@ class TestUnitTests(TestBase):
         bugnumber="This test only builds one way")
     def test_cross_module_extension(self):
         """Test that XCTest-based unit tests work"""
-        self.buildAll()
+        self.build()
         self.do_test()
 
     def setUp(self):
@@ -46,13 +46,10 @@ class TestUnitTests(TestBase):
         self.xctest_source = "xctest.c"
         self.xctest_source_spec = lldb.SBFileSpec(self.xctest_source)
 
-    def buildAll(self):
-        execute_command("make everything")
-
     def do_test(self):
         """Test that XCTest-based unit tests work"""
         exe_name = "xctest"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         def cleanup():
             execute_command("make cleanup")

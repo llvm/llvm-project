@@ -17,7 +17,7 @@ class IRInterpreterPHINodesTestCase(TestBase):
         """Test support for PHI nodes in the IR interpreter."""
 
         self.build()
-        exe = os.path.join(os.getcwd(), 'a.out')
+        exe = self.getBuildArtifact("a.out")
         self.runCmd('file ' + exe, CURRENT_EXECUTABLE_SET)
 
         # Break on the first assignment to i

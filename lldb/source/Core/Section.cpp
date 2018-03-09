@@ -65,6 +65,8 @@ static const char *GetSectionTypeAsCString(lldb::SectionType sect_type) {
     return "dwarf-addr";
   case eSectionTypeDWARFDebugAranges:
     return "dwarf-aranges";
+  case eSectionTypeDWARFDebugCuIndex:
+    return "dwarf-cu-index";
   case eSectionTypeDWARFDebugFrame:
     return "dwarf-frame";
   case eSectionTypeDWARFDebugInfo:
@@ -133,7 +135,7 @@ Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_target_byte_size(target_byte_size) {
+      m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
   //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ",
   //    addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 "
   //    - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s\n",
@@ -155,7 +157,7 @@ Section::Section(const lldb::SectionSP &parent_section_sp,
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_target_byte_size(target_byte_size) {
+      m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
   //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ",
   //    addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 "
   //    - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s.%s\n",
@@ -390,7 +392,7 @@ lldb::offset_t Section::GetSectionData(void *dst, lldb::offset_t dst_len,
   return 0;
 }
 
-lldb::offset_t Section::GetSectionData(DataExtractor &section_data) const {
+lldb::offset_t Section::GetSectionData(DataExtractor &section_data) {
   if (m_obj_file)
     return m_obj_file->ReadSectionData(this, section_data);
   return 0;

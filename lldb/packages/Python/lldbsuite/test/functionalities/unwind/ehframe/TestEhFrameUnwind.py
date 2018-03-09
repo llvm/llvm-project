@@ -23,7 +23,7 @@ class EHFrameBasedUnwind(TestBase):
         self.build()
         self.setTearDownCleanup()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
 
         self.assertTrue(target, VALID_TARGET)

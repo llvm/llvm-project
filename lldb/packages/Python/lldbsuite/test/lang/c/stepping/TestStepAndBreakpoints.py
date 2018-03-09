@@ -15,23 +15,20 @@ class TestCStepping(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def getCategories(self):
-        return ['basic_process']
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers that we will step to in main:
         self.main_source = "main.c"
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(['pyapi', 'basic_process'])
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17932')
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr14437")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24777")
     def test_and_python_api(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

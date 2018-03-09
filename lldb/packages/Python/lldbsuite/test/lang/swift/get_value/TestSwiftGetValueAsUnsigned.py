@@ -35,7 +35,7 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
 
     def getvalue_commands(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_source_regexp(
             self, r"break here", num_expected_locations=1)
 

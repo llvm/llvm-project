@@ -56,9 +56,7 @@ void DarwinLogCallback(void *baton, uint32_t flags, const char *format,
 }
 }
 
-DNBCallbackLog OsLogger::GetLogFunction() {
-  return _os_log_impl ? DarwinLogCallback : nullptr;
-}
+DNBCallbackLog OsLogger::GetLogFunction() { return DarwinLogCallback; }
 
 #else
 

@@ -22,7 +22,7 @@ class NestedPersistentTypesTestCase(TestBase):
         """Test that nested persistent types work."""
         self.build()
 
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         self.runCmd("breakpoint set --name main")
 

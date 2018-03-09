@@ -6,6 +6,8 @@ function(add_python_test_target name test_script args comment)
     )
 
   add_custom_target(${name}
+    # Clear the test directory first.
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/lldb-test-build.noindex
     COMMAND ${PYTHON_TEST_COMMAND} ${ARG_DEFAULT_ARGS}
     COMMENT "${comment}"
     DEPENDS ${LLDB_TEST_DEPS}
@@ -14,6 +16,11 @@ function(add_python_test_target name test_script args comment)
 endfunction()
 
 set(LLDB_TEST_DEPS lldb)
+
+# darwin-debug is an hard dependency for the testsuite.
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  list(APPEND LLDB_TEST_DEPS darwin-debug)
+endif()
 
 if(TARGET lldb-server)
   list(APPEND LLDB_TEST_DEPS lldb-server)
@@ -27,10 +34,6 @@ endif()
 
 if(TARGET lldb-mi)
   list(APPEND LLDB_TEST_DEPS lldb-mi)
-endif()
-
-if ("${LLDB_TEST_COMPILER}" STREQUAL "")
-    string(REGEX REPLACE ".*ccache\ +" "" LLDB_TEST_COMPILER ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
 endif()
 
 # The default architecture with which to compile test executables is the default LLVM target
@@ -62,15 +65,22 @@ set(LLDB_TEST_USER_ARGS
   ""
   CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
 
+# The .nodindex suffix is a marker for Spotlight to never index the
+# build directory.  LLDB queries Spotlight to locate .dSYM bundles
+# based on the UUID embedded in a binary, and because the UUID is a
+# hash of filename and .text section, there *will* be conflicts inside
+# the build directory.
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
   --executable $<TARGET_FILE:lldb>
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
+  --build-dir
+  ${CMAKE_BINARY_DIR}/lldb-test-build.noindex
   -S nm
   -u CXXFLAGS
   -u CFLAGS
-  -C ${LLDB_TEST_COMPILER}
+  -C ${LLDB_TEST_C_COMPILER}
   ${SWIFT_TEST_ARGS}
   )
 
@@ -127,6 +137,21 @@ add_python_test_target(check-lldb
   "-q;${LLDB_DOTEST_ARGS}"
   "Testing LLDB (parallel execution, with a separate subprocess per test)"
   )
+
+# If we're building with an in-tree clang, then list clang as a dependency
+# to run tests.
+if (TARGET clang)
+  add_dependencies(check-lldb clang)
+endif()
+
+# LLD is required to link test executables on Windows.
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  if (TARGET lld)
+    add_dependencies(check-lldb lld)
+  else ()
+    message(WARNING "lld required to test LLDB on Windows")
+  endif ()
+endif ()
 
 add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPENDS})
 # This will add LLDB's test dependencies to the depenednecies for check-all and

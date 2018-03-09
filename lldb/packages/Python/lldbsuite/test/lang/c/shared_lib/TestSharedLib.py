@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import unittest2
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -34,10 +35,12 @@ class SharedLibTestCase(TestBase):
             "expression GetMeASubFoo(my_foo_ptr)",
             startstr="(sub_foo *) $")
 
+    @expectedFailureAll(oslist=["windows"])
     def test_expr(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         self.common_test_expr(True)
 
+    @expectedFailureAll(oslist=["windows"])
     def test_expr_no_preload(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable, but with preloading disabled"""
         self.common_test_expr(False)
@@ -70,7 +73,7 @@ class SharedLibTestCase(TestBase):
         self.dbg.SetAsync(False)
 
         # Create a target by the debugger.
-        target = self.dbg.CreateTarget("a.out")
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
         self.runCmd("settings set target.preload-symbols " + str(preload_symbols).lower())

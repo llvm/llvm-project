@@ -36,7 +36,7 @@ class SwiftPartialBreakTest(TestBase):
 
     def break_commands(self):
         """Tests that we can break on a partial name of a Swift function"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_symbol(self, "incr")
         lldbutil.run_break_set_by_symbol(self, "Accumulator.decr")
 

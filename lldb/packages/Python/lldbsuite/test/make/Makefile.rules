@@ -6,6 +6,7 @@
 # OBJC_SOURCES :=
 # OBJCXX_SOURCES :=
 # DYLIB_C_SOURCES :=
+# DYLIB_OBJC_SOURCES :=
 # DYLIB_CXX_SOURCES :=
 #
 # Specifying DYLIB_ONLY has the effect of building dylib only, skipping
@@ -27,7 +28,8 @@
 # Uncomment line below for debugging shell commands
 # SHELL = /bin/sh -x
 
-THIS_FILE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
+SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))/
+THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
 LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
 
@@ -217,6 +219,9 @@ else
 	ifeq "$(ARCH)" "powerpc64"
 		override ARCH := $(subst powerpc64,64,$(ARCH))
 	endif
+	ifeq "$(ARCH)" "powerpc64le"
+		override ARCH := $(subst powerpc64le,64,$(ARCH))
+	endif
 	ifeq "$(ARCH)" "aarch64"
 		override ARCH :=
 		override ARCHFLAG :=
@@ -260,29 +265,27 @@ ifneq (,$(findstring arm,$(ARCH)))
 	SWIFTFLAGS += -static-stdlib
 endif
 
-CFLAGS += $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 ifeq "$(OS)" "Darwin"
 	ifneq "$(SDKROOT)" ""
 		CFLAGS += -isysroot "$(SDKROOT)"
 	endif
 endif
 
-CFLAGS += -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR) $(ARCH_CFLAGS)
-CFLAGS_NO_ARCH := $(CFLAGS)
-
-ifeq "$(ARCHFLAG)" "-arch"
-    CFLAGS += $(ARCHFLAG) $(ARCH)
+ifeq "$(OS)" "Darwin"
+	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 else
-    CFLAGS += $(ARCHFLAG)$(ARCH)
+	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 endif
 
+CFLAGS += -I$(SRCDIR) -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR)
+CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(ARCH_CFLAGS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 else
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(ARCH_CFLAGS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 endif
 
 ifeq "$(MAKE_DWO)" "YES"
@@ -360,10 +363,6 @@ ifneq "$(OS)" "Darwin"
     endif
 
     OBJCOPY ?= $(call replace_cc_with,objcopy)
-ifeq ($(wildcard $(OBJCOPY)),)
-    OBJCOPY = objcopy
-endif
-
     ARCHIVER ?= $(call replace_cc_with,ar)
     override AR = $(ARCHIVER)
 endif
@@ -571,41 +570,40 @@ endif
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
-# Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
-#----------------------------------------------------------------------
-ifneq "$(DYLIB_ONLY)" "YES"
-$(DSYM) : $(EXE)
-ifeq "$(OS)" "Darwin"
-ifneq "$(MAKE_DSYM)" "NO"
-	"$(DS)" $(DSFLAGS) -o "$(DSYM)" "$(EXE)"
-endif
-else
-ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
-	$(OBJCOPY) --remove-section .gnu_debuglink --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
-endif
-endif
-endif
-
-#----------------------------------------------------------------------
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 $(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) -o "$(EXE)"
+	$(SWIFTCC) $^ $(SWIFTFLAGS) -o "$(EXE)"
 else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
-	$(LD) $(OBJECTS) $(ARCHIVE_NAME) -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
+	$(LD) $^ -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
 else
 EXE = $(DYLIB_FILENAME)
 endif
 else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
-	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
+	$(LD) $(LDFLAGS) $^ -o "$(EXE)"
 endif
 endif
+#----------------------------------------------------------------------
+# Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
+#----------------------------------------------------------------------
+$(DSYM) : $(EXE)
+ifeq "$(OS)" "Darwin"
+ifneq "$(MAKE_DSYM)" "NO"
+	"$(DS)" $(DSFLAGS) -o "$(DSYM)" "$(EXE)"
+else
+endif
+else
+ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
+	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
+	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
+endif
+endif
+
 #----------------------------------------------------------------------
 # Make the archive
 #----------------------------------------------------------------------
@@ -623,6 +621,11 @@ endif
 # Make the dylib
 #----------------------------------------------------------------------
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
+
+ifneq "$(OS)" "Windows_NT"
+$(DYLIB_OBJECTS) : CFLAGS += -fPIC
+$(DYLIB_OBJECTS) : CXXFLAGS += -fPIC
+endif
 
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 ifeq "$(OS)" "Darwin"
@@ -646,7 +649,7 @@ endif
 
 #ifneq "$(PCH_OUTPUT)" ""
 $(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
-	$(CXX) $(CXXFLAGS) -x c++-header -o $(PCH_OUTPUT) $(PCH_CXX_SOURCE)
+	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $<
 %.o : %.cpp $(PCH_OUTPUT)
 	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -c -o $@ $<
 #endif

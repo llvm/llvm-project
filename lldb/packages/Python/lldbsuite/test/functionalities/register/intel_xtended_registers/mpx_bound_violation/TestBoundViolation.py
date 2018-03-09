@@ -29,7 +29,7 @@ class RegisterCommandsTestCase(TestBase):
         self.mpx_boundary_violation()
 
     def mpx_boundary_violation(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)

@@ -83,7 +83,7 @@ class CreateDuringStepTestCase(TestBase):
 
     def create_during_step_base(self, step_cmd, step_stop_reason):
         """Test thread creation while using step-in."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Get the target process

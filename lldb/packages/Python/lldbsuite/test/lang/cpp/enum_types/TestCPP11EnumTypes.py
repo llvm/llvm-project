@@ -78,7 +78,7 @@ class CPP11EnumTypesTestCase(TestBase):
 
     def image_lookup_for_enum_type(self):
         """Test C++11 enumeration class types."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.
@@ -99,8 +99,8 @@ class CPP11EnumTypesTestCase(TestBase):
         # Look up information about the 'DayType' enum type.
         # Check for correct display.
         self.expect("image lookup -t DayType", DATA_TYPES_DISPLAYED_CORRECTLY,
-                    substrs=['enum DayType {',
-                             'Monday',
+                    patterns=['enum( struct| class) DayType {'],
+                    substrs=['Monday',
                              'Tuesday',
                              'Wednesday',
                              'Thursday',

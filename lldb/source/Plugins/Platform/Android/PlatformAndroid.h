@@ -76,7 +76,8 @@ protected:
   Status DownloadSymbolFile(const lldb::ModuleSP &module_sp,
                             const FileSpec &dst_file_spec) override;
 
-  llvm::StringRef GetLibdlFunctionDeclarations() override;
+  llvm::StringRef
+  GetLibdlFunctionDeclarations(lldb_private::Process *process) override;
 
 private:
   AdbClient::SyncService *GetSyncService(Status &error);

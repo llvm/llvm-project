@@ -29,7 +29,7 @@ typedef std::vector<pthread_t> thread_vector;
 pseudo_barrier_t g_barrier;
 int g_breakpoint = 0;
 int g_sigusr1_count = 0;
-std::atomic_int g_watchme;
+uint32_t g_watchme;
 
 struct action_args {
   int delay;
@@ -74,7 +74,7 @@ watchpoint_func (void *input) {
     pseudo_barrier_wait(g_barrier);
     do_action_args(input);
 
-    g_watchme += 1;     // watchpoint triggers here
+    g_watchme = 1;     // watchpoint triggers here
     return 0;
 }
 

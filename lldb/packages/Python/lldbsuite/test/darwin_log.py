@@ -162,7 +162,7 @@ class DarwinLogTestBase(lldbtest.TestBase):
         if enable_options is not None and len(enable_options) > 0:
             enable_cmd += ' ' + ' '.join(enable_options)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.run_lldb_to_breakpoint(exe, self.source, self.line,
                                     enable_command=enable_cmd,
                                     settings_commands=settings_commands)
@@ -346,7 +346,7 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -382,7 +382,7 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
         # self.runCmd("log enable lldb process")
 
         # Launch the process - doesn't stop at entry.
-        process = target.LaunchSimple(None, None, os.getcwd())
+        process = target.LaunchSimple(None, None, self.getBuildDir())
         self.assertIsNotNone(process, lldbtest.PROCESS_IS_VALID)
 
         # Keep track of whether we're tracing output.

@@ -31,7 +31,7 @@ class TestSwiftHashedContainerEnum(TestBase):
     def do_test(self):
         """Test combinations of hashed swift containers with enums"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

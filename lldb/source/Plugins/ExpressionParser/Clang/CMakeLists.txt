@@ -23,6 +23,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   LINK_LIBS
     clangAST
     clangCodeGen
+    clangDriver
     clangEdit
     clangFrontend
     clangLex

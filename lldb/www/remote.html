@@ -86,7 +86,9 @@
               Once the binaries are in place, you just need to run the <code>lldb-server</code>
               in platform mode and specify the port it should listen on. For example, the command
             </p>
-            <code>lldb-server platform --listen *:1234</code>
+            <code>
+              remote% <b>lldb-server platform --listen "*:1234" --server</b>
+            </code>
             <p>
               will start the LLDB platform and wait for incoming connections from any address to
               port 1234. Specifying an address instead of <code>*</code> will only allow
@@ -104,14 +106,35 @@
               your remote system. A list of available plug-ins can be obtained through
               <code>platform list</code>.
             </p>
-
+            <code>
+              local% <b>lldb</b>
+              <br>(lldb) <b>platform list</b>
+              <br>Available platforms:
+              <br>host: Local Mac OS X user platform plug-in.
+              <br>remote-freebsd: Remote FreeBSD user platform plug-in.
+              <br>remote-linux: Remote Linux user platform plug-in.
+              <br>remote-netbsd: Remote NetBSD user platform plug-in.
+              <br>remote-windows: Remote Windows user platform plug-in.
+              <br>remote-android: Remote Android user platform plug-in.
+              <br>remote-ios: Remote iOS platform plug-in.
+              <br>remote-macosx: Remote Mac OS X user platform plug-in.
+              <br>ios-simulator: iOS simulator platform plug-in.
+              <br>darwin-kernel: Darwin Kernel platform plug-in.
+              <br>tvos-simulator: Apple TV simulator platform plug-in.
+              <br>watchos-simulator: Apple Watch simulator platform plug-in.
+              <br>remote-tvos: Remote Apple TV platform plug-in.
+              <br>remote-watchos: Remote Apple Watch platform plug-in.
+              <br>remote-gdb-server: A platform that uses the GDB remote protocol as the communication transport.
+            </code>
             <p>
               The default platform is the platform <code>host</code> which is used for local
               debugging. Apart from this, the list should contain a number of plug-ins, for
               debugging different kinds of systems. The remote plug-ins are prefixed with
-              "<code>remote-</code>". For example, to debug a remote Linux application, you should
-              run <code>platform select remote-linux</code>.
-            </p>
+              "<code>remote-</code>". For example, to debug a remote Linux application:
+            <br>
+            <code>
+              <br>(lldb) <b>patform select remote-linux</b>
+            </code>
 
             <p>
               After selecting the platform plug-in, you should receive a prompt which confirms
@@ -121,9 +144,19 @@
               command takes a number of arguments (as always, use the <code>help</code> command
               to find out more), but normally you only need to specify the address to connect to,
               e.g.:
-            </p>
-            <code>platform connect connect://host:port</code>
-
+            <br>
+            <code>
+              <br>(lldb) <b>platform connect connect://remote:1234</b>
+              <br>&nbsp;&nbsp;Platform: remote-linux
+              <br>&nbsp;&nbsp;&nbsp;&nbsp;Triple: x86_64-gnu-linux
+              <br>&nbsp;&nbsp;Hostname: remote
+              <br>&nbsp;Connected: yes
+              <br>WorkingDir: /tmp
+            </code>
+            <p>
+              Note that the platform has a working directory of <code>/tmp</code>. This directory
+              will be used as the directory that executables will be uploaded to by default when
+              launching a process from <em>local</em>.
             <p>
               After this, you should be able to debug normally. You can use the
               <code>process attach</code> to attach to an existing remote process or
@@ -134,7 +167,98 @@
               <code>put-file</code>, <code>mkdir</code>, etc. The environment can be prepared
               further using the <code>platform shell</code> command.
             </p>
+            <h3>Launching a locally built process on the remote machine</h3>
+            <h4>Install and run in the platform working directory</h4>
+            <p>
+              To launch a locally built process on the remote system in the
+              platform working directory:
+            <br>
+            <code>
+              <br>(lldb) <b>file a.out</b>
+              <br>(lldb) <b>run</b>
+            </code>
+            <p>
+              This will cause LLDB to create a target with the "a.out"
+              executable that you cross built. The "run" command will cause
+              LLDB to upload "a.out" to the platform's current working
+              directory only if the file has changed.
+              The platform connection allows us to transfer files, but also
+              allows us to get the MD5 checksum of the file on the other end
+              and only upload the file if it has changed. LLDB will automatically
+              launch a lldb-server in gdbremote mode to allow you to debug this
+              executable, connect to it and start your debug session for you.
+            </p>
+            <h4>Changing the platform working directory</h4>
+            <p>
+              You can change the platform working directory while connected to
+              the platform with:
+            <br>
+            <code>
+              <br>(lldb) <b>platform settings -w /usr/local/bin</b>
+            </code>
+            <p>
+              And you can verify it worked using "platform status":
+            <br>
+            <code>
+              <br>(lldb) <b>platform status</b>
+              <br>&nbsp;&nbsp;Platform: remote-linux
+              <br>&nbsp;&nbsp;&nbsp;&nbsp;Triple: x86_64-gnu-linux
+              <br>&nbsp;&nbsp;Hostname: remote
+              <br>&nbsp;Connected: yes
+              <br>WorkingDir: /usr/local/bin
+            </code>
+            <p>
+              If we run again, the program will be installed into /usr/local/bin.
+            </p>
 
+
+            <h4>Install and run by specifying a remote install path</h4>
+            <p>
+              If you want the "a.out" executable to be installed into
+              "/bin/a.out" instead of the platorm's current working directory,
+              we can set the platform file specification using python:
+            <br>
+            <code>
+              <br>(lldb) <b>file a.out</b>
+              <br>(lldb) <b>script lldb.target.module['a.out'].SetPlatformFileSpec("/bin/a.out")</b>
+              <br>(lldb) <b>run</b>
+            </code>
+            <p>
+              Now when you run your program, the program will be uploaded to
+              "/bin/a.out" instead of the the platform current working directory.
+              Only the main executable is uploaded to the remote system by
+              default when launching the application. If you have shared
+              libraries that should also be uploaded, then you can add the
+              locally build shared library to the current target and set its
+              platform file specification:
+            </p>
+            <code>
+              <br>(lldb) <b>file a.out</b>
+              <br>(lldb) <b>target module add /local/build/libfoo.so</b>
+              <br>(lldb) <b>target module add /local/build/libbar.so</b>
+              <br>(lldb) <b>script lldb.target.module['libfoo.so'].SetPlatformFileSpec("/usr/lib/libfoo.so")</b>
+              <br>(lldb) <b>script lldb.target.module['libbar.so'].SetPlatformFileSpec("/usr/local/lib/libbar.so")</b>
+              <br>(lldb) <b>run</b>
+            </code>
+            <h4>Attaching to a remote process</h4>
+            <p>
+              If you want to attach to a remote process, you can first list the
+              processes on the remote system:
+            </p>
+            <code>
+              <br>(lldb) <b>platform process list</b>
+              <br>223 matching processes were found on "remote-linux"
+              <br>PID&nbsp;&nbsp;&nbsp;&nbsp;PARENT&nbsp;USER&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRIPLE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NAME
+              <br>======&nbsp;======&nbsp;==========&nbsp;========================&nbsp;============================
+              <br>68639&nbsp;&nbsp;90652&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x86_64-apple-macosx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lldb
+              <br>...
+            </code>
+            <p>
+              Then attaching is as simple as specifying the remote process ID:
+            </p>
+            <code>
+              <br>(lldb) <b>attach 68639</b>
+            </code>
           </div>
           <div class="postfooter"></div>
         </div>

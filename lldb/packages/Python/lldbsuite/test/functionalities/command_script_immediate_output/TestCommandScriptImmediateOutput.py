@@ -30,9 +30,10 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr26139")
     def test_command_script_immediate_output_console(self):
         """Test that LLDB correctly allows scripted commands to set immediate output to the console."""
+        self.makeBuildDir()
         self.launch(timeout=10)
 
-        script = os.path.join(os.getcwd(), 'custom_command.py')
+        script = os.path.join(self.getSourceDir(), 'custom_command.py')
         prompt = "\(lldb\) "
 
         self.sendline('command script import %s' % script, patterns=[prompt])
@@ -52,14 +53,15 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr26139")
     def test_command_script_immediate_output_file(self):
         """Test that LLDB correctly allows scripted commands to set immediate output to a file."""
+        self.makeBuildDir()
         self.launch(timeout=10)
 
-        test_files = {os.path.join(os.getcwd(), 'read.txt'): 'r',
-                      os.path.join(os.getcwd(), 'write.txt'): 'w',
-                      os.path.join(os.getcwd(), 'append.txt'): 'a',
-                      os.path.join(os.getcwd(), 'write_plus.txt'): 'w+',
-                      os.path.join(os.getcwd(), 'read_plus.txt'): 'r+',
-                      os.path.join(os.getcwd(), 'append_plus.txt'): 'a+'}
+        test_files = {self.getBuildArtifact('read.txt'): 'r',
+                      self.getBuildArtifact('write.txt'): 'w',
+                      self.getBuildArtifact('append.txt'): 'a',
+                      self.getBuildArtifact('write_plus.txt'): 'w+',
+                      self.getBuildArtifact('read_plus.txt'): 'r+',
+                      self.getBuildArtifact('append_plus.txt'): 'a+'}
 
         starter_string = 'Starter Garbage\n'
         write_string = 'writing to file with mode: '
@@ -68,7 +70,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
             with open(path, 'w+') as init:
                 init.write(starter_string)
 
-        script = os.path.join(os.getcwd(), 'custom_command.py')
+        script = os.path.join(self.getSourceDir(), 'custom_command.py')
         prompt = "\(lldb\) "
 
         self.sendline('command script import %s' % script, patterns=[prompt])

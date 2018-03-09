@@ -370,7 +370,7 @@ class GdbRemoteTestCaseBase(TestBase):
                 ["*:{}".format(self.port)]
         else:
             commandline_args = self.debug_monitor_extra_args + \
-                ["localhost:{}".format(self.port)]
+                ["127.0.0.1:{}".format(self.port)]
 
         if attach_pid:
             commandline_args += ["--attach=%d" % attach_pid]
@@ -484,7 +484,7 @@ class GdbRemoteTestCaseBase(TestBase):
         # This process needs to be started so that it just hangs around for a while.  We'll
         # have it sleep.
         if not exe_path:
-            exe_path = os.path.abspath("a.out")
+            exe_path = self.getBuildArtifact("a.out")
 
         args = []
         if inferior_args:
@@ -547,7 +547,7 @@ class GdbRemoteTestCaseBase(TestBase):
         if self._inferior_startup == self._STARTUP_LAUNCH:
             # Build launch args
             if not inferior_exe_path:
-                inferior_exe_path = os.path.abspath("a.out")
+                inferior_exe_path = self.getBuildArtifact("a.out")
 
             if lldb.remote_platform:
                 remote_path = lldbutil.append_to_process_working_directory(
@@ -1608,7 +1608,7 @@ class GdbRemoteTestCaseBase(TestBase):
             '.*' if lldbplatformutil.hasChattyStderr(self) else '^' + regex + '$'
 
     def install_and_create_launch_args(self):
-        exe_path = os.path.abspath('a.out')
+        exe_path = self.getBuildArtifact("a.out")
         if not lldb.remote_platform:
             return [exe_path]
         remote_path = lldbutil.append_to_process_working_directory(

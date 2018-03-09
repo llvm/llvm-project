@@ -39,7 +39,7 @@ class TestSwiftStructInit(TestBase):
     def do_test(self):
         """Test that we display self correctly for an inline-initialized struct"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

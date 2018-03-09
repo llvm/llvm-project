@@ -18,9 +18,6 @@
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -28,6 +25,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamGDBRemote.h"
@@ -263,7 +261,6 @@ protected:
     eBroadcastBitAsyncThreadDidExit = (1 << 2)
   };
 
-  Flags m_flags; // Process specific flags (see eFlags enums)
   GDBRemoteCommunicationClient m_gdb_comm;
   std::atomic<lldb::pid_t> m_debugserver_pid;
   std::vector<StringExtractorGDBRemote> m_stop_packet_stack; // The stop packet
@@ -323,10 +320,6 @@ protected:
   bool ProcessIDIsValid() const;
 
   void Clear();
-
-  Flags &GetFlags() { return m_flags; }
-
-  const Flags &GetFlags() const { return m_flags; }
 
   bool UpdateThreadList(ThreadList &old_thread_list,
                         ThreadList &new_thread_list) override;

@@ -129,7 +129,7 @@ class RegisterCommandsTestCase(TestBase):
         self.convenience_registers_with_process_attach(test_16bit_regs=True)
 
     def common_setup(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
@@ -154,7 +154,7 @@ class RegisterCommandsTestCase(TestBase):
             self.platform = "posix"
 
         if self.platform != "":
-            self.log_file = os.path.join(os.getcwd(), 'TestRegisters.log')
+            self.log_file = self.getBuildArtifact('TestRegisters.log')
             self.runCmd(
                 "log enable " +
                 self.platform +
@@ -190,7 +190,7 @@ class RegisterCommandsTestCase(TestBase):
                 new_value])
 
     def fp_special_purpose_register_read(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -271,20 +271,24 @@ class RegisterCommandsTestCase(TestBase):
                 1 << fstat_top_pointer_initial)
 
     def fp_register_write(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        lldbutil.run_break_set_by_symbol(
-            self, "main", num_expected_locations=-1)
+        # Launch the process, stop at the entry point.
+        error = lldb.SBError()
+        process = target.Launch(
+                lldb.SBListener(),
+                None, None, # argv, envp
+                None, None, None, # stdin/out/err
+                self.get_process_working_directory(),
+                0, # launch flags
+                True, # stop at entry
+                error)
+        self.assertTrue(error.Success(), "Launch succeeds. Error is :" + str(error))
 
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        process = target.GetProcess()
         self.assertTrue(
             process.GetState() == lldb.eStateStopped,
             PROCESS_STOPPED)
@@ -442,7 +446,7 @@ class RegisterCommandsTestCase(TestBase):
 
     def convenience_registers_with_process_attach(self, test_16bit_regs):
         """Test convenience registers after a 'process attach'."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Spawn a new process
         pid = self.spawnSubprocess(exe, ['wait_for_attach']).pid

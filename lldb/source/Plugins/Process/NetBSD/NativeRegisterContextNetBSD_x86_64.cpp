@@ -149,10 +149,8 @@ const int fpu_save = []() -> int {
 
 NativeRegisterContextNetBSD *
 NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx) {
-  return new NativeRegisterContextNetBSD_x86_64(target_arch, native_thread,
-                                                concrete_frame_idx);
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+  return new NativeRegisterContextNetBSD_x86_64(target_arch, native_thread);
 }
 
 // ----------------------------------------------------------------------------
@@ -169,9 +167,8 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 }
 
 NativeRegisterContextNetBSD_x86_64::NativeRegisterContextNetBSD_x86_64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx)
-    : NativeRegisterContextNetBSD(native_thread, concrete_frame_idx,
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+    : NativeRegisterContextNetBSD(native_thread,
                                   CreateRegisterInfoInterface(target_arch)),
       m_gpr_x86_64(), m_fpr_x86_64(), m_dbr_x86_64() {}
 

@@ -36,7 +36,7 @@ class SkipSummaryDataFormatterTestCase(TestBase):
 
     def data_formatter_commands(self):
         """Test that that file and class static variables display correctly."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         #import lldbsuite.test.lldbutil as lldbutil
         lldbutil.run_break_set_by_file_and_line(

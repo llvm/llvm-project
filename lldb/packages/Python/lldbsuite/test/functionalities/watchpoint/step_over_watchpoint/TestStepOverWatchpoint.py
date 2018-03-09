@@ -13,11 +13,6 @@ class TestStepOverWatchpoint(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def getCategories(self):
-        return ['basic_process']
-
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["linux"],
         archs=[
@@ -31,10 +26,11 @@ class TestStepOverWatchpoint(TestBase):
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     @expectedFailureAll(oslist=["ios", "watchos", "tvos", "bridgeos"], bugnumber="<rdar://problem/34027183>")  # watchpoint tests aren't working on arm64
+    @add_test_categories(["basic_process"])
     def test(self):
         """Test stepping over watchpoints."""
         self.build()
-        exe = os.path.join(os.getcwd(), 'a.out')
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)

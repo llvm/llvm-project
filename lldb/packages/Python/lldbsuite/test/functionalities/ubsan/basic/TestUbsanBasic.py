@@ -27,7 +27,7 @@ class UbsanBasicTestCase(TestBase):
 
     def ubsan_tests(self):
         # Load the test
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect(
             "file " + exe,
             patterns=["Current executable set to .*a.out"])
@@ -84,7 +84,7 @@ class UbsanBasicTestCase(TestBase):
 
         self.assertEqual(data["instrumentation_class"], "UndefinedBehaviorSanitizer")
         self.assertEqual(data["description"], "misaligned-pointer-use")
-        self.assertEqual(data["filename"], "main.c")
+        self.assertEqual(os.path.basename(data["filename"]), "main.c")
         self.assertEqual(data["line"], self.line_align)
 
         self.runCmd("continue")

@@ -22,11 +22,12 @@ class TestFormats(TestBase):
     def test_formats(self):
         """Test format string functionality."""
         self.build()
+        exe = self.getBuildArtifact("a.out")
         import pexpect
         prompt = "(lldb) "
         child = pexpect.spawn(
-            '%s %s -x -o "b main" -o r a.out' %
-            (lldbtest_config.lldbExec, self.lldbOption))
+            '%s %s -x -o "b main" -o r %s' %
+            (lldbtest_config.lldbExec, self.lldbOption, exe))
         # Turn on logging for what the child sends back.
         if self.TraceOn():
             child.logfile_read = sys.stdout
@@ -34,7 +35,7 @@ class TestFormats(TestBase):
         self.child = child
 
         # Substitute 'Help!' for 'help' using the 'commands regex' mechanism.
-        child.expect_exact(prompt + 'target create "a.out"')
+        child.expect_exact(prompt + 'target create "%s"' % exe)
         child.expect_exact(prompt + 'b main')
         child.expect_exact(prompt + 'r')
         child.expect_exact(prompt)

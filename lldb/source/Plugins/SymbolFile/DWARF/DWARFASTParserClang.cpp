@@ -40,6 +40,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 
@@ -967,6 +968,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         // Set a bit that lets us know that we are currently parsing this
         dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
+        bool is_scoped = false;
         DWARFFormValue encoding_form;
 
         const size_t num_attributes = die.GetAttributes(attributes);
@@ -1002,6 +1004,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                        // DW_ACCESS_to_AccessType(form_value.Unsigned()); break;
               case DW_AT_declaration:
                 is_forward_declaration = form_value.Boolean();
+                break;
+              case DW_AT_enum_class:
+                is_scoped = form_value.Boolean();
                 break;
               case DW_AT_allocated:
               case DW_AT_associated:
@@ -1092,7 +1097,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
             clang_type = m_ast.CreateEnumerationType(
                 type_name_cstr, GetClangDeclContextContainingDIE(die, nullptr),
-                decl, enumerator_clang_type);
+                decl, enumerator_clang_type, is_scoped);
           } else {
             enumerator_clang_type =
                 m_ast.GetEnumerationIntegerType(clang_type.GetOpaqueQualType());
@@ -1769,8 +1774,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                       "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
                       "class/union/struct element type DIE 0x%8.8x that is a "
                       "forward declaration, not a complete definition.\nTry "
-                      "compiling the source file with -fno-limit-debug-info or "
-                      "disable -gmodule",
+                      "compiling the source file with -fstandalone-debug or "
+                      "disable -gmodules",
                       die.GetOffset(), type_die_ref.die_offset);
                 else
                   module_sp->ReportError(
@@ -2099,6 +2104,92 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
   return template_param_infos.args.size() == template_param_infos.names.size();
 }
 
+// Checks whether m1 is an overload of m2 (as opposed to an override).
+// This is called by addOverridesForMethod to distinguish overrides (which share
+// a vtable entry) from overloads (which require distinct entries).
+static bool isOverload(clang::CXXMethodDecl *m1, clang::CXXMethodDecl *m2) {
+  // FIXME: This should detect covariant return types, but currently doesn't.
+  lldbassert(&m1->getASTContext() == &m2->getASTContext() &&
+             "Methods should have the same AST context");
+  clang::ASTContext &context = m1->getASTContext();
+
+  const auto *m1Type =
+    llvm::cast<clang::FunctionProtoType>(
+      context.getCanonicalType(m1->getType()));
+
+  const auto *m2Type =
+    llvm::cast<clang::FunctionProtoType>(
+      context.getCanonicalType(m2->getType()));
+
+  auto compareArgTypes =
+    [&context](const clang::QualType &m1p, const clang::QualType &m2p) {
+      return context.hasSameType(m1p.getUnqualifiedType(),
+                                 m2p.getUnqualifiedType());
+    };
+
+  return !std::equal(m1Type->param_type_begin(), m1Type->param_type_end(),
+                     m2Type->param_type_begin(), compareArgTypes);
+}
+
+// If decl is a virtual method, walk the base classes looking for methods that
+// decl overrides. This table of overridden methods is used by IRGen to determine
+// the vtable layout for decl's parent class.
+static void addOverridesForMethod(clang::CXXMethodDecl *decl) {
+  if (!decl->isVirtual())
+    return;
+
+  clang::CXXBasePaths paths;
+
+  auto find_overridden_methods =
+    [decl](const clang::CXXBaseSpecifier *specifier, clang::CXXBasePath &path) {
+      if (auto *base_record =
+          llvm::dyn_cast<clang::CXXRecordDecl>(
+            specifier->getType()->getAs<clang::RecordType>()->getDecl())) {
+
+        clang::DeclarationName name = decl->getDeclName();
+
+        // If this is a destructor, check whether the base class destructor is
+        // virtual.
+        if (name.getNameKind() == clang::DeclarationName::CXXDestructorName)
+          if (auto *baseDtorDecl = base_record->getDestructor()) {
+            if (baseDtorDecl->isVirtual()) {
+              path.Decls = baseDtorDecl;
+              return true;
+            } else
+              return false;
+          }
+
+        // Otherwise, search for name in the base class.
+        for (path.Decls = base_record->lookup(name); !path.Decls.empty();
+             path.Decls = path.Decls.slice(1)) {
+          if (auto *method_decl =
+                llvm::dyn_cast<clang::CXXMethodDecl>(path.Decls.front()))
+            if (method_decl->isVirtual() && !isOverload(decl, method_decl)) {
+              path.Decls = method_decl;
+              return true;
+            }
+        }
+      }
+
+      return false;
+    };
+
+  if (decl->getParent()->lookupInBases(find_overridden_methods, paths)) {
+    for (auto *overridden_decl : paths.found_decls())
+      decl->addOverriddenMethod(
+        llvm::cast<clang::CXXMethodDecl>(overridden_decl));
+  }
+}
+
+// If clang_type is a CXXRecordDecl, builds the method override list for each
+// of its virtual methods.
+static void addMethodOverrides(ClangASTContext &ast, CompilerType &clang_type) {
+  if (auto *record =
+      ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType()))
+    for (auto *method : record->methods())
+      addOverridesForMethod(method);
+}
+
 bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                                                 lldb_private::Type *type,
                                                 CompilerType &clang_type) {
@@ -2281,7 +2372,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                 if (die.GetCU()->GetProducer() ==
                     DWARFCompileUnit::eProducerClang)
                   module->ReportError(":: Try compiling the source file with "
-                                      "-fno-limit-debug-info.");
+                                      "-fstandalone-debug.");
 
                 // We have no choice other than to pretend that the base class
                 // is complete. If we don't do this, clang will crash when we
@@ -2311,6 +2402,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
       }
     }
 
+    addMethodOverrides(m_ast, clang_type);
     ClangASTContext::BuildIndirectFields(clang_type);
     ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
 
@@ -2781,8 +2873,6 @@ bool DWARFASTParserClang::ParseChildMembers(
                     form_value.BlockData() - debug_info_data.GetDataStart();
                 if (DWARFExpression::Evaluate(
                         nullptr, // ExecutionContext *
-                        nullptr, // ClangExpressionVariableList *
-                        nullptr, // ClangExpressionDeclMap *
                         nullptr, // RegisterContext *
                         module_sp, debug_info_data, die.GetCU(), block_offset,
                         block_length, eRegisterKindDWARF, &initialValue,
@@ -3123,7 +3213,7 @@ bool DWARFASTParserClang::ParseChildMembers(
                       "DWARF DIE at 0x%8.8x (class %s) has a member variable "
                       "0x%8.8x (%s) whose type is a forward declaration, not a "
                       "complete definition.\nTry compiling the source file "
-                      "with -fno-limit-debug-info",
+                      "with -fstandalone-debug",
                       parent_die.GetOffset(), parent_die.GetName(),
                       die.GetOffset(), name);
                 else
@@ -3254,11 +3344,11 @@ bool DWARFASTParserClang::ParseChildMembers(
                 uint32_t block_length = form_value.Unsigned();
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();
-                if (DWARFExpression::Evaluate(
-                        nullptr, nullptr, nullptr, nullptr, module_sp,
-                        debug_info_data, die.GetCU(), block_offset,
-                        block_length, eRegisterKindDWARF, &initialValue,
-                        nullptr, memberOffset, nullptr)) {
+                if (DWARFExpression::Evaluate(nullptr, nullptr, module_sp,
+                                              debug_info_data, die.GetCU(),
+                                              block_offset, block_length,
+                                              eRegisterKindDWARF, &initialValue,
+                                              nullptr, memberOffset, nullptr)) {
                   member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
                 }
               } else {

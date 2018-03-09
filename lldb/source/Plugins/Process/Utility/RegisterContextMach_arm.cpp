@@ -50,22 +50,30 @@ int RegisterContextMach_arm::DoReadDBG(lldb::tid_t tid, int flavor, DBG &dbg) {
 
 int RegisterContextMach_arm::DoWriteGPR(lldb::tid_t tid, int flavor,
                                         const GPR &gpr) {
-  return ::thread_set_state(tid, flavor, (thread_state_t)&gpr, GPRWordCount);
+  return ::thread_set_state(
+      tid, flavor, reinterpret_cast<thread_state_t>(const_cast<GPR *>(&gpr)),
+      GPRWordCount);
 }
 
 int RegisterContextMach_arm::DoWriteFPU(lldb::tid_t tid, int flavor,
                                         const FPU &fpu) {
-  return ::thread_set_state(tid, flavor, (thread_state_t)&fpu, FPUWordCount);
+  return ::thread_set_state(
+      tid, flavor, reinterpret_cast<thread_state_t>(const_cast<FPU *>(&fpu)),
+      FPUWordCount);
 }
 
 int RegisterContextMach_arm::DoWriteEXC(lldb::tid_t tid, int flavor,
                                         const EXC &exc) {
-  return ::thread_set_state(tid, flavor, (thread_state_t)&exc, EXCWordCount);
+  return ::thread_set_state(
+      tid, flavor, reinterpret_cast<thread_state_t>(const_cast<EXC *>(&exc)),
+      EXCWordCount);
 }
 
 int RegisterContextMach_arm::DoWriteDBG(lldb::tid_t tid, int flavor,
                                         const DBG &dbg) {
-  return ::thread_set_state(tid, flavor, (thread_state_t)&dbg, DBGWordCount);
+  return ::thread_set_state(
+      tid, flavor, reinterpret_cast<thread_state_t>(const_cast<DBG *>(&dbg)),
+      DBGWordCount);
 }
 
 #endif

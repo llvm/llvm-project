@@ -39,7 +39,7 @@ class TestSwiftMultipayloadEnum(TestBase):
     def do_test(self):
         """Test that LLDB understands generic enums with more than one payload type"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

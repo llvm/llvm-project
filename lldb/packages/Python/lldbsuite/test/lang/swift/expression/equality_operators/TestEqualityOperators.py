@@ -15,6 +15,7 @@ Test that we resolve various shadowed equality operators properly
 import commands
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import no_match
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -32,47 +33,42 @@ class TestUnitTests(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
     @decorators.expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
     def test_equality_operators_fileprivate(self):
         """Test that we resolve expression operators correctly"""
-        self.buildAll()
+        self.build()
         self.do_test("Fooey.CompareEm1", "true", 1)
 
     @decorators.swiftTest
+    @decorators.skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
     @decorators.expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
     def test_equality_operators_private(self):
         """Test that we resolve expression operators correctly"""
-        self.buildAll()
+        self.build()
         self.do_test("Fooey.CompareEm2", "false", 2)
 
     @decorators.swiftTest
+    @decorators.skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
     @decorators.expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
     def test_equality_operators_other_module(self):
         """Test that we resolve expression operators correctly"""
-        self.buildAll()
+        self.build()
         self.do_test("Fooey.CompareEm3", "false", 3)
 
     def setUp(self):
         TestBase.setUp(self)
 
-    def buildAll(self):
-        execute_command("make everything")
-
     def do_test(self, bkpt_name, compare_value, counter_value):
         """Test that we resolve expression operators correctly"""
         exe_name = "three"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        def cleanup():
-            execute_command("make cleanup")
-
-        self.addTearDownHook(cleanup)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

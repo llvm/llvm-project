@@ -13,7 +13,7 @@ class CPPBoolTestCase(TestBase):
     def test_with_run_command(self):
         """Test that bool types work in the expression parser"""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         line = line_number('main.cpp', '// breakpoint 1')
         lldbutil.run_break_set_by_file_and_line(

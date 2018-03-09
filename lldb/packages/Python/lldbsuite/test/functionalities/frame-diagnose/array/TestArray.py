@@ -14,12 +14,14 @@ from lldbsuite.test import lldbutil
 class TestArray(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
+    def setUp(self):
+        TestBase.setUp(self)
+
     @skipUnlessDarwin
     @skipIfDarwinEmbedded  # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64
     def test_array(self):
-        TestBase.setUp(self)
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("thread list", "Thread should be stopped",

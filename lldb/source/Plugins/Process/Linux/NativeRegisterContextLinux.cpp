@@ -14,27 +14,19 @@
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Host/linux/Ptrace.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
 NativeRegisterContextLinux::NativeRegisterContextLinux(
-    NativeThreadProtocol &native_thread, uint32_t concrete_frame_idx,
+    NativeThreadProtocol &native_thread,
     RegisterInfoInterface *reg_info_interface_p)
-    : NativeRegisterContextRegisterInfo(native_thread, concrete_frame_idx,
-                                        reg_info_interface_p) {}
+    : NativeRegisterContextRegisterInfo(native_thread, reg_info_interface_p) {}
 
 lldb::ByteOrder NativeRegisterContextLinux::GetByteOrder() const {
-  // Get the target process whose privileged thread was used for the register
-  // read.
-  lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
-
-  if (!m_thread.GetProcess().GetByteOrder(byte_order)) {
-    // FIXME log here
-  }
-
-  return byte_order;
+  return m_thread.GetProcess().GetByteOrder();
 }
 
 Status NativeRegisterContextLinux::ReadRegisterRaw(uint32_t reg_index,

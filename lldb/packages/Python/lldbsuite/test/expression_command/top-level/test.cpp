@@ -42,11 +42,11 @@ public:
             int i;
         } s = { 15 };
     
-        int as[4] = { 2, 3, 4, 5 };
+        int numbers[4] = { 2, 3, 4, 5 };
     
-        for (signed char a : as)
+        for (signed char number: numbers)
         {
-            s.i -= a;
+            s.i -= number;
         }
     
         return s.i;
@@ -94,14 +94,14 @@ public:
 
 int doTest()
 {
-    int a = m.memberResult();
-    a += MyClass::staticResult();
-    a += m.externResult();
-    a += MyEnum::myEnumThree;
-    a += myEnumOne;
-    a += AnotherClass().complicatedFunction();
-    a += DiamondD(3).accessor();
-    return a;
+    int accumulator = m.memberResult();
+    accumulator += MyClass::staticResult();
+    accumulator += m.externResult();
+    accumulator += MyEnum::myEnumThree;
+    accumulator += myEnumOne;
+    accumulator += AnotherClass().complicatedFunction();
+    accumulator += DiamondD(3).accessor();
+    return accumulator;
 }
 
 // --

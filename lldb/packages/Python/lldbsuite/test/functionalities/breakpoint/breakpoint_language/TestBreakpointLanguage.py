@@ -36,7 +36,7 @@ class TestBreakpointLanguage(TestBase):
 
         self.build()
         # Create a target by the debugger.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
         # Don't read in dependencies so we don't come across false matches that
         # add unwanted breakpoint hits.
@@ -77,7 +77,7 @@ class TestBreakpointLanguage(TestBase):
 
         self.build()
         # Create a target by the debugger.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
         # Don't read in dependencies so we don't come across false matches that
         # add unwanted breakpoint hits.

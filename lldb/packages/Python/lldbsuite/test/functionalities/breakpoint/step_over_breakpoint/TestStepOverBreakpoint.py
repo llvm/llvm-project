@@ -21,7 +21,7 @@ class StepOverBreakpointsTestCase(TestBase):
         TestBase.setUp(self)
        
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         src = lldb.SBFileSpec("main.cpp")
 
         # Create a target by the debugger.

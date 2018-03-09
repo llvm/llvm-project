@@ -31,7 +31,7 @@ class StdCXXDisassembleTestCase(TestBase):
     def test_stdcxx_disasm(self):
         """Do 'disassemble' on each and every 'Code' symbol entry from the std c++ lib."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # rdar://problem/8543077

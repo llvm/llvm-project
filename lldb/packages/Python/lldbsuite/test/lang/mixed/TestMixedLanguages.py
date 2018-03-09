@@ -17,7 +17,7 @@ class MixedLanguagesTestCase(TestBase):
     def test_language_of_frame(self):
         """Test that the language defaults to the language of the current frame."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Execute the cleanup function during test case tear down

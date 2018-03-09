@@ -529,16 +529,7 @@ public:
 
   ~IntrusiveSharingPtr() {
     release_shared();
-#if defined(LLDB_CONFIGURATION_DEBUG) || defined(LLDB_CONFIGURATION_RELEASE)
-    // NULL out the pointer in objects which can help with leaks detection.
-    // We don't enable this for LLDB_CONFIGURATION_BUILD_AND_INTEGRATION or
-    // when none of the LLDB_CONFIGURATION_XXX macros are defined since
-    // those would be builds for release. But for debug and release builds
-    // that are for development, we NULL out the pointers to catch potential
-    // issues.
     ptr_ = nullptr;
-#endif // #if defined (LLDB_CONFIGURATION_DEBUG) || defined
-       // (LLDB_CONFIGURATION_RELEASE)
   }
 
   T &operator*() const { return *ptr_; }

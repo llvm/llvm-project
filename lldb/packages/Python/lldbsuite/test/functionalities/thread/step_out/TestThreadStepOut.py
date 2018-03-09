@@ -125,7 +125,7 @@ class ThreadStepOutTestCase(TestBase):
 
     def step_out_test(self, step_out_func):
         """Test single thread step out of a function."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.

@@ -16,19 +16,17 @@ from lldbsuite.test import lldbutil
 
 class ExprDoesntDeadlockTestCase(TestBase):
 
-    def getCategories(self):
-        return ['basic_process']
-
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17946')
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="Windows doesn't have pthreads, test needs to be ported")
+    @add_test_categories(["basic_process"])
     def test_with_run_command(self):
         """Test that expr will time out and allow other threads to run if it blocks."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

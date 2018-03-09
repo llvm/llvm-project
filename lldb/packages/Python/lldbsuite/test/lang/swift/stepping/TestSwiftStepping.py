@@ -73,7 +73,7 @@ class TestSwiftStepping(lldbtest.TestBase):
     def do_test(self):
         """Tests that we can step reliably in swift code."""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

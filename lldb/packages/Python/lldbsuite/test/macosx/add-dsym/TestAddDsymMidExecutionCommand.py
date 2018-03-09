@@ -25,8 +25,8 @@ class AddDsymMidExecutionCommandCase(TestBase):
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     def test_add_dsym_mid_execution(self):
         """Test that add-dsym mid-execution loads the symbols at the right place for a slid binary."""
-        self.buildDsym(clean=True)
-        exe = os.path.join(os.getcwd(), "a.out")
+        self.buildDefault(clean=True, dictionary={'MAKE_DSYM':'YES'})
+        exe = self.getBuildArtifact("a.out")
 
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
@@ -43,7 +43,8 @@ class AddDsymMidExecutionCommandCase(TestBase):
         self.assertTrue(self.process.GetState() == lldb.eStateStopped,
                         STOPPED_DUE_TO_BREAKPOINT)
 
-        self.runCmd("add-dsym hide.app/Contents/a.out.dSYM")
+        self.runCmd("add-dsym " +
+                    self.getBuildArtifact("hide.app/Contents/a.out.dSYM"))
 
         self.expect("frame select",
                     substrs=['a.out`main at main.c'])

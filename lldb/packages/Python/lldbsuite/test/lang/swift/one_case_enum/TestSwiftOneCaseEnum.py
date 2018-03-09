@@ -39,7 +39,7 @@ class TestSwiftOneCaseEnum(TestBase):
     def do_test(self):
         """Test that an enum with only one case does not crash LLDB"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

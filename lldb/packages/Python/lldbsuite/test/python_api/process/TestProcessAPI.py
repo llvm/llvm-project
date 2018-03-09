@@ -29,7 +29,7 @@ class ProcessAPITestCase(TestBase):
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -127,7 +127,7 @@ class ProcessAPITestCase(TestBase):
     def test_write_memory(self):
         """Test Python SBProcess.WriteMemory() API."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -186,7 +186,7 @@ class ProcessAPITestCase(TestBase):
     def test_access_my_int(self):
         """Test access 'my_int' using Python SBProcess.GetByteOrder() and other APIs."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -284,7 +284,7 @@ class ProcessAPITestCase(TestBase):
     def test_remote_launch(self):
         """Test SBProcess.RemoteLaunch() API with a process not in eStateConnected, and it should fail."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -308,7 +308,7 @@ class ProcessAPITestCase(TestBase):
     def test_get_num_supported_hardware_watchpoints(self):
         """Test SBProcess.GetNumSupportedHardwareWatchpoints() API with a process."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         target = self.dbg.CreateTarget(exe)
@@ -325,3 +325,79 @@ class ProcessAPITestCase(TestBase):
         num = process.GetNumSupportedHardwareWatchpoints(error)
         if self.TraceOn() and error.Success():
             print("Number of supported hardware watchpoints: %d" % num)
+
+    @add_test_categories(['pyapi'])
+    @no_debug_info_test
+    def test_get_process_info(self):
+        """Test SBProcess::GetProcessInfo() API with a locally launched process."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Launch the process and stop at the entry point.
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        launch_flags = launch_info.GetLaunchFlags()
+        launch_flags |= lldb.eLaunchFlagStopAtEntry
+        launch_info.SetLaunchFlags(launch_flags)
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+
+        if not error.Success():
+            self.fail("Failed to launch process")
+
+        # Verify basic process info can be retrieved successfully
+        process_info = process.GetProcessInfo()
+        self.assertTrue(process_info.IsValid())
+        file_spec = process_info.GetExecutableFile()
+        self.assertTrue(file_spec.IsValid())
+        process_name = process_info.GetName()
+        self.assertIsNotNone(process_name, "Process has a name")
+        self.assertGreater(len(process_name), 0, "Process name isn't blank")
+        self.assertEqual(file_spec.GetFilename(), "a.out")
+        self.assertNotEqual(
+            process_info.GetProcessID(), lldb.LLDB_INVALID_PROCESS_ID,
+            "Process ID is valid")
+
+        # Additional process info varies by platform, so just check that
+        # whatever info was retrieved is consistent and nothing blows up.
+        if process_info.UserIDIsValid():
+            self.assertNotEqual(
+                process_info.GetUserID(), lldb.UINT32_MAX,
+                "Process user ID is valid")
+        else:
+            self.assertEqual(
+                process_info.GetUserID(), lldb.UINT32_MAX,
+                "Process user ID is invalid")
+
+        if process_info.GroupIDIsValid():
+            self.assertNotEqual(
+                process_info.GetGroupID(), lldb.UINT32_MAX,
+                "Process group ID is valid")
+        else:
+            self.assertEqual(
+                process_info.GetGroupID(), lldb.UINT32_MAX,
+                "Process group ID is invalid")
+
+        if process_info.EffectiveUserIDIsValid():
+            self.assertNotEqual(
+                process_info.GetEffectiveUserID(), lldb.UINT32_MAX,
+                "Process effective user ID is valid")
+        else:
+            self.assertEqual(
+                process_info.GetEffectiveUserID(), lldb.UINT32_MAX,
+                "Process effective user ID is invalid")
+
+        if process_info.EffectiveGroupIDIsValid():
+            self.assertNotEqual(
+                process_info.GetEffectiveGroupID(), lldb.UINT32_MAX,
+                "Process effective group ID is valid")
+        else:
+            self.assertEqual(
+                process_info.GetEffectiveGroupID(), lldb.UINT32_MAX,
+                "Process effective group ID is invalid")
+
+        process_info.GetParentProcessID()
