@@ -13,7 +13,6 @@
 #include <cassert>
 #include <unordered_map>
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -24,7 +23,8 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -32,6 +32,7 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -405,8 +406,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                           lldb::offset_t file_offset,
                                           lldb::offset_t length) {
   if (!data_sp) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -423,8 +423,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -452,7 +451,7 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
     if (ELFHeader::MagicBytesMatch(magic)) {
       unsigned address_size = ELFHeader::AddressSizeInBytes(magic);
       if (address_size == 4 || address_size == 8) {
-        std::auto_ptr<ObjectFileELF> objfile_ap(
+        std::unique_ptr<ObjectFileELF> objfile_ap(
             new ObjectFileELF(module_sp, data_sp, process_sp, header_addr));
         ArchSpec spec;
         if (objfile_ap->GetArchitecture(spec) &&
@@ -683,8 +682,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           size_t section_header_end = header.e_shoff + header.e_shentsize;
           if (header.HasHeaderExtension() &&
             section_header_end > data_sp->GetByteSize()) {
-            data_sp = DataBufferLLVM::CreateSliceFromPath(
-                file.GetPath(), section_header_end, file_offset);
+            data_sp = MapFileData(file, section_header_end, file_offset);
             if (data_sp) {
               data.SetData(data_sp);
               lldb::offset_t header_offset = data_offset;
@@ -697,8 +695,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           section_header_end =
               header.e_shoff + header.e_shnum * header.e_shentsize;
           if (section_header_end > data_sp->GetByteSize()) {
-            data_sp = DataBufferLLVM::CreateSliceFromPath(
-                file.GetPath(), section_header_end, file_offset);
+            data_sp = MapFileData(file, section_header_end, file_offset);
             if (data_sp)
               data.SetData(data_sp);
           }
@@ -740,8 +737,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                 size_t program_headers_end =
                     header.e_phoff + header.e_phnum * header.e_phentsize;
                 if (program_headers_end > data_sp->GetByteSize()) {
-                  data_sp = DataBufferLLVM::CreateSliceFromPath(
-                      file.GetPath(), program_headers_end, file_offset);
+                  data_sp = MapFileData(file, program_headers_end, file_offset);
                   if (data_sp)
                     data.SetData(data_sp);
                 }
@@ -756,8 +752,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                 }
 
                 if (segment_data_end > data_sp->GetByteSize()) {
-                  data_sp = DataBufferLLVM::CreateSliceFromPath(
-                      file.GetPath(), segment_data_end, file_offset);
+                  data_sp = MapFileData(file, segment_data_end, file_offset);
                   if (data_sp)
                     data.SetData(data_sp);
                 }
@@ -766,8 +761,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                     CalculateELFNotesSegmentsCRC32(program_headers, data);
               } else {
                 // Need to map entire file into memory to calculate the crc.
-                data_sp = DataBufferLLVM::CreateSliceFromPath(file.GetPath(), -1,
-                                                         file_offset);
+                data_sp = MapFileData(file, -1, file_offset);
                 if (data_sp) {
                   data.SetData(data_sp);
                   gnu_debuglink_crc = calc_gnu_debuglink_crc32(
@@ -1819,6 +1813,12 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (!m_sections_ap.get() && ParseSectionHeaders()) {
     m_sections_ap.reset(new SectionList());
 
+    // Object files frequently have 0 for every section address, meaning we
+    // need to compute synthetic addresses in order for "file addresses" from
+    // different sections to not overlap
+    bool synthaddrs = (CalculateType() == ObjectFile::Type::eTypeObjectFile);
+    uint64_t nextaddr = 0;
+
     for (SectionHeaderCollIter I = m_section_headers.begin();
          I != m_section_headers.end(); ++I) {
       const ELFSectionHeaderInfo &header = *I;
@@ -1836,6 +1836,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
       static ConstString g_sect_name_dwarf_debug_addr(".debug_addr");
       static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
+      static ConstString g_sect_name_dwarf_debug_cu_index(".debug_cu_index");
       static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
       static ConstString g_sect_name_dwarf_debug_info(".debug_info");
       static ConstString g_sect_name_dwarf_debug_line(".debug_line");
@@ -1906,6 +1907,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeDWARFDebugAddr;
       else if (name == g_sect_name_dwarf_debug_aranges)
         sect_type = eSectionTypeDWARFDebugAranges;
+      else if (name == g_sect_name_dwarf_debug_cu_index)
+        sect_type = eSectionTypeDWARFDebugCuIndex;
       else if (name == g_sect_name_dwarf_debug_frame)
         sect_type = eSectionTypeDWARFDebugFrame;
       else if (name == g_sect_name_dwarf_debug_info)
@@ -1991,9 +1994,18 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
               ? m_arch_spec.GetDataByteSize()
               : eSectionTypeCode == sect_type ? m_arch_spec.GetCodeByteSize()
                                               : 1;
-
       elf::elf_xword log2align =
           (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
+
+      uint64_t addr = header.sh_addr;
+
+      if ((header.sh_flags & SHF_ALLOC) && synthaddrs) {
+          nextaddr =
+              (nextaddr + header.sh_addralign - 1) & ~(header.sh_addralign - 1);
+          addr = nextaddr;
+          nextaddr += vm_size;
+      }
+
       SectionSP section_sp(new Section(
           GetModule(), // Module to which this section belongs.
           this, // ObjectFile to which this section belongs and should read
@@ -2001,7 +2013,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           SectionIndex(I),     // Section ID.
           name,                // Section name.
           sect_type,           // Section type.
-          header.sh_addr,      // VM address.
+          addr,                // VM address.
           vm_size,             // VM size in bytes of this section.
           header.sh_offset,    // Offset of this section in the file.
           file_size,           // Size of the section as found in the file.
@@ -2019,13 +2031,14 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_ap.get()) {
     if (GetType() == eTypeDebugInfo) {
       static const SectionType g_sections[] = {
-          eSectionTypeDWARFDebugAbbrev,     eSectionTypeDWARFDebugAddr,
-          eSectionTypeDWARFDebugAranges,    eSectionTypeDWARFDebugFrame,
-          eSectionTypeDWARFDebugInfo,       eSectionTypeDWARFDebugLine,
-          eSectionTypeDWARFDebugLoc,        eSectionTypeDWARFDebugMacInfo,
-          eSectionTypeDWARFDebugPubNames,   eSectionTypeDWARFDebugPubTypes,
-          eSectionTypeDWARFDebugRanges,     eSectionTypeDWARFDebugStr,
-          eSectionTypeDWARFDebugStrOffsets, eSectionTypeELFSymbolTable,
+          eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAddr,
+          eSectionTypeDWARFDebugAranges,  eSectionTypeDWARFDebugCuIndex,
+          eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
+          eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
+          eSectionTypeDWARFDebugMacInfo,  eSectionTypeDWARFDebugPubNames,
+          eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
+          eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugStrOffsets,
+          eSectionTypeELFSymbolTable,
       };
       SectionList *elf_section_list = m_sections_ap.get();
       for (size_t idx = 0; idx < sizeof(g_sections) / sizeof(g_sections[0]);
@@ -2725,7 +2738,7 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table, user_id_t start_id,
                              rel_data, symtab_data, strtab_data);
 }
 
-unsigned ObjectFileELF::RelocateSection(
+unsigned ObjectFileELF::ApplyRelocations(
     Symtab *symtab, const ELFHeader *hdr, const ELFSectionHeader *rel_hdr,
     const ELFSectionHeader *symtab_hdr, const ELFSectionHeader *debug_hdr,
     DataExtractor &rel_data, DataExtractor &symtab_data,
@@ -2756,6 +2769,14 @@ unsigned ObjectFileELF::RelocateSection(
       case R_386_32:
       case R_386_PC32:
       default:
+        // FIXME: This asserts with this input:
+        //
+        // foo.cpp
+        // int main(int argc, char **argv) { return 0; }
+        //
+        // clang++.exe --target=i686-unknown-linux-gnu -g -c foo.cpp -o foo.o
+        //
+        // and running this on the foo.o module.
         assert(false && "unexpected relocation type");
       }
     } else {
@@ -2802,7 +2823,8 @@ unsigned ObjectFileELF::RelocateSection(
 }
 
 unsigned ObjectFileELF::RelocateDebugSections(const ELFSectionHeader *rel_hdr,
-                                              user_id_t rel_id) {
+                                              user_id_t rel_id,
+                                              lldb_private::Symtab *thetab) {
   assert(rel_hdr->sh_type == SHT_RELA || rel_hdr->sh_type == SHT_REL);
 
   // Parse in the section list if needed.
@@ -2838,10 +2860,11 @@ unsigned ObjectFileELF::RelocateDebugSections(const ELFSectionHeader *rel_hdr,
   DataExtractor symtab_data;
   DataExtractor debug_data;
 
-  if (ReadSectionData(rel, rel_data) && ReadSectionData(symtab, symtab_data) &&
-      ReadSectionData(debug, debug_data)) {
-    RelocateSection(m_symtab_ap.get(), &m_header, rel_hdr, symtab_hdr,
-                    debug_hdr, rel_data, symtab_data, debug_data, debug);
+  if (GetData(rel->GetFileOffset(), rel->GetFileSize(), rel_data) &&
+      GetData(symtab->GetFileOffset(), symtab->GetFileSize(), symtab_data) &&
+      GetData(debug->GetFileOffset(), debug->GetFileSize(), debug_data)) {
+    ApplyRelocations(thetab, &m_header, rel_hdr, symtab_hdr, debug_hdr,
+                     rel_data, symtab_data, debug_data, debug);
   }
 
   return 0;
@@ -2935,21 +2958,48 @@ Symtab *ObjectFileELF::GetSymtab() {
     m_symtab_ap->CalculateSymbolSizes();
   }
 
+  return m_symtab_ap.get();
+}
+
+void ObjectFileELF::RelocateSection(lldb_private::Section *section)
+{
+  static const char *debug_prefix = ".debug";
+
+  // Set relocated bit so we stop getting called, regardless of
+  // whether we actually relocate.
+  section->SetIsRelocated(true);
+
+  // We only relocate in ELF relocatable files
+  if (CalculateType() != eTypeObjectFile)
+    return;
+
+  const char *section_name = section->GetName().GetCString();
+  // Can't relocate that which can't be named
+  if (section_name == nullptr)
+    return;
+
+  // We don't relocate non-debug sections at the moment
+  if (strncmp(section_name, debug_prefix, strlen(debug_prefix)))
+    return;
+
+  // Relocation section names to look for
+  std::string needle = std::string(".rel") + section_name;
+  std::string needlea = std::string(".rela") + section_name;
+
   for (SectionHeaderCollIter I = m_section_headers.begin();
        I != m_section_headers.end(); ++I) {
     if (I->sh_type == SHT_RELA || I->sh_type == SHT_REL) {
-      if (CalculateType() == eTypeObjectFile) {
-        const char *section_name = I->section_name.AsCString("");
-        if (strstr(section_name, ".rela.debug") ||
-            strstr(section_name, ".rel.debug")) {
-          const ELFSectionHeader &reloc_header = *I;
-          user_id_t reloc_id = SectionIndex(I);
-          RelocateDebugSections(&reloc_header, reloc_id);
-        }
+      const char *hay_name = I->section_name.GetCString();
+      if (hay_name == nullptr)
+        continue;
+      if (needle == hay_name || needlea == hay_name) {
+        const ELFSectionHeader &reloc_header = *I;
+        user_id_t reloc_id = SectionIndex(I);
+        RelocateDebugSections(&reloc_header, reloc_id, GetSymtab());
+        break;
       }
     }
   }
-  return m_symtab_ap.get();
 }
 
 void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
@@ -3414,4 +3464,57 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
     break;
   }
   return eStrataUnknown;
+}
+
+size_t ObjectFileELF::ReadSectionData(Section *section,
+                       lldb::offset_t section_offset, void *dst,
+                       size_t dst_len) {
+  // If some other objectfile owns this data, pass this to them.
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_offset,
+                                                     dst, dst_len);
+
+  if (!section->Test(SHF_COMPRESSED))
+    return ObjectFile::ReadSectionData(section, section_offset, dst, dst_len);
+
+  // For compressed sections we need to read to full data to be able to
+  // decompress.
+  DataExtractor data;
+  ReadSectionData(section, data);
+  return data.CopyData(section_offset, dst_len, dst);
+}
+
+size_t ObjectFileELF::ReadSectionData(Section *section,
+                                      DataExtractor &section_data) {
+  // If some other objectfile owns this data, pass this to them.
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_data);
+
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+
+  size_t result = ObjectFile::ReadSectionData(section, section_data);
+  if (result == 0 || !section->Test(SHF_COMPRESSED))
+    return result;
+
+  auto Decompressor = llvm::object::Decompressor::create(
+      section->GetName().GetStringRef(),
+      {reinterpret_cast<const char *>(section_data.GetDataStart()),
+       size_t(section_data.GetByteSize())},
+      GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
+  if (!Decompressor) {
+    LLDB_LOG(log, "Unable to initialize decompressor for section {0}: {1}",
+             section->GetName(), llvm::toString(Decompressor.takeError()));
+    return result;
+  }
+  auto buffer_sp =
+      std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
+  if (auto Error = Decompressor->decompress(
+          {reinterpret_cast<char *>(buffer_sp->GetBytes()),
+           size_t(buffer_sp->GetByteSize())})) {
+    LLDB_LOG(log, "Decompression of section {0} failed: {1}",
+             section->GetName(), llvm::toString(std::move(Error)));
+    return result;
+  }
+  section_data.SetData(buffer_sp);
+  return buffer_sp->GetByteSize();
 }

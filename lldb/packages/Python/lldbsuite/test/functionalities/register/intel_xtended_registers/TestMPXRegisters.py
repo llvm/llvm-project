@@ -35,7 +35,7 @@ class RegisterCommandsTestCase(TestBase):
         """Test Intel(R) MPX registers after running example code."""
         self.line = line_number('main.cpp', '// Set a break point here.')
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(self, "main.cpp", self.line, num_expected_locations=1)

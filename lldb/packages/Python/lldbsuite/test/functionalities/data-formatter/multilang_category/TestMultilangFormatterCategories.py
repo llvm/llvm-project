@@ -28,7 +28,7 @@ class TestMultilangFormatterCategories(TestBase):
     def do_test(self):
         """Test that formatter categories can work for multiple languages"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

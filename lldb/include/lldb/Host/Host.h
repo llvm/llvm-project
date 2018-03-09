@@ -48,6 +48,12 @@ struct WaitStatus {
   static WaitStatus Decode(int wstatus);
 };
 
+inline bool operator==(WaitStatus a, WaitStatus b) {
+  return a.type == b.type && a.status == b.status;
+}
+
+inline bool operator!=(WaitStatus a, WaitStatus b) { return !(a == b); }
+
 //----------------------------------------------------------------------
 /// @class Host Host.h "lldb/Host/Host.h"
 /// @brief A class that provides host computer information.

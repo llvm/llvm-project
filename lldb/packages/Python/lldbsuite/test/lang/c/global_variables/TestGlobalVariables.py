@@ -27,7 +27,7 @@ class GlobalVariablesTestCase(TestBase):
         self.build()
 
         # Create a target by the debugger.
-        target = self.dbg.CreateTarget("a.out")
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
         # Break inside the main.

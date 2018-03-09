@@ -20,7 +20,7 @@ class ThreadJumpTestCase(TestBase):
     def test(self):
         """Test thread jump handling."""
         self.build(dictionary=self.getBuildFlags())
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Find the line numbers for our breakpoints.

@@ -37,8 +37,9 @@ class BundleWithDotInFilenameTestCase(TestBase):
 
     def test_attach_and_check_dsyms(self):
         """Test attach to binary, see if the bundle dSYM is found"""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
         self.build()
+        os.chdir(self.getBuildDir());
         popen = self.spawnSubprocess(exe)
         self.addTearDownHook(self.cleanupSubprocesses)
 
@@ -66,6 +67,7 @@ class BundleWithDotInFilenameTestCase(TestBase):
                 dsym_name = mod.GetSymbolFileSpec().GetFilename()
                 self.assertTrue (dsym_name == 'com.apple.sbd', "Check that we found the dSYM for the bundle that was loaded")
             i=i+1
+        os.chdir(self.getSourceDir());
 
 if __name__ == '__main__':
     unittest.main()

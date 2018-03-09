@@ -26,7 +26,7 @@ class AproposWithProcessTestCase(TestBase):
     def test_apropos_with_process(self):
         """Test that apropos env doesn't crash trying to touch the process plugin commmand."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break in main() aftre the variables are assigned values.

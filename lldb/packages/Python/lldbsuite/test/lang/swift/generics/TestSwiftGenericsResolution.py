@@ -34,7 +34,7 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     def genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_source_regexp(self, "//Break here")
 
         self.runCmd("run", RUN_SUCCEEDED)

@@ -12,7 +12,19 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
+def execute_command(command):
+    #print('%% %s' % (command))
+    (exit_status, output) = seven.get_command_status_output(command)
+    # if output:
+    #    print(output)
+    #print('status = %u' % (exit_status))
+    return exit_status
+
+
 class ExecTestCase(TestBase):
+
+    NO_DEBUG_INFO_TESTCASE = True
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -29,22 +41,22 @@ class ExecTestCase(TestBase):
         self.do_test(False)
 
     def do_test(self, skip_exec):
+        self.makeBuildDir()
+        exe = self.getBuildArtifact("a.out")
         if self.getArchitecture() == 'x86_64':
-            source = os.path.join(os.getcwd(), "main.cpp")
-            o_file = os.path.join(os.getcwd(), "main.o")
-            lldbutil.execute_command(
+            source = self.getSourcePath("main.cpp")
+            o_file = self.getBuildArtifact("main.o")
+            execute_command(
                 "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -c -o '%s'" %
                 (os.environ["CC"], source, o_file))
-            lldbutil.execute_command(
-                "'%s' -g -O0 -arch i386 -arch x86_64 '%s'" %
-                (os.environ["CC"], o_file))
-            if self.debug_info != "dsym":
-                dsym_path = os.path.join(os.getcwd(), "a.out.dSYM")
-                lldbutil.execute_command("rm -rf '%s'" % (dsym_path))
+            execute_command(
+                "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -o '%s'" %
+                (os.environ["CC"], o_file, exe))
+            if self.getDebugInfo() != "dsym":
+                dsym_path = self.getBuildArtifact("a.out.dSYM")
+                execute_command("rm -rf '%s'" % (dsym_path))
         else:
             self.build()
-            
-        exe = os.path.join(os.getcwd(), "a.out")
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -61,7 +73,6 @@ class ExecTestCase(TestBase):
 
         if skip_exec:
             self.dbg.HandleCommand("settings set target.process.stop-on-exec false")
-
             def cleanup():
                 self.runCmd("settings set target.process.stop-on-exec false",
                             check=False)

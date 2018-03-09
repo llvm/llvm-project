@@ -24,7 +24,7 @@ class MultipleHitsTestCase(TestBase):
     @skipIf(bugnumber="llvm.org/pr30758", oslist=["linux"], archs=["arm", "aarch64"])
     def test(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target and target.IsValid(), VALID_TARGET)
 

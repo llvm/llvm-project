@@ -28,10 +28,12 @@ class SBFormattersAPITestCase(TestBase):
         self.setTearDownCleanup()
 
         """Test Python APIs for working with formatters"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+            self, "main.cpp", self.line, num_expected_locations=1,
+            loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -439,7 +441,8 @@ class SBFormattersAPITestCase(TestBase):
         self.build(dictionary={'EXE': 'no_synth'})
         self.setTearDownCleanup()
 
-        self.runCmd("file no_synth", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("no_synth"),
+                    CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)

@@ -85,7 +85,6 @@ void PathMappingList::Insert(const ConstString &path,
 bool PathMappingList::Replace(const ConstString &path,
                               const ConstString &replacement, uint32_t index,
                               bool notify) {
-  iterator insert_iter;
   if (index >= m_pairs.size())
     return false;
   ++m_mod_id;

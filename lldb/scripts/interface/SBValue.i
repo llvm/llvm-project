@@ -16,15 +16,15 @@ SBValue supports iteration through its child, which in turn is represented
 as an SBValue.  For example, we can get the general purpose registers of a
 frame as an SBValue, and iterate through all the registers,
 
-    registerSet = frame.GetRegisters() # Returns an SBValueList.
+    registerSet = frame.registers # Returns an SBValueList.
     for regs in registerSet:
-        if 'general purpose registers' in regs.getName().lower():
+        if 'general purpose registers' in regs.name.lower():
             GPRs = regs
             break
 
-    print('%s (number of children = %d):' % (GPRs.GetName(), GPRs.GetNumChildren()))
+    print('%s (number of children = %d):' % (GPRs.name, GPRs.num_children))
     for reg in GPRs:
-        print('Name: ', reg.GetName(), ' Value: ', reg.GetValue())
+        print('Name: ', reg.name, ' Value: ', reg.value)
 
 produces the output:
 

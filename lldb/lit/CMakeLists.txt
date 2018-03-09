@@ -11,6 +11,10 @@ else()
   set(ENABLE_SHARED 0)
 endif(BUILD_SHARED_LIBS)
 
+# the value is not canonicalized within LLVM
+llvm_canonicalize_cmake_booleans(
+  LLVM_ENABLE_ZLIB)
+
 option(LLDB_TEST_CLANG "Use in-tree clang when testing lldb" Off)
 option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" Off)
 set(LLDB_TEST_C_COMPILER "" CACHE STRING "C compiler to use when testing LLDB")
@@ -31,10 +35,11 @@ configure_lit_site_cfg(
 set(LLDB_TEST_DEPS
   LLDBUnitTests
   lldb
+  lldb-test
   )
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS FileCheck not)
+  list(APPEND LLDB_TEST_DEPS FileCheck not yaml2obj)
 endif()
   
 # lldb-server is not built on every platform.
@@ -46,10 +51,7 @@ if(APPLE)
   list(APPEND LLDB_TEST_DEPS debugserver)
 endif()
 
-if(LLDB_TEST_CLANG)
-  if(LLDB_TEST_C_COMPILER OR LLDB_TEST_CXX_COMPILER)
-    message(SEND_ERROR "Cannot override LLDB_TEST_<LANG>_COMPILER and set LLDB_TEST_CLANG.")
-  endif()
+if(TARGET clang)
   list(APPEND LLDB_TEST_DEPS clang)
 endif()
 
@@ -66,6 +68,12 @@ add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
   )
 
 set_target_properties(check-lldb-lit PROPERTIES FOLDER "LLDB tests")
+
+# If we're building with an in-tree clang, then list clang as a dependency
+# to run tests.
+if (TARGET clang)
+  add_dependencies(check-lldb-lit clang)
+endif()
 
 add_lit_testsuites(LLDB ${CMAKE_CURRENT_SOURCE_DIR}
   ${LIT_ARGS}

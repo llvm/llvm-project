@@ -23,8 +23,7 @@ class NativeProcessLinux;
 class NativeRegisterContextLinux_arm : public NativeRegisterContextLinux {
 public:
   NativeRegisterContextLinux_arm(const ArchSpec &target_arch,
-                                 NativeThreadProtocol &native_thread,
-                                 uint32_t concrete_frame_idx);
+                                 NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 

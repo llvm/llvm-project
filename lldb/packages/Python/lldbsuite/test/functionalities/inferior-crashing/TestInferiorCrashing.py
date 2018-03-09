@@ -17,9 +17,6 @@ class CrashingInferiorTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber="llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
-    @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     def test_inferior_crashing(self):
@@ -60,7 +57,6 @@ class CrashingInferiorTestCase(TestBase):
         self.build()
         self.inferior_crashing_step()
 
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr24939')
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
@@ -76,6 +72,7 @@ class CrashingInferiorTestCase(TestBase):
     # Inferior exits after stepping after a segfault. This is working as
     # intended IMHO.
     @skipIfLinux
+    @skipIfFreeBSD
     def test_inferior_crashing_expr_step_and_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""
         self.build()
@@ -103,14 +100,14 @@ class CrashingInferiorTestCase(TestBase):
 
     def inferior_crashing(self):
         """Inferior crashes upon launching; lldb should catch the event and stop."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
         # The exact stop reason depends on the platform
         if self.platformIsDarwin():
             stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        elif self.getPlatform() == "linux":
+        elif self.getPlatform() == "linux" or self.getPlatform() == "freebsd":
             stop_reason = 'stop reason = signal SIGSEGV'
         else:
             stop_reason = 'stop reason = invalid address'
@@ -125,7 +122,7 @@ class CrashingInferiorTestCase(TestBase):
 
     def inferior_crashing_python(self):
         """Inferior crashes upon launching; lldb should catch the event and stop."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -151,7 +148,7 @@ class CrashingInferiorTestCase(TestBase):
 
     def inferior_crashing_registers(self):
         """Test that lldb can read registers after crashing."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
@@ -163,7 +160,7 @@ class CrashingInferiorTestCase(TestBase):
 
     def inferior_crashing_expr(self):
         """Test that the lldb expression interpreter can read symbols after crashing."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
@@ -179,7 +176,7 @@ class CrashingInferiorTestCase(TestBase):
 
     def inferior_crashing_step(self):
         """Test that lldb functions correctly after stepping through a crash."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.set_breakpoint(self.line)
@@ -209,7 +206,7 @@ class CrashingInferiorTestCase(TestBase):
 
     def inferior_crashing_step_after_break(self):
         """Test that lldb behaves correctly when stepping after a crash."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
@@ -234,7 +231,7 @@ class CrashingInferiorTestCase(TestBase):
 
     def inferior_crashing_expr_step_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)

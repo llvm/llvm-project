@@ -39,7 +39,7 @@ class ExpressionEvaluationCase(BenchBase):
 
     def run_lldb_repeated_exprs(self, exe_name, count):
         import pexpect
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Set self.child_prompt, which is "(lldb) ".
         self.child_prompt = '(lldb) '

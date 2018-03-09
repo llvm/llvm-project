@@ -28,7 +28,7 @@ class MemoryCacheTestCase(TestBase):
     def test_memory_cache(self):
         """Test the MemoryCache class with a sequence of 'memory read' and 'memory write' operations."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break in main() after the variables are assigned values.

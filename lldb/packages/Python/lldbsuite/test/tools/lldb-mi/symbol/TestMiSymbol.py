@@ -92,7 +92,7 @@ class MiSymbolTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that -symbol-list-lines works when file is specified using
         # absolute path
         import os
-        path = os.path.join(os.getcwd(), "main.cpp")
+        path = os.path.join(self.getSourceDir(), "main.cpp")
         self.runCmd("-symbol-list-lines \"%s\"" % path)
         self.expect(
             "\^done,lines=\[\{pc=\"0x0*%x\",line=\"%d\"\}(,\{pc=\"0x[0-9a-f]+\",line=\"\d+\"\})+\]" %

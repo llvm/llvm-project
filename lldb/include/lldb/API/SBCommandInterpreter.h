@@ -165,6 +165,8 @@ public:
                        int match_start_point, int max_return_elements,
                        lldb::SBStringList &matches);
 
+  bool WasInterrupted() const;
+
   // Catch commands before they execute by registering a callback that will
   // get called when the command gets executed. This allows GUI or command
   // line interfaces to intercept a command and stop it from happening

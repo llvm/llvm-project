@@ -20,7 +20,7 @@ class DebugBreakTestCase(TestBase):
     def test_asm_int_3(self):
         """Test that intrinsics like `__debugbreak();` and `asm {"int3"}` are treated like breakpoints."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Run the program.
         target = self.dbg.CreateTarget(exe)

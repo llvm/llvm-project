@@ -339,7 +339,7 @@ XMLNode XMLNode::FindFirstChildElementWithName(const char *name) const {
 
 #if defined(LIBXML2_DEFINED)
   ForEachChildElementWithName(
-      name, [&result_node, name](const XMLNode &node) -> bool {
+      name, [&result_node](const XMLNode &node) -> bool {
         result_node = node;
         // Stop iterating, we found the node we wanted
         return false;

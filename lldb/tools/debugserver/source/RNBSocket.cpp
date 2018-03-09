@@ -373,9 +373,10 @@ rnb_err_t RNBSocket::Write(const void *buffer, size_t length) {
 
   DNBLogThreadedIf(
       LOG_RNB_PACKETS, "putpkt: %*s", (int)length,
-      (char *)
+      (const char *)
           buffer); // All data is string based in debugserver, so this is safe
-  DNBLogThreadedIf(LOG_RNB_COMM, "sent: %*s", (int)length, (char *)buffer);
+  DNBLogThreadedIf(LOG_RNB_COMM, "sent: %*s", (int)length,
+                   (const char *)buffer);
 
   return rnb_success;
 }

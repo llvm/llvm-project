@@ -45,7 +45,7 @@ class StopHookMechanismTestCase(TestBase):
         self.build()
 
         import pexpect
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         prompt = "(lldb) "
         add_prompt = "Enter your stop hook command(s).  Type 'DONE' to end."
         add_prompt1 = "> "

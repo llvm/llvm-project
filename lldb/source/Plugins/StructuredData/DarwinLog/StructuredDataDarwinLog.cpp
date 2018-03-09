@@ -857,36 +857,6 @@ protected:
         *static_cast<StructuredDataDarwinLog *>(plugin_sp.get());
 
     if (m_enable) {
-// To do this next part right, we need to track whether we
-// added the proper environment variable at launch time.
-// It is incorrect to assume that we're enabling after launch,
-// and that therefore if we needed the env var set to properly
-// handle the options, that it is set incorrectly.  The env var
-// could have been added if this is a re-enable using different
-// arguments.  This is a bit tricky as the point where we
-// have to set the env var, we don't yet have a process or the
-// associated darwin-log plugin instance, and thus don't have a
-// great place to stick this knowledge.
-#if 0
-                // Check if we're attempting to disable debug-level or
-                // info-level content but we haven't launched with the magic
-                // env var that suppresses the "always add" of those.  In
-                // that scenario, the user is asking *not* to see debug or
-                // info level messages, but will see them anyway.  Warn and
-                // show how to correct it.
-                if (!m_options_sp->GetIncludeDebugLevel() &&
-                    !GetGlobalProperties()->GetUseStrictSources())
-                {
-                    AppendStrictSourcesWarning(result, "debug-level");
-                }
-
-                if (!m_options_sp->GetIncludeInfoLevel() &&
-                    !GetGlobalProperties()->GetUseStrictSources())
-                {
-                    AppendStrictSourcesWarning(result, "info-level");
-                }
-#endif
-
       // Hook up the breakpoint for the process that detects when
       // libtrace has been sufficiently initialized to really start
       // the os_log stream.  This is insurance to assure us that
@@ -1823,34 +1793,10 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
       if (header_count > 0)
         stream.PutChar(',');
 
-// Switch over to the #if 0 branch once we figure out
-// how we want to present settings for the tri-state of
-// no-activity, activity (most derived only), or activity-chain.
-#if 1
       // Display the activity chain, from parent-most to child-most
       // activity, separated by a colon (:).
       stream.PutCString("activity-chain=");
       stream.PutCString(activity_chain);
-#else
-      if (GetGlobalProperties()->GetDisplayActivityChain()) {
-        // Display the activity chain, from parent-most to child-most
-        // activity, separated by a colon (:).
-        stream.PutCString("activity-chain=");
-        stream.PutCString(activity_chain.c_str());
-      } else {
-        // We're only displaying the child-most activity.
-        stream.PutCString("activity=");
-        auto pos = activity_chain.find_last_of(':');
-        if (pos == std::string::npos) {
-          // The activity chain only has one level, use the whole
-          // thing.
-          stream.PutCString(activity_chain.c_str());
-        } else {
-          // Display everything after the final ':'.
-          stream.PutCString(activity_chain.substr(pos + 1).c_str());
-        }
-      }
-#endif
       ++header_count;
     }
   }

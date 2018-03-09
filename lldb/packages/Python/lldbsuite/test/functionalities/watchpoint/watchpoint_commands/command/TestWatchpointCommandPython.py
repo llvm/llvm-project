@@ -37,8 +37,6 @@ class WatchpointPythonCommandTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
@@ -48,7 +46,7 @@ class WatchpointPythonCommandTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
@@ -109,8 +107,6 @@ class WatchpointPythonCommandTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
@@ -120,7 +116,7 @@ class WatchpointPythonCommandTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
@@ -148,7 +144,8 @@ class WatchpointPythonCommandTestCase(TestBase):
                 (self.source,
                  self.decl)])
 
-        cmd_script_file = os.path.join(os.getcwd(), "watchpoint_command.py")
+        cmd_script_file = os.path.join(self.getSourceDir(),
+                                       "watchpoint_command.py")
         self.runCmd("command script import '%s'" % (cmd_script_file))
 
         self.runCmd(

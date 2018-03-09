@@ -13,11 +13,10 @@ CXXFLAGS += -fPIC
 
 include $(LEVEL)/Makefile.rules
 
-.PHONY:
 $(DYLIB_FILENAME): lib_b
 
-lib_b:
-	"$(MAKE)" -f b.mk
+.PHONY lib_b:
+	$(MAKE) VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/b.mk
 
 clean::
-	"$(MAKE)" -f b.mk clean
+	$(MAKE) -I $(SRCDIR) -f $(SRCDIR)/b.mk clean

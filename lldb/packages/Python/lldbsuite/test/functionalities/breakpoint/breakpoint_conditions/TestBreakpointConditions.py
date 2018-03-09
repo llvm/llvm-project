@@ -59,7 +59,7 @@ class BreakpointConditionsTestCase(TestBase):
 
     def breakpoint_conditions(self, inline=False):
         """Exercise breakpoint condition with 'breakpoint modify -c <expr> id'."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         if inline:
@@ -132,7 +132,7 @@ class BreakpointConditionsTestCase(TestBase):
 
     def breakpoint_conditions_python(self):
         """Use Python APIs to set breakpoint conditions."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -200,7 +200,7 @@ class BreakpointConditionsTestCase(TestBase):
 
     def breakpoint_invalid_conditions_python(self):
         """Use Python APIs to set breakpoint conditions."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

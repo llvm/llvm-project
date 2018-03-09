@@ -27,7 +27,7 @@ class BitfieldsTestCase(TestBase):
     def test_and_run_command(self):
         """Test 'frame variable ...' on a variable with bitfields."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.
@@ -123,7 +123,7 @@ class BitfieldsTestCase(TestBase):
     def test_and_python_api(self):
         """Use Python APIs to inspect a bitfields variable."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

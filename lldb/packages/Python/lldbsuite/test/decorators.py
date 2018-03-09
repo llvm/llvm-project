@@ -172,7 +172,7 @@ def _decorateTest(mode,
         skip_for_arch = _match_decorator_property(
             archs, self.getArchitecture())
         skip_for_debug_info = _match_decorator_property(
-            debug_info, self.debug_info)
+            debug_info, self.getDebugInfo())
         skip_for_triple = _match_decorator_property(
             triple, lldb.DBG.GetSelectedPlatform().GetTriple())
         skip_for_remote = _match_decorator_property(
@@ -439,13 +439,13 @@ def expectedFlakey(expected_fn, bugnumber=None):
 
 def expectedFlakeyDwarf(bugnumber=None):
     def fn(self):
-        return self.debug_info == "dwarf"
+        return self.getDebugInfo() == "dwarf"
     return expectedFlakey(fn, bugnumber)
 
 
 def expectedFlakeyDsym(bugnumber=None):
     def fn(self):
-        return self.debug_info == "dwarf"
+        return self.getDebugInfo() == "dwarf"
     return expectedFlakey(fn, bugnumber)
 
 
@@ -511,13 +511,6 @@ def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
     def is_remote():
         return "skip on remote platform" if lldb.remote_platform else None
-    return skipTestIfFn(is_remote)(func)
-
-
-def skipIfRemoteDueToDeadlock(func):
-    """Decorate the item to skip tests if testing remotely due to the test deadlocking."""
-    def is_remote():
-        return "skip on remote platform (deadlocks)" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
 
 

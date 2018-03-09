@@ -46,7 +46,7 @@ class DriverBatchModeTest (TestBase):
         self.setTearDownCleanup()
 
         import pexpect
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         prompt = "(lldb) "
 
         # Pass CRASH so the process will crash and stop in batch mode.
@@ -86,7 +86,7 @@ class DriverBatchModeTest (TestBase):
         self.setTearDownCleanup()
 
         import pexpect
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         prompt = "(lldb) "
 
         # Now do it again, and make sure if we don't crash, we quit:
@@ -129,7 +129,7 @@ class DriverBatchModeTest (TestBase):
         self.setTearDownCleanup()
 
         import pexpect
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         prompt = "(lldb) "
 
         # Finally, start up the process by hand, attach to it, and wait for its completion.

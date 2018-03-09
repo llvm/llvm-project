@@ -1,12 +1,17 @@
 #include <MyFramework/MyFramework.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 int setup_is_complete = 0;
 
-int main()
+int main(int argc, const char **argv)
 {
-    system ("/bin/rm -rf MyFramework MyFramework.framework MyFramework.framework.dSYM");
+    char command[8192];
+    sprintf (command,
+             "/bin/rm -rf %s/MyFramework %s/MyFramework.framework %s/MyFramework.framework.dSYM",
+             argv[1], argv[1], argv[1]);
+    system (command);
 
     setup_is_complete = 1;
 

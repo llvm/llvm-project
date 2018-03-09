@@ -26,7 +26,7 @@
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
@@ -44,6 +44,7 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/SectionLoadHistory.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
@@ -138,13 +139,13 @@ public:
 
   FileSpec &GetSDKPath();
 
+  FileSpec &GetClangModulesCachePath();
+
   FileSpecList &GetClangModuleSearchPaths();
 
   FileSpecList &GetSwiftFrameworkSearchPaths();
 
   FileSpecList &GetSwiftModuleSearchPaths();
-
-  FileSpec &GetModuleCachePath();
 
   bool GetEnableAutoImportClangModules() const;
 
@@ -180,7 +181,7 @@ public:
 
   lldb::LanguageType GetLanguage() const;
 
-  const char *GetExpressionPrefixContentsAsCString();
+  llvm::StringRef GetExpressionPrefixContents();
 
   bool GetUseHexImmediates() const;
 
@@ -215,6 +216,8 @@ public:
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
   void SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
+
+  bool GetUseModernTypeLookup() const;
 
 private:
   //------------------------------------------------------------------
@@ -949,7 +952,7 @@ public:
   bool
   ModuleIsExcludedForUnconstrainedSearches(const lldb::ModuleSP &module_sp);
 
-  const ArchSpec &GetArchitecture() const { return m_arch; }
+  const ArchSpec &GetArchitecture() const { return m_arch.GetSpec(); }
 
   //------------------------------------------------------------------
   /// Set the architecture for this target.
@@ -979,6 +982,8 @@ public:
   bool SetArchitecture(const ArchSpec &arch_spec);
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
+
+  Architecture *GetArchitecturePlugin() { return m_arch.GetPlugin(); }
 
   Debugger &GetDebugger() { return m_debugger; }
 
@@ -1351,6 +1356,18 @@ protected:
                      const lldb::ModuleSP &new_module_sp) override;
   void WillClearList(const ModuleList &module_list) override;
 
+  class Arch {
+  public:
+    explicit Arch(const ArchSpec &spec);
+    const Arch &operator=(const ArchSpec &spec);
+
+    const ArchSpec &GetSpec() const { return m_spec; }
+    Architecture *GetPlugin() const { return m_plugin_up.get(); }
+
+  private:
+    ArchSpec m_spec;
+    std::unique_ptr<Architecture> m_plugin_up;
+  };
   //------------------------------------------------------------------
   // Member variables.
   //------------------------------------------------------------------
@@ -1358,7 +1375,7 @@ protected:
   lldb::PlatformSP m_platform_sp; ///< The platform for this target.
   std::recursive_mutex m_mutex; ///< An API mutex that is used by the lldb::SB*
                                 /// classes make the SB interface thread safe
-  ArchSpec m_arch;
+  Arch m_arch;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
   SectionLoadHistory m_section_load_history;

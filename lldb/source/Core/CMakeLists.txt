@@ -13,7 +13,6 @@ add_lldb_library(lldbCore
   AddressResolver.cpp
   AddressResolverFileLine.cpp
   AddressResolverName.cpp
-  ArchSpec.cpp
   Broadcaster.cpp
   Communication.cpp
   Debugger.cpp

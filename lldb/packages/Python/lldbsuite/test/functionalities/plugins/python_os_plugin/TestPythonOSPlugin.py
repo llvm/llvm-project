@@ -44,9 +44,9 @@ class PluginPythonOSPlugin(TestBase):
         self.dbg.SetAsync(False)
 
         # Create a target by the debugger.
-        cwd = os.getcwd()
-        exe = os.path.join(cwd, "a.out")
-        python_os_plugin_path = os.path.join(cwd, "operating_system.py")
+        exe = self.getBuildArtifact("a.out")
+        python_os_plugin_path = os.path.join(self.getSourceDir(),
+                                             "operating_system.py")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
@@ -128,9 +128,9 @@ class PluginPythonOSPlugin(TestBase):
         self.dbg.SetAsync(False)
 
         # Create a target by the debugger.
-        cwd = os.getcwd()
-        exe = os.path.join(cwd, "a.out")
-        python_os_plugin_path = os.path.join(cwd, "operating_system2.py")
+        exe = self.getBuildArtifact("a.out")
+        python_os_plugin_path = os.path.join(self.getSourceDir(),
+                                             "operating_system2.py")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 

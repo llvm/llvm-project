@@ -39,7 +39,7 @@ class TestSwiftCrossModuleExtension(TestBase):
     @decorators.swiftTest
     def test_cross_module_extension(self):
         """Test that we correctly find private extension decls across modules"""
-        self.buildAll()
+        self.build()
         self.do_test()
 
     def setUp(self):
@@ -49,17 +49,10 @@ class TestSwiftCrossModuleExtension(TestBase):
         self.b_source = "modb.swift"
         self.b_source_spec = lldb.SBFileSpec(self.b_source)
 
-    def buildAll(self):
-        execute_command("make everything")
-
     def do_test(self):
         """Test that we correctly find private extension decls across modules"""
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
+        exe_name = "main"
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

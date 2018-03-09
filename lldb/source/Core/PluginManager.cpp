@@ -275,6 +275,54 @@ PluginManager::GetABICreateCallbackForPluginName(const ConstString &name) {
   return nullptr;
 }
 
+#pragma mark Architecture
+
+struct ArchitectureInstance {
+  ConstString name;
+  std::string description;
+  PluginManager::ArchitectureCreateInstance create_callback;
+};
+
+typedef std::vector<ArchitectureInstance> ArchitectureInstances;
+
+static std::mutex g_architecture_mutex;
+
+static ArchitectureInstances &GetArchitectureInstances() {
+  static ArchitectureInstances g_instances;
+  return g_instances;
+}
+
+void PluginManager::RegisterPlugin(const ConstString &name,
+                                   llvm::StringRef description,
+                                   ArchitectureCreateInstance create_callback) {
+  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  GetArchitectureInstances().push_back({name, description, create_callback});
+}
+
+void PluginManager::UnregisterPlugin(
+    ArchitectureCreateInstance create_callback) {
+  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  auto &instances = GetArchitectureInstances();
+
+  for (auto pos = instances.begin(), end = instances.end(); pos != end; ++pos) {
+    if (pos->create_callback == create_callback) {
+      instances.erase(pos);
+      return;
+    }
+  }
+  llvm_unreachable("Plugin not found");
+}
+
+std::unique_ptr<Architecture>
+PluginManager::CreateArchitectureInstance(const ArchSpec &arch) {
+  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  for (const auto &instances : GetArchitectureInstances()) {
+    if (auto plugin_up = instances.create_callback(arch))
+      return plugin_up;
+  }
+  return nullptr;
+}
+
 #pragma mark Disassembler
 
 struct DisassemblerInstance {

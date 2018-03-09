@@ -64,7 +64,7 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
       options.SetTimeout(std::chrono::milliseconds(500));
       options.SetTrapExceptions(false);
 
-      addr_t prot_arg, flags_arg = 0;
+      addr_t prot_arg;
       if (prot == eMmapProtNone)
         prot_arg = PROT_NONE;
       else {
@@ -77,11 +77,6 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
           prot_arg |= PROT_WRITE;
       }
 
-      const ArchSpec arch = process->GetTarget().GetArchitecture();
-      flags_arg =
-          process->GetTarget().GetPlatform()->ConvertMmapFlagsToPlatform(arch,
-                                                                         flags);
-
       AddressRange mmap_range;
       if (sc.GetAddressRange(range_scope, 0, use_inline_block_range,
                              mmap_range)) {
@@ -89,7 +84,10 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
             process->GetTarget().GetScratchClangASTContext();
         CompilerType clang_void_ptr_type =
             clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-        lldb::addr_t args[] = {addr, length, prot_arg, flags_arg, fd, offset};
+        const ArchSpec arch = process->GetTarget().GetArchitecture();
+        MmapArgList args =
+            process->GetTarget().GetPlatform()->GetMmapArgumentList(
+                arch, addr, length, prot_arg, flags, fd, offset);
         lldb::ThreadPlanSP call_plan_sp(
             new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
                                        clang_void_ptr_type, args, options));

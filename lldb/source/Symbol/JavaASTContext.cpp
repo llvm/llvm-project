@@ -7,9 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <sstream>
-
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -17,11 +15,12 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Stream.h"
+#include <sstream>
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserJava.h"
 
@@ -134,9 +133,9 @@ public:
     obj_load_address.SetValueType(Value::eValueTypeLoadAddress);
 
     Value result;
-    if (m_dynamic_type_id.Evaluate(exe_ctx->GetBestExecutionContextScope(),
-                                   nullptr, nullptr, 0, &obj_load_address,
-                                   nullptr, result, nullptr)) {
+    if (m_dynamic_type_id.Evaluate(exe_ctx->GetBestExecutionContextScope(), 0,
+                                   &obj_load_address, nullptr, result,
+                                   nullptr)) {
       Status error;
 
       lldb::addr_t type_id_addr = result.GetScalar().UInt();
@@ -315,9 +314,8 @@ public:
     ExecutionContextScope *exec_ctx_scope = value_obj->GetExecutionContextRef()
                                                 .Lock(true)
                                                 .GetBestExecutionContextScope();
-    if (m_length_expression.Evaluate(exec_ctx_scope, nullptr, nullptr, 0,
-                                     nullptr, &obj_load_address, result,
-                                     nullptr))
+    if (m_length_expression.Evaluate(exec_ctx_scope, 0, nullptr,
+                                     &obj_load_address, result, nullptr))
       return result.GetScalar().UInt();
 
     return UINT32_MAX;
@@ -897,13 +895,6 @@ JavaASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
 size_t
 JavaASTContext::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
   return 0;
-}
-
-CompilerType
-JavaASTContext::GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                    size_t idx,
-                                    lldb::TemplateArgumentKind &kind) {
-  return CompilerType();
 }
 
 uint32_t JavaASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {

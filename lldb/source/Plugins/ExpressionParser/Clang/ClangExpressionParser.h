@@ -10,10 +10,10 @@
 #ifndef liblldb_ClangExpressionParser_h_
 #define liblldb_ClangExpressionParser_h_
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-public.h"
 

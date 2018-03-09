@@ -25,7 +25,7 @@ class AttachDeniedTestCase(TestBase):
     def test_attach_to_process_by_id_denied(self):
         """Test attach by process id denied"""
         self.build()
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Use a file as a synchronization point between test and inferior.
         pid_file_path = lldbutil.append_to_process_working_directory(

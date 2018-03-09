@@ -30,14 +30,11 @@ class TestSwiftVersion(TestBase):
     @decorators.swiftTest
     def test_cross_module_extension(self):
         """Test that LLDB can debug different Swift language versions"""
-        self.buildAll()
+        self.build()
         self.do_test()
 
     def setUp(self):
         TestBase.setUp(self)
-
-    def buildAll(self):
-        lldbutil.execute_command("make everything")
 
     def do_test(self):
         """Test that LLDB can debug different Swift language versions"""
@@ -46,7 +43,7 @@ class TestSwiftVersion(TestBase):
         self.addTearDownHook(cleanup)
 
         exe_name = "main"
-        exe_path = os.path.join(os.getcwd(), exe_name)
+        exe_path = self.getBuildArtifact(exe_name)
 
         tests = [
           { 'file' : "mod3.swift",

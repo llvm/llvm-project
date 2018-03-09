@@ -24,8 +24,7 @@ class NativeProcessLinux;
 class NativeRegisterContextLinux_s390x : public NativeRegisterContextLinux {
 public:
   NativeRegisterContextLinux_s390x(const ArchSpec &target_arch,
-                                   NativeThreadProtocol &native_thread,
-                                   uint32_t concrete_frame_idx);
+                                   NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 

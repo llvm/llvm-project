@@ -25,7 +25,7 @@ class InitializerListTestCase(TestBase):
     def test(self):
         """Test that that file and class static variables display correctly."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(

@@ -34,7 +34,7 @@ class GenericTester(TestBase):
         # module cacheing subsystem to be confused with executable name "a.out"
         # used for all the test cases.
         self.exe_name = self.testMethodName
-        self.golden_filename = os.path.join(os.getcwd(), "golden-output.txt")
+        self.golden_filename = self.getBuildArtifact("golden-output.txt")
 
     def tearDown(self):
         """Cleanup the test byproducts."""
@@ -113,8 +113,8 @@ class GenericTester(TestBase):
             quotedDisplay=False,
             blockCaptured=False):
         """Test that variables with basic types are displayed correctly."""
-
-        self.runCmd("file %s" % exe_name, CURRENT_EXECUTABLE_SET)
+        self.runCmd("file %s" % self.getBuildArtifact(exe_name),
+                    CURRENT_EXECUTABLE_SET)
 
         # First, capture the golden output emitted by the oracle, i.e., the
         # series of printf statements.
@@ -210,7 +210,8 @@ class GenericTester(TestBase):
             blockCaptured=False):
         """Test that variable expressions with basic types are evaluated correctly."""
 
-        self.runCmd("file %s" % exe_name, CURRENT_EXECUTABLE_SET)
+        self.runCmd("file %s" % self.getBuildArtifact(exe_name),
+                    CURRENT_EXECUTABLE_SET)
 
         # First, capture the golden output emitted by the oracle, i.e., the
         # series of printf statements.

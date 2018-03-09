@@ -60,7 +60,7 @@ uint16_t DNBDataRef::Get16(offset_t *offset_ptr) const {
   uint16_t val = 0;
   if (ValidOffsetForDataOfSize(*offset_ptr, sizeof(val))) {
     const uint8_t *p = m_start + *offset_ptr;
-    val = *(uint16_t *)p;
+    memcpy(&val, p, sizeof(uint16_t));
 
     if (m_swap)
       val = OSSwapInt16(val);
@@ -78,7 +78,7 @@ uint32_t DNBDataRef::Get32(offset_t *offset_ptr) const {
   uint32_t val = 0;
   if (ValidOffsetForDataOfSize(*offset_ptr, sizeof(val))) {
     const uint8_t *p = m_start + *offset_ptr;
-    val = *(uint32_t *)p;
+    memcpy(&val, p, sizeof(uint32_t));
     if (m_swap)
       val = OSSwapInt32(val);
 
@@ -95,7 +95,7 @@ uint64_t DNBDataRef::Get64(offset_t *offset_ptr) const {
   uint64_t val = 0;
   if (ValidOffsetForDataOfSize(*offset_ptr, sizeof(val))) {
     const uint8_t *p = m_start + *offset_ptr;
-    val = *(uint64_t *)p;
+    memcpy(&val, p, sizeof(uint64_t));
     if (m_swap)
       val = OSSwapInt64(val);
 
@@ -123,7 +123,7 @@ uint32_t DNBDataRef::GetMax32(offset_t *offset_ptr, uint32_t byte_size) const {
     return Get32(offset_ptr);
     break;
   default:
-    assert(!"GetMax32 unhandled case!");
+    assert(false && "GetMax32 unhandled case!");
     break;
   }
   return 0;
@@ -150,7 +150,7 @@ uint64_t DNBDataRef::GetMax64(offset_t *offset_ptr, uint32_t size) const {
     return Get64(offset_ptr);
     break;
   default:
-    assert(!"GetMax64 unhandled case!");
+    assert(false && "GetMax64 unhandled case!");
     break;
   }
   return 0;
@@ -174,7 +174,7 @@ const char *DNBDataRef::GetCStr(offset_t *offset_ptr,
                                 uint32_t fixed_length) const {
   const char *s = NULL;
   if (m_start < m_end) {
-    s = (char *)m_start + *offset_ptr;
+    s = (const char *)m_start + *offset_ptr;
 
     // Advance the offset
     if (fixed_length)

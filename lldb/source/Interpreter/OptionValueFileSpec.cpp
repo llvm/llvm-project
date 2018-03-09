@@ -113,14 +113,12 @@ size_t OptionValueFileSpec::AutoComplete(
   return matches.GetSize();
 }
 
-const lldb::DataBufferSP &
-OptionValueFileSpec::GetFileContents(bool null_terminate) {
+const lldb::DataBufferSP &OptionValueFileSpec::GetFileContents() {
   if (m_current_value) {
     const auto file_mod_time = FileSystem::GetModificationTime(m_current_value);
     if (m_data_sp && m_data_mod_time == file_mod_time)
       return m_data_sp;
-    m_data_sp = DataBufferLLVM::CreateFromPath(m_current_value.GetPath(),
-                                               null_terminate);
+    m_data_sp = DataBufferLLVM::CreateFromPath(m_current_value.GetPath());
     m_data_mod_time = file_mod_time;
   }
   return m_data_sp;

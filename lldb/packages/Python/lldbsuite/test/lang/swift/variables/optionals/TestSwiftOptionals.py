@@ -41,7 +41,7 @@ class TestSwiftOptionalType(TestBase):
     def do_check_consistency(self):
         """Check formatting for T? and T!"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

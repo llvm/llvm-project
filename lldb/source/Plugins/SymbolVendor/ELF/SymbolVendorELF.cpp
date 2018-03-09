@@ -127,13 +127,14 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
           SectionList *objfile_section_list = dsym_objfile_sp->GetSectionList();
 
           static const SectionType g_sections[] = {
-              eSectionTypeDWARFDebugAbbrev,     eSectionTypeDWARFDebugAddr,
-              eSectionTypeDWARFDebugAranges,    eSectionTypeDWARFDebugFrame,
-              eSectionTypeDWARFDebugInfo,       eSectionTypeDWARFDebugLine,
-              eSectionTypeDWARFDebugLoc,        eSectionTypeDWARFDebugMacInfo,
-              eSectionTypeDWARFDebugPubNames,   eSectionTypeDWARFDebugPubTypes,
-              eSectionTypeDWARFDebugRanges,     eSectionTypeDWARFDebugStr,
-              eSectionTypeDWARFDebugStrOffsets, eSectionTypeELFSymbolTable,
+              eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAddr,
+              eSectionTypeDWARFDebugAranges,  eSectionTypeDWARFDebugCuIndex,
+              eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
+              eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
+              eSectionTypeDWARFDebugMacInfo,  eSectionTypeDWARFDebugPubNames,
+              eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
+              eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugStrOffsets,
+              eSectionTypeELFSymbolTable,
           };
           for (size_t idx = 0; idx < sizeof(g_sections) / sizeof(g_sections[0]);
                ++idx) {

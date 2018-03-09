@@ -58,7 +58,6 @@ uint64_t JSONNumber::GetAsUnsigned() const {
   case DataType::Double:
     return (uint64_t)m_data.m_double;
   }
-  assert("Unhandled data type");
 }
 
 int64_t JSONNumber::GetAsSigned() const {
@@ -70,7 +69,6 @@ int64_t JSONNumber::GetAsSigned() const {
   case DataType::Double:
     return (int64_t)m_data.m_double;
   }
-  assert("Unhandled data type");
 }
 
 double JSONNumber::GetAsDouble() const {
@@ -82,7 +80,6 @@ double JSONNumber::GetAsDouble() const {
   case DataType::Double:
     return m_data.m_double;
   }
-  assert("Unhandled data type");
 }
 
 void JSONNumber::Write(std::ostream &s) {

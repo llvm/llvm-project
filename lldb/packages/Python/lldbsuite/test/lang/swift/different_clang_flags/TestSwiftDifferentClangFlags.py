@@ -42,7 +42,7 @@ class TestSwiftDifferentClangFlags(TestBase):
         bugnumber="This test requires a stripped binary and a dSYM")
     def test_swift_different_clang_flags(self):
         """Test that we use the right compiler flags when debugging"""
-        self.buildAll()
+        self.build()
         self.do_test()
 
     def setUp(self):
@@ -52,17 +52,10 @@ class TestSwiftDifferentClangFlags(TestBase):
         self.modb_source = "modb.swift"
         self.modb_source_spec = lldb.SBFileSpec(self.modb_source)
 
-    def buildAll(self):
-        execute_command("make everything")
-
     def do_test(self):
         """Test that we use the right compiler flags when debugging"""
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
+        exe_name = "main"
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

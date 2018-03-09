@@ -263,6 +263,10 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleEventSBBreakPoint(
     pEventType = "eBreakpointEventTypeIgnoreChanged";
     bOk = HandleEventSBBreakpointCmn(vEvent);
     break;
+  case lldb::eBreakpointEventTypeAutoContinueChanged:
+    pEventType = "eBreakpointEventTypeAutoContinueChanged";
+    bOk = HandleEventSBBreakpointCmn(vEvent);
+    break;
   }
   m_pLog->WriteLog(CMIUtilString::Format(
       "##### An SB Breakpoint event occurred: %s", pEventType));

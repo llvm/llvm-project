@@ -28,7 +28,7 @@ class ExprOptionsTestCase(TestBase):
         self.main_source = "main.cpp"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
         self.line = line_number('main.cpp', '// breakpoint_in_main')
-        self.exe = os.path.join(os.getcwd(), "a.out")
+        self.exe = self.getBuildArtifact("a.out")
 
     def test_expr_options(self):
         """These expression command options should work as expected."""

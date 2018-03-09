@@ -491,8 +491,8 @@ Status ProcessLaunchCommandOptions::SetOptionValue(
         execution_context ? execution_context->GetTargetSP() : TargetSP();
     PlatformSP platform_sp =
         target_sp ? target_sp->GetPlatform() : PlatformSP();
-    if (!launch_info.GetArchitecture().SetTriple(option_arg, platform_sp.get()))
-      launch_info.GetArchitecture().SetTriple(option_arg);
+    launch_info.GetArchitecture() =
+        Platform::GetAugmentedArchSpec(platform_sp.get(), option_arg);
   } break;
 
   case 'A': // Disable ASLR.
@@ -754,8 +754,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_profile_data_comm_mutex(), m_profile_data(), m_iohandler_sync(0),
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_ap(), m_public_run_lock(),
-      m_private_run_lock(), m_stop_info_override_callback(nullptr),
-      m_finalizing(false), m_finalize_called(false),
+      m_private_run_lock(), m_finalizing(false), m_finalize_called(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_destroy_in_process(false), m_destroy_complete(false),
       m_last_broadcast_state(eStateInvalid),
@@ -884,7 +883,6 @@ void Process::Finalize() {
   m_language_runtimes.clear();
   m_instrumentation_runtimes.clear();
   m_next_event_action_ap.reset();
-  m_stop_info_override_callback = nullptr;
   // Clear the last natural stop ID since it has a strong
   // reference to this process
   m_mod_id.SetStopEventForLastNaturalStopID(EventSP());
@@ -1674,7 +1672,6 @@ uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
 }
 
 StateType Process::GetState() {
-  // If any other threads access this we will need a mutex for it
   return m_public_state.GetValue();
 }
 
@@ -1733,7 +1730,12 @@ Status Process::Resume() {
       log->Printf("Process::Resume: -- TrySetRunning failed, not resuming.");
     return error;
   }
-  return PrivateResume();
+  Status error = PrivateResume();
+  if (!error.Success()) {
+    // Undo running state change
+    m_public_run_lock.SetStopped();
+  }
+  return error;
 }
 
 Status Process::ResumeSynchronous(Stream *stream) {
@@ -1762,6 +1764,9 @@ Status Process::ResumeSynchronous(Stream *stream) {
       error.SetErrorStringWithFormat(
           "process not in stopped state after synchronous resume: %s",
           StateAsCString(state));
+  } else {
+    // Undo running state change
+    m_public_run_lock.SetStopped();
   }
 
   // Undo the hijacking of process events...
@@ -2852,7 +2857,6 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   m_system_runtime_ap.reset();
   m_os_ap.reset();
   m_process_input_reader.reset();
-  m_stop_info_override_callback = nullptr;
 
   Module *exe_module = GetTarget().GetExecutableModulePointer();
   if (exe_module) {
@@ -2939,9 +2943,6 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
               ResumePrivateStateThread();
             else
               StartPrivateStateThread();
-
-            m_stop_info_override_callback =
-                GetTarget().GetArchitecture().GetStopInfoOverrideCallback();
 
             // Target was stopped at entry as was intended. Need to notify the
             // listeners
@@ -3126,7 +3127,6 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_jit_loaders_ap.reset();
   m_system_runtime_ap.reset();
   m_os_ap.reset();
-  m_stop_info_override_callback = nullptr;
 
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
@@ -3359,8 +3359,6 @@ void Process::CompleteAttach() {
                         : "<none>");
     }
   }
-
-  m_stop_info_override_callback = process_arch.GetStopInfoOverrideCallback();
 }
 
 Status Process::ConnectRemote(Stream *strm, llvm::StringRef remote_url) {
@@ -6009,7 +6007,6 @@ void Process::DidExec() {
   m_instrumentation_runtimes.clear();
   m_thread_list.DiscardThreadPlans();
   m_memory_cache.Clear(true);
-  m_stop_info_override_callback = nullptr;
   DoDidExec();
   CompleteAttach();
   // Flush the process (threads and all stack frames) after running
