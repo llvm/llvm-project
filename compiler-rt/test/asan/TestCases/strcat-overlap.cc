@@ -26,6 +26,7 @@
 // RUN: echo "interceptor_name:strcat" > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t
 
+// REQUIRES: (target-is-x86_64 || target-is-x86_64h) && !ios
 // UNSUPPORTED: win32
 // UNSUPPORTED: android
 
