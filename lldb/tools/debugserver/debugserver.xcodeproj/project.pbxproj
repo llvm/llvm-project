@@ -1046,9 +1046,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_DEBUGSERVER = 1;
 				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=macosx*]" = "-DLLDB_ENERGY";
+				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
 				LLDB_ENERGY_LFLAGS = "-lpmenergy -lpmsample";
-				"LLDB_ENERGY_LFLAGS[sdk=macosx*]" = "-lpmenergy -lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CFLAGS = (
@@ -1534,9 +1533,8 @@
 				"INSTALL_PATH[sdk=iphoneos*]" = /usr/local/bin;
 				LLDB_DEBUGSERVER = 1;
 				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=macosx*]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LFLAGS = "";
-				"LLDB_ENERGY_LFLAGS[sdk=macosx*]" = "-lpmenergy -lpmsample";
+				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
+				LLDB_ENERGY_LFLAGS = "-lpmenergy -lpmsample";
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
