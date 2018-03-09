@@ -51,6 +51,8 @@ public:
                         unsigned ByteAlignment) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitELFSymverDirective(MCSymbol *Alias,
+                              const MCSymbol *Aliasee) override;
 
   void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;

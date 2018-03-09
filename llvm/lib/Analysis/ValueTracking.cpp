@@ -3968,6 +3968,15 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
   return true;
 }
 
+bool llvm::isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB) {
+  // TODO: This is slightly consdervative for invoke instruction since exiting
+  // via an exception *is* normal control for them.
+  for (auto I = BB->begin(), E = BB->end(); I != E; ++I)
+    if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
+      return false;
+  return true;
+}
+
 bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
                                                   const Loop *L) {
   // The loop header is guaranteed to be executed for every iteration.

@@ -21,6 +21,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BackendPrinter.h"
+#include "BackendStatistics.h"
+#include "ResourcePressureView.h"
+#include "TimelineView.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -37,11 +41,6 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "BackendPrinter.h"
-#include "BackendStatistics.h"
-#include "ResourcePressureView.h"
-#include "TimelineView.h"
-
 
 using namespace llvm;
 

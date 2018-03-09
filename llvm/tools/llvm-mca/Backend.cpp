@@ -43,11 +43,6 @@ void Backend::runCycle(unsigned Cycle) {
     Instructions[IR.first] = std::unique_ptr<Instruction>(NewIS);
     NewIS->setRCUTokenID(DU->dispatch(IR.first, NewIS));
 
-    // If this is a zero latency instruction, then we don't need to dispatch
-    // it. Instead, we can mark it as executed.
-    if (NewIS->isZeroLatency())
-      notifyInstructionExecuted(IR.first);
-
     // Check if we have dispatched all the instructions.
     SM.updateNext();
     if (!SM.hasNext())

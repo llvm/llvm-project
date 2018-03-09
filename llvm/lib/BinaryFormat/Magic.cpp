@@ -14,6 +14,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -205,15 +206,12 @@ file_magic llvm::identify_magic(StringRef Magic) {
 }
 
 std::error_code llvm::identify_magic(const Twine &Path, file_magic &Result) {
-  int FD;
-  if (std::error_code EC = openFileForRead(Path, FD))
-    return EC;
+  auto FileOrError = MemoryBuffer::getFile(Path);
+  if (!FileOrError)
+    return FileOrError.getError();
 
-  char Buffer[32];
-  int Length = read(FD, Buffer, sizeof(Buffer));
-  if (close(FD) != 0 || Length < 0)
-    return std::error_code(errno, std::generic_category());
+  std::unique_ptr<MemoryBuffer> FileBuffer = std::move(*FileOrError);
+  Result = identify_magic(FileBuffer->getBuffer());
 
-  Result = identify_magic(StringRef(Buffer, Length));
   return std::error_code();
 }

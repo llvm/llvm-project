@@ -160,6 +160,7 @@ struct DIDumpOptions {
   bool ShowForm = false;
   bool SummarizeTypes = false;
   bool Verbose = false;
+  bool DisplayRawContents = false;
 
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {

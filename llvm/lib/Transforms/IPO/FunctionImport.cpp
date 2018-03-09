@@ -544,25 +544,9 @@ void llvm::computeDeadSymbols(
       if (S->isLive())
         return;
 
-    // We only keep live symbols that are known to be non-prevailing if any are
-    // available_externally. Those symbols are discarded later in the
-    // EliminateAvailableExternally pass and setting them to not-live breaks
-    // downstreams users of liveness information (PR36483).
-    if (isPrevailing(VI.getGUID()) == PrevailingType::No) {
-      bool AvailableExternally = false;
-      for (auto &S : VI.getSummaryList())
-        if (S->linkage() == GlobalValue::AvailableExternallyLinkage)
-          AvailableExternally = true;
-
-      if (!AvailableExternally)
-        return;
-
-#ifndef NDEBUG
-      for (auto &S : VI.getSummaryList())
-        assert(!GlobalValue::isInterposableLinkage(S->linkage()) &&
-               "Symbol with interposable and available_externally linkages");
-#endif
-    }
+    // We do not keep live symbols that are known to be non-prevailing.
+    if (isPrevailing(VI.getGUID()) == PrevailingType::No)
+      return;
 
     for (auto &S : VI.getSummaryList())
       S->setLive(true);

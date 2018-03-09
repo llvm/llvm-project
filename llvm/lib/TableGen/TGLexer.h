@@ -44,11 +44,11 @@ namespace tgtok {
 
     // Keywords.
     Bit, Bits, Class, Code, Dag, Def, Foreach, Defm, Field, In, Int, Let, List,
-    MultiClass, String,
+    MultiClass, String, Defset,
 
     // !keywords.
     XConcat, XADD, XAND, XOR, XSRA, XSRL, XSHL, XListConcat, XStrConcat, XCast,
-    XSubst, XForEach, XFoldl, XHead, XTail, XSize, XEmpty, XIf, XEq,
+    XSubst, XForEach, XFoldl, XHead, XTail, XSize, XEmpty, XIf, XEq, XIsA,
 
     // Integer value.
     IntVal,

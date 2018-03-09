@@ -19,5 +19,5 @@ declare void @func2(i8*)
 ; CHECK: bl __chkstk
 ; CHECK: mov [[REG2:x[0-9]+]], sp
 ; CHECK-OPT: sub [[REG3:x[0-9]+]], [[REG2]], x15, lsl #4
-; CHECK-OPT: mov sp, [[REG3:x[0-9]+]]
+; CHECK-OPT: mov sp, [[REG3]]
 ; CHECK: bl func2

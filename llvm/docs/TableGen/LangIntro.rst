@@ -208,6 +208,9 @@ supported include:
     is a special case in that the argument can be an int or a record. In the
     latter case, the record's name is returned.
 
+``!isa<type>(a)``
+    Returns an integer: 1 if 'a' is dynamically of the given type, 0 otherwise.
+
 ``!subst(a, b, c)``
     If 'a' and 'b' are of string type or are symbol references, substitute 'b'
     for 'a' in 'c.'  This operation is analogous to $(subst) in GNU make.

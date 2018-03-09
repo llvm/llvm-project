@@ -179,7 +179,7 @@ define float @frem_undef_op1_fast(float %x) {
 
 define double @fadd_undef_undef(double %x) {
 ; CHECK-LABEL: @fadd_undef_undef(
-; CHECK-NEXT:    ret double fadd (double undef, double undef)
+; CHECK-NEXT:    ret double undef
 ;
   %r = fadd double undef, undef
   ret double %r
@@ -187,7 +187,7 @@ define double @fadd_undef_undef(double %x) {
 
 define double @fsub_undef_undef(double %x) {
 ; CHECK-LABEL: @fsub_undef_undef(
-; CHECK-NEXT:    ret double fsub (double undef, double undef)
+; CHECK-NEXT:    ret double undef
 ;
   %r = fsub double undef, undef
   ret double %r
@@ -195,7 +195,7 @@ define double @fsub_undef_undef(double %x) {
 
 define double @fmul_undef_undef(double %x) {
 ; CHECK-LABEL: @fmul_undef_undef(
-; CHECK-NEXT:    ret double fmul (double undef, double undef)
+; CHECK-NEXT:    ret double undef
 ;
   %r = fmul double undef, undef
   ret double %r
@@ -203,7 +203,7 @@ define double @fmul_undef_undef(double %x) {
 
 define double @fdiv_undef_undef(double %x) {
 ; CHECK-LABEL: @fdiv_undef_undef(
-; CHECK-NEXT:    ret double fdiv (double undef, double undef)
+; CHECK-NEXT:    ret double undef
 ;
   %r = fdiv double undef, undef
   ret double %r
@@ -211,7 +211,7 @@ define double @fdiv_undef_undef(double %x) {
 
 define double @frem_undef_undef(double %x) {
 ; CHECK-LABEL: @frem_undef_undef(
-; CHECK-NEXT:    ret double frem (double undef, double undef)
+; CHECK-NEXT:    ret double undef
 ;
   %r = frem double undef, undef
   ret double %r
