@@ -11,7 +11,7 @@ HEADER-NEXT: AddressSize: 32bit
 HEADER-NEXT: ImageFileHeader {
 HEADER-NEXT:   Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
 HEADER-NEXT:   SectionCount: 4
-HEADER-NEXT:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+HEADER-NEXT:   TimeDateStamp: 
 HEADER-NEXT:   PointerToSymbolTable: 0x0
 HEADER-NEXT:   SymbolCount: 0
 HEADER-NEXT:   OptionalHeaderSize: 224
@@ -40,7 +40,7 @@ HEADER-NEXT:   MinorImageVersion: 0
 HEADER-NEXT:   MajorSubsystemVersion: 6
 HEADER-NEXT:   MinorSubsystemVersion: 0
 HEADER-NEXT:   SizeOfImage: 20480
-HEADER-NEXT:   SizeOfHeaders: 512
+HEADER-NEXT:   SizeOfHeaders: 1024
 HEADER-NEXT:   Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
 HEADER-NEXT:   Characteristics [ (0x9540)
 HEADER-NEXT:     IMAGE_DLL_CHARACTERISTICS_APPCONTAINER (0x1000)
@@ -91,10 +91,10 @@ HEADER-NEXT:   }
 HEADER-NEXT: }
 HEADER-NEXT: DOSHeader {
 HEADER-NEXT:   Magic: MZ
-HEADER-NEXT:   UsedBytesInTheLastPage: 0
-HEADER-NEXT:   FileSizeInPages: 0
+HEADER-NEXT:   UsedBytesInTheLastPage: 120
+HEADER-NEXT:   FileSizeInPages: 1
 HEADER-NEXT:   NumberOfRelocationItems: 0
-HEADER-NEXT:   HeaderSizeInParagraphs: 0
+HEADER-NEXT:   HeaderSizeInParagraphs: 4
 HEADER-NEXT:   MinimumExtraParagraphs: 0
 HEADER-NEXT:   MaximumExtraParagraphs: 0
 HEADER-NEXT:   InitialRelativeSS: 0
@@ -106,7 +106,7 @@ HEADER-NEXT:   AddressOfRelocationTable: 64
 HEADER-NEXT:   OverlayNumber: 0
 HEADER-NEXT:   OEMid: 0
 HEADER-NEXT:   OEMinfo: 0
-HEADER-NEXT:   AddressOfNewExeHeader: 64
+HEADER-NEXT:   AddressOfNewExeHeader: 120
 HEADER-NEXT: }
 
 IMPORTS: Format: COFF-i386
