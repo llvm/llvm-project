@@ -2403,9 +2403,6 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
         mangled.SetDemangledName(ConstString((demangled_name + suffix).str()));
     }
 
-    if (SwiftLanguageRuntime::IsMetadataSymbol(symbol_name))
-      symbol_type = eSymbolTypeMetadata;
-
     // In ELF all symbol should have a valid size but it is not true for some
     // function symbols
     // coming from hand written assembly. As none of the function symbol should
