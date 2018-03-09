@@ -9,6 +9,7 @@ add_clang_library(clangTidyPlugin
   clangSema
   clangTidy
   clangTidyAndroidModule
+  clangTidyAbseilModule
   clangTidyBoostModule
   clangTidyCERTModule
   clangTidyCppCoreGuidelinesModule
