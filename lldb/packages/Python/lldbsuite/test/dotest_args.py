@@ -127,6 +127,11 @@ def create_parser():
         metavar='server-path',
         help='The path to the debug server executable to use')
     group.add_argument(
+        '--out-of-tree-debugserver',
+        dest='out_of_tree_debugserver',
+        action='store_true',
+        help='A flag to indicate an out-of-tree debug server is being used')
+    group.add_argument(
         '-s',
         metavar='name',
         help='Specify the name of the dir created to store the session files of tests with errored or failed status. If not specified, the test driver uses the timestamp as the session dir name')

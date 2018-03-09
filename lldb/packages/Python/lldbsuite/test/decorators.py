@@ -22,6 +22,7 @@ import use_lldb_suite
 import lldb
 from . import configuration
 from . import test_categories
+from . import lldbtest_config
 from lldbsuite.test_event.event_builder import EventBuilder
 from lldbsuite.support import funcutils
 from lldbsuite.test import lldbplatform
@@ -476,6 +477,11 @@ def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
             archs),
         bugnumber)
 
+def skipIfOutOfTreeDebugserver(func):
+    """Decorate the item to skip tests if using an out-of-tree debugserver."""
+    def is_out_of_tree_debugserver():
+        return "out-of-tree debugserver" if lldbtest_config.out_of_tree_debugserver else None
+    return skipTestIfFn(is_out_of_tree_debugserver)(func)
 
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
