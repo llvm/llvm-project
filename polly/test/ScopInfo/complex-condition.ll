@@ -2,7 +2,7 @@
 ; RUN: -polly-invariant-load-hoisting=true \
 ; RUN:     < %s 2>&1 | FileCheck %s
 ;
-; CHECK: Low complexity assumption: {  : 1 = 0 }
+; CHECK: Low complexity assumption: {  : false }
 ;
 ; The IR is a modified version of the following C:
 ;

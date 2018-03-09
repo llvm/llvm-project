@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
 ;
 ; Do not remove the scalar value write of %i.trunc in inner.for.
 ; It is used by body.

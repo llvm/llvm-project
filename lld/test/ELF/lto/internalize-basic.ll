@@ -15,7 +15,7 @@ define hidden void @foo() {
 }
 
 ; Check that _start is not internalized.
-; CHECK: define void @_start()
+; CHECK: define dso_local void @_start()
 
 ; Check that foo function is correctly internalized.
 ; CHECK: define internal void @foo()

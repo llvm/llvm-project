@@ -239,7 +239,6 @@ void neverCalled() {
   isl::ast_expr_list().dump();
   isl::ast_node().dump();
   isl::ast_node_list().dump();
-  isl::band_list().dump();
   isl::basic_map().dump();
   isl::basic_map_list().dump();
   isl::basic_set().dump();

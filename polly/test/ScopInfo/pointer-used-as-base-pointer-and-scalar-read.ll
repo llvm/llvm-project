@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
 
 ; In this test case we pass a pointer %A into a PHI node and also use this
 ; pointer as base pointer of an array store. As a result, we get both scalar

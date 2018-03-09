@@ -19,7 +19,7 @@
 ; RUN:   FileCheck --check-prefix=INVALID1 %s
 ; RUN: not ld.lld -o %t3 -m elf_x86_64 -e main --plugin-opt=Ofoo %t.o 2>&1 | \
 ; RUN:   FileCheck --check-prefix=INVALID2 %s
-; INVALID2: --plugin-opt: number expected, but got 'foo'
+; INVALID2: --plugin-opt=Ofoo: number expected, but got 'foo'
 
 ; RUN: not ld.lld -o %t3 -m elf_x86_64 -e main --lto-O-1 %t.o 2>&1 | \
 ; RUN:   FileCheck --check-prefix=INVALIDNEGATIVE1 %s

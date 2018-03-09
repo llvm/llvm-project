@@ -198,8 +198,11 @@ public:
       return asLoad()->getAlignment();
     if (isStore())
       return asStore()->getAlignment();
+    if (isMemTransferInst())
+      return std::min(asMemTransferInst()->getDestAlignment(),
+                      asMemTransferInst()->getSourceAlignment());
     if (isMemIntrinsic())
-      return asMemIntrinsic()->getAlignment();
+      return asMemIntrinsic()->getDestAlignment();
     if (isCallInst())
       return 0;
     llvm_unreachable("Operation not supported on nullptr");

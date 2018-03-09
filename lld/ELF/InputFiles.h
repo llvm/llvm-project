@@ -12,7 +12,6 @@
 
 #include "Config.h"
 #include "lld/Common/ErrorHandler.h"
-
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -23,7 +22,6 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/Threading.h"
-
 #include <map>
 
 namespace llvm {
@@ -90,15 +88,15 @@ public:
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
   ArrayRef<Symbol *> getSymbols() {
-    assert(FileKind == ObjKind || FileKind == BitcodeKind ||
-           FileKind == ArchiveKind);
+    assert(FileKind == BinaryKind || FileKind == ObjKind ||
+           FileKind == BitcodeKind);
     return Symbols;
   }
 
   // Filename of .a which contained this file. If this file was
   // not in an archive file, it is the empty string. We use this
   // string for creating error messages.
-  StringRef ArchiveName;
+  std::string ArchiveName;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.

@@ -21,7 +21,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxxabi CXX C)
 
   set(PACKAGE_NAME libcxxabi)
-  set(PACKAGE_VERSION 6.0.0)
+  set(PACKAGE_VERSION 7.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -115,6 +115,7 @@ find_path(
         ${CMAKE_BINARY_DIR}/${LIBCXXABI_LIBCXX_INCLUDES}
         ${LIBCXXABI_LIBCXX_INCLUDE_DIRS}
         ${LLVM_INCLUDE_DIR}/c++/v1
+  NO_CMAKE_FIND_ROOT_PATH
   )
 
 set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_INCLUDES}" CACHE PATH
@@ -127,6 +128,7 @@ find_path(
         ${LIBCXXABI_LIBCXX_INCLUDES}/../
         ${LIBCXXABI_LIBCXX_SRC_DIRS}
   NO_DEFAULT_PATH
+  NO_CMAKE_FIND_ROOT_PATH
   )
 
 if (LIBCXXABI_LIBCXX_PATH STREQUAL "LIBCXXABI_LIBCXX_PATH-NOTFOUND")
@@ -425,6 +427,7 @@ if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
           ${LLVM_MAIN_SRC_DIR}/projects/libunwind/include
           ${LLVM_MAIN_SRC_DIR}/runtimes/libunwind/include
     NO_DEFAULT_PATH
+    NO_CMAKE_FIND_ROOT_PATH
   )
 
   if (LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL STREQUAL "LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL-NOTFOUND")
@@ -440,18 +443,21 @@ endif()
 # soname, etc...
 add_subdirectory(src)
 
-if (NOT LIBCXXABI_INCLUDE_TESTS OR (LIBCXXABI_STANDALONE_BUILD AND NOT LIBCXXABI_ENABLE_SHARED))
-  # We can't reasonably test the system C++ library with a static libc++abi.
-  # We either need to be able to replace libc++abi at run time (with a shared
-  # libc++abi), or we need to be able to replace the C++ runtime (with a non-
-  # standalone build).
-  message(WARNING "The libc++abi tests aren't valid when libc++abi is built "
-                  "standalone (i.e. outside of llvm/projects/libcxxabi ) and "
-                  "is built without a shared library.  Either build a shared "
-                  "library, build libc++abi at the same time as you build "
-                  "libc++, or do without testing.  No check target will be "
-                  "available!")
-else()
-  add_subdirectory(test)
-  add_subdirectory(fuzz)
+if (LIBCXXABI_INCLUDE_TESTS)
+  if (LIBCXXABI_STANDALONE_BUILD AND NOT LIBCXXABI_ENABLE_SHARED)
+    # We can't reasonably test the system C++ library with a static
+    # libc++abi.  We either need to be able to replace libc++abi at
+    # run time (with a shared libc++abi), or we need to be able to
+    # replace the C++ runtime (with a non- standalone build).
+    message(WARNING "The libc++abi tests aren't valid when libc++abi "
+                    "is built standalone (i.e. outside of "
+                    "llvm/projects/libcxxabi ) and is built without "
+                    "a shared library.  Either build a shared "
+                    "library, build libc++abi at the same time as "
+                    "you build libc++, or do without testing.  No "
+                    "check target will be available!")
+  else()
+    add_subdirectory(test)
+    add_subdirectory(fuzz)
+  endif()
 endif()

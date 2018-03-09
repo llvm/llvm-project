@@ -167,20 +167,20 @@ error:
 }
 
 __isl_give isl_reordering *isl_reordering_extend_space(
-	__isl_take isl_reordering *exp, __isl_take isl_space *dim)
+	__isl_take isl_reordering *exp, __isl_take isl_space *space)
 {
 	isl_reordering *res;
 
-	if (!exp || !dim)
+	if (!exp || !space)
 		goto error;
 
 	res = isl_reordering_extend(isl_reordering_copy(exp),
-				    isl_space_dim(dim, isl_dim_all) - exp->len);
+				isl_space_dim(space, isl_dim_all) - exp->len);
 	res = isl_reordering_cow(res);
 	if (!res)
 		goto error;
 	isl_space_free(res->dim);
-	res->dim = isl_space_replace(dim, isl_dim_param, exp->dim);
+	res->dim = isl_space_replace_params(space, exp->dim);
 
 	isl_reordering_free(exp);
 
@@ -190,7 +190,7 @@ __isl_give isl_reordering *isl_reordering_extend_space(
 	return res;
 error:
 	isl_reordering_free(exp);
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 

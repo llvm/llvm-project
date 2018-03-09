@@ -115,10 +115,46 @@ mark_as_advanced(
 find_package(CUDA QUIET)
 
 set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDA_FOUND})
-set(LIBOMPTARGET_DEP_CUDA_LIBRARIES ${CUDA_LIBRARIES})
 set(LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS ${CUDA_INCLUDE_DIRS})
 
 mark_as_advanced(
   LIBOMPTARGET_DEP_CUDA_FOUND 
-  LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS
-  LIBOMPTARGET_DEP_CUDA_LIBRARIES)
+  LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS)
+
+################################################################################
+# Looking for CUDA Driver API... (needed for CUDA plugin)
+################################################################################
+
+find_library (
+    LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES
+  NAMES
+    cuda
+  PATHS
+    /lib64)
+
+# There is a libcuda.so in lib64/stubs that can be used for linking.
+if (NOT LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES AND CUDA_FOUND)
+  # Since CMake 3.3 FindCUDA.cmake defaults to using static libraries. In this
+  # case CUDA_LIBRARIES contains additional linker arguments which breaks
+  # get_filename_component below. Fortunately, since that change the module
+  # exports CUDA_cudart_static_LIBRARY which points to a single file in the
+  # right directory.
+  set(cuda_library ${CUDA_LIBRARIES})
+  if (DEFINED CUDA_cudart_static_LIBRARY)
+    set(cuda_library ${CUDA_cudart_static_LIBRARY})
+  endif()
+  get_filename_component(CUDA_LIBDIR ${cuda_library} DIRECTORY)
+  find_library (
+      LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES
+    NAMES
+      cuda
+    HINTS
+      "${CUDA_LIBDIR}/stubs")
+endif()
+
+find_package_handle_standard_args(
+  LIBOMPTARGET_DEP_CUDA_DRIVER
+  DEFAULT_MSG
+  LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
+
+mark_as_advanced(LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)

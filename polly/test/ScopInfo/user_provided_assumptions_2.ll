@@ -10,7 +10,7 @@
 ; SCOP:      Assumed Context:
 ; SCOP-NEXT: [N, M] -> { : }
 ; SCOP:      Invalid Context:
-; SCOP-NEXT: [N, M] -> { : 1 = 0 }
+; SCOP-NEXT: [N, M] -> { : false }
 ;
 ;
 ; This test checks that assumptions over parameters not used in the Scop are

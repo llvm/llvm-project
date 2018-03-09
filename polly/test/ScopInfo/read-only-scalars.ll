@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=false -polly-scops \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=false -polly-scops \
 ; RUN:                -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=true -polly-scops \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=true -polly-scops \
 ; RUN:                -analyze < %s | FileCheck %s \
 ; RUN:                -check-prefix=SCALARS
 

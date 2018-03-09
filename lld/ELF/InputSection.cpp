@@ -45,32 +45,6 @@ std::string lld::toString(const InputSectionBase *Sec) {
   return (toString(Sec->File) + ":(" + Sec->Name + ")").str();
 }
 
-DenseMap<SectionBase *, int> elf::buildSectionOrder() {
-  DenseMap<SectionBase *, int> SectionOrder;
-  if (Config->SymbolOrderingFile.empty())
-    return SectionOrder;
-
-  // Build a map from symbols to their priorities. Symbols that didn't
-  // appear in the symbol ordering file have the lowest priority 0.
-  // All explicitly mentioned symbols have negative (higher) priorities.
-  DenseMap<StringRef, int> SymbolOrder;
-  int Priority = -Config->SymbolOrderingFile.size();
-  for (StringRef S : Config->SymbolOrderingFile)
-    SymbolOrder.insert({S, Priority++});
-
-  // Build a map from sections to their priorities.
-  for (InputFile *File : ObjectFiles) {
-    for (Symbol *Sym : File->getSymbols()) {
-      auto *D = dyn_cast<Defined>(Sym);
-      if (!D || !D->Section)
-        continue;
-      int &Priority = SectionOrder[D->Section];
-      Priority = std::min(Priority, SymbolOrder.lookup(D->getName()));
-    }
-  }
-  return SectionOrder;
-}
-
 template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &File,
                                             const typename ELFT::Shdr &Hdr) {
@@ -201,23 +175,34 @@ OutputSection *SectionBase::getOutputSection() {
   return Sec ? Sec->getParent() : nullptr;
 }
 
-// Uncompress section contents if required. Note that this function
+// Decompress section contents if required. Note that this function
 // is called from parallelForEach, so it must be thread-safe.
-void InputSectionBase::maybeUncompress() {
-  if (UncompressBuf || !Decompressor::isCompressedELFSection(Flags, Name))
+void InputSectionBase::maybeDecompress() {
+  if (DecompressBuf)
+    return;
+  if (!(Flags & SHF_COMPRESSED) && !Name.startswith(".zdebug"))
     return;
 
+  // Decompress a section.
   Decompressor Dec = check(Decompressor::create(Name, toStringRef(Data),
                                                 Config->IsLE, Config->Is64));
 
   size_t Size = Dec.getDecompressedSize();
-  UncompressBuf.reset(new char[Size]());
-  if (Error E = Dec.decompress({UncompressBuf.get(), Size}))
+  DecompressBuf.reset(new char[Size + Name.size()]());
+  if (Error E = Dec.decompress({DecompressBuf.get(), Size}))
     fatal(toString(this) +
           ": decompress failed: " + llvm::toString(std::move(E)));
 
-  Data = makeArrayRef((uint8_t *)UncompressBuf.get(), Size);
+  Data = makeArrayRef((uint8_t *)DecompressBuf.get(), Size);
   Flags &= ~(uint64_t)SHF_COMPRESSED;
+
+  // A section name may have been altered if compressed. If that's
+  // the case, restore the original name. (i.e. ".zdebug_" -> ".debug_")
+  if (Name.startswith(".zdebug")) {
+    DecompressBuf[Size] = '.';
+    memcpy(&DecompressBuf[Size + 1], Name.data() + 2, Name.size() - 2);
+    Name = StringRef(&DecompressBuf[Size], Name.size() - 1);
+  }
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
@@ -292,7 +277,7 @@ std::string InputSectionBase::getObjMsg(uint64_t Off) {
 
   std::string Archive;
   if (!File->ArchiveName.empty())
-    Archive = (" in archive " + File->ArchiveName).str();
+    Archive = " in archive " + File->ArchiveName;
 
   // Find a symbol that encloses a given location.
   for (Symbol *B : File->getSymbols())
@@ -365,7 +350,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     auto *P = reinterpret_cast<typename ELFT::Rela *>(Buf);
     Buf += sizeof(RelTy);
 
-    if (Config->IsRela)
+    if (RelTy::IsRela)
       P->r_addend = getAddend<ELFT>(Rel);
 
     // Output section VA is zero for -r, so r_offset is an offset within the
@@ -395,7 +380,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
         continue;
       }
 
-      if (Config->IsRela) {
+      if (RelTy::IsRela) {
         P->r_addend =
             Sym.getVA(getAddend<ELFT>(Rel)) - Section->getOutputSection()->Addr;
       } else if (Config->Relocatable) {
@@ -489,6 +474,8 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Sym.getVA(A);
+  case R_ADDEND:
+    return A;
   case R_ARM_SBREL:
     return Sym.getVA(A) - getARMStaticBase(Sym);
   case R_GOT:
@@ -625,7 +612,7 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
   case R_NEG_TLS:
     return Out::TlsPhdr->p_memsz - Sym.getVA(A);
   case R_SIZE:
-    return A; // Sym.getSize was already folded into the addend.
+    return Sym.getSize() + A;
   case R_TLSDESC:
     return InX::Got->getGlobalDynAddr(Sym) + A;
   case R_TLSDESC_PAGE:
@@ -656,6 +643,14 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
   for (const RelTy &Rel : Rels) {
     RelType Type = Rel.getType(Config->IsMips64EL);
+
+    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
+    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed
+    // in 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we
+    // need to keep this bug-compatible code for a while.
+    if (Config->EMachine == EM_386 && Type == R_386_GOTPC)
+      continue;
+
     uint64_t Offset = getOffset(Rel.r_offset);
     uint8_t *BufLoc = Buf + Offset;
     int64_t Addend = getAddend<ELFT>(Rel);
@@ -666,17 +661,27 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
-    if (Expr != R_ABS) {
-      // GCC 8.0 or earlier have a bug that it emits R_386_GOTPC relocations
-      // against _GLOBAL_OFFSET_TABLE for .debug_info. The bug seems to have
-      // been fixed in 2017: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630,
-      // but we need to keep this bug-compatible code for a while.
-      if (Config->EMachine == EM_386 && Type == R_386_GOTPC)
-        continue;
 
-      error(getLocation<ELFT>(Offset) + ": has non-ABS relocation " +
-            toString(Type) + " against symbol '" + toString(Sym) + "'");
-      return;
+    if (Expr != R_ABS) {
+      std::string Msg = getLocation<ELFT>(Offset) +
+                        ": has non-ABS relocation " + toString(Type) +
+                        " against symbol '" + toString(Sym) + "'";
+      if (Expr != R_PC) {
+        error(Msg);
+        return;
+      }
+
+      // If the control reaches here, we found a PC-relative relocation in a
+      // non-ALLOC section. Since non-ALLOC section is not loaded into memory
+      // at runtime, the notion of PC-relative doesn't make sense here. So,
+      // this is a usage error. However, GNU linkers historically accept such
+      // relocations without any errors and relocate them as if they were at
+      // address 0. For bug-compatibilty, we accept them with warnings. We
+      // know Steel Bank Common Lisp as of 2018 have this bug.
+      warn(Msg);
+      Target->relocateOne(BufLoc, Type,
+                          SignExtend64<Bits>(Sym.getVA(Addend - Offset)));
+      continue;
     }
 
     if (Sym.isTls() && !Out::TlsPhdr)

@@ -17,9 +17,12 @@
 _start:
  .quad sharedFoo
  .quad sharedBar
- callq sharedFunc1
- callq sharedFunc2
-        call baz
+ .byte 0xe8
+ .long sharedFunc1 - .
+ .byte 0xe8
+ .long sharedFunc2 - .
+ .byte 0xe8
+ .long baz - .
 .global _Z1fi
 _Z1fi:
 .cfi_startproc

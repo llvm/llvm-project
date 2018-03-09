@@ -282,8 +282,7 @@ PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   auto *SmallerDom =
       isl_pw_aff_lt_set(OpPWAC.first.copy(), isl_pw_aff_neg(ExpPWA));
   auto *OutOfBoundsDom = isl_set_union(SmallerDom, GreaterDom);
-  OpPWAC.second =
-      OpPWAC.second.unite(isl::manage(isl_set_copy(OutOfBoundsDom)));
+  OpPWAC.second = OpPWAC.second.unite(isl::manage_copy(OutOfBoundsDom));
 
   if (!BB) {
     assert(isl_set_dim(OutOfBoundsDom, isl_dim_set) == 0 &&

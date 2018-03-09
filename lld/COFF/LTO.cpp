@@ -127,10 +127,10 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   // specified, configure LTO to use it as the cache directory.
   lto::NativeObjectCache Cache;
   if (!Config->LTOCache.empty())
-    Cache = check(
-        lto::localCache(Config->LTOCache,
-                        [&](size_t Task, std::unique_ptr<MemoryBuffer> MB,
-                            StringRef Path) { Files[Task] = std::move(MB); }));
+    Cache = check(lto::localCache(
+        Config->LTOCache, [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
+          Files[Task] = std::move(MB);
+        }));
 
   checkError(LTOObj->run(
       [&](size_t Task) {

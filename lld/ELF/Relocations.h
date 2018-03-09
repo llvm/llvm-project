@@ -32,6 +32,7 @@ typedef uint32_t RelType;
 enum RelExpr {
   R_INVALID,
   R_ABS,
+  R_ADDEND,
   R_ARM_SBREL,
   R_GOT,
   R_GOTONLY_PC,

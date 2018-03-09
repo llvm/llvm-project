@@ -23,7 +23,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
-
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"

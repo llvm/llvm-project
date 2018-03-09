@@ -287,7 +287,7 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
   if (!Stmt || !Build_C)
     return NULL;
 
-  isl::ast_build Build = isl::manage(isl_ast_build_copy(Build_C));
+  isl::ast_build Build = isl::manage_copy(Build_C);
   isl::ctx Ctx = Build.get_ctx();
   isl::id_to_ast_expr RefToExpr = isl::id_to_ast_expr::alloc(Ctx, 0);
 
@@ -1103,8 +1103,7 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
   Value *ArraySize = ConstantInt::get(Builder.getInt64Ty(), Array->size);
 
   if (!gpu_array_is_scalar(Array)) {
-    isl::multi_pw_aff ArrayBound =
-        isl::manage(isl_multi_pw_aff_copy(Array->bound));
+    isl::multi_pw_aff ArrayBound = isl::manage_copy(Array->bound);
 
     isl::pw_aff OffsetDimZero = ArrayBound.get_pw_aff(0);
     isl::ast_expr Res = Build.expr_from(OffsetDimZero);
@@ -1129,7 +1128,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::ast_build Build = isl::ast_build::from_context(S.getContext());
 
-  isl::set Min = isl::manage(isl_set_copy(Array->extent)).lexmin();
+  isl::set Min = isl::manage_copy(Array->extent).lexmin();
 
   isl::set ZeroSet = isl::set::universe(Min.get_space());
 
@@ -1576,8 +1575,7 @@ std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {
   std::vector<Value *> Sizes;
   isl::ast_build Context = isl::ast_build::from_context(S.getContext());
 
-  isl::multi_pw_aff GridSizePwAffs =
-      isl::manage(isl_multi_pw_aff_copy(Kernel->grid_size));
+  isl::multi_pw_aff GridSizePwAffs = isl::manage_copy(Kernel->grid_size);
   for (long i = 0; i < Kernel->n_grid; i++) {
     isl::pw_aff Size = GridSizePwAffs.get_pw_aff(i);
     isl::ast_expr GridSize = Context.expr_from(Size);
@@ -2012,8 +2010,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     Arg->setName(Kernel->array[i].array->name);
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI =
-        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage_copy(Id));
     Type *EleTy = SAI->getElementType();
     Value *Val = &*Arg;
     SmallVector<const SCEV *, 4> Sizes;
@@ -2144,8 +2141,7 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI =
-        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage_copy(Id));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {
@@ -2178,8 +2174,7 @@ void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI =
-        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage_copy(Id));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {

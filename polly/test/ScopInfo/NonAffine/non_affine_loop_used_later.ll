@@ -20,7 +20,7 @@
 ; CHECK-NEXT: Assumed Context:
 ; CHECK-NEXT: [N] -> {  :  }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT: [N] -> {  : 1 = 0 }
+; CHECK-NEXT: [N] -> {  : false }
 ; CHECK-NEXT: p0: %N
 ; CHECK-NEXT: Arrays {
 ; CHECK-NEXT:     i32 MemRef_j_0__phi; // Element size 4

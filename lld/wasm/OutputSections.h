@@ -10,7 +10,7 @@
 #ifndef LLD_WASM_OUTPUT_SECTIONS_H
 #define LLD_WASM_OUTPUT_SECTIONS_H
 
-#include "InputSegment.h"
+#include "InputChunks.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
@@ -28,7 +28,6 @@ std::string toString(const wasm::OutputSection &Section);
 namespace wasm {
 
 class OutputSegment;
-class ObjFile;
 
 class OutputSection {
 public:
@@ -61,7 +60,7 @@ public:
   SyntheticSection(uint32_t Type, std::string Name = "")
       : OutputSection(Type, Name), BodyOutputStream(Body) {
     if (!Name.empty())
-      writeStr(BodyOutputStream, Name);
+      writeStr(BodyOutputStream, Name, "section name");
   }
 
   void writeTo(uint8_t *Buf) override {
@@ -97,21 +96,21 @@ public:
 
   std::string getSectionName() const;
   void writeToStream(raw_ostream &OS) {
-    writeBytes(OS, Header.data(), Header.size());
-    writeBytes(OS, Body.data(), Body.size());
+    OS.write(Header.data(), Header.size());
+    OS.write(Body.data(), Body.size());
   }
 };
 
 class CodeSection : public OutputSection {
 public:
-  explicit CodeSection(uint32_t NumFunctions, ArrayRef<ObjFile *> Objs);
+  explicit CodeSection(ArrayRef<InputFunction *> Functions);
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
 
 protected:
-  ArrayRef<ObjFile *> InputObjects;
+  ArrayRef<InputFunction *> Functions;
   std::string CodeSectionHeader;
   size_t BodySize = 0;
 };

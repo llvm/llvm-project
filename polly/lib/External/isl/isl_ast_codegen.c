@@ -11,6 +11,8 @@
  */
 
 #include <limits.h>
+#include <isl/val.h>
+#include <isl/space.h>
 #include <isl/aff.h>
 #include <isl/constraint.h>
 #include <isl/set.h>
@@ -1453,7 +1455,8 @@ static __isl_give isl_ast_graft *create_node_scaled(
 	__isl_take isl_ast_build *build)
 {
 	int depth;
-	int degenerate, eliminated;
+	int degenerate;
+	isl_bool eliminated;
 	isl_basic_set *hull;
 	isl_basic_set *enforced;
 	isl_set *guard, *hoisted;
@@ -3521,6 +3524,12 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_only_after(
  * to the isolated domain).
  * We generate an AST for each piece and concatenate the results.
  *
+ * If the isolated domain is not convex, then it is replaced
+ * by a convex superset to ensure that the sets of preceding and
+ * following iterations are properly defined and, in particular,
+ * that there are no intermediate iterations that do not belong
+ * to the isolated domain.
+ *
  * In the special case where at least one element of the schedule
  * domain that does not belong to the isolated domain needs
  * to be scheduled after this isolated domain, but none of those
@@ -5171,7 +5180,7 @@ static __isl_give isl_ast_graft_list *hoist_out_of_context(
  * to the domain elements executed by those iterations.
  *
  * The context node may introduce additional parameters as well as
- * constraints on the outer schedule dimenions or original parameters.
+ * constraints on the outer schedule dimensions or original parameters.
  *
  * We add the extra parameters to a new build and the context
  * constraints to both the build and (as a single disjunct)
@@ -5735,6 +5744,8 @@ __isl_give isl_ast_node *isl_ast_build_node_from_schedule(
 	ctx = isl_ast_build_get_ctx(build);
 
 	node = isl_schedule_get_root(schedule);
+	if (!node)
+		goto error;
 	isl_schedule_free(schedule);
 
 	build = isl_ast_build_copy(build);

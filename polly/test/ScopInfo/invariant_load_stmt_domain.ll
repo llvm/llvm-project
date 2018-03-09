@@ -15,7 +15,7 @@
 ; CHECK-NEXT:  Assumed Context:
 ; CHECK-NEXT:  {  :  }
 ; CHECK-NEXT:  Invalid Context:
-; CHECK-NEXT:  {  : 1 = 0 }
+; CHECK-NEXT:  {  : false }
 
 ; CHECK:  Statements {
 ; CHECK-NEXT:    Stmt_loop

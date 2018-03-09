@@ -12,12 +12,10 @@
 
 #include "InputFiles.h"
 #include "Symbols.h"
-
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 
-using llvm::object::WasmSymbol;
 using llvm::wasm::WasmSignature;
 
 namespace lld {
@@ -43,22 +41,30 @@ public:
 
   std::vector<ObjFile *> ObjectFiles;
 
-  void reportDuplicate(Symbol *Existing, InputFile *NewFile);
   void reportRemainingUndefines();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   Symbol *find(StringRef Name);
+  ObjFile *findComdat(StringRef Name) const;
 
-  Symbol *addDefined(InputFile *F, const WasmSymbol *Sym,
-                     const InputSegment *Segment = nullptr);
-  Symbol *addUndefined(InputFile *F, const WasmSymbol *Sym);
+  Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
+                             InputFunction *Function = nullptr);
+  Symbol *addDefinedData(StringRef Name, uint32_t Flags, InputFile *F,
+                         InputSegment *Segment = nullptr, uint32_t Address = 0);
+  Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
+                       InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
-  Symbol *addDefinedGlobal(StringRef Name);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
+  bool addComdat(StringRef Name, ObjFile *);
 
+  DefinedData *addSyntheticDataSymbol(StringRef Name, uint32_t Flags = 0);
+  DefinedFunction *addSyntheticFunction(StringRef Name,
+                                        const WasmSignature *Type,
+                                        uint32_t Flags = 0);
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 
+  llvm::DenseMap<llvm::CachedHashStringRef, ObjFile *> ComdatMap;
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
   std::vector<Symbol *> SymVector;
 };

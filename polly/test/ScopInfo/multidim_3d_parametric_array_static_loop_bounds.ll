@@ -12,7 +12,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT: [m, o] -> {  : m >= 150 and o >= 200 }
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [m, o] -> {  : 1 = 0 }
+; CHECK-NEXT: [m, o] -> {  : false }
 ;
 ; CHECK:      p0: %m
 ; CHECK-NEXT: p1: %o

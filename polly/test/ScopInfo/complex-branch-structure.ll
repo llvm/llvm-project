@@ -20,7 +20,7 @@
 ;        \   /     /
 ;     loop backedge
 
-; CHECK: Low complexity assumption: {  : 1 = 0 }
+; CHECK: Low complexity assumption: {  : false }
 
 define void @foo(float* %A, float* %B, float* %C, float* %D, float* %E,
                  i64 %A1.p, i64 %A2.p, i64 %A3.p,

@@ -3122,7 +3122,7 @@ static __isl_give isl_set *read_aff_domain(__isl_keep isl_stream *s,
 	tok = isl_stream_next_token(s);
 	if (tok && (tok->type == ISL_TOKEN_IDENT || tok->is_keyword)) {
 		isl_stream_push_token(s, tok);
-		return read_map_tuple(s, dom, isl_dim_set, v, 1, 0);
+		return read_map_tuple(s, dom, isl_dim_set, v, 0, 0);
 	}
 	if (!tok || tok->type != '[') {
 		isl_stream_error(s, tok, "expecting '['");
@@ -3134,7 +3134,7 @@ static __isl_give isl_set *read_aff_domain(__isl_keep isl_stream *s,
 		isl_stream_push_token(s, tok2);
 	if (is_empty || next_is_tuple(s) || next_is_fresh_ident(s, v)) {
 		isl_stream_push_token(s, tok);
-		dom = read_map_tuple(s, dom, isl_dim_set, v, 1, 0);
+		dom = read_map_tuple(s, dom, isl_dim_set, v, 0, 0);
 	} else
 		isl_stream_push_token(s, tok);
 

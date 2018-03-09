@@ -476,11 +476,6 @@ isl_bool isl_map_align_params_map_map_and_test(__isl_keep isl_map *map1,
 	__isl_keep isl_map *map2,
 	isl_bool (*fn)(__isl_keep isl_map *map1, __isl_keep isl_map *map2));
 
-isl_stat isl_basic_map_foreach_lexopt(__isl_keep isl_basic_map *bmap, int max,
-	isl_stat (*fn)(__isl_take isl_basic_set *dom,
-		__isl_take isl_aff_list *list, void *user),
-	void *user);
-
 __isl_give isl_set *isl_set_substitute(__isl_take isl_set *set,
 	enum isl_dim_type type, unsigned pos, __isl_keep isl_aff *subs);
 
@@ -535,8 +530,6 @@ __isl_give isl_basic_map *isl_basic_map_shift_div(
 
 __isl_give isl_basic_map_list *isl_map_get_basic_map_list(
 	__isl_keep isl_map *map);
-
-__isl_give isl_map *isl_map_fixed_power(__isl_take isl_map *map, isl_int exp);
 
 int isl_basic_set_count_upto(__isl_keep isl_basic_set *bset,
 	isl_int max, isl_int *count);

@@ -10,8 +10,8 @@
 
 // RUN: ld.lld %t1 %t2 -o %t3 --icf=all --verbose 2>&1 | FileCheck %s
 
-// CHECK-NOT: selected .text.f1
-// CHECK-NOT:   removed .text.f2
+// CHECK-NOT: selected section '.text.f1'
+// CHECK-NOT:   removing identical section '.text.f2'
 
 .globl _start, f1, f2, d1, d2
 _start:

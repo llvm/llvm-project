@@ -28,7 +28,6 @@
 #include <isl_aff_private.h>
 #include <isl_val_private.h>
 #include <isl_config.h>
-#include <isl/deprecated/polynomial_int.h>
 
 static unsigned pos(__isl_keep isl_space *dim, enum isl_dim_type type)
 {
@@ -3854,13 +3853,6 @@ void isl_term_get_num(__isl_keep isl_term *term, isl_int *n)
 	if (!term)
 		return;
 	isl_int_set(*n, term->n);
-}
-
-void isl_term_get_den(__isl_keep isl_term *term, isl_int *d)
-{
-	if (!term)
-		return;
-	isl_int_set(*d, term->d);
 }
 
 /* Return the coefficient of the term "term".

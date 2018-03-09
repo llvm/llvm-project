@@ -10,6 +10,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -17,7 +18,6 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Endian.h"
-
 #include <vector>
 
 namespace lld {
@@ -88,12 +88,12 @@ struct Configuration {
   llvm::StringRef MapFile;
   llvm::StringRef OutputFile;
   llvm::StringRef OptRemarksFilename;
+  llvm::StringRef ProgName;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   llvm::StringRef ThinLTOCacheDir;
   std::string Rpath;
   std::vector<VersionDefinition> VersionDefinitions;
-  std::vector<llvm::StringRef> Argv;
   std::vector<llvm::StringRef> AuxiliaryList;
   std::vector<llvm::StringRef> FilterList;
   std::vector<llvm::StringRef> SearchPaths;
@@ -111,6 +111,7 @@ struct Configuration {
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
+  bool CheckSections;
   bool CompressDebugSections;
   bool DefineCommon;
   bool Demangle = true;
@@ -123,14 +124,14 @@ struct Configuration {
   bool GcSections;
   bool GdbIndex;
   bool GnuHash = false;
+  bool GnuUnique;
   bool HasDynamicList = false;
   bool HasDynSymTab;
   bool ICF;
-  bool ICFData;
+  bool IgnoreDataAddressEquality;
+  bool IgnoreFunctionAddressEquality;
   bool MergeArmExidx;
   bool MipsN32Abi = false;
-  bool NoGnuUnique;
-  bool NoUndefinedVersion;
   bool NoinhibitExec;
   bool Nostdlib;
   bool OFormatBinary;
@@ -138,6 +139,7 @@ struct Configuration {
   bool OptRemarksWithHotness;
   bool Pie;
   bool PrintGcSections;
+  bool PrintIcfSections;
   bool Relocatable;
   bool SaveTemps;
   bool SingleRoRx;
@@ -146,11 +148,14 @@ struct Configuration {
   bool SysvHash = false;
   bool Target1Rel;
   bool Trace;
-  bool Verbose;
+  bool UndefinedVersion;
   bool WarnCommon;
   bool WarnMissingEntry;
+  bool WarnSymbolOrdering;
+  bool WriteAddends;
   bool ZCombreloc;
   bool ZExecstack;
+  bool ZHazardplt;
   bool ZNocopyreloc;
   bool ZNodelete;
   bool ZNodlopen;
@@ -160,7 +165,6 @@ struct Configuration {
   bool ZRodynamic;
   bool ZText;
   bool ZRetpolineplt;
-  bool ExitEarly;
   bool ZWxneeded;
   DiscardPolicy Discard;
   OrphanHandlingPolicy OrphanHandling;
@@ -239,6 +243,12 @@ struct Configuration {
 // The only instance of Configuration struct.
 extern Configuration *Config;
 
+static inline void errorOrWarn(const Twine &Msg) {
+  if (!Config->NoinhibitExec)
+    error(Msg);
+  else
+    warn(Msg);
+}
 } // namespace elf
 } // namespace lld
 

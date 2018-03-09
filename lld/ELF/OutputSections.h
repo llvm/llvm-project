@@ -14,7 +14,6 @@
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "Relocations.h"
-
 #include "lld/Common/LLVM.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
@@ -100,6 +99,7 @@ public:
   std::string Location;
   std::string MemoryRegionName;
   std::string LMARegionName;
+  bool NonAlloc = false;
   bool Noload = false;
 
   template <class ELFT> void finalize();
@@ -143,8 +143,6 @@ namespace lld {
 namespace elf {
 
 uint64_t getHeaderSize();
-void sortByOrder(llvm::MutableArrayRef<InputSection *> In,
-                 std::function<int(InputSectionBase *S)> Order);
 
 extern std::vector<OutputSection *> OutputSections;
 } // namespace elf

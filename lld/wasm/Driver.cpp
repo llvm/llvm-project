@@ -9,6 +9,7 @@
 
 #include "lld/Common/Driver.h"
 #include "Config.h"
+#include "MarkLive.h"
 #include "SymbolTable.h"
 #include "Writer.h"
 #include "lld/Common/Args.h"
@@ -22,6 +23,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+
+#define DEBUG_TYPE "lld"
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -134,14 +137,6 @@ static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
   return None;
 }
 
-// Inject a new undefined symbol into the link.  This will cause the link to
-// fail unless this symbol can be found.
-static void addSyntheticUndefinedFunction(StringRef Name,
-                                          const WasmSignature *Type) {
-  log("injecting undefined func: " + Name);
-  Symtab->addUndefinedFunction(Name, Type);
-}
-
 static void printHelp(const char *Argv0) {
   WasmOptTable().PrintHelp(outs(), Argv0, "LLVM Linker", false);
 }
@@ -161,16 +156,36 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> Argv) {
   return Args;
 }
 
+// Currently we allow a ".imports" to live alongside a library. This can
+// be used to specify a list of symbols which can be undefined at link
+// time (imported from the environment.  For example libc.a include an
+// import file that lists the syscall functions it relies on at runtime.
+// In the long run this information would be better stored as a symbol
+// attribute/flag in the object file itself.
+// See: https://github.com/WebAssembly/tool-conventions/issues/35
+static void readImportFile(StringRef Filename) {
+  if (Optional<MemoryBufferRef> Buf = readFile(Filename))
+    for (StringRef Sym : args::getLines(*Buf))
+      Config->AllowUndefinedSymbols.insert(Sym);
+}
+
 void LinkerDriver::addFile(StringRef Path) {
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (identify_magic(MBRef.getBuffer()) == file_magic::archive)
+  if (identify_magic(MBRef.getBuffer()) == file_magic::archive) {
+    SmallString<128> ImportFile = Path;
+    path::replace_extension(ImportFile, ".imports");
+    if (fs::exists(ImportFile))
+      readImportFile(ImportFile.str());
+
     Files.push_back(make<ArchiveFile>(MBRef));
-  else
-    Files.push_back(make<ObjFile>(MBRef));
+    return;
+  }
+
+  Files.push_back(make<ObjFile>(MBRef));
 }
 
 // Add a given library by searching it from input search paths.
@@ -196,9 +211,6 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       break;
     }
   }
-
-  if (Files.empty())
-    error("no input files");
 }
 
 static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
@@ -208,6 +220,11 @@ static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
   if (Arg->getOption().getID() == OPT_no_entry)
     return "";
   return Arg->getValue();
+}
+
+static Symbol* addUndefinedFunction(StringRef Name, const WasmSignature *Type) {
+  return Symtab->addUndefined(Name, Symbol::UndefinedFunctionKind, 0, nullptr,
+                              Type);
 }
 
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
@@ -237,18 +254,19 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->CheckSignatures =
       Args.hasFlag(OPT_check_signatures, OPT_no_check_signatures, false);
-  Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
+  Config->GcSections =
+      Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !Config->Relocatable);
+  Config->PrintGcSections =
+      Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
-  if (Config->Relocatable)
-    Config->EmitRelocs = true;
 
   Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);
   Config->GlobalBase = args::getInteger(Args, OPT_global_base, 1024);
@@ -257,32 +275,43 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
 
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
-    if (Optional<MemoryBufferRef> Buf = readFile(Arg->getValue()))
-      for (StringRef Sym : args::getLines(*Buf))
-        Config->AllowUndefinedSymbols.insert(Sym);
+    readImportFile(Arg->getValue());
+
+  if (!Args.hasArg(OPT_INPUT)) {
+    error("no input files");
+    return;
+  }
 
   if (Config->OutputFile.empty())
     error("no output file specified");
 
-  if (!Args.hasArg(OPT_INPUT))
-    error("no input files");
+  if (Config->Relocatable) {
+    if (!Config->Entry.empty())
+      error("entry point specified for relocatable output file");
+    if (Config->GcSections)
+      error("-r and --gc-sections may not be used together");
+    if (Args.hasArg(OPT_undefined))
+      error("-r -and --undefined may not be used together");
+  }
 
-  if (Config->Relocatable && !Config->Entry.empty())
-    error("entry point specified for relocatable output file");
-  if (Config->Relocatable && Args.hasArg(OPT_undefined))
-    error("undefined symbols specified for relocatable output file");
-
+  Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
-    if (!Config->Entry.empty()) {
-      static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
-      addSyntheticUndefinedFunction(Config->Entry, &Signature);
-    }
+    static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
+
+    // Add synthetic symbols before any others
+    WasmSym::CallCtors = Symtab->addSyntheticFunction(
+        "__wasm_call_ctors", &NullSignature, WASM_SYMBOL_VISIBILITY_HIDDEN);
+    WasmSym::StackPointer = Symtab->addSyntheticDataSymbol("__stack_pointer");
+    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base");
+    WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol("__dso_handle");
+    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end");
+
+    if (!Config->Entry.empty())
+      EntrySym = addUndefinedFunction(Config->Entry, &NullSignature);
 
     // Handle the `--undefined <sym>` options.
-    for (StringRef S : args::getStrings(Args, OPT_undefined))
-      addSyntheticUndefinedFunction(S, nullptr);
-
-    Config->StackPointerSymbol = Symtab->addDefinedGlobal("__stack_pointer");
+    for (auto* Arg : Args.filtered(OPT_undefined))
+      addUndefinedFunction(Arg->getValue(), nullptr);
   }
 
   createFiles(Args);
@@ -302,8 +331,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // -u/--undefined since these undefined symbols have only names and no
     // function signature, which means they cannot be written to the final
     // output.
-    for (StringRef S : args::getStrings(Args, OPT_undefined)) {
-      Symbol *Sym = Symtab->find(S);
+    for (auto* Arg : Args.filtered(OPT_undefined)) {
+      Symbol *Sym = Symtab->find(Arg->getValue());
       if (!Sym->isDefined())
         error("function forced with --undefined not found: " + Sym->getName());
     }
@@ -311,10 +340,23 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
-  if (!Config->Entry.empty() && !Symtab->find(Config->Entry)->isDefined())
-    error("entry point not found: " + Config->Entry);
+  for (auto *Arg : Args.filtered(OPT_export)) {
+    Symbol *Sym = Symtab->find(Arg->getValue());
+    if (!Sym || !Sym->isDefined())
+      error("symbol exported via --export not found: " +
+            Twine(Arg->getValue()));
+    else
+      Sym->setHidden(false);
+  }
+
+  if (EntrySym)
+    EntrySym->setHidden(false);
+
   if (errorCount())
     return;
+
+  // Do size optimizations: garbage collection
+  markLive();
 
   // Write the result to the file.
   writeResult();

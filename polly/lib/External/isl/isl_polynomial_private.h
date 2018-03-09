@@ -251,6 +251,9 @@ __isl_give isl_qpolynomial *isl_qpolynomial_mul_isl_int(
 __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_mul_isl_int(
 	__isl_take isl_pw_qpolynomial *pwqp, isl_int v);
 
+__isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_scale(
+	__isl_take isl_qpolynomial_fold *fold, isl_int v);
+
 __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_mul_isl_int(
 	__isl_take isl_qpolynomial_fold *fold, isl_int v);
 __isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_fold_mul_isl_int(

@@ -24,6 +24,7 @@ struct isl_vec;
 typedef struct isl_vec isl_vec;
 
 __isl_give isl_vec *isl_vec_alloc(isl_ctx *ctx, unsigned size);
+__isl_give isl_vec *isl_vec_zero(isl_ctx *ctx, unsigned size);
 __isl_give isl_vec *isl_vec_copy(__isl_keep isl_vec *vec);
 __isl_null isl_vec *isl_vec_free(__isl_take isl_vec *vec);
 

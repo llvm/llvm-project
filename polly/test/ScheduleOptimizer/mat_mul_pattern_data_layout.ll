@@ -22,10 +22,10 @@
 ; CHECK-NEXT:        double Packed_A[ { [] -> [(24)] } ][ { [] -> [(256)] } ][ { [] -> [(4)] } ]; // Element size 8
 ;
 ; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg6[i0, i2] };
-; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_A[o0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 96*floor((-i0 + 4o0 + o2)/96) = -i0 + 4o0 + o2 and 0 <= o1 <= 255 and o2 >= 0 and -4o0 <= o2 <= 95 - 4o0 and o2 <= 3 };
+; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_A[o0, o1, o2] : (-i2 + o1) mod 256 = 0 and (-i0 + 4o0 + o2) mod 96 = 0 and 0 <= o1 <= 255 and o2 >= 0 and -4o0 <= o2 <= 95 - 4o0 and o2 <= 3 }
 ;
 ; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg7[i2, i1] };
-; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_B[o0, o1, i1 - 8o0] : 256*floor((-i2 + o1)/256) = -i2 + o1 and -7 + i1 <= 8o0 <= i1 and 0 <= o1 <= 255 };
+; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_B[o0, o1, i1 - 8o0] : (-i2 + o1) mod 256 = 0 and -7 + i1 <= 8o0 <= i1 and 0 <= o1 <= 255 }
 ;
 ; CHECK:    	CopyStmt_0
 ; CHECK-NEXT:            Domain :=
@@ -34,7 +34,7 @@
 ; CHECK-NEXT:                ;
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                ;
-; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> Packed_B[o0, o1, i1 - 8o0] : 256*floor((-i2 + o1)/256) = -i2 + o1 and -7 + i1 <= 8o0 <= i1 and 0 <= o1 <= 255 };
+; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> Packed_B[o0, o1, i1 - 8o0] : (-i2 + o1) mod 256 = 0 and -7 + i1 <= 8o0 <= i1 and 0 <= o1 <= 255 }
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                ;
 ; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> MemRef_arg7[i2, i1] };
@@ -45,7 +45,7 @@
 ; CHECK-NEXT:                ;
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                ;
-; CHECK-NEXT:           new: { CopyStmt_1[i0, i1, i2] -> Packed_A[o0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 96*floor((-i0 + 4o0 + o2)/96) = -i0 + 4o0 + o2 and 0 <= o1 <= 255 and o2 >= 0 and -4o0 <= o2 <= 95 - 4o0 and o2 <= 3 };
+; CHECK-NEXT:           new: { CopyStmt_1[i0, i1, i2] -> Packed_A[o0, o1, o2] : (-i2 + o1) mod 256 = 0 and (-i0 + 4o0 + o2) mod 96 = 0 and 0 <= o1 <= 255 and o2 >= 0 and -4o0 <= o2 <= 95 - 4o0 and o2 <= 3 };
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                ;
 ; CHECK-NEXT:           new: { CopyStmt_1[i0, i1, i2] -> MemRef_arg6[i0, i2] };

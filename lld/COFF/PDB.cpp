@@ -15,6 +15,7 @@
 #include "Symbols.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Timer.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
@@ -47,6 +48,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JamCRC.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -60,6 +62,15 @@ using namespace llvm::codeview;
 using llvm::object::coff_section;
 
 static ExitOnError ExitOnErr;
+
+static Timer TotalPdbLinkTimer("PDB Emission (Cumulative)", Timer::root());
+
+static Timer AddObjectsTimer("Add Objects", TotalPdbLinkTimer);
+static Timer TypeMergingTimer("Type Merging", AddObjectsTimer);
+static Timer SymbolMergingTimer("Symbol Merging", AddObjectsTimer);
+static Timer GlobalsLayoutTimer("Globals Stream Layout", TotalPdbLinkTimer);
+static Timer TpiStreamLayoutTimer("TPI Stream Layout", TotalPdbLinkTimer);
+static Timer DiskCommitTimer("Commit to Disk", TotalPdbLinkTimer);
 
 namespace {
 /// Map from type index and item index in a type server PDB to the
@@ -237,6 +248,8 @@ maybeReadTypeServerRecord(CVTypeArray &Types) {
 
 Expected<const CVIndexMap&> PDBLinker::mergeDebugT(ObjFile *File,
                                                    CVIndexMap &ObjectIndexMap) {
+  ScopedTimer T(TypeMergingTimer);
+
   ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
   if (Data.empty())
     return ObjectIndexMap;
@@ -425,6 +438,38 @@ static void remapTypesInSymbolRecord(ObjFile *File, SymbolKind SymKind,
         continue;
       }
     }
+  }
+}
+
+static void
+recordStringTableReferenceAtOffset(MutableArrayRef<uint8_t> Contents,
+                                   uint32_t Offset,
+                                   std::vector<ulittle32_t *> &StrTableRefs) {
+  Contents =
+      Contents.drop_front(Offset).take_front(sizeof(support::ulittle32_t));
+  ulittle32_t *Index = reinterpret_cast<ulittle32_t *>(Contents.data());
+  StrTableRefs.push_back(Index);
+}
+
+static void
+recordStringTableReferences(SymbolKind Kind, MutableArrayRef<uint8_t> Contents,
+                            std::vector<ulittle32_t *> &StrTableRefs) {
+  // For now we only handle S_FILESTATIC, but we may need the same logic for
+  // S_DEFRANGE and S_DEFRANGE_SUBFIELD.  However, I cannot seem to generate any
+  // PDBs that contain these types of records, so because of the uncertainty
+  // they are omitted here until we can prove that it's necessary.
+  switch (Kind) {
+  case SymbolKind::S_FILESTATIC:
+    // FileStaticSym::ModFileOffset
+    recordStringTableReferenceAtOffset(Contents, 4, StrTableRefs);
+    break;
+  case SymbolKind::S_DEFRANGE:
+  case SymbolKind::S_DEFRANGE_SUBFIELD:
+    log("Not fixing up string table reference in S_DEFRANGE / "
+        "S_DEFRANGE_SUBFIELD record");
+    break;
+  default:
+    break;
   }
 }
 
@@ -644,53 +689,65 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
                                pdb::GSIStreamBuilder &GsiBuilder,
                                const CVIndexMap &IndexMap,
                                TypeCollection &IDTable,
+                               std::vector<ulittle32_t *> &StringTableRefs,
                                BinaryStreamRef SymData) {
   // FIXME: Improve error recovery by warning and skipping records when
   // possible.
-  CVSymbolArray Syms;
-  BinaryStreamReader Reader(SymData);
-  ExitOnErr(Reader.readArray(Syms, Reader.getLength()));
+  ArrayRef<uint8_t> SymsBuffer;
+  cantFail(SymData.readBytes(0, SymData.getLength(), SymsBuffer));
   SmallVector<SymbolScope, 4> Scopes;
-  for (CVSymbol Sym : Syms) {
-    // Discover type index references in the record. Skip it if we don't know
-    // where they are.
-    SmallVector<TiReference, 32> TypeRefs;
-    if (!discoverTypeIndicesInSymbol(Sym, TypeRefs)) {
-      log("ignoring unknown symbol record with kind 0x" + utohexstr(Sym.kind()));
-      continue;
-    }
 
-    // Copy the symbol record so we can mutate it.
-    MutableArrayRef<uint8_t> NewData = copySymbolForPdb(Sym, Alloc);
+  auto EC = forEachCodeViewRecord<CVSymbol>(
+      SymsBuffer, [&](const CVSymbol &Sym) -> llvm::Error {
+        // Discover type index references in the record. Skip it if we don't
+        // know where they are.
+        SmallVector<TiReference, 32> TypeRefs;
+        if (!discoverTypeIndicesInSymbol(Sym, TypeRefs)) {
+          log("ignoring unknown symbol record with kind 0x" +
+              utohexstr(Sym.kind()));
+          return Error::success();
+        }
 
-    // Re-map all the type index references.
-    MutableArrayRef<uint8_t> Contents =
-        NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Sym.kind(), Contents, IndexMap, TypeRefs);
+        // Copy the symbol record so we can mutate it.
+        MutableArrayRef<uint8_t> NewData = copySymbolForPdb(Sym, Alloc);
 
-    // An object file may have S_xxx_ID symbols, but these get converted to
-    // "real" symbols in a PDB.
-    translateIdSymbols(NewData, IDTable);
+        // Re-map all the type index references.
+        MutableArrayRef<uint8_t> Contents =
+            NewData.drop_front(sizeof(RecordPrefix));
+        remapTypesInSymbolRecord(File, Sym.kind(), Contents, IndexMap,
+                                 TypeRefs);
 
-    SymbolKind NewKind = symbolKind(NewData);
+        // An object file may have S_xxx_ID symbols, but these get converted to
+        // "real" symbols in a PDB.
+        translateIdSymbols(NewData, IDTable);
 
-    // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
-    CVSymbol NewSym(NewKind, NewData);
-    if (symbolOpensScope(NewKind))
-      scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(), NewSym);
-    else if (symbolEndsScope(NewKind))
-      scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
+        // If this record refers to an offset in the object file's string table,
+        // add that item to the global PDB string table and re-write the index.
+        recordStringTableReferences(Sym.kind(), Contents, StringTableRefs);
 
-    // Add the symbol to the globals stream if necessary.  Do this before adding
-    // the symbol to the module since we may need to get the next symbol offset,
-    // and writing to the module's symbol stream will update that offset.
-    if (symbolGoesInGlobalsStream(NewSym))
-      addGlobalSymbol(GsiBuilder, *File, NewSym);
+        SymbolKind NewKind = symbolKind(NewData);
 
-    // Add the symbol to the module.
-    if (symbolGoesInModuleStream(NewSym))
-      File->ModuleDBI->addSymbol(NewSym);
-  }
+        // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
+        CVSymbol NewSym(NewKind, NewData);
+        if (symbolOpensScope(NewKind))
+          scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(),
+                         NewSym);
+        else if (symbolEndsScope(NewKind))
+          scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
+
+        // Add the symbol to the globals stream if necessary.  Do this before
+        // adding the symbol to the module since we may need to get the next
+        // symbol offset, and writing to the module's symbol stream will update
+        // that offset.
+        if (symbolGoesInGlobalsStream(NewSym))
+          addGlobalSymbol(GsiBuilder, *File, NewSym);
+
+        // Add the symbol to the module.
+        if (symbolGoesInModuleStream(NewSym))
+          File->ModuleDBI->addSymbol(NewSym);
+        return Error::success();
+      });
+  cantFail(std::move(EC));
 }
 
 // Allocate memory for a .debug$S section and relocate it.
@@ -734,7 +791,12 @@ void PDBLinker::addObjFile(ObjFile *File) {
 
   const CVIndexMap &IndexMap = *IndexMapResult;
 
+  ScopedTimer T(SymbolMergingTimer);
+
   // Now do all live .debug$S sections.
+  DebugStringTableSubsectionRef CVStrTab;
+  DebugChecksumsSubsectionRef Checksums;
+  std::vector<ulittle32_t *> StringTableReferences;
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {
     if (!DebugChunk->isLive() || DebugChunk->getSectionName() != ".debug$S")
       continue;
@@ -748,14 +810,20 @@ void PDBLinker::addObjFile(ObjFile *File) {
     BinaryStreamReader Reader(RelocatedDebugContents, support::little);
     ExitOnErr(Reader.readArray(Subsections, RelocatedDebugContents.size()));
 
-    DebugStringTableSubsectionRef CVStrTab;
-    DebugChecksumsSubsectionRef Checksums;
     for (const DebugSubsectionRecord &SS : Subsections) {
       switch (SS.kind()) {
-      case DebugSubsectionKind::StringTable:
+      case DebugSubsectionKind::StringTable: {
+        auto Data = SS.getRecordData();
+        ArrayRef<uint8_t> Buffer;
+        cantFail(Data.readLongestContiguousChunk(0, Buffer));
+        assert(!CVStrTab.valid() &&
+               "Encountered multiple string table subsections!");
         ExitOnErr(CVStrTab.initialize(SS.getRecordData()));
         break;
+      }
       case DebugSubsectionKind::FileChecksums:
+        assert(!Checksums.valid() &&
+               "Encountered multiple checksum subsections!");
         ExitOnErr(Checksums.initialize(SS.getRecordData()));
         break;
       case DebugSubsectionKind::Lines:
@@ -766,10 +834,12 @@ void PDBLinker::addObjFile(ObjFile *File) {
       case DebugSubsectionKind::Symbols:
         if (Config->DebugGHashes) {
           mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
-                             GlobalIDTable, SS.getRecordData());
+                             GlobalIDTable, StringTableReferences,
+                             SS.getRecordData());
         } else {
           mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
-                             IDTable, SS.getRecordData());
+                             IDTable, StringTableReferences,
+                             SS.getRecordData());
         }
         break;
       default:
@@ -777,25 +847,47 @@ void PDBLinker::addObjFile(ObjFile *File) {
         break;
       }
     }
-
-    if (Checksums.valid()) {
-      // Make a new file checksum table that refers to offsets in the PDB-wide
-      // string table. Generally the string table subsection appears after the
-      // checksum table, so we have to do this after looping over all the
-      // subsections.
-      if (!CVStrTab.valid())
-        fatal(".debug$S sections must have both a string table subsection "
-              "and a checksum subsection table or neither");
-      auto NewChecksums = make_unique<DebugChecksumsSubsection>(PDBStrTab);
-      for (FileChecksumEntry &FC : Checksums) {
-        StringRef FileName = ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
-        ExitOnErr(Builder.getDbiBuilder().addModuleSourceFile(*File->ModuleDBI,
-                                                              FileName));
-        NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
-      }
-      File->ModuleDBI->addDebugSubsection(std::move(NewChecksums));
-    }
   }
+
+  // We should have seen all debug subsections across the entire object file now
+  // which means that if a StringTable subsection and Checksums subsection were
+  // present, now is the time to handle them.
+  if (!CVStrTab.valid()) {
+    if (Checksums.valid())
+      fatal(".debug$S sections with a checksums subsection must also contain a "
+            "string table subsection");
+
+    if (!StringTableReferences.empty())
+      warn("No StringTable subsection was encountered, but there are string "
+           "table references");
+    return;
+  }
+
+  // Rewrite each string table reference based on the value that the string
+  // assumes in the final PDB.
+  for (ulittle32_t *Ref : StringTableReferences) {
+    auto ExpectedString = CVStrTab.getString(*Ref);
+    if (!ExpectedString) {
+      warn("Invalid string table reference");
+      consumeError(ExpectedString.takeError());
+      continue;
+    }
+
+    *Ref = PDBStrTab.insert(*ExpectedString);
+  }
+
+  // Make a new file checksum table that refers to offsets in the PDB-wide
+  // string table. Generally the string table subsection appears after the
+  // checksum table, so we have to do this after looping over all the
+  // subsections.
+  auto NewChecksums = make_unique<DebugChecksumsSubsection>(PDBStrTab);
+  for (FileChecksumEntry &FC : Checksums) {
+    StringRef FileName = ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
+    ExitOnErr(Builder.getDbiBuilder().addModuleSourceFile(*File->ModuleDBI,
+                                                          FileName));
+    NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
+  }
+  File->ModuleDBI->addDebugSubsection(std::move(NewChecksums));
 }
 
 static PublicSym32 createPublic(Defined *Def) {
@@ -818,12 +910,15 @@ static PublicSym32 createPublic(Defined *Def) {
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
+  ScopedTimer T1(AddObjectsTimer);
   for (ObjFile *File : ObjFile::Instances)
     addObjFile(File);
 
   Builder.getStringTableBuilder().setStrings(PDBStrTab);
+  T1.stop();
 
   // Construct TPI and IPI stream contents.
+  ScopedTimer T2(TpiStreamLayoutTimer);
   if (Config->DebugGHashes) {
     addTypeInfo(Builder.getTpiBuilder(), GlobalTypeTable);
     addTypeInfo(Builder.getIpiBuilder(), GlobalIDTable);
@@ -831,7 +926,9 @@ void PDBLinker::addObjectsToPDB() {
     addTypeInfo(Builder.getTpiBuilder(), TypeTable);
     addTypeInfo(Builder.getIpiBuilder(), IDTable);
   }
+  T2.stop();
 
+  ScopedTimer T3(GlobalsLayoutTimer);
   // Compute the public and global symbols.
   auto &GsiBuilder = Builder.getGsiBuilder();
   std::vector<PublicSym32> Publics;
@@ -928,10 +1025,13 @@ void coff::createPDB(SymbolTable *Symtab,
                      ArrayRef<OutputSection *> OutputSections,
                      ArrayRef<uint8_t> SectionTable,
                      const llvm::codeview::DebugInfo &BuildId) {
+  ScopedTimer T1(TotalPdbLinkTimer);
   PDBLinker PDB(Symtab);
   PDB.initialize(BuildId);
   PDB.addObjectsToPDB();
   PDB.addSections(OutputSections, SectionTable);
+
+  ScopedTimer T2(DiskCommitTimer);
   PDB.commit();
 }
 

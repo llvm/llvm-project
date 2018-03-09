@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-flatten-schedule \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule \
 ; RUN: -polly-delicm-overapproximate-writes=true \
 ; RUN: -polly-delicm-compute-known=true -polly-delicm \
 ; RUN: -analyze < %s | FileCheck %s

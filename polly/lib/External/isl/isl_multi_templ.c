@@ -129,75 +129,6 @@ __isl_null MULTI(BASE) *FN(MULTI(BASE),free)(__isl_take MULTI(BASE) *multi)
 	return NULL;
 }
 
-#ifndef NO_DIMS
-/* Check whether "multi" has non-zero coefficients for any dimension
- * in the given range or if any of these dimensions appear
- * with non-zero coefficients in any of the integer divisions involved.
- */
-isl_bool FN(MULTI(BASE),involves_dims)(__isl_keep MULTI(BASE) *multi,
-	enum isl_dim_type type, unsigned first, unsigned n)
-{
-	int i;
-
-	if (!multi)
-		return isl_bool_error;
-	if (multi->n == 0 || n == 0)
-		return isl_bool_false;
-
-	for (i = 0; i < multi->n; ++i) {
-		isl_bool involves;
-
-		involves = FN(EL,involves_dims)(multi->p[i], type, first, n);
-		if (involves < 0 || involves)
-			return involves;
-	}
-
-	return isl_bool_false;
-}
-
-__isl_give MULTI(BASE) *FN(MULTI(BASE),insert_dims)(
-	__isl_take MULTI(BASE) *multi,
-	enum isl_dim_type type, unsigned first, unsigned n)
-{
-	int i;
-
-	if (!multi)
-		return NULL;
-	if (type == isl_dim_out)
-		isl_die(FN(MULTI(BASE),get_ctx)(multi), isl_error_invalid,
-			"cannot insert output/set dimensions",
-			return FN(MULTI(BASE),free)(multi));
-	if (n == 0 && !isl_space_is_named_or_nested(multi->space, type))
-		return multi;
-
-	multi = FN(MULTI(BASE),cow)(multi);
-	if (!multi)
-		return NULL;
-
-	multi->space = isl_space_insert_dims(multi->space, type, first, n);
-	if (!multi->space)
-		return FN(MULTI(BASE),free)(multi);
-
-	for (i = 0; i < multi->n; ++i) {
-		multi->p[i] = FN(EL,insert_dims)(multi->p[i], type, first, n);
-		if (!multi->p[i])
-			return FN(MULTI(BASE),free)(multi);
-	}
-
-	return multi;
-}
-
-__isl_give MULTI(BASE) *FN(MULTI(BASE),add_dims)(__isl_take MULTI(BASE) *multi,
-	enum isl_dim_type type, unsigned n)
-{
-	unsigned pos;
-
-	pos = FN(MULTI(BASE),dim)(multi, type);
-
-	return FN(MULTI(BASE),insert_dims)(multi, type, pos, n);
-}
-#endif
-
 unsigned FN(MULTI(BASE),dim)(__isl_keep MULTI(BASE) *multi,
 	enum isl_dim_type type)
 {
@@ -333,7 +264,7 @@ error:
 /* Reset the space of "multi".  This function is called from isl_pw_templ.c
  * and doesn't know if the space of an element object is represented
  * directly or through its domain.  It therefore passes along both,
- * which we pass along to the element function since we don't how
+ * which we pass along to the element function since we don't know how
  * that is represented either.
  */
 __isl_give MULTI(BASE) *FN(MULTI(BASE),reset_space_and_domain)(
@@ -1326,7 +1257,7 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),mod_multi_val)(
 
 	multi = FN(MULTI(BASE),cow)(multi);
 	if (!multi)
-		return NULL;
+		goto error;
 
 	for (i = 0; i < multi->n; ++i) {
 		isl_val *v;

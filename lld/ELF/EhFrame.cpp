@@ -21,7 +21,6 @@
 #include "InputSection.h"
 #include "Relocations.h"
 #include "Strings.h"
-
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Object/ELF.h"

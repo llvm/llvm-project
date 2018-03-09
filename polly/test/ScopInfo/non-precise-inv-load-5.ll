@@ -7,13 +7,13 @@
 ; CHECK:         Invariant Accesses: {
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                [c] -> { Stmt_if_then[i0] -> MemRef_I[-129] };
-; CHECK-NEXT:            Execution Context: [c] -> {  : 1 = 0 }
+; CHECK-NEXT:            Execution Context: [c] -> {  : false }
 ; CHECK-NEXT:    }
 ;
 ; TODO: FIXME: We should remove the statement as it has an empty domain.
 ; CHECK:      Stmt_if_then
 ; CHECK-NEXT: Domain :=
-; CHECK-NEXT: [c] -> { Stmt_if_then[i0] : 1 = 0 };
+; CHECK-NEXT: [c] -> { Stmt_if_then[i0] : false };
 ;
 ;    int I[1024];
 ;    void f(int *A, unsigned char c) {

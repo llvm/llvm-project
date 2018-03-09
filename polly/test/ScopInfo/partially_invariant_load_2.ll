@@ -6,7 +6,7 @@
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [N, p] -> {  : 1 = 0 }
+; CHECK-NEXT: [N, p] -> {  : false }
 ;
 ; CHECK:      Stmt_if_then__TO__if_end
 ; CHECK-NEXT:   Domain :=

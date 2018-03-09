@@ -1,17 +1,19 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/weak-symbol1.ll -o %t1.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/weak-symbol2.ll -o %t2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
-; RUN: lld -flavor wasm -o %t.wasm %t.o %t1.o %t2.o
+; RUN: llc -filetype=obj %p/Inputs/weak-symbol1.ll -o %t1.o
+; RUN: llc -filetype=obj %p/Inputs/weak-symbol2.ll -o %t2.o
+; RUN: llc -filetype=obj %s -o %t.o
+; RUN: wasm-ld -no-gc-sections --check-signatures -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 declare i32 @weakFn() local_unnamed_addr
 @weakGlobal = external global i32
 
-define i32 @_start() local_unnamed_addr {
+define void @_start() local_unnamed_addr {
 entry:
   %call = call i32 @weakFn()
   %val = load i32, i32* @weakGlobal, align 4
-  ret i32 %val
+  ret void
 }
 
 ; CHECK:      --- !WASM
@@ -21,10 +23,13 @@ entry:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 1, 1, 1, 0 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -37,11 +42,24 @@ entry:
 ; CHECK-NEXT:       - Initial:         0x00000002
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           66576
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           66576
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           1032
 ; CHECK-NEXT:   - Type:            EXPORT
 ; CHECK-NEXT:     Exports:
 ; CHECK-NEXT:       - Name:            memory
@@ -59,6 +77,12 @@ entry:
 ; CHECK-NEXT:       - Name:            exportWeak2
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:       - Name:            __heap_base
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:       - Name:            __data_end
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
@@ -67,16 +91,24 @@ entry:
 ; CHECK-NEXT:         Functions:       [ 1 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
-; CHECK-NEXT:       - Locals:
-; CHECK-NEXT:         Body:            1081808080001A4100280280888080000B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Locals:
+; CHECK-NEXT:         Body:            1081808080001A0B
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41010B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4181808080000B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4181808080000B
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Locals:
+; CHECK-NEXT:         Body:            0B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   7
@@ -93,8 +125,14 @@ entry:
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            _start
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            weakFn
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            exportWeak1
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Name:            weakFn
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Name:            exportWeak2
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...

@@ -60,8 +60,8 @@ public:
                  uint32_t VerdefIndex);
 
   template <class ELFT>
-  Symbol *addLazyArchive(StringRef Name, ArchiveFile &F,
-                         const llvm::object::Archive::Symbol S);
+  void addLazyArchive(StringRef Name, ArchiveFile &F,
+                      const llvm::object::Archive::Symbol S);
 
   template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);
 
@@ -90,7 +90,6 @@ public:
 private:
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
-  void defsym(Symbol *Dst, Symbol *Src);
 
   llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
   void handleAnonymousVersion();

@@ -331,36 +331,27 @@ static int test_bounded(isl_ctx *ctx)
 /* Construct the basic set { [i] : 5 <= i <= N } */
 static int test_construction_1(isl_ctx *ctx)
 {
-	isl_int v;
 	isl_space *dim;
 	isl_local_space *ls;
 	isl_basic_set *bset;
 	isl_constraint *c;
-
-	isl_int_init(v);
 
 	dim = isl_space_set_alloc(ctx, 1, 1);
 	bset = isl_basic_set_universe(isl_space_copy(dim));
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_inequality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_param, 0, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_param, 0, 1);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_inequality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, -5);
-	c = isl_constraint_set_constant(c, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_constant_si(c, -5);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	isl_local_space_free(ls);
 	isl_basic_set_free(bset);
-
-	isl_int_clear(v);
 
 	return 0;
 }
@@ -515,14 +506,17 @@ static int test_un_val(isl_ctx *ctx)
 	int i;
 	isl_val *v, *res;
 	__isl_give isl_val *(*fn)(__isl_take isl_val *v);
-	int ok;
+	isl_bool ok, is_nan;
 
 	for (i = 0; i < ARRAY_SIZE(val_un_tests); ++i) {
 		v = isl_val_read_from_str(ctx, val_un_tests[i].arg);
 		res = isl_val_read_from_str(ctx, val_un_tests[i].res);
 		fn = val_un_tests[i].op;
 		v = fn(v);
-		if (isl_val_is_nan(res))
+		is_nan = isl_val_is_nan(res);
+		if (is_nan < 0)
+			ok = isl_bool_error;
+		else if (is_nan)
 			ok = isl_val_is_nan(v);
 		else
 			ok = isl_val_eq(v, res);
@@ -714,14 +708,11 @@ static int test_div(isl_ctx *ctx)
 {
 	const char *str;
 	int empty;
-	isl_int v;
 	isl_space *dim;
 	isl_set *set;
 	isl_local_space *ls;
 	struct isl_basic_set *bset;
 	struct isl_constraint *c;
-
-	isl_int_init(v);
 
 	/* test 1 */
 	dim = isl_space_set_alloc(ctx, 0, 3);
@@ -729,21 +720,15 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
+	c = isl_constraint_set_constant_si(c, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, 3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_constant_si(c, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, 3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 1, 2);
@@ -758,21 +743,15 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
+	c = isl_constraint_set_constant_si(c, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, 3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_constant_si(c, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, 3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 1, 2);
@@ -787,21 +766,15 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
+	c = isl_constraint_set_constant_si(c, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, 3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -3);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 4);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_constant_si(c, -3);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, 4);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 1, 2);
@@ -816,21 +789,15 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 2);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
+	c = isl_constraint_set_constant_si(c, 2);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, 3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_constant(c, v);
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 6);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_constant_si(c, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, 6);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 1, 2);
@@ -845,17 +812,13 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, 3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, -3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, -3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 2, 1);
@@ -870,17 +833,13 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 6);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, 6);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, -3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, -3);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 2, 1);
@@ -904,14 +863,10 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, -3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
-	isl_int_set_si(v, -3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
-	isl_int_set_si(v, 6);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 3, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, -3);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, -3);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 3, 6);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 3, 1);
@@ -929,23 +884,16 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, -3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
-	isl_int_set_si(v, -3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 3, v);
-	isl_int_set_si(v, 6);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 4, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, -3);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 3, -3);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 4, 6);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_constant(c, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, 1);
+	c = isl_constraint_set_constant_si(c, 1);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 4, 1);
@@ -963,21 +911,15 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 1, v);
-	isl_int_set_si(v, -2);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 1, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, -2);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, -1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, 3);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 3, v);
-	isl_int_set_si(v, 2);
-	c = isl_constraint_set_constant(c, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, -1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 3, 3);
+	c = isl_constraint_set_constant_si(c, 2);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 2, 2);
@@ -995,10 +937,8 @@ static int test_div(isl_ctx *ctx)
 	ls = isl_local_space_from_space(dim);
 
 	c = isl_constraint_alloc_equality(isl_local_space_copy(ls));
-	isl_int_set_si(v, 1);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 0, v);
-	isl_int_set_si(v, -2);
-	c = isl_constraint_set_coefficient(c, isl_dim_set, 2, v);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 0, 1);
+	c = isl_constraint_set_coefficient_si(c, isl_dim_set, 2, -2);
 	bset = isl_basic_set_add_constraint(bset, c);
 
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 2, 1);
@@ -1007,8 +947,6 @@ static int test_div(isl_ctx *ctx)
 
 	isl_local_space_free(ls);
 	isl_basic_set_free(bset);
-
-	isl_int_clear(v);
 
 	str = "{ [i] : exists (e0, e1: 3e1 >= 1 + 2e0 and "
 	    "8e1 <= -1 + 5i - 5e0 and 2e1 >= 1 + 2i - 5e0) }";
@@ -1948,6 +1886,11 @@ struct {
 			"2e0 < -a + 2b) }" },
 	{ 1, "{ [i, j, i - 8j] : 8 <= i <= 63 and -7 + i <= 8j <= i; "
 		"[i, 0, i] : 0 <= i <= 7 }" },
+	{ 1, "{ [a, b] : a >= 0 and 0 <= b <= 1 - a; [1, 1] }" },
+	{ 0, "{ [a, b] : a >= 0 and 0 <= b <= 1 - a; [0, 2] }" },
+	{ 0, "{ [a, b] : a >= 0 and 0 <= b <= 1 - a; [-1, 3] }" },
+	{ 1, "{ [a, b] : a, b >= 0 and a + 2b <= 2; [1, 1] }" },
+	{ 0, "{ [a, b] : a, b >= 0 and a + 2b <= 2; [2, 1] }" },
 };
 
 /* A specialized coalescing test case that would result
@@ -3640,8 +3583,8 @@ int test_special_schedule(isl_ctx *ctx, const char *domain,
 	return 0;
 }
 
-/* Check that the schedule map is properly padded, even after being
- * reconstructed from the band forest.
+/* Check that the schedule map is properly padded, i.e., that the range
+ * lives in a single space.
  */
 static int test_padded_schedule(isl_ctx *ctx)
 {
@@ -3650,9 +3593,9 @@ static int test_padded_schedule(isl_ctx *ctx)
 	isl_union_map *validity, *proximity;
 	isl_schedule_constraints *sc;
 	isl_schedule *sched;
-	isl_union_map *map1, *map2;
-	isl_band_list *list;
-	int equal;
+	isl_union_map *umap;
+	isl_union_set *range;
+	isl_set *set;
 
 	str = "[N] -> { S0[i] : 0 <= i <= N; S1[i, j] : 0 <= i, j <= N }";
 	D = isl_union_set_read_from_str(ctx, str);
@@ -3662,21 +3605,14 @@ static int test_padded_schedule(isl_ctx *ctx)
 	sc = isl_schedule_constraints_set_validity(sc, validity);
 	sc = isl_schedule_constraints_set_proximity(sc, proximity);
 	sched = isl_schedule_constraints_compute_schedule(sc);
-	map1 = isl_schedule_get_map(sched);
-	list = isl_schedule_get_band_forest(sched);
-	isl_band_list_free(list);
-	map2 = isl_schedule_get_map(sched);
+	umap = isl_schedule_get_map(sched);
 	isl_schedule_free(sched);
-	equal = isl_union_map_is_equal(map1, map2);
-	isl_union_map_free(map1);
-	isl_union_map_free(map2);
+	range = isl_union_map_range(umap);
+	set = isl_set_from_union_set(range);
+	isl_set_free(set);
 
-	if (equal < 0)
+	if (!set)
 		return -1;
-	if (!equal)
-		isl_die(ctx, isl_error_unknown,
-			"reconstructed schedule map not the same as original",
-			return -1);
 
 	return 0;
 }
@@ -4094,8 +4030,8 @@ static int test_bounded_coefficients_schedule_whole(isl_ctx *ctx)
 	sched1 = isl_schedule_get_map(schedule);
 	isl_schedule_free(schedule);
 
-	str = "{ S_4[i, j, k] -> [i, j, 10 - k, 1]; "
-	    "S_2[i, j] -> [0, i, j, 0]; S_6[i, j] -> [0, 10 + i, j, 2] }";
+	str = "{ S_4[i, j, k] -> [i, j, 10 - k]; "
+	    "S_2[i, j] -> [0, i, j]; S_6[i, j] -> [0, 10 + i, j] }";
 	sched2 = isl_union_map_read_from_str(ctx, str);
 	equal = isl_union_map_is_equal(sched1, sched2);
 	isl_union_map_free(sched1);
@@ -4586,6 +4522,82 @@ static int aff_check_plain_equal(__isl_keep isl_aff *aff, const char *str)
 	return 0;
 }
 
+/* Is "upa" obviously equal to the isl_union_pw_aff represented by "str"?
+ */
+static isl_bool union_pw_aff_plain_is_equal(__isl_keep isl_union_pw_aff *upa,
+	const char *str)
+{
+	isl_ctx *ctx;
+	isl_union_pw_aff *upa2;
+	isl_bool equal;
+
+	if (!upa)
+		return isl_bool_error;
+
+	ctx = isl_union_pw_aff_get_ctx(upa);
+	upa2 = isl_union_pw_aff_read_from_str(ctx, str);
+	equal = isl_union_pw_aff_plain_is_equal(upa, upa2);
+	isl_union_pw_aff_free(upa2);
+
+	return equal;
+}
+
+/* Check that "upa" is obviously equal to the isl_union_pw_aff
+ * represented by "str".
+ */
+static isl_stat union_pw_aff_check_plain_equal(__isl_keep isl_union_pw_aff *upa,
+	const char *str)
+{
+	isl_bool equal;
+
+	equal = union_pw_aff_plain_is_equal(upa, str);
+	if (equal < 0)
+		return isl_stat_error;
+	if (!equal)
+		isl_die(isl_union_pw_aff_get_ctx(upa), isl_error_unknown,
+			"result not as expected", return isl_stat_error);
+	return isl_stat_ok;
+}
+
+/* Basic tests on isl_union_pw_aff.
+ *
+ * In particular, check that isl_union_pw_aff_aff_on_domain
+ * aligns the parameters of the input objects and
+ * that isl_union_pw_aff_param_on_domain_id properly
+ * introduces the parameter.
+ */
+static int test_upa(isl_ctx *ctx)
+{
+	const char *str;
+	isl_id *id;
+	isl_aff *aff;
+	isl_union_set *domain;
+	isl_union_pw_aff *upa;
+	isl_stat ok;
+
+	aff = isl_aff_read_from_str(ctx, "[N] -> { [N] }");
+	str = "[M] -> { A[i] : 0 <= i < M; B[] }";
+	domain = isl_union_set_read_from_str(ctx, str);
+	upa = isl_union_pw_aff_aff_on_domain(domain, aff);
+	str = "[N, M] -> { A[i] -> [N] : 0 <= i < M; B[] -> [N] }";
+	ok = union_pw_aff_check_plain_equal(upa, str);
+	isl_union_pw_aff_free(upa);
+	if (ok < 0)
+		return -1;
+
+	id = isl_id_alloc(ctx, "N", NULL);
+	str = "[M] -> { A[i] : 0 <= i < M; B[] }";
+	domain = isl_union_set_read_from_str(ctx, str);
+	upa = isl_union_pw_aff_param_on_domain_id(domain, id);
+	str = "[N, M] -> { A[i] -> [N] : 0 <= i < M; B[] -> [N] }";
+	ok = union_pw_aff_check_plain_equal(upa, str);
+	isl_union_pw_aff_free(upa);
+	if (ok < 0)
+		return -1;
+
+	return 0;
+}
+
 struct {
 	__isl_give isl_aff *(*fn)(__isl_take isl_aff *aff1,
 				__isl_take isl_aff *aff2);
@@ -4830,6 +4842,56 @@ static int test_bin_upma_fail(isl_ctx *ctx)
 	return 0;
 }
 
+/* Inputs for basic tests of binary operations on
+ * pairs of isl_multi_union_pw_aff and isl_union_set objects.
+ * "fn" is the function that is tested.
+ * "arg1" and "arg2" are string descriptions of the inputs.
+ * "res" is a string description of the expected result.
+ */
+struct {
+	__isl_give isl_multi_union_pw_aff *(*fn)(
+		__isl_take isl_multi_union_pw_aff *mupa,
+		__isl_take isl_union_set *uset);
+	const char *arg1;
+	const char *arg2;
+	const char *res;
+} mupa_uset_tests[] = {
+	{ &isl_multi_union_pw_aff_intersect_domain,
+	  "C[{ B[i,j] -> [i + 2j] }]", "{ B[i,i] }",
+	  "C[{ B[i,i] -> [3i] }]" },
+};
+
+/* Perform some basic tests of binary operations on
+ * pairs of isl_multi_union_pw_aff and isl_union_set objects.
+ */
+static int test_mupa_uset(isl_ctx *ctx)
+{
+	int i;
+	isl_bool ok;
+	isl_multi_union_pw_aff *mupa, *res;
+	isl_union_set *uset;
+
+	for (i = 0; i < ARRAY_SIZE(mupa_uset_tests); ++i) {
+		mupa = isl_multi_union_pw_aff_read_from_str(ctx,
+						    mupa_uset_tests[i].arg1);
+		uset = isl_union_set_read_from_str(ctx,
+						    mupa_uset_tests[i].arg2);
+		res = isl_multi_union_pw_aff_read_from_str(ctx,
+						    mupa_uset_tests[i].res);
+		mupa = mupa_uset_tests[i].fn(mupa, uset);
+		ok = isl_multi_union_pw_aff_plain_is_equal(mupa, res);
+		isl_multi_union_pw_aff_free(mupa);
+		isl_multi_union_pw_aff_free(res);
+		if (ok < 0)
+			return -1;
+		if (!ok)
+			isl_die(ctx, isl_error_unknown,
+				"unexpected result", return -1);
+	}
+
+	return 0;
+}
+
 int test_aff(isl_ctx *ctx)
 {
 	const char *str;
@@ -4839,6 +4901,8 @@ int test_aff(isl_ctx *ctx)
 	isl_aff *aff;
 	int zero, equal;
 
+	if (test_upa(ctx) < 0)
+		return -1;
 	if (test_bin_aff(ctx) < 0)
 		return -1;
 	if (test_bin_pw_aff(ctx) < 0)
@@ -4846,6 +4910,8 @@ int test_aff(isl_ctx *ctx)
 	if (test_bin_upma(ctx) < 0)
 		return -1;
 	if (test_bin_upma_fail(ctx) < 0)
+		return -1;
+	if (test_mupa_uset(ctx) < 0)
 		return -1;
 
 	space = isl_space_set_alloc(ctx, 0, 1);
@@ -4884,23 +4950,12 @@ int test_aff(isl_ctx *ctx)
 	return 0;
 }
 
-/* Check that the computation below results in a single expression.
- * One or two expressions may result depending on which constraint
- * ends up being considered as redundant with respect to the other
- * constraints after the projection that is performed internally
- * by isl_set_dim_min.
+/* Check that "pa" consists of a single expression.
  */
-static int test_dim_max_1(isl_ctx *ctx)
+static int check_single_piece(isl_ctx *ctx, __isl_take isl_pw_aff *pa)
 {
-	const char *str;
-	isl_set *set;
-	isl_pw_aff *pa;
 	int n;
 
-	str = "[n] -> { [a, b] : n >= 0 and 4a >= -4 + n and b >= 0 and "
-				"-4a <= b <= 3 and b < n - 4a }";
-	set = isl_set_read_from_str(ctx, str);
-	pa = isl_set_dim_min(set, 0);
 	n = isl_pw_aff_n_piece(pa);
 	isl_pw_aff_free(pa);
 
@@ -4913,6 +4968,47 @@ static int test_dim_max_1(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that the computation below results in a single expression.
+ * One or two expressions may result depending on which constraint
+ * ends up being considered as redundant with respect to the other
+ * constraints after the projection that is performed internally
+ * by isl_set_dim_min.
+ */
+static int test_dim_max_1(isl_ctx *ctx)
+{
+	const char *str;
+	isl_set *set;
+	isl_pw_aff *pa;
+
+	str = "[n] -> { [a, b] : n >= 0 and 4a >= -4 + n and b >= 0 and "
+				"-4a <= b <= 3 and b < n - 4a }";
+	set = isl_set_read_from_str(ctx, str);
+	pa = isl_set_dim_min(set, 0);
+	return check_single_piece(ctx, pa);
+}
+
+/* Check that the computation below results in a single expression.
+ * The PIP problem corresponding to these constraints has a row
+ * that causes a split of the solution domain.  The solver should
+ * first pick rows that split off empty parts such that the actual
+ * solution domain does not get split.
+ * Note that the description contains some redundant constraints.
+ * If these constraints get removed first, then the row mentioned
+ * above does not appear in the PIP problem.
+ */
+static int test_dim_max_2(isl_ctx *ctx)
+{
+	const char *str;
+	isl_set *set;
+	isl_pw_aff *pa;
+
+	str = "[P, N] -> { [a] : a < N and a >= 0 and N > P and a <= P and "
+				"N > 0 and P >= 0 }";
+	set = isl_set_read_from_str(ctx, str);
+	pa = isl_set_dim_max(set, 0);
+	return check_single_piece(ctx, pa);
+}
+
 int test_dim_max(isl_ctx *ctx)
 {
 	int equal;
@@ -4923,6 +5019,8 @@ int test_dim_max(isl_ctx *ctx)
 	isl_pw_aff *pwaff;
 
 	if (test_dim_max_1(ctx) < 0)
+		return -1;
+	if (test_dim_max_2(ctx) < 0)
 		return -1;
 
 	str = "[N] -> { [i] : 0 <= i <= min(N,10) }";
@@ -5440,6 +5538,16 @@ static int test_eval(isl_ctx *ctx)
  */
 const char *output_tests[] = {
 	"{ [1, y] : 0 <= y <= 1; [x, -x] : 0 <= x <= 1 }",
+	"{ [x] : 1 = 0 }",
+	"{ [x] : false }",
+	"{ [x] : x mod 2 = 0 }",
+	"{ [x] : x mod 2 = 1 }",
+	"{ [x, y] : x mod 2 = 0 and 3*floor(y/2) < x }",
+	"{ [y, x] : x mod 2 = 0 and 3*floor(y/2) < x }",
+	"{ [x, y] : x mod 2 = 0 and 3*floor(y/2) = x + y }",
+	"{ [y, x] : x mod 2 = 0 and 3*floor(y/2) = x + y }",
+	"[n] -> { [y, x] : 2*((x + 2y) mod 3) = n }",
+	"{ [x, y] : (2*floor(x/3) + 3*floor(y/4)) mod 5 = x }",
 };
 
 /* Check that printing a set and reparsing a set from the printed output
@@ -5555,16 +5663,14 @@ int test_fixed_power(isl_ctx *ctx)
 {
 	const char *str;
 	isl_map *map;
-	isl_int exp;
+	isl_val *exp;
 	int equal;
 
-	isl_int_init(exp);
 	str = "{ [i] -> [i + 1] }";
 	map = isl_map_read_from_str(ctx, str);
-	isl_int_set_si(exp, 23);
-	map = isl_map_fixed_power(map, exp);
+	exp = isl_val_int_from_si(ctx, 23);
+	map = isl_map_fixed_power_val(map, exp);
 	equal = map_check_equal(map, "{ [i] -> [i + 23] }");
-	isl_int_clear(exp);
 	isl_map_free(map);
 	if (equal < 0)
 		return -1;
@@ -5723,6 +5829,8 @@ static int test_list(isl_ctx *ctx)
 	list = isl_id_list_add(list, d);
 	list = isl_id_list_drop(list, 1, 1);
 
+	if (!list)
+		return -1;
 	if (isl_id_list_n_id(list) != 3) {
 		isl_id_list_free(list);
 		isl_die(ctx, isl_error_unknown,

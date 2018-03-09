@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-dependences -analyze < %s | FileCheck %s
 ;
 ; This loopnest contains a reduction which imposes the same dependences as the
 ; accesses to the array A. We need to ensure we keep the dependences of A.

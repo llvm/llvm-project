@@ -60,7 +60,7 @@ _start:
 // HDR-NEXT:    Size: 36
 // HDR-NEXT:    Link: 0
 // HDR-NEXT:    Info: 0
-// HDR-NEXT:    AddressAlignment: 1
+// HDR-NEXT:    AddressAlignment: 4
 // HDR-NEXT:    EntrySize: 0
 // HDR-NEXT:    SectionData (
 // HDR-NEXT:      0000: 011B033B 24000000 03000000 A80E0000
@@ -130,5 +130,5 @@ _start:
 // HDR-NEXT:   Flags [
 // HDR-NEXT:     PF_R
 // HDR-NEXT:   ]
-// HDR-NEXT:   Alignment: 1
+// HDR-NEXT:   Alignment: 4
 // HDR-NEXT: }

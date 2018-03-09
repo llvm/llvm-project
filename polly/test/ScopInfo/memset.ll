@@ -16,7 +16,7 @@
 ; IR:   %[[r1:[a-zA-Z0-9]*]] = bitcast i32* %A to i8*
 ;
 ; IR: polly.stmt.for.body3:
-; IR:   call void @llvm.memset.p0i8.i64(i8* %[[r1]], i8 36, i64 187, i32 4, i1 false)
+; IR:   call void @llvm.memset.p0i8.i64(i8* align 4 %[[r1]], i8 36, i64 187, i1 false)
 ;
 ;    #include <string.h>
 ;

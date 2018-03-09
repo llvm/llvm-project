@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-vectorizer=polly -polly-opt-isl -polly-ast -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-vectorizer=polly -polly-opt-isl -polly-ast -polly-codegen -S < %s | FileCheck %s
 ;
 ; Polly's vectorizer does not support partial accesses.
 ;

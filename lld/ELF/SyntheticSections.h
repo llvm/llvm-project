@@ -310,22 +310,30 @@ private:
 
 class DynamicReloc {
 public:
-  DynamicReloc(uint32_t Type, const InputSectionBase *InputSec,
+  DynamicReloc(RelType Type, const InputSectionBase *InputSec,
                uint64_t OffsetInSec, bool UseSymVA, Symbol *Sym, int64_t Addend)
       : Type(Type), Sym(Sym), InputSec(InputSec), OffsetInSec(OffsetInSec),
         UseSymVA(UseSymVA), Addend(Addend) {}
 
   uint64_t getOffset() const;
-  int64_t getAddend() const;
   uint32_t getSymIndex() const;
   const InputSectionBase *getInputSec() const { return InputSec; }
 
-  uint32_t Type;
+  // Computes the addend of the dynamic relocation. Note that this is not the
+  // same as the Addend member variable as it also includes the symbol address
+  // if UseSymVA is true.
+  int64_t computeAddend() const;
+
+  RelType Type;
 
 private:
   Symbol *Sym;
   const InputSectionBase *InputSec = nullptr;
   uint64_t OffsetInSec;
+  // If this member is true, the dynamic relocation will not be against the
+  // symbol but will instead be a relative relocation that simply adds the
+  // load address. This means we need to write the symbol virtual address
+  // plus the original addend as the final relocation addend.
   bool UseSymVA;
   int64_t Addend;
 };
@@ -361,6 +369,13 @@ class RelocationBaseSection : public SyntheticSection {
 public:
   RelocationBaseSection(StringRef Name, uint32_t Type, int32_t DynamicTag,
                         int32_t SizeDynamicTag);
+  void addReloc(RelType DynType, InputSectionBase *IS, uint64_t OffsetInSec,
+                Symbol *Sym);
+  // Add a dynamic relocation that might need an addend. This takes care of
+  // writing the addend to the output section if needed.
+  void addReloc(RelType DynType, InputSectionBase *InputSec,
+                uint64_t OffsetInSec, Symbol *Sym, int64_t Addend, RelExpr Expr,
+                RelType Type);
   void addReloc(const DynamicReloc &Reloc);
   bool empty() const override { return Relocs.empty(); }
   size_t getSize() const override { return Relocs.size() * this->Entsize; }
@@ -484,13 +499,13 @@ private:
   size_t Size = 0;
 };
 
-// The PltSection is used for both the Plt and Iplt. The former always has a
+// The PltSection is used for both the Plt and Iplt. The former usually has a
 // header as its first entry that is used at run-time to resolve lazy binding.
 // The latter is used for GNU Ifunc symbols, that will be subject to a
 // Target->IRelativeRel.
 class PltSection : public SyntheticSection {
 public:
-  PltSection(size_t HeaderSize);
+  PltSection(bool IsIplt);
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
   bool empty() const override { return Entries.empty(); }
@@ -501,8 +516,8 @@ public:
 private:
   unsigned getPltRelocOff() const;
   std::vector<std::pair<const Symbol *, unsigned>> Entries;
-  // Iplt always has HeaderSize of 0, the Plt HeaderSize is always non-zero
   size_t HeaderSize;
+  bool IsIplt;
 };
 
 // GdbIndexChunk is created for each .debug_info section and contains
@@ -787,7 +802,10 @@ public:
   void writeTo(uint8_t *Buf) override;
   bool empty() const override;
 
-  InputSection *Highest = 0;
+  // The last section referenced by a regular .ARM.exidx section.
+  // It is found and filled in Writer<ELFT>::resolveShfLinkOrder().
+  // The sentinel points at the end of that section.
+  InputSection *Highest = nullptr;
 };
 
 // A container for one or more linker generated thunks. Instances of these

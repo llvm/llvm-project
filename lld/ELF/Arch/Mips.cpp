@@ -213,8 +213,8 @@ template <endianness E> static uint32_t readShuffle(const uint8_t *Loc) {
 }
 
 template <endianness E>
-static void writeRelocation(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
-                            uint8_t Shift) {
+static void writeValue(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
+                       uint8_t Shift) {
   uint32_t Instr = read32<E>(Loc);
   uint32_t Mask = 0xffffffff >> (32 - BitsSize);
   uint32_t Data = (Instr & ~Mask) | ((V >> Shift) & Mask);
@@ -222,14 +222,14 @@ static void writeRelocation(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
 }
 
 template <endianness E>
-static void writeMicroRelocation32(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
-                                   uint8_t Shift) {
+static void writeShuffleValue(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
+                              uint8_t Shift) {
   // See comments in readShuffle for purpose of this code.
   uint16_t *Words = (uint16_t *)Loc;
   if (E == support::little)
     std::swap(Words[0], Words[1]);
 
-  writeRelocation<E>(Loc, V, BitsSize, Shift);
+  writeValue<E>(Loc, V, BitsSize, Shift);
 
   if (E == support::little)
     std::swap(Words[0], Words[1]);
@@ -296,13 +296,14 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
     write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
   }
 
-  write32<E>(Buf + 24, 0x0320f809); // jalr  $25
+  uint32_t JalrInst = Config->ZHazardplt ? 0x0320fc09 : 0x0320f809;
+  write32<E>(Buf + 24, JalrInst); // jalr.hb $25 or jalr $25
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
   uint64_t GotPlt = InX::GotPlt->getVA();
-  writeRelocation<E>(Buf, GotPlt + 0x8000, 16, 16);
-  writeRelocation<E>(Buf + 4, GotPlt, 16, 0);
-  writeRelocation<E>(Buf + 8, GotPlt, 16, 0);
+  writeValue<E>(Buf, GotPlt + 0x8000, 16, 16);
+  writeValue<E>(Buf + 4, GotPlt, 16, 0);
+  writeValue<E>(Buf + 8, GotPlt, 16, 0);
 }
 
 template <class ELFT>
@@ -330,13 +331,16 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
     return;
   }
 
+  uint32_t JrInst = isMipsR6() ? (Config->ZHazardplt ? 0x03200409 : 0x03200009)
+                               : (Config->ZHazardplt ? 0x03200408 : 0x03200008);
+
   write32<E>(Buf, 0x3c0f0000);     // lui   $15, %hi(.got.plt entry)
   write32<E>(Buf + 4, 0x8df90000); // l[wd] $25, %lo(.got.plt entry)($15)
-  write32<E>(Buf + 8, isMipsR6() ? 0x03200009 : 0x03200008);  // jr  $25
+  write32<E>(Buf + 8, JrInst);     // jr  $25 / jr.hb $25
   write32<E>(Buf + 12, 0x25f80000); // addiu $24, $15, %lo(.got.plt entry)
-  writeRelocation<E>(Buf, GotPltEntryAddr + 0x8000, 16, 16);
-  writeRelocation<E>(Buf + 4, GotPltEntryAddr, 16, 0);
-  writeRelocation<E>(Buf + 12, GotPltEntryAddr, 16, 0);
+  writeValue<E>(Buf, GotPltEntryAddr + 0x8000, 16, 16);
+  writeValue<E>(Buf + 4, GotPltEntryAddr, 16, 0);
+  writeValue<E>(Buf + 12, GotPltEntryAddr, 16, 0);
 }
 
 template <class ELFT>
@@ -467,6 +471,9 @@ template <class ELFT>
 void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   const endianness E = ELFT::TargetEndianness;
 
+  if (ELFT::Is64Bits || Config->MipsN32Abi)
+    std::tie(Type, Val) = calculateMipsRelChain(Loc, Type, Val);
+
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
   if (Type == R_MIPS_TLS_DTPREL_HI16 || Type == R_MIPS_TLS_DTPREL_LO16 ||
@@ -481,9 +488,6 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     Val -= 0x7000;
   }
 
-  if (ELFT::Is64Bits || Config->MipsN32Abi)
-    std::tie(Type, Val) = calculateMipsRelChain(Loc, Type, Val);
-
   switch (Type) {
   case R_MIPS_32:
   case R_MIPS_GPREL32:
@@ -497,25 +501,25 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write64<E>(Loc, Val);
     break;
   case R_MIPS_26:
-    writeRelocation<E>(Loc, Val, 26, 2);
+    writeValue<E>(Loc, Val, 26, 2);
     break;
   case R_MIPS_GOT16:
     // The R_MIPS_GOT16 relocation's value in "relocatable" linking mode
     // is updated addend (not a GOT index). In that case write high 16 bits
     // to store a correct addend value.
     if (Config->Relocatable) {
-      writeRelocation<E>(Loc, Val + 0x8000, 16, 16);
+      writeValue<E>(Loc, Val + 0x8000, 16, 16);
     } else {
       checkInt<16>(Loc, Val, Type);
-      writeRelocation<E>(Loc, Val, 16, 0);
+      writeValue<E>(Loc, Val, 16, 0);
     }
     break;
   case R_MICROMIPS_GOT16:
     if (Config->Relocatable) {
-      writeMicroRelocation32<E>(Loc, Val + 0x8000, 16, 16);
+      writeShuffleValue<E>(Loc, Val + 0x8000, 16, 16);
     } else {
       checkInt<16>(Loc, Val, Type);
-      writeMicroRelocation32<E>(Loc, Val, 16, 0);
+      writeShuffleValue<E>(Loc, Val, 16, 0);
     }
     break;
   case R_MIPS_CALL16:
@@ -534,7 +538,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MIPS_PCLO16:
   case R_MIPS_TLS_DTPREL_LO16:
   case R_MIPS_TLS_TPREL_LO16:
-    writeRelocation<E>(Loc, Val, 16, 0);
+    writeValue<E>(Loc, Val, 16, 0);
     break;
   case R_MICROMIPS_GOT_DISP:
   case R_MICROMIPS_GOT_PAGE:
@@ -542,7 +546,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MICROMIPS_TLS_GD:
   case R_MICROMIPS_TLS_LDM:
     checkInt<16>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 16, 0);
+    writeShuffleValue<E>(Loc, Val, 16, 0);
     break;
   case R_MICROMIPS_CALL16:
   case R_MICROMIPS_CALL_LO16:
@@ -551,11 +555,11 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MICROMIPS_TLS_DTPREL_LO16:
   case R_MICROMIPS_TLS_GOTTPREL:
   case R_MICROMIPS_TLS_TPREL_LO16:
-    writeMicroRelocation32<E>(Loc, Val, 16, 0);
+    writeShuffleValue<E>(Loc, Val, 16, 0);
     break;
   case R_MICROMIPS_GPREL7_S2:
     checkInt<7>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 7, 2);
+    writeShuffleValue<E>(Loc, Val, 7, 2);
     break;
   case R_MIPS_CALL_HI16:
   case R_MIPS_GOT_HI16:
@@ -563,26 +567,26 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MIPS_PCHI16:
   case R_MIPS_TLS_DTPREL_HI16:
   case R_MIPS_TLS_TPREL_HI16:
-    writeRelocation<E>(Loc, Val + 0x8000, 16, 16);
+    writeValue<E>(Loc, Val + 0x8000, 16, 16);
     break;
   case R_MICROMIPS_CALL_HI16:
   case R_MICROMIPS_GOT_HI16:
   case R_MICROMIPS_HI16:
   case R_MICROMIPS_TLS_DTPREL_HI16:
   case R_MICROMIPS_TLS_TPREL_HI16:
-    writeMicroRelocation32<E>(Loc, Val + 0x8000, 16, 16);
+    writeShuffleValue<E>(Loc, Val + 0x8000, 16, 16);
     break;
   case R_MIPS_HIGHER:
-    writeRelocation<E>(Loc, Val + 0x80008000, 16, 32);
+    writeValue<E>(Loc, Val + 0x80008000, 16, 32);
     break;
   case R_MIPS_HIGHEST:
-    writeRelocation<E>(Loc, Val + 0x800080008000, 16, 48);
+    writeValue<E>(Loc, Val + 0x800080008000, 16, 48);
     break;
   case R_MICROMIPS_HIGHER:
-    writeMicroRelocation32<E>(Loc, Val + 0x80008000, 16, 32);
+    writeShuffleValue<E>(Loc, Val + 0x80008000, 16, 32);
     break;
   case R_MICROMIPS_HIGHEST:
-    writeMicroRelocation32<E>(Loc, Val + 0x800080008000, 16, 48);
+    writeShuffleValue<E>(Loc, Val + 0x800080008000, 16, 48);
     break;
   case R_MIPS_JALR:
   case R_MICROMIPS_JALR:
@@ -591,30 +595,30 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MIPS_PC16:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<18>(Loc, Val, Type);
-    writeRelocation<E>(Loc, Val, 16, 2);
+    writeValue<E>(Loc, Val, 16, 2);
     break;
   case R_MIPS_PC19_S2:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<21>(Loc, Val, Type);
-    writeRelocation<E>(Loc, Val, 19, 2);
+    writeValue<E>(Loc, Val, 19, 2);
     break;
   case R_MIPS_PC21_S2:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<23>(Loc, Val, Type);
-    writeRelocation<E>(Loc, Val, 21, 2);
+    writeValue<E>(Loc, Val, 21, 2);
     break;
   case R_MIPS_PC26_S2:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<28>(Loc, Val, Type);
-    writeRelocation<E>(Loc, Val, 26, 2);
+    writeValue<E>(Loc, Val, 26, 2);
     break;
   case R_MIPS_PC32:
-    writeRelocation<E>(Loc, Val, 32, 0);
+    writeValue<E>(Loc, Val, 32, 0);
     break;
   case R_MICROMIPS_26_S1:
   case R_MICROMIPS_PC26_S1:
     checkInt<27>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 26, 1);
+    writeShuffleValue<E>(Loc, Val, 26, 1);
     break;
   case R_MICROMIPS_PC7_S1:
     checkInt<8>(Loc, Val, Type);
@@ -626,23 +630,23 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_MICROMIPS_PC16_S1:
     checkInt<17>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 16, 1);
+    writeShuffleValue<E>(Loc, Val, 16, 1);
     break;
   case R_MICROMIPS_PC18_S3:
     checkInt<21>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 18, 3);
+    writeShuffleValue<E>(Loc, Val, 18, 3);
     break;
   case R_MICROMIPS_PC19_S2:
     checkInt<21>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 19, 2);
+    writeShuffleValue<E>(Loc, Val, 19, 2);
     break;
   case R_MICROMIPS_PC21_S1:
     checkInt<22>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 21, 1);
+    writeShuffleValue<E>(Loc, Val, 21, 1);
     break;
   case R_MICROMIPS_PC23_S2:
     checkInt<25>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 23, 2);
+    writeShuffleValue<E>(Loc, Val, 23, 2);
     break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));

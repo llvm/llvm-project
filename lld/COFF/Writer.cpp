@@ -17,6 +17,7 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <algorithm>
 #include <cstdio>
@@ -122,6 +124,13 @@ private:
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable(OutputSection *RData);
+  void createGuardCFTables(OutputSection *RData);
+  void createGLJmpTable(OutputSection *RData);
+  void markSymbolsForRVATable(ObjFile *File,
+                              ArrayRef<SectionChunk *> SymIdxChunks,
+                              SymbolRVASet &TableSymbols);
+  void maybeAddRVATable(OutputSection *RData, SymbolRVASet TableSymbols,
+                        StringRef TableSym, StringRef CountSym);
   void setSectionPermissions();
   void writeSections();
   void writeBuildId();
@@ -145,7 +154,8 @@ private:
   IdataContents Idata;
   DelayLoadContents DelayIdata;
   EdataContents Edata;
-  SEHTableChunk *SEHTable = nullptr;
+  RVATableChunk *GuardFidsTable = nullptr;
+  RVATableChunk *SEHTable = nullptr;
 
   Chunk *DebugDirectory = nullptr;
   std::vector<Chunk *> DebugRecords;
@@ -163,6 +173,9 @@ private:
 namespace lld {
 namespace coff {
 
+static Timer CodeLayoutTimer("Code Layout", Timer::root());
+static Timer DiskCommitTimer("Commit Output File", Timer::root());
+
 void writeResult() { Writer().run(); }
 
 void OutputSection::setRVA(uint64_t RVA) {
@@ -177,6 +190,9 @@ void OutputSection::setFileOffset(uint64_t Off) {
   // by the loader.
   if (Header.SizeOfRawData == 0)
     return;
+
+  // It is possible that this assignment could cause an overflow of the u32,
+  // but that should be caught by the FileSize check in OutputSection::run().
   Header.PointerToRawData = Off;
 }
 
@@ -284,6 +300,8 @@ static Optional<codeview::DebugInfo> loadExistingBuildId(StringRef Path) {
 
 // The main function of the writer.
 void Writer::run() {
+  ScopedTimer T1(CodeLayoutTimer);
+
   createSections();
   createMiscChunks();
   createImportTables();
@@ -294,6 +312,10 @@ void Writer::run() {
   removeEmptySections();
   setSectionPermissions();
   createSymbolAndStringTable();
+
+  if (FileSize > UINT32_MAX)
+    fatal("image size (" + Twine(FileSize) + ") " +
+        "exceeds maximum allowable size (" + Twine(UINT32_MAX) + ")");
 
   // We must do this before opening the output file, as it depends on being able
   // to read the contents of the existing output file.
@@ -308,14 +330,16 @@ void Writer::run() {
   sortExceptionTable();
   writeBuildId();
 
-  if (!Config->PDBPath.empty() && Config->Debug) {
+  T1.stop();
 
+  if (!Config->PDBPath.empty() && Config->Debug) {
     assert(BuildId);
     createPDB(Symtab, OutputSections, SectionTable, *BuildId->BuildId);
   }
 
   writeMapFile(OutputSections);
 
+  ScopedTimer T2(DiskCommitTimer);
   if (auto E = Buffer->commit())
     fatal("failed to write the output file: " + toString(std::move(E)));
 }
@@ -333,6 +357,21 @@ static StringRef getOutputSection(StringRef Name) {
   return It->second;
 }
 
+// For /order.
+static void sortBySectionOrder(std::vector<Chunk *> &Chunks) {
+  auto GetPriority = [](const Chunk *C) {
+    if (auto *Sec = dyn_cast<SectionChunk>(C))
+      if (Sec->Sym)
+        return Config->Order.lookup(Sec->Sym->getName());
+    return 0;
+  };
+
+  std::stable_sort(Chunks.begin(), Chunks.end(),
+                   [=](const Chunk *A, const Chunk *B) {
+                     return GetPriority(A) < GetPriority(B);
+                   });
+}
+
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
   // First, bin chunks by name.
@@ -346,6 +385,11 @@ void Writer::createSections() {
     }
     Map[C->getSectionName()].push_back(C);
   }
+
+  // Process an /order option.
+  if (!Config->Order.empty())
+    for (auto &Pair : Map)
+      sortBySectionOrder(Pair.second);
 
   // Then create an OutputSection for each section.
   // '$' and all following characters in input section names are
@@ -393,7 +437,13 @@ void Writer::createMiscChunks() {
       RData->addChunk(C);
   }
 
-  createSEHTable(RData);
+  // Create SEH table. x86-only.
+  if (Config->Machine == I386)
+    createSEHTable(RData);
+
+  // Create /guard:cf tables if requested.
+  if (Config->GuardCF != GuardCFLevel::Off)
+    createGuardCFTables(RData);
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -546,9 +596,8 @@ void Writer::createSymbolAndStringTable() {
       continue;
     // If a section isn't discardable (i.e. will be mapped at runtime),
     // prefer a truncated section name over a long section name in
-    // the string table that is unavailable at runtime. This is different from
-    // what link.exe does, but finding ".eh_fram" instead of "/4" is useful
-    // to libunwind.
+    // the string table that is unavailable at runtime. Note that link.exe
+    // always truncates, even for discardable sections.
     if ((Sec->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
     Sec->setStringTableOff(addEntryToStringTable(Name));
@@ -571,10 +620,8 @@ void Writer::createSymbolAndStringTable() {
   if (OutputSymtab.empty() && Strtab.empty())
     return;
 
-  OutputSection *LastSection = OutputSections.back();
   // We position the symbol table to be adjacent to the end of the last section.
-  uint64_t FileOff = LastSection->getFileOff() +
-                     alignTo(LastSection->getRawSize(), SectorSize);
+  uint64_t FileOff = FileSize;
   PointerToSymbolTable = FileOff;
   FileOff += OutputSymtab.size() * sizeof(coff_symbol16);
   FileOff += 4 + Strtab.size();
@@ -590,7 +637,7 @@ void Writer::assignAddresses() {
   SizeOfHeaders +=
       Config->is64() ? sizeof(pe32plus_header) : sizeof(pe32_header);
   SizeOfHeaders = alignTo(SizeOfHeaders, SectorSize);
-  uint64_t RVA = 0x1000; // The first page is kept unmapped.
+  uint64_t RVA = PageSize; // The first page is kept unmapped.
   FileSize = SizeOfHeaders;
   // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
   // the loader cannot handle holes.
@@ -688,6 +735,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NX_COMPAT;
   if (!Config->AllowIsolation)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_ISOLATION;
+  if (Config->GuardCF != GuardCFLevel::Off)
+    PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_GUARD_CF;
   if (Config->Machine == I386 && !SEHTable &&
       !Symtab->findUnderscore("_load_config_used"))
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_SEH;
@@ -793,34 +842,157 @@ void Writer::openFile(StringRef Path) {
 }
 
 void Writer::createSEHTable(OutputSection *RData) {
-  // Create SEH table. x86-only.
-  if (Config->Machine != I386)
-    return;
-
-  std::set<Defined *> Handlers;
-
+  SymbolRVASet Handlers;
   for (ObjFile *File : ObjFile::Instances) {
-    if (!File->SEHCompat)
+    // FIXME: We should error here instead of earlier unless /safeseh:no was
+    // passed.
+    if (!File->hasSafeSEH())
       return;
-    for (uint32_t I : File->SXData)
-      if (Symbol *B = File->getSymbol(I))
-        if (B->isLive())
-          Handlers.insert(cast<Defined>(B));
+
+    markSymbolsForRVATable(File, File->getSXDataChunks(), Handlers);
   }
 
-  if (Handlers.empty())
+  maybeAddRVATable(RData, std::move(Handlers), "__safe_se_handler_table",
+                   "__safe_se_handler_count");
+}
+
+// Add a symbol to an RVA set. Two symbols may have the same RVA, but an RVA set
+// cannot contain duplicates. Therefore, the set is uniqued by Chunk and the
+// symbol's offset into that Chunk.
+static void addSymbolToRVASet(SymbolRVASet &RVASet, Defined *S) {
+  Chunk *C = S->getChunk();
+  if (auto *SC = dyn_cast<SectionChunk>(C))
+    C = SC->Repl; // Look through ICF replacement.
+  uint32_t Off = S->getRVA() - (C ? C->getRVA() : 0);
+  RVASet.insert({C, Off});
+}
+
+// Visit all relocations from all section contributions of this object file and
+// mark the relocation target as address-taken.
+static void markSymbolsWithRelocations(ObjFile *File,
+                                       SymbolRVASet &UsedSymbols) {
+  for (Chunk *C : File->getChunks()) {
+    // We only care about live section chunks. Common chunks and other chunks
+    // don't generally contain relocations.
+    SectionChunk *SC = dyn_cast<SectionChunk>(C);
+    if (!SC || !SC->isLive())
+      continue;
+
+    // Look for relocations in this section against symbols in executable output
+    // sections.
+    for (Symbol *Ref : SC->symbols()) {
+      // FIXME: Do further testing to see if the relocation type matters,
+      // especially for 32-bit where taking the address of something usually
+      // uses an absolute relocation instead of a relative one.
+      if (auto *D = dyn_cast_or_null<Defined>(Ref)) {
+        Chunk *RefChunk = D->getChunk();
+        OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
+        if (OS && OS->getPermissions() & IMAGE_SCN_MEM_EXECUTE)
+          addSymbolToRVASet(UsedSymbols, D);
+      }
+    }
+  }
+}
+
+// Create the guard function id table. This is a table of RVAs of all
+// address-taken functions. It is sorted and uniqued, just like the safe SEH
+// table.
+void Writer::createGuardCFTables(OutputSection *RData) {
+  SymbolRVASet AddressTakenSyms;
+  SymbolRVASet LongJmpTargets;
+  for (ObjFile *File : ObjFile::Instances) {
+    // If the object was compiled with /guard:cf, the address taken symbols
+    // are in .gfids$y sections, and the longjmp targets are in .gljmp$y
+    // sections. If the object was not compiled with /guard:cf, we assume there
+    // were no setjmp targets, and that all code symbols with relocations are
+    // possibly address-taken.
+    if (File->hasGuardCF()) {
+      markSymbolsForRVATable(File, File->getGuardFidChunks(), AddressTakenSyms);
+      markSymbolsForRVATable(File, File->getGuardLJmpChunks(), LongJmpTargets);
+    } else {
+      markSymbolsWithRelocations(File, AddressTakenSyms);
+    }
+  }
+
+  // Mark the image entry as address-taken.
+  if (Config->Entry)
+    addSymbolToRVASet(AddressTakenSyms, cast<Defined>(Config->Entry));
+
+  maybeAddRVATable(RData, std::move(AddressTakenSyms), "__guard_fids_table",
+                   "__guard_fids_count");
+
+  // Add the longjmp target table unless the user told us not to.
+  if (Config->GuardCF == GuardCFLevel::Full)
+    maybeAddRVATable(RData, std::move(LongJmpTargets), "__guard_longjmp_table",
+                     "__guard_longjmp_count");
+
+  // Set __guard_flags, which will be used in the load config to indicate that
+  // /guard:cf was enabled.
+  uint32_t GuardFlags = uint32_t(coff_guard_flags::CFInstrumented) |
+                        uint32_t(coff_guard_flags::HasFidTable);
+  if (Config->GuardCF == GuardCFLevel::Full)
+    GuardFlags |= uint32_t(coff_guard_flags::HasLongJmpTable);
+  Symbol *FlagSym = Symtab->findUnderscore("__guard_flags");
+  cast<DefinedAbsolute>(FlagSym)->setVA(GuardFlags);
+}
+
+// Take a list of input sections containing symbol table indices and add those
+// symbols to an RVA table. The challenge is that symbol RVAs are not known and
+// depend on the table size, so we can't directly build a set of integers.
+void Writer::markSymbolsForRVATable(ObjFile *File,
+                                    ArrayRef<SectionChunk *> SymIdxChunks,
+                                    SymbolRVASet &TableSymbols) {
+  for (SectionChunk *C : SymIdxChunks) {
+    // Skip sections discarded by linker GC. This comes up when a .gfids section
+    // is associated with something like a vtable and the vtable is discarded.
+    // In this case, the associated gfids section is discarded, and we don't
+    // mark the virtual member functions as address-taken by the vtable.
+    if (!C->isLive())
+      continue;
+
+    // Validate that the contents look like symbol table indices.
+    ArrayRef<uint8_t> Data = C->getContents();
+    if (Data.size() % 4 != 0) {
+      warn("ignoring " + C->getSectionName() +
+           " symbol table index section in object " + toString(File));
+      continue;
+    }
+
+    // Read each symbol table index and check if that symbol was included in the
+    // final link. If so, add it to the table symbol set.
+    ArrayRef<ulittle32_t> SymIndices(
+        reinterpret_cast<const ulittle32_t *>(Data.data()), Data.size() / 4);
+    ArrayRef<Symbol *> ObjSymbols = File->getSymbols();
+    for (uint32_t SymIndex : SymIndices) {
+      if (SymIndex >= ObjSymbols.size()) {
+        warn("ignoring invalid symbol table index in section " +
+             C->getSectionName() + " in object " + toString(File));
+        continue;
+      }
+      if (Symbol *S = ObjSymbols[SymIndex]) {
+        if (S->isLive())
+          addSymbolToRVASet(TableSymbols, cast<Defined>(S));
+      }
+    }
+  }
+}
+
+// Replace the absolute table symbol with a synthetic symbol pointing to
+// TableChunk so that we can emit base relocations for it and resolve section
+// relative relocations.
+void Writer::maybeAddRVATable(OutputSection *RData,
+                              SymbolRVASet TableSymbols,
+                              StringRef TableSym, StringRef CountSym) {
+  if (TableSymbols.empty())
     return;
 
-  SEHTable = make<SEHTableChunk>(Handlers);
-  RData->addChunk(SEHTable);
+  RVATableChunk *TableChunk = make<RVATableChunk>(std::move(TableSymbols));
+  RData->addChunk(TableChunk);
 
-  // Replace the absolute table symbol with a synthetic symbol pointing to the
-  // SEHTable chunk so that we can emit base relocations for it and resolve
-  // section relative relocations.
-  Symbol *T = Symtab->find("___safe_se_handler_table");
-  Symbol *C = Symtab->find("___safe_se_handler_count");
-  replaceSymbol<DefinedSynthetic>(T, T->getName(), SEHTable);
-  cast<DefinedAbsolute>(C)->setVA(SEHTable->getSize() / 4);
+  Symbol *T = Symtab->findUnderscore(TableSym);
+  Symbol *C = Symtab->findUnderscore(CountSym);
+  replaceSymbol<DefinedSynthetic>(T, T->getName(), TableChunk);
+  cast<DefinedAbsolute>(C)->setVA(TableChunk->getSize() / 4);
 }
 
 // Handles /section options to allow users to overwrite
@@ -836,9 +1008,9 @@ void Writer::setSectionPermissions() {
 
 // Write section contents to a mmap'ed file.
 void Writer::writeSections() {
-  // Record the section index that should be used when resolving a section
-  // relocation against an absolute symbol.
-  DefinedAbsolute::OutputSectionIndex = OutputSections.size() + 1;
+  // Record the number of sections to apply section index relocations
+  // against absolute symbols. See applySecIdx in Chunks.cpp..
+  DefinedAbsolute::NumOutputSections = OutputSections.size();
 
   uint8_t *Buf = Buffer->getBufferStart();
   for (OutputSection *Sec : OutputSections) {

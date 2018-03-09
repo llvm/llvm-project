@@ -324,7 +324,7 @@ static
                                           enum sched_type schedule, long start,
                                           long end, long incr,
                                           long chunk_size) {
-// Intialize the loop worksharing construct.
+  // Intialize the loop worksharing construct.
 
   KMP_DISPATCH_INIT(loc, *gtid, schedule, start, end, incr, chunk_size,
                     schedule != kmp_sch_static);

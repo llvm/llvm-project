@@ -19,9 +19,9 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and -41 <= o0 <= 41 and ((n < 0 and o0 <= 0) or (n >= 0 and o0 >= 0)) }
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n < 0 and o0 <= 0) or (n >= 0 and o0 >= 0)) }
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and -41 <= o0 <= 41 and ((n < 0 and o0 <= 0) or (n >= 0 and o0 >= 0)) }
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n < 0 and o0 <= 0) or (n >= 0 and o0 >= 0)) }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Statements {
@@ -31,9 +31,9 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) }
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) }; 
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) }
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) };
 ; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

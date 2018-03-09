@@ -36,7 +36,6 @@ __isl_give isl_constraint *isl_constraint_alloc_inequality(
 __isl_give isl_constraint *isl_equality_alloc(__isl_take isl_local_space *ls);
 __isl_give isl_constraint *isl_inequality_alloc(__isl_take isl_local_space *ls);
 
-struct isl_constraint *isl_constraint_cow(struct isl_constraint *c);
 struct isl_constraint *isl_constraint_copy(struct isl_constraint *c);
 __isl_null isl_constraint *isl_constraint_free(__isl_take isl_constraint *c);
 

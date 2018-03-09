@@ -1,3 +1,5 @@
+target triple = "wasm32-unknown-unknown-wasm"
+
 ; Function Attrs: norecurse nounwind readnone
 define i32 @ret32(float %arg) #0 {
 entry:

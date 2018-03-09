@@ -71,7 +71,7 @@ COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
   return COFFSymbolRef(reinterpret_cast<const coff_symbol32 *>(Sym));
 }
 
-uint16_t DefinedAbsolute::OutputSectionIndex = 0;
+uint16_t DefinedAbsolute::NumOutputSections;
 
 static Chunk *makeImportThunk(DefinedImportData *S, uint16_t Machine) {
   if (Machine == AMD64)

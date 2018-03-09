@@ -250,7 +250,8 @@ __isl_give isl_multi_aff *isl_ast_build_get_schedule_map_multi_aff(
 	__isl_keep isl_ast_build *build);
 __isl_give isl_map *isl_ast_build_get_schedule_map(
 	__isl_keep isl_ast_build *build);
-int isl_ast_build_has_affine_value(__isl_keep isl_ast_build *build, int pos);
+isl_bool isl_ast_build_has_affine_value(__isl_keep isl_ast_build *build,
+	int pos);
 int isl_ast_build_has_value(__isl_keep isl_ast_build *build);
 __isl_give isl_id *isl_ast_build_get_iterator_id(
 	__isl_keep isl_ast_build *build, int pos);

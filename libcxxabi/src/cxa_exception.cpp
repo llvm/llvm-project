@@ -11,6 +11,8 @@
 //  
 //===----------------------------------------------------------------------===//
 
+#define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate

@@ -640,45 +640,68 @@ static int flatCompare(const isl::basic_set &A, const isl::basic_set &B) {
   return ALen - BLen;
 }
 
-/// Compare the sets @p A and @p B according to their nested space structure. If
-/// the structure is the same, sort using the dimension lower bounds.
-static int recursiveCompare(const isl::basic_set &A, const isl::basic_set &B) {
-  isl::space ASpace = A.get_space();
-  isl::space BSpace = B.get_space();
-
+/// Compare the sets @p A and @p B according to their nested space structure.
+/// Returns 0 if the structure is considered equal.
+/// If @p ConsiderTupleLen is false, the number of dimensions in a tuple are
+/// ignored, i.e. a tuple with the same name but different number of dimensions
+/// are considered equal.
+static int structureCompare(const isl::space &ASpace, const isl::space &BSpace,
+                            bool ConsiderTupleLen) {
   int WrappingCompare = bool(ASpace.is_wrapping()) - bool(BSpace.is_wrapping());
   if (WrappingCompare != 0)
     return WrappingCompare;
 
-  if (ASpace.is_wrapping() && B.is_wrapping()) {
-    isl::basic_map AMap = A.unwrap();
-    isl::basic_map BMap = B.unwrap();
+  if (ASpace.is_wrapping() && BSpace.is_wrapping()) {
+    isl::space AMap = ASpace.unwrap();
+    isl::space BMap = BSpace.unwrap();
 
-    int FirstResult = recursiveCompare(AMap.domain(), BMap.domain());
+    int FirstResult =
+        structureCompare(AMap.domain(), BMap.domain(), ConsiderTupleLen);
     if (FirstResult != 0)
       return FirstResult;
 
-    return recursiveCompare(AMap.range(), BMap.range());
+    return structureCompare(AMap.range(), BMap.range(), ConsiderTupleLen);
   }
 
-  std::string AName = ASpace.has_tuple_name(isl::dim::set)
-                          ? ASpace.get_tuple_name(isl::dim::set)
-                          : std::string();
-  std::string BName = BSpace.has_tuple_name(isl::dim::set)
-                          ? BSpace.get_tuple_name(isl::dim::set)
-                          : std::string();
+  std::string AName;
+  if (ASpace.has_tuple_name(isl::dim::set))
+    AName = ASpace.get_tuple_name(isl::dim::set);
+
+  std::string BName;
+  if (BSpace.has_tuple_name(isl::dim::set))
+    BName = BSpace.get_tuple_name(isl::dim::set);
 
   int NameCompare = AName.compare(BName);
   if (NameCompare != 0)
     return NameCompare;
 
-  return flatCompare(A, B);
+  if (ConsiderTupleLen) {
+    int LenCompare = BSpace.dim(isl::dim::set) - ASpace.dim(isl::dim::set);
+    if (LenCompare != 0)
+      return LenCompare;
+  }
+
+  return 0;
 }
 
-/// Wrapper for recursiveCompare, convert a {-1,0,1} compare result to what
-/// std::sort expects.
+/// Compare the sets @p A and @p B according to their nested space structure. If
+/// the structure is the same, sort using the dimension lower bounds.
+/// Returns an std::sort compatible bool.
 static bool orderComparer(const isl::basic_set &A, const isl::basic_set &B) {
-  return recursiveCompare(A, B) < 0;
+  isl::space ASpace = A.get_space();
+  isl::space BSpace = B.get_space();
+
+  // Ignoring number of dimensions first ensures that structures with same tuple
+  // names, but different number of dimensions are still sorted close together.
+  int TupleNestingCompare = structureCompare(ASpace, BSpace, false);
+  if (TupleNestingCompare != 0)
+    return TupleNestingCompare < 0;
+
+  int TupleCompare = structureCompare(ASpace, BSpace, true);
+  if (TupleCompare != 0)
+    return TupleCompare < 0;
+
+  return flatCompare(A, B) < 0;
 }
 
 /// Print a string representation of @p USet to @p OS.
@@ -820,19 +843,19 @@ LLVM_DUMP_METHOD void polly::dumpPw(const isl::union_map &UMap) {
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_set *Set) {
-  dumpPw(isl::manage(isl_set_copy(Set)));
+  dumpPw(isl::manage_copy(Set));
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_map *Map) {
-  dumpPw(isl::manage(isl_map_copy(Map)));
+  dumpPw(isl::manage_copy(Map));
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_union_set *USet) {
-  dumpPw(isl::manage(isl_union_set_copy(USet)));
+  dumpPw(isl::manage_copy(USet));
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_union_map *UMap) {
-  dumpPw(isl::manage(isl_union_map_copy(UMap)));
+  dumpPw(isl::manage_copy(UMap));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(const isl::set &Set) {
@@ -852,18 +875,18 @@ LLVM_DUMP_METHOD void polly::dumpExpanded(const isl::union_map &UMap) {
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_set *Set) {
-  dumpExpanded(isl::manage(isl_set_copy(Set)));
+  dumpExpanded(isl::manage_copy(Set));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_map *Map) {
-  dumpExpanded(isl::manage(isl_map_copy(Map)));
+  dumpExpanded(isl::manage_copy(Map));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_union_set *USet) {
-  dumpExpanded(isl::manage(isl_union_set_copy(USet)));
+  dumpExpanded(isl::manage_copy(USet));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_union_map *UMap) {
-  dumpExpanded(isl::manage(isl_union_map_copy(UMap)));
+  dumpExpanded(isl::manage_copy(UMap));
 }
 #endif

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
 ;
 ; Check that there is no MK_ExitPHI READ access.
 ;

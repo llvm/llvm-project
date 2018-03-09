@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: echo "SECTIONS { \
-# RUN:    .got  : { *(.got) } \
+# RUN:    .got  : { *(.got) *(.got) } \
 # RUN:    .plt  : { *(.plt) } \
 # RUN:    .text : { *(.text) } \
 # RUN:  }" > %t.script

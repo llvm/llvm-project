@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MarkLive.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
@@ -27,7 +28,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
-#include "Writer.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
@@ -305,8 +305,7 @@ template <class ELFT> void elf::markLive() {
   if (Config->PrintGcSections)
     for (InputSectionBase *Sec : InputSections)
       if (!Sec->Live)
-        message("removing unused section from '" + Sec->Name + "' in file '" +
-                Sec->File->getName() + "'");
+        message("removing unused section " + toString(Sec));
 }
 
 template void elf::markLive<ELF32LE>();
