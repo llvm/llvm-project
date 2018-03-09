@@ -124,6 +124,6 @@ int main(int Argc, const char **Argv) {
     return !wasm::link(Args, true);
   default:
     die("lld is a generic driver.\n"
-        "Invoke ld.lld (Unix), ld (macOS) or lld-link (Windows) instead.");
+        "Invoke ld.lld (Unix), ld64.lld (macOS) or lld-link (Windows) instead.");
   }
 }

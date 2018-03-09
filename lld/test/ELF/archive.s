@@ -3,13 +3,13 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/archive2.s -o %t3
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/archive3.s -o %t4
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/archive4.s -o %t5
-# RUN: llvm-ar rcs %tar %t2 %t3 %t4
-# RUN: ld.lld %t %tar %t5 -o %tout
-# RUN: llvm-nm %tout | FileCheck %s
-# RUN: rm -f %tarthin
-# RUN: llvm-ar --format=gnu rcsT %tarthin %t2 %t3 %t4
-# RUN: ld.lld %t %tarthin %t5 -o %tout
-# RUN: llvm-nm %tout | FileCheck %s
+# RUN: llvm-ar rcs %t.a %t2 %t3 %t4
+# RUN: ld.lld %t %t.a %t5 -o %t.out
+# RUN: llvm-nm %t.out | FileCheck %s
+# RUN: rm -f %t.thin
+# RUN: llvm-ar --format=gnu rcsT %t.thin %t2 %t3 %t4
+# RUN: ld.lld %t %t.thin %t5 -o %t.out
+# RUN: llvm-nm %t.out | FileCheck %s
 # REQUIRES: x86
 
 # Nothing here. Just needed for the linker to create a undefined _start symbol.
@@ -31,8 +31,8 @@
 
 # Test that the hitting the first object file after having a lazy symbol for
 # _start is handled correctly.
-# RUN: ld.lld %tar %t -o %tout
-# RUN: llvm-nm %tout | FileCheck --check-prefix=AR-FIRST %s
+# RUN: ld.lld %t.a %t -o %t.out
+# RUN: llvm-nm %t.out | FileCheck --check-prefix=AR-FIRST %s
 
 # AR-FIRST:      T _start
 # AR-FIRST-NEXT: w bar

@@ -60,6 +60,8 @@ void writeInitExpr(raw_ostream &OS, const llvm::wasm::WasmInitExpr &InitExpr);
 
 void writeLimits(raw_ostream &OS, const llvm::wasm::WasmLimits &Limits);
 
+void writeGlobalType(raw_ostream &OS, const llvm::wasm::WasmGlobalType &Type);
+
 void writeGlobal(raw_ostream &OS, const llvm::wasm::WasmGlobal &Global);
 
 void writeImport(raw_ostream &OS, const llvm::wasm::WasmImport &Import);

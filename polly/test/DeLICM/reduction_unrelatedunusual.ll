@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm-partial-writes=true -polly-delicm -analyze < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm-partial-writes=true -polly-delicm -analyze < %s | FileCheck -match-full-lines %s
 ;
 ; Map %add and %phi to A[j].
 ; The non-analyzable store to C[0] is unrelated and can be ignored.

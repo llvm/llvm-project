@@ -16,9 +16,9 @@
 ; RUN: llvm-objdump -d %t4 | FileCheck %s --check-prefix=NOIPO
 ; NOIPO:      Disassembly of section .text:
 ; NOIPO:      foo:
-; NOIPO-NEXT:   201010: {{.*}} movl $2, %eax
+; NOIPO-NEXT:   {{.*}} movl $2, %eax
 ; NOIPO:      _start:
-; NOIPO-NEXT:   201020: {{.*}} jmp -21 <foo>
+; NOIPO-NEXT:   {{.*}} jmp -21 <foo>
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

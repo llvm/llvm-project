@@ -30,3 +30,5 @@ llvm::TargetOptions lld::InitTargetOptionsFromCodeGenFlags() {
 llvm::Optional<llvm::CodeModel::Model> lld::GetCodeModelFromCMModel() {
   return getCodeModel();
 }
+
+std::string lld::GetCPUStr() { return ::getCPUStr(); }

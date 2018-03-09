@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-scops -analyze -polly-allow-modref-calls \
+; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
 ; RUN: < %s | FileCheck %s
 ; RUN: opt %loadPolly -basicaa -polly-codegen -disable-output \
 ; RUN: -polly-allow-modref-calls < %s

@@ -138,89 +138,259 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
 //  thread_state pointer is in r3
 //
 
+// load register (GPR)
+#define PPC64_LR(n) \
+  ld    %r##n, (8 * (n + 2))(%r3)
+
   // restore integral registers
   // skip r0 for now
   // skip r1 for now
-  ld    %r2,   32(%r3)
+  PPC64_LR(2)
   // skip r3 for now
   // skip r4 for now
   // skip r5 for now
-  ld    %r6,   64(%r3)
-  ld    %r7,   72(%r3)
-  ld    %r8,   80(%r3)
-  ld    %r9,   88(%r3)
-  ld    %r10,  96(%r3)
-  ld    %r11, 104(%r3)
-  ld    %r12, 112(%r3)
-  ld    %r13, 120(%r3)
-  ld    %r14, 128(%r3)
-  ld    %r15, 136(%r3)
-  ld    %r16, 144(%r3)
-  ld    %r17, 152(%r3)
-  ld    %r18, 160(%r3)
-  ld    %r19, 168(%r3)
-  ld    %r20, 176(%r3)
-  ld    %r21, 184(%r3)
-  ld    %r22, 192(%r3)
-  ld    %r23, 200(%r3)
-  ld    %r24, 208(%r3)
-  ld    %r25, 216(%r3)
-  ld    %r26, 224(%r3)
-  ld    %r27, 232(%r3)
-  ld    %r28, 240(%r3)
-  ld    %r29, 248(%r3)
-  ld    %r30, 256(%r3)
-  ld    %r31, 264(%r3)
+  PPC64_LR(6)
+  PPC64_LR(7)
+  PPC64_LR(8)
+  PPC64_LR(9)
+  PPC64_LR(10)
+  PPC64_LR(11)
+  PPC64_LR(12)
+  PPC64_LR(13)
+  PPC64_LR(14)
+  PPC64_LR(15)
+  PPC64_LR(16)
+  PPC64_LR(17)
+  PPC64_LR(18)
+  PPC64_LR(19)
+  PPC64_LR(20)
+  PPC64_LR(21)
+  PPC64_LR(22)
+  PPC64_LR(23)
+  PPC64_LR(24)
+  PPC64_LR(25)
+  PPC64_LR(26)
+  PPC64_LR(27)
+  PPC64_LR(28)
+  PPC64_LR(29)
+  PPC64_LR(30)
+  PPC64_LR(31)
 
-  //restore float registers
-  lfd   %f0,  312(%r3)
-  lfd   %f1,  320(%r3)
-  lfd   %f2,  328(%r3)
-  lfd   %f3,  336(%r3)
-  lfd   %f4,  344(%r3)
-  lfd   %f5,  352(%r3)
-  lfd   %f6,  360(%r3)
-  lfd   %f7,  368(%r3)
-  lfd   %f8,  376(%r3)
-  lfd   %f9,  384(%r3)
-  lfd   %f10, 392(%r3)
-  lfd   %f11, 400(%r3)
-  lfd   %f12, 408(%r3)
-  lfd   %f13, 416(%r3)
-  lfd   %f14, 424(%r3)
-  lfd   %f15, 432(%r3)
-  lfd   %f16, 440(%r3)
-  lfd   %f17, 448(%r3)
-  lfd   %f18, 456(%r3)
-  lfd   %f19, 464(%r3)
-  lfd   %f20, 472(%r3)
-  lfd   %f21, 480(%r3)
-  lfd   %f22, 488(%r3)
-  lfd   %f23, 496(%r3)
-  lfd   %f24, 504(%r3)
-  lfd   %f25, 512(%r3)
-  lfd   %f26, 520(%r3)
-  lfd   %f27, 528(%r3)
-  lfd   %f28, 536(%r3)
-  lfd   %f29, 544(%r3)
-  lfd   %f30, 552(%r3)
-  lfd   %f31, 560(%r3)
+#ifdef PPC64_HAS_VMX
 
-  //TODO: restore vector registers
+  // restore VS registers
+  // (note that this also restores floating point registers and V registers,
+  // because part of VS is mapped to these registers)
 
-  // Lnovec:
-  ld    %r0, 272(%r3) // __cr
+  addi  %r4, %r3, PPC64_OFFS_FP
+
+// load VS register
+#define PPC64_LVS(n)         \
+  lxvd2x  %vs##n, 0, %r4    ;\
+  addi    %r4, %r4, 16
+
+  // restore the first 32 VS regs (and also all floating point regs)
+  PPC64_LVS(0)
+  PPC64_LVS(1)
+  PPC64_LVS(2)
+  PPC64_LVS(3)
+  PPC64_LVS(4)
+  PPC64_LVS(5)
+  PPC64_LVS(6)
+  PPC64_LVS(7)
+  PPC64_LVS(8)
+  PPC64_LVS(9)
+  PPC64_LVS(10)
+  PPC64_LVS(11)
+  PPC64_LVS(12)
+  PPC64_LVS(13)
+  PPC64_LVS(14)
+  PPC64_LVS(15)
+  PPC64_LVS(16)
+  PPC64_LVS(17)
+  PPC64_LVS(18)
+  PPC64_LVS(19)
+  PPC64_LVS(20)
+  PPC64_LVS(21)
+  PPC64_LVS(22)
+  PPC64_LVS(23)
+  PPC64_LVS(24)
+  PPC64_LVS(25)
+  PPC64_LVS(26)
+  PPC64_LVS(27)
+  PPC64_LVS(28)
+  PPC64_LVS(29)
+  PPC64_LVS(30)
+  PPC64_LVS(31)
+
+  // use VRSAVE to conditionally restore the remaining VS regs,
+  // that are where the V regs are mapped
+
+  ld    %r5, PPC64_OFFS_VRSAVE(%r3)   // test VRsave
+  cmpwi %r5, 0
+  beq   Lnovec
+
+// conditionally load VS
+#define PPC64_CLVS_BOTTOM(n)               \
+  beq    Ldone##n                         ;\
+  addi   %r4, %r3, PPC64_OFFS_FP + n * 16 ;\
+  lxvd2x %vs##n, 0, %r4                   ;\
+Ldone##n:
+
+#define PPC64_CLVSl(n)           \
+  andis. %r0, %r5, (1<<(47-n))  ;\
+PPC64_CLVS_BOTTOM(n)
+
+#define PPC64_CLVSh(n)           \
+  andi.  %r0, %r5, (1<<(63-n))  ;\
+PPC64_CLVS_BOTTOM(n)
+
+  PPC64_CLVSl(32)
+  PPC64_CLVSl(33)
+  PPC64_CLVSl(34)
+  PPC64_CLVSl(35)
+  PPC64_CLVSl(36)
+  PPC64_CLVSl(37)
+  PPC64_CLVSl(38)
+  PPC64_CLVSl(39)
+  PPC64_CLVSl(40)
+  PPC64_CLVSl(41)
+  PPC64_CLVSl(42)
+  PPC64_CLVSl(43)
+  PPC64_CLVSl(44)
+  PPC64_CLVSl(45)
+  PPC64_CLVSl(46)
+  PPC64_CLVSl(47)
+  PPC64_CLVSh(48)
+  PPC64_CLVSh(49)
+  PPC64_CLVSh(50)
+  PPC64_CLVSh(51)
+  PPC64_CLVSh(52)
+  PPC64_CLVSh(53)
+  PPC64_CLVSh(54)
+  PPC64_CLVSh(55)
+  PPC64_CLVSh(56)
+  PPC64_CLVSh(57)
+  PPC64_CLVSh(58)
+  PPC64_CLVSh(59)
+  PPC64_CLVSh(60)
+  PPC64_CLVSh(61)
+  PPC64_CLVSh(62)
+  PPC64_CLVSh(63)
+
+#else
+
+// load FP register
+#define PPC64_LF(n) \
+  lfd   %f##n, (PPC64_OFFS_FP + n * 16)(%r3)
+
+  // restore float registers
+  PPC64_LF(0)
+  PPC64_LF(1)
+  PPC64_LF(2)
+  PPC64_LF(3)
+  PPC64_LF(4)
+  PPC64_LF(5)
+  PPC64_LF(6)
+  PPC64_LF(7)
+  PPC64_LF(8)
+  PPC64_LF(9)
+  PPC64_LF(10)
+  PPC64_LF(11)
+  PPC64_LF(12)
+  PPC64_LF(13)
+  PPC64_LF(14)
+  PPC64_LF(15)
+  PPC64_LF(16)
+  PPC64_LF(17)
+  PPC64_LF(18)
+  PPC64_LF(19)
+  PPC64_LF(20)
+  PPC64_LF(21)
+  PPC64_LF(22)
+  PPC64_LF(23)
+  PPC64_LF(24)
+  PPC64_LF(25)
+  PPC64_LF(26)
+  PPC64_LF(27)
+  PPC64_LF(28)
+  PPC64_LF(29)
+  PPC64_LF(30)
+  PPC64_LF(31)
+
+  // restore vector registers if any are in use
+  ld    %r5, PPC64_OFFS_VRSAVE(%r3)   // test VRsave
+  cmpwi %r5, 0
+  beq   Lnovec
+
+  subi  %r4, %r1, 16
+  // r4 is now a 16-byte aligned pointer into the red zone
+  // the _vectorScalarRegisters may not be 16-byte aligned
+  // so copy via red zone temp buffer
+
+#define PPC64_CLV_UNALIGNED_BOTTOM(n)            \
+  beq    Ldone##n                               ;\
+  ld     %r0, (PPC64_OFFS_V + n * 16)(%r3)      ;\
+  std    %r0, 0(%r4)                            ;\
+  ld     %r0, (PPC64_OFFS_V + n * 16 + 8)(%r3)  ;\
+  std    %r0, 8(%r4)                            ;\
+  lvx    %v##n, 0, %r4                          ;\
+Ldone  ## n:
+
+#define PPC64_CLV_UNALIGNEDl(n)  \
+  andis. %r0, %r5, (1<<(15-n))  ;\
+PPC64_CLV_UNALIGNED_BOTTOM(n)
+
+#define PPC64_CLV_UNALIGNEDh(n)  \
+  andi.  %r0, %r5, (1<<(31-n))  ;\
+PPC64_CLV_UNALIGNED_BOTTOM(n)
+
+  PPC64_CLV_UNALIGNEDl(0)
+  PPC64_CLV_UNALIGNEDl(1)
+  PPC64_CLV_UNALIGNEDl(2)
+  PPC64_CLV_UNALIGNEDl(3)
+  PPC64_CLV_UNALIGNEDl(4)
+  PPC64_CLV_UNALIGNEDl(5)
+  PPC64_CLV_UNALIGNEDl(6)
+  PPC64_CLV_UNALIGNEDl(7)
+  PPC64_CLV_UNALIGNEDl(8)
+  PPC64_CLV_UNALIGNEDl(9)
+  PPC64_CLV_UNALIGNEDl(10)
+  PPC64_CLV_UNALIGNEDl(11)
+  PPC64_CLV_UNALIGNEDl(12)
+  PPC64_CLV_UNALIGNEDl(13)
+  PPC64_CLV_UNALIGNEDl(14)
+  PPC64_CLV_UNALIGNEDl(15)
+  PPC64_CLV_UNALIGNEDh(16)
+  PPC64_CLV_UNALIGNEDh(17)
+  PPC64_CLV_UNALIGNEDh(18)
+  PPC64_CLV_UNALIGNEDh(19)
+  PPC64_CLV_UNALIGNEDh(20)
+  PPC64_CLV_UNALIGNEDh(21)
+  PPC64_CLV_UNALIGNEDh(22)
+  PPC64_CLV_UNALIGNEDh(23)
+  PPC64_CLV_UNALIGNEDh(24)
+  PPC64_CLV_UNALIGNEDh(25)
+  PPC64_CLV_UNALIGNEDh(26)
+  PPC64_CLV_UNALIGNEDh(27)
+  PPC64_CLV_UNALIGNEDh(28)
+  PPC64_CLV_UNALIGNEDh(29)
+  PPC64_CLV_UNALIGNEDh(30)
+  PPC64_CLV_UNALIGNEDh(31)
+
+#endif
+
+Lnovec:
+  ld    %r0, PPC64_OFFS_CR(%r3)
   mtcr  %r0
-  ld    %r0, 296(%r3) // __ctr
-  mtctr %r0
-  ld    %r0,   0(%r3) // __ssr0
+  ld    %r0, PPC64_OFFS_SRR0(%r3)
   mtctr %r0
 
-  ld    %r0,   16(%r3)
-  ld    %r5,   56(%r3)
-  ld    %r4,   48(%r3)
-  ld    %r1,   24(%r3)
-  ld    %r3,   40(%r3)
+  PPC64_LR(0)
+  PPC64_LR(5)
+  PPC64_LR(4)
+  PPC64_LR(1)
+  PPC64_LR(3)
   bctr
 
 #elif defined(__ppc__)
@@ -688,12 +858,12 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
 #elif defined(__mips__) && defined(_ABI64) && defined(__mips_soft_float)
 
 //
-// void libunwind::Registers_mips_n64::jumpto()
+// void libunwind::Registers_mips_newabi::jumpto()
 //
 // On entry:
 //  thread state pointer is in a0 ($4)
 //
-DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_n646jumptoEv)
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   .set push
   .set noat
   .set noreorder

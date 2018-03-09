@@ -281,7 +281,7 @@ if (POLLY_BUNDLED_ISL)
     )
   set_target_properties(polly-isl-test PROPERTIES FOLDER "Polly")
 
-  target_link_libraries(polly-isl-test
+  target_link_libraries(polly-isl-test PRIVATE
     PollyISL
     )
 
@@ -342,7 +342,7 @@ add_polly_library(PollyPPCG
   ${PPCG_FILES}
 )
 
-target_link_libraries(PollyPPCG ${ISL_TARGET})
+target_link_libraries(PollyPPCG PUBLIC ${ISL_TARGET})
 
 # Disable warnings for upstream projects.
 if (MSVC)

@@ -25,35 +25,35 @@
 // Detect compiler.
 #if KMP_COMPILER_ICC
 #if __INTEL_COMPILER == 1010
-#define KMP_COMPILER "Intel C++ Compiler 10.1"
+#define KMP_COMPILER "Intel(R) C++ Compiler 10.1"
 #elif __INTEL_COMPILER == 1100
-#define KMP_COMPILER "Intel C++ Compiler 11.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 11.0"
 #elif __INTEL_COMPILER == 1110
-#define KMP_COMPILER "Intel C++ Compiler 11.1"
+#define KMP_COMPILER "Intel(R) C++ Compiler 11.1"
 #elif __INTEL_COMPILER == 1200
-#define KMP_COMPILER "Intel C++ Compiler 12.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 12.0"
 #elif __INTEL_COMPILER == 1210
-#define KMP_COMPILER "Intel C++ Compiler 12.1"
+#define KMP_COMPILER "Intel(R) C++ Compiler 12.1"
 #elif __INTEL_COMPILER == 1300
-#define KMP_COMPILER "Intel C++ Compiler 13.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 13.0"
 #elif __INTEL_COMPILER == 1310
-#define KMP_COMPILER "Intel C++ Compiler 13.1"
+#define KMP_COMPILER "Intel(R) C++ Compiler 13.1"
 #elif __INTEL_COMPILER == 1400
-#define KMP_COMPILER "Intel C++ Compiler 14.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 14.0"
 #elif __INTEL_COMPILER == 1410
-#define KMP_COMPILER "Intel C++ Compiler 14.1"
+#define KMP_COMPILER "Intel(R) C++ Compiler 14.1"
 #elif __INTEL_COMPILER == 1500
-#define KMP_COMPILER "Intel C++ Compiler 15.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 15.0"
 #elif __INTEL_COMPILER == 1600
-#define KMP_COMPILER "Intel C++ Compiler 16.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 16.0"
 #elif __INTEL_COMPILER == 1700
-#define KMP_COMPILER "Intel C++ Compiler 17.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 17.0"
 #elif __INTEL_COMPILER == 1800
-#define KMP_COMPILER "Intel C++ Compiler 18.0"
+#define KMP_COMPILER "Intel(R) C++ Compiler 18.0"
 #elif __INTEL_COMPILER == 9998
-#define KMP_COMPILER "Intel C++ Compiler mainline"
+#define KMP_COMPILER "Intel(R) C++ Compiler mainline"
 #elif __INTEL_COMPILER == 9999
-#define KMP_COMPILER "Intel C++ Compiler mainline"
+#define KMP_COMPILER "Intel(R) C++ Compiler mainline"
 #endif
 #elif KMP_COMPILER_CLANG
 #define KMP_COMPILER                                                           \

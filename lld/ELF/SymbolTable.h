@@ -90,7 +90,6 @@ public:
 private:
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
-  void defsym(Symbol *Dst, Symbol *Src);
 
   llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
   void handleAnonymousVersion();

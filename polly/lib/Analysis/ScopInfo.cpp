@@ -1695,26 +1695,19 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, TerminatorInst *TI, Loop *L,
                             ConditionSets);
 }
 
-ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop,
+ScopStmt::ScopStmt(Scop &parent, Region &R, StringRef Name,
+                   Loop *SurroundingLoop,
                    std::vector<Instruction *> EntryBlockInstructions)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), R(&R),
-      Build(nullptr), SurroundingLoop(SurroundingLoop),
-      Instructions(EntryBlockInstructions) {
-  BaseName = getIslCompatibleName(
-      "Stmt", R.getNameStr(), parent.getNextStmtIdx(), "", UseInstructionNames);
-}
+      Build(nullptr), BaseName(Name), SurroundingLoop(SurroundingLoop),
+      Instructions(EntryBlockInstructions) {}
 
-ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop,
-                   std::vector<Instruction *> Instructions, int Count)
+ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, StringRef Name,
+                   Loop *SurroundingLoop,
+                   std::vector<Instruction *> Instructions)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
-      Build(nullptr), SurroundingLoop(SurroundingLoop),
-      Instructions(Instructions) {
-  std::string S = "";
-  if (Count != 0)
-    S += std::to_string(Count);
-  BaseName = getIslCompatibleName("Stmt", &bb, parent.getNextStmtIdx(), S,
-                                  UseInstructionNames);
-}
+      Build(nullptr), BaseName(Name), SurroundingLoop(SurroundingLoop),
+      Instructions(Instructions) {}
 
 ScopStmt::ScopStmt(Scop &parent, isl::map SourceRel, isl::map TargetRel,
                    isl::set NewDomain)
@@ -3428,9 +3421,13 @@ void Scop::foldSizeConstantsToRight() {
 
         int ValInt = 1;
 
-        if (isl_val_is_int(Val))
-          ValInt = isl_val_get_num_si(Val);
-        isl_val_free(Val);
+        if (isl_val_is_int(Val)) {
+          auto ValAPInt = APIntFromVal(Val);
+          if (ValAPInt.isSignedIntN(32))
+            ValInt = ValAPInt.getSExtValue();
+        } else {
+          isl_val_free(Val);
+        }
 
         Int.push_back(ValInt);
 
@@ -4640,10 +4637,10 @@ static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
   return isl::multi_union_pw_aff(isl::union_pw_multi_aff(Result));
 }
 
-void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
-                       std::vector<Instruction *> Instructions, int Count) {
+void Scop::addScopStmt(BasicBlock *BB, StringRef Name, Loop *SurroundingLoop,
+                       std::vector<Instruction *> Instructions) {
   assert(BB && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *BB, SurroundingLoop, Instructions, Count);
+  Stmts.emplace_back(*this, *BB, Name, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
   StmtMap[BB].push_back(Stmt);
   for (Instruction *Inst : Instructions) {
@@ -4653,10 +4650,10 @@ void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
   }
 }
 
-void Scop::addScopStmt(Region *R, Loop *SurroundingLoop,
+void Scop::addScopStmt(Region *R, StringRef Name, Loop *SurroundingLoop,
                        std::vector<Instruction *> Instructions) {
   assert(R && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *R, SurroundingLoop, Instructions);
+  Stmts.emplace_back(*this, *R, Name, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
 
   for (Instruction *Inst : Instructions) {
@@ -4824,6 +4821,23 @@ ArrayRef<ScopStmt *> Scop::getStmtListFor(BasicBlock *BB) const {
   if (StmtMapIt == StmtMap.end())
     return {};
   return StmtMapIt->second;
+}
+
+ScopStmt *Scop::getIncomingStmtFor(const Use &U) const {
+  auto *PHI = cast<PHINode>(U.getUser());
+  BasicBlock *IncomingBB = PHI->getIncomingBlock(U);
+
+  // If the value is a non-synthesizable from the incoming block, use the
+  // statement that contains it as user statement.
+  if (auto *IncomingInst = dyn_cast<Instruction>(U.get())) {
+    if (IncomingInst->getParent() == IncomingBB) {
+      if (ScopStmt *IncomingStmt = getStmtFor(IncomingInst))
+        return IncomingStmt;
+    }
+  }
+
+  // Otherwise, use the epilogue/last statement.
+  return getLastStmtFor(IncomingBB);
 }
 
 ScopStmt *Scop::getLastStmtFor(BasicBlock *BB) const {

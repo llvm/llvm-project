@@ -1,8 +1,8 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
-// RUN: ld.lld -fix-cortex-a53-843419 -verbose %t.o -o %t2 | FileCheck -check-prefix CHECK-PRINT %s
+// RUN: ld.lld -fix-cortex-a53-843419 -verbose %t.o -o %t2 2>&1 | FileCheck -check-prefix CHECK-PRINT %s
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 | FileCheck %s -check-prefixes=CHECK,CHECK-FIX
-// RUN: ld.lld -verbose %t.o -o %t3
+// RUN: ld.lld %t.o -o %t3
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t3 | FileCheck %s -check-prefixes=CHECK,CHECK-NOFIX
 // Test cases for Cortex-A53 Erratum 843419
 // See ARM-EPM-048406 Cortex_A53_MPCore_Software_Developers_Errata_Notice.pdf

@@ -19,6 +19,7 @@
 #include "polly/ScopDetection.h"
 #include "polly/ScopDetectionDiagnostic.h"
 #include "polly/ScopInfo.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
 #include "polly/Support/VirtualInstruction.h"
@@ -115,7 +116,7 @@ static cl::opt<GranularityChoice> StmtGranularity(
                           "Scalar independence heuristic"),
                clEnumValN(GranularityChoice::Stores, "store",
                           "Store-level granularity")),
-    cl::init(GranularityChoice::BasicBlocks), cl::cat(PollyCategory));
+    cl::init(GranularityChoice::ScalarIndependence), cl::cat(PollyCategory));
 
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
                                    Region *NonAffineSubRegion,
@@ -139,7 +140,7 @@ void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
   for (unsigned u = 0; u < PHI->getNumIncomingValues(); u++) {
     Value *Op = PHI->getIncomingValue(u);
     BasicBlock *OpBB = PHI->getIncomingBlock(u);
-    ScopStmt *OpStmt = scop->getLastStmtFor(OpBB);
+    ScopStmt *OpStmt = scop->getIncomingStmtFor(PHI->getOperandUse(u));
 
     // Do not build PHI dependences inside a non-affine subregion, but make
     // sure that the necessary scalar values are still made available.
@@ -688,23 +689,59 @@ bool ScopBuilder::shouldModelInst(Instruction *Inst, Loop *L) {
          !canSynthesize(Inst, *scop, &SE, L);
 }
 
+/// Generate a name for a statement.
+///
+/// @param BB     The basic block the statement will represent.
+/// @param BBIdx  The index of the @p BB relative to other BBs/regions.
+/// @param Count  The index of the created statement in @p BB.
+/// @param IsMain Whether this is the main of all statement for @p BB. If true,
+///               no suffix will be added.
+/// @param IsLast Uses a special indicator for the last statement of a BB.
+static std::string makeStmtName(BasicBlock *BB, long BBIdx, int Count,
+                                bool IsMain, bool IsLast = false) {
+  std::string Suffix;
+  if (!IsMain) {
+    if (UseInstructionNames)
+      Suffix = '_';
+    if (IsLast)
+      Suffix += "last";
+    else if (Count < 26)
+      Suffix += 'a' + Count;
+    else
+      Suffix += std::to_string(Count);
+  }
+  return getIslCompatibleName("Stmt", BB, BBIdx, Suffix, UseInstructionNames);
+}
+
+/// Generate a name for a statement that represents a non-affine subregion.
+///
+/// @param R    The region the statement will represent.
+/// @param RIdx The index of the @p R relative to other BBs/regions.
+static std::string makeStmtName(Region *R, long RIdx) {
+  return getIslCompatibleName("Stmt", R->getNameStr(), RIdx, "",
+                              UseInstructionNames);
+}
+
 void ScopBuilder::buildSequentialBlockStmts(BasicBlock *BB, bool SplitOnStore) {
   Loop *SurroundingLoop = LI.getLoopFor(BB);
 
   int Count = 0;
+  long BBIdx = scop->getNextStmtIdx();
   std::vector<Instruction *> Instructions;
   for (Instruction &Inst : *BB) {
     if (shouldModelInst(&Inst, SurroundingLoop))
       Instructions.push_back(&Inst);
     if (Inst.getMetadata("polly_split_after") ||
         (SplitOnStore && isa<StoreInst>(Inst))) {
-      scop->addScopStmt(BB, SurroundingLoop, Instructions, Count);
+      std::string Name = makeStmtName(BB, BBIdx, Count, Count == 0);
+      scop->addScopStmt(BB, Name, SurroundingLoop, Instructions);
       Count++;
       Instructions.clear();
     }
   }
 
-  scop->addScopStmt(BB, SurroundingLoop, Instructions, Count);
+  std::string Name = makeStmtName(BB, BBIdx, Count, Count == 0);
+  scop->addScopStmt(BB, Name, SurroundingLoop, Instructions);
 }
 
 /// Is @p Inst an ordered instruction?
@@ -735,32 +772,6 @@ static void joinOperandTree(EquivalenceClasses<Instruction *> &UnionFind,
         continue;
 
       UnionFind.unionSets(Inst, OpInst);
-    }
-  }
-}
-
-/// Join instructions that are used as incoming value in successor PHIs into the
-/// epilogue.
-static void
-joinIncomingPHIValuesIntoEpilogue(EquivalenceClasses<Instruction *> &UnionFind,
-                                  ArrayRef<Instruction *> ModeledInsts,
-                                  BasicBlock *BB) {
-  for (BasicBlock *Succ : successors(BB)) {
-    for (Instruction &SuccInst : *Succ) {
-      PHINode *SuccPHI = dyn_cast<PHINode>(&SuccInst);
-      if (!SuccPHI)
-        break;
-
-      Value *IncomingVal = SuccPHI->getIncomingValueForBlock(BB);
-      Instruction *IncomingInst = dyn_cast<Instruction>(IncomingVal);
-      if (!IncomingInst)
-        continue;
-      if (IncomingInst->getParent() != BB)
-        continue;
-      if (UnionFind.findValue(IncomingInst) == UnionFind.end())
-        continue;
-
-      UnionFind.unionSets(nullptr, IncomingInst);
     }
   }
 }
@@ -798,26 +809,41 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
   }
 }
 
-/// Also ensure that the epilogue is the last statement relative to all ordered
-/// instructions.
+/// If the BasicBlock has an edge from itself, ensure that the PHI WRITEs for
+/// the incoming values from this block are executed after the PHI READ.
 ///
-/// This is basically joinOrderedInstructions() but using the epilogue as
-/// 'ordered instruction'.
-static void joinAllAfterEpilogue(EquivalenceClasses<Instruction *> &UnionFind,
-                                 ArrayRef<Instruction *> ModeledInsts) {
-  bool EpilogueSeen = false;
+/// Otherwise it could overwrite the incoming value from before the BB with the
+/// value for the next execution. This can happen if the PHI WRITE is added to
+/// the statement with the instruction that defines the incoming value (instead
+/// of the last statement of the same BB). To ensure that the PHI READ and WRITE
+/// are in order, we put both into the statement. PHI WRITEs are always executed
+/// after PHI READs when they are in the same statement.
+///
+/// TODO: This is an overpessimization. We only have to ensure that the PHI
+/// WRITE is not put into a statement containing the PHI itself. That could also
+/// be done by
+/// - having all (strongly connected) PHIs in a single statement,
+/// - unite only the PHIs in the operand tree of the PHI WRITE (because it only
+///   has a chance of being lifted before a PHI by being in a statement with a
+///   PHI that comes before in the basic block), or
+/// - when uniting statements, ensure that no (relevant) PHIs are overtaken.
+static void joinOrderedPHIs(EquivalenceClasses<Instruction *> &UnionFind,
+                            ArrayRef<Instruction *> ModeledInsts) {
   for (Instruction *Inst : ModeledInsts) {
-    auto PHIWritesLeader = UnionFind.findLeader(nullptr);
-    auto InstLeader = UnionFind.findLeader(Inst);
-
-    if (PHIWritesLeader == InstLeader)
-      EpilogueSeen = true;
-
-    if (!isOrderedInstruction(Inst))
+    PHINode *PHI = dyn_cast<PHINode>(Inst);
+    if (!PHI)
       continue;
 
-    if (EpilogueSeen)
-      UnionFind.unionSets(PHIWritesLeader, InstLeader);
+    int Idx = PHI->getBasicBlockIndex(PHI->getParent());
+    if (Idx < 0)
+      continue;
+
+    Instruction *IncomingVal =
+        dyn_cast<Instruction>(PHI->getIncomingValue(Idx));
+    if (!IncomingVal)
+      continue;
+
+    UnionFind.unionSets(PHI, IncomingVal);
   }
 }
 
@@ -828,35 +854,32 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // shouldModelInst() repeatedly.
   SmallVector<Instruction *, 32> ModeledInsts;
   EquivalenceClasses<Instruction *> UnionFind;
+  Instruction *MainInst = nullptr;
   for (Instruction &Inst : *BB) {
     if (!shouldModelInst(&Inst, L))
       continue;
     ModeledInsts.push_back(&Inst);
     UnionFind.insert(&Inst);
+
+    // When a BB is split into multiple statements, the main statement is the
+    // one containing the 'main' instruction. We select the first instruction
+    // that is unlikely to be removed (because it has side-effects) as the main
+    // one. It is used to ensure that at least one statement from the bb has the
+    // same name as with -polly-stmt-granularity=bb.
+    if (!MainInst && (isa<StoreInst>(Inst) ||
+                      (isa<CallInst>(Inst) && !isa<IntrinsicInst>(Inst))))
+      MainInst = &Inst;
   }
 
-  // 'nullptr' represents the last statement for a basic block. It contains no
-  // instructions, but holds the PHI write accesses for successor basic blocks.
-  // If a PHI has an incoming value defined in this BB, it can also be merged
-  // with other statements.
-  // TODO: We wouldn't need this if we would add PHIWrites into the statement
-  // that defines the incoming value (if in the BB) instead of always the last,
-  // so we could unconditionally always add a last statement.
-  UnionFind.insert(nullptr);
-
   joinOperandTree(UnionFind, ModeledInsts);
-  joinIncomingPHIValuesIntoEpilogue(UnionFind, ModeledInsts, BB);
   joinOrderedInstructions(UnionFind, ModeledInsts);
-  joinAllAfterEpilogue(UnionFind, ModeledInsts);
+  joinOrderedPHIs(UnionFind, ModeledInsts);
 
   // The list of instructions for statement (statement represented by the leader
   // instruction). The order of statements instructions is reversed such that
   // the epilogue is first. This makes it easier to ensure that the epilogue is
   // the last statement.
   MapVector<Instruction *, std::vector<Instruction *>> LeaderToInstList;
-
-  // Ensure that the epilogue is last.
-  LeaderToInstList[nullptr];
 
   // Collect the instructions of all leaders. UnionFind's member iterator
   // unfortunately are not in any specific order.
@@ -871,12 +894,33 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
 
   // Finally build the statements.
   int Count = 0;
+  long BBIdx = scop->getNextStmtIdx();
+  bool MainFound = false;
   for (auto &Instructions : reverse(LeaderToInstList)) {
     std::vector<Instruction *> &InstList = Instructions.second;
+
+    // If there is no main instruction, make the first statement the main.
+    bool IsMain;
+    if (MainInst)
+      IsMain = std::find(InstList.begin(), InstList.end(), MainInst) !=
+               InstList.end();
+    else
+      IsMain = (Count == 0);
+    if (IsMain)
+      MainFound = true;
+
     std::reverse(InstList.begin(), InstList.end());
-    scop->addScopStmt(BB, L, std::move(InstList), Count);
+    std::string Name = makeStmtName(BB, BBIdx, Count, IsMain);
+    scop->addScopStmt(BB, Name, L, std::move(InstList));
     Count += 1;
   }
+
+  // Unconditionally add an epilogue (last statement). It contains no
+  // instructions, but holds the PHI write accesses for successor basic blocks,
+  // if the incoming value is not defined in another statement if the same BB.
+  // The epilogue will be removed if no PHIWrite is added to it.
+  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, !MainFound, true);
+  scop->addScopStmt(BB, EpilogueName, L, {});
 }
 
 void ScopBuilder::buildStmts(Region &SR) {
@@ -887,7 +931,9 @@ void ScopBuilder::buildStmts(Region &SR) {
     for (Instruction &Inst : *SR.getEntry())
       if (shouldModelInst(&Inst, SurroundingLoop))
         Instructions.push_back(&Inst);
-    scop->addScopStmt(&SR, SurroundingLoop, Instructions);
+    long RIdx = scop->getNextStmtIdx();
+    std::string Name = makeStmtName(&SR, RIdx);
+    scop->addScopStmt(&SR, Name, SurroundingLoop, Instructions);
     return;
   }
 

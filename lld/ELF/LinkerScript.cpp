@@ -74,7 +74,7 @@ uint64_t ExprValue::getSectionOffset() const {
   // If the alignment is trivial, we don't have to compute the full
   // value to know the offset. This allows this function to succeed in
   // cases where the output section is not yet known.
-  if (Alignment == 1)
+  if (Alignment == 1 && (!Sec || !Sec->getOutputSection()))
     return Val;
   return getValue() - getSecAddr();
 }
@@ -114,16 +114,28 @@ void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
     Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
 }
 
+// Used for handling linker symbol assignments, for both finalizing
+// their values and doing early declarations. Returns true if symbol
+// should be defined from linker script.
+static bool shouldDefineSym(SymbolAssignment *Cmd) {
+  if (Cmd->Name == ".")
+    return false;
+
+  if (!Cmd->Provide)
+    return true;
+
+  // If a symbol was in PROVIDE(), we need to define it only
+  // when it is a referenced undefined symbol.
+  Symbol *B = Symtab->find(Cmd->Name);
+  if (!B || B->isDefined())
+    return false;
+  return true;
+}
+
 // This function is called from processSectionCommands,
 // while we are fixing the output section layout.
 void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
-  if (Cmd->Name == ".")
-    return;
-
-  // If a symbol was in PROVIDE(), we need to define it only when
-  // it is a referenced undefined symbol.
-  Symbol *B = Symtab->find(Cmd->Name);
-  if (Cmd->Provide && (!B || B->isDefined()))
+  if (!shouldDefineSym(Cmd))
     return;
 
   // Define a symbol.
@@ -151,6 +163,30 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
                          STT_NOTYPE, SymValue, 0, Sec);
   Cmd->Sym = cast<Defined>(Sym);
+}
+
+// Symbols defined in script should not be inlined by LTO. At the same time
+// we don't know their final values until late stages of link. Here we scan
+// over symbol assignment commands and create placeholder symbols if needed.
+void LinkerScript::declareSymbols() {
+  assert(!Ctx);
+  for (BaseCommand *Base : SectionCommands) {
+    auto *Cmd = dyn_cast<SymbolAssignment>(Base);
+    if (!Cmd || !shouldDefineSym(Cmd))
+      continue;
+
+    // We can't calculate final value right now.
+    Symbol *Sym;
+    uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+    std::tie(Sym, std::ignore) =
+        Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+                       /*CanOmitFromDynSym*/ false,
+                       /*File*/ nullptr);
+    replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
+                           STT_NOTYPE, 0, 0, nullptr);
+    Cmd->Sym = cast<Defined>(Sym);
+    Cmd->Provide = false;
+  }
 }
 
 // This function is called from assignAddresses, while we are
@@ -249,22 +285,10 @@ static void sortSections(MutableArrayRef<InputSection *> Vec,
 //    --sort-section is handled as an inner SORT command.
 // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
 // 4. If no SORT command is given, sort according to --sort-section.
-// 5. If no SORT commands are given and --sort-section is not specified,
-//    apply sorting provided by --symbol-ordering-file if any exist.
-static void sortInputSections(
-    MutableArrayRef<InputSection *> Vec, const SectionPattern &Pat,
-    const DenseMap<SectionBase *, int> &Order) {
+static void sortInputSections(MutableArrayRef<InputSection *> Vec,
+                              const SectionPattern &Pat) {
   if (Pat.SortOuter == SortSectionPolicy::None)
     return;
-
-  if (Pat.SortOuter == SortSectionPolicy::Default &&
-      Config->SortSection == SortSectionPolicy::Default) {
-    // If -symbol-ordering-file was given, sort accordingly.
-    // Usually, Order is empty.
-    if (!Order.empty())
-      sortByOrder(Vec, [&](InputSectionBase *S) { return Order.lookup(S); });
-    return;
-  }
 
   if (Pat.SortInner == SortSectionPolicy::Default)
     sortSections(Vec, Config->SortSection);
@@ -275,8 +299,7 @@ static void sortInputSections(
 
 // Compute and remember which sections the InputSectionDescription matches.
 std::vector<InputSection *>
-LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
-                                   const DenseMap<SectionBase *, int> &Order) {
+LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
   std::vector<InputSection *> Ret;
 
   // Collects all sections that satisfy constraints of Cmd.
@@ -307,7 +330,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
     }
 
     sortInputSections(MutableArrayRef<InputSection *>(Ret).slice(SizeBefore),
-                      Pat, Order);
+                      Pat);
   }
   return Ret;
 }
@@ -324,13 +347,13 @@ void LinkerScript::discard(ArrayRef<InputSection *> V) {
   }
 }
 
-std::vector<InputSection *> LinkerScript::createInputSectionList(
-    OutputSection &OutCmd, const DenseMap<SectionBase *, int> &Order) {
+std::vector<InputSection *>
+LinkerScript::createInputSectionList(OutputSection &OutCmd) {
   std::vector<InputSection *> Ret;
 
   for (BaseCommand *Base : OutCmd.SectionCommands) {
     if (auto *Cmd = dyn_cast<InputSectionDescription>(Base)) {
-      Cmd->Sections = computeInputSections(Cmd, Order);
+      Cmd->Sections = computeInputSections(Cmd);
       Ret.insert(Ret.end(), Cmd->Sections.begin(), Cmd->Sections.end());
     }
   }
@@ -359,7 +382,6 @@ void LinkerScript::processSectionCommands() {
   Ctx->OutSec = Aether;
 
   size_t I = 0;
-  DenseMap<SectionBase *, int> Order = buildSectionOrder();
   // Add input sections to output sections.
   for (BaseCommand *Base : SectionCommands) {
     // Handle symbol assignments outside of any output section.
@@ -369,7 +391,7 @@ void LinkerScript::processSectionCommands() {
     }
 
     if (auto *Sec = dyn_cast<OutputSection>(Base)) {
-      std::vector<InputSection *> V = createInputSectionList(*Sec, Order);
+      std::vector<InputSection *> V = createInputSectionList(*Sec);
 
       // The output section name `/DISCARD/' is special.
       // Any input section assigned to it is discarded.

@@ -11,20 +11,32 @@ multiclass Eq<string name> {
   def _eq: Joined<["--", "-"], name # "=">, Alias<!cast<Separate>(NAME)>;
 }
 
-def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
-  HelpText<"Add a directory to the library search path">;
-
+// The follow flags are shared with the ELF linker
 def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
 
 def color_diagnostics_eq: J<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics">;
 
-// The follow flags are shared with the ELF linker
+def entry: S<"entry">, MetaVarName<"<entry>">,
+  HelpText<"Name of entry point symbol">;
+
+def error_limit: J<"error-limit=">,
+  HelpText<"Maximum number of errors to emit before stopping (0 = no limit)">;
+
+def fatal_warnings: F<"fatal-warnings">,
+  HelpText<"Treat warnings as errors">;
+
+def gc_sections: F<"gc-sections">,
+  HelpText<"Enable garbage collection of unused sections">;
+
 def help: F<"help">, HelpText<"Print option help">;
 
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
+
+def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+  HelpText<"Add a directory to the library search path">;
 
 def mllvm: S<"mllvm">, HelpText<"Options to pass to LLVM">;
 
@@ -34,57 +46,41 @@ def no_threads: F<"no-threads">,
 def no_color_diagnostics: F<"no-color-diagnostics">,
   HelpText<"Do not use colors in diagnostics">;
 
-def no_check_signatures: F<"no-check-signatures">, HelpText<"Don't check function signatures">;
+def no_fatal_warnings: F<"no-fatal-warnings">;
+
+def no_gc_sections: F<"no-gc-sections">,
+  HelpText<"Disable garbage collection of unused sections">;
+
+def no_print_gc_sections: F<"no-print-gc-sections">,
+  HelpText<"Do not list removed unused sections">;
 
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
-def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
-
-def check_signatures: F<"check-signatures">, HelpText<"Check function signatures">;
-
-def v: Flag<["-"], "v">, HelpText<"Display the version number">;
-
-def version: F<"version">, HelpText<"Display the version number and exit">;
-
-def verbose: F<"verbose">, HelpText<"Verbose mode">;
+def print_gc_sections: F<"print-gc-sections">,
+  HelpText<"List removed unused sections">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
-
-def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
 
 def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
+def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
+
 defm undefined: Eq<"undefined">,
   HelpText<"Force undefined symbol during linking">;
+
+def v: Flag<["-"], "v">, HelpText<"Display the version number">;
+
+def verbose: F<"verbose">, HelpText<"Verbose mode">;
+
+def version: F<"version">, HelpText<"Display the version number and exit">;
 
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
-def entry: S<"entry">, MetaVarName<"<entry>">,
-  HelpText<"Name of entry point symbol">;
-
-def no_entry: F<"no-entry">,
-  HelpText<"Do not output any entry point">;
-
-def error_limit: J<"error-limit=">,
-  HelpText<"Maximum number of errors to emit before stopping (0 = no limit)">;
-
 // The follow flags are unique to wasm
-
-def global_base: J<"global-base=">,
-  HelpText<"Where to start to place global data">;
-
-def initial_memory: J<"initial-memory=">,
-  HelpText<"Initial size of the linear memory">;
-
-def max_memory: J<"max-memory=">,
-  HelpText<"Maximum size of the linear memory">;
-
-def import_memory: F<"import-memory">,
-  HelpText<"Import memory from the environment">;
 
 def allow_undefined: F<"allow-undefined">,
   HelpText<"Allow undefined symbols in linked binary">;
@@ -92,12 +88,37 @@ def allow_undefined: F<"allow-undefined">,
 def allow_undefined_file: J<"allow-undefined-file=">,
   HelpText<"Allow symbols listed in <file> to be undefined in linked binary">;
 
-def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">, Alias<allow_undefined_file>;
+def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">,
+  Alias<allow_undefined_file>;
+
+def check_signatures: F<"check-signatures">,
+  HelpText<"Check function signatures">;
+
+defm export: Eq<"export">,
+  HelpText<"Force a symbol to be exported">;
+
+def global_base: J<"global-base=">,
+  HelpText<"Where to start to place global data">;
+
+def import_memory: F<"import-memory">,
+  HelpText<"Import memory from the environment">;
+
+def initial_memory: J<"initial-memory=">,
+  HelpText<"Initial size of the linear memory">;
+
+def max_memory: J<"max-memory=">,
+  HelpText<"Maximum size of the linear memory">;
+
+def no_check_signatures: F<"no-check-signatures">,
+  HelpText<"Don't check function signatures">;
+
+def no_entry: F<"no-entry">,
+  HelpText<"Do not output any entry point">;
 
 // Aliases
+def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
+def alias_entry_entry: J<"entry=">, Alias<entry>;
 def alias_initial_memory_i: Flag<["-"], "i">, Alias<initial_memory>;
 def alias_max_memory_m: Flag<["-"], "m">, Alias<max_memory>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
-def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
-def alias_entry_entry: J<"entry=">, Alias<entry>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;

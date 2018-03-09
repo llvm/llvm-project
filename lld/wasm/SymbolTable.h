@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 
-using llvm::object::WasmSymbol;
 using llvm::wasm::WasmSignature;
 
 namespace lld {
@@ -48,17 +47,24 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   Symbol *find(StringRef Name);
+  ObjFile *findComdat(StringRef Name) const;
 
-  Symbol *addDefined(InputFile *F, const WasmSymbol *Sym,
-                     const InputSegment *Segment = nullptr);
-  Symbol *addUndefined(InputFile *F, const WasmSymbol *Sym);
+  Symbol *addDefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
+                     InputFile *F, InputChunk *Chunk = nullptr,
+                     uint32_t Address = 0);
+  Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
+                       InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
-  Symbol *addDefinedGlobal(StringRef Name);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
+  bool addComdat(StringRef Name, ObjFile *);
 
+  Symbol *addSyntheticGlobal(StringRef Name);
+  Symbol *addSyntheticFunction(StringRef Name, const WasmSignature *Type,
+                               uint32_t Flags);
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 
+  llvm::DenseMap<llvm::CachedHashStringRef, ObjFile *> ComdatMap;
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
   std::vector<Symbol *> SymVector;
 };

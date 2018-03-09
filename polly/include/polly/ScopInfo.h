@@ -1195,8 +1195,8 @@ class ScopStmt {
 
 public:
   /// Create the ScopStmt from a BasicBlock.
-  ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop,
-           std::vector<Instruction *> Instructions, int Count);
+  ScopStmt(Scop &parent, BasicBlock &bb, StringRef Name, Loop *SurroundingLoop,
+           std::vector<Instruction *> Instructions);
 
   /// Create an overapproximating ScopStmt for the region @p R.
   ///
@@ -1206,7 +1206,7 @@ public:
   ///                               blocks for now. We currently do not allow
   ///                               to modify the instructions of blocks later
   ///                               in the region statement.
-  ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop,
+  ScopStmt(Scop &parent, Region &R, StringRef Name, Loop *SurroundingLoop,
            std::vector<Instruction *> EntryBlockInstructions);
 
   /// Create a copy statement.
@@ -2197,11 +2197,11 @@ private:
   /// and map.
   ///
   /// @param BB              The basic block we build the statement for.
+  /// @param Name            The name of the new statement.
   /// @param SurroundingLoop The loop the created statement is contained in.
   /// @param Instructions    The instructions in the statement.
-  /// @param Count           The index of the created statement in @p BB.
-  void addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
-                   std::vector<Instruction *> Instructions, int Count);
+  void addScopStmt(BasicBlock *BB, StringRef Name, Loop *SurroundingLoop,
+                   std::vector<Instruction *> Instructions);
 
   /// Create a new SCoP statement for @p R.
   ///
@@ -2209,11 +2209,12 @@ private:
   /// and map.
   ///
   /// @param R                      The region we build the statement for.
+  /// @param Name                   The name of the new statement.
   /// @param SurroundingLoop        The loop the created statement is contained
   ///                               in.
   /// @param EntryBlockInstructions The (interesting) instructions in the
   ///                               entry block of the region statement.
-  void addScopStmt(Region *R, Loop *SurroundingLoop,
+  void addScopStmt(Region *R, StringRef Name, Loop *SurroundingLoop,
                    std::vector<Instruction *> EntryBlockInstructions);
 
   /// Update access dimensionalities.
@@ -2742,6 +2743,11 @@ public:
 
   /// Return the list of ScopStmts that represent the given @p BB.
   ArrayRef<ScopStmt *> getStmtListFor(BasicBlock *BB) const;
+
+  /// Get the statement to put a PHI WRITE into.
+  ///
+  /// @param U The operand of a PHINode.
+  ScopStmt *getIncomingStmtFor(const Use &U) const;
 
   /// Return the last statement representing @p BB.
   ///

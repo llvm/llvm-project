@@ -453,12 +453,14 @@ void LocalImportChunk::writeTo(uint8_t *Buf) const {
   }
 }
 
-void SEHTableChunk::writeTo(uint8_t *Buf) const {
+void RVATableChunk::writeTo(uint8_t *Buf) const {
   ulittle32_t *Begin = reinterpret_cast<ulittle32_t *>(Buf + OutputSectionOff);
   size_t Cnt = 0;
-  for (Defined *D : Syms)
-    Begin[Cnt++] = D->getRVA();
+  for (const ChunkAndOffset &CO : Syms)
+    Begin[Cnt++] = CO.InputChunk->getRVA() + CO.Offset;
   std::sort(Begin, Begin + Cnt);
+  assert(std::unique(Begin, Begin + Cnt) == Begin + Cnt &&
+         "RVA tables should be de-duplicated");
 }
 
 // Windows-specific. This class represents a block in .reloc section.

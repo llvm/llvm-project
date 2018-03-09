@@ -32,8 +32,7 @@
 # DECORATED-IMPLIB: Name type: name
 # DECORATED-IMPLIB-NEXT: __imp_@fastcall@8
 # DECORATED-IMPLIB-NEXT: @fastcall@8
-# TODO: To match link.exe, this one should also be Name type: name.
-# DECORATED-IMPLIB: Name type: noprefix
+# DECORATED-IMPLIB: Name type: name
 # DECORATED-IMPLIB-NEXT: __imp__stdcall@8
 # DECORATED-IMPLIB-NEXT: _stdcall@8
 # DECORATED-IMPLIB: Name type: name
@@ -41,8 +40,7 @@
 # DECORATED-IMPLIB-NEXT: vectorcall@@8
 
 # DECORATED-EXPORTS: Name: @fastcall@8
-# TODO: To match link.exe, this one should actually be _stdcall@8
-# DECORATED-EXPORTS: Name: stdcall@8
+# DECORATED-EXPORTS: Name: _stdcall@8
 # DECORATED-EXPORTS: Name: vectorcall@@8
 
 

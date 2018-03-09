@@ -108,7 +108,6 @@ public:
   }
 
   StringRef getName() const { return Name; }
-  uint8_t getVisibility() const { return StOther & 0x3; }
   void parseSymbolVersion();
 
   bool isInGot() const { return GotIndex != -1U; }
@@ -351,6 +350,8 @@ void printTraceSymbol(Symbol *Sym);
 
 template <typename T, typename... ArgT>
 void replaceSymbol(Symbol *S, ArgT &&... Arg) {
+  static_assert(std::is_trivially_destructible<T>(),
+                "Symbol types must be trivially destructible");
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");

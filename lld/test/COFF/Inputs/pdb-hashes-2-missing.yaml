@@ -80,8 +80,6 @@ sections:
               Type:            4099
               Flags:           [ IsParameter ]
               VarName:         f
-          - Kind:            S_DEFRANGE_REGISTER_REL
-            DefRangeRegisterRelSym:
           - Kind:            S_PROC_ID_END
             ScopeEndSym:
       - !Lines

@@ -56,8 +56,10 @@ public:
   llvm::opt::InputArgList parse(StringRef S) { return parse(tokenize(S)); }
 
   // Tokenizes a given string and then parses as command line options in
-  // .drectve section.
-  llvm::opt::InputArgList parseDirectives(StringRef S);
+  // .drectve section. /EXPORT options are returned in second element
+  // to be processed in fastpath.
+  std::pair<llvm::opt::InputArgList, std::vector<StringRef>>
+  parseDirectives(StringRef S);
 
 private:
   // Parses command line options.
@@ -142,6 +144,8 @@ StringRef machineToStr(MachineTypes MT);
 
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef Arg, uint64_t *Addr, uint64_t *Size = nullptr);
+
+void parseGuard(StringRef Arg);
 
 // Parses a string in the form of "<integer>[.<integer>]".
 // Minor's default value is 0.

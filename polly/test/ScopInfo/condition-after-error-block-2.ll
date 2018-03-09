@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
 
 ; Verify that we do not allow PHI nodes such as %phi, if they reference an error
 ; block and are used by anything else than a terminator instruction.

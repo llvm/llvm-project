@@ -143,8 +143,6 @@ namespace lld {
 namespace elf {
 
 uint64_t getHeaderSize();
-void sortByOrder(llvm::MutableArrayRef<InputSection *> In,
-                 std::function<int(InputSectionBase *S)> Order);
 
 extern std::vector<OutputSection *> OutputSections;
 } // namespace elf

@@ -88,13 +88,13 @@ void __kmp_setup_icv_copy(kmp_team_t *team, int new_nproc,
 static int __kmp_load_balance_nproc(kmp_root_t *root, int set_nproc);
 #endif
 
-static int __kmp_expand_threads(int nWish, int nNeed);
+static int __kmp_expand_threads(int nNeed);
 #if KMP_OS_WINDOWS
 static int __kmp_unregister_root_other_thread(int gtid);
 #endif
 static void __kmp_unregister_library(void); // called by __kmp_internal_end()
 static void __kmp_reap_thread(kmp_info_t *thread, int is_root);
-static kmp_info_t *__kmp_thread_pool_insert_pt = NULL;
+kmp_info_t *__kmp_thread_pool_insert_pt = NULL;
 
 /* Calculate the identifier of the current thread */
 /* fast (and somewhat portable) way to get unique identifier of executing
@@ -941,7 +941,7 @@ static int __kmp_reserve_threads(kmp_root_t *root, kmp_team_t *parent_team,
     int slotsRequired = __kmp_nth + new_nthreads -
                         (root->r.r_active ? 1 : root->r.r_hot_team->t.t_nproc) -
                         capacity;
-    int slotsAdded = __kmp_expand_threads(slotsRequired, slotsRequired);
+    int slotsAdded = __kmp_expand_threads(slotsRequired);
     if (slotsAdded < slotsRequired) {
       // The threads array was not expanded enough.
       new_nthreads -= (slotsRequired - slotsAdded);
@@ -2199,7 +2199,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #endif /* USE_ITT_NOTIFY */
           if ((__itt_frame_begin_v3_ptr || KMP_ITT_DEBUG) &&
               __kmp_forkjoin_frames && !__kmp_forkjoin_frames_mode) {
-        // Mark start of "parallel" region for VTune.
+        // Mark start of "parallel" region for Intel(R) VTune(TM) analyzer.
         __kmp_itt_region_forking(gtid, team->t.t_nproc, 0);
       }
     }
@@ -2394,7 +2394,7 @@ void __kmp_join_call(ident_t *loc, int gtid
             .t_stack_id); // destroy the stack stitching id after join barrier
   }
 
-  // Mark end of "parallel" region for VTune.
+  // Mark end of "parallel" region for Intel(R) VTune(TM) analyzer.
   if (team->t.t_active_level == 1
 #if OMP_40_ENABLED
       && !master_th->th.th_teams_microtask /* not in teams construct */
@@ -3501,22 +3501,16 @@ static int __kmp_reclaim_dead_roots(void) {
    __kmpc_threadprivate_cached is done using __kmp_tp_cached_lock.
 
    After any dead root reclamation, if the clipping value allows array expansion
-   to result in the generation of a total of nWish free slots, the function does
-   that expansion. If not, but the clipping value allows array expansion to
-   result in the generation of a total of nNeed free slots, the function does
-   that expansion. Otherwise, nothing is done beyond the possible initial root
-   thread reclamation. However, if nNeed is zero, a best-effort attempt is made
-   to fulfil nWish as far as possible, i.e. the function will attempt to create
-   as many free slots as possible up to nWish.
+   to result in the generation of a total of nNeed free slots, the function does
+   that expansion. If not, nothing is done beyond the possible initial root
+   thread reclamation.
 
    If any argument is negative, the behavior is undefined. */
-static int __kmp_expand_threads(int nWish, int nNeed) {
+static int __kmp_expand_threads(int nNeed) {
   int added = 0;
   int old_tp_cached;
   int __kmp_actual_max_nth;
 
-  if (nNeed > nWish) /* normalize the arguments */
-    nWish = nNeed;
 #if KMP_OS_WINDOWS && !defined KMP_DYNAMIC_LIB
   /* only for Windows static library */
   /* reclaim array entries for root threads that are already dead */
@@ -3527,13 +3521,8 @@ static int __kmp_expand_threads(int nWish, int nNeed) {
     if (nNeed < 0)
       nNeed = 0;
   }
-  if (nWish) {
-    nWish -= added;
-    if (nWish < 0)
-      nWish = 0;
-  }
 #endif
-  if (nWish <= 0)
+  if (nNeed <= 0)
     return added;
 
   while (1) {
@@ -3565,25 +3554,11 @@ static int __kmp_expand_threads(int nWish, int nNeed) {
         old_tp_cached ? __kmp_tp_capacity : __kmp_sys_max_nth;
     KMP_DEBUG_ASSERT(__kmp_actual_max_nth >= __kmp_threads_capacity);
 
-    /* compute expansion headroom to check if we can expand and whether to aim
-       for nWish or nNeed */
-    nTarget = nWish;
+    /* compute expansion headroom to check if we can expand */
+    nTarget = nNeed;
     if (__kmp_actual_max_nth - __kmp_threads_capacity < nTarget) {
-      /* can't fulfil nWish, so try nNeed */
-      if (nNeed) {
-        nTarget = nNeed;
-        if (__kmp_actual_max_nth - __kmp_threads_capacity < nTarget) {
-          /* possible expansion too small -- give up */
-          break;
-        }
-      } else {
-        /* best-effort */
-        nTarget = __kmp_actual_max_nth - __kmp_threads_capacity;
-        if (!nTarget) {
-          /* can expand at all -- give up */
-          break;
-        }
-      }
+      /* possible expansion too small -- give up */
+      break;
     }
     minimumRequiredCapacity = __kmp_threads_capacity + nTarget;
 
@@ -3670,7 +3645,7 @@ int __kmp_register_root(int initial_thread) {
   }
 
   /* see if there are too many threads */
-  if (__kmp_all_nth >= capacity && !__kmp_expand_threads(1, 1)) {
+  if (__kmp_all_nth >= capacity && !__kmp_expand_threads(1)) {
     if (__kmp_tp_cached) {
       __kmp_fatal(KMP_MSG(CantRegisterNewThread),
                   KMP_HNT(Set_ALL_THREADPRIVATE, __kmp_tp_capacity),
@@ -5528,6 +5503,14 @@ void __kmp_free_thread(kmp_info_t *this_th) {
   TCW_PTR(this_th->th.th_root, NULL);
   TCW_PTR(this_th->th.th_dispatch, NULL); /* NOT NEEDED */
 
+  /* If the implicit task assigned to this thread can be used by other threads
+   * -> multiple threads can share the data and try to free the task at
+   * __kmp_reap_thread at exit. This duplicate use of the task data can happen
+   * with higher probability when hot team is disabled but can occurs even when
+   * the hot team is enabled */
+  __kmp_free_implicit_task(this_th);
+  this_th->th.th_current_task = NULL;
+
   // If the __kmp_thread_pool_insert_pt is already past the new insert
   // point, then we need to re-scan the entire list.
   gtid = this_th->th.th_info.ds.ds_gtid;
@@ -5669,7 +5652,6 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
         __ompt_get_task_info_object(0)->frame.exit_frame = NULL;
 
         this_thr->th.ompt_thread_info.state = omp_state_overhead;
-        this_thr->th.ompt_thread_info.task_data = *OMPT_CUR_TASK_DATA(this_thr);
       }
 #endif
       /* join barrier after parallel region */

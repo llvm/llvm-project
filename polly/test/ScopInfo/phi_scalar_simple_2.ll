@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
 ;
 ;    int jd(int *restrict A, int x, int N, int c) {
 ;      for (int i = 0; i < N; i++)

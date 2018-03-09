@@ -15,16 +15,13 @@
 #include "llvm/Object/Wasm.h"
 
 using llvm::object::Archive;
-using llvm::object::WasmSymbol;
-using llvm::wasm::WasmExport;
-using llvm::wasm::WasmImport;
 using llvm::wasm::WasmSignature;
 
 namespace lld {
 namespace wasm {
 
 class InputFile;
-class InputSegment;
+class InputChunk;
 
 class Symbol {
 public:
@@ -40,8 +37,7 @@ public:
     InvalidKind,
   };
 
-  Symbol(StringRef Name, bool IsLocal)
-      : WrittenToSymtab(0), WrittenToNameSec(0), IsLocal(IsLocal), Name(Name) {}
+  Symbol(StringRef Name, uint32_t Flags) : Flags(Flags), Name(Name) {}
 
   Kind getKind() const { return SymbolKind; }
 
@@ -56,7 +52,7 @@ public:
            SymbolKind == UndefinedFunctionKind;
   }
   bool isGlobal() const { return !isFunction(); }
-  bool isLocal() const { return IsLocal; }
+  bool isLocal() const;
   bool isWeak() const;
   bool isHidden() const;
 
@@ -65,56 +61,80 @@ public:
 
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return File; }
-
-  uint32_t getGlobalIndex() const;
-  uint32_t getFunctionIndex() const;
+  InputChunk *getChunk() const { return Chunk; }
 
   bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
-  uint32_t getOutputIndex() const;
-  uint32_t getTableIndex() const { return TableIndex.getValue(); }
+  void setFunctionType(const WasmSignature *Type);
+  void setHidden(bool IsHidden);
 
-  // Returns the virtual address of a defined global.
-  // Only works for globals, not functions.
-  uint32_t getVirtualAddress() const;
+  uint32_t getOutputIndex() const;
+
+  // Returns true if an output index has been set for this symbol
+  bool hasOutputIndex() const;
 
   // Set the output index of the symbol (in the function or global index
   // space of the output object.
   void setOutputIndex(uint32_t Index);
 
+  uint32_t getTableIndex() const;
+
   // Returns true if a table index has been set for this symbol
-  bool hasTableIndex() const { return TableIndex.hasValue(); }
+  bool hasTableIndex() const;
 
   // Set the table index of the symbol
   void setTableIndex(uint32_t Index);
 
+  // Returns the virtual address of a defined global.
+  // Only works for globals, not functions.
+  uint32_t getVirtualAddress() const;
+
   void setVirtualAddress(uint32_t VA);
 
-  void update(Kind K, InputFile *F = nullptr, const WasmSymbol *Sym = nullptr,
-              const InputSegment *Segment = nullptr,
-              const WasmSignature *Sig = nullptr);
+  void update(Kind K, InputFile *F = nullptr, uint32_t Flags = 0,
+              InputChunk *chunk = nullptr, uint32_t Address = UINT32_MAX);
 
   void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
 
-  // This bit is used by Writer::writeNameSection() to prevent
-  // symbols from being written to the symbol table more than once.
-  unsigned WrittenToSymtab : 1;
-  unsigned WrittenToNameSec : 1;
-
 protected:
-  unsigned IsLocal : 1;
+  uint32_t Flags;
+  uint32_t VirtualAddress = 0;
 
   StringRef Name;
   Archive::Symbol ArchiveSymbol = {nullptr, 0, 0};
   Kind SymbolKind = InvalidKind;
   InputFile *File = nullptr;
-  const WasmSymbol *Sym = nullptr;
-  const InputSegment *Segment = nullptr;
+  InputChunk *Chunk = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
   llvm::Optional<uint32_t> TableIndex;
-  llvm::Optional<uint32_t> VirtualAddress;
-  const WasmSignature *FunctionType;
+  const WasmSignature *FunctionType = nullptr;
+};
+
+// linker-generated symbols
+struct WasmSym {
+  // __stack_pointer
+  // Global that holds the address of the top of the explicit value stack in
+  // linear memory.
+  static Symbol *StackPointer;
+
+  // __data_end
+  // Symbol marking the end of the data and bss.
+  static Symbol *DataEnd;
+
+  // __heap_base
+  // Symbol marking the end of the data, bss and explicit stack.  Any linear
+  // memory following this address is not used by the linked code and can
+  // therefore be used as a backing store for brk()/malloc() implementations.
+  static Symbol *HeapBase;
+
+  // __wasm_call_ctors
+  // Function that directly calls all ctors in priority order.
+  static Symbol *CallCtors;
+
+  // __dso_handle
+  // Global used in calls to __cxa_atexit to determine current DLL
+  static Symbol *DsoHandle;
 };
 
 } // namespace wasm

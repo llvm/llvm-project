@@ -63,7 +63,7 @@ enum {
 #undef OPTION
 };
 
-void printHelp(const char *Argv0);
+void printHelp();
 std::string createResponseFile(const llvm::opt::InputArgList &Args);
 
 llvm::Optional<std::string> findFromSearchPaths(StringRef Path);

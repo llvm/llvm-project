@@ -234,8 +234,12 @@ __forceinline kmp_int32 compare_and_swap<kmp_int64>(volatile kmp_int64 *p,
 /* Spin wait loop that first does pause, then yield.
     Waits until function returns non-zero when called with *spinner and check.
     Does NOT put threads to sleep.
-#if USE_ITT_BUILD
     Arguments:
+        UT is unsigned 4- or 8-byte type
+        spinner - memory location to check value
+        checker - value which spinner is >, <, ==, etc.
+        pred - predicate function to perform binary comparison of some sort
+#if USE_ITT_BUILD
         obj -- is higher-level synchronization object to report to ittnotify.
         It is used to report locks consistently. For example, if lock is
         acquired immediately, its address is reported to ittnotify via
@@ -243,15 +247,12 @@ __forceinline kmp_int32 compare_and_swap<kmp_int64>(volatile kmp_int64 *p,
         and lock routine calls to KMP_WAIT_YIELD(), the later should report the
         same address, not an address of low-level spinner.
 #endif // USE_ITT_BUILD
+    TODO: make inline function (move to header file for icl)
 */
 template <typename UT>
-// ToDo: make inline function (move to header file for icl)
-static UT // unsigned 4- or 8-byte type
-    __kmp_wait_yield(
-        volatile UT *spinner, UT checker,
-        kmp_uint32 (*pred)(UT, UT) USE_ITT_BUILD_ARG(
-            void *obj) // Higher-level synchronization object, or NULL.
-        ) {
+static UT __kmp_wait_yield(volatile UT *spinner, UT checker,
+                           kmp_uint32 (*pred)(UT, UT)
+                               USE_ITT_BUILD_ARG(void *obj)) {
   // note: we may not belong to a team at this point
   volatile UT *spin = spinner;
   UT check = checker;
