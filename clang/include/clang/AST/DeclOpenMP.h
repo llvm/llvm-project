@@ -100,12 +100,22 @@ public:
 ///
 /// Here 'omp_out += omp_in' is a combiner and 'omp_priv = 0' is an initializer.
 class OMPDeclareReductionDecl final : public ValueDecl, public DeclContext {
+public:
+  enum InitKind {
+    CallInit,   // Initialized by function call.
+    DirectInit, // omp_priv(<expr>)
+    CopyInit    // omp_priv = <expr>
+  };
+
 private:
   friend class ASTDeclReader;
   /// \brief Combiner for declare reduction construct.
   Expr *Combiner;
   /// \brief Initializer for declare reduction construct.
   Expr *Initializer;
+  /// Kind of initializer - function call or omp_priv<init_expr> initializtion.
+  InitKind InitializerKind = CallInit;
+
   /// \brief Reference to the previous declare reduction construct in the same
   /// scope with the same name. Required for proper templates instantiation if
   /// the declare reduction construct is declared inside compound statement.
@@ -117,7 +127,8 @@ private:
                           DeclarationName Name, QualType Ty,
                           OMPDeclareReductionDecl *PrevDeclInScope)
       : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
-        Initializer(nullptr), PrevDeclInScope(PrevDeclInScope) {}
+        Initializer(nullptr), InitializerKind(CallInit),
+        PrevDeclInScope(PrevDeclInScope) {}
 
   void setPrevDeclInScope(OMPDeclareReductionDecl *Prev) {
     PrevDeclInScope = Prev;
@@ -142,8 +153,13 @@ public:
   /// construct.
   Expr *getInitializer() { return Initializer; }
   const Expr *getInitializer() const { return Initializer; }
+  /// Get initializer kind.
+  InitKind getInitializerKind() const { return InitializerKind; }
   /// \brief Set initializer expression for the declare reduction construct.
-  void setInitializer(Expr *E) { Initializer = E; }
+  void setInitializer(Expr *E, InitKind IK) {
+    Initializer = E;
+    InitializerKind = IK;
+  }
 
   /// \brief Get reference to previous declare reduction construct in the same
   /// scope with the same name.

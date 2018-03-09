@@ -1,15 +1,33 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -verify %s
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBSTDCPP -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -verify %s -o %t.report
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBSTDCPP -verify %s -o %t.report
 
 // We do NOT model libcxx03 implementation, but the analyzer should still
 // not crash.
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBCXX03 -verify %s
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBCXX03 -DEMULATE_LIBSTDCPP -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBCXX03 -verify %s -o %t.report
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBCXX03 -DEMULATE_LIBSTDCPP -verify %s -o %t.report
+// RUN: rm -rf %t.report
 
 void clang_analyzer_eval(bool);
 
-// Faking std::std::call_once implementation.
+// Faking std::call_once implementation.
 namespace std {
+
+// Fake std::function implementation.
+template <typename>
+class function;
+class function_base {
+ public:
+  long field;
+};
+template <typename R, typename... P>
+class function<R(P...)> : function_base {
+ public:
+   R operator()(P...) const {
+
+     // Read from a super-class necessary to reproduce a crash.
+     bool a = field;
+   }
+};
 
 #ifndef EMULATE_LIBSTDCPP
 typedef struct once_flag_s {
@@ -358,4 +376,30 @@ void test_implicit_funcptr() {
 #ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(x == 42); // expected-warning{{TRUE}}
 #endif
+}
+
+int param_passed(int *x) {
+  return *x; // no-warning, as std::function is not working yet.
+}
+
+void callback_taking_func_ok(std::function<void(int*)> &innerCallback) {
+  innerCallback(nullptr);
+}
+
+// The provided callback expects an std::function, but instead a pointer
+// to a C++ function is provided.
+void callback_with_implicit_cast_ok() {
+  std::once_flag flag;
+  call_once(flag, callback_taking_func_ok, &param_passed);
+}
+
+void callback_taking_func(std::function<void()> &innerCallback) {
+  innerCallback();
+}
+
+// The provided callback expects an std::function, but instead a C function
+// name is provided, and C++ implicitly auto-constructs a pointer from it.
+void callback_with_implicit_cast() {
+  std::once_flag flag;
+  call_once(flag, callback_taking_func, callback_with_implicit_cast);
 }

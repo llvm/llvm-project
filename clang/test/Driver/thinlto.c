@@ -19,19 +19,19 @@
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto=full -fno-lto -flto=thin 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-THIN-ACTION < %t %s
 //
-// CHECK-LINK-THIN-ACTION: "-plugin" "{{.*}}/LLVMgold.so"
+// CHECK-LINK-THIN-ACTION: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 // CHECK-LINK-THIN-ACTION: "-plugin-opt=thinlto"
 
 // Check that subsequent -flto=full takes precedence
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto=thin -flto=full 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-FULL-ACTION < %t %s
 //
-// CHECK-LINK-FULL-ACTION: "-plugin" "{{.*}}/LLVMgold.so"
+// CHECK-LINK-FULL-ACTION: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 // CHECK-LINK-FULL-ACTION-NOT: "-plugin-opt=thinlto"
 
 // Check that subsequent -fno-lto takes precedence
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto=thin -fno-lto 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-NOLTO-ACTION < %t %s
 //
-// CHECK-LINK-NOLTO-ACTION-NOT: "-plugin" "{{.*}}/LLVMgold.so"
+// CHECK-LINK-NOLTO-ACTION-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 // CHECK-LINK-NOLTO-ACTION-NOT: "-plugin-opt=thinlto"

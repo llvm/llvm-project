@@ -1,4 +1,4 @@
-//===-- DeclFriend.h - Classes for C++ friend declarations -*- C++ -*------===//
+//===- DeclFriend.h - Classes for C++ friend declarations -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,16 +15,30 @@
 #ifndef LLVM_CLANG_AST_DECLFRIEND_H
 #define LLVM_CLANG_AST_DECLFRIEND_H
 
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TrailingObjects.h"
+#include <cassert>
+#include <iterator>
 
 namespace clang {
 
+class ASTContext;
+
 /// FriendDecl - Represents the declaration of a friend entity,
 /// which can be a function, a type, or a templated function or type.
-//  For example:
+/// For example:
 ///
 /// @code
 /// template <typename T> class A {
@@ -41,10 +55,14 @@ class FriendDecl final
     : public Decl,
       private llvm::TrailingObjects<FriendDecl, TemplateParameterList *> {
   virtual void anchor();
+
 public:
-  typedef llvm::PointerUnion<NamedDecl*,TypeSourceInfo*> FriendUnion;
+  using FriendUnion = llvm::PointerUnion<NamedDecl *, TypeSourceInfo *>;
 
 private:
+  friend class CXXRecordDecl;
+  friend class CXXRecordDecl::friend_iterator;
+
   // The declaration that's a friend of this class.
   FriendUnion Friend;
 
@@ -64,35 +82,33 @@ private:
   //     template <class T> friend class A<T>::B;
   unsigned NumTPLists : 31;
 
-  friend class CXXRecordDecl::friend_iterator;
-  friend class CXXRecordDecl;
-
   FriendDecl(DeclContext *DC, SourceLocation L, FriendUnion Friend,
              SourceLocation FriendL,
-             ArrayRef<TemplateParameterList*> FriendTypeTPLists)
-    : Decl(Decl::Friend, DC, L),
-      Friend(Friend),
-      NextFriend(),
-      FriendLoc(FriendL),
-      UnsupportedFriend(false),
-      NumTPLists(FriendTypeTPLists.size()) {
+             ArrayRef<TemplateParameterList *> FriendTypeTPLists)
+      : Decl(Decl::Friend, DC, L), Friend(Friend), FriendLoc(FriendL),
+        UnsupportedFriend(false), NumTPLists(FriendTypeTPLists.size()) {
     for (unsigned i = 0; i < NumTPLists; ++i)
       getTrailingObjects<TemplateParameterList *>()[i] = FriendTypeTPLists[i];
   }
 
   FriendDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
-    : Decl(Decl::Friend, Empty), NextFriend(),
-      UnsupportedFriend(false),
-      NumTPLists(NumFriendTypeTPLists) { }
+      : Decl(Decl::Friend, Empty), UnsupportedFriend(false),
+        NumTPLists(NumFriendTypeTPLists) {}
 
   FriendDecl *getNextFriend() {
     if (!NextFriend.isOffset())
       return cast_or_null<FriendDecl>(NextFriend.get(nullptr));
     return getNextFriendSlowCase();
   }
+
   FriendDecl *getNextFriendSlowCase();
 
 public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend class ASTNodeImporter;
+  friend TrailingObjects;
+
   static FriendDecl *Create(ASTContext &C, DeclContext *DC,
                             SourceLocation L, FriendUnion Friend_,
                             SourceLocation FriendL,
@@ -108,9 +124,11 @@ public:
   TypeSourceInfo *getFriendType() const {
     return Friend.dyn_cast<TypeSourceInfo*>();
   }
+
   unsigned getFriendTypeNumTemplateParameterLists() const {
     return NumTPLists;
   }
+
   TemplateParameterList *getFriendTypeTemplateParameterList(unsigned N) const {
     assert(N < NumTPLists);
     return getTrailingObjects<TemplateParameterList *>()[N];
@@ -119,7 +137,7 @@ public:
   /// If this friend declaration doesn't name a type, return the inner
   /// declaration.
   NamedDecl *getFriendDecl() const {
-    return Friend.dyn_cast<NamedDecl*>();
+    return Friend.dyn_cast<NamedDecl *>();
   }
 
   /// Retrieves the location of the 'friend' keyword.
@@ -164,27 +182,24 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decl::Friend; }
-
-  friend class ASTDeclReader;
-  friend class ASTDeclWriter;
-  friend class ASTNodeImporter;
-  friend TrailingObjects;
 };
 
 /// An iterator over the friend declarations of a class.
 class CXXRecordDecl::friend_iterator {
+  friend class CXXRecordDecl;
+
   FriendDecl *Ptr;
 
-  friend class CXXRecordDecl;
   explicit friend_iterator(FriendDecl *Ptr) : Ptr(Ptr) {}
-public:
-  friend_iterator() {}
 
-  typedef FriendDecl *value_type;
-  typedef FriendDecl *reference;
-  typedef FriendDecl *pointer;
-  typedef int difference_type;
-  typedef std::forward_iterator_tag iterator_category;
+public:
+  friend_iterator() = default;
+
+  using value_type = FriendDecl *;
+  using reference = FriendDecl *;
+  using pointer = FriendDecl *;
+  using difference_type = int;
+  using iterator_category = std::forward_iterator_tag;
 
   reference operator*() const { return Ptr; }
 
@@ -240,6 +255,6 @@ inline void CXXRecordDecl::pushFriendDecl(FriendDecl *FD) {
   data().FirstFriend = FD;
 }
   
-}
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_DECLFRIEND_H

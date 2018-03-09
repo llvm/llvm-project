@@ -29,7 +29,7 @@ X::X(int value) {
 }
 
 // RUN: c-index-test -test-load-source all %s | FileCheck %s
-// CHECK: load-classes.cpp:3:8: StructDecl=X:3:8 (Definition) Extent=[3:1 - 26:2]
+// CHECK: load-classes.cpp:3:8: StructDecl=X:3:8 (Definition) (abstract) Extent=[3:1 - 26:2]
 // CHECK: load-classes.cpp:4:3: CXXConstructor=X:4:3 (converting constructor) Extent=[4:3 - 4:15] [access=public]
 // FIXME: missing TypeRef in the constructor name
 // CHECK: load-classes.cpp:4:9: ParmDecl=value:4:9 (Definition) Extent=[4:5 - 4:14]

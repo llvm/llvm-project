@@ -1,9 +1,12 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -w -std=c++03 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -w -std=c++11 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true %s -std=c++11
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++11
 
 extern bool clang_analyzer_eval(bool);
 extern bool clang_analyzer_warnIfReached();
+void clang_analyzer_checkInlined(bool);
+
+#include "Inputs/system-header-simulator-cxx.h";
 
 struct Trivial {
   Trivial(int x) : value(x) {}
@@ -422,6 +425,10 @@ namespace destructors {
   struct CtorWithNoReturnDtor {
     CtorWithNoReturnDtor() = default;
 
+    CtorWithNoReturnDtor(int x) {
+      clang_analyzer_checkInlined(false); // no-warning
+    }
+
     ~CtorWithNoReturnDtor() __attribute__((noreturn));
   };
 
@@ -434,10 +441,16 @@ namespace destructors {
     const CtorWithNoReturnDtor &c = CtorWithNoReturnDtor();
 
     // This represents an (expected) loss of coverage, since the destructor
-    // of the lifetime-exended temporary is executed at at the end of
+    // of the lifetime-exended temporary is executed at the end of
     // scope.
     clang_analyzer_warnIfReached();  // no-warning
   }
+
+#if __cplusplus >= 201103L
+  CtorWithNoReturnDtor returnNoReturnDtor() {
+    return {1}; // no-crash
+  }
+#endif
 
 #endif // TEMPORARY_DTORS
 }
@@ -530,3 +543,400 @@ void run() {
   Sub(i).m();
 }
 }
+
+namespace test_return_temporary {
+class C {
+  int x, y;
+
+public:
+  C(int x, int y) : x(x), y(y) {}
+  int getX() const { return x; }
+  int getY() const { return y; }
+  ~C() {}
+};
+
+class D: public C {
+public:
+  D() : C(1, 2) {}
+  D(const D &d): C(d.getX(), d.getY()) {}
+};
+
+C returnTemporaryWithVariable() { C c(1, 2); return c; }
+C returnTemporaryWithAnotherFunctionWithVariable() {
+  return returnTemporaryWithVariable();
+}
+C returnTemporaryWithCopyConstructionWithVariable() {
+  return C(returnTemporaryWithVariable());
+}
+
+C returnTemporaryWithConstruction() { return C(1, 2); }
+C returnTemporaryWithAnotherFunctionWithConstruction() {
+  return returnTemporaryWithConstruction();
+}
+C returnTemporaryWithCopyConstructionWithConstruction() {
+  return C(returnTemporaryWithConstruction());
+}
+
+D returnTemporaryWithVariableAndNonTrivialCopy() { D d; return d; }
+D returnTemporaryWithAnotherFunctionWithVariableAndNonTrivialCopy() {
+  return returnTemporaryWithVariableAndNonTrivialCopy();
+}
+D returnTemporaryWithCopyConstructionWithVariableAndNonTrivialCopy() {
+  return D(returnTemporaryWithVariableAndNonTrivialCopy());
+}
+
+#if __cplusplus >= 201103L
+C returnTemporaryWithBraces() { return {1, 2}; }
+C returnTemporaryWithAnotherFunctionWithBraces() {
+  return returnTemporaryWithBraces();
+}
+C returnTemporaryWithCopyConstructionWithBraces() {
+  return C(returnTemporaryWithBraces());
+}
+#endif // C++11
+
+void test() {
+  C c1 = returnTemporaryWithVariable();
+  clang_analyzer_eval(c1.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c1.getY() == 2); // expected-warning{{TRUE}}
+
+  C c2 = returnTemporaryWithAnotherFunctionWithVariable();
+  clang_analyzer_eval(c2.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c2.getY() == 2); // expected-warning{{TRUE}}
+
+  C c3 = returnTemporaryWithCopyConstructionWithVariable();
+  clang_analyzer_eval(c3.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c3.getY() == 2); // expected-warning{{TRUE}}
+
+  C c4 = returnTemporaryWithConstruction();
+  clang_analyzer_eval(c4.getX() == 1);
+  clang_analyzer_eval(c4.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  C c5 = returnTemporaryWithAnotherFunctionWithConstruction();
+  clang_analyzer_eval(c5.getX() == 1);
+  clang_analyzer_eval(c5.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  C c6 = returnTemporaryWithCopyConstructionWithConstruction();
+  clang_analyzer_eval(c5.getX() == 1);
+  clang_analyzer_eval(c5.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+#if __cplusplus >= 201103L
+
+  C c7 = returnTemporaryWithBraces();
+  clang_analyzer_eval(c7.getX() == 1);
+  clang_analyzer_eval(c7.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  C c8 = returnTemporaryWithAnotherFunctionWithBraces();
+  clang_analyzer_eval(c8.getX() == 1);
+  clang_analyzer_eval(c8.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  C c9 = returnTemporaryWithCopyConstructionWithBraces();
+  clang_analyzer_eval(c9.getX() == 1);
+  clang_analyzer_eval(c9.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+#endif // C++11
+
+  D d1 = returnTemporaryWithVariableAndNonTrivialCopy();
+  clang_analyzer_eval(d1.getX() == 1);
+  clang_analyzer_eval(d1.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  D d2 = returnTemporaryWithAnotherFunctionWithVariableAndNonTrivialCopy();
+  clang_analyzer_eval(d2.getX() == 1);
+  clang_analyzer_eval(d2.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  D d3 = returnTemporaryWithCopyConstructionWithVariableAndNonTrivialCopy();
+  clang_analyzer_eval(d3.getX() == 1);
+  clang_analyzer_eval(d3.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+}
+} // namespace test_return_temporary
+
+
+namespace test_temporary_object_expr_without_dtor {
+class C {
+  int x;
+public:
+  C(int x) : x(x) {}
+  int getX() const { return x; }
+};
+
+void test() {
+  clang_analyzer_eval(C(3).getX() == 3); // expected-warning{{TRUE}}
+};
+}
+
+namespace test_temporary_object_expr_with_dtor {
+class C {
+  int x;
+
+public:
+  C(int x) : x(x) {}
+  ~C() {}
+  int getX() const { return x; }
+};
+
+void test(int coin) {
+  clang_analyzer_eval(C(3).getX() == 3);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+
+  const C &c1 = coin ? C(1) : C(2);
+  if (coin) {
+    clang_analyzer_eval(c1.getX() == 1);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  } else {
+    clang_analyzer_eval(c1.getX() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  }
+
+  C c2 = coin ? C(1) : C(2);
+  if (coin) {
+    clang_analyzer_eval(c2.getX() == 1);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  } else {
+    clang_analyzer_eval(c2.getX() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  }
+}
+
+} // namespace test_temporary_object_expr
+
+namespace test_match_constructors_and_destructors {
+class C {
+public:
+  int &x, &y;
+  C(int &_x, int &_y) : x(_x), y(_y) { ++x; }
+  C(const C &c): x(c.x), y(c.y) { ++x; }
+  ~C() { ++y; }
+};
+
+void test_simple_temporary() {
+  int x = 0, y = 0;
+  {
+    const C &c = C(x, y);
+  }
+  // One constructor and one destructor.
+  clang_analyzer_eval(x == 1);
+  clang_analyzer_eval(y == 1);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+}
+
+void test_simple_temporary_with_copy() {
+  int x = 0, y = 0;
+  {
+    C c = C(x, y);
+  }
+  // Two constructors (temporary object expr and copy) and two destructors.
+  clang_analyzer_eval(x == 2);
+  clang_analyzer_eval(y == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+}
+
+void test_ternary_temporary(int coin) {
+  int x = 0, y = 0, z = 0, w = 0;
+  {
+    const C &c = coin ? C(x, y) : C(z, w);
+  }
+  // This time each branch contains an additional elidable copy constructor.
+  if (coin) {
+    clang_analyzer_eval(x == 2);
+    clang_analyzer_eval(y == 2);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+    clang_analyzer_eval(z == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(w == 0); // expected-warning{{TRUE}}
+
+  } else {
+    clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(z == 2);
+    clang_analyzer_eval(w == 2);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+  }
+}
+
+void test_ternary_temporary_with_copy(int coin) {
+  int x = 0, y = 0, z = 0, w = 0;
+  {
+    C c = coin ? C(x, y) : C(z, w);
+  }
+  // Temporary expression, elidable copy within branch,
+  // constructor for variable - 3 total.
+  if (coin) {
+    clang_analyzer_eval(x == 3);
+    clang_analyzer_eval(y == 3);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+    clang_analyzer_eval(z == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(w == 0); // expected-warning{{TRUE}}
+
+  } else {
+    clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(z == 3);
+    clang_analyzer_eval(w == 3);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+  }
+}
+} // namespace test_match_constructors_and_destructors
+
+namespace dont_forget_destructor_around_logical_op {
+int glob;
+
+class C {
+public:
+  ~C() {
+    glob = 1;
+    clang_analyzer_checkInlined(true);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-2{{TRUE}}
+#endif
+  }
+};
+
+C get();
+
+bool is(C);
+
+
+void test(int coin) {
+  // Here temporaries are being cleaned up after && is evaluated. There are two
+  // temporaries: the return value of get() and the elidable copy constructor
+  // of that return value into is(). According to the CFG, we need to cleanup
+  // both of them depending on whether the temporary corresponding to the
+  // return value of get() was initialized. However, we didn't track
+  // temporaries returned from functions, so we took the wrong branch.
+  coin && is(get()); // no-crash
+  // FIXME: Should be true once we inline all destructors.
+  clang_analyzer_eval(glob); // expected-warning{{UNKNOWN}}
+}
+} // namespace dont_forget_destructor_around_logical_op
+
+#if __cplusplus >= 201103L
+namespace temporary_list_crash {
+class C {
+public:
+  C() {}
+  ~C() {}
+};
+
+void test() {
+  std::initializer_list<C>{C(), C()}; // no-crash
+}
+} // namespace temporary_list_crash
+#endif // C++11

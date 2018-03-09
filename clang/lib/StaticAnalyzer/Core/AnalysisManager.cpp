@@ -29,6 +29,7 @@ AnalysisManager::AnalysisManager(
                 Options.shouldSynthesizeBodies(),
                 Options.shouldConditionalizeStaticInitializers(),
                 /*addCXXNewAllocator=*/true,
+                Options.includeRichConstructorsInCFG(),
                 injector),
       Ctx(ASTCtx), Diags(diags), LangOpts(lang), PathConsumers(PDC),
       CreateStoreMgr(storemgr), CreateConstraintMgr(constraintmgr),

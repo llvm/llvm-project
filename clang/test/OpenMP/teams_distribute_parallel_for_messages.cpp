@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+
 void foo() {
 }
 
@@ -9,6 +11,9 @@ static int pvt;
 #pragma omp teams distribute parallel for // expected-error {{unexpected OpenMP directive '#pragma omp teams distribute parallel for'}}
 
 int main(int argc, char **argv) {
+  #pragma omp target
+  #pragma omp teams distribute parallel for
+  f; // expected-error {{use of undeclared identifier 'f'}}
 #pragma omp target
 #pragma omp teams distribute parallel for { // expected-warning {{extra tokens at the end of '#pragma omp teams distribute parallel for' are ignored}}
   for (int i = 0; i < argc; ++i)
@@ -34,7 +39,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < argc; ++i)
     foo();
 #pragma omp target
-#pragma omp teams distribute parallel for
+#pragma omp teams distribute parallel for linear(argc) // expected-error {{unexpected OpenMP clause 'linear' in directive '#pragma omp teams distribute parallel for'}}
   for (int i = 0; i < argc; ++i)
     foo();
 // expected-warning@+2 {{extra tokens at the end of '#pragma omp teams distribute parallel for' are ignored}}
@@ -94,7 +99,7 @@ L1:
   }
 
 #pragma omp target
-#pragma omp teams distribute parallel for copyin(pvt) // expected-error {{unexpected OpenMP clause 'copyin' in directive '#pragma omp teams distribute parallel for'}}
+#pragma omp teams distribute parallel for copyin(pvt)
   for (int n = 0; n < 100; ++n) {}
 
   return 0;
@@ -105,5 +110,14 @@ void test_ordered() {
 #pragma omp teams distribute parallel for ordered // expected-error {{unexpected OpenMP clause 'ordered' in directive '#pragma omp teams distribute parallel for'}}
   for (int i = 0; i < 16; ++i)
     ;
+}
+
+void test_cancel() {
+#pragma omp target
+#pragma omp teams distribute parallel for
+  for (int i = 0; i < 16; ++i) {
+#pragma omp cancel for
+    ;
+  }
 }
 

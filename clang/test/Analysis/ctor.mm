@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify -DTEST_INLINABLE_ALLOCATORS %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -572,10 +573,9 @@ namespace ZeroInitialization {
   }
 
   void testNew() {
-    // FIXME: Pending proper implementation of constructors for 'new'.
     raw_pair *pp = new raw_pair();
-    clang_analyzer_eval(pp->p1 == 0); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(pp->p2 == 0); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(pp->p1 == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(pp->p2 == 0); // expected-warning{{TRUE}}
   }
 
   void testArrayNew() {
@@ -679,8 +679,7 @@ namespace InitializerList {
 
   void testDynamic() {
     List *list = new List{1, 2};
-    // FIXME: When we handle constructors with 'new', this will be TRUE.
-    clang_analyzer_eval(list->usedInitializerList); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(list->usedInitializerList); // expected-warning{{TRUE}}
   }
 }
 
@@ -729,4 +728,24 @@ namespace NoCrashOnEmptyBaseOptimization {
   void testSCtorNoCrash() {
     S s;
   }
+}
+
+namespace EmptyBaseAssign {
+struct B1 {};
+struct B2 { int x; };
+struct D: public B1, public B2 {
+const D &operator=(const D &d) {
+  *((B2 *)this) = d;
+  *((B1 *)this) = d;
+  return *this;
+}
+};
+
+void test() {
+  D d1;
+  d1.x = 1;
+  D d2;
+  d2 = d1;
+  clang_analyzer_eval(d2.x == 1); // expected-warning{{TRUE}}
+}
 }

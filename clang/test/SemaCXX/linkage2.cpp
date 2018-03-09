@@ -143,9 +143,10 @@ namespace test13 {
 }
 
 namespace test14 {
+  // Anonymous namespace implies internal linkage, so 'static' has no effect.
   namespace {
-    void a(void); // expected-note {{previous declaration is here}}
-    static void a(void) {} // expected-error {{static declaration of 'a' follows non-static declaration}}
+    void a(void);
+    static void a(void) {}
   }
 }
 
@@ -216,4 +217,35 @@ namespace PR16247 {
 namespace PR18964 {
   unsigned &*foo; //expected-error{{'foo' declared as a pointer to a reference of type}}
   extern struct {} *foo; // don't assert
+}
+
+namespace typedef_name_for_linkage {
+  template<typename T> struct Use {};
+
+  struct A { A(); A(const A&); ~A(); };
+
+  typedef struct {
+    A a;
+  } B;
+
+  struct C {
+    typedef struct {
+      A a;
+    } D;
+  };
+
+  typedef struct {
+    void f() { static int n; struct Inner {};}
+  } E;
+
+  // FIXME: Ideally this would be accepted in all modes. In C++98, we trigger a
+  // linkage calculation to drive the "internal linkage type as template
+  // argument" warning.
+  typedef struct {
+    void f() { struct Inner {}; Use<Inner> ui; }
+  } F;
+#if __cplusplus < 201103L
+  // expected-error@-2 {{unsupported: typedef changes linkage of anonymous type, but linkage was already computed}}
+  // expected-note@-5 {{use a tag name here}}
+#endif
 }

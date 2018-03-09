@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 namespace X {
   int x;
 };
@@ -18,41 +20,49 @@ void test_linear_colons()
 {
   int B = 0;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(B:bfoo())
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(B::ib:B:bfoo()) // expected-error {{unexpected ':' in nested name specifier; did you mean '::'}}
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(B:ib) // expected-error {{use of undeclared identifier 'ib'; did you mean 'B::ib'}}
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(z:B:ib) // expected-error {{unexpected ':' in nested name specifier; did you mean '::'?}}
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(B:B::bfoo())
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(X::x : ::z)
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(B,::z, X::x)
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(::z)
@@ -63,6 +73,7 @@ void test_linear_colons()
 #pragma omp distribute parallel for simd linear(B::bfoo()) // expected-error {{expected variable name}}
   for (int i = 0; i < 10; ++i) ;
 
+// expected-error@+3 2 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(B::ib,B:C1+C2)
@@ -148,11 +159,13 @@ template<class I, class C> int foomain(I argc, C **argv) {
 #pragma omp distribute parallel for simd linear () // expected-error {{expected expression}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -163,6 +176,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
 #pragma omp distribute parallel for simd linear (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear (argc : 5)
@@ -183,6 +197,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
 #pragma omp distribute parallel for simd linear (argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 2 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(e, g)
@@ -193,6 +208,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
 #pragma omp distribute parallel for simd linear(h) // expected-error {{threadprivate or thread local variable cannot be linear}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear(i)
@@ -202,28 +218,13 @@ template<class I, class C> int foomain(I argc, C **argv) {
   {
     int v = 0;
     int i;
+    int k;
     #pragma omp target
     #pragma omp teams
-    #pragma omp distribute parallel for simd linear(v:i)
-    for (int k = 0; k < argc; ++k) { i = k; v += i; }
+    #pragma omp distribute parallel for simd linear(k:i)
+    for (k = 0; k < argc; ++k) { i = k; v += i; }
   }
 
-#pragma omp target
-#pragma omp teams
-#pragma omp parallel for simd linear(j)
-  for (int k = 0; k < argc; ++k) ++k;
-
-  int v = 0;
-
-#pragma omp target
-#pragma omp teams
-#pragma omp distribute parallel for simd linear(v:j)
-  for (int k = 0; k < argc; ++k) { ++k; v += j; }
-
-#pragma omp target
-#pragma omp teams
-#pragma omp distribute parallel for simd linear(i)
-  for (int k = 0; k < argc; ++k) ++k;
   return 0;
 }
 
@@ -262,11 +263,13 @@ int main(int argc, char **argv) {
 #pragma omp distribute parallel for simd linear () // expected-error {{expected expression}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -277,6 +280,7 @@ int main(int argc, char **argv) {
 #pragma omp distribute parallel for simd linear (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
+// expected-error@+3 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd linear (argc)
@@ -314,23 +318,13 @@ int main(int argc, char **argv) {
     #pragma omp target
     #pragma omp teams
     #pragma omp distribute parallel for simd linear(i)
-      for (int k = 0; k < argc; ++k) ++k;
+      for (i = 0; i < argc; ++i) ++i;
 
     #pragma omp target
     #pragma omp teams
     #pragma omp distribute parallel for simd linear(i : 4)
-      for (int k = 0; k < argc; ++k) { ++k; i += 4; }
+      for (i = 0; i < argc; ++i) { ++i; i += 4; }
   }
-
-#pragma omp target
-#pragma omp teams
-#pragma omp distribute parallel for simd linear(j)
-  for (int k = 0; k < argc; ++k) ++k;
-
-#pragma omp target
-#pragma omp teams
-#pragma omp distribute parallel for simd linear(i)
-  for (int k = 0; k < argc; ++k) ++k;
 
   foomain<int,char>(argc,argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}
   return 0;

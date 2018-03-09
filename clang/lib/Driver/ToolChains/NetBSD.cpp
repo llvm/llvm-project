@@ -325,7 +325,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 NetBSD::NetBSD(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  if (getDriver().UseStdLib) {
+  if (!Args.hasArg(options::OPT_nostdlib)) {
     // When targeting a 32-bit platform, try the special directory used on
     // 64-bit hosts, and only fall back to the main library directory if that
     // doesn't work.
@@ -416,11 +416,34 @@ void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            "", DriverArgs, CC1Args);
 }
 
+llvm::ExceptionHandling NetBSD::GetExceptionModel(const ArgList &Args) const {
+  // NetBSD uses Dwarf exceptions on ARM.
+  llvm::Triple::ArchType TArch = getTriple().getArch();
+  if (TArch == llvm::Triple::arm || TArch == llvm::Triple::armeb ||
+      TArch == llvm::Triple::thumb || TArch == llvm::Triple::thumbeb)
+    return llvm::ExceptionHandling::DwarfCFI;
+  return llvm::ExceptionHandling::None;
+}
+
 SanitizerMask NetBSD::getSupportedSanitizers() const {
+  const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
-  if (IsX86_64) {
+  if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Address;
+    Res |= SanitizerKind::Function;
+    Res |= SanitizerKind::Leak;
+    Res |= SanitizerKind::SafeStack;
+    Res |= SanitizerKind::Scudo;
+    Res |= SanitizerKind::Vptr;
+  }
+  if (IsX86_64) {
+    Res |= SanitizerKind::Efficiency;
+    Res |= SanitizerKind::Fuzzer;
+    Res |= SanitizerKind::FuzzerNoLink;
+    Res |= SanitizerKind::KernelAddress;
+    Res |= SanitizerKind::Memory;
+    Res |= SanitizerKind::Thread;
   }
   return Res;
 }

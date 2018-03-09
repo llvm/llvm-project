@@ -77,7 +77,8 @@ public:
     DCC_CDecl,
     DCC_FastCall,
     DCC_StdCall,
-    DCC_VectorCall
+    DCC_VectorCall,
+    DCC_RegCall
   };
 
   enum AddrSpaceMapMangling { ASMM_Target, ASMM_On, ASMM_Off };
@@ -196,6 +197,10 @@ public:
   /// \brief True if any ObjC types may have non-trivial lifetime qualifiers.
   bool allowsNonTrivialObjCLifetimeQualifiers() const {
     return ObjCAutoRefCount || ObjCWeak;
+  }
+
+  bool assumeFunctionsAreConvergent() const {
+    return (CUDA && CUDAIsDevice) || OpenCL;
   }
 };
 

@@ -1,4 +1,4 @@
-//===-- BumpVector.h - Vector-like ADT that uses bump allocation --*- C++ -*-=//
+//===- BumpVector.h - Vector-like ADT that uses bump allocation -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,16 +21,18 @@
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/type_traits.h"
-#include <algorithm>
+#include <cassert>
+#include <cstddef>
 #include <cstring>
 #include <iterator>
 #include <memory>
+#include <type_traits>
 
 namespace clang {
   
 class BumpVectorContext {
   llvm::PointerIntPair<llvm::BumpPtrAllocator*, 1> Alloc;
+
 public:
   /// Construct a new BumpVectorContext that creates a new BumpPtrAllocator
   /// and destroys it when the BumpVectorContext object is destroyed.
@@ -56,11 +58,13 @@ public:
   
 template<typename T>
 class BumpVector {
-  T *Begin, *End, *Capacity;
+  T *Begin = nullptr;
+  T *End = nullptr;
+  T *Capacity = nullptr;
+
 public:
   // Default ctor - Initialize to empty.
-  explicit BumpVector(BumpVectorContext &C, unsigned N)
-  : Begin(nullptr), End(nullptr), Capacity(nullptr) {
+  explicit BumpVector(BumpVectorContext &C, unsigned N) {
     reserve(C, N);
   }
   
@@ -71,19 +75,19 @@ public:
     }
   }
   
-  typedef size_t size_type;
-  typedef ptrdiff_t difference_type;
-  typedef T value_type;
-  typedef T* iterator;
-  typedef const T* const_iterator;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using value_type = T;
+  using iterator = T *;
+  using const_iterator = const T *;
   
-  typedef std::reverse_iterator<const_iterator>  const_reverse_iterator;
-  typedef std::reverse_iterator<iterator>  reverse_iterator;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
   
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef T* pointer;
-  typedef const T* const_pointer;
+  using reference = T &;
+  using const_reference = const T &;
+  using pointer = T *;
+  using const_pointer = const T *;
   
   // forward iterator creation methods.
   iterator begin() { return Begin; }
@@ -92,10 +96,12 @@ public:
   const_iterator end() const { return End; }
   
   // reverse iterator creation methods.
-  reverse_iterator rbegin()            { return reverse_iterator(end()); }
+  reverse_iterator rbegin() { return reverse_iterator(end()); }
   const_reverse_iterator rbegin() const{ return const_reverse_iterator(end()); }
-  reverse_iterator rend()              { return reverse_iterator(begin()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(begin());}
+  reverse_iterator rend() { return reverse_iterator(begin()); }
+  const_reverse_iterator rend() const {
+    return const_reverse_iterator(begin());
+  }
     
   bool empty() const { return Begin == End; }
   size_type size() const { return End-Begin; }
@@ -166,7 +172,7 @@ public:
   /// iterator to position after last inserted copy.
   iterator insert(iterator I, size_t Cnt, const_reference E,
       BumpVectorContext &C) {
-    assert (I >= Begin && I <= End && "Iterator out of bounds.");
+    assert(I >= Begin && I <= End && "Iterator out of bounds.");
     if (End + Cnt <= Capacity) {
     Retry:
       move_range_right(I, End, Cnt);
@@ -246,5 +252,6 @@ void BumpVector<T>::grow(BumpVectorContext &C, size_t MinSize) {
   Capacity = Begin+NewCapacity;
 }
 
-} // end: clang namespace
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_ANALYSIS_SUPPORT_BUMPVECTOR_H

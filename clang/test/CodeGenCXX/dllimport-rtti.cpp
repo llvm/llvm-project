@@ -12,7 +12,7 @@ struct __declspec(dllimport) S {
 // MSVC-DAG: @"\01??_R3S@@8" = linkonce_odr
 
 // GNU-DAG: @_ZTV1S = available_externally dllimport
-// GNU-DAG: @_ZTI1S = external dllimport
+// GNU-DAG: @_ZTI1S = linkonce_odr
 
 struct U : S {
 } u;

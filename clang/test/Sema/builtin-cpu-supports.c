@@ -12,9 +12,15 @@ int main() {
 
   if (__builtin_cpu_supports(str)) // expected-error {{expression is not a string literal}}
     a(str);
+
+  if (__builtin_cpu_is("int")) // expected-error {{invalid cpu name for builtin}}
+    a("intel");
 #else
   if (__builtin_cpu_supports("vsx")) // expected-error {{use of unknown builtin}}
     a("vsx");
+
+  if (__builtin_cpu_is("pwr9")) // expected-error {{use of unknown builtin}}
+    a("pwr9");
 #endif
 
   return 0;

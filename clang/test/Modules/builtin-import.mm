@@ -1,7 +1,5 @@
-// REQUIRES: system-darwin
-
 // RUN: rm -rf %t
-// RUN: %clang -cc1 -fsyntax-only -nostdinc++ -isysroot %S/Inputs/libc-libcxx/sysroot -isystem %S/Inputs/libc-libcxx/sysroot/usr/include/c++/v1 -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c++ -fmodules-local-submodule-visibility %s
+// RUN: %clang -cc1 -fsyntax-only -nobuiltininc -nostdinc++ -isysroot %S/Inputs/libc-libcxx/sysroot -isystem %S/Inputs/libc-libcxx/sysroot/usr/include/c++/v1 -isystem %S/Inputs/libc-libcxx/sysroot/usr/include -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c++ -fmodules-local-submodule-visibility %s
 
 #include <stdio.h>
 #include <stddef.h>

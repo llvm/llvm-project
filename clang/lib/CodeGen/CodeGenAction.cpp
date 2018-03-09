@@ -51,7 +51,7 @@ namespace clang {
   public:
     ClangDiagnosticHandler(const CodeGenOptions &CGOpts, BackendConsumer *BCon)
         : CodeGenOpts(CGOpts), BackendCon(BCon) {}
-
+  
     bool handleDiagnostics(const DiagnosticInfo &DI) override;
 
     bool isAnalysisRemarkEnabled(StringRef PassName) const override {
@@ -65,6 +65,12 @@ namespace clang {
     bool isPassedOptRemarkEnabled(StringRef PassName) const override {
       return (CodeGenOpts.OptimizationRemarkPattern &&
               CodeGenOpts.OptimizationRemarkPattern->match(PassName));
+    }
+
+    bool isAnyRemarkEnabled() const override {
+      return (CodeGenOpts.OptimizationRemarkAnalysisPattern ||
+              CodeGenOpts.OptimizationRemarkMissedPattern ||
+              CodeGenOpts.OptimizationRemarkPattern);
     }
 
   private:
@@ -259,12 +265,11 @@ namespace clang {
         Ctx.setDiagnosticsHotnessThreshold(
             CodeGenOpts.DiagnosticsHotnessThreshold);
 
-      std::unique_ptr<llvm::tool_output_file> OptRecordFile;
+      std::unique_ptr<llvm::ToolOutputFile> OptRecordFile;
       if (!CodeGenOpts.OptRecordFile.empty()) {
         std::error_code EC;
-        OptRecordFile =
-          llvm::make_unique<llvm::tool_output_file>(CodeGenOpts.OptRecordFile,
-                                                    EC, sys::fs::F_None);
+        OptRecordFile = llvm::make_unique<llvm::ToolOutputFile>(
+            CodeGenOpts.OptRecordFile, EC, sys::fs::F_None);
         if (EC) {
           Diags.Report(diag::err_cannot_open_file) <<
             CodeGenOpts.OptRecordFile << EC.message();
@@ -628,6 +633,10 @@ void BackendConsumer::EmitOptimizationMessage(
 
 void BackendConsumer::OptimizationRemarkHandler(
     const llvm::DiagnosticInfoOptimizationBase &D) {
+  // Without hotness information, don't show noisy remarks.
+  if (D.isVerbose() && !D.getHotness())
+    return;
+
   if (D.isPassed()) {
     // Optimization remarks are active only if the -Rpass flag has a regular
     // expression that matches the name of the pass name in \p D.

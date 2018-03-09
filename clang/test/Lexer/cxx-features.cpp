@@ -4,8 +4,8 @@
 // RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -fsized-deallocation -verify %s
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -verify %s
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
-// RUN: %clang_cc1 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
-// RUN: %clang_cc1 -fcoroutines-ts -DNO_EXCEPTIONS -DCOROUTINES -verify %s
+// RUN: %clang_cc1 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS -fsized-deallocation
+// RUN: %clang_cc1 -fcoroutines-ts -DNO_EXCEPTIONS -DCOROUTINES -verify -fsized-deallocation %s
 
 // expected-no-diagnostics
 

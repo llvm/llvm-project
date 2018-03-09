@@ -154,6 +154,10 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
         return ScopePair(diag::note_protected_by_objc_weak_init,
                          diag::note_exits_objc_weak);
 
+      case QualType::DK_nontrivial_c_struct:
+        return ScopePair(diag::note_protected_by_non_trivial_c_struct_init,
+                         diag::note_exits_dtor);
+
       case QualType::DK_cxx_destructor:
         OutDiag = diag::note_exits_dtor;
         break;
@@ -254,6 +258,10 @@ void JumpScopeChecker::BuildScopeInformation(VarDecl *D,
         Diags = ScopePair(diag::note_enters_block_captures_weak,
                           diag::note_exits_block_captures_weak);
         break;
+      case QualType::DK_nontrivial_c_struct:
+        Diags = ScopePair(diag::note_enters_block_captures_non_trivial_c_struct,
+                          diag::note_exits_block_captures_non_trivial_c_struct);
+        break;
       case QualType::DK_none:
         llvm_unreachable("non-lifetime captured variable");
     }
@@ -323,7 +331,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
       BuildScopeInformation(Var, ParentScope);
       ++StmtsToSkip;
     }
-    // Fall through
+    LLVM_FALLTHROUGH;
 
   case Stmt::GotoStmtClass:
     // Remember both what scope a goto is in as well as the fact that we have

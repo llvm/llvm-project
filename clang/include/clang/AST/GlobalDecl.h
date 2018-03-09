@@ -1,4 +1,4 @@
-//===--- GlobalDecl.h - Global declaration holder ---------------*- C++ -*-===//
+//===- GlobalDecl.h - Global declaration holder -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,6 +19,12 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/type_traits.h"
+#include <cassert>
 
 namespace clang {
 
@@ -27,7 +33,7 @@ namespace clang {
 /// a CXXDestructorDecl and the destructor type (Base, Complete) or
 /// a VarDecl, a FunctionDecl or a BlockDecl.
 class GlobalDecl {
-  llvm::PointerIntPair<const Decl*, 2> Value;
+  llvm::PointerIntPair<const Decl *, 2> Value;
 
   void Init(const Decl *D) {
     assert(!isa<CXXConstructorDecl>(D) && "Use other ctor with ctor decls!");
@@ -37,19 +43,15 @@ class GlobalDecl {
   }
 
 public:
-  GlobalDecl() {}
-
+  GlobalDecl() = default;
   GlobalDecl(const VarDecl *D) { Init(D);}
   GlobalDecl(const FunctionDecl *D) { Init(D); }
   GlobalDecl(const BlockDecl *D) { Init(D); }
   GlobalDecl(const CapturedDecl *D) { Init(D); }
   GlobalDecl(const ObjCMethodDecl *D) { Init(D); }
   GlobalDecl(const OMPDeclareReductionDecl *D) { Init(D); }
-
-  GlobalDecl(const CXXConstructorDecl *D, CXXCtorType Type)
-  : Value(D, Type) {}
-  GlobalDecl(const CXXDestructorDecl *D, CXXDtorType Type)
-  : Value(D, Type) {}
+  GlobalDecl(const CXXConstructorDecl *D, CXXCtorType Type) : Value(D, Type) {}
+  GlobalDecl(const CXXDestructorDecl *D, CXXDtorType Type) : Value(D, Type) {}
 
   GlobalDecl getCanonicalDecl() const {
     GlobalDecl CanonGD;
@@ -90,10 +92,9 @@ public:
   }
 };
 
-} // end namespace clang
+} // namespace clang
 
 namespace llvm {
-  template<class> struct DenseMapInfo;
 
   template<> struct DenseMapInfo<clang::GlobalDecl> {
     static inline clang::GlobalDecl getEmptyKey() {
@@ -113,7 +114,6 @@ namespace llvm {
                         clang::GlobalDecl RHS) {
       return LHS == RHS;
     }
-      
   };
   
   // GlobalDecl isn't *technically* a POD type. However, its copy constructor,
@@ -122,6 +122,7 @@ namespace llvm {
   struct isPodLike<clang::GlobalDecl> {
     static const bool value = true;
   };
-} // end namespace llvm
 
-#endif
+} // namespace llvm
+
+#endif // LLVM_CLANG_AST_GLOBALDECL_H

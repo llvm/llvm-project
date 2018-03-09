@@ -560,8 +560,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (State->get<InvariantViolated>())
     return;
 
-  auto RetSVal =
-      State->getSVal(S, C.getLocationContext()).getAs<DefinedOrUnknownSVal>();
+  auto RetSVal = C.getSVal(S).getAs<DefinedOrUnknownSVal>();
   if (!RetSVal)
     return;
 
@@ -977,8 +976,7 @@ void NullabilityChecker::checkPostStmt(const ExplicitCastExpr *CE,
   if (DestNullability == Nullability::Unspecified)
     return;
 
-  auto RegionSVal =
-      State->getSVal(CE, C.getLocationContext()).getAs<DefinedOrUnknownSVal>();
+  auto RegionSVal = C.getSVal(CE).getAs<DefinedOrUnknownSVal>();
   const MemRegion *Region = getTrackRegion(*RegionSVal);
   if (!Region)
     return;

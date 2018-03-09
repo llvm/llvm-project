@@ -7,4 +7,4 @@ struct [[nodiscard("Wrong")]] S3 {}; // expected-error {{'nodiscard' cannot have
 [[nodiscard]] int f();
 enum [[nodiscard]] E {};
 
-namespace [[nodiscard]] N {} // expected-warning {{'nodiscard' attribute only applies to functions, methods, enums, and classes}}
+namespace [[nodiscard]] N {} // expected-warning {{'nodiscard' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, and function pointers}}

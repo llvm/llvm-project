@@ -81,8 +81,10 @@ Parser::DeclGroupPtrTy Parser::ParseObjCAtDirectives() {
     SingleDecl = ParseObjCPropertyDynamic(AtLoc);
     break;
   case tok::objc_import:
-    if (getLangOpts().Modules || getLangOpts().DebuggerSupport)
-      return ParseModuleImport(AtLoc);
+    if (getLangOpts().Modules || getLangOpts().DebuggerSupport) {
+      SingleDecl = ParseModuleImport(AtLoc);
+      break;
+    }
     Diag(AtLoc, diag::err_atimport);
     SkipUntil(tok::semi);
     return Actions.ConvertDeclToDeclGroup(nullptr);
@@ -1140,14 +1142,14 @@ bool Parser::isTokIdentifier_in() const {
 ///     'null_unspecified'
 ///
 void Parser::ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
-                                        Declarator::TheContext Context) {
-  assert(Context == Declarator::ObjCParameterContext ||
-         Context == Declarator::ObjCResultContext);
+                                        DeclaratorContext Context) {
+  assert(Context == DeclaratorContext::ObjCParameterContext ||
+         Context == DeclaratorContext::ObjCResultContext);
 
   while (1) {
     if (Tok.is(tok::code_completion)) {
       Actions.CodeCompleteObjCPassingType(getCurScope(), DS, 
-                          Context == Declarator::ObjCParameterContext);
+                          Context == DeclaratorContext::ObjCParameterContext);
       return cutOffParsing();
     }
     
@@ -1242,12 +1244,12 @@ static void takeDeclAttributes(ParsedAttributes &attrs,
 ///     '(' objc-type-qualifiers[opt] ')'
 ///
 ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS, 
-                                     Declarator::TheContext context,
+                                     DeclaratorContext context,
                                      ParsedAttributes *paramAttrs) {
-  assert(context == Declarator::ObjCParameterContext ||
-         context == Declarator::ObjCResultContext);
+  assert(context == DeclaratorContext::ObjCParameterContext ||
+         context == DeclaratorContext::ObjCResultContext);
   assert((paramAttrs != nullptr) ==
-         (context == Declarator::ObjCParameterContext));
+         (context == DeclaratorContext::ObjCParameterContext));
 
   assert(Tok.is(tok::l_paren) && "expected (");
 
@@ -1265,9 +1267,9 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
     // Parse an abstract declarator.
     DeclSpec declSpec(AttrFactory);
     declSpec.setObjCQualifiers(&DS);
-    DeclSpecContext dsContext = DSC_normal;
-    if (context == Declarator::ObjCResultContext)
-      dsContext = DSC_objc_method_result;
+    DeclSpecContext dsContext = DeclSpecContext::DSC_normal;
+    if (context == DeclaratorContext::ObjCResultContext)
+      dsContext = DeclSpecContext::DSC_objc_method_result;
     ParseSpecifierQualifierList(declSpec, AS_none, dsContext);
     Declarator declarator(declSpec, context);
     ParseDeclarator(declarator);
@@ -1288,7 +1290,7 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
 
       // If we're parsing a parameter, steal all the decl attributes
       // and add them to the decl spec.
-      if (context == Declarator::ObjCParameterContext)
+      if (context == DeclaratorContext::ObjCParameterContext)
         takeDeclAttributes(*paramAttrs, declarator);
     }
   }
@@ -1352,7 +1354,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
   ParsedType ReturnType;
   ObjCDeclSpec DSRet;
   if (Tok.is(tok::l_paren))
-    ReturnType = ParseObjCTypeName(DSRet, Declarator::ObjCResultContext,
+    ReturnType = ParseObjCTypeName(DSRet, DeclaratorContext::ObjCResultContext,
                                    nullptr);
 
   // If attributes exist before the method, parse them.
@@ -1416,7 +1418,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     ArgInfo.Type = nullptr;
     if (Tok.is(tok::l_paren)) // Parse the argument type if present.
       ArgInfo.Type = ParseObjCTypeName(ArgInfo.DeclSpec,
-                                       Declarator::ObjCParameterContext,
+                                       DeclaratorContext::ObjCParameterContext,
                                        &paramAttrs);
 
     // If attributes exist before the argument name, parse them.
@@ -1494,7 +1496,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     DeclSpec DS(AttrFactory);
     ParseDeclarationSpecifiers(DS);
     // Parse the declarator.
-    Declarator ParmDecl(DS, Declarator::PrototypeContext);
+    Declarator ParmDecl(DS, DeclaratorContext::PrototypeContext);
     ParseDeclarator(ParmDecl);
     IdentifierInfo *ParmII = ParmDecl.getIdentifier();
     Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDecl);
@@ -1703,7 +1705,7 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
                          typeArg, Actions.getASTContext().getPrintingPolicy());
 
       // Form a declarator to turn this into a type.
-      Declarator D(DS, Declarator::TypeNameContext);
+      Declarator D(DS, DeclaratorContext::TypeNameContext);
       TypeResult fullTypeArg = Actions.ActOnTypeName(getCurScope(), D);
       if (fullTypeArg.isUsable()) {
         typeArgs.push_back(fullTypeArg.get());
@@ -2480,7 +2482,7 @@ Parser::ParseObjCSynchronizedStmt(SourceLocation atLoc) {
     operand = Actions.ActOnObjCAtSynchronizedOperand(atLoc, operand.get());
 
   // Parse the compound statement within a new scope.
-  ParseScope bodyScope(this, Scope::DeclScope);
+  ParseScope bodyScope(this, Scope::DeclScope | Scope::CompoundStmtScope);
   StmtResult body(ParseCompoundStatementBody());
   bodyScope.Exit();
 
@@ -2516,7 +2518,7 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
   }
   StmtVector CatchStmts;
   StmtResult FinallyStmt;
-  ParseScope TryScope(this, Scope::DeclScope);
+  ParseScope TryScope(this, Scope::DeclScope | Scope::CompoundStmtScope);
   StmtResult TryBody(ParseCompoundStatementBody());
   TryScope.Exit();
   if (TryBody.isInvalid())
@@ -2537,11 +2539,13 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
       ConsumeToken(); // consume catch
       if (Tok.is(tok::l_paren)) {
         ConsumeParen();
-        ParseScope CatchScope(this, Scope::DeclScope|Scope::AtCatchScope);
+        ParseScope CatchScope(this, Scope::DeclScope |
+                                        Scope::CompoundStmtScope |
+                                        Scope::AtCatchScope);
         if (Tok.isNot(tok::ellipsis)) {
           DeclSpec DS(AttrFactory);
           ParseDeclarationSpecifiers(DS);
-          Declarator ParmDecl(DS, Declarator::ObjCCatchContext);
+          Declarator ParmDecl(DS, DeclaratorContext::ObjCCatchContext);
           ParseDeclarator(ParmDecl);
 
           // Inform the actions module about the declarator, so it
@@ -2581,7 +2585,8 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
     } else {
       assert(Tok.isObjCAtKeyword(tok::objc_finally) && "Lookahead confused?");
       ConsumeToken(); // consume finally
-      ParseScope FinallyScope(this, Scope::DeclScope);
+      ParseScope FinallyScope(this,
+                              Scope::DeclScope | Scope::CompoundStmtScope);
 
       StmtResult FinallyBody(true);
       if (Tok.is(tok::l_brace))
@@ -2618,7 +2623,7 @@ Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
   }
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
-  ParseScope BodyScope(this, Scope::DeclScope);
+  ParseScope BodyScope(this, Scope::DeclScope | Scope::CompoundStmtScope);
 
   StmtResult AutoreleasePoolBody(ParseCompoundStatementBody());
 
@@ -2942,7 +2947,7 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
   // We have a class message. Turn the simple-type-specifier or
   // typename-specifier we parsed into a type and parse the
   // remainder of the class message.
-  Declarator DeclaratorInfo(DS, Declarator::TypeNameContext);
+  Declarator DeclaratorInfo(DS, DeclaratorContext::TypeNameContext);
   TypeResult Type = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
   if (Type.isInvalid())
     return true;
@@ -3652,11 +3657,10 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   assert(Tok.isOneOf(tok::l_brace, tok::kw_try, tok::colon) && 
          "Inline objective-c method not starting with '{' or 'try' or ':'");
   // Enter a scope for the method or c-function body.
-  ParseScope BodyScope(this,
-                       parseMethod
-                       ? Scope::ObjCMethodScope|Scope::FnScope|Scope::DeclScope
-                       : Scope::FnScope|Scope::DeclScope);
-    
+  ParseScope BodyScope(this, (parseMethod ? Scope::ObjCMethodScope : 0) |
+                                 Scope::FnScope | Scope::DeclScope |
+                                 Scope::CompoundStmtScope);
+
   // Tell the actions module that we have entered a method or c-function definition 
   // with the specified Declarator for the method/function.
   if (parseMethod)

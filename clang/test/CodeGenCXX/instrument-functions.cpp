@@ -1,21 +1,25 @@
-// RUN: %clang_cc1 -S -emit-llvm -triple %itanium_abi_triple -o - %s -finstrument-functions | FileCheck %s
+// RUN: %clang_cc1 -S -emit-llvm -triple %itanium_abi_triple -o - %s -finstrument-functions -disable-llvm-passes | FileCheck %s
 
-// CHECK: @_Z5test1i
 int test1(int x) {
-// CHECK: __cyg_profile_func_enter
-// CHECK: __cyg_profile_func_exit
+// CHECK: @_Z5test1i(i32 {{.*}}%x) #[[ATTR1:[0-9]+]]
 // CHECK: ret
   return x;
 }
 
-// CHECK: @_Z5test2i
 int test2(int) __attribute__((no_instrument_function));
 int test2(int x) {
-// CHECK-NOT: __cyg_profile_func_enter
-// CHECK-NOT: __cyg_profile_func_exit
+// CHECK: @_Z5test2i(i32 {{.*}}%x) #[[ATTR2:[0-9]+]]
 // CHECK: ret
   return x;
 }
+
+// CHECK: attributes #[[ATTR1]] =
+// CHECK-SAME: "instrument-function-entry"="__cyg_profile_func_enter"
+// CHECK-SAME: "instrument-function-exit"="__cyg_profile_func_exit"
+
+// CHECK: attributes #[[ATTR2]] =
+// CHECK-NOT: "instrument-function-entry"
+
 
 // This test case previously crashed code generation.  It exists solely
 // to test -finstrument-function does not crash codegen for this trivial

@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -14,8 +18,10 @@ T tmain(T argc) {
   T *ptr;
   static T a;
 // CHECK: static T a;
-#pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+:g)
-  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+: g)
+#pragma omp taskgroup task_reduction(+: d)
+#pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+:g) in_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+: g) in_reduction(+: d)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
@@ -54,8 +60,10 @@ int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;
-#pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b), aligned(argv) num_tasks(argc) reduction(*: g)
-  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b) aligned(argv) num_tasks(argc) reduction(*: g)
+#pragma omp taskgroup task_reduction(+: d)
+#pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b), aligned(argv) num_tasks(argc) reduction(*: g) in_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b) aligned(argv) num_tasks(argc) reduction(*: g) in_reduction(+: d)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

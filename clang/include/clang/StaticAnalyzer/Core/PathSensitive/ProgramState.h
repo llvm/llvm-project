@@ -212,9 +212,16 @@ public:
   assumeInclusiveRange(DefinedOrUnknownSVal Val, const llvm::APSInt &From,
                        const llvm::APSInt &To) const;
 
+  /// \brief Check if the given SVal is not constrained to zero and is not
+  ///        a zero constant.
+  ConditionTruthVal isNonNull(SVal V) const;
+
   /// \brief Check if the given SVal is constrained to zero or is a zero
   ///        constant.
   ConditionTruthVal isNull(SVal V) const;
+
+  /// \return Whether values \p Lhs and \p Rhs are equal.
+  ConditionTruthVal areEqual(SVal Lhs, SVal Rhs) const;
 
   /// Utility method for getting regions.
   const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
@@ -428,9 +435,10 @@ public:
   }
 
   // Pretty-printing.
-  void print(raw_ostream &Out, const char *nl = "\n",
-             const char *sep = "") const;
-  void printDOT(raw_ostream &Out) const;
+  void print(raw_ostream &Out, const char *nl = "\n", const char *sep = "",
+             const LocationContext *CurrentLC = nullptr) const;
+  void printDOT(raw_ostream &Out,
+                const LocationContext *CurrentLC = nullptr) const;
   void printTaint(raw_ostream &Out, const char *nl = "\n",
                   const char *sep = "") const;
 

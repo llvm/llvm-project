@@ -1,0 +1,3 @@
+struct F {
+  int a;
+};

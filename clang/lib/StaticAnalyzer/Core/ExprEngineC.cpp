@@ -760,7 +760,11 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   for (const ExplodedNode *N = Pred ; N ; N = *N->pred_begin()) {
     ProgramPoint PP = N->getLocation();
     if (PP.getAs<PreStmtPurgeDeadSymbols>() || PP.getAs<BlockEntrance>()) {
-      assert(N->pred_size() == 1);
+      // If the state N has multiple predecessors P, it means that successors
+      // of P are all equivalent.
+      // In turn, that means that all nodes at P are equivalent in terms
+      // of observable behavior at N, and we can follow any of them.
+      // FIXME: a more robust solution which does not walk up the tree.
       continue;
     }
     SrcBlock = PP.castAs<BlockEdge>().getSrc();
@@ -1062,6 +1066,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     // constant value. If the UnaryOperator has location type, create the
     // constant with int type and pointer width.
     SVal RHS;
+    SVal Result;
 
     if (U->getType()->isAnyPointerType())
       RHS = svalBuilder.makeArrayIndex(1);
@@ -1070,7 +1075,14 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     else
       RHS = UnknownVal();
 
-    SVal Result = evalBinOp(state, Op, V2, RHS, U->getType());
+    // The use of an operand of type bool with the ++ operators is deprecated
+    // but valid until C++17. And if the operand of the ++ operator is of type
+    // bool, it is set to true until C++17. Note that for '_Bool', it is also
+    // set to true when it encounters ++ operator.
+    if (U->getType()->isBooleanType() && U->isIncrementOp())
+      Result = svalBuilder.makeTruthVal(true, U->getType());
+    else
+      Result = evalBinOp(state, Op, V2, RHS, U->getType());
 
     // Conjure a new symbol if necessary to recover precision.
     if (Result.isUnknown()){
@@ -1091,7 +1103,6 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
           // Propagate this constraint.
           Constraint = svalBuilder.evalEQ(state, SymVal,
                                        svalBuilder.makeZeroVal(U->getType()));
-
 
           state = state->assume(Constraint, false);
           assert(state);

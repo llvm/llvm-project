@@ -37,4 +37,22 @@ framework module DependsOnModule {
       export *
     }
   }
+  explicit module CXX11 {
+    requires cplusplus11
+  }
+  explicit module CXX14 {
+    requires cplusplus14
+  }
+  explicit module CXX17 {
+    requires cplusplus17
+  }
+  explicit module C99 {
+    requires c99
+  }
+  explicit module C11 {
+    requires c11
+  }
+  explicit module C17 {
+    requires c17
+  }
 }

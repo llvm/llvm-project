@@ -78,7 +78,7 @@ T* test6(B* x) { return dynamic_cast<T*>(x); }
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, i32* [[VBOFFP]], align 4
 // CHECK-NEXT:   [[DELTA:%.*]] = add nsw i32 [[VBOFFS]], 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, i8* [[CAST]], i32 [[DELTA]]
-// CHECK-NEXT:   [[CALL:%.*]] = tail call i8* @__RTDynamicCast(i8* [[ADJ]], i32 [[DELTA]], i8* {{.*}}bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AUB@@@8" to i8*), i8* {{.*}}bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AUT@@@8" to i8*), i32 0)
+// CHECK-NEXT:   [[CALL:%.*]] = tail call i8* @__RTDynamicCast(i8* nonnull [[ADJ]], i32 [[DELTA]], i8* {{.*}}bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AUB@@@8" to i8*), i8* {{.*}}bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AUT@@@8" to i8*), i32 0)
 // CHECK-NEXT:   [[RES:%.*]] = bitcast i8* [[CALL]] to %struct.T*
 // CHECK-NEXT:   br label
 // CHECK:        [[RET:%.*]] = phi %struct.T*
@@ -117,7 +117,7 @@ void* test9(B* x) { return dynamic_cast<void*>(x); }
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, i32* [[VBOFFP]], align 4
 // CHECK-NEXT:   [[DELTA:%.*]] = add nsw i32 [[VBOFFS]], 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, i8* [[CAST]], i32 [[DELTA]]
-// CHECK-NEXT:   [[CALL:%.*]] = tail call i8* @__RTCastToVoid(i8* [[ADJ]])
+// CHECK-NEXT:   [[CALL:%.*]] = tail call i8* @__RTCastToVoid(i8* nonnull [[ADJ]])
 // CHECK-NEXT:   br label
 // CHECK:        [[RET:%.*]] = phi i8*
 // CHECK-NEXT:   ret i8* [[RET]]

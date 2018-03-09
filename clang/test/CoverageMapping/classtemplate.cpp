@@ -2,6 +2,7 @@
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-CONSTRUCTOR
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-GETTER
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-SETTER
+// RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-INIT-LIST
 
 template<class TT>
 class Test {
@@ -44,11 +45,51 @@ template <class T> class Test3 {
   void unmangleable(UninstantiatedClassWithTraits<T> x) {}
 };
 
+void abort() __attribute__((noreturn));
+
+namespace std {
+typedef decltype(sizeof(int)) size_t;
+
+template <typename E> struct initializer_list {
+  const E *p;
+  size_t n;
+  initializer_list(const E *p, size_t n) : p(p), n(n) {}
+};
+
+template <typename F, typename S> struct pair {
+  F f;
+  S s;
+  pair(const F &f, const S &s) : f(f), s(s) {}
+};
+
+struct string {
+  const char *str;
+  string() { abort(); }
+  string(const char *S) : str(S) {}
+  ~string() { abort(); }
+};
+
+template<typename K, typename V>
+struct map {
+  using T = pair<K, V>;
+  map(initializer_list<T> i, const string &s = string()) {}
+  ~map() { abort(); }
+};
+
+}; // namespace std
+
+// CHECK-INIT-LIST-LABEL: _Z5Test4v:
+std::map<int, int> Test4() { // CHECK-INIT-LIST: File 0, [[@LINE]]:28 -> [[@LINE+3]]:2 = #0
+  abort();
+  return std::map<int, int>{{0, 0}}; // CHECK-INIT-LIST-NEXT: [[@LINE]]:3 -> [[@LINE]]:36 = 0
+}
+
 int main() {
   Test<unsigned> t;
   t.set(Test<unsigned>::A, 5.5);
   t.set(Test<unsigned>::T, 5.6);
   t.set(Test<unsigned>::G, 5.7);
   t.set(Test<unsigned>::C, 5.8);
+  Test4();
   return 0;
 }

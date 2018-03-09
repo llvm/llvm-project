@@ -13,10 +13,10 @@ import sys
 Verbose = 1
 
 
-def runCmd(Command):
+def runCmd(Command, **kwargs):
     if Verbose:
         print "Executing %s" % Command
-    check_call(Command, shell=True)
+    check_call(Command, shell=True, **kwargs)
 
 
 def updateReferenceResults(ProjName, ProjBuildMode):
@@ -32,42 +32,32 @@ def updateReferenceResults(ProjName, ProjBuildMode):
     if not os.path.exists(CreatedResultsPath):
         print >> sys.stderr, "New results not found, was SATestBuild.py "\
                              "previously run?"
-        sys.exit(-1)
+        sys.exit(1)
 
-    # Remove reference results: in git, and then again for a good measure
-    # with rm, as git might not remove things fully if there are empty
-    # directories involved.
-    runCmd('git rm -r -q "%s"' % (RefResultsPath,))
-    runCmd('rm -rf "%s"' % (RefResultsPath,))
-
-    # Replace reference results with a freshly computed once.
-    runCmd('cp -r "%s" "%s"' % (CreatedResultsPath, RefResultsPath,))
-
-    # Run cleanup script.
     BuildLogPath = SATestBuild.getBuildLogPath(RefResultsPath)
+    Dirname = os.path.dirname(os.path.abspath(BuildLogPath))
+    runCmd("mkdir -p '%s'" % Dirname)
     with open(BuildLogPath, "wb+") as PBuildLogFile:
+        # Remove reference results: in git, and then again for a good measure
+        # with rm, as git might not remove things fully if there are empty
+        # directories involved.
+        runCmd('git rm -r -q "%s"' % (RefResultsPath,), stdout=PBuildLogFile)
+        runCmd('rm -rf "%s"' % (RefResultsPath,), stdout=PBuildLogFile)
+
+        # Replace reference results with a freshly computed once.
+        runCmd('cp -r "%s" "%s"' % (CreatedResultsPath, RefResultsPath,),
+               stdout=PBuildLogFile)
+
+        # Run cleanup script.
         SATestBuild.runCleanupScript(ProjDir, PBuildLogFile)
 
-    SATestBuild.normalizeReferenceResults(
-        ProjDir, RefResultsPath, ProjBuildMode)
+        SATestBuild.normalizeReferenceResults(
+            ProjDir, RefResultsPath, ProjBuildMode)
 
-    # Clean up the generated difference results.
-    SATestBuild.cleanupReferenceResults(RefResultsPath)
+        # Clean up the generated difference results.
+        SATestBuild.cleanupReferenceResults(RefResultsPath)
 
-    # Remove the created .diffs file before adding.
-    removeDiffsSummaryFiles(RefResultsPath)
-
-    runCmd('git add "%s"' % (RefResultsPath,))
-
-
-def removeDiffsSummaryFiles(RefResultsPath):
-    """
-    Remove all auto-generated .diffs files in reference data.
-    """
-    for (Dirpath, Dirnames, Filenames) in os.walk(RefResultsPath):
-        if SATestBuild.DiffsSummaryFileName in Filenames:
-            runCmd("rm '%s'" % os.path.join(
-                Dirpath, SATestBuild.DiffsSummaryFileName))
+        runCmd('git add "%s"' % (RefResultsPath,), stdout=PBuildLogFile)
 
 
 def main(argv):
@@ -75,11 +65,12 @@ def main(argv):
         print >> sys.stderr, "Update static analyzer reference results based "\
                              "\non the previous run of SATestBuild.py.\n"\
                              "\nN.B.: Assumes that SATestBuild.py was just run"
-        sys.exit(-1)
+        sys.exit(1)
 
     with SATestBuild.projectFileHandler() as f:
         for (ProjName, ProjBuildMode) in SATestBuild.iterateOverProjects(f):
             updateReferenceResults(ProjName, int(ProjBuildMode))
+
 
 if __name__ == '__main__':
     main(sys.argv)

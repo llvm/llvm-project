@@ -1,4 +1,4 @@
-//===--- DeclBase.cpp - Declaration AST Node Implementation ---------------===//
+//===- DeclBase.cpp - Declaration AST Node Implementation -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
@@ -25,11 +26,30 @@
 #include "clang/AST/DependentDiagnostic.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/Stmt.h"
-#include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/VersionTuple.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <string>
+#include <tuple>
+#include <utility>
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -74,8 +94,9 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
                          DeclContext *Parent, std::size_t Extra) {
   assert(!Parent || &Parent->getParentASTContext() == &Ctx);
   // With local visibility enabled, we track the owning module even for local
-  // declarations.
-  if (Ctx.getLangOpts().trackLocalOwningModule()) {
+  // declarations. We create the TU decl early and may not yet know what the
+  // LangOpts are, so conservatively allocate the storage.
+  if (Ctx.getLangOpts().trackLocalOwningModule() || !Parent) {
     // Ensure required alignment of the resulting object by adding extra
     // padding at the start if required.
     size_t ExtraAlign =
@@ -215,8 +236,21 @@ TemplateDecl *Decl::getDescribedTemplate() const {
     return RD->getDescribedClassTemplate();
   else if (auto *VD = dyn_cast<VarDecl>(this))
     return VD->getDescribedVarTemplate();
+  else if (auto *AD = dyn_cast<TypeAliasDecl>(this))
+    return AD->getDescribedAliasTemplate();
 
   return nullptr;
+}
+
+bool Decl::isTemplated() const {
+  // A declaration is dependent if it is a template or a template pattern, or
+  // is within (lexcially for a friend, semantically otherwise) a dependent
+  // context.
+  // FIXME: Should local extern declarations be treated like friends?
+  if (auto *AsDC = dyn_cast<DeclContext>(this))
+    return AsDC->isDependentContext();
+  auto *DC = getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
+  return DC->isDependentContext() || isTemplateDecl() || getDescribedTemplate();
 }
 
 const DeclContext *Decl::getParentFunctionOrMethod() const {
@@ -228,7 +262,6 @@ const DeclContext *Decl::getParentFunctionOrMethod() const {
 
   return nullptr;
 }
-
 
 //===----------------------------------------------------------------------===//
 // PrettyStackTraceDecl Implementation
@@ -259,7 +292,7 @@ void PrettyStackTraceDecl::print(raw_ostream &OS) const {
 //===----------------------------------------------------------------------===//
 
 // Out-of-line virtual method providing a home for Decl.
-Decl::~Decl() { }
+Decl::~Decl() = default;
 
 void Decl::setDeclContext(DeclContext *DC) {
   DeclCtx = DC;
@@ -314,12 +347,11 @@ bool Decl::isLexicallyWithinFunctionOrMethod() const {
 }
 
 bool Decl::isInAnonymousNamespace() const {
-  const DeclContext *DC = getDeclContext();
-  do {
+  for (const DeclContext *DC = getDeclContext(); DC; DC = DC->getParent()) {
     if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC))
       if (ND->isAnonymousNamespace())
         return true;
-  } while ((DC = DC->getParent()));
+  }
 
   return false;
 }
@@ -680,7 +712,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case CXXConversion:
     case EnumConstant:
     case Var:
-    case Binding:
     case ImplicitParam:
     case ParmVar:
     case ObjCMethod:
@@ -692,10 +723,11 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case IndirectField:
       return IDNS_Ordinary | IDNS_Member;
 
+    case Binding:
     case NonTypeTemplateParm:
-      // Non-type template parameters are not found by lookups that ignore
-      // non-types, but they are found by redeclaration lookups for tag types,
-      // so we include them in the tag namespace.
+    case VarTemplate:
+      // These (C++-only) declarations are found by redeclaration lookup for
+      // tag types, so we include them in the tag namespace.
       return IDNS_Ordinary | IDNS_Tag;
 
     case ObjCCompatibleAlias:
@@ -704,7 +736,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
 
     case Typedef:
     case TypeAlias:
-    case TypeAliasTemplate:
     case TemplateTypeParm:
     case ObjCTypeParam:
       return IDNS_Ordinary | IDNS_Type;
@@ -740,11 +771,11 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_Namespace;
 
     case FunctionTemplate:
-    case VarTemplate:
       return IDNS_Ordinary;
 
     case ClassTemplate:
     case TemplateTemplateParm:
+    case TypeAliasTemplate:
       return IDNS_Ordinary | IDNS_Tag | IDNS_Type;
 
     case OMPDeclareReduction:
@@ -873,12 +904,14 @@ bool Decl::AccessDeclContextSanity() const {
   // 4. the context is not a record
   // 5. it's invalid
   // 6. it's a C++0x static_assert.
+  // 7. it's a block literal declaration
   if (isa<TranslationUnitDecl>(this) ||
       isa<TemplateTypeParmDecl>(this) ||
       isa<NonTypeTemplateParmDecl>(this) ||
       !isa<CXXRecordDecl>(getDeclContext()) ||
       isInvalidDecl() ||
       isa<StaticAssertDecl>(this) ||
+      isa<BlockDecl>(this) ||
       // FIXME: a ParmVarDecl can have ClassTemplateSpecialization
       // as DeclContext (?).
       isa<ParmVarDecl>(this) ||
@@ -913,7 +946,6 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
 
   return Ty->getAs<FunctionType>();
 }
-
 
 /// Starting at a given context (a Decl or DeclContext), look for a
 /// code context that is not a closure (a lambda, block, etc.).
@@ -967,7 +999,7 @@ bool DeclContext::classof(const Decl *D) {
   }
 }
 
-DeclContext::~DeclContext() { }
+DeclContext::~DeclContext() = default;
 
 /// \brief Find the parent context of this context that will be
 /// used for unqualified name lookup.
@@ -1058,15 +1090,14 @@ static bool isLinkageSpecContext(const DeclContext *DC,
 }
 
 bool DeclContext::isExternCContext() const {
-  return isLinkageSpecContext(this, clang::LinkageSpecDecl::lang_c);
+  return isLinkageSpecContext(this, LinkageSpecDecl::lang_c);
 }
 
 const LinkageSpecDecl *DeclContext::getExternCContext() const {
   const DeclContext *DC = this;
   while (DC->getDeclKind() != Decl::TranslationUnit) {
     if (DC->getDeclKind() == Decl::LinkageSpec &&
-        cast<LinkageSpecDecl>(DC)->getLanguage() ==
-            clang::LinkageSpecDecl::lang_c)
+        cast<LinkageSpecDecl>(DC)->getLanguage() == LinkageSpecDecl::lang_c)
       return cast<LinkageSpecDecl>(DC);
     DC = DC->getLexicalParent();
   }
@@ -1074,7 +1105,7 @@ const LinkageSpecDecl *DeclContext::getExternCContext() const {
 }
 
 bool DeclContext::isExternCXXContext() const {
-  return isLinkageSpecContext(this, clang::LinkageSpecDecl::lang_cxx);
+  return isLinkageSpecContext(this, LinkageSpecDecl::lang_cxx);
 }
 
 bool DeclContext::Encloses(const DeclContext *DC) const {
@@ -1109,13 +1140,11 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ObjCInterface:
     if (ObjCInterfaceDecl *Def = cast<ObjCInterfaceDecl>(this)->getDefinition())
       return Def;
-      
     return this;
       
   case Decl::ObjCProtocol:
     if (ObjCProtocolDecl *Def = cast<ObjCProtocolDecl>(this)->getDefinition())
       return Def;
-    
     return this;
       
   case Decl::ObjCCategory:

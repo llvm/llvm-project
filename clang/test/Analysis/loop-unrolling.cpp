@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify -std=c++11 -analyzer-config exploration_strategy=unexplored_first_queue %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify -std=c++11 -DDFS=1 %s
 
 void clang_analyzer_numTimesReached();
 void clang_analyzer_warnIfReached();
@@ -234,7 +235,11 @@ int simple_known_bound_loop() {
 
 int simple_unknown_bound_loop() {
   for (int i = 2; i < getNum(); i++) {
+#ifdef DFS
     clang_analyzer_numTimesReached(); // expected-warning {{10}}
+#else
+    clang_analyzer_numTimesReached(); // expected-warning {{13}}
+#endif
   }
   return 0;
 }

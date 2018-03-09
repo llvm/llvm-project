@@ -22,6 +22,7 @@
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Analysis/CodeInjector.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Checkers/LocalCheckers.h"
@@ -57,6 +58,8 @@ STATISTIC(NumFunctionsAnalyzed,
                       "with inlining turned on).");
 STATISTIC(NumBlocksInAnalyzedFunctions,
                       "The # of basic blocks in the analyzed functions.");
+STATISTIC(NumVisitedBlocksInAnalyzedFunctions,
+          "The # of visited basic blocks in the analyzed functions.");
 STATISTIC(PercentReachableBlocks, "The % of reachable basic blocks.");
 STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 
@@ -168,6 +171,7 @@ public:
   AnalyzerOptionsRef Opts;
   ArrayRef<std::string> Plugins;
   CodeInjector *Injector;
+  cross_tu::CrossTranslationUnitContext CTU;
 
   /// \brief Stores the declarations from the local translation unit.
   /// Note, we pre-compute the local declarations at parse time as an
@@ -186,28 +190,31 @@ public:
   std::unique_ptr<AnalysisManager> Mgr;
 
   /// Time the analyzes time of each translation unit.
-  static llvm::Timer* TUTotalTimer;
+  std::unique_ptr<llvm::TimerGroup> AnalyzerTimers;
+  std::unique_ptr<llvm::Timer> TUTotalTimer;
 
   /// The information about analyzed functions shared throughout the
   /// translation unit.
   FunctionSummariesTy FunctionSummaries;
 
-  AnalysisConsumer(const Preprocessor &pp, const std::string &outdir,
+  AnalysisConsumer(CompilerInstance &CI, const std::string &outdir,
                    AnalyzerOptionsRef opts, ArrayRef<std::string> plugins,
                    CodeInjector *injector)
-      : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr), PP(pp),
-        OutDir(outdir), Opts(std::move(opts)), Plugins(plugins),
-        Injector(injector) {
+      : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr),
+        PP(CI.getPreprocessor()), OutDir(outdir), Opts(std::move(opts)),
+        Plugins(plugins), Injector(injector), CTU(CI) {
     DigestAnalyzerOptions();
-    if (Opts->PrintStats) {
-      llvm::EnableStatistics(false);
-      TUTotalTimer = new llvm::Timer("time", "Analyzer Total Time");
+    if (Opts->PrintStats || Opts->shouldSerializeStats()) {
+      AnalyzerTimers = llvm::make_unique<llvm::TimerGroup>(
+          "analyzer", "Analyzer timers");
+      TUTotalTimer = llvm::make_unique<llvm::Timer>(
+          "time", "Analyzer total time", *AnalyzerTimers);
+      llvm::EnableStatistics(/* PrintOnExit= */ false);
     }
   }
 
   ~AnalysisConsumer() override {
     if (Opts->PrintStats) {
-      delete TUTotalTimer;
       llvm::PrintStatistics();
     }
   }
@@ -384,7 +391,10 @@ private:
 
   /// \brief Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
+  void runAnalysisOnTranslationUnit(ASTContext &C);
 
+  /// Print \p S to stderr if \c Opts->AnalyzerDisplayProgress is set.
+  void reportAnalyzerProgress(StringRef S);
 };
 } // end anonymous namespace
 
@@ -392,8 +402,6 @@ private:
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer implementation.
 //===----------------------------------------------------------------------===//
-llvm::Timer* AnalysisConsumer::TUTotalTimer = nullptr;
-
 bool AnalysisConsumer::HandleTopLevelDecl(DeclGroupRef DG) {
   storeTopLevelDecls(DG);
   return true;
@@ -508,68 +516,90 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
   }
 }
 
+static bool isBisonFile(ASTContext &C) {
+  const SourceManager &SM = C.getSourceManager();
+  FileID FID = SM.getMainFileID();
+  StringRef Buffer = SM.getBuffer(FID)->getBuffer();
+  if (Buffer.startswith("/* A Bison parser, made by"))
+    return true;
+  return false;
+}
+
+void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
+  BugReporter BR(*Mgr);
+  TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
+
+  // Run the AST-only checks using the order in which functions are defined.
+  // If inlining is not turned on, use the simplest function order for path
+  // sensitive analyzes as well.
+  RecVisitorMode = AM_Syntax;
+  if (!Mgr->shouldInlineCall())
+    RecVisitorMode |= AM_Path;
+  RecVisitorBR = &BR;
+
+  // Process all the top level declarations.
+  //
+  // Note: TraverseDecl may modify LocalTUDecls, but only by appending more
+  // entries.  Thus we don't use an iterator, but rely on LocalTUDecls
+  // random access.  By doing so, we automatically compensate for iterators
+  // possibly being invalidated, although this is a bit slower.
+  const unsigned LocalTUDeclsSize = LocalTUDecls.size();
+  for (unsigned i = 0 ; i < LocalTUDeclsSize ; ++i) {
+    TraverseDecl(LocalTUDecls[i]);
+  }
+
+  if (Mgr->shouldInlineCall())
+    HandleDeclsCallGraph(LocalTUDeclsSize);
+
+  // After all decls handled, run checkers on the entire TranslationUnit.
+  checkerMgr->runCheckersOnEndOfTranslationUnit(TU, *Mgr, BR);
+
+  RecVisitorBR = nullptr;
+}
+
+void AnalysisConsumer::reportAnalyzerProgress(StringRef S) {
+  if (Opts->AnalyzerDisplayProgress)
+    llvm::errs() << S;
+}
+
 void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
+
   // Don't run the actions if an error has occurred with parsing the file.
   DiagnosticsEngine &Diags = PP.getDiagnostics();
   if (Diags.hasErrorOccurred() || Diags.hasFatalErrorOccurred())
     return;
 
-  // Don't analyze if the user explicitly asked for no checks to be performed
-  // on this file.
-  if (Opts->DisableAllChecks)
-    return;
+  if (TUTotalTimer) TUTotalTimer->startTimer();
 
-  {
-    if (TUTotalTimer) TUTotalTimer->startTimer();
+  if (isBisonFile(C)) {
+    reportAnalyzerProgress("Skipping bison-generated file\n");
+  } else if (Opts->DisableAllChecks) {
 
-    // Introduce a scope to destroy BR before Mgr.
-    BugReporter BR(*Mgr);
-    TranslationUnitDecl *TU = C.getTranslationUnitDecl();
-    checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
-
-    // Run the AST-only checks using the order in which functions are defined.
-    // If inlining is not turned on, use the simplest function order for path
-    // sensitive analyzes as well.
-    RecVisitorMode = AM_Syntax;
-    if (!Mgr->shouldInlineCall())
-      RecVisitorMode |= AM_Path;
-    RecVisitorBR = &BR;
-
-    // Process all the top level declarations.
-    //
-    // Note: TraverseDecl may modify LocalTUDecls, but only by appending more
-    // entries.  Thus we don't use an iterator, but rely on LocalTUDecls
-    // random access.  By doing so, we automatically compensate for iterators
-    // possibly being invalidated, although this is a bit slower.
-    const unsigned LocalTUDeclsSize = LocalTUDecls.size();
-    for (unsigned i = 0 ; i < LocalTUDeclsSize ; ++i) {
-      TraverseDecl(LocalTUDecls[i]);
-    }
-
-    if (Mgr->shouldInlineCall())
-      HandleDeclsCallGraph(LocalTUDeclsSize);
-
-    // After all decls handled, run checkers on the entire TranslationUnit.
-    checkerMgr->runCheckersOnEndOfTranslationUnit(TU, *Mgr, BR);
-
-    RecVisitorBR = nullptr;
+    // Don't analyze if the user explicitly asked for no checks to be performed
+    // on this file.
+    reportAnalyzerProgress("All checks are disabled using a supplied option\n");
+  } else {
+    // Otherwise, just run the analysis.
+    runAnalysisOnTranslationUnit(C);
   }
+
+  if (TUTotalTimer) TUTotalTimer->stopTimer();
+
+  // Count how many basic blocks we have not covered.
+  NumBlocksInAnalyzedFunctions = FunctionSummaries.getTotalNumBasicBlocks();
+  NumVisitedBlocksInAnalyzedFunctions =
+      FunctionSummaries.getTotalNumVisitedBasicBlocks();
+  if (NumBlocksInAnalyzedFunctions > 0)
+    PercentReachableBlocks =
+      (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
+        NumBlocksInAnalyzedFunctions;
 
   // Explicitly destroy the PathDiagnosticConsumer.  This will flush its output.
   // FIXME: This should be replaced with something that doesn't rely on
   // side-effects in PathDiagnosticConsumer's destructor. This is required when
   // used with option -disable-free.
   Mgr.reset();
-
-  if (TUTotalTimer) TUTotalTimer->stopTimer();
-
-  // Count how many basic blocks we have not covered.
-  NumBlocksInAnalyzedFunctions = FunctionSummaries.getTotalNumBasicBlocks();
-  if (NumBlocksInAnalyzedFunctions > 0)
-    PercentReachableBlocks =
-      (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
-        NumBlocksInAnalyzedFunctions;
-
 }
 
 std::string AnalysisConsumer::getFunctionName(const Decl *D) {
@@ -704,7 +734,8 @@ void AnalysisConsumer::ActionExprEngine(Decl *D, bool ObjCGCEnabled,
   if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
     return;
 
-  ExprEngine Eng(*Mgr, ObjCGCEnabled, VisitedCallees, &FunctionSummaries,IMode);
+  ExprEngine Eng(CTU, *Mgr, ObjCGCEnabled, VisitedCallees, &FunctionSummaries,
+                 IMode);
 
   // Set the graph auditor.
   std::unique_ptr<ExplodedNode::Auditor> Auditor;
@@ -762,7 +793,7 @@ ento::CreateAnalysisConsumer(CompilerInstance &CI) {
   bool hasModelPath = analyzerOpts->Config.count("model-path") > 0;
 
   return llvm::make_unique<AnalysisConsumer>(
-      CI.getPreprocessor(), CI.getFrontendOpts().OutputFile, analyzerOpts,
+      CI, CI.getFrontendOpts().OutputFile, analyzerOpts,
       CI.getFrontendOpts().Plugins,
       hasModelPath ? new ModelInjector(CI) : nullptr);
 }
@@ -854,8 +885,7 @@ UbigraphViz::~UbigraphViz() {
     Ubiviz = *Path;
   const char *args[] = {Ubiviz.c_str(), Filename.c_str(), nullptr};
 
-  if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, nullptr, 0, 0,
-                                &ErrMsg)) {
+  if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, {}, 0, 0, &ErrMsg)) {
     llvm::errs() << "Error viewing graph: " << ErrMsg << "\n";
   }
 

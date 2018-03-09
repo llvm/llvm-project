@@ -5,7 +5,7 @@
 // RUN:         -triple thumbv7--windows -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-ARM,CHECK-ARM-X64
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
-// RUN:         -triple x86_64--windows -Oz -emit-llvm %s -o - \
+// RUN:         -triple x86_64--windows -Oz -emit-llvm -target-feature +cx16 %s -o - \
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-X64,CHECK-ARM-X64,CHECK-INTEL
 
 // intrin.h needs size_t, but -ffreestanding prevents us from getting it from
@@ -328,6 +328,27 @@ __int64 test_InterlockedCompareExchange64(__int64 volatile *Destination, __int64
 // CHECK: [[RESULT:%[0-9]+]] = extractvalue { i64, i1 } [[TMP]], 0
 // CHECK: ret i64 [[RESULT]]
 // CHECK: }
+
+#if defined(__x86_64__)
+unsigned char test_InterlockedCompareExchange128(__int64 volatile *Destination, __int64 ExchangeHigh, __int64 ExchangeLow, __int64* ComparandResult) {
+  return _InterlockedCompareExchange128(Destination, ExchangeHigh, ExchangeLow, ComparandResult);
+}
+// CHECK-X64: define{{.*}}i8 @test_InterlockedCompareExchange128(i64*{{[a-z_ ]*}}%Destination, i64{{[a-z_ ]*}}%ExchangeHigh, i64{{[a-z_ ]*}}%ExchangeLow, i64*{{[a-z_ ]*}}%ComparandResult){{.*}}{
+// CHECK-X64: [[DST:%[0-9]+]] = bitcast i64* %Destination to i128*
+// CHECK-X64: [[EH:%[0-9]+]] = zext i64 %ExchangeHigh to i128
+// CHECK-X64: [[EL:%[0-9]+]] = zext i64 %ExchangeLow to i128
+// CHECK-X64: [[CNR:%[0-9]+]] = bitcast i64* %ComparandResult to i128*
+// CHECK-X64: [[EHS:%[0-9]+]] = shl nuw i128 [[EH]], 64
+// CHECK-X64: [[EXP:%[0-9]+]] = or i128 [[EHS]], [[EL]]
+// CHECK-X64: [[ORG:%[0-9]+]] = load i128, i128* [[CNR]], align 16
+// CHECK-X64: [[RES:%[0-9]+]] = cmpxchg volatile i128* [[DST]], i128 [[ORG]], i128 [[EXP]] seq_cst seq_cst
+// CHECK-X64: [[OLD:%[0-9]+]] = extractvalue { i128, i1 } [[RES]], 0
+// CHECK-X64: store i128 [[OLD]], i128* [[CNR]], align 16
+// CHECK-X64: [[SUC1:%[0-9]+]] = extractvalue { i128, i1 } [[RES]], 1
+// CHECK-X64: [[SUC8:%[0-9]+]] = zext i1 [[SUC1]] to i8
+// CHECK-X64: ret i8 [[SUC8]]
+// CHECK-X64: }
+#endif
 
 short test_InterlockedIncrement16(short volatile *Addend) {
   return _InterlockedIncrement16(Addend);

@@ -1,4 +1,4 @@
-//===-- Redeclarable.h - Base for Decls that can be redeclared -*- C++ -*-====//
+//===- Redeclarable.h - Base for Decls that can be redeclared --*- C++ -*-====//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,11 +15,18 @@
 #define LLVM_CLANG_AST_REDECLARABLE_H
 
 #include "clang/AST/ExternalASTSource.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
+#include <cassert>
+#include <cstddef>
 #include <iterator>
 
 namespace clang {
+
 class ASTContext;
+class Decl;
 
 // Some notes on redeclarables:
 //
@@ -82,21 +89,21 @@ protected:
   class DeclLink {
     /// A pointer to a known latest declaration, either statically known or
     /// generationally updated as decls are added by an external source.
-    typedef LazyGenerationalUpdatePtr<const Decl*, Decl*,
-                                      &ExternalASTSource::CompleteRedeclChain>
-                                          KnownLatest;
+    using KnownLatest =
+        LazyGenerationalUpdatePtr<const Decl *, Decl *,
+                                  &ExternalASTSource::CompleteRedeclChain>;
 
     /// We store a pointer to the ASTContext in the UninitializedLatest
     /// pointer, but to avoid circular type dependencies when we steal the low
     /// bits of this pointer, we use a raw void* here.
-    typedef const void *UninitializedLatest;
+    using UninitializedLatest = const void *;
 
-    typedef Decl *Previous;
+    using Previous = Decl *;
 
     /// A pointer to either an uninitialized latest declaration (where either
     /// we've not yet set the previous decl or there isn't one), or to a known
     /// previous declaration.
-    typedef llvm::PointerUnion<Previous, UninitializedLatest> NotKnownLatest;
+    using NotKnownLatest = llvm::PointerUnion<Previous, UninitializedLatest>;
 
     mutable llvm::PointerUnion<NotKnownLatest, KnownLatest> Next;
 
@@ -106,8 +113,7 @@ protected:
 
     DeclLink(LatestTag, const ASTContext &Ctx)
         : Next(NotKnownLatest(reinterpret_cast<UninitializedLatest>(&Ctx))) {}
-    DeclLink(PreviousTag, decl_type *D)
-        : Next(NotKnownLatest(Previous(D))) {}
+    DeclLink(PreviousTag, decl_type *D) : Next(NotKnownLatest(Previous(D))) {}
 
     bool NextIsPrevious() const {
       return Next.is<NotKnownLatest>() &&
@@ -182,6 +188,7 @@ protected:
   ///
   /// If there is only one declaration, it is <pointer to self, true>
   DeclLink RedeclLink;
+
   decl_type *First;
 
   decl_type *getNextRedeclaration() const {
@@ -189,8 +196,12 @@ protected:
   }
 
 public:
- Redeclarable(const ASTContext &Ctx)
-     : RedeclLink(LatestDeclLink(Ctx)), First(static_cast<decl_type *>(this)) {}
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  Redeclarable(const ASTContext &Ctx)
+      : RedeclLink(LatestDeclLink(Ctx)),
+        First(static_cast<decl_type *>(this)) {}
 
   /// \brief Return the previous declaration of this declaration or NULL if this
   /// is the first declaration.
@@ -232,20 +243,19 @@ public:
   /// \brief Iterates through all the redeclarations of the same decl.
   class redecl_iterator {
     /// Current - The current declaration.
-    decl_type *Current;
+    decl_type *Current = nullptr;
     decl_type *Starter;
-    bool PassedFirst;
+    bool PassedFirst = false;
 
   public:
-    typedef decl_type*                value_type;
-    typedef decl_type*                reference;
-    typedef decl_type*                pointer;
-    typedef std::forward_iterator_tag iterator_category;
-    typedef std::ptrdiff_t            difference_type;
+    using value_type = decl_type *;
+    using reference = decl_type *;
+    using pointer = decl_type *;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
 
-    redecl_iterator() : Current(nullptr) { }
-    explicit redecl_iterator(decl_type *C)
-      : Current(C), Starter(C), PassedFirst(false) { }
+    redecl_iterator() = default;
+    explicit redecl_iterator(decl_type *C) : Current(C), Starter(C) {}
 
     reference operator*() const { return Current; }
     pointer operator->() const { return Current; }
@@ -282,7 +292,7 @@ public:
     }
   };
 
-  typedef llvm::iterator_range<redecl_iterator> redecl_range;
+  using redecl_range = llvm::iterator_range<redecl_iterator>;
 
   /// \brief Returns an iterator range for all the redeclarations of the same
   /// decl. It will iterate at least once (when this decl is the only one).
@@ -294,9 +304,6 @@ public:
 
   redecl_iterator redecls_begin() const { return redecls().begin(); }
   redecl_iterator redecls_end() const { return redecls().end(); }
-
-  friend class ASTDeclReader;
-  friend class ASTDeclWriter;
 };
 
 /// \brief Get the primary declaration for a declaration from an AST file. That
@@ -309,7 +316,7 @@ Decl *getPrimaryMergedDecl(Decl *D);
 template<typename decl_type>
 class Mergeable {
 public:
-  Mergeable() {}
+  Mergeable() = default;
 
   /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
@@ -344,7 +351,7 @@ public:
 /// remember to call getCanonicalDecl() everywhere.
 template <typename decl_type> class CanonicalDeclPtr {
 public:
-  CanonicalDeclPtr() : Ptr(nullptr) {}
+  CanonicalDeclPtr() = default;
   CanonicalDeclPtr(decl_type *Ptr)
       : Ptr(Ptr ? Ptr->getCanonicalDecl() : nullptr) {}
   CanonicalDeclPtr(const CanonicalDeclPtr &) = default;
@@ -362,11 +369,13 @@ public:
 private:
   friend struct llvm::DenseMapInfo<CanonicalDeclPtr<decl_type>>;
 
-  decl_type *Ptr;
+  decl_type *Ptr = nullptr;
 };
+
 } // namespace clang
 
 namespace llvm {
+
 template <typename decl_type>
 struct DenseMapInfo<clang::CanonicalDeclPtr<decl_type>> {
   using CanonicalDeclPtr = clang::CanonicalDeclPtr<decl_type>;
@@ -395,6 +404,7 @@ struct DenseMapInfo<clang::CanonicalDeclPtr<decl_type>> {
     return BaseInfo::isEqual(LHS, RHS);
   }
 };
+
 } // namespace llvm
 
-#endif
+#endif // LLVM_CLANG_AST_REDECLARABLE_H

@@ -535,7 +535,7 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
       continue;
 
     // Prevents diagnosing multiple times for the same instance variable
-    // at, for example, both a return and at the end of of the function.
+    // at, for example, both a return and at the end of the function.
     NewUnreleased = F.remove(NewUnreleased, IvarSymbol);
 
     if (State->getStateManager()
@@ -645,7 +645,7 @@ ObjCDeallocChecker::findPropertyOnDeallocatingInstance(
 bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
                                               const ObjCMethodCall &M,
                                               CheckerContext &C) const {
-  // Try to get the region from which the the released value was loaded.
+  // Try to get the region from which the released value was loaded.
   // Note that, unlike diagnosing for missing releases, here we don't track
   // values that must not be released in the state. This is because even if
   // these values escape, it is still an error under the rules of MRR to

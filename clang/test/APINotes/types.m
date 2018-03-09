@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fdisable-module-hash -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -Wno-private-module -fdisable-module-hash -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
 // RUN: %clang_cc1 -ast-print %t/ModulesCache/SimpleKit.pcm | FileCheck %s
 
 #import <SomeKit/SomeKit.h>

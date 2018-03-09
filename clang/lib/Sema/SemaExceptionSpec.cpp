@@ -145,7 +145,7 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
 bool Sema::CheckDistantExceptionSpec(QualType T) {
   // C++17 removes this rule in favor of putting exception specifications into
   // the type system.
-  if (getLangOpts().CPlusPlus1z)
+  if (getLangOpts().CPlusPlus17)
     return false;
 
   if (const PointerType *PT = T->getAs<PointerType>())
@@ -237,10 +237,10 @@ static bool hasImplicitExceptionSpec(FunctionDecl *Decl) {
 }
 
 bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
-  // Just completely ignore this under -fno-exceptions prior to C++1z.
-  // In C++1z onwards, the exception specification is part of the type and
+  // Just completely ignore this under -fno-exceptions prior to C++17.
+  // In C++17 onwards, the exception specification is part of the type and
   // we will diagnose mismatches anyway, so it's better to check for them here.
-  if (!getLangOpts().CXXExceptions && !getLangOpts().CPlusPlus1z)
+  if (!getLangOpts().CXXExceptions && !getLangOpts().CPlusPlus17)
     return false;
 
   OverloadedOperatorKind OO = New->getDeclName().getCXXOverloadedOperator();
@@ -872,7 +872,7 @@ bool Sema::CheckExceptionSpecCompatibility(Expr *From, QualType ToType) {
   // This is not an error in C++17 onwards, unless the noexceptness doesn't
   // match, but in that case we have a full-on type mismatch, not just a
   // type sugar mismatch.
-  if (getLangOpts().CPlusPlus1z) {
+  if (getLangOpts().CPlusPlus17) {
     DiagID = diag::warn_incompatible_exception_specs;
     NestedDiagID = diag::warn_deep_exception_specs_differ;
   }
@@ -892,7 +892,7 @@ bool Sema::CheckExceptionSpecCompatibility(Expr *From, QualType ToType) {
   return CheckExceptionSpecSubset(PDiag(DiagID), PDiag(NestedDiagID), PDiag(),
                                   ToFunc, From->getSourceRange().getBegin(),
                                   FromFunc, SourceLocation()) &&
-         !getLangOpts().CPlusPlus1z;
+         !getLangOpts().CPlusPlus17;
 }
 
 bool Sema::CheckOverridingFunctionExceptionSpec(const CXXMethodDecl *New,
@@ -953,7 +953,7 @@ static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D) {
   QualType T;
 
   // In C++1z, just look at the function type of the callee.
-  if (S.getLangOpts().CPlusPlus1z && isa<CallExpr>(E)) {
+  if (S.getLangOpts().CPlusPlus17 && isa<CallExpr>(E)) {
     E = cast<CallExpr>(E)->getCallee();
     T = E->getType();
     if (T->isSpecificPlaceholderType(BuiltinType::BoundMember)) {

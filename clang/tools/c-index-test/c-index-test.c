@@ -808,6 +808,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (const)");
     if (clang_CXXMethod_isPureVirtual(Cursor))
       printf(" (pure)");
+    if (clang_CXXRecord_isAbstract(Cursor))
+      printf(" (abstract)");
     if (clang_EnumDecl_isScoped(Cursor))
       printf(" (scoped)");
     if (clang_Cursor_isVariadic(Cursor))
@@ -1567,10 +1569,19 @@ static enum CXChildVisitResult PrintManglings(CXCursor cursor, CXCursor p,
     return CXChildVisit_Continue;
   PrintCursor(cursor, NULL);
   Manglings = clang_Cursor_getCXXManglings(cursor);
-  for (I = 0, E = Manglings->Count; I < E; ++I)
-    printf(" [mangled=%s]", clang_getCString(Manglings->Strings[I]));
-  clang_disposeStringSet(Manglings);
-  printf("\n");
+  if (Manglings) {
+    for (I = 0, E = Manglings->Count; I < E; ++I)
+      printf(" [mangled=%s]", clang_getCString(Manglings->Strings[I]));
+    clang_disposeStringSet(Manglings);
+    printf("\n");
+  }
+  Manglings = clang_Cursor_getObjCManglings(cursor);
+  if (Manglings) {
+    for (I = 0, E = Manglings->Count; I < E; ++I)
+      printf(" [mangled=%s]", clang_getCString(Manglings->Strings[I]));
+    clang_disposeStringSet(Manglings);
+    printf("\n");
+  }
   return CXChildVisit_Recurse;
 }
 

@@ -101,8 +101,6 @@ static ProgramStateRef removeFromState(ProgramStateRef State,
                                        const MemRegion *Region) {
   if (!Region)
     return State;
-  // Note: The isSubRegionOf function is not reflexive.
-  State = State->remove<TrackedRegionMap>(Region);
   for (auto &E : State->get<TrackedRegionMap>()) {
     if (E.first->isSubRegionOf(Region))
       State = State->remove<TrackedRegionMap>(E.first);

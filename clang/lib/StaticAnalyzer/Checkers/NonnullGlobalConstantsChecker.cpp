@@ -73,9 +73,9 @@ void NonnullGlobalConstantsChecker::checkLocation(SVal location, bool isLoad,
     return;
 
   ProgramStateRef State = C.getState();
-  SVal V = State->getSVal(location.castAs<Loc>());
 
   if (isGlobalConstString(location)) {
+    SVal V = State->getSVal(location.castAs<Loc>());
     Optional<DefinedOrUnknownSVal> Constr = V.getAs<DefinedOrUnknownSVal>();
 
     if (Constr) {

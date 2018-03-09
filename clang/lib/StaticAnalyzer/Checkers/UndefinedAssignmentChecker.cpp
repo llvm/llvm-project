@@ -51,17 +51,20 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   if (!N)
     return;
 
-  const char *str = "Assigned value is garbage or undefined";
-
+  static const char *const DefaultMsg =
+      "Assigned value is garbage or undefined";
   if (!BT)
-    BT.reset(new BuiltinBug(this, str));
+    BT.reset(new BuiltinBug(this, DefaultMsg));
 
   // Generate a report for this bug.
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+
   const Expr *ex = nullptr;
 
   while (StoreE) {
     if (const UnaryOperator *U = dyn_cast<UnaryOperator>(StoreE)) {
-      str = "The expression is an uninitialized value. "
+      OS << "The expression is an uninitialized value. "
             "The computed value will also be garbage";
 
       ex = U->getSubExpr();
@@ -70,9 +73,8 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
 
     if (const BinaryOperator *B = dyn_cast<BinaryOperator>(StoreE)) {
       if (B->isCompoundAssignmentOp()) {
-        ProgramStateRef state = C.getState();
-        if (state->getSVal(B->getLHS(), C.getLocationContext()).isUndef()) {
-          str = "The left expression of the compound assignment is an "
+        if (C.getSVal(B->getLHS()).isUndef()) {
+          OS << "The left expression of the compound assignment is an "
                 "uninitialized value. The computed value will also be garbage";
           ex = B->getLHS();
           break;
@@ -88,10 +90,26 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
       ex = VD->getInit();
     }
 
+    if (const auto *CD =
+            dyn_cast<CXXConstructorDecl>(C.getStackFrame()->getDecl())) {
+      if (CD->isImplicit()) {
+        for (auto I : CD->inits()) {
+          if (I->getInit()->IgnoreImpCasts() == StoreE) {
+            OS << "Value assigned to field '" << I->getMember()->getName()
+               << "' in implicit constructor is garbage or undefined";
+            break;
+          }
+        }
+      }
+    }
+
     break;
   }
 
-  auto R = llvm::make_unique<BugReport>(*BT, str, N);
+  if (OS.str().empty())
+    OS << DefaultMsg;
+
+  auto R = llvm::make_unique<BugReport>(*BT, OS.str(), N);
   if (ex) {
     R->addRange(ex->getSourceRange());
     bugreporter::trackNullOrUndefValue(N, ex, *R);

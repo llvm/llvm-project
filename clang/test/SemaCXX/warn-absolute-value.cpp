@@ -448,61 +448,9 @@ void test_long_double(long double x) {
 }
 
 void test_complex_float(_Complex float x) {
-  (void)abs(x);
-  // expected-warning@-1 {{using integer absolute value function 'abs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:12}:"cabsf"
-  (void)labs(x);
-  // expected-warning@-1 {{using integer absolute value function 'labs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:13}:"cabsf"
-  (void)llabs(x);
-  // expected-warning@-1 {{using integer absolute value function 'llabs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabsf"
-
-  (void)fabsf(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabsf' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabsf"
-  (void)fabs(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:13}:"cabsf"
-  (void)fabsl(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabsl' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabsf"
-
   (void)cabsf(x);
   (void)cabs(x);
   (void)cabsl(x);
-
-  (void)__builtin_abs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_abs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:22}:"__builtin_cabsf"
-  (void)__builtin_labs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_labs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:23}:"__builtin_cabsf"
-  (void)__builtin_llabs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_llabs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabsf"
-
-  (void)__builtin_fabsf(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabsf' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabsf"
-  (void)__builtin_fabs(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:23}:"__builtin_cabsf"
-  (void)__builtin_fabsl(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabsl' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsf' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabsf"
 
   (void)__builtin_cabsf(x);
   (void)__builtin_cabs(x);
@@ -510,32 +458,6 @@ void test_complex_float(_Complex float x) {
 }
 
 void test_complex_double(_Complex double x) {
-  (void)abs(x);
-  // expected-warning@-1 {{using integer absolute value function 'abs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:12}:"cabs"
-  (void)labs(x);
-  // expected-warning@-1 {{using integer absolute value function 'labs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:13}:"cabs"
-  (void)llabs(x);
-  // expected-warning@-1 {{using integer absolute value function 'llabs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabs"
-
-  (void)fabsf(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabsf' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabs"
-  (void)fabs(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:13}:"cabs"
-  (void)fabsl(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabsl' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabs"
-
   (void)cabsf(x);
   // expected-warning@-1 {{absolute value function 'cabsf' given an argument of type '_Complex double' but has parameter of type '_Complex float' which may cause truncation of value}}
   // expected-note@-2 {{use function 'cabs' instead}}
@@ -543,31 +465,6 @@ void test_complex_double(_Complex double x) {
   (void)cabs(x);
   (void)cabsl(x);
 
-  (void)__builtin_abs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_abs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:22}:"__builtin_cabs"
-  (void)__builtin_labs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_labs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:23}:"__builtin_cabs"
-  (void)__builtin_llabs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_llabs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabs"
-
-  (void)__builtin_fabsf(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabsf' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabs"
-  (void)__builtin_fabs(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:23}:"__builtin_cabs"
-  (void)__builtin_fabsl(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabsl' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabs' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabs"
 
   (void)__builtin_cabsf(x);
   // expected-warning@-1 {{absolute value function '__builtin_cabsf' given an argument of type '_Complex double' but has parameter of type '_Complex float' which may cause truncation of value}}
@@ -578,32 +475,6 @@ void test_complex_double(_Complex double x) {
 }
 
 void test_complex_long_double(_Complex long double x) {
-  (void)abs(x);
-  // expected-warning@-1 {{using integer absolute value function 'abs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:12}:"cabsl"
-  (void)labs(x);
-  // expected-warning@-1 {{using integer absolute value function 'labs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:13}:"cabsl"
-  (void)llabs(x);
-  // expected-warning@-1 {{using integer absolute value function 'llabs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabsl"
-
-  (void)fabsf(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabsf' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabsl"
-  (void)fabs(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabs' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:13}:"cabsl"
-  (void)fabsl(x);
-  // expected-warning@-1 {{using floating point absolute value function 'fabsl' when argument is of complex type}}
-  // expected-note@-2 {{use function 'cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:14}:"cabsl"
-
   (void)cabsf(x);
   // expected-warning@-1 {{absolute value function 'cabsf' given an argument of type '_Complex long double' but has parameter of type '_Complex float' which may cause truncation of value}}
   // expected-note@-2 {{use function 'cabsl' instead}}
@@ -613,32 +484,6 @@ void test_complex_long_double(_Complex long double x) {
   // expected-note@-2 {{use function 'cabsl' instead}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:13}:"cabsl"
   (void)cabsl(x);
-
-  (void)__builtin_abs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_abs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:22}:"__builtin_cabsl"
-  (void)__builtin_labs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_labs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:23}:"__builtin_cabsl"
-  (void)__builtin_llabs(x);
-  // expected-warning@-1 {{using integer absolute value function '__builtin_llabs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabsl"
-
-  (void)__builtin_fabsf(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabsf' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabsl"
-  (void)__builtin_fabs(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabs' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:23}:"__builtin_cabsl"
-  (void)__builtin_fabsl(x);
-  // expected-warning@-1 {{using floating point absolute value function '__builtin_fabsl' when argument is of complex type}}
-  // expected-note@-2 {{use function '__builtin_cabsl' instead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:"__builtin_cabsl"
 
   (void)__builtin_cabsf(x);
   // expected-warning@-1 {{absolute value function '__builtin_cabsf' given an argument of type '_Complex long double' but has parameter of type '_Complex float' which may cause truncation of value}}

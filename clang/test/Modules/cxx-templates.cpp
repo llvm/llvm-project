@@ -251,8 +251,22 @@ namespace Std {
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} prev {{.*}} SomeTemplate
 // CHECK-DUMP-NEXT:     TemplateArgument type 'char [2]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} SomeTemplate definition
+// CHECK-DUMP-NEXT:     DefinitionData
+// CHECK-DUMP-NEXT:       DefaultConstructor
+// CHECK-DUMP-NEXT:       CopyConstructor
+// CHECK-DUMP-NEXT:       MoveConstructor
+// CHECK-DUMP-NEXT:       CopyAssignment
+// CHECK-DUMP-NEXT:       MoveAssignment
+// CHECK-DUMP-NEXT:       Destructor
 // CHECK-DUMP-NEXT:     TemplateArgument type 'char [2]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} prev {{.*}} SomeTemplate
 // CHECK-DUMP-NEXT:     TemplateArgument type 'char [1]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} SomeTemplate definition
+// CHECK-DUMP-NEXT:     DefinitionData
+// CHECK-DUMP-NEXT:       DefaultConstructor
+// CHECK-DUMP-NEXT:       CopyConstructor
+// CHECK-DUMP-NEXT:       MoveConstructor
+// CHECK-DUMP-NEXT:       CopyAssignment
+// CHECK-DUMP-NEXT:       MoveAssignment
+// CHECK-DUMP-NEXT:       Destructor
 // CHECK-DUMP-NEXT:     TemplateArgument type 'char [1]'

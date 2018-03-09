@@ -112,3 +112,12 @@ void g1() {
   S<float> s3;
   s3.get(); // expected-note {{in instantiation of member function 'S<float>::get'}}
 }
+
+// PR35509
+typedef long L1;
+struct Incomplete;
+struct S2 {
+  L1 d;
+  Incomplete *e() const;
+} __attribute__((packed));
+Incomplete *S2::e() const { return (Incomplete *)&d; } // no-warning

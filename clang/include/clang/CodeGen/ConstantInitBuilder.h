@@ -295,7 +295,7 @@ public:
     slot = value;
   }
 
-  /// Produce an address which will eventually point to the the next
+  /// Produce an address which will eventually point to the next
   /// position to be filled.  This is computed with an indexed
   /// getelementptr rather than by computing offsets.
   ///

@@ -37,7 +37,7 @@ protected:
       DiagID(new DiagnosticIDs()),
       Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
       SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions) 
+      TargetOpts(new TargetOptions)
   {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
@@ -420,11 +420,102 @@ TEST_F(LexerTest, DontOverallocateStringifyArgs) {
 #endif
 }
 
+TEST_F(LexerTest, IsNewLineEscapedValid) {
+  auto hasNewLineEscaped = [](const char *S) {
+    return Lexer::isNewLineEscaped(S, S + strlen(S) - 1);
+  };
+
+  EXPECT_TRUE(hasNewLineEscaped("\\\r"));
+  EXPECT_TRUE(hasNewLineEscaped("\\\n"));
+  EXPECT_TRUE(hasNewLineEscaped("\\\r\n"));
+  EXPECT_TRUE(hasNewLineEscaped("\\\n\r"));
+  EXPECT_TRUE(hasNewLineEscaped("\\ \t\v\f\r"));
+  EXPECT_TRUE(hasNewLineEscaped("\\ \t\v\f\r\n"));
+
+  EXPECT_FALSE(hasNewLineEscaped("\\\r\r"));
+  EXPECT_FALSE(hasNewLineEscaped("\\\r\r\n"));
+  EXPECT_FALSE(hasNewLineEscaped("\\\n\n"));
+  EXPECT_FALSE(hasNewLineEscaped("\r"));
+  EXPECT_FALSE(hasNewLineEscaped("\n"));
+  EXPECT_FALSE(hasNewLineEscaped("\r\n"));
+  EXPECT_FALSE(hasNewLineEscaped("\n\r"));
+  EXPECT_FALSE(hasNewLineEscaped("\r\r"));
+  EXPECT_FALSE(hasNewLineEscaped("\n\n"));
+}
+
+TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
+  // Each line should have the same length for
+  // further offset calculation to be more straightforward.
+  const unsigned IdentifierLength = 8;
+  std::string TextToLex = "rabarbar\n"
+                          "foo\\\nbar\n"
+                          "foo\\\rbar\n"
+                          "fo\\\r\nbar\n"
+                          "foo\\\n\rba\n";
+  std::vector<tok::TokenKind> ExpectedTokens{5, tok::identifier};
+  std::vector<Token> LexedTokens = CheckLex(TextToLex, ExpectedTokens);
+
+  for (const Token &Tok : LexedTokens) {
+    std::pair<FileID, unsigned> OriginalLocation =
+        SourceMgr.getDecomposedLoc(Tok.getLocation());
+    for (unsigned Offset = 0; Offset < IdentifierLength; ++Offset) {
+      SourceLocation LookupLocation =
+          Tok.getLocation().getLocWithOffset(Offset);
+
+      std::pair<FileID, unsigned> FoundLocation =
+          SourceMgr.getDecomposedExpansionLoc(
+              Lexer::GetBeginningOfToken(LookupLocation, SourceMgr, LangOpts));
+
+      // Check that location returned by the GetBeginningOfToken
+      // is the same as original token location reported by Lexer.
+      EXPECT_EQ(FoundLocation.second, OriginalLocation.second);
+    }
+  }
+}
+
 TEST_F(LexerTest, AvoidPastEndOfStringDereference) {
   std::vector<Token> LexedTokens = Lex("  //  \\\n");
   EXPECT_TRUE(LexedTokens.empty());
   EXPECT_TRUE(Lex("#include <\\\\").empty());
   EXPECT_TRUE(Lex("#include <\\\\\n").empty());
+}
+
+TEST_F(LexerTest, StringizingRasString) {
+  // For "std::string Lexer::Stringify(StringRef Str, bool Charify)".
+  std::string String1 = R"(foo
+    {"bar":[]}
+    baz)";
+  // For "void Lexer::Stringify(SmallVectorImpl<char> &Str)".
+  SmallString<128> String2;
+  String2 += String1.c_str();
+
+  // Corner cases.
+  std::string String3 = R"(\
+    \n
+    \\n
+    \\)";
+  SmallString<128> String4;
+  String4 += String3.c_str();
+  std::string String5 = R"(a\
+
+
+    \\b)";
+  SmallString<128> String6;
+  String6 += String5.c_str();
+
+  String1 = Lexer::Stringify(StringRef(String1));
+  Lexer::Stringify(String2);
+  String3 = Lexer::Stringify(StringRef(String3));
+  Lexer::Stringify(String4);
+  String5 = Lexer::Stringify(StringRef(String5));
+  Lexer::Stringify(String6);
+
+  EXPECT_EQ(String1, R"(foo\n    {\"bar\":[]}\n    baz)");
+  EXPECT_EQ(String2, R"(foo\n    {\"bar\":[]}\n    baz)");
+  EXPECT_EQ(String3, R"(\\\n    \\n\n    \\\\n\n    \\\\)");
+  EXPECT_EQ(String4, R"(\\\n    \\n\n    \\\\n\n    \\\\)");
+  EXPECT_EQ(String5, R"(a\\\n\n\n    \\\\b)");
+  EXPECT_EQ(String6, R"(a\\\n\n\n    \\\\b)");
 }
 
 } // anonymous namespace

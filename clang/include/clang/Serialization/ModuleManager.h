@@ -1,4 +1,4 @@
-//===--- ModuleManager.cpp - Module Manager ---------------------*- C++ -*-===//
+//===- ModuleManager.cpp - Module Manager -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,15 +15,30 @@
 #ifndef LLVM_CLANG_SERIALIZATION_MODULEMANAGER_H
 #define LLVM_CLANG_SERIALIZATION_MODULEMANAGER_H
 
-#include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/Module.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
+#include <cstdint>
+#include <ctime>
+#include <memory>
+#include <string>
+#include <utility>
 
-namespace clang { 
+namespace clang {
 
+class FileEntry;
+class FileManager;
 class GlobalModuleIndex;
+class HeaderSearch;
 class MemoryBufferCache;
 class ModuleMap;
 class PCHContainerReader;
@@ -58,6 +73,9 @@ class ModuleManager {
   /// \brief Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
 
+  /// \brief Preprocessor's HeaderSearchInfo containing the module map.
+  const HeaderSearch &HeaderSearchInfo;
+
   /// \brief A lookup of in-memory (virtual file) buffers
   llvm::DenseMap<const FileEntry *, std::unique_ptr<llvm::MemoryBuffer>>
       InMemoryBuffers;
@@ -79,14 +97,12 @@ class ModuleManager {
   ///
   /// The global module index will actually be owned by the ASTReader; this is
   /// just an non-owning pointer.
-  GlobalModuleIndex *GlobalIndex;
+  GlobalModuleIndex *GlobalIndex = nullptr;
 
   /// \brief State used by the "visit" operation to avoid malloc traffic in
   /// calls to visit().
   struct VisitState {
-    explicit VisitState(unsigned N)
-      : VisitNumber(N, 0), NextVisitNumber(1), NextState(nullptr)
-    {
+    explicit VisitState(unsigned N) : VisitNumber(N, 0) {
       Stack.reserve(N);
     }
 
@@ -103,46 +119,47 @@ class ModuleManager {
     SmallVector<unsigned, 4> VisitNumber;
 
     /// \brief The next visit number to use to mark visited module files.
-    unsigned NextVisitNumber;
+    unsigned NextVisitNumber = 1;
 
     /// \brief The next visit state.
-    VisitState *NextState;
+    VisitState *NextState = nullptr;
   };
 
   /// \brief The first visit() state in the chain.
-  VisitState *FirstVisitState;
+  VisitState *FirstVisitState = nullptr;
 
   VisitState *allocateVisitState();
   void returnVisitState(VisitState *State);
 
 public:
-  typedef llvm::pointee_iterator<
-      SmallVectorImpl<std::unique_ptr<ModuleFile>>::iterator>
-      ModuleIterator;
-  typedef llvm::pointee_iterator<
-      SmallVectorImpl<std::unique_ptr<ModuleFile>>::const_iterator>
-      ModuleConstIterator;
-  typedef llvm::pointee_iterator<
-      SmallVectorImpl<std::unique_ptr<ModuleFile>>::reverse_iterator>
-      ModuleReverseIterator;
-  typedef std::pair<uint32_t, StringRef> ModuleOffset;
+  using ModuleIterator = llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::iterator>;
+  using ModuleConstIterator = llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::const_iterator>;
+  using ModuleReverseIterator = llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::reverse_iterator>;
+  using ModuleOffset = std::pair<uint32_t, StringRef>;
 
   explicit ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
-                         const PCHContainerReader &PCHContainerRdr);
+                         const PCHContainerReader &PCHContainerRdr,
+                         const HeaderSearch &HeaderSearchInfo);
   ~ModuleManager();
 
   /// \brief Forward iterator to traverse all loaded modules.
   ModuleIterator begin() { return Chain.begin(); }
+
   /// \brief Forward iterator end-point to traverse all loaded modules
   ModuleIterator end() { return Chain.end(); }
   
   /// \brief Const forward iterator to traverse all loaded modules.
   ModuleConstIterator begin() const { return Chain.begin(); }
+
   /// \brief Const forward iterator end-point to traverse all loaded modules
   ModuleConstIterator end() const { return Chain.end(); }
   
   /// \brief Reverse iterator to traverse all loaded modules.
   ModuleReverseIterator rbegin() { return Chain.rbegin(); }
+
   /// \brief Reverse iterator end-point to traverse all loaded modules.
   ModuleReverseIterator rend() { return Chain.rend(); }
 
@@ -163,8 +180,11 @@ public:
   /// \brief Returns the module associated with the given index
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
   
-  /// \brief Returns the module associated with the given name
-  ModuleFile *lookup(StringRef Name) const;
+  /// \brief Returns the module associated with the given file name.
+  ModuleFile *lookupByFileName(StringRef FileName) const;
+
+  /// \brief Returns the module associated with the given module name.
+  ModuleFile *lookupByModuleName(StringRef ModName) const;
 
   /// \brief Returns the module associated with the given module file.
   ModuleFile *lookup(const FileEntry *File) const;
@@ -179,15 +199,18 @@ public:
   enum AddModuleResult {
     /// \brief The module file had already been loaded.
     AlreadyLoaded,
+
     /// \brief The module file was just loaded in response to this call.
     NewlyLoaded,
+
     /// \brief The module file is missing.
     Missing,
+
     /// \brief The module file is out-of-date.
     OutOfDate
   };
 
-  typedef ASTFileSignature(*ASTFileSignatureReader)(StringRef);
+  using ASTFileSignatureReader = ASTFileSignature (*)(StringRef);
 
   /// \brief Attempts to create a new module and add it to the list of known
   /// modules.
@@ -298,6 +321,8 @@ public:
   MemoryBufferCache &getPCMCache() const { return *PCMCache; }
 };
 
-} } // end namespace clang::serialization
+} // namespace serialization
 
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_SERIALIZATION_MODULEMANAGER_H

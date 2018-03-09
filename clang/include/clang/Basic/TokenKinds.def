@@ -27,8 +27,11 @@
 #ifndef CXX11_KEYWORD
 #define CXX11_KEYWORD(X,Y) KEYWORD(X,KEYCXX11|(Y))
 #endif
+#ifndef CXX2A_KEYWORD
+#define CXX2A_KEYWORD(X,Y) KEYWORD(X,KEYCXX2A|(Y))
+#endif
 #ifndef CONCEPTS_KEYWORD
-#define CONCEPTS_KEYWORD(X) KEYWORD(X,KEYCONCEPTS)
+#define CONCEPTS_KEYWORD(X) CXX2A_KEYWORD(X,KEYCONCEPTS)
 #endif
 #ifndef MODULES_KEYWORD
 #define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
@@ -142,7 +145,7 @@ TOK(numeric_constant)    // 0x123
 TOK(char_constant)       // 'a'
 TOK(wide_char_constant)  // L'b'
 
-// C++1z Character Constants
+// C++17 Character Constants
 TOK(utf8_char_constant)  // u8'a'
 
 // C++11 Character Constants
@@ -191,6 +194,7 @@ PUNCTUATOR(less,                "<")
 PUNCTUATOR(lessless,            "<<")
 PUNCTUATOR(lessequal,           "<=")
 PUNCTUATOR(lesslessequal,       "<<=")
+PUNCTUATOR(spaceship,           "<=>")
 PUNCTUATOR(greater,             ">")
 PUNCTUATOR(greatergreater,      ">>")
 PUNCTUATOR(greaterequal,        ">=")
@@ -236,6 +240,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //              implementation namespace
 //   KEYNOCXX - This is a keyword in every non-C++ dialect.
 //   KEYCXX11 - This is a C++ keyword introduced to C++ in C++11
+//   KEYCXX2A - This is a C++ keyword introduced to C++ in C++2a
 //   KEYCONCEPTS - This is a keyword if the C++ extensions for concepts
 //                 are enabled.
 //   KEYMODULES - This is a keyword if the C++ extensions for modules
@@ -362,7 +367,7 @@ CXX11_KEYWORD(nullptr               , 0)
 CXX11_KEYWORD(static_assert         , 0)
 CXX11_KEYWORD(thread_local          , 0)
 
-// C++ concepts TS keywords
+// C++2a / concepts TS keywords
 CONCEPTS_KEYWORD(concept)
 CONCEPTS_KEYWORD(requires)
 
@@ -374,6 +379,9 @@ KEYWORD(co_yield                    , KEYCOROUTINES)
 // C++ modules TS keywords
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
+
+// C11 Extension
+KEYWORD(_Float16                    , KEYALL)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
@@ -448,6 +456,8 @@ TYPE_TRAIT_1(__is_pod, IsPOD, KEYCXX)
 TYPE_TRAIT_1(__is_polymorphic, IsPolymorphic, KEYCXX)
 TYPE_TRAIT_1(__is_trivial, IsTrivial, KEYCXX)
 TYPE_TRAIT_1(__is_union, IsUnion, KEYCXX)
+TYPE_TRAIT_1(__has_unique_object_representations,
+             HasUniqueObjectRepresentations, KEYCXX)
 
 // Clang-only C++ Type Traits
 TYPE_TRAIT_N(__is_trivially_constructible, IsTriviallyConstructible, KEYCXX)
@@ -810,6 +820,7 @@ ANNOTATION(module_end)
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
 #undef CONCEPTS_KEYWORD
+#undef CXX2A_KEYWORD
 #undef CXX11_KEYWORD
 #undef KEYWORD
 #undef PUNCTUATOR

@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
+
 void foo() {
 }
 
@@ -25,9 +29,9 @@ public:
   S2() : a(0) {}
   S2(S2 &s2) : a(s2.a) {}
   static float S2s; // expected-note 2 {{static data member is predetermined as shared}}
-  static const float S2sc;
+  static const float S2sc; // expected-note 2 {{'S2sc' declared here}}
 };
-const float S2::S2sc = 0; // expected-note 2 {{'S2sc' defined here}}
+const float S2::S2sc = 0;
 S2 b;                     // expected-note 3 {{'b' defined here}}
 const S2 ba[5];           // expected-note 2 {{'ba' defined here}}
 class S3 {

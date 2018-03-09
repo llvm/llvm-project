@@ -114,8 +114,7 @@ DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
   if (!E)
     return nullptr;
 
-  ProgramStateRef State = Succ->getState();
-  SVal S = State->getSVal(E, Succ->getLocationContext());
+  SVal S = Succ->getSVal(E);
   if (ZeroSymbol == S.getAsSymbol() && SFC == Succ->getStackFrame()) {
     Satisfied = true;
 

@@ -54,6 +54,9 @@ if (TARGET clangTidyPlugin)
   add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
   list(APPEND LIBS clangTidyPlugin)
   list(APPEND LIBS clangIncludeFixerPlugin)
+  if(LLVM_ENABLE_MODULES)
+    list(APPEND LLVM_COMPILE_FLAGS "-fmodules-ignore-macro=CLANG_TOOL_EXTRA_BUILD")
+  endif()
 endif ()
 
 find_library(DL_LIBRARY_PATH dl)
@@ -118,6 +121,12 @@ if(ENABLE_SHARED)
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
+    # FIXME: _CINDEX_LIB_ affects dllexport/dllimport on Win32.
+    if(LLVM_ENABLE_MODULES AND NOT WIN32)
+      target_compile_options(libclang PRIVATE
+        "-fmodules-ignore-macro=_CINDEX_LIB_"
+        )
+    endif()
   endif()
 endif()
 
@@ -135,10 +144,13 @@ install(DIRECTORY ../../include/clang-c
   PATTERN ".svn" EXCLUDE
   )
 
+# LLVM_DISTRIBUTION_COMPONENTS requires that each component have both a
+# component and an install-component target, so add a dummy libclang-headers
+# target to allow using it in LLVM_DISTRIBUTION_COMPONENTS.
+add_custom_target(libclang-headers)
+set_target_properties(libclang-headers PROPERTIES FOLDER "Misc")
+
 if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
-  add_custom_target(install-libclang-headers
-    DEPENDS
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=libclang-headers
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  add_llvm_install_targets(install-libclang-headers
+                           COMPONENT libclang-headers)
 endif()

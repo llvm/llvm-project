@@ -653,7 +653,9 @@ public:
                     const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
-  void createFileManager();
+  ///
+  /// \return The new file manager on success, or null on failure.
+  FileManager *createFileManager();
 
   /// Create the source manager and replace any existing one with it.
   void createSourceManager(FileManager &FileMgr);

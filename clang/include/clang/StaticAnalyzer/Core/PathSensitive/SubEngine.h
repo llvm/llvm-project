@@ -24,6 +24,10 @@ class CFGElement;
 class LocationContext;
 class Stmt;
 
+namespace cross_tu {
+class CrossTranslationUnitContext;
+}
+
 namespace ento {
   
 struct NodeBuilderContext;
@@ -48,6 +52,9 @@ public:
   virtual ProgramStateRef getInitialState(const LocationContext *InitLoc) = 0;
 
   virtual AnalysisManager &getAnalysisManager() = 0;
+
+  virtual cross_tu::CrossTranslationUnitContext *
+  getCrossTranslationUnitContext() = 0;
 
   virtual ProgramStateManager &getStateManager() = 0;
 
@@ -155,7 +162,8 @@ public:
 
   /// printState - Called by ProgramStateManager to print checker-specific data.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,
-                          const char *NL, const char *Sep) = 0;
+                          const char *NL, const char *Sep,
+                          const LocationContext *LCtx = nullptr) = 0;
 
   /// Called by CoreEngine when the analysis worklist is either empty or the
   //  maximum number of analysis steps have been reached.

@@ -39,6 +39,7 @@ struct S {
 void foo(auto int ap, register int rp) {
 #if __cplusplus >= 201103L // C++11 or later
 // expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-warning@-3 {{'register' storage class specifier is deprecated}}
 #endif
   auto int abo;
 #if __cplusplus >= 201103L // C++11 or later

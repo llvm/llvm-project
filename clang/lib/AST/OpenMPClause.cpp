@@ -1,4 +1,4 @@
-//===--- OpenMPClause.cpp - Classes for OpenMP clauses --------------------===//
+//===- OpenMPClause.cpp - Classes for OpenMP clauses ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/OpenMPClause.h"
-
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
 
 using namespace clang;
 
@@ -48,6 +54,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPReductionClause *>(C);
   case OMPC_task_reduction:
     return static_cast<const OMPTaskReductionClause *>(C);
+  case OMPC_in_reduction:
+    return static_cast<const OMPInReductionClause *>(C);
   case OMPC_linear:
     return static_cast<const OMPLinearClause *>(C);
   case OMPC_if:
@@ -58,6 +66,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPNumTeamsClause *>(C);
   case OMPC_thread_limit:
     return static_cast<const OMPThreadLimitClause *>(C);
+  case OMPC_device:
+    return static_cast<const OMPDeviceClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_final:
@@ -81,7 +91,6 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_capture:
   case OMPC_seq_cst:
   case OMPC_depend:
-  case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_map:
@@ -116,6 +125,8 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
     return static_cast<const OMPReductionClause *>(C);
   case OMPC_task_reduction:
     return static_cast<const OMPTaskReductionClause *>(C);
+  case OMPC_in_reduction:
+    return static_cast<const OMPInReductionClause *>(C);
   case OMPC_linear:
     return static_cast<const OMPLinearClause *>(C);
   case OMPC_schedule:
@@ -562,6 +573,69 @@ OMPTaskReductionClause *OMPTaskReductionClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPTaskReductionClause(N);
 }
 
+void OMPInReductionClause::setPrivates(ArrayRef<Expr *> Privates) {
+  assert(Privates.size() == varlist_size() &&
+         "Number of private copies is not the same as the preallocated buffer");
+  std::copy(Privates.begin(), Privates.end(), varlist_end());
+}
+
+void OMPInReductionClause::setLHSExprs(ArrayRef<Expr *> LHSExprs) {
+  assert(
+      LHSExprs.size() == varlist_size() &&
+      "Number of LHS expressions is not the same as the preallocated buffer");
+  std::copy(LHSExprs.begin(), LHSExprs.end(), getPrivates().end());
+}
+
+void OMPInReductionClause::setRHSExprs(ArrayRef<Expr *> RHSExprs) {
+  assert(
+      RHSExprs.size() == varlist_size() &&
+      "Number of RHS expressions is not the same as the preallocated buffer");
+  std::copy(RHSExprs.begin(), RHSExprs.end(), getLHSExprs().end());
+}
+
+void OMPInReductionClause::setReductionOps(ArrayRef<Expr *> ReductionOps) {
+  assert(ReductionOps.size() == varlist_size() && "Number of in reduction "
+                                                  "expressions is not the same "
+                                                  "as the preallocated buffer");
+  std::copy(ReductionOps.begin(), ReductionOps.end(), getRHSExprs().end());
+}
+
+void OMPInReductionClause::setTaskgroupDescriptors(
+    ArrayRef<Expr *> TaskgroupDescriptors) {
+  assert(TaskgroupDescriptors.size() == varlist_size() &&
+         "Number of in reduction descriptors is not the same as the "
+         "preallocated buffer");
+  std::copy(TaskgroupDescriptors.begin(), TaskgroupDescriptors.end(),
+            getReductionOps().end());
+}
+
+OMPInReductionClause *OMPInReductionClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VL,
+    NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
+    ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
+    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps,
+    ArrayRef<Expr *> TaskgroupDescriptors, Stmt *PreInit, Expr *PostUpdate) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(6 * VL.size()));
+  OMPInReductionClause *Clause = new (Mem) OMPInReductionClause(
+      StartLoc, LParenLoc, EndLoc, ColonLoc, VL.size(), QualifierLoc, NameInfo);
+  Clause->setVarRefs(VL);
+  Clause->setPrivates(Privates);
+  Clause->setLHSExprs(LHSExprs);
+  Clause->setRHSExprs(RHSExprs);
+  Clause->setReductionOps(ReductionOps);
+  Clause->setTaskgroupDescriptors(TaskgroupDescriptors);
+  Clause->setPreInitStmt(PreInit);
+  Clause->setPostUpdateExpr(PostUpdate);
+  return Clause;
+}
+
+OMPInReductionClause *OMPInReductionClause::CreateEmpty(const ASTContext &C,
+                                                        unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(6 * N));
+  return new (Mem) OMPInReductionClause(N);
+}
+
 OMPFlushClause *OMPFlushClause::Create(const ASTContext &C,
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
@@ -648,7 +722,6 @@ OMPMapClause::Create(const ASTContext &C, SourceLocation StartLoc,
                      MappableExprComponentListsRef ComponentLists,
                      OpenMPMapClauseKind TypeModifier, OpenMPMapClauseKind Type,
                      bool TypeIsImplicit, SourceLocation TypeLoc) {
-
   unsigned NumVars = Vars.size();
   unsigned NumUniqueDeclarations =
       getUniqueDeclarationsTotalNumber(Declarations);

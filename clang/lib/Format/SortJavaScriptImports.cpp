@@ -123,7 +123,7 @@ public:
       : TokenAnalyzer(Env, Style),
         FileContents(Env.getSourceManager().getBufferData(Env.getFileID())) {}
 
-  tooling::Replacements
+  std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
           FormatTokenLexer &Tokens) override {
@@ -138,7 +138,7 @@ public:
         parseModuleReferences(Keywords, AnnotatedLines);
 
     if (References.empty())
-      return Result;
+      return {Result, 0};
 
     SmallVector<unsigned, 16> Indices;
     for (unsigned i = 0, e = References.size(); i != e; ++i)
@@ -168,7 +168,7 @@ public:
     }
 
     if (ReferencesInOrder && SymbolsInOrder)
-      return Result;
+      return {Result, 0};
 
     SourceRange InsertionPoint = References[0].Range;
     InsertionPoint.setEnd(References[References.size() - 1].Range.getEnd());
@@ -202,7 +202,7 @@ public:
       assert(false);
     }
 
-    return Result;
+    return {Result, 0};
   }
 
 private:
@@ -277,7 +277,7 @@ private:
   // Parses module references in the given lines. Returns the module references,
   // and a pointer to the first "main code" line if that is adjacent to the
   // affected lines of module references, nullptr otherwise.
-  std::pair<SmallVector<JsModuleReference, 16>, AnnotatedLine*>
+  std::pair<SmallVector<JsModuleReference, 16>, AnnotatedLine *>
   parseModuleReferences(const AdditionalKeywords &Keywords,
                         SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
     SmallVector<JsModuleReference, 16> References;
@@ -413,7 +413,7 @@ private:
       nextToken();
       if (Current->is(tok::r_brace))
         break;
-      if (Current->isNot(tok::identifier))
+      if (!Current->isOneOf(tok::identifier, tok::kw_default))
         return false;
 
       JsImportedSymbol Symbol;
@@ -425,7 +425,7 @@ private:
 
       if (Current->is(Keywords.kw_as)) {
         nextToken();
-        if (Current->isNot(tok::identifier))
+        if (!Current->isOneOf(tok::identifier, tok::kw_default))
           return false;
         Symbol.Alias = Current->TokenText;
         nextToken();
@@ -449,7 +449,7 @@ tooling::Replacements sortJavaScriptImports(const FormatStyle &Style,
   std::unique_ptr<Environment> Env =
       Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
   JavaScriptImportSorter Sorter(*Env, Style);
-  return Sorter.process();
+  return Sorter.process().first;
 }
 
 } // end namespace format

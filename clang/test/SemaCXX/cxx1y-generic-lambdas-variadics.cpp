@@ -98,3 +98,27 @@ namespace variadic_expansion {
 }
 #endif
 
+namespace PR33082 {
+  template<int ...I> void a() {
+    int arr[] = { [](auto ...K) { (void)I; } ... }; // expected-error {{no viable conversion}} expected-note {{candidate}}
+  }
+
+  template<typename ...T> struct Pack {};
+  template<typename ...T, typename ...U> void b(Pack<U...>, T ...t) {
+    int arr[] = {[t...]() { // expected-error 2{{cannot initialize an array element of type 'int' with}}
+      U u;
+      return u;
+    }()...};
+  }
+
+  void c() {
+    int arr[] = {[](auto... v) {
+      v; // expected-error {{unexpanded parameter pack 'v'}}
+    }...}; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+  }
+
+  void run() {
+    a<1>(); // expected-note {{instantiation of}}
+    b(Pack<int*, float*>(), 1, 2, 3); // expected-note {{instantiation of}}
+  }
+}

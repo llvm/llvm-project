@@ -111,14 +111,12 @@ void testInlineCheckInNestedMacro(int *p) {
   *p = 1; // no-warning
 }
 
-// If there is a check in a macro that is not function-like, don't treat
-// it like a function so don't suppress.
 #define NON_FUNCTION_MACRO_WITH_CHECK ( ((p) != 0) ? *p : 17)
 void testNonFunctionMacro(int *p) {
   int i = NON_FUNCTION_MACRO_WITH_CHECK ;
   (void)i;
 
-  *p = 1; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+  *p = 1; // no-warning
 }
 
 
@@ -163,12 +161,22 @@ void testNestedDisjunctiveMacro2(int *p, int *q) {
 }
 
 
+
 // Here the check is entirely in non-macro code even though the code itself
 // is a macro argument.
 #define MACRO_DO_IT(a) (a)
 void testErrorInArgument(int *p) {
   int i = MACRO_DO_IT((p ? 0 : *p)); // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}c
   (void)i;
+}
+
+// No warning should be emitted if dereference is performed from a different
+// macro.
+#define MACRO_CHECK(a) if (a) {}
+#define MACRO_DEREF(a) (*a)
+int testDifferentMacro(int *p) {
+  MACRO_CHECK(p);
+  return MACRO_DEREF(p); // no-warning
 }
 
 // --------------------------

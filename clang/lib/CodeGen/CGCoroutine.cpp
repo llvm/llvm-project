@@ -181,10 +181,8 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
 
   auto *SuspendRet = CGF.EmitScalarExpr(S.getSuspendExpr());
-  if (SuspendRet != nullptr) {
+  if (SuspendRet != nullptr && SuspendRet->getType()->isIntegerTy(1)) {
     // Veto suspension if requested by bool returning await_suspend.
-    assert(SuspendRet->getType()->isIntegerTy(1) &&
-           "Sema should have already checked that it is void or bool");
     BasicBlock *RealSuspendBlock =
         CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
     CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
@@ -234,6 +232,13 @@ RValue CodeGenFunction::EmitCoyieldExpr(const CoyieldExpr &E,
 
 void CodeGenFunction::EmitCoreturnStmt(CoreturnStmt const &S) {
   ++CurCoro.Data->CoreturnCount;
+  const Expr *RV = S.getOperand();
+  if (RV && RV->getType()->isVoidType()) {
+    // Make sure to evaluate the expression of a co_return with a void
+    // expression for side effects.
+    RunCleanupsScope cleanupScope(*this);
+    EmitIgnoredExpr(RV);
+  }
   EmitStmt(S.getPromiseCall());
   EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
 }

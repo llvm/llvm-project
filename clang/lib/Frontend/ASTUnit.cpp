@@ -970,9 +970,8 @@ public:
     }
   }
 
-  void HandleMacroDefined(const Token &MacroNameTok,
-                          const MacroDirective *MD) override {
-    AddDefinedMacroToHash(MacroNameTok, Hash);
+  std::unique_ptr<PPCallbacks> createPPCallbacks() override {
+    return llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(Hash);
   }
 
 private:
@@ -1024,6 +1023,19 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   if (!Invocation)
     return true;
 
+  auto CCInvocation = std::make_shared<CompilerInvocation>(*Invocation);
+  if (OverrideMainBuffer) {
+    assert(Preamble &&
+           "No preamble was built, but OverrideMainBuffer is not null");
+    IntrusiveRefCntPtr<vfs::FileSystem> OldVFS = VFS;
+    Preamble->AddImplicitPreamble(*CCInvocation, VFS, OverrideMainBuffer.get());
+    if (OldVFS != VFS && FileMgr) {
+      assert(OldVFS == FileMgr->getVirtualFileSystem() &&
+             "VFS passed to Parse and VFS in FileMgr are different");
+      FileMgr = new FileManager(FileMgr->getFileSystemOpts(), VFS);
+    }
+  }
+
   // Create the compiler instance to use for building the AST.
   std::unique_ptr<CompilerInstance> Clang(
       new CompilerInstance(std::move(PCHContainerOps)));
@@ -1038,7 +1050,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
     CICleanup(Clang.get());
 
-  Clang->setInvocation(std::make_shared<CompilerInvocation>(*Invocation));
+  Clang->setInvocation(CCInvocation);
   OriginalSourceFile = Clang->getFrontendOpts().Inputs[0].getFile();
     
   // Set up diagnostics, capturing any diagnostics that would
@@ -1092,9 +1104,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
   if (OverrideMainBuffer) {
-    assert(Preamble && "No preamble was built, but OverrideMainBuffer is not null");
-    Preamble->AddImplicitPreamble(Clang->getInvocation(), OverrideMainBuffer.get());
-    
     // The stored diagnostic has the old source manager in it; update
     // the locations to refer into the new source manager. Since we've
     // been careful to make sure that the source manager's state
@@ -1283,7 +1292,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
 
     llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
         PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
-        PCHContainerOps, Callbacks);
+        PCHContainerOps, /*StoreInMemory=*/false, Callbacks);
     if (NewPreamble) {
       Preamble = std::move(*NewPreamble);
       PreambleRebuildCounter = 1;
@@ -1666,7 +1675,6 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   PreprocessorOptions &PPOpts = CI->getPreprocessorOpts();
   PPOpts.RemappedFilesKeepOriginalName = RemappedFilesKeepOriginalName;
   PPOpts.AllowPCHWithCompilerErrors = AllowPCHWithCompilerErrors;
-  PPOpts.GeneratePreamble = PrecompilePreambleAfterNParses != 0;
   PPOpts.SingleFileParseMode = SingleFileParse;
   
   // Override the resources path.
@@ -2163,8 +2171,16 @@ void ASTUnit::CodeComplete(
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
   if (OverrideMainBuffer) {
-    assert(Preamble && "No preamble was built, but OverrideMainBuffer is not null");
-    Preamble->AddImplicitPreamble(Clang->getInvocation(), OverrideMainBuffer.get());
+    assert(Preamble &&
+           "No preamble was built, but OverrideMainBuffer is not null");
+
+    auto VFS = FileMgr.getVirtualFileSystem();
+    Preamble->AddImplicitPreamble(Clang->getInvocation(), VFS,
+                                  OverrideMainBuffer.get());
+    // FIXME: there is no way to update VFS if it was changed by
+    // AddImplicitPreamble as FileMgr is accepted as a parameter by this method.
+    // We use on-disk preambles instead and rely on FileMgr's VFS to ensure the
+    // PCH files are always readable.
     OwnedBuffers.push_back(OverrideMainBuffer.release());
   } else {
     PreprocessorOpts.PrecompiledPreambleBytes.first = 0;
@@ -2406,7 +2422,7 @@ SourceLocation ASTUnit::getLocation(const FileEntry *File,
 /// \brief If \arg Loc is a loaded location from the preamble, returns
 /// the corresponding local location of the main file, otherwise it returns
 /// \arg Loc.
-SourceLocation ASTUnit::mapLocationFromPreamble(SourceLocation Loc) {
+SourceLocation ASTUnit::mapLocationFromPreamble(SourceLocation Loc) const {
   FileID PreambleID;
   if (SourceMgr)
     PreambleID = SourceMgr->getPreambleFileID();
@@ -2427,7 +2443,7 @@ SourceLocation ASTUnit::mapLocationFromPreamble(SourceLocation Loc) {
 /// \brief If \arg Loc is a local location of the main file but inside the
 /// preamble chunk, returns the corresponding loaded location from the
 /// preamble, otherwise it returns \arg Loc.
-SourceLocation ASTUnit::mapLocationToPreamble(SourceLocation Loc) {
+SourceLocation ASTUnit::mapLocationToPreamble(SourceLocation Loc) const {
   FileID PreambleID;
   if (SourceMgr)
     PreambleID = SourceMgr->getPreambleFileID();
@@ -2445,7 +2461,7 @@ SourceLocation ASTUnit::mapLocationToPreamble(SourceLocation Loc) {
   return Loc;
 }
 
-bool ASTUnit::isInPreambleFileID(SourceLocation Loc) {
+bool ASTUnit::isInPreambleFileID(SourceLocation Loc) const {
   FileID FID;
   if (SourceMgr)
     FID = SourceMgr->getPreambleFileID();
@@ -2456,7 +2472,7 @@ bool ASTUnit::isInPreambleFileID(SourceLocation Loc) {
   return SourceMgr->isInFileID(Loc, FID);
 }
 
-bool ASTUnit::isInMainFileID(SourceLocation Loc) {
+bool ASTUnit::isInMainFileID(SourceLocation Loc) const {
   FileID FID;
   if (SourceMgr)
     FID = SourceMgr->getMainFileID();
@@ -2467,7 +2483,7 @@ bool ASTUnit::isInMainFileID(SourceLocation Loc) {
   return SourceMgr->isInFileID(Loc, FID);
 }
 
-SourceLocation ASTUnit::getEndOfPreambleFileID() {
+SourceLocation ASTUnit::getEndOfPreambleFileID() const {
   FileID FID;
   if (SourceMgr)
     FID = SourceMgr->getPreambleFileID();
@@ -2478,7 +2494,7 @@ SourceLocation ASTUnit::getEndOfPreambleFileID() {
   return SourceMgr->getLocForEndOfFile(FID);
 }
 
-SourceLocation ASTUnit::getStartOfMainFileID() {
+SourceLocation ASTUnit::getStartOfMainFileID() const {
   FileID FID;
   if (SourceMgr)
     FID = SourceMgr->getMainFileID();
@@ -2554,7 +2570,7 @@ const FileEntry *ASTUnit::getPCHFile() {
   return nullptr;
 }
 
-bool ASTUnit::isModuleFile() {
+bool ASTUnit::isModuleFile() const {
   return isMainFileAST() && getLangOpts().isCompilingModule();
 }
 

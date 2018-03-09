@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fshort-wchar -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fwchar-type=short -fno-signed-wchar -verify %s
 
 void f() {
   (void)L"\U00010000"; // unicode escape produces UTF-16 sequence, so no warning

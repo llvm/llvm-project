@@ -49,6 +49,7 @@ module Clang_Basic {
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TokenKinds.def"
+  textual header "Basic/X86Target.def"
 
   module * { export * }
 }
@@ -69,9 +70,9 @@ module Clang_Diagnostics {
   module Frontend { header "Frontend/FrontendDiagnostic.h" export * }
   module Lex { header "Lex/LexDiagnostic.h" export * }
   module Parse { header "Parse/ParseDiagnostic.h" export * }
-  // FIXME: This breaks the build of Clang_Sema, for unknown reasons.
-  //module Sema { header "Sema/SemaDiagnostic.h" export * }
+  module Sema { header "Sema/SemaDiagnostic.h" export * }
   module Serialization { header "Serialization/SerializationDiagnostic.h" export * }
+  module Refactoring { header "Tooling/Refactoring/RefactoringDiagnostic.h" export * }
 }
 
 module Clang_Driver {
@@ -90,7 +91,6 @@ module Clang_Frontend {
   requires cplusplus
   umbrella "Frontend"
 
-  textual header "Frontend/CodeGenOptions.def"
   textual header "Frontend/LangStandards.def"
 
   module * { export * }
@@ -99,11 +99,20 @@ module Clang_Frontend {
   exclude header "Frontend/PCHContainerOperations.h"
 }
 
+// Used in clangBasic
+module Clang_Frontend_CodeGenOptions {
+  requires cplusplus
+  header "Frontend/CodeGenOptions.h"
+  textual header "Frontend/CodeGenOptions.def"
+  export *
+}
+
 module Clang_FrontendTool { requires cplusplus umbrella "FrontendTool" module * { export * } }
 module Clang_Index { requires cplusplus umbrella "Index" module * { export * } }
 module Clang_Lex { requires cplusplus umbrella "Lex" module * { export * } }
 module Clang_Parse { requires cplusplus umbrella "Parse" module * { export * } }
-module Clang_Rewrite { requires cplusplus umbrella "Rewrite" module * { export * } }
+module Clang_Rewrite { requires cplusplus umbrella "Rewrite/Core" module * { export * } }
+module Clang_RewriteFrontend { requires cplusplus umbrella "Rewrite/Frontend" module * { export * } }
 module Clang_Sema { requires cplusplus umbrella "Sema" module * { export * } }
 module Clang_Serialization { requires cplusplus umbrella "Serialization" module * { export * } }
 
@@ -141,4 +150,9 @@ module Clang_Tooling {
   exclude header "Tooling/Refactor/USRFinder.h"
 
   textual header "Tooling/Refactor/RefactoringActions.def"
+}
+
+module Clang_ToolingCore {
+  requires cplusplus
+  umbrella "Tooling/Core" module * { export * }
 }

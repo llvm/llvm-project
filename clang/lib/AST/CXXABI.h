@@ -31,9 +31,16 @@ class CXXABI {
 public:
   virtual ~CXXABI();
 
-  /// Returns the width and alignment of a member pointer in bits.
-  virtual std::pair<uint64_t, unsigned>
-  getMemberPointerWidthAndAlign(const MemberPointerType *MPT) const = 0;
+  struct MemberPointerInfo {
+    uint64_t Width;
+    unsigned Align;
+    bool HasPadding;
+  };
+
+  /// Returns the width and alignment of a member pointer in bits, as well as
+  /// whether it has padding.
+  virtual MemberPointerInfo
+  getMemberPointerInfo(const MemberPointerType *MPT) const = 0;
 
   /// Returns the default calling convention for C++ methods.
   virtual CallingConv getDefaultMethodCallConv(bool isVariadic) const = 0;

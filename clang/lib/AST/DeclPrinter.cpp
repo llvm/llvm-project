@@ -37,6 +37,8 @@ namespace {
     void ProcessDeclGroup(SmallVectorImpl<Decl*>& Decls);
 
     void Print(AccessSpecifier AS);
+    void PrintConstructorInitializers(CXXConstructorDecl *CDecl,
+                                      std::string &Proto);
 
     /// Print an Objective-C method type in parentheses.
     ///
@@ -282,6 +284,71 @@ void DeclPrinter::Print(AccessSpecifier AS) {
   }
 }
 
+void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
+                                               std::string &Proto) {
+  bool HasInitializerList = false;
+  for (const auto *BMInitializer : CDecl->inits()) {
+    if (BMInitializer->isInClassMemberInitializer())
+      continue;
+
+    if (!HasInitializerList) {
+      Proto += " : ";
+      Out << Proto;
+      Proto.clear();
+      HasInitializerList = true;
+    } else
+      Out << ", ";
+
+    if (BMInitializer->isAnyMemberInitializer()) {
+      FieldDecl *FD = BMInitializer->getAnyMember();
+      Out << *FD;
+    } else {
+      Out << QualType(BMInitializer->getBaseClass(), 0).getAsString(Policy);
+    }
+
+    Out << "(";
+    if (!BMInitializer->getInit()) {
+      // Nothing to print
+    } else {
+      Expr *Init = BMInitializer->getInit();
+      if (ExprWithCleanups *Tmp = dyn_cast<ExprWithCleanups>(Init))
+        Init = Tmp->getSubExpr();
+
+      Init = Init->IgnoreParens();
+
+      Expr *SimpleInit = nullptr;
+      Expr **Args = nullptr;
+      unsigned NumArgs = 0;
+      if (ParenListExpr *ParenList = dyn_cast<ParenListExpr>(Init)) {
+        Args = ParenList->getExprs();
+        NumArgs = ParenList->getNumExprs();
+      } else if (CXXConstructExpr *Construct =
+                     dyn_cast<CXXConstructExpr>(Init)) {
+        Args = Construct->getArgs();
+        NumArgs = Construct->getNumArgs();
+      } else
+        SimpleInit = Init;
+
+      if (SimpleInit)
+        SimpleInit->printPretty(Out, nullptr, Policy, Indentation);
+      else {
+        for (unsigned I = 0; I != NumArgs; ++I) {
+          assert(Args[I] != nullptr && "Expected non-null Expr");
+          if (isa<CXXDefaultArgExpr>(Args[I]))
+            break;
+
+          if (I)
+            Out << ", ";
+          Args[I]->printPretty(Out, nullptr, Policy, Indentation);
+        }
+      }
+    }
+    Out << ")";
+    if (BMInitializer->isPackExpansion())
+      Out << "...";
+  }
+}
+
 //----------------------------------------------------------------------------
 // Common C declarations
 //----------------------------------------------------------------------------
@@ -523,13 +590,19 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   PrintingPolicy SubPolicy(Policy);
   SubPolicy.SuppressSpecifiers = false;
   std::string Proto;
-  if (!Policy.SuppressScope) {
-    if (const NestedNameSpecifier *NS = D->getQualifier()) {
-      llvm::raw_string_ostream OS(Proto);
-      NS->print(OS, Policy);
+
+  if (Policy.FullyQualifiedName) {
+    Proto += D->getQualifiedNameAsString();
+  } else {
+    if (!Policy.SuppressScope) {
+      if (const NestedNameSpecifier *NS = D->getQualifier()) {
+        llvm::raw_string_ostream OS(Proto);
+        NS->print(OS, Policy);
+      }
     }
+    Proto += D->getNameInfo().getAsString();
   }
-  Proto += D->getNameInfo().getAsString();
+
   if (GuideDecl)
     Proto = GuideDecl->getDeducedTemplate()->getDeclName().getAsString();
   if (const TemplateArgumentList *TArgs = D->getTemplateSpecializationArgs()) {
@@ -618,67 +691,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     }
 
     if (CDecl) {
-      bool HasInitializerList = false;
-      for (const auto *BMInitializer : CDecl->inits()) {
-        if (BMInitializer->isInClassMemberInitializer())
-          continue;
-
-        if (!HasInitializerList) {
-          Proto += " : ";
-          Out << Proto;
-          Proto.clear();
-          HasInitializerList = true;
-        } else
-          Out << ", ";
-
-        if (BMInitializer->isAnyMemberInitializer()) {
-          FieldDecl *FD = BMInitializer->getAnyMember();
-          Out << *FD;
-        } else {
-          Out << QualType(BMInitializer->getBaseClass(), 0).getAsString(Policy);
-        }
-        
-        Out << "(";
-        if (!BMInitializer->getInit()) {
-          // Nothing to print
-        } else {
-          Expr *Init = BMInitializer->getInit();
-          if (ExprWithCleanups *Tmp = dyn_cast<ExprWithCleanups>(Init))
-            Init = Tmp->getSubExpr();
-          
-          Init = Init->IgnoreParens();
-
-          Expr *SimpleInit = nullptr;
-          Expr **Args = nullptr;
-          unsigned NumArgs = 0;
-          if (ParenListExpr *ParenList = dyn_cast<ParenListExpr>(Init)) {
-            Args = ParenList->getExprs();
-            NumArgs = ParenList->getNumExprs();
-          } else if (CXXConstructExpr *Construct
-                                        = dyn_cast<CXXConstructExpr>(Init)) {
-            Args = Construct->getArgs();
-            NumArgs = Construct->getNumArgs();
-          } else
-            SimpleInit = Init;
-          
-          if (SimpleInit)
-            SimpleInit->printPretty(Out, nullptr, Policy, Indentation);
-          else {
-            for (unsigned I = 0; I != NumArgs; ++I) {
-              assert(Args[I] != nullptr && "Expected non-null Expr");
-              if (isa<CXXDefaultArgExpr>(Args[I]))
-                break;
-              
-              if (I)
-                Out << ", ";
-              Args[I]->printPretty(Out, nullptr, Policy, Indentation);
-            }
-          }
-        }
-        Out << ")";
-        if (BMInitializer->isPackExpansion())
-          Out << "...";
-      }
+      if (!Policy.TerseOutput)
+        PrintConstructorInitializers(CDecl, Proto);
     } else if (!ConversionDecl && !isa<CXXDestructorDecl>(D)) {
       if (FT && FT->hasTrailingReturn()) {
         if (!GuideDecl)
@@ -722,7 +736,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       if (D->getBody())
         D->getBody()->printPretty(Out, nullptr, SubPolicy, Indentation);
     } else {
-      if (isa<CXXConstructorDecl>(*D))
+      if (!Policy.TerseOutput && isa<CXXConstructorDecl>(*D))
         Out << " {}";
     }
   }
@@ -1557,7 +1571,19 @@ void DeclPrinter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
     Out << ")";
     if (auto *Init = D->getInitializer()) {
       Out << " initializer(";
+      switch (D->getInitializerKind()) {
+      case OMPDeclareReductionDecl::DirectInit:
+        Out << "omp_priv(";
+        break;
+      case OMPDeclareReductionDecl::CopyInit:
+        Out << "omp_priv = ";
+        break;
+      case OMPDeclareReductionDecl::CallInit:
+        break;
+      }
       Init->printPretty(Out, nullptr, Policy, 0);
+      if (D->getInitializerKind() == OMPDeclareReductionDecl::DirectInit)
+        Out << ")";
       Out << ")";
     }
   }

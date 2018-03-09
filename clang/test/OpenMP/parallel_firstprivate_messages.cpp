@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+
 void foo() {
 }
 
@@ -56,7 +58,7 @@ using A::x;
 }
 
 int main(int argc, char **argv) {
-  const int d = 5;
+  const int d = 5; // expected-note {{variable 'd' declared const here}}
   const int da[5] = { 0 };
   S4 e(4);
   S5 g(5);
@@ -72,6 +74,8 @@ int main(int argc, char **argv) {
   #pragma omp parallel firstprivate (argc)
   #pragma omp parallel firstprivate (S1) // expected-error {{'S1' does not refer to a value}}
   #pragma omp parallel firstprivate (a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
+  #pragma omp parallel firstprivate (d)
+    d = 5; // expected-error {{cannot assign to variable 'd' with const-qualified type}}
   #pragma omp parallel firstprivate (argv[1]) // expected-error {{expected variable name}}
   #pragma omp parallel firstprivate(ba)
   #pragma omp parallel firstprivate(ca)

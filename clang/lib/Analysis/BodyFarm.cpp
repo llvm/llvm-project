@@ -133,7 +133,7 @@ BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
 }
 
 CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
-  return new (C) CompoundStmt(C, Stmts, SourceLocation(), SourceLocation());
+  return CompoundStmt::Create(C, Stmts, SourceLocation(), SourceLocation());
 }
 
 DeclRefExpr *ASTMaker::makeDeclRefExpr(
@@ -405,6 +405,16 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   // reference.
   for (unsigned int ParamIdx = 2; ParamIdx < D->getNumParams(); ParamIdx++) {
     const ParmVarDecl *PDecl = D->getParamDecl(ParamIdx);
+    if (PDecl &&
+        CallbackFunctionType->getParamType(ParamIdx - 2)
+                .getNonReferenceType()
+                .getCanonicalType() !=
+            PDecl->getType().getNonReferenceType().getCanonicalType()) {
+      DEBUG(llvm::dbgs() << "Types of params of the callback do not match "
+                         << "params passed to std::call_once, "
+                         << "ignoring the call\n");
+      return nullptr;
+    }
     Expr *ParamExpr = M.makeDeclRefExpr(PDecl);
     if (!CallbackFunctionType->getParamType(ParamIdx - 2)->isReferenceType()) {
       QualType PTy = PDecl->getType().getNonReferenceType();
@@ -813,4 +823,3 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
 
   return Val.getValue();
 }
-

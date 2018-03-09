@@ -16,6 +16,13 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/ProgramPoint.h"
+#include "clang/CrossTU/CrossTranslationUnit.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -369,7 +376,27 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     }
   }
 
-  return RuntimeDefinition();
+  SubEngine *Engine = getState()->getStateManager().getOwningEngine();
+  AnalyzerOptions &Opts = Engine->getAnalysisManager().options;
+
+  // Try to get CTU definition only if CTUDir is provided.
+  if (!Opts.naiveCTUEnabled())
+    return RuntimeDefinition();
+
+  cross_tu::CrossTranslationUnitContext &CTUCtx =
+      *Engine->getCrossTranslationUnitContext();
+  llvm::Expected<const FunctionDecl *> CTUDeclOrError =
+      CTUCtx.getCrossTUDefinition(FD, Opts.getCTUDir(), Opts.getCTUIndexName());
+
+  if (!CTUDeclOrError) {
+    handleAllErrors(CTUDeclOrError.takeError(),
+                    [&](const cross_tu::IndexError &IE) {
+                      CTUCtx.emitCrossTUDiagnostics(IE);
+                    });
+    return {};
+  }
+
+  return RuntimeDefinition(*CTUDeclOrError);
 }
 
 void AnyFunctionCall::getInitialStackFrameContents(
@@ -587,7 +614,15 @@ void CXXInstanceCall::getInitialStackFrameContents(
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
       bool Failed;
       ThisVal = StateMgr.getStoreManager().attemptDownCast(ThisVal, Ty, Failed);
-      assert(!Failed && "Calling an incorrectly devirtualized method");
+      if (Failed) {
+        // We might have suffered some sort of placement new earlier, so
+        // we're constructing in a completely unexpected storage.
+        // Fall back to a generic pointer cast for this-value.
+        const CXXMethodDecl *StaticMD = cast<CXXMethodDecl>(getDecl());
+        const CXXRecordDecl *StaticClass = StaticMD->getParent();
+        QualType StaticTy = Ctx.getPointerType(Ctx.getRecordType(StaticClass));
+        ThisVal = SVB.evalCast(ThisVal, Ty, StaticTy);
+      }
     }
 
     if (!ThisVal.isUnknown())
@@ -672,8 +707,13 @@ SVal CXXConstructorCall::getCXXThisVal() const {
 
 void CXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
                            RegionAndSymbolInvalidationTraits *ETraits) const {
-  if (Data)
-    Values.push_back(loc::MemRegionVal(static_cast<const MemRegion *>(Data)));
+  if (Data) {
+    loc::MemRegionVal MV(static_cast<const MemRegion *>(Data));
+    if (SymbolRef Sym = MV.getAsSymbol(true))
+      ETraits->setTrait(Sym,
+                        RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+    Values.push_back(MV);
+  }
 }
 
 void CXXConstructorCall::getInitialStackFrameContents(
@@ -1192,9 +1232,8 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   // destructors, though this could change in the future.
   const CFGBlock *B = CalleeCtx->getCallSiteBlock();
   CFGElement E = (*B)[CalleeCtx->getIndex()];
-  assert(E.getAs<CFGImplicitDtor>() &&
+  assert((E.getAs<CFGImplicitDtor>() || E.getAs<CFGTemporaryDtor>()) &&
          "All other CFG elements should have exprs");
-  assert(!E.getAs<CFGTemporaryDtor>() && "We don't handle temporaries yet");
 
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CalleeCtx->getDecl());

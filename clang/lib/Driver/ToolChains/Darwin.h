@@ -174,16 +174,16 @@ public:
 
   /// Options to control how a runtime library is linked.
   enum RuntimeLinkOptions : unsigned {
-    // Link the library in even if it can't be found in the VFS.
+    /// Link the library in even if it can't be found in the VFS.
     RLO_AlwaysLink = 1 << 0,
 
-    // Use the embedded runtime from the macho_embedded directory.
+    /// Use the embedded runtime from the macho_embedded directory.
     RLO_IsEmbedded = 1 << 1,
 
-    // Emit rpaths for @executable_path as well as the resource directory.
+    /// Emit rpaths for @executable_path as well as the resource directory.
     RLO_AddRPath = 1 << 2,
 
-    //< Link the library in before any others.
+    /// Link the library in before any others.
     RLO_FirstLink = 1 << 3,
   };
 
@@ -245,12 +245,11 @@ public:
 
   bool SupportsProfiling() const override;
 
-  bool SupportsObjCGC() const override { return false; }
-
   bool UseDwarfDebugFlags() const override;
 
-  bool UseSjLjExceptions(const llvm::opt::ArgList &Args) const override {
-    return false;
+  llvm::ExceptionHandling
+  GetExceptionModel(const llvm::opt::ArgList &Args) const override {
+    return llvm::ExceptionHandling::None;
   }
 
   /// }
@@ -464,11 +463,10 @@ public:
     return 0;
   }
 
-  bool SupportsObjCGC() const override;
-
   void CheckObjCARC() const override;
 
-  bool UseSjLjExceptions(const llvm::opt::ArgList &Args) const override;
+  llvm::ExceptionHandling GetExceptionModel(
+      const llvm::opt::ArgList &Args) const override;
 
   bool SupportsEmbeddedBitcode() const override;
 

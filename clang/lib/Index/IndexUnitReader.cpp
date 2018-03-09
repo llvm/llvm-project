@@ -19,9 +19,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <unistd.h>
 
 using namespace clang;
 using namespace clang::index;
@@ -400,7 +399,7 @@ IndexUnitReader::createWithFilePath(StringRef FilePath, std::string &Error) {
     int FD;
     AutoFDClose(int FD) : FD(FD) {}
     ~AutoFDClose() {
-      ::close(FD);
+        llvm::sys::Process::SafelyCloseFileDescriptor(FD);
     }
   } AutoFDClose(FD);
 

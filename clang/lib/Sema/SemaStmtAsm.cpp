@@ -48,10 +48,10 @@ static bool CheckAsmLValue(const Expr *E, Sema &S) {
   if (E != E2 && E2->isLValue()) {
     if (!S.getLangOpts().HeinousExtensions)
       S.Diag(E2->getLocStart(), diag::err_invalid_asm_cast_lvalue)
-        << E->getSourceRange();
+          << E->getSourceRange();
     else
       S.Diag(E2->getLocStart(), diag::warn_invalid_asm_cast_lvalue)
-        << E->getSourceRange();
+          << E->getSourceRange();
     // Accept, even if we emitted an error diagnostic.
     return false;
   }
@@ -62,11 +62,13 @@ static bool CheckAsmLValue(const Expr *E, Sema &S) {
 
 /// isOperandMentioned - Return true if the specified operand # is mentioned
 /// anywhere in the decomposed asm string.
-static bool isOperandMentioned(unsigned OpNo,
-                         ArrayRef<GCCAsmStmt::AsmStringPiece> AsmStrPieces) {
+static bool
+isOperandMentioned(unsigned OpNo,
+                   ArrayRef<GCCAsmStmt::AsmStringPiece> AsmStrPieces) {
   for (unsigned p = 0, e = AsmStrPieces.size(); p != e; ++p) {
     const GCCAsmStmt::AsmStringPiece &Piece = AsmStrPieces[p];
-    if (!Piece.isOperand()) continue;
+    if (!Piece.isOperand())
+      continue;
 
     // If this is a reference to the input and if the input was the smaller
     // one, then we have to reject this asm.
@@ -605,23 +607,31 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   return NS;
 }
 
-static void fillInlineAsmTypeInfo(const ASTContext &Context, QualType T,
-                                  llvm::InlineAsmIdentifierInfo &Info) {
-  // Compute the type size (and array length if applicable?).
-  Info.Type = Info.Size = Context.getTypeSizeInChars(T).getQuantity();
-  if (T->isArrayType()) {
-    const ArrayType *ATy = Context.getAsArrayType(T);
-    Info.Type = Context.getTypeSizeInChars(ATy->getElementType()).getQuantity();
-    Info.Length = Info.Size / Info.Type;
+void Sema::FillInlineAsmIdentifierInfo(Expr *Res,
+                                       llvm::InlineAsmIdentifierInfo &Info) {
+  QualType T = Res->getType();
+  Expr::EvalResult Eval;
+  if (T->isFunctionType() || T->isDependentType())
+    return Info.setLabel(Res);
+  if (Res->isRValue()) {
+    if (isa<clang::EnumType>(T) && Res->EvaluateAsRValue(Eval, Context))
+      return Info.setEnum(Eval.Val.getInt().getSExtValue());
+    return Info.setLabel(Res);
   }
+  unsigned Size = Context.getTypeSizeInChars(T).getQuantity();
+  unsigned Type = Size;
+  if (const auto *ATy = Context.getAsArrayType(T))
+    Type = Context.getTypeSizeInChars(ATy->getElementType()).getQuantity();
+  bool IsGlobalLV = false;
+  if (Res->EvaluateAsLValue(Eval, Context))
+    IsGlobalLV = Eval.isGlobalLValue();
+  Info.setVar(Res, IsGlobalLV, Size, Type);
 }
 
 ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
                                            SourceLocation TemplateKWLoc,
                                            UnqualifiedId &Id,
-                                           llvm::InlineAsmIdentifierInfo &Info,
                                            bool IsUnevaluatedContext) {
-  Info.clear();
 
   if (IsUnevaluatedContext)
     PushExpressionEvaluationContext(
@@ -662,12 +672,6 @@ ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
     return ExprError();
   }
 
-  fillInlineAsmTypeInfo(Context, T, Info);
-
-  // We can work with the expression as long as it's not an r-value.
-  if (!Result.get()->isRValue())
-    Info.IsVarDecl = true;
-
   return Result;
 }
 
@@ -677,22 +681,33 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
   SmallVector<StringRef, 2> Members;
   Member.split(Members, ".");
 
-  LookupResult BaseResult(*this, &Context.Idents.get(Base), SourceLocation(),
-                          LookupOrdinaryName);
+  NamedDecl *FoundDecl = nullptr;
 
-  if (!LookupName(BaseResult, getCurScope()))
+  // MS InlineAsm uses 'this' as a base
+  if (getLangOpts().CPlusPlus && Base.equals("this")) {
+    if (const Type *PT = getCurrentThisType().getTypePtrOrNull())
+      FoundDecl = PT->getPointeeType()->getAsTagDecl();
+  } else {
+    LookupResult BaseResult(*this, &Context.Idents.get(Base), SourceLocation(),
+                            LookupOrdinaryName);
+    if (LookupName(BaseResult, getCurScope()) && BaseResult.isSingleResult())
+      FoundDecl = BaseResult.getFoundDecl();
+  }
+
+  if (!FoundDecl)
     return true;
-  
-  if(!BaseResult.isSingleResult())
-    return true;
-  NamedDecl *FoundDecl = BaseResult.getFoundDecl();
+
   for (StringRef NextMember : Members) {
     const RecordType *RT = nullptr;
     if (VarDecl *VD = dyn_cast<VarDecl>(FoundDecl))
       RT = VD->getType()->getAs<RecordType>();
     else if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(FoundDecl)) {
       MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
-      RT = TD->getUnderlyingType()->getAs<RecordType>();
+      // MS InlineAsm often uses struct pointer aliases as a base
+      QualType QT = TD->getUnderlyingType();
+      if (const auto *PT = QT->getAs<PointerType>())
+        QT = PT->getPointeeType();
+      RT = QT->getAs<RecordType>();
     } else if (TypeDecl *TD = dyn_cast<TypeDecl>(FoundDecl))
       RT = TD->getTypeForDecl()->getAs<RecordType>();
     else if (FieldDecl *TD = dyn_cast<FieldDecl>(FoundDecl))
@@ -730,9 +745,7 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
 
 ExprResult
 Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
-                                  llvm::InlineAsmIdentifierInfo &Info,
                                   SourceLocation AsmLoc) {
-  Info.clear();
 
   QualType T = E->getType();
   if (T->isDependentType()) {
@@ -767,14 +780,6 @@ Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
   ExprResult Result = BuildMemberReferenceExpr(
       E, E->getType(), AsmLoc, /*IsArrow=*/false, CXXScopeSpec(),
       SourceLocation(), nullptr, FieldResult, nullptr, nullptr);
-  if (Result.isInvalid())
-    return Result;
-  Info.OpDecl = Result.get();
-
-  fillInlineAsmTypeInfo(Context, Result.get()->getType(), Info);
-
-  // Fields are "variables" as far as inline assembly is concerned.
-  Info.IsVarDecl = true;
 
   return Result;
 }

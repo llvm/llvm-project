@@ -40,3 +40,8 @@ void B::bar(float real) {
 // CHECK-ACCESS-PATTERN: NotImplemented:{TypedText private}{Colon :} (40)
 // CHECK-ACCESS-PATTERN: NotImplemented:{TypedText protected}{Colon :} (40)
 // CHECK-ACCESS-PATTERN: NotImplemented:{TypedText public}{Colon :} (40)
+
+// RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:10:12 %s | FileCheck -check-prefix=CHECK-INHERITANCE-PATTERN %s
+// CHECK-INHERITANCE-PATTERN: NotImplemented:{TypedText private} (40)
+// CHECK-INHERITANCE-PATTERN: NotImplemented:{TypedText protected} (40)
+// CHECK-INHERITANCE-PATTERN: NotImplemented:{TypedText public} (40)

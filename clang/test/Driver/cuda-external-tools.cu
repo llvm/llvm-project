@@ -65,6 +65,10 @@
 // RUN: %clang -### -target x86_32-apple-macosx -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix ARCH32 -check-prefix SM20 %s
 
+// Check that CLANG forwards the -v flag to PTXAS.
+// RUN:   %clang -### -save-temps -no-canonical-prefixes -v %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-PTXAS-VERBOSE %s
+
 // Match clang job that produces PTX assembly.
 // CHECK: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // SM20: "-target-cpu" "sm_20"
@@ -110,3 +114,5 @@
 // Match the clang job for host compilation.
 // CHECK: "-cc1" "-triple" "x86_64--linux-gnu"
 // CHECK-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
+
+// CHK-PTXAS-VERBOSE: ptxas{{.*}}" "-v"

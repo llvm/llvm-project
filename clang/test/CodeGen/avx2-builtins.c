@@ -8,19 +8,25 @@
 
 __m256i test_mm256_abs_epi8(__m256i a) {
   // CHECK-LABEL: test_mm256_abs_epi8
-  // CHECK: call <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8> %{{.*}})
+  // CHECK: [[SUB:%.*]] = sub <32 x i8> zeroinitializer, %{{.*}}
+  // CHECK: [[CMP:%.*]] = icmp sgt <32 x i8> %{{.*}}, zeroinitializer
+  // CHECK: select <32 x i1> [[CMP]], <32 x i8> %{{.*}}, <32 x i8> [[SUB]]
   return _mm256_abs_epi8(a);
 }
 
 __m256i test_mm256_abs_epi16(__m256i a) {
   // CHECK-LABEL: test_mm256_abs_epi16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16> %{{.*}})
+  // CHECK: [[SUB:%.*]] = sub <16 x i16> zeroinitializer, %{{.*}}
+  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i16> %{{.*}}, zeroinitializer
+  // CHECK: select <16 x i1> [[CMP]], <16 x i16> %{{.*}}, <16 x i16> [[SUB]]
   return _mm256_abs_epi16(a);
 }
 
 __m256i test_mm256_abs_epi32(__m256i a) {
   // CHECK-LABEL: test_mm256_abs_epi32
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pabs.d(<8 x i32> %{{.*}})
+  // CHECK: [[SUB:%.*]] = sub <8 x i32> zeroinitializer, %{{.*}}
+  // CHECK: [[CMP:%.*]] = icmp sgt <8 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <8 x i1> [[CMP]], <8 x i32> %{{.*}}, <8 x i32> [[SUB]]
   return _mm256_abs_epi32(a);
 }
 
@@ -99,13 +105,25 @@ __m256i test_mm256_andnot_si256(__m256i a, __m256i b) {
 
 __m256i test_mm256_avg_epu8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_avg_epu8
-  // CHECK: call <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK-NOT: call <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
+  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
+  // CHECK: add <32 x i16> %{{.*}}, %{{.*}}
+  // CHECK: add <32 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  // CHECK: lshr <32 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
   return _mm256_avg_epu8(a, b);
 }
 
 __m256i test_mm256_avg_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_avg_epu16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK-NOT: call <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
+  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
+  // CHECK: add <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: add <16 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  // CHECK: lshr <16 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
   return _mm256_avg_epu16(a, b);
 }
 
@@ -889,8 +907,8 @@ __m256i test_mm256_packs_epu32(__m256i a, __m256i b) {
 
 __m256i test_mm256_permute2x128_si256(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_permute2x128_si256
-  // CHECK: call <4 x i64> @llvm.x86.avx2.vperm2i128(<4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 49)
-  return _mm256_permute2x128_si256(a, b, 0x31);
+  // CHECK: shufflevector <4 x i64> zeroinitializer, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  return _mm256_permute2x128_si256(a, b, 0x38);
 }
 
 __m256i test_mm256_permute4x64_epi64(__m256i a) {

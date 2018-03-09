@@ -56,12 +56,12 @@ struct StoresNonLit {
 #if defined(TEST_ONE) // Test semantics of attribute
 
 // Test diagnostics when attribute is applied to non-static declarations.
-void test_func_local(ATTR int param) { // expected-error {{only applies to variables with static or thread}}
-  ATTR int x = 42;                     // expected-error {{only applies to variables with static or thread}}
+void test_func_local(ATTR int param) { // expected-error {{only applies to global variables}}
+  ATTR int x = 42;                     // expected-error {{only applies to}}
   ATTR extern int y;
 }
-struct ATTR class_mem { // expected-error {{only applies to variables with static or thread}}
-  ATTR int x;           // expected-error {{only applies to variables with static or thread}}
+struct ATTR class_mem { // expected-error {{only applies to}}
+  ATTR int x;           // expected-error {{only applies to}}
 };
 
 // [basic.start.static]p2.1

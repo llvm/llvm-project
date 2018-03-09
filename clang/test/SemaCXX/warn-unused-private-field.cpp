@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++17 %s
 
 class NotFullyDefined {
  public:
@@ -246,3 +247,19 @@ namespace pr13543 {
     X x[4]; // no-warning
   };
 }
+
+class implicit_special_member {
+public:
+  static implicit_special_member make() { return implicit_special_member(); }
+
+private:
+  int n; // expected-warning{{private field 'n' is not used}}
+};
+
+class defaulted_special_member {
+public:
+  defaulted_special_member(const defaulted_special_member&) = default;
+
+private:
+  int n; // expected-warning{{private field 'n' is not used}}
+};

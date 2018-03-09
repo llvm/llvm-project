@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s
+
 void foo() {
 }
 
@@ -37,21 +39,21 @@ int main(int argc, char **argv, char *env[]) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute depend (out: ) // expected-error {{expected expression}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute depend (inout : foobool(argc)), depend (in, argc) // expected-error {{expected variable name, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
+#pragma omp target teams distribute depend (inout : foobool(argc)), depend (in, argc) // expected-error {{expected addressable lvalue expression, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute depend (out :S1) // expected-error {{'S1' does not refer to a value}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute depend(in : argv[1][1] = '2') // expected-error {{expected variable name, array element or array section}}
+#pragma omp target teams distribute depend(in : argv[1][1] = '2')
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute depend (in : vec[1]) // expected-error {{expected variable name, array element or array section}}
+#pragma omp target teams distribute depend (in : vec[1]) // expected-error {{expected addressable lvalue expression, array element or array section}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute depend (in : argv[0])
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute depend (in : ) // expected-error {{expected expression}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute depend (in : main) // expected-error {{expected variable name, array element or array section}}
+#pragma omp target teams distribute depend (in : main)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute depend(in : a[0]) // expected-error{{expected variable name, array element or array section}}
+#pragma omp target teams distribute depend(in : a[0]) // expected-error{{expected addressable lvalue expression, array element or array section}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute depend (in : vec[1:2]) // expected-error {{ value is not an array or pointer}}
   for (i = 0; i < argc; ++i) foo();

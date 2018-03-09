@@ -8,7 +8,7 @@ template<typename T> auto v1 = [](int a = T(1)) { return a; }();
 
 struct S {
   template<class T>
-  static constexpr T t = [](int f = T(7)){return f;}(); // expected-error{{constexpr variable 't<int>' must be initialized by a constant expression}} expected-error{{a lambda expression may not appear inside of a constant expression}} expected-note{{cannot be used in a constant expression}}
+  static constexpr T t = [](int f = T(7)){return f;}(); // expected-error{{constexpr variable 't<int>' must be initialized by a constant expression}} expected-note{{cannot be used in a constant expression}}
 };
 
 template <typename X>

@@ -61,6 +61,8 @@ CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
+CODEGENOPT(NoEscapingBlockTailCalls, 1, 0) ///< Do not emit tail calls from
+                                           ///< escaping blocks.
 CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what
                                      ///< Decl* various IR entities came from.
                                      ///< Only useful when running CodeGen as a
@@ -76,9 +78,16 @@ CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
 CODEGENOPT(InstrumentFunctions , 1, 0) ///< Set when -finstrument-functions is
                                        ///< enabled.
+CODEGENOPT(InstrumentFunctionsAfterInlining , 1, 0) ///< Set when
+                          ///< -finstrument-functions-after-inlining is enabled.
+CODEGENOPT(InstrumentFunctionEntryBare , 1, 0) ///< Set when
+                               ///< -finstrument-function-entry-bare is enabled.
 
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
+
+///< Set when -fxray-always-emit-customevents is enabled.
+CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0)
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
@@ -110,6 +119,7 @@ CODEGENOPT(EnableSegmentedStacks , 1, 0) ///< Set when -fsplit-stack is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.
 CODEGENOPT(NoInfsFPMath      , 1, 0) ///< Assume FP arguments, results not +-Inf.
 CODEGENOPT(NoSignedZeros     , 1, 0) ///< Allow ignoring the signedness of FP zero
+CODEGENOPT(Reassociate       , 1, 0) ///< Allow reassociation of FP math ops
 CODEGENOPT(ReciprocalMath    , 1, 0) ///< Allow FP divisions to be reassociated.
 CODEGENOPT(NoTrappingMath    , 1, 0) ///< Set when -fno-trapping-math is enabled.
 CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
@@ -120,6 +130,10 @@ CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
 CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer is
                                         ///< enabled.
+
+/// A version of Clang that we should attempt to be ABI-compatible with.
+ENUM_CODEGENOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest)
+
 VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
@@ -138,6 +152,7 @@ ENUM_CODEGENOPT(StructReturnConvention, StructReturnConventionKind, 2, SRCK_Defa
 CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
 CODEGENOPT(StructPathTBAA    , 1, 0) ///< Whether or not to use struct-path TBAA.
+CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-path TBAA.
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
 CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
                                                 ///< in AddressSanitizer
@@ -150,6 +165,8 @@ CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detect
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.
 CODEGENOPT(SanitizeMinimalRuntime, 1, 0) ///< Use "_minimal" sanitizer runtime for
                                          ///< diagnostics.
+CODEGENOPT(SanitizeCfiICallGeneralizePointers, 1, 0) ///< Generalize pointer types in
+                                                     ///< CFI icall function signatures
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage
@@ -169,10 +186,13 @@ CODEGENOPT(SanitizeCoverageTracePC, 1, 0) ///< Enable PC tracing
 CODEGENOPT(SanitizeCoverageTracePCGuard, 1, 0) ///< Enable PC tracing with guard
                                                ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageInline8bitCounters, 1, 0) ///< Use inline 8bit counters.
+CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.
 CODEGENOPT(SanitizeCoverageNoPrune, 1, 0) ///< Disable coverage pruning.
+CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
 CODEGENOPT(SanitizeStats     , 1, 0) ///< Collect statistics for sanitizers.
 CODEGENOPT(SimplifyLibCalls  , 1, 1) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0) ///< -soft-float.
+CODEGENOPT(FineGrainedBitfieldAccesses, 1, 0) ///< Enable fine-grained bitfield accesses.
 CODEGENOPT(StrictEnums       , 1, 0) ///< Optimize based on strict enum definition.
 CODEGENOPT(StrictVTablePointers, 1, 0) ///< Optimize based on the strict vtable pointers
 CODEGENOPT(TimePasses        , 1, 0) ///< Set when -ftime-report is enabled.
@@ -183,6 +203,7 @@ CODEGENOPT(UnsafeFPMath      , 1, 0) ///< Allow unsafe floating point optzns.
 CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
 CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.
+CODEGENOPT(ProfileSampleAccurate, 1, 0) ///< Sample profile is accurate.
 
   /// Attempt to use register sized accesses to bit-fields in structures, when
   /// possible.
@@ -212,6 +233,10 @@ CODEGENOPT(EnableSplitDwarf, 1, 0) ///< Whether to enable split DWARF
 CODEGENOPT(SplitDwarfInlining, 1, 1) ///< Whether to include inlining info in the
                                      ///< skeleton CU to allow for symbolication
 				     ///< of inline stack frames without .dwo files.
+CODEGENOPT(DebugFwdTemplateParams, 1, 0) ///< Whether to emit complete
+                                         ///< template parameter descriptions in
+                                         ///< forward declarations (versus just
+                                         ///< including them in the name).
 
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 
@@ -279,6 +304,11 @@ CODEGENOPT(DebugInfoForProfiling, 1, 0)
 
 /// Whether 3-component vector type is preserved.
 CODEGENOPT(PreserveVec3Type, 1, 0)
+
+/// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
+CODEGENOPT(GnuPubnames, 1, 0)
+
+CODEGENOPT(NoPLT, 1, 0)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

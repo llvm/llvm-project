@@ -575,13 +575,15 @@ public:
   OverloadsShown getShowOverloads() const { return ShowOverloads; }
   
   /// \brief Pretend that the last diagnostic issued was ignored, so any
-  /// subsequent notes will be suppressed.
+  /// subsequent notes will be suppressed, or restore a prior ignoring
+  /// state after ignoring some diagnostics and their notes, possibly in
+  /// the middle of another diagnostic.
   ///
   /// This can be used by clients who suppress diagnostics themselves.
-  void setLastDiagnosticIgnored() {
+  void setLastDiagnosticIgnored(bool Ignored = true) {
     if (LastDiagLevel == DiagnosticIDs::Fatal)
       FatalErrorOccurred = true;
-    LastDiagLevel = DiagnosticIDs::Ignored;
+    LastDiagLevel = Ignored ? DiagnosticIDs::Ignored : DiagnosticIDs::Warning;
   }
 
   /// \brief Determine whether the previous diagnostic was ignored. This can

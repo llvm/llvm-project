@@ -564,10 +564,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     HandlePragmaUnused();
     return false;
 
-  case tok::kw_import:
-    Result = ParseModuleImport(SourceLocation());
-    return false;
-
   case tok::kw_export:
     if (NextToken().isNot(tok::kw_module))
       break;
@@ -645,6 +641,9 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
 ///           ';'
 ///
 /// [C++0x/GNU] 'extern' 'template' declaration
+///
+/// [Modules-TS] module-import-declaration
+///
 Parser::DeclGroupPtrTy
 Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
                                  ParsingDeclSpec *DS) {
@@ -772,6 +771,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
         CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
     cutOffParsing();
     return nullptr;
+  case tok::kw_import:
+    SingleDecl = ParseModuleImport(SourceLocation());
+    break;
   case tok::kw_export:
     if (getLangOpts().ModulesTS) {
       SingleDecl = ParseExportDeclaration();
@@ -789,7 +791,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     // A function definition cannot start with any of these keywords.
     {
       SourceLocation DeclEnd;
-      return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
     }
 
   case tok::kw_static:
@@ -799,7 +801,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
         << 0;
       SourceLocation DeclEnd;
-      return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
     }
     goto dont_know;
       
@@ -810,7 +812,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       // Inline namespaces. Allowed as an extension even in C++03.
       if (NextKind == tok::kw_namespace) {
         SourceLocation DeclEnd;
-        return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
       }
       
       // Parse (then ignore) 'inline' prior to a template instantiation. This is
@@ -819,7 +821,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
         Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
           << 1;
         SourceLocation DeclEnd;
-        return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
       }
     }
     goto dont_know;
@@ -834,7 +836,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
       return Actions.ConvertDeclToDeclGroup(
-                  ParseExplicitInstantiation(Declarator::FileContext,
+                  ParseExplicitInstantiation(DeclaratorContext::FileContext,
                                              ExternLoc, TemplateLoc, DeclEnd));
     }
     goto dont_know;
@@ -925,18 +927,43 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
                                        AccessSpecifier AS) {
   MaybeParseMicrosoftAttributes(DS.getAttributes());
   // Parse the common declaration-specifiers piece.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS, DSC_top_level);
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS,
+                             DeclSpecContext::DSC_top_level);
 
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
-  if (DS.hasTagDefinition() &&
-      DiagnoseMissingSemiAfterTagDefinition(DS, AS, DSC_top_level))
+  if (DS.hasTagDefinition() && DiagnoseMissingSemiAfterTagDefinition(
+                                   DS, AS, DeclSpecContext::DSC_top_level))
     return nullptr;
 
   // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
   // declaration-specifiers init-declarator-list[opt] ';'
   if (Tok.is(tok::semi)) {
-    ProhibitAttributes(attrs);
+    auto LengthOfTSTToken = [](DeclSpec::TST TKind) {
+      assert(DeclSpec::isDeclRep(TKind));
+      switch(TKind) {
+      case DeclSpec::TST_class:
+        return 5;
+      case DeclSpec::TST_struct:
+        return 6;
+      case DeclSpec::TST_union:
+        return 5;
+      case DeclSpec::TST_enum:
+        return 4;
+      case DeclSpec::TST_interface:
+        return 9;
+      default:
+        llvm_unreachable("we only expect to get the length of the class/struct/union/enum");
+      }
+      
+    };
+    // Suggest correct location to fix '[[attrib]] struct' to 'struct [[attrib]]'
+    SourceLocation CorrectLocationForAttributes =
+        DeclSpec::isDeclRep(DS.getTypeSpecType())
+            ? DS.getTypeSpecTypeLoc().getLocWithOffset(
+                  LengthOfTSTToken(DS.getTypeSpecType()))
+            : SourceLocation();
+    ProhibitAttributes(attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
@@ -986,11 +1013,11 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   if (getLangOpts().CPlusPlus && isTokenStringLiteral() &&
       DS.getStorageClassSpec() == DeclSpec::SCS_extern &&
       DS.getParsedSpecifiers() == DeclSpec::PQ_StorageClassSpecifier) {
-    Decl *TheDecl = ParseLinkage(DS, Declarator::FileContext);
+    Decl *TheDecl = ParseLinkage(DS, DeclaratorContext::FileContext);
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  return ParseDeclGroup(DS, Declarator::FileContext);
+  return ParseDeclGroup(DS, DeclaratorContext::FileContext);
 }
 
 Parser::DeclGroupPtrTy
@@ -1087,8 +1114,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       TemplateInfo.Kind == ParsedTemplateInfo::Template &&
       Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
-    
-    ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
+
+    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
+                                   Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
     D.setFunctionDefinitionKind(FDK_Definition);
@@ -1118,7 +1146,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
            (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) ||
             Tok.is(tok::colon)) && 
       Actions.CurContext->isTranslationUnit()) {
-    ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
+    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
+                                   Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
     D.setFunctionDefinitionKind(FDK_Definition);
@@ -1136,7 +1165,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   }
 
   // Enter a scope for the function body.
-  ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
+  ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
+                                 Scope::CompoundStmtScope);
 
   // Tell the actions module that we have entered a function definition with the
   // specified Declarator for the function.
@@ -1292,7 +1322,7 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
     }
 
     // Parse the first declarator attached to this declspec.
-    Declarator ParmDeclarator(DS, Declarator::KNRTypeListContext);
+    Declarator ParmDeclarator(DS, DeclaratorContext::KNRTypeListContext);
     ParseDeclarator(ParmDeclarator);
 
     // Handle the full declarator list.
@@ -2059,7 +2089,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
   SourceLocation StartLoc = Tok.getLocation();
 
   Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
-                                 ? Sema::ModuleDeclKind::Module
+                                 ? Sema::ModuleDeclKind::Interface
                                  : Sema::ModuleDeclKind::Implementation;
 
   assert(Tok.is(tok::kw_module) && "not a module declaration");
@@ -2068,7 +2098,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
   if (Tok.is(tok::identifier) && NextToken().is(tok::identifier) &&
       Tok.getIdentifierInfo()->isStr("partition")) {
     // If 'partition' is present, this must be a module interface unit.
-    if (MDK != Sema::ModuleDeclKind::Module)
+    if (MDK != Sema::ModuleDeclKind::Interface)
       Diag(Tok.getLocation(), diag::err_module_implementation_partition)
         << FixItHint::CreateInsertion(ModuleLoc, "export ");
     MDK = Sema::ModuleDeclKind::Partition;
@@ -2097,7 +2127,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
 ///           '@' 'import' module-name ';'
 /// [ModTS] module-import-declaration:
 ///           'import' module-name attribute-specifier-seq[opt] ';'
-Parser::DeclGroupPtrTy Parser::ParseModuleImport(SourceLocation AtLoc) {
+Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
   assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
@@ -2124,7 +2154,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleImport(SourceLocation AtLoc) {
   if (Import.isInvalid())
     return nullptr;
 
-  return Actions.ConvertDeclToDeclGroup(Import.get());
+  return Import.get();
 }
 
 /// Parse a C++ Modules TS / Objective-C module name (both forms use the same

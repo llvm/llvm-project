@@ -1,5 +1,5 @@
 // RUN: rm -rf %t 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/ModuleMapLocations/Module_ModuleMap -I %S/Inputs/ModuleMapLocations/Both -F %S/Inputs/ModuleMapLocations -I %S/Inputs/ModuleMapLocations -F %S/Inputs -x objective-c -fsyntax-only %s -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/ModuleMapLocations/Module_ModuleMap -I %S/Inputs/ModuleMapLocations/Both -F %S/Inputs/ModuleMapLocations -I %S/Inputs/ModuleMapLocations -F %S/Inputs -x objective-c -fsyntax-only %s -verify -Wno-private-module
 
 // regular
 @import module_modulemap;

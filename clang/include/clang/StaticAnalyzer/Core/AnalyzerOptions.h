@@ -139,6 +139,10 @@ public:
   AnalysisPurgeMode AnalysisPurgeOpt;
   
   std::string AnalyzeSpecificFunction;
+
+  /// Store full compiler invocation for reproducible instructions in the
+  /// generated report.
+  std::string FullCompilerInvocation;
   
   /// \brief The maximum number of times the analyzer visits a block.
   unsigned maxBlockVisitOnPath;
@@ -184,7 +188,19 @@ public:
   /// \brief The mode of function selection used during inlining.
   AnalysisInliningMode InliningMode;
 
+  enum class ExplorationStrategyKind {
+    DFS,
+    BFS,
+    UnexploredFirst,
+    UnexploredFirstQueue,
+    BFSBlockDFSContents,
+    NotSet
+  };
+
 private:
+
+  ExplorationStrategyKind ExplorationStrategy;
+
   /// \brief Describes the kinds for high-level analyzer mode.
   enum UserModeKind {
     UMK_NotSet = 0,
@@ -217,6 +233,9 @@ private:
   /// \sa IncludeLoopExitInCFG
   Optional<bool> IncludeLoopExitInCFG;
 
+  /// \sa IncludeRichConstructorsInCFG
+  Optional<bool> IncludeRichConstructorsInCFG;
+
   /// \sa mayInlineCXXStandardLibrary
   Optional<bool> InlineCXXStandardLibrary;
   
@@ -231,6 +250,9 @@ private:
 
   /// \sa mayInlineCXXSharedPtrDtor
   Optional<bool> InlineCXXSharedPtrDtor;
+
+  /// \sa mayInlineCXXTemporaryDtors
+  Optional<bool> InlineCXXTemporaryDtors;
 
   /// \sa mayInlineObjCMethod
   Optional<bool> ObjCInliningMode;
@@ -260,6 +282,8 @@ private:
   /// \sa StableReportFilename
   Optional<bool> StableReportFilename;
 
+  Optional<bool> SerializeStats;
+
   /// \sa getGraphTrimInterval
   Optional<unsigned> GraphTrimInterval;
 
@@ -283,6 +307,16 @@ private:
 
   /// \sa shouldDisplayNotesAsEvents
   Optional<bool> DisplayNotesAsEvents;
+
+  /// \sa getCTUDir
+  Optional<StringRef> CTUDir;
+
+  /// \sa getCTUIndexName
+  Optional<StringRef> CTUIndexName;
+
+  /// \sa naiveCTUEnabled
+  Optional<bool> NaiveCTU;
+
 
   /// A helper function that retrieves option for a given full-qualified
   /// checker name.
@@ -386,6 +420,8 @@ public:
   /// outside of AnalyzerOptions.
   UserModeKind getUserMode();
 
+  ExplorationStrategyKind getExplorationStrategy();
+
   /// \brief Returns the inter-procedural analysis mode.
   IPAKind getIPAMode();
 
@@ -428,6 +464,13 @@ public:
   /// the values "true" and "false".
   bool includeLoopExitInCFG();
 
+  /// Returns whether or not construction site information should be included
+  /// in the CFG C++ constructor elements.
+  ///
+  /// This is controlled by the 'cfg-rich-constructors' config options,
+  /// which accepts the values "true" and "false".
+  bool includeRichConstructorsInCFG();
+
   /// Returns whether or not C++ standard library functions may be considered
   /// for inlining.
   ///
@@ -463,6 +506,17 @@ public:
   /// This is controlled by the 'c++-shared_ptr-inlining' config option, which
   /// accepts the values "true" and "false".
   bool mayInlineCXXSharedPtrDtor();
+
+  /// Returns true if C++ temporary destructors should be inlined during
+  /// analysis.
+  ///
+  /// If temporary destructors are disabled in the CFG via the
+  /// 'cfg-temporary-dtors' option, temporary destructors would not be
+  /// inlined anyway.
+  ///
+  /// This is controlled by the 'c++-temp-dtor-inlining' config option, which
+  /// accepts the values "true" and "false".
+  bool mayInlineCXXTemporaryDtors();
 
   /// Returns whether or not paths that go through null returns should be
   /// suppressed.
@@ -511,6 +565,14 @@ public:
   /// This is controlled by the 'stable-report-filename' config option,
   /// which accepts the values "true" and "false". Default = false
   bool shouldWriteStableReportFilename();
+
+  /// \return Whether the analyzer should
+  /// serialize statistics to plist output.
+  /// Statistics would be serialized in JSON format inside the main dictionary
+  /// under the \c statistics key.
+  /// Available only if compiled in assert mode or with LLVM statistics
+  /// explicitly enabled.
+  bool shouldSerializeStats();
 
   /// Returns whether irrelevant parts of a bug report path should be pruned
   /// out of the final output.
@@ -585,6 +647,17 @@ public:
   /// to false when unset.
   bool shouldDisplayNotesAsEvents();
 
+  /// Returns the directory containing the CTU related files.
+  StringRef getCTUDir();
+
+  /// Returns the name of the file containing the CTU index of functions.
+  StringRef getCTUIndexName();
+
+  /// Returns true when naive cross translation unit analysis is enabled.
+  /// This is an experimental feature to inline functions from another
+  /// translation units.
+  bool naiveCTUEnabled();
+
 public:
   AnalyzerOptions() :
     AnalysisStoreOpt(RegionStoreModel),
@@ -607,6 +680,7 @@ public:
     // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
     InlineMaxStackDepth(5),
     InliningMode(NoRedundancy),
+    ExplorationStrategy(ExplorationStrategyKind::NotSet),
     UserMode(UMK_NotSet),
     IPAMode(IPAK_NotSet),
     CXXMemberInliningMode() {}

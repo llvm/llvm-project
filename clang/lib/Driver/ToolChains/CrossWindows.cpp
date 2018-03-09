@@ -36,6 +36,7 @@ void tools::CrossWindows::Assembler::ConstructJob(
     llvm_unreachable("unsupported architecture");
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
+  case llvm::Triple::aarch64:
     break;
   case llvm::Triple::x86:
     CmdArgs.push_back("--32");
@@ -98,6 +99,9 @@ void tools::CrossWindows::Linker::ConstructJob(
     // FIXME: this is incorrect for WinCE
     CmdArgs.push_back("thumb2pe");
     break;
+  case llvm::Triple::aarch64:
+    CmdArgs.push_back("arm64pe");
+    break;
   case llvm::Triple::x86:
     CmdArgs.push_back("i386pe");
     EntryPoint.append("_");
@@ -111,6 +115,7 @@ void tools::CrossWindows::Linker::ConstructJob(
     switch (T.getArch()) {
     default:
       llvm_unreachable("unsupported architecture");
+    case llvm::Triple::aarch64:
     case llvm::Triple::arm:
     case llvm::Triple::thumb:
     case llvm::Triple::x86_64:
@@ -202,16 +207,7 @@ void tools::CrossWindows::Linker::ConstructJob(
 CrossWindowsToolChain::CrossWindowsToolChain(const Driver &D,
                                              const llvm::Triple &T,
                                              const llvm::opt::ArgList &Args)
-    : Generic_GCC(D, T, Args) {
-  if (D.CCCIsCXX() && GetCXXStdlibType(Args) == ToolChain::CST_Libstdcxx) {
-    const std::string &SysRoot = D.SysRoot;
-
-    // libstdc++ resides in /usr/lib, but depends on libgcc which is placed in
-    // /usr/lib/gcc.
-    getFilePaths().push_back(SysRoot + "/usr/lib");
-    getFilePaths().push_back(SysRoot + "/usr/lib/gcc");
-  }
-}
+    : Generic_GCC(D, T, Args) {}
 
 bool CrossWindowsToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
   // FIXME: all non-x86 targets need unwind tables, however, LLVM currently does
@@ -260,43 +256,21 @@ AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
 void CrossWindowsToolChain::
 AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args) const {
-  const llvm::Triple &Triple = getTriple();
   const std::string &SysRoot = getDriver().SysRoot;
 
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
-  switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx:
+  if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx)
     addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include/c++/v1");
-    break;
-
-  case ToolChain::CST_Libstdcxx:
-    addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include/c++");
-    addSystemInclude(DriverArgs, CC1Args,
-                     SysRoot + "/usr/include/c++/" + Triple.str());
-    addSystemInclude(DriverArgs, CC1Args,
-                     SysRoot + "/usr/include/c++/backwards");
-  }
 }
 
 void CrossWindowsToolChain::
 AddCXXStdlibLibArgs(const llvm::opt::ArgList &DriverArgs,
                     llvm::opt::ArgStringList &CC1Args) const {
-  switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx:
+  if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx)
     CC1Args.push_back("-lc++");
-    break;
-  case ToolChain::CST_Libstdcxx:
-    CC1Args.push_back("-lstdc++");
-    CC1Args.push_back("-lmingw32");
-    CC1Args.push_back("-lmingwex");
-    CC1Args.push_back("-lgcc");
-    CC1Args.push_back("-lmoldname");
-    CC1Args.push_back("-lmingw32");
-    break;
-  }
 }
 
 clang::SanitizerMask CrossWindowsToolChain::getSupportedSanitizers() const {

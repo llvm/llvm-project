@@ -25,6 +25,10 @@ N: Eric Christopher
 E: echristo@gmail.com
 D: Debug Information, inline assembly
 
+N: Devin Coughlin
+E: dcoughlin@apple.com
+D: Clang Static Analyzer
+
 N: Doug Gregor
 E: dgregor@apple.com
 D: Emeritus owner
@@ -40,10 +44,6 @@ D: AST matchers, LibTooling
 N: Anton Korobeynikov
 E: anton@korobeynikov.info
 D: Exception handling, Windows codegen, ARM EABI
-
-N: Anna Zaks
-E: ganna@apple.com
-D: Clang Static Analyzer
 
 N: John McCall
 E: rjmccall@apple.com

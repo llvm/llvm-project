@@ -53,6 +53,10 @@ public:
   // more information than the AddDecl class.
   void AddCXXRecordDecl(const CXXRecordDecl *Record);
 
+  // Use this for ODR checking functions between modules.  This method compares
+  // more information than the AddDecl class.
+  void AddFunctionDecl(const FunctionDecl *Function);
+
   // Process SubDecls of the main Decl.  This method calls the DeclVisitor
   // while AddDecl does not.
   void AddSubDecl(const Decl *D);

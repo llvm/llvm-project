@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -verify %s
 
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify %s
+
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp target teams distribute parallel for'}}
 #pragma omp target teams distribute parallel for
 
@@ -285,12 +287,15 @@ void test_firstprivate() {
     ;
 
   int x, y, z;
+// expected-error@+1 {{lastprivate variable cannot be firstprivate}} expected-note@+1 {{defined as lastprivate}}
 #pragma omp target teams distribute parallel for lastprivate(x) firstprivate(x)
   for (i = 0; i < 16; ++i)
     ;
+// expected-error@+1 2 {{lastprivate variable cannot be firstprivate}} expected-note@+1 2 {{defined as lastprivate}}
 #pragma omp target teams distribute parallel for lastprivate(x, y) firstprivate(x, y)
   for (i = 0; i < 16; ++i)
     ;
+// expected-error@+1 3 {{lastprivate variable cannot be firstprivate}} expected-note@+1 3 {{defined as lastprivate}}
 #pragma omp target teams distribute parallel for lastprivate(x, y, z) firstprivate(x, y, z)
   for (i = 0; i < 16; ++i)
     ;

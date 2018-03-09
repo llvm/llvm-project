@@ -6,6 +6,7 @@ int value(void);
 int main()
 {
     int a = value();
+
     if (a == 0x1234567812345678L) // expected-warning {{comparison of constant 1311768465173141112 with expression of type 'int' is always false}}
         return 0;
     if (a != 0x1234567812345678L) // expected-warning {{comparison of constant 1311768465173141112 with expression of type 'int' is always true}}
@@ -74,6 +75,7 @@ int main()
         return 0;
     if (0x1234567812345678L >= s) // expected-warning {{comparison of constant 1311768465173141112 with expression of type 'short' is always true}}
         return 0;
+
     long l = value();
     if (l == 0x1234567812345678L)
         return 0;
@@ -100,40 +102,6 @@ int main()
         return 0;
     if (0x1234567812345678L >= l)
         return 0;
-
-    unsigned un = 0;
-    if (un == 0x0000000000000000L)
-        return 0;
-    if (un != 0x0000000000000000L)
-        return 0;
-    if (un < 0x0000000000000000L)
-        return 0;
-    if (un <= 0x0000000000000000L)
-        return 0;
-    if (un > 0x0000000000000000L)
-        return 0;
-    if (un >= 0x0000000000000000L)
-        return 0;
-
-    if (0x0000000000000000L == un)
-        return 0;
-    if (0x0000000000000000L != un)
-        return 0;
-    if (0x0000000000000000L < un)
-        return 0;
-    if (0x0000000000000000L <= un)
-        return 0;
-    if (0x0000000000000000L > un)
-        return 0;
-    if (0x0000000000000000L >= un)
-        return 0;
-    float fl = 0;
-    if (fl == 0x0000000000000000L) // no warning
-      return 0;
-
-    float dl = 0;
-    if (dl == 0x0000000000000000L) // no warning
-      return 0;
 
     enum E {
     yes,

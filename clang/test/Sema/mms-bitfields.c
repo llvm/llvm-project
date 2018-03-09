@@ -11,3 +11,18 @@ struct
 
 // MS pads out bitfields between different types.
 static int arr[(sizeof(t) == 8) ? 1 : -1];
+
+#pragma pack (push,1)
+
+typedef unsigned int UINT32;
+
+struct Inner {
+  UINT32    A    :  1;
+  UINT32    B    :  1;
+  UINT32    C    :  1;
+  UINT32    D    : 30;
+} Inner;
+
+#pragma pack (pop)
+
+static int arr2[(sizeof(Inner) == 8) ? 1 : -1];

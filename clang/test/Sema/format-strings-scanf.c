@@ -13,6 +13,16 @@ typedef __SIZE_TYPE__ size_t;
                       unsigned short : (short)0,                               \
                       unsigned char : (signed char)0))
 typedef __SSIZE_TYPE__ ssize_t;                         
+
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+#define __UNSIGNED_PTRDIFF_TYPE__                                              \
+  __typeof__(_Generic((__PTRDIFF_TYPE__)0,                                     \
+                      long long int : (unsigned long long int)0,               \
+                      long int : (unsigned long int)0,                         \
+                      int : (unsigned int)0,                                   \
+                      short : (unsigned short)0,                               \
+                      signed char : (unsigned char)0))
+
 typedef struct _FILE FILE;
 typedef __WCHAR_TYPE__ wchar_t;
 
@@ -198,6 +208,26 @@ void test_size_types() {
 
   double d3 = 0.;
   scanf("%zn", &d3); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+}
+
+void test_ptrdiff_t_types() {
+  __UNSIGNED_PTRDIFF_TYPE__ p1 = 0;
+  scanf("%tu", &p1); // No warning.
+
+  double d1 = 0.;
+  scanf("%tu", &d1); // expected-warning-re{{format specifies type 'unsigned ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+
+  ptrdiff_t p2 = 0;
+  scanf("%td", &p2); // No warning.
+  
+  double d2 = 0.;
+  scanf("%td", &d2); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+
+  ptrdiff_t p3 = 0;
+  scanf("%tn", &p3); // No warning.
+  
+  double d3 = 0.;
+  scanf("%tn", &d3); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
 
 void check_conditional_literal(char *s, int *i) {

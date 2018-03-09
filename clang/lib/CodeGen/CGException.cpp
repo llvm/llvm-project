@@ -112,17 +112,11 @@ EHPersonality::MSVC_C_specific_handler = { "__C_specific_handler", nullptr };
 const EHPersonality
 EHPersonality::MSVC_CxxFrameHandler3 = { "__CxxFrameHandler3", nullptr };
 
-/// On Win64, use libgcc's SEH personality function. We fall back to dwarf on
-/// other platforms, unless the user asked for SjLj exceptions.
-static bool useLibGCCSEHPersonality(const llvm::Triple &T) {
-  return T.isOSWindows() && T.getArch() == llvm::Triple::x86_64;
-}
-
 static const EHPersonality &getCPersonality(const llvm::Triple &T,
                                             const LangOptions &L) {
   if (L.SjLjExceptions)
     return EHPersonality::GNU_C_SJLJ;
-  else if (useLibGCCSEHPersonality(T))
+  if (L.SEHExceptions)
     return EHPersonality::GNU_C_SEH;
   return EHPersonality::GNU_C;
 }
@@ -139,12 +133,12 @@ static const EHPersonality &getObjCPersonality(const llvm::Triple &T,
   case ObjCRuntime::GNUstep:
     if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
-    // fallthrough
+    LLVM_FALLTHROUGH;
   case ObjCRuntime::GCC:
   case ObjCRuntime::ObjFW:
     if (L.SjLjExceptions)
       return EHPersonality::GNU_ObjC_SJLJ;
-    else if (useLibGCCSEHPersonality(T))
+    if (L.SEHExceptions)
       return EHPersonality::GNU_ObjC_SEH;
     return EHPersonality::GNU_ObjC;
   }
@@ -155,7 +149,7 @@ static const EHPersonality &getCXXPersonality(const llvm::Triple &T,
                                               const LangOptions &L) {
   if (L.SjLjExceptions)
     return EHPersonality::GNU_CPlusPlus_SJLJ;
-  else if (useLibGCCSEHPersonality(T))
+  if (L.SEHExceptions)
     return EHPersonality::GNU_CPlusPlus_SEH;
   return EHPersonality::GNU_CPlusPlus;
 }
@@ -165,26 +159,27 @@ static const EHPersonality &getCXXPersonality(const llvm::Triple &T,
 static const EHPersonality &getObjCXXPersonality(const llvm::Triple &T,
                                                  const LangOptions &L) {
   switch (L.ObjCRuntime.getKind()) {
+  // In the fragile ABI, just use C++ exception handling and hope
+  // they're not doing crazy exception mixing.
+  case ObjCRuntime::FragileMacOSX:
+    return getCXXPersonality(T, L);
+
   // The ObjC personality defers to the C++ personality for non-ObjC
   // handlers.  Unlike the C++ case, we use the same personality
   // function on targets using (backend-driven) SJLJ EH.
   case ObjCRuntime::MacOSX:
   case ObjCRuntime::iOS:
   case ObjCRuntime::WatchOS:
-    return EHPersonality::NeXT_ObjC;
+    return getObjCPersonality(T, L);
 
-  // In the fragile ABI, just use C++ exception handling and hope
-  // they're not doing crazy exception mixing.
-  case ObjCRuntime::FragileMacOSX:
-    return getCXXPersonality(T, L);
+  case ObjCRuntime::GNUstep:
+    return EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
-  // mixed EH.  Use the C++ personality just to avoid returning null.
+  // mixed EH.  Use the ObjC personality just to avoid returning null.
   case ObjCRuntime::GCC:
   case ObjCRuntime::ObjFW:
     return getObjCPersonality(T, L);
-  case ObjCRuntime::GNUstep:
-    return EHPersonality::GNU_ObjCXX;
   }
   llvm_unreachable("bad runtime kind");
 }
@@ -210,8 +205,9 @@ const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
   if (T.isWindowsMSVCEnvironment() && !L.ObjC1) {
     if (L.SjLjExceptions)
       return EHPersonality::GNU_CPlusPlus_SJLJ;
-    else
-      return EHPersonality::MSVC_CxxFrameHandler3;
+    if (L.DWARFExceptions)
+      return EHPersonality::GNU_CPlusPlus;
+    return EHPersonality::MSVC_CxxFrameHandler3;
   }
 
   if (L.CPlusPlus && L.ObjC1)
@@ -225,7 +221,12 @@ const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
 }
 
 const EHPersonality &EHPersonality::get(CodeGenFunction &CGF) {
-  return get(CGF.CGM, dyn_cast_or_null<FunctionDecl>(CGF.CurCodeDecl));
+  const auto *FD = CGF.CurCodeDecl;
+  // For outlined finallys and filters, use the SEH personality in case they
+  // contain more SEH. This mostly only affects finallys. Filters could
+  // hypothetically use gnu statement expressions to sneak in nested SEH.
+  FD = FD ? FD : CGF.CurSEHParent;
+  return get(CGF.CGM, dyn_cast_or_null<FunctionDecl>(FD));
 }
 
 static llvm::Constant *getPersonalityFn(CodeGenModule &CGM,
@@ -645,7 +646,7 @@ CodeGenFunction::getMSVCDispatchBlock(EHScopeStack::stable_iterator SI) {
     return DispatchBlock;
 
   if (EHS.getKind() == EHScope::Terminate)
-    DispatchBlock = getTerminateHandler();
+    DispatchBlock = getTerminateFunclet();
   else
     DispatchBlock = createBasicBlock();
   CGBuilderTy Builder(*this, DispatchBlock);
@@ -1333,24 +1334,15 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   if (TerminateHandler)
     return TerminateHandler;
 
-  CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
-
   // Set up the terminate handler.  This block is inserted at the very
   // end of the function by FinishFunction.
   TerminateHandler = createBasicBlock("terminate.handler");
+  CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
   Builder.SetInsertPoint(TerminateHandler);
+
   llvm::Value *Exn = nullptr;
-  SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
-      CurrentFuncletPad);
-  if (EHPersonality::get(*this).usesFuncletPads()) {
-    llvm::Value *ParentPad = CurrentFuncletPad;
-    if (!ParentPad)
-      ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
-    CurrentFuncletPad = Builder.CreateCleanupPad(ParentPad);
-  } else {
-    if (getLangOpts().CPlusPlus)
-      Exn = getExceptionFromSlot();
-  }
+  if (getLangOpts().CPlusPlus)
+    Exn = getExceptionFromSlot();
   llvm::CallInst *terminateCall =
       CGM.getCXXABI().emitTerminateForUnexpectedException(*this, Exn);
   terminateCall->setDoesNotReturn();
@@ -1360,6 +1352,42 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   Builder.restoreIP(SavedIP);
 
   return TerminateHandler;
+}
+
+llvm::BasicBlock *CodeGenFunction::getTerminateFunclet() {
+  assert(EHPersonality::get(*this).usesFuncletPads() &&
+         "use getTerminateLandingPad for non-funclet EH");
+
+  llvm::BasicBlock *&TerminateFunclet = TerminateFunclets[CurrentFuncletPad];
+  if (TerminateFunclet)
+    return TerminateFunclet;
+
+  CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
+
+  // Set up the terminate handler.  This block is inserted at the very
+  // end of the function by FinishFunction.
+  TerminateFunclet = createBasicBlock("terminate.handler");
+  Builder.SetInsertPoint(TerminateFunclet);
+
+  // Create the cleanuppad using the current parent pad as its token. Use 'none'
+  // if this is a top-level terminate scope, which is the common case.
+  SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
+      CurrentFuncletPad);
+  llvm::Value *ParentPad = CurrentFuncletPad;
+  if (!ParentPad)
+    ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
+  CurrentFuncletPad = Builder.CreateCleanupPad(ParentPad);
+
+  // Emit the __std_terminate call.
+  llvm::CallInst *terminateCall =
+      CGM.getCXXABI().emitTerminateForUnexpectedException(*this, nullptr);
+  terminateCall->setDoesNotReturn();
+  Builder.CreateUnreachable();
+
+  // Restore the saved insertion state.
+  Builder.restoreIP(SavedIP);
+
+  return TerminateFunclet;
 }
 
 llvm::BasicBlock *CodeGenFunction::getEHResumeBlock(bool isCleanup) {

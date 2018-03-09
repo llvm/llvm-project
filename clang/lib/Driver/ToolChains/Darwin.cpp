@@ -68,14 +68,14 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
 
 void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   const llvm::Triple::ArchType Arch = getArchTypeForMachOArchName(Str);
-  unsigned ArchKind = llvm::ARM::parseArch(Str);
+  llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
 
   if (Str == "x86_64h")
     T.setArchName(Str);
-  else if (ArchKind == llvm::ARM::AK_ARMV6M ||
-           ArchKind == llvm::ARM::AK_ARMV7M ||
-           ArchKind == llvm::ARM::AK_ARMV7EM) {
+  else if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
+           ArchKind == llvm::ARM::ArchKind::ARMV7M ||
+           ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
     T.setOS(llvm::Triple::UnknownOS);
     T.setObjectFormat(llvm::Triple::MachO);
   }
@@ -549,8 +549,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (unsigned Parallelism =
           getLTOParallelism(Args, getToolChain().getDriver())) {
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-threads=") + llvm::to_string(Parallelism)));
+    CmdArgs.push_back(Args.MakeArgString("-threads=" + Twine(Parallelism)));
   }
 
   if (getToolChain().ShouldLinkCXXStdlib(Args))
@@ -743,8 +742,8 @@ static const char *ArmMachOArchName(StringRef Arch) {
 }
 
 static const char *ArmMachOArchNameCPU(StringRef CPU) {
-  unsigned ArchKind = llvm::ARM::parseCPUArch(CPU);
-  if (ArchKind == llvm::ARM::AK_INVALID)
+  llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
+  if (ArchKind == llvm::ARM::ArchKind::INVALID)
     return nullptr;
   StringRef Arch = llvm::ARM::getArchName(ArchKind);
 
@@ -1198,10 +1197,11 @@ struct DarwinPlatform {
   }
 
   void setOSVersion(StringRef S) {
-    // Needed for workaround for rdar://36160258.
-    assert(Kind == TargetArg && "invalid kind!");
+    assert(Kind == TargetArg && "Unexpected kind!");
     OSVersion = S;
   }
+
+  bool hasOSVersion() const { return HasOSVersion; }
 
   /// Returns true if the target OS was explicitly specified.
   bool isExplicitlySpecified() const { return Kind <= DeploymentTargetEnv; }
@@ -1246,17 +1246,21 @@ struct DarwinPlatform {
     llvm_unreachable("Unsupported Darwin Source Kind");
   }
 
-  static DarwinPlatform createFromTarget(llvm::Triple::OSType OS,
-                                         StringRef OSVersion, Arg *A,
-                                         llvm::Triple::EnvironmentType Env) {
-    DarwinPlatform Result(TargetArg, getPlatformFromOS(OS), OSVersion, A);
-    switch (Env) {
+  static DarwinPlatform createFromTarget(const llvm::Triple &TT,
+                                         StringRef OSVersion, Arg *A) {
+    DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()), OSVersion,
+                          A);
+    switch (TT.getEnvironment()) {
     case llvm::Triple::Simulator:
       Result.Environment = DarwinEnvironmentKind::Simulator;
       break;
     default:
       break;
     }
+    unsigned Major, Minor, Micro;
+    TT.getOSVersion(Major, Minor, Micro);
+    if (Major == 0)
+      Result.HasOSVersion = false;
     return Result;
   }
   static DarwinPlatform createOSVersionArg(DarwinPlatformKind Platform,
@@ -1306,6 +1310,7 @@ private:
   DarwinPlatformKind Platform;
   DarwinEnvironmentKind Environment = DarwinEnvironmentKind::NativeEnvironment;
   std::string OSVersion;
+  bool HasOSVersion = true;
   Arg *Argument;
   StringRef EnvVarName;
 };
@@ -1500,9 +1505,8 @@ Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
       Triple.getOS() == llvm::Triple::UnknownOS)
     return None;
   std::string OSVersion = getOSVersion(Triple.getOS(), Triple, TheDriver);
-  return DarwinPlatform::createFromTarget(Triple.getOS(), OSVersion,
-                                          Args.getLastArg(options::OPT_target),
-                                          Triple.getEnvironment());
+  return DarwinPlatform::createFromTarget(Triple, OSVersion,
+                                          Args.getLastArg(options::OPT_target));
 }
 
 } // namespace
@@ -1548,11 +1552,10 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
            (VersionTuple(TargetMajor, TargetMinor, TargetMicro) !=
                 VersionTuple(ArgMajor, ArgMinor, ArgMicro) ||
             TargetExtra != ArgExtra))) {
-        // Workaround for rdar://36160258.
-        // Select the highest OS version if it's specified in the argument.
+        // Select the OS version from the -m<os>-version-min argument when
+        // the -target does not include an OS version.
         if (OSTarget->getPlatform() == OSVersionArgTarget->getPlatform() &&
-            VersionTuple(ArgMajor, ArgMinor, ArgMicro) >
-                VersionTuple(TargetMajor, TargetMinor, TargetMicro)) {
+            !OSTarget->hasOSVersion()) {
           OSTarget->setOSVersion(OSVersionArgTarget->getOSVersion());
         } else {
           // Warn about -m<os>-version-min that doesn't match the OS version
@@ -2058,7 +2061,7 @@ bool MachO::IsUnwindTablesDefault(const ArgList &Args) const {
   // Unwind tables are not emitted if -fno-exceptions is supplied (except when
   // targeting x86_64).
   return getArch() == llvm::Triple::x86_64 ||
-         (!UseSjLjExceptions(Args) &&
+         (GetExceptionModel(Args) != llvm::ExceptionHandling::SjLj &&
           Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
                        true));
 }
@@ -2069,15 +2072,18 @@ bool MachO::UseDwarfDebugFlags() const {
   return false;
 }
 
-bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
+llvm::ExceptionHandling Darwin::GetExceptionModel(const ArgList &Args) const {
   // Darwin uses SjLj exceptions on ARM.
   if (getTriple().getArch() != llvm::Triple::arm &&
       getTriple().getArch() != llvm::Triple::thumb)
-    return false;
+    return llvm::ExceptionHandling::None;
 
   // Only watchOS uses the new DWARF/Compact unwinding method.
   llvm::Triple Triple(ComputeLLVMTriple(Args));
-  return !Triple.isWatchABI();
+  if(Triple.isWatchABI())
+    return llvm::ExceptionHandling::DwarfCFI;
+
+  return llvm::ExceptionHandling::SjLj;
 }
 
 bool Darwin::SupportsEmbeddedBitcode() const {
@@ -2217,8 +2223,6 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
     CmdArgs.push_back(Str);
   }
 }
-
-bool Darwin::SupportsObjCGC() const { return isTargetMacOS(); }
 
 void Darwin::CheckObjCARC() const {
   if (isTargetIOSBased() || isTargetWatchOSBased() ||

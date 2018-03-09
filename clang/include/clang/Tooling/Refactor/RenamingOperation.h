@@ -25,15 +25,16 @@ class SymbolOperation;
 namespace rename {
 
 /// Return true if the new name is a valid language identifier.
-bool isNewNameValid(const SymbolName &NewName, bool IsSymbolObjCSelector,
+bool isNewNameValid(const OldSymbolName &NewName, bool IsSymbolObjCSelector,
                     IdentifierTable &IDs, const LangOptions &LangOpts);
-bool isNewNameValid(const SymbolName &NewName, const SymbolOperation &Operation,
-                    IdentifierTable &IDs, const LangOptions &LangOpts);
+bool isNewNameValid(const OldSymbolName &NewName,
+                    const SymbolOperation &Operation, IdentifierTable &IDs,
+                    const LangOptions &LangOpts);
 
 /// \brief Finds the set of new names that apply to the symbols in the given
 /// \c SymbolOperation.
-void determineNewNames(SymbolName NewName, const SymbolOperation &Operation,
-                       SmallVectorImpl<SymbolName> &NewNames,
+void determineNewNames(OldSymbolName NewName, const SymbolOperation &Operation,
+                       SmallVectorImpl<OldSymbolName> &NewNames,
                        const LangOptions &LangOpts);
 
 } // end namespace rename

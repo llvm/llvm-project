@@ -1,4 +1,4 @@
-//===--- Registry.h - Matcher registry --------------------------*- C++ -*-===//
+//===- Registry.h - Matcher registry ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,12 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Registry of all known matchers.
 ///
 /// The registry provides a generic interface to construct any matcher by name.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ASTMATCHERS_DYNAMIC_REGISTRY_H
@@ -34,9 +34,9 @@ namespace internal {
 
 class MatcherDescriptor;
 
-} // end namespace internal
+} // namespace internal
 
-typedef const internal::MatcherDescriptor *MatcherCtor;
+using MatcherCtor = const internal::MatcherDescriptor *;
 
 struct MatcherCompletion {
   MatcherCompletion() = default;
@@ -129,8 +129,8 @@ public:
                                               Diagnostics *Error);
 };
 
-} // end namespace dynamic
-} // end namespace ast_matchers
-} // end namespace clang
+} // namespace dynamic
+} // namespace ast_matchers
+} // namespace clang
 
 #endif // LLVM_CLANG_AST_MATCHERS_DYNAMIC_REGISTRY_H

@@ -52,9 +52,9 @@
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS11 %s
 // CHECK-VERSION-IOS11: arm64-apple-ios11.1.0
 
-// RUN: %clang -target armv7-apple-ios11.0 -miphoneos-version-min=9.0 -c -Wno-invalid-ios-deployment-target -### %s 2>&1 | \
+// RUN: %clang -target armv7-apple-ios9.0 -miphoneos-version-min=11.0 -c -Wno-invalid-ios-deployment-target -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS12 %s
-// CHECK-VERSION-IOS12: thumbv7-apple-ios11.0.0
+// CHECK-VERSION-IOS12: thumbv7-apple-ios9.0.0
 
 // RUN: %clang -target i686-apple-darwin8 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX4 %s
@@ -205,8 +205,8 @@
 
 // RUN: %clang -target x86_64-apple-ios -miphonesimulator-version-min=10.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-OSV3 %s
-// CHECK-VERSION-TNO-OSV3: -ios10.0.0
-// CHECK-VERSION-TNO-OSV3-NOT: overriding
+// CHECK-VERSION-TNO-OSV3: "x86_64-apple-ios10.0.0-simulator"
+// CHECK-VERSION-TNO-OSV3-NOT: overriding '-mios-simulator-version-min
 // CHECK-VERSION-TNO-OSV3-NOT: argument unused during compilation
 
 // RUN: %clang -target arm64-apple-ios10.1.0 -miphoneos-version-min=10.1.0.1 -c %s -### 2>&1 | \
@@ -232,9 +232,27 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV3 %s
 // CHECK-VERSION-TIGNORE-OSV3: "arm64-apple-tvos11.0.0"
 
-// RUN: %clang -target armv7k-apple-watchos4 -mwatchos-version-min=3 -c %s -### 2>&1 | \
+// RUN: %clang -target armv7k-apple-watchos3 -mwatchos-version-min=4 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV4 %s
-// CHECK-VERSION-TIGNORE-OSV4: "thumbv7k-apple-watchos4.0.0"
+// CHECK-VERSION-TIGNORE-OSV4: "thumbv7k-apple-watchos3.0.0"
+
+// Target without OS version inlcudes the OS given by -m<os>-version-min arguments:
+
+// RUN: %clang -target x86_64-apple-macos -mmacos-version-min=10.11 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-USE-OS-ARG1 %s
+// CHECK-VERSION-USE-OS-ARG1: "x86_64-apple-macosx10.11.0"
+
+// RUN: %clang -target arm64-apple-ios -mios-version-min=9.0 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-USE-OS-ARG2 %s
+// CHECK-VERSION-USE-OS-ARG2: "arm64-apple-ios9.0.0"
+
+// RUN: %clang -target arm64-apple-tvos -mtvos-version-min=10.0 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-USE-OS-ARG3 %s
+// CHECK-VERSION-USE-OS-ARG3: "arm64-apple-tvos10.0.0"
+
+// RUN: %clang -target armv7k-apple-watchos -mwatchos-version-min=4 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-USE-OS-ARG4 %s
+// CHECK-VERSION-USE-OS-ARG4: "thumbv7k-apple-watchos4.0.0"
 
 // Target with OS version is not overriden by environment variables:
 

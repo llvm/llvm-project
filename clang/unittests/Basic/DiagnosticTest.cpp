@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "gtest/gtest.h"
 
@@ -72,4 +73,25 @@ TEST(DiagnosticTest, suppressAfterFatalError) {
   }
 }
 
+TEST(DiagnosticTest, diagnosticError) {
+  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+                          new IgnoringDiagConsumer());
+  PartialDiagnostic::StorageAllocator Alloc;
+  llvm::Expected<std::pair<int, int>> Value = DiagnosticError::create(
+      SourceLocation(), PartialDiagnostic(diag::err_cannot_open_file, Alloc)
+                            << "file"
+                            << "error");
+  ASSERT_TRUE(!Value);
+  llvm::Error Err = Value.takeError();
+  Optional<PartialDiagnosticAt> ErrDiag = DiagnosticError::take(Err);
+  llvm::cantFail(std::move(Err));
+  ASSERT_FALSE(!ErrDiag);
+  EXPECT_EQ(ErrDiag->first, SourceLocation());
+  EXPECT_EQ(ErrDiag->second.getDiagID(), diag::err_cannot_open_file);
+
+  Value = std::make_pair(20, 1);
+  ASSERT_FALSE(!Value);
+  EXPECT_EQ(*Value, std::make_pair(20, 1));
+  EXPECT_EQ(Value->first, 20);
+}
 }

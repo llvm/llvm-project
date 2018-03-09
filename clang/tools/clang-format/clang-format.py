@@ -92,7 +92,7 @@ def main():
 
   # Call formatter.
   command = [binary, '-style', style, '-cursor', str(cursor)]
-  if lines != 'all':
+  if lines != ['-lines', 'all']:
     command += lines
   if fallback_style:
     command.extend(['-fallback-style', fallback_style])

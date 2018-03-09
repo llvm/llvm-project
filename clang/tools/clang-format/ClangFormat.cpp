@@ -102,6 +102,10 @@ static cl::opt<bool> SortIncludes(
              "SortIncludes style flag"),
     cl::cat(ClangFormatCategory));
 
+static cl::opt<bool>
+    Verbose("verbose", cl::desc("If set, shows the list of processed files"),
+            cl::cat(ClangFormatCategory));
+
 static cl::list<std::string> FileNames(cl::Positional, cl::desc("[<file> ...]"),
                                        cl::cat(ClangFormatCategory));
 
@@ -285,7 +289,7 @@ static bool format(StringRef FileName) {
               "xml:space='preserve' incomplete_format='"
            << (Status.FormatComplete ? "false" : "true") << "'";
     if (!Status.FormatComplete)
-      outs() << " line=" << Status.Line;
+      outs() << " line='" << Status.Line << "'";
     outs() << ">\n";
     if (Cursor.getNumOccurrences() != 0)
       outs() << "<cursor>"
@@ -328,8 +332,7 @@ static bool format(StringRef FileName) {
 }  // namespace format
 }  // namespace clang
 
-static void PrintVersion() {
-  raw_ostream &OS = outs();
+static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-format") << '\n';
 }
 
@@ -348,8 +351,10 @@ int main(int argc, const char **argv) {
       "together with <file>s, the files are edited in-place. Otherwise, the\n"
       "result is written to the standard output.\n");
 
-  if (Help)
+  if (Help) {
     cl::PrintHelpMessage();
+    return 0;
+  }
 
   if (DumpConfig) {
     llvm::Expected<clang::format::FormatStyle> FormatStyle =
@@ -366,23 +371,19 @@ int main(int argc, const char **argv) {
   }
 
   bool Error = false;
-  switch (FileNames.size()) {
-  case 0:
+  if (FileNames.empty()) {
     Error = clang::format::format("-");
-    break;
-  case 1:
-    Error = clang::format::format(FileNames[0]);
-    break;
-  default:
-    if (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty()) {
-      errs() << "error: -offset, -length and -lines can only be used for "
-                "single file.\n";
-      return 1;
-    }
-    for (unsigned i = 0; i < FileNames.size(); ++i)
-      Error |= clang::format::format(FileNames[i]);
-    break;
+    return Error ? 1 : 0;
+  }
+  if (FileNames.size() != 1 && (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
+    errs() << "error: -offset, -length and -lines can only be used for "
+              "single file.\n";
+    return 1;
+  }
+  for (const auto &FileName : FileNames) {
+    if (Verbose)
+      errs() << "Formatting " << FileName << "\n";
+    Error |= clang::format::format(FileName);
   }
   return Error ? 1 : 0;
 }
-

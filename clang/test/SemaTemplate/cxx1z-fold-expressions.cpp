@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s
 
 template<typename ...T> constexpr auto sum(T ...t) { return (... + t); }
 template<typename ...T> constexpr auto product(T ...t) { return (t * ...); }
@@ -76,3 +77,18 @@ template<typename T, typename ...Ts> constexpr decltype(auto) apply(T &t, Ts ...
   return (t.*....*ts);
 }
 static_assert(&apply(a, &A::b, &A::B::c, &A::B::C::d, &A::B::C::D::e) == &a.b.c.d.e);
+
+#if __cplusplus > 201703L
+// The <=> operator is unique among binary operators in not being a
+// fold-operator.
+// FIXME: This diagnostic is not great.
+template<typename ...T> constexpr auto spaceship1(T ...t) { return (t <=> ...); } // expected-error {{expected expression}}
+template<typename ...T> constexpr auto spaceship2(T ...t) { return (... <=> t); } // expected-error {{expected expression}}
+template<typename ...T> constexpr auto spaceship3(T ...t) { return (t <=> ... <=> 0); } // expected-error {{expected expression}}
+#endif
+
+// The GNU binary conditional operator ?: is not recognized as a fold-operator.
+// FIXME: Why not? This seems like it would be useful.
+template<typename ...T> constexpr auto binary_conditional1(T ...t) { return (t ?: ...); } // expected-error {{expected expression}}
+template<typename ...T> constexpr auto binary_conditional2(T ...t) { return (... ?: t); } // expected-error {{expected expression}}
+template<typename ...T> constexpr auto binary_conditional3(T ...t) { return (t ?: ... ?: 0); } // expected-error {{expected expression}}

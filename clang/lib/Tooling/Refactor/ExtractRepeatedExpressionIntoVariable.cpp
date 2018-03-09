@@ -257,7 +257,8 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
 
   StringRef Name = nameForExtractedVariable(E);
   Result.AssociatedSymbols.push_back(
-      llvm::make_unique<RefactoringResultAssociatedSymbol>(SymbolName(Name)));
+      llvm::make_unique<RefactoringResultAssociatedSymbol>(
+          OldSymbolName(Name)));
   RefactoringResultAssociatedSymbol *CreatedSymbol =
       Result.AssociatedSymbols.back().get();
 

@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify %s
 
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify %s
+
 class S {
   int a;
-  S() : a(0) {}
+  S() : a(0) {} // expected-note {{implicitly declared private here}}
 
 public:
   S(int v) : a(v) {}
@@ -691,8 +693,9 @@ void test_loop_eh() {
 
 void test_loop_firstprivate_lastprivate() {
   S s(4);
+// expected-error@+2 {{lastprivate variable cannot be firstprivate}} expected-note@+2 {{defined as lastprivate}}
 #pragma omp target
-#pragma omp teams distribute parallel for lastprivate(s) firstprivate(s)
+#pragma omp teams distribute parallel for lastprivate(s) firstprivate(s) // expected-error {{calling a private constructor of class 'S'}}
   for (int i = 0; i < 16; ++i)
     ;
 }

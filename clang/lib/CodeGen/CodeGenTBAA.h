@@ -30,20 +30,94 @@ namespace clang {
   class Type;
 
 namespace CodeGen {
-  class CGRecordLayout;
+class CGRecordLayout;
 
-  struct TBAAPathTag {
-    TBAAPathTag(const Type *B, const llvm::MDNode *A, uint64_t O)
-      : BaseT(B), AccessN(A), Offset(O) {}
-    const Type *BaseT;
-    const llvm::MDNode *AccessN;
-    uint64_t Offset;
-  };
+// TBAAAccessKind - A kind of TBAA memory access descriptor.
+enum class TBAAAccessKind : unsigned {
+  Ordinary,
+  MayAlias,
+  Incomplete,
+};
+
+// TBAAAccessInfo - Describes a memory access in terms of TBAA.
+struct TBAAAccessInfo {
+  TBAAAccessInfo(TBAAAccessKind Kind, llvm::MDNode *BaseType,
+                 llvm::MDNode *AccessType, uint64_t Offset, uint64_t Size)
+    : Kind(Kind), BaseType(BaseType), AccessType(AccessType),
+      Offset(Offset), Size(Size)
+  {}
+
+  TBAAAccessInfo(llvm::MDNode *BaseType, llvm::MDNode *AccessType,
+                 uint64_t Offset, uint64_t Size)
+    : TBAAAccessInfo(TBAAAccessKind::Ordinary, BaseType, AccessType,
+                     Offset, Size)
+  {}
+
+  explicit TBAAAccessInfo(llvm::MDNode *AccessType, uint64_t Size)
+    : TBAAAccessInfo(/* BaseType= */ nullptr, AccessType, /* Offset= */ 0, Size)
+  {}
+
+  TBAAAccessInfo()
+    : TBAAAccessInfo(/* AccessType= */ nullptr, /* Size= */ 0)
+  {}
+
+  static TBAAAccessInfo getMayAliasInfo() {
+    return TBAAAccessInfo(TBAAAccessKind::MayAlias,
+                          /* BaseType= */ nullptr, /* AccessType= */ nullptr,
+                          /* Offset= */ 0, /* Size= */ 0);
+  }
+
+  bool isMayAlias() const { return Kind == TBAAAccessKind::MayAlias; }
+
+  static TBAAAccessInfo getIncompleteInfo() {
+    return TBAAAccessInfo(TBAAAccessKind::Incomplete,
+                          /* BaseType= */ nullptr, /* AccessType= */ nullptr,
+                          /* Offset= */ 0, /* Size= */ 0);
+  }
+
+  bool isIncomplete() const { return Kind == TBAAAccessKind::Incomplete; }
+
+  bool operator==(const TBAAAccessInfo &Other) const {
+    return Kind == Other.Kind &&
+           BaseType == Other.BaseType &&
+           AccessType == Other.AccessType &&
+           Offset == Other.Offset &&
+           Size == Other.Size;
+  }
+
+  bool operator!=(const TBAAAccessInfo &Other) const {
+    return !(*this == Other);
+  }
+
+  explicit operator bool() const {
+    return *this != TBAAAccessInfo();
+  }
+
+  /// Kind - The kind of the access descriptor.
+  TBAAAccessKind Kind;
+
+  /// BaseType - The base/leading access type. May be null if this access
+  /// descriptor represents an access that is not considered to be an access
+  /// to an aggregate or union member.
+  llvm::MDNode *BaseType;
+
+  /// AccessType - The final access type. May be null if there is no TBAA
+  /// information available about this access.
+  llvm::MDNode *AccessType;
+
+  /// Offset - The byte offset of the final access within the base one. Must be
+  /// zero if the base access type is not specified.
+  uint64_t Offset;
+
+  /// Size - The size of access, in bytes.
+  uint64_t Size;
+};
 
 /// CodeGenTBAA - This class organizes the cross-module state that is used
 /// while lowering AST types to LLVM types.
 class CodeGenTBAA {
   ASTContext &Context;
+  llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
   MangleContext &MContext;
@@ -54,12 +128,10 @@ class CodeGenTBAA {
   /// MetadataCache - This maps clang::Types to scalar llvm::MDNodes describing
   /// them.
   llvm::DenseMap<const Type *, llvm::MDNode *> MetadataCache;
-  /// This maps clang::Types to a struct node in the type DAG.
-  llvm::DenseMap<const Type *, llvm::MDNode *> StructTypeMetadataCache;
-  /// This maps TBAAPathTags to a tag node.
-  llvm::DenseMap<TBAAPathTag, llvm::MDNode *> StructTagMetadataCache;
-  /// This maps a scalar type to a scalar tag node.
-  llvm::DenseMap<const llvm::MDNode *, llvm::MDNode *> ScalarTagMetadataCache;
+  /// This maps clang::Types to a base access type in the type DAG.
+  llvm::DenseMap<const Type *, llvm::MDNode *> BaseTypeMetadataCache;
+  /// This maps TBAA access descriptors to tag nodes.
+  llvm::DenseMap<TBAAAccessInfo, llvm::MDNode *> AccessTagMetadataCache;
 
   /// StructMetadataCache - This maps clang::Types to llvm::MDNodes describing
   /// them for struct assignments.
@@ -83,39 +155,52 @@ class CodeGenTBAA {
                      SmallVectorImpl<llvm::MDBuilder::TBAAStructField> &Fields,
                      bool MayAlias);
 
-  /// A wrapper function to create a scalar type. For struct-path aware TBAA,
-  /// the scalar type has the same format as the struct type: name, offset,
-  /// pointer to another node in the type DAG.
-  llvm::MDNode *createTBAAScalarType(StringRef Name, llvm::MDNode *Parent);
+  /// createScalarTypeNode - A wrapper function to create a metadata node
+  /// describing a scalar type.
+  llvm::MDNode *createScalarTypeNode(StringRef Name, llvm::MDNode *Parent,
+                                     uint64_t Size);
+
+  /// getTypeInfoHelper - An internal helper function to generate metadata used
+  /// to describe accesses to objects of the given type.
+  llvm::MDNode *getTypeInfoHelper(const Type *Ty);
+
+  /// getBaseTypeInfoHelper - An internal helper function to generate metadata
+  /// used to describe accesses to objects of the given base type.
+  llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
 
 public:
-  CodeGenTBAA(ASTContext &Ctx, llvm::LLVMContext &VMContext,
-              const CodeGenOptions &CGO,
-              const LangOptions &Features,
-              MangleContext &MContext);
+  CodeGenTBAA(ASTContext &Ctx, llvm::Module &M, const CodeGenOptions &CGO,
+              const LangOptions &Features, MangleContext &MContext);
   ~CodeGenTBAA();
 
-  /// getTBAAInfo - Get the TBAA MDNode to be used for a dereference
-  /// of the given type.
-  llvm::MDNode *getTBAAInfo(QualType QTy);
+  /// getTypeInfo - Get metadata used to describe accesses to objects of the
+  /// given type.
+  llvm::MDNode *getTypeInfo(QualType QTy);
 
-  /// getTBAAInfoForVTablePtr - Get the TBAA MDNode to be used for a
-  /// dereference of a vtable pointer.
-  llvm::MDNode *getTBAAInfoForVTablePtr();
+  /// getVTablePtrAccessInfo - Get the TBAA information that describes an
+  /// access to a virtual table pointer.
+  TBAAAccessInfo getVTablePtrAccessInfo(llvm::Type *VTablePtrType);
 
   /// getTBAAStructInfo - Get the TBAAStruct MDNode to be used for a memcpy of
   /// the given type.
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
-  /// Get the MDNode in the type DAG for given struct type QType.
-  llvm::MDNode *getTBAAStructTypeInfo(QualType QType);
-  /// Get the tag MDNode for a given base type, the actual scalar access MDNode
-  /// and offset into the base type.
-  llvm::MDNode *getTBAAStructTagInfo(QualType BaseQType,
-                                     llvm::MDNode *AccessNode, uint64_t Offset);
+  /// getBaseTypeInfo - Get metadata that describes the given base access type.
+  /// Return null if the type is not suitable for use in TBAA access tags.
+  llvm::MDNode *getBaseTypeInfo(QualType QTy);
 
-  /// Get the scalar tag MDNode for a given scalar type.
-  llvm::MDNode *getTBAAScalarTagInfo(llvm::MDNode *AccessNode);
+  /// getAccessTagInfo - Get TBAA tag for a given memory access.
+  llvm::MDNode *getAccessTagInfo(TBAAAccessInfo Info);
+
+  /// mergeTBAAInfoForCast - Get merged TBAA information for the purpose of
+  /// type casts.
+  TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
+                                      TBAAAccessInfo TargetInfo);
+
+  /// mergeTBAAInfoForConditionalOperator - Get merged TBAA information for the
+  /// purpose of conditional operator.
+  TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
+                                                     TBAAAccessInfo InfoB);
 };
 
 }  // end namespace CodeGen
@@ -123,32 +208,39 @@ public:
 
 namespace llvm {
 
-template<> struct DenseMapInfo<clang::CodeGen::TBAAPathTag> {
-  static clang::CodeGen::TBAAPathTag getEmptyKey() {
-    return clang::CodeGen::TBAAPathTag(
-      DenseMapInfo<const clang::Type *>::getEmptyKey(),
-      DenseMapInfo<const MDNode *>::getEmptyKey(),
+template<> struct DenseMapInfo<clang::CodeGen::TBAAAccessInfo> {
+  static clang::CodeGen::TBAAAccessInfo getEmptyKey() {
+    unsigned UnsignedKey = DenseMapInfo<unsigned>::getEmptyKey();
+    return clang::CodeGen::TBAAAccessInfo(
+      static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
+      DenseMapInfo<MDNode *>::getEmptyKey(),
+      DenseMapInfo<MDNode *>::getEmptyKey(),
+      DenseMapInfo<uint64_t>::getEmptyKey(),
       DenseMapInfo<uint64_t>::getEmptyKey());
   }
 
-  static clang::CodeGen::TBAAPathTag getTombstoneKey() {
-    return clang::CodeGen::TBAAPathTag(
-      DenseMapInfo<const clang::Type *>::getTombstoneKey(),
-      DenseMapInfo<const MDNode *>::getTombstoneKey(),
+  static clang::CodeGen::TBAAAccessInfo getTombstoneKey() {
+    unsigned UnsignedKey = DenseMapInfo<unsigned>::getTombstoneKey();
+    return clang::CodeGen::TBAAAccessInfo(
+      static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
+      DenseMapInfo<MDNode *>::getTombstoneKey(),
+      DenseMapInfo<MDNode *>::getTombstoneKey(),
+      DenseMapInfo<uint64_t>::getTombstoneKey(),
       DenseMapInfo<uint64_t>::getTombstoneKey());
   }
 
-  static unsigned getHashValue(const clang::CodeGen::TBAAPathTag &Val) {
-    return DenseMapInfo<const clang::Type *>::getHashValue(Val.BaseT) ^
-           DenseMapInfo<const MDNode *>::getHashValue(Val.AccessN) ^
-           DenseMapInfo<uint64_t>::getHashValue(Val.Offset);
+  static unsigned getHashValue(const clang::CodeGen::TBAAAccessInfo &Val) {
+    auto KindValue = static_cast<unsigned>(Val.Kind);
+    return DenseMapInfo<unsigned>::getHashValue(KindValue) ^
+           DenseMapInfo<MDNode *>::getHashValue(Val.BaseType) ^
+           DenseMapInfo<MDNode *>::getHashValue(Val.AccessType) ^
+           DenseMapInfo<uint64_t>::getHashValue(Val.Offset) ^
+           DenseMapInfo<uint64_t>::getHashValue(Val.Size);
   }
 
-  static bool isEqual(const clang::CodeGen::TBAAPathTag &LHS,
-                      const clang::CodeGen::TBAAPathTag &RHS) {
-    return LHS.BaseT == RHS.BaseT &&
-           LHS.AccessN == RHS.AccessN &&
-           LHS.Offset == RHS.Offset;
+  static bool isEqual(const clang::CodeGen::TBAAAccessInfo &LHS,
+                      const clang::CodeGen::TBAAAccessInfo &RHS) {
+    return LHS == RHS;
   }
 };
 

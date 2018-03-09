@@ -10,6 +10,9 @@
 //  This file contains implementations of the CompilationDatabase base class
 //  and the FixedCompilationDatabase.
 //
+//  FIXME: Various functions that take a string &ErrorMessage should be upgraded
+//  to Expected.
+//
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/CompilationDatabase.h"
@@ -26,6 +29,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
@@ -106,6 +110,15 @@ CompilationDatabase::autoDetectFromDirectory(StringRef SourceDir,
     ErrorMessage = ("Could not auto-detect compilation database from directory \"" +
                    SourceDir + "\"\n" + ErrorMessage).str();
   return DB;
+}
+
+std::vector<CompileCommand> CompilationDatabase::getAllCompileCommands() const {
+  std::vector<CompileCommand> Result;
+  for (const auto &File : getAllFiles()) {
+    auto C = getCompileCommands(File);
+    std::move(C.begin(), C.end(), std::back_inserter(Result));
+  }
+  return Result;
 }
 
 CompilationDatabasePlugin::~CompilationDatabasePlugin() {}
@@ -302,8 +315,22 @@ FixedCompilationDatabase::loadFromCommandLine(int &Argc,
   std::vector<std::string> StrippedArgs;
   if (!stripPositionalArgs(CommandLine, StrippedArgs, ErrorMsg))
     return nullptr;
-  return std::unique_ptr<FixedCompilationDatabase>(
-      new FixedCompilationDatabase(Directory, StrippedArgs));
+  return llvm::make_unique<FixedCompilationDatabase>(Directory, StrippedArgs);
+}
+
+std::unique_ptr<FixedCompilationDatabase>
+FixedCompilationDatabase::loadFromFile(StringRef Path, std::string &ErrorMsg) {
+  ErrorMsg.clear();
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
+      llvm::MemoryBuffer::getFile(Path);
+  if (std::error_code Result = File.getError()) {
+    ErrorMsg = "Error while opening fixed database: " + Result.message();
+    return nullptr;
+  }
+  std::vector<std::string> Args{llvm::line_iterator(**File),
+                                llvm::line_iterator()};
+  return llvm::make_unique<FixedCompilationDatabase>(
+      llvm::sys::path::parent_path(Path), std::move(Args));
 }
 
 FixedCompilationDatabase::
@@ -324,15 +351,21 @@ FixedCompilationDatabase::getCompileCommands(StringRef FilePath) const {
   return Result;
 }
 
-std::vector<std::string>
-FixedCompilationDatabase::getAllFiles() const {
-  return std::vector<std::string>();
-}
+namespace {
 
-std::vector<CompileCommand>
-FixedCompilationDatabase::getAllCompileCommands() const {
-  return std::vector<CompileCommand>();
-}
+class FixedCompilationDatabasePlugin : public CompilationDatabasePlugin {
+  std::unique_ptr<CompilationDatabase>
+  loadFromDirectory(StringRef Directory, std::string &ErrorMessage) override {
+    SmallString<1024> DatabasePath(Directory);
+    llvm::sys::path::append(DatabasePath, "compile_flags.txt");
+    return FixedCompilationDatabase::loadFromFile(DatabasePath, ErrorMessage);
+  }
+};
+
+static CompilationDatabasePluginRegistry::Add<FixedCompilationDatabasePlugin>
+X("fixed-compilation-database", "Reads plain-text flags file");
+
+} // namespace
 
 namespace clang {
 namespace tooling {

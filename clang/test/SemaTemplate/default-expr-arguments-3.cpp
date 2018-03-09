@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -std=c++14 -verify -ast-dump %s | FileCheck %s
 // expected-no-diagnostics
 
-// CHECK: FunctionDecl {{.*}} used func 'void (void)'
+// CHECK: FunctionDecl {{.*}} used func 'void ()'
 // CHECK-NEXT: TemplateArgument type 'int'
-// CHECK: LambdaExpr {{.*}} 'class (lambda at
-// CHECK: ParmVarDecl {{.*}} used f 'enum foo' cinit
-// CHECK-NEXT: DeclRefExpr {{.*}} 'enum foo' EnumConstant {{.*}} 'a' 'enum foo'
+// CHECK: LambdaExpr {{.*}} '(lambda at
+// CHECK: ParmVarDecl {{.*}} used f 'foo' cinit
+// CHECK-NEXT: DeclRefExpr {{.*}} 'foo' EnumConstant {{.*}} 'a' 'foo'
 
 namespace PR28795 {
   template<typename T>
@@ -21,10 +21,10 @@ namespace PR28795 {
 }
 
 // CHECK: ClassTemplateSpecializationDecl {{.*}} struct class2 definition
-// CHECK-NEXT: TemplateArgument type 'int'
-// CHECK: LambdaExpr {{.*}} 'class (lambda at
-// CHECK: ParmVarDecl {{.*}} used f 'enum foo' cinit
-// CHECK-NEXT: DeclRefExpr {{.*}} 'enum foo' EnumConstant {{.*}} 'a' 'enum foo'
+// CHECK: TemplateArgument type 'int'
+// CHECK: LambdaExpr {{.*}} '(lambda at
+// CHECK: ParmVarDecl {{.*}} used f 'foo' cinit
+// CHECK-NEXT: DeclRefExpr {{.*}} 'foo' EnumConstant {{.*}} 'a' 'foo'
 
 // Template struct case:
 template <class T> struct class2 {
@@ -38,11 +38,11 @@ template struct class2<int>;
 
 // CHECK: FunctionTemplateDecl {{.*}} f1
 // CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
-// CHECK-NEXT: FunctionDecl {{.*}} f1 'void (void)'
-// CHECK: FunctionDecl {{.*}} f1 'void (void)'
+// CHECK-NEXT: FunctionDecl {{.*}} f1 'void ()'
+// CHECK: FunctionDecl {{.*}} f1 'void ()'
 // CHECK-NEXT: TemplateArgument type 'int'
-// CHECK: ParmVarDecl {{.*}} n 'enum foo' cinit
-// CHECK-NEXT: DeclRefExpr {{.*}} 'enum foo' EnumConstant {{.*}} 'a' 'enum foo'
+// CHECK: ParmVarDecl {{.*}} n 'foo' cinit
+// CHECK-NEXT: DeclRefExpr {{.*}} 'foo' EnumConstant {{.*}} 'a' 'foo'
 
 template<typename T>
 void f1() {

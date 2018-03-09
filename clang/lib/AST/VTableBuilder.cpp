@@ -1079,9 +1079,7 @@ static void
 visitAllOverriddenMethods(const CXXMethodDecl *MD, VisitorTy &Visitor) {
   assert(MD->isVirtual() && "Method is not virtual!");
 
-  for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-       E = MD->end_overridden_methods(); I != E; ++I) {
-    const CXXMethodDecl *OverriddenMD = *I;
+  for (const CXXMethodDecl *OverriddenMD : MD->overridden_methods()) {
     if (!Visitor(OverriddenMD))
       continue;
     visitAllOverriddenMethods(OverriddenMD, Visitor);
@@ -1329,11 +1327,8 @@ static bool OverridesIndirectMethodInBases(
     ItaniumVTableBuilder::PrimaryBasesSetVectorTy &Bases) {
   if (Bases.count(MD->getParent()))
     return true;
-  
-  for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-       E = MD->end_overridden_methods(); I != E; ++I) {
-    const CXXMethodDecl *OverriddenMD = *I;
-    
+
+  for (const CXXMethodDecl *OverriddenMD : MD->overridden_methods()) {
     // Check "indirect overriders".
     if (OverridesIndirectMethodInBases(OverriddenMD, Bases))
       return true;
@@ -2963,6 +2958,9 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
       CalculateVtordispAdjustment(FinalOverrider, ThisOffset,
                                   ThisAdjustmentOffset);
 
+    unsigned VBIndex =
+        LastVBase ? VTables.getVBTableIndex(MostDerivedClass, LastVBase) : 0;
+
     if (OverriddenMD) {
       // If MD overrides anything in this vftable, we need to update the
       // entries.
@@ -2974,6 +2972,8 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
         continue;
 
       MethodInfo &OverriddenMethodInfo = OverriddenMDIterator->second;
+
+      VBIndex = OverriddenMethodInfo.VBTableIndex;
 
       // Let's check if the overrider requires any return adjustments.
       // We must create a new slot if the MD's return type is not trivially
@@ -2987,8 +2987,7 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
       if (!ReturnAdjustingThunk) {
         // No return adjustment needed - just replace the overridden method info
         // with the current info.
-        MethodInfo MI(OverriddenMethodInfo.VBTableIndex,
-                      OverriddenMethodInfo.VFTableIndex);
+        MethodInfo MI(VBIndex, OverriddenMethodInfo.VFTableIndex);
         MethodInfoMap.erase(OverriddenMDIterator);
 
         assert(!MethodInfoMap.count(MD) &&
@@ -3015,8 +3014,6 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
 
     // If we got here, MD is a method not seen in any of the sub-bases or
     // it requires return adjustment. Insert the method info for this method.
-    unsigned VBIndex =
-        LastVBase ? VTables.getVBTableIndex(MostDerivedClass, LastVBase) : 0;
     MethodInfo MI(VBIndex,
                   HasRTTIComponent ? Components.size() - 1 : Components.size(),
                   ReturnAdjustingThunk);

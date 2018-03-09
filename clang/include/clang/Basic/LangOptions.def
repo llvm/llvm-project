@@ -82,6 +82,7 @@
 // FIXME: A lot of the BENIGN_ options should be COMPATIBLE_ instead.
 LANGOPT(C99               , 1, 0, "C99")
 LANGOPT(C11               , 1, 0, "C11")
+LANGOPT(C17               , 1, 0, "C17")
 LANGOPT(MSVCCompat        , 1, 0, "Microsoft Visual C++ full compatibility mode")
 LANGOPT(MicrosoftExt      , 1, 0, "Microsoft C++ extensions")
 LANGOPT(AsmBlocks         , 1, 0, "Microsoft inline asm blocks")
@@ -89,7 +90,7 @@ LANGOPT(Borland           , 1, 0, "Borland extensions")
 LANGOPT(CPlusPlus         , 1, 0, "C++")
 LANGOPT(CPlusPlus11       , 1, 0, "C++11")
 LANGOPT(CPlusPlus14       , 1, 0, "C++14")
-LANGOPT(CPlusPlus1z       , 1, 0, "C++1z")
+LANGOPT(CPlusPlus17       , 1, 0, "C++17")
 LANGOPT(CPlusPlus2a       , 1, 0, "C++2a")
 LANGOPT(ObjC1             , 1, 0, "Objective-C 1")
 LANGOPT(ObjC2             , 1, 0, "Objective-C 2")
@@ -124,7 +125,9 @@ LANGOPT(ZVector           , 1, 0, "System z vector extensions")
 LANGOPT(Exceptions        , 1, 0, "exception handling")
 LANGOPT(ObjCExceptions    , 1, 0, "Objective-C exceptions")
 LANGOPT(CXXExceptions     , 1, 0, "C++ exceptions")
+LANGOPT(DWARFExceptions   , 1, 0, "dwarf exception handling")
 LANGOPT(SjLjExceptions    , 1, 0, "setjmp-longjump exception handling")
+LANGOPT(SEHExceptions     , 1, 0, "SEH .xdata exception handling")
 LANGOPT(ExternCNoUnwind   , 1, 0, "Assume extern C functions don't unwind")
 LANGOPT(TraditionalCPP    , 1, 0, "traditional CPP emulation")
 LANGOPT(RTTI              , 1, 1, "run-time type information")
@@ -136,6 +139,8 @@ LANGOPT(NoMathBuiltin     , 1, 0, "disable math builtin functions")
 LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
 LANGOPT(CoroutinesTS      , 1, 0, "C++ coroutines TS")
 LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template template arguments")
+
+LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 
 BENIGN_LANGOPT(ThreadsafeStatics , 1, 1, "thread-safe static initializers")
 LANGOPT(POSIXThreads      , 1, 0, "POSIX thread support")
@@ -176,7 +181,8 @@ BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __w
 
 BENIGN_LANGOPT(AccessControl     , 1, 1, "C++ access control")
 LANGOPT(CharIsSigned      , 1, 1, "signed char")
-LANGOPT(ShortWChar        , 1, 0, "unsigned short wchar_t")
+LANGOPT(WCharSize         , 4, 0, "width of wchar_t")
+LANGOPT(WCharIsSigned        , 1, 0, "signed or unsigned wchar_t")
 ENUM_LANGOPT(MSPointerToMemberRepresentationMethod, PragmaMSPointersToMembersKind, 2, PPTMK_BestCase, "member-pointer representation method")
 ENUM_LANGOPT(DefaultCallingConv, DefaultCallingConvention, 3, DCC_None, "default calling convention")
 
@@ -189,6 +195,7 @@ LANGOPT(NativeHalfArgsAndReturns, 1, 0, "Native half args and returns")
 LANGOPT(HalfArgsAndReturns, 1, 0, "half args and returns")
 LANGOPT(CUDA              , 1, 0, "CUDA")
 LANGOPT(OpenMP            , 32, 0, "OpenMP support and version of OpenMP (31, 40 or 45)")
+LANGOPT(OpenMPSimd        , 1, 0, "Use SIMD only OpenMP support.")
 LANGOPT(OpenMPUseTLS      , 1, 0, "Use TLS for threadprivates or runtime calls")
 LANGOPT(OpenMPIsDevice    , 1, 0, "Generate code only for OpenMP target device")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
@@ -271,6 +278,9 @@ LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "aggressive, 2: more aggressive)")
 
 LANGOPT(XRayInstrument, 1, 0, "controls whether to do XRay instrumentation")
+LANGOPT(XRayAlwaysEmitCustomEvents, 1, 0,
+        "controls whether to always emit intrinsic calls to "
+        "__xray_customevent(...) builtin.")
 
 BENIGN_LANGOPT(AllowEditorPlaceholders, 1, 0,
                "allow editor placeholders in source")

@@ -15,4 +15,4 @@ struct CharlieImpl : Charlie, Alpha {
   void bravo(...) {}
 } delta;
 
-// CHECK: define {{.*}} void @_ZThn8_N11CharlieImpl5bravoEz(
+// CHECK: define {{.*}} void @_ZThn{{[48]}}_N11CharlieImpl5bravoEz(

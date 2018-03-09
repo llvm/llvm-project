@@ -1,4 +1,4 @@
-//===--- DeclCXX.cpp - C++ Declaration AST Node Implementation ------------===//
+//===- DeclCXX.cpp - C++ Declaration AST Node Implementation --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,26 +10,51 @@
 // This file implements the C++ related Decl classes.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/LambdaCapture.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/ODRHash.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "llvm/ADT/STLExtras.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
 // Decl Allocation/Deallocation Method Implementations
 //===----------------------------------------------------------------------===//
 
-void AccessSpecDecl::anchor() { }
+void AccessSpecDecl::anchor() {}
 
 AccessSpecDecl *AccessSpecDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID) AccessSpecDecl(EmptyShell());
@@ -55,15 +80,20 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasOnlyCMembers(true), HasInClassInitializer(false),
       HasUninitializedReferenceMember(false), HasUninitializedFields(false),
       HasInheritedConstructor(false), HasInheritedAssignment(false),
+      NeedOverloadResolutionForCopyConstructor(false),
       NeedOverloadResolutionForMoveConstructor(false),
       NeedOverloadResolutionForMoveAssignment(false),
       NeedOverloadResolutionForDestructor(false),
+      DefaultedCopyConstructorIsDeleted(false),
       DefaultedMoveConstructorIsDeleted(false),
       DefaultedMoveAssignmentIsDeleted(false),
       DefaultedDestructorIsDeleted(false), HasTrivialSpecialMembers(SMF_All),
-      DeclaredNonTrivialSpecialMembers(0), HasIrrelevantDestructor(true),
+      HasTrivialSpecialMembersForCall(SMF_All),
+      DeclaredNonTrivialSpecialMembers(0),
+      DeclaredNonTrivialSpecialMembersForCall(0), HasIrrelevantDestructor(true),
       HasConstexprNonCopyMoveConstructor(false),
       HasDefaultedDefaultConstructor(false),
+      CanPassInRegisters(true),
       DefaultedDefaultConstructorIsConstexpr(true),
       HasConstexprDefaultConstructor(false),
       HasNonLiteralTypeFieldsOrBases(false), ComputedVisibleConversions(false),
@@ -73,9 +103,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), HasODRHash(false), ODRHash(0),
-      NumBases(0), NumVBases(0), Bases(), VBases(), Definition(D),
-      FirstFriend() {}
+      IsParsingBaseSpecifiers(false), HasODRHash(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -91,13 +119,12 @@ CXXRecordDecl::CXXRecordDecl(Kind K, TagKind TK, const ASTContext &C,
                              CXXRecordDecl *PrevDecl)
     : RecordDecl(K, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl),
       DefinitionData(PrevDecl ? PrevDecl->DefinitionData
-                              : nullptr),
-      TemplateOrInstantiation() {}
+                              : nullptr) {}
 
 CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
                                      DeclContext *DC, SourceLocation StartLoc,
                                      SourceLocation IdLoc, IdentifierInfo *Id,
-                                     CXXRecordDecl* PrevDecl,
+                                     CXXRecordDecl *PrevDecl,
                                      bool DelayTypeCreation) {
   CXXRecordDecl *R = new (C, DC) CXXRecordDecl(CXXRecord, TK, C, DC, StartLoc,
                                                IdLoc, Id, PrevDecl);
@@ -145,7 +172,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     C.Deallocate(data().getBases());
 
   if (NumBases) {
-    if (!C.getLangOpts().CPlusPlus1z) {
+    if (!C.getLangOpts().CPlusPlus17) {
       // C++ [dcl.init.aggr]p1:
       //   An aggregate is [...] a class with [...] no base classes [...].
       data().Aggregate = false;
@@ -256,6 +283,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   operator for a class X] is trivial [...] if:
       //    -- class X has [...] no virtual base classes
       data().HasTrivialSpecialMembers &= SMF_Destructor;
+      data().HasTrivialSpecialMembersForCall &= SMF_Destructor;
 
       // C++0x [class]p7:
       //   A standard-layout class is a class that: [...]
@@ -289,12 +317,19 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //       subobject is trivial, and
       if (!BaseClassDecl->hasTrivialCopyConstructor())
         data().HasTrivialSpecialMembers &= ~SMF_CopyConstructor;
+
+      if (!BaseClassDecl->hasTrivialCopyConstructorForCall())
+        data().HasTrivialSpecialMembersForCall &= ~SMF_CopyConstructor;
+
       // If the base class doesn't have a simple move constructor, we'll eagerly
       // declare it and perform overload resolution to determine which function
       // it actually calls. If it does have a simple move constructor, this
       // check is correct.
       if (!BaseClassDecl->hasTrivialMoveConstructor())
         data().HasTrivialSpecialMembers &= ~SMF_MoveConstructor;
+
+      if (!BaseClassDecl->hasTrivialMoveConstructorForCall())
+        data().HasTrivialSpecialMembersForCall &= ~SMF_MoveConstructor;
 
       // C++0x [class.copy]p27:
       //   A copy/move assignment operator for class X is trivial if [...]
@@ -332,6 +367,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     if (!BaseClassDecl->hasTrivialDestructor())
       data().HasTrivialSpecialMembers &= ~SMF_Destructor;
 
+    if (!BaseClassDecl->hasTrivialDestructorForCall())
+      data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
+
     if (!BaseClassDecl->hasIrrelevantDestructor())
       data().HasIrrelevantDestructor = false;
 
@@ -352,8 +390,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       setHasVolatileMember(true);
 
     // Keep track of the presence of mutable fields.
-    if (BaseClassDecl->hasMutableFields())
+    if (BaseClassDecl->hasMutableFields()) {
       data().HasMutableFields = true;
+      data().NeedOverloadResolutionForCopyConstructor = true;
+    }
 
     if (BaseClassDecl->hasUninitializedReferenceMember())
       data().HasUninitializedReferenceMember = true;
@@ -398,7 +438,6 @@ unsigned CXXRecordDecl::getODRHash() const {
   return DefinitionData->ODRHash;
 }
 
-
 void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   // C++11 [class.copy]p11:
   //   A defaulted copy/move constructor for a class X is defined as
@@ -406,6 +445,8 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   //    -- a direct or virtual base class B that cannot be copied/moved [...]
   //    -- a non-static data member of class type M (or array thereof)
   //       that cannot be copied or moved [...]
+  if (!Subobj->hasSimpleCopyConstructor())
+    data().NeedOverloadResolutionForCopyConstructor = true;
   if (!Subobj->hasSimpleMoveConstructor())
     data().NeedOverloadResolutionForMoveConstructor = true;
 
@@ -426,6 +467,7 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   //    -- any non-static data member has a type with a destructor
   //       that is deleted or inaccessible from the defaulted [ctor or dtor].
   if (!Subobj->hasSimpleDestructor()) {
+    data().NeedOverloadResolutionForCopyConstructor = true;
     data().NeedOverloadResolutionForMoveConstructor = true;
     data().NeedOverloadResolutionForDestructor = true;
   }
@@ -510,6 +552,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   assignment operator for a class X] is trivial [...] if:
       //    -- class X has no virtual functions [...]
       data().HasTrivialSpecialMembers &= SMF_Destructor;
+      data().HasTrivialSpecialMembersForCall &= SMF_Destructor;
 
       // C++0x [class]p7:
       //   A standard-layout class is a class that: [...]
@@ -594,8 +637,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
     // C++11 [class.dtor]p5:
     //   A destructor is trivial if [...] the destructor is not virtual.
-    if (DD->isVirtual())
+    if (DD->isVirtual()) {
       data().HasTrivialSpecialMembers &= ~SMF_Destructor;
+      data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
+    }
   }
 
   // Handle member functions.
@@ -641,16 +686,30 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // If this is the first declaration of a special member, we no longer have
       // an implicit trivial special member.
       data().HasTrivialSpecialMembers &=
-        data().DeclaredSpecialMembers | ~SMKind;
+          data().DeclaredSpecialMembers | ~SMKind;
+      data().HasTrivialSpecialMembersForCall &=
+          data().DeclaredSpecialMembers | ~SMKind;
 
       if (!Method->isImplicit() && !Method->isUserProvided()) {
         // This method is user-declared but not user-provided. We can't work out
         // whether it's trivial yet (not until we get to the end of the class).
         // We'll handle this method in finishedDefaultedOrDeletedMember.
-      } else if (Method->isTrivial())
+      } else if (Method->isTrivial()) {
         data().HasTrivialSpecialMembers |= SMKind;
-      else
+        data().HasTrivialSpecialMembersForCall |= SMKind;
+      } else if (Method->isTrivialForCall()) {
+        data().HasTrivialSpecialMembersForCall |= SMKind;
         data().DeclaredNonTrivialSpecialMembers |= SMKind;
+      } else {
+        data().DeclaredNonTrivialSpecialMembers |= SMKind;
+        // If this is a user-provided function, do not set
+        // DeclaredNonTrivialSpecialMembersForCall here since we don't know
+        // yet whether the method would be considered non-trivial for the
+        // purpose of calls (attribute "trivial_abi" can be dropped from the
+        // class later, which can change the special method's triviality).
+        if (!Method->isUserProvided())
+          data().DeclaredNonTrivialSpecialMembersForCall |= SMKind;
+      }
 
       // Note when we have declared a declared special member, and suppress the
       // implicit declaration of this special member.
@@ -711,8 +770,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
       data().IsStandardLayout = false;
 
     // Keep track of the presence of mutable fields.
-    if (Field->isMutable())
+    if (Field->isMutable()) {
       data().HasMutableFields = true;
+      data().NeedOverloadResolutionForCopyConstructor = true;
+    }
 
     // C++11 [class.union]p8, DR1460:
     //   If X is a union, a non-static data member of X that is not an anonymous
@@ -741,6 +802,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
         struct DefinitionData &Data = data();
         Data.PlainOldData = false;
         Data.HasTrivialSpecialMembers = 0;
+        Data.HasTrivialSpecialMembersForCall = 0;
         Data.HasIrrelevantDestructor = false;
       } else if (!Context.getLangOpts().ObjCAutoRefCount) {
         setHasObjectMember(true);
@@ -756,6 +818,12 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   A standard-layout class is a class that:
       //    -- has no non-static data members of type [...] reference,
       data().IsStandardLayout = false;
+
+      // C++1z [class.copy.ctor]p10:
+      //   A defaulted copy constructor for a class X is defined as deleted if X has:
+      //    -- a non-static data member of rvalue reference type
+      if (T->isRValueReferenceType())
+        data().DefaultedCopyConstructorIsDeleted = true;
     }
 
     if (!Field->hasInClassInitializer() && !Field->isMutable()) {
@@ -809,6 +877,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         // We may need to perform overload resolution to determine whether a
         // field can be moved if it's const or volatile qualified.
         if (T.getCVRQualifiers() & (Qualifiers::Const | Qualifiers::Volatile)) {
+          // We need to care about 'const' for the copy constructor because an
+          // implicit copy constructor might be declared with a non-const
+          // parameter.
+          data().NeedOverloadResolutionForCopyConstructor = true;
           data().NeedOverloadResolutionForMoveConstructor = true;
           data().NeedOverloadResolutionForMoveAssignment = true;
         }
@@ -819,6 +891,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //    -- X is a union-like class that has a variant member with a
         //       non-trivial [corresponding special member]
         if (isUnion()) {
+          if (FieldRec->hasNonTrivialCopyConstructor())
+            data().DefaultedCopyConstructorIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveConstructor())
             data().DefaultedMoveConstructorIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveAssignment())
@@ -830,6 +904,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         // For an anonymous union member, our overload resolution will perform
         // overload resolution for its members.
         if (Field->isAnonymousStructOrUnion()) {
+          data().NeedOverloadResolutionForCopyConstructor |=
+              FieldRec->data().NeedOverloadResolutionForCopyConstructor;
           data().NeedOverloadResolutionForMoveConstructor |=
               FieldRec->data().NeedOverloadResolutionForMoveConstructor;
           data().NeedOverloadResolutionForMoveAssignment |=
@@ -854,11 +930,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //       member is trivial;
         if (!FieldRec->hasTrivialCopyConstructor())
           data().HasTrivialSpecialMembers &= ~SMF_CopyConstructor;
+
+        if (!FieldRec->hasTrivialCopyConstructorForCall())
+          data().HasTrivialSpecialMembersForCall &= ~SMF_CopyConstructor;
+
         // If the field doesn't have a simple move constructor, we'll eagerly
         // declare the move constructor for this class and we'll decide whether
         // it's trivial then.
         if (!FieldRec->hasTrivialMoveConstructor())
           data().HasTrivialSpecialMembers &= ~SMF_MoveConstructor;
+
+        if (!FieldRec->hasTrivialMoveConstructorForCall())
+          data().HasTrivialSpecialMembersForCall &= ~SMF_MoveConstructor;
 
         // C++0x [class.copy]p27:
         //   A copy/move assignment operator for class X is trivial if [...]
@@ -876,6 +959,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
         if (!FieldRec->hasTrivialDestructor())
           data().HasTrivialSpecialMembers &= ~SMF_Destructor;
+        if (!FieldRec->hasTrivialDestructorForCall())
+          data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
         if (!FieldRec->hasIrrelevantDestructor())
           data().HasIrrelevantDestructor = false;
         if (FieldRec->hasObjectMember())
@@ -915,8 +1000,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         }
         
         // Keep track of the presence of mutable fields.
-        if (FieldRec->hasMutableFields())
+        if (FieldRec->hasMutableFields()) {
           data().HasMutableFields = true;
+          data().NeedOverloadResolutionForCopyConstructor = true;
+        }
 
         // C++11 [class.copy]p13:
         //   If the implicitly-defined constructor would satisfy the
@@ -1054,6 +1141,23 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
     data().HasTrivialSpecialMembers |= SMKind;
   else
     data().DeclaredNonTrivialSpecialMembers |= SMKind;
+}
+
+void CXXRecordDecl::setTrivialForCallFlags(CXXMethodDecl *D) {
+  unsigned SMKind = 0;
+
+  if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
+    if (Constructor->isCopyConstructor())
+      SMKind = SMF_CopyConstructor;
+    else if (Constructor->isMoveConstructor())
+      SMKind = SMF_MoveConstructor;
+  } else if (isa<CXXDestructorDecl>(D))
+    SMKind = SMF_Destructor;
+
+  if (D->isTrivialForCall())
+    data().HasTrivialSpecialMembersForCall |= SMKind;
+  else
+    data().DeclaredNonTrivialSpecialMembersForCall |= SMKind;
 }
 
 bool CXXRecordDecl::isCLike() const {
@@ -1444,13 +1548,73 @@ bool CXXRecordDecl::isAnyDestructorNoReturn() const {
   return false;
 }
 
+static bool isDeclContextInNamespace(const DeclContext *DC) {
+  while (!DC->isTranslationUnit()) {
+    if (DC->isNamespace())
+      return true;
+    DC = DC->getParent();
+  }
+  return false;
+}
+
+bool CXXRecordDecl::isInterfaceLike() const {
+  assert(hasDefinition() && "checking for interface-like without a definition");
+  // All __interfaces are inheritently interface-like.
+  if (isInterface())
+    return true;
+
+  // Interface-like types cannot have a user declared constructor, destructor,
+  // friends, VBases, conversion functions, or fields.  Additionally, lambdas
+  // cannot be interface types.
+  if (isLambda() || hasUserDeclaredConstructor() ||
+      hasUserDeclaredDestructor() || !field_empty() || hasFriends() ||
+      getNumVBases() > 0 || conversion_end() - conversion_begin() > 0)
+    return false;
+
+  // No interface-like type can have a method with a definition.
+  for (const auto *const Method : methods())
+    if (Method->isDefined() && !Method->isImplicit())
+      return false;
+
+  // Check "Special" types.
+  const auto *Uuid = getAttr<UuidAttr>();
+  // MS SDK declares IUnknown/IDispatch both in the root of a TU, or in an
+  // extern C++ block directly in the TU.  These are only valid if in one
+  // of these two situations.
+  if (Uuid && isStruct() && !getDeclContext()->isExternCContext() &&
+      !isDeclContextInNamespace(getDeclContext()) &&
+      ((getName() == "IUnknown" &&
+        Uuid->getGuid() == "00000000-0000-0000-C000-000000000046") ||
+       (getName() == "IDispatch" &&
+        Uuid->getGuid() == "00020400-0000-0000-C000-000000000046"))) {
+    if (getNumBases() > 0)
+      return false;
+    return true;
+  }
+
+  // FIXME: Any access specifiers is supposed to make this no longer interface
+  // like.
+
+  // If this isn't a 'special' type, it must have a single interface-like base.
+  if (getNumBases() != 1)
+    return false;
+
+  const auto BaseSpec = *bases_begin();
+  if (BaseSpec.isVirtual() || BaseSpec.getAccessSpecifier() != AS_public)
+    return false;
+  const auto *Base = BaseSpec.getType()->getAsCXXRecordDecl();
+  if (Base->isInterface() || !Base->isInterfaceLike())
+    return false;
+  return true;
+}
+
 void CXXRecordDecl::completeDefinition() {
   completeDefinition(nullptr);
 }
 
 void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
   RecordDecl::completeDefinition();
-  
+
   // If the class may be abstract (but hasn't been marked as such), check for
   // any pure final overriders.
   if (mayBeAbstract()) {
@@ -1504,7 +1668,7 @@ bool CXXRecordDecl::mayBeAbstract() const {
   return false;
 }
 
-void CXXDeductionGuideDecl::anchor() { }
+void CXXDeductionGuideDecl::anchor() {}
 
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc, bool IsExplicit,
@@ -1521,7 +1685,7 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
                                            nullptr, SourceLocation());
 }
 
-void CXXMethodDecl::anchor() { }
+void CXXMethodDecl::anchor() {}
 
 bool CXXMethodDecl::isStatic() const {
   const CXXMethodDecl *MD = getCanonicalDecl();
@@ -1535,9 +1699,7 @@ bool CXXMethodDecl::isStatic() const {
 
 static bool recursivelyOverrides(const CXXMethodDecl *DerivedMD,
                                  const CXXMethodDecl *BaseMD) {
-  for (CXXMethodDecl::method_iterator I = DerivedMD->begin_overridden_methods(),
-         E = DerivedMD->end_overridden_methods(); I != E; ++I) {
-    const CXXMethodDecl *MD = *I;
+  for (const CXXMethodDecl *MD : DerivedMD->overridden_methods()) {
     if (MD->getCanonicalDecl() == BaseMD->getCanonicalDecl())
       return true;
     if (recursivelyOverrides(MD, BaseMD))
@@ -1702,6 +1864,14 @@ bool CXXMethodDecl::isUsualDeallocationFunction() const {
     return true;
   unsigned UsualParams = 1;
 
+  // C++ P0722:
+  //   A destroying operator delete is a usual deallocation function if
+  //   removing the std::destroying_delete_t parameter and changing the
+  //   first parameter type from T* to void* results in the signature of
+  //   a usual deallocation function.
+  if (isDestroyingOperatorDelete())
+    ++UsualParams;
+
   // C++ <=14 [basic.stc.dynamic.deallocation]p2:
   //   [...] If class T does not declare such an operator delete but does 
   //   declare a member deallocation function named operator delete with 
@@ -1860,43 +2030,34 @@ CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R,
                                        SourceLocation EllipsisLoc)
-  : Initializee(TInfo), MemberOrEllipsisLocation(EllipsisLoc), Init(Init), 
-    LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(IsVirtual), 
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(TInfo), MemberOrEllipsisLocation(EllipsisLoc), Init(Init),
+      LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(IsVirtual),
+      IsWritten(false), SourceOrder(0) {}
 
 CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        FieldDecl *Member,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-  : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
-    LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+      LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
+      IsWritten(false), SourceOrder(0) {}
 
 CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        IndirectFieldDecl *Member,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-  : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
-    LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+      LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
+      IsWritten(false), SourceOrder(0) {}
 
 CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        TypeSourceInfo *TInfo,
                                        SourceLocation L, Expr *Init, 
                                        SourceLocation R)
-  : Initializee(TInfo), MemberOrEllipsisLocation(), Init(Init),
-    LParenLoc(L), RParenLoc(R), IsDelegating(true), IsVirtual(false),
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(TInfo), Init(Init), LParenLoc(L), RParenLoc(R),
+      IsDelegating(true), IsVirtual(false), IsWritten(false), SourceOrder(0) {}
 
 TypeLoc CXXCtorInitializer::getBaseClassLoc() const {
   if (isBaseInitializer())
@@ -1936,7 +2097,7 @@ SourceRange CXXCtorInitializer::getSourceRange() const {
   return SourceRange(getSourceLocation(), getRParenLoc());
 }
 
-void CXXConstructorDecl::anchor() { }
+void CXXConstructorDecl::anchor() {}
 
 CXXConstructorDecl *CXXConstructorDecl::CreateDeserialized(ASTContext &C,
                                                            unsigned ID,
@@ -2079,7 +2240,7 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   return true;  
 }
 
-void CXXDestructorDecl::anchor() { }
+void CXXDestructorDecl::anchor() {}
 
 CXXDestructorDecl *
 CXXDestructorDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
@@ -2101,16 +2262,17 @@ CXXDestructorDecl::Create(ASTContext &C, CXXRecordDecl *RD,
                                        isInline, isImplicitlyDeclared);
 }
 
-void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD) {
+void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   auto *First = cast<CXXDestructorDecl>(getFirstDecl());
   if (OD && !First->OperatorDelete) {
     First->OperatorDelete = OD;
+    First->OperatorDeleteThisArg = ThisArg;
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorDelete(First, OD);
+      L->ResolvedOperatorDelete(First, OD, ThisArg);
   }
 }
 
-void CXXConversionDecl::anchor() { }
+void CXXConversionDecl::anchor() {}
 
 CXXConversionDecl *
 CXXConversionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
@@ -2140,7 +2302,7 @@ bool CXXConversionDecl::isLambdaToBlockPointerConversion() const {
          getConversionType()->isBlockPointerType();
 }
 
-void LinkageSpecDecl::anchor() { }
+void LinkageSpecDecl::anchor() {}
 
 LinkageSpecDecl *LinkageSpecDecl::Create(ASTContext &C,
                                          DeclContext *DC,
@@ -2157,7 +2319,7 @@ LinkageSpecDecl *LinkageSpecDecl::CreateDeserialized(ASTContext &C,
                                      SourceLocation(), lang_c, false);
 }
 
-void UsingDirectiveDecl::anchor() { }
+void UsingDirectiveDecl::anchor() {}
 
 UsingDirectiveDecl *UsingDirectiveDecl::Create(ASTContext &C, DeclContext *DC,
                                                SourceLocation L,
@@ -2191,7 +2353,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl)
     : NamedDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
-      redeclarable_base(C), LocStart(StartLoc), RBraceLoc(),
+      redeclarable_base(C), LocStart(StartLoc),
       AnonOrFirstNamespaceAndInline(nullptr, Inline) {
   setPreviousDecl(PrevDecl);
 
@@ -2231,21 +2393,25 @@ bool NamespaceDecl::isOriginalNamespace() const { return isFirstDecl(); }
 NamespaceDecl *NamespaceDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();
 }
+
 NamespaceDecl *NamespaceDecl::getPreviousDeclImpl() {
   return getPreviousDecl();
 }
+
 NamespaceDecl *NamespaceDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
 
-void NamespaceAliasDecl::anchor() { }
+void NamespaceAliasDecl::anchor() {}
 
 NamespaceAliasDecl *NamespaceAliasDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();
 }
+
 NamespaceAliasDecl *NamespaceAliasDecl::getPreviousDeclImpl() {
   return getPreviousDecl();
 }
+
 NamespaceAliasDecl *NamespaceAliasDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
@@ -2272,7 +2438,7 @@ NamespaceAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
                                         SourceLocation(), nullptr);
 }
 
-void UsingShadowDecl::anchor() { }
+void UsingShadowDecl::anchor() {}
 
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
                                  SourceLocation Loc, UsingDecl *Using,
@@ -2287,7 +2453,7 @@ UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
 
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, EmptyShell Empty)
     : NamedDecl(K, nullptr, SourceLocation(), DeclarationName()),
-      redeclarable_base(C), Underlying(), UsingOrNextShadow() {}
+      redeclarable_base(C) {}
 
 UsingShadowDecl *
 UsingShadowDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
@@ -2302,7 +2468,7 @@ UsingDecl *UsingShadowDecl::getUsingDecl() const {
   return cast<UsingDecl>(Shadow->UsingOrNextShadow);
 }
 
-void ConstructorUsingShadowDecl::anchor() { }
+void ConstructorUsingShadowDecl::anchor() {}
 
 ConstructorUsingShadowDecl *
 ConstructorUsingShadowDecl::Create(ASTContext &C, DeclContext *DC,
@@ -2321,7 +2487,7 @@ CXXRecordDecl *ConstructorUsingShadowDecl::getNominatedBaseClass() const {
   return getUsingDecl()->getQualifier()->getAsRecordDecl();
 }
 
-void UsingDecl::anchor() { }
+void UsingDecl::anchor() {}
 
 void UsingDecl::addShadowDecl(UsingShadowDecl *S) {
   assert(std::find(shadow_begin(), shadow_end(), S) == shadow_end() &&
@@ -2373,7 +2539,7 @@ SourceRange UsingDecl::getSourceRange() const {
   return SourceRange(Begin, getNameInfo().getEndLoc());
 }
 
-void UsingPackDecl::anchor() { }
+void UsingPackDecl::anchor() {}
 
 UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,
                                      NamedDecl *InstantiatedFrom,
@@ -2393,7 +2559,7 @@ UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, unsigned ID,
   return Result;
 }
 
-void UnresolvedUsingValueDecl::anchor() { }
+void UnresolvedUsingValueDecl::anchor() {}
 
 UnresolvedUsingValueDecl *
 UnresolvedUsingValueDecl::Create(ASTContext &C, DeclContext *DC,
@@ -2421,7 +2587,7 @@ SourceRange UnresolvedUsingValueDecl::getSourceRange() const {
   return SourceRange(Begin, getNameInfo().getEndLoc());
 }
 
-void UnresolvedUsingTypenameDecl::anchor() { }
+void UnresolvedUsingTypenameDecl::anchor() {}
 
 UnresolvedUsingTypenameDecl *
 UnresolvedUsingTypenameDecl::Create(ASTContext &C, DeclContext *DC,
@@ -2443,7 +2609,7 @@ UnresolvedUsingTypenameDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
       SourceLocation(), nullptr, SourceLocation());
 }
 
-void StaticAssertDecl::anchor() { }
+void StaticAssertDecl::anchor() {}
 
 StaticAssertDecl *StaticAssertDecl::Create(ASTContext &C, DeclContext *DC,
                                            SourceLocation StaticAssertLoc,

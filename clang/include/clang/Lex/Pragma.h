@@ -1,4 +1,4 @@
-//===--- Pragma.h - Pragma registration and handling ------------*- C++ -*-===//
+//===- Pragma.h - Pragma registration and handling --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,13 +17,13 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include <cassert>
+#include <string>
 
 namespace clang {
-  class Preprocessor;
-  class Token;
-  class IdentifierInfo;
-  class PragmaNamespace;
+
+class PragmaNamespace;
+class Preprocessor;
+class Token;
 
   /**
    * \brief Describes how the pragma was introduced, e.g., with \#pragma,
@@ -58,9 +58,10 @@ namespace clang {
 /// pragmas.
 class PragmaHandler {
   std::string Name;
+
 public:
+  PragmaHandler() = default;
   explicit PragmaHandler(StringRef name) : Name(name) {}
-  PragmaHandler() {}
   virtual ~PragmaHandler();
 
   StringRef getName() const { return Name; }
@@ -89,8 +90,8 @@ public:
 class PragmaNamespace : public PragmaHandler {
   /// Handlers - This is a map of the handlers in this namespace with their name
   /// as key.
-  ///
-  llvm::StringMap<PragmaHandler*> Handlers;
+  llvm::StringMap<PragmaHandler *> Handlers;
+
 public:
   explicit PragmaNamespace(StringRef Name) : PragmaHandler(Name) {}
   ~PragmaNamespace() override;
@@ -103,16 +104,13 @@ public:
                              bool IgnoreNull = true) const;
 
   /// AddPragma - Add a pragma to this namespace.
-  ///
   void AddPragma(PragmaHandler *Handler);
 
   /// RemovePragmaHandler - Remove the given handler from the
   /// namespace.
   void RemovePragmaHandler(PragmaHandler *Handler);
 
-  bool IsEmpty() {
-    return Handlers.empty();
-  }
+  bool IsEmpty() const { return Handlers.empty(); }
 
   void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
                     Token &FirstToken) override;
@@ -120,7 +118,6 @@ public:
   PragmaNamespace *getIfNamespace() override { return this; }
 };
 
+} // namespace clang
 
-}  // end namespace clang
-
-#endif
+#endif // LLVM_CLANG_LEX_PRAGMA_H

@@ -255,8 +255,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
     return;
   RetE = RetE->IgnoreParens();
 
-  const LocationContext *LCtx = C.getLocationContext();
-  SVal V = C.getState()->getSVal(RetE, LCtx);
+  SVal V = C.getSVal(RetE);
   const MemRegion *R = V.getAsRegion();
   if (!R)
     return;

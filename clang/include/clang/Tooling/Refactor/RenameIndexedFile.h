@@ -36,7 +36,7 @@ struct IndexedOccurrence {
 };
 
 struct IndexedSymbol {
-  SymbolName Name;
+  OldSymbolName Name;
   std::vector<IndexedOccurrence> IndexedOccurrences;
   /// Whether this symbol is an Objective-C selector.
   bool IsObjCSelector;
@@ -44,7 +44,7 @@ struct IndexedSymbol {
   /// in string literal tokens.
   bool SearchForStringLiteralOccurrences;
 
-  IndexedSymbol(SymbolName Name,
+  IndexedSymbol(OldSymbolName Name,
                 std::vector<IndexedOccurrence> IndexedOccurrences,
                 bool IsObjCSelector,
                 bool SearchForStringLiteralOccurrences = false)
@@ -60,7 +60,7 @@ struct IndexedSymbol {
 class IndexedFileOccurrenceConsumer {
 public:
   virtual ~IndexedFileOccurrenceConsumer() {}
-  virtual void handleOccurrence(const SymbolOccurrence &Occurrence,
+  virtual void handleOccurrence(const OldSymbolOccurrence &Occurrence,
                                 SourceManager &SM,
                                 const LangOptions &LangOpts) = 0;
 };

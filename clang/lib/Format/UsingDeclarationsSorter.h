@@ -25,7 +25,7 @@ class UsingDeclarationsSorter : public TokenAnalyzer {
 public:
   UsingDeclarationsSorter(const Environment &Env, const FormatStyle &Style);
 
-  tooling::Replacements
+  std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
           FormatTokenLexer &Tokens) override;

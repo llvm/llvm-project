@@ -196,7 +196,11 @@ void C::g(NonTrivial o) {
 }
 
 // BITCODE-LABEL: define void @"\01?g@C@pr30293@@UAAXUNonTrivial@2@@Z"(<{ i8*, %"struct.pr30293::NonTrivial" }>* inalloca)
-// BITCODE: %[[this1:[^ ]*]] = load i8*, i8** %[[thisaddr:[^ ]*]], align 4
-// BITCODE-NEXT: %[[this2:[^ ]*]] = getelementptr inbounds i8, i8* %[[this1]], i32 -4
-// BITCODE-NEXT: store i8* %[[this2]], i8** %[[thisaddr]], align 4
+// BITCODE: %[[thisaddr:[^ ]*]] = getelementptr inbounds <{ i8*, %"struct.pr30293::NonTrivial" }>, <{ i8*, %"struct.pr30293::NonTrivial" }>* {{.*}}, i32 0, i32 0
+// BITCODE: %[[thisaddr1:[^ ]*]] = bitcast i8** %[[thisaddr]] to %"struct.pr30293::C"**
+// BITCODE: %[[this1:[^ ]*]] = load %"struct.pr30293::C"*, %"struct.pr30293::C"** %[[thisaddr1]], align 4
+// BITCODE: %[[this2:[^ ]*]] = bitcast %"struct.pr30293::C"* %[[this1]] to i8*
+// BITCODE: %[[this3:[^ ]*]] = getelementptr inbounds i8, i8* %[[this2]], i32 -4
+// BITCODE: %[[this4:[^ ]*]] = bitcast i8* %[[this3]] to %"struct.pr30293::C"*
+// BITCODE: store %"struct.pr30293::C"* %[[this4]], %"struct.pr30293::C"** @"\01?whatsthis@pr30293@@3PAUC@1@A", align 4
 }

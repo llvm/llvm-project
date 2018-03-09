@@ -230,6 +230,17 @@ TEST(HasDeclaration, HasGetDeclTraitTest) {
                 "Expected TemplateSpecializationType to *not* have a getDecl.");
 }
 
+TEST(HasDeclaration, ElaboratedType) {
+  EXPECT_TRUE(matches(
+      "namespace n { template <typename T> struct X {}; }"
+      "void f(n::X<int>);",
+      parmVarDecl(hasType(qualType(hasDeclaration(cxxRecordDecl()))))));
+  EXPECT_TRUE(matches(
+      "namespace n { template <typename T> struct X {}; }"
+      "void f(n::X<int>);",
+      parmVarDecl(hasType(elaboratedType(hasDeclaration(cxxRecordDecl()))))));
+}
+
 TEST(HasDeclaration, HasDeclarationOfTypeWithDecl) {
   EXPECT_TRUE(matches("typedef int X; X a;",
                       varDecl(hasName("a"),
@@ -242,12 +253,25 @@ TEST(HasDeclaration, HasDeclarationOfTemplateSpecializationType) {
   EXPECT_TRUE(matches("template <typename T> class A {}; A<int> a;",
                       varDecl(hasType(templateSpecializationType(
                         hasDeclaration(namedDecl(hasName("A"))))))));
+  EXPECT_TRUE(matches("template <typename T> class A {};"
+                      "template <typename T> class B { A<T> a; };",
+                      fieldDecl(hasType(templateSpecializationType(
+                        hasDeclaration(namedDecl(hasName("A"))))))));
+  EXPECT_TRUE(matches("template <typename T> class A {}; A<int> a;",
+                      varDecl(hasType(templateSpecializationType(
+                          hasDeclaration(cxxRecordDecl()))))));
 }
 
 TEST(HasDeclaration, HasDeclarationOfCXXNewExpr) {
   EXPECT_TRUE(
       matches("int *A = new int();",
               cxxNewExpr(hasDeclaration(functionDecl(parameterCountIs(1))))));
+}
+
+TEST(HasDeclaration, HasDeclarationOfTypeAlias) {
+  EXPECT_TRUE(matches("template <typename T> using C = T; C<int> c;",
+                      varDecl(hasType(templateSpecializationType(
+                          hasDeclaration(typeAliasTemplateDecl()))))));
 }
 
 TEST(HasUnqualifiedDesugaredType, DesugarsUsing) {
@@ -379,11 +403,18 @@ TEST(Matcher, Argument) {
 }
 
 TEST(Matcher, AnyArgument) {
-  StatementMatcher CallArgumentY = callExpr(
-    hasAnyArgument(
-      ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y")))))));
+  auto HasArgumentY = hasAnyArgument(
+      ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y"))))));
+  StatementMatcher CallArgumentY = callExpr(HasArgumentY);
+  StatementMatcher ObjCCallArgumentY = objcMessageExpr(HasArgumentY);
   EXPECT_TRUE(matches("void x(int, int) { int y; x(1, y); }", CallArgumentY));
   EXPECT_TRUE(matches("void x(int, int) { int y; x(y, 42); }", CallArgumentY));
+  EXPECT_TRUE(matchesObjC("@interface I -(void)f:(int) y; @end "
+                          "void x(I* i) { int y; [i f:y]; }",
+                          ObjCCallArgumentY));
+  EXPECT_FALSE(matchesObjC("@interface I -(void)f:(int) z; @end "
+                           "void x(I* i) { int z; [i f:z]; }",
+                           ObjCCallArgumentY));
   EXPECT_TRUE(notMatches("void x(int, int) { x(1, 2); }", CallArgumentY));
 
   StatementMatcher ImplicitCastedArgument = callExpr(
@@ -785,14 +816,18 @@ TEST(HasAnyConstructorInitializer, ForField) {
   static const char Code[] =
     "class Baz { };"
       "class Foo {"
-      "  Foo() : foo_() { }"
+      "  Foo() : foo_(), bar_() { }"
       "  Baz foo_;"
-      "  Baz bar_;"
+      "  struct {"
+      "    Baz bar_;"
+      "  };"
       "};";
   EXPECT_TRUE(matches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
     forField(hasType(recordDecl(hasName("Baz"))))))));
   EXPECT_TRUE(matches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
     forField(hasName("foo_"))))));
+  EXPECT_TRUE(matches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
+    forField(hasName("bar_"))))));
   EXPECT_TRUE(notMatches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
     forField(hasType(recordDecl(hasName("Bar"))))))));
 }
@@ -2207,8 +2242,7 @@ TEST(Matcher, HasAnyDeclaration) {
                                        functionDecl(hasName("bar"))))));
 }
 
-TEST(SubstTemplateTypeParmType, HasReplacementType)
-{
+TEST(SubstTemplateTypeParmType, HasReplacementType) {
   std::string Fragment = "template<typename T>"
                          "double F(T t);"
                          "int i;"
@@ -2222,6 +2256,14 @@ TEST(SubstTemplateTypeParmType, HasReplacementType)
                  "double F();"
                  "double j = F<5>();",
                  substTemplateTypeParmType(hasReplacementType(qualType()))));
+}
+
+TEST(ClassTemplateSpecializationDecl, HasSpecializedTemplate) {
+  auto Matcher = classTemplateSpecializationDecl(
+      hasSpecializedTemplate(classTemplateDecl()));
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; typedef A<int> B;", Matcher));
+  EXPECT_TRUE(notMatches("template<typename T> class A {};", Matcher));
 }
 
 } // namespace ast_matchers

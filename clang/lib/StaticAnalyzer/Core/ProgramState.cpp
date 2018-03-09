@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/TaintManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -354,6 +355,17 @@ ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
   return CM.assume(this, inBound.castAs<DefinedSVal>(), Assumption);
 }
 
+ConditionTruthVal ProgramState::isNonNull(SVal V) const {
+  ConditionTruthVal IsNull = isNull(V);
+  if (IsNull.isUnderconstrained())
+    return IsNull;
+  return ConditionTruthVal(!IsNull.getValue());
+}
+
+ConditionTruthVal ProgramState::areEqual(SVal Lhs, SVal Rhs) const {
+  return stateMgr->getSValBuilder().areEqual(this, Lhs, Rhs);
+}
+
 ConditionTruthVal ProgramState::isNull(SVal V) const {
   if (V.isZeroConstant())
     return true;
@@ -426,24 +438,30 @@ void ProgramState::setStore(const StoreRef &newStore) {
 //  State pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void ProgramState::print(raw_ostream &Out,
-                         const char *NL, const char *Sep) const {
+void ProgramState::print(raw_ostream &Out, const char *NL, const char *Sep,
+                         const LocationContext *LC) const {
   // Print the store.
   ProgramStateManager &Mgr = getStateManager();
   Mgr.getStoreManager().print(getStore(), Out, NL, Sep);
 
   // Print out the environment.
-  Env.print(Out, NL, Sep);
+  Env.print(Out, NL, Sep, LC);
 
   // Print out the constraints.
   Mgr.getConstraintManager().print(this, Out, NL, Sep);
 
+  // Print out the tracked dynamic types.
+  printDynamicTypeInfo(this, Out, NL, Sep);
+
+  // Print out tainted symbols.
+  printTaint(Out, NL, Sep);
+
   // Print checker-specific data.
-  Mgr.getOwningEngine()->printState(Out, this, NL, Sep);
+  Mgr.getOwningEngine()->printState(Out, this, NL, Sep, LC);
 }
 
-void ProgramState::printDOT(raw_ostream &Out) const {
-  print(Out, "\\l", "\\|");
+void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LC) const {
+  print(Out, "\\l", "\\|", LC);
 }
 
 LLVM_DUMP_METHOD void ProgramState::dump() const {
@@ -455,7 +473,7 @@ void ProgramState::printTaint(raw_ostream &Out,
   TaintMapImpl TM = get<TaintMap>();
 
   if (!TM.isEmpty())
-    Out <<"Tainted Symbols:" << NL;
+    Out <<"Tainted symbols:" << NL;
 
   for (TaintMapImpl::iterator I = TM.begin(), E = TM.end(); I != E; ++I) {
     Out << I->first << " : " << I->second << NL;
@@ -781,8 +799,7 @@ bool ProgramState::isTainted(SymbolRef Sym, TaintTagType Kind) const {
           // complete. For example, this would not currently identify
           // overlapping fields in a union as tainted. To identify this we can
           // check for overlapping/nested byte offsets.
-          if (Kind == I.second &&
-              (R == I.first || R->isSubRegionOf(I.first)))
+          if (Kind == I.second && R->isSubRegionOf(I.first))
             return true;
         }
       }

@@ -109,8 +109,6 @@ REGISTER_MAP_WITH_PROGRAMSTATE(DestroyRetVal, const MemRegion *, SymbolRef)
 
 void PthreadLockChecker::checkPostStmt(const CallExpr *CE,
                                        CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
-  const LocationContext *LCtx = C.getLocationContext();
   StringRef FName = C.getCalleeName(CE);
   if (FName.empty())
     return;
@@ -121,34 +119,31 @@ void PthreadLockChecker::checkPostStmt(const CallExpr *CE,
   if (FName == "pthread_mutex_lock" ||
       FName == "pthread_rwlock_rdlock" ||
       FName == "pthread_rwlock_wrlock")
-    AcquireLock(C, CE, state->getSVal(CE->getArg(0), LCtx),
-                false, PthreadSemantics);
+    AcquireLock(C, CE, C.getSVal(CE->getArg(0)), false, PthreadSemantics);
   else if (FName == "lck_mtx_lock" ||
            FName == "lck_rw_lock_exclusive" ||
            FName == "lck_rw_lock_shared")
-    AcquireLock(C, CE, state->getSVal(CE->getArg(0), LCtx),
-                false, XNUSemantics);
+    AcquireLock(C, CE, C.getSVal(CE->getArg(0)), false, XNUSemantics);
   else if (FName == "pthread_mutex_trylock" ||
            FName == "pthread_rwlock_tryrdlock" ||
            FName == "pthread_rwlock_trywrlock")
-    AcquireLock(C, CE, state->getSVal(CE->getArg(0), LCtx),
+    AcquireLock(C, CE, C.getSVal(CE->getArg(0)),
                 true, PthreadSemantics);
   else if (FName == "lck_mtx_try_lock" ||
            FName == "lck_rw_try_lock_exclusive" ||
            FName == "lck_rw_try_lock_shared")
-    AcquireLock(C, CE, state->getSVal(CE->getArg(0), LCtx),
-                true, XNUSemantics);
+    AcquireLock(C, CE, C.getSVal(CE->getArg(0)), true, XNUSemantics);
   else if (FName == "pthread_mutex_unlock" ||
            FName == "pthread_rwlock_unlock" ||
            FName == "lck_mtx_unlock" ||
            FName == "lck_rw_done")
-    ReleaseLock(C, CE, state->getSVal(CE->getArg(0), LCtx));
+    ReleaseLock(C, CE, C.getSVal(CE->getArg(0)));
   else if (FName == "pthread_mutex_destroy")
-    DestroyLock(C, CE, state->getSVal(CE->getArg(0), LCtx), PthreadSemantics);
+    DestroyLock(C, CE, C.getSVal(CE->getArg(0)), PthreadSemantics);
   else if (FName == "lck_mtx_destroy")
-    DestroyLock(C, CE, state->getSVal(CE->getArg(0), LCtx), XNUSemantics);
+    DestroyLock(C, CE, C.getSVal(CE->getArg(0)), XNUSemantics);
   else if (FName == "pthread_mutex_init")
-    InitLock(C, CE, state->getSVal(CE->getArg(0), LCtx));
+    InitLock(C, CE, C.getSVal(CE->getArg(0)));
 }
 
 // When a lock is destroyed, in some semantics(like PthreadSemantics) we are not
@@ -232,7 +227,7 @@ void PthreadLockChecker::AcquireLock(CheckerContext &C, const CallExpr *CE,
   if (sym)
     state = resolvePossiblyDestroyedMutex(state, lockR, sym);
 
-  SVal X = state->getSVal(CE, C.getLocationContext());
+  SVal X = C.getSVal(CE);
   if (X.isUnknownOrUndef())
     return;
 

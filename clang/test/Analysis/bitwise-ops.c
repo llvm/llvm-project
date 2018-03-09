@@ -51,3 +51,9 @@ int testNegativeLeftShift(int a) {
   }
   return 0;
 }
+
+int testUnrepresentableLeftShift(int a) {
+  if (a == 8)
+    return a << 30; // expected-warning{{The result of the left shift is undefined due to shifting '8' by '30', which is unrepresentable in the unsigned version of the return type 'int'}}
+  return 0;
+}

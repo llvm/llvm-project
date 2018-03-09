@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s
+
 void foo() {
 }
 
@@ -36,21 +38,21 @@ int main(int argc, char **argv, char *env[]) {
   foo();
 #pragma omp target teams depend (out: ) // expected-error {{expected expression}}
   foo();
-#pragma omp target teams depend (inout : foobool(argc)), depend (in, argc) // expected-error {{expected variable name, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
+#pragma omp target teams depend (inout : foobool(argc)), depend (in, argc) // expected-error {{expected addressable lvalue expression, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
   foo();
 #pragma omp target teams depend (out :S1) // expected-error {{'S1' does not refer to a value}}
   foo();
-#pragma omp target teams depend(in : argv[1][1] = '2') // expected-error {{expected variable name, array element or array section}}
+#pragma omp target teams depend(in : argv[1][1] = '2')
   foo();
-#pragma omp target teams depend (in : vec[1]) // expected-error {{expected variable name, array element or array section}}
+#pragma omp target teams depend (in : vec[1]) // expected-error {{expected addressable lvalue expression, array element or array section}}
   foo();
 #pragma omp target teams depend (in : argv[0])
   foo();
 #pragma omp target teams depend (in : ) // expected-error {{expected expression}}
   foo();
-#pragma omp target teams depend (in : main) // expected-error {{expected variable name, array element or array section}}
+#pragma omp target teams depend (in : main)
   foo();
-#pragma omp target teams depend(in : a[0]) // expected-error{{expected variable name, array element or array section}}
+#pragma omp target teams depend(in : a[0]) // expected-error{{expected addressable lvalue expression, array element or array section}}
   foo();
 #pragma omp target teams depend (in : vec[1:2]) // expected-error {{ value is not an array or pointer}}
   foo();

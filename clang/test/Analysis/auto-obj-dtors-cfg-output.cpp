@@ -1,5 +1,16 @@
-// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG %s > %t 2>&1
-// RUN: FileCheck --input-file=%t %s
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
+
+// This file tests how we construct two different flavors of the Clang CFG -
+// the CFG used by the Sema analysis-based warnings and the CFG used by the
+// static analyzer. The difference in the behavior is checked via FileCheck
+// prefixes (WARNINGS and ANALYZER respectively). When introducing new analyzer
+// flags, no new run lines should be added - just these flags would go to the
+// respective line depending on where is it turned on and where is it turned
+// off. Feel free to add tests that test only one of the CFG flavors if you're
+// not sure how the other flavor is supposed to work in your case.
 
 class A {
 public:
@@ -32,12 +43,14 @@ extern const bool UV;
 // CHECK:      [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   3: a
 // CHECK-NEXT:   4: [B1.3] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:   5: const A &b = a;
-// CHECK-NEXT:   6: A() (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   6: A() (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   6: A() (CXXConstructExpr, [B1.7], [B1.9], class A)
 // CHECK-NEXT:   7: [B1.6] (BindTemporary)
 // CHECK-NEXT:   8: [B1.7] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:   9: [B1.8]
@@ -57,9 +70,11 @@ void test_const_ref() {
 // CHECK:      [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A [2])
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A [2])
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B1.2], class A [2])
 // CHECK-NEXT:   2: A a[2];
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A [0])
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A [0])
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A [0])
 // CHECK-NEXT:   4: A b[0];
 // CHECK-NEXT:   5: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (1): B2
@@ -74,15 +89,19 @@ void test_array() {
 // CHECK:      [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A a;
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A)
 // CHECK-NEXT:   4: A c;
-// CHECK-NEXT:   5:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   5:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   5:  (CXXConstructExpr, [B1.6], class A)
 // CHECK-NEXT:   6: A d;
 // CHECK-NEXT:   7: [B1.6].~A() (Implicit destructor)
 // CHECK-NEXT:   8: [B1.4].~A() (Implicit destructor)
-// CHECK-NEXT:   9:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   9:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   9:  (CXXConstructExpr, [B1.10], class A)
 // CHECK:       10: A b;
 // CHECK:       11: [B1.10].~A() (Implicit destructor)
 // CHECK:       12: [B1.2].~A() (Implicit destructor)
@@ -101,7 +120,8 @@ void test_scope() {
 // CHECK:      [B4 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B3
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B3.4].~A() (Implicit destructor)
@@ -115,9 +135,11 @@ void test_scope() {
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A a;
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B3.4], class A)
 // CHECK-NEXT:   4: A b;
 // CHECK-NEXT:   5: UV
 // CHECK-NEXT:   6: [B3.5] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -137,7 +159,8 @@ void test_return() {
 // CHECK-NEXT:   Succs (1): B7
 // CHECK:      [B1]
 // CHECK:       l1:
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B6.2].~A() (Implicit destructor)
@@ -145,7 +168,8 @@ void test_return() {
 // CHECK-NEXT:   Preds (2): B2 B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A b;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B6.4].~A() (Implicit destructor)
@@ -170,9 +194,11 @@ void test_return() {
 // CHECK-NEXT:   Succs (1): B6
 // CHECK:      [B6]
 // CHECK:       l0:
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B6.2], class A)
 // CHECK-NEXT:   2: A b;
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B6.4], class A)
 // CHECK-NEXT:   4: A a;
 // CHECK-NEXT:   5: UV
 // CHECK-NEXT:   6: [B6.5] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -180,7 +206,8 @@ void test_return() {
 // CHECK-NEXT:   Preds (2): B7 B5
 // CHECK-NEXT:   Succs (2): B5 B4
 // CHECK:      [B7]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B7.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   Preds (1): B8
 // CHECK-NEXT:   Succs (1): B6
@@ -207,23 +234,27 @@ l1:
 // CHECK-NEXT:   Preds (2): B2 B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B4]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B4.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   3: a
 // CHECK-NEXT:   4: [B4.3] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   5: [B4.4] (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   5: [B4.4] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   5: [B4.4] (CXXConstructExpr, [B4.6], class A)
 // CHECK-NEXT:   6: A b = a;
 // CHECK-NEXT:   7: b
 // CHECK-NEXT:   8: [B4.7] (ImplicitCastExpr, NoOp, const class A)
@@ -247,14 +278,16 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B8
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B8.6].~A() (Implicit destructor)
-// CHECK-NEXT:   2:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   2:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], class A)
 // CHECK-NEXT:   3: A e;
 // CHECK-NEXT:   4: [B1.3].~A() (Implicit destructor)
 // CHECK-NEXT:   5: [B8.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (2): B2 B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B4.2].~A() (Implicit destructor)
@@ -268,7 +301,8 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B4]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B4.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: UV
 // CHECK-NEXT:   4: [B4.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -276,7 +310,8 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Preds (1): B8
 // CHECK-NEXT:   Succs (2): B3 B2
 // CHECK:      [B5]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B5.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B5.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B7.2].~A() (Implicit destructor)
@@ -290,7 +325,8 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B7]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B7.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: UV
 // CHECK-NEXT:   4: [B7.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -298,11 +334,13 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Preds (1): B8
 // CHECK-NEXT:   Succs (2): B6 B5
 // CHECK:      [B8]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B8.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   3: a
 // CHECK-NEXT:   4: [B8.3] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   5: [B8.4] (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   5: [B8.4] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   5: [B8.4] (CXXConstructExpr, [B8.6], class A)
 // CHECK-NEXT:   6: A b = a;
 // CHECK-NEXT:   7: b
 // CHECK-NEXT:   8: [B8.7] (ImplicitCastExpr, NoOp, const class A)
@@ -340,7 +378,8 @@ void test_if_jumps() {
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B4.4].~A() (Implicit destructor)
@@ -361,7 +400,8 @@ void test_if_jumps() {
 // CHECK-NEXT:   Preds (2): B2 B5
 // CHECK-NEXT:   Succs (2): B3 B1
 // CHECK:      [B5]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B5.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (1): B4
@@ -377,7 +417,8 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B10.4].~A() (Implicit destructor)
-// CHECK-NEXT:   2:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   2:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], class A)
 // CHECK-NEXT:   3: A e;
 // CHECK-NEXT:   4: [B1.3].~A() (Implicit destructor)
 // CHECK-NEXT:   5: [B11.2].~A() (Implicit destructor)
@@ -387,7 +428,8 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B3 B6
 // CHECK-NEXT:   Succs (1): B10
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B9.2].~A() (Implicit destructor)
@@ -425,7 +467,8 @@ void test_while_implicit_scope() {
 // CHECK:        Preds (1): B9
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B9]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B9.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: UV
 // CHECK-NEXT:   4: [B9.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -447,7 +490,8 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B2 B11
 // CHECK-NEXT:   Succs (2): B9 B1
 // CHECK:      [B11]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B11.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   Preds (1): B12
 // CHECK-NEXT:   Succs (1): B10
@@ -474,7 +518,8 @@ void test_while_jumps() {
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (2): B3 B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (2): B3 B4
@@ -492,7 +537,8 @@ void test_do_implicit_scope() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B11.2].~A() (Implicit destructor)
@@ -505,7 +551,8 @@ void test_do_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B3 B6
 // CHECK-NEXT:   Succs (2): B10 B1
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B9.2].~A() (Implicit destructor)
@@ -540,7 +587,8 @@ void test_do_implicit_scope() {
 // CHECK:        Preds (1): B9
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B9]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B9.2], class A)
 // CHECK-NEXT:   2: A b;
 // CHECK-NEXT:   3: UV
 // CHECK-NEXT:   4: [B9.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -551,7 +599,8 @@ void test_do_implicit_scope() {
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B9
 // CHECK:      [B11]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B11.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   Preds (1): B12
 // CHECK-NEXT:   Succs (1): B9
@@ -577,7 +626,8 @@ void test_do_jumps() {
 // CHECK-NEXT:   Preds (2): B3 B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   3: a
 // CHECK-NEXT:   4: [B2.3] (ImplicitCastExpr, NoOp, const class A)
@@ -592,7 +642,8 @@ void test_do_jumps() {
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Succs (1): B1
@@ -608,14 +659,16 @@ void test_switch_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B2.6].~A() (Implicit destructor)
-// CHECK-NEXT:   2:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   2:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], class A)
 // CHECK-NEXT:   3: A g;
 // CHECK-NEXT:   4: [B1.3].~A() (Implicit destructor)
 // CHECK-NEXT:   5: [B2.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (3): B3 B7 B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   3: a
 // CHECK-NEXT:   4: [B2.3] (ImplicitCastExpr, NoOp, const class A)
@@ -635,7 +688,8 @@ void test_switch_implicit_scope() {
 // CHECK:        Preds (2): B2 B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B4]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B4.2], class A)
 // CHECK-NEXT:   2: A f;
 // CHECK-NEXT:   3: [B4.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B8.2].~A() (Implicit destructor)
@@ -661,7 +715,8 @@ void test_switch_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B8]
 // CHECK:       case 0:
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B8.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: UV
 // CHECK-NEXT:   4: [B8.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -696,7 +751,8 @@ void test_switch_jumps() {
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B4.4].~A() (Implicit destructor)
@@ -717,7 +773,8 @@ void test_switch_jumps() {
 // CHECK-NEXT:   Preds (2): B2 B5
 // CHECK-NEXT:   Succs (2): B3 B1
 // CHECK:      [B5]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B5.2], class A)
 // CHECK-NEXT:   2: A a;
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (1): B4
@@ -733,7 +790,8 @@ void test_for_implicit_scope() {
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B10.4].~A() (Implicit destructor)
 // CHECK-NEXT:   2: [B11.4].~A() (Implicit destructor)
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A)
 // CHECK-NEXT:   4: A f;
 // CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
 // CHECK-NEXT:   6: [B11.2].~A() (Implicit destructor)
@@ -743,7 +801,8 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B3 B6
 // CHECK-NEXT:   Succs (1): B10
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A e;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B9.2].~A() (Implicit destructor)
@@ -781,7 +840,8 @@ void test_for_implicit_scope() {
 // CHECK:        Preds (1): B9
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B9]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B9.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: UV
 // CHECK-NEXT:   4: [B9.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -803,9 +863,11 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B2 B11
 // CHECK-NEXT:   Succs (2): B9 B1
 // CHECK:      [B11]
-// CHECK-NEXT:   1:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B11.2], class A)
 // CHECK-NEXT:   2: A a;
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B11.4], class A)
 // CHECK-NEXT:   4: A b;
 // CHECK-NEXT:   Preds (1): B12
 // CHECK-NEXT:   Succs (1): B10

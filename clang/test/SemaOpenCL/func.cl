@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -triple spir-unknown-unknown
 
 // Variadic functions
 void vararg_f(int, ...);                    // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
@@ -15,6 +15,9 @@ typedef struct s
 
 //Function pointer
 void foo(void*);
+
+// Expect no diagnostics for an empty parameter list.
+void bar();
 
 void bar()
 {

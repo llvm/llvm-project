@@ -19,7 +19,7 @@
 #include "clang/AST/DependentASTVisitor.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/Core/RefactoringDiagnostic.h"
+#include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "llvm/ADT/SmallVector.h"
 #include <functional>
 
@@ -291,18 +291,6 @@ public:
       return true;
     }
     return checkOccurrence(Expr->getExplicitProperty(), Expr->getLocation());
-  }
-
-  bool VisitOffsetOfExpr(const OffsetOfExpr *S) {
-    for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I) {
-      const OffsetOfNode &Component = S->getComponent(I);
-      if (Component.getKind() == OffsetOfNode::Field) {
-        if (!checkOccurrence(Component.getField(), Component.getLocEnd()))
-          return false;
-      }
-      // FIXME: Try to resolve dependent field references.
-    }
-    return true;
   }
 
   // Other visitors:

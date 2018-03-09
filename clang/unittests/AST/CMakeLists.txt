@@ -21,6 +21,7 @@ add_clang_unittest(ASTTests
   )
 
 target_link_libraries(ASTTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

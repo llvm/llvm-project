@@ -679,7 +679,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     if (SymbolRef rSym = rhs.getAsLocSymbol()) {
       // We can only build expressions with symbols on the left,
       // so we need a reversible operator.
-      if (!BinaryOperator::isComparisonOp(op))
+      if (!BinaryOperator::isComparisonOp(op) || op == BO_Cmp)
         return UnknownVal();
 
       const llvm::APSInt &lVal = lhs.castAs<loc::ConcreteInt>().getValue();
@@ -987,6 +987,12 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
       if (resultTy->isAnyPointerType())
         elementType = resultTy->getPointeeType();
     }
+
+    // Represent arithmetic on void pointers as arithmetic on char pointers.
+    // It is fine when a TypedValueRegion of char value type represents
+    // a void pointer. Note that arithmetic on void pointers is a GCC extension.
+    if (elementType->isVoidType())
+      elementType = getContext().CharTy;
 
     if (Optional<NonLoc> indexV = index.getAs<NonLoc>()) {
       return loc::MemRegionVal(MemMgr.getElementRegion(elementType, *indexV,

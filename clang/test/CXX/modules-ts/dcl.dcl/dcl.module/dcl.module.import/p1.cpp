@@ -2,15 +2,22 @@
 // RUN: mkdir -p %t
 // RUN: echo 'export module x; export int a, b;' > %t/x.cppm
 // RUN: echo 'export module x.y; export int c;' > %t/x.y.cppm
+// RUN: echo 'export module a.b; export int d;' > %t/a.b.cppm
 //
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %t/x.cppm -o %t/x.pcm
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface -fmodule-file=%t/x.pcm %t/x.y.cppm -o %t/x.y.pcm
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %t/a.b.cppm -o %t/a.b.pcm
 //
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
-// RUN:            -DMODULE_NAME=z
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %s \
+// RUN:            -DMODULE_NAME=z -DINTERFACE
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %s \
+// RUN:            -DMODULE_NAME=a.b
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %s \
 // RUN:            -DMODULE_X -DMODULE_NAME=x
 
+#ifdef INTERFACE
+export
+#endif
 module MODULE_NAME;
 
 int use_1 = a;
@@ -33,6 +40,7 @@ import x [[noreturn]]; // expected-error {{'noreturn' attribute cannot be applie
 import x [[blarg::noreturn]]; // expected-warning {{unknown attribute 'noreturn' ignored}}
 
 import x.y;
+import a.b; // Does not imply existence of module a.
 import x.; // expected-error {{expected a module name after 'import'}}
 import .x; // expected-error {{expected a module name after 'import'}}
 

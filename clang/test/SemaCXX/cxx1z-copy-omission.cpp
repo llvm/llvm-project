@@ -2,11 +2,11 @@
 
 struct Noncopyable {
   Noncopyable();
-  Noncopyable(const Noncopyable &) = delete; // expected-note 1+{{deleted}}
+  Noncopyable(const Noncopyable &) = delete; // expected-note 1+{{deleted}} expected-note 1+ {{not viable}}
   virtual ~Noncopyable();
 };
 struct Derived : Noncopyable {};
-struct NoncopyableAggr {
+struct NoncopyableAggr { // expected-note 3{{candidate}}
   Noncopyable nc;
 };
 struct Indestructible {
@@ -38,10 +38,38 @@ Noncopyable nrvo() {
 Noncopyable nc1 = make();
 Noncopyable nc2 = Noncopyable();
 Noncopyable nc3 = Derived(); // expected-error {{deleted constructor}}
+Noncopyable nc4((Noncopyable()));
+Noncopyable nc5 = {Noncopyable()};
+Noncopyable nc6{Noncopyable()};
 
 NoncopyableAggr nca1 = NoncopyableAggr{};
 NoncopyableAggr nca2 = NoncopyableAggr{{}};
 NoncopyableAggr nca3 = NoncopyableAggr{NoncopyableAggr{Noncopyable()}};
+
+template<typename T> struct Convert { operator T(); }; // expected-note 1+{{candidate}}
+Noncopyable conv1 = Convert<Noncopyable>();
+Noncopyable conv2((Convert<Noncopyable>()));
+Noncopyable conv3 = {Convert<Noncopyable>()};
+Noncopyable conv4{Convert<Noncopyable>()};
+
+Noncopyable ref_conv1 = Convert<Noncopyable&>(); // expected-error {{deleted constructor}}
+Noncopyable ref_conv2((Convert<Noncopyable&>())); // expected-error {{deleted constructor}}
+Noncopyable ref_conv3 = {Convert<Noncopyable&>()}; // expected-error {{deleted constructor}}
+Noncopyable ref_conv4{Convert<Noncopyable&>()}; // expected-error {{deleted constructor}}
+
+Noncopyable derived_conv1 = Convert<Derived>(); // expected-error {{deleted constructor}}
+Noncopyable derived_conv2((Convert<Derived>())); // expected-error {{deleted constructor}}
+Noncopyable derived_conv3 = {Convert<Derived>()}; // expected-error {{deleted constructor}}
+Noncopyable derived_conv4{Convert<Derived>()}; // expected-error {{deleted constructor}}
+
+NoncopyableAggr nc_aggr1 = Convert<NoncopyableAggr>();
+NoncopyableAggr nc_aggr2((Convert<NoncopyableAggr>()));
+NoncopyableAggr nc_aggr3 = {Convert<NoncopyableAggr>()}; // expected-error {{no viable conversion}}
+NoncopyableAggr nc_aggr4{Convert<NoncopyableAggr>()}; // expected-error {{no viable conversion}}
+NoncopyableAggr nc_aggr5 = Convert<Noncopyable>(); // expected-error {{no viable}}
+NoncopyableAggr nc_aggr6((Convert<Noncopyable>())); // expected-error {{no matching constructor}}
+NoncopyableAggr nc_aggr7 = {Convert<Noncopyable>()};
+NoncopyableAggr nc_aggr8{Convert<Noncopyable>()};
 
 void test_expressions(bool b) {
   auto lambda = [a = make()] {};
@@ -132,3 +160,12 @@ struct AsDelegating final {
   // classes?
   AsDelegating(int n) : AsDelegating(make(n)) {} // expected-error {{deleted}}
 };
+
+namespace CtorTemplateBeatsNonTemplateConversionFn {
+  struct Foo { template <typename Derived> Foo(const Derived &); };
+  template <typename Derived> struct Base { operator Foo() const = delete; }; // expected-note {{deleted}}
+  struct Derived : Base<Derived> {};
+
+  Foo f(Derived d) { return d; } // expected-error {{invokes a deleted function}}
+  Foo g(Derived d) { return Foo(d); } // ok, calls constructor
+}

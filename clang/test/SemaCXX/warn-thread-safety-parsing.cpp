@@ -154,18 +154,18 @@ class GVFoo {
 };
 
 class GUARDED_VAR GV { // \
-  // expected-warning {{'guarded_var' attribute only applies to fields and global variables}}
+  // expected-warning {{'guarded_var' attribute only applies to non-static data members and global variables}}
 };
 
 void gv_function() GUARDED_VAR; // \
-  // expected-warning {{'guarded_var' attribute only applies to fields and global variables}}
+  // expected-warning {{'guarded_var' attribute only applies to}}
 
 void gv_function_params(int gv_lvar GUARDED_VAR); // \
-  // expected-warning {{'guarded_var' attribute only applies to fields and global variables}}
+  // expected-warning {{'guarded_var' attribute only applies to}}
 
 int gv_testfn(int y){
   int x GUARDED_VAR = y; // \
-    // expected-warning {{'guarded_var' attribute only applies to fields and global variables}}
+    // expected-warning {{'guarded_var' attribute only applies to}}
   return x;
 }
 
@@ -194,7 +194,7 @@ class PGVFoo {
 };
 
 class PT_GUARDED_VAR PGV { // \
-  // expected-warning {{'pt_guarded_var' attribute only applies to fields and global variables}}
+  // expected-warning {{'pt_guarded_var' attribute only applies to non-static data members and global variables}}
 };
 
 int *pgv_var_args __attribute__((pt_guarded_var(1))); // \
@@ -202,14 +202,14 @@ int *pgv_var_args __attribute__((pt_guarded_var(1))); // \
 
 
 void pgv_function() PT_GUARDED_VAR; // \
-  // expected-warning {{'pt_guarded_var' attribute only applies to fields and global variables}}
+  // expected-warning {{'pt_guarded_var' attribute only applies to}}
 
 void pgv_function_params(int *gv_lvar PT_GUARDED_VAR); // \
-  // expected-warning {{'pt_guarded_var' attribute only applies to fields and global variables}}
+  // expected-warning {{'pt_guarded_var' attribute only applies to}}
 
 void pgv_testfn(int y){
   int *x PT_GUARDED_VAR = new int(0); // \
-    // expected-warning {{'pt_guarded_var' attribute only applies to fields and global variables}}
+    // expected-warning {{'pt_guarded_var' attribute only applies to}}
   delete x;
 }
 
@@ -231,28 +231,28 @@ class __attribute__((lockable (1))) LTestClass_args { // \
 };
 
 void l_test_function() LOCKABLE;  // \
-  // expected-warning {{'lockable' attribute only applies to struct, union or class}}
+  // expected-warning {{'lockable' attribute only applies to structs, unions, and classes}}
 
 int l_testfn(int y) {
   int x LOCKABLE = y; // \
-    // expected-warning {{'lockable' attribute only applies to struct, union or class}}
+    // expected-warning {{'lockable' attribute only applies to}}
   return x;
 }
 
 int l_test_var LOCKABLE; // \
-  // expected-warning {{'lockable' attribute only applies to struct, union or class}}
+  // expected-warning {{'lockable' attribute only applies to}}
 
 class LFoo {
  private:
   int test_field LOCKABLE; // \
-    // expected-warning {{'lockable' attribute only applies to struct, union or class}}
+    // expected-warning {{'lockable' attribute only applies to}}
   void test_method() LOCKABLE; // \
-    // expected-warning {{'lockable' attribute only applies to struct, union or class}}
+    // expected-warning {{'lockable' attribute only applies to}}
 };
 
 
 void l_function_params(int lvar LOCKABLE); // \
-  // expected-warning {{'lockable' attribute only applies to struct, union or class}}
+  // expected-warning {{'lockable' attribute only applies to}}
 
 
 //-----------------------------------------//
@@ -271,28 +271,28 @@ class __attribute__((scoped_lockable (1))) SLTestClass_args { // \
 };
 
 void sl_test_function() SCOPED_LOCKABLE;  // \
-  // expected-warning {{'scoped_lockable' attribute only applies to struct, union or class}}
+  // expected-warning {{'scoped_lockable' attribute only applies to structs, unions, and classes}}
 
 int sl_testfn(int y) {
   int x SCOPED_LOCKABLE = y; // \
-    // expected-warning {{'scoped_lockable' attribute only applies to struct, union or class}}
+    // expected-warning {{'scoped_lockable' attribute only applies to}}
   return x;
 }
 
 int sl_test_var SCOPED_LOCKABLE; // \
-  // expected-warning {{'scoped_lockable' attribute only applies to struct, union or class}}
+  // expected-warning {{'scoped_lockable' attribute only applies to}}
 
 class SLFoo {
  private:
   int test_field SCOPED_LOCKABLE; // \
-    // expected-warning {{'scoped_lockable' attribute only applies to struct, union or class}}
+    // expected-warning {{'scoped_lockable' attribute only applies to}}
   void test_method() SCOPED_LOCKABLE; // \
-    // expected-warning {{'scoped_lockable' attribute only applies to struct, union or class}}
+    // expected-warning {{'scoped_lockable' attribute only applies to}}
 };
 
 
 void sl_function_params(int lvar SCOPED_LOCKABLE); // \
-  // expected-warning {{'scoped_lockable' attribute only applies to struct, union or class}}
+  // expected-warning {{'scoped_lockable' attribute only applies to}}
 
 
 //-----------------------------------------//
@@ -325,18 +325,18 @@ class GBFoo {
 };
 
 class GUARDED_BY(mu1) GB { // \
-  // expected-warning {{'guarded_by' attribute only applies to fields and global variables}}
+  // expected-warning {{'guarded_by' attribute only applies to non-static data members and global variables}}
 };
 
 void gb_function() GUARDED_BY(mu1); // \
-  // expected-warning {{'guarded_by' attribute only applies to fields and global variables}}
+  // expected-warning {{'guarded_by' attribute only applies to}}
 
 void gb_function_params(int gv_lvar GUARDED_BY(mu1)); // \
-  // expected-warning {{'guarded_by' attribute only applies to fields and global variables}}
+  // expected-warning {{'guarded_by' attribute only applies to}}
 
 int gb_testfn(int y){
   int x GUARDED_BY(mu1) = y; // \
-    // expected-warning {{'guarded_by' attribute only applies to fields and global variables}}
+    // expected-warning {{'guarded_by' attribute only applies to}}
   return x;
 }
 
@@ -351,7 +351,8 @@ int gb_var_arg_5 GUARDED_BY(&mu1);
 int gb_var_arg_6 GUARDED_BY(muRef);
 int gb_var_arg_7 GUARDED_BY(muDoubleWrapper.getWrapper()->getMu());
 int gb_var_arg_8 GUARDED_BY(muPointer);
-
+int gb_var_arg_9 GUARDED_BY(!&mu1);
+int gb_var_arg_10 GUARDED_BY(!&*&mu1);
 
 // illegal attribute arguments
 int gb_var_arg_bad_1 GUARDED_BY(1); // \
@@ -396,18 +397,18 @@ class PGBFoo {
 };
 
 class PT_GUARDED_BY(mu1) PGB { // \
-  // expected-warning {{'pt_guarded_by' attribute only applies to fields and global variables}}
+  // expected-warning {{'pt_guarded_by' attribute only applies to non-static data members and global variables}}
 };
 
 void pgb_function() PT_GUARDED_BY(mu1); // \
-  // expected-warning {{'pt_guarded_by' attribute only applies to fields and global variables}}
+  // expected-warning {{'pt_guarded_by' attribute only applies to}}
 
 void pgb_function_params(int gv_lvar PT_GUARDED_BY(mu1)); // \
-  // expected-warning {{'pt_guarded_by' attribute only applies to fields and global variables}}
+  // expected-warning {{'pt_guarded_by' attribute only applies to}}
 
 void pgb_testfn(int y){
   int *x PT_GUARDED_BY(mu1) = new int(0); // \
-    // expected-warning {{'pt_guarded_by' attribute only applies to fields and global variables}}
+    // expected-warning {{'pt_guarded_by' attribute only applies to}}
   delete x;
 }
 
@@ -458,18 +459,18 @@ class AAFoo {
 };
 
 class ACQUIRED_AFTER(mu1) AA { // \
-  // expected-warning {{'acquired_after' attribute only applies to fields and global variables}}
+  // expected-warning {{'acquired_after' attribute only applies to non-static data members and global variables}}
 };
 
 void aa_function() ACQUIRED_AFTER(mu1); // \
-  // expected-warning {{'acquired_after' attribute only applies to fields and global variables}}
+  // expected-warning {{'acquired_after' attribute only applies to}}
 
 void aa_function_params(int gv_lvar ACQUIRED_AFTER(mu1)); // \
-  // expected-warning {{'acquired_after' attribute only applies to fields and global variables}}
+  // expected-warning {{'acquired_after' attribute only applies to}}
 
 void aa_testfn(int y){
   Mutex x ACQUIRED_AFTER(mu1) = Mutex(); // \
-    // expected-warning {{'acquired_after' attribute only applies to fields and global variables}}
+    // expected-warning {{'acquired_after' attribute only applies to}}
 }
 
 //Check argument parsing.
@@ -518,18 +519,18 @@ class ABFoo {
 };
 
 class ACQUIRED_BEFORE(mu1) AB { // \
-  // expected-warning {{'acquired_before' attribute only applies to fields and global variables}}
+  // expected-warning {{'acquired_before' attribute only applies to non-static data members and global variables}}
 };
 
 void ab_function() ACQUIRED_BEFORE(mu1); // \
-  // expected-warning {{'acquired_before' attribute only applies to fields and global variables}}
+  // expected-warning {{'acquired_before' attribute only applies to}}
 
 void ab_function_params(int gv_lvar ACQUIRED_BEFORE(mu1)); // \
-  // expected-warning {{'acquired_before' attribute only applies to fields and global variables}}
+  // expected-warning {{'acquired_before' attribute only applies to}}
 
 void ab_testfn(int y){
   Mutex x ACQUIRED_BEFORE(mu1) = Mutex(); // \
-    // expected-warning {{'acquired_before' attribute only applies to fields and global variables}}
+    // expected-warning {{'acquired_before' attribute only applies to}}
 }
 
 // Note: illegal int ab_int ACQUIRED_BEFORE(mu1) will

@@ -60,7 +60,10 @@ public:
       case Lang_CXX98: Args.push_back("-std=c++98"); break;
       case Lang_CXX11: Args.push_back("-std=c++11"); break;
       case Lang_CXX14: Args.push_back("-std=c++14"); break;
-      case Lang_OBJC: Args.push_back("-ObjC"); break;
+      case Lang_OBJC:
+        Args.push_back("-ObjC");
+        Args.push_back("-fobjc-runtime=macosx-10.12.0");
+        break;
       case Lang_OBJCXX11:
         Args.push_back("-ObjC++");
         Args.push_back("-std=c++11");

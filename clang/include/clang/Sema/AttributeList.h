@@ -100,16 +100,20 @@ public:
     AS_GNU,
     /// [[...]]
     AS_CXX11,
+    /// [[...]]
+    AS_C2x,
     /// __declspec(...)
     AS_Declspec,
     /// [uuid("...")] class Foo
     AS_Microsoft,
     /// __ptr16, alignas(...), etc.
     AS_Keyword,
-    /// Context-sensitive version of a keyword attribute.
-    AS_ContextSensitiveKeyword,
     /// #pragma ...
     AS_Pragma,
+    // Note TableGen depends on the order above.  Do not add or change the order
+    // without adding related code to TableGen/ClangAttrEmitter.cpp.
+    /// Context-sensitive version of a keyword attribute.
+    AS_ContextSensitiveKeyword,
   };
 
 private:
@@ -375,6 +379,9 @@ public:
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
   bool isCXX11Attribute() const {
     return SyntaxUsed == AS_CXX11 || isAlignasAttribute();
+  }
+  bool isC2xAttribute() const {
+    return SyntaxUsed == AS_C2x;
   }
   bool isKeywordAttribute() const {
     return SyntaxUsed == AS_Keyword || SyntaxUsed == AS_ContextSensitiveKeyword;
@@ -893,50 +900,17 @@ enum AttributeDeclKind {
   ExpectedFunction,
   ExpectedUnion,
   ExpectedVariableOrFunction,
-  ExpectedFunctionOrGlobalVar,
-  ExpectedFunctionVariableOrObjCInterface,
   ExpectedFunctionOrMethod,
-  ExpectedParameter,
   ExpectedFunctionMethodOrBlock,
-  ExpectedFunctionMethodOrClass,
   ExpectedFunctionMethodOrParameter,
-  ExpectedFunctionMethodOrGlobalVar,
-  ExpectedClass,
-  ExpectedEnum,
   ExpectedVariable,
-  ExpectedMethod,
-  ExpectedFieldOrGlobalVar,
-  ExpectedStruct,
-  ExpectedParameterOrTypedef,
-  ExpectedVariableOrTypedef,
-  ExpectedTLSVar,
   ExpectedVariableOrField,
   ExpectedVariableFieldOrTag,
   ExpectedTypeOrNamespace,
-  ExpectedObjectiveCInterface,
-  ExpectedMethodOrProperty,
-  ExpectedFunctionOrMethodOrProperty,
-  ExpectedStructOrUnion,
-  ExpectedStructOrUnionOrClass,
-  ExpectedType,
-  ExpectedObjCInstanceMethod,
-  ExpectedObjCInterfaceDeclInitMethod,
   ExpectedFunctionVariableOrClass,
-  ExpectedFunctionVariableClassOrObjCInterface,
-  ExpectedObjectiveCProtocol,
-  ExpectedStaticOrTLSVar,
-  ExpectedFunctionGlobalVarMethodOrProperty,
-  ExpectedStructOrUnionOrTypedef,
-  ExpectedStructOrTypedef,
-  ExpectedObjectiveCInterfaceOrProtocol,
   ExpectedKernelFunction,
   ExpectedFunctionWithProtoType,
-  ExpectedVariableEnumFieldOrTypedef,
-  ExpectedFunctionMethodEnumOrClass,
-  ExpectedStructClassVariableFunctionOrInlineNamespace,
   ExpectedForMaybeUnused,
-  ExpectedEnumOrClass,
-  ExpectedNamedDecl,
 };
 
 }  // end namespace clang

@@ -760,6 +760,88 @@ TEST_F(InMemoryFileSystemTest, WorkingDirectory) {
                       NormalizedFS.getCurrentWorkingDirectory().get()));
 }
 
+TEST_F(InMemoryFileSystemTest, AddFileWithUser) {
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), 0xFEEDFACE);
+  auto Stat = FS.status("/a");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  ASSERT_EQ(0xFEEDFACE, Stat->getUser());
+  Stat = FS.status("/a/b");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  ASSERT_EQ(0xFEEDFACE, Stat->getUser());
+  Stat = FS.status("/a/b/c");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+  ASSERT_EQ(sys::fs::perms::all_all, Stat->getPermissions());
+  ASSERT_EQ(0xFEEDFACE, Stat->getUser());
+}
+
+TEST_F(InMemoryFileSystemTest, AddFileWithGroup) {
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, 0xDABBAD00);
+  auto Stat = FS.status("/a");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  ASSERT_EQ(0xDABBAD00, Stat->getGroup());
+  Stat = FS.status("/a/b");
+  ASSERT_TRUE(Stat->isDirectory());
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_EQ(0xDABBAD00, Stat->getGroup());
+  Stat = FS.status("/a/b/c");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+  ASSERT_EQ(sys::fs::perms::all_all, Stat->getPermissions());
+  ASSERT_EQ(0xDABBAD00, Stat->getGroup());
+}
+
+TEST_F(InMemoryFileSystemTest, AddFileWithFileType) {
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, None,
+             sys::fs::file_type::socket_file);
+  auto Stat = FS.status("/a");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  Stat = FS.status("/a/b");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  Stat = FS.status("/a/b/c");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_EQ(sys::fs::file_type::socket_file, Stat->getType());
+  ASSERT_EQ(sys::fs::perms::all_all, Stat->getPermissions());
+}
+
+TEST_F(InMemoryFileSystemTest, AddFileWithPerms) {
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, None,
+             None, sys::fs::perms::owner_read | sys::fs::perms::owner_write);
+  auto Stat = FS.status("/a");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  ASSERT_EQ(sys::fs::perms::owner_read | sys::fs::perms::owner_write |
+            sys::fs::perms::owner_exe, Stat->getPermissions());
+  Stat = FS.status("/a/b");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  ASSERT_EQ(sys::fs::perms::owner_read | sys::fs::perms::owner_write |
+            sys::fs::perms::owner_exe, Stat->getPermissions());
+  Stat = FS.status("/a/b/c");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+  ASSERT_EQ(sys::fs::perms::owner_read | sys::fs::perms::owner_write,
+            Stat->getPermissions());
+}
+
+TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
+  FS.addFile("/a", 0, MemoryBuffer::getMemBuffer(""), /*User=*/None,
+             /*Group=*/None, sys::fs::file_type::directory_file);
+  FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("abc"), /*User=*/None,
+             /*Group=*/None, sys::fs::file_type::regular_file);
+  auto Stat = FS.status("/a");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  Stat = FS.status("/a/b");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+}
+
 // NOTE: in the tests below, we use '//root/' as our root directory, since it is
 // a legal *absolute* path on Windows as well as *nix.
 class VFSFromYAMLTest : public ::testing::Test {

@@ -80,12 +80,21 @@ void bad_news(int *ip)
   (void)new int[1.1];
 #if __cplusplus <= 199711L
   // expected-error@-2 {{array size expression must have integral or enumeration type, not 'double'}}
-#else
+#elif __cplusplus <= 201103L
   // expected-error@-4 {{array size expression must have integral or unscoped enumeration type, not 'double'}}
+#else
+  // expected-warning@-6 {{implicit conversion from 'double' to 'unsigned int' changes value from 1.1 to 1}}
 #endif
 
-  (void)new int[1][i]; // expected-error {{only the first dimension}} expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
-  (void)new (int[1][i]); // expected-error {{only the first dimension}} expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
+  (void)new int[1][i];  // expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
+  (void)new (int[1][i]); // expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
+#if __cplusplus <= 201103L
+  // expected-error@-3 {{only the first dimension}}
+  // expected-error@-3 {{only the first dimension}}
+#else
+  // expected-error@-6 {{array size is not a constant expression}}
+  // expected-error@-6 {{array size is not a constant expression}}
+#endif
   (void)new (int[i]); // expected-warning {{when type is in parentheses}}
   (void)new int(*(S*)0); // expected-error {{no viable conversion from 'S' to 'int'}}
   (void)new int(1, 2); // expected-error {{excess elements in scalar initializer}}
@@ -94,13 +103,20 @@ void bad_news(int *ip)
   (void)new const int; // expected-error {{default initialization of an object of const type 'const int'}}
   (void)new float*(ip); // expected-error {{cannot initialize a new value of type 'float *' with an lvalue of type 'int *'}}
   // Undefined, but clang should reject it directly.
-  (void)new int[-1]; // expected-error {{array size is negative}}
+  (void)new int[-1];
+#if __cplusplus <= 201103L
+  // expected-error@-2 {{array size is negative}}
+#else
+  // expected-error@-4 {{array is too large}}
+#endif
   (void)new int[2000000000]; // expected-error {{array is too large}}
   (void)new int[*(S*)0];
 #if __cplusplus <= 199711L
   // expected-error@-2 {{array size expression must have integral or enumeration type, not 'S'}}
-#else
+#elif __cplusplus <= 201103L
   // expected-error@-4 {{array size expression must have integral or unscoped enumeration type, not 'S'}}
+#else
+  // expected-error@-6 {{converting 'S' to incompatible type}}
 #endif
 
   (void)::S::new int; // expected-error {{expected unqualified-id}}

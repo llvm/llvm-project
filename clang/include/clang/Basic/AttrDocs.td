@@ -7,6 +7,24 @@
 //
 //===---------------------------------------------------------------------===//
 
+// To test that the documentation builds cleanly, you must run clang-tblgen to
+// convert the .td file into a .rst file, and then run sphinx to convert the
+// .rst file into an HTML file. After completing testing, you should revert the
+// generated .rst file so that the modified version does not get checked in to
+// version control.
+//
+// To run clang-tblgen to generate the .rst file:
+// clang-tblgen -gen-attr-docs -I <root>/llvm/tools/clang/include
+//   <root>/llvm/tools/clang/include/clang/Basic/Attr.td -o
+//   <root>/llvm/tools/clang/docs/AttributeReference.rst
+//
+// To run sphinx to generate the .html files (note that sphinx-build must be
+// available on the PATH):
+// Windows (from within the clang\docs directory):
+//   make.bat html
+// Non-Windows (from within the clang\docs directory):
+//   make -f Makefile.sphinx html
+
 def GlobalDocumentation {
   code Intro =[{..
   -------------------------------------------------------------------
@@ -109,6 +127,50 @@ GNU ``__thread`` keyword.  The variable must not have a destructor and must have
 a constant initializer, if any.  The attribute only applies to variables
 declared with static storage duration, such as globals, class static data
 members, and static locals.
+  }];
+}
+
+def NoEscapeDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+``noescape`` placed on a function parameter of a pointer type is used to inform
+the compiler that the pointer cannot escape: that is, no reference to the object
+the pointer points to that is derived from the parameter value will survive
+after the function returns. Users are responsible for making sure parameters
+annotated with ``noescape`` do not actuallly escape.
+
+For example:
+
+.. code-block:: c
+
+  int *gp;
+
+  void nonescapingFunc(__attribute__((noescape)) int *p) {
+    *p += 100; // OK.
+  }
+
+  void escapingFunc(__attribute__((noescape)) int *p) {
+    gp = p; // Not OK.
+  }
+
+Additionally, when the parameter is a `block pointer
+<https://clang.llvm.org/docs/BlockLanguageSpec.html>`, the same restriction
+applies to copies of the block. For example:
+
+.. code-block:: c
+
+  typedef void (^BlockTy)();
+  BlockTy g0, g1;
+
+  void nonescapingFunc(__attribute__((noescape)) BlockTy block) {
+    block(); // OK.
+  }
+
+  void escapingFunc(__attribute__((noescape)) BlockTy block) {
+    g0 = block; // Not OK.
+    g1 = Block_copy(block); // Not OK either.
+  }
+
   }];
 }
 
@@ -291,7 +353,7 @@ available in C.
 
   int isdigit(int c);
   int isdigit(int c) __attribute__((enable_if(c <= -1 || c > 255, "chosen when 'c' is out of range"))) __attribute__((unavailable("'c' must have the value of an unsigned char or EOF")));
-  
+
   void foo(char c) {
     isdigit(c);
     isdigit(10);
@@ -344,7 +406,7 @@ overload out of a number of viable overloads using enable_if.
 
   void f() __attribute__((enable_if(true, "")));  // #1
   void f() __attribute__((enable_if(true, ""))) __attribute__((enable_if(true, "")));  // #2
-  
+
   void g(int i, int j) __attribute__((enable_if(i, "")));  // #1
   void g(int i, int j) __attribute__((enable_if(j, ""))) __attribute__((enable_if(true)));  // #2
 
@@ -856,11 +918,11 @@ default name.
 can only be placed before an @protocol or @interface declaration:
         
 .. code-block:: objc
-        
+
   __attribute__((objc_runtime_name("MyLocalName")))
   @interface Message
   @end
-        
+
     }];
 }
 
@@ -1166,7 +1228,7 @@ potentially-evaluated discarded-value expression that is not explicitly cast to
 .. code-block: c++
   struct [[nodiscard]] error_info { /*...*/ };
   error_info enable_missile_safety_mode();
-  
+
   void launch_missiles();
   void test_missiles() {
     enable_missile_safety_mode(); // diagnoses
@@ -1231,6 +1293,7 @@ Here is an example:
 
 def ARMInterruptDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "interrupt (ARM)";
   let Content = [{
 Clang supports the GNU style ``__attribute__((interrupt("TYPE")))`` attribute on
 ARM targets. This attribute may be attached to a function definition and
@@ -1272,6 +1335,7 @@ The semantics are as follows:
 
 def MipsInterruptDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "interrupt (MIPS)";
   let Content = [{
 Clang supports the GNU style ``__attribute__((interrupt("ARGUMENT")))`` attribute on
 MIPS targets. This attribute may be attached to a function definition and instructs
@@ -1323,8 +1387,52 @@ on the command line.
   }];
 }
 
+def MipsLongCallStyleDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "long_call (gnu::long_call, gnu::far)";
+  let Content = [{
+Clang supports the ``__attribute__((long_call))``, ``__attribute__((far))``,
+and ``__attribute__((near))`` attributes on MIPS targets. These attributes may
+only be added to function declarations and change the code generated
+by the compiler when directly calling the function. The ``near`` attribute
+allows calls to the function to be made using the ``jal`` instruction, which
+requires the function to be located in the same naturally aligned 256MB
+segment as the caller.  The ``long_call`` and ``far`` attributes are synonyms
+and require the use of a different call sequence that works regardless
+of the distance between the functions.
+
+These attributes have no effect for position-independent code.
+
+These attributes take priority over command line switches such
+as ``-mlong-calls`` and ``-mno-long-calls``.
+  }];
+}
+
+def MipsShortCallStyleDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "short_call (gnu::short_call, gnu::near)";
+  let Content = [{
+Clang supports the ``__attribute__((long_call))``, ``__attribute__((far))``,
+``__attribute__((short__call))``, and ``__attribute__((near))`` attributes
+on MIPS targets. These attributes may only be added to function declarations
+and change the code generated by the compiler when directly calling
+the function. The ``short_call`` and ``near`` attributes are synonyms and
+allow calls to the function to be made using the ``jal`` instruction, which
+requires the function to be located in the same naturally aligned 256MB segment
+as the caller.  The ``long_call`` and ``far`` attributes are synonyms and
+require the use of a different call sequence that works regardless
+of the distance between the functions.
+
+These attributes have no effect for position-independent code.
+
+These attributes take priority over command line switches such
+as ``-mlong-calls`` and ``-mno-long-calls``.
+  }];
+}
+
 def AVRInterruptDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "interrupt (AVR)";
   let Content = [{
 Clang supports the GNU style ``__attribute__((interrupt))`` attribute on
 AVR targets. This attribute may be attached to a function definition and instructs
@@ -2116,6 +2224,48 @@ It is only supported when using the Microsoft C++ ABI.
   }];
 }
 
+def TrivialABIDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``trivial_abi`` attribute can be applied to a C++ class, struct, or union.
+It instructs the compiler to pass and return the type using the C ABI for the
+underlying type when the type would otherwise be considered non-trivial for the
+purpose of calls.
+A class annotated with `trivial_abi` can have non-trivial destructors or copy/move constructors without automatically becoming non-trivial for the purposes of calls. For example:
+
+  .. code-block:: c++
+
+    // A is trivial for the purposes of calls because `trivial_abi` makes the
+    // user-provided special functions trivial.
+    struct __attribute__((trivial_abi)) A {
+      ~A();
+      A(const A &);
+      A(A &&);
+      int x;
+    };
+
+    // B's destructor and copy/move constructor are considered trivial for the
+    // purpose of calls because A is trivial.
+    struct B {
+      A a;
+    };
+
+If a type is trivial for the purposes of calls, has a non-trivial destructor,
+and is passed as an argument by value, the convention is that the callee will
+destroy the object before returning.
+
+Attribute ``trivial_abi`` has no effect in the following cases:
+
+- The class directly declares a virtual base or virtual methods.
+- The class has a base class that is non-trivial for the purposes of calls.
+- The class has a non-static data member whose type is non-trivial for the
+purposes of calls, which includes:
+ - classes that are non-trivial for the purposes of calls
+ - __weak-qualified types in Objective-C++
+ - arrays of any of the above
+  }];
+}
+
 def MSInheritanceDocs : Documentation {
   let Category = DocCatType;
   let Heading = "__single_inhertiance, __multiple_inheritance, __virtual_inheritance";
@@ -2533,23 +2683,23 @@ used to process multiple arguments from a single invocation from a SIMD loop
 concurrently.
 The syntax of the `declare simd` construct is as follows:
 
-  .. code-block:: c
+  .. code-block:: none
 
-  #pragma omp declare simd [clause[[,] clause] ...] new-line
-  [#pragma omp declare simd [clause[[,] clause] ...] new-line]
-  [...]
-  function definition or declaration
+    #pragma omp declare simd [clause[[,] clause] ...] new-line
+    [#pragma omp declare simd [clause[[,] clause] ...] new-line]
+    [...]
+    function definition or declaration
 
 where clause is one of the following:
 
-  .. code-block:: c
+  .. code-block:: none
 
-  simdlen(length)
-  linear(argument-list[:constant-linear-step])
-  aligned(argument-list[:alignment])
-  uniform(argument-list)
-  inbranch
-  notinbranch
+    simdlen(length)
+    linear(argument-list[:constant-linear-step])
+    aligned(argument-list[:alignment])
+    uniform(argument-list)
+    inbranch
+    notinbranch
 
   }];
 }
@@ -2624,9 +2774,9 @@ The syntax of the declare target directive is as follows:
 
   .. code-block:: c
 
-  #pragma omp declare target new-line
-  declarations-definition-seq
-  #pragma omp end declare target new-line
+    #pragma omp declare target new-line
+    declarations-definition-seq
+    #pragma omp end declare target new-line
   }];
 }
 
@@ -2684,6 +2834,18 @@ Marking virtual functions as ``not_tail_called`` is an error:
   }];
 }
 
+def NoThrowDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the GNU style ``__attribute__((nothrow))`` and Microsoft style
+``__declspec(nothrow)`` attribute as an equivilent of `noexcept` on function
+declarations. This attribute informs the compiler that the annotated function
+does not throw an exception. This prevents exception-unwinding. This attribute
+is particularly useful on functions in the C Standard Library that are
+guaranteed to not throw an exception.
+    }];
+}
+
 def InternalLinkageDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2732,59 +2894,6 @@ Marking virtual functions as ``disable_tail_calls`` is legal.
   }];
 }
 
-def AnyX86InterruptDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-Clang supports the GNU style ``__attribute__((interrupt))`` attribute on
-x86/x86-64 targets.The compiler generates function entry and exit sequences
-suitable for use in an interrupt handler when this attribute is present.
-The 'IRET' instruction, instead of the 'RET' instruction, is used to return
-from interrupt or exception handlers.  All registers, except for the EFLAGS
-register which is restored by the 'IRET' instruction, are preserved by the
-compiler.
-
-Any interruptible-without-stack-switch code must be compiled with
--mno-red-zone since interrupt handlers can and will, because of the
-hardware design, touch the red zone.
-
-1. interrupt handler must be declared with a mandatory pointer argument:
-
-  .. code-block:: c
-
-    struct interrupt_frame
-    {
-      uword_t ip;
-      uword_t cs;
-      uword_t flags;
-      uword_t sp;
-      uword_t ss;
-    };
-
-    __attribute__ ((interrupt))
-    void f (struct interrupt_frame *frame) {
-      ...
-    }
-
-2. exception handler:
-
-  The exception handler is very similar to the interrupt handler with
-  a different mandatory function signature:
-
-  .. code-block:: c
-
-    __attribute__ ((interrupt))
-    void f (struct interrupt_frame *frame, uword_t error_code) {
-      ...
-    }
-
-  and compiler pops 'ERROR_CODE' off stack before the 'IRET' instruction.
-
-  The exception handler should only be used for exceptions which push an
-  error code and all other exceptions must use the interrupt handler.
-  The system will crash if the wrong handler is used.
-  }];
-}
-
 def AnyX86NoCallerSavedRegistersDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2816,6 +2925,31 @@ For example:
   In this case, on 32-bit x86 targets, the function 'f' will use ECX and EDX as
   register parameters. However, it will not assume any scratch registers and
   should save and restore any modified registers except for ECX and EDX.
+  }];
+}
+
+def X86ForceAlignArgPointerDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use this attribute to force stack alignment.
+
+Legacy x86 code uses 4-byte stack alignment. Newer aligned SSE instructions
+(like 'movaps') that work with the stack require operands to be 16-byte aligned.
+This attribute realigns the stack in the function prologue to make sure the
+stack can be used with SSE instructions.
+
+Note that the x86_64 ABI forces 16-byte stack alignment at the call site.
+Because of this, 'force_align_arg_pointer' is not needed on x86_64, except in
+rare cases where the caller does not align the stack properly (e.g. flow
+jumps from i386 arch code).
+
+  .. code-block:: c
+
+    __attribute__ ((force_align_arg_pointer))
+    void f () {
+      ...
+    }
+
   }];
 }
 
