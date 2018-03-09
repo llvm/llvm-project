@@ -215,10 +215,6 @@ public:
   
   static bool IsSwiftClassName(const char *name);
   
-  static bool IsMetadataSymbol(const char *symbol);
-  
-  static bool IsIvarOffsetSymbol(const char *symbol);
-  
   static const std::string GetCurrentMangledName(const char *mangled_name);
 
   struct SwiftErrorDescriptor {

@@ -596,62 +596,6 @@ bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
   return swift::Demangle::isClass(name);
 }
 
-bool SwiftLanguageRuntime::IsMetadataSymbol(const char *symbol) {
-  if (!symbol)
-    return false;
-
-  swift::Demangle::Context demangle_ctx;
-  swift::Demangle::NodePointer node_ptr =
-    demangle_ctx.demangleSymbolAsNode(symbol);
-  if (!node_ptr)
-    return false;
-
-  size_t num_children = node_ptr->getNumChildren();
-  
-  if (num_children != 1)
-    return false;
-    
-  if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
-    return false;
-  
-  num_children = node_ptr->getNumChildren();
-  if (num_children != 1)
-    return false;
-  swift::Demangle::NodePointer type_meta_ptr = node_ptr->getFirstChild();
-  if (type_meta_ptr->getKind() != swift::Demangle::Node::Kind::TypeMetadata)
-    return false;
-  else
-    return true;
-  
-  return true;
-}
-
-bool SwiftLanguageRuntime::IsIvarOffsetSymbol(const char *symbol)
-{
-  if (!symbol) 
-    return false;
-  swift::Demangle::Context demangle_ctx;
-  swift::Demangle::NodePointer node_pointer = 
-    demangle_ctx.demangleSymbolAsNode(symbol);
-  if (!node_pointer)
-    return false;
-
-  size_t num_children = node_pointer->getNumChildren();
-  if (num_children < 2)
-    return false;
-  if (node_pointer->getChild(0)->getKind() != swift::Demangle::Node::Kind::Global)
-    return false;
-  swift::Demangle::NodePointer field_offset = node_pointer->getChild(1);
-  if (field_offset->getKind() != swift::Demangle::Node::Kind::FieldOffset)
-    return false;
-  if (node_pointer->getNumChildren() < 1)
-    return false;
-  if (node_pointer->getChild(0)->getKind() != swift::Demangle::Node::Kind::Directness)
-    return false;
-    
-  return true;
-}
-
 const std::string SwiftLanguageRuntime::GetCurrentMangledName(const char *mangled_name)
 {
 #ifndef USE_NEW_MANGLING

@@ -642,14 +642,7 @@ lldb::SymbolType
 ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
                                   lldb::SymbolType symbol_type_hint) {
   if (!name.empty()) {
-    std::string name_str = name.str();
-    if (SwiftLanguageRuntime::IsSwiftMangledName(name_str.c_str())) {
-      // Swift
-      if (SwiftLanguageRuntime::IsMetadataSymbol(name_str.c_str()))
-        return lldb::eSymbolTypeMetadata;
-      if (SwiftLanguageRuntime::IsIvarOffsetSymbol(name_str.c_str()))
-        return lldb::eSymbolTypeIVarOffset;
-    } else if (name.startswith("_OBJC_")) {
+    if (name.startswith("_OBJC_")) {
       // ObjC
       if (name.startswith("_OBJC_CLASS_$_"))
         return lldb::eSymbolTypeObjCClass;
