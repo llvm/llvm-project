@@ -686,8 +686,6 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
     case eSymbolTypeObjCClass:
     case eSymbolTypeObjCMetaClass:
     case eSymbolTypeObjCIVar:
-    case eSymbolTypeIVarOffset:
-    case eSymbolTypeMetadata:
     case eSymbolTypeASTFile:
       symbol_load_addr = sym_address.GetLoadAddress(&target);
       break;

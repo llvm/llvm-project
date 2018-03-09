@@ -448,10 +448,6 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
         return eAddressClassRuntime;
       case eSymbolTypeObjCIVar:
         return eAddressClassRuntime;
-      case eSymbolTypeIVarOffset:
-        return eAddressClassRuntime;
-      case eSymbolTypeMetadata:
-        return eAddressClassRuntime;
       case eSymbolTypeReExported:
         return eAddressClassRuntime;
       case eSymbolTypeASTFile:
