@@ -678,15 +678,20 @@ enum OpenFlags : unsigned {
   /// with F_Excl.
   F_Append = 2,
 
+  /// F_NoTrunc - When opening a file, if it already exists don't truncate
+  /// the file contents.  F_Append implies F_NoTrunc, but F_Append seeks to
+  /// the end of the file, which F_NoTrunc doesn't.
+  F_NoTrunc = 4,
+
   /// The file should be opened in text mode on platforms that make this
   /// distinction.
-  F_Text = 4,
+  F_Text = 8,
 
   /// Open the file for read and write.
-  F_RW = 8,
+  F_RW = 16,
 
   /// Delete the file on close. Only makes a difference on windows.
-  F_Delete = 16
+  F_Delete = 32
 };
 
 /// @brief Create a uniquely named file.

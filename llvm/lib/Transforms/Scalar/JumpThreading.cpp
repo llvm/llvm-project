@@ -1019,9 +1019,7 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
 
       // Invalidate LVI information for BB if the LVI is not provably true for
       // all of BB.
-      if (any_of(*BB, [](Instruction &I) {
-            return !isGuaranteedToTransferExecutionToSuccessor(&I);
-          }))
+      if (!isGuaranteedToTransferExecutionToSuccessor(BB))
         LVI->eraseBlock(BB);
       return true;
     }

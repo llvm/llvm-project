@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFADDRESSRANGE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFADDRESSRANGE_H
 
+#include "llvm/DebugInfo/DIContext.h"
 #include <cstdint>
 #include <tuple>
 #include <vector>
@@ -48,7 +49,8 @@ struct DWARFAddressRange {
     return false;
   }
 
-  void dump(raw_ostream &OS, uint32_t AddressSize) const;
+  void dump(raw_ostream &OS, uint32_t AddressSize,
+            DIDumpOptions DumpOpts = {}) const;
 };
 
 static inline bool operator<(const DWARFAddressRange &LHS,

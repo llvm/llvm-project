@@ -1,4 +1,4 @@
-//======- SHA1.h - Private copy of the SHA1 implementation ---*- C++ -* ======//
+//====- SHA1.cpp - Private copy of the SHA1 implementation ---*- C++ -* ======//
 //
 //                     The LLVM Compiler Infrastructure
 //

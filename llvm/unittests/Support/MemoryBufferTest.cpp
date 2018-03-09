@@ -260,4 +260,33 @@ TEST_F(MemoryBufferTest, writableSlice) {
   for (size_t i = 0; i < MB.getBufferSize(); i += 0x10)
     EXPECT_EQ("0123456789abcdef", MB.getBuffer().substr(i, 0x10)) << "i: " << i;
 }
+
+TEST_F(MemoryBufferTest, writeThroughFile) {
+  // Create a file initialized with some data
+  int FD;
+  SmallString<64> TestPath;
+  sys::fs::createTemporaryFile("MemoryBufferTest_WriteThrough", "temp", FD,
+                               TestPath);
+  FileRemover Cleanup(TestPath);
+  raw_fd_ostream OF(FD, true);
+  OF << "0123456789abcdef";
+  OF.close();
+  {
+    auto MBOrError = WriteThroughMemoryBuffer::getFile(TestPath);
+    ASSERT_FALSE(MBOrError.getError());
+    // Write some data.  It should be mapped readwrite, so that upon completion
+    // the original file contents are modified.
+    WriteThroughMemoryBuffer &MB = **MBOrError;
+    ASSERT_EQ(16u, MB.getBufferSize());
+    char *Start = MB.getBufferStart();
+    ASSERT_EQ(MB.getBufferEnd(), MB.getBufferStart() + MB.getBufferSize());
+    ::memset(Start, 'x', MB.getBufferSize());
+  }
+
+  auto MBOrError = MemoryBuffer::getFile(TestPath);
+  ASSERT_FALSE(MBOrError.getError());
+  auto &MB = **MBOrError;
+  ASSERT_EQ(16u, MB.getBufferSize());
+  EXPECT_EQ("xxxxxxxxxxxxxxxx", MB.getBuffer());
+}
 }

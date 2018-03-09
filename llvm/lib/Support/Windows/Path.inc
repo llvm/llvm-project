@@ -1101,7 +1101,7 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   DWORD CreationDisposition;
   if (Flags & F_Excl)
     CreationDisposition = CREATE_NEW;
-  else if (Flags & F_Append)
+  else if ((Flags & F_Append) || (Flags & F_NoTrunc))
     CreationDisposition = OPEN_ALWAYS;
   else
     CreationDisposition = CREATE_ALWAYS;

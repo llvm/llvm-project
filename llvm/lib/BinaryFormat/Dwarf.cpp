@@ -444,6 +444,17 @@ unsigned llvm::dwarf::getMacinfo(StringRef MacinfoString) {
       .Default(DW_MACINFO_invalid);
 }
 
+StringRef llvm::dwarf::RangeListEncodingString(unsigned Encoding) {
+  switch (Encoding) {
+  default:
+    return StringRef();
+#define HANDLE_DW_RLE(ID, NAME)                                                \
+  case DW_RLE_##NAME:                                                          \
+    return "DW_RLE_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
 StringRef llvm::dwarf::CallFrameString(unsigned Encoding) {
   switch (Encoding) {
   default:

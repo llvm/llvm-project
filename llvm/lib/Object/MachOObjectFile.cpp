@@ -1011,7 +1011,43 @@ static Error checkThreadCommand(const MachOObjectFile &Obj,
                               CmdName + " command");
       }
     } else if (cputype == MachO::CPU_TYPE_X86_64) {
-      if (flavor == MachO::x86_THREAD_STATE64) {
+      if (flavor == MachO::x86_THREAD_STATE) {
+        if (count != MachO::x86_THREAD_STATE_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not x86_THREAD_STATE_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a x86_THREAD_STATE flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::x86_thread_state_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " x86_THREAD_STATE extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::x86_thread_state_t);
+      } else if (flavor == MachO::x86_FLOAT_STATE) {
+        if (count != MachO::x86_FLOAT_STATE_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not x86_FLOAT_STATE_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a x86_FLOAT_STATE flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::x86_float_state_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " x86_FLOAT_STATE extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::x86_float_state_t);
+      } else if (flavor == MachO::x86_EXCEPTION_STATE) {
+        if (count != MachO::x86_EXCEPTION_STATE_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not x86_EXCEPTION_STATE_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a x86_EXCEPTION_STATE flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::x86_exception_state_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " x86_EXCEPTION_STATE extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::x86_exception_state_t);
+      } else if (flavor == MachO::x86_THREAD_STATE64) {
         if (count != MachO::x86_THREAD_STATE64_COUNT)
           return malformedError("load command " + Twine(LoadCommandIndex) +
                                 " count not x86_THREAD_STATE64_COUNT for "
@@ -1023,6 +1059,18 @@ static Error checkThreadCommand(const MachOObjectFile &Obj,
                                 " x86_THREAD_STATE64 extends past end of "
                                 "command in " + CmdName + " command");
         state += sizeof(MachO::x86_thread_state64_t);
+      } else if (flavor == MachO::x86_EXCEPTION_STATE64) {
+        if (count != MachO::x86_EXCEPTION_STATE64_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not x86_EXCEPTION_STATE64_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a x86_EXCEPTION_STATE64 flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::x86_exception_state64_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " x86_EXCEPTION_STATE64 extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::x86_exception_state64_t);
       } else {
         return malformedError("load command " + Twine(LoadCommandIndex) +
                               " unknown flavor (" + Twine(flavor) + ") for "

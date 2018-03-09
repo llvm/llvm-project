@@ -509,8 +509,9 @@ void DWARFContext::dump(
         if (Length == 0)
           break;
         Offset = TableOffset + Length;
-      } else
-        Rnglists.dump(OS);
+      } else {
+        Rnglists.dump(OS, DumpOpts);
+      }
     }
   }
 
