@@ -681,15 +681,14 @@ int s() {
 })test",
                    getRawStringPbStyleWithColumns(20)));
 
-  // Align the suffix with the surrounding FirstIndent if the prefix is not on
+  // Align the suffix with the surrounding indent if the prefix is not on
   // a line of its own.
   expect_eq(R"test(
 int s() {
-  auto S = PTP(
-      R"pb(
-        item_1: 1,
-        item_2: 2
-      )pb");
+  auto S = PTP(R"pb(
+    item_1: 1,
+    item_2: 2
+  )pb");
 })test",
             format(R"test(
 int s() {

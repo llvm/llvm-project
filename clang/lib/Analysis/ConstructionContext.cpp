@@ -70,8 +70,11 @@ const ConstructionContext *ConstructionContext::createFromLayers(
           C.getAllocator().Allocate<TemporaryObjectConstructionContext>();
       return new (CC) TemporaryObjectConstructionContext(BTE, MTE);
     } else if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(S)) {
+      // If the object requires destruction and is not lifetime-extended,
+      // then it must have a BTE within its MTE.
       assert(MTE->getType().getCanonicalType()
-                ->getAsCXXRecordDecl()->hasTrivialDestructor());
+                ->getAsCXXRecordDecl()->hasTrivialDestructor() ||
+             MTE->getStorageDuration() != SD_FullExpression);
       assert(TopLayer->isLast());
       auto *CC =
           C.getAllocator().Allocate<TemporaryObjectConstructionContext>();

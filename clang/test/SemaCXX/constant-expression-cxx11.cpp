@@ -629,6 +629,10 @@ namespace ArrayOfUnknownBound {
 
   extern const int carr[]; // expected-note {{here}}
   constexpr int n = carr[0]; // expected-error {{constant}} expected-note {{non-constexpr variable}}
+
+  constexpr int local_extern[] = {1, 2, 3};
+  void f() { extern const int local_extern[]; }
+  static_assert(local_extern[1] == 2, "");
 }
 
 namespace DependentValues {

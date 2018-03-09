@@ -116,6 +116,10 @@ static const EHPersonality &getCPersonality(const llvm::Triple &T,
                                             const LangOptions &L) {
   if (L.SjLjExceptions)
     return EHPersonality::GNU_C_SJLJ;
+  if (L.DWARFExceptions)
+    return EHPersonality::GNU_C;
+  if (T.isWindowsMSVCEnvironment())
+    return EHPersonality::MSVC_CxxFrameHandler3;
   if (L.SEHExceptions)
     return EHPersonality::GNU_C_SEH;
   return EHPersonality::GNU_C;
@@ -129,6 +133,8 @@ static const EHPersonality &getObjCPersonality(const llvm::Triple &T,
   case ObjCRuntime::MacOSX:
   case ObjCRuntime::iOS:
   case ObjCRuntime::WatchOS:
+    if (T.isWindowsMSVCEnvironment())
+      return EHPersonality::MSVC_CxxFrameHandler3;
     return EHPersonality::NeXT_ObjC;
   case ObjCRuntime::GNUstep:
     if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
@@ -149,6 +155,10 @@ static const EHPersonality &getCXXPersonality(const llvm::Triple &T,
                                               const LangOptions &L) {
   if (L.SjLjExceptions)
     return EHPersonality::GNU_CPlusPlus_SJLJ;
+  if (L.DWARFExceptions)
+    return EHPersonality::GNU_CPlusPlus;
+  if (T.isWindowsMSVCEnvironment())
+    return EHPersonality::MSVC_CxxFrameHandler3;
   if (L.SEHExceptions)
     return EHPersonality::GNU_CPlusPlus_SEH;
   return EHPersonality::GNU_CPlusPlus;
@@ -199,25 +209,9 @@ const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
   if (FD && FD->usesSEHTry())
     return getSEHPersonalityMSVC(T);
 
-  // Try to pick a personality function that is compatible with MSVC if we're
-  // not compiling Obj-C. Obj-C users better have an Obj-C runtime that supports
-  // the GCC-style personality function.
-  if (T.isWindowsMSVCEnvironment() && !L.ObjC1) {
-    if (L.SjLjExceptions)
-      return EHPersonality::GNU_CPlusPlus_SJLJ;
-    if (L.DWARFExceptions)
-      return EHPersonality::GNU_CPlusPlus;
-    return EHPersonality::MSVC_CxxFrameHandler3;
-  }
-
-  if (L.CPlusPlus && L.ObjC1)
-    return getObjCXXPersonality(T, L);
-  else if (L.CPlusPlus)
-    return getCXXPersonality(T, L);
-  else if (L.ObjC1)
-    return getObjCPersonality(T, L);
-  else
-    return getCPersonality(T, L);
+  if (L.ObjC1)
+    return L.CPlusPlus ? getObjCXXPersonality(T, L) : getObjCPersonality(T, L);
+  return L.CPlusPlus ? getCXXPersonality(T, L) : getCPersonality(T, L);
 }
 
 const EHPersonality &EHPersonality::get(CodeGenFunction &CGF) {

@@ -1385,9 +1385,10 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   // violate the rectangle rule and visually flows within the surrounding
   // source.
   bool ContentStartsOnNewline = Current.TokenText[OldPrefixSize] == '\n';
-  unsigned NextStartColumn = ContentStartsOnNewline
-                                 ? State.Stack.back().Indent + Style.IndentWidth
-                                 : FirstStartColumn;
+  unsigned NextStartColumn =
+      ContentStartsOnNewline
+          ? State.Stack.back().NestedBlockIndent + Style.IndentWidth
+          : FirstStartColumn;
 
   // The last start column is the column the raw string suffix starts if it is
   // put on a newline.
@@ -1399,7 +1400,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   //     indent.
   unsigned LastStartColumn = Current.NewlinesBefore
                                  ? FirstStartColumn - NewPrefixSize
-                                 : State.Stack.back().Indent;
+                                 : State.Stack.back().NestedBlockIndent;
 
   std::pair<tooling::Replacements, unsigned> Fixes = internal::reformat(
       RawStringStyle, RawText, {tooling::Range(0, RawText.size())},

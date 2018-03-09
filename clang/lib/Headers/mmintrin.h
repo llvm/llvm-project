@@ -52,7 +52,7 @@ _mm_empty(void)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVD / MOVD </c> instruction.
+/// This intrinsic corresponds to the <c> MOVD </c> instruction.
 ///
 /// \param __i
 ///    A 32-bit integer value.
@@ -69,7 +69,7 @@ _mm_cvtsi32_si64(int __i)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVD / MOVD </c> instruction.
+/// This intrinsic corresponds to the <c> MOVD </c> instruction.
 ///
 /// \param __m
 ///    A 64-bit integer vector.
@@ -85,7 +85,7 @@ _mm_cvtsi64_si32(__m64 __m)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVQ / MOVD </c> instruction.
+/// This intrinsic corresponds to the <c> MOVQ </c> instruction.
 ///
 /// \param __i
 ///    A 64-bit signed integer.
@@ -101,7 +101,7 @@ _mm_cvtsi64_m64(long long __i)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVQ / MOVD </c> instruction.
+/// This intrinsic corresponds to the <c> MOVQ </c> instruction.
 ///
 /// \param __m
 ///    A 64-bit integer vector.
@@ -1289,7 +1289,7 @@ _mm_cmpgt_pi32(__m64 __m1, __m64 __m2)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VXORPS / XORPS </c> instruction.
+/// This intrinsic corresponds to the <c> PXOR </c> instruction.
 ///
 /// \returns An initialized 64-bit integer vector with all elements set to zero.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
@@ -1381,7 +1381,8 @@ _mm_set_pi8(char __b7, char __b6, char __b5, char __b4, char __b3, char __b2,
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VPSHUFD / PSHUFD </c> instruction.
+/// This intrinsic is a utility function and does not correspond to a specific
+///    instruction.
 ///
 /// \param __i
 ///    A 32-bit integer value used to initialize each vector element of the
@@ -1399,7 +1400,8 @@ _mm_set1_pi32(int __i)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VPSHUFLW / PSHUFLW </c> instruction.
+/// This intrinsic is a utility function and does not correspond to a specific
+///    instruction.
 ///
 /// \param __w
 ///    A 16-bit integer value used to initialize each vector element of the
@@ -1416,8 +1418,8 @@ _mm_set1_pi16(short __w)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VPUNPCKLBW + VPSHUFLW / PUNPCKLBW +
-///    PSHUFLW </c> instruction.
+/// This intrinsic is a utility function and does not correspond to a specific
+///    instruction.
 ///
 /// \param __b
 ///    An 8-bit integer value used to initialize each vector element of the
