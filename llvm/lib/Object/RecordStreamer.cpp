@@ -114,5 +114,7 @@ void RecordStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
 void RecordStreamer::emitELFSymverDirective(MCSymbol *Alias,
                                             const MCSymbol *Aliasee) {
+  const MCExpr *Value = MCSymbolRefExpr::create(Aliasee, getContext());
+  EmitAssignment(Alias, Value);
   SymverAliasMap[Aliasee].push_back(Alias);
 }
