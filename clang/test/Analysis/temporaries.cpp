@@ -940,3 +940,48 @@ void test() {
 }
 } // namespace temporary_list_crash
 #endif // C++11
+
+namespace implicit_constructor_conversion {
+struct S {
+  int x;
+  S(int x) : x(x) {}
+  ~S() {}
+};
+
+class C {
+  int x;
+
+public:
+  C(const S &s) : x(s.x) {}
+  ~C() {}
+  int getX() const { return x; }
+};
+
+void test() {
+  const C &c1 = S(10);
+  clang_analyzer_eval(c1.getX() == 10);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+
+  S s = 20;
+  clang_analyzer_eval(s.x == 20);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+
+  C c2 = s;
+  clang_analyzer_eval(c2.getX() == 20);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+}
+} // end namespace implicit_constructor_conversion
+
+

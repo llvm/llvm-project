@@ -13,6 +13,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 define void @julia_fastshortest_6256() #1 {
 top:
   %cp = alloca %foo, align 8
+  %sink = alloca %foo, align 8
   call void @llvm.dbg.declare(metadata %foo* %cp, metadata !1, metadata !16), !dbg !17
   br i1 undef, label %idxend, label %fail
 
@@ -21,9 +22,10 @@ fail:                                             ; preds = %top
 
 idxend:                                           ; preds = %top
 ; CHECK-NOT: call void @llvm.dbg.value(metadata %foo* %cp,
-  %0 = load volatile %foo, %foo* %cp, align 8
-; CHECK: call void @llvm.dbg.value(metadata %foo %0,
-  store volatile %foo %0, %foo* undef, align 8
+  %0 = load %foo, %foo* %cp, align 8
+  store volatile %foo %0, %foo *%sink, align 8
+; CHECK: call void @llvm.dbg.value(metadata %foo %
+  store %foo %0, %foo* undef, align 8
   ret void
 }
 

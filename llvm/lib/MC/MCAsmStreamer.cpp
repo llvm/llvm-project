@@ -130,6 +130,9 @@ public:
 
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
 
+  void emitELFSymverDirective(MCSymbol *Alias,
+                              const MCSymbol *Aliasee) override;
+
   void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
@@ -412,6 +415,15 @@ void MCAsmStreamer::ChangeSection(MCSection *Section,
         *MAI, getContext().getObjectFileInfo()->getTargetTriple(), OS,
         Subsection);
   }
+}
+
+void MCAsmStreamer::emitELFSymverDirective(MCSymbol *Alias,
+                                           const MCSymbol *Aliasee) {
+  OS << ".symver ";
+  Aliasee->print(OS, MAI);
+  OS << ", ";
+  Alias->print(OS, MAI);
+  EmitEOL();
 }
 
 void MCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {

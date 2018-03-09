@@ -22323,14 +22323,15 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
       ALo = DAG.getSignExtendVectorInReg(A, dl, ExVT);
       BLo = DAG.getSignExtendVectorInReg(B, dl, ExVT);
     } else {
-      const int ShufMask[] = {-1, 0, -1, 1, -1, 2, -1, 3,
-                              -1, 4, -1, 5, -1, 6, -1, 7};
+      // We're going to mask off the low byte of each result element of the
+      // pmullw, so it doesn't matter what's in the high byte of each 16-bit
+      // element.
+      const int ShufMask[] = {0, -1, 1, -1, 2, -1, 3, -1,
+                              4, -1, 5, -1, 6, -1, 7, -1};
       ALo = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
       BLo = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
       ALo = DAG.getBitcast(ExVT, ALo);
       BLo = DAG.getBitcast(ExVT, BLo);
-      ALo = DAG.getNode(ISD::SRA, dl, ExVT, ALo, DAG.getConstant(8, dl, ExVT));
-      BLo = DAG.getNode(ISD::SRA, dl, ExVT, BLo, DAG.getConstant(8, dl, ExVT));
     }
 
     // Extract the hi parts and sign extend to i16
@@ -22343,14 +22344,15 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
       AHi = DAG.getSignExtendVectorInReg(AHi, dl, ExVT);
       BHi = DAG.getSignExtendVectorInReg(BHi, dl, ExVT);
     } else {
-      const int ShufMask[] = {-1, 8,  -1, 9,  -1, 10, -1, 11,
-                              -1, 12, -1, 13, -1, 14, -1, 15};
+      // We're going to mask off the low byte of each result element of the
+      // pmullw, so it doesn't matter what's in the high byte of each 16-bit
+      // element.
+      const int ShufMask[] = {8,  -1, 9,  -1, 10, -1, 11, -1,
+                              12, -1, 13, -1, 14, -1, 15, -1};
       AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
       BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
       AHi = DAG.getBitcast(ExVT, AHi);
       BHi = DAG.getBitcast(ExVT, BHi);
-      AHi = DAG.getNode(ISD::SRA, dl, ExVT, AHi, DAG.getConstant(8, dl, ExVT));
-      BHi = DAG.getNode(ISD::SRA, dl, ExVT, BHi, DAG.getConstant(8, dl, ExVT));
     }
 
     // Multiply, mask the lower 8bits of the lo/hi results and pack

@@ -34,9 +34,9 @@ far:
 @CHECK-NOT: @
 
 @CHECK-LABEL: bar:
-@CHECK: bar1@zed = defined1
-@CHECK: bar3@@zed = defined2
-@CHECK: bar5@@@zed = defined3
+@CHECK: .symver defined1, bar1@zed
+@CHECK: .symver defined2, bar3@@zed
+@CHECK: .symver defined3, bar5@@@zed
 
 @ Make sure we did not mess up the parser state and it still lexes
 @ comments correctly by excluding the @ in normal symbols
