@@ -117,8 +117,7 @@ else()
   # Cannot use CLANG_VERSION because we are not guaranteed that this is already set.
   set(OPENMP_TEST_COMPILER_VERSION "${LLVM_VERSION}")
   set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_MAJOR_VERSION}")
-  # TODO: Implement blockaddress in GlobalISel and remove this flag!
-  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp -fno-experimental-isel")
+  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp")
 endif()
 
 # Function to set compiler features for use in lit.

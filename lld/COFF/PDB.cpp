@@ -96,11 +96,10 @@ public:
   /// If the object does not use a type server PDB (compiled with /Z7), we merge
   /// all the type and item records from the .debug$S stream and fill in the
   /// caller-provided ObjectIndexMap.
-  Expected<const CVIndexMap&> mergeDebugT(ObjFile *File,
-                                          CVIndexMap &ObjectIndexMap);
+  const CVIndexMap &mergeDebugT(ObjFile *File, CVIndexMap &ObjectIndexMap);
 
-  Expected<const CVIndexMap&> maybeMergeTypeServerPDB(ObjFile *File,
-                                                      TypeServer2Record &TS);
+  const CVIndexMap &maybeMergeTypeServerPDB(ObjFile *File,
+                                            TypeServer2Record &TS);
 
   /// Add the section map and section contributions to the PDB.
   void addSections(ArrayRef<OutputSection *> OutputSections,
@@ -141,10 +140,6 @@ private:
 
   /// Type index mappings of type server PDBs that we've loaded so far.
   std::map<GUID, CVIndexMap> TypeServerIndexMappings;
-
-  /// List of TypeServer PDBs which cannot be loaded.
-  /// Cached to prevent repeated load attempts.
-  std::set<GUID> MissingTypeServerPDBs;
 };
 }
 
@@ -235,8 +230,8 @@ maybeReadTypeServerRecord(CVTypeArray &Types) {
   return std::move(TS);
 }
 
-Expected<const CVIndexMap&> PDBLinker::mergeDebugT(ObjFile *File,
-                                                   CVIndexMap &ObjectIndexMap) {
+const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
+                                         CVIndexMap &ObjectIndexMap) {
   ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
   if (Data.empty())
     return ObjectIndexMap;
@@ -309,19 +304,11 @@ tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
   return std::move(NS);
 }
 
-Expected<const CVIndexMap&> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
-                                                               TypeServer2Record &TS) {
-  const GUID& TSId = TS.getGuid();
-  StringRef TSPath = TS.getName();
-
-  // First, check if the PDB has previously failed to load.
-  if (MissingTypeServerPDBs.count(TSId))
-    return make_error<pdb::GenericError>(
-      pdb::generic_error_code::type_server_not_found, TSPath);
-
-  // Second, check if we already loaded a PDB with this GUID. Return the type
+const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
+                                                     TypeServer2Record &TS) {
+  // First, check if we already loaded a PDB with this GUID. Return the type
   // index mapping if we have it.
-  auto Insertion = TypeServerIndexMappings.insert({TSId, CVIndexMap()});
+  auto Insertion = TypeServerIndexMappings.insert({TS.getGuid(), CVIndexMap()});
   CVIndexMap &IndexMap = Insertion.first->second;
   if (!Insertion.second)
     return IndexMap;
@@ -332,21 +319,18 @@ Expected<const CVIndexMap&> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
   // Check for a PDB at:
   // 1. The given file path
   // 2. Next to the object file or archive file
-  auto ExpectedSession = tryToLoadPDB(TSId, TSPath);
+  auto ExpectedSession = tryToLoadPDB(TS.getGuid(), TS.getName());
   if (!ExpectedSession) {
     consumeError(ExpectedSession.takeError());
     StringRef LocalPath =
         !File->ParentName.empty() ? File->ParentName : File->getName();
     SmallString<128> Path = sys::path::parent_path(LocalPath);
     sys::path::append(
-        Path, sys::path::filename(TSPath, sys::path::Style::windows));
-    ExpectedSession = tryToLoadPDB(TSId, Path);
+        Path, sys::path::filename(TS.getName(), sys::path::Style::windows));
+    ExpectedSession = tryToLoadPDB(TS.getGuid(), Path);
   }
-  if (auto E = ExpectedSession.takeError()) {
-    TypeServerIndexMappings.erase(TSId);
-    MissingTypeServerPDBs.emplace(TSId);
-    return std::move(E);
-  }
+  if (auto E = ExpectedSession.takeError())
+    fatal("Type server PDB was not found: " + toString(std::move(E)));
 
   auto ExpectedTpi = (*ExpectedSession)->getPDBFile().getPDBTpiStream();
   if (auto E = ExpectedTpi.takeError())
@@ -723,16 +707,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   // the PDB first, so that we can get the map from object file type and item
   // indices to PDB type and item indices.
   CVIndexMap ObjectIndexMap;
-  auto IndexMapResult = mergeDebugT(File, ObjectIndexMap);
-
-  // If the .debug$T sections fail to merge, assume there is no debug info.
-  if (!IndexMapResult) {
-    warn("Type server PDB for " + Name + " is invalid, ignoring debug info. " +
-         toString(IndexMapResult.takeError()));
-    return;
-  }
-
-  const CVIndexMap &IndexMap = *IndexMapResult;
+  const CVIndexMap &IndexMap = mergeDebugT(File, ObjectIndexMap);
 
   // Now do all live .debug$S sections.
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {

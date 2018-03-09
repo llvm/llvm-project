@@ -47,7 +47,6 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
-using namespace llvm::support;
 using namespace llvm::support::endian;
 
 using namespace lld;
@@ -358,7 +357,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *IS, uint64_t &Off,
 
   uint64_t PatchOff = 0;
   const uint8_t *Buf = IS->Data.begin();
-  const ulittle32_t *InstBuf = reinterpret_cast<const ulittle32_t *>(Buf + Off);
+  const uint32_t *InstBuf = reinterpret_cast<const uint32_t *>(Buf + Off);
   uint32_t Instr1 = *InstBuf++;
   uint32_t Instr2 = *InstBuf++;
   uint32_t Instr3 = *InstBuf++;

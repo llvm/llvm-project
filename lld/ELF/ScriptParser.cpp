@@ -709,14 +709,6 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   if (consume(">"))
     Cmd->MemoryRegionName = next();
 
-  if (consume("AT")) {
-    expect(">");
-    Cmd->LMARegionName = next();
-  }
-
-  if (Cmd->LMAExpr && !Cmd->LMARegionName.empty())
-    error("section can't have both LMA and a load region");
-
   Cmd->Phdrs = readOutputSectionPhdrs();
 
   if (consume("="))
@@ -930,10 +922,7 @@ ByteCommand *ScriptParser::readByteCommand(StringRef Tok) {
 
 StringRef ScriptParser::readParenLiteral() {
   expect("(");
-  bool Orig = InExpr;
-  InExpr = false;
   StringRef Tok = next();
-  InExpr = Orig;
   expect(")");
   return Tok;
 }
@@ -1293,8 +1282,8 @@ void ScriptParser::readMemory() {
     // Add the memory region to the region map.
     if (Script->MemoryRegions.count(Name))
       setError("region '" + Name + "' already defined");
-    MemoryRegion *MR =
-        make<MemoryRegion>(Name, Origin, Length, Flags, NegFlags);
+    MemoryRegion *MR = make<MemoryRegion>();
+    *MR = {Name, Origin, Length, Flags, NegFlags};
     Script->MemoryRegions[Name] = MR;
   }
 }
