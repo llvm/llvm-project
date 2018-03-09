@@ -175,14 +175,16 @@ void TimelineView::printTimelineViewEntry(raw_string_ostream &OS,
   if (Entry.CycleDispatched != Entry.CycleExecuted) {
     // Zero latency instructions have the same value for CycleDispatched,
     // CycleIssued and CycleExecuted.
-    for (unsigned I = Entry.CycleDispatched + 1, E = Entry.CycleIssued; I < E; ++I)
+    for (unsigned I = Entry.CycleDispatched + 1, E = Entry.CycleIssued; I < E;
+         ++I)
       OS << '=';
     if (Entry.CycleIssued == Entry.CycleExecuted)
       OS << 'E';
     else {
       if (Entry.CycleDispatched != Entry.CycleIssued)
         OS << 'e';
-      for (unsigned I = Entry.CycleIssued + 1, E = Entry.CycleExecuted; I < E; ++I)
+      for (unsigned I = Entry.CycleIssued + 1, E = Entry.CycleExecuted; I < E;
+           ++I)
         OS << 'e';
       OS << 'E';
     }

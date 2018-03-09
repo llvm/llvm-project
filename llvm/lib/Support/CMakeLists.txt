@@ -120,6 +120,7 @@ add_llvm_library(LLVMSupport
   Twine.cpp
   Unicode.cpp
   UnicodeCaseFold.cpp
+  WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   raw_os_ostream.cpp

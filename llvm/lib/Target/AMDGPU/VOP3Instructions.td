@@ -406,16 +406,16 @@ def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 } // End SubtargetPredicate = isCIVI
 
 
-let SubtargetPredicate = Has16BitInsts in {
-
-let renamedInGFX9 = 1 in {
-def V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
+def V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup> {
+  let Predicates = [Has16BitInsts, isVIOnly];
 }
-let SubtargetPredicate = isGFX9 in {
-def V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
+def V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9",
+                                      VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUdiv_fixup> {
+  let renamedInGFX9 = 1;
+  let Predicates = [Has16BitInsts, isGFX9];
 }
 
-let isCommutable = 1 in {
+let SubtargetPredicate = Has16BitInsts, isCommutable = 1 in {
 
 let renamedInGFX9 = 1 in {
 def V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
@@ -436,8 +436,7 @@ def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f1
 def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>>;
 def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>>;
 
-}  // End isCommutable = 1
-} // End SubtargetPredicate = Has16BitInsts
+} // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
 
 let SubtargetPredicate = isVI in {
 def V_INTERP_P1_F32_e64  : VOP3Interp <"v_interp_p1_f32", VOP3_INTERP>;
@@ -695,7 +694,7 @@ multiclass VOP3Interp_F16_Real_vi<bits<10> op> {
 let AssemblerPredicates = [isGFX9], DecoderNamespace = "GFX9" in {
 
 multiclass VOP3_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
+  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
             VOP3e_vi <op, !cast<VOP3_Pseudo>(OpName).Pfl> {
               VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName);
               let AsmString = AsmName # ps.AsmOperands;
@@ -703,7 +702,7 @@ multiclass VOP3_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
 }
 
 multiclass VOP3OpSel_F16_Real_gfx9<bits<10> op, string AsmName> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
+  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
             VOP3OpSel_gfx9 <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
               VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME);
               let AsmString = AsmName # ps.AsmOperands;
@@ -711,7 +710,7 @@ multiclass VOP3OpSel_F16_Real_gfx9<bits<10> op, string AsmName> {
 }
 
 multiclass VOP3Interp_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
+  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
             VOP3Interp_vi <op, !cast<VOP3_Pseudo>(OpName).Pfl> {
               VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName);
               let AsmString = AsmName # ps.AsmOperands;
@@ -719,7 +718,7 @@ multiclass VOP3Interp_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> 
 }
 
 multiclass VOP3_Real_gfx9<bits<10> op, string AsmName> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
+  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
               VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
               VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME);
               let AsmString = AsmName # ps.AsmOperands;

@@ -56,10 +56,11 @@ public:
     /// in this Accelerator Entry.
     virtual Optional<uint64_t> getCUOffset() const = 0;
 
-    /// Returns the Offset of the Debug Info Entry associated with this
+    /// Returns the Section Offset of the Debug Info Entry associated with this
     /// Accelerator Entry or None if the DIE offset is not recorded in this
-    /// Accelerator Entry.
-    virtual Optional<uint64_t> getDIEOffset() const = 0;
+    /// Accelerator Entry. The returned offset is relative to the start of the
+    /// Section containing the DIE.
+    virtual Optional<uint64_t> getDIESectionOffset() const = 0;
 
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or None if the Tag is not recorded in this
@@ -104,6 +105,8 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
 
     uint32_t DIEOffsetBase;
     SmallVector<std::pair<AtomType, Form>, 3> Atoms;
+
+    Optional<uint64_t> extractOffset(Optional<DWARFFormValue> Value) const;
   };
 
   struct Header Hdr;
@@ -127,7 +130,7 @@ public:
 
   public:
     Optional<uint64_t> getCUOffset() const override;
-    Optional<uint64_t> getDIEOffset() const override;
+    Optional<uint64_t> getDIESectionOffset() const override;
     Optional<dwarf::Tag> getTag() const override;
 
     /// Returns the value of the Atom in this Accelerator Entry, if the Entry
@@ -284,17 +287,23 @@ public:
     /// Index or None if this Accelerator Entry does not have an associated
     /// Compilation Unit. It is up to the user to verify that the returned Index
     /// is valid in the owning NameIndex (or use getCUOffset(), which will
-    /// handle that check itself).
+    /// handle that check itself). Note that entries in NameIndexes which index
+    /// just a single Compilation Unit are implicitly associated with that unit,
+    /// so this function will return 0 even without an explicit
+    /// DW_IDX_compile_unit attribute.
     Optional<uint64_t> getCUIndex() const;
 
   public:
     Optional<uint64_t> getCUOffset() const override;
-    Optional<uint64_t> getDIEOffset() const override;
+    Optional<uint64_t> getDIESectionOffset() const override;
     Optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// .debug_names-specific getter, which always succeeds (DWARF v5 index
     /// entries always have a tag).
     dwarf::Tag tag() const { return Abbr->Tag; }
+
+    /// Returns the Offset of the DIE within the containing CU or TU.
+    Optional<uint64_t> getDIEUnitOffset() const;
 
     /// Return the Abbreviation that can be used to interpret the raw values of
     /// this Accelerator Entry.

@@ -22,5 +22,6 @@ add_llvm_tool(llvm-mca
   ResourcePressureView.cpp
   Scheduler.cpp
   TimelineView.cpp
+  SummaryView.cpp
   View.cpp
   )

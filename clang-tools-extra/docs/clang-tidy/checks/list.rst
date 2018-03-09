@@ -4,6 +4,7 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-string-find-startswith
    android-cloexec-accept
    android-cloexec-accept4
    android-cloexec-creat

@@ -88,23 +88,6 @@ class CommandLineCompletionTestCase(TestBase):
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
-    def test_watchpoint_set_variable_dash_w(self):
-        """Test that 'watchpoint set variable -w' completes to 'watchpoint set variable -w '."""
-        self.complete_from_to(
-            'watchpoint set variable -w',
-            'watchpoint set variable -w ')
-
-    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
-    @no_debug_info_test
-    def test_watchpoint_set_variable_dash_w_space(self):
-        """Test that 'watchpoint set variable -w ' completes to ['read', 'write', 'read_write']."""
-        self.complete_from_to('watchpoint set variable -w ',
-                              ['read', 'write', 'read_write'])
-
-    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
-    @no_debug_info_test
     def test_watchpoint_set_ex(self):
         """Test that 'watchpoint set ex' completes to 'watchpoint set expression '."""
         self.complete_from_to(
@@ -117,15 +100,6 @@ class CommandLineCompletionTestCase(TestBase):
     def test_watchpoint_set_var(self):
         """Test that 'watchpoint set var' completes to 'watchpoint set variable '."""
         self.complete_from_to('watchpoint set var', 'watchpoint set variable ')
-
-    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
-    @no_debug_info_test
-    def test_watchpoint_set_variable_dash_w_read_underbar(self):
-        """Test that 'watchpoint set variable -w read_' completes to 'watchpoint set variable -w read_write'."""
-        self.complete_from_to(
-            'watchpoint set variable -w read_',
-            'watchpoint set variable -w read_write')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
@@ -295,6 +269,27 @@ class CommandLineCompletionTestCase(TestBase):
     def test_target_va(self):
         """Test that 'target va' completes to 'target variable '."""
         self.complete_from_to('target va', 'target variable ')
+
+    def test_command_argument_completion(self):
+        """Test completion of command arguments"""
+        self.complete_from_to("watchpoint set variable -", ["-w", "-s"])
+        self.complete_from_to('watchpoint set variable -w', 'watchpoint set variable -w ')
+        self.complete_from_to("watchpoint set variable --", ["--watch", "--size"])
+        self.complete_from_to("watchpoint set variable --w", "watchpoint set variable --watch")
+        self.complete_from_to('watchpoint set variable -w ', ['read', 'write', 'read_write'])
+        self.complete_from_to("watchpoint set variable --watch ", ["read", "write", "read_write"])
+        self.complete_from_to("watchpoint set variable --watch w", "watchpoint set variable --watch write")
+        self.complete_from_to('watchpoint set variable -w read_', 'watchpoint set variable -w read_write')
+        # Now try the same thing with a variable name (non-option argument) to
+        # test that getopts arg reshuffling doesn't confuse us.
+        self.complete_from_to("watchpoint set variable foo -", ["-w", "-s"])
+        self.complete_from_to('watchpoint set variable foo -w', 'watchpoint set variable foo -w ')
+        self.complete_from_to("watchpoint set variable foo --", ["--watch", "--size"])
+        self.complete_from_to("watchpoint set variable foo --w", "watchpoint set variable foo --watch")
+        self.complete_from_to('watchpoint set variable foo -w ', ['read', 'write', 'read_write'])
+        self.complete_from_to("watchpoint set variable foo --watch ", ["read", "write", "read_write"])
+        self.complete_from_to("watchpoint set variable foo --watch w", "watchpoint set variable foo --watch write")
+        self.complete_from_to('watchpoint set variable foo -w read_', 'watchpoint set variable foo -w read_write')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     def test_symbol_name(self):

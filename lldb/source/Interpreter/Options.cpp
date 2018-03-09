@@ -951,3 +951,527 @@ OptionGroupOptions::OptionParsingFinished(ExecutionContext *execution_context) {
   }
   return error;
 }
+
+// OptionParser permutes the arguments while processing them, so we create a
+// temporary array holding to avoid modification of the input arguments. The
+// options themselves are never modified, but the API expects a char * anyway,
+// hence the const_cast.
+static std::vector<char *> GetArgvForParsing(const Args &args) {
+  std::vector<char *> result;
+  // OptionParser always skips the first argument as it is based on getopt().
+  result.push_back(const_cast<char *>("<FAKE-ARG0>"));
+  for (const Args::ArgEntry &entry : args)
+    result.push_back(const_cast<char *>(entry.c_str()));
+  return result;
+}
+
+// Given a permuted argument, find it's position in the original Args vector.
+static Args::const_iterator FindOriginalIter(const char *arg,
+                                             const Args &original) {
+  return llvm::find_if(
+      original, [arg](const Args::ArgEntry &D) { return D.c_str() == arg; });
+}
+
+// Given a permuted argument, find it's index in the original Args vector.
+static size_t FindOriginalIndex(const char *arg, const Args &original) {
+  return std::distance(original.begin(), FindOriginalIter(arg, original));
+}
+
+// Construct a new Args object, consisting of the entries from the original
+// arguments, but in the permuted order.
+static Args ReconstituteArgsAfterParsing(llvm::ArrayRef<char *> parsed,
+                                         const Args &original) {
+  Args result;
+  for (const char *arg : parsed) {
+    auto pos = FindOriginalIter(arg, original);
+    assert(pos != original.end());
+    result.AppendArgument(pos->ref, pos->quote);
+  }
+  return result;
+}
+
+static size_t FindArgumentIndexForOption(const Args &args,
+                                         const Option &long_option) {
+  std::string short_opt = llvm::formatv("-{0}", char(long_option.val)).str();
+  std::string long_opt =
+      llvm::formatv("--{0}", long_option.definition->long_option);
+  for (const auto &entry : llvm::enumerate(args)) {
+    if (entry.value().ref.startswith(short_opt) ||
+        entry.value().ref.startswith(long_opt))
+      return entry.index();
+  }
+
+  return size_t(-1);
+}
+
+llvm::Expected<Args> Options::ParseAlias(const Args &args,
+                                         OptionArgVector *option_arg_vector,
+                                         std::string &input_line) {
+  StreamString sstr;
+  int i;
+  Option *long_options = GetLongOptions();
+
+  if (long_options == nullptr) {
+    return llvm::make_error<llvm::StringError>("Invalid long options",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  for (i = 0; long_options[i].definition != nullptr; ++i) {
+    if (long_options[i].flag == nullptr) {
+      sstr << (char)long_options[i].val;
+      switch (long_options[i].definition->option_has_arg) {
+      default:
+      case OptionParser::eNoArgument:
+        break;
+      case OptionParser::eRequiredArgument:
+        sstr << ":";
+        break;
+      case OptionParser::eOptionalArgument:
+        sstr << "::";
+        break;
+      }
+    }
+  }
+
+  Args args_copy = args;
+  std::vector<char *> argv = GetArgvForParsing(args);
+
+  std::unique_lock<std::mutex> lock;
+  OptionParser::Prepare(lock);
+  int val;
+  while (1) {
+    int long_options_index = -1;
+    val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
+                              long_options, &long_options_index);
+
+    if (val == -1)
+      break;
+
+    if (val == '?') {
+      return llvm::make_error<llvm::StringError>(
+          "Unknown or ambiguous option", llvm::inconvertibleErrorCode());
+    }
+
+    if (val == 0)
+      continue;
+
+    OptionSeen(val);
+
+    // Look up the long option index
+    if (long_options_index == -1) {
+      for (int j = 0; long_options[j].definition || long_options[j].flag ||
+                      long_options[j].val;
+           ++j) {
+        if (long_options[j].val == val) {
+          long_options_index = j;
+          break;
+        }
+      }
+    }
+
+    // See if the option takes an argument, and see if one was supplied.
+    if (long_options_index == -1) {
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("Invalid option with value '{0}'.", char(val)).str(),
+          llvm::inconvertibleErrorCode());
+    }
+
+    StreamString option_str;
+    option_str.Printf("-%c", val);
+    const OptionDefinition *def = long_options[long_options_index].definition;
+    int has_arg =
+        (def == nullptr) ? OptionParser::eNoArgument : def->option_has_arg;
+
+    const char *option_arg = nullptr;
+    switch (has_arg) {
+    case OptionParser::eRequiredArgument:
+      if (OptionParser::GetOptionArgument() == nullptr) {
+        return llvm::make_error<llvm::StringError>(
+            llvm::formatv("Option '{0}' is missing argument specifier.",
+                          option_str.GetString())
+                .str(),
+            llvm::inconvertibleErrorCode());
+      }
+      LLVM_FALLTHROUGH;
+    case OptionParser::eOptionalArgument:
+      option_arg = OptionParser::GetOptionArgument();
+      LLVM_FALLTHROUGH;
+    case OptionParser::eNoArgument:
+      break;
+    default:
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("error with options table; invalid value in has_arg "
+                        "field for option '{0}'.",
+                        char(val))
+              .str(),
+          llvm::inconvertibleErrorCode());
+    }
+    if (!option_arg)
+      option_arg = "<no-argument>";
+    option_arg_vector->emplace_back(option_str.GetString(), has_arg,
+                                    option_arg);
+
+    // Find option in the argument list; also see if it was supposed to take
+    // an argument and if one was supplied.  Remove option (and argument, if
+    // given) from the argument list.  Also remove them from the
+    // raw_input_string, if one was passed in.
+    size_t idx =
+        FindArgumentIndexForOption(args_copy, long_options[long_options_index]);
+    if (idx == size_t(-1))
+      continue;
+
+    if (!input_line.empty()) {
+      auto tmp_arg = args_copy[idx].ref;
+      size_t pos = input_line.find(tmp_arg);
+      if (pos != std::string::npos)
+        input_line.erase(pos, tmp_arg.size());
+    }
+    args_copy.DeleteArgumentAtIndex(idx);
+    if ((long_options[long_options_index].definition->option_has_arg !=
+         OptionParser::eNoArgument) &&
+        (OptionParser::GetOptionArgument() != nullptr) &&
+        (idx < args_copy.GetArgumentCount()) &&
+        (args_copy[idx].ref == OptionParser::GetOptionArgument())) {
+      if (input_line.size() > 0) {
+        auto tmp_arg = args_copy[idx].ref;
+        size_t pos = input_line.find(tmp_arg);
+        if (pos != std::string::npos)
+          input_line.erase(pos, tmp_arg.size());
+      }
+      args_copy.DeleteArgumentAtIndex(idx);
+    }
+  }
+
+  return std::move(args_copy);
+}
+
+OptionElementVector Options::ParseForCompletion(const Args &args,
+                                                uint32_t cursor_index) {
+  OptionElementVector option_element_vector;
+  StreamString sstr;
+  Option *long_options = GetLongOptions();
+  option_element_vector.clear();
+
+  if (long_options == nullptr)
+    return option_element_vector;
+
+  // Leading : tells getopt to return a : for a missing option argument AND
+  // to suppress error messages.
+
+  sstr << ":";
+  for (int i = 0; long_options[i].definition != nullptr; ++i) {
+    if (long_options[i].flag == nullptr) {
+      sstr << (char)long_options[i].val;
+      switch (long_options[i].definition->option_has_arg) {
+      default:
+      case OptionParser::eNoArgument:
+        break;
+      case OptionParser::eRequiredArgument:
+        sstr << ":";
+        break;
+      case OptionParser::eOptionalArgument:
+        sstr << "::";
+        break;
+      }
+    }
+  }
+
+  std::unique_lock<std::mutex> lock;
+  OptionParser::Prepare(lock);
+  OptionParser::EnableError(false);
+
+  int val;
+  auto opt_defs = GetDefinitions();
+
+  std::vector<char *> dummy_vec = GetArgvForParsing(args);
+
+  // I stick an element on the end of the input, because if the last element
+  // is option that requires an argument, getopt_long_only will freak out.
+  dummy_vec.push_back(const_cast<char *>("<FAKE-VALUE>"));
+
+  bool failed_once = false;
+  uint32_t dash_dash_pos = -1;
+
+  while (1) {
+    bool missing_argument = false;
+    int long_options_index = -1;
+
+    val = OptionParser::Parse(dummy_vec.size(), &dummy_vec[0], sstr.GetString(),
+                              long_options, &long_options_index);
+
+    if (val == -1) {
+      // When we're completing a "--" which is the last option on line,
+      if (failed_once)
+        break;
+
+      failed_once = true;
+
+      // If this is a bare  "--" we mark it as such so we can complete it
+      // successfully later.  Handling the "--" is a little tricky, since that
+      // may mean end of options or arguments, or the user might want to
+      // complete options by long name.  I make this work by checking whether
+      // the cursor is in the "--" argument, and if so I assume we're
+      // completing the long option, otherwise I let it pass to
+      // OptionParser::Parse which will terminate the option parsing.  Note, in
+      // either case we continue parsing the line so we can figure out what
+      // other options were passed.  This will be useful when we come to
+      // restricting completions based on what other options we've seen on the
+      // line.
+
+      if (static_cast<size_t>(OptionParser::GetOptionIndex()) <
+              dummy_vec.size() &&
+          (strcmp(dummy_vec[OptionParser::GetOptionIndex() - 1], "--") == 0)) {
+        dash_dash_pos = FindOriginalIndex(
+            dummy_vec[OptionParser::GetOptionIndex() - 1], args);
+        if (dash_dash_pos == cursor_index) {
+          option_element_vector.push_back(
+              OptionArgElement(OptionArgElement::eBareDoubleDash, dash_dash_pos,
+                               OptionArgElement::eBareDoubleDash));
+          continue;
+        } else
+          break;
+      } else
+        break;
+    } else if (val == '?') {
+      option_element_vector.push_back(OptionArgElement(
+          OptionArgElement::eUnrecognizedArg,
+          FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                            args),
+          OptionArgElement::eUnrecognizedArg));
+      continue;
+    } else if (val == 0) {
+      continue;
+    } else if (val == ':') {
+      // This is a missing argument.
+      val = OptionParser::GetOptionErrorCause();
+      missing_argument = true;
+    }
+
+    OptionSeen(val);
+
+    // Look up the long option index
+    if (long_options_index == -1) {
+      for (int j = 0; long_options[j].definition || long_options[j].flag ||
+                      long_options[j].val;
+           ++j) {
+        if (long_options[j].val == val) {
+          long_options_index = j;
+          break;
+        }
+      }
+    }
+
+    // See if the option takes an argument, and see if one was supplied.
+    if (long_options_index >= 0) {
+      int opt_defs_index = -1;
+      for (size_t i = 0; i < opt_defs.size(); i++) {
+        if (opt_defs[i].short_option != val)
+          continue;
+        opt_defs_index = i;
+        break;
+      }
+
+      const OptionDefinition *def = long_options[long_options_index].definition;
+      int has_arg =
+          (def == nullptr) ? OptionParser::eNoArgument : def->option_has_arg;
+      switch (has_arg) {
+      case OptionParser::eNoArgument:
+        option_element_vector.push_back(OptionArgElement(
+            opt_defs_index,
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                              args),
+            0));
+        break;
+      case OptionParser::eRequiredArgument:
+        if (OptionParser::GetOptionArgument() != nullptr) {
+          int arg_index;
+          if (missing_argument)
+            arg_index = -1;
+          else
+            arg_index = OptionParser::GetOptionIndex() - 2;
+
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                                args),
+              arg_index));
+        } else {
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                                args),
+              -1));
+        }
+        break;
+      case OptionParser::eOptionalArgument:
+        if (OptionParser::GetOptionArgument() != nullptr) {
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                                args),
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                                args)));
+        } else {
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                                args),
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                                args)));
+        }
+        break;
+      default:
+        // The options table is messed up.  Here we'll just continue
+        option_element_vector.push_back(OptionArgElement(
+            OptionArgElement::eUnrecognizedArg,
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                              args),
+            OptionArgElement::eUnrecognizedArg));
+        break;
+      }
+    } else {
+      option_element_vector.push_back(OptionArgElement(
+          OptionArgElement::eUnrecognizedArg,
+          FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                            args),
+          OptionArgElement::eUnrecognizedArg));
+    }
+  }
+
+  // Finally we have to handle the case where the cursor index points at a
+  // single "-".  We want to mark that in
+  // the option_element_vector, but only if it is not after the "--".  But it
+  // turns out that OptionParser::Parse just ignores
+  // an isolated "-".  So we have to look it up by hand here.  We only care if
+  // it is AT the cursor position.
+  // Note, a single quoted dash is not the same as a single dash...
+
+  const Args::ArgEntry &cursor = args[cursor_index];
+  if ((static_cast<int32_t>(dash_dash_pos) == -1 ||
+       cursor_index < dash_dash_pos) &&
+      cursor.quote == '\0' && cursor.ref == "-") {
+    option_element_vector.push_back(
+        OptionArgElement(OptionArgElement::eBareDash, cursor_index,
+                         OptionArgElement::eBareDash));
+  }
+  return option_element_vector;
+}
+
+llvm::Expected<Args> Options::Parse(const Args &args,
+                                    ExecutionContext *execution_context,
+                                    lldb::PlatformSP platform_sp,
+                                    bool require_validation) {
+  StreamString sstr;
+  Status error;
+  Option *long_options = GetLongOptions();
+  if (long_options == nullptr) {
+    return llvm::make_error<llvm::StringError>("Invalid long options.",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  for (int i = 0; long_options[i].definition != nullptr; ++i) {
+    if (long_options[i].flag == nullptr) {
+      if (isprint8(long_options[i].val)) {
+        sstr << (char)long_options[i].val;
+        switch (long_options[i].definition->option_has_arg) {
+        default:
+        case OptionParser::eNoArgument:
+          break;
+        case OptionParser::eRequiredArgument:
+          sstr << ':';
+          break;
+        case OptionParser::eOptionalArgument:
+          sstr << "::";
+          break;
+        }
+      }
+    }
+  }
+  std::vector<char *> argv = GetArgvForParsing(args);
+  std::unique_lock<std::mutex> lock;
+  OptionParser::Prepare(lock);
+  int val;
+  while (1) {
+    int long_options_index = -1;
+    val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
+                              long_options, &long_options_index);
+    if (val == -1)
+      break;
+
+    // Did we get an error?
+    if (val == '?') {
+      error.SetErrorStringWithFormat("unknown or ambiguous option");
+      break;
+    }
+    // The option auto-set itself
+    if (val == 0)
+      continue;
+
+    OptionSeen(val);
+
+    // Lookup the long option index
+    if (long_options_index == -1) {
+      for (int i = 0; long_options[i].definition || long_options[i].flag ||
+                      long_options[i].val;
+           ++i) {
+        if (long_options[i].val == val) {
+          long_options_index = i;
+          break;
+        }
+      }
+    }
+    // Call the callback with the option
+    if (long_options_index >= 0 &&
+        long_options[long_options_index].definition) {
+      const OptionDefinition *def = long_options[long_options_index].definition;
+
+      if (!platform_sp) {
+        // User did not pass in an explicit platform.  Try to grab
+        // from the execution context.
+        TargetSP target_sp =
+            execution_context ? execution_context->GetTargetSP() : TargetSP();
+        platform_sp = target_sp ? target_sp->GetPlatform() : PlatformSP();
+      }
+      OptionValidator *validator = def->validator;
+
+      if (!platform_sp && require_validation) {
+        // Caller requires validation but we cannot validate as we
+        // don't have the mandatory platform against which to
+        // validate.
+        return llvm::make_error<llvm::StringError>(
+            "cannot validate options: no platform available",
+            llvm::inconvertibleErrorCode());
+      }
+
+      bool validation_failed = false;
+      if (platform_sp) {
+        // Ensure we have an execution context, empty or not.
+        ExecutionContext dummy_context;
+        ExecutionContext *exe_ctx_p =
+            execution_context ? execution_context : &dummy_context;
+        if (validator && !validator->IsValid(*platform_sp, *exe_ctx_p)) {
+          validation_failed = true;
+          error.SetErrorStringWithFormat("Option \"%s\" invalid.  %s",
+                                         def->long_option,
+                                         def->validator->LongConditionString());
+        }
+      }
+
+      // As long as validation didn't fail, we set the option value.
+      if (!validation_failed)
+        error =
+            SetOptionValue(long_options_index,
+                           (def->option_has_arg == OptionParser::eNoArgument)
+                               ? nullptr
+                               : OptionParser::GetOptionArgument(),
+                           execution_context);
+    } else {
+      error.SetErrorStringWithFormat("invalid option with value '%i'", val);
+    }
+    if (error.Fail())
+      return error.ToError();
+  }
+
+  argv.erase(argv.begin(), argv.begin() + OptionParser::GetOptionIndex());
+  return ReconstituteArgsAfterParsing(argv, args);
+}
