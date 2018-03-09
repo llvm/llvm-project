@@ -1,0 +1,3 @@
+# RUN: not llvm-mca %t.blah -o %t2 2>&1 | FileCheck --check-prefix=ENOENT %s
+
+# ENOENT: {{.*}}.blah: {{[Nn]}}o such file or directory

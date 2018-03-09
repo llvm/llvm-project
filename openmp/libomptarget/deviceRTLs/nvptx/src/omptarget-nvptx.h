@@ -107,27 +107,27 @@ public:
   // methods for flags
   INLINE omp_sched_t GetRuntimeSched();
   INLINE void SetRuntimeSched(omp_sched_t sched);
-  INLINE int IsDynamic() { return data.items.flags & TaskDescr_IsDynamic; }
+  INLINE int IsDynamic() { return items.flags & TaskDescr_IsDynamic; }
   INLINE void SetDynamic() {
-    data.items.flags = data.items.flags | TaskDescr_IsDynamic;
+    items.flags = items.flags | TaskDescr_IsDynamic;
   }
   INLINE void ClearDynamic() {
-    data.items.flags = data.items.flags & (~TaskDescr_IsDynamic);
+    items.flags = items.flags & (~TaskDescr_IsDynamic);
   }
-  INLINE int InParallelRegion() { return data.items.flags & TaskDescr_InPar; }
+  INLINE int InParallelRegion() { return items.flags & TaskDescr_InPar; }
   INLINE int InL2OrHigherParallelRegion() {
-    return data.items.flags & TaskDescr_InParL2P;
+    return items.flags & TaskDescr_InParL2P;
   }
   INLINE int IsParallelConstruct() {
-    return data.items.flags & TaskDescr_IsParConstr;
+    return items.flags & TaskDescr_IsParConstr;
   }
   INLINE int IsTaskConstruct() { return !IsParallelConstruct(); }
   // methods for other fields
-  INLINE uint16_t &NThreads() { return data.items.nthreads; }
-  INLINE uint16_t &ThreadLimit() { return data.items.threadlimit; }
-  INLINE uint16_t &ThreadId() { return data.items.threadId; }
-  INLINE uint16_t &ThreadsInTeam() { return data.items.threadsInTeam; }
-  INLINE uint64_t &RuntimeChunkSize() { return data.items.runtimeChunkSize; }
+  INLINE uint16_t &NThreads() { return items.nthreads; }
+  INLINE uint16_t &ThreadLimit() { return items.threadlimit; }
+  INLINE uint16_t &ThreadId() { return items.threadId; }
+  INLINE uint16_t &ThreadsInTeam() { return items.threadsInTeam; }
+  INLINE uint64_t &RuntimeChunkSize() { return items.runtimeChunkSize; }
   INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() { return prev; }
   INLINE void SetPrevTaskDescr(omptarget_nvptx_TaskDescr *taskDescr) {
     prev = taskDescr;
@@ -160,18 +160,15 @@ private:
   static const uint8_t TaskDescr_IsParConstr = 0x20;
   static const uint8_t TaskDescr_InParL2P = 0x40;
 
-  union { // both have same size
-    uint64_t vect[2];
-    struct TaskDescr_items {
-      uint8_t flags; // 6 bit used (see flag above)
-      uint8_t unused;
-      uint16_t nthreads;         // thread num for subsequent parallel regions
-      uint16_t threadlimit;      // thread limit ICV
-      uint16_t threadId;         // thread id
-      uint16_t threadsInTeam;    // threads in current team
-      uint64_t runtimeChunkSize; // runtime chunk size
-    } items;
-  } data;
+  struct TaskDescr_items {
+    uint8_t flags; // 6 bit used (see flag above)
+    uint8_t unused;
+    uint16_t nthreads;         // thread num for subsequent parallel regions
+    uint16_t threadlimit;      // thread limit ICV
+    uint16_t threadId;         // thread id
+    uint16_t threadsInTeam;    // threads in current team
+    uint64_t runtimeChunkSize; // runtime chunk size
+  } items;
   omptarget_nvptx_TaskDescr *prev;
 };
 

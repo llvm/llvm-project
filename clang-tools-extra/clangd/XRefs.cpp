@@ -174,6 +174,18 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
 
   SourceLocation SourceLocationBeg = getBeginningOfIdentifier(AST, Pos, FE);
 
+  std::vector<Location> Result;
+  // Handle goto definition for #include.
+  for (auto &IncludeLoc : AST.getInclusionLocations()) {
+    Range R = IncludeLoc.first;
+    Position Pos = sourceLocToPosition(SourceMgr, SourceLocationBeg);
+
+    if (R.contains(Pos))
+      Result.push_back(Location{URIForFile{IncludeLoc.second}, {}});
+  }
+  if (!Result.empty())
+    return Result;
+
   auto DeclMacrosFinder = std::make_shared<DeclarationAndMacrosFinder>(
       llvm::errs(), SourceLocationBeg, AST.getASTContext(),
       AST.getPreprocessor());
@@ -187,7 +199,6 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
 
   std::vector<const Decl *> Decls = DeclMacrosFinder->takeDecls();
   std::vector<MacroDecl> MacroInfos = DeclMacrosFinder->takeMacroInfos();
-  std::vector<Location> Result;
 
   for (auto Item : Decls) {
     auto L = getDeclarationLocation(AST, Item->getSourceRange());
@@ -201,15 +212,6 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
     auto L = getDeclarationLocation(AST, SR);
     if (L)
       Result.push_back(*L);
-  }
-
-  /// Process targets for paths inside #include directive.
-  for (auto &IncludeLoc : AST.getInclusionLocations()) {
-    Range R = IncludeLoc.first;
-    Position Pos = sourceLocToPosition(SourceMgr, SourceLocationBeg);
-
-    if (R.contains(Pos))
-      Result.push_back(Location{URIForFile{IncludeLoc.second}, {}});
   }
 
   return Result;

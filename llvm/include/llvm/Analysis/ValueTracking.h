@@ -423,6 +423,13 @@ class Value;
   /// though division by zero might cause undefined behavior.
   bool isGuaranteedToTransferExecutionToSuccessor(const Instruction *I);
 
+  /// Returns true if this block does not contain a potential implicit exit.
+  /// This is equivelent to saying that all instructions within the basic block
+  /// are guaranteed to transfer execution to their successor within the basic
+  /// block. This has the same assumptions w.r.t. undefined behavior as the
+  /// instruction variant of this function. 
+  bool isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB);
+
   /// Return true if this function can prove that the instruction I
   /// is executed for every iteration of the loop L.
   ///

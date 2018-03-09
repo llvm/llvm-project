@@ -66,6 +66,7 @@ set(LLVM_TEST_DEPENDS
           llvm-link
           llvm-lto2
           llvm-mc
+          llvm-mca
           llvm-mcmarkup
           llvm-modextract
           llvm-mt

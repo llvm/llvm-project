@@ -449,6 +449,9 @@ const DWARFDebugLine::LineTable *
 DWARFDebugLine::getOrParseLineTable(DWARFDataExtractor &DebugLineData,
                                     uint32_t Offset, const DWARFContext &Ctx,
                                     const DWARFUnit *U) {
+  if (!DebugLineData.isValidOffset(Offset))
+    return nullptr;
+
   std::pair<LineTableIter, bool> Pos =
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
   LineTable *LT = &Pos.first->second;

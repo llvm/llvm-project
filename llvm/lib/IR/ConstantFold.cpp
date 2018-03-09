@@ -1009,7 +1009,10 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
     case Instruction::FMul:
     case Instruction::FDiv:
     case Instruction::FRem:
-      // TODO: UNDEF handling for binary float instructions.
+      // [any flop] undef, undef -> undef
+      if (isa<UndefValue>(C1) && isa<UndefValue>(C2))
+        return C1;
+      // TODO: Handle one undef operand and some other constant.
       return nullptr;
     case Instruction::BinaryOpsEnd:
       llvm_unreachable("Invalid BinaryOp");

@@ -199,6 +199,17 @@ sum = 0.0;
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
+// CHECK-NOT: call i8* @__kmpc_threadprivate_cached(
+// CHECK: call i8* @__kmpc_task_reduction_get_th_data(
+// CHECK: call i8* @__kmpc_threadprivate_cached(
+// CHECK: call i8* @__kmpc_threadprivate_cached(
+// CHECK: call i8* @__kmpc_task_reduction_get_th_data(
+// CHECK-NOT: call i8* @__kmpc_threadprivate_cached(
+// CHECK: call i8* @__kmpc_task_reduction_get_th_data(
+// CHECK: call i8* @__kmpc_threadprivate_cached(
+// CHECK: call i8* @__kmpc_task_reduction_get_th_data(
+// CHECK-NOT: call i8* @__kmpc_threadprivate_cached(
+
 // CHECK-DAG: distinct !DISubprogram(linkageName: "[[TASK]]", scope: !
 // CHECK-DAG: !DISubprogram(linkageName: "[[RED_INIT1]]"
 // CHECK-DAG: !DISubprogram(linkageName: "[[RED_COMB1]]"

@@ -259,14 +259,12 @@ def X86selects : SDNode<"X86ISD::SELECTS",
 
 def X86pmuludq : SDNode<"X86ISD::PMULUDQ",
                         SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i64>,
-                                             SDTCVecEltisVT<1, i32>,
-                                             SDTCisSameSizeAs<0,1>,
+                                             SDTCisSameAs<0,1>,
                                              SDTCisSameAs<1,2>]>,
                                              [SDNPCommutative]>;
 def X86pmuldq  : SDNode<"X86ISD::PMULDQ",
                         SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i64>,
-                                             SDTCVecEltisVT<1, i32>,
-                                             SDTCisSameSizeAs<0,1>,
+                                             SDTCisSameAs<0,1>,
                                              SDTCisSameAs<1,2>]>,
                                              [SDNPCommutative]>;
 

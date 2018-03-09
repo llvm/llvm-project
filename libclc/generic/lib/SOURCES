@@ -70,6 +70,7 @@ integer/mad24.cl
 integer/mad_sat.cl
 integer/mul24.cl
 integer/mul_hi.cl
+integer/popcount.cl
 integer/rhadd.cl
 integer/rotate.cl
 integer/sub_sat.cl

@@ -37,6 +37,11 @@
 # CHECK-NEXT: error: section is not large enough to contain a .debug_rnglists table of length 0x1f at offset 0xe5
 # CHECK-NOT: error:
 
+# RUN: llvm-mc %S/Inputs/debug_rnglists_DWARF64.s -filetype obj -triple x86_64-pc-linux -o - | \
+# RUN: llvm-dwarfdump --debug-rnglists - 2>&1 | FileCheck %s --check-prefix=DWARF64
+
+# DWARF64: DWARF64 is not supported in .debug_rnglists at offset 0x0
+
 .section .debug_rnglists,"",@progbits
 
 # Table 1 (good)

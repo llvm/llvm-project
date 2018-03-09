@@ -778,6 +778,90 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
   return NumErrors;
 }
 
+unsigned
+DWARFVerifier::verifyDebugNamesCULists(const DWARFDebugNames &AccelTable) {
+  // A map from CU offset to the (first) Name Index offset which claims to index
+  // this CU.
+  DenseMap<uint32_t, uint32_t> CUMap;
+  const uint32_t NotIndexed = std::numeric_limits<uint32_t>::max();
+
+  CUMap.reserve(DCtx.getNumCompileUnits());
+  for (const auto &CU : DCtx.compile_units())
+    CUMap[CU->getOffset()] = NotIndexed;
+
+  unsigned NumErrors = 0;
+  for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
+    if (NI.getCUCount() == 0) {
+      error() << formatv("Name Index @ {0:x} does not index any CU\n",
+                         NI.getUnitOffset());
+      ++NumErrors;
+      continue;
+    }
+    for (uint32_t CU = 0, End = NI.getCUCount(); CU < End; ++CU) {
+      uint32_t Offset = NI.getCUOffset(CU);
+      auto Iter = CUMap.find(Offset);
+
+      if (Iter == CUMap.end()) {
+        error() << formatv(
+            "Name Index @ {0:x} references a non-existing CU @ {1:x}\n",
+            NI.getUnitOffset(), Offset);
+        ++NumErrors;
+        continue;
+      }
+
+      if (Iter->second != NotIndexed) {
+        error() << formatv("Name Index @ {0:x} references a CU @ {1:x}, but "
+                          "this CU is already indexed by Name Index @ {2:x}\n",
+                          NI.getUnitOffset(), Offset, Iter->second);
+        continue;
+      }
+      Iter->second = NI.getUnitOffset();
+    }
+  }
+
+  for (const auto &KV : CUMap) {
+    if (KV.second == NotIndexed)
+      warn() << formatv("CU @ {0:x} not covered by any Name Index\n", KV.first);
+  }
+
+  return NumErrors;
+}
+
+unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
+                                         const DataExtractor &StrData) {
+  unsigned NumErrors = 0;
+  DWARFDataExtractor AccelSectionData(DCtx.getDWARFObj(), AccelSection,
+                                      DCtx.isLittleEndian(), 0);
+  DWARFDebugNames AccelTable(AccelSectionData, StrData);
+
+  OS << "Verifying .debug_names...\n";
+
+  // This verifies that we can read individual name indices and their
+  // abbreviation tables.
+  if (Error E = AccelTable.extract()) {
+    error() << toString(std::move(E)) << '\n';
+    return 1;
+  }
+
+  NumErrors += verifyDebugNamesCULists(AccelTable);
+
+  for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
+    for (uint32_t Bucket = 0, End = NI.getBucketCount(); Bucket < End;
+         ++Bucket) {
+      uint32_t Index = NI.getBucketArrayEntry(Bucket);
+      if (Index > NI.getNameCount()) {
+        error() << formatv("Bucket {0} of Name Index @ {1:x} contains invalid "
+                           "value {2}. Valid range is [0, {3}].\n",
+                           Bucket, NI.getUnitOffset(), Index,
+                           NI.getNameCount());
+        ++NumErrors;
+      }
+    }
+  }
+
+  return NumErrors;
+}
+
 bool DWARFVerifier::handleAccelTables() {
   const DWARFObject &D = DCtx.getDWARFObj();
   DataExtractor StrData(D.getStringSection(), DCtx.isLittleEndian(), 0);
@@ -794,6 +878,9 @@ bool DWARFVerifier::handleAccelTables() {
   if (!D.getAppleObjCSection().Data.empty())
     NumErrors +=
         verifyAppleAccelTable(&D.getAppleObjCSection(), &StrData, ".apple_objc");
+
+  if (!D.getDebugNamesSection().Data.empty())
+    NumErrors += verifyDebugNames(D.getDebugNamesSection(), StrData);
   return NumErrors == 0;
 }
 
