@@ -77,6 +77,15 @@ Improvements to clang-tidy
 
   Warns if a class inherits from multiple classes that are not pure virtual.
 
+- New `abseil` module for checks related to the `Abseil <https://abseil.io>`_
+  library.
+
+- New `abseil-string-find-startswith
+  <http://clang.llvm.org/extra/clang-tidy/checks/abseil-string-find-startswith.html>`_ check
+
+  Checks whether a ``std::string::find()`` result is compared with 0, and
+  suggests replacing with ``absl::StartsWith()``.
+
 - New `fuchsia-statically-constructed-objects
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-statically-constructed-objects.html>`_ check
 

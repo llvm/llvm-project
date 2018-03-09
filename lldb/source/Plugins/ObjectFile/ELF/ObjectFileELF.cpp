@@ -1986,38 +1986,10 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     }
   }
 
-  if (m_sections_ap.get()) {
-    if (GetType() == eTypeDebugInfo) {
-      static const SectionType g_sections[] = {
-          eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAddr,
-          eSectionTypeDWARFDebugAranges,  eSectionTypeDWARFDebugCuIndex,
-          eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
-          eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
-          eSectionTypeDWARFDebugMacInfo,  eSectionTypeDWARFDebugPubNames,
-          eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
-          eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugStrOffsets,
-          eSectionTypeELFSymbolTable,
-      };
-      SectionList *elf_section_list = m_sections_ap.get();
-      for (size_t idx = 0; idx < sizeof(g_sections) / sizeof(g_sections[0]);
-           ++idx) {
-        SectionType section_type = g_sections[idx];
-        SectionSP section_sp(
-            elf_section_list->FindSectionByType(section_type, true));
-        if (section_sp) {
-          SectionSP module_section_sp(
-              unified_section_list.FindSectionByType(section_type, true));
-          if (module_section_sp)
-            unified_section_list.ReplaceSection(module_section_sp->GetID(),
-                                                section_sp);
-          else
-            unified_section_list.AddSection(section_sp);
-        }
-      }
-    } else {
-      unified_section_list = *m_sections_ap;
-    }
-  }
+  // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the
+  // unified section list.
+  if (GetType() != eTypeDebugInfo)
+    unified_section_list = *m_sections_ap;
 }
 
 // Find the arm/aarch64 mapping symbol character in the given symbol name.

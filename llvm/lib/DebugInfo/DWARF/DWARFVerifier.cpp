@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SyntaxHighlighting.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
+#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
@@ -16,8 +16,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
-#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <set>
@@ -26,7 +26,6 @@
 using namespace llvm;
 using namespace dwarf;
 using namespace object;
-using namespace syntax;
 
 DWARFVerifier::DieRangeInfo::address_range_iterator
 DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
@@ -885,13 +884,13 @@ bool DWARFVerifier::handleAccelTables() {
 }
 
 raw_ostream &DWARFVerifier::error() const {
-  return WithColor(OS, syntax::Error).get() << "error: ";
+  return WithColor(OS, HighlightColor::Error).get() << "error: ";
 }
 
 raw_ostream &DWARFVerifier::warn() const {
-  return WithColor(OS, syntax::Warning).get() << "warning: ";
+  return WithColor(OS, HighlightColor::Warning).get() << "warning: ";
 }
 
 raw_ostream &DWARFVerifier::note() const {
-  return WithColor(OS, syntax::Note).get() << "note: ";
+  return WithColor(OS, HighlightColor::Note).get() << "note: ";
 }

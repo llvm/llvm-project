@@ -104,20 +104,16 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
     options->NotifyOptionParsingStarting(&exe_ctx);
 
-    // ParseOptions calls getopt_long_only, which always skips the zero'th item
-    // in the array and starts at position 1,
-    // so we need to push a dummy value into position zero.
-    args.Unshift(llvm::StringRef("dummy_string"));
     const bool require_validation = true;
-    error = args.ParseOptions(*options, &exe_ctx,
-                              GetCommandInterpreter().GetPlatform(true),
-                              require_validation);
+    llvm::Expected<Args> args_or = options->Parse(
+        args, &exe_ctx, GetCommandInterpreter().GetPlatform(true),
+        require_validation);
 
-    // The "dummy_string" will have already been removed by ParseOptions,
-    // so no need to remove it.
-
-    if (error.Success())
+    if (args_or) {
+      args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
+    } else
+      error = args_or.takeError();
 
     if (error.Success()) {
       if (options->VerifyOptions(result))
@@ -285,20 +281,7 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
     OptionElementVector opt_element_vector;
 
     if (cur_options != nullptr) {
-      // Re-insert the dummy command name string which will have been
-      // stripped off:
-      input.Unshift(llvm::StringRef("dummy-string"));
-      cursor_index++;
-
-      // I stick an element on the end of the input, because if the last element
-      // is option that requires an argument, getopt_long_only will freak out.
-
-      input.AppendArgument(llvm::StringRef("<FAKE-VALUE>"));
-
-      input.ParseArgsForCompletion(*cur_options, opt_element_vector,
-                                   cursor_index);
-
-      input.DeleteArgumentAtIndex(input.GetArgumentCount() - 1);
+      opt_element_vector = cur_options->ParseForCompletion(input, cursor_index);
 
       bool handled_by_options;
       handled_by_options = cur_options->HandleOptionCompletion(

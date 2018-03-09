@@ -159,6 +159,23 @@ void AppleAcceleratorTable::Header::dump(ScopedPrinter &W) const {
   W.printNumber("HeaderData length", HeaderDataLength);
 }
 
+Optional<uint64_t> AppleAcceleratorTable::HeaderData::extractOffset(
+    Optional<DWARFFormValue> Value) const {
+  if (!Value)
+    return None;
+
+  switch (Value->getForm()) {
+  case dwarf::DW_FORM_ref1:
+  case dwarf::DW_FORM_ref2:
+  case dwarf::DW_FORM_ref4:
+  case dwarf::DW_FORM_ref8:
+  case dwarf::DW_FORM_ref_udata:
+    return Value->getRawUValue() + DIEOffsetBase;
+  default:
+    return Value->getAsSectionOffset();
+  }
+}
+
 bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
                                      SmallVectorImpl<DWARFFormValue> &AtomForms,
                                      uint32_t *DataOffset) const {
@@ -276,16 +293,12 @@ AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType Atom) const {
   return None;
 }
 
-Optional<uint64_t> AppleAcceleratorTable::Entry::getDIEOffset() const {
-  if (Optional<DWARFFormValue> Off = lookup(dwarf::DW_ATOM_die_offset))
-    return Off->getAsSectionOffset();
-  return None;
+Optional<uint64_t> AppleAcceleratorTable::Entry::getDIESectionOffset() const {
+  return HdrData->extractOffset(lookup(dwarf::DW_ATOM_die_offset));
 }
 
 Optional<uint64_t> AppleAcceleratorTable::Entry::getCUOffset() const {
-  if (Optional<DWARFFormValue> Off = lookup(dwarf::DW_ATOM_cu_offset))
-    return Off->getAsSectionOffset();
-  return None;
+  return HdrData->extractOffset(lookup(dwarf::DW_ATOM_cu_offset));
 }
 
 Optional<dwarf::Tag> AppleAcceleratorTable::Entry::getTag() const {
@@ -537,7 +550,7 @@ DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   return None;
 }
 
-Optional<uint64_t> DWARFDebugNames::Entry::getDIEOffset() const {
+Optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   if (Optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
     return Off->getAsSectionOffset();
   return None;
@@ -546,6 +559,10 @@ Optional<uint64_t> DWARFDebugNames::Entry::getDIEOffset() const {
 Optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
   if (Optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
+  // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
+  // implicitly refer to the single CU.
+  if (NameIdx->getCUCount() == 1)
+    return 0;
   return None;
 }
 
@@ -554,6 +571,14 @@ Optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
   if (!Index || *Index >= NameIdx->getCUCount())
     return None;
   return NameIdx->getCUOffset(*Index);
+}
+
+Optional<uint64_t> DWARFDebugNames::Entry::getDIESectionOffset() const {
+  Optional<uint64_t> CUOff = getCUOffset();
+  Optional<uint64_t> DIEOff = getDIEUnitOffset();
+  if (CUOff && DIEOff)
+    return *CUOff + *DIEOff;
+  return None;
 }
 
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {

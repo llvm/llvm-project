@@ -413,6 +413,8 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
   Records.addDef(std::move(IterRec));
   IterRecSave->resolveReferences();
   checkConcrete(*IterRecSave);
+  if (addToDefsets(*IterRecSave))
+    return true;
   return false;
 }
 
@@ -422,9 +424,9 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
 
 /// isObjectStart - Return true if this is a valid first token for an Object.
 static bool isObjectStart(tgtok::TokKind K) {
-  return K == tgtok::Class || K == tgtok::Def ||
-         K == tgtok::Defm || K == tgtok::Let ||
-         K == tgtok::MultiClass || K == tgtok::Foreach;
+  return K == tgtok::Class || K == tgtok::Def || K == tgtok::Defm ||
+         K == tgtok::Let || K == tgtok::MultiClass || K == tgtok::Foreach ||
+         K == tgtok::Defset;
 }
 
 /// ParseObjectName - If an object name is specified, return it.  Otherwise,
@@ -724,6 +726,7 @@ RecTy *TGParser::ParseType() {
   case tgtok::Dag:    Lex.Lex(); return DagRecTy::get();
   case tgtok::Id:
     if (Record *R = ParseClassID()) return RecordRecTy::get(R);
+    TokError("unknown class name");
     return nullptr;
   case tgtok::Bits: {
     if (Lex.Lex() != tgtok::less) { // Eat 'bits'
@@ -805,8 +808,8 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
   if (Mode == ParseNameMode)
     return Name;
 
-  if (Record *D = Records.getDef(Name->getValue()))
-    return DefInit::get(D);
+  if (Init *I = Records.getGlobal(Name->getValue()))
+    return I;
 
   if (Mode == ParseValueMode) {
     Error(NameLoc, "Variable not defined: '" + Name->getValue() + "'");
@@ -934,6 +937,33 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     }
     Lex.Lex();  // eat the ')'
     return (UnOpInit::get(Code, LHS, Type))->Fold(CurRec, CurMultiClass);
+  }
+
+  case tgtok::XIsA: {
+    // Value ::= !isa '<' Type '>' '(' Value ')'
+    Lex.Lex(); // eat the operation
+
+    RecTy *Type = ParseOperatorType();
+    if (!Type)
+      return nullptr;
+
+    if (Lex.getCode() != tgtok::l_paren) {
+      TokError("expected '(' after type of !isa");
+      return nullptr;
+    }
+    Lex.Lex(); // eat the '('
+
+    Init *LHS = ParseValue(CurRec);
+    if (!LHS)
+      return nullptr;
+
+    if (Lex.getCode() != tgtok::r_paren) {
+      TokError("expected ')' in !isa");
+      return nullptr;
+    }
+    Lex.Lex(); // eat the ')'
+
+    return (IsAOpInit::get(Type, LHS))->Fold();
   }
 
   case tgtok::XConcat:
@@ -1696,6 +1726,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast:  // Value ::= !unop '(' Value ')'
+  case tgtok::XIsA:
   case tgtok::XConcat:
   case tgtok::XADD:
   case tgtok::XAND:
@@ -1733,7 +1764,7 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
     switch (Lex.getCode()) {
     default: return Result;
     case tgtok::l_brace: {
-      if (Mode == ParseNameMode || Mode == ParseForeachMode)
+      if (Mode == ParseNameMode)
         // This is the beginning of the object body.
         return Result;
 
@@ -1791,7 +1822,7 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
                  Result->getAsString() + "'");
         return nullptr;
       }
-      Result = FieldInit::get(Result, FieldName);
+      Result = FieldInit::get(Result, FieldName)->Fold();
       Lex.Lex();  // eat field name
       break;
     }
@@ -2010,9 +2041,9 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
 /// the name of the declared object or a NULL Init on error.  Return
 /// the name of the parsed initializer list through ForeachListName.
 ///
-///  ForeachDeclaration ::= ID '=' '[' ValueList ']'
 ///  ForeachDeclaration ::= ID '=' '{' RangeList '}'
 ///  ForeachDeclaration ::= ID '=' RangePiece
+///  ForeachDeclaration ::= ID '=' Value
 ///
 VarInit *TGParser::ParseForeachDeclaration(ListInit *&ForeachListValue) {
   if (Lex.getCode() != tgtok::Id) {
@@ -2034,24 +2065,6 @@ VarInit *TGParser::ParseForeachDeclaration(ListInit *&ForeachListValue) {
   SmallVector<unsigned, 16> Ranges;
 
   switch (Lex.getCode()) {
-  default: TokError("Unknown token when expecting a range list"); return nullptr;
-  case tgtok::l_square: { // '[' ValueList ']'
-    Init *List = ParseSimpleValue(nullptr, nullptr, ParseForeachMode);
-    ForeachListValue = dyn_cast<ListInit>(List);
-    if (!ForeachListValue) {
-      TokError("Expected a Value list");
-      return nullptr;
-    }
-    RecTy *ValueType = ForeachListValue->getType();
-    ListRecTy *ListType = dyn_cast<ListRecTy>(ValueType);
-    if (!ListType) {
-      TokError("Value list is not of list type");
-      return nullptr;
-    }
-    IterType = ListType->getElementType();
-    break;
-  }
-
   case tgtok::IntVal: { // RangePiece.
     if (ParseRangePiece(Ranges))
       return nullptr;
@@ -2066,6 +2079,21 @@ VarInit *TGParser::ParseForeachDeclaration(ListInit *&ForeachListValue) {
       return nullptr;
     }
     Lex.Lex();
+    break;
+  }
+
+  default: {
+    SMLoc ValueLoc = Lex.getLoc();
+    Init *I = ParseValue(nullptr);
+    if (!isa<ListInit>(I)) {
+      std::string Type;
+      if (TypedInit *TI = dyn_cast<TypedInit>(I))
+        Type = (Twine("' of type '") + TI->getType()->getAsString()).str();
+      Error(ValueLoc, "expected a list, got '" + I->getAsString() + Type + "'");
+      return nullptr;
+    }
+    ForeachListValue = dyn_cast<ListInit>(I);
+    IterType = ForeachListValue->getElementType();
     break;
   }
   }
@@ -2298,8 +2326,11 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
     // for the def that might have been created when resolving
     // inheritance, values and arguments above.
     CurRec->resolveReferences();
-    if (Loops.empty())
+    if (Loops.empty()) {
       checkConcrete(*CurRec);
+      if (addToDefsets(*CurRec))
+        return true;
+    }
   }
 
   // If ObjectBody has template arguments, it's an error.
@@ -2318,6 +2349,68 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
     return Error(DefLoc, "Could not process loops for def" +
                  CurRec->getNameInitAsString());
 
+  return false;
+}
+
+bool TGParser::addToDefsets(Record &R) {
+  for (DefsetRecord *Defset : Defsets) {
+    DefInit *I = R.getDefInit();
+    if (!I->getType()->typeIsA(Defset->EltTy)) {
+      PrintError(R.getLoc(),
+                 Twine("adding record of incompatible type '") +
+                 I->getType()->getAsString() + "' to defset");
+      PrintNote(Defset->Loc, "to this defset");
+      return true;
+    }
+    Defset->Elements.push_back(I);
+  }
+  return false;
+}
+
+/// ParseDefset - Parse a defset statement.
+///
+///   Defset ::= DEFSET Type Id '=' '{' ObjectList '}'
+///
+bool TGParser::ParseDefset() {
+  assert(Lex.getCode() == tgtok::Defset);
+  Lex.Lex(); // Eat the 'defset' token
+
+  DefsetRecord Defset;
+  Defset.Loc = Lex.getLoc();
+  RecTy *Type = ParseType();
+  if (!Type)
+    return true;
+  if (!isa<ListRecTy>(Type))
+    return Error(Defset.Loc, "expected list type");
+  Defset.EltTy = cast<ListRecTy>(Type)->getElementType();
+
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("expected identifier");
+  StringInit *DeclName = StringInit::get(Lex.getCurStrVal());
+  if (Records.getGlobal(DeclName->getValue()))
+    return TokError("def or global variable of this name already exists");
+
+  if (Lex.Lex() != tgtok::equal) // Eat the identifier
+    return TokError("expected '='");
+  if (Lex.Lex() != tgtok::l_brace) // Eat the '='
+    return TokError("expected '{'");
+  SMLoc BraceLoc = Lex.getLoc();
+  Lex.Lex(); // Eat the '{'
+
+  Defsets.push_back(&Defset);
+  bool Err = ParseObjectList(nullptr);
+  Defsets.pop_back();
+  if (Err)
+    return true;
+
+  if (Lex.getCode() != tgtok::r_brace) {
+    TokError("expected '}' at end of defset");
+    return Error(BraceLoc, "to match this '{'");
+  }
+  Lex.Lex();  // Eat the '}'
+
+  Records.addExtraGlobal(DeclName->getValue(),
+                         ListInit::get(Defset.Elements, Defset.EltTy));
   return false;
 }
 
@@ -2573,7 +2666,8 @@ bool TGParser::ParseMultiClass() {
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
-        return TokError("expected 'let', 'def' or 'defm' in multiclass body");
+        return TokError("expected 'let', 'def', 'defm' or 'foreach' in "
+                        "multiclass body");
       case tgtok::Let:
       case tgtok::Def:
       case tgtok::Defm:
@@ -2894,6 +2988,8 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
       // inheritance, values and arguments above.
       CurRec->resolveReferences();
       checkConcrete(*CurRec);
+      if (addToDefsets(*CurRec))
+        return true;
     }
   }
 
@@ -2914,11 +3010,16 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 bool TGParser::ParseObject(MultiClass *MC) {
   switch (Lex.getCode()) {
   default:
-    return TokError("Expected class, def, defm, multiclass or let definition");
+    return TokError("Expected class, def, defm, defset, multiclass, let or "
+                    "foreach");
   case tgtok::Let:   return ParseTopLevelLet(MC);
   case tgtok::Def:   return ParseDef(MC);
   case tgtok::Foreach:   return ParseForeach(MC);
   case tgtok::Defm:  return ParseDefm(MC);
+  case tgtok::Defset:
+    if (MC)
+      return TokError("defset is not allowed inside multiclass");
+    return ParseDefset();
   case tgtok::Class: return ParseClass();
   case tgtok::MultiClass: return ParseMultiClass();
   }

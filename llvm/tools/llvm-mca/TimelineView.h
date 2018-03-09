@@ -100,8 +100,8 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_TIMELINEVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_TIMELINEVIEW_H
 
-#include "View.h"
 #include "SourceMgr.h"
+#include "View.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"

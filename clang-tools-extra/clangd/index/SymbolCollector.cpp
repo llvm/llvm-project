@@ -115,10 +115,16 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
   //   * enum constants in unscoped enum decl (e.g. "red" in "enum {red};")
   auto InTopLevelScope = hasDeclContext(
       anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
+  // Don't index template specializations.
+  auto IsSpecialization =
+      anyOf(functionDecl(isExplicitTemplateSpecialization()),
+            cxxRecordDecl(isExplicitTemplateSpecialization()),
+            varDecl(isExplicitTemplateSpecialization()));
   if (match(decl(allOf(unless(isExpansionInMainFile()),
                        anyOf(InTopLevelScope,
                              hasDeclContext(enumDecl(InTopLevelScope,
-                                                     unless(isScoped())))))),
+                                                     unless(isScoped())))),
+                       unless(IsSpecialization))),
             *ND, *ASTCtx)
           .empty())
     return true;
