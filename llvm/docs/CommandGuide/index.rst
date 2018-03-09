@@ -31,6 +31,7 @@ Basic Commands
    llvm-symbolizer
    llvm-dwarfdump
    dsymutil
+   llvm-mca
 
 Debugging Tools
 ~~~~~~~~~~~~~~~

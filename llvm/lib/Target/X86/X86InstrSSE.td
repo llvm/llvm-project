@@ -3796,6 +3796,8 @@ defm PAVGB   : PDI_binop_all<0xE0, "pavgb", X86avg, v16i8, v32i8,
                              SSE_INTALU_ITINS_P, 1, NoVLX_Or_NoBWI>;
 defm PAVGW   : PDI_binop_all<0xE3, "pavgw", X86avg, v8i16, v16i16,
                              SSE_INTALU_ITINS_P, 1, NoVLX_Or_NoBWI>;
+defm PMULUDQ : PDI_binop_all<0xF4, "pmuludq", X86pmuludq, v2i64, v4i64,
+                             SSE_INTMUL_ITINS_P, 1, NoVLX>;
 
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in
 defm VPMADDWD : PDI_binop_rm2<0xF5, "vpmaddwd", X86vpmaddwd, v4i32, v8i16, VR128,
@@ -3820,18 +3822,6 @@ defm VPSADBWY : PDI_binop_rm2<0xF6, "vpsadbw", X86psadbw, v4i64, v32i8, VR256,
 let Constraints = "$src1 = $dst" in
 defm PSADBW : PDI_binop_rm2<0xF6, "psadbw", X86psadbw, v2i64, v16i8, VR128,
                             memopv2i64, i128mem, SSE_INTALU_ITINS_P>;
-
-let Predicates = [HasAVX, NoVLX] in
-defm VPMULUDQ : PDI_binop_rm2<0xF4, "vpmuludq", X86pmuludq, v2i64, v4i32, VR128,
-                              loadv2i64, i128mem, SSE_INTMUL_ITINS_P, 0>,
-                              VEX_4V, VEX_WIG;
-let Predicates = [HasAVX2, NoVLX] in
-defm VPMULUDQY : PDI_binop_rm2<0xF4, "vpmuludq", X86pmuludq, v4i64, v8i32,
-                               VR256, loadv4i64, i256mem,
-                               SSE_INTMUL_ITINS_P, 0>, VEX_4V, VEX_L, VEX_WIG;
-let Constraints = "$src1 = $dst" in
-defm PMULUDQ : PDI_binop_rm2<0xF4, "pmuludq", X86pmuludq, v2i64, v4i32, VR128,
-                             memopv2i64, i128mem, SSE_INTMUL_ITINS_P>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Integer Logical Instructions
@@ -6324,31 +6314,6 @@ multiclass SS48I_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
        itins.rm>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 
-/// SS48I_binop_rm2 - Simple SSE41 binary operator with different src and dst
-/// types.
-multiclass SS48I_binop_rm2<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                         ValueType DstVT, ValueType SrcVT, RegisterClass RC,
-                         PatFrag memop_frag, X86MemOperand x86memop,
-                         OpndItins itins,
-                         bit IsCommutable = 0, bit Is2Addr = 1> {
-  let isCommutable = IsCommutable in
-  def rr : SS48I<opc, MRMSrcReg, (outs RC:$dst),
-       (ins RC:$src1, RC:$src2),
-       !if(Is2Addr,
-           !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
-           !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
-       [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1), RC:$src2)))], itins.rr>,
-       Sched<[itins.Sched]>;
-  def rm : SS48I<opc, MRMSrcMem, (outs RC:$dst),
-       (ins RC:$src1, x86memop:$src2),
-       !if(Is2Addr,
-           !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
-           !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
-       [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1),
-                                     (bitconvert (memop_frag addr:$src2)))))],
-       itins.rm>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
-}
-
 let Predicates = [HasAVX, NoVLX] in {
   defm VPMINSD   : SS48I_binop_rm<0x39, "vpminsd", smin, v4i32, VR128,
                                   loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
@@ -6362,9 +6327,9 @@ let Predicates = [HasAVX, NoVLX] in {
   defm VPMAXUD   : SS48I_binop_rm<0x3F, "vpmaxud", umax, v4i32, VR128,
                                   loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V, VEX_WIG;
-  defm VPMULDQ   : SS48I_binop_rm2<0x28, "vpmuldq", X86pmuldq, v2i64, v4i32,
-                                   VR128, loadv2i64, i128mem,
-                                   SSE_INTMUL_ITINS_P, 1, 0>, VEX_4V, VEX_WIG;
+  defm VPMULDQ   : SS48I_binop_rm<0x28, "vpmuldq", X86pmuldq, v2i64, VR128,
+                                  loadv2i64, i128mem, 0, SSE_INTMUL_ITINS_P>,
+                                  VEX_4V, VEX_WIG;
 }
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   defm VPMINSB   : SS48I_binop_rm<0x38, "vpminsb", smin, v16i8, VR128,
@@ -6394,9 +6359,9 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm VPMAXUDY  : SS48I_binop_rm<0x3F, "vpmaxud", umax, v8i32, VR256,
                                   loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V, VEX_L, VEX_WIG;
-  defm VPMULDQY : SS48I_binop_rm2<0x28, "vpmuldq", X86pmuldq, v4i64, v8i32,
-                                  VR256, loadv4i64, i256mem,
-                                  SSE_INTMUL_ITINS_P, 1, 0>, VEX_4V, VEX_L, VEX_WIG;
+  defm VPMULDQY  : SS48I_binop_rm<0x28, "vpmuldq", X86pmuldq, v4i64, VR256,
+                                  loadv4i64, i256mem, 0, SSE_INTMUL_ITINS_P>,
+                                  VEX_4V, VEX_L, VEX_WIG;
 }
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   defm VPMINSBY  : SS48I_binop_rm<0x38, "vpminsb", smin, v32i8, VR256,
@@ -6430,9 +6395,8 @@ let Constraints = "$src1 = $dst" in {
                                  memopv2i64, i128mem, 1, SSE_INTALU_ITINS_P>;
   defm PMAXUW   : SS48I_binop_rm<0x3E, "pmaxuw", umax, v8i16, VR128,
                                  memopv2i64, i128mem, 1, SSE_INTALU_ITINS_P>;
-  defm PMULDQ   : SS48I_binop_rm2<0x28, "pmuldq", X86pmuldq, v2i64, v4i32,
-                                  VR128, memopv2i64, i128mem,
-                                  SSE_INTMUL_ITINS_P, 1>;
+  defm PMULDQ   : SS48I_binop_rm<0x28, "pmuldq", X86pmuldq, v2i64, VR128,
+                                 memopv2i64, i128mem, 1, SSE_INTMUL_ITINS_P>;
 }
 
 let Predicates = [HasAVX, NoVLX] in

@@ -30,7 +30,7 @@ bb:
 bb21:                                             ; preds = %bb
   %tmp22 = fmul <4 x float> %tmp18, undef
   %tmp23 = fadd <4 x float> undef, %tmp22
-  %tmp24 = fmul <4 x float> undef, undef
+  %tmp24 = fmul <4 x float> %tmp23, undef
   br label %bb28
 
 bb25:                                             ; preds = %bb

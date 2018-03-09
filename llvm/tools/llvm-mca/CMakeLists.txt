@@ -1,0 +1,26 @@
+set(LLVM_LINK_COMPONENTS
+  AllTargetsAsmPrinters
+  AllTargetsAsmParsers
+  AllTargetsDescs
+  AllTargetsDisassemblers
+  AllTargetsInfos
+  MC
+  MCParser
+  Support
+  )
+
+add_llvm_tool(llvm-mca
+  Backend.cpp
+  BackendPrinter.cpp
+  BackendStatistics.cpp
+  Dispatch.cpp
+  HWEventListener.cpp
+  InstrBuilder.cpp
+  Instruction.cpp
+  LSUnit.cpp
+  llvm-mca.cpp
+  ResourcePressureView.cpp
+  Scheduler.cpp
+  TimelineView.cpp
+  View.cpp
+  )

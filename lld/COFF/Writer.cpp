@@ -28,6 +28,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cstdio>
 #include <map>
@@ -42,8 +43,40 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::coff;
 
+/* To re-generate DOSProgram:
+$ cat > /tmp/DOSProgram.asm
+org 0
+        ; Copy cs to ds.
+        push cs
+        pop ds
+        ; Point ds:dx at the $-terminated string.
+        mov dx, str
+        ; Int 21/AH=09h: Write string to standard output.
+        mov ah, 0x9
+        int 0x21
+        ; Int 21/AH=4Ch: Exit with return code (in AL).
+        mov ax, 0x4C01
+        int 0x21
+str:
+        db 'This program cannot be run in DOS mode.$'
+align 8, db 0
+$ nasm -fbin /tmp/DOSProgram.asm -o /tmp/DOSProgram.bin
+$ xxd -i /tmp/DOSProgram.bin
+*/
+static unsigned char DOSProgram[] = {
+  0x0e, 0x1f, 0xba, 0x0e, 0x00, 0xb4, 0x09, 0xcd, 0x21, 0xb8, 0x01, 0x4c,
+  0xcd, 0x21, 0x54, 0x68, 0x69, 0x73, 0x20, 0x70, 0x72, 0x6f, 0x67, 0x72,
+  0x61, 0x6d, 0x20, 0x63, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x20, 0x62, 0x65,
+  0x20, 0x72, 0x75, 0x6e, 0x20, 0x69, 0x6e, 0x20, 0x44, 0x4f, 0x53, 0x20,
+  0x6d, 0x6f, 0x64, 0x65, 0x2e, 0x24, 0x00, 0x00
+};
+static_assert(sizeof(DOSProgram) % 8 == 0,
+              "DOSProgram size must be multiple of 8");
+
 static const int SectorSize = 512;
-static const int DOSStubSize = 64;
+static const int DOSStubSize = sizeof(dos_header) + sizeof(DOSProgram);
+static_assert(DOSStubSize % 8 == 0, "DOSStub size must be multiple of 8");
+
 static const int NumberfOfDataDirectory = 16;
 
 namespace {
@@ -71,11 +104,18 @@ public:
       uint64_t Offs = OS->getFileOff() + (Record->getRVA() - OS->getRVA());
       D->PointerToRawData = Offs;
 
+      TimeDateStamps.push_back(&D->TimeDateStamp);
       ++D;
     }
   }
 
+  void setTimeDateStamp(uint32_t TimeDateStamp) {
+    for (support::ulittle32_t *TDS : TimeDateStamps)
+      *TDS = TimeDateStamp;
+  }
+
 private:
+  mutable std::vector<support::ulittle32_t *> TimeDateStamps;
   const std::vector<Chunk *> &Records;
 };
 
@@ -157,7 +197,7 @@ private:
   RVATableChunk *GuardFidsTable = nullptr;
   RVATableChunk *SEHTable = nullptr;
 
-  Chunk *DebugDirectory = nullptr;
+  DebugDirectoryChunk *DebugDirectory = nullptr;
   std::vector<Chunk *> DebugRecords;
   CVDebugRecordChunk *BuildId = nullptr;
   Optional<codeview::DebugInfo> PreviousBuildId;
@@ -657,14 +697,26 @@ void Writer::assignAddresses() {
 }
 
 template <typename PEHeaderTy> void Writer::writeHeader() {
-  // Write DOS stub
+  // Write DOS header. For backwards compatibility, the first part of a PE/COFF
+  // executable consists of an MS-DOS MZ executable. If the executable is run
+  // under DOS, that program gets run (usually to just print an error message).
+  // When run under Windows, the loader looks at AddressOfNewExeHeader and uses
+  // the PE header instead.
   uint8_t *Buf = Buffer->getBufferStart();
   auto *DOS = reinterpret_cast<dos_header *>(Buf);
-  Buf += DOSStubSize;
+  Buf += sizeof(dos_header);
   DOS->Magic[0] = 'M';
   DOS->Magic[1] = 'Z';
+  DOS->UsedBytesInTheLastPage = DOSStubSize % 512;
+  DOS->FileSizeInPages = divideCeil(DOSStubSize, 512);
+  DOS->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
+
   DOS->AddressOfRelocationTable = sizeof(dos_header);
   DOS->AddressOfNewExeHeader = DOSStubSize;
+
+  // Write DOS program.
+  memcpy(Buf, DOSProgram, sizeof(DOSProgram));
+  Buf += sizeof(DOSProgram);
 
   // Write PE magic
   memcpy(Buf, PEMagic, sizeof(PEMagic));
@@ -1026,22 +1078,50 @@ void Writer::writeSections() {
 }
 
 void Writer::writeBuildId() {
-  // If we're not writing a build id (e.g. because /debug is not specified),
-  // then just return;
-  if (!Config->Debug)
-    return;
-
-  assert(BuildId && "BuildId is not set!");
-
-  if (PreviousBuildId.hasValue()) {
-    *BuildId->BuildId = *PreviousBuildId;
-    BuildId->BuildId->PDB70.Age = BuildId->BuildId->PDB70.Age + 1;
-    return;
+  // There are two important parts to the build ID.
+  // 1) If building with debug info, the COFF debug directory contains a
+  //    timestamp as well as a Guid and Age of the PDB.
+  // 2) In all cases, the PE COFF file header also contains a timestamp.
+  // For reproducibility, instead of a timestamp we want to use a hash of the
+  // binary, however when building with debug info the hash needs to take into
+  // account the debug info, since it's possible to add blank lines to a file
+  // which causes the debug info to change but not the generated code.
+  //
+  // To handle this, we first set the Guid and Age in the debug directory (but
+  // only if we're doing a debug build).  Then, we hash the binary (thus causing
+  // the hash to change if only the debug info changes, since the Age will be
+  // different).  Finally, we write that hash into the debug directory (if
+  // present) as well as the COFF file header (always).
+  if (Config->Debug) {
+    assert(BuildId && "BuildId is not set!");
+    if (PreviousBuildId.hasValue()) {
+      *BuildId->BuildId = *PreviousBuildId;
+      BuildId->BuildId->PDB70.Age = BuildId->BuildId->PDB70.Age + 1;
+    } else {
+      BuildId->BuildId->Signature.CVSignature = OMF::Signature::PDB70;
+      BuildId->BuildId->PDB70.Age = 1;
+      llvm::getRandomBytes(BuildId->BuildId->PDB70.Signature, 16);
+    }
   }
 
-  BuildId->BuildId->Signature.CVSignature = OMF::Signature::PDB70;
-  BuildId->BuildId->PDB70.Age = 1;
-  llvm::getRandomBytes(BuildId->BuildId->PDB70.Signature, 16);
+  // At this point the only fields in the COFF file which remain unset are the
+  // "timestamp" in the COFF file header, and the ones in the coff debug
+  // directory.  Now we can hash the file and write that hash to the various
+  // timestamp fields in the file.
+  StringRef OutputFileData(
+      reinterpret_cast<const char *>(Buffer->getBufferStart()),
+      Buffer->getBufferSize());
+
+  uint32_t Hash = static_cast<uint32_t>(xxHash64(OutputFileData));
+
+  if (DebugDirectory)
+    DebugDirectory->setTimeDateStamp(Hash);
+
+  uint8_t *Buf = Buffer->getBufferStart();
+  Buf += DOSStubSize + sizeof(PEMagic);
+  object::coff_file_header *CoffHeader =
+      reinterpret_cast<coff_file_header *>(Buf);
+  CoffHeader->TimeDateStamp = Hash;
 }
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.

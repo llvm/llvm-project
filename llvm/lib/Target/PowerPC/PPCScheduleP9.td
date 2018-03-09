@@ -151,6 +151,10 @@ let SchedModel = P9Model in {
     let Latency = 6;
   }
 
+  def P9_DIV_5C : SchedWriteRes<[DIV]> {
+    let Latency = 5;
+  }
+
   def P9_DIV_12C : SchedWriteRes<[DIV]> {
     let Latency = 12;
   }
@@ -220,6 +224,16 @@ let SchedModel = P9Model in {
     let Latency = 27;
   }
 
+  def P9_DPE_27C_10 : SchedWriteRes<[DP]> {
+    let ResourceCycles = [10];
+    let Latency = 27;
+  }
+
+  def P9_DPO_27C_10 : SchedWriteRes<[DP]> {
+    let ResourceCycles = [10];
+    let Latency = 27;
+  }
+
   def P9_DP_33C_8 : SchedWriteRes<[DP]> {
     let ResourceCycles = [8];
     let Latency = 33;
@@ -236,6 +250,16 @@ let SchedModel = P9Model in {
   }
 
   def P9_DP_36C_10 : SchedWriteRes<[DP]> {
+    let ResourceCycles = [10];
+    let Latency = 36;
+  }
+
+  def P9_DPE_36C_10 : SchedWriteRes<[DP]> {
+    let ResourceCycles = [10];
+    let Latency = 36;
+  }
+
+  def P9_DPO_36C_10 : SchedWriteRes<[DP]> {
     let ResourceCycles = [10];
     let Latency = 36;
   }
@@ -258,6 +282,10 @@ let SchedModel = P9Model in {
 
   def P9_LS_5C : SchedWriteRes<[LS]> {
     let Latency = 5;
+  }
+
+  def P9_LS_6C : SchedWriteRes<[LS]> {
+    let Latency = 6;
   }
 
   def P9_DFU_12C : SchedWriteRes<[DFU]> {
@@ -312,8 +340,13 @@ let SchedModel = P9Model in {
   def P9_IntDivAndALUOp_18C_8 : WriteSequence<[P9_DIV_16C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_26C_8 : WriteSequence<[P9_DIV_24C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_42C_8 : WriteSequence<[P9_DIV_40C_8, P9_ALU_2C]>;
+  def P9_StoreAndALUOp_3C : WriteSequence<[P9_LS_1C, P9_ALU_2C]>;
   def P9_StoreAndALUOp_4C : WriteSequence<[P9_LS_1C, P9_ALU_3C]>;
   def P9_ALUOpAndALUOp_4C : WriteSequence<[P9_ALU_2C, P9_ALU_2C]>;
+  def P9_ALU2OpAndALU2Op_6C : WriteSequence<[P9_ALU_3C, P9_ALU_3C]>;
+  def P9_ALUOpAndALUOpAndALUOp_6C :
+    WriteSequence<[P9_ALU_2C, P9_ALU_2C, P9_ALU_2C]>;
+  def P9_DPOpAndALUOp_7C : WriteSequence<[P9_DP_5C, P9_ALU_2C]>;
   def P9_DPOpAndALUOp_9C : WriteSequence<[P9_DP_7C, P9_ALU_2C]>;
   def P9_DPOpAndALU2Op_10C : WriteSequence<[P9_DP_7C, P9_ALU_3C]>;
   def P9_DPOpAndALUOp_24C_5 : WriteSequence<[P9_DP_22C_5, P9_ALU_2C]>;

@@ -59,7 +59,7 @@ For example:
 
 ::
 
-  clang -fxray-instrument ..
+  clang -fxray-instrument ...
 
 By default, functions that have at least 200 instructions will get XRay
 instrumentation points. You can tweak that number through the
@@ -67,7 +67,7 @@ instrumentation points. You can tweak that number through the
 
 ::
 
-  clang -fxray-instrument -fxray-instruction-threshold=1 ..
+  clang -fxray-instrument -fxray-instruction-threshold=1 ...
 
 You can also specifically instrument functions in your binary to either always
 or never be instrumented using source-level attributes. You can do it using the

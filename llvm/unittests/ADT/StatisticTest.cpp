@@ -19,6 +19,7 @@ namespace {
 STATISTIC(Counter, "Counts things");
 STATISTIC(Counter2, "Counts other things");
 
+#if LLVM_ENABLE_STATS
 static void
 extractCounters(const std::vector<std::pair<StringRef, unsigned>> &Range,
                 OptionalStatistic &S1, OptionalStatistic &S2) {
@@ -29,6 +30,7 @@ extractCounters(const std::vector<std::pair<StringRef, unsigned>> &Range,
       S2 = S;
   }
 }
+#endif
 
 TEST(StatisticTest, Count) {
   EnableStatistics();

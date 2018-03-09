@@ -616,7 +616,7 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
   OS << "static const llvm::MCProcResourceDesc " << ProcModel.ModelName
      << "ProcResources"
      << "[] = {\n"
-     << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0, 0},\n";
+     << "  {\"InvalidUnit\", 0, 0, 0, 0},\n";
 
   unsigned SubUnitsOffset = 1;
   for (unsigned i = 0, e = ProcModel.ProcResourceDefs.size(); i < e; ++i) {
@@ -645,7 +645,7 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
       NumUnits = PRDef->getValueAsInt("NumUnits");
     }
     // Emit the ProcResourceDesc
-    OS << "  {DBGFIELD(\"" << PRDef->getName() << "\") ";
+    OS << "  {\"" << PRDef->getName() << "\", ";
     if (PRDef->getName().size() < 15)
       OS.indent(15 - PRDef->getName().size());
     OS << NumUnits << ", " << SuperIdx << ", " << BufferSize << ", ";

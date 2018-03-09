@@ -695,16 +695,17 @@ define <2 x i64> @mul_v2i64_15_63(<2 x i64> %a0) nounwind {
 define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 ; X86-LABEL: mul_v2i64_neg_15_63:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [4294967281,4294967295,4294967233,4294967295]
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlq $32, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [4294967281,4294967295,4294967233,4294967295]
+; X86-NEXT:    pmuludq %xmm2, %xmm1
+; X86-NEXT:    movdqa %xmm2, %xmm3
 ; X86-NEXT:    psrlq $32, %xmm3
-; X86-NEXT:    pmuludq %xmm1, %xmm3
-; X86-NEXT:    pmuludq {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pmuludq %xmm0, %xmm3
+; X86-NEXT:    paddq %xmm1, %xmm3
+; X86-NEXT:    psllq $32, %xmm3
+; X86-NEXT:    pmuludq %xmm2, %xmm0
 ; X86-NEXT:    paddq %xmm3, %xmm0
-; X86-NEXT:    psllq $32, %xmm0
-; X86-NEXT:    paddq %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v2i64_neg_15_63:
@@ -739,16 +740,17 @@ define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 ; X86-LABEL: mul_v2i64_neg_17_65:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [4294967279,4294967295,4294967231,4294967295]
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlq $32, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [4294967279,4294967295,4294967231,4294967295]
+; X86-NEXT:    pmuludq %xmm2, %xmm1
+; X86-NEXT:    movdqa %xmm2, %xmm3
 ; X86-NEXT:    psrlq $32, %xmm3
-; X86-NEXT:    pmuludq %xmm1, %xmm3
-; X86-NEXT:    pmuludq {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pmuludq %xmm0, %xmm3
+; X86-NEXT:    paddq %xmm1, %xmm3
+; X86-NEXT:    psllq $32, %xmm3
+; X86-NEXT:    pmuludq %xmm2, %xmm0
 ; X86-NEXT:    paddq %xmm3, %xmm0
-; X86-NEXT:    psllq $32, %xmm0
-; X86-NEXT:    paddq %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v2i64_neg_17_65:
@@ -823,16 +825,17 @@ define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
 define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ; X86-LABEL: mul_v2i64_neg_0_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,4294967295,4294967295]
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlq $32, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,4294967295,4294967295]
+; X86-NEXT:    pmuludq %xmm2, %xmm1
+; X86-NEXT:    movdqa %xmm2, %xmm3
 ; X86-NEXT:    psrlq $32, %xmm3
-; X86-NEXT:    pmuludq %xmm1, %xmm3
-; X86-NEXT:    pmuludq {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pmuludq %xmm0, %xmm3
+; X86-NEXT:    paddq %xmm1, %xmm3
+; X86-NEXT:    psllq $32, %xmm3
+; X86-NEXT:    pmuludq %xmm2, %xmm0
 ; X86-NEXT:    paddq %xmm3, %xmm0
-; X86-NEXT:    psllq $32, %xmm0
-; X86-NEXT:    paddq %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v2i64_neg_0_1:
@@ -876,16 +879,17 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ; X86-LABEL: mul_v2i64_15_neg_63:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [15,0,4294967233,4294967295]
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlq $32, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [15,0,4294967233,4294967295]
+; X86-NEXT:    pmuludq %xmm2, %xmm1
+; X86-NEXT:    movdqa %xmm2, %xmm3
 ; X86-NEXT:    psrlq $32, %xmm3
-; X86-NEXT:    pmuludq %xmm1, %xmm3
-; X86-NEXT:    pmuludq {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pmuludq %xmm0, %xmm3
+; X86-NEXT:    paddq %xmm1, %xmm3
+; X86-NEXT:    psllq $32, %xmm3
+; X86-NEXT:    pmuludq %xmm2, %xmm0
 ; X86-NEXT:    paddq %xmm3, %xmm0
-; X86-NEXT:    psllq $32, %xmm0
-; X86-NEXT:    paddq %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v2i64_15_neg_63:
