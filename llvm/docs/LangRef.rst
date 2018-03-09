@@ -3037,17 +3037,17 @@ uses with" concept would not hold.
 
 .. code-block:: llvm
 
-      %A = fdiv undef, %X
-      %B = fdiv %X, undef
+      %A = sdiv undef, %X
+      %B = sdiv %X, undef
     Safe:
-      %A = undef
+      %A = 0
     b: unreachable
 
 These examples show the crucial difference between an *undefined value*
 and *undefined behavior*. An undefined value (like '``undef``') is
 allowed to have an arbitrary bit-pattern. This means that the ``%A``
-operation can be constant folded to '``undef``', because the '``undef``'
-could be an SNaN, and ``fdiv`` is not (currently) defined on SNaN's.
+operation can be constant folded to '``0``', because the '``undef``'
+could be zero, and zero divided by any value is zero.
 However, in the second example, we can make a more aggressive
 assumption: because the ``undef`` is allowed to be an arbitrary value,
 we are allowed to assume that it could be zero. Since a divide by zero
@@ -6404,6 +6404,9 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point sum of the two operands.
+This instruction is assumed to execute in the default floating-point
+environment. It has no side effects. Users can not assume that any 
+floating-point exception state is updated by this instruction.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6499,6 +6502,9 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point difference of the two operands.
+This instruction is assumed to execute in the default floating-point
+environment. It has no side effects. Users can not assume that any 
+floating-point exception state is updated by this instruction.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6592,6 +6598,9 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point product of the two operands.
+This instruction is assumed to execute in the default floating-point
+environment. It has no side effects. Users can not assume that any 
+floating-point exception state is updated by this instruction.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6724,6 +6733,9 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point quotient of the two operands.
+This instruction is assumed to execute in the default floating-point
+environment. It has no side effects. Users can not assume that any 
+floating-point exception state is updated by this instruction.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6868,6 +6880,9 @@ The value produced is the floating-point remainder of the two operands.
 This is the same output as a libm '``fmod``' function, but without any
 possibility of setting ``errno``. The remainder has the same sign as the 
 dividend.
+This instruction is assumed to execute in the default floating-point
+environment. It has no side effects. Users can not assume that any 
+floating-point exception state is updated by this instruction.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:

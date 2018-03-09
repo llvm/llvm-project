@@ -142,6 +142,16 @@ template <> struct bind_helper<LLT> {
   }
 };
 
+template <> struct bind_helper<const ConstantFP *> {
+  static bool bind(const MachineRegisterInfo &MRI, const ConstantFP *&F,
+                   unsigned Reg) {
+    F = getConstantFPVRegVal(Reg, MRI);
+    if (F)
+      return true;
+    return false;
+  }
+};
+
 template <typename Class> struct bind_ty {
   Class &VR;
 
@@ -155,6 +165,9 @@ template <typename Class> struct bind_ty {
 inline bind_ty<unsigned> m_Reg(unsigned &R) { return R; }
 inline bind_ty<MachineInstr *> m_MInstr(MachineInstr *&MI) { return MI; }
 inline bind_ty<LLT> m_Type(LLT &Ty) { return Ty; }
+
+// Helper for matching G_FCONSTANT
+inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 
 // General helper for all the binary generic MI such as G_ADD/G_SUB etc
 template <typename LHS_P, typename RHS_P, unsigned Opcode,

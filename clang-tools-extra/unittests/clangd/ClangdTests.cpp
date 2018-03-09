@@ -435,9 +435,9 @@ int main() { return 0; }
 TEST_F(ClangdVFSTest, ReparseOpenedFiles) {
   Annotations FooSource(R"cpp(
 #ifdef MACRO
-$one[[static void bob() {}]]
+static void $one[[bob]]() {}
 #else
-$two[[static void bob() {}]]
+static void $two[[bob]]() {}
 #endif
 
 int main () { bo^b (); return 0; }

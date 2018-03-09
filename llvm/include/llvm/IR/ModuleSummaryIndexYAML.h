@@ -98,6 +98,8 @@ template <> struct ScalarEnumerationTraits<WholeProgramDevirtResolution::Kind> {
   static void enumeration(IO &io, WholeProgramDevirtResolution::Kind &value) {
     io.enumCase(value, "Indir", WholeProgramDevirtResolution::Indir);
     io.enumCase(value, "SingleImpl", WholeProgramDevirtResolution::SingleImpl);
+    io.enumCase(value, "BranchFunnel",
+                WholeProgramDevirtResolution::BranchFunnel);
   }
 };
 

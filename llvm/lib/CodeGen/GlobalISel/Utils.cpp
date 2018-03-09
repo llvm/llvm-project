@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -211,4 +212,17 @@ llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, unsigned Reg,
     DefMI = MRI.getVRegDef(SrcReg);
   }
   return DefMI->getOpcode() == Opcode ? DefMI : nullptr;
+}
+
+APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
+  if (Size == 32)
+    return APFloat(float(Val));
+  if (Size == 64)
+    return APFloat(Val);
+  if (Size != 16)
+    llvm_unreachable("Unsupported FPConstant size");
+  bool Ignored;
+  APFloat APF(Val);
+  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
+  return APF;
 }

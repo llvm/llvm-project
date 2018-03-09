@@ -179,6 +179,31 @@ static void checkAlignment(uint8_t *Loc, uint64_t V, RelType Type) {
           lld::toString(Type) + ": 0x" + llvm::utohexstr(V) +
           " is not aligned to " + Twine(N) + " bytes");
 }
+
+// Endianness-aware read/write.
+inline uint16_t read16(const void *P) {
+  return llvm::support::endian::read16(P, Config->Endianness);
+}
+
+inline uint32_t read32(const void *P) {
+  return llvm::support::endian::read32(P, Config->Endianness);
+}
+
+inline uint64_t read64(const void *P) {
+  return llvm::support::endian::read64(P, Config->Endianness);
+}
+
+inline void write16(void *P, uint16_t V) {
+  llvm::support::endian::write16(P, V, Config->Endianness);
+}
+
+inline void write32(void *P, uint32_t V) {
+  llvm::support::endian::write32(P, V, Config->Endianness);
+}
+
+inline void write64(void *P, uint64_t V) {
+  llvm::support::endian::write64(P, V, Config->Endianness);
+}
 } // namespace elf
 } // namespace lld
 

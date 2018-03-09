@@ -134,13 +134,8 @@ protected:
 
 class DefinedFunction : public FunctionSymbol {
 public:
-  // Primary constructor for file-defined functions.
   DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
                   InputFunction *Function);
-
-  // Second constructor used when creating synthetic functions.
-  DefinedFunction(StringRef Name, uint32_t Flags, const WasmSignature *Type)
-      : FunctionSymbol(Name, DefinedFunctionKind, Flags, nullptr, Type) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == DefinedFunctionKind;
@@ -317,7 +312,7 @@ T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
 } // namespace wasm
 
 // Returns a symbol name for an error message.
-std::string toString(const wasm::Symbol &Sym);
+std::string toString(const wasm::Symbol &Sym, bool QuoteDemangled = true);
 std::string toString(wasm::Symbol::Kind Kind);
 std::string toString(WasmSymbolType Type);
 

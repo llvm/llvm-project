@@ -41,6 +41,8 @@ public:
   void addFile(InputFile *File);
 
   std::vector<ObjFile *> ObjectFiles;
+  std::vector<InputFunction *> SyntheticFunctions;
+  std::vector<InputGlobal *> SyntheticGlobals;
 
   void reportRemainingUndefines();
 
@@ -68,9 +70,8 @@ public:
   DefinedData *addSyntheticDataSymbol(StringRef Name, uint32_t Flags);
   DefinedGlobal *addSyntheticGlobal(StringRef Name, uint32_t Flags,
                                     InputGlobal *Global);
-  DefinedFunction *addSyntheticFunction(StringRef Name,
-                                        const WasmSignature *Type,
-                                        uint32_t Flags);
+  DefinedFunction *addSyntheticFunction(StringRef Name, uint32_t Flags,
+                                        InputFunction *Function);
 
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);

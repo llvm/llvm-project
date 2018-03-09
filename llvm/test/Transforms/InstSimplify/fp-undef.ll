@@ -401,9 +401,9 @@ define double @fadd_undef_op1_fast_constant_inf(double %x) {
 
 define double @fsub_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @fsub_undef_op0_constant_inf(
-; CHECK-NEXT:    ret double fsub (double undef, double 0xFFF8000000000000)
+; CHECK-NEXT:    ret double fsub (double undef, double 0xFFF0000000000000)
 ;
-  %r = fsub double undef, 0xFFF8000000000000
+  %r = fsub double undef, 0xFFF0000000000000
   ret double %r
 }
 
@@ -417,9 +417,9 @@ define double @fsub_undef_op1_ninf_constant_inf(double %x) {
 
 define double @fmul_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @fmul_undef_op0_constant_inf(
-; CHECK-NEXT:    ret double fmul (double undef, double 0x7FF8000000000000)
+; CHECK-NEXT:    ret double fmul (double undef, double 0x7FF0000000000000)
 ;
-  %r = fmul double undef, 0x7FF8000000000000
+  %r = fmul double undef, 0x7FF0000000000000
   ret double %r
 }
 
@@ -433,9 +433,9 @@ define double @fmul_undef_op1_fast_constant_inf(double %x) {
 
 define double @fdiv_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @fdiv_undef_op0_constant_inf(
-; CHECK-NEXT:    ret double fdiv (double undef, double 0xFFF8000000000000)
+; CHECK-NEXT:    ret double fdiv (double undef, double 0xFFF0000000000000)
 ;
-  %r = fdiv double undef, 0xFFF8000000000000
+  %r = fdiv double undef, 0xFFF0000000000000
   ret double %r
 }
 
@@ -449,9 +449,9 @@ define double @fdiv_undef_op1_ninf_constant_inf(double %x) {
 
 define double @frem_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @frem_undef_op0_constant_inf(
-; CHECK-NEXT:    ret double frem (double undef, double 0x7FF8000000000000)
+; CHECK-NEXT:    ret double frem (double undef, double 0x7FF0000000000000)
 ;
-  %r = frem double undef, 0x7FF8000000000000
+  %r = frem double undef, 0x7FF0000000000000
   ret double %r
 }
 

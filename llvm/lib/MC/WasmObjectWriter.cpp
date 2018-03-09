@@ -1024,6 +1024,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         Imports.push_back(Import);
         WasmIndices[&WS] = NumFunctionImports++;
       } else if (WS.isGlobal()) {
+        if (WS.isWeak())
+          report_fatal_error("undefined global symbol cannot be weak");
+
         wasm::WasmImport Import;
         Import.Module = WS.getModuleName();
         Import.Field = WS.getName();

@@ -284,6 +284,14 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(unsigned Res,
   return buildInstr(TargetOpcode::G_FCONSTANT).addDef(Res).addFPImm(&Val);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildFConstant(unsigned Res, double Val) {
+  LLT DstTy = MRI->getType(Res);
+  auto &Ctx = MF->getFunction().getContext();
+  auto *CFP =
+      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getSizeInBits()));
+  return buildFConstant(Res, *CFP);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(unsigned Tst,
                                                   MachineBasicBlock &Dest) {
   assert(MRI->getType(Tst).isScalar() && "invalid operand type");

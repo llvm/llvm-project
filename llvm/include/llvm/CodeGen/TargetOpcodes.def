@@ -187,6 +187,8 @@ HANDLE_TARGET_OPCODE(PATCHABLE_TAIL_CALL)
 /// patched to insert instrumentation instructions.
 HANDLE_TARGET_OPCODE(PATCHABLE_EVENT_CALL)
 
+HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.

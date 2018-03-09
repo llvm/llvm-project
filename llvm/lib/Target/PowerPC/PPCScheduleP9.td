@@ -13,17 +13,29 @@
 include "PPCInstrInfo.td"
 
 def P9Model : SchedMachineModel {
+  // The maximum number of instructions to be issued at the same time.
+  // While a value of 8 is technically correct since 8 instructions can be
+  // fetched from the instruction cache. However, only 6 instructions may be
+  // actually dispatched at a time.
   let IssueWidth = 8;
 
+  // Load latency is 4 or 5 cycles depending on the load. This latency assumes
+  // that we have a cache hit. For a cache miss the load latency will be more.
+  // There are two instructions (lxvl, lxvll) that have a latencty of 6 cycles.
+  // However it is not worth bumping this value up to 6 when the vast majority
+  // of instructions are 4 or 5 cycles.
   let LoadLatency = 5;
 
+  // A total of 16 cycles to recover from a branch mispredict.
   let MispredictPenalty = 16;
 
   // Try to make sure we have at least 10 dispatch groups in a loop.
+  // A dispatch group is 6 instructions.
   let LoopMicroOpBufferSize = 60;
 
   let CompleteModel = 1;
 
+  // Do not support QPX (Quad Processing eXtension) on Power 9.
   let UnsupportedFeatures = [HasQPX];
 
 }
@@ -36,6 +48,12 @@ let SchedModel = P9Model in {
   def DISPATCHER : ProcResource<12>;
 
   // Issue Ports
+  // An instruction can go down one of two issue queues.
+  // Address Generation (AGEN) mainly for loads and stores.
+  // Execution (EXEC) for most other instructions.
+  // Some instructions cannot be run on just any issue queue and may require an
+  // Even or an Odd queue. The EXECE represents the even queues and the EXECO
+  // represents the odd queues.
   def IP_AGEN : ProcResource<4>;
   def IP_EXEC : ProcResource<4>;
   def IP_EXECE : ProcResource<2> {
@@ -48,6 +66,7 @@ let SchedModel = P9Model in {
   }
 
   // Pipeline Groups
+  // Four ALU (Fixed Point Arithmetic) units in total. Two even, two Odd.
   def ALU : ProcResource<4>;
   def ALUE : ProcResource<2> {
     //Even ALU pipelines
@@ -57,7 +76,11 @@ let SchedModel = P9Model in {
     //Odd ALU pipelines
     let Super = ALU;
   }
+
+  // Two DIV (Fixed Point Divide) units.
   def DIV : ProcResource<2>;
+
+  // Four DP (Floating Point) units in total. Two even, two Odd.
   def DP : ProcResource<4>;
   def DPE : ProcResource<2> {
     //Even DP pipelines
@@ -67,15 +90,23 @@ let SchedModel = P9Model in {
     //Odd DP pipelines
     let Super = DP;
   }
+
+  // Four LS (Load or Store) units.
   def LS : ProcResource<4>;
+
+  // Two PM (Permute) units.
   def PM : ProcResource<2>;
+
+  // Only one DFU (Decimal Floating Point and Quad Precision) unit.
   def DFU : ProcResource<1>;
+
+  // Only one Branch unit.
   def BR : ProcResource<1> {
     let BufferSize = 16;
   }
-  def CY : ProcResource<1>;
 
-  def TestGroup : ProcResGroup<[ALU, DP]>;
+  // Only one CY (Crypto) unit.
+  def CY : ProcResource<1>;
 
   // ***************** SchedWriteRes Definitions *****************
 
@@ -107,6 +138,11 @@ let SchedModel = P9Model in {
   }
 
   //Pipeline Groups
+
+  // ALU Units
+  // An ALU may take either 2 or 3 cycles to complete the operation.
+  // However, the ALU unit is only every busy for 1 cycle at a time and may
+  // receive new instructions each cycle.
   def P9_ALU_2C : SchedWriteRes<[ALU]> {
     let Latency = 2;
   }
@@ -131,26 +167,9 @@ let SchedModel = P9Model in {
     let Latency = 3;
   }
 
-  def P9_ALU_4C : SchedWriteRes<[ALU]> {
-    let Latency = 4;
-  }
-
-  def P9_ALUE_4C : SchedWriteRes<[ALUE]> {
-    let Latency = 4;
-  }
-
-  def P9_ALUO_4C : SchedWriteRes<[ALUO]> {
-    let Latency = 4;
-  }
-
-  def P9_ALU_5C : SchedWriteRes<[ALU]> {
-    let Latency = 5;
-  }
-
-  def P9_ALU_6C : SchedWriteRes<[ALU]> {
-    let Latency = 6;
-  }
-
+  // DIV Unit
+  // A DIV unit may take from 5 to 40 cycles to complete.
+  // Some DIV operations may keep the unit busy for up to 8 cycles.
   def P9_DIV_5C : SchedWriteRes<[DIV]> {
     let Latency = 5;
   }
@@ -174,6 +193,9 @@ let SchedModel = P9Model in {
     let Latency = 40;
   }
 
+  // DP Unit
+  // A DP unit may take from 2 to 36 cycles to complete.
+  // Some DP operations keep the unit busy for up to 10 cycles.
   def P9_DP_2C : SchedWriteRes<[DP]> {
     let Latency = 2;
   }
@@ -264,14 +286,18 @@ let SchedModel = P9Model in {
     let Latency = 36;
   }
 
+  // PM Unit
+  // Three cycle permute operations.
   def P9_PM_3C : SchedWriteRes<[PM]> {
     let Latency = 3;
   }
 
-  def P9_PM_7C : SchedWriteRes<[PM]> {
-    let Latency = 3;
-  }
-
+  // Load and Store Units
+  // Loads can have 4, 5 or 6 cycles of latency.
+  // Stores are listed as having a single cycle of latency. This is not
+  // completely accurate since it takes more than 1 cycle to actually store
+  // the value. However, since the store does not produce a result it can be
+  // considered complete after one cycle.
   def P9_LS_1C : SchedWriteRes<[LS]> {
     let Latency = 1;
   }
@@ -288,6 +314,10 @@ let SchedModel = P9Model in {
     let Latency = 6;
   }
 
+  // DFU Unit
+  // Some of the most expensive ops use the DFU.
+  // Can take from 12 cycles to 76 cycles to obtain a result.
+  // The unit may be busy for up to 62 cycles.
   def P9_DFU_12C : SchedWriteRes<[DFU]> {
     let Latency = 12;
   }
@@ -312,11 +342,12 @@ let SchedModel = P9Model in {
     let ResourceCycles = [44];
   }
 
-  def P9_DFU_76C : SchedWriteRes<[TestGroup, DFU]> {
+  def P9_DFU_76C : SchedWriteRes<[DFU]> {
     let Latency = 76;
     let ResourceCycles = [62];
   }
 
+  // 2 or 5 cycle latencies for the branch unit.
   def P9_BR_2C : SchedWriteRes<[BR]> {
     let Latency = 2;
   }
@@ -325,12 +356,16 @@ let SchedModel = P9Model in {
     let Latency = 5;
   }
 
+  // 6 cycle latency for the crypto unit
   def P9_CY_6C : SchedWriteRes<[CY]> {
     let Latency = 6;
   }
 
   // ***************** WriteSeq Definitions *****************
 
+  // These are combinations of the resources listed above.
+  // The idea is that some cracked instructions cannot be done in parallel and
+  // so the latencies for their resources must be added.
   def P9_LoadAndALUOp_6C : WriteSequence<[P9_LS_4C, P9_ALU_2C]>;
   def P9_LoadAndALUOp_7C : WriteSequence<[P9_LS_5C, P9_ALU_2C]>;
   def P9_LoadAndALU2Op_7C : WriteSequence<[P9_LS_4C, P9_ALU_3C]>;
@@ -357,120 +392,7 @@ let SchedModel = P9Model in {
   def P9_DPOpAndALU2Op_39C_10 : WriteSequence<[P9_DP_36C_10, P9_ALU_3C]>;
   def P9_BROpAndALUOp_7C : WriteSequence<[P9_BR_5C, P9_ALU_2C]>;
 
-  // ***************** Defining Itinerary Class Resources *****************
-
-  // The following itineraries are fully covered by the InstRW definitions in
-  // P9InstrResources.td so aren't listed here.
-  // IIC_FPDivD, IIC_FPDivS, IIC_FPFused, IIC_IntDivD, IIC_LdStLFDU,
-  // IIC_LdStLFDUX
-
-  def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_IntSimple, IIC_IntGeneral, IIC_IntRFID,
-                IIC_IntRotateD, IIC_IntRotateDI, IIC_IntTrapD,
-                IIC_SprRFI]>;
-
-  def : ItinRW<[P9_ALU_3C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_IntTrapW]>;
-
-  def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_IntISEL, IIC_IntRotate, IIC_IntShift]>;
-
-  def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C], [IIC_IntCompare]>;
-
-  def : ItinRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C,
-                DISP_1C, DISP_1C], [IIC_VecGeneral, IIC_FPCompare]>;
-
-  def : ItinRW<[P9_DP_5C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_IntMulHW, IIC_IntMulHWU, IIC_IntMulLI, IIC_IntMulHD]>;
-
-  def : ItinRW<[P9_LS_5C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_LdStLoad, IIC_LdStLD, IIC_LdStLFD]>;
-
-  def : ItinRW<[P9_LS_4C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
-                DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStLoadUpd, IIC_LdStLDU]>;
-
-  def : ItinRW<[P9_LS_4C, P9_ALU_2C, IP_EXECE_1C, IP_EXECO_1C,
-                DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStLoadUpdX, IIC_LdStLDUX]>;
-
-  def : ItinRW<[P9_LS_1C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
-                DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStSTFDU]>;
-
-  def : ItinRW<[P9_LoadAndALUOp_6C,
-                IP_AGEN_1C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStLHA, IIC_LdStLWA]>;
-
-  def : ItinRW<[P9_LoadAndALUOp_6C, P9_ALU_2C,
-                IP_AGEN_1C, IP_EXEC_1C, IP_EXEC_1C,
-                DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStLHAU, IIC_LdStLHAUX]>;
-
-  // IIC_LdStLMW contains two microcoded insns. This is not accurate, but
-  // those insns are not used that much, if at all.
-  def : ItinRW<[P9_LS_4C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_LdStLWARX, IIC_LdStLDARX, IIC_LdStLMW]>;
-
-  def : ItinRW<[P9_LS_4C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_LdStCOPY, IIC_SprABORT, IIC_LdStPASTE, IIC_LdStDCBF,
-                IIC_LdStICBI, IIC_LdStSync, IIC_SprISYNC, IIC_SprMSGSYNC,
-                IIC_SprSLBIA, IIC_SprSLBSYNC, IIC_SprTLBSYNC]>;
-
-  def : ItinRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStSTFD, IIC_LdStSTD, IIC_LdStStore]>;
-
-  def : ItinRW<[P9_LS_1C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
-                DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStSTDU, IIC_LdStSTDUX, IIC_LdStStoreUpd, IIC_SprSLBIEG,
-                IIC_SprTLBIA, IIC_SprTLBIE]>;
-
-  def : ItinRW<[P9_StoreAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
-                DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStSTDCX, IIC_LdStSTWCX]>;
-
-  def : ItinRW<[P9_ALU_5C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_BrCR, IIC_IntMTFSB0]>;
-
-  def : ItinRW<[P9_ALUOpAndALUOp_4C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
-                IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C,
-                DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_SprMFCR, IIC_SprMFCRF, IIC_BrMCR, IIC_BrMCRX, IIC_IntMFFS]>;
-
-  def : ItinRW<[P9_BR_2C, DISP_1C], [IIC_BrB]>;
-  def : ItinRW<[P9_BR_5C, DISP_1C], [IIC_SprMFSPR]>;
-
-  // This class should be broken down to instruction level, once some missing
-  // info is obtained.
-  def : ItinRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
-                DISP_1C, DISP_1C, DISP_1C], [IIC_SprMTSPR]>;
-
-  def : ItinRW<[P9_LoadAndLoadOp_8C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_SprSLBIE, IIC_SprSLBMFEE, IIC_SprSLBMFEV, IIC_SprSLBMTE,
-                IIC_SprTLBIEL]>;
-
-  // IIC_VecFP is added here although many instructions with that itinerary
-  // use very different resources. It would appear that instructions were
-  // given that itinerary rather carelessly over time. Specific instructions
-  // that use different resources are listed in various InstrRW classes.
-  def : ItinRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_FPGeneral, IIC_FPAddSub, IIC_VecFP]>;
-
-  def : ItinRW<[P9_ALUE_3C, P9_ALUO_3C, IP_EXECE_1C, IP_EXECO_1C,
-                DISP_1C, DISP_1C], [IIC_VecFPCompare]>;
-
-  def : ItinRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C, DISP_1C],
-               [IIC_VecPerm]>;
-
-  def : ItinRW<[P9_DP_36C_10, IP_EXEC_1C], [IIC_FPSqrtD]>;
-  def : ItinRW<[P9_DP_26C_5, P9_DP_26C_5, IP_EXEC_1C, IP_EXEC_1C], [IIC_FPSqrtS]>;
-
-  def : ItinRW<[P9_DIV_12C, IP_EXECE_1C, DISP_1C, DISP_1C],
-               [IIC_SprMFMSR, IIC_SprMFPMR, IIC_SprMFSR, IIC_SprMFTB,
-                IIC_SprMTMSR, IIC_SprMTMSRD, IIC_SprMTPMR, IIC_SprMTSR]>;
-
-  def : ItinRW<[], [IIC_SprSTOP]>;
-
+  // Include the resource requirements of individual instructions.
   include "P9InstrResources.td"
 
 }

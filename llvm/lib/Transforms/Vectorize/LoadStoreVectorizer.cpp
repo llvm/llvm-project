@@ -118,8 +118,6 @@ public:
   bool run();
 
 private:
-  Value *getPointerOperand(Value *I) const;
-
   GetElementPtrInst *getSourceGEP(Value *Src) const;
 
   unsigned getPointerAddressSpace(Value *I);
@@ -271,14 +269,6 @@ bool Vectorizer::run() {
   return Changed;
 }
 
-Value *Vectorizer::getPointerOperand(Value *I) const {
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerOperand();
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand();
-  return nullptr;
-}
-
 unsigned Vectorizer::getPointerAddressSpace(Value *I) {
   if (LoadInst *L = dyn_cast<LoadInst>(I))
     return L->getPointerAddressSpace();
@@ -292,7 +282,7 @@ GetElementPtrInst *Vectorizer::getSourceGEP(Value *Src) const {
   // and without casts.
   // TODO: a stride set by the add instruction below can match the difference
   // in pointee type size here. Currently it will not be vectorized.
-  Value *SrcPtr = getPointerOperand(Src);
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *SrcBase = SrcPtr->stripPointerCasts();
   if (DL.getTypeStoreSize(SrcPtr->getType()->getPointerElementType()) ==
       DL.getTypeStoreSize(SrcBase->getType()->getPointerElementType()))
@@ -302,8 +292,8 @@ GetElementPtrInst *Vectorizer::getSourceGEP(Value *Src) const {
 
 // FIXME: Merge with llvm::isConsecutiveAccess
 bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
-  Value *PtrA = getPointerOperand(A);
-  Value *PtrB = getPointerOperand(B);
+  Value *PtrA = getLoadStorePointerOperand(A);
+  Value *PtrB = getLoadStorePointerOperand(B);
   unsigned ASA = getPointerAddressSpace(A);
   unsigned ASB = getPointerAddressSpace(B);
 
@@ -482,7 +472,7 @@ Vectorizer::getBoundaryInstrs(ArrayRef<Instruction *> Chain) {
 void Vectorizer::eraseInstructions(ArrayRef<Instruction *> Chain) {
   SmallVector<Instruction *, 16> Instrs;
   for (Instruction *I : Chain) {
-    Value *PtrOperand = getPointerOperand(I);
+    Value *PtrOperand = getLoadStorePointerOperand(I);
     assert(PtrOperand && "Instruction must have a pointer operand.");
     Instrs.push_back(I);
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(PtrOperand))
@@ -592,10 +582,10 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
           dbgs() << "LSV: Found alias:\n"
                     "  Aliasing instruction and pointer:\n"
                  << "  " << *MemInstr << '\n'
-                 << "  " << *getPointerOperand(MemInstr) << '\n'
+                 << "  " << *getLoadStorePointerOperand(MemInstr) << '\n'
                  << "  Aliased instruction and pointer:\n"
                  << "  " << *ChainInstr << '\n'
-                 << "  " << *getPointerOperand(ChainInstr) << '\n';
+                 << "  " << *getLoadStorePointerOperand(ChainInstr) << '\n';
         });
         // Save this aliasing memory instruction as a barrier, but allow other
         // instructions that precede the barrier to be vectorized with this one.

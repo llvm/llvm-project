@@ -649,6 +649,7 @@ defm : DSReadPat_mc <DS_READ_B32, i32, "load_local">;
 let AddedComplexity = 100 in {
 
 defm : DSReadPat_mc <DS_READ_B64, v2i32, "load_align8_local">;
+defm : DSReadPat_mc <DS_READ_B128, v4i32, "load_align16_local">;
 
 } // End AddedComplexity = 100
 

@@ -248,6 +248,10 @@ class Aligned8Bytes <dag ops, dag frag> : PatFrag <ops, frag, [{
   return cast<MemSDNode>(N)->getAlignment() % 8 == 0;
 }]>;
 
+class Aligned16Bytes <dag ops, dag frag> : PatFrag <ops, frag, [{
+  return cast<MemSDNode>(N)->getAlignment() >= 16;
+}]>;
+
 class LoadFrag <SDPatternOperator op> : PatFrag<(ops node:$ptr), (op node:$ptr)>;
 
 class StoreFrag<SDPatternOperator op> : PatFrag <
@@ -368,6 +372,10 @@ def store_local_hi16 : StoreHi16 <truncstorei16>, LocalAddress;
 def truncstorei8_local_hi16 : StoreHi16<truncstorei8>, LocalAddress;
 
 def load_align8_local : Aligned8Bytes <
+  (ops node:$ptr), (load_local node:$ptr)
+>;
+
+def load_align16_local : Aligned16Bytes <
   (ops node:$ptr), (load_local node:$ptr)
 >;
 
