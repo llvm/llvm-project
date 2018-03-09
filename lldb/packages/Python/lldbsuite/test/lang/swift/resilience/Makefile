@@ -1,53 +1,34 @@
 LEVEL = ../../../make
 
+EXE=
+override MAKE_DSYM=NO
+
 include $(LEVEL)/Makefile.rules
 
 MACOSX_DEPLOYMENT_TARGET ?= 10.10
 SWIFT_TRIPLE ?= -target x86_64-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)
-SDK_PATH ?= $(shell xcrun --show-sdk-path --sdk macosx)
 
-everything: libmod.a.dylib libmod.b.dylib main.a main.b
+SWIFTFLAGS += -Xfrontend -enable-resilience $(SWIFT_TRIPLE)
 
-RESILIENCE_FLAGS = -Xfrontend -enable-resilience
+all: libmod.a.dylib libmod.b.dylib main.a main.b
 
-libmod.a.dylib:
-	ln -sf mod.a.swift mod.swift
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -g -Onone -Xfrontend -serialize-debugging-options $(RESILEINCE_FLAGS) -emit-module -module-name mod mod.swift -emit-library -o libmod.dylib
-	mv libmod.dylib libmod.a.dylib
-	mv libmod.dylib.dSYM libmod.a.dylib.dSYM
-	mv mod.swiftdoc mod.a.swiftdoc
-	mv mod.swiftmodule mod.a.swiftmodule
+libmod.%.dylib: mod.%.swift
+	ln -sf $< mod.swift
+	$(SWIFTCC) $(SWIFTFLAGS) -emit-module -module-name mod mod.swift -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/libmod.$*.dylib
+	mv mod.swiftdoc mod.$*.swiftdoc
+	mv mod.swiftmodule mod.$*.swiftmodule
 	rm mod.swift
 
-libmod.b.dylib:
-	ln -sf mod.b.swift mod.swift
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -g -Onone -Xfrontend -serialize-debugging-options $(RESILEINCE_FLAGS) -emit-module -module-name mod mod.swift -emit-library -o libmod.dylib
-	mv libmod.dylib libmod.b.dylib
-	mv libmod.dylib.dSYM libmod.b.dylib.dSYM
-	mv mod.swiftdoc mod.b.swiftdoc
-	mv mod.swiftmodule mod.b.swiftmodule
-	rm mod.swift
-
-main.a:
-	ln -sf libmod.a.dylib libmod.dylib
-	ln -sf libmod.a.dylib.dSYM libmod.dylib.dSYM
-	ln -sf mod.a.swiftdoc mod.swiftdoc
-	ln -sf mod.a.swiftmodule mod.swiftmodule
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH)  -g -Onone $(RESILIENCE_FLAGS) main.swift -o main -L. -I. -lmod
-	mv main main.a
-	mv main.dSYM main.a.dSYM
+main.%: main.swift
+	ln -sf libmod.$*.dylib libmod.dylib
+	ln -sf libmod.$*.dylib.dSYM libmod.dylib.dSYM
+	ln -sf mod.$*.swiftdoc mod.swiftdoc
+	ln -sf mod.$*.swiftmodule mod.swiftmodule
+	$(SWIFTCC) $(SWIFTFLAGS) $< -o main -L$(shell pwd) -I$(shell pwd) -lmod
+	mv main main.$*
+	mv main.dSYM main.$*.dSYM
 	rm libmod.dylib libmod.dylib.dSYM mod.swiftdoc mod.swiftmodule
 
-main.b:
-	ln -sf libmod.b.dylib libmod.dylib
-	ln -sf libmod.b.dylib.dSYM libmod.dylib.dSYM
-	ln -sf mod.b.swiftdoc mod.swiftdoc
-	ln -sf mod.b.swiftmodule mod.swiftmodule
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH)  -g -Onone $(RESILIENCE_FLAGS) main.swift -o main -L. -I. -lmod
-	mv main main.b
-	mv main.dSYM main.b.dSYM
-	rm libmod.dylib libmod.dylib.dSYM mod.swiftdoc mod.swiftmodule
-
-cleanup:
+clean::
 	rm -rf main main.a main.b *.dylib *.dSYM *.swiftdoc *.swiftmodule mod.swift
 

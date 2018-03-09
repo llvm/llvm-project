@@ -25,6 +25,7 @@ class TestSwiftLetIntSupport(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_let_int(self):
         """Test that a 'let' Int is formatted properly"""
         self.build()

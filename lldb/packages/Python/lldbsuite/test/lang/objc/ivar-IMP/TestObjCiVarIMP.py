@@ -22,7 +22,6 @@ class ObjCiVarIMPTestCase(TestBase):
     @skipUnlessDarwin
     @skipIf(archs=['i386'])  # objc file does not build for i386
     @no_debug_info_test
-    @expectedFailureDarwin("rdar://23590082")
     def test_imp_ivar_type(self):
         """Test that dynamically discovered ivars of type IMP do not crash LLDB"""
         self.build()

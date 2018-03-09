@@ -36,10 +36,10 @@ class TestSwiftPlaygrounds(TestBase):
     @decorators.skipIf(
         debug_info=decorators.no_match("dsym"),
         bugnumber="This test only builds one way")
-    @decorators.expectedFailureAll # rdar://36744510
+    @decorators.add_test_categories(["swiftpr"])
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
-        self.buildAll()
+        self.build()
         self.do_test()
 
     def setUp(self):
@@ -48,17 +48,10 @@ class TestSwiftPlaygrounds(TestBase):
         self.PlaygroundStub_source_spec = lldb.SBFileSpec(
             self.PlaygroundStub_source)
 
-    def buildAll(self):
-        execute_command("make everything")
-
     def do_test(self):
         """Test that playgrounds work"""
         exe_name = "PlaygroundStub"
         exe = self.getBuildArtifact(exe_name)
-
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

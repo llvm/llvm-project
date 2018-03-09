@@ -27,6 +27,7 @@
 #include "swift/AST/Module.h"
 #include "swift/AST/Types.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/Demangler.h"
 #include "swift/Remote/MemoryReader.h"
 #include "swift/RemoteAST/RemoteAST.h"
 
@@ -592,47 +593,7 @@ std::string SwiftLanguageRuntime::DemangleSymbolAsString (const ConstString &sym
 
 bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
 {
-  // _TtC in the old mangling
-  if (!name)
-    return false;
-
-  swift::Demangle::Context demangle_ctx;
-  swift::Demangle::NodePointer node_ptr =
-    demangle_ctx.demangleSymbolAsNode(name);
-  if (!node_ptr)
-    return false;
-
-  size_t num_children = node_ptr->getNumChildren();
-  
-  if (num_children != 1)
-    return false;
-    
-  if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
-    return false;
-  
-  num_children = node_ptr->getNumChildren();
-  if (num_children != 1)
-  return true;
-  
-  swift::Demangle::NodePointer type_mangling_ptr = node_ptr->getFirstChild();
-  if (type_mangling_ptr->getKind() != swift::Demangle::Node::Kind::TypeMangling)
-    return false;
-  
-  if (type_mangling_ptr->getNumChildren() != 1)
-    return false;
-
-  swift::Demangle::NodePointer type_ptr = type_mangling_ptr->getFirstChild();
-  if (type_ptr->getKind() != swift::Demangle::Node::Kind::Type)
-    return false;
-  
-  if (type_ptr->getNumChildren() != 1)
-    return false;
-
-  swift::Demangle::NodePointer class_ptr = type_ptr->getFirstChild();
-  if (class_ptr->getKind() != swift::Demangle::Node::Kind::Class)
-    return false;
-  
-  return true;
+  return swift::Demangle::isClass(name);
 }
 
 bool SwiftLanguageRuntime::IsMetadataSymbol(const char *symbol) {
@@ -709,11 +670,6 @@ const std::string SwiftLanguageRuntime::GetCurrentMangledName(const char *mangle
   else
     return swift::Demangle::mangleNode(node_ptr);
 #endif
-}
-
-uint32_t SwiftLanguageRuntime::FindEquivalentNames(
-    ConstString type_name, std::vector<ConstString> &equivalents) {
-  return 0;
 }
 
 void SwiftLanguageRuntime::MethodName::Clear() {
@@ -1098,42 +1054,6 @@ llvm::StringRef SwiftLanguageRuntime::MethodName::GetBasename() {
   if (!m_parsed)
     Parse();
   return m_basename;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetContext() {
-  if (!m_parsed)
-    Parse();
-  return m_context;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetArguments() {
-  if (!m_parsed)
-    Parse();
-  return m_arguments;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetQualifiers() {
-  if (!m_parsed)
-    Parse();
-  return m_qualifiers;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetMetatypeReference() {
-  if (!m_parsed)
-    Parse();
-  return m_qualifiers;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetTemplateArguments() {
-  if (!m_parsed)
-    Parse();
-  return m_template_args;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetReturnType() {
-  if (!m_parsed)
-    Parse();
-  return m_return_type;
 }
 
 const CompilerType &SwiftLanguageRuntime::GetBoxMetadataType() {
@@ -2216,41 +2136,39 @@ SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
 
 CompilerType
 SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
-                                                CompilerType base_type,
-                                                SwiftASTContext *ast_context) {
+                                                CompilerType base_type) {
+  SwiftASTContext *ast_context =
+      llvm::dyn_cast_or_null<SwiftASTContext>(base_type.GetTypeSystem());
+  lldbassert(ast_context && "null AST Context");
+  if (!ast_context)
+    return base_type;
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
-    if (!ast_context)
-      ast_context =
-          llvm::dyn_cast_or_null<SwiftASTContext>(base_type.GetTypeSystem());
+    swift::Type target_swift_type(GetSwiftType(base_type));
 
-    if (ast_context) {
-      swift::Type target_swift_type(GetSwiftType(base_type));
+    target_swift_type = target_swift_type.transform(
+        [this, &stack_frame,
+         ast_context](swift::Type candidate_type) -> swift::Type {
+          if (swift::ArchetypeType *candidate_archetype =
+                  llvm::dyn_cast_or_null<swift::ArchetypeType>(
+                      candidate_type.getPointer())) {
+            ConstString candidate_name(candidate_archetype->getFullName());
 
-      target_swift_type = target_swift_type.transform(
-          [this, &stack_frame,
-           ast_context](swift::Type candidate_type) -> swift::Type {
-            if (swift::ArchetypeType *candidate_archetype =
-                    llvm::dyn_cast_or_null<swift::ArchetypeType>(
-                        candidate_type.getPointer())) {
-              ConstString candidate_name(candidate_archetype->getFullName());
+            CompilerType concrete_type = this->GetConcreteType(
+                &stack_frame, candidate_name);
+            Status import_error;
+            CompilerType target_concrete_type =
+                ast_context->ImportType(concrete_type, import_error);
 
-              CompilerType concrete_type = this->GetConcreteType(
-                  &stack_frame, candidate_name);
-              Status import_error;
-              CompilerType target_concrete_type =
-                  ast_context->ImportType(concrete_type, import_error);
-
-              if (target_concrete_type.IsValid())
-                return swift::Type(GetSwiftType(target_concrete_type));
-              else
-                return candidate_type;
-            } else
+            if (target_concrete_type.IsValid())
+              return swift::Type(GetSwiftType(target_concrete_type));
+            else
               return candidate_type;
-          });
+          } else
+            return candidate_type;
+        });
 
-      return CompilerType(ast_context->GetASTContext(),
-                          target_swift_type.getPointer());
-    }
+    return CompilerType(ast_context->GetASTContext(),
+                        target_swift_type.getPointer());
   }
   return base_type;
 }
@@ -2343,12 +2261,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
 
   // this will be a BoundGenericStruct, bound to archetypes
   CompilerType struct_type(in_value.GetCompilerType());
-
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(struct_type.GetTypeSystem());
-
-  CompilerType resolved_type(
-      DoArchetypeBindingForType(*frame, struct_type, swift_ast_ctx));
+  CompilerType resolved_type(DoArchetypeBindingForType(*frame, struct_type));
   if (!resolved_type)
     return false;
 
@@ -2382,12 +2295,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
 
   // this will be a BoundGenericEnum, bound to archetypes
   CompilerType enum_type(in_value.GetCompilerType());
-
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(enum_type.GetTypeSystem());
-
-  CompilerType resolved_type(
-      DoArchetypeBindingForType(*frame, enum_type, swift_ast_ctx));
+  CompilerType resolved_type(DoArchetypeBindingForType(*frame, enum_type));
   if (!resolved_type)
     return false;
 

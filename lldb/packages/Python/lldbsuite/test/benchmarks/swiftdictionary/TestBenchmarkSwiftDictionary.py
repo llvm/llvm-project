@@ -43,7 +43,7 @@ class TestBenchmarkSwiftDictionary(BenchBase):
 
     def data_formatter_commands(self):
         """Benchmark the Swift dictionary data formatter"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(

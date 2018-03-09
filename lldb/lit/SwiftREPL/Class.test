@@ -1,0 +1,21 @@
+// Test that we can define and use a basic class.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+class Bar {
+  var bar : Int
+  var baaz : Int
+  init (a: Int, b: Int) {
+    bar = a
+    baaz = b
+  }
+  func sum() -> Int {
+    return bar + baaz
+  }
+}
+
+Bar(a: 2, b: 3)
+// CHECK: $R0: Bar = {
+// CHECK-NEXT:   bar = 2
+// CHECK-NEXT:   baaz = 3
+// CHECK-NEXT: }

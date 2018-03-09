@@ -37,7 +37,7 @@ class SwiftNSErrorTest(TestBase):
 
     def nserror_commands(self):
         """Tests that Swift displays NSError correctly"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_source_regexp(
             self, "// Set a breakpoint here")
 

@@ -14,7 +14,7 @@ class TestMultilangFormatterCategories(TestBase):
 
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll # string ABI issues
+    @decorators.add_test_categories(["swiftpr"])
     def test_multilang_formatter_categories(self):
         """Test that formatter categories can work for multiple languages"""
         self.build()

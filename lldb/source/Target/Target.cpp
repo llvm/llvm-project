@@ -4131,6 +4131,15 @@ FileSpecList &TargetProperties::GetDebugFileSearchPaths() {
   return option_value->GetCurrentValue();
 }
 
+FileSpec &TargetProperties::GetClangModulesCachePath() {
+  const uint32_t idx = ePropertyClangModulesCachePath;
+  OptionValueFileSpec *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+                                                               idx);
+  assert(option_value);
+  return option_value->GetCurrentValue();
+}
+
 FileSpec &TargetProperties::GetSDKPath() {
   const uint32_t idx = ePropertySDKPath;
   OptionValueFileSpec *option_value =

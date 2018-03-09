@@ -52,3 +52,4 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
                 Pointee(Eq(stop_reply_pc.second)));
   }
 }
+

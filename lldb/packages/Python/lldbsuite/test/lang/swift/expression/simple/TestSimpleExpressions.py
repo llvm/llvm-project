@@ -25,7 +25,7 @@ class TestSimpleSwiftExpressions(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.expectedFailureAll # rdar://36744510
+    @decorators.add_test_categories(["swiftpr"])
     def test_simple_swift_expressions(self):
         """Tests that we can run simple Swift expressions correctly"""
         self.build()

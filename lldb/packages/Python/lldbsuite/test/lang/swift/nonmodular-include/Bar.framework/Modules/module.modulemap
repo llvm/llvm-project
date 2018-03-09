@@ -1,0 +1,3 @@
+framework module Bar {
+  header "Bar.h"
+}

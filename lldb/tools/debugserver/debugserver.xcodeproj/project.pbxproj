@@ -793,6 +793,7 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				STRIPFLAGS = "";
@@ -884,7 +885,12 @@
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = "CustomSwift-RelWithDebInfo";
@@ -951,7 +957,12 @@
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = "CustomSwift-RelWithDebInfo";
@@ -1079,7 +1090,12 @@
 				SKIP_INSTALL = YES;
 				"SKIP_INSTALL[sdk=iphoneos*]" = NO;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = BuildAndIntegration;
@@ -1167,7 +1183,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = Debug;
@@ -1254,7 +1275,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -1346,7 +1372,12 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRIP_INSTALLED_PRODUCT = NO;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_BUILDER = "$(USER)";
 				ZERO_LINK = NO;
@@ -1414,7 +1445,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = DebugClang;
@@ -1487,7 +1523,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -1551,7 +1592,12 @@
 				SKIP_INSTALL = YES;
 				"SKIP_INSTALL[sdk=iphoneos*]" = NO;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = BuildAndIntegration;
@@ -1676,7 +1722,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = DebugClang;
@@ -1800,7 +1851,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = DebugPresubmission;
@@ -1862,7 +1918,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = DebugPresubmission;
@@ -2002,7 +2063,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = "CustomSwift-Debug";
@@ -2128,7 +2194,12 @@
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
+				USER_HEADER_SEARCH_PATHS = (
+					./source,
+					../../source,
+					"$(DERIVED_SOURCES_DIR)",
+					../../include,
+				);
 				ZERO_LINK = NO;
 			};
 			name = "CustomSwift-Release";
