@@ -4377,7 +4377,7 @@ public:
   }
 
   bool isSwiftErrorInRegister() const override {
-    return true;
+    return false;
   }
 };
 
