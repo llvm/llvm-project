@@ -10,11 +10,11 @@
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "range": {
 # CHECK-NEXT:        "end": {
-# CHECK-NEXT:          "character": 9,
+# CHECK-NEXT:          "character": 5,
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        },
 # CHECK-NEXT:        "start": {
-# CHECK-NEXT:          "character": 0,
+# CHECK-NEXT:          "character": 4,
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
