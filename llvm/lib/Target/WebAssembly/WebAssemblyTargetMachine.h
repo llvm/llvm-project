@@ -28,8 +28,9 @@ class WebAssemblyTargetMachine final : public LLVMTargetMachine {
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                            StringRef FS, const TargetOptions &Options,
-                           Optional<Reloc::Model> RM, CodeModel::Model CM,
-                           CodeGenOpt::Level OL);
+                           Optional<Reloc::Model> RM,
+                           Optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                           bool JIT);
 
   ~WebAssemblyTargetMachine() override;
   const WebAssemblySubtarget *
@@ -42,8 +43,7 @@ public:
     return TLOF.get();
   }
 
-  /// \brief Get the TargetIRAnalysis for this target.
-  TargetIRAnalysis getTargetIRAnalysis() override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   bool usesPhysRegsForPEI() const override { return false; }
 };

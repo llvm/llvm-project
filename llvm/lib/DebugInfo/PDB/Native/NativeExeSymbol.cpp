@@ -38,6 +38,8 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
     consumeError(Dbi.takeError());
     break;
   }
+  case PDB_SymType::Enum:
+    return Session.createTypeEnumerator(codeview::LF_ENUM);
   default:
     break;
   }

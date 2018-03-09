@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}fadd_f16
@@ -60,8 +60,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fadd_v2f16:
-; GCN: {{buffer|flat}}_load_dword v[[A_V2_F16:[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword v[[B_V2_F16:[0-9]+]]
+; SI: buffer_load_dword v[[A_V2_F16:[0-9]+]]
+; SI: buffer_load_dword v[[B_V2_F16:[0-9]+]]
+; VI: flat_load_dword v[[B_V2_F16:[0-9]+]]
+; VI: flat_load_dword v[[A_V2_F16:[0-9]+]]
 
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
 ; SI: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]

@@ -17,8 +17,8 @@ define i32 @foo(i32* %a) {
 
   %1 = bitcast i32* %a to i8*
 ; CHECK: MemoryUse(2)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
+; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
+  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
 ; This have to be MemoryUse(2), because we can't skip the barrier based on
@@ -36,8 +36,8 @@ define i32 @skipBarrier(i32* %a) {
 
   %1 = bitcast i32* %a to i8*
 ; CHECK: MemoryUse(1)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
+; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
+  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
 ; We can skip the barrier only if the "skip" is not based on !invariant.group.
@@ -55,8 +55,8 @@ define i32 @skipBarrier2(i32* %a) {
 
   %1 = bitcast i32* %a to i8*
 ; CHECK: MemoryUse(liveOnEntry)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
+; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
+  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
 ; We can skip the barrier only if the "skip" is not based on !invariant.group.
@@ -86,8 +86,8 @@ define i32 @handleInvariantGroups(i32* %a) {
   store i32 1, i32* @g, align 4
   %1 = bitcast i32* %a to i8*
 ; CHECK: MemoryUse(2)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
+; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
+  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
 ; CHECK: MemoryUse(2)
@@ -145,8 +145,8 @@ entry:
   call void @clobber8(i8* %p)
 
 ; CHECK: MemoryUse(2)
-; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier(i8* %p)
-  %after = call i8* @llvm.invariant.group.barrier(i8* %p)
+; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
+  %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
   br i1 undef, label %Loop.Body, label %Loop.End
 
 Loop.Body:
@@ -192,8 +192,8 @@ entry:
   call void @clobber8(i8* %p)
 
 ; CHECK: MemoryUse(2)
-; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier(i8* %p)
-  %after = call i8* @llvm.invariant.group.barrier(i8* %p)
+; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
+  %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
   br i1 undef, label %Loop.Body, label %Loop.End
 
 Loop.Body:
@@ -253,8 +253,8 @@ entry:
 ; CHECK-NEXT: call void @clobber
   call void @clobber8(i8* %p)
 ; CHECK: MemoryUse(2)
-; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier(i8* %p)
-  %after = call i8* @llvm.invariant.group.barrier(i8* %p)
+; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
+  %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
   br i1 undef, label %Loop.Pre, label %Loop.End
 
 Loop.Pre:
@@ -293,7 +293,7 @@ Ret:
   ret i8 %3
 }
 
-declare i8* @llvm.invariant.group.barrier(i8*)
+declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
 declare void @clobber(i32*)
 declare void @clobber8(i8*)
 

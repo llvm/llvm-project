@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mcpu=a2q | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=a2q | FileCheck %s
 target triple = "powerpc64-bgq-linux"
 
 @R = global <4 x i1> <i1 0, i1 0, i1 0, i1 0>, align 16

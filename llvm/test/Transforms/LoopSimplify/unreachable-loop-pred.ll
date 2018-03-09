@@ -18,3 +18,52 @@ while.body115:                                    ; preds = %9, %if.end192, %if.
 foo:
   br label %while.body115
 }
+
+; When loopsimplify generates dedicated exit block for blocks that are landing
+; pads (i.e. innerLoopExit in this test), we should not get confused with the
+; unreachable pred (unreachableB) to innerLoopExit.
+define align 8 void @baz(i32 %trip) personality i32* ()* @wobble {
+entry:
+  br label %outerHeader
+
+outerHeader:
+  invoke void @foo() 
+          to label %innerPreheader unwind label %innerLoopExit
+
+innerPreheader:
+  br label %innerH
+
+innerH:
+  %tmp50 = invoke i8 * undef()
+          to label %innerLatch unwind label %innerLoopExit
+
+innerLatch:
+  %cmp = icmp slt i32 %trip, 42
+  br i1 %cmp, label %innerH, label %retblock
+
+unreachableB:                                             ; No predecessors!
+  %tmp62 = invoke i8 * undef()
+          to label %retblock unwind label %innerLoopExit
+
+; undedicated exit block (preds from inner and outer loop)
+; Also has unreachableB as pred.
+innerLoopExit:
+  %tmp65 = landingpad { i8*, i32 }
+          cleanup
+  invoke void @foo() 
+          to label %outerHeader unwind label %unwindblock
+
+unwindblock:
+  %tmp67 = landingpad { i8*, i32 }
+          cleanup
+  ret void
+
+retblock:
+  ret void
+}
+
+; Function Attrs: nounwind
+declare i32* @wobble()
+
+; Function Attrs: uwtable
+declare void @foo()

@@ -163,7 +163,7 @@ public:
   };
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L)
-      : PSE(PSE), InnermostLoop(L), AccessIdx(0),
+      : PSE(PSE), InnermostLoop(L), AccessIdx(0), MaxSafeRegisterWidth(-1U),
         ShouldRetryWithRuntimeCheck(false), SafeForVectorization(true),
         RecordDependences(true) {}
 
@@ -198,6 +198,10 @@ public:
   /// \brief The maximum number of bytes of a vector register we can vectorize
   /// the accesses safely with.
   uint64_t getMaxSafeDepDistBytes() { return MaxSafeDepDistBytes; }
+
+  /// \brief Return the number of elements that are safe to operate on
+  /// simultaneously, multiplied by the size of the element in bits.
+  uint64_t getMaxSafeRegisterWidth() const { return MaxSafeRegisterWidth; }
 
   /// \brief In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
@@ -254,6 +258,12 @@ private:
 
   // We can access this many bytes in parallel safely.
   uint64_t MaxSafeDepDistBytes;
+
+  /// \brief Number of elements (from consecutive iterations) that are safe to
+  /// operate on simultaneously, multiplied by the size of the element in bits.
+  /// The size of the element is taken from the memory access that is most
+  /// restrictive.
+  uint64_t MaxSafeRegisterWidth;
 
   /// \brief If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.

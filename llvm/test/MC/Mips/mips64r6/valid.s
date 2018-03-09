@@ -15,7 +15,7 @@
 a:
         .set noat
         # FIXME: Add the instructions carried forward from older ISA's
-        addiupc $4, 100          # CHECK: addiupc $4, 100     # encoding: [0xec,0x80,0x00,0x19]
+        addiupc $4, 100          # CHECK: lapc $4, 100        # encoding: [0xec,0x80,0x00,0x19]
         addu    $9,10            # CHECK: addiu $9, $9, 10    # encoding: [0x25,0x29,0x00,0x0a]
         align   $4, $2, $3, 2    # CHECK: align $4, $2, $3, 2 # encoding: [0x7c,0x43,0x22,0xa0]
         aluipc  $3, 56           # CHECK: aluipc $3, 56       # encoding: [0xec,0x7f,0x00,0x38]
@@ -112,8 +112,14 @@ a:
         dclz    $s0,$25          # CHECK: dclz $16, $25          # encoding: [0x03,0x20,0x80,0x52]
         ddiv    $2,$3,$4         # CHECK: ddiv $2, $3, $4  # encoding: [0x00,0x64,0x10,0x9e]
         ddivu   $2,$3,$4         # CHECK: ddivu $2, $3, $4 # encoding: [0x00,0x64,0x10,0x9f]
+        dext    $9,$6,3,7        # CHECK: dext $9, $6, 3, 7      # encoding: [0x7c,0xc9,0x30,0xc3]
+        dextm   $9,$6,3,39       # CHECK: dextm $9, $6, 3, 39    # encoding: [0x7c,0xc9,0x30,0xc1]
+        dextu   $9,$6,35,7       # CHECK: dextu $9, $6, 35, 7    # encoding: [0x7c,0xc9,0x30,0xc2]
         di                       # CHECK: di               # encoding: [0x41,0x60,0x60,0x00]
         di      $s8              # CHECK: di  $fp          # encoding: [0x41,0x7e,0x60,0x00]
+        dins    $2,$3,4,28       # CHECK: dins  $2, $3, 4, 28    # encoding: [0x7c,0x62,0xf9,0x07]
+        dinsm   $2,$3,4,34       # CHECK: dinsm $2, $3, 4, 34    # encoding: [0x7c,0x62,0x29,0x05]
+        dinsu   $2,$3,34,16      # CHECK: dinsu $2, $3, 34, 16   # encoding: [0x7c,0x62,0x88,0x86]
         div     $2,$3,$4         # CHECK: div $2, $3, $4   # encoding: [0x00,0x64,0x10,0x9a]
         divu    $2,$3,$4         # CHECK: divu $2, $3, $4  # encoding: [0x00,0x64,0x10,0x9b]
         dlsa    $2, $3, $4, 3    # CHECK: dlsa $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0x95]
@@ -158,6 +164,7 @@ a:
         jic     $5, 256          # CHECK: jic $5, 256      # encoding: [0xd8,0x05,0x01,0x00]
         l.s     $f2, 8($3)       # CHECK: lwc1  $f2, 8($3)       # encoding: [0xc4,0x62,0x00,0x08]
         l.d     $f2, 8($3)       # CHECK: ldc1  $f2, 8($3)       # encoding: [0xd4,0x62,0x00,0x08]
+        lapc    $4, 100          # CHECK: lapc $4, 100           # encoding: [0xec,0x80,0x00,0x19]
         ldc2    $8, -701($at)    # CHECK: ldc2 $8, -701($1)      # encoding: [0x49,0xc8,0x0d,0x43]
         ldpc    $2,123456        # CHECK: ldpc $2, 123456  # encoding: [0xec,0x58,0x3c,0x48]
         ll      $v0,-153($s2)    # CHECK: ll $2, -153($18)       # encoding: [0x7e,0x42,0xb3,0xb6]

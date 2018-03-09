@@ -17,7 +17,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "AArch64GenInstrInfo.inc"
@@ -136,36 +136,87 @@ public:
     default:
       llvm_unreachable("Opcode has no flag setting equivalent!");
     // 32-bit cases:
-    case AArch64::ADDWri: Is64Bit = false; return AArch64::ADDSWri;
-    case AArch64::ADDWrr: Is64Bit = false; return AArch64::ADDSWrr;
-    case AArch64::ADDWrs: Is64Bit = false; return AArch64::ADDSWrs;
-    case AArch64::ADDWrx: Is64Bit = false; return AArch64::ADDSWrx;
-    case AArch64::ANDWri: Is64Bit = false; return AArch64::ANDSWri;
-    case AArch64::ANDWrr: Is64Bit = false; return AArch64::ANDSWrr;
-    case AArch64::ANDWrs: Is64Bit = false; return AArch64::ANDSWrs;
-    case AArch64::BICWrr: Is64Bit = false; return AArch64::BICSWrr;
-    case AArch64::BICWrs: Is64Bit = false; return AArch64::BICSWrs;
-    case AArch64::SUBWri: Is64Bit = false; return AArch64::SUBSWri;
-    case AArch64::SUBWrr: Is64Bit = false; return AArch64::SUBSWrr;
-    case AArch64::SUBWrs: Is64Bit = false; return AArch64::SUBSWrs;
-    case AArch64::SUBWrx: Is64Bit = false; return AArch64::SUBSWrx;
+    case AArch64::ADDWri:
+      Is64Bit = false;
+      return AArch64::ADDSWri;
+    case AArch64::ADDWrr:
+      Is64Bit = false;
+      return AArch64::ADDSWrr;
+    case AArch64::ADDWrs:
+      Is64Bit = false;
+      return AArch64::ADDSWrs;
+    case AArch64::ADDWrx:
+      Is64Bit = false;
+      return AArch64::ADDSWrx;
+    case AArch64::ANDWri:
+      Is64Bit = false;
+      return AArch64::ANDSWri;
+    case AArch64::ANDWrr:
+      Is64Bit = false;
+      return AArch64::ANDSWrr;
+    case AArch64::ANDWrs:
+      Is64Bit = false;
+      return AArch64::ANDSWrs;
+    case AArch64::BICWrr:
+      Is64Bit = false;
+      return AArch64::BICSWrr;
+    case AArch64::BICWrs:
+      Is64Bit = false;
+      return AArch64::BICSWrs;
+    case AArch64::SUBWri:
+      Is64Bit = false;
+      return AArch64::SUBSWri;
+    case AArch64::SUBWrr:
+      Is64Bit = false;
+      return AArch64::SUBSWrr;
+    case AArch64::SUBWrs:
+      Is64Bit = false;
+      return AArch64::SUBSWrs;
+    case AArch64::SUBWrx:
+      Is64Bit = false;
+      return AArch64::SUBSWrx;
     // 64-bit cases:
-    case AArch64::ADDXri: Is64Bit = true; return AArch64::ADDSXri;
-    case AArch64::ADDXrr: Is64Bit = true; return AArch64::ADDSXrr;
-    case AArch64::ADDXrs: Is64Bit = true; return AArch64::ADDSXrs;
-    case AArch64::ADDXrx: Is64Bit = true; return AArch64::ADDSXrx;
-    case AArch64::ANDXri: Is64Bit = true; return AArch64::ANDSXri;
-    case AArch64::ANDXrr: Is64Bit = true; return AArch64::ANDSXrr;
-    case AArch64::ANDXrs: Is64Bit = true; return AArch64::ANDSXrs;
-    case AArch64::BICXrr: Is64Bit = true; return AArch64::BICSXrr;
-    case AArch64::BICXrs: Is64Bit = true; return AArch64::BICSXrs;
-    case AArch64::SUBXri: Is64Bit = true; return AArch64::SUBSXri;
-    case AArch64::SUBXrr: Is64Bit = true; return AArch64::SUBSXrr;
-    case AArch64::SUBXrs: Is64Bit = true; return AArch64::SUBSXrs;
-    case AArch64::SUBXrx: Is64Bit = true; return AArch64::SUBSXrx;
+    case AArch64::ADDXri:
+      Is64Bit = true;
+      return AArch64::ADDSXri;
+    case AArch64::ADDXrr:
+      Is64Bit = true;
+      return AArch64::ADDSXrr;
+    case AArch64::ADDXrs:
+      Is64Bit = true;
+      return AArch64::ADDSXrs;
+    case AArch64::ADDXrx:
+      Is64Bit = true;
+      return AArch64::ADDSXrx;
+    case AArch64::ANDXri:
+      Is64Bit = true;
+      return AArch64::ANDSXri;
+    case AArch64::ANDXrr:
+      Is64Bit = true;
+      return AArch64::ANDSXrr;
+    case AArch64::ANDXrs:
+      Is64Bit = true;
+      return AArch64::ANDSXrs;
+    case AArch64::BICXrr:
+      Is64Bit = true;
+      return AArch64::BICSXrr;
+    case AArch64::BICXrs:
+      Is64Bit = true;
+      return AArch64::BICSXrs;
+    case AArch64::SUBXri:
+      Is64Bit = true;
+      return AArch64::SUBSXri;
+    case AArch64::SUBXrr:
+      Is64Bit = true;
+      return AArch64::SUBSXrr;
+    case AArch64::SUBXrs:
+      Is64Bit = true;
+      return AArch64::SUBSXrs;
+    case AArch64::SUBXrx:
+      Is64Bit = true;
+      return AArch64::SUBSXrx;
     }
   }
-
 
   /// Return true if this is a load/store that can be potentially paired/merged.
   bool isCandidateToMergeOrPair(MachineInstr &MI) const;
@@ -191,7 +242,8 @@ public:
   bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
                     int64_t &MinOffset, int64_t &MaxOffset) const;
 
-  bool shouldClusterMemOps(MachineInstr &FirstLdSt, MachineInstr &SecondLdSt,
+  bool shouldClusterMemOps(MachineInstr &FirstLdSt, unsigned BaseReg1,
+                           MachineInstr &SecondLdSt, unsigned BaseReg2,
                            unsigned NumLoads) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -271,9 +323,9 @@ public:
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in ``Root``. All potential patterns are
   /// listed in the ``Patterns`` array.
-  bool getMachineCombinerPatterns(MachineInstr &Root,
-                  SmallVectorImpl<MachineCombinerPattern> &Patterns)
-      const override;
+  bool getMachineCombinerPatterns(
+      MachineInstr &Root,
+      SmallVectorImpl<MachineCombinerPattern> &Patterns) const override;
   /// Return true when Inst is associative and commutative so that it can be
   /// reassociated.
   bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
@@ -298,27 +350,32 @@ public:
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
 
-  bool isFunctionSafeToOutlineFrom(MachineFunction &MF) const override;
-  unsigned getOutliningBenefit(size_t SequenceSize, size_t Occurrences,
-                               bool CanBeTailCall) const override;
+  bool
+  canOutlineWithoutLRSave(MachineBasicBlock::iterator &CallInsertionPt) const;
+  bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                                   bool OutlineFromLinkOnceODRs) const override;
+  MachineOutlinerInfo getOutlininingCandidateInfo(
+      std::vector<
+          std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+          &RepeatedSequenceLocs) const override;
   AArch64GenInstrInfo::MachineOutlinerInstrType
   getOutliningType(MachineInstr &MI) const override;
-  void insertOutlinerEpilogue(MachineBasicBlock &MBB,
-                              MachineFunction &MF,
-                              bool IsTailCall) const override;
-  void insertOutlinerPrologue(MachineBasicBlock &MBB,
-                              MachineFunction &MF,
-                              bool isTailCall) const override;
+  void insertOutlinerEpilogue(MachineBasicBlock &MBB, MachineFunction &MF,
+                              const MachineOutlinerInfo &MInfo) const override;
+  void insertOutlinerPrologue(MachineBasicBlock &MBB, MachineFunction &MF,
+                              const MachineOutlinerInfo &MInfo) const override;
   MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator &It,
-                     MachineFunction &MF,
-                     bool IsTailCall) const override;
+                     MachineBasicBlock::iterator &It, MachineFunction &MF,
+                     const MachineOutlinerInfo &MInfo) const override;
+  /// Returns true if the instruction has a shift left that can be executed
+  /// more efficiently.
+  bool isExynosShiftLeftFast(const MachineInstr &MI) const;
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   bool isFalkorShiftExtFast(const MachineInstr &MI) const;
-private:
 
+private:
   /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
@@ -346,8 +403,8 @@ void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
 /// FP. Return false if the offset could not be handled directly in MI, and
 /// return the left-over portion by reference.
 bool rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
-                            unsigned FrameReg, int &Offset,
-                            const AArch64InstrInfo *TII);
+                              unsigned FrameReg, int &Offset,
+                              const AArch64InstrInfo *TII);
 
 /// \brief Use to report the frame offset status in isAArch64FrameOffsetLegal.
 enum AArch64FrameOffsetStatus {
@@ -371,9 +428,9 @@ enum AArch64FrameOffsetStatus {
 /// (possibly with @p OutUnscaledOp if OutUseUnscaledOp is true) and that
 /// is a legal offset.
 int isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
-                            bool *OutUseUnscaledOp = nullptr,
-                            unsigned *OutUnscaledOp = nullptr,
-                            int *EmittableOffset = nullptr);
+                              bool *OutUseUnscaledOp = nullptr,
+                              unsigned *OutUnscaledOp = nullptr,
+                              int *EmittableOffset = nullptr);
 
 static inline bool isUncondBranchOpcode(int Opc) { return Opc == AArch64::B; }
 
@@ -394,7 +451,9 @@ static inline bool isCondBranchOpcode(int Opc) {
   }
 }
 
-static inline bool isIndirectBranchOpcode(int Opc) { return Opc == AArch64::BR; }
+static inline bool isIndirectBranchOpcode(int Opc) {
+  return Opc == AArch64::BR;
+}
 
 } // end namespace llvm
 

@@ -16,6 +16,8 @@
 #include "AArch64MCAsmInfo.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "InstPrinter/AArch64InstPrinter.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -49,9 +51,18 @@ createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createAArch64MCSubtargetInfoImpl(TT, CPU, FS);
 }
 
+void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
+  for (unsigned Reg = AArch64::NoRegister + 1;
+       Reg < AArch64::NUM_TARGET_REGS; ++Reg) {
+    unsigned CV = MRI->getEncodingValue(Reg);
+    MRI->mapLLVMRegToCVReg(Reg, CV);
+  }
+}
+
 static MCRegisterInfo *createAArch64MCRegisterInfo(const Triple &Triple) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitAArch64MCRegisterInfo(X, AArch64::LR);
+  AArch64_MC::initLLVMToCVRegMapping(X);
   return X;
 }
 
@@ -60,8 +71,10 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO())
     MAI = new AArch64MCAsmInfoDarwin();
+  else if (TheTriple.isWindowsMSVCEnvironment())
+    MAI = new AArch64MCAsmInfoMicrosoftCOFF();
   else if (TheTriple.isOSBinFormatCOFF())
-    MAI = new AArch64MCAsmInfoCOFF();
+    MAI = new AArch64MCAsmInfoGNUCOFF();
   else {
     assert(TheTriple.isOSBinFormatELF() && "Invalid target");
     MAI = new AArch64MCAsmInfoELF(TheTriple);
@@ -73,28 +86,6 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
   MAI->addInitialFrameState(Inst);
 
   return MAI;
-}
-
-static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
-                              CodeModel::Model &CM) {
-  assert((TT.isOSBinFormatELF() || TT.isOSBinFormatMachO() ||
-          TT.isOSBinFormatCOFF()) && "Invalid target");
-
-  if (CM == CodeModel::Default)
-    CM = CodeModel::Small;
-  // The default MCJIT memory managers make no guarantees about where they can
-  // find an executable page; JITed code needs to be able to refer to globals
-  // no matter how far away they are.
-  else if (CM == CodeModel::JITDefault)
-    CM = CodeModel::Large;
-  else if (CM != CodeModel::Small && CM != CodeModel::Large) {
-    if (!TT.isOSFuchsia())
-      report_fatal_error(
-          "Only small and large code models are allowed on AArch64");
-    else if (CM != CodeModel::Kernel)
-      report_fatal_error(
-          "Only small, kernel, and large code models are allowed on AArch64");
-  }
 }
 
 static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
@@ -111,25 +102,32 @@ static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
 }
 
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
-                                     MCAsmBackend &TAB, raw_pwrite_stream &OS,
-                                     MCCodeEmitter *Emitter, bool RelaxAll) {
-  return createAArch64ELFStreamer(Ctx, TAB, OS, Emitter, RelaxAll);
+                                     std::unique_ptr<MCAsmBackend> &&TAB,
+                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                     bool RelaxAll) {
+  return createAArch64ELFStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
+                                  RelaxAll);
 }
 
-static MCStreamer *createMachOStreamer(MCContext &Ctx, MCAsmBackend &TAB,
+static MCStreamer *createMachOStreamer(MCContext &Ctx,
+                                       std::unique_ptr<MCAsmBackend> &&TAB,
                                        raw_pwrite_stream &OS,
-                                       MCCodeEmitter *Emitter, bool RelaxAll,
+                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                       bool RelaxAll,
                                        bool DWARFMustBeAtTheEnd) {
-  return createMachOStreamer(Ctx, TAB, OS, Emitter, RelaxAll,
-                             DWARFMustBeAtTheEnd,
+  return createMachOStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
+                             RelaxAll, DWARFMustBeAtTheEnd,
                              /*LabelSections*/ true);
 }
 
-static MCStreamer *createWinCOFFStreamer(MCContext &Ctx, MCAsmBackend &TAB,
-                                         raw_pwrite_stream &OS,
-                                         MCCodeEmitter *Emitter, bool RelaxAll,
-                                         bool IncrementalLinkerCompatible) {
-  return createAArch64WinCOFFStreamer(Ctx, TAB, OS, Emitter, RelaxAll,
+static MCStreamer *
+createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
+                      bool IncrementalLinkerCompatible) {
+  return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), OS,
+                                      std::move(Emitter), RelaxAll,
                                       IncrementalLinkerCompatible);
 }
 
@@ -143,9 +141,6 @@ extern "C" void LLVMInitializeAArch64TargetMC() {
                     &getTheARM64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createAArch64MCAsmInfo);
-
-    // Register the MC codegen info.
-    TargetRegistry::registerMCAdjustCodeGenOpts(*T, adjustCodeGenOpts);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createAArch64MCInstrInfo);

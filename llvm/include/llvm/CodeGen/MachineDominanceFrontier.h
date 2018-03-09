@@ -39,7 +39,7 @@ public:
 
  DominanceFrontierBase<MachineBasicBlock, false> &getBase() { return Base; }
 
- inline const std::vector<MachineBasicBlock *> &getRoots() const {
+  const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
    return Base.getRoots();
   }
 

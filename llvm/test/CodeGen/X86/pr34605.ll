@@ -3,7 +3,7 @@
 
 define void @pr34605(i8* nocapture %s, i32 %p) {
 ; CHECK-LABEL: pr34605:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %zmm0
 ; CHECK-NEXT:    vpcmpeqd {{\.LCPI.*}}, %zmm0, %k0
@@ -13,21 +13,20 @@ define void @pr34605(i8* nocapture %s, i32 %p) {
 ; CHECK-NEXT:    vpcmpeqd {{\.LCPI.*}}, %zmm0, %k2
 ; CHECK-NEXT:    kunpckwd %k1, %k2, %k1
 ; CHECK-NEXT:    kunpckdq %k0, %k1, %k0
-; CHECK-NEXT:    kxord %k0, %k0, %k1
 ; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    kmovd %ecx, %k2
-; CHECK-NEXT:    kunpckdq %k2, %k1, %k1
+; CHECK-NEXT:    kmovd %ecx, %k1
+; CHECK-NEXT:    kmovd %k1, %k1
 ; CHECK-NEXT:    kandq %k1, %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 {{\.LCPI.*}}, %zmm0 {%k1} {z}
-; CHECK-NEXT:    vmovdqu8 %zmm0, (%eax)
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu32 %zmm0, 64(%eax)
-; CHECK-NEXT:    vmovdqu32 %zmm0, 128(%eax)
-; CHECK-NEXT:    vmovdqu32 %zmm0, 192(%eax)
-; CHECK-NEXT:    vmovdqu32 %zmm0, 256(%eax)
-; CHECK-NEXT:    vmovdqu32 %zmm0, 320(%eax)
-; CHECK-NEXT:    vmovdqu32 %zmm0, 384(%eax)
-; CHECK-NEXT:    vmovdqu32 %zmm0, 448(%eax)
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmovdqu32 %zmm0, (%eax)
+; CHECK-NEXT:    vmovups %zmm1, 64(%eax)
+; CHECK-NEXT:    vmovups %zmm1, 128(%eax)
+; CHECK-NEXT:    vmovups %zmm1, 192(%eax)
+; CHECK-NEXT:    vmovups %zmm1, 256(%eax)
+; CHECK-NEXT:    vmovups %zmm1, 320(%eax)
+; CHECK-NEXT:    vmovups %zmm1, 384(%eax)
+; CHECK-NEXT:    vmovups %zmm1, 448(%eax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:

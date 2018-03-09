@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=sse2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=sse2 | FileCheck %s
 
 
 ; Test case for r63760 where we generate a legalization assert that an illegal

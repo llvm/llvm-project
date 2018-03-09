@@ -1,5 +1,5 @@
 ; PR850
-; RUN: llc < %s -march=x86 -x86-asm-syntax=att -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -x86-asm-syntax=att -no-integrated-as | FileCheck %s
 
 ; CHECK: {{movl 4[(]%eax[)],%ebp}}
 ; CHECK: {{movl 0[(]%eax[)], %ebx}}

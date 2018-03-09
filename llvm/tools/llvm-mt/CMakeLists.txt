@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Option
   Support
+  WindowsManifest
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)

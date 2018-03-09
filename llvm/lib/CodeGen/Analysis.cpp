@@ -14,7 +14,9 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -24,9 +26,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 
 using namespace llvm;
@@ -565,6 +564,24 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     return false;
 
   const Value *RetVal = Ret->getOperand(0), *CallVal = I;
+  // Intrinsic like llvm.memcpy has no return value, but the expanded
+  // libcall may or may not have return value. On most platforms, it
+  // will be expanded as memcpy in libc, which returns the first
+  // argument. On other platforms like arm-none-eabi, memcpy may be
+  // expanded as library call without return value, like __aeabi_memcpy.
+  const CallInst *Call = cast<CallInst>(I);
+  if (Function *F = Call->getCalledFunction()) {
+    Intrinsic::ID IID = F->getIntrinsicID();
+    if (((IID == Intrinsic::memcpy &&
+          TLI.getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy")) ||
+         (IID == Intrinsic::memmove &&
+          TLI.getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove")) ||
+         (IID == Intrinsic::memset &&
+          TLI.getLibcallName(RTLIB::MEMSET) == StringRef("memset"))) &&
+        RetVal == Call->getArgOperand(0))
+      return true;
+  }
+
   SmallVector<unsigned, 4> RetPath, CallPath;
   SmallVector<CompositeType *, 4> RetSubTypes, CallSubTypes;
 
@@ -651,7 +668,7 @@ llvm::getFuncletMembership(const MachineFunction &MF) {
 
   int EntryBBNumber = MF.front().getNumber();
   bool IsSEH = isAsynchronousEHPersonality(
-      classifyEHPersonality(MF.getFunction()->getPersonalityFn()));
+      classifyEHPersonality(MF.getFunction().getPersonalityFn()));
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   SmallVector<const MachineBasicBlock *, 16> FuncletBlocks;

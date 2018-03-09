@@ -46,13 +46,14 @@ public:
 
   /// @brief Add the given module to the JIT.
   /// @return A handle for the added modules.
-  ModuleHandleT addModule(std::shared_ptr<Module> M,
-                          std::shared_ptr<JITSymbolResolver> Resolver) {
+  Expected<ModuleHandleT>
+  addModule(std::shared_ptr<Module> M,
+            std::shared_ptr<JITSymbolResolver> Resolver) {
     return BaseLayer.addModule(std::move(M), std::move(Resolver));
   }
 
   /// @brief Remove the module set associated with the handle H.
-  void removeModule(ModuleHandleT H) { BaseLayer.removeModule(H); }
+  Error removeModule(ModuleHandleT H) { return BaseLayer.removeModule(H); }
 
   /// @brief Manually set the address to return for the given symbol.
   void setGlobalMapping(const std::string &Name, JITTargetAddress Addr) {
@@ -96,8 +97,8 @@ public:
   /// @brief Immediately emit and finalize the module set represented by the
   ///        given handle.
   /// @param H Handle for module set to emit/finalize.
-  void emitAndFinalize(ModuleHandleT H) {
-    BaseLayer.emitAndFinalize(H);
+  Error emitAndFinalize(ModuleHandleT H) {
+    return BaseLayer.emitAndFinalize(H);
   }
 
 private:

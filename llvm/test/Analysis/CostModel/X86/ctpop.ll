@@ -1,11 +1,9 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=pentium4 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=SSE -check-prefix=SSE2 -check-prefix=NOPOPCNT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=SSE -check-prefix=SSE42 -check-prefix=POPCNT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX1 -check-prefix=POPCNT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=core-avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX2 -check-prefix=POPCNT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=bdver2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX1 -check-prefix=POPCNT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=bdver4 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX2 -check-prefix=POPCNT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=knl -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX512 -check-prefix=AVX512F -check-prefix=POPCNT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX512 -check-prefix=AVX512BW -check-prefix=POPCNT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=SSE -check-prefix=SSE2 -check-prefix=NOPOPCNT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+popcnt,+sse4.2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=SSE -check-prefix=SSE42 -check-prefix=POPCNT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+popcnt,+avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX1 -check-prefix=POPCNT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+popcnt,+avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX2 -check-prefix=POPCNT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+popcnt,+avx512f -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX512 -check-prefix=AVX512F -check-prefix=POPCNT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+popcnt,+avx512vl,+avx512bw,+avx512dq -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX512 -check-prefix=AVX512BW -check-prefix=POPCNT
 
 ; Verify the cost of scalar population count instructions.
 

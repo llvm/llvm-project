@@ -13,6 +13,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -33,18 +34,49 @@ public:
 };
 
 AVRELFObjectWriter::AVRELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_AVR, true, false) {}
+    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_AVR, true) {}
 
 unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx,
                                           const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
+  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
   switch ((unsigned) Fixup.getKind()) {
   case FK_Data_1:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_AVR_8;
+    case MCSymbolRefExpr::VK_AVR_DIFF8:
+      return ELF::R_AVR_DIFF8;
+    case MCSymbolRefExpr::VK_AVR_LO8:
+      return ELF::R_AVR_8_LO8;
+    case MCSymbolRefExpr::VK_AVR_HI8:
+      return ELF::R_AVR_8_HI8;
+    case MCSymbolRefExpr::VK_AVR_HLO8:
+      return ELF::R_AVR_8_HLO8;
+    }
   case FK_Data_4:
-    llvm_unreachable("unsupported relocation type");
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_AVR_32;
+    case MCSymbolRefExpr::VK_AVR_DIFF32:
+      return ELF::R_AVR_DIFF32;
+    }
   case FK_Data_2:
-    return ELF::R_AVR_16_PM;
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_AVR_16;
+    case MCSymbolRefExpr::VK_AVR_NONE:
+      return ELF::R_AVR_16_PM;
+    case MCSymbolRefExpr::VK_AVR_DIFF16:
+      return ELF::R_AVR_DIFF16;
+    }
   case AVR::fixup_32:
     return ELF::R_AVR_32;
   case AVR::fixup_7_pcrel:
@@ -103,10 +135,12 @@ unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_AVR_8_HI8;
   case AVR::fixup_8_hlo8:
     return ELF::R_AVR_8_HLO8;
-  case AVR::fixup_sym_diff:
-    return ELF::R_AVR_SYM_DIFF;
-  case AVR::fixup_16_ldst:
-    return ELF::R_AVR_16_LDST;
+  case AVR::fixup_diff8:
+    return ELF::R_AVR_DIFF8;
+  case AVR::fixup_diff16:
+    return ELF::R_AVR_DIFF16;
+  case AVR::fixup_diff32:
+    return ELF::R_AVR_DIFF32;
   case AVR::fixup_lds_sts_16:
     return ELF::R_AVR_LDS_STS_16;
   case AVR::fixup_port6:
@@ -118,9 +152,10 @@ unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-MCObjectWriter *createAVRELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI) {
-  MCELFObjectTargetWriter *MOTW = new AVRELFObjectWriter(OSABI);
-  return createELFObjectWriter(MOTW, OS, true);
+std::unique_ptr<MCObjectWriter>
+createAVRELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI) {
+  std::unique_ptr<MCELFObjectTargetWriter> MOTW(new AVRELFObjectWriter(OSABI));
+  return createELFObjectWriter(std::move(MOTW), OS, true);
 }
 
 } // end of namespace llvm

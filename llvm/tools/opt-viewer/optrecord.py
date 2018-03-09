@@ -155,7 +155,7 @@ class Remark(yaml.YAMLObject):
         assert(len(mapping) == 1)
         (key, value) = list(mapping.items())[0]
 
-        if key == 'Caller' or key == 'Callee':
+        if key == 'Caller' or key == 'Callee' or key == 'DirectCallee':
             value = cgi.escape(self.demangle(value))
 
         if dl and key != 'Caller':

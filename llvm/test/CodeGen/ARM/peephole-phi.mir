@@ -11,16 +11,16 @@
 #
 # CHECK:   bb.1:
 # CHECK:     %0:dpr = IMPLICIT_DEF
-# CHECK:     %1:gpr, %2:gpr = VMOVRRD %0, 14, _
+# CHECK:     %1:gpr, %2:gpr = VMOVRRD %0, 14, %noreg
 # CHECK:     B %bb.3
 #
 # CHECK:   bb.2:
 # CHECK:     %3:spr = IMPLICIT_DEF
-# CHECK:     %4:gpr = VMOVRS %3, 14, _
+# CHECK:     %4:gpr = VMOVRS %3, 14, %noreg
 #
 # CHECK:   bb.3:
 # CHECK:     %5:gpr = PHI %1, %bb.1, %4, %bb.2
-# CHECK:     %6:spr = VMOVSR %5, 14, _
+# CHECK:     %6:spr = VMOVSR %5, 14, %noreg
 ---
 name: func0
 tracksRegLiveness: true

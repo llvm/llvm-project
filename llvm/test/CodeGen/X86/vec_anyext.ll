@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=x86_64--
 ; PR 9267
 
 define<4 x i16> @func_16_32() {

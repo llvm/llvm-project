@@ -16,7 +16,7 @@
 ; CHECK:           sll
 
 ; Check that at the start of a fallthrough block there is a instruction that writes to $1.
-; CHECK:       {{BB[0-9_#]+}}:
+; CHECK:       {{%bb.[0-9]+}}:
 ; CHECK:           sll $1, $[[R0:[0-9]+]], 4
 ; CHECK:           lw      $[[R1:[0-9]+]], %got(assignSE2partition)($[[R2:[0-9]+]])
 

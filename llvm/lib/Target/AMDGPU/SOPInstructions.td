@@ -139,7 +139,9 @@ let Defs = [SCC] in {
     [(set i64:$sdst, (not i64:$src0))]
   >;
   def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
-  def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
+  def S_WQM_B64 : SOP1_64 <"s_wqm_b64",
+    [(set i1:$sdst, (int_amdgcn_wqm_vote i1:$src0))]
+  >;
 } // End Defs = [SCC]
 
 
@@ -159,10 +161,11 @@ def S_BCNT1_I32_B64 : SOP1_32_64 <"s_bcnt1_i32_b64">;
 
 def S_FF0_I32_B32 : SOP1_32 <"s_ff0_i32_b32">;
 def S_FF0_I32_B64 : SOP1_32_64 <"s_ff0_i32_b64">;
-def S_FF1_I32_B32 : SOP1_32 <"s_ff1_i32_b32",
-  [(set i32:$sdst, (cttz_zero_undef i32:$src0))]
->;
 def S_FF1_I32_B64 : SOP1_32_64 <"s_ff1_i32_b64">;
+
+def S_FF1_I32_B32 : SOP1_32 <"s_ff1_i32_b32",
+  [(set i32:$sdst, (AMDGPUffbl_b32 i32:$src0))]
+>;
 
 def S_FLBIT_I32_B32 : SOP1_32 <"s_flbit_i32_b32",
   [(set i32:$sdst, (AMDGPUffbh_u32 i32:$src0))]
@@ -391,6 +394,14 @@ def S_XOR_B32 : SOP2_32 <"s_xor_b32",
 def S_XOR_B64 : SOP2_64 <"s_xor_b64",
   [(set i64:$sdst, (xor i64:$src0, i64:$src1))]
 >;
+
+def S_XNOR_B32 : SOP2_32 <"s_xnor_b32",
+  [(set i32:$sdst, (not (xor_oneuse i32:$src0, i32:$src1)))]
+>;
+
+def S_XNOR_B64 : SOP2_64 <"s_xnor_b64",
+  [(set i64:$sdst, (not (xor_oneuse i64:$src0, i64:$src1)))]
+>;
 } // End isCommutable = 1
 
 def S_ANDN2_B32 : SOP2_32 <"s_andn2_b32">;
@@ -401,8 +412,6 @@ def S_NAND_B32 : SOP2_32 <"s_nand_b32">;
 def S_NAND_B64 : SOP2_64 <"s_nand_b64">;
 def S_NOR_B32 : SOP2_32 <"s_nor_b32">;
 def S_NOR_B64 : SOP2_64 <"s_nor_b64">;
-def S_XNOR_B32 : SOP2_32 <"s_xnor_b32">;
-def S_XNOR_B64 : SOP2_64 <"s_xnor_b64">;
 } // End Defs = [SCC]
 
 // Use added complexity so these patterns are preferred to the VALU patterns.
@@ -811,8 +820,7 @@ def S_CBRANCH_SCC0 : SOPP <
 >;
 def S_CBRANCH_SCC1 : SOPP <
   0x00000005, (ins sopp_brtarget:$simm16),
-  "s_cbranch_scc1 $simm16",
-  [(si_uniform_br_scc SCC, bb:$simm16)]
+  "s_cbranch_scc1 $simm16"
 >;
 } // End Uses = [SCC]
 
@@ -942,12 +950,10 @@ def S_SET_GPR_IDX_MODE : SOPP<0x1d, (ins GPRIdxMode:$simm16),
 }
 }
 
-let Predicates = [isGCN] in {
-
 //===----------------------------------------------------------------------===//
 // S_GETREG_B32 Intrinsic Pattern.
 //===----------------------------------------------------------------------===//
-def : Pat <
+def : GCNPat <
   (int_amdgcn_s_getreg imm:$simm16),
   (S_GETREG_B32 (as_i16imm $simm16))
 >;
@@ -956,25 +962,25 @@ def : Pat <
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
 
-def : Pat <
+def : GCNPat <
   (i64 (ctpop i64:$src)),
     (i64 (REG_SEQUENCE SReg_64,
      (i32 (COPY_TO_REGCLASS (S_BCNT1_I32_B64 $src), SReg_32)), sub0,
      (S_MOV_B32 (i32 0)), sub1))
 >;
 
-def : Pat <
+def : GCNPat <
   (i32 (smax i32:$x, (i32 (ineg i32:$x)))),
   (S_ABS_I32 $x)
 >;
 
-def : Pat <
+def : GCNPat <
   (i16 imm:$imm),
   (S_MOV_B32 imm:$imm)
 >;
 
 // Same as a 32-bit inreg
-def : Pat<
+def : GCNPat<
   (i32 (sext i16:$src)),
   (S_SEXT_I32_I16 $src)
 >;
@@ -986,7 +992,7 @@ def : Pat<
 
 // V_ADD_I32_e32/S_ADD_U32 produces carry in VCC/SCC. For the vector
 // case, the sgpr-copies pass will fix this to use the vector version.
-def : Pat <
+def : GCNPat <
   (i32 (addc i32:$src0, i32:$src1)),
   (S_ADD_U32 $src0, $src1)
 >;
@@ -994,20 +1000,20 @@ def : Pat <
 // FIXME: We need to use COPY_TO_REGCLASS to work-around the fact that
 // REG_SEQUENCE patterns don't support instructions with multiple
 // outputs.
-def : Pat<
+def : GCNPat<
   (i64 (zext i16:$src)),
     (REG_SEQUENCE SReg_64,
       (i32 (COPY_TO_REGCLASS (S_AND_B32 $src, (S_MOV_B32 (i32 0xffff))), SGPR_32)), sub0,
       (S_MOV_B32 (i32 0)), sub1)
 >;
 
-def : Pat <
+def : GCNPat <
   (i64 (sext i16:$src)),
     (REG_SEQUENCE SReg_64, (i32 (S_SEXT_I32_I16 $src)), sub0,
     (i32 (COPY_TO_REGCLASS (S_ASHR_I32 (i32 (S_SEXT_I32_I16 $src)), (S_MOV_B32 (i32 31))), SGPR_32)), sub1)
 >;
 
-def : Pat<
+def : GCNPat<
   (i32 (zext i16:$src)),
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), $src)
 >;
@@ -1018,12 +1024,10 @@ def : Pat<
 // SOPP Patterns
 //===----------------------------------------------------------------------===//
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_s_waitcnt i32:$simm16),
   (S_WAITCNT (as_i16imm $simm16))
 >;
-
-} // End isGCN predicate
 
 
 //===----------------------------------------------------------------------===//

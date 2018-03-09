@@ -20,11 +20,11 @@
 /// register.
 ///
 /// X86 Example:
-/// %YMM0<def> = ...
-/// %XMM0<def> = ... (Kills %XMM0, all %XMM0s sub-registers, and %YMM0)
+/// %ymm0 = ...
+/// %xmm0 = ... (Kills %xmm0, all %xmm0s sub-registers, and %ymm0)
 ///
-/// %YMM0<def> = ...
-/// %XMM0<def> = ..., %YMM0<imp-use> (%YMM0 and all its sub-registers are alive)
+/// %ymm0 = ...
+/// %xmm0 = ..., implicit %ymm0 (%ymm0 and all its sub-registers are alive)
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_LIVEPHYSREGS_H
@@ -32,8 +32,8 @@
 
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <utility>
 
@@ -108,6 +108,12 @@ public:
   /// Returns true if register \p Reg and no aliasing register is in the set.
   bool available(const MachineRegisterInfo &MRI, unsigned Reg) const;
 
+  /// Remove defined registers and regmask kills from the set.
+  void removeDefs(const MachineInstr &MI);
+
+  /// Add uses to the set.
+  void addUses(const MachineInstr &MI);
+
   /// Simulates liveness when stepping backwards over an instruction(bundle).
   /// Remove Defs, add uses. This is the recommended way of calculating
   /// liveness.
@@ -152,6 +158,10 @@ private:
   /// \brief Adds live-in registers from basic block \p MBB, taking associated
   /// lane masks into consideration.
   void addBlockLiveIns(const MachineBasicBlock &MBB);
+
+  /// Adds pristine registers. Pristine registers are callee saved registers
+  /// that are unused in the function.
+  void addPristines(const MachineFunction &MF);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
@@ -159,12 +169,21 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
   return OS;
 }
 
-/// \brief Computes the live-in list for \p MBB assuming all of its successors
-/// live-in lists are up-to-date. Uses the given LivePhysReg instance \p
-/// LiveRegs; This is just here to avoid repeated heap allocations when calling
-/// this multiple times in a pass.
-void computeLiveIns(LivePhysRegs &LiveRegs, const MachineRegisterInfo &MRI,
-                    MachineBasicBlock &MBB);
+/// \brief Computes registers live-in to \p MBB assuming all of its successors
+/// live-in lists are up-to-date. Puts the result into the given LivePhysReg
+/// instance \p LiveRegs.
+void computeLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB);
+
+/// Recomputes dead and kill flags in \p MBB.
+void recomputeLivenessFlags(MachineBasicBlock &MBB);
+
+/// Adds registers contained in \p LiveRegs to the block live-in list of \p MBB.
+/// Does not add reserved registers.
+void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
+
+/// Convenience function combining computeLiveIns() and addLiveIns().
+void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
+                          MachineBasicBlock &MBB);
 
 } // end namespace llvm
 

@@ -11,6 +11,7 @@
 
 #ifdef __APPLE__
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <assert.h>
@@ -56,7 +57,7 @@ public:
   static const char *UTF8(CFStringRef CFStr, std::string &Str);
 };
 
-/// Static function that puts a copy of the UTF8 contents of CFStringRef into
+/// Static function that puts a copy of the UTF-8 contents of CFStringRef into
 /// std::string and returns the C string pointer that is contained in the
 /// std::string when successful, nullptr otherwise.
 ///
@@ -85,13 +86,10 @@ const char *CFString::UTF8(CFStringRef CFStr, std::string &Str) {
 /// RAII wrapper around CFBundleRef.
 class CFBundle : public CFReleaser<CFBundleRef> {
 public:
-  CFBundle(const char *Path = nullptr) : CFReleaser<CFBundleRef>() {
-    if (Path && Path[0])
-      SetFromPath(Path);
-  }
+  CFBundle(StringRef Path) : CFReleaser<CFBundleRef>() { SetFromPath(Path); }
 
-  CFBundle(CFURLRef url)
-      : CFReleaser<CFBundleRef>(url ? ::CFBundleCreate(nullptr, url)
+  CFBundle(CFURLRef Url)
+      : CFReleaser<CFBundleRef>(Url ? ::CFBundleCreate(nullptr, Url)
                                     : nullptr) {}
 
   /// Return the bundle identifier.
@@ -109,67 +107,49 @@ public:
   }
 
 private:
-  /// Update this instance with a new bundle created from the given path.
-  bool SetFromPath(const char *Path);
+  /// Helper to initialize this instance with a new bundle created from the
+  /// given path. This function will recursively remove components from the
+  /// path in its search for the nearest Info.plist.
+  void SetFromPath(StringRef Path);
 };
 
-bool CFBundle::SetFromPath(const char *InPath) {
-  // Release our old bundle and URL.
+void CFBundle::SetFromPath(StringRef Path) {
+  // Start from an empty/invalid CFBundle.
   reset();
 
-  if (InPath && InPath[0]) {
-    char ResolvedPath[PATH_MAX];
-    const char *Path = ::realpath(InPath, ResolvedPath);
-    if (Path == nullptr)
-      Path = InPath;
+  if (Path.empty() || !sys::fs::exists(Path))
+    return;
 
-    CFAllocatorRef Allocator = kCFAllocatorDefault;
-    // Make our Bundle URL.
+  SmallString<256> RealPath;
+  sys::fs::real_path(Path, RealPath, /*expand_tilde*/ true);
+
+  do {
+    // Create a CFURL from the current path and use it to create a CFBundle.
     CFReleaser<CFURLRef> BundleURL(::CFURLCreateFromFileSystemRepresentation(
-        Allocator, (const UInt8 *)Path, strlen(Path), false));
-    if (BundleURL.get()) {
-      CFIndex LastLength = LONG_MAX;
+        kCFAllocatorDefault, (const UInt8 *)RealPath.data(), RealPath.size(),
+        false));
+    reset(::CFBundleCreate(kCFAllocatorDefault, BundleURL.get()));
 
-      while (BundleURL.get() != nullptr) {
-        // Check the Path range and make sure we didn't make it to just "/",
-        // ".", or "..".
-        CFRange rangeIncludingSeparators;
-        CFRange range = ::CFURLGetByteRangeForComponent(
-            BundleURL.get(), kCFURLComponentPath, &rangeIncludingSeparators);
-        if (range.length > LastLength)
-          break;
-
-        reset(::CFBundleCreate(Allocator, BundleURL.get()));
-        if (get() != nullptr) {
-          if (GetIdentifier() != nullptr)
-            break;
-          reset();
-        }
-        BundleURL.reset(::CFURLCreateCopyDeletingLastPathComponent(
-            Allocator, BundleURL.get()));
-
-        LastLength = range.length;
-      }
+    // If we have a valid bundle and find its identifier we are done.
+    if (get() != nullptr) {
+      if (GetIdentifier() != nullptr)
+        return;
+      reset();
     }
-  }
 
-  return get() != nullptr;
+    // Remove the last component of the path and try again until there's
+    // nothing left but the root.
+    sys::path::remove_filename(RealPath);
+  } while (RealPath != sys::path::root_name(RealPath));
 }
-
 #endif
 
-/// On Darwin, try and find the original executable's Info.plist information
-/// using CoreFoundation calls by creating a URL for the executable and
-/// chopping off the last Path component. The CFBundle can then get the
-/// identifier and grab any needed information from it directly. Return default
-/// CFBundleInfo on other platforms.
+/// On Darwin, try and find the original executable's Info.plist to extract
+/// information about the bundle. Return default values on other platforms.
 CFBundleInfo getBundleInfo(StringRef ExePath) {
   CFBundleInfo BundleInfo;
 
 #ifdef __APPLE__
-  if (ExePath.empty() || !sys::fs::exists(ExePath))
-    return BundleInfo;
-
   auto PrintError = [&](CFTypeID TypeID) {
     CFString TypeIDCFStr(::CFCopyTypeIDDescription(TypeID));
     std::string TypeIDStr;
@@ -178,7 +158,7 @@ CFBundleInfo getBundleInfo(StringRef ExePath) {
            << ", but it should be a string in: " << ExePath << ".\n";
   };
 
-  CFBundle Bundle(ExePath.data());
+  CFBundle Bundle(ExePath);
   if (CFStringRef BundleID = Bundle.GetIdentifier()) {
     CFString::UTF8(BundleID, BundleInfo.IDStr);
     if (CFTypeRef TypeRef =

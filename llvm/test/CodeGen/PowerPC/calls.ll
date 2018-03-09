@@ -1,10 +1,10 @@
 ; Test various forms of calls.
 
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | \
 ; RUN:   grep "bl " | count 1
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | \
 ; RUN:   grep "bctrl" | count 1
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | \
 ; RUN:   grep "bla " | count 1
 
 declare void @foo()

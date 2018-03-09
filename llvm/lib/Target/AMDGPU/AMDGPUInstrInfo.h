@@ -18,10 +18,11 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "AMDGPUGenInstrInfo.inc"
+#undef GET_INSTRINFO_HEADER
 
 namespace llvm {
 
@@ -50,9 +51,7 @@ public:
   /// not exist. If Opcode is not a pseudo instruction, this is identity.
   int pseudoToMCOpcode(int Opcode) const;
 
-  /// \brief Given a MIMG \p Opcode that writes all 4 channels, return the
-  /// equivalent opcode that writes \p Channels Channels.
-  int getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const;
+  static bool isUniformMMO(const MachineMemOperand *MMO);
 };
 } // End llvm namespace
 

@@ -9,7 +9,7 @@ REQUIRES: shell
 
 // RUN: llvm-cov show %S/Inputs/binary-formats.v1.linux64l -instr-profile %S/Inputs/elf_binary_comdat.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/instrprof-comdat.h -dump 2> %t.err | FileCheck --check-prefix=HEADER %S/Inputs/instrprof-comdat.h
 // RUN: FileCheck --check-prefix=ERROR -input-file %t.err %s
-// ERROR: hash-mismatch: No profile record found for 'main' with hash = 0xA
+// ERROR: hash-mismatch: No profile record found for 'main' with hash = 0xa
 
 // RUN: llvm-cov show %S/Inputs/binary-formats.v2.linux64l -instr-profile %S/Inputs/elf_binary_comdat.profdata -path-equivalence=/root/llvm/test/tools,%S/.. %S/Inputs/instrprof-comdat.h | FileCheck --check-prefix=HEADER %S/Inputs/instrprof-comdat.h
 // RUN: llvm-cov show %S/Inputs/binary-formats.v2.linux32l -instr-profile %S/Inputs/elf_binary_comdat.profdata -path-equivalence=/root/llvm/R/../test/tools,%S/.. %S/Inputs/instrprof-comdat.h | FileCheck --check-prefix=HEADER %S/Inputs/instrprof-comdat.h

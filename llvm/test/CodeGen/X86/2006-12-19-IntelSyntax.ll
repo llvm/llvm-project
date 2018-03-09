@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -x86-asm-syntax=intel
+; RUN: llc < %s -x86-asm-syntax=intel
 ; PR1061
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"

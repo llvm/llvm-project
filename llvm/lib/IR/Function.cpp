@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
-#include "LLVMContextImpl.h"
 #include "SymbolTableListTraitsImpl.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -649,7 +648,10 @@ enum IIT_Info {
   IIT_VEC_OF_ANYPTRS_TO_ELT = 34,
   IIT_I128 = 35,
   IIT_V512 = 36,
-  IIT_V1024 = 37
+  IIT_V1024 = 37,
+  IIT_STRUCT6 = 38,
+  IIT_STRUCT7 = 39,
+  IIT_STRUCT8 = 40
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -798,6 +800,9 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_EMPTYSTRUCT:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
     return;
+  case IIT_STRUCT8: ++StructElts; LLVM_FALLTHROUGH;
+  case IIT_STRUCT7: ++StructElts; LLVM_FALLTHROUGH;
+  case IIT_STRUCT6: ++StructElts; LLVM_FALLTHROUGH;
   case IIT_STRUCT5: ++StructElts; LLVM_FALLTHROUGH;
   case IIT_STRUCT4: ++StructElts; LLVM_FALLTHROUGH;
   case IIT_STRUCT3: ++StructElts; LLVM_FALLTHROUGH;
@@ -874,11 +879,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return PointerType::get(DecodeFixedType(Infos, Tys, Context),
                             D.Pointer_AddressSpace);
   case IITDescriptor::Struct: {
-    Type *Elts[5];
-    assert(D.Struct_NumElements <= 5 && "Can't handle this yet");
+    SmallVector<Type *, 8> Elts;
     for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
-      Elts[i] = DecodeFixedType(Infos, Tys, Context);
-    return StructType::get(Context, makeArrayRef(Elts,D.Struct_NumElements));
+      Elts.push_back(DecodeFixedType(Infos, Tys, Context));
+    return StructType::get(Context, Elts);
   }
   case IITDescriptor::Argument:
     return Tys[D.getArgumentNumber()];
@@ -1329,7 +1333,9 @@ Optional<uint64_t> Function::getEntryCount() const {
       if (MDS->getString().equals("function_entry_count")) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
-        if (Count == 0)
+        // A value of -1 is used for SamplePGO when there were no samples.
+        // Treat this the same as unknown.
+        if (Count == (uint64_t)-1)
           return None;
         return Count;
       }

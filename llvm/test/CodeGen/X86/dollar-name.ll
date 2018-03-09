@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mtriple=i386-linux | FileCheck %s
+; RUN: llc < %s -mtriple=i386-linux | FileCheck %s
 ; PR1339
 
 @"$bar" = global i32 zeroinitializer

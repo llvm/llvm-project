@@ -1,5 +1,5 @@
-; RUN: llc < %s -march armeb -mtriple arm-eabi -mattr v7,neon -float-abi soft -o - | FileCheck %s
-; RUN: llc < %s -march armeb -mtriple arm-eabi -mattr v7,neon -float-abi hard -o - | FileCheck %s -check-prefix CHECK-HARD
+; RUN: llc < %s -mtriple armeb-eabi -mattr v7,neon -float-abi soft -o - | FileCheck %s
+; RUN: llc < %s -mtriple armeb-eabi -mattr v7,neon -float-abi hard -o - | FileCheck %s -check-prefix CHECK-HARD
 
 @v2i64 = global <2 x i64> zeroinitializer
 @v2i32 = global <2 x i32> zeroinitializer

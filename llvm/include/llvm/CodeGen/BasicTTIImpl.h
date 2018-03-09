@@ -6,24 +6,62 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file provides a helper that implements much of the TTI interface in
 /// terms of the target-independent code generator and TargetLowering
 /// interfaces.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_BASICTTIIMPL_H
 #define LLVM_CODEGEN_BASICTTIIMPL_H
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/MCSchedule.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <limits>
+#include <utility>
 
 namespace llvm {
+
+class Function;
+class GlobalValue;
+class LLVMContext;
+class ScalarEvolution;
+class SCEV;
+class TargetMachine;
 
 extern cl::opt<unsigned> PartialUnrollingThreshold;
 
@@ -39,8 +77,8 @@ extern cl::opt<unsigned> PartialUnrollingThreshold;
 template <typename T>
 class BasicTTIImplBase : public TargetTransformInfoImplCRTPBase<T> {
 private:
-  typedef TargetTransformInfoImplCRTPBase<T> BaseT;
-  typedef TargetTransformInfo TTI;
+  using BaseT = TargetTransformInfoImplCRTPBase<T>;
+  using TTI = TargetTransformInfo;
 
   /// Estimate a cost of shuffle as a sequence of extract and insert
   /// operations.
@@ -110,13 +148,13 @@ public:
 
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, int64_t Scale,
-                             unsigned AddrSpace) {
+                             unsigned AddrSpace, Instruction *I = nullptr) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
-    return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace);
+    return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
   bool isLSRCostLess(TTI::LSRCost C1, TTI::LSRCost C2) {
@@ -131,10 +169,6 @@ public:
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
     return getTLI()->getScalingFactorCost(DL, AM, Ty, AddrSpace);
-  }
-
-  bool isFoldableMemAccessOffset(Instruction *I, int64_t Offset) {
-    return getTLI()->isFoldableMemAccessOffset(I, Offset);
   }
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) {
@@ -235,7 +269,8 @@ public:
       if (N < 2 || N < TLI->getMinimumJumpTableEntries())
         return N;
       uint64_t Range =
-          (MaxCaseVal - MinCaseVal).getLimitedValue(UINT64_MAX - 1) + 1;
+          (MaxCaseVal - MinCaseVal)
+              .getLimitedValue(std::numeric_limits<uint64_t>::max() - 1) + 1;
       // Check whether a range of clusters is dense enough for a jump table
       if (TLI->isSuitableForJumpTable(&SI, N, Range)) {
         JumpTableSize = Range;
@@ -262,26 +297,32 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
+  bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) {
+    return true;
+  }
+
   unsigned getFPOpCost(Type *Ty) {
-    // By default, FP instructions are no more expensive since they are
-    // implemented in HW.  Target specific TTI can override this.
-    return TargetTransformInfo::TCC_Basic;
+    // Check whether FADD is available, as a proxy for floating-point in
+    // general.
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, Ty);
+    if (TLI->isOperationLegalOrCustomOrPromote(ISD::FADD, VT))
+      return TargetTransformInfo::TCC_Basic;
+    return TargetTransformInfo::TCC_Expensive;
   }
 
   unsigned getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) {
     const TargetLoweringBase *TLI = getTLI();
     switch (Opcode) {
     default: break;
-    case Instruction::Trunc: {
+    case Instruction::Trunc:
       if (TLI->isTruncateFree(OpTy, Ty))
         return TargetTransformInfo::TCC_Free;
       return TargetTransformInfo::TCC_Basic;
-    }
-    case Instruction::ZExt: {
+    case Instruction::ZExt:
       if (TLI->isZExtFree(OpTy, Ty))
         return TargetTransformInfo::TCC_Free;
       return TargetTransformInfo::TCC_Basic;
-    }
     }
 
     return BaseT::getOperationCost(Opcode, Ty, OpTy);
@@ -354,6 +395,13 @@ public:
     UP.BEInsns = 2;
   }
 
+  int getInstructionLatency(const Instruction *I) {
+    if (isa<LoadInst>(I))
+      return getST()->getSchedModel().DefaultLoadLatency;
+
+    return BaseT::getInstructionLatency(I);
+  }
+
   /// @}
 
   /// \name Vector TTI Implementations
@@ -394,8 +442,8 @@ public:
         if (A->getType()->isVectorTy()) {
           VecTy = A->getType();
           // If A is a vector operand, VF should be 1 or correspond to A.
-          assert ((VF == 1 || VF == VecTy->getVectorNumElements()) &&
-                  "Vector argument does not match VF");
+          assert((VF == 1 || VF == VecTy->getVectorNumElements()) &&
+                 "Vector argument does not match VF");
         }
         else
           VecTy = VectorType::get(A->getType(), VF);
@@ -408,8 +456,8 @@ public:
   }
 
   unsigned getScalarizationOverhead(Type *VecTy, ArrayRef<const Value *> Args) {
-    assert (VecTy->isVectorTy());
-    
+    assert(VecTy->isVectorTy());
+
     unsigned Cost = 0;
 
     Cost += getScalarizationOverhead(VecTy, true, false);
@@ -531,7 +579,6 @@ public:
 
     // Handle scalar conversions.
     if (!Src->isVectorTy() && !Dst->isVectorTy()) {
-
       // Scalar bitcasts are usually free.
       if (Opcode == Instruction::BitCast)
         return 0;
@@ -547,7 +594,6 @@ public:
 
     // Check vector-to-vector casts.
     if (Dst->isVectorTy() && Src->isVectorTy()) {
-
       // If the cast is between same-sized registers, then the check is simple.
       if (SrcLT.first == DstLT.first &&
           SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits()) {
@@ -743,7 +789,6 @@ public:
     // We only scale the cost of loads since interleaved store groups aren't
     // allowed to have gaps.
     if (Opcode == Instruction::Load && VecTySize > VecTyLTSize) {
-
       // The number of loads of a legal type it will take to represent a load
       // of the unlegalized vector type.
       unsigned NumLegalInsts = ceil(VecTySize, VecTyLTSize);
@@ -821,7 +866,7 @@ public:
                                  ArrayRef<Value *> Args, FastMathFlags FMF,
                                  unsigned VF = 1) {
     unsigned RetVF = (RetTy->isVectorTy() ? RetTy->getVectorNumElements() : 1);
-    assert ((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
+    assert((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
 
     switch (IID) {
     default: {
@@ -829,7 +874,7 @@ public:
       SmallVector<Type *, 4> Types;
       for (Value *Op : Args) {
         Type *OpTy = Op->getType();
-        assert (VF == 1 || !OpTy->isVectorTy());
+        assert(VF == 1 || !OpTy->isVectorTy());
         Types.push_back(VF == 1 ? OpTy : VectorType::get(OpTy, VF));
       }
 
@@ -839,7 +884,7 @@ public:
       // Compute the scalarization overhead based on Args for a vector
       // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
       // CostModel will pass a vector RetTy and VF is 1.
-      unsigned ScalarizationCost = UINT_MAX;
+      unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
       if (RetVF > 1 || VF > 1) {
         ScalarizationCost = 0;
         if (!RetTy->isVoidTy())
@@ -851,7 +896,7 @@ public:
         getIntrinsicInstrCost(IID, RetTy, Types, FMF, ScalarizationCost);
     }
     case Intrinsic::masked_scatter: {
-      assert (VF == 1 && "Can't vectorize types here.");
+      assert(VF == 1 && "Can't vectorize types here.");
       Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[2])->getZExtValue();
@@ -862,7 +907,7 @@ public:
                                                        Alignment);
     }
     case Intrinsic::masked_gather: {
-      assert (VF == 1 && "Can't vectorize types here.");
+      assert(VF == 1 && "Can't vectorize types here.");
       Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[1])->getZExtValue();
@@ -873,13 +918,14 @@ public:
     }
     }
   }
-  
+
   /// Get intrinsic cost based on argument types.
-  /// If ScalarizationCostPassed is UINT_MAX, the cost of scalarizing the
-  /// arguments and the return value will be computed based on types.
-  unsigned getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                          ArrayRef<Type *> Tys, FastMathFlags FMF,
-                          unsigned ScalarizationCostPassed = UINT_MAX) {
+  /// If ScalarizationCostPassed is std::numeric_limits<unsigned>::max(), the
+  /// cost of scalarizing the arguments and the return value will be computed
+  /// based on types.
+  unsigned getIntrinsicInstrCost(
+      Intrinsic::ID IID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
+      unsigned ScalarizationCostPassed = std::numeric_limits<unsigned>::max()) {
     SmallVector<unsigned, 2> ISDs;
     unsigned SingleCallCost = 10; // Library call cost. Make it expensive.
     switch (IID) {
@@ -889,7 +935,7 @@ public:
       unsigned ScalarCalls = 1;
       Type *ScalarRetTy = RetTy;
       if (RetTy->isVectorTy()) {
-        if (ScalarizationCostPassed == UINT_MAX)
+        if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
           ScalarizationCost = getScalarizationOverhead(RetTy, true, false);
         ScalarCalls = std::max(ScalarCalls, RetTy->getVectorNumElements());
         ScalarRetTy = RetTy->getScalarType();
@@ -898,7 +944,7 @@ public:
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         Type *Ty = Tys[i];
         if (Ty->isVectorTy()) {
-          if (ScalarizationCostPassed == UINT_MAX)
+          if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
             ScalarizationCost += getScalarizationOverhead(Ty, false, true);
           ScalarCalls = std::max(ScalarCalls, Ty->getVectorNumElements());
           Ty = Ty->getScalarType();
@@ -985,6 +1031,7 @@ public:
     // FIXME: We should return 0 whenever getIntrinsicCost == TCC_Free.
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+    case Intrinsic::sideeffect:
       return 0;
     case Intrinsic::masked_store:
       return static_cast<T *>(this)
@@ -1047,8 +1094,10 @@ public:
     // this will emit a costly libcall, adding call overhead and spills. Make it
     // very expensive.
     if (RetTy->isVectorTy()) {
-      unsigned ScalarizationCost = ((ScalarizationCostPassed != UINT_MAX) ?
-         ScalarizationCostPassed : getScalarizationOverhead(RetTy, true, false));
+      unsigned ScalarizationCost =
+          ((ScalarizationCostPassed != std::numeric_limits<unsigned>::max())
+               ? ScalarizationCostPassed
+               : getScalarizationOverhead(RetTy, true, false));
       unsigned ScalarCalls = RetTy->getVectorNumElements();
       SmallVector<Type *, 4> ScalarTys;
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
@@ -1061,7 +1110,7 @@ public:
           IID, RetTy->getScalarType(), ScalarTys, FMF);
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         if (Tys[i]->isVectorTy()) {
-          if (ScalarizationCostPassed == UINT_MAX)
+          if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
             ScalarizationCost += getScalarizationOverhead(Tys[i], false, true);
           ScalarCalls = std::max(ScalarCalls, Tys[i]->getVectorNumElements());
         }
@@ -1096,7 +1145,7 @@ public:
 
   unsigned getAddressComputationCost(Type *Ty, ScalarEvolution *,
                                      const SCEV *) {
-    return 0; 
+    return 0;
   }
 
   /// Try to calculate arithmetic and shuffle op costs for reduction operations.
@@ -1134,7 +1183,8 @@ public:
   ///
   /// The cost model should take into account that the actual length of the
   /// vector is reduced on each iteration.
-  unsigned getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwise) {
+  unsigned getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+                                      bool IsPairwise) {
     assert(Ty->isVectorTy() && "Expect a vector type");
     Type *ScalarTy = Ty->getVectorElementType();
     unsigned NumVecElts = Ty->getVectorNumElements();
@@ -1159,7 +1209,7 @@ public:
     }
     // The minimal length of the vector is limited by the real length of vector
     // operations performed on the current platform. That's why several final
-    // reduction opertions are perfomed on the vectors with the same
+    // reduction operations are performed on the vectors with the same
     // architecture-dependent length.
     ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
                    ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
@@ -1167,6 +1217,66 @@ public:
     ArithCost += (NumReduxLevels - LongVectorCount) *
                  ConcreteTTI->getArithmeticInstrCost(Opcode, Ty);
     return ShuffleCost + ArithCost + getScalarizationOverhead(Ty, false, true);
+  }
+
+  /// Try to calculate op costs for min/max reduction operations.
+  /// \param CondTy Conditional type for the Select instruction.
+  unsigned getMinMaxReductionCost(Type *Ty, Type *CondTy, bool IsPairwise,
+                                  bool) {
+    assert(Ty->isVectorTy() && "Expect a vector type");
+    Type *ScalarTy = Ty->getVectorElementType();
+    Type *ScalarCondTy = CondTy->getVectorElementType();
+    unsigned NumVecElts = Ty->getVectorNumElements();
+    unsigned NumReduxLevels = Log2_32(NumVecElts);
+    unsigned CmpOpcode;
+    if (Ty->isFPOrFPVectorTy()) {
+      CmpOpcode = Instruction::FCmp;
+    } else {
+      assert(Ty->isIntOrIntVectorTy() &&
+             "expecting floating point or integer type for min/max reduction");
+      CmpOpcode = Instruction::ICmp;
+    }
+    unsigned MinMaxCost = 0;
+    unsigned ShuffleCost = 0;
+    auto *ConcreteTTI = static_cast<T *>(this);
+    std::pair<unsigned, MVT> LT =
+        ConcreteTTI->getTLI()->getTypeLegalizationCost(DL, Ty);
+    unsigned LongVectorCount = 0;
+    unsigned MVTLen =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+    while (NumVecElts > MVTLen) {
+      NumVecElts /= 2;
+      // Assume the pairwise shuffles add a cost.
+      ShuffleCost += (IsPairwise + 1) *
+                     ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
+                                                 NumVecElts, Ty);
+      MinMaxCost +=
+          ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
+          ConcreteTTI->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
+                                          nullptr);
+      Ty = VectorType::get(ScalarTy, NumVecElts);
+      CondTy = VectorType::get(ScalarCondTy, NumVecElts);
+      ++LongVectorCount;
+    }
+    // The minimal length of the vector is limited by the real length of vector
+    // operations performed on the current platform. That's why several final
+    // reduction opertions are perfomed on the vectors with the same
+    // architecture-dependent length.
+    ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
+                   ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
+                                               NumVecElts, Ty);
+    MinMaxCost +=
+        (NumReduxLevels - LongVectorCount) *
+        (ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
+         ConcreteTTI->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
+                                         nullptr));
+    // Need 3 extractelement instructions for scalarization + an additional
+    // scalar select instruction.
+    return ShuffleCost + MinMaxCost +
+           3 * getScalarizationOverhead(Ty, /*Insert=*/false,
+                                        /*Extract=*/true) +
+           ConcreteTTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
+                                           ScalarCondTy, nullptr);
   }
 
   unsigned getVectorSplitCost() { return 1; }
@@ -1177,7 +1287,8 @@ public:
 /// \brief Concrete BasicTTIImpl that can be used if no further customization
 /// is needed.
 class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
-  typedef BasicTTIImplBase<BasicTTIImpl> BaseT;
+  using BaseT = BasicTTIImplBase<BasicTTIImpl>;
+
   friend class BasicTTIImplBase<BasicTTIImpl>;
 
   const TargetSubtargetInfo *ST;
@@ -1190,6 +1301,6 @@ public:
   explicit BasicTTIImpl(const TargetMachine *ST, const Function &F);
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_BASICTTIIMPL_H

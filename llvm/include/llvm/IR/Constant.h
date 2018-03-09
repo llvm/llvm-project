@@ -117,8 +117,8 @@ public:
 
   //// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() >= ConstantFirstVal &&
-           V->getValueID() <= ConstantLastVal;
+    static_assert(ConstantFirstVal == 0, "V->getValueID() >= ConstantFirstVal always succeeds");
+    return V->getValueID() <= ConstantLastVal;
   }
 
   /// This method is a special form of User::replaceUsesOfWith

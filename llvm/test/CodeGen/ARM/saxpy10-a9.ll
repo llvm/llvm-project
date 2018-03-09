@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mtriple=thumbv7-apple-ios7.0.0 -float-abi=hard -mcpu=cortex-a9 -misched-postra -enable-misched -pre-RA-sched=source -scheditins=false | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-apple-ios7.0.0 -float-abi=hard -mcpu=cortex-a9 -misched-postra -enable-misched -pre-RA-sched=source -scheditins=false | FileCheck %s
 ;
 ; Test MI-Sched suppory latency based stalls on in in-order pipeline
 ; using the new machine model.

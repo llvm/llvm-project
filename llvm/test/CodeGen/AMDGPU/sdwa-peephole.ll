@@ -4,10 +4,11 @@
 
 ; GCN-LABEL: {{^}}add_shr_i32:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST:[0-9]+]], 16, v{{[0-9]+}}
-; NOSDWA: v_add_i32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v[[DST]]
-; NOSDWA-NOT: v_add_i32_sdwa
+; NOSDWA: v_add_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v[[DST]]
+; NOSDWA-NOT: v_add_{{(_co)?}}_u32_sdwa
 
-; SDWA: v_add_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI: v_add_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9: v_add_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 define amdgpu_kernel void @add_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %a = load i32, i32 addrspace(1)* %in, align 4
@@ -19,11 +20,11 @@ define amdgpu_kernel void @add_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)*
 
 ; GCN-LABEL: {{^}}sub_shr_i32:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST:[0-9]+]], 16, v{{[0-9]+}}
-; NOSDWA: v_subrev_i32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v[[DST]]
-; NOSDWA-NOT: v_subrev_i32_sdwa
+; NOSDWA: v_subrev_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v[[DST]]
+; NOSDWA-NOT: v_subrev_{{(_co)?}}_u32_sdwa
 
-; SDWA: v_subrev_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-
+; VI: v_subrev_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9: v_sub_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 define amdgpu_kernel void @sub_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %a = load i32, i32 addrspace(1)* %in, align 4
   %shr = lshr i32 %a, 16
@@ -426,9 +427,9 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}add_bb_v2i16:
-; NOSDWA-NOT: v_add_i32_sdwa
+; NOSDWA-NOT: v_add_{{(_co)?}}_u32_sdwa
 
-; VI: v_add_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI: v_add_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 
 ; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
@@ -495,4 +496,27 @@ entry:
   %arrayidx5 = getelementptr inbounds <8 x i8>, <8 x i8> addrspace(1)* %destValues, i64 %idxprom
   store <8 x i8> %tmp19, <8 x i8> addrspace(1)* %arrayidx5, align 8
   ret void
+}
+
+; GCN-LABEL: {{^}}sdwa_crash_inlineasm_de
+; GCN: s_mov_b32 s{{[0-9]+}}, 0xffff
+; GCN: v_and_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x10000,
+define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb11, %bb
+  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ undef, %bb ]
+  br i1 true, label %bb2, label %bb11
+
+bb2:                                              ; preds = %bb1
+  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 undef) #1
+  %tmp5 = or i32 %tmp3, 65536
+  %tmp6 = insertelement <2 x i32> %tmp, i32 %tmp5, i64 0
+  br label %bb11
+
+bb11:                                             ; preds = %bb10, %bb2
+  %tmp12 = phi <2 x i32> [ %tmp6, %bb2 ], [ %tmp, %bb1 ]
+  br label %bb1
 }

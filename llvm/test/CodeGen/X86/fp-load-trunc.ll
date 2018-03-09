@@ -4,7 +4,7 @@
 
 define <1 x float> @test1(<1 x double>* %p) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -15,7 +15,7 @@ define <1 x float> @test1(<1 x double>* %p) nounwind {
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    pushl %eax
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -31,13 +31,13 @@ define <1 x float> @test1(<1 x double>* %p) nounwind {
 
 define <2 x float> @test2(<2 x double>* %p) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cvtpd2ps (%eax), %xmm0
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test2:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-NEXT:    vcvtpd2psx (%eax), %xmm0
 ; AVX-NEXT:    retl
@@ -48,7 +48,7 @@ define <2 x float> @test2(<2 x double>* %p) nounwind {
 
 define <4 x float> @test3(<4 x double>* %p) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cvtpd2ps 16(%eax), %xmm1
 ; CHECK-NEXT:    cvtpd2ps (%eax), %xmm0
@@ -56,7 +56,7 @@ define <4 x float> @test3(<4 x double>* %p) nounwind {
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-NEXT:    vcvtpd2psy (%eax), %xmm0
 ; AVX-NEXT:    retl
@@ -67,7 +67,7 @@ define <4 x float> @test3(<4 x double>* %p) nounwind {
 
 define <8 x float> @test4(<8 x double>* %p) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cvtpd2ps 16(%eax), %xmm1
 ; CHECK-NEXT:    cvtpd2ps (%eax), %xmm0
@@ -78,7 +78,7 @@ define <8 x float> @test4(<8 x double>* %p) nounwind {
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-NEXT:    vcvtpd2psy (%eax), %xmm0
 ; AVX-NEXT:    vcvtpd2psy 32(%eax), %xmm1

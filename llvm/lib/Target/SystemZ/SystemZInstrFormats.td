@@ -21,6 +21,10 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   let Pattern = pattern;
   let AsmString = asmstr;
 
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
   // Some instructions come in pairs, one having a 12-bit displacement
   // and the other having a 20-bit displacement.  Both instructions in
   // the pair have the same DispKey and their DispSizes are "12" and "20"
@@ -2100,11 +2104,14 @@ class CondBranchRXY<string mnemonic, bits<16> opcode>
   : InstRXYb<opcode, (outs), (ins cond4:$valid, cond4:$M1, bdxaddr20only:$XBD2),
              !subst("#", "${M1}", mnemonic)#"\t$XBD2", []> {
   let CCMaskFirst = 1;
+  let mayLoad = 1;
 }
 
 class AsmCondBranchRXY<string mnemonic, bits<16> opcode>
   : InstRXYb<opcode, (outs), (ins imm32zx4:$M1, bdxaddr20only:$XBD2),
-             mnemonic#"\t$M1, $XBD2", []>;
+             mnemonic#"\t$M1, $XBD2", []> {
+  let mayLoad = 1;
+}
 
 class FixedCondBranchRXY<CondVariant V, string mnemonic, bits<16> opcode,
                          SDPatternOperator operator = null_frag>
@@ -2113,6 +2120,7 @@ class FixedCondBranchRXY<CondVariant V, string mnemonic, bits<16> opcode,
              [(operator (load bdxaddr20only:$XBD2))]> {
   let isAsmParserOnly = V.alternate;
   let M1 = V.ccmask;
+  let mayLoad = 1;
 }
 
 class CmpBranchRIEa<string mnemonic, bits<16> opcode,
@@ -2783,7 +2791,6 @@ multiclass CondUnaryRSYPair<string mnemonic, bits<16> opcode,
     def "" : CondUnaryRSY<mnemonic, opcode, operator, cls, bytes, mode>;
   def Asm : AsmCondUnaryRSY<mnemonic, opcode, cls, bytes, mode>;
 }
-
 
 class UnaryRX<string mnemonic, bits<8> opcode, SDPatternOperator operator,
               RegisterOperand cls, bits<5> bytes,
@@ -4688,7 +4695,8 @@ class SelectWrapper<ValueType vt, RegisterOperand cls>
 // Stores $new to $addr if $cc is true ("" case) or false (Inv case).
 multiclass CondStores<RegisterOperand cls, SDPatternOperator store,
                       SDPatternOperator load, AddressingMode mode> {
-  let Defs = [CC], Uses = [CC], usesCustomInserter = 1 in {
+  let Defs = [CC], Uses = [CC], usesCustomInserter = 1,
+      mayLoad = 1, mayStore = 1 in {
     def "" : Pseudo<(outs),
                     (ins cls:$new, mode:$addr, imm32zx4:$valid, imm32zx4:$cc),
                     [(store (z_select_ccmask cls:$new, (load mode:$addr),

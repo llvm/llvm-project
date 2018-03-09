@@ -95,28 +95,28 @@ body:             |
   bb.0 (%ir-block.0):
     successors: %bb.1(0x80000000)
 
-    ; CHECK: %3:gr64_nosp = LEA64r %2, 2, %2, 0, _, debug-location !13
-    ; CHECK-NEXT: %4:gr64 = LEA64r %1, 4, %3, 0, _, debug-location !13
-    ; CHECK-NOT: %0:gr64 = LEA64r %1, 4, %3, 8, _, debug-location !14
-    ; CHECK: DBG_VALUE debug-use %4, debug-use _, !11, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value), debug-location !15
+    ; CHECK: %3:gr64_nosp = LEA64r %2, 2, %2, 0, %noreg, debug-location !13
+    ; CHECK-NEXT: %4:gr64 = LEA64r %1, 4, %3, 0, %noreg, debug-location !13
+    ; CHECK-NOT: %0:gr64 = LEA64r %1, 4, %3, 8, %noreg, debug-location !14
+    ; CHECK: DBG_VALUE debug-use %4, debug-use %noreg, !11, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value), debug-location !15
 
-    %1 = MOV64rm %rip, 1, _, @c, _, debug-location !13 :: (dereferenceable load 8 from @c)
-    %2 = MOVSX64rm32 %rip, 1, _, @a, _, debug-location !13 :: (dereferenceable load 4 from @a)
-    %3 = LEA64r %2, 2, %2, 0, _, debug-location !13
-    %4 = LEA64r %1, 4, %3, 0, _, debug-location !13
+    %1 = MOV64rm %rip, 1, %noreg, @c, %noreg, debug-location !13 :: (dereferenceable load 8 from @c)
+    %2 = MOVSX64rm32 %rip, 1, %noreg, @a, %noreg, debug-location !13 :: (dereferenceable load 4 from @a)
+    %3 = LEA64r %2, 2, %2, 0, %noreg, debug-location !13
+    %4 = LEA64r %1, 4, %3, 0, %noreg, debug-location !13
     %5 = COPY %4.sub_32bit, debug-location !13
-    MOV32mr %rip, 1, _, @d, _, killed %5, debug-location !13 :: (store 4 into @d)
-    %0 = LEA64r %1, 4, %3, 8, _, debug-location !14
-    DBG_VALUE debug-use %0, debug-use _, !11, !DIExpression(), debug-location !15
+    MOV32mr %rip, 1, %noreg, @d, %noreg, killed %5, debug-location !13 :: (store 4 into @d)
+    %0 = LEA64r %1, 4, %3, 8, %noreg, debug-location !14
+    DBG_VALUE debug-use %0, debug-use %noreg, !11, !DIExpression(), debug-location !15
 
     ; CHECK-LABEL: bb.1 (%ir-block.8):
-    ; CHECK: %6:gr32 = MOV32rm %4, 1, _, 8, _, debug-location !17 :: (load 4 from %ir.7)
+    ; CHECK: %6:gr32 = MOV32rm %4, 1, %noreg, 8, %noreg, debug-location !17 :: (load 4 from %ir.7)
 
   bb.1 (%ir-block.8):
     successors: %bb.1(0x80000000)
 
-    %6 = MOV32rm %0, 1, _, 0, _, debug-location !17 :: (load 4 from %ir.7)
-    MOV32mr %rip, 1, _, @d, _, killed %6, debug-location !17 :: (store 4 into @d)
+    %6 = MOV32rm %0, 1, %noreg, 0, %noreg, debug-location !17 :: (load 4 from %ir.7)
+    MOV32mr %rip, 1, %noreg, @d, %noreg, killed %6, debug-location !17 :: (store 4 into @d)
     JMP_1 %bb.1, debug-location !18
 
 ...

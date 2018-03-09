@@ -9,7 +9,6 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
-#include "dsymutil.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
@@ -482,7 +481,9 @@ void MachODebugMapParser::loadMainBinarySymbols(
     // are the only ones that need to be queried because the address
     // of common data won't be described in the debug map. All other
     // addresses should be fetched for the debug map.
-    if (!(Sym.getFlags() & SymbolRef::SF_Global))
+    uint8_t SymType =
+        MainBinary.getSymbolTableEntry(Sym.getRawDataRefImpl()).n_type;
+    if (!(SymType & (MachO::N_EXT | MachO::N_PEXT)))
       continue;
     Expected<section_iterator> SectionOrErr = Sym.getSection();
     if (!SectionOrErr) {

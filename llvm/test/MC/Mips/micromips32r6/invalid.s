@@ -38,6 +38,10 @@
                            # FIXME: This ought to point at the $34 but memory is treated as one operand.
   swe $5, 8($34)           # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   swe $5, 512($4)          # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lapc $7, 1048576         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+  lapc $6, -1048580        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+  lapc $3, 3               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+  lapc $3, -1              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
   lbu16 $9, 8($16)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   lbu16 $3, -2($16)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   lbu16 $3, -2($16)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
@@ -347,3 +351,21 @@
   bnezc $2, -4194303       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
   bnezc $2, 4194304        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
   bnezc $2, 4194303        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  teq $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  teq $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  tge $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  tge $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  tgeu $8, $9, $2          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
+  tgeu $8, $9, -1          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
+  tlt $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  tlt $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  tltu $8, $9, $2          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
+  tltu $8, $9, -1          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
+  tne $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  tne $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
+  syscall -1               # CHECK: :[[@LINE]]:11: error: expected 10-bit unsigned immediate
+  syscall $4               # CHECK: :[[@LINE]]:11: error: expected 10-bit unsigned immediate
+  ldc2 $1, 1023($32)       # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset
+  lwc2 $1, 16($32)         # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset
+  sdc2 $1, 8($32)          # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset
+  swc2 $1, 777($32)        # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset

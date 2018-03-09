@@ -7,18 +7,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i32 @t(<2 x i64>* %val) nounwind  {
 ; X32-SSE2-LABEL: t:
-; X32-SSE2:       # BB#0:
+; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movl 8(%eax), %eax
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSSE3-LABEL: t:
-; X64-SSSE3:       # BB#0:
+; X64-SSSE3:       # %bb.0:
 ; X64-SSSE3-NEXT:    movl 8(%rdi), %eax
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl 8(%rdi), %eax
 ; X64-AVX-NEXT:    retq
   %tmp2 = load <2 x i64>, <2 x i64>* %val, align 16		; <<2 x i64>> [#uses=1]
@@ -31,15 +31,15 @@ define i32 @t(<2 x i64>* %val) nounwind  {
 ; (Making sure this doesn't crash.)
 define i32 @t2(<8 x i32>* %xp) {
 ; X32-SSE2-LABEL: t2:
-; X32-SSE2:       # BB#0:
+; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSSE3-LABEL: t2:
-; X64-SSSE3:       # BB#0:
+; X64-SSSE3:       # %bb.0:
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t2:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    retq
   %x = load <8 x i32>, <8 x i32>* %xp
   %Shuff68 = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 undef, i32 7, i32 9, i32 undef, i32 13, i32 15, i32 1, i32 3>
@@ -57,17 +57,17 @@ define i32 @t2(<8 x i32>* %xp) {
 
 define void @t3() {
 ; X32-SSE2-LABEL: t3:
-; X32-SSE2:       # BB#0: # %bb
+; X32-SSE2:       # %bb.0: # %bb
 ; X32-SSE2-NEXT:    movupd (%eax), %xmm0
 ; X32-SSE2-NEXT:    movhpd %xmm0, (%eax)
 ;
 ; X64-SSSE3-LABEL: t3:
-; X64-SSSE3:       # BB#0: # %bb
+; X64-SSSE3:       # %bb.0: # %bb
 ; X64-SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-SSSE3-NEXT:    movlpd %xmm0, (%rax)
 ;
 ; X64-AVX-LABEL: t3:
-; X64-AVX:       # BB#0: # %bb
+; X64-AVX:       # %bb.0: # %bb
 ; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-AVX-NEXT:    vmovlpd %xmm0, (%rax)
 bb:
@@ -83,7 +83,7 @@ bb:
 ; second shuffle operand was a post-bitcast type instead of a pre-bitcast type.
 define i64 @t4(<2 x double>* %a) {
 ; X32-SSE2-LABEL: t4:
-; X32-SSE2:       # BB#0:
+; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movapd (%eax), %xmm0
 ; X32-SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
@@ -94,12 +94,12 @@ define i64 @t4(<2 x double>* %a) {
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSSE3-LABEL: t4:
-; X64-SSSE3:       # BB#0:
+; X64-SSSE3:       # %bb.0:
 ; X64-SSSE3-NEXT:    movq (%rdi), %rax
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t4:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movq (%rdi), %rax
 ; X64-AVX-NEXT:    retq
   %b = load <2 x double>, <2 x double>* %a, align 16

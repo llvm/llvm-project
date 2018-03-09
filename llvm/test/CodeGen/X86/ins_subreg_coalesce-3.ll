@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep mov | count 3
+; RUN: llc < %s -mtriple=x86_64-- | grep mov | count 3
 
 	%struct.COMPOSITE = type { i8, i16, i16 }
 	%struct.FILE = type { i8*, i32, i32, i16, i16, %struct.__sbuf, i32, i8*, i32 (i8*)*, i32 (i8*, i8*, i32)*, i64 (i8*, i64, i32)*, i32 (i8*, i8*, i32)*, %struct.__sbuf, %struct.__sFILEX*, i32, [3 x i8], [1 x i8], %struct.__sbuf, i32, i64 }

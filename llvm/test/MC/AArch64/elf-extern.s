@@ -9,7 +9,7 @@
 	.type	check_extern,@function
 check_extern:                           // @check_extern
 	.cfi_startproc
-// BB#0:
+// %bb.0:
 	sub	sp, sp, #16
 .Ltmp2:
 	.cfi_def_cfa sp, 16

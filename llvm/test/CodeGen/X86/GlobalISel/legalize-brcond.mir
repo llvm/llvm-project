@@ -27,25 +27,25 @@ registers:
   - { id: 2, class: _, preferred-register: '' }
   - { id: 3, class: _, preferred-register: '' }
 # ALL:         %1:_(s1) = G_TRUNC %0(s32)
-# ALL-NEXT:    G_BRCOND %1(s1), %[[TRUE:bb.[0-9]+.if.then]]
-# ALL-NEXT:    G_BR %[[FALSE:bb.[0-9]+.if.else]]
-# ALL:       [[TRUE]]:
+# ALL-NEXT:    G_BRCOND %1(s1), %[[TRUE:bb.[0-9]+]]
+# ALL-NEXT:    G_BR %[[FALSE:bb.[0-9]+]]
+# ALL:       [[TRUE]].{{[a-zA-Z0-9.]+}}:
 # ALL-NEXT:    %eax = COPY %2(s32)
 # ALL-NEXT:    RET 0, implicit %eax
-# ALL:       [[FALSE]]:
+# ALL:       [[FALSE]].{{[a-zA-Z0-9.]+}}:
 # ALL-NEXT:    %eax = COPY %3(s32)
 # ALL-NEXT:    RET 0, implicit %eax
 body:             |
   bb.1.entry:
-    successors: %bb.2.if.then(0x40000000), %bb.3.if.else(0x40000000)
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
     liveins: %edi
 
     %0(s32) = COPY %edi
     %2(s32) = G_CONSTANT i32 0
     %3(s32) = G_CONSTANT i32 1
     %1(s1) = G_TRUNC %0(s32)
-    G_BRCOND %1(s1), %bb.2.if.then
-    G_BR %bb.3.if.else
+    G_BRCOND %1(s1), %bb.2
+    G_BR %bb.3
 
   bb.2.if.then:
     %eax = COPY %2(s32)

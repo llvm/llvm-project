@@ -3,7 +3,7 @@
 
 define void @t0(<2 x i64>* %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind readonly {
 ; CHECK-LABEL: t0:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm0
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm1
@@ -22,32 +22,28 @@ define void @t0(<2 x i64>* %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind read
 
 define void @t2(<3 x i64>* %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %r9, %xmm1
 ; CHECK-NEXT:    movq %r8, %xmm0
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    movq %rdx, %xmm2
-; CHECK-NEXT:    movq %rsi, %xmm1
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; CHECK-NEXT:    movq %rcx, %xmm2
+; CHECK-NEXT:    movq %rdx, %xmm1
+; CHECK-NEXT:    movq %rsi, %xmm2
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    movq %rcx, %xmm1
 ; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    pxor %xmm4, %xmm4
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2
-; CHECK-NEXT:    pcmpeqd %xmm5, %xmm5
-; CHECK-NEXT:    pxor %xmm5, %xmm2
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm5, %xmm5
 ; CHECK-NEXT:    pxor %xmm5, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; CHECK-NEXT:    pslld $31, %xmm1
-; CHECK-NEXT:    psrad $31, %xmm1
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2
+; CHECK-NEXT:    pxor %xmm5, %xmm2
+; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,2]
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm3
 ; CHECK-NEXT:    pxor %xmm5, %xmm3
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm0
 ; CHECK-NEXT:    pxor %xmm5, %xmm0
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
-; CHECK-NEXT:    pslld $31, %xmm0
-; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    andps %xmm2, %xmm0
 ; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
 ; CHECK-NEXT:    psllq $63, %xmm1
 ; CHECK-NEXT:    psrad $31, %xmm1

@@ -16,7 +16,7 @@
 #define LLVM_LIB_TARGET_SPARC_SPARCISELLOWERING_H
 
 #include "Sparc.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
   class SparcSubtarget;

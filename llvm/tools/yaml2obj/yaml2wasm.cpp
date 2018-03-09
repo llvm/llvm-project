@@ -12,8 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 //
-#include "yaml2obj.h"
-#include "llvm/Object/Wasm.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
@@ -140,11 +138,6 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
   encodeULEB128(Section.DataSize, SubSection.GetStream());
   SubSection.Done();
 
-  // DATA_ALIGNMENT subsection
-  encodeULEB128(wasm::WASM_DATA_ALIGNMENT, OS);
-  encodeULEB128(Section.DataAlignment, SubSection.GetStream());
-  SubSection.Done();
-
   // SYMBOL_INFO subsection
   if (Section.SymbolInfos.size()) {
     encodeULEB128(wasm::WASM_SYMBOL_INFO, OS);
@@ -155,6 +148,29 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
       encodeULEB128(Info.Flags, SubSection.GetStream());
     }
 
+    SubSection.Done();
+  }
+
+  // SEGMENT_NAMES subsection
+  if (Section.SegmentInfos.size()) {
+    encodeULEB128(wasm::WASM_SEGMENT_INFO, OS);
+    encodeULEB128(Section.SegmentInfos.size(), SubSection.GetStream());
+    for (const WasmYAML::SegmentInfo &SegmentInfo : Section.SegmentInfos) {
+      writeStringRef(SegmentInfo.Name, SubSection.GetStream());
+      encodeULEB128(SegmentInfo.Alignment, SubSection.GetStream());
+      encodeULEB128(SegmentInfo.Flags, SubSection.GetStream());
+    }
+    SubSection.Done();
+  }
+
+  // INIT_FUNCS subsection
+  if (Section.InitFunctions.size()) {
+    encodeULEB128(wasm::WASM_INIT_FUNCS, OS);
+    encodeULEB128(Section.InitFunctions.size(), SubSection.GetStream());
+    for (const WasmYAML::InitFunction &Func : Section.InitFunctions) {
+      encodeULEB128(Func.Priority, SubSection.GetStream());
+      encodeULEB128(Func.FunctionIndex, SubSection.GetStream());
+    }
     SubSection.Done();
   }
   return 0;
@@ -370,9 +386,9 @@ int WasmWriter::writeRelocSection(raw_ostream &OS,
     encodeULEB128(Reloc.Offset, OS);
     encodeULEB128(Reloc.Index, OS);
     switch (Reloc.Type) {
-      case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
-      case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
-      case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
         encodeULEB128(Reloc.Addend, OS);
     }
   }

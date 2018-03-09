@@ -1,5 +1,5 @@
 ; A test for checking PR 9623
-; RUN: llc -march=x86-64 -mcpu=corei7 < %s | FileCheck %s
+; RUN: llc -mcpu=corei7 < %s | FileCheck %s
 
 target triple = "x86_64-apple-darwin"
 

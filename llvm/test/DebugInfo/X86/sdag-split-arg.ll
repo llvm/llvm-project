@@ -1,10 +1,10 @@
 ; RUN: llc -O0 -filetype=asm %s -o - | FileCheck %s
 ; Test large integral function arguments passed in multiple registers.
-; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 64 16] %AX
-; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 48 16] %R9W
-; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 32 16] %R10W
-; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 16 16] %R11W
-; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 0 16] %BX
+; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 64 16] %ax
+; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 48 16] %r9w
+; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 32 16] %r10w
+; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 16 16] %r11w
+; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 0 16] %bx
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

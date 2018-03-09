@@ -31,11 +31,11 @@
 name:            foo
 body: |
   bb.0.entry:
-    successors: %bb.1.less, %bb.2.exit
+    successors: %bb.1, %bb.2
     ; CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
-    ; CHECK-NEXT: JG_1 %bb.2.exit, implicit %eflags
+    ; CHECK-NEXT: JG_1 %bb.2, implicit %eflags
     CMP32ri8 %edi, 10, implicit-def %eflags
-    JG_1 %bb.2.exit, implicit %eflags
+    JG_1 %bb.2, implicit %eflags
 
   bb.1.less:
     ; CHECK: %eax = MOV32r0 implicit-def %eflags

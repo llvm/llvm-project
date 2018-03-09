@@ -35,7 +35,7 @@ define void @test_tailcall_explicit_sret_alloca_unused() #0 {
 }
 
 ; CHECK-LABEL: _test_tailcall_explicit_sret_alloca_dummyusers:
-; CHECK: ldr [[PTRLOAD1:x[0-9]+]], [x0]
+; CHECK: ldr [[PTRLOAD1:q[0-9]+]], [x0]
 ; CHECK: str [[PTRLOAD1]], [sp]
 ; CHECK: mov  x8, sp
 ; CHECK-NEXT: bl _test_explicit_sret
@@ -64,8 +64,8 @@ define void @test_tailcall_explicit_sret_gep(i1024* %ptr) #0 {
 ; CHECK: mov  x[[CALLERX8NUM:[0-9]+]], x8
 ; CHECK: mov  x8, sp
 ; CHECK-NEXT: bl _test_explicit_sret
-; CHECK-NEXT: ldr [[CALLERSRET1:x[0-9]+]], [sp]
-; CHECK: str [[CALLERSRET1:x[0-9]+]], [x[[CALLERX8NUM]]]
+; CHECK-NEXT: ldr [[CALLERSRET1:q[0-9]+]], [sp]
+; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
 define i1024 @test_tailcall_explicit_sret_alloca_returned() #0 {
   %l = alloca i1024, align 8
@@ -79,8 +79,8 @@ define i1024 @test_tailcall_explicit_sret_alloca_returned() #0 {
 ; CHECK-DAG: mov  [[FPTR:x[0-9]+]], x0
 ; CHECK: mov  x0, sp
 ; CHECK-NEXT: blr [[FPTR]]
-; CHECK-NEXT: ldr [[CALLERSRET1:x[0-9]+]], [sp]
-; CHECK: str [[CALLERSRET1:x[0-9]+]], [x[[CALLERX8NUM]]]
+; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
+; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
 define void @test_indirect_tailcall_explicit_sret_nosret_arg(i1024* sret %arg, void (i1024*)* %f) #0 {
   %l = alloca i1024, align 8
@@ -94,8 +94,8 @@ define void @test_indirect_tailcall_explicit_sret_nosret_arg(i1024* sret %arg, v
 ; CHECK: mov  x[[CALLERX8NUM:[0-9]+]], x8
 ; CHECK: mov  x8, sp
 ; CHECK-NEXT: blr x0
-; CHECK-NEXT: ldr [[CALLERSRET1:x[0-9]+]], [sp]
-; CHECK: str [[CALLERSRET1:x[0-9]+]], [x[[CALLERX8NUM]]]
+; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
+; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
 define void @test_indirect_tailcall_explicit_sret_(i1024* sret %arg, i1024 ()* %f) #0 {
   %ret = tail call i1024 %f()

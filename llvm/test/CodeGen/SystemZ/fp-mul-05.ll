@@ -5,12 +5,12 @@
 ; There is no memory form of 128-bit multiplication.
 define void @f1(fp128 *%ptr, float %f2) {
 ; CHECK-LABEL: f1:
-; CHECK: lxebr %f0, %f0
-; CHECK: ld %f1, 0(%r2)
-; CHECK: ld %f3, 8(%r2)
-; CHECK: mxbr %f1, %f0
-; CHECK: std %f1, 0(%r2)
-; CHECK: std %f3, 8(%r2)
+; CHECK-DAG: lxebr %f0, %f0
+; CHECK-DAG: ld %f1, 0(%r2)
+; CHECK-DAG: ld %f3, 8(%r2)
+; CHECK: mxbr %f0, %f1
+; CHECK: std %f0, 0(%r2)
+; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
   %f1 = load fp128 , fp128 *%ptr
   %f2x = fpext float %f2 to fp128

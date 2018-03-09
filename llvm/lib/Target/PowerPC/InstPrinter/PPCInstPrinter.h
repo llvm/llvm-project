@@ -14,21 +14,24 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_INSTPRINTER_PPCINSTPRINTER_H
 #define LLVM_LIB_TARGET_POWERPC_INSTPRINTER_PPCINSTPRINTER_H
 
+#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 
 class PPCInstPrinter : public MCInstPrinter {
-  bool IsDarwin;
+  Triple TT;
+private:
+  bool showRegistersWithPercentPrefix(const char *RegName) const;
+  bool showRegistersWithPrefix() const;
+  const char *getVerboseConditionRegName(unsigned RegNum,
+                                         unsigned RegEncoding) const;
+
 public:
   PPCInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
-                 const MCRegisterInfo &MRI, bool isDarwin)
-    : MCInstPrinter(MAI, MII, MRI), IsDarwin(isDarwin) {}
-  
-  bool isDarwinSyntax() const {
-    return IsDarwin;
-  }
-  
+                 const MCRegisterInfo &MRI, Triple T)
+    : MCInstPrinter(MAI, MII, MRI), TT(T) {}
+
   void printRegName(raw_ostream &OS, unsigned RegNo) const override;
   void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
                  const MCSubtargetInfo &STI) override;

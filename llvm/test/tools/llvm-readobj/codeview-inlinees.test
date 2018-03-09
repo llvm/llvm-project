@@ -1,0 +1,38 @@
+Compile the following like so to reproduce the input:
+$ cl -c -O2 t.c -Z7
+void g();
+static inline void f() { g(); }
+static inline void h() { g(); }
+void k() {
+  f();
+  h();
+}
+
+RUN: llvm-readobj -codeview %p/Inputs/codeview-inlinees.obj | FileCheck %s
+
+CHECK:    SubSectionType: InlineeLines (0xF6)
+CHECK:      Inlinee: f (0x1003)
+CHECK:      Inlinee: h (0x1004)
+CHECK-NOT: Inlinee:
+
+CHECK:    GlobalProcIdSym {
+CHECK:      Kind: S_GPROC32_ID (0x1147)
+CHECK:      DisplayName: k
+CHECK:      LinkageName: k
+CHECK:    }
+CHECK:    InlineSiteSym
+CHECK:      Kind: S_INLINESITE (0x114D)
+CHECK:      Inlinee: h (0x1004)
+CHECK:    InlineSiteSym
+CHECK:      Kind: S_INLINESITE (0x114D)
+CHECK:      Inlinee: f (0x1003)
+CHECK:    InlineesSym {
+CHECK-NEXT:      Kind: S_INLINEES (0x1168)
+CHECK-NEXT:      Callers [
+CHECK-NEXT:        FuncID: f (0x1003)
+CHECK-NEXT:        FuncID: h (0x1004)
+CHECK-NEXT:      ]
+CHECK:    }
+CHECK:    ProcEnd {
+CHECK:      Kind: S_PROC_ID_END (0x114F)
+CHECK:    }

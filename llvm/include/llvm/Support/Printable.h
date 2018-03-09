@@ -42,7 +42,7 @@ public:
       : Print(std::move(Print)) {}
 };
 
-static inline raw_ostream &operator<<(raw_ostream &OS, const Printable &P) {
+inline raw_ostream &operator<<(raw_ostream &OS, const Printable &P) {
   P.Print(OS);
   return OS;
 }

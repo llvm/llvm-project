@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep srwi
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep rlwimi
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep srwi
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep rlwimi
 
 define i32 @baz(i64 %a) {
         %tmp29 = lshr i64 %a, 24                ; <i64> [#uses=1]

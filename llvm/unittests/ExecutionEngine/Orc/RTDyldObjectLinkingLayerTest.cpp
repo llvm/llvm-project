@@ -255,4 +255,12 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
          "(multiple unrelated objects loaded prior to finalization)";
 }
 
+TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
+  RTDyldObjectLinkingLayer ObjLayer(
+      []() { return nullptr; },
+      [](RTDyldObjectLinkingLayer::ObjHandleT,
+         const RTDyldObjectLinkingLayer::ObjectPtr &obj,
+         const RuntimeDyld::LoadedObjectInfo &info) {});
+}
+
 } // end anonymous namespace

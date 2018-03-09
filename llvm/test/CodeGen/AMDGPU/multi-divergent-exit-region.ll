@@ -81,13 +81,11 @@
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN: v_cmp_ne_u32_e32 vcc, 0
 ; GCN-NEXT: s_and_saveexec_b64
-; GCN-NEXT: s_xor_b64
 
 ; GCN: ; %exit0
 ; GCN: buffer_store_dword
 
 ; GCN: ; %UnifiedReturnBlock
-; GCN-NEXT: s_or_b64 exec, exec
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @multi_divergent_region_exit_ret_ret(i32 addrspace(1)* nocapture %arg0, i32 addrspace(1)* nocapture %arg1, i32 addrspace(1)* nocapture %arg2) #0 {
 entry:

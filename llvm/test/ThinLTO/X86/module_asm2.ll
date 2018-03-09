@@ -11,9 +11,9 @@
 ; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:     -r=%t1.bc,foo,plx \
 ; RUN:     -r=%t1.bc,globalfunc,plx \
-; RUN:     -r=%t1.bc,globalfunc,plx \
+; RUN:     -r=%t1.bc,globalfunc,lx \
 ; RUN:     -r=%t1.bc,weakfunc,plx \
-; RUN:     -r=%t1.bc,weakfunc,plx \
+; RUN:     -r=%t1.bc,weakfunc,lx \
 ; RUN:     -r=%t1.bc,b,pl \
 ; RUN:     -r=%t1.bc,x,pl \
 ; RUN:     -r=%t1.bc,func1,pl \
@@ -27,8 +27,8 @@
 ; RUN:     -r=%t2.bc,func3,l \
 ; RUN:     -r=%t2.bc,callglobalfunc,l \
 ; RUN:     -r=%t2.bc,callweakfunc,l
-; RUN: llvm-nm %t.o.0 | FileCheck  %s --check-prefix=NM0
-; RUN: llvm-nm %t.o.1 | FileCheck  %s --check-prefix=NM1
+; RUN: llvm-nm %t.o.1 | FileCheck  %s --check-prefix=NM0
+; RUN: llvm-nm %t.o.2 | FileCheck  %s --check-prefix=NM1
 
 ; Check that local values b and x, which are referenced on
 ; llvm.used and llvm.compiler.used, respectively, are not promoted.

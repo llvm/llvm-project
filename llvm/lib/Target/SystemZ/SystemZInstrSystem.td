@@ -23,7 +23,7 @@ let hasSideEffects = 1, Uses = [CC] in
   def EPSW : InherentDualRRE<"epsw", 0xB98D, GR32>;
 
 // Load PSW (extended).
-let hasSideEffects = 1, Defs = [CC], mayLoad = 1 in {
+let hasSideEffects = 1, Defs = [CC] in {
   def LPSW : SideEffectUnaryS<"lpsw", 0x8200, null_frag, 8>;
   def LPSWE : SideEffectUnaryS<"lpswe", 0xB2B2, null_frag, 16>;
 }
@@ -37,7 +37,7 @@ let hasSideEffects = 1 in
   def SPKA : SideEffectAddressS<"spka", 0xB20A, null_frag>;
 
 // Set system mask.
-let hasSideEffects = 1, mayLoad = 1 in
+let hasSideEffects = 1 in
   def SSM : SideEffectUnaryS<"ssm", 0x8000, null_frag, 1>;
 
 // Store then AND/OR system mask.
@@ -60,13 +60,15 @@ let hasSideEffects = 1 in {
 // Control Register Instructions.
 //===----------------------------------------------------------------------===//
 
-// Load control.
-def LCTL : LoadMultipleRS<"lctl", 0xB7, CR64>;
-def LCTLG : LoadMultipleRSY<"lctlg", 0xEB2F, CR64>;
+let hasSideEffects = 1 in {
+  // Load control.
+  def LCTL : LoadMultipleRS<"lctl", 0xB7, CR64>;
+  def LCTLG : LoadMultipleRSY<"lctlg", 0xEB2F, CR64>;
 
-// Store control.
-def STCTL : StoreMultipleRS<"stctl", 0xB6, CR64>;
-def STCTG : StoreMultipleRSY<"stctg", 0xEB25, CR64>;
+  // Store control.
+  def STCTL : StoreMultipleRS<"stctl", 0xB6, CR64>;
+  def STCTG : StoreMultipleRSY<"stctg", 0xEB25, CR64>;
+}
 
 // Extract primary ASN (and instance).
 let hasSideEffects = 1 in {

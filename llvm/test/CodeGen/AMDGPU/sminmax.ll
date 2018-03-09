@@ -1,6 +1,7 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}s_abs_i32:
 ; GCN: s_abs_i32
@@ -17,9 +18,13 @@ define amdgpu_kernel void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind 
 }
 
 ; FUNC-LABEL: {{^}}v_abs_i32:
-; GCN: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
+; SIVI: v_sub_{{i|u}}32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
+; GFX9: v_sub_u32_e32 [[NEG:v[0-9]+]], 0, [[SRC:v[0-9]+]]
+
 ; GCN: v_max_i32_e32 {{v[0-9]+}}, [[SRC]], [[NEG]]
-; GCN: v_add_i32
+
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc
+; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
@@ -33,7 +38,8 @@ define amdgpu_kernel void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}v_abs_i32_repeat_user:
-; GCN: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
+; SIVI: v_sub_{{i|u}}32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
+; GFX9: v_sub_u32_e32 [[NEG:v[0-9]+]], 0, [[SRC:v[0-9]+]]
 ; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[SRC]], [[NEG]]
 ; GCN: v_mul_lo_i32 v{{[0-9]+}}, [[MAX]], [[MAX]]
 define amdgpu_kernel void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
@@ -68,14 +74,20 @@ define amdgpu_kernel void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %
 }
 
 ; FUNC-LABEL: {{^}}v_abs_v2i32:
-; GCN-DAG: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
-; GCN-DAG: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
+; SIVI-DAG: v_sub_{{i|u}}32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
+; SIVI-DAG: v_sub_{{i|u}}32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
+
+; GFX9-DAG: v_sub_u32_e32 [[NEG0:v[0-9]+]], 0, [[SRC0:v[0-9]+]]
+; GFX9-DAG: v_sub_u32_e32 [[NEG1:v[0-9]+]], 0, [[SRC1:v[0-9]+]]
 
 ; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC0]], [[NEG0]]
 ; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC1]], [[NEG1]]
 
-; GCN: v_add_i32
-; GCN: v_add_i32
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc
+
+; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
+; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
 
 ; EG: MAX_INT
 ; EG: MAX_INT
@@ -127,20 +139,31 @@ define amdgpu_kernel void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %
 }
 
 ; FUNC-LABEL: {{^}}v_abs_v4i32:
-; GCN-DAG: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
-; GCN-DAG: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
-; GCN-DAG: v_sub_i32_e32 [[NEG2:v[0-9]+]], vcc, 0, [[SRC2:v[0-9]+]]
-; GCN-DAG: v_sub_i32_e32 [[NEG3:v[0-9]+]], vcc, 0, [[SRC3:v[0-9]+]]
+
+; SIVI-DAG: v_sub_{{i|u}}32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
+; SIVI-DAG: v_sub_{{i|u}}32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
+; SIVI-DAG: v_sub_{{i|u}}32_e32 [[NEG2:v[0-9]+]], vcc, 0, [[SRC2:v[0-9]+]]
+; SIVI-DAG: v_sub_{{i|u}}32_e32 [[NEG3:v[0-9]+]], vcc, 0, [[SRC3:v[0-9]+]]
+
+; GFX9-DAG: v_sub_u32_e32 [[NEG0:v[0-9]+]], 0, [[SRC0:v[0-9]+]]
+; GFX9-DAG: v_sub_u32_e32 [[NEG1:v[0-9]+]], 0, [[SRC1:v[0-9]+]]
+; GFX9-DAG: v_sub_u32_e32 [[NEG2:v[0-9]+]], 0, [[SRC2:v[0-9]+]]
+; GFX9-DAG: v_sub_u32_e32 [[NEG3:v[0-9]+]], 0, [[SRC3:v[0-9]+]]
 
 ; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC0]], [[NEG0]]
 ; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC1]], [[NEG1]]
 ; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC2]], [[NEG2]]
 ; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC3]], [[NEG3]]
 
-; GCN: v_add_i32
-; GCN: v_add_i32
-; GCN: v_add_i32
-; GCN: v_add_i32
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc,
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc,
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc,
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc,
+
+; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
+; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
+; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
+; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
 
 ; EG: MAX_INT
 ; EG: MAX_INT
@@ -181,8 +204,8 @@ define amdgpu_kernel void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(
 }
 
 ; FUNC-LABEL: {{^}}v_min_max_i32:
-; GCN: {{buffer|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[VAL0:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[VAL1:v[0-9]+]]
 
 ; GCN-DAG: v_min_i32_e32 v{{[0-9]+}}, [[VAL0]], [[VAL1]]
 ; GCN-DAG: v_max_i32_e32 v{{[0-9]+}}, [[VAL0]], [[VAL1]]

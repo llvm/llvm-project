@@ -5,7 +5,7 @@
 
 define i32 @sad8_32bit_icmp_sge(i8* nocapture readonly %cur, i8* nocapture readonly %ref, i32 %stride) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad8_32bit_icmp_sge:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
@@ -13,7 +13,7 @@ define i32 @sad8_32bit_icmp_sge(i8* nocapture readonly %cur, i8* nocapture reado
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_32bit_icmp_sge:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -21,7 +21,7 @@ define i32 @sad8_32bit_icmp_sge(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad8_32bit_icmp_sge:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -55,7 +55,7 @@ for.body:                                         ; preds = %entry
 
 define i32 @sad8_32bit_icmp_sgt(i8* nocapture readonly %cur, i8* nocapture readonly %ref, i32 %stride) local_unnamed_addr #1 {
 ; SSE2-LABEL: sad8_32bit_icmp_sgt:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
@@ -63,7 +63,7 @@ define i32 @sad8_32bit_icmp_sgt(i8* nocapture readonly %cur, i8* nocapture reado
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_32bit_icmp_sgt:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -71,7 +71,7 @@ define i32 @sad8_32bit_icmp_sgt(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad8_32bit_icmp_sgt:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -104,7 +104,7 @@ for.body:                                         ; preds = %entry
 
 define i32 @sad8_32bit_icmp_sle(i8* nocapture readonly %cur, i8* nocapture readonly %ref, i32 %stride) local_unnamed_addr #2 {
 ; SSE2-LABEL: sad8_32bit_icmp_sle:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
@@ -112,7 +112,7 @@ define i32 @sad8_32bit_icmp_sle(i8* nocapture readonly %cur, i8* nocapture reado
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_32bit_icmp_sle:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -120,7 +120,7 @@ define i32 @sad8_32bit_icmp_sle(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad8_32bit_icmp_sle:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -153,7 +153,7 @@ for.body:                                         ; preds = %entry
 
 define i32 @sad8_32bit_icmp_slt(i8* nocapture readonly %cur, i8* nocapture readonly %ref, i32 %stride) local_unnamed_addr #3 {
 ; SSE2-LABEL: sad8_32bit_icmp_slt:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
@@ -161,7 +161,7 @@ define i32 @sad8_32bit_icmp_slt(i8* nocapture readonly %cur, i8* nocapture reado
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_32bit_icmp_slt:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -169,7 +169,7 @@ define i32 @sad8_32bit_icmp_slt(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad8_32bit_icmp_slt:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -202,7 +202,7 @@ for.body:                                         ; preds = %entry
 
 define i64 @sad8_64bit_icmp_sext_slt(i8* nocapture readonly %cur, i8* nocapture readonly %ref, i64 %stride) local_unnamed_addr #4 {
 ; SSE2-LABEL: sad8_64bit_icmp_sext_slt:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
@@ -210,7 +210,7 @@ define i64 @sad8_64bit_icmp_sext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_64bit_icmp_sext_slt:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -218,7 +218,7 @@ define i64 @sad8_64bit_icmp_sext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad8_64bit_icmp_sext_slt:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -251,7 +251,7 @@ for.body:                                         ; preds = %entry
 
 define i64 @sad8_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* nocapture readonly %ref, i64 %stride) local_unnamed_addr #4 {
 ; SSE2-LABEL: sad8_64bit_icmp_zext_slt:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
@@ -259,7 +259,7 @@ define i64 @sad8_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_64bit_icmp_zext_slt:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -267,7 +267,7 @@ define i64 @sad8_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad8_64bit_icmp_zext_slt:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -300,7 +300,7 @@ for.body:                                         ; preds = %entry
 
 define i64 @sad8_early_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* nocapture readonly %ref, i64 %stride) local_unnamed_addr #4 {
 ; SSE2-LABEL: sad8_early_64bit_icmp_zext_slt:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
@@ -308,7 +308,7 @@ define i64 @sad8_early_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* noca
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_early_64bit_icmp_zext_slt:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
@@ -316,7 +316,7 @@ define i64 @sad8_early_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* noca
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad8_early_64bit_icmp_zext_slt:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0

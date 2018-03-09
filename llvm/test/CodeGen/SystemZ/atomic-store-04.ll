@@ -10,3 +10,12 @@ define void @f1(i64 %val, i64 *%src) {
   store atomic i64 %val, i64 *%src seq_cst, align 8
   ret void
 }
+
+define void @f2(i64 %val, i64 *%src) {
+; CHECK-LABEL: f2:
+; CHECK: stg %r2, 0(%r3)
+; CHECK-NOT: bcr 1{{[45]}}, %r0
+; CHECK: br %r14
+  store atomic i64 %val, i64 *%src monotonic, align 8
+  ret void
+}

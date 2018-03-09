@@ -6,7 +6,7 @@
 
 @ ARM: vfma.f64 d16, d18, d17 @ encoding: [0xa1,0x0b,0xe2,0xee]
 @ THUMB: vfma.f64 d16, d18, d17 @ encoding: [0xe2,0xee,0xa1,0x0b]
-@ THUMB_V7EM-ERRORS: error: invalid operand for instruction
+@ THUMB_V7EM-ERRORS: error: invalid instruction
 @ THUMB_V7EM-ERRORS-NEXT: vfma.f64 d16, d18, d17
 vfma.f64 d16, d18, d17
 
@@ -17,7 +17,7 @@ vfma.f32 s2, s4, s0
 
 @ ARM: vfma.f32 d16, d18, d17 @ encoding: [0xb1,0x0c,0x42,0xf2]
 @ THUMB: vfma.f32 d16, d18, d17 @ encoding: [0x42,0xef,0xb1,0x0c]
-@ THUMB_V7EM-ERRORS: error: invalid operand for instruction
+@ THUMB_V7EM-ERRORS: error: invalid instruction
 @ THUMB_V7EM-ERRORS-NEXT: vfma.f32 d16, d18, d17
 vfma.f32 d16, d18, d17
 
@@ -29,7 +29,7 @@ vfma.f32 q2, q4, q0
 
 @ ARM: vfnma.f64 d16, d18, d17 @ encoding: [0xe1,0x0b,0xd2,0xee]
 @ THUMB: vfnma.f64 d16, d18, d17 @ encoding: [0xd2,0xee,0xe1,0x0b]
-@ THUMB_V7EM-ERRORS: error: invalid operand for instruction
+@ THUMB_V7EM-ERRORS: error: invalid instruction
 @ THUMB_V7EM-ERRORS-NEXT: vfnma.f64 d16, d18, d17
 vfnma.f64 d16, d18, d17
 
@@ -40,7 +40,7 @@ vfnma.f32 s2, s4, s0
 
 @ ARM: vfms.f64 d16, d18, d17 @ encoding: [0xe1,0x0b,0xe2,0xee]
 @ THUMB: vfms.f64 d16, d18, d17 @ encoding: [0xe2,0xee,0xe1,0x0b]
-@ THUMB_V7EM-ERRORS: error: invalid operand for instruction
+@ THUMB_V7EM-ERRORS: error: invalid instruction
 @ THUMB_V7EM-ERRORS-NEXT: vfms.f64 d16, d18, d17
 vfms.f64 d16, d18, d17
 
@@ -51,7 +51,7 @@ vfms.f32 s2, s4, s0
 
 @ ARM: vfms.f32 d16, d18, d17 @ encoding: [0xb1,0x0c,0x62,0xf2]
 @ THUMB: vfms.f32 d16, d18, d17 @ encoding: [0x62,0xef,0xb1,0x0c]
-@ THUMB_V7EM-ERRORS: error: invalid operand for instruction
+@ THUMB_V7EM-ERRORS: error: invalid instruction
 @ THUMB_V7EM-ERRORS-NEXT: vfms.f32 d16, d18, d17
 vfms.f32 d16, d18, d17
 
@@ -63,7 +63,7 @@ vfms.f32 q2, q4, q0
 
 @ ARM: vfnms.f64 d16, d18, d17 @ encoding: [0xa1,0x0b,0xd2,0xee]
 @ THUMB: vfnms.f64 d16, d18, d17 @ encoding: [0xd2,0xee,0xa1,0x0b]
-@ THUMB_V7EM-ERRORS: error: invalid operand for instruction
+@ THUMB_V7EM-ERRORS: error: invalid instruction
 @ THUMB_V7EM-ERRORS-NEXT: vfnms.f64 d16, d18, d17
 vfnms.f64 d16, d18, d17
 

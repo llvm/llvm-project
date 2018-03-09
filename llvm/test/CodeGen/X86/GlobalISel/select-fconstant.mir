@@ -25,16 +25,16 @@ regBankSelected: true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr, preferred-register: '' }
-# CHECK_SMALL64:          %0:fr32 = MOVSSrm %rip, 1, _, %const.0, _
+# CHECK_SMALL64:          %0:fr32 = MOVSSrm %rip, 1, %noreg, %const.0, %noreg
 # CHECK_SMALL64-NEXT:     %xmm0 = COPY %0
 # CHECK_SMALL64-NEXT:     RET 0, implicit %xmm0
 #
 # CHECK_LARGE64:          %1:gr64 = MOV64ri %const.0
-# CHECK_LARGE64-NEXT:     %0:fr32 = MOVSSrm %1, 1, _, 0, _ :: (load 8 from constant-pool, align 32)
+# CHECK_LARGE64-NEXT:     %0:fr32 = MOVSSrm %1, 1, %noreg, 0, %noreg :: (load 8 from constant-pool, align 32)
 # CHECK_LARGE64-NEXT:     %xmm0 = COPY %0
 # CHECK_LARGE64-NEXT:     RET 0, implicit %xmm0
 #
-# CHECK32:                %0:fr32 = MOVSSrm _, 1, _, %const.0, _
+# CHECK32:                %0:fr32 = MOVSSrm %noreg, 1, %noreg, %const.0, %noreg
 # CHECK32-NEXT:           %xmm0 = COPY %0
 # CHECK32-NEXT:           RET 0, implicit %xmm0
 body:             |
@@ -64,16 +64,16 @@ tracksRegLiveness: true
 # CHECK32-NEXT:         - { id: 0, class: fr64, preferred-register: '' }
 registers:
   - { id: 0, class: vecr, preferred-register: '' }
-# CHECK_SMALL64:          %0:fr64 = MOVSDrm %rip, 1, _, %const.0, _
+# CHECK_SMALL64:          %0:fr64 = MOVSDrm %rip, 1, %noreg, %const.0, %noreg
 # CHECK_SMALL64-NEXT:     %xmm0 = COPY %0
 # CHECK_SMALL64-NEXT:     RET 0, implicit %xmm0
 #
 # CHECK_LARGE64:          %1:gr64 = MOV64ri %const.0
-# CHECK_LARGE64-NEXT:     %0:fr64 = MOVSDrm %1, 1, _, 0, _ :: (load 8 from constant-pool, align 64)
+# CHECK_LARGE64-NEXT:     %0:fr64 = MOVSDrm %1, 1, %noreg, 0, %noreg :: (load 8 from constant-pool, align 64)
 # CHECK_LARGE64-NEXT:     %xmm0 = COPY %0
 # CHECK_LARGE64-NEXT:     RET 0, implicit %xmm0
 #
-# CHECK32:                %0:fr64 = MOVSDrm _, 1, _, %const.0, _
+# CHECK32:                %0:fr64 = MOVSDrm %noreg, 1, %noreg, %const.0, %noreg
 # CHECK32-NEXT:           %xmm0 = COPY %0
 # CHECK32-NEXT:           RET 0, implicit %xmm0
 body:             |

@@ -20,8 +20,8 @@ define i32 @test2(i8 %tmp) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 %tmp to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], 7
-; CHECK-NEXT:    [[TMP51:%.*]] = lshr i32 [[TMP4]], 3
-; CHECK-NEXT:    ret i32 [[TMP51]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP4]], 3
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %tmp3 = zext i8 %tmp to i32
   %tmp4 = add i32 %tmp3, 7
@@ -161,5 +161,57 @@ define <2 x i32> @ashr_overshift_splat_vec(<2 x i32> %x) {
   %sh1 = ashr <2 x i32> %x, <i32 15, i32 15>
   %sh2 = ashr <2 x i32> %sh1, <i32 17, i32 17>
   ret <2 x i32> %sh2
+}
+
+; ashr (sext X), C --> sext (ashr X, C')
+
+define i32 @hoist_ashr_ahead_of_sext_1(i8 %x) {
+; CHECK-LABEL: @hoist_ashr_ahead_of_sext_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 %x, 3
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i8 %x to i32
+  %r = ashr i32 %sext, 3
+  ret i32 %r
+}
+
+; ashr (sext X), C --> sext (ashr X, C')
+
+define <2 x i32> @hoist_ashr_ahead_of_sext_1_splat(<2 x i8> %x) {
+; CHECK-LABEL: @hoist_ashr_ahead_of_sext_1_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> %x, <i8 3, i8 3>
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sext = sext <2 x i8> %x to <2 x i32>
+  %r = ashr <2 x i32> %sext, <i32 3, i32 3>
+  ret <2 x i32> %r
+}
+
+; ashr (sext X), C --> sext (ashr X, C') -- the shift amount must be clamped
+
+define i32 @hoist_ashr_ahead_of_sext_2(i8 %x) {
+; CHECK-LABEL: @hoist_ashr_ahead_of_sext_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 %x, 7
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i8 %x to i32
+  %r = ashr i32 %sext, 8
+  ret i32 %r
+}
+
+; ashr (sext X), C --> sext (ashr X, C') -- the shift amount must be clamped
+
+define <2 x i32> @hoist_ashr_ahead_of_sext_2_splat(<2 x i8> %x) {
+; CHECK-LABEL: @hoist_ashr_ahead_of_sext_2_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> %x, <i8 7, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sext = sext <2 x i8> %x to <2 x i32>
+  %r = ashr <2 x i32> %sext, <i32 8, i32 8>
+  ret <2 x i32> %r
 }
 

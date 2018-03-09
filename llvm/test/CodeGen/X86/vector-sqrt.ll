@@ -4,7 +4,7 @@
 ; Function Attrs: nounwind readonly uwtable
 define <2 x double> @sqrtd2(double* nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: sqrtd2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsqrtsd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    vsqrtsd 8(%rdi), %xmm1, %xmm1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -26,7 +26,7 @@ declare double @sqrt(double) local_unnamed_addr #1
 ; Function Attrs: nounwind readonly uwtable
 define <4 x float> @sqrtf4(float* nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: sqrtf4:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsqrtss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    vsqrtss 4(%rdi), %xmm1, %xmm1
 ; CHECK-NEXT:    vsqrtss 8(%rdi), %xmm2, %xmm2

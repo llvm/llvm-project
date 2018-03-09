@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86FRAMELOWERING_H
 #define LLVM_LIB_TARGET_X86_X86FRAMELOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 
@@ -89,7 +89,7 @@ public:
 
   bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MI,
-                                  const std::vector<CalleeSavedInfo> &CSI,
+                                  std::vector<CalleeSavedInfo> &CSI,
                                   const TargetRegisterInfo *TRI) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
@@ -157,15 +157,6 @@ public:
   void orderFrameObjects(const MachineFunction &MF,
                          SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
-  /// convertArgMovsToPushes - This method tries to convert a call sequence
-  /// that uses sub and mov instructions to put the argument onto the stack
-  /// into a series of pushes.
-  /// Returns true if the transformation succeeded, false if not.
-  bool convertArgMovsToPushes(MachineFunction &MF, 
-                              MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator I, 
-                              uint64_t Amount) const;
-
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
@@ -214,6 +205,11 @@ private:
   unsigned getPSPSlotOffsetFromSP(const MachineFunction &MF) const;
 
   unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
+
+  /// Materialize the catchret target MBB in RAX.
+  void emitCatchRetReturnValue(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI,
+                               MachineInstr *CatchRet) const;
 };
 
 } // End llvm namespace

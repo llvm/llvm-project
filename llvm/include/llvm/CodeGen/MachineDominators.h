@@ -93,7 +93,7 @@ public:
   /// multiple blocks if we are computing post dominators.  For forward
   /// dominators, this will always be a single block (the entry node).
   ///
-  inline const std::vector<MachineBasicBlock*> &getRoots() const {
+  inline const SmallVectorImpl<MachineBasicBlock*> &getRoots() const {
     applySplitCriticalEdges();
     return DT->getRoots();
   }

@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=thumbv7s-apple-ios7.0.0 -filetype=obj -o %T/MachO_Thumb.o %s
-# RUN: llvm-rtdyld -triple=thumbv7s-apple-ios7.0.0 -verify -check=%s %/T/MachO_Thumb.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=thumbv7s-apple-ios7.0.0 -filetype=obj -o %t/MachO_Thumb.o %s
+# RUN: llvm-rtdyld -triple=thumbv7s-apple-ios7.0.0 -verify -check=%s %t/MachO_Thumb.o
 
         .section        __TEXT,__text,regular,pure_instructions
         .syntax unified

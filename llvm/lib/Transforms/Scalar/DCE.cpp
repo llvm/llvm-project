@@ -50,6 +50,7 @@ namespace {
       for (BasicBlock::iterator DI = BB.begin(); DI != BB.end(); ) {
         Instruction *Inst = &*DI++;
         if (isInstructionTriviallyDead(Inst, TLI)) {
+          salvageDebugInfo(*Inst);
           Inst->eraseFromParent();
           Changed = true;
           ++DIEEliminated;
@@ -76,6 +77,8 @@ static bool DCEInstruction(Instruction *I,
                            SmallSetVector<Instruction *, 16> &WorkList,
                            const TargetLibraryInfo *TLI) {
   if (isInstructionTriviallyDead(I, TLI)) {
+    salvageDebugInfo(*I);
+
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
     for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {

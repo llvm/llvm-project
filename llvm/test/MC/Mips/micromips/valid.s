@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mattr=micromips | FileCheck %s
+# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mattr=micromips | FileCheck %s
 
 .set noat
 addiusp -16                 # CHECK: addiusp -16        # encoding: [0x4f,0xf9]
@@ -49,6 +49,10 @@ sdbbp16 14                  # CHECK: sdbbp16 14         # encoding: [0x46,0xce]
 lw $3, 32($sp)              # CHECK: lw $3, 32($sp)     # encoding: [0x48,0x68]
 sw $4, 124($sp)             # CHECK: sw $4, 124($sp)    # encoding: [0xc8,0x9f]
 lw $3, 32($gp)              # CHECK: lw $3, 32($gp)     # encoding: [0x65,0x88]
+abs.s $f0, $f2              # CHECK:  abs.s $f0, $f2    # encoding: [0x54,0x02,0x03,0x7b]
+                            # CHECK-NEXT:               # <MCInst #{{[0-9]+}} FABS_S_MM
+abs.d $f4, $f6              # CHECK:  abs.d $f4, $f6    # encoding: [0x54,0x86,0x23,0x7b]
+                            # CHECK-NEXT:               # <MCInst #{{[0-9]+}} FABS_MM
 add $9, $6, $7              # CHECK: add $9, $6, $7         # encoding: [0x00,0xe6,0x49,0x10]
 addi $9, $6, 17767          # CHECK: addi $9, $6, 17767     # encoding: [0x11,0x26,0x45,0x67]
 addiu $9, $6, -15001        # CHECK: addiu $9, $6, -15001   # encoding: [0x31,0x26,0xc5,0x67]
@@ -243,9 +247,13 @@ c.ult.s  $fcc7, $f24, $f10  # CHECK: c.ult.s  $fcc7, $f24, $f10 # encoding: [0x5
 c.un.d   $fcc6, $f22, $f24  # CHECK: c.un.d   $fcc6, $f22, $f24 # encoding: [0x57,0x16,0xc4,0x7c]
 c.un.s   $fcc1, $f30, $f4   # CHECK: c.un.s   $fcc1, $f30, $f4  # encoding: [0x54,0x9e,0x20,0x7c]
 bc1t 8                      # CHECK: bc1t 8                     # encoding: [0x43,0xa0,0x00,0x04]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} BC1T_MM
 bc1f 16                     # CHECK: bc1f 16                    # encoding: [0x43,0x80,0x00,0x08]
-bc1t $fcc1, 4               # CHECK: bc1t $fcc1, 4              # encoding: [0x43,0xa0,0x00,0x02]
-bc1f $fcc2, -20             # CHECK: bc1f $fcc2, -20            # encoding: [0x43,0x80,0xff,0xf6]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} BC1F_MM
+bc1t $fcc1, 4               # CHECK: bc1t $fcc1, 4              # encoding: [0x43,0xa4,0x00,0x02]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} BC1T_MM
+bc1f $fcc2, -20             # CHECK: bc1f $fcc2, -20            # encoding: [0x43,0x88,0xff,0xf6]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} BC1F_MM
 sync                        # CHECK: sync                   # encoding: [0x00,0x00,0x6b,0x7c]
 sync 0                      # CHECK: sync 0                 # encoding: [0x00,0x00,0x6b,0x7c]
 sync 1                      # CHECK: sync 1                 # encoding: [0x00,0x01,0x6b,0x7c]

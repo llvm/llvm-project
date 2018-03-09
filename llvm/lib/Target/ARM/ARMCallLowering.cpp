@@ -17,7 +17,7 @@
 #include "ARMBaseInstrInfo.h"
 #include "ARMISelLowering.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMBaseInfo.h"
+#include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -32,6 +32,8 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -41,8 +43,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -190,7 +190,7 @@ void ARMCallLowering::splitToValueTypes(
   LLVMContext &Ctx = OrigArg.Ty->getContext();
   const DataLayout &DL = MF.getDataLayout();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const Function *F = MF.getFunction();
+  const Function &F = MF.getFunction();
 
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
@@ -218,7 +218,7 @@ void ARMCallLowering::splitToValueTypes(
 
     bool NeedsConsecutiveRegisters =
         TLI.functionArgumentNeedsConsecutiveRegisters(
-            SplitTy, F->getCallingConv(), F->isVarArg());
+            SplitTy, F.getCallingConv(), F.isVarArg());
     if (NeedsConsecutiveRegisters) {
       Flags.setInConsecutiveRegs();
       if (i == e - 1)
@@ -244,7 +244,7 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
     return true;
 
   auto &MF = MIRBuilder.getMF();
-  const auto &F = *MF.getFunction();
+  const auto &F = MF.getFunction();
 
   auto DL = MF.getDataLayout();
   auto &TLI = *getTLI<ARMTargetLowering>();
@@ -434,9 +434,12 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto &MBB = MIRBuilder.getMBB();
   auto DL = MF.getDataLayout();
 
-  for (auto &Arg : F.args())
+  for (auto &Arg : F.args()) {
     if (!isSupportedType(DL, TLI, Arg.getType()))
       return false;
+    if (Arg.hasByValOrInAllocaAttr())
+      return false;
+  }
 
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), F.isVarArg());
@@ -527,6 +530,9 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
 
     if (!Arg.IsFixed)
+      return false;
+
+    if (Arg.Flags.isByVal())
       return false;
 
     SmallVector<unsigned, 8> Regs;

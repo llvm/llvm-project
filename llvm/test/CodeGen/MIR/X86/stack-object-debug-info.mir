@@ -51,8 +51,8 @@ frameInfo:
 # CHECK-LABEL: foo
 # CHECK: stack:
 # CHECK:  - { id: 0, name: y.i, type: default, offset: 0, size: 256, alignment: 16,
-# CHECK-NEXT: callee-saved-register: '', di-variable: '!4', di-expression: '!DIExpression()',
-# CHECK-NEXT: di-location: '!10' }
+# CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: di-variable: '!4', di-expression: '!DIExpression()', di-location: '!10' }
 stack:
   - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
       di-expression: '!DIExpression()', di-location: '!7' }

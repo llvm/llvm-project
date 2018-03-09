@@ -19,10 +19,12 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
+#include <string>
 #include <utility>
 
 namespace llvm {
 
+class Argument;
 class FeatureBitset;
 class Function;
 class GlobalValue;
@@ -52,6 +54,13 @@ struct IsaVersion {
 
 /// \returns Isa version for given subtarget \p Features.
 IsaVersion getIsaVersion(const FeatureBitset &Features);
+
+/// \brief Streams isa version string for given subtarget \p STI into \p Stream.
+void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
+
+/// \returns True if given subtarget \p Features support code object version 3,
+/// false otherwise.
+bool hasCodeObjectV3(const FeatureBitset &Features);
 
 /// \returns Wavefront size for given subtarget \p Features.
 unsigned getWavefrontSize(const FeatureBitset &Features);
@@ -147,12 +156,18 @@ unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 
+LLVM_READONLY
+int getMaskedMIMGOp(const MCInstrInfo &MII,
+                    unsigned Opc, unsigned NewChannels);
+LLVM_READONLY
+int getMCOpcode(uint16_t Opcode, unsigned Gen);
+
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const FeatureBitset &Features);
 
-bool isGroupSegment(const GlobalValue *GV, AMDGPUAS AS);
-bool isGlobalSegment(const GlobalValue *GV, AMDGPUAS AS);
-bool isReadOnlySegment(const GlobalValue *GV, AMDGPUAS AS);
+bool isGroupSegment(const GlobalValue *GV);
+bool isGlobalSegment(const GlobalValue *GV);
+bool isReadOnlySegment(const GlobalValue *GV);
 
 /// \returns True if constants should be emitted to .text section for given
 /// target triple \p TT, false otherwise.
@@ -347,7 +362,7 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 LLVM_READNONE
 bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
-bool isUniformMMO(const MachineMemOperand *MMO);
+bool isArgPassedInSGPR(const Argument *Arg);
 
 /// \returns The encoding that will be used for \p ByteOffset in the SMRD
 /// offset field.

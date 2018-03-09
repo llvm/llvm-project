@@ -55,45 +55,7 @@ class Run(object):
         return _execute_test_impl(test, self.lit_config,
                                   self.parallelism_semaphores)
 
-    def execute_tests(self, display, jobs, max_time=None):
-        """
-        execute_tests(display, jobs, [max_time])
-
-        Execute each of the tests in the run, using up to jobs number of
-        parallel tasks, and inform the display of each individual result. The
-        provided tests should be a subset of the tests available in this run
-        object.
-
-        If max_time is non-None, it should be a time in seconds after which to
-        stop executing tests.
-
-        The display object will have its update method called with each test as
-        it is completed. The calls are guaranteed to be locked with respect to
-        one another, but are *not* guaranteed to be called on the same thread as
-        this method was invoked on.
-
-        Upon completion, each test in the run will have its result
-        computed. Tests which were not actually executed (for any reason) will
-        be given an UNRESOLVED result.
-        """
-        # Don't do anything if we aren't going to run any tests.
-        if not self.tests or jobs == 0:
-            return
-
-        # Install a console-control signal handler on Windows.
-        if win32api is not None:
-            def console_ctrl_handler(type):
-                print('\nCtrl-C detected, terminating.')
-                pool.terminate()
-                pool.join()
-                abort_now()
-                return True
-            win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
-
-        # Save the display object on the runner so that we can update it from
-        # our task completion callback.
-        self.display = display
-
+    def execute_tests_in_pool(self, jobs, max_time):
         # We need to issue many wait calls, so compute the final deadline and
         # subtract time.time() from that as we go along.
         deadline = None
@@ -109,9 +71,17 @@ class Run(object):
                                     (self.lit_config,
                                      self.parallelism_semaphores))
 
+        # Install a console-control signal handler on Windows.
+        if win32api is not None:
+            def console_ctrl_handler(type):
+                print('\nCtrl-C detected, terminating.')
+                pool.terminate()
+                pool.join()
+                abort_now()
+                return True
+            win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
+
         try:
-            self.failure_count = 0
-            self.hit_max_failures = False
             async_results = [pool.apply_async(worker_run_one_test,
                                               args=(test_index, test),
                                               callback=self.consume_test_result)
@@ -140,6 +110,46 @@ class Run(object):
             raise
         finally:
             pool.join()
+
+    def execute_tests(self, display, jobs, max_time=None):
+        """
+        execute_tests(display, jobs, [max_time])
+
+        Execute each of the tests in the run, using up to jobs number of
+        parallel tasks, and inform the display of each individual result. The
+        provided tests should be a subset of the tests available in this run
+        object.
+
+        If max_time is non-None, it should be a time in seconds after which to
+        stop executing tests.
+
+        The display object will have its update method called with each test as
+        it is completed. The calls are guaranteed to be locked with respect to
+        one another, but are *not* guaranteed to be called on the same thread as
+        this method was invoked on.
+
+        Upon completion, each test in the run will have its result
+        computed. Tests which were not actually executed (for any reason) will
+        be given an UNRESOLVED result.
+        """
+        # Don't do anything if we aren't going to run any tests.
+        if not self.tests or jobs == 0:
+            return
+
+        # Save the display object on the runner so that we can update it from
+        # our task completion callback.
+        self.display = display
+
+        self.failure_count = 0
+        self.hit_max_failures = False
+        if self.lit_config.singleProcess:
+            global child_lit_config
+            child_lit_config = self.lit_config
+            for test_index, test in enumerate(self.tests):
+                result = worker_run_one_test(test_index, test)
+                self.consume_test_result(result)
+        else:
+            self.execute_tests_in_pool(jobs, max_time)
 
         # Mark any tests that weren't run as UNRESOLVED.
         for test in self.tests:

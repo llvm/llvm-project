@@ -12,17 +12,17 @@ declare void @f4()
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: tail_dup_fallthrough_with_branch
-; CHECK: # %entry
+; CHECK: # %bb.{{[0-9]+}}: # %entry
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
-; CHECK: # %entry
+; CHECK: # %bb.{{[0-9]+}}: # %entry
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
-; CHECK: # %sw.0
+; CHECK: # %bb.{{[0-9]+}}: # %sw.0
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
 ; CHECK: # %sw.1
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
 ; CHECK: # %sw.default
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
-; CHECK: # %if.then
+; CHECK: # %bb.{{[0-9]+}}: # %if.then
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
 ; CHECK: # %if.else
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}

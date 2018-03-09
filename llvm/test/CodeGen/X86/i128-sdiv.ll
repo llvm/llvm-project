@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 ; Make sure none of these crash, and that the power-of-two transformations
 ; trigger correctly.
 

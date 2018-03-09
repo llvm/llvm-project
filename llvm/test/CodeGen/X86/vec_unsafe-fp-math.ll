@@ -6,7 +6,7 @@
 ; Subtracting zero is free.
 define <4 x float> @vec_fsub_zero(<4 x float> %x) {
 ; CHECK-LABEL: vec_fsub_zero:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %sub = fsub <4 x float> %x, zeroinitializer
   ret <4 x float> %sub
@@ -15,7 +15,7 @@ define <4 x float> @vec_fsub_zero(<4 x float> %x) {
 ; Negating doesn't require subtraction.
 define <4 x float> @vec_fneg(<4 x float> %x) {
 ; CHECK-LABEL: vec_fneg:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %sub = fsub <4 x float> zeroinitializer, %x

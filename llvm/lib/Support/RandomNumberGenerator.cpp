@@ -32,8 +32,8 @@ using namespace llvm;
 //
 // Do not change to cl::opt<uint64_t> since this silently breaks argument parsing.
 static cl::opt<unsigned long long>
-Seed("rng-seed", cl::value_desc("seed"),
-     cl::desc("Seed for the random number generator"), cl::init(0));
+    Seed("rng-seed", cl::value_desc("seed"), cl::Hidden,
+         cl::desc("Seed for the random number generator"), cl::init(0));
 
 RandomNumberGenerator::RandomNumberGenerator(StringRef Salt) {
   DEBUG(

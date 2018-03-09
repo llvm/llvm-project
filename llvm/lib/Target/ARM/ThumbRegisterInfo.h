@@ -17,7 +17,7 @@
 #define LLVM_LIB_TARGET_ARM_THUMB1REGISTERINFO_H
 
 #include "ARMBaseRegisterInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 namespace llvm {
   class ARMSubtarget;

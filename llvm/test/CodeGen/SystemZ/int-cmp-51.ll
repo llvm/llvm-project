@@ -8,7 +8,7 @@ declare void @bar(i8)
 
 ; Check the low end of the CH range.
 define void @f1(i32 %lhs) {
-; CHECK-LABEL: BB#1:
+; CHECK-LABEL: %bb.1:
 ; CHECK-NOT: cijlh %r0, 1, .LBB0_3
 
 entry:

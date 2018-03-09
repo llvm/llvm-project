@@ -1,0 +1,12 @@
+# RUN: not llvm-xray stack %s 2>&1 | FileCheck %s
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 2601000000
+records:
+...
+# CHECK:     llvm-xray: No instrumented calls were accounted in the input file.
+# CHECK-NOT: {{[0-9A-Z]+}}

@@ -35,7 +35,7 @@ entry:
 ; }
 define <4 x half> @lane_64_64(<4 x half> %a, <4 x half> %b) #0 {
 ; CHECK-LABEL: lane_64_64:
-; CHECK: ins
+; CHECK: mov v{{[0-9]+}}.h
 entry:
   %0 = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 6, i32 2, i32 3>
   ret <4 x half> %0
@@ -46,7 +46,7 @@ entry:
 ; }
 define <8 x half> @lane_128_64(<8 x half> %a, <4 x half> %b) #0 {
 ; CHECK-LABEL: lane_128_64:
-; CHECK: ins
+; CHECK: mov v{{[0-9]+}}.h
 entry:
   %0 = bitcast <4 x half> %b to <4 x i16>
   %vget_lane = extractelement <4 x i16> %0, i32 2
@@ -61,7 +61,7 @@ entry:
 ; }
 define <4 x half> @lane_64_128(<4 x half> %a, <8 x half> %b) #0 {
 ; CHECK-LABEL: lane_64_128:
-; CHECK: ins
+; CHECK: mov v{{[0-9]+}}.h
 entry:
   %0 = bitcast <8 x half> %b to <8 x i16>
   %vgetq_lane = extractelement <8 x i16> %0, i32 5
@@ -76,7 +76,7 @@ entry:
 ; }
 define <8 x half> @lane_128_128(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-LABEL: lane_128_128:
-; CHECK: ins
+; CHECK: mov v{{[0-9]+}}.h
 entry:
   %0 = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 13, i32 4, i32 5, i32 6, i32 7>
   ret <8 x half> %0
@@ -225,7 +225,7 @@ entry:
 define <8 x half> @vcombine(<4 x half> %a, <4 x half> %b) #0 {
 entry:
 ; CHECK-LABEL: vcombine:
-; CHECK: ins
+; CHECK: mov v0.d[1], v1.d[0]
   %shuffle.i = shufflevector <4 x half> %a, <4 x half> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x half> %shuffle.i
 }
@@ -253,7 +253,7 @@ entry:
 define <4 x half> @set_lane_64(<4 x half> %a, half %b) #0 {
 ; CHECK-LABEL: set_lane_64:
 ; CHECK: fmov
-; CHECK: ins
+; CHECK: mov v{{[0-9]+}}.h
 entry:
   %0 = bitcast half %b to i16
   %1 = bitcast <4 x half> %a to <4 x i16>
@@ -267,7 +267,7 @@ entry:
 define <8 x half> @set_lane_128(<8 x half> %a, half %b) #0 {
 ; CHECK-LABEL: set_lane_128:
 ; CHECK: fmov
-; CHECK: ins
+; CHECK: mov v{{[0-9]+}}.h
 entry:
   %0 = bitcast half %b to i16
   %1 = bitcast <8 x half> %a to <8 x i16>

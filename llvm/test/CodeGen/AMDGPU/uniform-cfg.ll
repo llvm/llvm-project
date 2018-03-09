@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}uniform_if_scc:
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0
@@ -303,7 +303,6 @@ done:
 ; GCN-LABEL: {{^}}uniform_inside_divergent:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN: s_cmp_lg_u32 {{s[0-9]+}}, 0
 ; GCN: s_cbranch_scc0 [[IF_UNIFORM_LABEL:[A-Z0-9_a-z]+]]
 ; GCN: s_endpgm
@@ -331,13 +330,14 @@ endif:
 
 ; GCN-LABEL: {{^}}divergent_inside_uniform:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
-; GCN: [[IF_LABEL]]:
+; GCN: s_cbranch_scc1 [[ENDIF_LABEL:[0-9_A-Za-z]+]]
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
+; GCN: ; mask branch [[ENDIF_LABEL]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
+; GCN: [[ENDIF_LABEL]]:
+; GCN: s_endpgm
 define amdgpu_kernel void @divergent_inside_uniform(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %u_cmp = icmp eq i32 %cond, 0
@@ -360,7 +360,6 @@ endif:
 ; GCN-LABEL: {{^}}divergent_if_uniform_if:
 ; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
 ; GCN: s_or_b64 exec, exec, [[MASK]]
@@ -402,7 +401,7 @@ exit:
 ; GCN: s_cmp_lt_i32 [[COND]], 1
 ; GCN: s_cbranch_scc1 BB[[FNNUM:[0-9]+]]_3
 
-; GCN: BB#1:
+; GCN: %bb.1:
 ; GCN-NOT: cmp
 ; GCN: buffer_load_dword
 ; GCN: buffer_store_dword
@@ -503,7 +502,7 @@ done:
 ; GCN: s_mov_b32 [[S_VAL]], 1
 
 ; GCN: [[IF_LABEL]]:
-; GCN: v_mov_b32_e32 [[V_VAL]], [[S_VAL]]
+; GCN: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
 define amdgpu_kernel void @uniform_if_scc_i64_sgt(i64 %cond, i32 addrspace(1)* %out) {
 entry:
@@ -558,6 +557,28 @@ done:
   %value = phi i32 [0, %if], [1, %else]
   store i32 %value, i32 addrspace(1)* %out
   ret void
+}
+
+; GCN-LABEL: {{^}}move_to_valu_vgpr_operand_phi:
+; GCN: v_add_{{[iu]}}32_e32
+; GCN: ds_write_b32
+define void @move_to_valu_vgpr_operand_phi(i32 addrspace(3)* %out) {
+bb0:
+  br label %bb1
+
+bb1:                                              ; preds = %bb3, %bb0
+  %tmp0 = phi i32 [ 8, %bb0 ], [ %tmp4, %bb3 ]
+  %tmp1 = add nsw i32 %tmp0, -1
+  %tmp2 = getelementptr inbounds i32, i32 addrspace(3)* %out, i32 %tmp1
+  br i1 undef, label %bb2, label %bb3
+
+bb2:                                              ; preds = %bb1
+  store volatile i32 1, i32 addrspace(3)* %tmp2, align 4
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb1
+  %tmp4 = add nsw i32 %tmp0, 2
+  br label %bb1
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0

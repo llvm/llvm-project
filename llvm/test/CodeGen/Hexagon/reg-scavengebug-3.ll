@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon -mcpu=hexagonv60 < %s | FileCheck %s
+; RUN: llc -O0 -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
 
 ; CHECK: vmem
 

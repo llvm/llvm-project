@@ -2,8 +2,6 @@
 ; RUN: llc  < %s -march=mips64el -mcpu=mips4 -target-abi n32 -relocation-model=pic | FileCheck %s -check-prefix=CHECK-N32
 ; RUN: llc  < %s -march=mips64el -mcpu=mips64 -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefix=CHECK-N64
 ; RUN: llc  < %s -march=mips64el -mcpu=mips64 -target-abi n32 -relocation-model=pic | FileCheck %s -check-prefix=CHECK-N32
-; RUN: llc  < %s -march=mipsel -mcpu=mips64r6 -mattr=+micromips -target-abi n32 -relocation-model=pic | FileCheck %s -check-prefix=CHECK-N32
-; RUN: llc  < %s -march=mipsel -mcpu=mips64r6 -mattr=+micromips -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefix=CHECK-N64
 
 @f0 = common global float 0.000000e+00, align 4
 @d0 = common global double 0.000000e+00, align 8

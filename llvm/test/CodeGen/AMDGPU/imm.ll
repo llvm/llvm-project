@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; Use a 64-bit value with lo bits that can be represented as an inline constant
 ; GCN-LABEL: {{^}}i64_imm_inline_lo:
@@ -129,7 +129,7 @@ define amdgpu_kernel void @store_inline_imm_inv_2pi_f32(float addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}store_inline_imm_m_inv_2pi_f32:
-; SI: v_mov_b32_e32 [[REG:v[0-9]+]], 0xbe22f983{{$}}
+; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xbe22f983{{$}}
 ; GCN: buffer_store_dword [[REG]]
 define amdgpu_kernel void @store_inline_imm_m_inv_2pi_f32(float addrspace(1)* %out) {
   store float 0xBFC45F3060000000, float addrspace(1)* %out

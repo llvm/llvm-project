@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -o - %s | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -O0 -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -O0 -fast-isel -o - %s | FileCheck %s
 
 ; O0 checked for fastisel purposes. It has a separate path which
 ; creates a constpool entry for floating values.

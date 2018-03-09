@@ -1,22 +1,28 @@
 ; RUN: llc -mtriple=thumb-eabi < %s | FileCheck %s
 
 define i1 @t1(i64 %x) {
-	%B = icmp slt i64 %x, 0
-	ret i1 %B
+; CHECK-LABEL: t1:
+; CHECK: lsrs  r0, r1, #31
+  %B = icmp slt i64 %x, 0
+  ret i1 %B
 }
 
 define i1 @t2(i64 %x) {
-	%tmp = icmp ult i64 %x, 4294967296
-	ret i1 %tmp
+; CHECK-LABEL: t2:
+; CHECK: movs    r0, #1
+; CHECK: movs    r2, #0
+; CHECK: cmp     r1, #0
+; CHECK: beq     .LBB1_2
+  %tmp = icmp ult i64 %x, 4294967296
+  ret i1 %tmp
 }
 
 define i1 @t3(i32 %x) {
-	%tmp = icmp ugt i32 %x, -1
-	ret i1 %tmp
+; CHECK-LABEL: t3:
+; CHECK: movs  r0, #0
+  %tmp = icmp ugt i32 %x, -1
+  ret i1 %tmp
 }
 
-; CHECK: cmp
+
 ; CHECK-NOT: cmp
-
-
-

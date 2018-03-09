@@ -9,6 +9,8 @@ entry:
 ; --------
 ; CHECK-V4T:    push {[[SAVED:(r[4567](, )?)+]], lr}
 ; CHECK-V4T:    sub sp,
+; Stack is realigned because of the <6 x i32> type
+; CHECK-V4T:    mov sp, r4
 ; CHECK-V5T:    push {[[SAVED:(r[4567](, )?)+]], lr}
 
   %b = alloca <6 x i32>, align 16
@@ -21,24 +23,16 @@ entry:
 
 ; Epilogue
 ; --------
-; CHECK-V4T:         add sp,
+; Stack realignment means sp is restored from frame pointer
+; CHECK-V4T:         mov sp
+; CHECK-V4T-NEXT:    ldr [[POP:r[4567]]], [sp, #16]
+; CHECK-V4T-NEXT:    mov lr, [[POP]]
 ; CHECK-V4T-NEXT:    pop {[[SAVED]]}
+; CHECK-V4T-NEXT     add sp, sp, #4
 ; The ISA for v4 does not support pop pc, so make sure we do not emit
 ; one even when we do not need to update SP.
 ; CHECK-V4T-NOT:     pop {pc}
-; We may only use lo register to pop, but in that case, all the scratch
-; ones are used.
-; r12 is the only register we are allowed to clobber for AAPCS.
-; Use it to save a lo register.
-; CHECK-V4T-NEXT:    mov [[TEMP_REG:r12]], [[POP_REG:r[0-7]]]
-; Pop the value of LR.
-; CHECK-V4T-NEXT:    pop {[[POP_REG]]}
-; Copy the value of LR in the right register.
-; CHECK-V4T-NEXT:    mov lr, [[POP_REG]]
-; Restore the value that was in the register we used to pop the value of LR.
-; CHECK-V4T-NEXT:    mov [[POP_REG]], [[TEMP_REG]]
-; Return.
-; CHECK-V4T-NEXT:    bx lr
+; CHECK-V4T:         bx lr
 ; CHECK-V5T:         pop {[[SAVED]], pc}
 }
 
@@ -63,21 +57,18 @@ entry:
 
 ; Epilogue
 ; --------
-; CHECK-V4T:         pop {[[SAVED]]}
-; CHECK-V4T-NEXT:    mov r12, [[POP_REG:r[0-7]]]
-; CHECK-V4T-NEXT:    pop {[[POP_REG]]}
-; CHECK-V4T-NEXT:    add sp,
-; CHECK-V4T-NEXT:    mov lr, [[POP_REG]]
-; CHECK-V4T-NEXT:    mov [[POP_REG]], r12
-; CHECK-V4T:         bx  lr
-; CHECK-V5T:         add sp,
+; CHECK-V4T:         ldr [[POP:r[4567]]], [sp, #12]
+; CHECK-V4T-NEXT:    mov lr, [[POP]]
+; CHECK-V4T-NEXT:    pop {[[SAVED]]}
+; CHECK-V4T-NEXT:    add sp, #16
+; CHECK-V4T-NEXT:    bx  lr
+; CHECK-V5T:         lsls r4
+; CHECK-V5T-NEXT:    mov sp, r4
+; CHECK-V5T:         ldr [[POP:r[4567]]], [sp, #12]
+; CHECK-V5T-NEXT:    mov lr, [[POP]]
 ; CHECK-V5T-NEXT:    pop {[[SAVED]]}
-; CHECK-V5T-NEXT:    mov r12, [[POP_REG:r[0-7]]]
-; CHECK-V5T-NEXT:    pop {[[POP_REG]]}
-; CHECK-V5T-NEXT:    add sp,
-; CHECK-V5T-NEXT:    mov lr, [[POP_REG]]
-; CHECK-V5T-NEXT:    mov [[POP_REG]], r12
-; CHECK-V5T-NEXT:    bx lr
+; CHECK-V5T-NEXT:    add sp, #16
+; CHECK-V5T-NEXT:    bx  lr
 }
 
 ; CHECK-V4T-LABEL: simpleframe

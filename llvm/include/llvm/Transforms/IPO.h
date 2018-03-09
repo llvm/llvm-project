@@ -216,6 +216,10 @@ ModulePass *createMetaRenamerPass();
 /// manager.
 ModulePass *createBarrierNoopPass();
 
+/// createCalledValuePropagationPass - Attach metadata to indirct call sites
+/// indicating the set of functions they may target at run-time.
+ModulePass *createCalledValuePropagationPass();
+
 /// What to do with the summary when running passes that operate on it.
 enum class PassSummaryAction {
   None,   ///< Do nothing.

@@ -1,6 +1,6 @@
-; RUN: not llc -march x86 -regalloc=fast -optimize-regalloc=0 < %s 2> %t1
-; RUN: not llc -march x86 -regalloc=basic      < %s 2> %t2
-; RUN: not llc -march x86 -regalloc=greedy     < %s 2> %t3
+; RUN: not llc -mtriple=i686-- -regalloc=fast -optimize-regalloc=0 < %s 2> %t1
+; RUN: not llc -mtriple=i686-- -regalloc=basic      < %s 2> %t2
+; RUN: not llc -mtriple=i686-- -regalloc=greedy     < %s 2> %t3
 ; RUN: FileCheck %s < %t1
 ; RUN: FileCheck %s < %t2
 ; RUN: FileCheck %s < %t3

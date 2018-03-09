@@ -93,15 +93,27 @@ public:
   }
   void EmitSLEB128(uint64_t DWord, const Twine &Comment) override {
     raw_svector_ostream OSE(Buffer);
-    encodeSLEB128(DWord, OSE);
-    if (GenerateComments)
+    unsigned Length = encodeSLEB128(DWord, OSE);
+    if (GenerateComments) {
       Comments.push_back(Comment.str());
+      // Add some empty comments to keep the Buffer and Comments vectors aligned
+      // with each other.
+      for (size_t i = 1; i < Length; ++i)
+        Comments.push_back("");
+
+    }
   }
   void EmitULEB128(uint64_t DWord, const Twine &Comment) override {
     raw_svector_ostream OSE(Buffer);
-    encodeULEB128(DWord, OSE);
-    if (GenerateComments)
+    unsigned Length = encodeULEB128(DWord, OSE);
+    if (GenerateComments) {
       Comments.push_back(Comment.str());
+      // Add some empty comments to keep the Buffer and Comments vectors aligned
+      // with each other.
+      for (size_t i = 1; i < Length; ++i)
+        Comments.push_back("");
+
+    }
   }
 };
 

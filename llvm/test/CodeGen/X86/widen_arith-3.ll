@@ -8,7 +8,7 @@
 
 define void @update(<3 x i16>* %dst, <3 x i16>* %src, i32 %n) nounwind {
 ; CHECK-LABEL: update:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-8, %esp
@@ -16,9 +16,9 @@ define void @update(<3 x i16>* %dst, <3 x i16>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl {{\.LCPI.*}}, %eax
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    movw $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movw $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %forbody
@@ -39,7 +39,7 @@ define void @update(<3 x i16>* %dst, <3 x i16>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmpl 16(%ebp), %eax
 ; CHECK-NEXT:    jl .LBB0_2
-; CHECK-NEXT:  # BB#3: # %afterfor
+; CHECK-NEXT:  # %bb.3: # %afterfor
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

@@ -954,7 +954,12 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
     NewGV->setLinkage(GlobalValue::InternalLinkage);
 
   Constant *C = NewGV;
-  if (DGV)
+  // Only create a bitcast if necessary. In particular, with
+  // DebugTypeODRUniquing we may reach metadata in the destination module
+  // containing a GV from the source module, in which case SGV will be
+  // the same as DGV and NewGV, and TypeMap.get() will assert since it
+  // assumes it is being invoked on a type in the source module.
+  if (DGV && NewGV != SGV)
     C = ConstantExpr::getBitCast(NewGV, TypeMap.get(SGV->getType()));
 
   if (DGV && NewGV != DGV) {

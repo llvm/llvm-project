@@ -46,3 +46,48 @@ entry:
   %mul = mul nsw i64 %a, -9223372036854775805
   ret i64 %mul
 }
+
+; CHECK64-LABEL:     muln170141183460469231731687303715884105725_128:
+; CHECK64-DAG: dsrl $[[R0:[0-9]+]], $4, 63
+; CHECK64-DAG: dsll $[[R1:[0-9]+]], $5, 1
+; CHECK64-DAG: or $[[R2:[0-9]+]], $[[R1]], $[[R0]]
+; CHECK64-DAG: daddu $[[R3:[0-9]+]], $[[R2]], $5
+; CHECK64-DAG: dsll $[[R4:[0-9]+]], $4, 1
+; CHECK64-DAG: daddu $[[R5:[0-9]+]], $[[R4]], $4
+; CHECK64-DAG: sltu $[[R6:[0-9]+]], $[[R5]], $[[R4]]
+; CHECK64-DAG: dsll $[[R7:[0-9]+]], $[[R6]], 32
+; CHECK64-DAG: dsrl $[[R8:[0-9]+]], $[[R7]], 32
+; CHECK64-DAG: daddu $[[R9:[0-9]+]], $[[R3]], $[[R8]]
+; CHECK64-DAG: dsll $[[R10:[0-9]+]], $4, 63
+; CHECK64:     daddu ${{[0-9]+}}, $[[R10]], $[[R9]]
+
+define i128 @muln170141183460469231731687303715884105725_128(i128 signext %a) {
+entry:
+  %mul = mul nsw i128 %a, -170141183460469231731687303715884105725
+  ret i128 %mul
+}
+
+; CHECK64-LABEL:     mul170141183460469231731687303715884105723_128:
+; CHECK64-DAG: dsrl $[[R0:[0-9]+]], $4, 62
+; CHECK64-DAG: dsll $[[R1:[0-9]+]], $5, 2
+; CHECK64-DAG: or $[[R2:[0-9]+]], $[[R1]], $[[R0]]
+; CHECK64-DAG: daddu $[[R3:[0-9]+]], $[[R2]], $5
+; CHECK64-DAG: dsll $[[R4:[0-9]+]], $4, 2
+; CHECK64-DAG: daddu $[[R5:[0-9]+]], $[[R4]], $4
+; CHECK64-DAG: sltu $[[R6:[0-9]+]], $[[R5]], $[[R4]]
+; CHECK64-DAG: dsll $[[R7:[0-9]+]], $[[R6]], 32
+; CHECK64-DAG: dsrl $[[R8:[0-9]+]], $[[R7]], 32
+; CHECK64-DAG: daddu $[[R9:[0-9]+]], $[[R3]], $[[R8]]
+; CHECK64-DAG: dsll $[[R10:[0-9]+]], $4, 63
+; CHECK64-DAG: dsubu $[[R11:[0-9]+]], $[[R10]], $[[R9]]
+; CHECK64-DAG: sltu $[[R12:[0-9]+]], $zero, $[[R5]]
+; CHECK64-DAG: dsll $[[R13:[0-9]+]], $[[R12]], 32
+; CHECK64-DAG: dsrl $[[R14:[0-9]+]], $[[R13]], 32
+; CHECK64-DAG: dsubu $[[R15:[0-9]+]], $[[R11]], $[[R14]]
+; CHECK64:     dnegu ${{[0-9]+}}, $[[R5]]
+
+define i128 @mul170141183460469231731687303715884105723_128(i128 signext %a) {
+entry:
+  %mul = mul nsw i128 %a, 170141183460469231731687303715884105723
+  ret i128 %mul
+}

@@ -8,7 +8,7 @@
 
 define x86_fp80 @foo(x86_fp80 %a) {
 ; CHECK-LABEL: foo:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb $-128, -{{[0-9]+}}(%rsp)
@@ -28,7 +28,7 @@ declare x86_fp80 @copysignl(x86_fp80, x86_fp80) nounwind readnone
 
 define float @pr26070() {
 ; CHECK-LABEL: pr26070:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0

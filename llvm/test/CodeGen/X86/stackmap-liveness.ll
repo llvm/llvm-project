@@ -48,7 +48,7 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 1
 ; PATCH-NEXT:   .short  1
-; LiveOut Entry 1: %YMM2 (16 bytes) --> %XMM2
+; LiveOut Entry 1: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
@@ -81,23 +81,23 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 5
 ; PATCH-NEXT:   .short  5
-; LiveOut Entry 1: %RAX (1 bytes) --> %AL or %AH
+; LiveOut Entry 1: %rax (1 bytes) --> %al or %ah
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 1
-; LiveOut Entry 2: %R8 (8 bytes)
+; LiveOut Entry 2: %r8 (8 bytes)
 ; PATCH-NEXT:   .short  8
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 3: %YMM0 (32 bytes)
+; LiveOut Entry 3: %ymm0 (32 bytes)
 ; PATCH-NEXT:   .short  17
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 32
-; LiveOut Entry 4: %YMM1 (32 bytes)
+; LiveOut Entry 4: %ymm1 (32 bytes)
 ; PATCH-NEXT:   .short  18
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 32
-; LiveOut Entry 5: %YMM2 (16 bytes) --> %XMM2
+; LiveOut Entry 5: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
@@ -127,11 +127,11 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 2
 ; PATCH-NEXT:   .short  2
-; LiveOut Entry 1: %RSP (8 bytes)
+; LiveOut Entry 1: %rsp (8 bytes)
 ; PATCH-NEXT:   .short  7
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 2: %YMM2 (16 bytes) --> %XMM2
+; LiveOut Entry 2: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
@@ -166,11 +166,11 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 2
 ; PATCH-NEXT:   .short  2
-; LiveOut Entry 1: %RSP (8 bytes)
+; LiveOut Entry 1: %rsp (8 bytes)
 ; PATCH-NEXT:   .short  7
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 2: %YMM2 (16 bytes) --> %XMM2
+; LiveOut Entry 2: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16

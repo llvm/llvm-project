@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=corei7 -mattr=+avx2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 -mattr=+avx2 | FileCheck %s
 
 declare x86_fastcallcc i64 @barrier()
 

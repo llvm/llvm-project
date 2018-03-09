@@ -17,10 +17,10 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Target/TargetOpcodes.h"
 
 using namespace llvm;
 
@@ -350,6 +350,24 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   for (auto Ty : {s8, s16, s32, s64, p0})
     setAction({G_VAARG, Ty}, Custom);
 
+  if (ST.hasLSE()) {
+    for (auto Ty : {s8, s16, s32, s64}) {
+      setAction({G_ATOMIC_CMPXCHG_WITH_SUCCESS, Ty}, Lower);
+      setAction({G_ATOMIC_CMPXCHG, Ty}, Legal);
+    }
+    setAction({G_ATOMIC_CMPXCHG, 1, p0}, Legal);
+
+    for (unsigned Op :
+         {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
+          G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
+          G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX}) {
+      for (auto Ty : {s8, s16, s32, s64}) {
+        setAction({Op, Ty}, Legal);
+      }
+      setAction({Op, 1, p0}, Legal);
+    }
+  }
+
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES})
     for (int Sz : {8, 16, 32, 64, 128, 192, 256, 384, 512}) {
@@ -366,24 +384,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
         setAction({Op, 1, VecTy}, Legal);
       }
     }
-
-  if (ST.hasLSE()) {
-    for (auto Ty : {s8, s16, s32, s64}) {
-      setAction({G_ATOMIC_CMPXCHG_WITH_SUCCESS, Ty}, Lower);
-      setAction({G_ATOMIC_CMPXCHG, Ty}, Legal);
-    }
-    setAction({G_ATOMIC_CMPXCHG, 1, p0}, Legal);
-
-    for (auto Op :
-         {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
-          G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
-          G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX}) {
-      for (auto Ty : {s8, s16, s32, s64}) {
-        setAction({Op, Ty}, Legal);
-      }
-      setAction({Op, 1, p0}, Legal);
-    }
-  }
 
   computeTables();
 }

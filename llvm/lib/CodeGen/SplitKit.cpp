@@ -1,4 +1,4 @@
-//===---------- SplitKit.cpp - Toolkit for splitting live ranges ----------===//
+//===- SplitKit.cpp - Toolkit for splitting live ranges -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,20 +13,46 @@
 //===----------------------------------------------------------------------===//
 
 #include "SplitKit.h"
+#include "LiveRangeCalc.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <limits>
+#include <tuple>
+#include <utility>
 
 using namespace llvm;
 
@@ -125,8 +151,7 @@ InsertPointAnalysis::getLastInsertPointIter(const LiveInterval &CurLI,
 SplitAnalysis::SplitAnalysis(const VirtRegMap &vrm, const LiveIntervals &lis,
                              const MachineLoopInfo &mli)
     : MF(vrm.getMachineFunction()), VRM(vrm), LIS(lis), Loops(mli),
-      TII(*MF.getSubtarget().getInstrInfo()), CurLI(nullptr),
-      IPA(lis, MF.getNumBlockIDs()) {}
+      TII(*MF.getSubtarget().getInstrInfo()), IPA(lis, MF.getNumBlockIDs()) {}
 
 void SplitAnalysis::clear() {
   UseSlots.clear();
@@ -200,7 +225,7 @@ bool SplitAnalysis::calcLiveBlockInfo() {
   // Loop over basic blocks where CurLI is live.
   MachineFunction::iterator MFI =
       LIS.getMBBFromIndex(LVI->start)->getIterator();
-  for (;;) {
+  while (true) {
     BlockInfo BI;
     BI.MBB = &*MFI;
     SlotIndex Start, Stop;
@@ -301,7 +326,7 @@ unsigned SplitAnalysis::countLiveBlocks(const LiveInterval *cli) const {
   MachineFunction::const_iterator MFI =
       LIS.getMBBFromIndex(LVI->start)->getIterator();
   SlotIndex Stop = LIS.getMBBEndIdx(&*MFI);
-  for (;;) {
+  while (true) {
     ++Count;
     LVI = li->advanceTo(LVI, Stop);
     if (LVI == LVE)
@@ -333,7 +358,6 @@ void SplitAnalysis::analyze(const LiveInterval *li) {
   analyzeUses();
 }
 
-
 //===----------------------------------------------------------------------===//
 //                               Split Editor
 //===----------------------------------------------------------------------===//
@@ -347,8 +371,7 @@ SplitEditor::SplitEditor(SplitAnalysis &sa, AliasAnalysis &aa,
       MRI(vrm.getMachineFunction().getRegInfo()), MDT(mdt),
       TII(*vrm.getMachineFunction().getSubtarget().getInstrInfo()),
       TRI(*vrm.getMachineFunction().getSubtarget().getRegisterInfo()),
-      MBFI(mbfi), Edit(nullptr), OpenIdx(0), SpillMode(SM_Partition),
-      RegAssign(Allocator) {}
+      MBFI(mbfi), RegAssign(Allocator) {}
 
 void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   Edit = &LRE;
@@ -551,7 +574,7 @@ SlotIndex SplitEditor::buildCopy(unsigned FromReg, unsigned ToReg,
     if ((SubRegMask & ~LaneMask).any())
       continue;
 
-    unsigned PopCount = countPopulation(SubRegMask.getAsInteger());
+    unsigned PopCount = SubRegMask.getNumLanes();
     PossibleIndexes.push_back(Idx);
     if (PopCount > BestCover) {
       BestCover = PopCount;
@@ -571,7 +594,7 @@ SlotIndex SplitEditor::buildCopy(unsigned FromReg, unsigned ToReg,
   LaneBitmask LanesLeft = LaneMask & ~(TRI.getSubRegIndexLaneMask(BestIdx));
   while (LanesLeft.any()) {
     unsigned BestIdx = 0;
-    int BestCover = INT_MIN;
+    int BestCover = std::numeric_limits<int>::min();
     for (unsigned Idx : PossibleIndexes) {
       LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(Idx);
       // Early exit if we found a perfect match.
@@ -582,8 +605,8 @@ SlotIndex SplitEditor::buildCopy(unsigned FromReg, unsigned ToReg,
 
       // Try to cover as much of the remaining lanes as possible but
       // as few of the already covered lanes as possible.
-      int Cover = countPopulation((SubRegMask & LanesLeft).getAsInteger())
-                - countPopulation((SubRegMask & ~LanesLeft).getAsInteger());
+      int Cover = (SubRegMask & LanesLeft).getNumLanes()
+                - (SubRegMask & ~LanesLeft).getNumLanes();
       if (Cover > BestCover) {
         BestCover = Cover;
         BestIdx = Idx;
@@ -705,7 +728,8 @@ SlotIndex SplitEditor::enterIntvAtEnd(MachineBasicBlock &MBB) {
   assert(OpenIdx && "openIntv not called before enterIntvAtEnd");
   SlotIndex End = LIS.getMBBEndIdx(&MBB);
   SlotIndex Last = End.getPrevSlot();
-  DEBUG(dbgs() << "    enterIntvAtEnd BB#" << MBB.getNumber() << ", " << Last);
+  DEBUG(dbgs() << "    enterIntvAtEnd " << printMBBReference(MBB) << ", "
+               << Last);
   VNInfo *ParentVNI = Edit->getParent().getVNInfoAt(Last);
   if (!ParentVNI) {
     DEBUG(dbgs() << ": not live\n");
@@ -784,7 +808,8 @@ SlotIndex SplitEditor::leaveIntvBefore(SlotIndex Idx) {
 SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
   assert(OpenIdx && "openIntv not called before leaveIntvAtTop");
   SlotIndex Start = LIS.getMBBStartIdx(&MBB);
-  DEBUG(dbgs() << "    leaveIntvAtTop BB#" << MBB.getNumber() << ", " << Start);
+  DEBUG(dbgs() << "    leaveIntvAtTop " << printMBBReference(MBB) << ", "
+               << Start);
 
   VNInfo *ParentVNI = Edit->getParent().getVNInfoAt(Start);
   if (!ParentVNI) {
@@ -874,23 +899,23 @@ SplitEditor::findShallowDominator(MachineBasicBlock *MBB,
 
   // Best candidate so far.
   MachineBasicBlock *BestMBB = MBB;
-  unsigned BestDepth = UINT_MAX;
+  unsigned BestDepth = std::numeric_limits<unsigned>::max();
 
-  for (;;) {
+  while (true) {
     const MachineLoop *Loop = Loops.getLoopFor(MBB);
 
     // MBB isn't in a loop, it doesn't get any better.  All dominators have a
     // higher frequency by definition.
     if (!Loop) {
-      DEBUG(dbgs() << "Def in BB#" << DefMBB->getNumber() << " dominates BB#"
-                   << MBB->getNumber() << " at depth 0\n");
+      DEBUG(dbgs() << "Def in " << printMBBReference(*DefMBB) << " dominates "
+                   << printMBBReference(*MBB) << " at depth 0\n");
       return MBB;
     }
 
     // We'll never be able to exit the DefLoop.
     if (Loop == DefLoop) {
-      DEBUG(dbgs() << "Def in BB#" << DefMBB->getNumber() << " dominates BB#"
-                   << MBB->getNumber() << " in the same loop\n");
+      DEBUG(dbgs() << "Def in " << printMBBReference(*DefMBB) << " dominates "
+                   << printMBBReference(*MBB) << " in the same loop\n");
       return MBB;
     }
 
@@ -899,8 +924,8 @@ SplitEditor::findShallowDominator(MachineBasicBlock *MBB,
     if (Depth < BestDepth) {
       BestMBB = MBB;
       BestDepth = Depth;
-      DEBUG(dbgs() << "Def in BB#" << DefMBB->getNumber() << " dominates BB#"
-                   << MBB->getNumber() << " at depth " << Depth << '\n');
+      DEBUG(dbgs() << "Def in " << printMBBReference(*DefMBB) << " dominates "
+                   << printMBBReference(*MBB) << " at depth " << Depth << '\n');
     }
 
     // Leave loop by going to the immediate dominator of the loop header.
@@ -977,7 +1002,7 @@ void SplitEditor::hoistCopies() {
 
   // Track the nearest common dominator for all back-copies for each ParentVNI,
   // indexed by ParentVNI->id.
-  typedef std::pair<MachineBasicBlock*, SlotIndex> DomPair;
+  using DomPair = std::pair<MachineBasicBlock *, SlotIndex>;
   SmallVector<DomPair, 8> NearestDom(Parent->getNumValNums());
   // The total cost of all the back-copies for each ParentVNI.
   SmallVector<BlockFrequency, 8> Costs(Parent->getNumValNums());
@@ -1039,7 +1064,7 @@ void SplitEditor::hoistCopies() {
 
     DEBUG(dbgs() << "Multi-mapped complement " << VNI->id << '@' << VNI->def
                  << " for parent " << ParentVNI->id << '@' << ParentVNI->def
-                 << " hoist to BB#" << Dom.first->getNumber() << ' '
+                 << " hoist to " << printMBBReference(*Dom.first) << ' '
                  << Dom.second << '\n');
   }
 
@@ -1087,7 +1112,6 @@ void SplitEditor::hoistCopies() {
   removeBackCopies(BackCopies);
 }
 
-
 /// transferValues - Transfer all possible values to the new live ranges.
 /// Values that were rematerialized are left alone, they need LRCalc.extend().
 bool SplitEditor::transferValues() {
@@ -1117,7 +1141,7 @@ bool SplitEditor::transferValues() {
 
       // The interval [Start;End) is continuously mapped to RegIdx, ParentVNI.
       DEBUG(dbgs() << " [" << Start << ';' << End << ")=" << RegIdx
-                   << '(' << PrintReg(Edit->get(RegIdx)) << ')');
+                   << '(' << printReg(Edit->get(RegIdx)) << ')');
       LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
 
       // Check for a simply defined value that can be blitted directly.
@@ -1150,7 +1174,7 @@ bool SplitEditor::transferValues() {
       if (Start != BlockStart) {
         VNInfo *VNI = LI.extendInBlock(BlockStart, std::min(BlockEnd, End));
         assert(VNI && "Missing def for complex mapped value");
-        DEBUG(dbgs() << ':' << VNI->id << "*BB#" << MBB->getNumber());
+        DEBUG(dbgs() << ':' << VNI->id << "*" << printMBBReference(*MBB));
         // MBB has its own def. Is it also live-out?
         if (BlockEnd <= End)
           LRC.setLiveOutValue(&*MBB, VNI);
@@ -1163,7 +1187,7 @@ bool SplitEditor::transferValues() {
       // Handle the live-in blocks covered by [Start;End).
       assert(Start <= BlockStart && "Expected live-in block");
       while (BlockStart < End) {
-        DEBUG(dbgs() << ">BB#" << MBB->getNumber());
+        DEBUG(dbgs() << ">" << printMBBReference(*MBB));
         BlockEnd = LIS.getMBBEndIdx(&*MBB);
         if (BlockStart == ParentVNI->def) {
           // This block has the def of a parent PHI, so it isn't live-in.
@@ -1275,6 +1299,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
   struct ExtPoint {
     ExtPoint(const MachineOperand &O, unsigned R, SlotIndex N)
       : MO(O), RegIdx(R), Next(N) {}
+
     MachineOperand MO;
     unsigned RegIdx;
     SlotIndex Next;
@@ -1305,7 +1330,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     unsigned RegIdx = RegAssign.lookup(Idx);
     LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
     MO.setReg(LI.reg);
-    DEBUG(dbgs() << "  rewr BB#" << MI->getParent()->getNumber() << '\t'
+    DEBUG(dbgs() << "  rewr " << printMBBReference(*MI->getParent()) << '\t'
                  << Idx << ':' << RegIdx << '\t' << *MI);
 
     // Extend liveness to Idx if the instruction reads reg.
@@ -1351,9 +1376,9 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
         continue;
       // The problem here can be that the new register may have been created
       // for a partially defined original register. For example:
-      //   %vreg827:subreg_hireg<def,read-undef> = ...
+      //   %0:subreg_hireg<def,read-undef> = ...
       //   ...
-      //   %vreg828<def> = COPY %vreg827
+      //   %1 = COPY %0
       if (S.empty())
         continue;
       SubLRC.reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
@@ -1519,7 +1544,6 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
   assert(!LRMap || LRMap->size() == Edit->size());
 }
 
-
 //===----------------------------------------------------------------------===//
 //                            Single Block Splitting
 //===----------------------------------------------------------------------===//
@@ -1557,7 +1581,6 @@ void SplitEditor::splitSingleBlock(const SplitAnalysis::BlockInfo &BI) {
   }
 }
 
-
 //===----------------------------------------------------------------------===//
 //                    Global Live Range Splitting Support
 //===----------------------------------------------------------------------===//
@@ -1575,9 +1598,9 @@ void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
   SlotIndex Start, Stop;
   std::tie(Start, Stop) = LIS.getSlotIndexes()->getMBBRange(MBBNum);
 
-  DEBUG(dbgs() << "BB#" << MBBNum << " [" << Start << ';' << Stop
-               << ") intf " << LeaveBefore << '-' << EnterAfter
-               << ", live-through " << IntvIn << " -> " << IntvOut);
+  DEBUG(dbgs() << "%bb." << MBBNum << " [" << Start << ';' << Stop << ") intf "
+               << LeaveBefore << '-' << EnterAfter << ", live-through "
+               << IntvIn << " -> " << IntvOut);
 
   assert((IntvIn || IntvOut) && "Use splitSingleBlock for isolated blocks");
 
@@ -1672,13 +1695,12 @@ void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
   assert((!LeaveBefore || Idx <= LeaveBefore) && "Interference");
 }
 
-
 void SplitEditor::splitRegInBlock(const SplitAnalysis::BlockInfo &BI,
                                   unsigned IntvIn, SlotIndex LeaveBefore) {
   SlotIndex Start, Stop;
   std::tie(Start, Stop) = LIS.getSlotIndexes()->getMBBRange(BI.MBB);
 
-  DEBUG(dbgs() << "BB#" << BI.MBB->getNumber() << " [" << Start << ';' << Stop
+  DEBUG(dbgs() << printMBBReference(*BI.MBB) << " [" << Start << ';' << Stop
                << "), uses " << BI.FirstInstr << '-' << BI.LastInstr
                << ", reg-in " << IntvIn << ", leave before " << LeaveBefore
                << (BI.LiveOut ? ", stack-out" : ", killed in block"));
@@ -1770,7 +1792,7 @@ void SplitEditor::splitRegOutBlock(const SplitAnalysis::BlockInfo &BI,
   SlotIndex Start, Stop;
   std::tie(Start, Stop) = LIS.getSlotIndexes()->getMBBRange(BI.MBB);
 
-  DEBUG(dbgs() << "BB#" << BI.MBB->getNumber() << " [" << Start << ';' << Stop
+  DEBUG(dbgs() << printMBBReference(*BI.MBB) << " [" << Start << ';' << Stop
                << "), uses " << BI.FirstInstr << '-' << BI.LastInstr
                << ", reg-out " << IntvOut << ", enter after " << EnterAfter
                << (BI.LiveIn ? ", stack-in" : ", defined in block"));

@@ -4,6 +4,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+sse4.1 -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=SSE --check-prefix=SSE41
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx2 -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX2
+; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512vl -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512VL
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512f -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512bw -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512BW
 
@@ -13,7 +14,7 @@
 
 define void @test_nti32(i32* nocapture %ptr, i32 %X) {
 ; ALL-LABEL: test_nti32:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movntil %esi, (%rdi)
 ; ALL-NEXT:    retq
 entry:
@@ -23,7 +24,7 @@ entry:
 
 define void @test_nti64(i64* nocapture %ptr, i64 %X) {
 ; ALL-LABEL: test_nti64:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movntiq %rsi, (%rdi)
 ; ALL-NEXT:    retq
 entry:
@@ -33,27 +34,27 @@ entry:
 
 define void @test_ntfloat(float* nocapture %ptr, float %X) {
 ; SSE2-LABEL: test_ntfloat:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_ntfloat:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movntss %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_ntfloat:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movss %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_ntfloat:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ntfloat:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -63,27 +64,27 @@ entry:
 
 define void @test_ntdouble(double* nocapture %ptr, double %X) {
 ; SSE2-LABEL: test_ntdouble:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movsd %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_ntdouble:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_ntdouble:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movsd %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_ntdouble:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ntdouble:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -97,7 +98,7 @@ entry:
 
 define void @test_mmx(x86_mmx* nocapture %a0, x86_mmx* nocapture %a1) {
 ; ALL-LABEL: test_mmx:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movq (%rdi), %mm0
 ; ALL-NEXT:    psrlq $3, %mm0
 ; ALL-NEXT:    movntq %mm0, (%rsi)
@@ -116,17 +117,17 @@ declare x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx, i32) nounwind readnone
 
 define void @test_nt4xfloat(<4 x float>* nocapture %ptr, <4 x float> %X) {
 ; SSE-LABEL: test_nt4xfloat:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt4xfloat:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt4xfloat:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -136,17 +137,17 @@ entry:
 
 define void @test_nt2xdouble(<2 x double>* nocapture %ptr, <2 x double> %X) {
 ; SSE-LABEL: test_nt2xdouble:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntpd %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt2xdouble:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntpd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt2xdouble:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntpd %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -156,17 +157,17 @@ entry:
 
 define void @test_nt16xi8(<16 x i8>* nocapture %ptr, <16 x i8> %X) {
 ; SSE-LABEL: test_nt16xi8:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt16xi8:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt16xi8:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -176,17 +177,17 @@ entry:
 
 define void @test_nt8xi16(<8 x i16>* nocapture %ptr, <8 x i16> %X) {
 ; SSE-LABEL: test_nt8xi16:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt8xi16:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt8xi16:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -196,17 +197,17 @@ entry:
 
 define void @test_nt4xi32(<4 x i32>* nocapture %ptr, <4 x i32> %X) {
 ; SSE-LABEL: test_nt4xi32:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt4xi32:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt4xi32:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -216,17 +217,17 @@ entry:
 
 define void @test_nt2xi64(<2 x i64>* nocapture %ptr, <2 x i64> %X) {
 ; SSE-LABEL: test_nt2xi64:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt2xi64:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt2xi64:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
@@ -240,27 +241,27 @@ entry:
 
 define <4 x float> @test_load_nt4xfloat(<4 x float>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt4xfloat:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt4xfloat:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt4xfloat:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt4xfloat:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt4xfloat:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -270,27 +271,27 @@ entry:
 
 define <2 x double> @test_load_nt2xdouble(<2 x double>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt2xdouble:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movapd (%rdi), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt2xdouble:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movapd (%rdi), %xmm0
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt2xdouble:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt2xdouble:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt2xdouble:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -300,17 +301,17 @@ entry:
 
 define <16 x i8> @test_load_nt16xi8(<16 x i8>* nocapture %ptr) {
 ; SSE-LABEL: test_load_nt16xi8:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt16xi8:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt16xi8:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -320,17 +321,17 @@ entry:
 
 define <8 x i16> @test_load_nt8xi16(<8 x i16>* nocapture %ptr) {
 ; SSE-LABEL: test_load_nt8xi16:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt8xi16:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt8xi16:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -340,17 +341,17 @@ entry:
 
 define <4 x i32> @test_load_nt4xi32(<4 x i32>* nocapture %ptr) {
 ; SSE-LABEL: test_load_nt4xi32:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt4xi32:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt4xi32:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -360,17 +361,17 @@ entry:
 
 define <2 x i64> @test_load_nt2xi64(<2 x i64>* nocapture %ptr) {
 ; SSE-LABEL: test_load_nt2xi64:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt2xi64:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt2xi64:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -384,19 +385,19 @@ entry:
 
 define void @test_nt8xfloat(<8 x float>* nocapture %ptr, <8 x float> %X) {
 ; SSE-LABEL: test_nt8xfloat:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm1, 16(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt8xfloat:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt8xfloat:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -407,19 +408,19 @@ entry:
 
 define void @test_nt4xdouble(<4 x double>* nocapture %ptr, <4 x double> %X) {
 ; SSE-LABEL: test_nt4xdouble:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntpd %xmm0, (%rdi)
 ; SSE-NEXT:    movntpd %xmm1, 16(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt4xdouble:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntpd %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt4xdouble:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntpd %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -430,19 +431,19 @@ entry:
 
 define void @test_nt32xi8(<32 x i8>* nocapture %ptr, <32 x i8> %X) {
 ; SSE-LABEL: test_nt32xi8:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt32xi8:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt32xi8:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -453,19 +454,19 @@ entry:
 
 define void @test_nt16xi16(<16 x i16>* nocapture %ptr, <16 x i16> %X) {
 ; SSE-LABEL: test_nt16xi16:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt16xi16:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt16xi16:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -476,19 +477,19 @@ entry:
 
 define void @test_nt8xi32(<8 x i32>* nocapture %ptr, <8 x i32> %X) {
 ; SSE-LABEL: test_nt8xi32:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt8xi32:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt8xi32:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -499,19 +500,19 @@ entry:
 
 define void @test_nt4xi64(<4 x i64>* nocapture %ptr, <4 x i64> %X) {
 ; SSE-LABEL: test_nt4xi64:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt4xi64:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt4xi64:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -526,39 +527,39 @@ entry:
 
 define <8 x float> @test_load_nt8xfloat(<8 x float>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt8xfloat:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt8xfloat:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt8xfloat:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt8xfloat:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt8xfloat:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt8xfloat:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
@@ -568,39 +569,39 @@ entry:
 
 define <4 x double> @test_load_nt4xdouble(<4 x double>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt4xdouble:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movapd (%rdi), %xmm0
 ; SSE2-NEXT:    movapd 16(%rdi), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt4xdouble:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movapd (%rdi), %xmm0
 ; SSE4A-NEXT:    movapd 16(%rdi), %xmm1
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt4xdouble:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt4xdouble:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt4xdouble:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt4xdouble:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
@@ -610,39 +611,39 @@ entry:
 
 define <32 x i8> @test_load_nt32xi8(<32 x i8>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt32xi8:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt32xi8:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt32xi8:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt32xi8:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt32xi8:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt32xi8:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
@@ -652,39 +653,39 @@ entry:
 
 define <16 x i16> @test_load_nt16xi16(<16 x i16>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt16xi16:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt16xi16:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt16xi16:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt16xi16:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt16xi16:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt16xi16:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
@@ -694,39 +695,39 @@ entry:
 
 define <8 x i32> @test_load_nt8xi32(<8 x i32>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt8xi32:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt8xi32:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt8xi32:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt8xi32:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt8xi32:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt8xi32:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
@@ -736,39 +737,39 @@ entry:
 
 define <4 x i64> @test_load_nt4xi64(<4 x i64>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt4xi64:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt4xi64:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt4xi64:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt4xi64:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt4xi64:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt4xi64:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
@@ -782,7 +783,7 @@ entry:
 
 define void @test_nt16xfloat(<16 x float>* nocapture %ptr, <16 x float> %X) {
 ; SSE-LABEL: test_nt16xfloat:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm1, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm2, 32(%rdi)
@@ -790,14 +791,14 @@ define void @test_nt16xfloat(<16 x float>* nocapture %ptr, <16 x float> %X) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt16xfloat:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
 ; AVX-NEXT:    vmovntps %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt16xfloat:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntps %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -808,7 +809,7 @@ entry:
 
 define void @test_nt8xdouble(<8 x double>* nocapture %ptr, <8 x double> %X) {
 ; SSE-LABEL: test_nt8xdouble:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntpd %xmm0, (%rdi)
 ; SSE-NEXT:    movntpd %xmm1, 16(%rdi)
 ; SSE-NEXT:    movntpd %xmm2, 32(%rdi)
@@ -816,14 +817,14 @@ define void @test_nt8xdouble(<8 x double>* nocapture %ptr, <8 x double> %X) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt8xdouble:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntpd %ymm0, (%rdi)
 ; AVX-NEXT:    vmovntpd %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt8xdouble:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntpd %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -834,7 +835,7 @@ entry:
 
 define void @test_nt64xi8(<64 x i8>* nocapture %ptr, <64 x i8> %X) {
 ; SSE-LABEL: test_nt64xi8:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    movntdq %xmm2, 32(%rdi)
@@ -842,21 +843,28 @@ define void @test_nt64xi8(<64 x i8>* nocapture %ptr, <64 x i8> %X) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt64xi8:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
+; AVX512VL-LABEL: test_nt64xi8:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vmovntdq %ymm0, (%rdi)
+; AVX512VL-NEXT:    vmovntdq %ymm1, 32(%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
 ; AVX512F-LABEL: test_nt64xi8:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX512F-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_nt64xi8:
-; AVX512BW:       # BB#0: # %entry
+; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    vmovntdq %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -867,7 +875,7 @@ entry:
 
 define void @test_nt32xi16(<32 x i16>* nocapture %ptr, <32 x i16> %X) {
 ; SSE-LABEL: test_nt32xi16:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    movntdq %xmm2, 32(%rdi)
@@ -875,21 +883,28 @@ define void @test_nt32xi16(<32 x i16>* nocapture %ptr, <32 x i16> %X) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt32xi16:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
+; AVX512VL-LABEL: test_nt32xi16:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vmovntdq %ymm0, (%rdi)
+; AVX512VL-NEXT:    vmovntdq %ymm1, 32(%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
 ; AVX512F-LABEL: test_nt32xi16:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX512F-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_nt32xi16:
-; AVX512BW:       # BB#0: # %entry
+; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    vmovntdq %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -900,7 +915,7 @@ entry:
 
 define void @test_nt16xi32(<16 x i32>* nocapture %ptr, <16 x i32> %X) {
 ; SSE-LABEL: test_nt16xi32:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    movntdq %xmm2, 32(%rdi)
@@ -908,14 +923,14 @@ define void @test_nt16xi32(<16 x i32>* nocapture %ptr, <16 x i32> %X) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt16xi32:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt16xi32:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -926,7 +941,7 @@ entry:
 
 define void @test_nt8xi64(<8 x i64>* nocapture %ptr, <8 x i64> %X) {
 ; SSE-LABEL: test_nt8xi64:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movntdq %xmm0, (%rdi)
 ; SSE-NEXT:    movntdq %xmm1, 16(%rdi)
 ; SSE-NEXT:    movntdq %xmm2, 32(%rdi)
@@ -934,14 +949,14 @@ define void @test_nt8xi64(<8 x i64>* nocapture %ptr, <8 x i64> %X) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_nt8xi64:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_nt8xi64:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdq %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -956,7 +971,7 @@ entry:
 
 define <16 x float> @test_load_nt16xfloat(<16 x float>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt16xfloat:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    movaps 32(%rdi), %xmm2
@@ -964,7 +979,7 @@ define <16 x float> @test_load_nt16xfloat(<16 x float>* nocapture %ptr) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt16xfloat:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    movaps 32(%rdi), %xmm2
@@ -972,7 +987,7 @@ define <16 x float> @test_load_nt16xfloat(<16 x float>* nocapture %ptr) {
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt16xfloat:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    movntdqa 32(%rdi), %xmm2
@@ -980,27 +995,27 @@ define <16 x float> @test_load_nt16xfloat(<16 x float>* nocapture %ptr) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt16xfloat:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt16xfloat:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt16xfloat:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %zmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -1010,7 +1025,7 @@ entry:
 
 define <8 x double> @test_load_nt8xdouble(<8 x double>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt8xdouble:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movapd (%rdi), %xmm0
 ; SSE2-NEXT:    movapd 16(%rdi), %xmm1
 ; SSE2-NEXT:    movapd 32(%rdi), %xmm2
@@ -1018,7 +1033,7 @@ define <8 x double> @test_load_nt8xdouble(<8 x double>* nocapture %ptr) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt8xdouble:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movapd (%rdi), %xmm0
 ; SSE4A-NEXT:    movapd 16(%rdi), %xmm1
 ; SSE4A-NEXT:    movapd 32(%rdi), %xmm2
@@ -1026,7 +1041,7 @@ define <8 x double> @test_load_nt8xdouble(<8 x double>* nocapture %ptr) {
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt8xdouble:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    movntdqa 32(%rdi), %xmm2
@@ -1034,27 +1049,27 @@ define <8 x double> @test_load_nt8xdouble(<8 x double>* nocapture %ptr) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt8xdouble:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt8xdouble:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt8xdouble:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %zmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -1064,7 +1079,7 @@ entry:
 
 define <64 x i8> @test_load_nt64xi8(<64 x i8>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt64xi8:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    movaps 32(%rdi), %xmm2
@@ -1072,7 +1087,7 @@ define <64 x i8> @test_load_nt64xi8(<64 x i8>* nocapture %ptr) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt64xi8:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    movaps 32(%rdi), %xmm2
@@ -1080,7 +1095,7 @@ define <64 x i8> @test_load_nt64xi8(<64 x i8>* nocapture %ptr) {
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt64xi8:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    movntdqa 32(%rdi), %xmm2
@@ -1088,33 +1103,39 @@ define <64 x i8> @test_load_nt64xi8(<64 x i8>* nocapture %ptr) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt64xi8:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt64xi8:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
+; AVX512VL-LABEL: test_load_nt64xi8:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm1
+; AVX512VL-NEXT:    retq
+;
 ; AVX512F-LABEL: test_load_nt64xi8:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_load_nt64xi8:
-; AVX512BW:       # BB#0: # %entry
+; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    vmovntdqa (%rdi), %zmm0
 ; AVX512BW-NEXT:    retq
 entry:
@@ -1124,7 +1145,7 @@ entry:
 
 define <32 x i16> @test_load_nt32xi16(<32 x i16>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt32xi16:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    movaps 32(%rdi), %xmm2
@@ -1132,7 +1153,7 @@ define <32 x i16> @test_load_nt32xi16(<32 x i16>* nocapture %ptr) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt32xi16:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    movaps 32(%rdi), %xmm2
@@ -1140,7 +1161,7 @@ define <32 x i16> @test_load_nt32xi16(<32 x i16>* nocapture %ptr) {
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt32xi16:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    movntdqa 32(%rdi), %xmm2
@@ -1148,33 +1169,39 @@ define <32 x i16> @test_load_nt32xi16(<32 x i16>* nocapture %ptr) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt32xi16:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt32xi16:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
+; AVX512VL-LABEL: test_load_nt32xi16:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm1
+; AVX512VL-NEXT:    retq
+;
 ; AVX512F-LABEL: test_load_nt32xi16:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_load_nt32xi16:
-; AVX512BW:       # BB#0: # %entry
+; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    vmovntdqa (%rdi), %zmm0
 ; AVX512BW-NEXT:    retq
 entry:
@@ -1184,7 +1211,7 @@ entry:
 
 define <16 x i32> @test_load_nt16xi32(<16 x i32>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt16xi32:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    movaps 32(%rdi), %xmm2
@@ -1192,7 +1219,7 @@ define <16 x i32> @test_load_nt16xi32(<16 x i32>* nocapture %ptr) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt16xi32:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    movaps 32(%rdi), %xmm2
@@ -1200,7 +1227,7 @@ define <16 x i32> @test_load_nt16xi32(<16 x i32>* nocapture %ptr) {
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt16xi32:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    movntdqa 32(%rdi), %xmm2
@@ -1208,27 +1235,27 @@ define <16 x i32> @test_load_nt16xi32(<16 x i32>* nocapture %ptr) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt16xi32:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt16xi32:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt16xi32:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %zmm0
 ; AVX512-NEXT:    retq
 entry:
@@ -1238,7 +1265,7 @@ entry:
 
 define <8 x i64> @test_load_nt8xi64(<8 x i64>* nocapture %ptr) {
 ; SSE2-LABEL: test_load_nt8xi64:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
 ; SSE2-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE2-NEXT:    movaps 32(%rdi), %xmm2
@@ -1246,7 +1273,7 @@ define <8 x i64> @test_load_nt8xi64(<8 x i64>* nocapture %ptr) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_load_nt8xi64:
-; SSE4A:       # BB#0: # %entry
+; SSE4A:       # %bb.0: # %entry
 ; SSE4A-NEXT:    movaps (%rdi), %xmm0
 ; SSE4A-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE4A-NEXT:    movaps 32(%rdi), %xmm2
@@ -1254,7 +1281,7 @@ define <8 x i64> @test_load_nt8xi64(<8 x i64>* nocapture %ptr) {
 ; SSE4A-NEXT:    retq
 ;
 ; SSE41-LABEL: test_load_nt8xi64:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movntdqa (%rdi), %xmm0
 ; SSE41-NEXT:    movntdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    movntdqa 32(%rdi), %xmm2
@@ -1262,27 +1289,27 @@ define <8 x i64> @test_load_nt8xi64(<8 x i64>* nocapture %ptr) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_load_nt8xi64:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    # implicit-def: %YMM1
+; AVX1-NEXT:    # implicit-def: %ymm1
 ; AVX1-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_load_nt8xi64:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_load_nt8xi64:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovntdqa (%rdi), %zmm0
 ; AVX512-NEXT:    retq
 entry:

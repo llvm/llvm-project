@@ -19,7 +19,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -40,9 +39,17 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       continue;
 
     auto Name = ExportGV.getName();
-    GlobalValue *ImportGV = ImportM.getNamedValue(Name);
-    if ((!ImportGV || ImportGV->use_empty()) && !PromoteExtra.count(&ExportGV))
-      continue;
+    GlobalValue *ImportGV = nullptr;
+    if (!PromoteExtra.count(&ExportGV)) {
+      ImportGV = ImportM.getNamedValue(Name);
+      if (!ImportGV)
+        continue;
+      ImportGV->removeDeadConstantUsers();
+      if (ImportGV->use_empty()) {
+        ImportGV->eraseFromParent();
+        continue;
+      }
+    }
 
     std::string NewName = (Name + ModuleId).str();
 
@@ -83,8 +90,7 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     if (isa<MDNode>(MD) && cast<MDNode>(MD)->isDistinct()) {
       Metadata *&GlobalMD = LocalToGlobal[MD];
       if (!GlobalMD) {
-        std::string NewName =
-            (to_string(LocalToGlobal.size()) + ModuleId).str();
+        std::string NewName = (Twine(LocalToGlobal.size()) + ModuleId).str();
         GlobalMD = MDString::get(M.getContext(), NewName);
       }
 
@@ -141,7 +147,9 @@ void simplifyExternals(Module &M) {
       continue;
     }
 
-    if (!F.isDeclaration() || F.getFunctionType() == EmptyFT)
+    if (!F.isDeclaration() || F.getFunctionType() == EmptyFT ||
+        // Changing the type of an intrinsic may invalidate the IR.
+        F.getName().startswith("llvm."))
       continue;
 
     Function *NewF =
@@ -376,15 +384,14 @@ void splitAndWriteThinLTOBitcode(
   W.writeStrtab();
   OS << Buffer;
 
-  // If a minimized bitcode module was requested for the thin link,
-  // strip the debug info (the merged module was already stripped above)
-  // and write it to the given OS.
+  // If a minimized bitcode module was requested for the thin link, only
+  // the information that is needed by thin link will be written in the
+  // given OS (the merged module will be written as usual).
   if (ThinLinkOS) {
     Buffer.clear();
     BitcodeWriter W2(Buffer);
     StripDebugInfo(M);
-    W2.writeModule(&M, /*ShouldPreserveUseListOrder=*/false, &Index,
-                   /*GenerateHash=*/false, &ModHash);
+    W2.writeThinLinkBitcode(&M, Index, ModHash);
     W2.writeModule(MergedM.get(), /*ShouldPreserveUseListOrder=*/false,
                    &MergedMIndex);
     W2.writeSymtab();
@@ -420,14 +427,11 @@ void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
   ModuleHash ModHash = {{0}};
   WriteBitcodeToFile(&M, OS, /*ShouldPreserveUseListOrder=*/false, Index,
                      /*GenerateHash=*/true, &ModHash);
-  // If a minimized bitcode module was requested for the thin link,
-  // strip the debug info and write it to the given OS.
-  if (ThinLinkOS) {
-    StripDebugInfo(M);
-    WriteBitcodeToFile(&M, *ThinLinkOS, /*ShouldPreserveUseListOrder=*/false,
-                       Index,
-                       /*GenerateHash=*/false, &ModHash);
-  }
+  // If a minimized bitcode module was requested for the thin link, only
+  // the information that is needed by thin link will be written in the
+  // given OS.
+  if (ThinLinkOS && Index)
+    WriteThinLinkBitcodeToFile(&M, *ThinLinkOS, *Index, ModHash);
 }
 
 class WriteThinLTOBitcode : public ModulePass {

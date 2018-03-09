@@ -108,6 +108,18 @@ private:
   bool Stopped = false;
   bool AddingMachinePasses = false;
 
+  /// Set the StartAfter, StartBefore and StopAfter passes to allow running only
+  /// a portion of the normal code-gen pass sequence.
+  ///
+  /// If the StartAfter and StartBefore pass ID is zero, then compilation will
+  /// begin at the normal point; otherwise, clear the Started flag to indicate
+  /// that passes should not be added until the starting pass is seen.  If the
+  /// Stop pass ID is zero, then compilation will continue to the end.
+  ///
+  /// This function expects that at least one of the StartAfter or the
+  /// StartBefore pass IDs is null.
+  void setStartStopPasses();
+
 protected:
   LLVMTargetMachine *TM;
   PassConfigImpl *Impl = nullptr; // Internal data structures
@@ -147,27 +159,25 @@ public:
 
   CodeGenOpt::Level getOptLevel() const;
 
-  /// Set the StartAfter, StartBefore and StopAfter passes to allow running only
-  /// a portion of the normal code-gen pass sequence.
-  ///
-  /// If the StartAfter and StartBefore pass ID is zero, then compilation will
-  /// begin at the normal point; otherwise, clear the Started flag to indicate
-  /// that passes should not be added until the starting pass is seen.  If the
-  /// Stop pass ID is zero, then compilation will continue to the end.
-  ///
-  /// This function expects that at least one of the StartAfter or the
-  /// StartBefore pass IDs is null.
-  void setStartStopPasses(AnalysisID StartBefore, AnalysisID StartAfter,
-                          AnalysisID StopBefore, AnalysisID StopAfter) {
-    assert(!(StartBefore && StartAfter) &&
-           "Start after and start before passes are given");
-    assert(!(StopBefore && StopAfter) &&
-           "Stop after and stop before passed are given");
-    this->StartBefore = StartBefore;
-    this->StartAfter = StartAfter;
-    this->StopBefore = StopBefore;
-    this->StopAfter = StopAfter;
-    Started = (StartAfter == nullptr) && (StartBefore == nullptr);
+  /// Describe the status of the codegen
+  /// pipeline set by this target pass config.
+  /// Having a limited codegen pipeline means that options
+  /// have been used to restrict what codegen is doing.
+  /// In particular, that means that codegen won't emit
+  /// assembly code.
+  bool hasLimitedCodeGenPipeline() const;
+
+  /// If hasLimitedCodeGenPipeline is true, this method
+  /// returns a string with the name of the options, separated
+  /// by \p Separator that caused this pipeline to be limited.
+  std::string
+  getLimitedCodeGenPipelineReason(const char *Separator = "/") const;
+
+  /// Check if the codegen pipeline is limited in such a way that it
+  /// won't be complete. When the codegen pipeline is not complete,
+  /// this means it may not be possible to generate assembly from it.
+  bool willCompleteCodeGenPipeline() const {
+    return !hasLimitedCodeGenPipeline() || (!StopAfter && !StopBefore);
   }
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
@@ -315,9 +325,9 @@ public:
   virtual bool isGlobalISelEnabled() const;
 
   /// Check whether or not GlobalISel should abort on error.
-  /// When this is disable, GlobalISel will fall back on SDISel instead of
+  /// When this is disabled, GlobalISel will fall back on SDISel instead of
   /// erroring out.
-  virtual bool isGlobalISelAbortEnabled() const;
+  bool isGlobalISelAbortEnabled() const;
 
   /// Check whether or not a diagnostic should be emitted when GlobalISel
   /// uses the fallback path. In other words, it will emit a diagnostic

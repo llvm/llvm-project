@@ -41,7 +41,8 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel) const override;
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override;
 
   // No instruction requires relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -82,7 +83,8 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel) const override;
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override;
 
   // No instruction requires relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -131,7 +133,7 @@ void WebAssemblyAsmBackendELF::applyFixup(const MCAssembler &Asm,
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
 }
 
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 WebAssemblyAsmBackendELF::createObjectWriter(raw_pwrite_stream &OS) const {
   return createWebAssemblyELFObjectWriter(OS, Is64Bit, 0);
 }
@@ -191,7 +193,7 @@ void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
 }
 
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 WebAssemblyAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   return createWebAssemblyWasmObjectWriter(OS, Is64Bit);
 }

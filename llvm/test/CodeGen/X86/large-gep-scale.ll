@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 ; PR5281
 
 ; After scaling, this type doesn't fit in memory. Codegen should generate

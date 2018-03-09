@@ -13,7 +13,7 @@ declare void @_ZNSsC1EPKcRKSaIcE() unnamed_addr #0
 ; It isn't valid to If-Convert the following function, even though the calls
 ; are in common. The calls clobber the predicate info.
 ; CHECK: cbnz r{{[0-9]+}}, .LBB0_2
-; CHECK: BB#1
+; CHECK: %bb.1
 ; CHECK: .LBB0_2
 ; Function Attrs: nounwind
 define hidden void @_ZN4llvm14DOTGraphTraitsIPNS_13ScheduleDAGMIEE17getEdgeAttributesEPKNS_5SUnitENS_13SUnitIteratorEPKNS_11ScheduleDAGE() #0 align 2 {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -x86-asm-syntax=intel -mcpu=i486 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -x86-asm-syntax=intel -mcpu=i486 | FileCheck %s
 ; Test that the load of the constant is folded into the operation.
 
 

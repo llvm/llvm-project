@@ -15,11 +15,11 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -200,7 +200,7 @@ void ExecutionDepsFix::enterBasicBlock(MachineBasicBlock *MBB) {
         LiveRegs[rx].Def = -1;
       }
     }
-    DEBUG(dbgs() << "BB#" << MBB->getNumber() << ": entry\n");
+    DEBUG(dbgs() << printMBBReference(*MBB) << ": entry\n");
     return;
   }
 
@@ -246,7 +246,7 @@ void ExecutionDepsFix::enterBasicBlock(MachineBasicBlock *MBB) {
     }
   }
   DEBUG(
-      dbgs() << "BB#" << MBB->getNumber()
+      dbgs() << printMBBReference(*MBB)
              << (!isBlockDone(MBB) ? ": incomplete\n" : ": all preds known\n"));
 }
 
@@ -394,7 +394,7 @@ void ExecutionDepsFix::processDefs(MachineInstr *MI, bool breakDependency,
       continue;
     for (int rx : regIndices(MO.getReg())) {
       // This instruction explicitly defines rx.
-      DEBUG(dbgs() << TRI->getName(RC->getRegister(rx)) << ":\t" << CurInstr
+      DEBUG(dbgs() << printReg(RC->getRegister(rx), TRI) << ":\t" << CurInstr
                    << '\t' << *MI);
 
       if (breakDependency) {
@@ -617,7 +617,7 @@ bool ExecutionDepsFix::isBlockDone(MachineBasicBlock *MBB) {
 }
 
 bool ExecutionDepsFix::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(*mf.getFunction()))
+  if (skipFunction(mf.getFunction()))
     return false;
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();

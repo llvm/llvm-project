@@ -1,5 +1,10 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN:   | llvm-dwarfdump -lookup=0x7fffffff - | \
+# RUN:   | llvm-dwarfdump -lookup=0xffffffff - | \
+# RUN: FileCheck %s --check-prefix=EMPTY --allow-empty
+# EMPTY: {{^$}}
+
+# RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
+# RUN:   | llvm-dwarfdump -lookup=0xffffffffffffffff - | \
 # RUN: FileCheck %s --check-prefix=EMPTY --allow-empty
 # EMPTY: {{^$}}
 
@@ -45,7 +50,7 @@ Lfunc_begin0:
 	.file	1 "foo.c"
 	.loc	1 1 0                   ## foo.c:1:0
 	.cfi_startproc
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	pushq	%rbp
 Lcfi0:
 	.cfi_def_cfa_offset 16

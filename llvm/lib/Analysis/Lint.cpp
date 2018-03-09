@@ -265,13 +265,21 @@ void Lint::visitCallSite(CallSite CS) {
         // Check that noalias arguments don't alias other arguments. This is
         // not fully precise because we don't know the sizes of the dereferenced
         // memory regions.
-        if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy())
-          for (CallSite::arg_iterator BI = CS.arg_begin(); BI != AE; ++BI)
+        if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
+          AttributeList PAL = CS.getAttributes();
+          unsigned ArgNo = 0;
+          for (CallSite::arg_iterator BI = CS.arg_begin(); BI != AE; ++BI) {
+            // Skip ByVal arguments since they will be memcpy'd to the callee's
+            // stack so we're not really passing the pointer anyway.
+            if (PAL.hasParamAttribute(ArgNo++, Attribute::ByVal))
+              continue;
             if (AI != BI && (*BI)->getType()->isPointerTy()) {
               AliasResult Result = AA->alias(*AI, *BI);
               Assert(Result != MustAlias && Result != PartialAlias,
                      "Unusual: noalias argument aliases another argument", &I);
             }
+          }
+        }
 
         // Check that an sret argument points to valid memory.
         if (Formal->hasStructRetAttr() && Actual->getType()->isPointerTy()) {
@@ -285,15 +293,24 @@ void Lint::visitCallSite(CallSite CS) {
     }
   }
 
-  if (CS.isCall() && cast<CallInst>(CS.getInstruction())->isTailCall())
-    for (CallSite::arg_iterator AI = CS.arg_begin(), AE = CS.arg_end();
-         AI != AE; ++AI) {
-      Value *Obj = findValue(*AI, /*OffsetOk=*/true);
-      Assert(!isa<AllocaInst>(Obj),
-             "Undefined behavior: Call with \"tail\" keyword references "
-             "alloca",
-             &I);
+  if (CS.isCall()) {
+    const CallInst *CI = cast<CallInst>(CS.getInstruction());
+    if (CI->isTailCall()) {
+      const AttributeList &PAL = CI->getAttributes();
+      unsigned ArgNo = 0;
+      for (Value *Arg : CS.args()) {
+        // Skip ByVal arguments since they will be memcpy'd to the callee's
+        // stack anyway.
+        if (PAL.hasParamAttribute(ArgNo++, Attribute::ByVal))
+          continue;
+        Value *Obj = findValue(Arg, /*OffsetOk=*/true);
+        Assert(!isa<AllocaInst>(Obj),
+               "Undefined behavior: Call with \"tail\" keyword references "
+               "alloca",
+               &I);
+      }
     }
+  }
 
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
@@ -683,7 +700,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
     if (Instruction::isCast(CE->getOpcode())) {
       if (CastInst::isNoopCast(Instruction::CastOps(CE->getOpcode()),
                                CE->getOperand(0)->getType(), CE->getType(),
-                               DL->getIntPtrType(V->getType())))
+                               *DL))
         return findValueImpl(CE->getOperand(0), OffsetOk, Visited);
     } else if (CE->getOpcode() == Instruction::ExtractValue) {
       ArrayRef<unsigned> Indices = CE->getIndices();

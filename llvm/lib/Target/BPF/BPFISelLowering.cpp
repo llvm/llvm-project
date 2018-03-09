@@ -36,7 +36,7 @@ using namespace llvm;
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
-      DiagnosticInfoUnsupported(*MF.getFunction(), Msg, DL.getDebugLoc()));
+      DiagnosticInfoUnsupported(MF.getFunction(), Msg, DL.getDebugLoc()));
 }
 
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *Msg,
@@ -48,7 +48,7 @@ static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *Msg,
   Val->print(OS);
   OS.flush();
   DAG.getContext()->diagnose(
-      DiagnosticInfoUnsupported(*MF.getFunction(), Str, DL.getDebugLoc()));
+      DiagnosticInfoUnsupported(MF.getFunction(), Str, DL.getDebugLoc()));
 }
 
 BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
@@ -130,10 +130,29 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = 128;
   MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = 128;
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = 128;
+
+  // CPU/Feature control
+  HasJmpExt = STI.getHasJmpExt();
 }
 
 bool BPFTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   return false;
+}
+
+std::pair<unsigned, const TargetRegisterClass *>
+BPFTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                StringRef Constraint,
+                                                MVT VT) const {
+  if (Constraint.size() == 1)
+    // GCC Constraint Letters
+    switch (Constraint[0]) {
+    case 'r': // GENERAL_REGS
+      return std::make_pair(0U, &BPF::GPRRegClass);
+    default:
+      break;
+    }
+
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -158,7 +177,7 @@ SDValue BPFTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   switch (CallConv) {
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
     break;
@@ -208,7 +227,7 @@ SDValue BPFTargetLowering::LowerFormalArguments(
     }
   }
 
-  if (IsVarArg || MF.getFunction()->hasStructRetAttr()) {
+  if (IsVarArg || MF.getFunction().hasStructRetAttr()) {
     fail(DL, DAG, "functions with VarArgs or StructRet are not supported");
   }
 
@@ -310,14 +329,6 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    auto GV = G->getGlobal();
-    fail(CLI.DL, DAG,
-         "A call to global function '" + StringRef(GV->getName())
-         + "' is not supported. "
-         + (GV->isDeclaration() ?
-           "Only calls to predefined BPF helpers are allowed." :
-           "Please use __attribute__((always_inline) to make sure"
-           " this function is inlined."));
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), CLI.DL, PtrVT,
                                         G->getOffset(), 0);
   } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
@@ -371,7 +382,7 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
-  if (MF.getFunction()->getReturnType()->isAggregateType()) {
+  if (MF.getFunction().getReturnType()->isAggregateType()) {
     fail(DL, DAG, "only integer returns supported");
     return DAG.getNode(Opc, DL, MVT::Other, Chain);
   }
@@ -456,7 +467,8 @@ SDValue BPFTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Dest = Op.getOperand(4);
   SDLoc DL(Op);
 
-  NegateCC(LHS, RHS, CC);
+  if (!getHasJmpExt())
+    NegateCC(LHS, RHS, CC);
 
   return DAG.getNode(BPFISD::BR_CC, DL, Op.getValueType(), Chain, LHS, RHS,
                      DAG.getConstant(CC, DL, MVT::i64), Dest);
@@ -470,7 +482,8 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
   SDLoc DL(Op);
 
-  NegateCC(LHS, RHS, CC);
+  if (!getHasJmpExt())
+    NegateCC(LHS, RHS, CC);
 
   SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i64);
 
@@ -569,6 +582,18 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     break;
   case ISD::SETNE:
     NewCC = isSelectOp ? BPF::JNE_rr : BPF::JNE_ri;
+    break;
+  case ISD::SETLT:
+    NewCC = isSelectOp ? BPF::JSLT_rr : BPF::JSLT_ri;
+    break;
+  case ISD::SETULT:
+    NewCC = isSelectOp ? BPF::JULT_rr : BPF::JULT_ri;
+    break;
+  case ISD::SETLE:
+    NewCC = isSelectOp ? BPF::JSLE_rr : BPF::JSLE_ri;
+    break;
+  case ISD::SETULE:
+    NewCC = isSelectOp ? BPF::JULE_rr : BPF::JULE_ri;
     break;
   default:
     report_fatal_error("unimplemented select CondCode " + Twine(CC));

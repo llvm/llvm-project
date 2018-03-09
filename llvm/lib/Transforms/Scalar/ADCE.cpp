@@ -15,8 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ADCE.h"
-
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,13 +29,29 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include <cassert>
+#include <cstddef>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "adce"
@@ -52,10 +70,12 @@ static cl::opt<bool> RemoveLoops("adce-remove-loops", cl::init(false),
                                  cl::Hidden);
 
 namespace {
+
 /// Information about Instructions
 struct InstInfoType {
   /// True if the associated instruction is live.
   bool Live = false;
+
   /// Quick access to information for block containing associated Instruction.
   struct BlockInfoType *Block = nullptr;
 };
@@ -64,18 +84,19 @@ struct InstInfoType {
 struct BlockInfoType {
   /// True when this block contains a live instructions.
   bool Live = false;
+
   /// True when this block ends in an unconditional branch.
   bool UnconditionalBranch = false;
+
   /// True when this block is known to have live PHI nodes.
   bool HasLivePhiNodes = false;
+
   /// Control dependence sources need to be live for this block.
   bool CFLive = false;
 
   /// Quick access to the LiveInfo for the terminator,
   /// holds the value &InstInfo[Terminator]
   InstInfoType *TerminatorLiveInfo = nullptr;
-
-  bool terminatorIsLive() const { return TerminatorLiveInfo->Live; }
 
   /// Corresponding BasicBlock.
   BasicBlock *BB = nullptr;
@@ -85,14 +106,21 @@ struct BlockInfoType {
 
   /// Post-order numbering of reverse control flow graph.
   unsigned PostOrder;
+
+  bool terminatorIsLive() const { return TerminatorLiveInfo->Live; }
 };
 
 class AggressiveDeadCodeElimination {
   Function &F;
+
+  // ADCE does not use DominatorTree per se, but it updates it to preserve the
+  // analysis.
+  DominatorTree &DT;
   PostDominatorTree &PDT;
 
   /// Mapping of blocks to associated information, an element in BlockInfoVec.
-  DenseMap<BasicBlock *, BlockInfoType> BlockInfo;
+  /// Use MapVector to get deterministic iteration order.
+  MapVector<BasicBlock *, BlockInfoType> BlockInfo;
   bool isLive(BasicBlock *BB) { return BlockInfo[BB].Live; }
 
   /// Mapping of instructions to associated information.
@@ -102,6 +130,7 @@ class AggressiveDeadCodeElimination {
   /// Instructions known to be live where we need to mark
   /// reaching definitions as live.
   SmallVector<Instruction *, 128> Worklist;
+
   /// Debug info scopes around a live instruction.
   SmallPtrSet<const Metadata *, 32> AliveScopes;
 
@@ -116,15 +145,19 @@ class AggressiveDeadCodeElimination {
   /// Set up auxiliary data structures for Instructions and BasicBlocks and
   /// initialize the Worklist to the set of must-be-live Instruscions.
   void initialize();
+
   /// Return true for operations which are always treated as live.
   bool isAlwaysLive(Instruction &I);
+
   /// Return true for instrumentation instructions for value profiling.
   bool isInstrumentsConstant(Instruction &I);
 
   /// Propagate liveness to reaching definitions.
   void markLiveInstructions();
+
   /// Mark an instruction as live.
   void markLive(Instruction *I);
+
   /// Mark a block as live.
   void markLive(BlockInfoType &BB);
   void markLive(BasicBlock *BB) { markLive(BlockInfo[BB]); }
@@ -157,11 +190,14 @@ class AggressiveDeadCodeElimination {
   void makeUnconditional(BasicBlock *BB, BasicBlock *Target);
 
 public:
-  AggressiveDeadCodeElimination(Function &F, PostDominatorTree &PDT)
-      : F(F), PDT(PDT) {}
+  AggressiveDeadCodeElimination(Function &F, DominatorTree &DT,
+                                PostDominatorTree &PDT)
+      : F(F), DT(DT), PDT(PDT) {}
+
   bool performDeadCodeElimination();
 };
-}
+
+} // end anonymous namespace
 
 bool AggressiveDeadCodeElimination::performDeadCodeElimination() {
   initialize();
@@ -175,7 +211,6 @@ static bool isUnconditionalBranch(TerminatorInst *Term) {
 }
 
 void AggressiveDeadCodeElimination::initialize() {
-
   auto NumBlocks = F.size();
 
   // We will have an entry in the map for each block so we grow the
@@ -217,7 +252,8 @@ void AggressiveDeadCodeElimination::initialize() {
     // to recording which nodes have been visited we also record whether
     // a node is currently on the "stack" of active ancestors of the current
     // node.
-    typedef DenseMap<BasicBlock *, bool>  StatusMap ;
+    using StatusMap = DenseMap<BasicBlock *, bool>;
+
     class DFState : public StatusMap {
     public:
       std::pair<StatusMap::iterator, bool> insert(BasicBlock *BB) {
@@ -253,27 +289,23 @@ void AggressiveDeadCodeElimination::initialize() {
     }
   }
 
-  // Mark blocks live if there is no path from the block to the
-  // return of the function or a successor for which this is true.
-  // This protects IDFCalculator which cannot handle such blocks.
-  for (auto &BBInfoPair : BlockInfo) {
-    auto &BBInfo = BBInfoPair.second;
-    if (BBInfo.terminatorIsLive())
-      continue;
-    auto *BB = BBInfo.BB;
-    if (!PDT.getNode(BB)) {
-      DEBUG(dbgs() << "Not post-dominated by return: " << BB->getName()
+  // Mark blocks live if there is no path from the block to a
+  // return of the function.
+  // We do this by seeing which of the postdomtree root children exit the
+  // program, and for all others, mark the subtree live.
+  for (auto &PDTChild : children<DomTreeNode *>(PDT.getRootNode())) {
+    auto *BB = PDTChild->getBlock();
+    auto &Info = BlockInfo[BB];
+    // Real function return
+    if (isa<ReturnInst>(Info.Terminator)) {
+      DEBUG(dbgs() << "post-dom root child is a return: " << BB->getName()
                    << '\n';);
-      markLive(BBInfo.Terminator);
       continue;
     }
-    for (auto *Succ : successors(BB))
-      if (!PDT.getNode(Succ)) {
-        DEBUG(dbgs() << "Successor not post-dominated by return: "
-                     << BB->getName() << '\n';);
-        markLive(BBInfo.Terminator);
-        break;
-      }
+
+    // This child is something else, like an infinite loop.
+    for (auto DFNode : depth_first(PDTChild))
+      markLive(BlockInfo[DFNode->getBlock()].Terminator);
   }
 
   // Treat the entry block as always live
@@ -318,7 +350,6 @@ bool AggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
 }
 
 void AggressiveDeadCodeElimination::markLiveInstructions() {
-
   // Propagate liveness backwards to operands.
   do {
     // Worklist holds newly discovered live instructions
@@ -343,7 +374,6 @@ void AggressiveDeadCodeElimination::markLiveInstructions() {
 }
 
 void AggressiveDeadCodeElimination::markLive(Instruction *I) {
-
   auto &Info = InstInfo[I];
   if (Info.Live)
     return;
@@ -430,7 +460,6 @@ void AggressiveDeadCodeElimination::markPhiLive(PHINode *PN) {
 }
 
 void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
-
   if (BlocksWithDeadTerminators.empty())
     return;
 
@@ -469,7 +498,6 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
 //
 //===----------------------------------------------------------------------===//
 bool AggressiveDeadCodeElimination::removeDeadInstructions() {
-
   // Updates control and dataflow around dead blocks
   updateDeadRegions();
 
@@ -527,7 +555,6 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
 
 // A dead region is the set of dead blocks with a common live post-dominator.
 void AggressiveDeadCodeElimination::updateDeadRegions() {
-
   DEBUG({
     dbgs() << "final dead terminator blocks: " << '\n';
     for (auto *BB : BlocksWithDeadTerminators)
@@ -561,21 +588,40 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
     }
     assert((PreferredSucc && PreferredSucc->PostOrder > 0) &&
            "Failed to find safe successor for dead branch");
+
+    // Collect removed successors to update the (Post)DominatorTrees.
+    SmallPtrSet<BasicBlock *, 4> RemovedSuccessors;
     bool First = true;
     for (auto *Succ : successors(BB)) {
-      if (!First || Succ != PreferredSucc->BB)
+      if (!First || Succ != PreferredSucc->BB) {
         Succ->removePredecessor(BB);
-      else
+        RemovedSuccessors.insert(Succ);
+      } else
         First = false;
     }
     makeUnconditional(BB, PreferredSucc->BB);
+
+    // Inform the dominators about the deleted CFG edges.
+    SmallVector<DominatorTree::UpdateType, 4> DeletedEdges;
+    for (auto *Succ : RemovedSuccessors) {
+      // It might have happened that the same successor appeared multiple times
+      // and the CFG edge wasn't really removed.
+      if (Succ != PreferredSucc->BB) {
+        DEBUG(dbgs() << "ADCE: (Post)DomTree edge enqueued for deletion"
+                     << BB->getName() << " -> " << Succ->getName() << "\n");
+        DeletedEdges.push_back({DominatorTree::Delete, BB, Succ});
+      }
+    }
+
+    DT.applyUpdates(DeletedEdges);
+    PDT.applyUpdates(DeletedEdges);
+
     NumBranchesRemoved += 1;
   }
 }
 
 // reverse top-sort order
 void AggressiveDeadCodeElimination::computeReversePostOrder() {
-
   // This provides a post-order numbering of the reverse control flow graph
   // Note that it is incomplete in the presence of infinite loops but we don't
   // need numbers blocks which don't reach the end of the functions since
@@ -613,6 +659,9 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
   InstInfo[NewTerm].Live = true;
   if (const DILocation *DL = PredTerm->getDebugLoc())
     NewTerm->setDebugLoc(DL);
+
+  InstInfo.erase(PredTerm);
+  PredTerm->eraseFromParent();
 }
 
 //===----------------------------------------------------------------------===//
@@ -621,19 +670,24 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
 //
 //===----------------------------------------------------------------------===//
 PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!AggressiveDeadCodeElimination(F, PDT).performDeadCodeElimination())
+  if (!AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination())
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
   return PA;
 }
 
 namespace {
+
 struct ADCELegacyPass : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
+
   ADCELegacyPass() : FunctionPass(ID) {
     initializeADCELegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -641,22 +695,34 @@ struct ADCELegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
+
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    return AggressiveDeadCodeElimination(F, PDT).performDeadCodeElimination();
+    return AggressiveDeadCodeElimination(F, DT, PDT)
+        .performDeadCodeElimination();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    // We require DominatorTree here only to update and thus preserve it.
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     if (!RemoveControlFlowFlag)
       AU.setPreservesCFG();
+    else {
+      AU.addPreserved<DominatorTreeWrapperPass>();
+      AU.addPreserved<PostDominatorTreeWrapperPass>();
+    }
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
-}
+
+} // end anonymous namespace
 
 char ADCELegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(ADCELegacyPass, "adce",
                       "Aggressive Dead Code Elimination", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ADCELegacyPass, "adce", "Aggressive Dead Code Elimination",
                     false, false)

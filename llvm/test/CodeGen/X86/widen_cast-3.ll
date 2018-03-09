@@ -6,7 +6,7 @@
 
 define void @convert(<12 x i8>* %dst.addr, <3 x i32> %src) nounwind {
 ; X86-LABEL: convert:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    psubd %xmm1, %xmm0
@@ -16,7 +16,7 @@ define void @convert(<12 x i8>* %dst.addr, <3 x i32> %src) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: convert:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    psubd %xmm1, %xmm0
 ; X64-NEXT:    pextrd $2, %xmm0, 8(%rdi)

@@ -1,7 +1,14 @@
 from __future__ import absolute_import
+import difflib
+import errno
+import functools
+import itertools
+import getopt
 import os, signal, subprocess, sys
 import re
+import stat
 import platform
+import shutil
 import tempfile
 import threading
 
@@ -217,7 +224,20 @@ def quote_windows_command(seq):
 # cmd is export or env
 def updateEnv(env, cmd):
     arg_idx = 1
+    unset_next_env_var = False
     for arg_idx, arg in enumerate(cmd.args[1:]):
+        # Support for the -u flag (unsetting) for env command
+        # e.g., env -u FOO -u BAR will remove both FOO and BAR
+        # from the environment.
+        if arg == '-u':
+            unset_next_env_var = True
+            continue
+        if unset_next_env_var:
+            unset_next_env_var = False
+            if arg in env.env:
+                del env.env[arg]
+            continue
+
         # Partition the string into KEY=VALUE.
         key, eq, val = arg.partition('=')
         # Stop if there was no equals.
@@ -238,6 +258,7 @@ def executeBuiltinEcho(cmd, shenv):
     # Some tests have un-redirected echo commands to help debug test failures.
     # Buffer our output and return it to the caller.
     is_redirected = True
+    encode = lambda x : x
     if stdout == subprocess.PIPE:
         is_redirected = False
         stdout = StringIO()
@@ -245,6 +266,9 @@ def executeBuiltinEcho(cmd, shenv):
         # Reopen stdout in binary mode to avoid CRLF translation. The versions
         # of echo we are replacing on Windows all emit plain LF, and the LLVM
         # tests now depend on this.
+        # When we open as binary, however, this also means that we have to write
+        # 'bytes' objects to stdout instead of 'str' objects.
+        encode = lit.util.to_bytes
         stdout = open(stdout.name, stdout.mode + 'b')
         opened_files.append((None, None, stdout, None))
 
@@ -265,17 +289,18 @@ def executeBuiltinEcho(cmd, shenv):
     def maybeUnescape(arg):
         if not interpret_escapes:
             return arg
-        # Python string escapes and "echo" escapes are obviously different, but
-        # this should be enough for the LLVM test suite.
-        return arg.decode('string_escape')
+
+        arg = lit.util.to_bytes(arg)
+        codec = 'string_escape' if sys.version_info < (3,0) else 'unicode_escape'
+        return arg.decode(codec)
 
     if args:
         for arg in args[:-1]:
-            stdout.write(maybeUnescape(arg))
-            stdout.write(' ')
-        stdout.write(maybeUnescape(args[-1]))
+            stdout.write(encode(maybeUnescape(arg)))
+            stdout.write(encode(' '))
+        stdout.write(encode(maybeUnescape(args[-1])))
     if write_newline:
-        stdout.write('\n')
+        stdout.write(encode('\n'))
 
     for (name, mode, f, path) in opened_files:
         f.close()
@@ -283,6 +308,255 @@ def executeBuiltinEcho(cmd, shenv):
     if not is_redirected:
         return stdout.getvalue()
     return ""
+
+def executeBuiltinMkdir(cmd, cmd_shenv):
+    """executeBuiltinMkdir - Create new directories."""
+    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
+    try:
+        opts, args = getopt.gnu_getopt(args, 'p')
+    except getopt.GetoptError as err:
+        raise InternalShellError(cmd, "Unsupported: 'mkdir':  %s" % str(err))
+
+    parent = False
+    for o, a in opts:
+        if o == "-p":
+            parent = True
+        else:
+            assert False, "unhandled option"
+
+    if len(args) == 0:
+        raise InternalShellError(cmd, "Error: 'mkdir' is missing an operand")
+
+    stderr = StringIO()
+    exitCode = 0
+    for dir in args:
+        if not os.path.isabs(dir):
+            dir = os.path.realpath(os.path.join(cmd_shenv.cwd, dir))
+        if parent:
+            lit.util.mkdir_p(dir)
+        else:
+            try:
+                os.mkdir(dir)
+            except OSError as err:
+                stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
+                exitCode = 1
+    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
+
+def executeBuiltinDiff(cmd, cmd_shenv):
+    """executeBuiltinDiff - Compare files line by line."""
+    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
+    try:
+        opts, args = getopt.gnu_getopt(args, "wbur", ["strip-trailing-cr"])
+    except getopt.GetoptError as err:
+        raise InternalShellError(cmd, "Unsupported: 'diff':  %s" % str(err))
+
+    filelines, filepaths, dir_trees = ([] for i in range(3))
+    ignore_all_space = False
+    ignore_space_change = False
+    unified_diff = False
+    recursive_diff = False
+    strip_trailing_cr = False
+    for o, a in opts:
+        if o == "-w":
+            ignore_all_space = True
+        elif o == "-b":
+            ignore_space_change = True
+        elif o == "-u":
+            unified_diff = True
+        elif o == "-r":
+            recursive_diff = True
+        elif o == "--strip-trailing-cr":
+            strip_trailing_cr = True
+        else:
+            assert False, "unhandled option"
+
+    if len(args) != 2:
+        raise InternalShellError(cmd, "Error:  missing or extra operand")
+
+    def getDirTree(path, basedir=""):
+        # Tree is a tuple of form (dirname, child_trees).
+        # An empty dir has child_trees = [], a file has child_trees = None.
+        child_trees = []
+        for dirname, child_dirs, files in os.walk(os.path.join(basedir, path)):
+            for child_dir in child_dirs:
+                child_trees.append(getDirTree(child_dir, dirname))
+            for filename in files:
+                child_trees.append((filename, None))
+            return path, sorted(child_trees)
+
+    def compareTwoFiles(filepaths):
+        filelines = []
+        for file in filepaths:
+            with open(file, 'r') as f:
+                filelines.append(f.readlines())
+
+        exitCode = 0 
+        def compose2(f, g):
+            return lambda x: f(g(x))
+
+        f = lambda x: x
+        if strip_trailing_cr:
+            f = compose2(lambda line: line.rstrip('\r'), f)
+        if ignore_all_space or ignore_space_change:
+            ignoreSpace = lambda line, separator: separator.join(line.split())
+            ignoreAllSpaceOrSpaceChange = functools.partial(ignoreSpace, separator='' if ignore_all_space else ' ')
+            f = compose2(ignoreAllSpaceOrSpaceChange, f)
+
+        for idx, lines in enumerate(filelines):
+            filelines[idx]= [f(line) for line in lines]
+
+        func = difflib.unified_diff if unified_diff else difflib.context_diff
+        for diff in func(filelines[0], filelines[1], filepaths[0], filepaths[1]):
+            stdout.write(diff)
+            exitCode = 1
+        return exitCode
+
+    def printDirVsFile(dir_path, file_path):
+        if os.path.getsize(file_path):
+            msg = "File %s is a directory while file %s is a regular file"
+        else:
+            msg = "File %s is a directory while file %s is a regular empty file"
+        stdout.write(msg % (dir_path, file_path) + "\n")
+
+    def printFileVsDir(file_path, dir_path):
+        if os.path.getsize(file_path):
+            msg = "File %s is a regular file while file %s is a directory"
+        else:
+            msg = "File %s is a regular empty file while file %s is a directory"
+        stdout.write(msg % (file_path, dir_path) + "\n")
+
+    def printOnlyIn(basedir, path, name):
+        stdout.write("Only in %s: %s\n" % (os.path.join(basedir, path), name))
+
+    def compareDirTrees(dir_trees, base_paths=["", ""]):
+        # Dirnames of the trees are not checked, it's caller's responsibility,
+        # as top-level dirnames are always different. Base paths are important
+        # for doing os.walk, but we don't put it into tree's dirname in order
+        # to speed up string comparison below and while sorting in getDirTree.
+        left_tree, right_tree = dir_trees[0], dir_trees[1]
+        left_base, right_base = base_paths[0], base_paths[1]
+
+        # Compare two files or report file vs. directory mismatch.
+        if left_tree[1] is None and right_tree[1] is None:
+            return compareTwoFiles([os.path.join(left_base, left_tree[0]),
+                                    os.path.join(right_base, right_tree[0])])
+
+        if left_tree[1] is None and right_tree[1] is not None:
+            printFileVsDir(os.path.join(left_base, left_tree[0]),
+                           os.path.join(right_base, right_tree[0]))
+            return 1
+
+        if left_tree[1] is not None and right_tree[1] is None:
+            printDirVsFile(os.path.join(left_base, left_tree[0]),
+                           os.path.join(right_base, right_tree[0]))
+            return 1
+
+        # Compare two directories via recursive use of compareDirTrees.
+        exitCode = 0
+        left_names = [node[0] for node in left_tree[1]]
+        right_names = [node[0] for node in right_tree[1]]
+        l, r = 0, 0
+        while l < len(left_names) and r < len(right_names):
+            # Names are sorted in getDirTree, rely on that order.
+            if left_names[l] < right_names[r]:
+                exitCode = 1
+                printOnlyIn(left_base, left_tree[0], left_names[l])
+                l += 1
+            elif left_names[l] > right_names[r]:
+                exitCode = 1
+                printOnlyIn(right_base, right_tree[0], right_names[r])
+                r += 1
+            else:
+                exitCode |= compareDirTrees([left_tree[1][l], right_tree[1][r]],
+                                            [os.path.join(left_base, left_tree[0]),
+                                            os.path.join(right_base, right_tree[0])])
+                l += 1
+                r += 1
+
+        # At least one of the trees has ended. Report names from the other tree.
+        while l < len(left_names):
+            exitCode = 1
+            printOnlyIn(left_base, left_tree[0], left_names[l])
+            l += 1
+        while r < len(right_names):
+            exitCode = 1
+            printOnlyIn(right_base, right_tree[0], right_names[r])
+            r += 1
+        return exitCode
+
+    stderr = StringIO()
+    stdout = StringIO()
+    exitCode = 0
+    try:
+        for file in args:
+            if not os.path.isabs(file):
+                file = os.path.realpath(os.path.join(cmd_shenv.cwd, file))
+    
+            if recursive_diff:
+                dir_trees.append(getDirTree(file))
+            else:
+                filepaths.append(file)
+
+        if not recursive_diff:
+            exitCode = compareTwoFiles(filepaths)
+        else:
+            exitCode = compareDirTrees(dir_trees)
+
+    except IOError as err:
+        stderr.write("Error: 'diff' command failed, %s\n" % str(err))
+        exitCode = 1
+
+    return ShellCommandResult(cmd, stdout.getvalue(), stderr.getvalue(), exitCode, False)
+
+def executeBuiltinRm(cmd, cmd_shenv):
+    """executeBuiltinRm - Removes (deletes) files or directories."""
+    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
+    try:
+        opts, args = getopt.gnu_getopt(args, "frR", ["--recursive"])
+    except getopt.GetoptError as err:
+        raise InternalShellError(cmd, "Unsupported: 'rm':  %s" % str(err))
+
+    force = False
+    recursive = False
+    for o, a in opts:
+        if o == "-f":
+            force = True
+        elif o in ("-r", "-R", "--recursive"):
+            recursive = True
+        else:
+            assert False, "unhandled option"
+
+    if len(args) == 0:
+        raise InternalShellError(cmd, "Error: 'rm' is missing an operand")
+
+    def on_rm_error(func, path, exc_info):
+        # path contains the path of the file that couldn't be removed
+        # let's just assume that it's read-only and remove it.
+        os.chmod(path, stat.S_IMODE( os.stat(path).st_mode) | stat.S_IWRITE)
+        os.remove(path)
+
+    stderr = StringIO()
+    exitCode = 0
+    for path in args:
+        if not os.path.isabs(path):
+            path = os.path.realpath(os.path.join(cmd_shenv.cwd, path))
+        if force and not os.path.exists(path):
+            continue
+        try:
+            if os.path.isdir(path):
+                if not recursive:
+                    stderr.write("Error: %s is a directory\n" % path)
+                    exitCode = 1
+                shutil.rmtree(path, onerror = on_rm_error if force else None)
+            else:
+                if force and not os.access(path, os.W_OK):
+                    os.chmod(path,
+                             stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
+                os.remove(path)
+        except OSError as err:
+            stderr.write("Error: 'rm' command failed, %s" % str(err))
+            exitCode = 1
+    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
 
 def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     """Return the standard fds for cmd after applying redirects
@@ -441,6 +715,30 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             raise ValueError("'export' supports only one argument")
         updateEnv(shenv, cmd.commands[0])
         return 0
+
+    if cmd.commands[0].args[0] == 'mkdir':
+        if len(cmd.commands) != 1:
+            raise InternalShellError(cmd.commands[0], "Unsupported: 'mkdir' "
+                                     "cannot be part of a pipeline")
+        cmdResult = executeBuiltinMkdir(cmd.commands[0], shenv)
+        results.append(cmdResult)
+        return cmdResult.exitCode
+
+    if cmd.commands[0].args[0] == 'diff':
+        if len(cmd.commands) != 1:
+            raise InternalShellError(cmd.commands[0], "Unsupported: 'diff' "
+                                     "cannot be part of a pipeline")
+        cmdResult = executeBuiltinDiff(cmd.commands[0], shenv)
+        results.append(cmdResult)
+        return cmdResult.exitCode
+
+    if cmd.commands[0].args[0] == 'rm':
+        if len(cmd.commands) != 1:
+            raise InternalShellError(cmd.commands[0], "Unsupported: 'rm' "
+                                     "cannot be part of a pipeline")
+        cmdResult = executeBuiltinRm(cmd.commands[0], shenv)
+        results.append(cmdResult)
+        return cmdResult.exitCode
 
     procs = []
     default_stdin = subprocess.PIPE
@@ -711,6 +1009,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
       mode += 'b'  # Avoid CRLFs when writing bash scripts.
     f = open(script, mode)
     if isWin32CMDEXE:
+        f.write('@echo off\n')
         f.write('\nif %ERRORLEVEL% NEQ 0 EXIT\n'.join(commands))
     else:
         if test.config.pipefail:
@@ -787,9 +1086,13 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # command. Note that we take care to return regular strings in
             # Python 2, to avoid other code having to differentiate between the
             # str and unicode types.
+            #
+            # Opening the file in binary mode prevented Windows \r newline
+            # characters from being converted to Unix \n newlines, so manually
+            # strip those from the yielded lines.
             keyword,ln = match.groups()
             yield (line_number, to_string(keyword.decode('utf-8')),
-                   to_string(ln.decode('utf-8')))
+                   to_string(ln.decode('utf-8').rstrip('\r')))
     finally:
         f.close()
 
@@ -801,6 +1104,13 @@ def getTempPaths(test):
     tmpDir = os.path.join(execdir, 'Output')
     tmpBase = os.path.join(tmpDir, execbase)
     return tmpDir, tmpBase
+
+def colonNormalizePath(path):
+    if kIsWindows:
+        return re.sub(r'^(.):', r'\1', path.replace('\\', '/'))
+    else:
+        assert path[0] == '/'
+        return path[1:]
 
 def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     sourcepath = test.getSourcePath()
@@ -837,23 +1147,15 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ('%/T', tmpDir.replace('\\', '/')),
             ])
 
-    # "%:[STpst]" are paths without colons.
-    if kIsWindows:
-        substitutions.extend([
-                ('%:s', re.sub(r'^(.):', r'\1', sourcepath)),
-                ('%:S', re.sub(r'^(.):', r'\1', sourcedir)),
-                ('%:p', re.sub(r'^(.):', r'\1', sourcedir)),
-                ('%:t', re.sub(r'^(.):', r'\1', tmpBase) + '.tmp'),
-                ('%:T', re.sub(r'^(.):', r'\1', tmpDir)),
-                ])
-    else:
-        substitutions.extend([
-                ('%:s', sourcepath),
-                ('%:S', sourcedir),
-                ('%:p', sourcedir),
-                ('%:t', tmpBase + '.tmp'),
-                ('%:T', tmpDir),
-                ])
+    # "%:[STpst]" are normalized paths without colons and without a leading
+    # slash.
+    substitutions.extend([
+            ('%:s', colonNormalizePath(sourcepath)),
+            ('%:S', colonNormalizePath(sourcedir)),
+            ('%:p', colonNormalizePath(sourcedir)),
+            ('%:t', colonNormalizePath(tmpBase + '.tmp')),
+            ('%:T', colonNormalizePath(tmpDir)),
+            ])
     return substitutions
 
 def applySubstitutions(script, substitutions):

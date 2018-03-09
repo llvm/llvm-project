@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
@@ -27,16 +26,249 @@ using namespace llvm::PatternMatch;
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
 /// locations of the original PHI node arguments.
-DebugLoc InstCombiner::PHIArgMergedDebugLoc(PHINode &PN) {
+void InstCombiner::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
   auto *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
-  const DILocation *Loc = FirstInst->getDebugLoc();
+  Inst->setDebugLoc(FirstInst->getDebugLoc());
+  // We do not expect a CallInst here, otherwise, N-way merging of DebugLoc
+  // will be inefficient.
+  assert(!isa<CallInst>(Inst));
 
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
     auto *I = cast<Instruction>(PN.getIncomingValue(i));
-    Loc = DILocation::getMergedLocation(Loc, I->getDebugLoc());
+    Inst->applyMergedLocation(Inst->getDebugLoc(), I->getDebugLoc());
+  }
+}
+
+// Replace Integer typed PHI PN if the PHI's value is used as a pointer value.
+// If there is an existing pointer typed PHI that produces the same value as PN,
+// replace PN and the IntToPtr operation with it. Otherwise, synthesize a new
+// PHI node:
+//
+// Case-1:
+// bb1:
+//     int_init = PtrToInt(ptr_init)
+//     br label %bb2
+// bb2:
+//    int_val = PHI([int_init, %bb1], [int_val_inc, %bb2]
+//    ptr_val = PHI([ptr_init, %bb1], [ptr_val_inc, %bb2]
+//    ptr_val2 = IntToPtr(int_val)
+//    ...
+//    use(ptr_val2)
+//    ptr_val_inc = ...
+//    inc_val_inc = PtrToInt(ptr_val_inc)
+//
+// ==>
+// bb1:
+//     br label %bb2
+// bb2:
+//    ptr_val = PHI([ptr_init, %bb1], [ptr_val_inc, %bb2]
+//    ...
+//    use(ptr_val)
+//    ptr_val_inc = ...
+//
+// Case-2:
+// bb1:
+//    int_ptr = BitCast(ptr_ptr)
+//    int_init = Load(int_ptr)
+//    br label %bb2
+// bb2:
+//    int_val = PHI([int_init, %bb1], [int_val_inc, %bb2]
+//    ptr_val2 = IntToPtr(int_val)
+//    ...
+//    use(ptr_val2)
+//    ptr_val_inc = ...
+//    inc_val_inc = PtrToInt(ptr_val_inc)
+// ==>
+// bb1:
+//    ptr_init = Load(ptr_ptr)
+//    br label %bb2
+// bb2:
+//    ptr_val = PHI([ptr_init, %bb1], [ptr_val_inc, %bb2]
+//    ...
+//    use(ptr_val)
+//    ptr_val_inc = ...
+//    ...
+//
+Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
+  if (!PN.getType()->isIntegerTy())
+    return nullptr;
+  if (!PN.hasOneUse())
+    return nullptr;
+
+  auto *IntToPtr = dyn_cast<IntToPtrInst>(PN.user_back());
+  if (!IntToPtr)
+    return nullptr;
+
+  // Check if the pointer is actually used as pointer:
+  auto HasPointerUse = [](Instruction *IIP) {
+    for (User *U : IIP->users()) {
+      Value *Ptr = nullptr;
+      if (LoadInst *LoadI = dyn_cast<LoadInst>(U)) {
+        Ptr = LoadI->getPointerOperand();
+      } else if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+        Ptr = SI->getPointerOperand();
+      } else if (GetElementPtrInst *GI = dyn_cast<GetElementPtrInst>(U)) {
+        Ptr = GI->getPointerOperand();
+      }
+
+      if (Ptr && Ptr == IIP)
+        return true;
+    }
+    return false;
+  };
+
+  if (!HasPointerUse(IntToPtr))
+    return nullptr;
+
+  if (DL.getPointerSizeInBits(IntToPtr->getAddressSpace()) !=
+      DL.getTypeSizeInBits(IntToPtr->getOperand(0)->getType()))
+    return nullptr;
+
+  SmallVector<Value *, 4> AvailablePtrVals;
+  for (unsigned i = 0; i != PN.getNumIncomingValues(); ++i) {
+    Value *Arg = PN.getIncomingValue(i);
+
+    // First look backward:
+    if (auto *PI = dyn_cast<PtrToIntInst>(Arg)) {
+      AvailablePtrVals.emplace_back(PI->getOperand(0));
+      continue;
+    }
+
+    // Next look forward:
+    Value *ArgIntToPtr = nullptr;
+    for (User *U : Arg->users()) {
+      if (isa<IntToPtrInst>(U) && U->getType() == IntToPtr->getType() &&
+          (DT.dominates(cast<Instruction>(U), PN.getIncomingBlock(i)) ||
+           cast<Instruction>(U)->getParent() == PN.getIncomingBlock(i))) {
+        ArgIntToPtr = U;
+        break;
+      }
+    }
+
+    if (ArgIntToPtr) {
+      AvailablePtrVals.emplace_back(ArgIntToPtr);
+      continue;
+    }
+
+    // If Arg is defined by a PHI, allow it. This will also create
+    // more opportunities iteratively.
+    if (isa<PHINode>(Arg)) {
+      AvailablePtrVals.emplace_back(Arg);
+      continue;
+    }
+
+    // For a single use integer load:
+    auto *LoadI = dyn_cast<LoadInst>(Arg);
+    if (!LoadI)
+      return nullptr;
+
+    if (!LoadI->hasOneUse())
+      return nullptr;
+
+    // Push the integer typed Load instruction into the available
+    // value set, and fix it up later when the pointer typed PHI
+    // is synthesized.
+    AvailablePtrVals.emplace_back(LoadI);
   }
 
-  return Loc;
+  // Now search for a matching PHI
+  auto *BB = PN.getParent();
+  assert(AvailablePtrVals.size() == PN.getNumIncomingValues() &&
+         "Not enough available ptr typed incoming values");
+  PHINode *MatchingPtrPHI = nullptr;
+  for (auto II = BB->begin(), EI = BasicBlock::iterator(BB->getFirstNonPHI());
+       II != EI; II++) {
+    PHINode *PtrPHI = dyn_cast<PHINode>(II);
+    if (!PtrPHI || PtrPHI == &PN || PtrPHI->getType() != IntToPtr->getType())
+      continue;
+    MatchingPtrPHI = PtrPHI;
+    for (unsigned i = 0; i != PtrPHI->getNumIncomingValues(); ++i) {
+      if (AvailablePtrVals[i] !=
+          PtrPHI->getIncomingValueForBlock(PN.getIncomingBlock(i))) {
+        MatchingPtrPHI = nullptr;
+        break;
+      }
+    }
+
+    if (MatchingPtrPHI)
+      break;
+  }
+
+  if (MatchingPtrPHI) {
+    assert(MatchingPtrPHI->getType() == IntToPtr->getType() &&
+           "Phi's Type does not match with IntToPtr");
+    // The PtrToCast + IntToPtr will be simplified later
+    return CastInst::CreateBitOrPointerCast(MatchingPtrPHI,
+                                            IntToPtr->getOperand(0)->getType());
+  }
+
+  // If it requires a conversion for every PHI operand, do not do it.
+  if (std::all_of(AvailablePtrVals.begin(), AvailablePtrVals.end(),
+                  [&](Value *V) {
+                    return (V->getType() != IntToPtr->getType()) ||
+                           isa<IntToPtrInst>(V);
+                  }))
+    return nullptr;
+
+  // If any of the operand that requires casting is a terminator
+  // instruction, do not do it.
+  if (std::any_of(AvailablePtrVals.begin(), AvailablePtrVals.end(),
+                  [&](Value *V) {
+                    return (V->getType() != IntToPtr->getType()) &&
+                           isa<TerminatorInst>(V);
+                  }))
+    return nullptr;
+
+  PHINode *NewPtrPHI = PHINode::Create(
+      IntToPtr->getType(), PN.getNumIncomingValues(), PN.getName() + ".ptr");
+
+  InsertNewInstBefore(NewPtrPHI, PN);
+  SmallDenseMap<Value *, Instruction *> Casts;
+  for (unsigned i = 0; i != PN.getNumIncomingValues(); ++i) {
+    auto *IncomingBB = PN.getIncomingBlock(i);
+    auto *IncomingVal = AvailablePtrVals[i];
+
+    if (IncomingVal->getType() == IntToPtr->getType()) {
+      NewPtrPHI->addIncoming(IncomingVal, IncomingBB);
+      continue;
+    }
+
+#ifndef NDEBUG
+    LoadInst *LoadI = dyn_cast<LoadInst>(IncomingVal);
+    assert((isa<PHINode>(IncomingVal) ||
+            IncomingVal->getType()->isPointerTy() ||
+            (LoadI && LoadI->hasOneUse())) &&
+           "Can not replace LoadInst with multiple uses");
+#endif
+    // Need to insert a BitCast.
+    // For an integer Load instruction with a single use, the load + IntToPtr
+    // cast will be simplified into a pointer load:
+    // %v = load i64, i64* %a.ip, align 8
+    // %v.cast = inttoptr i64 %v to float **
+    // ==>
+    // %v.ptrp = bitcast i64 * %a.ip to float **
+    // %v.cast = load float *, float ** %v.ptrp, align 8
+    Instruction *&CI = Casts[IncomingVal];
+    if (!CI) {
+      CI = CastInst::CreateBitOrPointerCast(IncomingVal, IntToPtr->getType(),
+                                            IncomingVal->getName() + ".ptr");
+      if (auto *IncomingI = dyn_cast<Instruction>(IncomingVal)) {
+        BasicBlock::iterator InsertPos(IncomingI);
+        InsertPos++;
+        if (isa<PHINode>(IncomingI))
+          InsertPos = IncomingI->getParent()->getFirstInsertionPt();
+        InsertNewInstBefore(CI, *InsertPos);
+      } else {
+        auto *InsertBB = &IncomingBB->getParent()->getEntryBlock();
+        InsertNewInstBefore(CI, *InsertBB->getFirstInsertionPt());
+      }
+    }
+    NewPtrPHI->addIncoming(CI, IncomingBB);
+  }
+
+  // The PtrToCast + IntToPtr will be simplified later
+  return CastInst::CreateBitOrPointerCast(NewPtrPHI,
+                                          IntToPtr->getOperand(0)->getType());
 }
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
@@ -117,7 +349,7 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   if (CmpInst *CIOp = dyn_cast<CmpInst>(FirstInst)) {
     CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                      LHSVal, RHSVal);
-    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+    PHIArgMergedDebugLoc(NewCI, PN);
     return NewCI;
   }
 
@@ -130,7 +362,7 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
     NewBinOp->andIRFlags(PN.getIncomingValue(i));
 
-  NewBinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewBinOp, PN);
   return NewBinOp;
 }
 
@@ -239,7 +471,7 @@ Instruction *InstCombiner::FoldPHIArgGEPIntoPHI(PHINode &PN) {
       GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
                                 makeArrayRef(FixedOperands).slice(1));
   if (AllInBounds) NewGEP->setIsInBounds();
-  NewGEP->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewGEP, PN);
   return NewGEP;
 }
 
@@ -399,7 +631,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
     for (Value *IncValue : PN.incoming_values())
       cast<LoadInst>(IncValue)->setVolatile(false);
 
-  NewLI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewLI, PN);
   return NewLI;
 }
 
@@ -565,7 +797,7 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   if (CastInst *FirstCI = dyn_cast<CastInst>(FirstInst)) {
     CastInst *NewCI = CastInst::Create(FirstCI->getOpcode(), PhiVal,
                                        PN.getType());
-    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+    PHIArgMergedDebugLoc(NewCI, PN);
     return NewCI;
   }
 
@@ -576,14 +808,14 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
       BinOp->andIRFlags(PN.getIncomingValue(i));
 
-    BinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
+    PHIArgMergedDebugLoc(BinOp, PN);
     return BinOp;
   }
 
   CmpInst *CIOp = cast<CmpInst>(FirstInst);
   CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                    PhiVal, ConstantOp);
-  NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewCI, PN);
   return NewCI;
 }
 
@@ -902,6 +1134,9 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
   // this PHI only has a single use (a PHI), and if that PHI only has one use (a
   // PHI)... break the cycle.
   if (PN.hasOneUse()) {
+    if (Instruction *Result = FoldIntegerTypedPHI(PN))
+      return Result;
+
     Instruction *PHIUser = cast<Instruction>(PN.user_back());
     if (PHINode *PU = dyn_cast<PHINode>(PHIUser)) {
       SmallPtrSet<PHINode*, 16> PotentiallyDeadPHIs;

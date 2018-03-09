@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck %s
-; RUN: llc -O0 -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck %s --check-prefix=CHECK-O0
+; RUN: llc -O0 -fast-isel -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck %s --check-prefix=CHECK-O0
 
 ; CHECK-LABEL: test1
 ; CHECK: bl      _gen

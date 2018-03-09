@@ -101,7 +101,7 @@ public:
     /// input constraint is required to match it (e.g. "0").  The value is the
     /// constraint number that matches this one (for example, if this is
     /// constraint #0 and constraint #4 has the value "0", this will be 4).
-    signed char MatchingInput = -1;
+    int MatchingInput = -1;
 
     /// Code - The constraint code, either the register name (in braces) or the
     /// constraint letter/number.
@@ -128,7 +128,7 @@ public:
     /// input constraint is required to match it (e.g. "0").  The value is the
     /// constraint number that matches this one (for example, if this is
     /// constraint #0 and constraint #4 has the value "0", this will be 4).
-    signed char MatchingInput = -1;
+    int MatchingInput = -1;
 
     /// hasMatchingInput - Return true if this is an output constraint that has
     /// a matching input constraint.

@@ -1,4 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -ppc-reduce-cr-logicals \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 ; Test case is reduced from the snappy benchmark.
 ; Verify MachineLICM will always hoist trivially rematerializable instructions even when register pressure is high.
@@ -18,11 +19,11 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 
 define linkonce_odr void @ZN6snappyDecompressor_(%"class.snappy::SnappyDecompressor"* %this, %"class.snappy::SnappyIOVecWriter"* %writer) {
 ; CHECK-LABEL: ZN6snappyDecompressor_:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:       addis 3, 2, _ZN6snappy8internalL8wordmaskE@toc@ha
 ; CHECK-DAG:   addi 25, 3, _ZN6snappy8internalL8wordmaskE@toc@l
-; CHECK-DAG:   addis 4, 2, _ZN6snappy8internalL10char_tableE@toc@ha
-; CHECK-DAG:   addi 24, 4, _ZN6snappy8internalL10char_tableE@toc@l
+; CHECK-DAG:   addis 5, 2, _ZN6snappy8internalL10char_tableE@toc@ha
+; CHECK-DAG:   addi 24, 5, _ZN6snappy8internalL10char_tableE@toc@l
 ; CHECK:       b .LBB0_2
 ; CHECK:       .LBB0_2: # %for.cond
 ; CHECK-NOT:   addis {{[0-9]+}}, 2, _ZN6snappy8internalL8wordmaskE@toc@ha

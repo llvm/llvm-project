@@ -9,8 +9,8 @@
 
 #include "XCoreMachineFunctionInfo.h"
 #include "XCoreInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -39,7 +39,7 @@ int XCoreFunctionInfo::createLRSpillSlot(MachineFunction &MF) {
   const TargetRegisterClass &RC = XCore::GRRegsRegClass;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (! MF.getFunction()->isVarArg()) {
+  if (! MF.getFunction().isVarArg()) {
     // A fixed offset of 0 allows us to save / restore LR using entsp / retsp.
     LRSpillSlot = MFI.CreateFixedObject(TRI.getSpillSize(RC), 0, true);
   } else {

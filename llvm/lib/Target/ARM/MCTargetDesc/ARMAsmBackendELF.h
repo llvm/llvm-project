@@ -12,17 +12,20 @@
 
 #include "ARMAsmBackend.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
+#include "llvm/MC/MCObjectWriter.h"
+
 using namespace llvm;
 
 namespace {
 class ARMAsmBackendELF : public ARMAsmBackend {
 public:
   uint8_t OSABI;
-  ARMAsmBackendELF(const Target &T, const Triple &TT, uint8_t OSABI,
+  ARMAsmBackendELF(const Target &T, const MCSubtargetInfo &STI, uint8_t OSABI,
                    bool IsLittle)
-      : ARMAsmBackend(T, TT, IsLittle), OSABI(OSABI) {}
+      : ARMAsmBackend(T, STI, IsLittle), OSABI(OSABI) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
     return createARMELFObjectWriter(OS, OSABI, isLittle());
   }
 };

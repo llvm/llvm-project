@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 | FileCheck %s
 ; PR1198
 
 define i64 @foo(i64 %x, i64 %y) {

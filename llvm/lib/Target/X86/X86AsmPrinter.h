@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/Target/TargetMachine.h"
 
 // Implemented in X86MCInstLower.cpp
@@ -30,6 +31,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   StackMaps SM;
   FaultMaps FM;
   std::unique_ptr<MCCodeEmitter> CodeEmitter;
+  bool EmitFPOData = false;
   bool NeedsRetpoline = false;
 
   // This utility class tracks the length of a stackmap instruction's 'shadow'.
@@ -96,14 +98,11 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
 
   void LowerFENTRY_CALL(const MachineInstr &MI, X86MCInstLower &MCIL);
 
-  // Helper function that emits the XRay sleds we've collected for a particular
-  // function.
-  void EmitXRayTable();
+  // Choose between emitting .seh_ directives and .cv_fpo_ directives.
+  void EmitSEHInstruction(const MachineInstr *MI);
 
 public:
-  explicit X86AsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this) {}
+  X86AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 
   StringRef getPassName() const override {
     return "X86 Assembly Printer";
@@ -118,6 +117,7 @@ public:
   void EmitInstruction(const MachineInstr *MI) override;
 
   void EmitBasicBlockEnd(const MachineBasicBlock &MBB) override {
+    AsmPrinter::EmitBasicBlockEnd(MBB);
     SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
   }
 
@@ -134,10 +134,13 @@ public:
   bool doInitialization(Module &M) override {
     SMShadowTracker.reset(0);
     SM.reset();
+    FM.reset();
     return AsmPrinter::doInitialization(M);
   }
 
   bool runOnMachineFunction(MachineFunction &F) override;
+  void EmitFunctionBodyStart() override;
+  void EmitFunctionBodyEnd() override;
 };
 
 } // end namespace llvm

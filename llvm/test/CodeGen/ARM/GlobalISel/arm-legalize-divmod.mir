@@ -55,7 +55,7 @@ body:             |
     %2(s32) = G_SDIV %0, %1
     ; CHECK: %r0 = COPY [[R]]
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_udiv_i32
@@ -91,7 +91,7 @@ body:             |
     %2(s32) = G_UDIV %0, %1
     ; CHECK: %r0 = COPY [[R]]
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sdiv_i16
@@ -145,7 +145,7 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_udiv_i16
@@ -197,7 +197,7 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sdiv_i8
@@ -251,7 +251,7 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_udiv_i8
@@ -303,7 +303,7 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_srem_i32
@@ -341,7 +341,7 @@ body:             |
     %2(s32) = G_SREM %0, %1
     ; CHECK: %r0 = COPY [[R]]
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_urem_i32
@@ -379,7 +379,7 @@ body:             |
     %2(s32) = G_UREM %0, %1
     ; CHECK: %r0 = COPY [[R]]
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_srem_i16
@@ -435,7 +435,7 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_urem_i16
@@ -489,7 +489,7 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_srem_i8
@@ -545,7 +545,7 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_urem_i8
@@ -599,5 +599,5 @@ body:             |
     ; CHECK: %r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...

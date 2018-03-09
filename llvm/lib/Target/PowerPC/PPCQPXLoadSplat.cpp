@@ -22,9 +22,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "ppc-qpx-load-splat"
@@ -60,7 +60,7 @@ FunctionPass *llvm::createPPCQPXLoadSplatPass() {
 }
 
 bool PPCQPXLoadSplat::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   bool MadeChange = false;
@@ -79,8 +79,8 @@ bool PPCQPXLoadSplat::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // We're looking for a sequence like this:
-      // %F0<def> = LFD 0, %X3<kill>, %QF0<imp-def>; mem:LD8[%a](tbaa=!2)
-      // %QF1<def> = QVESPLATI %QF0<kill>, 0, %RM<imp-use>
+      // %f0 = LFD 0, killed %x3, implicit-def %qf0; mem:LD8[%a](tbaa=!2)
+      // %qf1 = QVESPLATI killed %qf0, 0, implicit %rm
 
       for (auto SI = Splats.begin(); SI != Splats.end();) {
         MachineInstr *SMI = *SI;

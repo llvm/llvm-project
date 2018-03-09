@@ -15,6 +15,7 @@
 #include "InstPrinter/X86ATTInstPrinter.h"
 #include "InstPrinter/X86InstComments.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86TargetStreamer.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "X86AsmPrinter.h"
 #include "X86RegisterInfo.h"
@@ -22,12 +23,12 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
@@ -40,12 +41,9 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 
 using namespace llvm;
 
@@ -102,7 +100,9 @@ void X86AsmPrinter::StackMapShadowTracker::emitShadowPadding(
 }
 
 void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
-  OutStreamer->EmitInstruction(Inst, getSubtargetInfo(), EnablePrintSchedInfo);
+  OutStreamer->EmitInstruction(Inst, getSubtargetInfo(),
+                               EnablePrintSchedInfo &&
+                                   !(Inst.getFlags() & X86::NO_SCHED_INFO));
   SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
 }
 
@@ -964,7 +964,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
       // This is an optimization that lets us get away without emitting a nop in
       // many cases.
       //
-      // NB! In some cases the encoding for PUSH64r (e.g. PUSH64r %R9) takes two
+      // NB! In some cases the encoding for PUSH64r (e.g. PUSH64r %r9) takes two
       // bytes too, so the check on MinSize is important.
       MCI.setOpcode(X86::PUSH64rmr);
     } else {
@@ -1055,20 +1055,20 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // We want to emit the following pattern, which follows the x86 calling
   // convention to prepare for the trampoline call to be patched in.
   //
-  //   <args placement according SysV64 calling convention>
   //   .p2align 1, ...
   // .Lxray_event_sled_N:
-  //   jmp +N                    // jump across the call instruction
-  //   callq __xray_CustomEvent  // force relocation to symbol
-  //   <args cleanup, jump to here>
-  //
-  // The relative jump needs to jump forward 24 bytes:
-  // 10 (args) + 5 (nops) + 9 (cleanup)
+  //   jmp +N                        // jump across the instrumentation sled
+  //   ...                           // set up arguments in register
+  //   callq __xray_CustomEvent@plt  // force dependency to symbol
+  //   ...
+  //   <jump here>
   //
   // After patching, it would look something like:
   //
   //   nopw (2-byte nop)
+  //   ...
   //   callq __xrayCustomEvent  // already lowered
+  //   ...
   //
   // ---
   // First we emit the label and the jump.
@@ -1080,49 +1080,57 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
-  OutStreamer->EmitBytes("\xeb\x14");
+  OutStreamer->EmitBinaryData("\xeb\x0f");
 
   // The default C calling convention will place two arguments into %rcx and
   // %rdx -- so we only work with those.
-  unsigned UsedRegs[] = {X86::RDI, X86::RSI, X86::RAX};
+  unsigned UsedRegs[] = {X86::RDI, X86::RSI};
+  bool UsedMask[] = {false, false};
 
-  // Because we will use %rax, we preserve that across the call.
-  EmitAndCountInstruction(MCInstBuilder(X86::PUSH64r).addReg(X86::RAX));
-
-  // Then we put the operands in the %rdi and %rsi registers.
+  // Then we put the operands in the %rdi and %rsi registers. We spill the
+  // values in the register before we clobber them, and mark them as used in
+  // UsedMask. In case the arguments are already in the correct register, we use
+  // emit nops appropriately sized to keep the sled the same size in every
+  // situation.
   for (unsigned I = 0; I < MI.getNumOperands(); ++I)
     if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
-      if (Op->isImm())
-        EmitAndCountInstruction(MCInstBuilder(X86::MOV64ri)
+      assert(Op->isReg() && "Only support arguments in registers");
+      if (Op->getReg() != UsedRegs[I]) {
+        UsedMask[I] = true;
+        EmitAndCountInstruction(
+            MCInstBuilder(X86::PUSH64r).addReg(UsedRegs[I]));
+        EmitAndCountInstruction(MCInstBuilder(X86::MOV64rr)
                                     .addReg(UsedRegs[I])
-                                    .addImm(Op->getImm()));
-      else if (Op->isReg()) {
-        if (Op->getReg() != UsedRegs[I])
-          EmitAndCountInstruction(MCInstBuilder(X86::MOV64rr)
-                                      .addReg(UsedRegs[I])
-                                      .addReg(Op->getReg()));
-        else
-          EmitNops(*OutStreamer, 3, Subtarget->is64Bit(), getSubtargetInfo());
+                                    .addReg(Op->getReg()));
+      } else {
+        EmitNops(*OutStreamer, 4, Subtarget->is64Bit(), getSubtargetInfo());
       }
     }
 
   // We emit a hard dependency on the __xray_CustomEvent symbol, which is the
-  // name of the trampoline to be implemented by the XRay runtime. We put this
-  // explicitly in the %rax register.
+  // name of the trampoline to be implemented by the XRay runtime.
   auto TSym = OutContext.getOrCreateSymbol("__xray_CustomEvent");
   MachineOperand TOp = MachineOperand::CreateMCSymbol(TSym);
-  EmitAndCountInstruction(MCInstBuilder(X86::MOV64ri)
-                              .addReg(X86::RAX)
-                              .addOperand(MCIL.LowerSymbolOperand(TOp, TSym)));
+  if (isPositionIndependent())
+    TOp.setTargetFlags(X86II::MO_PLT);
 
   // Emit the call instruction.
-  EmitAndCountInstruction(MCInstBuilder(X86::CALL64r).addReg(X86::RAX));
+  EmitAndCountInstruction(MCInstBuilder(X86::CALL64pcrel32)
+                              .addOperand(MCIL.LowerSymbolOperand(TOp, TSym)));
 
   // Restore caller-saved and used registers.
-  OutStreamer->AddComment("xray custom event end.");
-  EmitAndCountInstruction(MCInstBuilder(X86::POP64r).addReg(X86::RAX));
+  for (unsigned I = sizeof UsedMask; I-- > 0;)
+    if (UsedMask[I])
+      EmitAndCountInstruction(MCInstBuilder(X86::POP64r).addReg(UsedRegs[I]));
+    else
+      EmitNops(*OutStreamer, 1, Subtarget->is64Bit(), getSubtargetInfo());
 
-  recordSled(CurSled, MI, SledKind::CUSTOM_EVENT);
+  OutStreamer->AddComment("xray custom event end.");
+
+  // Record the sled version. Older versions of this sled were spelled
+  // differently, so we let the runtime handle the different offsets we're
+  // using.
+  recordSled(CurSled, MI, SledKind::CUSTOM_EVENT, 1);
 }
 
 void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
@@ -1133,7 +1141,6 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   // .Lxray_sled_N:
   //   jmp .tmpN
   //   # 9 bytes worth of noops
-  // .tmpN
   //
   // We need the 9 bytes because at runtime, we'd be patching over the full 11
   // bytes with the following pattern:
@@ -1144,14 +1151,12 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->EmitCodeAlignment(2);
   OutStreamer->EmitLabel(CurSled);
-  auto Target = OutContext.createTempSymbol();
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
   OutStreamer->EmitBytes("\xeb\x09");
   EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
-  OutStreamer->EmitLabel(Target);
   recordSled(CurSled, MI, SledKind::FUNCTION_ENTER);
 }
 
@@ -1366,6 +1371,82 @@ static void printConstant(const Constant *COp, raw_ostream &CS) {
   }
 }
 
+void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
+  assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
+  assert(getSubtarget().isOSWindows() && "SEH_ instruction Windows only");
+  const X86RegisterInfo *RI =
+      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
+
+  // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
+  if (EmitFPOData) {
+    X86TargetStreamer *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
+    switch (MI->getOpcode()) {
+    case X86::SEH_PushReg:
+      XTS->emitFPOPushReg(MI->getOperand(0).getImm());
+      break;
+    case X86::SEH_StackAlloc:
+      XTS->emitFPOStackAlloc(MI->getOperand(0).getImm());
+      break;
+    case X86::SEH_SetFrame:
+      assert(MI->getOperand(1).getImm() == 0 &&
+             ".cv_fpo_setframe takes no offset");
+      XTS->emitFPOSetFrame(MI->getOperand(0).getImm());
+      break;
+    case X86::SEH_EndPrologue:
+      XTS->emitFPOEndPrologue();
+      break;
+    case X86::SEH_SaveReg:
+    case X86::SEH_SaveXMM:
+    case X86::SEH_PushFrame:
+      llvm_unreachable("SEH_ directive incompatible with FPO");
+      break;
+    default:
+      llvm_unreachable("expected SEH_ instruction");
+    }
+    return;
+  }
+
+  // Otherwise, use the .seh_ directives for all other Windows platforms.
+  switch (MI->getOpcode()) {
+  case X86::SEH_PushReg:
+    OutStreamer->EmitWinCFIPushReg(
+        RI->getSEHRegNum(MI->getOperand(0).getImm()));
+    break;
+
+  case X86::SEH_SaveReg:
+    OutStreamer->EmitWinCFISaveReg(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+                                   MI->getOperand(1).getImm());
+    break;
+
+  case X86::SEH_SaveXMM:
+    OutStreamer->EmitWinCFISaveXMM(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+                                   MI->getOperand(1).getImm());
+    break;
+
+  case X86::SEH_StackAlloc:
+    OutStreamer->EmitWinCFIAllocStack(MI->getOperand(0).getImm());
+    break;
+
+  case X86::SEH_SetFrame:
+    OutStreamer->EmitWinCFISetFrame(
+        RI->getSEHRegNum(MI->getOperand(0).getImm()),
+        MI->getOperand(1).getImm());
+    break;
+
+  case X86::SEH_PushFrame:
+    OutStreamer->EmitWinCFIPushFrame(MI->getOperand(0).getImm());
+    break;
+
+  case X86::SEH_EndPrologue:
+    OutStreamer->EmitWinCFIEndProlog();
+    break;
+
+  default:
+    llvm_unreachable("expected SEH_ instruction");
+  }
+}
+
 void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   X86MCInstLower MCInstLowering(*MF, *this);
   const X86RegisterInfo *RI = MF->getSubtarget<X86Subtarget>().getRegisterInfo();
@@ -1543,41 +1624,13 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
 
   case X86::SEH_PushReg:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIPushReg(RI->getSEHRegNum(MI->getOperand(0).getImm()));
-    return;
-
   case X86::SEH_SaveReg:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFISaveReg(RI->getSEHRegNum(MI->getOperand(0).getImm()),
-                                   MI->getOperand(1).getImm());
-    return;
-
   case X86::SEH_SaveXMM:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFISaveXMM(RI->getSEHRegNum(MI->getOperand(0).getImm()),
-                                   MI->getOperand(1).getImm());
-    return;
-
   case X86::SEH_StackAlloc:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIAllocStack(MI->getOperand(0).getImm());
-    return;
-
   case X86::SEH_SetFrame:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFISetFrame(RI->getSEHRegNum(MI->getOperand(0).getImm()),
-                                    MI->getOperand(1).getImm());
-    return;
-
   case X86::SEH_PushFrame:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIPushFrame(MI->getOperand(0).getImm());
-    return;
-
   case X86::SEH_EndPrologue:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIEndProlog();
+    EmitSEHInstruction(MI);
     return;
 
   case X86::SEH_Epilogue: {
@@ -1957,6 +2010,8 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
+  if (MI->getAsmPrinterFlag(MachineInstr::NoSchedComment))
+    TmpInst.setFlags(TmpInst.getFlags() | X86::NO_SCHED_INFO);
 
   // Stackmap shadows cannot include branch targets, so we can count the bytes
   // in a call towards the shadow, but must ensure that the no thread returns

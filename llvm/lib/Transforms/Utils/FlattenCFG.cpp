@@ -1,4 +1,4 @@
-//===- FlatternCFG.cpp - Code to perform CFG flattening ---------------===//
+//===- FlatternCFG.cpp - Code to perform CFG flattening -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,25 +14,37 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <cassert>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "flattencfg"
 
 namespace {
+
 class FlattenCFGOpt {
   AliasAnalysis *AA;
+
   /// \brief Use parallel-and or parallel-or to generate conditions for
   /// conditional branches.
   bool FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder);
+
   /// \brief If \param BB is the merge block of an if-region, attempt to merge
   /// the if-region with an adjacent if-region upstream if two if-regions
   /// contain identical instructions.
   bool MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder);
+
   /// \brief Compare a pair of blocks: \p Block1 and \p Block2, which
   /// are from two if-regions whose entry blocks are \p Head1 and \p
   /// Head2.  \returns true if \p Block1 and \p Block2 contain identical
@@ -43,9 +55,11 @@ class FlattenCFGOpt {
 
 public:
   FlattenCFGOpt(AliasAnalysis *AA) : AA(AA) {}
+
   bool run(BasicBlock *BB);
 };
-}
+
+} // end anonymous namespace
 
 /// If \param [in] BB has more than one predecessor that is a conditional
 /// branch, attempt to use parallel and/or for the branch condition. \returns
@@ -120,7 +134,6 @@ public:
 ///  In Case 1, \param BB (BB4) has an unconditional branch (BB3) as
 ///  its predecessor.  In Case 2, \param BB (BB3) only has conditional branches
 ///  as its predecessors.
-///
 bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   PHINode *PHI = dyn_cast<PHINode>(BB->begin());
   if (PHI)
@@ -237,8 +250,8 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     // Do branch inversion.
     BasicBlock *CurrBlock = LastCondBlock;
     bool EverChanged = false;
-    for (;CurrBlock != FirstCondBlock;
-          CurrBlock = CurrBlock->getSinglePredecessor()) {
+    for (; CurrBlock != FirstCondBlock;
+         CurrBlock = CurrBlock->getSinglePredecessor()) {
       BranchInst *BI = dyn_cast<BranchInst>(CurrBlock->getTerminator());
       CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition());
       if (!CI)
@@ -309,7 +322,6 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 //  in the 2nd if-region to compare.  \returns true if \param Block1 and \param
 /// Block2 have identical instructions and do not have memory reference alias
 /// with \param Head2.
-///
 bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
                                          BasicBlock *Block1,
                                          BasicBlock *Block2) {
@@ -330,7 +342,7 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
   BasicBlock::iterator iter2 = Block2->begin();
   BasicBlock::iterator end2 = Block2->getTerminator()->getIterator();
 
-  while (1) {
+  while (true) {
     if (iter1 == end1) {
       if (iter2 != end2)
         return false;
@@ -384,7 +396,6 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
 /// To:
 /// if (a || b)
 ///   statement;
-///
 bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   BasicBlock *IfTrue2, *IfFalse2;
   Value *IfCond2 = GetIfCondition(BB, IfTrue2, IfFalse2);
@@ -475,8 +486,7 @@ bool FlattenCFGOpt::run(BasicBlock *BB) {
 
 /// FlattenCFG - This function is used to flatten a CFG.  For
 /// example, it uses parallel-and and parallel-or mode to collapse
-//  if-conditions and merge if-regions with identical statements.
-///
+/// if-conditions and merge if-regions with identical statements.
 bool llvm::FlattenCFG(BasicBlock *BB, AliasAnalysis *AA) {
   return FlattenCFGOpt(AA).run(BB);
 }

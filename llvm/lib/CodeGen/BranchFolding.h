@@ -1,4 +1,4 @@
-//===-- BranchFolding.h - Fold machine code branch instructions -*- C++ -*-===//
+//===- BranchFolding.h - Fold machine code branch instructions --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,20 +10,27 @@
 #ifndef LLVM_LIB_CODEGEN_BRANCHFOLDING_H
 #define LLVM_LIB_CODEGEN_BRANCHFOLDING_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compiler.h"
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
-  class MachineBlockFrequencyInfo;
-  class MachineBranchProbabilityInfo;
-  class MachineFunction;
-  class MachineModuleInfo;
-  class MachineLoopInfo;
-  class TargetInstrInfo;
-  class TargetRegisterInfo;
+
+class BasicBlock;
+class MachineBlockFrequencyInfo;
+class MachineBranchProbabilityInfo;
+class MachineFunction;
+class MachineLoopInfo;
+class MachineModuleInfo;
+class MachineRegisterInfo;
+class raw_ostream;
+class TargetInstrInfo;
+class TargetRegisterInfo;
 
   class LLVM_LIBRARY_VISIBILITY BranchFolder {
   public:
@@ -49,6 +56,7 @@ namespace llvm {
     class MergePotentialsElt {
       unsigned Hash;
       MachineBasicBlock *Block;
+
     public:
       MergePotentialsElt(unsigned h, MachineBasicBlock *b)
         : Hash(h), Block(b) {}
@@ -62,7 +70,9 @@ namespace llvm {
 
       bool operator<(const MergePotentialsElt &) const;
     };
-    typedef std::vector<MergePotentialsElt>::iterator MPIterator;
+
+    using MPIterator = std::vector<MergePotentialsElt>::iterator;
+
     std::vector<MergePotentialsElt> MergePotentials;
     SmallPtrSet<const MachineBasicBlock*, 2> TriedMerging;
     DenseMap<const MachineBasicBlock *, int> FuncletMembership;
@@ -70,6 +80,7 @@ namespace llvm {
     class SameTailElt {
       MPIterator MPIter;
       MachineBasicBlock::iterator TailStartPos;
+
     public:
       SameTailElt(MPIterator mp, MachineBasicBlock::iterator tsp)
         : MPIter(mp), TailStartPos(tsp) {}
@@ -77,18 +88,23 @@ namespace llvm {
       MPIterator getMPIter() const {
         return MPIter;
       }
+
       MergePotentialsElt &getMergePotentialsElt() const {
         return *getMPIter();
       }
+
       MachineBasicBlock::iterator getTailStartPos() const {
         return TailStartPos;
       }
+
       unsigned getHash() const {
         return getMergePotentialsElt().getHash();
       }
+
       MachineBasicBlock *getBlock() const {
         return getMergePotentialsElt().getBlock();
       }
+
       bool tailIsWholeBlock() const {
         return TailStartPos == getBlock()->begin();
       }
@@ -96,6 +112,7 @@ namespace llvm {
       void setBlock(MachineBasicBlock *MBB) {
         getMergePotentialsElt().setBlock(MBB);
       }
+
       void setTailStartPos(MachineBasicBlock::iterator Pos) {
         TailStartPos = Pos;
       }
@@ -120,6 +137,7 @@ namespace llvm {
     class MBFIWrapper {
     public:
       MBFIWrapper(const MachineBlockFrequencyInfo &I) : MBFI(I) {}
+
       BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
       void setBlockFreq(const MachineBasicBlock *MBB, BlockFrequency F);
       raw_ostream &printBlockFreq(raw_ostream &OS,
@@ -146,8 +164,8 @@ namespace llvm {
 
     /// Delete the instruction OldInst and everything after it, replacing it
     /// with an unconditional branch to NewDest.
-    void ReplaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
-                                 MachineBasicBlock *NewDest);
+    void replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
+                                 MachineBasicBlock &NewDest);
 
     /// Given a machine basic block and an iterator into it, split the MBB so
     /// that the part before the iterator falls into the part starting at the
@@ -182,8 +200,8 @@ namespace llvm {
                                    unsigned &commonTailIndex);
 
     /// Create merged DebugLocs of identical instructions across SameTails and
-    /// assign it to the instruction in common tail.
-    void MergeCommonTailDebugLocs(unsigned commonTailIndex);
+    /// assign it to the instruction in common tail; merge MMOs and undef flags.
+    void mergeCommonTails(unsigned commonTailIndex);
 
     bool OptimizeBranches(MachineFunction &MF);
 
@@ -203,6 +221,7 @@ namespace llvm {
     /// the function, move the instructions before MBB terminator if it's legal.
     bool HoistCommonCodeInSuccs(MachineBasicBlock *MBB);
   };
-}
 
-#endif /* LLVM_CODEGEN_BRANCHFOLDING_HPP */
+} // end namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_BRANCHFOLDING_H

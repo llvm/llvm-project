@@ -398,6 +398,8 @@ public:
   /// \brief Return true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() const;
 
+  Optional<uint64_t> getIrrLoopHeaderWeight() const;
+
 private:
   /// \brief Increment the internal refcount of the number of BlockAddresses
   /// referencing this BasicBlock by \p Amt.

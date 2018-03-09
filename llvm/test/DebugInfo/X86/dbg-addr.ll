@@ -7,7 +7,7 @@
 ; is control-dependent.
 
 ; CHECK-LABEL: use_dbg_addr:
-; CHECK: #DEBUG_VALUE: use_dbg_addr:o <- [%RSP+0]
+; CHECK: #DEBUG_VALUE: use_dbg_addr:o <- [%rsp+0]
 
 ; FIXME: Avoid the use of a single-location location list and use
 ; DW_AT_start_offset instead.

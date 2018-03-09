@@ -68,15 +68,6 @@ define <2 x i64> @test7(<2 x i64> %A) {
 ; CHECK-NEXT: ret <2 x i64> %add
 }
 
-define <2 x i64> @test8(<2 x i64> %A) {
-  %xor = xor <2 x i64> %A, <i64 -1, i64 -1>
-  %add = add <2 x i64> %xor, <i64 2, i64 3>
-  ret <2 x i64> %add
-; CHECK-LABEL: @test8(
-; CHECK-NEXT: %add = sub <2 x i64> <i64 1, i64 2>, %A
-; CHECK-NEXT: ret <2 x i64> %add
-}
-
 define i16 @test9(i16 %a) {
        %b = mul i16 %a, 2
        %c = mul i16 %a, 32767

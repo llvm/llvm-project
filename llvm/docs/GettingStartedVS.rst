@@ -76,6 +76,11 @@ Here's the short story for getting up and running quickly with LLVM:
 
    * With anonymous Subversion access:
 
+     *Note:* some regression tests require Unix-style line ending (``\n``). To
+     pass all regression tests, please add two lines *enable-auto-props = yes*
+     and *\* = svn:mime-type=application/octet-stream* to
+     ``C:\Users\<username>\AppData\Roaming\Subversion\config``.
+
       1. ``cd <where-you-want-llvm-to-live>``
       2. ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``
       3. ``cd llvm``

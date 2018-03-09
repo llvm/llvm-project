@@ -3,7 +3,7 @@
 
 define <4 x i32> @foo(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,1,2,3]
 ; CHECK-NEXT:    movd %xmm2, %eax
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,1,2,3]
@@ -41,7 +41,7 @@ define <4 x i32> @foo(<4 x i32> %t, <4 x i32> %u) nounwind {
 
 define <4 x i32> @bar(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-LABEL: bar:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,1,2,3]
 ; CHECK-NEXT:    movd %xmm2, %eax
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,1,2,3]
@@ -79,7 +79,7 @@ define <4 x i32> @bar(<4 x i32> %t, <4 x i32> %u) nounwind {
 
 define <4 x float> @qux(<4 x float> %t, <4 x float> %u) nounwind {
 ; CHECK-LABEL: qux:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
@@ -108,7 +108,7 @@ define <4 x float> @qux(<4 x float> %t, <4 x float> %u) nounwind {
 ; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; CHECK-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    retq
   %m = frem <4 x float> %t, %u

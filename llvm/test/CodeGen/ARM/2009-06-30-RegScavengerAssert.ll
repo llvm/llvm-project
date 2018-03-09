@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mtriple=armv6-apple-darwin9
+; RUN: llc < %s -mtriple=armv6-apple-darwin9
 
 @nn = external global i32		; <i32*> [#uses=1]
 @al_len = external global i32		; <i32*> [#uses=2]

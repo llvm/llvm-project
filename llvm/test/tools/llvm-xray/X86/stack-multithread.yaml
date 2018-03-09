@@ -1,0 +1,83 @@
+#RUN: llvm-xray stack -per-thread-stacks %s | FileCheck %s --check-prefix PER-THREAD
+#RUN: llvm-xray stack -aggregate-threads %s | FileCheck %s --check-prefix AGGREGATE
+
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 2601000000
+records:
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10100 }
+  - { type: 1, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10101 }
+  - { type: 1, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10301 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10401 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 111, kind: function-enter, tsc: 10501 }
+  - { type: 0, func-id: 3, cpu: 1, thread: 111, kind: function-enter, tsc: 10601 }
+  - { type: 1, func-id: 3, cpu: 1, thread: 111, kind: function-exit, tsc: 10701 }
+  - { type: 1, func-id: 2, cpu: 1, thread: 111, kind: function-exit, tsc: 10751 }
+  - { type: 1, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10775 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 123, kind: function-enter, tsc: 10401 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 123, kind: function-enter, tsc: 10501 }
+  - { type: 0, func-id: 3, cpu: 1, thread: 123, kind: function-enter, tsc: 10701 }
+  - { type: 1, func-id: 3, cpu: 1, thread: 123, kind: function-exit, tsc: 10801 }
+  - { type: 1, func-id: 2, cpu: 1, thread: 123, kind: function-exit, tsc: 10951 }
+  - { type: 1, func-id: 1, cpu: 1, thread: 123, kind: function-exit, tsc: 11075 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 200, kind: function-enter, tsc: 0 }
+  - { type: 0, func-id: 3, cpu: 1, thread: 200, kind: function-enter, tsc: 10 }
+  - { type: 1, func-id: 3, cpu: 1, thread: 200, kind: function-exit, tsc: 20 }
+  - { type: 1, func-id: 2, cpu: 1, thread: 200, kind: function-exit, tsc: 30 }
+...
+# PER-THREAD: Thread 123
+# PER-THREAD: Unique Stacks: 1
+# PER-THREAD: Top 10 Stacks by leaf sum:
+# PER-THREAD: Sum: 100
+# PER-THREAD: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+# PER-THREAD: #0    #1{{[[:space:]]+}}1{{[[:space:]]+}}674
+# PER-THREAD: #1    #2{{[[:space:]]+}}1{{[[:space:]]+}}450
+# PER-THREAD: #2    #3{{[[:space:]]+}}1{{[[:space:]]+}}100
+# PER-THREAD: Top 10 Stacks by leaf count:
+# PER-THREAD: #0    #1{{[[:space:]]+}}1{{[[:space:]]+}}674
+# PER-THREAD: #1    #2{{[[:space:]]+}}1{{[[:space:]]+}}450
+# PER-THREAD: #2    #3{{[[:space:]]+}}1{{[[:space:]]+}}100
+# PER-THREAD: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+
+# AGGREGATE: Unique Stacks: 3
+# AGGREGATE: Top 10 Stacks by leaf sum:
+# AGGREGATE: Sum: 200
+
+# AGGREGATE: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+# AGGREGATE: #0    #1{{[[:space:]]+}}3{{[[:space:]]+}}1348
+# AGGREGATE: #1    #2{{[[:space:]]+}}2{{[[:space:]]+}}700
+# AGGREGATE: #2    #3{{[[:space:]]+}}2{{[[:space:]]+}}200
+
+# AGGREGATE: Sum: 10
+# AGGREGATE: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+# AGGREGATE: #0    #2{{[[:space:]]+}}1{{[[:space:]]+}}30
+# AGGREGATE: #1    #3{{[[:space:]]+}}1{{[[:space:]]+}}10
+
+# AGGREGATE: Sum: 1
+# AGGREGATE: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+# AGGREGATE: #0    #1{{[[:space:]]+}}2{{[[:space:]]+}}674
+# AGGREGATE: #1    #1{{[[:space:]]+}}1{{[[:space:]]+}}1
+
+
+# AGGREGATE: Top 10 Stacks by leaf count:
+
+# AGGREGATE: Count: 2
+# AGGREGATE: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+# AGGREGATE: #0    #1{{[[:space:]]+}}3{{[[:space:]]+}}1348
+# AGGREGATE: #1    #2{{[[:space:]]+}}2{{[[:space:]]+}}700
+# AGGREGATE: #2    #3{{[[:space:]]+}}2{{[[:space:]]+}}200
+
+# AGGREGATE: Count: 1
+# AGGREGATE: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+# AGGREGATE: #0    #2{{[[:space:]]+}}1{{[[:space:]]+}}30
+# AGGREGATE: #1    #3{{[[:space:]]+}}1{{[[:space:]]+}}10
+
+# AGGREGATE: Count: 1
+# AGGREGATE: lvl   function{{[[:space:]]+}}count{{[[:space:]]+}}sum
+# AGGREGATE: #0    #1{{[[:space:]]+}}2{{[[:space:]]+}}674
+# AGGREGATE: #1    #1{{[[:space:]]+}}1{{[[:space:]]+}}1

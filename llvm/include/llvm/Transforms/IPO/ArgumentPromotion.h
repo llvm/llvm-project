@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
@@ -26,6 +27,6 @@ public:
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_IPO_ARGUMENTPROMOTION_H

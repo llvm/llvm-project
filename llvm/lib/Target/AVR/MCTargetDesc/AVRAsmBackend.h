@@ -38,7 +38,7 @@ public:
   void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
                         uint64_t &Value, MCContext *Ctx = nullptr) const;
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectWriter> createObjectWriter(raw_pwrite_stream &OS) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

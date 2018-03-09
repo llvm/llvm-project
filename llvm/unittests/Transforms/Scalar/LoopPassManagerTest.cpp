@@ -21,8 +21,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/SourceMgr.h"
 
-// Workaround for the gcc 7.1 bug PR80916.
-#if defined(__GNUC__) && __GNUC__ > 6
+// Workaround for the gcc 6.1 bug PR80916.
+#if defined(__GNUC__) && __GNUC__ > 5
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wunused-function"
 #endif
@@ -30,7 +30,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#if defined(__GNUC__) && __GNUC__ > 6
+#if defined(__GNUC__) && __GNUC__ > 5
 #  pragma GCC diagnostic pop
 #endif
 
@@ -946,7 +946,7 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         L.addChildLoop(NewLoop);
         auto *NewLoop010PHBB =
             BasicBlock::Create(Context, "loop.0.1.0.ph", &F, &Loop02PHBB);
@@ -992,7 +992,7 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         L.addChildLoop(NewLoop);
         auto *NewLoop011PHBB = BasicBlock::Create(Context, "loop.0.1.1.ph", &F, NewLoop01LatchBB);
         auto *NewLoop011BB = BasicBlock::Create(Context, "loop.0.1.1", &F, NewLoop01LatchBB);
@@ -1139,7 +1139,7 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         L.getParentLoop()->addChildLoop(NewLoop);
         auto *NewLoop01PHBB = BasicBlock::Create(Context, "loop.0.1.ph", &F, &Loop02PHBB);
         auto *NewLoop01BB = BasicBlock::Create(Context, "loop.0.1", &F, &Loop02PHBB);
@@ -1181,7 +1181,8 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        Loop *NewLoops[] = {new Loop(), new Loop(), new Loop()};
+        Loop *NewLoops[] = {AR.LI.AllocateLoop(), AR.LI.AllocateLoop(),
+                            AR.LI.AllocateLoop()};
         L.getParentLoop()->addChildLoop(NewLoops[0]);
         L.getParentLoop()->addChildLoop(NewLoops[1]);
         NewLoops[1]->addChildLoop(NewLoops[2]);
@@ -1260,7 +1261,7 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         AR.LI.addTopLevelLoop(NewLoop);
         auto *NewLoop1PHBB = BasicBlock::Create(Context, "loop.1.ph", &F, &Loop2BB);
         auto *NewLoop1BB = BasicBlock::Create(Context, "loop.1", &F, &Loop2BB);
@@ -1374,12 +1375,11 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
   // to isolate ourselves from the rest of LLVM and for simplicity. Here we can
   // egregiously cheat based on knowledge of the test case. For example, we
   // have no PHI nodes and there is always a single i-dom.
-  auto RemoveLoop = [](Loop &L, BasicBlock &IDomBB,
-                             LoopStandardAnalysisResults &AR,
-                             LPMUpdater &Updater) {
+  auto EraseLoop = [](Loop &L, BasicBlock &IDomBB,
+                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
     assert(L.empty() && "Can only delete leaf loops with this routine!");
     SmallVector<BasicBlock *, 4> LoopBBs(L.block_begin(), L.block_end());
-    Updater.markLoopAsDeleted(L);
+    Updater.markLoopAsDeleted(L, L.getName());
     IDomBB.getTerminator()->replaceUsesOfWith(L.getHeader(),
                                               L.getUniqueExitBlock());
     for (BasicBlock *LoopBB : LoopBBs) {
@@ -1394,10 +1394,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
     for (BasicBlock *LoopBB : LoopBBs)
       LoopBB->eraseFromParent();
 
-    if (Loop *ParentL = L.getParentLoop())
-      return ParentL->removeChildLoop(find(*ParentL, &L));
-
-    return AR.LI.removeLoop(find(AR.LI, &L));
+    AR.LI.erase(&L);
   };
 
   // Build up the pass managers.
@@ -1442,7 +1439,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
             Loop *ParentL = L.getParentLoop();
             AR.SE.forgetLoop(&L);
-            delete RemoveLoop(L, Loop01PHBB, AR, Updater);
+            EraseLoop(L, Loop01PHBB, AR, Updater);
             ParentL->verifyLoop();
             return PreservedAnalyses::all();
           }));
@@ -1469,10 +1466,8 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
       .WillRepeatedly(Invoke(getLoopAnalysisResult));
 
   // Run the loop pipeline again. This time we delete the last loop, which
-  // contains a nested loop within it, and we reuse its inner loop object to
-  // insert a new loop into the nest. This makes sure that we don't reuse
-  // cached analysis results for loop objects when removed just because their
-  // pointers match, and that we can handle nested loop deletion.
+  // contains a nested loop within it and insert a new loop into the nest. This
+  // makes sure we can handle nested loop deletion.
   AddLoopPipelineAndVerificationPasses();
   EXPECT_CALL(MLPHandle, run(HasName("loop.0.0"), _, _, _))
       .Times(3)
@@ -1489,16 +1484,16 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
       .WillOnce(
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
-            // Remove the inner loop first but retain it to reuse later.
             AR.SE.forgetLoop(*L.begin());
-            auto *OldL = RemoveLoop(**L.begin(), Loop020PHBB, AR, Updater);
+            EraseLoop(**L.begin(), Loop020PHBB, AR, Updater);
 
             auto *ParentL = L.getParentLoop();
             AR.SE.forgetLoop(&L);
-            delete RemoveLoop(L, Loop02PHBB, AR, Updater);
+            EraseLoop(L, Loop02PHBB, AR, Updater);
 
-            // Now insert a new sibling loop, reusing a loop pointer.
-            ParentL->addChildLoop(OldL);
+            // Now insert a new sibling loop.
+            auto *NewSibling = AR.LI.AllocateLoop();
+            ParentL->addChildLoop(NewSibling);
             NewLoop03PHBB =
                 BasicBlock::Create(Context, "loop.0.3.ph", &F, &Loop0LatchBB);
             auto *NewLoop03BB =
@@ -1515,10 +1510,10 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
                                            AR.DT[NewLoop03BB]);
             AR.DT.verifyDomTree();
             ParentL->addBasicBlockToLoop(NewLoop03PHBB, AR.LI);
-            OldL->addBasicBlockToLoop(NewLoop03BB, AR.LI);
-            OldL->verifyLoop();
+            NewSibling->addBasicBlockToLoop(NewLoop03BB, AR.LI);
+            NewSibling->verifyLoop();
             ParentL->verifyLoop();
-            Updater.addSiblingLoops({OldL});
+            Updater.addSiblingLoops({NewSibling});
             return PreservedAnalyses::all();
           }));
 
@@ -1550,7 +1545,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
             AR.SE.forgetLoop(&L);
-            delete RemoveLoop(L, Loop00PHBB, AR, Updater);
+            EraseLoop(L, Loop00PHBB, AR, Updater);
             return PreservedAnalyses::all();
           }));
 
@@ -1561,7 +1556,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
             AR.SE.forgetLoop(&L);
-            delete RemoveLoop(L, *NewLoop03PHBB, AR, Updater);
+            EraseLoop(L, *NewLoop03PHBB, AR, Updater);
             return PreservedAnalyses::all();
           }));
 
@@ -1572,7 +1567,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
             AR.SE.forgetLoop(&L);
-            delete RemoveLoop(L, EntryBB, AR, Updater);
+            EraseLoop(L, EntryBB, AR, Updater);
             return PreservedAnalyses::all();
           }));
 

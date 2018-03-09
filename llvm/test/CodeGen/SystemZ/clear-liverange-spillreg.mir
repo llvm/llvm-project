@@ -1,0 +1,526 @@
+#RUN: llc -o - %s -mtriple=s390x-ibm-linux -run-pass=greedy
+#PR34502. Check HoistSpill works properly after the live range of spilled
+#virtual register is cleared.
+--- |
+  ; ModuleID = 'hoistspills_crash.ll'
+  source_filename = "bugpoint-output-07170c2.bc"
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+  target triple = "s390x-ibm-linux"
+
+  @best8x8mode = external local_unnamed_addr global [4 x i16], align 2
+  @best8x8fwref = external local_unnamed_addr global [15 x [4 x i16]], align 2
+  @rec_mbY8x8 = external local_unnamed_addr global [16 x [16 x i16]], align 2
+  @bi_pred_me = external local_unnamed_addr global i32, align 4
+
+  declare signext i32 @Get_Direct_Cost8x8(i32 signext, i32*) local_unnamed_addr #0
+  declare void @store_coding_state(i32*) local_unnamed_addr #0
+  declare void @reset_coding_state(i32*) local_unnamed_addr #0
+  declare void @SetRefAndMotionVectors(i32 signext, i32 signext, i32 signext, i32 signext, i32 signext) local_unnamed_addr #2
+  declare signext i32 @Get_Direct_CostMB(double) local_unnamed_addr #0
+  declare void @SetModesAndRefframeForBlocks(i32 signext) local_unnamed_addr #1
+
+  define void @encode_one_macroblock() { ret void }
+---
+name:            encode_one_macroblock
+alignment:       2
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: addr64bit }
+  - { id: 2, class: grx32bit }
+  - { id: 3, class: grx32bit }
+  - { id: 4, class: gr32bit }
+  - { id: 5, class: gr32bit }
+  - { id: 6, class: addr64bit }
+  - { id: 7, class: addr64bit }
+  - { id: 8, class: gr64bit }
+  - { id: 9, class: grx32bit }
+  - { id: 10, class: gr32bit }
+  - { id: 11, class: grx32bit }
+  - { id: 12, class: gr32bit }
+  - { id: 13, class: grx32bit }
+  - { id: 14, class: gr32bit }
+  - { id: 15, class: grx32bit }
+  - { id: 16, class: grx32bit }
+  - { id: 17, class: gr32bit }
+  - { id: 18, class: gr32bit }
+  - { id: 19, class: gr64bit }
+  - { id: 20, class: grx32bit }
+  - { id: 21, class: grx32bit }
+  - { id: 22, class: addr64bit }
+  - { id: 23, class: grx32bit }
+  - { id: 24, class: grx32bit }
+  - { id: 25, class: grx32bit }
+  - { id: 26, class: grx32bit }
+  - { id: 27, class: grx32bit }
+  - { id: 28, class: grx32bit }
+  - { id: 29, class: grx32bit }
+  - { id: 30, class: grx32bit }
+  - { id: 31, class: grx32bit }
+  - { id: 32, class: grx32bit }
+  - { id: 33, class: grx32bit }
+  - { id: 34, class: grx32bit }
+  - { id: 35, class: grx32bit }
+  - { id: 36, class: grx32bit }
+  - { id: 37, class: gr64bit }
+  - { id: 38, class: gr32bit }
+  - { id: 39, class: grx32bit }
+  - { id: 40, class: addr64bit }
+  - { id: 41, class: addr64bit }
+  - { id: 42, class: gr64bit }
+  - { id: 43, class: gr32bit }
+  - { id: 44, class: gr32bit }
+  - { id: 45, class: gr32bit }
+  - { id: 46, class: gr32bit }
+  - { id: 47, class: gr32bit }
+  - { id: 48, class: grx32bit }
+  - { id: 49, class: gr64bit }
+  - { id: 50, class: gr64bit }
+  - { id: 51, class: gr64bit }
+  - { id: 52, class: gr32bit }
+  - { id: 53, class: gr32bit }
+  - { id: 54, class: grx32bit }
+  - { id: 55, class: gr32bit }
+  - { id: 56, class: grx32bit }
+  - { id: 57, class: grx32bit }
+  - { id: 58, class: gr64bit }
+  - { id: 59, class: gr64bit }
+  - { id: 60, class: gr32bit }
+  - { id: 61, class: grx32bit }
+  - { id: 62, class: addr64bit }
+  - { id: 63, class: addr64bit }
+  - { id: 64, class: addr64bit }
+  - { id: 65, class: addr64bit }
+  - { id: 66, class: addr64bit }
+  - { id: 67, class: addr64bit }
+  - { id: 68, class: addr64bit }
+  - { id: 69, class: addr64bit }
+  - { id: 70, class: addr64bit }
+  - { id: 71, class: gr64bit }
+  - { id: 72, class: addr64bit }
+  - { id: 73, class: grx32bit }
+  - { id: 74, class: gr64bit }
+  - { id: 75, class: addr64bit }
+  - { id: 76, class: addr64bit }
+  - { id: 77, class: addr64bit }
+  - { id: 78, class: addr64bit }
+  - { id: 79, class: gr32bit }
+  - { id: 80, class: grx32bit }
+  - { id: 81, class: gr64bit }
+  - { id: 82, class: addr64bit }
+  - { id: 83, class: grx32bit }
+  - { id: 84, class: addr64bit }
+  - { id: 85, class: addr64bit }
+  - { id: 86, class: addr64bit }
+  - { id: 87, class: grx32bit }
+  - { id: 88, class: addr64bit }
+  - { id: 89, class: addr64bit }
+  - { id: 90, class: gr64bit }
+  - { id: 91, class: addr64bit }
+  - { id: 92, class: addr64bit }
+  - { id: 93, class: addr64bit }
+  - { id: 94, class: addr64bit }
+  - { id: 95, class: addr64bit }
+  - { id: 96, class: addr64bit }
+  - { id: 97, class: addr64bit }
+  - { id: 98, class: gr64bit }
+  - { id: 99, class: gr64bit }
+  - { id: 100, class: addr64bit }
+  - { id: 101, class: gr64bit }
+  - { id: 102, class: gr64bit }
+  - { id: 103, class: gr64bit }
+  - { id: 104, class: gr64bit }
+  - { id: 105, class: addr64bit }
+  - { id: 106, class: grx32bit }
+  - { id: 107, class: grx32bit }
+  - { id: 108, class: vr64bit }
+  - { id: 109, class: gr64bit }
+  - { id: 110, class: gr64bit }
+  - { id: 111, class: grx32bit }
+  - { id: 112, class: grx32bit }
+  - { id: 113, class: fp64bit }
+  - { id: 114, class: grx32bit }
+  - { id: 115, class: fp64bit }
+  - { id: 116, class: fp64bit }
+  - { id: 117, class: addr64bit }
+  - { id: 118, class: grx32bit }
+  - { id: 119, class: grx32bit }
+  - { id: 120, class: addr64bit }
+  - { id: 121, class: grx32bit }
+  - { id: 122, class: grx32bit }
+  - { id: 123, class: gr32bit }
+  - { id: 124, class: gr32bit }
+  - { id: 125, class: gr32bit }
+  - { id: 126, class: gr32bit }
+  - { id: 127, class: gr32bit }
+  - { id: 128, class: grx32bit }
+  - { id: 129, class: grx32bit }
+  - { id: 130, class: fp64bit }
+frameInfo:       
+  hasCalls:        true
+body:             |
+  bb.0:
+    successors: %bb.2(0x00000001), %bb.1(0x7fffffff)
+  
+    CHIMux undef %20, 3, implicit-def %cc
+    BRC 14, 8, %bb.2, implicit killed %cc
+    J %bb.1
+  
+  bb.1:
+    successors: %bb.2(0x00000001), %bb.3(0x7fffffff)
+  
+    CHIMux undef %21, 0, implicit-def %cc
+    BRC 14, 6, %bb.3, implicit killed %cc
+    J %bb.2
+  
+  bb.2:
+  
+  bb.3:
+    successors: %bb.6(0x00000001), %bb.4(0x7fffffff)
+  
+    CHIMux undef %23, 2, implicit-def %cc
+    BRC 14, 8, %bb.6, implicit killed %cc
+    J %bb.4
+  
+  bb.4:
+    successors: %bb.5(0x00000001), %bb.7(0x7fffffff)
+  
+    CHIMux undef %24, 1, implicit-def %cc
+    BRC 14, 6, %bb.7, implicit killed %cc
+    J %bb.5
+  
+  bb.5:
+  
+  bb.6:
+  
+  bb.7:
+    successors: %bb.47(0x00000001), %bb.8(0x7fffffff)
+  
+    CHIMux undef %25, 1, implicit-def %cc
+    BRC 14, 8, %bb.47, implicit killed %cc
+    J %bb.8
+  
+  bb.8:
+    successors: %bb.46(0x00000001), %bb.48(0x7fffffff)
+  
+    CHIMux undef %26, 2, implicit-def %cc
+    BRC 14, 8, %bb.46, implicit killed %cc
+    J %bb.48
+  
+  bb.9:
+    successors: %bb.36(0x00000001), %bb.10(0x7fffffff)
+  
+    CHIMux undef %31, 1, implicit-def %cc
+    BRC 14, 8, %bb.36, implicit killed %cc
+    J %bb.10
+  
+  bb.10:
+    successors: %bb.35(0x00000001), %bb.37(0x7fffffff)
+  
+    CHIMux undef %32, 2, implicit-def %cc
+    BRC 14, 8, %bb.35, implicit killed %cc
+    J %bb.37
+  
+  bb.11:
+    %4 = COPY %60
+    %6 = SLLG %120, %noreg, 1
+    %7 = LA %6, 64, %41
+    %6 = AGR %6, %42, implicit-def dead %cc
+    %45 = SRLK %120.subreg_l32, %noreg, 31
+    %45 = AR %45, %120.subreg_l32, implicit-def dead %cc
+    %45 = NIFMux %45, 536870910, implicit-def dead %cc
+    %47 = SRK %120.subreg_l32, %45, implicit-def dead %cc
+    %47 = SLL %47, %noreg, 3
+    %81 = LGFR %47
+  
+  bb.12:
+    successors: %bb.56, %bb.13
+  
+    CHIMux %38, 0, implicit-def %cc
+    BRC 14, 8, %bb.13, implicit killed %cc
+  
+  bb.56:
+    J %bb.16
+  
+  bb.13:
+    successors: %bb.14(0x7fffffff), %bb.15(0x00000001)
+  
+    ADJCALLSTACKDOWN 0, 0
+    %49 = LGFR %120.subreg_l32
+    %r2d = COPY %49
+    CallBRASL @Get_Direct_Cost8x8, killed %r2d, undef %r3d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc, implicit-def %r2d
+    ADJCALLSTACKUP 0, 0
+    %51 = COPY killed %r2d
+    MVHHI %7, 0, 0 :: (store 2)
+    %12 = ARK %51.subreg_l32, %125, implicit-def dead %cc
+    CFIMux %51.subreg_l32, 2147483647, implicit-def %cc
+    %12 = LOCRMux %12, %126, 14, 8, implicit killed %cc
+    CFIMux %125, 2147483647, implicit-def %cc
+    %12 = LOCRMux %12, %126, 14, 8, implicit killed %cc
+    CHIMux undef %56, 0, implicit-def %cc
+    BRC 14, 6, %bb.15, implicit killed %cc
+    J %bb.14
+  
+  bb.14:
+    %124 = AHIMux %124, 1, implicit-def dead %cc
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @store_coding_state, undef %r2d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc
+    ADJCALLSTACKUP 0, 0
+    %125 = COPY %12
+    J %bb.16
+  
+  bb.15:
+  
+  bb.16:
+    successors: %bb.12(0x7c000000), %bb.17(0x04000000)
+  
+    CLGFI undef %59, 4, implicit-def %cc
+    BRC 14, 4, %bb.12, implicit killed %cc
+    J %bb.17
+  
+  bb.17:
+    successors: %bb.18, %bb.19
+  
+    MVHI %0, 332, 2 :: (store 4)
+    %60 = COPY %126
+    %60 = AR %60, %4, implicit-def dead %cc
+    %18 = LHMux %6, 0, %noreg :: (load 2)
+    CHIMux %38, 0, implicit-def %cc
+    BRC 14, 6, %bb.19, implicit killed %cc
+    J %bb.18
+  
+  bb.18:
+    %62 = SLLG %81, %noreg, 1
+    %64 = LA %62, 0, %63
+    %65 = LG undef %66, 0, %noreg :: (load 8)
+    %67 = LGF undef %68, 0, %noreg :: (load 4)
+    MVC undef %69, 0, 2, %64, 0 :: (store 2), (load 2)
+    %70 = COPY %81
+    %70 = OILL64 %70, 3, implicit-def dead %cc
+    %71 = LA %70, 2, %noreg
+    %72 = SLLG %71, %noreg, 1
+    %73 = LHMux %72, 0, %63 :: (load 2)
+    %74 = LA %70, 2, %67
+    %75 = SLLG %74, %noreg, 1
+    %76 = LG %65, 0, %noreg :: (load 8)
+    STHMux %73, %76, 0, %75 :: (store 2)
+    %77 = LG undef %78, 0, %noreg :: (load 8)
+    %79 = LHRL @rec_mbY8x8 :: (load 2)
+    STHMux %79, %77, 0, %noreg :: (store 2)
+    %80 = LHMux %72, 0, %63 :: (load 2)
+    STHMux %80, %77, 0, %75 :: (store 2)
+    %81 = OILL64 %81, 7, implicit-def dead %cc
+    %82 = SLLG %81, %noreg, 1
+    %83 = LHMux %82, 0, %63 :: (load 2)
+    STHMux %83, %77, 0, %noreg :: (store 2)
+    %84 = LA %62, 64, %63
+    MVC undef %85, 0, 2, %84, 0 :: (store 2), (load 2)
+    %86 = SLLG %70, %noreg, 1
+    %87 = LHMux %86, 64, %63 :: (load 2)
+    %88 = SLLG %67, %noreg, 3
+    %89 = LG %65, 16, %88 :: (load 8)
+    %90 = LA %70, 0, %67
+    %91 = SLLG %90, %noreg, 1
+    STHMux %87, %89, 0, %91 :: (store 2)
+    %92 = LA %72, 64, %63
+    MVC undef %93, 0, 2, %92, 0 :: (store 2), (load 2)
+    %94 = LA %86, 6, %63
+    MVC undef %95, 0, 2, %94, 0 :: (store 2), (load 2)
+    %96 = LA %82, 0, %63
+    MVC undef %97, 0, 2, %96, 0 :: (store 2), (load 2)
+  
+  bb.19:
+    successors: %bb.20(0x04000000), %bb.11(0x7c000000)
+  
+    %98 = LGH %7, 0, %noreg :: (load 2)
+    %99 = LGH undef %100, 0, %noreg :: (load 2)
+    ADJCALLSTACKDOWN 0, 0
+    %101 = LGFR %120.subreg_l32
+    %102 = LGFR %18
+    %r2d = COPY %101
+    %r3d = COPY %102
+    %r4d = LGHI 0
+    %r5d = COPY %98
+    %r6d = COPY %99
+    CallBRASL @SetRefAndMotionVectors, killed %r2d, killed %r3d, killed %r4d, killed %r5d, killed %r6d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc
+    ADJCALLSTACKUP 0, 0
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @reset_coding_state, undef %r2d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc
+    ADJCALLSTACKUP 0, 0
+    %120 = LA %120, 1, %noreg
+    CGHI %120, 4, implicit-def %cc
+    BRC 14, 6, %bb.11, implicit killed %cc
+    J %bb.20
+  
+  bb.20:
+    successors: %bb.22(0x00000001), %bb.21(0x7fffffff)
+  
+    MVHI undef %105, 0, 0 :: (store 4)
+    CHIMux undef %106, 3, implicit-def %cc
+    BRC 14, 8, %bb.22, implicit killed %cc
+    J %bb.21
+  
+  bb.21:
+    successors: %bb.22(0x00000001), %bb.23(0x7fffffff)
+  
+    CHIMux undef %107, 0, implicit-def %cc
+    BRC 14, 6, %bb.23, implicit killed %cc
+    J %bb.22
+  
+  bb.22:
+  
+  bb.23:
+    successors: %bb.26(0x00000001), %bb.24(0x7fffffff)
+  
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @Get_Direct_CostMB, undef %f0d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc, implicit-def dead %r2d
+    ADJCALLSTACKUP 0, 0
+    ADJCALLSTACKDOWN 0, 0
+    %r2d = LGHI 0
+    CallBRASL @SetModesAndRefframeForBlocks, killed %r2d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc
+    ADJCALLSTACKUP 0, 0
+    CHIMux undef %111, 13, implicit-def %cc
+    BRC 14, 8, %bb.26, implicit killed %cc
+    J %bb.24
+  
+  bb.24:
+    successors: %bb.25(0x00000001), %bb.27(0x7fffffff)
+  
+    CHIMux undef %112, 8, implicit-def %cc
+    BRC 14, 6, %bb.27, implicit killed %cc
+    J %bb.25
+  
+  bb.25:
+  
+  bb.26:
+  
+  bb.27:
+    successors: %bb.28, %bb.29
+  
+    CHIMux undef %114, 0, implicit-def %cc
+    BRC 14, 6, %bb.29, implicit killed %cc
+  
+  bb.28:
+    %130 = CDFBR %60
+    J %bb.30
+  
+  bb.29:
+    %130 = IMPLICIT_DEF
+  
+  bb.30:
+    successors: %bb.33(0x00000001), %bb.31(0x7fffffff)
+  
+    VST64 %130, undef %117, 0, %noreg :: (store 8)
+    CHIMux undef %118, 2, implicit-def %cc
+    BRC 14, 8, %bb.33, implicit killed %cc
+    J %bb.31
+  
+  bb.31:
+    successors: %bb.32(0x00000001), %bb.34(0x7fffffff)
+  
+    CHIMux undef %119, 1, implicit-def %cc
+    BRC 14, 6, %bb.34, implicit killed %cc
+    J %bb.32
+  
+  bb.32:
+  
+  bb.33:
+  
+  bb.34:
+    Return
+  
+  bb.35:
+  
+  bb.36:
+  
+  bb.37:
+    successors: %bb.40(0x00000001), %bb.38(0x7fffffff)
+  
+    CHIMux undef %33, 1, implicit-def %cc
+    BRC 14, 8, %bb.40, implicit killed %cc
+    J %bb.38
+  
+  bb.38:
+    successors: %bb.39(0x00000001), %bb.41(0x7fffffff)
+  
+    CHIMux undef %34, 2, implicit-def %cc
+    BRC 14, 6, %bb.41, implicit killed %cc
+    J %bb.39
+  
+  bb.39:
+  
+  bb.40:
+  
+  bb.41:
+    successors: %bb.44(0x00000001), %bb.42(0x7fffffff)
+  
+    CHIMux undef %35, 1, implicit-def %cc
+    BRC 14, 8, %bb.44, implicit killed %cc
+    J %bb.42
+  
+  bb.42:
+    successors: %bb.43(0x00000001), %bb.45(0x7fffffff)
+  
+    CHIMux undef %36, 2, implicit-def %cc
+    BRC 14, 6, %bb.45, implicit killed %cc
+    J %bb.43
+  
+  bb.43:
+  
+  bb.44:
+  
+  bb.45:
+    %0 = LG undef %22, 0, %noreg :: (load 8)
+    %38 = LHIMux 0
+    STRL %38, @bi_pred_me :: (store 4)
+    %120 = LGHI 0
+    %41 = LARL @best8x8fwref
+    %42 = LARL @best8x8mode
+    %63 = LARL @rec_mbY8x8
+    %126 = IIFMux 2147483647
+    %124 = LHIMux 0
+    %125 = LHIMux 0
+    %60 = LHIMux 0
+    J %bb.11
+  
+  bb.46:
+  
+  bb.47:
+  
+  bb.48:
+    successors: %bb.51(0x00000001), %bb.49(0x7fffffff)
+  
+    CHIMux undef %27, 1, implicit-def %cc
+    BRC 14, 8, %bb.51, implicit killed %cc
+    J %bb.49
+  
+  bb.49:
+    successors: %bb.50(0x00000001), %bb.52(0x7fffffff)
+  
+    CHIMux undef %28, 2, implicit-def %cc
+    BRC 14, 6, %bb.52, implicit killed %cc
+    J %bb.50
+  
+  bb.50:
+  
+  bb.51:
+  
+  bb.52:
+    successors: %bb.55(0x00000001), %bb.53(0x7fffffff)
+  
+    CHIMux undef %29, 1, implicit-def %cc
+    BRC 14, 8, %bb.55, implicit killed %cc
+    J %bb.53
+  
+  bb.53:
+    successors: %bb.54(0x00000001), %bb.9(0x7fffffff)
+  
+    CHIMux undef %30, 2, implicit-def %cc
+    BRC 14, 6, %bb.9, implicit killed %cc
+    J %bb.54
+  
+  bb.54:
+  
+  bb.55:
+
+...

@@ -94,13 +94,16 @@ std::error_code widenPath(const Twine &Path8,
         return EC;
       FullPath.append(CurPath);
     }
-    // Traverse the requested path, canonicalizing . and .. as we go (because
-    // the \\?\ prefix is documented to treat them as real components).
-    // The iterators don't report separators and append() always attaches
-    // preferred_separator so we don't need to call native() on the result.
+    // Traverse the requested path, canonicalizing . and .. (because the \\?\
+    // prefix is documented to treat them as real components).  Ignore
+    // separators, which can be returned from the iterator if the path has a
+    // drive name.  We don't need to call native() on the result since append()
+    // always attaches preferred_separator.
     for (llvm::sys::path::const_iterator I = llvm::sys::path::begin(Path8Str),
                                          E = llvm::sys::path::end(Path8Str);
                                          I != E; ++I) {
+      if (I->size() == 1 && is_separator((*I)[0]))
+        continue;
       if (I->size() == 1 && *I == ".")
         continue;
       if (I->size() == 2 && *I == "..")
@@ -165,14 +168,14 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
   return SpaceInfo;
 }
 
-TimePoint<> file_status::getLastAccessedTime() const {
+TimePoint<> basic_file_status::getLastAccessedTime() const {
   FILETIME Time;
   Time.dwLowDateTime = LastAccessedTimeLow;
   Time.dwHighDateTime = LastAccessedTimeHigh;
   return toTimePoint(Time);
 }
 
-TimePoint<> file_status::getLastModificationTime() const {
+TimePoint<> basic_file_status::getLastModificationTime() const {
   FILETIME Time;
   Time.dwLowDateTime = LastWriteTimeLow;
   Time.dwHighDateTime = LastWriteTimeHigh;
@@ -250,35 +253,38 @@ std::error_code create_link(const Twine &to, const Twine &from) {
 }
 
 std::error_code create_hard_link(const Twine &to, const Twine &from) {
-	return create_link(to, from);
+  return create_link(to, from);
 }
 
 std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
   SmallVector<wchar_t, 128> path_utf16;
 
-  file_status ST;
-  if (std::error_code EC = status(path, ST)) {
-    if (EC != errc::no_such_file_or_directory || !IgnoreNonExisting)
-      return EC;
-    return std::error_code();
-  }
-
   if (std::error_code ec = widenPath(path, path_utf16))
     return ec;
 
-  if (ST.type() == file_type::directory_file) {
-    if (!::RemoveDirectoryW(c_str(path_utf16))) {
-      std::error_code EC = mapWindowsError(::GetLastError());
-      if (EC != errc::no_such_file_or_directory || !IgnoreNonExisting)
-        return EC;
-    }
-    return std::error_code();
-  }
-  if (!::DeleteFileW(c_str(path_utf16))) {
+  // We don't know whether this is a file or a directory, and remove() can
+  // accept both. The usual way to delete a file or directory is to use one of
+  // the DeleteFile or RemoveDirectory functions, but that requires you to know
+  // which one it is. We could stat() the file to determine that, but that would
+  // cost us additional system calls, which can be slow in a directory
+  // containing a large number of files. So instead we call CreateFile directly.
+  // The important part is the FILE_FLAG_DELETE_ON_CLOSE flag, which causes the
+  // file to be deleted once it is closed. We also use the flags
+  // FILE_FLAG_BACKUP_SEMANTICS (which allows us to open directories), and
+  // FILE_FLAG_OPEN_REPARSE_POINT (don't follow symlinks).
+  ScopedFileHandle h(::CreateFileW(
+      c_str(path_utf16), DELETE,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+      OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS |
+          FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_DELETE_ON_CLOSE,
+      NULL));
+  if (!h) {
     std::error_code EC = mapWindowsError(::GetLastError());
     if (EC != errc::no_such_file_or_directory || !IgnoreNonExisting)
       return EC;
   }
+
   return std::error_code();
 }
 
@@ -338,83 +344,261 @@ std::error_code is_local(const Twine &path, bool &result) {
   return is_local_internal(WidePath, result);
 }
 
+static std::error_code realPathFromHandle(HANDLE H,
+                                          SmallVectorImpl<wchar_t> &Buffer) {
+  DWORD CountChars = ::GetFinalPathNameByHandleW(
+      H, Buffer.begin(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
+  if (CountChars > Buffer.capacity()) {
+    // The buffer wasn't big enough, try again.  In this case the return value
+    // *does* indicate the size of the null terminator.
+    Buffer.reserve(CountChars);
+    CountChars = ::GetFinalPathNameByHandleW(
+        H, Buffer.data(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
+  }
+  if (CountChars == 0)
+    return mapWindowsError(GetLastError());
+  Buffer.set_size(CountChars);
+  return std::error_code();
+}
+
+static std::error_code realPathFromHandle(HANDLE H,
+                                          SmallVectorImpl<char> &RealPath) {
+  RealPath.clear();
+  SmallVector<wchar_t, MAX_PATH> Buffer;
+  if (std::error_code EC = realPathFromHandle(H, Buffer))
+    return EC;
+
+  const wchar_t *Data = Buffer.data();
+  DWORD CountChars = Buffer.size();
+  if (CountChars >= 4) {
+    if (0 == ::memcmp(Data, L"\\\\?\\", 8)) {
+      CountChars -= 4;
+      Data += 4;
+    }
+  }
+
+  // Convert the result from UTF-16 to UTF-8.
+  return UTF16ToUTF8(Data, CountChars, RealPath);
+}
+
 std::error_code is_local(int FD, bool &Result) {
   SmallVector<wchar_t, 128> FinalPath;
   HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
 
-  size_t Len = 128;
-  do {
-    FinalPath.reserve(Len);
-    Len = ::GetFinalPathNameByHandleW(Handle, FinalPath.data(),
-                                      FinalPath.capacity() - 1, VOLUME_NAME_NT);
-    if (Len == 0)
-      return mapWindowsError(::GetLastError());
-  } while (Len > FinalPath.capacity());
-
-  FinalPath.set_size(Len);
+  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
+    return EC;
 
   return is_local_internal(FinalPath, Result);
 }
 
-std::error_code rename(const Twine &from, const Twine &to) {
-  // Convert to utf-16.
-  SmallVector<wchar_t, 128> wide_from;
-  SmallVector<wchar_t, 128> wide_to;
-  if (std::error_code ec = widenPath(from, wide_from))
-    return ec;
-  if (std::error_code ec = widenPath(to, wide_to))
-    return ec;
+static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
+  FILE_DISPOSITION_INFO Disposition;
+  Disposition.DeleteFile = Delete;
+  if (!SetFileInformationByHandle(Handle, FileDispositionInfo, &Disposition,
+                                  sizeof(Disposition)))
+    return mapWindowsError(::GetLastError());
+  return std::error_code();
+}
 
-  std::error_code ec = std::error_code();
+static std::error_code removeFD(int FD) {
+  HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  return setDeleteDisposition(Handle, true);
+}
 
-  // Retry while we see recoverable errors.
-  // System scanners (eg. indexer) might open the source file when it is written
-  // and closed.
+/// In order to handle temporary files we want the following properties
+///
+/// * The temporary file is deleted on crashes
+/// * We can use (read, rename, etc) the temporary file.
+/// * We can cancel the delete to keep the file.
+///
+/// Using FILE_DISPOSITION_INFO with DeleteFile=true will create a file that is
+/// deleted on close, but it has a few problems:
+///
+/// * The file cannot be used. An attempt to open or rename the file will fail.
+///   This makes the temporary file almost useless, as it cannot be part of
+///   any other CreateFileW call in the current or in another process.
+/// * It is not atomic. A crash just after CreateFileW or just after canceling
+///   the delete will leave the file on disk.
+///
+/// Using FILE_FLAG_DELETE_ON_CLOSE solves the first issues and the first part
+/// of the second one, but there is no way to cancel it in place. What works is
+/// to create a second handle to prevent the deletion, close the first one and
+/// then clear DeleteFile with SetFileInformationByHandle. This requires
+/// changing the handle and file descriptor the caller uses.
+static std::error_code cancelDeleteOnClose(int &FD) {
+  HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  SmallVector<wchar_t, MAX_PATH> Name;
+  if (std::error_code EC = realPathFromHandle(Handle, Name))
+    return EC;
+  HANDLE NewHandle =
+      ::CreateFileW(Name.data(), GENERIC_READ | GENERIC_WRITE | DELETE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (NewHandle == INVALID_HANDLE_VALUE)
+    return mapWindowsError(::GetLastError());
+  if (close(FD))
+    return mapWindowsError(::GetLastError());
 
-  bool TryReplace = true;
+  if (std::error_code EC = setDeleteDisposition(NewHandle, false))
+    return EC;
 
-  for (int i = 0; i < 2000; i++) {
-    if (i > 0)
-      ::Sleep(1);
+  FD = ::_open_osfhandle(intptr_t(NewHandle), 0);
+  if (FD == -1) {
+    ::CloseHandle(NewHandle);
+    return mapWindowsError(ERROR_INVALID_HANDLE);
+  }
+  return std::error_code();
+}
 
-    if (TryReplace) {
-      // Try ReplaceFile first, as it is able to associate a new data stream
-      // with the destination even if the destination file is currently open.
-      if (::ReplaceFileW(wide_to.data(), wide_from.data(), NULL, 0, NULL, NULL))
-        return std::error_code();
+static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
+                                       bool ReplaceIfExists) {
+  SmallVector<wchar_t, 0> ToWide;
+  if (auto EC = widenPath(To, ToWide))
+    return EC;
 
-      DWORD ReplaceError = ::GetLastError();
-      ec = mapWindowsError(ReplaceError);
+  std::vector<char> RenameInfoBuf(sizeof(FILE_RENAME_INFO) - sizeof(wchar_t) +
+                                  (ToWide.size() * sizeof(wchar_t)));
+  FILE_RENAME_INFO &RenameInfo =
+      *reinterpret_cast<FILE_RENAME_INFO *>(RenameInfoBuf.data());
+  RenameInfo.ReplaceIfExists = ReplaceIfExists;
+  RenameInfo.RootDirectory = 0;
+  RenameInfo.FileNameLength = ToWide.size();
+  std::copy(ToWide.begin(), ToWide.end(), &RenameInfo.FileName[0]);
 
-      // If ReplaceFileW returned ERROR_UNABLE_TO_MOVE_REPLACEMENT or
-      // ERROR_UNABLE_TO_MOVE_REPLACEMENT_2, retry but only use MoveFileExW().
-      if (ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT ||
-          ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT_2) {
-        TryReplace = false;
-        continue;
-      }
-      // If ReplaceFileW returned ERROR_UNABLE_TO_REMOVE_REPLACED, retry
-      // using ReplaceFileW().
-      if (ReplaceError == ERROR_UNABLE_TO_REMOVE_REPLACED)
-        continue;
-      // We get ERROR_FILE_NOT_FOUND if the destination file is missing.
-      // MoveFileEx can handle this case.
-      if (ReplaceError != ERROR_ACCESS_DENIED &&
-          ReplaceError != ERROR_FILE_NOT_FOUND &&
-          ReplaceError != ERROR_SHARING_VIOLATION)
-        break;
-    }
-
-    if (::MoveFileExW(wide_from.begin(), wide_to.begin(),
-                      MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING))
-      return std::error_code();
-
-    DWORD MoveError = ::GetLastError();
-    ec = mapWindowsError(MoveError);
-    if (MoveError != ERROR_ACCESS_DENIED) break;
+  SetLastError(ERROR_SUCCESS);
+  if (!SetFileInformationByHandle(FromHandle, FileRenameInfo, &RenameInfo,
+                                  RenameInfoBuf.size())) {
+    unsigned Error = GetLastError();
+    if (Error == ERROR_SUCCESS)
+      Error = ERROR_CALL_NOT_IMPLEMENTED; // Wine doesn't always set error code.
+    return mapWindowsError(Error);
   }
 
-  return ec;
+  return std::error_code();
+}
+
+static std::error_code rename_handle(HANDLE FromHandle, const Twine &To) {
+  SmallVector<wchar_t, 128> WideTo;
+  if (std::error_code EC = widenPath(To, WideTo))
+    return EC;
+
+  // We normally expect this loop to succeed after a few iterations. If it
+  // requires more than 200 tries, it's more likely that the failures are due to
+  // a true error, so stop trying.
+  for (unsigned Retry = 0; Retry != 200; ++Retry) {
+    auto EC = rename_internal(FromHandle, To, true);
+
+    if (EC ==
+        std::error_code(ERROR_CALL_NOT_IMPLEMENTED, std::system_category())) {
+      // Wine doesn't support SetFileInformationByHandle in rename_internal.
+      // Fall back to MoveFileEx.
+      SmallVector<wchar_t, MAX_PATH> WideFrom;
+      if (std::error_code EC2 = realPathFromHandle(FromHandle, WideFrom))
+        return EC2;
+      if (::MoveFileExW(WideFrom.begin(), WideTo.begin(),
+                        MOVEFILE_REPLACE_EXISTING))
+        return std::error_code();
+      return mapWindowsError(GetLastError());
+    }
+
+    if (!EC || EC != errc::permission_denied)
+      return EC;
+
+    // The destination file probably exists and is currently open in another
+    // process, either because the file was opened without FILE_SHARE_DELETE or
+    // it is mapped into memory (e.g. using MemoryBuffer). Rename it in order to
+    // move it out of the way of the source file. Use FILE_FLAG_DELETE_ON_CLOSE
+    // to arrange for the destination file to be deleted when the other process
+    // closes it.
+    ScopedFileHandle ToHandle(
+        ::CreateFileW(WideTo.begin(), GENERIC_READ | DELETE,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      NULL, OPEN_EXISTING,
+                      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL));
+    if (!ToHandle) {
+      auto EC = mapWindowsError(GetLastError());
+      // Another process might have raced with us and moved the existing file
+      // out of the way before we had a chance to open it. If that happens, try
+      // to rename the source file again.
+      if (EC == errc::no_such_file_or_directory)
+        continue;
+      return EC;
+    }
+
+    BY_HANDLE_FILE_INFORMATION FI;
+    if (!GetFileInformationByHandle(ToHandle, &FI))
+      return mapWindowsError(GetLastError());
+
+    // Try to find a unique new name for the destination file.
+    for (unsigned UniqueId = 0; UniqueId != 200; ++UniqueId) {
+      std::string TmpFilename = (To + ".tmp" + utostr(UniqueId)).str();
+      if (auto EC = rename_internal(ToHandle, TmpFilename, false)) {
+        if (EC == errc::file_exists || EC == errc::permission_denied) {
+          // Again, another process might have raced with us and moved the file
+          // before we could move it. Check whether this is the case, as it
+          // might have caused the permission denied error. If that was the
+          // case, we don't need to move it ourselves.
+          ScopedFileHandle ToHandle2(::CreateFileW(
+              WideTo.begin(), 0,
+              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+          if (!ToHandle2) {
+            auto EC = mapWindowsError(GetLastError());
+            if (EC == errc::no_such_file_or_directory)
+              break;
+            return EC;
+          }
+          BY_HANDLE_FILE_INFORMATION FI2;
+          if (!GetFileInformationByHandle(ToHandle2, &FI2))
+            return mapWindowsError(GetLastError());
+          if (FI.nFileIndexHigh != FI2.nFileIndexHigh ||
+              FI.nFileIndexLow != FI2.nFileIndexLow ||
+              FI.dwVolumeSerialNumber != FI2.dwVolumeSerialNumber)
+            break;
+          continue;
+        }
+        return EC;
+      }
+      break;
+    }
+
+    // Okay, the old destination file has probably been moved out of the way at
+    // this point, so try to rename the source file again. Still, another
+    // process might have raced with us to create and open the destination
+    // file, so we need to keep doing this until we succeed.
+  }
+
+  // The most likely root cause.
+  return errc::permission_denied;
+}
+
+static std::error_code rename_fd(int FromFD, const Twine &To) {
+  HANDLE FromHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FromFD));
+  return rename_handle(FromHandle, To);
+}
+
+std::error_code rename(const Twine &From, const Twine &To) {
+  // Convert to utf-16.
+  SmallVector<wchar_t, 128> WideFrom;
+  if (std::error_code EC = widenPath(From, WideFrom))
+    return EC;
+
+  ScopedFileHandle FromHandle;
+  // Retry this a few times to defeat badly behaved file system scanners.
+  for (unsigned Retry = 0; Retry != 200; ++Retry) {
+    if (Retry != 0)
+      ::Sleep(10);
+    FromHandle =
+        ::CreateFileW(WideFrom.begin(), GENERIC_READ | DELETE,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (FromHandle)
+      break;
+  }
+  if (!FromHandle)
+    return mapWindowsError(GetLastError());
+
+  return rename_handle(FromHandle, To);
 }
 
 std::error_code resize_file(int FD, uint64_t Size) {
@@ -502,6 +686,15 @@ static bool isReservedName(StringRef path) {
   return false;
 }
 
+static file_type file_type_from_attrs(DWORD Attrs) {
+  return (Attrs & FILE_ATTRIBUTE_DIRECTORY) ? file_type::directory_file
+                                            : file_type::regular_file;
+}
+
+static perms perms_from_attrs(DWORD Attrs) {
+  return (Attrs & FILE_ATTRIBUTE_READONLY) ? (all_read | all_exe) : all_all;
+}
+
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (FileHandle == INVALID_HANDLE_VALUE)
     goto handle_status_error;
@@ -530,22 +723,14 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (!::GetFileInformationByHandle(FileHandle, &Info))
     goto handle_status_error;
 
-  {
-    file_type Type = (Info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                         ? file_type::directory_file
-                         : file_type::regular_file;
-    perms Permissions = (Info.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
-                            ? (all_read | all_exe)
-                            : all_all;
-    Result = file_status(
-        Type, Permissions, Info.nNumberOfLinks,
-        Info.ftLastAccessTime.dwHighDateTime,
-        Info.ftLastAccessTime.dwLowDateTime,
-        Info.ftLastWriteTime.dwHighDateTime, Info.ftLastWriteTime.dwLowDateTime,
-        Info.dwVolumeSerialNumber, Info.nFileSizeHigh, Info.nFileSizeLow,
-        Info.nFileIndexHigh, Info.nFileIndexLow);
-    return std::error_code();
-  }
+  Result = file_status(
+      file_type_from_attrs(Info.dwFileAttributes),
+      perms_from_attrs(Info.dwFileAttributes), Info.nNumberOfLinks,
+      Info.ftLastAccessTime.dwHighDateTime, Info.ftLastAccessTime.dwLowDateTime,
+      Info.ftLastWriteTime.dwHighDateTime, Info.ftLastWriteTime.dwLowDateTime,
+      Info.dwVolumeSerialNumber, Info.nFileSizeHigh, Info.nFileSizeLow,
+      Info.nFileIndexHigh, Info.nFileIndexLow);
+  return std::error_code();
 
 handle_status_error:
   DWORD LastError = ::GetLastError();
@@ -637,10 +822,6 @@ std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {
 
 std::error_code mapped_file_region::init(int FD, uint64_t Offset,
                                          mapmode Mode) {
-  // Make sure that the requested size fits within SIZE_T.
-  if (Size > std::numeric_limits<SIZE_T>::max())
-    return make_error_code(errc::invalid_argument);
-
   HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   if (FileHandle == INVALID_HANDLE_VALUE)
     return make_error_code(errc::bad_file_descriptor);
@@ -654,8 +835,8 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
   HANDLE FileMappingHandle =
       ::CreateFileMappingW(FileHandle, 0, flprotect,
-                           (Offset + Size) >> 32,
-                           (Offset + Size) & 0xffffffff,
+                           Hi_32(Size),
+                           Lo_32(Size),
                            0);
   if (FileMappingHandle == NULL) {
     std::error_code ec = mapWindowsError(GetLastError());
@@ -697,7 +878,7 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
   return std::error_code();
 }
 
-mapped_file_region::mapped_file_region(int fd, mapmode mode, uint64_t length,
+mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
     : Size(length), Mapping() {
   ec = init(fd, offset, mode);
@@ -710,7 +891,7 @@ mapped_file_region::~mapped_file_region() {
     ::UnmapViewOfFile(Mapping);
 }
 
-uint64_t mapped_file_region::size() const {
+size_t mapped_file_region::size() const {
   assert(Mapping && "Mapping failed but used anyway!");
   return Size;
 }
@@ -729,6 +910,16 @@ int mapped_file_region::alignment() {
   SYSTEM_INFO SysInfo;
   ::GetSystemInfo(&SysInfo);
   return SysInfo.dwAllocationGranularity;
+}
+
+static basic_file_status status_from_find_data(WIN32_FIND_DATAW *FindData) {
+  return basic_file_status(file_type_from_attrs(FindData->dwFileAttributes),
+                           perms_from_attrs(FindData->dwFileAttributes),
+                           FindData->ftLastAccessTime.dwHighDateTime,
+                           FindData->ftLastAccessTime.dwLowDateTime,
+                           FindData->ftLastWriteTime.dwHighDateTime,
+                           FindData->ftLastWriteTime.dwLowDateTime,
+                           FindData->nFileSizeHigh, FindData->nFileSizeLow);
 }
 
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
@@ -751,7 +942,9 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
 
   //  Get the first directory entry.
   WIN32_FIND_DATAW FirstFind;
-  ScopedFindHandle FindHandle(::FindFirstFileW(c_str(path_utf16), &FirstFind));
+  ScopedFindHandle FindHandle(::FindFirstFileExW(
+      c_str(path_utf16), FindExInfoBasic, &FirstFind, FindExSearchNameMatch,
+      NULL, FIND_FIRST_EX_LARGE_FETCH));
   if (!FindHandle)
     return mapWindowsError(::GetLastError());
 
@@ -778,7 +971,8 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
   it.IterationHandle = intptr_t(FindHandle.take());
   SmallString<128> directory_entry_path(path);
   path::append(directory_entry_path, directory_entry_name_utf8);
-  it.CurrentEntry = directory_entry(directory_entry_path, follow_symlinks);
+  it.CurrentEntry = directory_entry(directory_entry_path, follow_symlinks,
+                                    status_from_find_data(&FirstFind));
 
   return std::error_code();
 }
@@ -814,36 +1008,13 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
                       directory_entry_path_utf8))
     return ec;
 
-  it.CurrentEntry.replace_filename(Twine(directory_entry_path_utf8));
+  it.CurrentEntry.replace_filename(Twine(directory_entry_path_utf8),
+                                   status_from_find_data(&FindData));
   return std::error_code();
 }
 
-static std::error_code realPathFromHandle(HANDLE H,
-                                          SmallVectorImpl<char> &RealPath) {
-  RealPath.clear();
-  llvm::SmallVector<wchar_t, MAX_PATH> Buffer;
-  DWORD CountChars = ::GetFinalPathNameByHandleW(
-      H, Buffer.begin(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
-  if (CountChars > Buffer.capacity()) {
-    // The buffer wasn't big enough, try again.  In this case the return value
-    // *does* indicate the size of the null terminator.
-    Buffer.reserve(CountChars);
-    CountChars = ::GetFinalPathNameByHandleW(
-        H, Buffer.data(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
-  }
-  if (CountChars == 0)
-    return mapWindowsError(GetLastError());
-
-  const wchar_t *Data = Buffer.data();
-  if (CountChars >= 4) {
-    if (0 == ::memcmp(Data, L"\\\\?\\", 8)) {
-      CountChars -= 4;
-      Data += 4;
-    }
-  }
-
-  // Convert the result from UTF-16 to UTF-8.
-  return UTF16ToUTF8(Data, CountChars, RealPath);
+ErrorOr<basic_file_status> directory_entry::status() const {
+  return Status;
 }
 
 static std::error_code directoryRealPath(const Twine &Name,
@@ -922,12 +1093,18 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
     CreationDisposition = CREATE_ALWAYS;
 
   DWORD Access = GENERIC_WRITE;
+  DWORD Attributes = FILE_ATTRIBUTE_NORMAL;
   if (Flags & F_RW)
     Access |= GENERIC_READ;
+  if (Flags & F_Delete) {
+    Access |= DELETE;
+    Attributes |= FILE_FLAG_DELETE_ON_CLOSE;
+  }
 
-  HANDLE H = ::CreateFileW(PathUTF16.begin(), Access,
-                           FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                           CreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+  HANDLE H =
+      ::CreateFileW(PathUTF16.data(), Access,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    NULL, CreationDisposition, Attributes, NULL);
 
   if (H == INVALID_HANDLE_VALUE) {
     DWORD LastError = ::GetLastError();
@@ -957,42 +1134,6 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 
   ResultFD = FD;
   return std::error_code();
-}
-
-std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath) {
-  HANDLE FileHandle = reinterpret_cast<HANDLE>(::_get_osfhandle(FD));
-  if (FileHandle == INVALID_HANDLE_VALUE)
-    return make_error_code(errc::bad_file_descriptor);
-
-  DWORD CharCount;
-  SmallVector<wchar_t, 1024> TempPath;
-  do {
-    CharCount = ::GetFinalPathNameByHandleW(FileHandle, TempPath.begin(),
-                                            TempPath.capacity(),
-                                            FILE_NAME_NORMALIZED);
-    if (CharCount < TempPath.capacity())
-      break;
-
-    // Reserve sufficient space for the path as well as the null character. Even
-    // though the API does not document that it is required, if we reserve just
-    // CharCount space, the function call will not store the resulting path and
-    // still report success.
-    TempPath.reserve(CharCount + 1);
-  } while (true);
-
-  if (CharCount == 0)
-    return mapWindowsError(::GetLastError());
-
-  TempPath.set_size(CharCount);
-
-  // On earlier Windows releases, the character count includes the terminating
-  // null.
-  if (TempPath.back() == L'\0') {
-    --CharCount;
-    TempPath.pop_back();
-  }
-
-  return windows::UTF16ToUTF8(TempPath.data(), CharCount, ResultPath);
 }
 
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {

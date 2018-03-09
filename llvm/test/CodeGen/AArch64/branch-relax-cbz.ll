@@ -4,7 +4,7 @@
 ; CHECK: cmn x{{[0-9]+}}, #5
 ; CHECK-NEXT: b.le [[B2:LBB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ; BB#1: ; %b3
+; CHECK-NEXT: ; %bb.1: ; %b3
 ; CHECK: ldr [[LOAD:w[0-9]+]]
 ; CHECK: cbnz [[LOAD]], [[B8:LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: b [[B7:LBB[0-9]+_[0-9]+]]

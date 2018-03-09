@@ -1,4 +1,4 @@
-//===-- StackColoring.cpp -------------------------------------------------===//
+//===- StackColoring.cpp --------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,35 +22,44 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <memory>
+#include <utility>
 
 using namespace llvm;
 
@@ -366,6 +375,7 @@ STATISTIC(EscapedAllocas, "Number of allocas that escaped the lifetime region");
 //
 
 namespace {
+
 /// StackColoring - A machine pass for merging disjoint stack allocations,
 /// marked by the LIFETIME_START and LIFETIME_END pseudo instructions.
 class StackColoring : public MachineFunctionPass {
@@ -378,32 +388,40 @@ class StackColoring : public MachineFunctionPass {
   struct BlockLifetimeInfo {
     /// Which slots BEGINs in each basic block.
     BitVector Begin;
+
     /// Which slots ENDs in each basic block.
     BitVector End;
+
     /// Which slots are marked as LIVE_IN, coming into each basic block.
     BitVector LiveIn;
+
     /// Which slots are marked as LIVE_OUT, coming out of each basic block.
     BitVector LiveOut;
   };
 
   /// Maps active slots (per bit) for each basic block.
-  typedef DenseMap<const MachineBasicBlock*, BlockLifetimeInfo> LivenessMap;
+  using LivenessMap = DenseMap<const MachineBasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
   /// Maps serial numbers to basic blocks.
-  DenseMap<const MachineBasicBlock*, int> BasicBlocks;
+  DenseMap<const MachineBasicBlock *, int> BasicBlocks;
+
   /// Maps basic blocks to a serial number.
-  SmallVector<const MachineBasicBlock*, 8> BasicBlockNumbering;
+  SmallVector<const MachineBasicBlock *, 8> BasicBlockNumbering;
 
   /// Maps slots to their use interval. Outside of this interval, slots
   /// values are either dead or `undef` and they will not be written to.
   SmallVector<std::unique_ptr<LiveInterval>, 16> Intervals;
+
   /// Maps slots to the points where they can become in-use.
   SmallVector<SmallVector<SlotIndex, 4>, 16> LiveStarts;
+
   /// VNInfo is used for the construction of LiveIntervals.
   VNInfo::Allocator VNInfoAllocator;
+
   /// SlotIndex analysis object.
   SlotIndexes *Indexes;
+
   /// The stack protector object.
   StackProtector *SP;
 
@@ -424,13 +442,18 @@ class StackColoring : public MachineFunctionPass {
 
 public:
   static char ID;
+
   StackColoring() : MachineFunctionPass(ID) {
     initializeStackColoringPass(*PassRegistry::getPassRegistry());
   }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
+  /// Used in collectMarkers
+  using BlockBitVecMap = DenseMap<const MachineBasicBlock *, BitVector>;
+
   /// Debug.
   void dump() const;
   void dumpIntervals() const;
@@ -489,13 +512,12 @@ private:
   /// Map entries which point to other entries to their destination.
   ///   A->B->C becomes A->C.
   void expungeSlotMap(DenseMap<int, int> &SlotRemap, unsigned NumSlots);
-
-  /// Used in collectMarkers
-  typedef DenseMap<const MachineBasicBlock*, BitVector> BlockBitVecMap;
 };
+
 } // end anonymous namespace
 
 char StackColoring::ID = 0;
+
 char &llvm::StackColoringID = StackColoring::ID;
 
 INITIALIZE_PASS_BEGIN(StackColoring, DEBUG_TYPE,
@@ -559,16 +581,13 @@ static inline int getStartOrEndSlot(const MachineInstr &MI)
   return -1;
 }
 
-//
 // At the moment the only way to end a variable lifetime is with
 // a VARIABLE_LIFETIME op (which can't contain a start). If things
 // change and the IR allows for a single inst that both begins
 // and ends lifetime(s), this interface will need to be reworked.
-//
 bool StackColoring::isLifetimeStartOrEnd(const MachineInstr &MI,
                                          SmallVector<int, 4> &slots,
-                                         bool &isStart)
-{
+                                         bool &isStart) {
   if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
       MI.getOpcode() == TargetOpcode::LIFETIME_END) {
     int Slot = getStartOrEndSlot(MI);
@@ -608,8 +627,7 @@ bool StackColoring::isLifetimeStartOrEnd(const MachineInstr &MI,
   return false;
 }
 
-unsigned StackColoring::collectMarkers(unsigned NumSlot)
-{
+unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   unsigned MarkersFound = 0;
   BlockBitVecMap SeenStartMap;
   InterestingSlots.clear();
@@ -624,7 +642,6 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
   // Step 1: collect markers and populate the "InterestingSlots"
   // and "ConservativeSlots" sets.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
-
     // Compute the set of slots for which we've seen a START marker but have
     // not yet seen an END marker at this point in the walk (e.g. on entry
     // to this bb).
@@ -697,7 +714,6 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
   // NOTE: We use a depth-first iteration to ensure that we obtain a
   // deterministic numbering.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
-
     // Assign a serial number to this basic block.
     BasicBlocks[MBB] = BasicBlockNumbering.size();
     BasicBlockNumbering.push_back(MBB);
@@ -723,7 +739,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
         } else {
           for (auto Slot : slots) {
             DEBUG(dbgs() << "Found a use of slot #" << Slot);
-            DEBUG(dbgs() << " at BB#" << MBB->getNumber() << " index ");
+            DEBUG(dbgs() << " at " << printMBBReference(*MBB) << " index ");
             DEBUG(Indexes->getInstructionIndex(MI).print(dbgs()));
             const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
             if (Allocation) {
@@ -745,8 +761,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
   return MarkersFound;
 }
 
-void StackColoring::calculateLocalLiveness()
-{
+void StackColoring::calculateLocalLiveness() {
   unsigned NumIters = 0;
   bool changed = true;
   while (changed) {
@@ -754,7 +769,6 @@ void StackColoring::calculateLocalLiveness()
     ++NumIters;
 
     for (const MachineBasicBlock *BB : BasicBlockNumbering) {
-
       // Use an iterator to avoid repeated lookups.
       LivenessMap::iterator BI = BlockLiveness.find(BB);
       assert(BI != BlockLiveness.end() && "Block not found");
@@ -792,7 +806,7 @@ void StackColoring::calculateLocalLiveness()
         BlockInfo.LiveOut |= LocalLiveOut;
       }
     }
-  }// while changed.
+  } // while changed.
 
   NumIterations = NumIters;
 }
@@ -818,7 +832,6 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
 
     // Create the interval for the basic blocks containing lifetime begin/end.
     for (const MachineInstr &MI : MBB) {
-
       SmallVector<int, 4> slots;
       bool IsStart = false;
       if (!isLifetimeStartOrEnd(MI, slots, IsStart))
@@ -1047,7 +1060,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (H.CatchObj.FrameIndex != INT_MAX &&
+        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max() &&
             SlotRemap.count(H.CatchObj.FrameIndex))
           H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
 
@@ -1116,8 +1129,7 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 
 bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   DEBUG(dbgs() << "********** Stack Coloring **********\n"
-               << "********** Function: "
-               << ((const Value*)Func.getFunction())->getName() << '\n');
+               << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
   Indexes = &getAnalysis<SlotIndexes>();
@@ -1157,7 +1169,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots.
   if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
-      skipFunction(*Func.getFunction())) {
+      skipFunction(Func.getFunction())) {
     DEBUG(dbgs()<<"Will not try to merge slots.\n");
     return removeAllMarkers();
   }
@@ -1231,7 +1243,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
         LiveInterval *Second = &*Intervals[SecondSlot];
         auto &FirstS = LiveStarts[FirstSlot];
         auto &SecondS = LiveStarts[SecondSlot];
-        assert (!First->empty() && !Second->empty() && "Found an empty range");
+        assert(!First->empty() && !Second->empty() && "Found an empty range");
 
         // Merge disjoint slots. This is a little bit tricky - see the
         // Implementation Notes section for an explanation.

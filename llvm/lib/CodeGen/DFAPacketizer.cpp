@@ -29,13 +29,13 @@
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -334,6 +334,38 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
   endPacket(MBB, EndItr);
   VLIWScheduler->exitRegion();
   VLIWScheduler->finishBlock();
+}
+
+bool VLIWPacketizerList::alias(const MachineMemOperand &Op1,
+                               const MachineMemOperand &Op2,
+                               bool UseTBAA) const {
+  if (!Op1.getValue() || !Op2.getValue())
+    return true;
+
+  int64_t MinOffset = std::min(Op1.getOffset(), Op2.getOffset());
+  int64_t Overlapa = Op1.getSize() + Op1.getOffset() - MinOffset;
+  int64_t Overlapb = Op2.getSize() + Op2.getOffset() - MinOffset;
+
+  AliasResult AAResult =
+      AA->alias(MemoryLocation(Op1.getValue(), Overlapa,
+                               UseTBAA ? Op1.getAAInfo() : AAMDNodes()),
+                MemoryLocation(Op2.getValue(), Overlapb,
+                               UseTBAA ? Op2.getAAInfo() : AAMDNodes()));
+
+  return AAResult != NoAlias;
+}
+
+bool VLIWPacketizerList::alias(const MachineInstr &MI1,
+                               const MachineInstr &MI2,
+                               bool UseTBAA) const {
+  if (MI1.memoperands_empty() || MI2.memoperands_empty())
+    return true;
+
+  for (const MachineMemOperand *Op1 : MI1.memoperands())
+    for (const MachineMemOperand *Op2 : MI2.memoperands())
+      if (alias(*Op1, *Op2, UseTBAA))
+        return true;
+  return false;
 }
 
 // Add a DAG mutation object to the ordered list.

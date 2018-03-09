@@ -9,7 +9,7 @@
 @lb = external global i64
 
 ; CHECK-LABEL: test1:
-; CHECK-NOT: CONST32 
+; CHECK-NOT: CONST32
 define void @test1() nounwind {
 entry:
   br label %block

@@ -19,6 +19,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
 #include "llvm/MC/MCValue.h"
@@ -73,7 +74,7 @@ WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   case WebAssembly::fixup_code_sleb128_i32:
     if (IsFunction)
       return wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB;
-    return wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB;
+    return wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB;
   case WebAssembly::fixup_code_sleb128_i64:
     llvm_unreachable("fixup_sleb128_i64 not implemented yet");
   case WebAssembly::fixup_code_uleb128_i32:
@@ -81,11 +82,11 @@ WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
       return wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB;
     if (IsFunction)
       return wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB;
-    return wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB;
+    return wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB;
   case FK_Data_4:
     if (IsFunction)
       return wasm::R_WEBASSEMBLY_TABLE_INDEX_I32;
-    return wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32;
+    return wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32;
   case FK_Data_8:
     llvm_unreachable("FK_Data_8 not implemented yet");
   default:
@@ -93,8 +94,9 @@ WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   }
 }
 
-MCObjectWriter *llvm::createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
-                                                        bool Is64Bit) {
-  MCWasmObjectTargetWriter *MOTW = new WebAssemblyWasmObjectWriter(Is64Bit);
-  return createWasmObjectWriter(MOTW, OS);
+std::unique_ptr<MCObjectWriter>
+llvm::createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
+                                        bool Is64Bit) {
+  auto MOTW = llvm::make_unique<WebAssemblyWasmObjectWriter>(Is64Bit);
+  return createWasmObjectWriter(std::move(MOTW), OS);
 }

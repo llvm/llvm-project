@@ -6,7 +6,7 @@
 
 define i32 @test(i32 %i) {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
 ; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha

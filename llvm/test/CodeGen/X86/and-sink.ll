@@ -9,15 +9,15 @@
 ; Test that 'and' is sunk into bb0.
 define i32 @and_sink1(i32 %a, i1 %c) {
 ; CHECK-LABEL: and_sink1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # BB#1: # %bb0
+; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $0, A
 ; CHECK-NEXT:    testb $4, %al
 ; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  # BB#2: # %bb1
+; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_3: # %bb2
@@ -46,11 +46,11 @@ bb2:
 ; Test that both 'and' and cmp get sunk to bb1.
 define i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-LABEL: and_sink2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $0, A
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB1_5
-; CHECK-NEXT:  # BB#1: # %bb0.preheader
+; CHECK-NEXT:  # %bb.1: # %bb0.preheader
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -59,12 +59,12 @@ define i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-NEXT:    movl $0, B
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB1_5
-; CHECK-NEXT:  # BB#3: # %bb1
+; CHECK-NEXT:  # %bb.3: # %bb1
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    movl $0, C
 ; CHECK-NEXT:    testb $4, %cl
 ; CHECK-NEXT:    jne .LBB1_2
-; CHECK-NEXT:  # BB#4: # %bb2
+; CHECK-NEXT:  # %bb.4: # %bb2
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_5: # %bb3
@@ -100,10 +100,10 @@ bb3:
 ; Test that CodeGenPrepare doesn't get stuck in a loop sinking and hoisting a masked load.
 define i32 @and_sink3(i1 %c, i32* %p) {
 ; CHECK-LABEL: and_sink3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB2_3
-; CHECK-NEXT:  # BB#1: # %bb0
+; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl (%eax), %eax
 ; CHECK-NEXT:    testl %eax, %eax
@@ -138,16 +138,16 @@ bb2:
 ; Test that CodeGenPrepare sinks/duplicates non-immediate 'and'.
 define i32 @and_sink4(i32 %a, i32 %b, i1 %c) {
 ; CHECK-LABEL: and_sink4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB3_4
-; CHECK-NEXT:  # BB#1: # %bb0
+; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    testl %eax, %ecx
 ; CHECK-NEXT:    movl $0, A
 ; CHECK-NEXT:    jne .LBB3_4
-; CHECK-NEXT:  # BB#2: # %bb1
+; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    leal (%ecx,%eax), %edx
 ; CHECK-NEXT:    testl %eax, %ecx
 ; CHECK-NEXT:    movl %edx, B
@@ -189,15 +189,15 @@ bb3:
 ; when it would increase register pressure.
 define i32 @and_sink5(i32 %a, i32 %b, i32 %a2, i32 %b2, i1 %c) {
 ; CHECK-LABEL: and_sink5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB4_4
-; CHECK-NEXT:  # BB#1: # %bb0
+; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $0, A
 ; CHECK-NEXT:    jne .LBB4_4
-; CHECK-NEXT:  # BB#2: # %bb1
+; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    testl %eax, %eax

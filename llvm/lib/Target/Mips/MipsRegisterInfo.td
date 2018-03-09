@@ -38,7 +38,7 @@ class MipsRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs>
   let Namespace = "Mips";
 }
 
-// Mips CPU Registers
+// Mips CPU Registers.
 class MipsGPRReg<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 // Mips 64-bit CPU Registers
@@ -349,12 +349,6 @@ def GPR64 : RegisterClass<"Mips", [i64], 64, (add
   // Reserved
   K0_64, K1_64, GP_64, SP_64, FP_64, RA_64)>;
 
-def GPRMM16_64 : RegisterClass<"Mips", [i64], 64, (add
-  // Callee save
-  S0_64, S1_64,
-  // Return Values and Arguments
-  V0_64, V1_64, A0_64, A1_64, A2_64, A3_64)>;
-
 def CPU16Regs : RegisterClass<"Mips", [i32], 32, (add
   // Return Values and Arguments
   V0, V1, A0, A1, A2, A3,
@@ -616,6 +610,7 @@ def GPRMM16OpndZero : RegisterOperand<GPRMM16Zero> {
 
 def GPRMM16OpndMoveP : RegisterOperand<GPRMM16MoveP> {
   let ParserMatchClass = GPRMM16AsmOperandMoveP;
+  let EncoderMethod = "getMovePRegSingleOpValue";
 }
 
 def GPR64Opnd : RegisterOperand<GPR64> {

@@ -83,6 +83,8 @@ public:
 private:
   StringRef Buf;
 
+  ELFFile(StringRef Object);
+
 public:
   const Elf_Ehdr *getHeader() const {
     return reinterpret_cast<const Elf_Ehdr *>(base());
@@ -102,8 +104,6 @@ public:
   Expected<ArrayRef<Elf_Word>> getSHNDXTable(const Elf_Shdr &Section,
                                              Elf_Shdr_Range Sections) const;
 
-  void VerifyStrTab(const Elf_Shdr *sh) const;
-
   StringRef getRelocationTypeName(uint32_t Type) const;
   void getRelocationTypeName(uint32_t Type,
                              SmallVectorImpl<char> &Result) const;
@@ -112,7 +112,7 @@ public:
   Expected<const Elf_Sym *> getRelocationSymbol(const Elf_Rel *Rel,
                                                 const Elf_Shdr *SymTab) const;
 
-  ELFFile(StringRef Object);
+  static Expected<ELFFile> create(StringRef Object);
 
   bool isMipsELF64() const {
     return getHeader()->e_machine == ELF::EM_MIPS &&
@@ -140,10 +140,16 @@ public:
     return getSectionContentsAsArray<Elf_Rel>(Sec);
   }
 
+  Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr *Sec) const;
+
   /// \brief Iterate over program header table.
   Expected<Elf_Phdr_Range> program_headers() const {
     if (getHeader()->e_phnum && getHeader()->e_phentsize != sizeof(Elf_Phdr))
       return createError("invalid e_phentsize");
+    if (getHeader()->e_phoff +
+            (getHeader()->e_phnum * getHeader()->e_phentsize) >
+        getBufSize())
+      return createError("program headers longer than binary");
     auto *Begin =
         reinterpret_cast<const Elf_Phdr *>(base() + getHeader()->e_phoff);
     return makeArrayRef(Begin, Begin + getHeader()->e_phnum);
@@ -271,6 +277,9 @@ ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr *Sec) const {
       Offset + Size > Buf.size())
     return createError("invalid section offset");
 
+  if (Offset % alignof(T))
+    return createError("unaligned data");
+
   const T *Start = reinterpret_cast<const T *>(base() + Offset);
   return makeArrayRef(Start, Size / sizeof(T));
 }
@@ -341,14 +350,13 @@ ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections) const {
   return getStringTable(&Sections[Index]);
 }
 
-template <class ELFT>
-ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {
-  assert(sizeof(Elf_Ehdr) <= Buf.size() && "Invalid buffer");
-}
+template <class ELFT> ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {}
 
 template <class ELFT>
-bool compareAddr(uint64_t VAddr, const Elf_Phdr_Impl<ELFT> *Phdr) {
-  return VAddr < Phdr->p_vaddr;
+Expected<ELFFile<ELFT>> ELFFile<ELFT>::create(StringRef Object) {
+  if (sizeof(Elf_Ehdr) > Object.size())
+    return createError("Invalid buffer");
+  return ELFFile(Object);
 }
 
 template <class ELFT>

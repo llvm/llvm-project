@@ -13,7 +13,7 @@
 	.globl	_foo
 	.align	16, 0x90
 _foo:                                   # @foo
-# BB#0:                                 # %e
+# %bb.0:                                # %e
 	.align	16, 0x90
 LBB0_1:                                 # %i
                                         # =>This Inner Loop Header: Depth=1
@@ -26,7 +26,7 @@ LBB0_1:                                 # %i
 	.globl	_bar
 	.align	16, 0x90
 _bar:                                   # @bar
-# BB#0:                                 # %e
+# %bb.0:                                # %e
 	.align	16, 0x90
 LBB1_1:                                 # %i
                                         # =>This Inner Loop Header: Depth=1
@@ -39,7 +39,7 @@ LBB1_1:                                 # %i
 	.globl	_baz
 	.align	16, 0x90
 _baz:                                   # @baz
-# BB#0:                                 # %e
+# %bb.0:                                # %e
 	subl	$4, %esp
 Ltmp0:
 	call	_baz

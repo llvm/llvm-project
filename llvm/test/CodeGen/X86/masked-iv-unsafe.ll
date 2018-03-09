@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 > %t
+; RUN: llc < %s -mtriple=x86_64-- > %t
 ; RUN: grep and %t | count 6
 ; RUN: grep movzb %t | count 6
 ; RUN: grep sar %t | count 12

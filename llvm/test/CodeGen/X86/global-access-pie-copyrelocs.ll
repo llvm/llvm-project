@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -pie-copy-relocations \
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -pie-copy-relocations \
 ; RUN:   | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic -pie-copy-relocations \
+; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic -pie-copy-relocations \
 ; RUN:   | FileCheck -check-prefix=X32 %s
 
 ; External Linkage
@@ -62,6 +62,33 @@ entry:
   %0 = load i32, i32* @d, align 4
   ret i32 %0
 }
+
+; ExternalWeak Linkage
+@e = extern_weak global i32, align 4
+
+define i32* @my_access_global_d() #0 {
+; X32-LABEL: my_access_global_d:
+; X32:       addl $_GLOBAL_OFFSET_TABLE_{{.*}}, %eax
+; X32:       movl e@GOT(%eax), %eax
+; X64-LABEL: my_access_global_d:
+; X64:       movq e@GOTPCREL(%rip), %rax
+
+entry:
+  ret i32* @e
+}
+
+; ExternalWeak hidden Linkage
+@he = extern_weak hidden global i32, align 4
+
+define i32* @my_access_global_he() #0 {
+; X32-LABEL: my_access_global_he:
+; X32:       addl $_GLOBAL_OFFSET_TABLE_{{.*}}, %eax
+; X32:       movl he@GOT(%eax), %eax
+; X64-LABEL: my_access_global_he:
+; X64:       movq he@GOTPCREL(%rip), %rax
+  ret i32* @he
+}
+
 
 ; External Linkage, only declaration, store a value.
 

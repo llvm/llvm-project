@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep btl
+; RUN: llc < %s -mtriple=i686-- | not grep btl
 
 ; This tests some cases where BT must not be generated.  See also bt.ll.
 ; Fixes 20040709-[12].c in gcc testsuite.

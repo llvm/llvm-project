@@ -16,6 +16,9 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -27,9 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOpcodes.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -41,7 +41,7 @@ using namespace llvm;
 #define DEBUG_TYPE "stackmaps"
 
 static cl::opt<int> StackMapVersion(
-    "stackmap-version", cl::init(3),
+    "stackmap-version", cl::init(3), cl::Hidden,
     cl::desc("Specify the stackmap encoding version (default = 3)"));
 
 const char *StackMaps::WSMP = "Stack Maps: ";
@@ -193,14 +193,14 @@ void StackMaps::print(raw_ostream &OS) {
       case Location::Register:
         OS << "Register ";
         if (TRI)
-          OS << TRI->getName(Loc.Reg);
+          OS << printReg(Loc.Reg, TRI);
         else
           OS << Loc.Reg;
         break;
       case Location::Direct:
         OS << "Direct ";
         if (TRI)
-          OS << TRI->getName(Loc.Reg);
+          OS << printReg(Loc.Reg, TRI);
         else
           OS << Loc.Reg;
         if (Loc.Offset)
@@ -209,7 +209,7 @@ void StackMaps::print(raw_ostream &OS) {
       case Location::Indirect:
         OS << "Indirect ";
         if (TRI)
-          OS << TRI->getName(Loc.Reg);
+          OS << printReg(Loc.Reg, TRI);
         else
           OS << Loc.Reg;
         OS << "+" << Loc.Offset;
@@ -233,7 +233,7 @@ void StackMaps::print(raw_ostream &OS) {
     for (const auto &LO : LiveOuts) {
       OS << WSMP << "\t\tLO " << Idx << ": ";
       if (TRI)
-        OS << TRI->getName(LO.Reg);
+        OS << printReg(LO.Reg, TRI);
       else
         OS << LO.Reg;
       OS << "\t[encoding: .short " << LO.DwarfRegNum << ", .byte 0, .byte "

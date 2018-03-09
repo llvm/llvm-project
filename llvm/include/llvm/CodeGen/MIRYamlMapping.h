@@ -212,7 +212,9 @@ struct MachineStackObject {
   int64_t Offset = 0;
   uint64_t Size = 0;
   unsigned Alignment = 0;
+  uint8_t StackID = 0;
   StringValue CalleeSavedRegister;
+  bool CalleeSavedRestored = true;
   Optional<int64_t> LocalOffset;
   StringValue DebugVar;
   StringValue DebugExpr;
@@ -222,7 +224,9 @@ struct MachineStackObject {
     return ID == Other.ID && Name == Other.Name && Type == Other.Type &&
            Offset == Other.Offset && Size == Other.Size &&
            Alignment == Other.Alignment &&
+           StackID == Other.StackID &&
            CalleeSavedRegister == Other.CalleeSavedRegister &&
+           CalleeSavedRestored == Other.CalleeSavedRestored &&
            LocalOffset == Other.LocalOffset && DebugVar == Other.DebugVar &&
            DebugExpr == Other.DebugExpr && DebugLoc == Other.DebugLoc;
   }
@@ -248,8 +252,11 @@ template <> struct MappingTraits<MachineStackObject> {
     if (Object.Type != MachineStackObject::VariableSized)
       YamlIO.mapRequired("size", Object.Size);
     YamlIO.mapOptional("alignment", Object.Alignment, (unsigned)0);
+    YamlIO.mapOptional("stack-id", Object.StackID);
     YamlIO.mapOptional("callee-saved-register", Object.CalleeSavedRegister,
                        StringValue()); // Don't print it out when it's empty.
+    YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
+                       true);
     YamlIO.mapOptional("local-offset", Object.LocalOffset, Optional<int64_t>());
     YamlIO.mapOptional("di-variable", Object.DebugVar,
                        StringValue()); // Don't print it out when it's empty.
@@ -271,15 +278,19 @@ struct FixedMachineStackObject {
   int64_t Offset = 0;
   uint64_t Size = 0;
   unsigned Alignment = 0;
+  uint8_t StackID = 0;
   bool IsImmutable = false;
   bool IsAliased = false;
   StringValue CalleeSavedRegister;
+  bool CalleeSavedRestored = true;
 
   bool operator==(const FixedMachineStackObject &Other) const {
     return ID == Other.ID && Type == Other.Type && Offset == Other.Offset &&
            Size == Other.Size && Alignment == Other.Alignment &&
+           StackID == Other.StackID &&
            IsImmutable == Other.IsImmutable && IsAliased == Other.IsAliased &&
-           CalleeSavedRegister == Other.CalleeSavedRegister;
+           CalleeSavedRegister == Other.CalleeSavedRegister &&
+           CalleeSavedRestored == Other.CalleeSavedRestored;
   }
 };
 
@@ -301,12 +312,15 @@ template <> struct MappingTraits<FixedMachineStackObject> {
     YamlIO.mapOptional("offset", Object.Offset, (int64_t)0);
     YamlIO.mapOptional("size", Object.Size, (uint64_t)0);
     YamlIO.mapOptional("alignment", Object.Alignment, (unsigned)0);
+    YamlIO.mapOptional("stack-id", Object.StackID);
     if (Object.Type != FixedMachineStackObject::SpillSlot) {
       YamlIO.mapOptional("isImmutable", Object.IsImmutable, false);
       YamlIO.mapOptional("isAliased", Object.IsAliased, false);
     }
     YamlIO.mapOptional("callee-saved-register", Object.CalleeSavedRegister,
                        StringValue()); // Don't print it out when it's empty.
+    YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
+                     true);
   }
 
   static const bool flow = true;

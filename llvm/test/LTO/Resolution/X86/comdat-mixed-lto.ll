@@ -17,7 +17,7 @@
 ; would clash with the copy from this module.
 ; RUN: llvm-dis %t3.0.0.preopt.bc -o - | FileCheck %s
 ; CHECK: define internal void @__cxx_global_var_init() section ".text.startup" {
-; CHECK: define available_externally void @testglobfunc() section ".text.startup" {
+; CHECK: define available_externally dso_local void @testglobfunc() section ".text.startup" {
 
 ; ModuleID = 'comdat-mixed-lto.o'
 source_filename = "comdat-mixed-lto.cpp"

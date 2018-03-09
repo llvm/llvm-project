@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -no-integrated-as < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-- -no-integrated-as < %s | FileCheck %s
 ; PR3701
 
 define i64 @t(i64* %arg) nounwind {

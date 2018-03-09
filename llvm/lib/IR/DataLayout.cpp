@@ -572,6 +572,8 @@ const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
   int NumElts = Ty->getNumElements();
   StructLayout *L =
     (StructLayout *)malloc(sizeof(StructLayout)+(NumElts-1) * sizeof(uint64_t));
+  if (L == nullptr)
+    report_bad_alloc_error("Allocation of StructLayout elements failed.");
 
   // Set SL before calling StructLayout's ctor.  The ctor could cause other
   // entries to be added to TheMap, invalidating our reference.

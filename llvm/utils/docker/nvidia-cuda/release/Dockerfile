@@ -18,6 +18,6 @@ FROM nvidia/cuda:8.0-devel
 LABEL maintainer "LLVM Developers"
 
 # Unpack clang installation into this container.
-ADD clang.tar.gz /
+ADD clang.tar.gz /usr/local/
 
 # C++ standard library and binutils are already included in the base package.

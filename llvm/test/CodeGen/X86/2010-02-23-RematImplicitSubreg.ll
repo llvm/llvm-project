@@ -3,7 +3,7 @@
 ;
 ; This test produces a move instruction with an implicitly defined super-register:
 ;
-;   %DL<def> = MOV8rr %reg1038<kill>, %RDX<imp-def>
+;   %DL = MOV8rr killed %reg1038, implicit-def %RDX
 ;
 ; When %DL is rematerialized, we must remember to update live intervals for
 ; sub-registers %DX and %EDX.

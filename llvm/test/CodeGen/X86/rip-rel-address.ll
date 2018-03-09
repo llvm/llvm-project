@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -relocation-model=pic -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=PIC64
+; RUN: llc < %s -relocation-model=pic -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=PIC64
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=STATIC64
 
 ; Use %rip-relative addressing even in static mode on x86-64, because

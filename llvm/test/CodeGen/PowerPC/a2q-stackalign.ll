@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mcpu=a2 | FileCheck -check-prefix=CHECK-A2 %s
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mcpu=a2q | FileCheck -check-prefix=CHECK-A2Q %s
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mtriple=powerpc64-bgq-linux -mcpu=a2 | FileCheck -check-prefix=CHECK-BGQ %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-- -mcpu=a2 | FileCheck -check-prefix=CHECK-A2 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-- -mcpu=a2q | FileCheck -check-prefix=CHECK-A2Q %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-bgq-linux -mcpu=a2 | FileCheck -check-prefix=CHECK-BGQ %s
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

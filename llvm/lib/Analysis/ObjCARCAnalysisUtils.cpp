@@ -21,8 +21,6 @@ using namespace llvm::objcarc;
 
 /// \brief A handy option to enable/disable all ARC Optimizations.
 bool llvm::objcarc::EnableARCOpts;
-static cl::opt<bool, true>
-EnableARCOptimizations("enable-objc-arc-opts",
-                       cl::desc("enable/disable all ARC Optimizations"),
-                       cl::location(EnableARCOpts),
-                       cl::init(true));
+static cl::opt<bool, true> EnableARCOptimizations(
+    "enable-objc-arc-opts", cl::desc("enable/disable all ARC Optimizations"),
+    cl::location(EnableARCOpts), cl::init(true), cl::Hidden);

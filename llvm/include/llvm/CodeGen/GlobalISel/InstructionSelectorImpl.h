@@ -22,13 +22,13 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetOpcodes.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -181,7 +181,7 @@ bool InstructionSelector::executeMatchTable(
       else
         llvm_unreachable("Expected Imm or CImm operand");
 
-      if (!MatcherInfo.I64ImmPredicateFns[Predicate](Value))
+      if (!testImmPredicate_I64(Predicate, Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
@@ -202,7 +202,7 @@ bool InstructionSelector::executeMatchTable(
       else
         llvm_unreachable("Expected Imm or CImm operand");
 
-      if (!MatcherInfo.APIntImmPredicateFns[Predicate](Value))
+      if (!testImmPredicate_APInt(Predicate, Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
@@ -221,7 +221,7 @@ bool InstructionSelector::executeMatchTable(
       assert(Predicate > GIPFP_APFloat_Invalid && "Expected a valid predicate");
       APFloat Value = State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
 
-      if (!MatcherInfo.APFloatImmPredicateFns[Predicate](Value))
+      if (!testImmPredicate_APFloat(Predicate, Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;

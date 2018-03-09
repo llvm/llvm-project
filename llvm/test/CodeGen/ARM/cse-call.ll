@@ -15,16 +15,17 @@ target triple = "armv6-apple-ios0.0.0"
 declare i32 @strlen(i8* nocapture) nounwind readonly
 declare void @S_trimzeros(...)
 
-define i8* @F_floatmul(i8* %f1, i8* %f2) nounwind ssp {
+define i8* @F_floatmul(i8* %f1, i8* %f2, i32 %a, i32 %b) nounwind ssp {
 entry:
-  br i1 undef, label %while.end42, label %while.body37
+  %0 = icmp eq i32 %a, %b
+  br i1 %0, label %while.end42, label %while.body37
 
 while.body37:                                     ; preds = %while.body37, %entry
   br i1 false, label %while.end42, label %while.body37
 
 while.end42:                                      ; preds = %while.body37, %entry
-  %. = select i1 undef, i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man1, i32 0, i32 0), i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man2, i32 0, i32 0)
-  %.92 = select i1 undef, i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man2, i32 0, i32 0), i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man1, i32 0, i32 0)
+  %. = select i1 %0, i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man1, i32 0, i32 0), i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man2, i32 0, i32 0)
+  %.92 = select i1 %0, i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man2, i32 0, i32 0), i8* getelementptr inbounds ([200 x i8], [200 x i8]* @F_floatmul.man1, i32 0, i32 0)
   tail call void bitcast (void (...)* @S_trimzeros to void (i8*)*)(i8* %.92) nounwind
   %call47 = tail call i32 @strlen(i8* %.) nounwind
   unreachable

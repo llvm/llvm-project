@@ -41,18 +41,18 @@ body:             |
     liveins: %r0
     %0 = COPY %r0
     %1 = t2MOVi32imm -25733
-    %2 = t2SUBrr %0, killed %1, 14, _, _
+    %2 = t2SUBrr %0, killed %1, 14, %noreg, %noreg
 
     %3 = t2MOVi32imm 25733
-    %4 = t2SUBrr %0, killed %3, 14, _, _
+    %4 = t2SUBrr %0, killed %3, 14, %noreg, %noreg
 
     %5 = t2MOVi32imm -25733
-    %6= t2ADDrr %0, killed %5, 14, _, _
+    %6= t2ADDrr %0, killed %5, 14, %noreg, %noreg
 
     %7 = t2MOVi32imm 25733
-    %8 = t2ADDrr killed %0, killed %7, 14, _, _
+    %8 = t2ADDrr killed %0, killed %7, 14, %noreg, %noreg
 
     %r0 = COPY killed %8
-    tBX_RET 14, _, implicit %r0
+    tBX_RET 14, %noreg, implicit %r0
 
 ...

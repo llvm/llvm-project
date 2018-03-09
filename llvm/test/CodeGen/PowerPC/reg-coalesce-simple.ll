@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32  | not grep or
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--  | not grep or
 
 %struct.foo = type { i32, i32, [0 x i8] }
 

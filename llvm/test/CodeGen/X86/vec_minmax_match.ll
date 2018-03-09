@@ -6,7 +6,7 @@
 
 define <4 x i32> @smin_vec1(<4 x i32> %x) {
 ; CHECK-LABEL: smin_vec1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
@@ -19,7 +19,7 @@ define <4 x i32> @smin_vec1(<4 x i32> %x) {
 
 define <4 x i32> @smin_vec2(<4 x i32> %x) {
 ; CHECK-LABEL: smin_vec2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
@@ -34,7 +34,7 @@ define <4 x i32> @smin_vec2(<4 x i32> %x) {
 ; (X >s Y) ? 0 : Z ==> (Z >s 0) ? 0 : Z ==> SMIN(Z, 0)
 define <4 x i32> @smin_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smin_vec3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
@@ -49,7 +49,7 @@ define <4 x i32> @smin_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; (X <s Y) ? Z : 0 ==> (Z <s 0) ? Z : 0 ==> SMIN(Z, 0)
 define <4 x i32> @smin_vec4(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smin_vec4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
@@ -62,7 +62,7 @@ define <4 x i32> @smin_vec4(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @smax_vec1(<4 x i32> %x) {
 ; CHECK-LABEL: smax_vec1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
@@ -75,7 +75,7 @@ define <4 x i32> @smax_vec1(<4 x i32> %x) {
 
 define <4 x i32> @smax_vec2(<4 x i32> %x) {
 ; CHECK-LABEL: smax_vec2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
@@ -90,7 +90,7 @@ define <4 x i32> @smax_vec2(<4 x i32> %x) {
 ; (X <s Y) ? 0 : Z ==> (Z <s 0) ? 0 : Z ==> SMAX(Z, 0)
 define <4 x i32> @smax_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smax_vec3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
@@ -105,7 +105,7 @@ define <4 x i32> @smax_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; (X >s Y) ? Z : 0 ==> (Z >s 0) ? Z : 0 ==> SMAX(Z, 0)
 define <4 x i32> @smax_vec4(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smax_vec4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
@@ -118,7 +118,7 @@ define <4 x i32> @smax_vec4(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @umax_vec1(<4 x i32> %x) {
 ; CHECK-LABEL: umax_vec1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp slt <4 x i32> %x, zeroinitializer
@@ -128,7 +128,7 @@ define <4 x i32> @umax_vec1(<4 x i32> %x) {
 
 define <4 x i32> @umax_vec2(<4 x i32> %x) {
 ; CHECK-LABEL: umax_vec2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -138,7 +138,7 @@ define <4 x i32> @umax_vec2(<4 x i32> %x) {
 
 define <4 x i32> @umin_vec1(<4 x i32> %x) {
 ; CHECK-LABEL: umin_vec1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp slt <4 x i32> %x, zeroinitializer
@@ -148,7 +148,7 @@ define <4 x i32> @umin_vec1(<4 x i32> %x) {
 
 define <4 x i32> @umin_vec2(<4 x i32> %x) {
 ; CHECK-LABEL: umin_vec2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -163,7 +163,7 @@ define <4 x i32> @umin_vec2(<4 x i32> %x) {
 
 define <4 x i32> @clamp_signed1(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_signed1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpminsd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxsd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -178,7 +178,7 @@ define <4 x i32> @clamp_signed1(<4 x i32> %x) {
 
 define <4 x i32> @clamp_signed2(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_signed2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmaxsd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpminsd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -193,7 +193,7 @@ define <4 x i32> @clamp_signed2(<4 x i32> %x) {
 
 define <4 x i32> @clamp_unsigned1(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_unsigned1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -208,7 +208,7 @@ define <4 x i32> @clamp_unsigned1(<4 x i32> %x) {
 
 define <4 x i32> @clamp_unsigned2(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_unsigned2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -217,5 +217,35 @@ define <4 x i32> @clamp_unsigned2(<4 x i32> %x) {
   %cmp1 = icmp ugt <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %r = select <4 x i1> %cmp1, <4 x i32><i32 255, i32 255, i32 255, i32 255>, <4 x i32> %max
   ret <4 x i32> %r
+}
+
+define <4 x i32> @wrong_pred_for_smin_with_not(<4 x i32> %x) {
+; CHECK-LABEL: wrong_pred_for_smin_with_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpgtd {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [4294967291,4294967291,4294967291,4294967291]
+; CHECK-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %not_x = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp = icmp ugt <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
+  %sel = select <4 x i1> %cmp, <4 x i32> %not_x, <4 x i32> <i32 -5, i32 -5, i32 -5, i32 -5>
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @wrong_pred_for_smin_with_subnsw(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: wrong_pred_for_smin_with_subnsw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpminud %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %sub = sub nsw <4 x i32> %x, %y
+  %cmp = icmp ugt <4 x i32> %x, %y
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %sub
+  ret <4 x i32> %sel
 }
 

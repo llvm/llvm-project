@@ -8,7 +8,7 @@
 
 define float @tst1(float %a, float %b) nounwind {
 ; X32-LABEL: tst1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    subl $8, %esp
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -19,7 +19,7 @@ define float @tst1(float %a, float %b) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: tst1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps %xmm0, %xmm2
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    movaps %xmm2, %xmm1
@@ -30,7 +30,7 @@ define float @tst1(float %a, float %b) nounwind {
 
 define double @tst2(double %a, float %b, float %c) nounwind {
 ; X32-LABEL: tst2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -43,7 +43,7 @@ define double @tst2(double %a, float %b, float %c) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: tst2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    addss %xmm2, %xmm1
 ; X64-NEXT:    cvtss2sd %xmm1, %xmm1
 ; X64-NEXT:    jmp copysign # TAILCALL
@@ -62,7 +62,7 @@ declare double @copysign(double, double)
 
 define float @int1(float %a, float %b) nounwind {
 ; X32-LABEL: int1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    andps {{\.LCPI.*}}, %xmm0
@@ -75,7 +75,7 @@ define float @int1(float %a, float %b) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: int1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-NEXT:    andps {{.*}}(%rip), %xmm1
 ; X64-NEXT:    orps %xmm1, %xmm0
@@ -86,7 +86,7 @@ define float @int1(float %a, float %b) nounwind {
 
 define double @int2(double %a, float %b, float %c) nounwind {
 ; X32-LABEL: int2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-8, %esp
@@ -105,7 +105,7 @@ define double @int2(double %a, float %b, float %c) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: int2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    addss %xmm2, %xmm1
 ; X64-NEXT:    cvtss2sd %xmm1, %xmm1
 ; X64-NEXT:    andps {{.*}}(%rip), %xmm1
@@ -120,13 +120,13 @@ define double @int2(double %a, float %b, float %c) nounwind {
 
 define float @cst1() nounwind {
 ; X32-LABEL: cst1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    fld1
 ; X32-NEXT:    fchs
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cst1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
   %tmp = tail call float @llvm.copysign.f32( float 1.0, float -2.0 )
@@ -135,13 +135,13 @@ define float @cst1() nounwind {
 
 define double @cst2() nounwind {
 ; X32-LABEL: cst2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    fldz
 ; X32-NEXT:    fchs
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cst2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %tmp1 = fadd float -1.0, -1.0

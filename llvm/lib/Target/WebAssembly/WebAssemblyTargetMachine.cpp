@@ -68,12 +68,12 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
-    CodeModel::Model CM, CodeGenOpt::Level OL)
+    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T,
                         TT.isArch64Bit() ? "e-m:e-p:64:64-i64:64-n32:64-S128"
                                          : "e-m:e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, getEffectiveRelocModel(RM),
-                        CM, OL),
+                        CM ? *CM : CodeModel::Large, OL),
       TLOF(TT.isOSBinFormatELF() ?
               static_cast<TargetLoweringObjectFile*>(
                   new WebAssemblyTargetObjectFileELF()) :
@@ -146,10 +146,9 @@ public:
 };
 } // end anonymous namespace
 
-TargetIRAnalysis WebAssemblyTargetMachine::getTargetIRAnalysis() {
-  return TargetIRAnalysis([this](const Function &F) {
-    return TargetTransformInfo(WebAssemblyTTIImpl(this, F));
-  });
+TargetTransformInfo
+WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(WebAssemblyTTIImpl(this, F));
 }
 
 TargetPassConfig *
@@ -174,6 +173,9 @@ void WebAssemblyPassConfig::addIRPasses() {
     // Expand some atomic operations. WebAssemblyTargetLowering has hooks which
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass());
+
+  // Lower .llvm.global_dtors into .llvm_global_ctors with __cxa_atexit calls.
+  addPass(createWebAssemblyLowerGlobalDtors());
 
   // Fix function bitcasts, as WebAssembly requires caller and callee signatures
   // to match.

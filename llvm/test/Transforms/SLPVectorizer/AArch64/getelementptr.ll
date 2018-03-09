@@ -1,5 +1,8 @@
 ; RUN: opt -S -slp-vectorizer -slp-threshold=-18 -dce -instcombine -pass-remarks-output=%t < %s | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: opt -S -passes='slp-vectorizer,dce,instcombine' -slp-threshold=-18 -pass-remarks-output=%t < %s | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
+
 
 target datalayout = "e-m:e-i32:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -25,7 +28,8 @@ target triple = "aarch64--linux-gnu"
 ; CHECK: [[X:%[a-zA-Z0-9.]+]] = extractelement <4 x i32> [[A]]
 ; CHECK: sext i32 [[X]] to i64
 
-; YAML:      Pass:            slp-vectorizer
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
 ; YAML-NEXT: Name:            VectorizedList
 ; YAML-NEXT: Function:        getelementptr_4x32
 ; YAML-NEXT: Args:
@@ -34,7 +38,8 @@ target triple = "aarch64--linux-gnu"
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '5'
 
-; YAML:      Pass:            slp-vectorizer
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
 ; YAML-NEXT: Name:            VectorizedList
 ; YAML-NEXT: Function:        getelementptr_4x32
 ; YAML-NEXT: Args:
@@ -89,7 +94,8 @@ for.body:
 ; CHECK: [[X:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[A]]
 ; CHECK: sext i32 [[X]] to i64
 
-; YAML:      Pass:            slp-vectorizer
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
 ; YAML-NEXT: Name:            VectorizedList
 ; YAML-NEXT: Function:        getelementptr_2x32
 ; YAML-NEXT: Args:
@@ -98,7 +104,8 @@ for.body:
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '5'
 
-; YAML:      Pass:            slp-vectorizer
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
 ; YAML-NEXT: Name:            VectorizedList
 ; YAML-NEXT: Function:        getelementptr_2x32
 ; YAML-NEXT: Args:

@@ -14,17 +14,14 @@
 #include "RuntimeDyldELF.h"
 #include "RuntimeDyldCheckerImpl.h"
 #include "Targets/RuntimeDyldELFMips.h"
-#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -70,8 +67,11 @@ template <class ELFT> class DyldELFObject : public ELFObjectFile<ELFT> {
 
   typedef typename ELFDataTypeTypedefHelper<ELFT>::value_type addr_type;
 
+  DyldELFObject(ELFObjectFile<ELFT> &&Obj);
+
 public:
-  DyldELFObject(MemoryBufferRef Wrapper, std::error_code &ec);
+  static Expected<std::unique_ptr<DyldELFObject>>
+  create(MemoryBufferRef Wrapper);
 
   void updateSectionAddress(const SectionRef &Sec, uint64_t Addr);
 
@@ -93,9 +93,20 @@ public:
 // actual memory.  Ultimately, the Binary parent class will take ownership of
 // this MemoryBuffer object but not the underlying memory.
 template <class ELFT>
-DyldELFObject<ELFT>::DyldELFObject(MemoryBufferRef Wrapper, std::error_code &EC)
-    : ELFObjectFile<ELFT>(Wrapper, EC) {
+DyldELFObject<ELFT>::DyldELFObject(ELFObjectFile<ELFT> &&Obj)
+    : ELFObjectFile<ELFT>(std::move(Obj)) {
   this->isDyldELFObject = true;
+}
+
+template <class ELFT>
+Expected<std::unique_ptr<DyldELFObject<ELFT>>>
+DyldELFObject<ELFT>::create(MemoryBufferRef Wrapper) {
+  auto Obj = ELFObjectFile<ELFT>::create(Wrapper);
+  if (auto E = Obj.takeError())
+    return std::move(E);
+  std::unique_ptr<DyldELFObject<ELFT>> Ret(
+      new DyldELFObject<ELFT>(std::move(*Obj)));
+  return std::move(Ret);
 }
 
 template <class ELFT>
@@ -134,16 +145,18 @@ public:
 };
 
 template <typename ELFT>
-std::unique_ptr<DyldELFObject<ELFT>>
-createRTDyldELFObject(MemoryBufferRef Buffer,
-                      const ObjectFile &SourceObject,
-                      const LoadedELFObjectInfo &L,
-                      std::error_code &ec) {
+static Expected<std::unique_ptr<DyldELFObject<ELFT>>>
+createRTDyldELFObject(MemoryBufferRef Buffer, const ObjectFile &SourceObject,
+                      const LoadedELFObjectInfo &L) {
   typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename ELFDataTypeTypedefHelper<ELFT>::value_type addr_type;
 
-  std::unique_ptr<DyldELFObject<ELFT>> Obj =
-    llvm::make_unique<DyldELFObject<ELFT>>(Buffer, ec);
+  Expected<std::unique_ptr<DyldELFObject<ELFT>>> ObjOrErr =
+      DyldELFObject<ELFT>::create(Buffer);
+  if (Error E = ObjOrErr.takeError())
+    return std::move(E);
+
+  std::unique_ptr<DyldELFObject<ELFT>> Obj = std::move(*ObjOrErr);
 
   // Iterate over all sections in the object.
   auto SI = SourceObject.section_begin();
@@ -164,41 +177,35 @@ createRTDyldELFObject(MemoryBufferRef Buffer,
     ++SI;
   }
 
-  return Obj;
+  return std::move(Obj);
 }
 
-OwningBinary<ObjectFile> createELFDebugObject(const ObjectFile &Obj,
-                                              const LoadedELFObjectInfo &L) {
+static OwningBinary<ObjectFile>
+createELFDebugObject(const ObjectFile &Obj, const LoadedELFObjectInfo &L) {
   assert(Obj.isELF() && "Not an ELF object file.");
 
   std::unique_ptr<MemoryBuffer> Buffer =
     MemoryBuffer::getMemBufferCopy(Obj.getData(), Obj.getFileName());
 
-  std::error_code ec;
-
-  std::unique_ptr<ObjectFile> DebugObj;
-  if (Obj.getBytesInAddress() == 4 && Obj.isLittleEndian()) {
-    typedef ELFType<support::little, false> ELF32LE;
-    DebugObj = createRTDyldELFObject<ELF32LE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else if (Obj.getBytesInAddress() == 4 && !Obj.isLittleEndian()) {
-    typedef ELFType<support::big, false> ELF32BE;
-    DebugObj = createRTDyldELFObject<ELF32BE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else if (Obj.getBytesInAddress() == 8 && !Obj.isLittleEndian()) {
-    typedef ELFType<support::big, true> ELF64BE;
-    DebugObj = createRTDyldELFObject<ELF64BE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else if (Obj.getBytesInAddress() == 8 && Obj.isLittleEndian()) {
-    typedef ELFType<support::little, true> ELF64LE;
-    DebugObj = createRTDyldELFObject<ELF64LE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else
+  Expected<std::unique_ptr<ObjectFile>> DebugObj(nullptr);
+  handleAllErrors(DebugObj.takeError());
+  if (Obj.getBytesInAddress() == 4 && Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF32LE>(Buffer->getMemBufferRef(), Obj, L);
+  else if (Obj.getBytesInAddress() == 4 && !Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF32BE>(Buffer->getMemBufferRef(), Obj, L);
+  else if (Obj.getBytesInAddress() == 8 && !Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF64BE>(Buffer->getMemBufferRef(), Obj, L);
+  else if (Obj.getBytesInAddress() == 8 && Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF64LE>(Buffer->getMemBufferRef(), Obj, L);
+  else
     llvm_unreachable("Unexpected ELF format");
 
-  assert(!ec && "Could not construct copy ELF object file");
-
-  return OwningBinary<ObjectFile>(std::move(DebugObj), std::move(Buffer));
+  handleAllErrors(DebugObj.takeError());
+  return OwningBinary<ObjectFile>(std::move(*DebugObj), std::move(Buffer));
 }
 
 OwningBinary<ObjectFile>
@@ -355,6 +362,18 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
   default:
     llvm_unreachable("Relocation type not implemented yet!");
     break;
+  case ELF::R_AARCH64_ABS16: {
+    uint64_t Result = Value + Addend;
+    assert(static_cast<int64_t>(Result) >= INT16_MIN && Result < UINT16_MAX);
+    write(isBE, TargetPtr, static_cast<uint16_t>(Result & 0xffffU));
+    break;
+  }
+  case ELF::R_AARCH64_ABS32: {
+    uint64_t Result = Value + Addend;
+    assert(static_cast<int64_t>(Result) >= INT32_MIN && Result < UINT32_MAX);
+    write(isBE, TargetPtr, static_cast<uint32_t>(Result & 0xffffffffU));
+    break;
+  }
   case ELF::R_AARCH64_ABS64:
     write(isBE, TargetPtr, Value + Addend);
     break;
@@ -590,7 +609,7 @@ Error RuntimeDyldELF::findOPDEntrySection(const ELFObjectFileBase &Obj,
       if (auto AddendOrErr = i->getAddend())
         Addend = *AddendOrErr;
       else
-        return errorCodeToError(AddendOrErr.getError());
+        return AddendOrErr.takeError();
 
       ++i;
       if (i == e)
@@ -1058,8 +1077,11 @@ RuntimeDyldELF::processRelocationRef(
     ObjSectionToIDMap &ObjSectionToID, StubMap &Stubs) {
   const auto &Obj = cast<ELFObjectFileBase>(O);
   uint64_t RelType = RelI->getType();
-  ErrorOr<int64_t> AddendOrErr = ELFRelocationRef(*RelI).getAddend();
-  int64_t Addend = AddendOrErr ? *AddendOrErr : 0;
+  int64_t Addend = 0;
+  if (Expected<int64_t> AddendOrErr = ELFRelocationRef(*RelI).getAddend())
+    Addend = *AddendOrErr;
+  else
+    consumeError(AddendOrErr.takeError());
   elf_symbol_iterator Symbol = RelI->getSymbol();
 
   // Obtain the symbol name which is referenced in the relocation
@@ -1252,8 +1274,7 @@ RuntimeDyldELF::processRelocationRef(
         if (Value.SymbolName) {
           addRelocationForSymbol(REHi, Value.SymbolName);
           addRelocationForSymbol(RELo, Value.SymbolName);
-        }
-        else {
+        } else {
           addRelocationForSection(REHi, Value.SectionID);
           addRelocationForSection(RELo, Value.SectionID);
         }
@@ -1313,11 +1334,81 @@ RuntimeDyldELF::processRelocationRef(
         RE.SymOffset = allocateGOTEntries(1);
         GOTSymbolOffsets[TargetName] = RE.SymOffset;
       }
+      if (Value.SymbolName)
+        addRelocationForSymbol(RE, Value.SymbolName);
+      else
+        addRelocationForSection(RE, Value.SectionID);
+    } else if (RelType == ELF::R_MIPS_26) {
+      // This is an Mips branch relocation, need to use a stub function.
+      DEBUG(dbgs() << "\t\tThis is a Mips branch relocation.");
+      SectionEntry &Section = Sections[SectionID];
+
+      //  Look up for existing stub.
+      StubMap::const_iterator i = Stubs.find(Value);
+      if (i != Stubs.end()) {
+        RelocationEntry RE(SectionID, Offset, RelType, i->second);
+        addRelocationForSection(RE, SectionID);
+        DEBUG(dbgs() << " Stub function found\n");
+      } else {
+        // Create a new stub function.
+        DEBUG(dbgs() << " Create a new stub function\n");
+        Stubs[Value] = Section.getStubOffset();
+
+        unsigned AbiVariant;
+        O.getPlatformFlags(AbiVariant);
+
+        uint8_t *StubTargetAddr = createStubFunction(
+            Section.getAddressWithOffset(Section.getStubOffset()), AbiVariant);
+
+        if (IsMipsN32ABI) {
+          // Creating Hi and Lo relocations for the filled stub instructions.
+          RelocationEntry REHi(SectionID, StubTargetAddr - Section.getAddress(),
+                               ELF::R_MIPS_HI16, Value.Addend);
+          RelocationEntry RELo(SectionID,
+                               StubTargetAddr - Section.getAddress() + 4,
+                               ELF::R_MIPS_LO16, Value.Addend);
+          if (Value.SymbolName) {
+            addRelocationForSymbol(REHi, Value.SymbolName);
+            addRelocationForSymbol(RELo, Value.SymbolName);
+          } else {
+            addRelocationForSection(REHi, Value.SectionID);
+            addRelocationForSection(RELo, Value.SectionID);
+          }
+        } else {
+          // Creating Highest, Higher, Hi and Lo relocations for the filled stub
+          // instructions.
+          RelocationEntry REHighest(SectionID,
+                                    StubTargetAddr - Section.getAddress(),
+                                    ELF::R_MIPS_HIGHEST, Value.Addend);
+          RelocationEntry REHigher(SectionID,
+                                   StubTargetAddr - Section.getAddress() + 4,
+                                   ELF::R_MIPS_HIGHER, Value.Addend);
+          RelocationEntry REHi(SectionID,
+                               StubTargetAddr - Section.getAddress() + 12,
+                               ELF::R_MIPS_HI16, Value.Addend);
+          RelocationEntry RELo(SectionID,
+                               StubTargetAddr - Section.getAddress() + 20,
+                               ELF::R_MIPS_LO16, Value.Addend);
+          if (Value.SymbolName) {
+            addRelocationForSymbol(REHighest, Value.SymbolName);
+            addRelocationForSymbol(REHigher, Value.SymbolName);
+            addRelocationForSymbol(REHi, Value.SymbolName);
+            addRelocationForSymbol(RELo, Value.SymbolName);
+          } else {
+            addRelocationForSection(REHighest, Value.SectionID);
+            addRelocationForSection(REHigher, Value.SectionID);
+            addRelocationForSection(REHi, Value.SectionID);
+            addRelocationForSection(RELo, Value.SectionID);
+          }
+        }
+        RelocationEntry RE(SectionID, Offset, RelType, Section.getStubOffset());
+        addRelocationForSection(RE, SectionID);
+        Section.advanceStubOffset(getMaxStubSize());
+      }
+    } else {
+      processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
-    if (Value.SymbolName)
-      addRelocationForSymbol(RE, Value.SymbolName);
-    else
-      addRelocationForSection(RE, Value.SectionID);
+  
   } else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
     if (RelType == ELF::R_PPC64_REL24) {
       // Determine ABI variant in use for this object.

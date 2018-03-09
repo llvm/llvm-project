@@ -12,7 +12,7 @@
 ; %t.o. It later selects %t2.o based on the strong ref from %t3.o.
 ; Therefore, %t3.o's copy of @f is prevailing, and we need to link
 ; %t3.o before %t2.o in the final native link.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -m elf_x86_64 \
@@ -24,7 +24,7 @@
 ; copy of f() (and didn't simply convert to available_externally, which
 ; would incorrectly enable inlining).
 ; RUN: llvm-dis %t2.o.1.promote.bc -o - | FileCheck %s
-; CHECK: declare i32 @f()
+; CHECK: declare dso_local i32 @f()
 
 ; ModuleID = 'thinlto_weak_library.c'
 source_filename = "thinlto_weak_library.c"

@@ -3,7 +3,7 @@
 
 define void @add18i16(<18 x i16>* nocapture sret %ret, <18 x i16>* %bp) nounwind {
 ; CHECK-LABEL: add18i16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    vmovups (%ecx), %ymm0

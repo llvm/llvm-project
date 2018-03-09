@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
-; RUN: llc < %s -march=x86 -regalloc=fast -optimize-regalloc=0 | FileCheck %s
+; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -regalloc=fast -optimize-regalloc=0 | FileCheck %s
 
 ; %0 must not be put in EAX or EDX.
 ; In the first asm, $0 and $2 must not be put in EAX.

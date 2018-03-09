@@ -1,5 +1,6 @@
 ; This is a collection of really basic tests for gc.statepoint rewriting.
 ; RUN: opt < %s -rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
+; RUN: opt < %s -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 
 ; Trivial relocation over a single call
 

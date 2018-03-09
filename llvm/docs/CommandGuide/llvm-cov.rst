@@ -361,14 +361,15 @@ EXPORT COMMAND
 SYNOPSIS
 ^^^^^^^^
 
-:program:`llvm-cov export` [*options*] -instr-profile *PROFILE* *BIN* [*-object BIN,...*] [[*-object BIN*]]
+:program:`llvm-cov export` [*options*] -instr-profile *PROFILE* *BIN* [*-object BIN,...*] [[*-object BIN*]] [*SOURCES*]
 
 DESCRIPTION
 ^^^^^^^^^^^
 
 The :program:`llvm-cov export` command exports regions, functions, expansions,
 and summaries of the coverage of the binaries *BIN*,... using the profile data
-*PROFILE* as JSON.
+*PROFILE* as JSON. It can optionally be filtered to only export the coverage
+for the files listed in *SOURCES*.
 
 For information on compiling programs for coverage and generating profile data,
 see :ref:`llvm-cov-show`.

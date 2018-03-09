@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep mfcr
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep mfcr
 
 define void @test(i64 %X) {
         %tmp1 = and i64 %X, 3           ; <i64> [#uses=1]

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mtriple=arm-apple-darwin
+; RUN: llc < %s -mtriple=arm-apple-darwin
 
 	%struct.H_TBL = type { [17 x i8], [256 x i8], i32 }
 	%struct.Q_TBL = type { [64 x i16], i32 }

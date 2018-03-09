@@ -1,4 +1,5 @@
 ; RUN: opt -S -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -verify-loop-info -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -force-vector-width=1 -force-vector-interleave=2 -loop-vectorize -verify-loop-info < %s | FileCheck %s --check-prefix=UNROLL-NO-VF
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -18,8 +19,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK-LABEL: test
 ; CHECK: vector.body:
 ; CHECK:   %[[SDEE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[SDCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[SDEE]], true
-; CHECK:   br i1 %[[SDCC]], label %[[CSD:[a-zA-Z0-9.]+]], label %[[ESD:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[SDEE]], label %[[CSD:[a-zA-Z0-9.]+]], label %[[ESD:[a-zA-Z0-9.]+]]
 ; CHECK: [[CSD]]:
 ; CHECK:   %[[SDA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -29,8 +29,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK: [[ESD]]:
 ; CHECK:   %[[SDR:[a-zA-Z0-9]+]] = phi <2 x i32> [ undef, %vector.body ], [ %[[SD1]], %[[CSD]] ]
 ; CHECK:   %[[SDEEH:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 1
-; CHECK:   %[[SDCCH:[a-zA-Z0-9]+]] = icmp eq i1 %[[SDEEH]], true
-; CHECK:   br i1 %[[SDCCH]], label %[[CSDH:[a-zA-Z0-9.]+]], label %[[ESDH:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[SDEEH]], label %[[CSDH:[a-zA-Z0-9.]+]], label %[[ESDH:[a-zA-Z0-9.]+]]
 ; CHECK: [[CSDH]]:
 ; CHECK:   %[[SDA0H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
 ; CHECK:   %[[SDA1H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
@@ -41,8 +40,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %{{.*}} = phi <2 x i32> [ %[[SDR]], %[[ESD]] ], [ %[[SD1H]], %[[CSDH]] ]
 
 ; CHECK:   %[[UDEE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[UDCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[UDEE]], true
-; CHECK:   br i1 %[[UDCC]], label %[[CUD:[a-zA-Z0-9.]+]], label %[[EUD:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[UDEE]], label %[[CUD:[a-zA-Z0-9.]+]], label %[[EUD:[a-zA-Z0-9.]+]]
 ; CHECK: [[CUD]]:
 ; CHECK:   %[[UDA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -53,8 +51,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %{{.*}} = phi <2 x i32> [ undef, %{{.*}} ], [ %[[UD1]], %[[CUD]] ]
 
 ; CHECK:   %[[SREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[SRCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[SREE]], true
-; CHECK:   br i1 %[[SRCC]], label %[[CSR:[a-zA-Z0-9.]+]], label %[[ESR:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[SREE]], label %[[CSR:[a-zA-Z0-9.]+]], label %[[ESR:[a-zA-Z0-9.]+]]
 ; CHECK: [[CSR]]:
 ; CHECK:   %[[SRA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SRA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -65,8 +62,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %{{.*}} = phi <2 x i32> [ undef, %{{.*}} ], [ %[[SR1]], %[[CSR]] ]
 
 ; CHECK:   %[[UREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[URCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[UREE]], true
-; CHECK:   br i1 %[[URCC]], label %[[CUR:[a-zA-Z0-9.]+]], label %[[EUR:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[UREE]], label %[[CUR:[a-zA-Z0-9.]+]], label %[[EUR:[a-zA-Z0-9.]+]]
 ; CHECK: [[CUR]]:
 ; CHECK:   %[[URA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[URA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -164,16 +160,11 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK: vector.body:
 ; CHECK: %[[CMP1:.+]] = icmp slt <2 x i32> %[[VAL:.+]], <i32 100, i32 100>
 ; CHECK: %[[CMP2:.+]] = icmp sge <2 x i32> %[[VAL]], <i32 200, i32 200>
-; CHECK: %[[XOR:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>
-; CHECK: %[[AND1:.+]] = and <2 x i1> %[[XOR]], <i1 true, i1 true>
-; CHECK: %[[OR1:.+]] = or <2 x i1> zeroinitializer, %[[AND1]]
-; CHECK: %[[AND2:.+]] = and <2 x i1> %[[CMP2]], %[[OR1]]
-; CHECK: %[[OR2:.+]] = or <2 x i1> zeroinitializer, %[[AND2]]
-; CHECK: %[[AND3:.+]] = and <2 x i1> %[[CMP1]], <i1 true, i1 true>
-; CHECK: %[[OR3:.+]] = or <2 x i1> %[[OR2]], %[[AND3]]
-; CHECK: %[[EXTRACT:.+]] = extractelement <2 x i1> %[[OR3]], i32 0
-; CHECK: %[[MASK:.+]] = icmp eq i1 %[[EXTRACT]], true
-; CHECK: br i1 %[[MASK]], label %[[THEN:[a-zA-Z0-9.]+]], label %[[FI:[a-zA-Z0-9.]+]]
+; CHECK: %[[NOT:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>
+; CHECK: %[[AND:.+]] = and <2 x i1> %[[CMP2]], %[[NOT]]
+; CHECK: %[[OR:.+]] = or <2 x i1> %[[AND]], %[[CMP1]]
+; CHECK: %[[EXTRACT:.+]] = extractelement <2 x i1> %[[OR]], i32 0
+; CHECK: br i1 %[[EXTRACT]], label %[[THEN:[a-zA-Z0-9.]+]], label %[[FI:[a-zA-Z0-9.]+]]
 ; CHECK: [[THEN]]:
 ; CHECK:   %[[PD:[a-zA-Z0-9]+]] = sdiv i32 %{{.*}}, %{{.*}}
 ; CHECK:   br label %[[FI]]
@@ -219,9 +210,9 @@ entry:
 ; CHECK:   br i1 {{.*}}, label %[[IF0:.+]], label %[[CONT0:.+]]
 ; CHECK: [[IF0]]:
 ; CHECK:   %[[T00:.+]] = extractelement <2 x i32> %wide.load, i32 0
-; CHECK:   %[[T01:.+]] = extractelement <2 x i32> %wide.load, i32 0
-; CHECK:   %[[T02:.+]] = add nsw i32 %[[T01]], %x
-; CHECK:   %[[T03:.+]] = udiv i32 %[[T00]], %[[T02]]
+; CHECK:   %[[T01:.+]] = add nsw i32 %[[T00]], %x
+; CHECK:   %[[T02:.+]] = extractelement <2 x i32> %wide.load, i32 0
+; CHECK:   %[[T03:.+]] = udiv i32 %[[T02]], %[[T01]]
 ; CHECK:   %[[T04:.+]] = insertelement <2 x i32> undef, i32 %[[T03]], i32 0
 ; CHECK:   br label %[[CONT0]]
 ; CHECK: [[CONT0]]:
@@ -229,15 +220,38 @@ entry:
 ; CHECK:   br i1 {{.*}}, label %[[IF1:.+]], label %[[CONT1:.+]]
 ; CHECK: [[IF1]]:
 ; CHECK:   %[[T06:.+]] = extractelement <2 x i32> %wide.load, i32 1
-; CHECK:   %[[T07:.+]] = extractelement <2 x i32> %wide.load, i32 1
-; CHECK:   %[[T08:.+]] = add nsw i32 %[[T07]], %x
-; CHECK:   %[[T09:.+]] = udiv i32 %[[T06]], %[[T08]]
+; CHECK:   %[[T07:.+]] = add nsw i32 %[[T06]], %x
+; CHECK:   %[[T08:.+]] = extractelement <2 x i32> %wide.load, i32 1
+; CHECK:   %[[T09:.+]] = udiv i32 %[[T08]], %[[T07]]
 ; CHECK:   %[[T10:.+]] = insertelement <2 x i32> %[[T05]], i32 %[[T09]], i32 1
 ; CHECK:   br label %[[CONT1]]
 ; CHECK: [[CONT1]]:
 ; CHECK:   phi <2 x i32> [ %[[T05]], %[[CONT0]] ], [ %[[T10]], %[[IF1]] ]
 ; CHECK:   br i1 {{.*}}, label %middle.block, label %vector.body
 
+; Test predicating an instruction that feeds a vectorizable use, when unrolled
+; but not vectorized. Derived from pr34248 reproducer.
+;
+; UNROLL-NO-VF-LABEL: predicated_udiv_scalarized_operand
+; UNROLL-NO-VF: vector.body:
+; UNROLL-NO-VF:   %[[LOAD0:.+]] = load i32, i32*
+; UNROLL-NO-VF:   %[[LOAD1:.+]] = load i32, i32*
+; UNROLL-NO-VF:   br i1 {{.*}}, label %[[IF0:.+]], label %[[CONT0:.+]]
+; UNROLL-NO-VF: [[IF0]]:
+; UNROLL-NO-VF:   %[[ADD0:.+]] = add nsw i32 %[[LOAD0]], %x
+; UNROLL-NO-VF:   %[[DIV0:.+]] = udiv i32 %[[LOAD0]], %[[ADD0]]
+; UNROLL-NO-VF:   br label %[[CONT0]]
+; UNROLL-NO-VF: [[CONT0]]:
+; UNROLL-NO-VF:   phi i32 [ undef, %vector.body ], [ %[[DIV0]], %[[IF0]] ]
+; UNROLL-NO-VF:   br i1 {{.*}}, label %[[IF1:.+]], label %[[CONT1:.+]]
+; UNROLL-NO-VF: [[IF1]]:
+; UNROLL-NO-VF:   %[[ADD1:.+]] = add nsw i32 %[[LOAD1]], %x
+; UNROLL-NO-VF:   %[[DIV1:.+]] = udiv i32 %[[LOAD1]], %[[ADD1]]
+; UNROLL-NO-VF:   br label %[[CONT1]]
+; UNROLL-NO-VF: [[CONT1]]:
+; UNROLL-NO-VF:   phi i32 [ undef, %[[CONT0]] ], [ %[[DIV1]], %[[IF1]] ]
+; UNROLL-NO-VF:   br i1 {{.*}}, label %middle.block, label %vector.body
+;
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
   %r = phi i32 [ 0, %entry ], [ %tmp6, %for.inc ]

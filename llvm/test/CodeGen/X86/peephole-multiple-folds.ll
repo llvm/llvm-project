@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -mcpu=core-avx2 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-- -mcpu=core-avx2 < %s | FileCheck %s
 ;
 ; Test multiple peephole-time folds in a single basic block.
 ; <rdar://problem/16478629>

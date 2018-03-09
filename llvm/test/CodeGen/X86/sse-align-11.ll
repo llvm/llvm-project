@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah -mtriple=i686-apple-darwin8 | grep movaps
-; RUN: llc < %s -march=x86 -mcpu=yonah -mtriple=i686-linux-gnu | grep movaps
+; RUN: llc < %s -mcpu=yonah -mtriple=i686-apple-darwin8 | grep movaps
+; RUN: llc < %s -mcpu=yonah -mtriple=i686-linux-gnu | grep movaps
 ; PR8969 - make 32-bit linux have a 16-byte aligned stack
 
 define <4 x float> @foo(float %a, float %b, float %c, float %d) nounwind {

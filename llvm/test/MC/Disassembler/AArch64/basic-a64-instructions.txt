@@ -1,6 +1,7 @@
 # RUN: llvm-mc -triple=aarch64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
+# RUN: llvm-mc -triple=arm64 -mattr=+v8.3a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
 
 #------------------------------------------------------------------------------
 # Add/sub (immediate)
@@ -3493,6 +3494,7 @@
 # CHECK: mrs      x9, {{midr_el1|MIDR_EL1}}
 # CHECK: mrs      x9, {{ccsidr_el1|CCSIDR_EL1}}
 # CHECK: mrs      x9, {{csselr_el1|CSSELR_EL1}}
+# CHECK-V83: mrs  x9, {{ccsidr2_el1|CCSIDR2_EL1}}
 # CHECK: mrs      x9, {{vpidr_el2|VPIDR_EL2}}
 # CHECK: mrs      x9, {{clidr_el1|CLIDR_EL1}}
 # CHECK: mrs      x9, {{ctr_el0|CTR_EL0}}
@@ -4048,6 +4050,7 @@
 0x9 0x0 0x38 0xd5
 0x9 0x0 0x39 0xd5
 0x9 0x0 0x3a 0xd5
+0x49 0x0 0x39 0xd5
 0x9 0x0 0x3c 0xd5
 0x29 0x0 0x39 0xd5
 0x29 0x0 0x3b 0xd5

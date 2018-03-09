@@ -14,7 +14,7 @@
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK: .section .text.foo,"ax",@progbits
   ret i32 0
-; CHECK: .section xray_instr_map,"a",@progbits
+; CHECK: .section xray_instr_map,"awo",@progbits,foo,unique,1
 }
 
 ; CHECK-OBJ: Section {
@@ -24,7 +24,7 @@ $bar = comdat any
 define i32 @bar() nounwind noinline uwtable "function-instrument"="xray-always" comdat($bar) {
 ; CHECK: .section .text.bar,"axG",@progbits,bar,comdat
   ret i32 1
-; CHECK: .section xray_instr_map,"aG",@progbits,bar,comdat
+; CHECK: .section xray_instr_map,"aGwo",@progbits,bar,comdat,bar,unique,2
 }
 
 ; CHECK-OBJ: Section {

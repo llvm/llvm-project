@@ -492,6 +492,21 @@ define i16 @test40(i16 %a) {
   ret i16 %tmp.upgrd.3
 }
 
+define <2 x i16> @test40vec(<2 x i16> %a) {
+; CHECK-LABEL: @test40vec(
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 9, i16 9>
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <2 x i16> [[A]], <i16 8, i16 8>
+; CHECK-NEXT:    [[TMP_UPGRD_32:%.*]] = or <2 x i16> [[TMP21]], [[TMP5]]
+; CHECK-NEXT:    ret <2 x i16> [[TMP_UPGRD_32]]
+;
+  %tmp = zext <2 x i16> %a to <2 x i32>
+  %tmp21 = lshr <2 x i32> %tmp, <i32 9, i32 9>
+  %tmp5 = shl <2 x i32> %tmp, <i32 8, i32 8>
+  %tmp.upgrd.32 = or <2 x i32> %tmp21, %tmp5
+  %tmp.upgrd.3 = trunc <2 x i32> %tmp.upgrd.32 to <2 x i16>
+  ret <2 x i16> %tmp.upgrd.3
+}
+
 ; PR1263
 define i32* @test41(i32* %tmp1) {
 ; CHECK-LABEL: @test41(
@@ -585,11 +600,24 @@ define i64 @test46(i64 %A) {
   ret i64 %E
 }
 
+define <2 x i64> @test46vec(<2 x i64> %A) {
+; CHECK-LABEL: @test46vec(
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i64> [[A:%.*]], <i64 8, i64 8>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i64> [[C]], <i64 10752, i64 10752>
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %B = trunc <2 x i64> %A to <2 x i32>
+  %C = and <2 x i32> %B, <i32 42, i32 42>
+  %D = shl <2 x i32> %C, <i32 8, i32 8>
+  %E = zext <2 x i32> %D to <2 x i64>
+  ret <2 x i64> %E
+}
+
 define i64 @test47(i8 %A) {
 ; CHECK-LABEL: @test47(
-; CHECK-NEXT:    [[B:%.*]] = sext i8 %A to i64
-; CHECK-NEXT:    [[C:%.*]] = and i64 [[B]], 4294967253
-; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 42
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i64
+; CHECK-NEXT:    [[E:%.*]] = and i64 [[C]], 4294967295
 ; CHECK-NEXT:    ret i64 [[E]]
 ;
   %B = sext i8 %A to i32
@@ -729,6 +757,19 @@ define i64 @test56(i16 %A) nounwind {
   ret i64 %tmp355
 }
 
+define <2 x i64> @test56vec(<2 x i16> %A) nounwind {
+; CHECK-LABEL: @test56vec(
+; CHECK-NEXT:    [[TMP353:%.*]] = sext <2 x i16> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP354:%.*]] = lshr <2 x i64> [[TMP353]], <i64 5, i64 5>
+; CHECK-NEXT:    [[TMP355:%.*]] = and <2 x i64> [[TMP354]], <i64 134217727, i64 134217727>
+; CHECK-NEXT:    ret <2 x i64> [[TMP355]]
+;
+  %tmp353 = sext <2 x i16> %A to <2 x i32>
+  %tmp354 = lshr <2 x i32> %tmp353, <i32 5, i32 5>
+  %tmp355 = zext <2 x i32> %tmp354 to <2 x i64>
+  ret <2 x i64> %tmp355
+}
+
 define i64 @test57(i64 %A) nounwind {
 ; CHECK-LABEL: @test57(
 ; CHECK-NEXT:    [[C:%.*]] = lshr i64 %A, 8
@@ -739,6 +780,18 @@ define i64 @test57(i64 %A) nounwind {
   %C = lshr i32 %B, 8
   %E = zext i32 %C to i64
   ret i64 %E
+}
+
+define <2 x i64> @test57vec(<2 x i64> %A) nounwind {
+; CHECK-LABEL: @test57vec(
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 8>
+; CHECK-NEXT:    [[E:%.*]] = and <2 x i64> [[C]], <i64 16777215, i64 16777215>
+; CHECK-NEXT:    ret <2 x i64> [[E]]
+;
+  %B = trunc <2 x i64> %A to <2 x i32>
+  %C = lshr <2 x i32> %B, <i32 8, i32 8>
+  %E = zext <2 x i32> %C to <2 x i64>
+  ret <2 x i64> %E
 }
 
 define i64 @test58(i64 %A) nounwind {
@@ -761,9 +814,9 @@ define i64 @test59(i8 %A, i8 %B) nounwind {
 ; CHECK-NEXT:    [[C:%.*]] = zext i8 %A to i64
 ; CHECK-NEXT:    [[D:%.*]] = shl nuw nsw i64 [[C]], 4
 ; CHECK-NEXT:    [[E:%.*]] = and i64 [[D]], 48
-; CHECK-NEXT:    [[F:%.*]] = zext i8 %B to i64
-; CHECK-NEXT:    [[G:%.*]] = lshr i64 [[F]], 4
-; CHECK-NEXT:    [[H:%.*]] = or i64 [[G]], [[E]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 %B, 4
+; CHECK-NEXT:    [[G:%.*]] = zext i8 [[TMP1]] to i64
+; CHECK-NEXT:    [[H:%.*]] = or i64 [[E]], [[G]]
 ; CHECK-NEXT:    ret i64 [[H]]
 ;
   %C = zext i8 %A to i32
@@ -1126,12 +1179,12 @@ define %s @test78(%s *%p, i64 %i, i64 %j, i32 %k, i32 %l, i128 %m, i128 %n) {
 
 define %s @test79(%s *%p, i64 %i, i32 %j) {
 ; CHECK-LABEL: @test79(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i64 %i, 36
-; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 %i to i32
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[TMP1]], 36
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[B]], %j
 ; CHECK-NEXT:    [[Q:%.*]] = bitcast %s* %p to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[C]] to i64
-; CHECK-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, i8* [[Q]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[C]] to i64
+; CHECK-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, i8* [[Q]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[R:%.*]] = bitcast i8* [[PP]] to %s*
 ; CHECK-NEXT:    [[L:%.*]] = load %s, %s* [[R]], align 4
 ; CHECK-NEXT:    ret %s [[L]]
@@ -1239,8 +1292,8 @@ define i64 @test82(i64 %A) nounwind {
 define i64 @test83(i16 %a, i64 %k) {
 ; CHECK-LABEL: @test83(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 %a to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 %k, 4294967295
-; CHECK-NEXT:    [[SH_PROM:%.*]] = trunc i64 [[SUB]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 %k to i32
+; CHECK-NEXT:    [[SH_PROM:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[SH_PROM]]
 ; CHECK-NEXT:    [[SH_PROM1:%.*]] = zext i32 [[SHL]] to i64
 ; CHECK-NEXT:    ret i64 [[SH_PROM1]]
@@ -1302,13 +1355,10 @@ define i16 @test87(i16 %v) {
   ret i16 %t
 }
 
-; Do not optimize to ashr i16 (shift by 18)
 define i16 @test88(i16 %v) {
 ; CHECK-LABEL: @test88(
-; CHECK-NEXT:    [[A:%.*]] = sext i16 %v to i32
-; CHECK-NEXT:    [[S:%.*]] = ashr i32 [[A]], 18
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[S]] to i16
-; CHECK-NEXT:    ret i16 [[T]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i16 %v, 15
+; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
   %a = sext i16 %v to i32
   %s = ashr i32 %a, 18
@@ -1521,4 +1571,34 @@ define i8 @pr33078_4(i3 %x) {
   %C = lshr i16 %B, 13
   %D = trunc i16 %C to i8
   ret i8 %D
+}
+
+; (sext (xor (cmp), -1)) -> (sext (!cmp))
+define i64 @test94(i32 %a) {
+; CHECK-LABEL: @test94(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = icmp eq i32 %a, -2
+  %2 = sext i1 %1 to i8
+  %3 = xor i8 %2, -1
+  %4 = sext i8 %3 to i64
+  ret i64 %4
+}
+
+; We should be able to remove the zext and trunc here.
+define i32 @test95(i32 %x) {
+; CHECK-LABEL: @test95(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], 40
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = trunc i32 %x to i8
+  %2 = lshr i8 %1, 6
+  %3 = and i8 %2, 2
+  %4 = or i8 %3, 40
+  %5 = zext i8 %4 to i32
+  ret i32 %5
 }

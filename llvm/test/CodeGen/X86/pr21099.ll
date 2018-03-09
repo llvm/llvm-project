@@ -1,4 +1,4 @@
-; RUN: llc < %s -O2 -march=x86-64 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=x86_64-- -verify-machineinstrs | FileCheck %s
 
 define void @pr21099(i64* %p) {
 ; CHECK-LABEL: pr21099

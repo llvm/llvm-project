@@ -1,4 +1,4 @@
-//===-- ARMISelLowering.h - ARM DAG Lowering Interface ----------*- C++ -*-===//
+//===- ARMISelLowering.h - ARM DAG Lowering Interface -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,22 +19,36 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Target/TargetLowering.h"
 #include <utility>
 
 namespace llvm {
 
 class ARMSubtarget;
+class DataLayout;
+class FastISel;
+class FunctionLoweringInfo;
+class GlobalValue;
 class InstrItineraryData;
+class Instruction;
+class MachineBasicBlock;
+class MachineInstr;
+class SelectionDAG;
+class TargetLibraryInfo;
+class TargetMachine;
+class TargetRegisterInfo;
+class VectorType;
 
   namespace ARMISD {
 
@@ -73,6 +87,7 @@ class InstrItineraryData;
       CMOV,         // ARM conditional move instructions.
 
       SSAT,         // Signed saturation
+      USAT,         // Unsigned saturation
 
       BCC_i64,
 
@@ -264,7 +279,6 @@ class InstrItineraryData;
 
     /// ReplaceNodeResults - Replace the results of node with an illegal result
     /// type with new values built out of custom code.
-    ///
     void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue>&Results,
                             SelectionDAG &DAG) const override;
 
@@ -274,6 +288,8 @@ class InstrItineraryData;
       // ARM does not support scalar condition selects on vectors.
       return (Kind != ScalarCondVectorVal);
     }
+
+    bool isReadOnly(const GlobalValue *GV) const;
 
     /// getSetCCResultType - Return the value type to use for ISD::SETCC.
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -306,7 +322,8 @@ class InstrItineraryData;
                             bool MemcpyStrSrc,
                             MachineFunction &MF) const override;
 
-    using TargetLowering::isZExtFree;
+    bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
+    bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
     bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
@@ -317,7 +334,8 @@ class InstrItineraryData;
     /// isLegalAddressingMode - Return true if the addressing mode represented
     /// by AM is legal for this target, for a load/store of the specified type.
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                               Type *Ty, unsigned AS) const override;
+                               Type *Ty, unsigned AS,
+                               Instruction *I = nullptr) const override;
 
     /// getScalingFactorCost - Return the cost of the scaling used in
     /// addressing mode represented by AM.
@@ -327,6 +345,10 @@ class InstrItineraryData;
                              unsigned AS) const override;
 
     bool isLegalT2ScaledAddressingMode(const AddrMode &AM, EVT VT) const;
+
+    /// \brief Returns true if the addresing mode representing by AM is legal
+    /// for the Thumb1 target, for a load/store of the specified type.
+    bool isLegalT1ScaledAddressingMode(const AddrMode &AM, EVT VT) const;
 
     /// isLegalICmpImmediate - Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can
@@ -439,7 +461,7 @@ class InstrItineraryData;
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
     bool
-    isShuffleMaskLegal(const SmallVectorImpl<int> &M, EVT VT) const override;
+    isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
@@ -449,6 +471,7 @@ class InstrItineraryData;
 
     bool getTgtMemIntrinsic(IntrinsicInfo &Info,
                             const CallInst &I,
+                            MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// \brief Returns true if it is beneficial to convert a load of a constant
@@ -458,7 +481,8 @@ class InstrItineraryData;
 
     /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
     /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, unsigned Index) const override;
+    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                                 unsigned Index) const override;
 
     /// \brief Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
@@ -562,7 +586,6 @@ class InstrItineraryData;
     const InstrItineraryData *Itins;
 
     /// ARMPCLabelIndex - Keep track of the number of ARM PC labels created.
-    ///
     unsigned ARMPCLabelIndex;
 
     // TODO: remove this, and have shouldInsertFencesForAtomic do the proper
@@ -576,7 +599,7 @@ class InstrItineraryData;
     void addQRTypeForNEON(MVT VT);
     std::pair<SDValue, SDValue> getARMXALUOOp(SDValue Op, SelectionDAG &DAG, SDValue &ARMcc) const;
 
-    typedef SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPassVector;
+    using RegsToPassVector = SmallVector<std::pair<unsigned, SDValue>, 8>;
 
     void PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG, SDValue Chain,
                           SDValue &Arg, RegsToPassVector &RegsToPass,
@@ -617,9 +640,11 @@ class InstrItineraryData;
     SDValue LowerGlobalTLSAddressWindows(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUnsignedALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
@@ -669,8 +694,8 @@ class InstrItineraryData;
                             SDValue ThisVal) const;
 
     bool supportSplitCSR(MachineFunction *MF) const override {
-      return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
-          MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);
+      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+          MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
     }
 
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;

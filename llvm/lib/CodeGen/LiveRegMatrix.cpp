@@ -15,17 +15,17 @@
 #include "RegisterCoalescer.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 
 using namespace llvm;
@@ -102,14 +102,14 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
 }
 
 void LiveRegMatrix::assign(LiveInterval &VirtReg, unsigned PhysReg) {
-  DEBUG(dbgs() << "assigning " << PrintReg(VirtReg.reg, TRI)
-               << " to " << PrintReg(PhysReg, TRI) << ':');
+  DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg, TRI)
+               << " to " << printReg(PhysReg, TRI) << ':');
   assert(!VRM->hasPhys(VirtReg.reg) && "Duplicate VirtReg assignment");
   VRM->assignVirt2Phys(VirtReg.reg, PhysReg);
 
   foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
                                          const LiveRange &Range) {
-    DEBUG(dbgs() << ' ' << PrintRegUnit(Unit, TRI) << ' ' << Range);
+    DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
     Matrix[Unit].unify(VirtReg, Range);
     return false;
   });
@@ -120,13 +120,13 @@ void LiveRegMatrix::assign(LiveInterval &VirtReg, unsigned PhysReg) {
 
 void LiveRegMatrix::unassign(LiveInterval &VirtReg) {
   unsigned PhysReg = VRM->getPhys(VirtReg.reg);
-  DEBUG(dbgs() << "unassigning " << PrintReg(VirtReg.reg, TRI)
-               << " from " << PrintReg(PhysReg, TRI) << ':');
+  DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg, TRI)
+               << " from " << printReg(PhysReg, TRI) << ':');
   VRM->clearVirt(VirtReg.reg);
 
   foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
                                          const LiveRange &Range) {
-    DEBUG(dbgs() << ' ' << PrintRegUnit(Unit, TRI));
+    DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
     Matrix[Unit].extract(VirtReg, Range);
     return false;
   });

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mtriple=i686-apple-darwin | FileCheck %s
+; RUN: llc < %s -mtriple=i686-apple-darwin | FileCheck %s
 
 declare void @bar(<2 x i64>* %n)
 

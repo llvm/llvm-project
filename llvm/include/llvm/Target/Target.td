@@ -21,6 +21,56 @@ include "llvm/IR/Intrinsics.td"
 
 class RegisterClass; // Forward def
 
+class HwMode<string FS> {
+  // A string representing subtarget features that turn on this HW mode.
+  // For example, "+feat1,-feat2" will indicate that the mode is active
+  // when "feat1" is enabled and "feat2" is disabled at the same time.
+  // Any other features are not checked.
+  // When multiple modes are used, they should be mutually exclusive,
+  // otherwise the results are unpredictable.
+  string Features = FS;
+}
+
+// A special mode recognized by tablegen. This mode is considered active
+// when no other mode is active. For targets that do not use specific hw
+// modes, this is the only mode.
+def DefaultMode : HwMode<"">;
+
+// A class used to associate objects with HW modes. It is only intended to
+// be used as a base class, where the derived class should contain a member
+// "Objects", which is a list of the same length as the list of modes.
+// The n-th element on the Objects list will be associated with the n-th
+// element on the Modes list.
+class HwModeSelect<list<HwMode> Ms> {
+  list<HwMode> Modes = Ms;
+}
+
+// A common class that implements a counterpart of ValueType, which is
+// dependent on a HW mode. This class inherits from ValueType itself,
+// which makes it possible to use objects of this class where ValueType
+// objects could be used. This is specifically applicable to selection
+// patterns.
+class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
+    : HwModeSelect<Ms>, ValueType<0, 0> {
+  // The length of this list must be the same as the length of Ms.
+  list<ValueType> Objects = Ts;
+}
+
+// A class representing the register size, spill size and spill alignment
+// in bits of a register.
+class RegInfo<int RS, int SS, int SA> {
+  int RegSize = RS;         // Register size in bits.
+  int SpillSize = SS;       // Spill slot size in bits.
+  int SpillAlignment = SA;  // Spill slot alignment in bits.
+}
+
+// The register size/alignment information, parameterized by a HW mode.
+class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
+    : HwModeSelect<Ms> {
+  // The length of this list must be the same as the length of Ms.
+  list<RegInfo> Objects = Ts;
+}
+
 // SubRegIndex - Use instances of SubRegIndex to identify subregisters.
 class SubRegIndex<int size, int offset = 0> {
   string Namespace = "";
@@ -156,6 +206,9 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   : DAGOperand {
   string Namespace = namespace;
 
+  // The register size/alignment information, parameterized by a HW mode.
+  RegInfoByHwMode RegInfos;
+
   // RegType - Specify the list ValueType of the registers in this register
   // class.  Note that all registers in a register class must have the same
   // ValueTypes.  This is a list because some targets permit storing different
@@ -216,6 +269,21 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // useful as it is sometimes beneficial to assign registers to highly
   // constrained classes first. The value has to be in the range [0,63].
   int AllocationPriority = 0;
+
+  // The diagnostic type to present when referencing this operand in a match
+  // failure error message. If this is empty, the default Match_InvalidOperand
+  // diagnostic type will be used. If this is "<name>", a Match_<name> enum
+  // value will be generated and used for this operand type. The target
+  // assembly parser is responsible for converting this into a user-facing
+  // diagnostic message.
+  string DiagnosticType = "";
+
+  // A diagnostic message to emit when an invalid value is provided for this
+  // register class when it is being used an an assembly operand. If this is
+  // non-empty, an anonymous diagnostic type enum value will be generated, and
+  // the assembly matcher will provide a function to map from diagnostic types
+  // to message strings.
+  string DiagnosticString = "";
 }
 
 // The memberList in a RegisterClass is a dag of set operations. TableGen
@@ -624,6 +692,10 @@ class AsmOperandClass {
   // diagnostic. The target AsmParser maps these codes to text.
   string DiagnosticType = "";
 
+  /// A diagnostic message to emit when an invalid value is provided for this
+  /// operand.
+  string DiagnosticString = "";
+
   /// Set to 1 if this operand is optional and not always required. Typically,
   /// the AsmParser will emit an error when it finishes parsing an
   /// instruction if it hasn't matched all the operands yet.  However, this
@@ -837,6 +909,7 @@ def PHI : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let AsmString = "PHINODE";
+  let hasSideEffects = 0;
 }
 def INLINEASM : StandardPseudoInstruction {
   let OutOperandList = (outs);
@@ -849,6 +922,7 @@ def CFI_INSTRUCTION : StandardPseudoInstruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
+  let hasSideEffects = 0;
   let isNotDuplicable = 1;
 }
 def EH_LABEL : StandardPseudoInstruction {
@@ -856,6 +930,7 @@ def EH_LABEL : StandardPseudoInstruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
+  let hasSideEffects = 0;
   let isNotDuplicable = 1;
 }
 def GC_LABEL : StandardPseudoInstruction {
@@ -863,6 +938,15 @@ def GC_LABEL : StandardPseudoInstruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
+  let hasSideEffects = 0;
+  let isNotDuplicable = 1;
+}
+def ANNOTATION_LABEL : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i32imm:$id);
+  let AsmString = "";
+  let hasCtrlDep = 1;
+  let hasSideEffects = 0;
   let isNotDuplicable = 1;
 }
 def KILL : StandardPseudoInstruction {
@@ -930,6 +1014,7 @@ def BUNDLE : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "BUNDLE";
+  let hasSideEffects = 1;
 }
 def LIFETIME_START : StandardPseudoInstruction {
   let OutOperandList = (outs);
@@ -946,6 +1031,7 @@ def LIFETIME_END : StandardPseudoInstruction {
 def STACKMAP : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins i64imm:$id, i32imm:$nbytes, variable_ops);
+  let hasSideEffects = 1;
   let isCall = 1;
   let mayLoad = 1;
   let usesCustomInserter = 1;
@@ -954,6 +1040,7 @@ def PATCHPOINT : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins i64imm:$id, i32imm:$nbytes, unknown:$callee,
                        i32imm:$nargs, i32imm:$cc, variable_ops);
+  let hasSideEffects = 1;
   let isCall = 1;
   let mayLoad = 1;
   let usesCustomInserter = 1;
@@ -988,6 +1075,7 @@ def FAULTING_OP : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let usesCustomInserter = 1;
+  let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
   let isTerminator = 1;
@@ -1014,6 +1102,7 @@ def PATCHABLE_RET : StandardPseudoInstruction {
   let AsmString = "# XRay Function Patchable RET.";
   let usesCustomInserter = 1;
   let hasSideEffects = 1;
+  let isTerminator = 1;
   let isReturn = 1;
 }
 def PATCHABLE_FUNCTION_EXIT : StandardPseudoInstruction {
@@ -1085,9 +1174,25 @@ class AsmParser {
   // several registers share the same alias (i.e. not a 1:1 mapping).
   bit ShouldEmitMatchRegisterAltName = 0;
 
+  // Set to true if MatchRegisterName and MatchRegisterAltName functions
+  // should be generated even if there are duplicate register names. The
+  // target is responsible for coercing aliased registers as necessary
+  // (e.g. in validateTargetOperandClass), and there are no guarantees about
+  // which numeric register identifier will be returned in the case of
+  // multiple matches.
+  bit AllowDuplicateRegisterNames = 0;
+
   // HasMnemonicFirst - Set to false if target instructions don't always
   // start with a mnemonic as the first token.
   bit HasMnemonicFirst = 1;
+
+  // ReportMultipleNearMisses -
+  // When 0, the assembly matcher reports an error for one encoding or operand
+  // that did not match the parsed instruction.
+  // When 1, the assmebly matcher returns a list of encodings that were close
+  // to matching the parsed instruction, so to allow more detailed error
+  // messages.
+  bit ReportMultipleNearMisses = 0;
 }
 def DefaultAsmParser : AsmParser;
 

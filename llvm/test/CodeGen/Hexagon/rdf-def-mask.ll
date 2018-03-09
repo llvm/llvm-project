@@ -48,5 +48,5 @@ declare i32 @llvm.hexagon.S2.clb(i32) #1
 declare i32 @llvm.hexagon.S2.asl.r.r(i32, i32) #1
 declare i32 @llvm.hexagon.M2.mpyu.nac.ll.s0(i32, i32, i32) #1
 
-attributes #0 = { nounwind readnone "target-cpu"="hexagonv55" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind readnone "target-cpu"="hexagonv55" "target-features"="-hvx,-long-calls" }
 attributes #1 = { nounwind readnone }

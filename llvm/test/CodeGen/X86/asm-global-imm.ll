@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -relocation-model=static -no-integrated-as | FileCheck %s
+; RUN: llc < %s -relocation-model=static -no-integrated-as | FileCheck %s
 ; PR882
 
 target datalayout = "e-p:32:32"

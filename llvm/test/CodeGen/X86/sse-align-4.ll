@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep movup | count 2
+; RUN: llc < %s -mtriple=x86_64-- | grep movup | count 2
 
 define void @foo(<4 x float>* %p, <4 x float> %x) nounwind {
   store <4 x float> %x, <4 x float>* %p, align 4

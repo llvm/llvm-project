@@ -13,18 +13,19 @@
 
 #include "InstrEmitter.h"
 #include "ScheduleDAGSDNodes.h"
+#include "SDNodeDbgValue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "pre-RA-sched"
@@ -767,12 +768,24 @@ ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       dbgs() << "\n*** Final schedule ***\n";
     });
 
-  // FIXME: Handle dbg_values.
   unsigned NumNodes = Sequence.size();
+  MachineBasicBlock *BB = Emitter.getBlock();
   for (unsigned i = 0; i != NumNodes; ++i) {
     SDNode *N = Sequence[NumNodes-i-1];
     DEBUG(N->dump(DAG));
     Emitter.EmitNode(N, false, false, VRBaseMap);
+
+    // Emit any debug values associated with the node.
+    if (N->getHasDebugValue()) {
+      MachineBasicBlock::iterator InsertPos = Emitter.getInsertPos();
+      for (auto DV : DAG->GetDbgValues(N)) {
+        if (DV->isInvalidated())
+          continue;
+        if (auto *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap))
+          BB->insert(InsertPos, DbgMI);
+        DV->setIsInvalidated();
+      }
+    }
   }
 
   DEBUG(dbgs() << '\n');

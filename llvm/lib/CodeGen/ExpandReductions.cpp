@@ -95,7 +95,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       // and it can't be handled by generating this shuffle sequence.
       // TODO: Implement scalarization of ordered reductions here for targets
       // without native support.
-      if (!II->getFastMathFlags().unsafeAlgebra())
+      if (!II->getFastMathFlags().isFast())
         continue;
       Vec = II->getArgOperand(1);
       break;

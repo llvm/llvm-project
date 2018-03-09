@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_SPARC_SPARCINSTRINFO_H
 
 #include "SparcRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "SparcGenInstrInfo.inc"

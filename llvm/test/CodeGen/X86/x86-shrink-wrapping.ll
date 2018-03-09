@@ -989,16 +989,16 @@ attributes #4 = { "no-frame-pointer-elim"="true" }
 ; looking for the nearest common post-dominator of an "unreachable" block.
 
 ; CHECK-LABEL: infiniteLoopNoSuccessor:
-; CHECK: ## BB#0:
+; CHECK: ## %bb.0:
 ; Make sure the prologue happens in the entry block.
 ; CHECK-NEXT: pushq %rbp
 ; ...
 ; Make sure we don't shrink-wrap.
-; CHECK: ## BB#1
+; CHECK: ## %bb.1
 ; CHECK-NOT: pushq %rbp
 ; ...
 ; Make sure the epilogue happens in the exit block.
-; CHECK: ## BB#5
+; CHECK: ## %bb.5
 ; CHECK: popq %rbp
 ; CHECK-NEXT: retq
 define void @infiniteLoopNoSuccessor() #5 {

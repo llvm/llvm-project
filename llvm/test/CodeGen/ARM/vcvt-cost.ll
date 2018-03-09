@@ -1,7 +1,7 @@
 ; We currently estimate the cost of sext/zext/trunc v8(v16)i32 <-> v8(v16)i8
 ; instructions as expensive. If lowering is improved the cost model needs to
 ; change.
-; RUN: opt < %s  -cost-model -analyze -mtriple=thumbv7-apple-ios6.0.0 -march=arm -mcpu=cortex-a8 | FileCheck %s --check-prefix=COST
+; RUN: opt < %s  -cost-model -analyze -mtriple=arm-apple-ios6.0.0 -mcpu=cortex-a8 | FileCheck %s --check-prefix=COST
 %T0_5 = type <8 x i8>
 %T1_5 = type <8 x i32>
 ; CHECK-LABEL: func_cvt5:

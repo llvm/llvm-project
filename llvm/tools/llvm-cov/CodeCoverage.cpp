@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CoverageExporterJson.h"
 #include "CoverageFilters.h"
 #include "CoverageReport.h"
 #include "CoverageSummaryInfo.h"
@@ -32,8 +33,8 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #include <functional>
@@ -113,14 +114,14 @@ private:
 
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
 
-  int show(int argc, const char **argv,
-           CommandLineParserType commandLineParser);
-
-  int report(int argc, const char **argv,
+  int doShow(int argc, const char **argv,
              CommandLineParserType commandLineParser);
 
-  int export_(int argc, const char **argv,
-              CommandLineParserType commandLineParser);
+  int doReport(int argc, const char **argv,
+               CommandLineParserType commandLineParser);
+
+  int doExport(int argc, const char **argv,
+               CommandLineParserType commandLineParser);
 
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
@@ -353,13 +354,14 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   auto Coverage = std::move(CoverageOrErr.get());
   unsigned Mismatched = Coverage->getMismatchedCount();
   if (Mismatched) {
-    warning(utostr(Mismatched) + " functions have mismatched data");
+    warning(Twine(Mismatched) + " functions have mismatched data");
 
     if (ViewOpts.Debug) {
       for (const auto &HashMismatch : Coverage->getHashMismatches())
         errs() << "hash-mismatch: "
                << "No profile record found for '" << HashMismatch.first << "'"
-               << " with hash = 0x" << utohexstr(HashMismatch.second) << "\n";
+               << " with hash = 0x" << Twine::utohexstr(HashMismatch.second)
+               << '\n';
 
       for (const auto &CounterMismatch : Coverage->getCounterMismatches())
         errs() << "counter-mismatch: "
@@ -448,7 +450,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
     error(InputPath, EC.message());
     return;
   }
-  tool_output_file InputTOF{InputPath, InputFD};
+  ToolOutputFile InputTOF{InputPath, InputFD};
 
   unsigned NumSymbols = 0;
   for (const auto &Function : Coverage.getCoveredFunctions()) {
@@ -466,7 +468,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
     error(OutputPath, EC.message());
     return;
   }
-  tool_output_file OutputTOF{OutputPath, OutputFD};
+  ToolOutputFile OutputTOF{OutputPath, OutputFD};
   OutputTOF.os().close();
 
   // Invoke the demangler.
@@ -474,10 +476,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   for (const std::string &Arg : ViewOpts.DemanglerOpts)
     ArgsV.push_back(Arg.c_str());
   ArgsV.push_back(nullptr);
-  StringRef InputPathRef = InputPath.str();
-  StringRef OutputPathRef = OutputPath.str();
-  StringRef StderrRef;
-  const StringRef *Redirects[] = {&InputPathRef, &OutputPathRef, &StderrRef};
+  Optional<StringRef> Redirects[] = {InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
   int RC = sys::ExecuteAndWait(ViewOpts.DemanglerOpts[0], ArgsV.data(),
                                /*env=*/nullptr, Redirects, /*secondsToWait=*/0,
@@ -638,6 +637,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "summary-only", cl::Optional,
       cl::desc("Export only summary information for each source file"));
 
+  cl::opt<unsigned> NumThreads(
+      "num-threads", cl::init(0),
+      cl::desc("Number of merge threads to use (default: autodetect)"));
+  cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
+                        cl::aliasopt(NumThreads));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -751,23 +756,24 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ShowRegionSummary = RegionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
+    ViewOpts.NumThreads = NumThreads;
 
     return 0;
   };
 
   switch (Cmd) {
   case Show:
-    return show(argc, argv, commandLineParser);
+    return doShow(argc, argv, commandLineParser);
   case Report:
-    return report(argc, argv, commandLineParser);
+    return doReport(argc, argv, commandLineParser);
   case Export:
-    return export_(argc, argv, commandLineParser);
+    return doExport(argc, argv, commandLineParser);
   }
   return 0;
 }
 
-int CodeCoverageTool::show(int argc, const char **argv,
-                           CommandLineParserType commandLineParser) {
+int CodeCoverageTool::doShow(int argc, const char **argv,
+                             CommandLineParserType commandLineParser) {
 
   cl::OptionCategory ViewCategory("Viewing options");
 
@@ -809,12 +815,6 @@ int CodeCoverageTool::show(int argc, const char **argv,
   cl::opt<std::string> ProjectTitle(
       "project-title", cl::Optional,
       cl::desc("Set project title for the coverage report"));
-
-  cl::opt<unsigned> NumThreads(
-      "num-threads", cl::init(0),
-      cl::desc("Number of merge threads to use (default: autodetect)"));
-  cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
-                        cl::aliasopt(NumThreads));
 
   auto Err = commandLineParser(argc, argv);
   if (Err)
@@ -912,6 +912,8 @@ int CodeCoverageTool::show(int argc, const char **argv,
       (SourceFiles.size() != 1) || ViewOpts.hasOutputDirectory() ||
       (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML);
 
+  auto NumThreads = ViewOpts.NumThreads;
+
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)
     NumThreads =
@@ -934,8 +936,8 @@ int CodeCoverageTool::show(int argc, const char **argv,
   return 0;
 }
 
-int CodeCoverageTool::report(int argc, const char **argv,
-                             CommandLineParserType commandLineParser) {
+int CodeCoverageTool::doReport(int argc, const char **argv,
+                               CommandLineParserType commandLineParser) {
   cl::opt<bool> ShowFunctionSummaries(
       "show-functions", cl::Optional, cl::init(false),
       cl::desc("Show coverage summaries for each function"));
@@ -971,8 +973,8 @@ int CodeCoverageTool::report(int argc, const char **argv,
   return 0;
 }
 
-int CodeCoverageTool::export_(int argc, const char **argv,
-                              CommandLineParserType commandLineParser) {
+int CodeCoverageTool::doExport(int argc, const char **argv,
+                               CommandLineParserType commandLineParser) {
 
   auto Err = commandLineParser(argc, argv);
   if (Err)
@@ -989,7 +991,12 @@ int CodeCoverageTool::export_(int argc, const char **argv,
     return 1;
   }
 
-  exportCoverageDataToJson(*Coverage.get(), ViewOpts, outs());
+  auto Exporter = CoverageExporterJson(*Coverage.get(), ViewOpts, outs());
+
+  if (SourceFiles.empty())
+    Exporter.renderRoot();
+  else
+    Exporter.renderRoot(SourceFiles);
 
   return 0;
 }

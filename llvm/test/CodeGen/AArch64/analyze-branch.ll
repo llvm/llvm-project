@@ -18,7 +18,7 @@ define void @test_Bcc_fallthrough_taken(i32 %in) nounwind {
 ; CHECK: cmp {{w[0-9]+}}, #42
 
 ; CHECK: b.ne [[FALSE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_true
 
 ; CHECK: [[FALSE]]:
@@ -41,7 +41,7 @@ define void @test_Bcc_fallthrough_nottaken(i32 %in) nounwind {
 ; CHECK: cmp {{w[0-9]+}}, #42
 
 ; CHECK: b.eq [[TRUE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_false
 
 ; CHECK: [[TRUE]]:
@@ -62,7 +62,7 @@ define void @test_CBZ_fallthrough_taken(i32 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !0
 
 ; CHECK: cbnz {{w[0-9]+}}, [[FALSE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_true
 
 ; CHECK: [[FALSE]]:
@@ -83,7 +83,7 @@ define void @test_CBZ_fallthrough_nottaken(i64 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !1
 
 ; CHECK: cbz {{x[0-9]+}}, [[TRUE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_false
 
 ; CHECK: [[TRUE]]:
@@ -104,7 +104,7 @@ define void @test_CBNZ_fallthrough_taken(i32 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !0
 
 ; CHECK: cbz {{w[0-9]+}}, [[FALSE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_true
 
 ; CHECK: [[FALSE]]:
@@ -125,7 +125,7 @@ define void @test_CBNZ_fallthrough_nottaken(i64 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !1
 
 ; CHECK: cbnz {{x[0-9]+}}, [[TRUE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_false
 
 ; CHECK: [[TRUE]]:
@@ -147,7 +147,7 @@ define void @test_TBZ_fallthrough_taken(i32 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !0
 
 ; CHECK: tbnz {{w[0-9]+}}, #15, [[FALSE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_true
 
 ; CHECK: [[FALSE]]:
@@ -169,7 +169,7 @@ define void @test_TBZ_fallthrough_nottaken(i64 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !1
 
 ; CHECK: tbz {{[wx][0-9]+}}, #15, [[TRUE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_false
 
 ; CHECK: [[TRUE]]:
@@ -192,7 +192,7 @@ define void @test_TBNZ_fallthrough_taken(i32 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !0
 
 ; CHECK: tbz {{w[0-9]+}}, #15, [[FALSE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_true
 
 ; CHECK: [[FALSE]]:
@@ -214,7 +214,7 @@ define void @test_TBNZ_fallthrough_nottaken(i64 %in) nounwind {
   br i1 %tst, label %true, label %false, !prof !1
 
 ; CHECK: tbnz {{[wx][0-9]+}}, #15, [[TRUE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: // BB#
+; CHECK-NEXT: // %bb.
 ; CHECK-NEXT: bl test_false
 
 ; CHECK: [[TRUE]]:

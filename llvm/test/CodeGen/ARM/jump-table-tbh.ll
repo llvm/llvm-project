@@ -10,7 +10,7 @@ define i32 @test_tbh(i1 %tst, i32 %sw, i32 %l) {
 ; T2-LABEL: test_tbh:
 ; T2: [[ANCHOR:.LCPI[0-9_]+]]:
 ; T2: tbh [pc, r{{[0-9]+}}, lsl #1]
-; T2-NEXT: @ BB#{{[0-9]+}}
+; T2-NEXT: @ %bb.{{[0-9]+}}
 ; T2-NEXT: LJTI
 ; T2-NEXT: .short	(.LBB0_[[x:[0-9]+]]-([[ANCHOR]]+4))/2
 ; T2-NEXT: .short	(.LBB0_{{[0-9]+}}-([[ANCHOR]]+4))/2
@@ -24,7 +24,7 @@ define i32 @test_tbh(i1 %tst, i32 %sw, i32 %l) {
 ; T1: lsls [[x]], [[x]], #1
 ; T1: [[ANCHOR:.LCPI[0-9_]+]]:
 ; T1: add pc, [[x]]
-; T1-NEXT: @ BB#2
+; T1-NEXT: @ %bb.2
 ; T1-NEXT: .p2align 2
 ; T1-NEXT: LJTI
 ; T1-NEXT: .short	(.LBB0_[[x:[0-9]+]]-([[ANCHOR]]+4))/2

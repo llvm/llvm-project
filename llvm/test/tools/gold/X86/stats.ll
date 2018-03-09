@@ -1,12 +1,12 @@
 ; REQUIRES: asserts
 
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so  -shared \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext  -shared \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=-stats %t.o -o %t2 2>&1 | FileCheck %s
 
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so  -shared \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext  -shared \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=thinlto \
 ; RUN:    -plugin-opt=thinlto-index-only \

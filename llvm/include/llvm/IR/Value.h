@@ -299,6 +299,12 @@ public:
   /// values or constant users.
   void replaceUsesOutsideBlock(Value *V, BasicBlock *BB);
 
+  /// replaceUsesExceptBlockAddr - Go through the uses list for this definition
+  /// and make each use point to "V" instead of "this" when the use is outside
+  /// the block. 'This's use list is expected to have at least one element.
+  /// Unlike replaceAllUsesWith this function skips blockaddr uses.
+  void replaceUsesExceptBlockAddr(Value *New);
+
   //----------------------------------------------------------------------
   // Methods for handling the chain of uses of this Value.
   //
@@ -321,6 +327,10 @@ public:
 
   bool use_empty() const {
     assertModuleIsMaterialized();
+    return UseList == nullptr;
+  }
+
+  bool materialized_use_empty() const {
     return UseList == nullptr;
   }
 
@@ -560,7 +570,7 @@ public:
   ///
   /// If CanBeNull is set by this function the pointer can either be null or be
   /// dereferenceable up to the returned number of bytes.
-  unsigned getPointerDereferenceableBytes(const DataLayout &DL,
+  uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
                                           bool &CanBeNull) const;
 
   /// \brief Returns an alignment of the pointer value.
@@ -644,12 +654,6 @@ private:
 
     return Merged;
   }
-
-  /// \brief Tail-recursive helper for \a mergeUseLists().
-  ///
-  /// \param[out] Next the first element in the list.
-  template <class Compare>
-  static void mergeUseListsImpl(Use *L, Use *R, Use **Next, Compare Cmp);
 
 protected:
   unsigned short getSubclassDataFromValue() const { return SubclassData; }
@@ -756,8 +760,8 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
 //
 template <> struct isa_impl<Constant, Value> {
   static inline bool doit(const Value &Val) {
-    return Val.getValueID() >= Value::ConstantFirstVal &&
-      Val.getValueID() <= Value::ConstantLastVal;
+    static_assert(Value::ConstantFirstVal == 0, "Val.getValueID() >= Value::ConstantFirstVal");
+    return Val.getValueID() <= Value::ConstantLastVal;
   }
 };
 

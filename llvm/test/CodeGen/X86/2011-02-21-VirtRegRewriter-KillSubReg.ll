@@ -1,4 +1,4 @@
-; RUN: llc < %s -O2 -march=x86 -mtriple=i386-pc-linux-gnu -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=i386-pc-linux-gnu -relocation-model=pic | FileCheck %s
 ; PR9237: Assertion in VirtRegRewriter.cpp, ResurrectConfirmedKill
 ;         `KillOps[*SR] == KillOp && "invalid subreg kill flags"'
 

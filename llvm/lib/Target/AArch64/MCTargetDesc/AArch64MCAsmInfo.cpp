@@ -102,7 +102,24 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
 }
 
 AArch64MCAsmInfoCOFF::AArch64MCAsmInfoCOFF() {
-  CommentString = ";";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
+
+  Data16bitsDirective = "\t.hword\t";
+  Data32bitsDirective = "\t.word\t";
+  Data64bitsDirective = "\t.xword\t";
+
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  CodePointerSize = 8;
+}
+
+AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
+  CommentString = ";";
+  ExceptionsType = ExceptionHandling::WinEH;
+}
+
+AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
+  CommentString = "//";
+  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

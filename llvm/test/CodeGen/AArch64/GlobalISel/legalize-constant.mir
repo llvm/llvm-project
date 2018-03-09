@@ -75,7 +75,7 @@ body: |
     ; CHECK: %w0 = COPY [[C]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 2.000000e+00
     ; CHECK: %x0 = COPY [[C1]](s64)
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT half 0xH0000
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
     ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[C2]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; CHECK: %w0 = COPY [[ANYEXT]](s32)

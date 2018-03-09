@@ -6,7 +6,7 @@
 # liveranges needed it.
 #
 # Should see three distinct value numbers:
-# CHECK: %vreg0 [{{.*}}:0)[{{.*}}:1)[{{.*}}:2) 0@{{[0-9]+[Berd]}} 1@{{[0-9]+[Berd]}} 2@{{[0-9]+B-phi}}
+# CHECK: %0 [{{.*}}:0)[{{.*}}:1)[{{.*}}:2) 0@{{[0-9]+[Berd]}} 1@{{[0-9]+[Berd]}} 2@{{[0-9]+B-phi}}
 --- |
   define amdgpu_kernel void @test0() { ret void }
 ...

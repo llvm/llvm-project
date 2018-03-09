@@ -33,7 +33,7 @@ It also increase the likelihood the store may become dead.
 bb27 ...
         ...
         %reg1037 = ADDri %reg1039, 1
-        %reg1038 = ADDrs %reg1032, %reg1039, %NOREG, 10
+        %reg1038 = ADDrs %reg1032, %reg1039, %noreg, 10
     Successors according to CFG: 0x8b03bf0 (#5)
 
 bb76 (0x8b03bf0, LLVM BB @0x8b032d0, ID#5):
@@ -164,7 +164,7 @@ synthesize the various copy insertion/inspection methods in TargetInstrInfo.
 
 Stack coloring improvements:
 
-1. Do proper LiveStackAnalysis on all stack objects including those which are
+1. Do proper LiveStacks analysis on all stack objects including those which are
    not spill slots.
 2. Reorder objects to fill in gaps between objects.
    e.g. 4, 1, <gap>, 4, 1, 1, 1, <gap>, 4 => 4, 1, 1, 1, 1, 4, 4

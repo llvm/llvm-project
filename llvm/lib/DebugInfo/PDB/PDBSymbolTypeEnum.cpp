@@ -9,10 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 
-#include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
 #include <utility>
 

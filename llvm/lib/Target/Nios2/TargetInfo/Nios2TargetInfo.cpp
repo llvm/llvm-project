@@ -20,5 +20,5 @@ Target &llvm::getTheNios2Target() {
 extern "C" void LLVMInitializeNios2TargetInfo() {
   RegisterTarget<Triple::nios2,
                  /*HasJIT=*/true>
-      X(getTheNios2Target(), "nios2", "Nios2");
+      X(getTheNios2Target(), "nios2", "Nios2", "Nios2");
 }

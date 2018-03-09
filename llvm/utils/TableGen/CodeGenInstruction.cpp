@@ -128,8 +128,8 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
 
   // Make sure the constraints list for each operand is large enough to hold
   // constraint info, even if none is present.
-  for (unsigned i = 0, e = OperandList.size(); i != e; ++i)
-    OperandList[i].Constraints.resize(OperandList[i].MINumOperands);
+  for (OperandInfo &OpInfo : OperandList)
+    OpInfo.Constraints.resize(OpInfo.MINumOperands);
 }
 
 
@@ -375,10 +375,10 @@ HasOneImplicitDefWithKnownVT(const CodeGenTarget &TargetInfo) const {
   // Check to see if the first implicit def has a resolvable type.
   Record *FirstImplicitDef = ImplicitDefs[0];
   assert(FirstImplicitDef->isSubClassOf("Register"));
-  const std::vector<MVT::SimpleValueType> &RegVTs =
+  const std::vector<ValueTypeByHwMode> &RegVTs =
     TargetInfo.getRegisterVTs(FirstImplicitDef);
-  if (RegVTs.size() == 1)
-    return RegVTs[0];
+  if (RegVTs.size() == 1 && RegVTs[0].isSimple())
+    return RegVTs[0].getSimple().SimpleTy;
   return MVT::Other;
 }
 

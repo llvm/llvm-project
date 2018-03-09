@@ -3,6 +3,13 @@
 hint #240
 hint #1000
 
-@ CHECK: error: immediate operand must be in the range [0,239]
-@ CHECK: error: immediate operand must be in the range [0,239]
+@ FIXME: set the subclasses of the operand classes so that we only get one error for each.
+
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: note: operand must be an immediate in the range [0,239]
+@ CHECK: note: operand must be an immediate in the range [0,15]
+
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: note: operand must be an immediate in the range [0,239]
+@ CHECK: note: operand must be an immediate in the range [0,15]
 

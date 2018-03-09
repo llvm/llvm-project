@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s
+; RUN: llc -march=amdgcn -mcpu=tahiti < %s
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s
 ; CHECK: s_endpgm
 

@@ -65,7 +65,8 @@ for.end:
 define void @fn1(double* noalias %x, double* noalias %c, double %a) {
 entry:
   %conv = fptosi double %a to i32
-  %cmp8 = icmp sgt i32 %conv, 0
+  %conv2 = add i32 %conv, 4
+  %cmp8 = icmp sgt i32 %conv2, 0
   br i1 %cmp8, label %for.body.preheader, label %for.end
 
 for.body.preheader:
@@ -82,7 +83,7 @@ for.body:
   store double %1, double* %arrayidx3, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, %conv
+  %exitcond = icmp eq i32 %lftr.wideiv, %conv2
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
 for.end.loopexit:

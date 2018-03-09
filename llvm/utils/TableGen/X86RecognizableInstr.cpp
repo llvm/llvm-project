@@ -100,6 +100,9 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
 
   HasVEX_LPrefix   = Rec->getValueAsBit("hasVEX_L");
 
+  EncodeRC = HasEVEX_B &&
+             (Form == X86Local::MRMDestReg || Form == X86Local::MRMSrcReg);
+
   // Check for 64-bit inst which does not require REX
   Is32Bit = false;
   Is64Bit = false;
@@ -161,7 +164,7 @@ InstructionContext RecognizableInstr::insnContext() const {
       llvm_unreachable("Don't support VEX.L if EVEX_L2 is enabled");
     }
     // VEX_L & VEX_W
-    if (HasVEX_LPrefix && VEX_WPrefix == X86Local::VEX_W1) {
+    if (!EncodeRC && HasVEX_LPrefix && VEX_WPrefix == X86Local::VEX_W1) {
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L_W_OPSIZE);
       else if (OpPrefix == X86Local::XS)
@@ -174,7 +177,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         errs() << "Instruction does not use a prefix: " << Name << "\n";
         llvm_unreachable("Invalid prefix");
       }
-    } else if (HasVEX_LPrefix) {
+    } else if (!EncodeRC && HasVEX_LPrefix) {
       // VEX_L
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L_OPSIZE);
@@ -188,8 +191,8 @@ InstructionContext RecognizableInstr::insnContext() const {
         errs() << "Instruction does not use a prefix: " << Name << "\n";
         llvm_unreachable("Invalid prefix");
       }
-    }
-    else if (HasEVEX_L2Prefix && VEX_WPrefix == X86Local::VEX_W1) {
+    } else if (!EncodeRC && HasEVEX_L2Prefix &&
+               VEX_WPrefix == X86Local::VEX_W1) {
       // EVEX_L2 & VEX_W
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L2_W_OPSIZE);
@@ -203,7 +206,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         errs() << "Instruction does not use a prefix: " << Name << "\n";
         llvm_unreachable("Invalid prefix");
       }
-    } else if (HasEVEX_L2Prefix) {
+    } else if (!EncodeRC && HasEVEX_L2Prefix) {
       // EVEX_L2
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L2_OPSIZE);
@@ -703,7 +706,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 #define MAP(from, to)                     \
   case X86Local::MRM_##from:
 
-  OpcodeType    opcodeType  = (OpcodeType)-1;
+  llvm::Optional<OpcodeType> opcodeType;
 
   ModRMFilter*  filter      = nullptr;
   uint8_t       opcodeToSet = 0;
@@ -783,8 +786,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::AdSize64: AddressSize = 64; break;
   }
 
-  assert(opcodeType != (OpcodeType)-1 &&
-         "Opcode type not set");
+  assert(opcodeType && "Opcode type not set");
   assert(filter && "Filter not set");
 
   if (Form == X86Local::AddRegFrm) {
@@ -796,17 +798,14 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     for (currentOpcode = opcodeToSet;
          currentOpcode < opcodeToSet + 8;
          ++currentOpcode)
-      tables.setTableFields(opcodeType,
-                            insnContext(),
-                            currentOpcode,
-                            *filter,
-                            UID, Is32Bit, IgnoresVEX_L, AddressSize);
+      tables.setTableFields(*opcodeType, insnContext(), currentOpcode, *filter,
+                            UID, Is32Bit, OpPrefix == 0,
+                            IgnoresVEX_L || EncodeRC,
+                            VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   } else {
-    tables.setTableFields(opcodeType,
-                          insnContext(),
-                          opcodeToSet,
-                          *filter,
-                          UID, Is32Bit, IgnoresVEX_L, AddressSize);
+    tables.setTableFields(*opcodeType, insnContext(), opcodeToSet, *filter, UID,
+                          Is32Bit, OpPrefix == 0, IgnoresVEX_L || EncodeRC,
+                          VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   }
 
   delete filter;
@@ -929,19 +928,19 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("VK64",                TYPE_VK)
   TYPE("VK64WM",              TYPE_VK)
   TYPE("GR32_NOAX",           TYPE_Rv)
-  TYPE("vx64mem",             TYPE_M)
-  TYPE("vx128mem",            TYPE_M)
-  TYPE("vx256mem",            TYPE_M)
-  TYPE("vy128mem",            TYPE_M)
-  TYPE("vy256mem",            TYPE_M)
-  TYPE("vx64xmem",            TYPE_M)
-  TYPE("vx128xmem",           TYPE_M)
-  TYPE("vx256xmem",           TYPE_M)
-  TYPE("vy128xmem",           TYPE_M)
-  TYPE("vy256xmem",           TYPE_M)
-  TYPE("vy512mem",            TYPE_M)
-  TYPE("vz256xmem",           TYPE_M)
-  TYPE("vz512mem",            TYPE_M)
+  TYPE("vx64mem",             TYPE_MVSIBX)
+  TYPE("vx128mem",            TYPE_MVSIBX)
+  TYPE("vx256mem",            TYPE_MVSIBX)
+  TYPE("vy128mem",            TYPE_MVSIBY)
+  TYPE("vy256mem",            TYPE_MVSIBY)
+  TYPE("vx64xmem",            TYPE_MVSIBX)
+  TYPE("vx128xmem",           TYPE_MVSIBX)
+  TYPE("vx256xmem",           TYPE_MVSIBX)
+  TYPE("vy128xmem",           TYPE_MVSIBY)
+  TYPE("vy256xmem",           TYPE_MVSIBY)
+  TYPE("vy512mem",            TYPE_MVSIBY)
+  TYPE("vz256xmem",           TYPE_MVSIBZ)
+  TYPE("vz512mem",            TYPE_MVSIBZ)
   TYPE("BNDR",                TYPE_BNDR)
   errs() << "Unhandled type string " << s << "\n";
   llvm_unreachable("Unhandled type string");
@@ -962,7 +961,7 @@ RecognizableInstr::immediateEncodingFromString(const std::string &s,
   ENCODING("XOPCC",           ENCODING_IB)
   ENCODING("AVXCC",           ENCODING_IB)
   ENCODING("AVX512ICC",       ENCODING_IB)
-  ENCODING("AVX512RC",        ENCODING_IB)
+  ENCODING("AVX512RC",        ENCODING_IRC)
   ENCODING("i16imm",          ENCODING_Iv)
   ENCODING("i16i8imm",        ENCODING_IB)
   ENCODING("i32imm",          ENCODING_Iv)

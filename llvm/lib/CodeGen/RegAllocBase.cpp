@@ -1,4 +1,4 @@
-//===-- RegAllocBase.cpp - Register Allocator Base Class ------------------===//
+//===- RegAllocBase.cpp - Register Allocator Base Class -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,19 +14,22 @@
 
 #include "RegAllocBase.h"
 #include "Spiller.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
-#include "llvm/CodeGen/LiveRangeEdit.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -37,8 +40,8 @@ STATISTIC(NumNewQueued    , "Number of new live ranges queued");
 // Temporary verification option until we can put verification inside
 // MachineVerifier.
 static cl::opt<bool, true>
-VerifyRegAlloc("verify-regalloc", cl::location(RegAllocBase::VerifyEnabled),
-               cl::desc("Verify during register allocation"));
+    VerifyRegAlloc("verify-regalloc", cl::location(RegAllocBase::VerifyEnabled),
+                   cl::Hidden, cl::desc("Verify during register allocation"));
 
 const char RegAllocBase::TimerGroupName[] = "regalloc";
 const char RegAllocBase::TimerGroupDescription[] = "Register Allocation";
@@ -103,7 +106,9 @@ void RegAllocBase::allocatePhysRegs() {
     DEBUG(dbgs() << "\nselectOrSplit "
           << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
           << ':' << *VirtReg << " w=" << VirtReg->weight << '\n');
-    typedef SmallVector<unsigned, 4> VirtRegVec;
+
+    using VirtRegVec = SmallVector<unsigned, 4>;
+
     VirtRegVec SplitVRegs;
     unsigned AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
 

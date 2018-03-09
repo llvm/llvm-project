@@ -39,9 +39,15 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                     const MCSubtargetInfo &STI) {
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
+  unsigned Flags = MI->getFlags();
 
-  if (TSFlags & X86II::LOCK)
-    OS << "\tlock\n";
+  if ((TSFlags & X86II::LOCK) || (Flags & X86::IP_HAS_LOCK))
+    OS << "\tlock\t";
+
+  if (Flags & X86::IP_HAS_REPEAT_NE)
+    OS << "\trepne\t";
+  else if (Flags & X86::IP_HAS_REPEAT)
+    OS << "\trep\t";
 
   printInstruction(MI, OS);
 
@@ -152,6 +158,7 @@ void X86IntelInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     O << formatImm((int64_t)Op.getImm());
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
+    O << "offset ";
     Op.getExpr()->print(O, &MAI);
   }
 }

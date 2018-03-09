@@ -1,0 +1,34 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-readobj -s -file-headers %t.o | FileCheck --check-prefix=ELF %s
+# RUN: obj2yaml %t.o | FileCheck --check-prefix=YAML %s
+
+# ELF: Format: ELF32-amdgpu
+# ELF: Arch: r600
+# ELF: ElfHeader {
+# ELF:   Ident {
+# ELF:     OS/ABI: AMDGPU_HSA (0x40)
+# ELF:     ABIVersion: 0
+# ELF:   }
+# ELF:   Machine: EM_AMDGPU (0xE0)
+# ELF:   Flags [ (0x1)
+# ELF:     EF_AMDGPU_ARCH_R600 (0x1)
+# ELF:   ]
+# ELF: }
+
+# YAML: FileHeader
+# YAML:   Class:   ELFCLASS32
+# YAML:   Data:    ELFDATA2LSB
+# YAML:   OSABI:   ELFOSABI_AMDGPU_HSA
+# YAML:   Type:    ET_REL
+# YAML:   Machine: EM_AMDGPU
+# YAML:   Flags:   [ EF_AMDGPU_ARCH_R600 ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_AMDGPU_HSA
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_ARCH_R600 ]
+...

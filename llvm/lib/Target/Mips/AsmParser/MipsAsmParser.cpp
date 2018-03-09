@@ -466,6 +466,9 @@ public:
     Match_RequiresSameSrcAndDst,
     Match_NoFCCRegisterForCurrentISA,
     Match_NonZeroOperandForSync,
+    Match_RequiresPosSizeRange0_32,
+    Match_RequiresPosSizeRange33_64,
+    Match_RequiresPosSizeUImm6,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "MipsGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -473,7 +476,7 @@ public:
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti),
+    : MCTargetAsmParser(Options, sti, MII),
         ABI(MipsABIInfo::computeTargetABI(Triple(sti.getTargetTriple()),
                                           sti.getCPU(), Options)) {
     MCAsmParserExtension::Initialize(parser);
@@ -509,6 +512,9 @@ public:
       IsLittleEndian = false;
     else
       IsLittleEndian = true;
+
+    if (getSTI().getCPU() == "mips64r6" && inMicroMipsMode())
+      report_fatal_error("microMIPS64R6 is not supported", false);
   }
 
   /// True if all of $fcc0 - $fcc7 exist for the current ISA.
@@ -1984,9 +1990,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::DDIV:
   case Mips::DDIVU:
   case Mips::DIVU_MMR6:
-  case Mips::DDIVU_MM64R6:
   case Mips::DIV_MMR6:
-  case Mips::DDIV_MM64R6:
     if (Inst.getOperand(SecondOp).getReg() == Mips::ZERO ||
         Inst.getOperand(SecondOp).getReg() == Mips::ZERO_64) {
       if (Inst.getOperand(FirstOp).getReg() == Mips::ZERO ||
@@ -2270,8 +2274,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
   // We know we emitted an instruction on the MER_NotAMacro or MER_Success path.
   // If we're in microMIPS mode then we must also set EF_MIPS_MICROMIPS.
-  if (inMicroMipsMode())
+  if (inMicroMipsMode()) {
     TOut.setUsesMicroMips();
+    TOut.updateABIInfo(*this);
+  }
 
   // If this instruction has a delay slot and .set reorder is active,
   // emit a NOP after it.
@@ -5109,8 +5115,6 @@ MipsAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
     return Match_Success;
   case Mips::DATI:
   case Mips::DAHI:
-  case Mips::DATI_MM64R6:
-  case Mips::DAHI_MM64R6:
     if (static_cast<MipsOperand &>(*Operands[1])
             .isValidForTie(static_cast<MipsOperand &>(*Operands[2])))
       return Match_Success;
@@ -5123,7 +5127,6 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   // As described by the MIPSR6 spec, daui must not use the zero operand for
   // its source operand.
   case Mips::DAUI:
-  case Mips::DAUI_MM64R6:
     if (Inst.getOperand(1).getReg() == Mips::ZERO ||
         Inst.getOperand(1).getReg() == Mips::ZERO_64)
       return Match_RequiresNoZeroRegister;
@@ -5196,6 +5199,44 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
       return Match_RequiresDifferentOperands;
     return Match_Success;
+  case Mips::DINS: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for dins!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((0 > (Pos + Size)) || ((Pos + Size) > 32))
+      return Match_RequiresPosSizeRange0_32;
+    return Match_Success;
+  }
+  case Mips::DINSM:
+  case Mips::DINSU: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for dinsm/dinsu!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((32 >= (Pos + Size)) || ((Pos + Size) > 64))
+      return Match_RequiresPosSizeRange33_64;
+    return Match_Success;
+  }
+  case Mips::DEXT: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for DEXTM!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((1 > (Pos + Size)) || ((Pos + Size) > 63))
+      return Match_RequiresPosSizeUImm6;
+    return Match_Success;
+  }
+  case Mips::DEXTM:
+  case Mips::DEXTU: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for dextm/dextu!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((32 > (Pos + Size)) || ((Pos + Size) > 64))
+      return Match_RequiresPosSizeRange33_64;
+    return Match_Success;
+  }
   }
 
   uint64_t TSFlags = getInstDesc(Inst.getOpcode()).TSFlags;
@@ -5341,6 +5382,7 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                  "expected 11-bit signed immediate");
   case Match_UImm16:
   case Match_UImm16_Relaxed:
+  case Match_UImm16_AltRelaxed:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 16-bit unsigned immediate");
   case Match_SImm16:
@@ -5387,6 +5429,24 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MemSImm16:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected memory with 16-bit signed offset");
+  case Match_RequiresPosSizeRange0_32: {
+    SMLoc ErrorStart = Operands[3]->getStartLoc();
+    SMLoc ErrorEnd = Operands[4]->getEndLoc();
+    return Error(ErrorStart, "size plus position are not in the range 0 .. 32",
+                 SMRange(ErrorStart, ErrorEnd));
+    }
+  case Match_RequiresPosSizeUImm6: {
+    SMLoc ErrorStart = Operands[3]->getStartLoc();
+    SMLoc ErrorEnd = Operands[4]->getEndLoc();
+    return Error(ErrorStart, "size plus position are not in the range 1 .. 63",
+                 SMRange(ErrorStart, ErrorEnd));
+    }
+  case Match_RequiresPosSizeRange33_64: {
+    SMLoc ErrorStart = Operands[3]->getStartLoc();
+    SMLoc ErrorEnd = Operands[4]->getEndLoc();
+    return Error(ErrorStart, "size plus position are not in the range 33 .. 64",
+                 SMRange(ErrorStart, ErrorEnd));
+    }
   }
 
   llvm_unreachable("Implement any new match types added!");
@@ -5658,12 +5718,12 @@ bool MipsAsmParser::isEvaluated(const MCExpr *Expr) {
     return true;
   case MCExpr::SymbolRef:
     return (cast<MCSymbolRefExpr>(Expr)->getKind() != MCSymbolRefExpr::VK_None);
-  case MCExpr::Binary:
-    if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr)) {
-      if (!isEvaluated(BE->getLHS()))
-        return false;
-      return isEvaluated(BE->getRHS());
-    }
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
+    if (!isEvaluated(BE->getLHS()))
+      return false;
+    return isEvaluated(BE->getRHS());
+  }
   case MCExpr::Unary:
     return isEvaluated(cast<MCUnaryExpr>(Expr)->getSubExpr());
   case MCExpr::Target:
@@ -6726,6 +6786,9 @@ bool MipsAsmParser::parseSetArchDirective() {
   if (ArchFeatureName.empty())
     return reportParseError("unsupported architecture");
 
+  if (ArchFeatureName == "mips64r6" && inMicroMipsMode())
+    return reportParseError("mips64r6 does not support microMIPS");
+
   selectArch(ArchFeatureName);
   getTargetStreamer().emitDirectiveSetArch(Arch);
   return false;
@@ -6743,6 +6806,10 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
   case Mips::FeatureDSP:
     setFeatureBits(Mips::FeatureDSP, "dsp");
     getTargetStreamer().emitDirectiveSetDsp();
+    break;
+  case Mips::FeatureDSPR2:
+    setFeatureBits(Mips::FeatureDSPR2, "dspr2");
+    getTargetStreamer().emitDirectiveSetDspr2();
     break;
   case Mips::FeatureMicroMips:
     setFeatureBits(Mips::FeatureMicroMips, "micromips");
@@ -7053,6 +7120,10 @@ bool MipsAsmParser::parseDirectiveSet() {
     Parser.eatToEndOfStatement();
     return false;
   } else if (Tok.getString() == "micromips") {
+    if (hasMips64r6()) {
+      Error(Tok.getLoc(), ".set micromips directive is not supported with MIPS64R6");
+      return false;
+    }
     return parseSetFeature(Mips::FeatureMicroMips);
   } else if (Tok.getString() == "mips0") {
     return parseSetMips0Directive();
@@ -7085,9 +7156,15 @@ bool MipsAsmParser::parseDirectiveSet() {
   } else if (Tok.getString() == "mips64r5") {
     return parseSetFeature(Mips::FeatureMips64r5);
   } else if (Tok.getString() == "mips64r6") {
+    if (inMicroMipsMode()) {
+      Error(Tok.getLoc(), "MIPS64R6 is not supported with microMIPS");
+      return false;
+    }
     return parseSetFeature(Mips::FeatureMips64r6);
   } else if (Tok.getString() == "dsp") {
     return parseSetFeature(Mips::FeatureDSP);
+  } else if (Tok.getString() == "dspr2") {
+    return parseSetFeature(Mips::FeatureDSPR2);
   } else if (Tok.getString() == "nodsp") {
     return parseSetNoDspDirective();
   } else if (Tok.getString() == "msa") {

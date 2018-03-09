@@ -18,7 +18,7 @@
   ; out of a loop the debug information is not retained.
   ;
   ; CHECK-LABEL:  bb.0.entry:
-  ; CHECK:        MOV64rm %rip, 1, _, target-flags(x86-gotpcrel) @x, _ :: (load 8 from got)
+  ; CHECK:        MOV64rm %rip, 1, %noreg, target-flags(x86-gotpcrel) @x, %noreg :: (load 8 from got)
   ; CHECK-LABEL:  bb.1.while.body:
   ;
   ; ModuleID = 'tx.ll'

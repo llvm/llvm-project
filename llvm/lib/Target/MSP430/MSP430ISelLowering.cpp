@@ -322,7 +322,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 
   setMinFunctionAlignment(1);
-  setPrefFunctionAlignment(2);
+  setPrefFunctionAlignment(1);
 }
 
 SDValue MSP430TargetLowering::LowerOperation(SDValue Op,
@@ -546,7 +546,7 @@ SDValue MSP430TargetLowering::LowerFormalArguments(
 
   switch (CallConv) {
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
     return LowerCCCArguments(Chain, CallConv, isVarArg, Ins, dl, DAG, InVals);
@@ -576,7 +576,7 @@ MSP430TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   switch (CallConv) {
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   case CallingConv::MSP430_BUILTIN:
   case CallingConv::Fast:
   case CallingConv::C:
@@ -746,7 +746,7 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
-  if (MF.getFunction()->hasStructRetAttr()) {
+  if (MF.getFunction().hasStructRetAttr()) {
     MSP430MachineFunctionInfo *FuncInfo = MF.getInfo<MSP430MachineFunctionInfo>();
     unsigned Reg = FuncInfo->getSRetReturnReg();
 

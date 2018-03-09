@@ -52,16 +52,6 @@ static bool checkSize(MemoryBufferRef M, std::error_code &EC, uint64_t Size) {
   return true;
 }
 
-static std::error_code checkOffset(MemoryBufferRef M, uintptr_t Addr,
-                                   const uint64_t Size) {
-  if (Addr + Size < Addr || Addr + Size < Size ||
-      Addr + Size > uintptr_t(M.getBufferEnd()) ||
-      Addr < uintptr_t(M.getBufferStart())) {
-    return object_error::unexpected_eof;
-  }
-  return std::error_code();
-}
-
 // Sets Obj unless any bytes in [addr, addr + size) fall outsize of m.
 // Returns unexpected_eof if error.
 template <typename T>
@@ -69,7 +59,7 @@ static std::error_code getObject(const T *&Obj, MemoryBufferRef M,
                                  const void *Ptr,
                                  const uint64_t Size = sizeof(T)) {
   uintptr_t Addr = uintptr_t(Ptr);
-  if (std::error_code EC = checkOffset(M, Addr, Size))
+  if (std::error_code EC = Binary::checkOffset(M, Addr, Size))
     return EC;
   Obj = reinterpret_cast<const T *>(Addr);
   return std::error_code();
@@ -383,7 +373,8 @@ getFirstReloc(const coff_section *Sec, MemoryBufferRef M, const uint8_t *Base) {
     // relocations.
     begin++;
   }
-  if (checkOffset(M, uintptr_t(begin), sizeof(coff_relocation) * NumRelocs))
+  if (Binary::checkOffset(M, uintptr_t(begin),
+                          sizeof(coff_relocation) * NumRelocs))
     return nullptr;
   return begin;
 }
@@ -904,7 +895,7 @@ StringRef COFFObjectFile::getFileFormatName() const {
   }
 }
 
-unsigned COFFObjectFile::getArch() const {
+Triple::ArchType COFFObjectFile::getArch() const {
   switch (getMachine()) {
   case COFF::IMAGE_FILE_MACHINE_I386:
     return Triple::x86;
@@ -1599,12 +1590,12 @@ std::error_code ImportedSymbolRef::getOrdinal(uint16_t &Result) const {
   return std::error_code();
 }
 
-ErrorOr<std::unique_ptr<COFFObjectFile>>
+Expected<std::unique_ptr<COFFObjectFile>>
 ObjectFile::createCOFFObjectFile(MemoryBufferRef Object) {
   std::error_code EC;
   std::unique_ptr<COFFObjectFile> Ret(new COFFObjectFile(Object, EC));
   if (EC)
-    return EC;
+    return errorCodeToError(EC);
   return std::move(Ret);
 }
 
@@ -1642,11 +1633,12 @@ std::error_code BaseRelocRef::getRVA(uint32_t &Result) const {
   return std::error_code();
 }
 
-#define RETURN_IF_ERROR(X)                                                     \
-  if (auto EC = errorToErrorCode(X))                                           \
-    return EC;
+#define RETURN_IF_ERROR(E)                                                     \
+  if (E)                                                                       \
+    return E;
 
-ErrorOr<ArrayRef<UTF16>> ResourceSectionRef::getDirStringAtOffset(uint32_t Offset) {
+Expected<ArrayRef<UTF16>>
+ResourceSectionRef::getDirStringAtOffset(uint32_t Offset) {
   BinaryStreamReader Reader = BinaryStreamReader(BBS);
   Reader.setOffset(Offset);
   uint16_t Length;
@@ -1656,12 +1648,12 @@ ErrorOr<ArrayRef<UTF16>> ResourceSectionRef::getDirStringAtOffset(uint32_t Offse
   return RawDirString;
 }
 
-ErrorOr<ArrayRef<UTF16>>
+Expected<ArrayRef<UTF16>>
 ResourceSectionRef::getEntryNameString(const coff_resource_dir_entry &Entry) {
   return getDirStringAtOffset(Entry.Identifier.getNameOffset());
 }
 
-ErrorOr<const coff_resource_dir_table &>
+Expected<const coff_resource_dir_table &>
 ResourceSectionRef::getTableAtOffset(uint32_t Offset) {
   const coff_resource_dir_table *Table = nullptr;
 
@@ -1672,11 +1664,11 @@ ResourceSectionRef::getTableAtOffset(uint32_t Offset) {
   return *Table;
 }
 
-ErrorOr<const coff_resource_dir_table &>
+Expected<const coff_resource_dir_table &>
 ResourceSectionRef::getEntrySubDir(const coff_resource_dir_entry &Entry) {
   return getTableAtOffset(Entry.Offset.value());
 }
 
-ErrorOr<const coff_resource_dir_table &> ResourceSectionRef::getBaseTable() {
+Expected<const coff_resource_dir_table &> ResourceSectionRef::getBaseTable() {
   return getTableAtOffset(0);
 }

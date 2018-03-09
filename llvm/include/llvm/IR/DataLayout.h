@@ -309,9 +309,7 @@ public:
   }
 
   /// Layout pointer alignment
-  /// FIXME: The defaults need to be removed once all of
-  /// the backends/clients are updated.
-  unsigned getPointerABIAlignment(unsigned AS = 0) const;
+  unsigned getPointerABIAlignment(unsigned AS) const;
 
   /// Return target's alignment for stack-based pointers
   /// FIXME: The defaults need to be removed once all of

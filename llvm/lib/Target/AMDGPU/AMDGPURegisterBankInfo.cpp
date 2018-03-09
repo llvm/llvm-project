@@ -17,9 +17,9 @@
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 #define GET_TARGET_REGBANK_IMPL
 #include "AMDGPUGenRegisterBank.inc"
@@ -120,7 +120,7 @@ static bool isInstrUniform(const MachineInstr &MI) {
     return false;
 
   const MachineMemOperand *MMO = *MI.memoperands_begin();
-  return AMDGPU::isUniformMMO(MMO);
+  return AMDGPUInstrInfo::isUniformMMO(MMO);
 }
 
 const RegisterBankInfo::InstructionMapping &

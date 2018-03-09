@@ -19,6 +19,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -28,9 +31,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 
 using namespace llvm;
@@ -183,7 +183,7 @@ void MachineRegisterInfo::verifyUseList(unsigned Reg) const {
     MachineOperand *MO = &M;
     MachineInstr *MI = MO->getParent();
     if (!MI) {
-      errs() << PrintReg(Reg, getTargetRegisterInfo())
+      errs() << printReg(Reg, getTargetRegisterInfo())
              << " use list MachineOperand " << MO
              << " has no parent instruction.\n";
       Valid = false;
@@ -192,19 +192,19 @@ void MachineRegisterInfo::verifyUseList(unsigned Reg) const {
     MachineOperand *MO0 = &MI->getOperand(0);
     unsigned NumOps = MI->getNumOperands();
     if (!(MO >= MO0 && MO < MO0+NumOps)) {
-      errs() << PrintReg(Reg, getTargetRegisterInfo())
+      errs() << printReg(Reg, getTargetRegisterInfo())
              << " use list MachineOperand " << MO
              << " doesn't belong to parent MI: " << *MI;
       Valid = false;
     }
     if (!MO->isReg()) {
-      errs() << PrintReg(Reg, getTargetRegisterInfo())
+      errs() << printReg(Reg, getTargetRegisterInfo())
              << " MachineOperand " << MO << ": " << *MO
              << " is not a register\n";
       Valid = false;
     }
     if (MO->getReg() != Reg) {
-      errs() << PrintReg(Reg, getTargetRegisterInfo())
+      errs() << printReg(Reg, getTargetRegisterInfo())
              << " use-list MachineOperand " << MO << ": "
              << *MO << " is the wrong register\n";
       Valid = false;
@@ -428,8 +428,8 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
   // Emit the copies into the top of the block.
   for (unsigned i = 0, e = LiveIns.size(); i != e; ++i)
     if (LiveIns[i].second) {
-      if (use_empty(LiveIns[i].second)) {
-        // The livein has no uses. Drop it.
+      if (use_nodbg_empty(LiveIns[i].second)) {
+        // The livein has no non-dbg uses. Drop it.
         //
         // It would be preferable to have isel avoid creating live-in
         // records for unused arguments in the first place, but it's
@@ -487,6 +487,13 @@ bool MachineRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
   return true;
 }
 
+bool
+MachineRegisterInfo::isCallerPreservedOrConstPhysReg(unsigned PhysReg) const {
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  return isConstantPhysReg(PhysReg) ||
+      TRI->isCallerPreservedPhysReg(PhysReg, *MF);
+}
+
 /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
 /// specified register as undefined which causes the DBG_VALUE to be
 /// deleted during LiveDebugVariables analysis.
@@ -524,7 +531,7 @@ static bool isNoReturnDef(const MachineOperand &MO) {
   const MachineFunction &MF = *MBB.getParent();
   // We need to keep correct unwind information even if the function will
   // not return, since the runtime may need it.
-  if (MF.getFunction()->hasFnAttribute(Attribute::UWTable))
+  if (MF.getFunction().hasFnAttribute(Attribute::UWTable))
     return false;
   const Function *Called = getCalledFunction(MI);
   return !(Called == nullptr || !Called->hasFnAttribute(Attribute::NoReturn) ||

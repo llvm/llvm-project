@@ -51,6 +51,20 @@ toTimePoint(std::time_t T) {
 
 raw_ostream &operator<<(raw_ostream &OS, sys::TimePoint<> TP);
 
+/// Format provider for TimePoint<>
+///
+/// The options string is a strftime format string, with extensions:
+///   - %L is millis: 000-999
+///   - %f is micros: 000000-999999
+///   - %N is nanos: 000000000 - 999999999
+///
+/// If no options are given, the default format is "%Y-%m-%d %H:%M:%S.%N".
+template <>
+struct format_provider<sys::TimePoint<>> {
+  static void format(const sys::TimePoint<> &TP, llvm::raw_ostream &OS,
+                     StringRef Style);
+};
+
 /// Implementation of format_provider<T> for duration types.
 ///
 /// The options string of a duration  type has the grammar:

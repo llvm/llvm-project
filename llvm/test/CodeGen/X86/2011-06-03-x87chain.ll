@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -march=x86 -mattr=+sse | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=i686-- -mattr=+sse | FileCheck %s
 
 define float @chainfail1(i64* nocapture %a, i64* nocapture %b, i32 %x, i32 %y, float* nocapture %f) nounwind uwtable noinline ssp {
 entry:

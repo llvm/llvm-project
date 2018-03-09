@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -march=x86 -run-pass branch-folder | FileCheck %s
+# RUN: llc -o - %s -mtriple=i686-- -run-pass branch-folder | FileCheck %s
 # Test that tail merging drops undef flags that aren't present on all
 # instructions to be merged.
 --- |

@@ -294,10 +294,30 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
         unsigned OldReg = MO.getReg();
 
+        // Inline asm may have a def in the middle of the operands. Our contract
+        // with inline asm register operands is to provide local indices as
+        // immediates.
+        if (MO.isDef()) {
+          assert(MI.getOpcode() == TargetOpcode::INLINEASM);
+          unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+          MRI.removeRegOperandFromUseList(&MO);
+          MO = MachineOperand::CreateImm(LocalId);
+          continue;
+        }
+
         // If we see a stackified register, prepare to insert subsequent
         // get_locals before the start of its tree.
         if (MFI.isVRegStackified(OldReg)) {
           InsertPt = FindStartOfTree(MO, MRI, MFI);
+          continue;
+        }
+
+        // Our contract with inline asm register operands is to provide local
+        // indices as immediates.
+        if (MI.getOpcode() == TargetOpcode::INLINEASM) {
+          unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+          MRI.removeRegOperandFromUseList(&MO);
+          MO = MachineOperand::CreateImm(LocalId);
           continue;
         }
 

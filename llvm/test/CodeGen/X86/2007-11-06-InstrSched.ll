@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=generic -mattr=+sse2 | not grep lea
+; RUN: llc < %s -mtriple=i686-- -mcpu=generic -mattr=+sse2 | not grep lea
 
 define float @foo(i32* %x, float* %y, i32 %c) nounwind {
 entry:

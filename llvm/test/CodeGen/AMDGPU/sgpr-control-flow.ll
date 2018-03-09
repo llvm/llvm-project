@@ -37,7 +37,7 @@ endif:
 ; SI: s_cmp_lg_u32
 ; SI: s_cbranch_scc0 [[IF:BB[0-9]+_[0-9]+]]
 
-; SI: ; BB#1: ; %else
+; SI: ; %bb.1: ; %else
 ; SI: s_load_dword [[LOAD0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xe
 ; SI: s_load_dword [[LOAD1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xf
 ; SI-NOT: add

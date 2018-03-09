@@ -42,7 +42,7 @@ declare <64 x i32> @llvm.hexagon.V6.vcombine.128B(<32 x i32>, <32 x i32>) #3
 declare <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32>) #3
 declare <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32>) #3
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx" }
-attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-double" }
-attributes #2 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvx" }
-attributes #3 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
+attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
+attributes #2 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
+attributes #3 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }

@@ -16,9 +16,9 @@
 #define LLVM_CODEGEN_LIVEREGUNITS_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cstdint>
 
 namespace llvm {
@@ -51,7 +51,7 @@ public:
   void clear() { Units.reset(); }
 
   /// Returns true if the set is empty.
-  bool empty() const { return Units.empty(); }
+  bool empty() const { return Units.none(); }
 
   /// Adds register units covered by physical register \p Reg.
   void addReg(unsigned Reg) {
@@ -123,6 +123,11 @@ public:
   const BitVector &getBitVector() const {
     return Units;
   }
+
+private:
+  /// Adds pristine registers. Pristine registers are callee saved registers
+  /// that are unused in the function.
+  void addPristines(const MachineFunction &MF);
 };
 
 } // end namespace llvm

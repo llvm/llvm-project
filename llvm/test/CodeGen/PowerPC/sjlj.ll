@@ -60,7 +60,7 @@ return:                                           ; preds = %if.end, %if.then
 
 ; FIXME: We should be saving VRSAVE on Darwin, but we're not!
 
-; CHECK: @main
+; CHECK-LABEL: main:
 ; CHECK: std
 ; Make sure that we're not saving VRSAVE on non-Darwin:
 ; CHECK-NOT: mfspr
@@ -77,7 +77,7 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: bcl 20, 31, .LBB1_3
 ; CHECK: li 3, 1
 ; CHECK: #EH_SjLj_Setup	.LBB1_3
-; CHECK: b .LBB1_1
+; CHECK: # %bb.1:
 
 ; CHECK: .LBB1_3:
 ; CHECK: mflr [[REGL:[0-9]+]]
@@ -87,12 +87,12 @@ return:                                           ; preds = %if.end, %if.then
 
 ; CHECK: .LBB1_5:
 
-; CHECK: lfd
-; CHECK: lxvd2x
+; CHECK-DAG: lfd
+; CHECK-DAG: lxvd2x
 ; CHECK: ld
 ; CHECK: blr
 
-; CHECK-NOAV: @main
+; CHECK-NOAV-LABEL: main:
 ; CHECK-NOAV-NOT: stxvd2x
 ; CHECK-NOAV: bcl
 ; CHECK-NOAV: mflr
@@ -131,7 +131,7 @@ return:                                           ; preds = %if.end, %if.then
   %3 = load i32, i32* %retval
   ret i32 %3
 
-; CHECK: @main2
+; CHECK-LABEL: main2:
 
 ; CHECK: addis [[REG:[0-9]+]], 2, env_sigill@toc@ha
 ; CHECK-DAG: std 31, env_sigill@toc@l([[REG]])

@@ -4,7 +4,8 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-unknown-linux-gnu -mattr=+avx | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX1
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 | FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX2
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512F
-; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512BW
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512bw,+avx512vbmi | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512
 
 ;
 ; Verify the cost model for broadcast shuffles.
@@ -130,8 +131,7 @@ define void @test_vXi16(<8 x i16> %src128, <16 x i16> %src256, <32 x i16> %src51
   ; SSE42: cost of 1 {{.*}} %V512 = shufflevector
   ; AVX1: cost of 3 {{.*}} %V512 = shufflevector
   ; AVX2: cost of 1 {{.*}} %V512 = shufflevector
-  ; AVX512F: cost of 1 {{.*}} %V512 = shufflevector
-  ; AVX512BW: cost of 1 {{.*}} %V512 = shufflevector
+  ; AVX512: cost of 1 {{.*}} %V512 = shufflevector
   %V512 = shufflevector <32 x i16> %src512, <32 x i16> undef, <32 x i32> zeroinitializer
 
   ret void
@@ -159,8 +159,7 @@ define void @test_vXi8(<16 x i8> %src128, <32 x i8> %src256, <64 x i8> %src512) 
   ; SSE42: cost of 1 {{.*}} %V512 = shufflevector
   ; AVX1: cost of 2 {{.*}} %V512 = shufflevector
   ; AVX2: cost of 1 {{.*}} %V512 = shufflevector
-  ; AVX512F: cost of 1 {{.*}} %V512 = shufflevector
-  ; AVX512BW: cost of 1 {{.*}} %V512 = shufflevector
+  ; AVX512: cost of 1 {{.*}} %V512 = shufflevector
   %V512 = shufflevector <64 x i8> %src512, <64 x i8> undef, <64 x i32> zeroinitializer
 
   ret void

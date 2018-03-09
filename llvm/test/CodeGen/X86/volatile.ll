@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -mattr=sse2 | grep movsd | count 5
-; RUN: llc < %s -march=x86 -mattr=sse2 -O0 | grep -v esp | grep movsd | count 5
+; RUN: llc < %s -mtriple=i686-- -mattr=sse2 | grep movsd | count 5
+; RUN: llc < %s -mtriple=i686-- -mattr=sse2 -O0 | grep -v esp | grep movsd | count 5
 
 @x = external global double
 

@@ -460,6 +460,38 @@
 # CHECK-LE: mulhwu. 2, 3, 4                 # encoding: [0x17,0x20,0x43,0x7c]
             mulhwu. 2, 3, 4
 
+# CHECK-BE: maddhd 2, 3, 4, 5               # encoding: [0x10,0x43,0x21,0x70]
+# CHECK-LE: maddhd 2, 3, 4, 5               # encoding: [0x70,0x21,0x43,0x10]
+            maddhd 2, 3, 4, 5
+
+# CHECK-BE: maddhdu 2, 3, 4, 5              # encoding: [0x10,0x43,0x21,0x71]
+# CHECK-LE: maddhdu 2, 3, 4, 5              # encoding: [0x71,0x21,0x43,0x10]
+            maddhdu 2, 3, 4, 5
+
+# CHECK-BE: maddld 2, 3, 4, 5               # encoding: [0x10,0x43,0x21,0x73]
+# CHECK-LE: maddld 2, 3, 4, 5               # encoding: [0x73,0x21,0x43,0x10]
+            maddld 2, 3, 4, 5
+
+# CHECK-BE: setb 2, 3                       # encoding: [0x7c,0x4c,0x01,0x00]
+# CHECK-LE: setb 2, 3                       # encoding: [0x00,0x01,0x4c,0x7c]
+            setb 2, 3
+
+# CHECK-BE: darn 2, 3                       # encoding: [0x7c,0x43,0x05,0xe6]
+# CHECK-LE: darn 2, 3                       # encoding: [0xe6,0x05,0x43,0x7c]
+            darn 2, 3
+
+# CHECK-BE: addpcis 3, 22627                # encoding: [0x4c,0x71,0x58,0x45]
+# CHECK-LE: addpcis 3, 22627                # encoding: [0x45,0x58,0x71,0x4c]
+            addpcis 3, 22627
+
+# CHECK-BE: addpcis 3, 22627                # encoding: [0x4c,0x71,0x58,0x45]
+# CHECK-LE: addpcis 3, 22627                # encoding: [0x45,0x58,0x71,0x4c]
+            subpcis 3, -22627
+
+# CHECK-BE: lnia 3                          # encoding: [0x4c,0x60,0x00,0x04]
+# CHECK-LE: lnia 3                          # encoding: [0x04,0x00,0x60,0x4c]
+            lnia 3
+
 # CHECK-BE: divw 2, 3, 4                    # encoding: [0x7c,0x43,0x23,0xd6]
 # CHECK-LE: divw 2, 3, 4                    # encoding: [0xd6,0x23,0x43,0x7c]
             divw 2, 3, 4
@@ -726,7 +758,9 @@
             cmpb 7, 21, 4
 # CHECK-BE: cmpb 7, 21, 4                   # encoding: [0x7e,0xa7,0x23,0xf8]
 # CHECK-LE: cmpb 7, 21, 4                   # encoding: [0xf8,0x23,0xa7,0x7e]
-# FIXME:    popcntb 2, 3
+# CHECK-BE: popcntb 2, 3                    # encoding: [0x7c,0x62,0x00,0xf4]
+# CHECK-LE: popcntb 2, 3                    # encoding: [0xf4,0x00,0x62,0x7c]
+            popcntb 2, 3
 # CHECK-BE: popcntw 2, 3                    # encoding: [0x7c,0x62,0x02,0xf4]
 # CHECK-LE: popcntw 2, 3                    # encoding: [0xf4,0x02,0x62,0x7c]
             popcntw 2, 3
@@ -885,6 +919,13 @@
 # CHECK-BE: srad. 2, 3, 4                   # encoding: [0x7c,0x62,0x26,0x35]
 # CHECK-LE: srad. 2, 3, 4                   # encoding: [0x35,0x26,0x62,0x7c]
             srad. 2, 3, 4
+# CHECK-BE: extswsli 2, 3, 4                # encoding: [0x7c,0x62,0x26,0xf4]
+# CHECK-LE: extswsli 2, 3, 4                # encoding: [0xf4,0x26,0x62,0x7c]
+            extswsli 2, 3, 4
+# CHECK-BE: extswsli. 2, 3, 4               # encoding: [0x7c,0x62,0x26,0xf5]
+# CHECK-LE: extswsli. 2, 3, 4               # encoding: [0xf5,0x26,0x62,0x7c]
+            extswsli. 2, 3, 4
+
 
 # FIXME: BCD assist instructions
 

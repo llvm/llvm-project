@@ -1,4 +1,6 @@
 ; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -filetype asm -o - %s | FileCheck %s
+; RUN: llc -mtriple x86_64-windows-gnu -exception-model sjlj -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-X64
+; RUN: llc -mtriple x86_64-linux -exception-model sjlj -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-X64-LINUX
 
 declare void @_Z20function_that_throwsv()
 declare i32 @__gxx_personality_sj0(...)
@@ -24,11 +26,11 @@ try.cont:
 
 ;     struct _Unwind_FunctionContext {
 ; +00   struct _Unwind_FunctionContext *prev;   -64(%ebp)
-; +04   uintptr_t __callsite;                   -60(%ebp)
-; +08   uintptr_t __buffer[4];                  -44(%ebp)
-; +28   __personality_routine __personality;    -40(%ebp)
-; +32   uintptr_t __lsda;                       -36(%ebp)
-; +36   void *__jbuf[];                         -32(%ebp)
+; +04   uint32_t __callsite;                    -60(%ebp)
+; +08   uint32_t __buffer[4];                   -56(%ebp)
+; +24   __personality_routine __personality;    -40(%ebp)
+; +28   uintptr_t __lsda;                       -36(%ebp)
+; +32   void *__jbuf[];                         -32(%ebp)
 ;     };
 
 
@@ -39,9 +41,9 @@ try.cont:
 ; CHECK: movl $___gxx_personality_sj0, -40(%ebp)
 ;     UFC.__lsda = $LSDA
 ; CHECK: movl $[[LSDA:GCC_except_table[0-9]+]], -36(%ebp)
-;     UFC.__jbuf[0] = $EBP
+;     UFC.__jbuf[0] = $ebp
 ; CHECK: movl %ebp, -32(%ebp)
-;     UFC.__jbuf[2] = $ESP
+;     UFC.__jbuf[2] = $esp
 ; CHECK: movl %esp, -24(%ebp)
 ;     UFC.__jbuf[1] = $EIP
 ; CHECK: movl $[[RESUME:LBB[0-9]+_[0-9]+]], -28(%ebp)
@@ -60,13 +62,74 @@ try.cont:
 ;
 ; CHECK: [[RESUME]]:
 ; CHECK: leal -64(%ebp), %esi
-;     assert(UFC.__callsite <= 1);
+;     assert(UFC.__callsite < 1);
 ; CHECK: movl -60(%ebp), %eax
 ; CHECK: cmpl $1, %eax
-; CHECK: jbe [[CONT:LBB[0-9]+_[0-9]+]]
+; CHECK: jb [[CONT:LBB[0-9]+_[0-9]+]]
 ; CHECK: ud2
 ; CHECK: [[CONT]]:
-;     *Handlers[--UFC.__callsite]
-; CHECK: subl $1, %eax
+;     *Handlers[UFC.__callsite]
 ; CHECK: jmpl *LJTI
 
+
+;     struct _Unwind_FunctionContext {
+; +00   struct _Unwind_FunctionContext *prev;   -312(%rbp)
+; +08   uint32_t __callsite;                    -304(%rbp)
+; +12   uint32_t __buffer[4];                   -300(%rbp)
+; +32   __personality_routine __personality;    -280(%rbp)
+; +40   uintptr_t __lsda;                       -272(%rbp)
+; +48   void *__jbuf[];                         -264(%rbp)
+;     };
+
+
+; CHECK-X64-LABEL: _Z8functionv:
+;     struct _Unwind_FunctionContext UFC;
+;
+;     UFC.__personality = __gxx_personality_sj0
+; CHECK-X64: leaq __gxx_personality_sj0(%rip), %rax
+; CHECK-X64: movq %rax, -280(%rbp)
+;     UFC.__lsda = $LSDA
+; CHECK-X64: leaq [[LSDA:GCC_except_table[0-9]+]](%rip), %rax
+; CHECK-X64: movq %rax, -272(%rbp)
+;     UFC.__jbuf[0] = $rbp
+; CHECK-X64: movq %rbp, -264(%rbp)
+;     UFC.__jbuf[2] = $rsp
+; CHECK-X64: movq %rsp, -248(%rbp)
+;     UFC.__jbuf[1] = $RIP
+; CHECK-X64: leaq .[[RESUME:LBB[0-9]+_[0-9]+]](%rip), %rax
+; CHECK-X64: movq %rax, -256(%rbp)
+;     UFC.__callsite = 1
+; CHECK-X64: movl $1, -304(%rbp)
+;     _Unwind_SjLj_Register(&UFC);
+; CHECK-X64: leaq -312(%rbp), %rcx
+; CHECK-X64: callq _Unwind_SjLj_Register
+;     function_that_throws();
+; CHECK-X64: callq _Z20function_that_throwsv
+;     _Unwind_SjLj_Unregister(&UFC);
+; CHECK-X64: leaq -312(%rbp), %rcx
+; CHECK-X64: callq _Unwind_SjLj_Unregister
+;
+; CHECK-X64: [[RESUME]]:
+;     assert(UFC.__callsite < 1);
+; CHECK-X64: movl -304(%rbp), %eax
+; CHECK-X64: cmpl $1, %eax
+; CHECK-X64: jb .[[CONT:LBB[0-9]+_[0-9]+]]
+; CHECK-X64: ud2
+; CHECK-X64: [[CONT]]:
+;     *Handlers[UFC.__callsite]
+; CHECK-X64: leaq .[[TABLE:LJTI[0-9]+_[0-9]+]](%rip), %rcx
+; CHECK-X64: movl (%rcx,%rax,4), %eax
+; CHECK-X64: cltq
+; CHECK-X64: addq %rcx, %rax
+; CHECK-X64: jmpq *%rax
+
+; CHECK-X64-LINUX: .[[RESUME:LBB[0-9]+_[0-9]+]]:
+;     assert(UFC.__callsite < 1);
+; CHECK-X64-LINUX: movl -120(%rbp), %eax
+; CHECK-X64-LINUX: cmpl $1, %eax
+; CHECK-X64-LINUX: jb .[[CONT:LBB[0-9]+_[0-9]+]]
+; CHECK-X64-LINUX: ud2
+; CHECK-X64-LINUX: [[CONT]]:
+;     *Handlers[UFC.__callsite]
+; CHECK-X64-LINUX: leaq .[[TABLE:LJTI[0-9]+_[0-9]+]](%rip), %rcx
+; CHECK-X64-LINUX: jmpq *(%rcx,%rax,8)

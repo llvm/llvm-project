@@ -278,7 +278,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     return;
 
   // Check for additional literals in SRC0/1/2 (Op 1/2/3)
-  for (unsigned i = 0, e = MI.getNumOperands(); i < e; ++i) {
+  for (unsigned i = 0, e = Desc.getNumOperands(); i < e; ++i) {
 
     // Check if this operand should be encoded as [SV]Src
     if (!AMDGPU::isSISrcOperand(Desc, i))

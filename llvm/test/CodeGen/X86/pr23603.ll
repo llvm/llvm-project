@@ -5,7 +5,7 @@ declare void @free_v()
 
 define void @f(i32* %x, i32 %c32, i32* %y) nounwind {
 ; CHECK-LABEL: f:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
@@ -15,7 +15,7 @@ define void @f(i32* %x, i32 %c32, i32* %y) nounwind {
 ; CHECK-NEXT:    callq free_v
 ; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:  # BB#1: # %left
+; CHECK-NEXT:  # %bb.1: # %left
 ; CHECK-NEXT:    movl %ebx, (%r14)
 ; CHECK-NEXT:  .LBB0_2: # %merge
 ; CHECK-NEXT:    popq %rbx

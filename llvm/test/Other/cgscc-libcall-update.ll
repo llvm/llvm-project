@@ -3,7 +3,10 @@
 ;
 ; Also check that it can handle inlining *removing* a libcall entirely.
 ;
-; RUN: opt -passes='cgscc(inline,function(instcombine))' -S < %s | FileCheck %s
+; Finally, we include some recursive patterns and forced analysis invaliadtion
+; that can trigger infinite CGSCC refinement if not handled correctly.
+;
+; RUN: opt -passes='cgscc(inline,function(instcombine,invalidate<all>))' -S < %s | FileCheck %s
 
 define i8* @wibble(i8* %arg1, i8* %arg2) {
 ; CHECK-LABEL: define i8* @wibble(
@@ -15,7 +18,7 @@ bb:
   %tmp3 = call i64 @llvm.objectsize.i64.p0i8(i8* %tmp2, i1 false, i1 true)
   %tmp4 = call i8* @__strncpy_chk(i8* %arg2, i8* %tmp2, i64 1023, i64 %tmp3)
 ; CHECK-NOT:     call
-; CHECK:         call i8* @strncpy(i8* %arg2, i8* %tmp2, i64 1023)
+; CHECK:         call i8* @strncpy(i8* %arg2, i8* nonnull %tmp2, i64 1023)
 ; CHECK-NOT:     call
 
   ret i8* %tmp4
@@ -58,4 +61,16 @@ entry:
   %and2 = lshr i32 %x, 8
   %shr = and i32 %and2, 65280
   ret i32 %shr
+}
+
+define i64 @write(i32 %i, i8* %p, i64 %j) {
+entry:
+  %val = call i64 @write_wrapper(i32 %i, i8* %p, i64 %j) noinline
+  ret i64 %val
+}
+
+define i64 @write_wrapper(i32 %i, i8* %p, i64 %j) {
+entry:
+  %val = call i64 @write(i32 %i, i8* %p, i64 %j) noinline
+  ret i64 %val
 }

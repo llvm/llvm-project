@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/DwarfFile.cpp - Dwarf Debug Framework ----------------===//
+//===- llvm/CodeGen/DwarfFile.cpp - Dwarf Debug Framework -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,18 +11,41 @@
 #include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
 #include "DwarfUnit.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/DIE.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
+#include <algorithm>
+#include <cstdint>
 
-namespace llvm {
+using namespace llvm;
+
 DwarfFile::DwarfFile(AsmPrinter *AP, StringRef Pref, BumpPtrAllocator &DA)
     : Asm(AP), Abbrevs(AbbrevAllocator), StrPool(DA, *Asm, Pref) {}
 
 void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
+}
+
+void DwarfFile::emitStringOffsetsTableHeader(MCSection *Section) {
+  if (StrPool.empty())
+    return;
+  Asm->OutStreamer->SwitchSection(Section);
+  unsigned EntrySize = 4;
+  // FIXME: DWARF64
+  // We are emitting the header for a contribution to the string offsets
+  // table. The header consists of an entry with the contribution's
+  // size (not including the size of the header), the DWARF version and
+  // 2 bytes of padding.
+  Asm->EmitInt32(StrPool.size() * EntrySize);
+  Asm->EmitInt16(Asm->getDwarfVersion());
+  Asm->EmitInt16(0);
+  // Define the symbol that marks the start of the contribution. It is
+  // referenced by most unit headers via DW_AT_str_offsets_base.
+  // Split units do not use the attribute.
+  if (StringOffsetsStartSym)
+    Asm->OutStreamer->EmitLabel(StringOffsetsStartSym);
 }
 
 // Emit the various dwarf units to the unit section USection with
@@ -74,43 +97,24 @@ unsigned DwarfFile::computeSizeAndOffset(DIE &Die, unsigned Offset) {
 void DwarfFile::emitAbbrevs(MCSection *Section) { Abbrevs.Emit(Asm, Section); }
 
 // Emit strings into a string section.
-void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection) {
-  StrPool.emit(*Asm, StrSection, OffsetSection);
+void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection,
+                            bool UseRelativeOffsets) {
+  StrPool.emit(*Asm, StrSection, OffsetSection, UseRelativeOffsets);
 }
 
 bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
-  SmallVectorImpl<DbgVariable *> &Vars = ScopeVariables[LS];
+  auto &ScopeVars = ScopeVariables[LS];
   const DILocalVariable *DV = Var->getVariable();
-  // Variables with positive arg numbers are parameters.
   if (unsigned ArgNum = DV->getArg()) {
-    // Keep all parameters in order at the start of the variable list to ensure
-    // function types are correct (no out-of-order parameters)
-    //
-    // This could be improved by only doing it for optimized builds (unoptimized
-    // builds have the right order to begin with), searching from the back (this
-    // would catch the unoptimized case quickly), or doing a binary search
-    // rather than linear search.
-    auto I = Vars.begin();
-    while (I != Vars.end()) {
-      unsigned CurNum = (*I)->getVariable()->getArg();
-      // A local (non-parameter) variable has been found, insert immediately
-      // before it.
-      if (CurNum == 0)
-        break;
-      // A later indexed parameter has been found, insert immediately before it.
-      if (CurNum > ArgNum)
-        break;
-      if (CurNum == ArgNum) {
-        (*I)->addMMIEntry(*Var);
-        return false;
-      }
-      ++I;
+    auto Cached = ScopeVars.Args.find(ArgNum);
+    if (Cached == ScopeVars.Args.end())
+      ScopeVars.Args[ArgNum] = Var;
+    else {
+      Cached->second->addMMIEntry(*Var);
+      return false;
     }
-    Vars.insert(I, Var);
-    return true;
-  }
-
-  Vars.push_back(Var);
+  } else {
+    ScopeVars.Locals.push_back(Var);
+  }    
   return true;
-}
 }

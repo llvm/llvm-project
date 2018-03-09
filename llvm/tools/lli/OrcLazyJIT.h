@@ -15,15 +15,16 @@
 #ifndef LLVM_TOOLS_LLI_ORCLAZYJIT_H
 #define LLVM_TOOLS_LLI_ORCLAZYJIT_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
@@ -61,8 +62,8 @@ public:
              IndirectStubsManagerBuilder IndirectStubsMgrBuilder,
              bool InlineStubs)
       : TM(std::move(TM)), DL(this->TM->createDataLayout()),
-	CCMgr(std::move(CCMgr)),
-	ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+        CCMgr(std::move(CCMgr)),
+        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(*this->TM)),
         IRDumpLayer(CompileLayer, createDebugDumper()),
         CODLayer(IRDumpLayer, extractSingleFunction, *this->CCMgr,
@@ -112,7 +113,7 @@ public:
     //   1) Search the JIT symbols.
     //   2) Check for C++ runtime overrides.
     //   3) Search the host process (LLI)'s symbol table.
-    if (ModulesHandle == CODLayerT::ModuleHandleT()) {
+    if (!ModulesHandle) {
       auto Resolver =
         orc::createLambdaResolver(
           [this](const std::string &Name) -> JITSymbol {
@@ -135,19 +136,18 @@ public:
       else
         return ModulesHandleOrErr.takeError();
 
-    } else
-      if (auto Err = CODLayer.addExtraModule(ModulesHandle, std::move(M)))
-        return Err;
+    } else if (auto Err = CODLayer.addExtraModule(*ModulesHandle, std::move(M)))
+      return Err;
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.
     orc::CtorDtorRunner<CODLayerT> CtorRunner(std::move(CtorNames),
-                                              ModulesHandle);
+                                              *ModulesHandle);
     if (auto Err = CtorRunner.runViaLayer(CODLayer))
       return Err;
 
     IRStaticDestructorRunners.emplace_back(std::move(DtorNames),
-                                           ModulesHandle);
+                                           *ModulesHandle);
 
     return Error::success();
   }
@@ -190,7 +190,7 @@ private:
 
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   std::vector<orc::CtorDtorRunner<CODLayerT>> IRStaticDestructorRunners;
-  CODLayerT::ModuleHandleT ModulesHandle;
+  llvm::Optional<CODLayerT::ModuleHandleT> ModulesHandle;
 };
 
 int runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,

@@ -66,9 +66,11 @@ public:
         Addend = *reinterpret_cast<support::ulittle64_t *>(LocalAddress);
       break;
     case MachO::ARM64_RELOC_BRANCH26: {
-      // Verify that the relocation points to the expected branch instruction.
+      // Verify that the relocation points to a B/BL instruction.
       auto *p = reinterpret_cast<support::aligned_ulittle32_t *>(LocalAddress);
-      assert((*p & 0xFC000000) == 0x14000000 && "Expected branch instruction.");
+      assert(((*p & 0xFC000000) == 0x14000000 ||
+              (*p & 0xFC000000) == 0x94000000) &&
+             "Expected branch instruction.");
 
       // Get the 26 bit addend encoded in the branch instruction and sign-extend
       // to 64 bit. The lower 2 bits are always zeros and are therefore implicit
@@ -164,7 +166,9 @@ public:
     case MachO::ARM64_RELOC_BRANCH26: {
       auto *p = reinterpret_cast<support::aligned_ulittle32_t *>(LocalAddress);
       // Verify that the relocation points to the expected branch instruction.
-      assert((*p & 0xFC000000) == 0x14000000 && "Expected branch instruction.");
+      assert(((*p & 0xFC000000) == 0x14000000 ||
+              (*p & 0xFC000000) == 0x94000000) &&
+             "Expected branch instruction.");
 
       // Verify addend value.
       assert((Addend & 0x3) == 0 && "Branch target is not aligned");

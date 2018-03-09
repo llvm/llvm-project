@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--
 
 	%struct..0objc_object = type { %struct.objc_class* }
 	%struct.NSArray = type { %struct..0objc_object }

@@ -94,7 +94,7 @@ define i32 @fptoui_double_i16(i32 %arg) {
   ; SSE42: cost of 27 {{.*}} %V8I16 = fptoui
   ; AVX1: cost of 25 {{.*}} %V8I16 = fptoui
   ; AVX2: cost of 25 {{.*}} %V8I16 = fptoui
-  ; AVX512: cost of 1 {{.*}} %V8I16 = fptoui
+  ; AVX512: cost of 2 {{.*}} %V8I16 = fptoui
   %V8I16 = fptoui <8 x double> undef to <8 x i16>
 
   ret i32 undef
@@ -125,7 +125,7 @@ define i32 @fptoui_double_i8(i32 %arg) {
   ; SSE42: cost of 27 {{.*}} %V8I8 = fptoui
   ; AVX1: cost of 25 {{.*}} %V8I8 = fptoui
   ; AVX2: cost of 25 {{.*}} %V8I8 = fptoui
-  ; AVX512: cost of 1 {{.*}} %V8I8 = fptoui
+  ; AVX512: cost of 2 {{.*}} %V8I8 = fptoui
   %V8I8 = fptoui <8 x double> undef to <8 x i8>
 
   ret i32 undef
@@ -225,7 +225,7 @@ define i32 @fptoui_float_i16(i32 %arg) {
   ; SSE42: cost of 51 {{.*}} %V16I16 = fptoui
   ; AVX1: cost of 3 {{.*}} %V16I16 = fptoui
   ; AVX2: cost of 3 {{.*}} %V16I16 = fptoui
-  ; AVX512: cost of 48 {{.*}} %V16I16 = fptoui
+  ; AVX512: cost of 2 {{.*}} %V16I16 = fptoui
   %V16I16 = fptoui <16 x float> undef to <16 x i16>
 
   ret i32 undef
@@ -255,7 +255,7 @@ define i32 @fptoui_float_i8(i32 %arg) {
   ; SSE42: cost of 51 {{.*}} %V16I8 = fptoui
   ; AVX1: cost of 3 {{.*}} %V16I8 = fptoui
   ; AVX2: cost of 3 {{.*}} %V16I8 = fptoui
-  ; AVX512: cost of 48 {{.*}} %V16I8 = fptoui
+  ; AVX512: cost of 2 {{.*}} %V16I8 = fptoui
   %V16I8 = fptoui <16 x float> undef to <16 x i8>
 
   ret i32 undef

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep lwz
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep lwz
 
 define i32 @test(i32* %P) {
         store i32 1, i32* %P

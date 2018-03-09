@@ -22,7 +22,7 @@ body:             |
 ...
 ---
 # CHECK-LABEL: name: test_subreg_spill_fold2
-# Similar to test_subreg_spill_fold, but with a vreg0 register class not containing %WZR.
+# Similar to test_subreg_spill_fold, but with a %0 register class not containing %WZR.
 name:            test_subreg_spill_fold2
 registers:
   - { id: 0, class: gpr64sp }

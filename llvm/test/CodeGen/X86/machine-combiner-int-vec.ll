@@ -5,14 +5,14 @@
 
 define <4 x i32> @reassociate_and_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, <4 x i32> %x3) {
 ; SSE-LABEL: reassociate_and_v4i32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    pand %xmm3, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: reassociate_and_v4i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm3, %xmm2, %xmm1
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -26,14 +26,14 @@ define <4 x i32> @reassociate_and_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> 
 
 define <4 x i32> @reassociate_or_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, <4 x i32> %x3) {
 ; SSE-LABEL: reassociate_or_v4i32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    por %xmm3, %xmm2
 ; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: reassociate_or_v4i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpor %xmm3, %xmm2, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
@@ -47,14 +47,14 @@ define <4 x i32> @reassociate_or_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %
 
 define <4 x i32> @reassociate_xor_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, <4 x i32> %x3) {
 ; SSE-LABEL: reassociate_xor_v4i32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    pxor %xmm3, %xmm2
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: reassociate_xor_v4i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpxor %xmm3, %xmm2, %xmm1
 ; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
@@ -70,7 +70,7 @@ define <4 x i32> @reassociate_xor_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> 
 
 define <8 x i32> @reassociate_and_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, <8 x i32> %x3) {
 ; AVX-LABEL: reassociate_and_v8i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vpand %ymm3, %ymm2, %ymm1
 ; AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
@@ -84,7 +84,7 @@ define <8 x i32> @reassociate_and_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> 
 
 define <8 x i32> @reassociate_or_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, <8 x i32> %x3) {
 ; AVX-LABEL: reassociate_or_v8i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vpor %ymm3, %ymm2, %ymm1
 ; AVX-NEXT:    vpor %ymm1, %ymm0, %ymm0
@@ -98,7 +98,7 @@ define <8 x i32> @reassociate_or_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %
 
 define <8 x i32> @reassociate_xor_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, <8 x i32> %x3) {
 ; AVX-LABEL: reassociate_xor_v8i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vpxor %ymm3, %ymm2, %ymm1
 ; AVX-NEXT:    vpxor %ymm1, %ymm0, %ymm0

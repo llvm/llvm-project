@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -verify-machineinstrs < %s
 ; PR25838
 
 target triple = "armv7--linux-android"

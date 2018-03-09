@@ -410,22 +410,27 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     ReportError("DIE has invalid DW_AT_stmt_list encoding:");
     break;
   case DW_AT_location: {
-    Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock();
-    if (!Expr) {
-      ReportError("DIE has invalid DW_AT_location encoding:");
-      break;
+    auto VerifyLocation = [&](StringRef D) {
+      DWARFUnit *U = Die.getDwarfUnit();
+      DataExtractor Data(D, DCtx.isLittleEndian(), 0);
+      DWARFExpression Expression(Data, U->getVersion(),
+                                 U->getAddressByteSize());
+      bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
+        return Op.isError();
+      });
+      if (Error)
+        ReportError("DIE contains invalid DWARF expression:");
+    };
+    if (Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock()) {
+      // Verify inlined location.
+      VerifyLocation(llvm::toStringRef(*Expr));
+    } else if (auto LocOffset = AttrValue.Value.getAsUnsignedConstant()) {
+      // Verify location list.
+      if (auto DebugLoc = DCtx.getDebugLoc())
+        if (auto LocList = DebugLoc->getLocationListAtOffset(*LocOffset))
+          for (const auto &Entry : LocList->Entries)
+            VerifyLocation({Entry.Loc.data(), Entry.Loc.size()});
     }
-
-    DWARFUnit *U = Die.getDwarfUnit();
-    DataExtractor Data(
-        StringRef(reinterpret_cast<const char *>(Expr->data()), Expr->size()),
-        DCtx.isLittleEndian(), 0);
-    DWARFExpression Expression(Data, U->getVersion(), U->getAddressByteSize());
-    bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
-      return Op.isError();
-    });
-    if (Error)
-      ReportError("DIE contains invalid DWARF expression:");
     break;
   }
 
@@ -669,13 +674,13 @@ bool DWARFVerifier::handleDebugLine() {
   return NumDebugLineErrors == 0;
 }
 
-unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
-                                         DataExtractor *StrData,
-                                         const char *SectionName) {
+unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
+                                              DataExtractor *StrData,
+                                              const char *SectionName) {
   unsigned NumErrors = 0;
   DWARFDataExtractor AccelSectionData(DCtx.getDWARFObj(), *AccelSection,
                                       DCtx.isLittleEndian(), 0);
-  DWARFAcceleratorTable AccelTable(AccelSectionData, *StrData);
+  AppleAcceleratorTable AccelTable(AccelSectionData, *StrData);
 
   OS << "Verifying " << SectionName << "...\n";
 
@@ -779,16 +784,16 @@ bool DWARFVerifier::handleAccelTables() {
   unsigned NumErrors = 0;
   if (!D.getAppleNamesSection().Data.empty())
     NumErrors +=
-        verifyAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
+        verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
   if (!D.getAppleTypesSection().Data.empty())
     NumErrors +=
-        verifyAccelTable(&D.getAppleTypesSection(), &StrData, ".apple_types");
+        verifyAppleAccelTable(&D.getAppleTypesSection(), &StrData, ".apple_types");
   if (!D.getAppleNamespacesSection().Data.empty())
-    NumErrors += verifyAccelTable(&D.getAppleNamespacesSection(), &StrData,
+    NumErrors += verifyAppleAccelTable(&D.getAppleNamespacesSection(), &StrData,
                                   ".apple_namespaces");
   if (!D.getAppleObjCSection().Data.empty())
     NumErrors +=
-        verifyAccelTable(&D.getAppleObjCSection(), &StrData, ".apple_objc");
+        verifyAppleAccelTable(&D.getAppleObjCSection(), &StrData, ".apple_objc");
   return NumErrors == 0;
 }
 

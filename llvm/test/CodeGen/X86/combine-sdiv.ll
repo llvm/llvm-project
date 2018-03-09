@@ -6,11 +6,11 @@
 ; fold (sdiv undef, x) -> 0
 define <4 x i32> @combine_vec_sdiv_undef0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_undef0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_undef0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> undef, %x
   ret <4 x i32> %1
@@ -19,11 +19,11 @@ define <4 x i32> @combine_vec_sdiv_undef0(<4 x i32> %x) {
 ; fold (sdiv x, undef) -> undef
 define <4 x i32> @combine_vec_sdiv_undef1(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_undef1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_undef1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, undef
   ret <4 x i32> %1
@@ -32,11 +32,11 @@ define <4 x i32> @combine_vec_sdiv_undef1(<4 x i32> %x) {
 ; fold (sdiv x, 1) -> x
 define <4 x i32> @combine_vec_sdiv_by_one(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_one:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_one:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %1
@@ -45,14 +45,14 @@ define <4 x i32> @combine_vec_sdiv_by_one(<4 x i32> %x) {
 ; fold (sdiv x, -1) -> 0 - x
 define <4 x i32> @combine_vec_sdiv_by_negone(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_negone:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_negone:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
@@ -63,13 +63,13 @@ define <4 x i32> @combine_vec_sdiv_by_negone(<4 x i32> %x) {
 ; fold (sdiv x, y) -> (udiv x, y) iff x and y are positive
 define <4 x i32> @combine_vec_sdiv_by_pos0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_pos0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    psrld $2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pos0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -80,7 +80,7 @@ define <4 x i32> @combine_vec_sdiv_by_pos0(<4 x i32> %x) {
 
 define <4 x i32> @combine_vec_sdiv_by_pos1(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_pos1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
@@ -94,7 +94,7 @@ define <4 x i32> @combine_vec_sdiv_by_pos1(<4 x i32> %x) {
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pos1:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrld $4, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrld $2, %xmm0, %xmm2
@@ -105,7 +105,7 @@ define <4 x i32> @combine_vec_sdiv_by_pos1(<4 x i32> %x) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_sdiv_by_pos1:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -117,7 +117,7 @@ define <4 x i32> @combine_vec_sdiv_by_pos1(<4 x i32> %x) {
 ; fold (sdiv x, (1 << c)) -> x >>u c
 define <4 x i32> @combine_vec_sdiv_by_pow2a(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_pow2a:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $31, %xmm1
 ; SSE-NEXT:    psrld $30, %xmm1
@@ -127,7 +127,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2a(<4 x i32> %x) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2a:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; AVX-NEXT:    vpsrld $30, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -139,7 +139,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2a(<4 x i32> %x) {
 
 define <4 x i32> @combine_vec_sdiv_by_pow2b(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_pow2b:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pextrd $1, %xmm0, %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    sarl $31, %ecx
@@ -164,7 +164,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b(<4 x i32> %x) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2b:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX-NEXT:    movl %eax, %ecx
 ; AVX-NEXT:    sarl $31, %ecx

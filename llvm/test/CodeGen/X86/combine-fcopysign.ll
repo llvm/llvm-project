@@ -9,7 +9,7 @@
 ; copysign(x, c1) -> fabs(x) iff ispos(c1)
 define <4 x float> @combine_vec_fcopysign_pos_constant0(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_pos_constant0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [2.000000e+00,2.000000e+00,2.000000e+00,2.000000e+00]
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
@@ -17,7 +17,7 @@ define <4 x float> @combine_vec_fcopysign_pos_constant0(<4 x float> %x) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_pos_constant0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandps %xmm1, %xmm2, %xmm1
@@ -31,7 +31,7 @@ define <4 x float> @combine_vec_fcopysign_pos_constant0(<4 x float> %x) {
 
 define <4 x float> @combine_vec_fcopysign_pos_constant1(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_pos_constant1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [0.000000e+00,2.000000e+00,4.000000e+00,8.000000e+00]
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
@@ -39,7 +39,7 @@ define <4 x float> @combine_vec_fcopysign_pos_constant1(<4 x float> %x) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_pos_constant1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
@@ -52,12 +52,12 @@ define <4 x float> @combine_vec_fcopysign_pos_constant1(<4 x float> %x) {
 
 define <4 x float> @combine_vec_fcopysign_fabs_sgn(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fabs_sgn:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fabs_sgn:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -69,7 +69,7 @@ define <4 x float> @combine_vec_fcopysign_fabs_sgn(<4 x float> %x, <4 x float> %
 ; copysign(x, c1) -> fneg(fabs(x)) iff isneg(c1)
 define <4 x float> @combine_vec_fcopysign_neg_constant0(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_neg_constant0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [-2.000000e+00,-2.000000e+00,-2.000000e+00,-2.000000e+00]
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
@@ -77,7 +77,7 @@ define <4 x float> @combine_vec_fcopysign_neg_constant0(<4 x float> %x) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_neg_constant0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandps %xmm1, %xmm2, %xmm1
@@ -91,7 +91,7 @@ define <4 x float> @combine_vec_fcopysign_neg_constant0(<4 x float> %x) {
 
 define <4 x float> @combine_vec_fcopysign_neg_constant1(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_neg_constant1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [-0.000000e+00,-2.000000e+00,-4.000000e+00,-8.000000e+00]
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
@@ -99,7 +99,7 @@ define <4 x float> @combine_vec_fcopysign_neg_constant1(<4 x float> %x) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_neg_constant1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
@@ -112,21 +112,16 @@ define <4 x float> @combine_vec_fcopysign_neg_constant1(<4 x float> %x) {
 
 define <4 x float> @combine_vec_fcopysign_fneg_fabs_sgn(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fneg_fabs_sgn:
-; SSE:       # BB#0:
-; SSE-NEXT:    movaps {{.*#+}} xmm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
-; SSE-NEXT:    orps %xmm2, %xmm1
-; SSE-NEXT:    andps %xmm2, %xmm1
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE-NEXT:    orps %xmm1, %xmm0
+; SSE-NEXT:    orps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fneg_fabs_sgn:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
-; AVX-NEXT:    vorps %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm3
-; AVX-NEXT:    vandps %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
@@ -138,14 +133,14 @@ define <4 x float> @combine_vec_fcopysign_fneg_fabs_sgn(<4 x float> %x, <4 x flo
 ; copysign(fabs(x), y) -> copysign(x, y)
 define <4 x float> @combine_vec_fcopysign_fabs_mag(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fabs_mag:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fabs_mag:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandps %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
@@ -160,14 +155,14 @@ define <4 x float> @combine_vec_fcopysign_fabs_mag(<4 x float> %x, <4 x float> %
 ; copysign(fneg(x), y) -> copysign(x, y)
 define <4 x float> @combine_vec_fcopysign_fneg_mag(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fneg_mag:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fneg_mag:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandps %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
@@ -182,14 +177,14 @@ define <4 x float> @combine_vec_fcopysign_fneg_mag(<4 x float> %x, <4 x float> %
 ; copysign(copysign(x,z), y) -> copysign(x, y)
 define <4 x float> @combine_vec_fcopysign_fcopysign_mag(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
 ; SSE-LABEL: combine_vec_fcopysign_fcopysign_mag:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fcopysign_mag:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandps %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
@@ -204,14 +199,14 @@ define <4 x float> @combine_vec_fcopysign_fcopysign_mag(<4 x float> %x, <4 x flo
 ; copysign(x, copysign(y,z)) -> copysign(x, z)
 define <4 x float> @combine_vec_fcopysign_fcopysign_sgn(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
 ; SSE-LABEL: combine_vec_fcopysign_fcopysign_sgn:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm2
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fcopysign_sgn:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vandps %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
@@ -226,7 +221,7 @@ define <4 x float> @combine_vec_fcopysign_fcopysign_sgn(<4 x float> %x, <4 x flo
 ; copysign(x, fp_extend(y)) -> copysign(x, y)
 define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fpext_sgn:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm2, %xmm3
 ; SSE-NEXT:    cvtss2sd %xmm2, %xmm4
 ; SSE-NEXT:    movshdup {{.*#+}} xmm5 = xmm2[1,1,3,3]
@@ -245,7 +240,7 @@ define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float
 ; SSE-NEXT:    cvtss2sd %xmm5, %xmm4
 ; SSE-NEXT:    andps %xmm8, %xmm4
 ; SSE-NEXT:    orps %xmm0, %xmm4
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm4[0]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    andps %xmm7, %xmm0
@@ -257,12 +252,12 @@ define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float
 ; SSE-NEXT:    cvtss2sd %xmm6, %xmm0
 ; SSE-NEXT:    andps %xmm8, %xmm0
 ; SSE-NEXT:    orps %xmm0, %xmm1
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fpext_sgn:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastsd {{.*}}(%rip), %ymm2
 ; AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vcvtps2pd %xmm1, %ymm1
@@ -278,7 +273,7 @@ define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float
 ; copysign(x, fp_round(y)) -> copysign(x, y)
 define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x double> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fptrunc_sgn:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    movaps {{.*#+}} xmm5
 ; SSE-NEXT:    andps %xmm5, %xmm0
@@ -312,7 +307,7 @@ define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x doubl
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fptrunc_sgn:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtpd2ps %ymm1, %xmm1

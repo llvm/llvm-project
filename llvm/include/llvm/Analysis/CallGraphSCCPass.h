@@ -21,16 +21,16 @@
 #ifndef LLVM_ANALYSIS_CALLGRAPHSCCPASS_H
 #define LLVM_ANALYSIS_CALLGRAPHSCCPASS_H
 
-#include "llvm/Analysis/CallGraph.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Pass.h"
-#include "llvm/PassSupport.h"
+#include <vector>
 
 namespace llvm {
 
-class CallGraphNode;
 class CallGraph;
-class PMStack;
+class CallGraphNode;
 class CallGraphSCC;
+class PMStack;
 
 class CallGraphSCCPass : public Pass {
 public:
@@ -38,7 +38,7 @@ public:
 
   /// createPrinterPass - Get a pass that prints the Module
   /// corresponding to a CallGraph.
-  Pass *createPrinterPass(raw_ostream &O,
+  Pass *createPrinterPass(raw_ostream &OS,
                           const std::string &Banner) const override;
 
   using llvm::Pass::doInitialization;
@@ -57,7 +57,6 @@ public:
   ///
   /// SCC passes that add or delete functions to the SCC are required to update
   /// the SCC list, otherwise stale pointers may be dereferenced.
-  ///
   virtual bool runOnSCC(CallGraphSCC &SCC) = 0;
 
   /// doFinalization - This method is called after the SCC's of the program has
@@ -89,7 +88,7 @@ protected:
 class CallGraphSCC {
   const CallGraph &CG; // The call graph for this SCC.
   void *Context; // The CGPassManager object that is vending this.
-  std::vector<CallGraphNode*> Nodes;
+  std::vector<CallGraphNode *> Nodes;
 
 public:
   CallGraphSCC(CallGraph &cg, void *context) : CG(cg), Context(context) {}
@@ -105,7 +104,8 @@ public:
   /// Old node has been deleted, and New is to be used in its place.
   void ReplaceNode(CallGraphNode *Old, CallGraphNode *New);
 
-  typedef std::vector<CallGraphNode *>::const_iterator iterator;
+  using iterator = std::vector<CallGraphNode *>::const_iterator;
+
   iterator begin() const { return Nodes.begin(); }
   iterator end() const { return Nodes.end(); }
 
@@ -119,16 +119,19 @@ void initializeDummyCGSCCPassPass(PassRegistry &);
 class DummyCGSCCPass : public CallGraphSCCPass {
 public:
   static char ID;
+
   DummyCGSCCPass() : CallGraphSCCPass(ID) {
     PassRegistry &Registry = *PassRegistry::getPassRegistry();
     initializeDummyCGSCCPassPass(Registry);
-  };
+  }
+
   bool runOnSCC(CallGraphSCC &SCC) override { return false; }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_CALLGRAPHSCCPASS_H

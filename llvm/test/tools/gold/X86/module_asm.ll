@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -shared -m elf_x86_64 -o %t2 -plugin %llvmshlibdir/LLVMgold.so %t.o
+; RUN: %gold -shared -m elf_x86_64 -o %t2 -plugin %llvmshlibdir/LLVMgold%shlibext %t.o
 ; RUN: llvm-nm %t2 | FileCheck %s
 ; CHECK: PrepareAndDispatch
 

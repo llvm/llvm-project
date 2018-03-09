@@ -23,6 +23,13 @@ br1:
     b _foo
     ret
 
+    .globl  _test_branch_reloc_bl
+    .align  2
+# rtdyld-check:  decode_operand(br2, 0)[25:0] = (_foo - br2)[27:2]
+_test_branch_reloc_bl:
+br2:
+    bl _foo
+    ret	
 
 # Test ARM64_RELOC_PAGE21 and ARM64_RELOC_PAGEOFF12 relocation. adrp encodes
 # the PC-relative page (4 KiB) difference between the adrp instruction and the
@@ -83,3 +90,5 @@ _ptr:
 # rtdyld-check: *{8}_subtractor_result = _test_branch_reloc - _foo
 _subtractor_result:
     .quad _test_branch_reloc - _foo
+
+.subsections_via_symbols

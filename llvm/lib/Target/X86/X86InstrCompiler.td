@@ -32,9 +32,10 @@ def GetLo8XForm : SDNodeXForm<imm, [{
 // PIC base construction.  This expands to code that looks like this:
 //     call  $next_inst
 //     popl %destreg"
-let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP] in
+let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP, SSP],
+    SchedRW = [WriteJump] in
   def MOVPC32r : Ii32<0xE8, Pseudo, (outs GR32:$reg), (ins i32imm:$label),
-                      "", []>;
+                      "", [], IIC_CALL_RI>;
 
 
 // ADJCALLSTACKDOWN/UP implicitly use/def ESP because they may be expanded into
@@ -42,16 +43,15 @@ let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP] in
 // pointer before prolog-epilog rewriting occurs.
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber EFLAGS.
-let Defs = [ESP, EFLAGS], Uses = [ESP] in {
+let Defs = [ESP, EFLAGS, SSP], Uses = [ESP, SSP], SchedRW = [WriteALU] in {
 def ADJCALLSTACKDOWN32 : I<0, Pseudo, (outs),
                            (ins i32imm:$amt1, i32imm:$amt2, i32imm:$amt3),
-                           "#ADJCALLSTACKDOWN",
-                           []>,
-                          Requires<[NotLP64]>;
+                           "#ADJCALLSTACKDOWN", [], IIC_ALU_NONMEM>,
+                           Requires<[NotLP64]>;
 def ADJCALLSTACKUP32   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            "#ADJCALLSTACKUP",
-                           [(X86callseq_end timm:$amt1, timm:$amt2)]>,
-                          Requires<[NotLP64]>;
+                           [(X86callseq_end timm:$amt1, timm:$amt2)],
+                           IIC_ALU_NONMEM>, Requires<[NotLP64]>;
 }
 def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
        (ADJCALLSTACKDOWN32 i32imm:$amt1, i32imm:$amt2, 0)>, Requires<[NotLP64]>;
@@ -62,20 +62,20 @@ def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
 // pointer before prolog-epilog rewriting occurs.
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber EFLAGS.
-let Defs = [RSP, EFLAGS], Uses = [RSP] in {
+let Defs = [RSP, EFLAGS, SSP], Uses = [RSP, SSP], SchedRW = [WriteALU] in {
 def ADJCALLSTACKDOWN64 : I<0, Pseudo, (outs),
                            (ins i32imm:$amt1, i32imm:$amt2, i32imm:$amt3),
                            "#ADJCALLSTACKDOWN",
-                           []>,
-                          Requires<[IsLP64]>;
+                           [], IIC_ALU_NONMEM>, Requires<[IsLP64]>;
 def ADJCALLSTACKUP64   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            "#ADJCALLSTACKUP",
-                           [(X86callseq_end timm:$amt1, timm:$amt2)]>,
-                          Requires<[IsLP64]>;
+                           [(X86callseq_end timm:$amt1, timm:$amt2)],
+                           IIC_ALU_NONMEM>, Requires<[IsLP64]>;
 }
 def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
         (ADJCALLSTACKDOWN64 i32imm:$amt1, i32imm:$amt2, 0)>, Requires<[IsLP64]>;
 
+let SchedRW = [WriteSystem] in {
 
 // x86-64 va_start lowering magic.
 let usesCustomInserter = 1, Defs = [EFLAGS] in {
@@ -141,7 +141,19 @@ def WIN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
                      "# dynamic stack allocation",
                      [(X86WinAlloca GR64:$size)]>,
                      Requires<[In64BitMode]>;
+} // SchedRW
 
+// These instructions XOR the frame pointer into a GPR. They are used in some
+// stack protection schemes. These are post-RA pseudos because we only know the
+// frame register after register allocation.
+let Constraints = "$src = $dst", isPseudo = 1, Defs = [EFLAGS] in {
+  def XOR32_FP : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$src),
+                  "xorl\t$$FP, $src", [], IIC_BIN_NONMEM>,
+                  Requires<[NotLP64]>, Sched<[WriteALU]>;
+  def XOR64_FP : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$src),
+                  "xorq\t$$FP $src", [], IIC_BIN_NONMEM>,
+                  Requires<[In64BitMode]>, Sched<[WriteALU]>;
+}
 
 //===----------------------------------------------------------------------===//
 // EH Pseudo Instructions
@@ -207,17 +219,17 @@ let hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
                           Requires<[In64BitMode]>;
   }
 }
-} // SchedRW
 
 let isBranch = 1, isTerminator = 1, isCodeGenOnly = 1 in {
   def EH_SjLj_Setup : I<0, Pseudo, (outs), (ins brtarget:$dst),
                         "#EH_SjLj_Setup\t$dst", []>;
 }
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions used by unwind info.
 //
-let isPseudo = 1 in {
+let isPseudo = 1, SchedRW = [WriteSystem] in {
   def SEH_PushReg : I<0, Pseudo, (outs), (ins i32imm:$reg),
                             "#SEH_PushReg $reg", []>;
   def SEH_SaveReg : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
@@ -243,15 +255,15 @@ let isPseudo = 1 in {
 // This is lowered into a RET instruction by MCInstLower.  We need
 // this so that we don't have to have a MachineBasicBlock which ends
 // with a RET and also has successors.
-let isPseudo = 1 in {
+let isPseudo = 1, SchedRW = [WriteJumpLd] in {
 def MORESTACK_RET: I<0, Pseudo, (outs), (ins),
-                          "", []>;
+                          "", [], IIC_RET>;
 
 // This instruction is lowered to a RET followed by a MOV.  The two
 // instructions are not generated on a higher level since then the
 // verifier sees a MachineBasicBlock ending with a non-terminator.
 def MORESTACK_RET_RESTORE_R10 : I<0, Pseudo, (outs), (ins),
-                                  "", []>;
+                                  "", [], IIC_RET>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,39 +285,42 @@ def : Pat<(i16 0), (EXTRACT_SUBREG (MOV32r0), sub_16bit)>;
 def : Pat<(i64 0), (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit)>;
 }
 
-let Predicates = [OptForSize, NotSlowIncDec, Not64BitMode],
+let Predicates = [OptForSize, Not64BitMode],
     AddedComplexity = 10 in {
+  let SchedRW = [WriteALU] in {
   // Pseudo instructions for materializing 1 and -1 using XOR+INC/DEC,
   // which only require 3 bytes compared to MOV32ri which requires 5.
   let Defs = [EFLAGS], isReMaterializable = 1, isPseudo = 1 in {
     def MOV32r1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
-                        [(set GR32:$dst, 1)]>;
+                        [(set GR32:$dst, 1)], IIC_ALU_NONMEM>;
     def MOV32r_1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
-                        [(set GR32:$dst, -1)]>;
+                        [(set GR32:$dst, -1)], IIC_ALU_NONMEM>;
   }
+  } // SchedRW
 
   // MOV16ri is 4 bytes, so the instructions above are smaller.
   def : Pat<(i16 1), (EXTRACT_SUBREG (MOV32r1), sub_16bit)>;
   def : Pat<(i16 -1), (EXTRACT_SUBREG (MOV32r_1), sub_16bit)>;
 }
 
-let isReMaterializable = 1, isPseudo = 1, AddedComplexity = 5 in {
+let isReMaterializable = 1, isPseudo = 1, AddedComplexity = 5,
+    SchedRW = [WriteALU] in {
 // AddedComplexity higher than MOV64ri but lower than MOV32r0 and MOV32r1.
-// FIXME: Add itinerary class and Schedule.
 def MOV32ImmSExti8 : I<0, Pseudo, (outs GR32:$dst), (ins i32i8imm:$src), "",
-                       [(set GR32:$dst, i32immSExt8:$src)]>,
-                     Requires<[OptForMinSize, NotWin64WithoutFP]>;
+                       [(set GR32:$dst, i32immSExt8:$src)], IIC_ALU_NONMEM>,
+                       Requires<[OptForMinSize, NotWin64WithoutFP]>;
 def MOV64ImmSExti8 : I<0, Pseudo, (outs GR64:$dst), (ins i64i8imm:$src), "",
-                       [(set GR64:$dst, i64immSExt8:$src)]>,
-                     Requires<[OptForMinSize, NotWin64WithoutFP]>;
+                       [(set GR64:$dst, i64immSExt8:$src)], IIC_ALU_NONMEM>,
+                       Requires<[OptForMinSize, NotWin64WithoutFP]>;
 }
 
 // Materialize i64 constant where top 32-bits are zero. This could theoretically
 // use MOV32ri with a SUBREG_TO_REG to represent the zero-extension, however
 // that would make it more difficult to rematerialize.
 let isReMaterializable = 1, isAsCheapAsAMove = 1,
-    isPseudo = 1, hasSideEffects = 0 in
-def MOV32ri64 : I<0, Pseudo, (outs GR32:$dst), (ins i64i32imm:$src), "", []>;
+    isPseudo = 1, hasSideEffects = 0, SchedRW = [WriteALU] in
+def MOV32ri64 : I<0, Pseudo, (outs GR32:$dst), (ins i64i32imm:$src), "", [],
+                  IIC_ALU_NONMEM>;
 
 // This 64-bit pseudo-move can be used for both a 64-bit constant that is
 // actually the zero-extension of a 32-bit constant and for labels in the
@@ -448,6 +463,7 @@ let Defs = [RCX,RDI], isCodeGenOnly = 1 in {
 //===----------------------------------------------------------------------===//
 // Thread Local Storage Instructions
 //
+let SchedRW = [WriteSystem] in {
 
 // ELF TLS Support
 // All calls clobber the non-callee saved registers. ESP is marked as
@@ -458,7 +474,7 @@ let Defs = [EAX, ECX, EDX, FP0, FP1, FP2, FP3, FP4, FP5, FP6, FP7,
             MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
             XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
             XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, EFLAGS],
-    usesCustomInserter = 1, Uses = [ESP] in {
+    usesCustomInserter = 1, Uses = [ESP, SSP] in {
 def TLS_addr32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                   "# TLS_addr32",
                   [(X86tlsaddr tls32addr:$sym)]>,
@@ -478,7 +494,7 @@ let Defs = [RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
             MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
             XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
             XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, EFLAGS],
-    usesCustomInserter = 1, Uses = [RSP] in {
+    usesCustomInserter = 1, Uses = [RSP, SSP] in {
 def TLS_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                    "# TLS_addr64",
                   [(X86tlsaddr tls64addr:$sym)]>,
@@ -494,7 +510,7 @@ def TLS_base_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
 // address of the variable is in %eax.  %ecx is trashed during the function
 // call.  All other registers are preserved.
 let Defs = [EAX, ECX, EFLAGS],
-    Uses = [ESP],
+    Uses = [ESP, SSP],
     usesCustomInserter = 1 in
 def TLSCall_32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                 "# TLSCall_32",
@@ -507,13 +523,13 @@ def TLSCall_32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
 // On return the address of the variable is in %rax.  All other
 // registers are preserved.
 let Defs = [RAX, EFLAGS],
-    Uses = [RSP],
+    Uses = [RSP, SSP],
     usesCustomInserter = 1 in
 def TLSCall_64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                   "# TLSCall_64",
                   [(X86TLSCall addr:$sym)]>,
                   Requires<[In64BitMode]>;
-
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // Conditional Move Pseudo Instructions
@@ -528,7 +544,7 @@ multiclass CMOVrr_PSEUDO<RegisterClass RC, ValueType VT> {
                                                 EFLAGS)))]>;
 }
 
-let usesCustomInserter = 1, Uses = [EFLAGS] in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
   // X86 doesn't have 8-bit conditional moves. Use a customInserter to
   // emit control flow. An alternative to this is to mark i8 SELECT as Promote,
   // however that requires promoting the operands, and can induce additional
@@ -566,7 +582,7 @@ let usesCustomInserter = 1, Uses = [EFLAGS] in {
   defm _V16I1  : CMOVrr_PSEUDO<VK16, v16i1>;
   defm _V32I1  : CMOVrr_PSEUDO<VK32, v32i1>;
   defm _V64I1  : CMOVrr_PSEUDO<VK64, v64i1>;
-} // usesCustomInserter = 1, Uses = [EFLAGS]
+} // usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS]
 
 //===----------------------------------------------------------------------===//
 // Normal-Instructions-With-Lock-Prefix Pseudo Instructions
@@ -593,7 +609,7 @@ def Int_MemBarrier : I<0, Pseudo, (outs), (ins),
 // ImmOpc8 corresponds to the mi8 version of the instruction
 // ImmMod corresponds to the instruction format of the mi and mi8 versions
 multiclass LOCK_ArithBinOp<bits<8> RegOpc, bits<8> ImmOpc, bits<8> ImmOpc8,
-                           Format ImmMod, SDPatternOperator Op, string mnemonic> {
+                           Format ImmMod, SDNode Op, string mnemonic> {
 let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
     SchedRW = [WriteALULd, WriteRMW] in {
 
@@ -696,30 +712,52 @@ defm LOCK_AND : LOCK_ArithBinOp<0x20, 0x80, 0x83, MRM4m, X86lock_and, "and">;
 defm LOCK_XOR : LOCK_ArithBinOp<0x30, 0x80, 0x83, MRM6m, X86lock_xor, "xor">;
 
 multiclass LOCK_ArithUnOp<bits<8> Opc8, bits<8> Opc, Format Form,
-                          int Increment, string mnemonic> {
+                          string frag, string mnemonic> {
 let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
-    SchedRW = [WriteALULd, WriteRMW], Predicates = [NotSlowIncDec] in {
+    SchedRW = [WriteALULd, WriteRMW] in {
 def NAME#8m  : I<Opc8, Form, (outs), (ins i8mem :$dst),
                  !strconcat(mnemonic, "{b}\t$dst"),
-                 [(set EFLAGS, (X86lock_add addr:$dst, (i8 Increment)))],
+                 [(set EFLAGS, (!cast<PatFrag>(frag # "_8") addr:$dst))],
                   IIC_UNARY_MEM>, LOCK;
 def NAME#16m : I<Opc, Form, (outs), (ins i16mem:$dst),
                  !strconcat(mnemonic, "{w}\t$dst"),
-                 [(set EFLAGS, (X86lock_add addr:$dst, (i16 Increment)))],
+                 [(set EFLAGS, (!cast<PatFrag>(frag # "_16") addr:$dst))],
                  IIC_UNARY_MEM>, OpSize16, LOCK;
 def NAME#32m : I<Opc, Form, (outs), (ins i32mem:$dst),
                  !strconcat(mnemonic, "{l}\t$dst"),
-                 [(set EFLAGS, (X86lock_add addr:$dst, (i32 Increment)))],
+                 [(set EFLAGS, (!cast<PatFrag>(frag # "_32") addr:$dst))],
                  IIC_UNARY_MEM>, OpSize32, LOCK;
 def NAME#64m : RI<Opc, Form, (outs), (ins i64mem:$dst),
                   !strconcat(mnemonic, "{q}\t$dst"),
-                  [(set EFLAGS, (X86lock_add addr:$dst, (i64 Increment)))],
+                  [(set EFLAGS, (!cast<PatFrag>(frag # "_64") addr:$dst))],
                   IIC_UNARY_MEM>, LOCK;
 }
 }
 
-defm LOCK_INC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM0m,  1, "inc">;
-defm LOCK_DEC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM1m, -1, "dec">;
+multiclass unary_atomic_intrin<SDNode atomic_op> {
+  def _8 : PatFrag<(ops node:$ptr),
+                   (atomic_op  node:$ptr), [{
+    return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i8;
+  }]>;
+  def _16 : PatFrag<(ops node:$ptr),
+                    (atomic_op node:$ptr), [{
+    return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
+  }]>;
+  def _32 : PatFrag<(ops node:$ptr),
+                    (atomic_op node:$ptr), [{
+    return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
+  }]>;
+  def _64 : PatFrag<(ops node:$ptr),
+                    (atomic_op node:$ptr), [{
+    return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+  }]>;
+}
+
+defm X86lock_inc : unary_atomic_intrin<X86lock_inc>;
+defm X86lock_dec : unary_atomic_intrin<X86lock_dec>;
+
+defm LOCK_INC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM0m, "X86lock_inc", "inc">;
+defm LOCK_DEC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM1m, "X86lock_dec", "dec">;
 
 // Atomic compare and swap.
 multiclass LCMPXCHG_UnOp<bits<8> Opc, Format Form, string mnemonic,
@@ -767,7 +805,7 @@ defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b",
 // register and the register allocator will ignore any use/def of
 // it. In other words, the register will not fix the clobbering of
 // RBX that will happen when setting the arguments for the instrucion.
-// 
+//
 // Unlike the actual related instuction, we mark that this one
 // defines EBX (instead of using EBX).
 // The rationale is that we will define RBX during the expansion of
@@ -895,7 +933,7 @@ multiclass RELEASE_BINOP_MI<SDNode op> {
         [(atomic_store_64 addr:$dst, (op
             (atomic_load_64 addr:$dst), GR64:$src))]>;
 }
-let Defs = [EFLAGS] in {
+let Defs = [EFLAGS], SchedRW = [WriteMicrocoded] in {
   defm RELEASE_ADD : RELEASE_BINOP_MI<add>;
   defm RELEASE_AND : RELEASE_BINOP_MI<and>;
   defm RELEASE_OR  : RELEASE_BINOP_MI<or>;
@@ -908,20 +946,20 @@ let Defs = [EFLAGS] in {
 // FIXME: imm version.
 // FIXME: Version that doesn't clobber $src, using AVX's VADDSS.
 // FIXME: This could also handle SIMD operations with *ps and *pd instructions.
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, SchedRW = [WriteMicrocoded] in {
 multiclass RELEASE_FP_BINOP_MI<SDNode op> {
     def NAME#32mr : I<0, Pseudo, (outs), (ins i32mem:$dst, FR32:$src),
         "#BINOP "#NAME#"32mr PSEUDO!",
         [(atomic_store_32 addr:$dst,
-	   (i32 (bitconvert (op
+           (i32 (bitconvert (op
              (f32 (bitconvert (i32 (atomic_load_32 addr:$dst)))),
-	      FR32:$src))))]>, Requires<[HasSSE1]>;
+          FR32:$src))))]>, Requires<[HasSSE1]>;
     def NAME#64mr : I<0, Pseudo, (outs), (ins i64mem:$dst, FR64:$src),
         "#BINOP "#NAME#"64mr PSEUDO!",
         [(atomic_store_64 addr:$dst,
-	   (i64 (bitconvert (op
+           (i64 (bitconvert (op
              (f64 (bitconvert (i64 (atomic_load_64 addr:$dst)))),
-	      FR64:$src))))]>, Requires<[HasSSE2]>;
+          FR64:$src))))]>, Requires<[HasSSE2]>;
 }
 defm RELEASE_FADD : RELEASE_FP_BINOP_MI<fadd>;
 // FIXME: Add fsub, fmul, fdiv, ...
@@ -942,17 +980,17 @@ multiclass RELEASE_UNOP<dag dag8, dag dag16, dag dag32, dag dag64> {
         [(atomic_store_64 addr:$dst, dag64)]>;
 }
 
-let Defs = [EFLAGS] in {
+let Defs = [EFLAGS], Predicates = [UseIncDec], SchedRW = [WriteMicrocoded] in {
   defm RELEASE_INC : RELEASE_UNOP<
       (add (atomic_load_8  addr:$dst), (i8 1)),
       (add (atomic_load_16 addr:$dst), (i16 1)),
       (add (atomic_load_32 addr:$dst), (i32 1)),
-      (add (atomic_load_64 addr:$dst), (i64 1))>, Requires<[NotSlowIncDec]>;
+      (add (atomic_load_64 addr:$dst), (i64 1))>;
   defm RELEASE_DEC : RELEASE_UNOP<
       (add (atomic_load_8  addr:$dst), (i8 -1)),
       (add (atomic_load_16 addr:$dst), (i16 -1)),
       (add (atomic_load_32 addr:$dst), (i32 -1)),
-      (add (atomic_load_64 addr:$dst), (i64 -1))>, Requires<[NotSlowIncDec]>;
+      (add (atomic_load_64 addr:$dst), (i64 -1))>;
 }
 /*
 TODO: These don't work because the type inference of TableGen fails.
@@ -972,18 +1010,19 @@ defm RELEASE_NOT : RELEASE_UNOP<
     (not (atomic_load_64 addr:$dst))>;
 */
 
+let SchedRW = [WriteMicrocoded] in {
 def RELEASE_MOV8mi : I<0, Pseudo, (outs), (ins i8mem:$dst, i8imm:$src),
-			"#RELEASE_MOV8mi PSEUDO!",
-			[(atomic_store_8 addr:$dst, (i8 imm:$src))]>;
+            "#RELEASE_MOV8mi PSEUDO!",
+            [(atomic_store_8 addr:$dst, (i8 imm:$src))]>;
 def RELEASE_MOV16mi : I<0, Pseudo, (outs), (ins i16mem:$dst, i16imm:$src),
-			"#RELEASE_MOV16mi PSEUDO!",
-			[(atomic_store_16 addr:$dst, (i16 imm:$src))]>;
+            "#RELEASE_MOV16mi PSEUDO!",
+            [(atomic_store_16 addr:$dst, (i16 imm:$src))]>;
 def RELEASE_MOV32mi : I<0, Pseudo, (outs), (ins i32mem:$dst, i32imm:$src),
-			"#RELEASE_MOV32mi PSEUDO!",
-			[(atomic_store_32 addr:$dst, (i32 imm:$src))]>;
+            "#RELEASE_MOV32mi PSEUDO!",
+            [(atomic_store_32 addr:$dst, (i32 imm:$src))]>;
 def RELEASE_MOV64mi32 : I<0, Pseudo, (outs), (ins i64mem:$dst, i64i32imm:$src),
-			"#RELEASE_MOV64mi32 PSEUDO!",
-			[(atomic_store_64 addr:$dst, i64immSExt32:$src)]>;
+            "#RELEASE_MOV64mi32 PSEUDO!",
+            [(atomic_store_64 addr:$dst, i64immSExt32:$src)]>;
 
 def RELEASE_MOV8mr  : I<0, Pseudo, (outs), (ins i8mem :$dst, GR8 :$src),
                         "#RELEASE_MOV8mr PSEUDO!",
@@ -1010,6 +1049,7 @@ def ACQUIRE_MOV32rm : I<0, Pseudo, (outs GR32:$dst), (ins i32mem:$src),
 def ACQUIRE_MOV64rm : I<0, Pseudo, (outs GR64:$dst), (ins i64mem:$src),
                       "#ACQUIRE_MOV64rm PSEUDO!",
                       [(set GR64:$dst, (atomic_load_64 addr:$src))]>;
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // DAG Pattern Matching Rules
@@ -1247,18 +1287,20 @@ def : Pat<(i64 (anyext GR8 :$src)),
 def : Pat<(i64 (anyext GR16:$src)),
           (SUBREG_TO_REG (i64 0), (MOVZX32rr16 GR16 :$src), sub_32bit)>;
 def : Pat<(i64 (anyext GR32:$src)),
-          (SUBREG_TO_REG (i64 0), GR32:$src, sub_32bit)>;
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, sub_32bit)>;
 
 
 // Any instruction that defines a 32-bit result leaves the high half of the
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
 // be copying from a truncate. Any other 32-bit operation will zero-extend
-// up to 64 bits.
+// up to 64 bits. AssertSext/AssertZext aren't saying anything about the upper
+// 32 bits, they're probably just qualifying a CopyFromReg.
 def def32 : PatLeaf<(i32 GR32:$src), [{
   return N->getOpcode() != ISD::TRUNCATE &&
          N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
          N->getOpcode() != ISD::CopyFromReg &&
-         N->getOpcode() != ISD::AssertSext;
+         N->getOpcode() != ISD::AssertSext &&
+         N->getOpcode() != ISD::AssertZext;
 }]>;
 
 // In the case of a 32-bit def that is known to implicitly zero-extend,
@@ -1405,16 +1447,11 @@ def : Pat<(and GR32:$src1, 0xffff),
           (MOVZX32rr16 (EXTRACT_SUBREG GR32:$src1, sub_16bit))>;
 // r & (2^8-1) ==> movz
 def : Pat<(and GR32:$src1, 0xff),
-          (MOVZX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src1,
-                                                             GR32_ABCD)),
-                                      sub_8bit))>,
-      Requires<[Not64BitMode]>;
+          (MOVZX32rr8 (EXTRACT_SUBREG GR32:$src1, sub_8bit))>;
 // r & (2^8-1) ==> movz
 def : Pat<(and GR16:$src1, 0xff),
-           (EXTRACT_SUBREG (MOVZX32rr8 (EXTRACT_SUBREG
-            (i16 (COPY_TO_REGCLASS GR16:$src1, GR16_ABCD)), sub_8bit)),
-             sub_16bit)>,
-      Requires<[Not64BitMode]>;
+           (EXTRACT_SUBREG (MOVZX32rr8 (EXTRACT_SUBREG GR16:$src1, sub_8bit)),
+             sub_16bit)>;
 
 // r & (2^32-1) ==> movz
 def : Pat<(and GR64:$src, 0x00000000FFFFFFFF),
@@ -1431,15 +1468,6 @@ def : Pat<(and GR64:$src, 0xff),
           (SUBREG_TO_REG (i64 0),
                          (MOVZX32rr8 (i8 (EXTRACT_SUBREG GR64:$src, sub_8bit))),
                          sub_32bit)>;
-// r & (2^8-1) ==> movz
-def : Pat<(and GR32:$src1, 0xff),
-           (MOVZX32rr8 (EXTRACT_SUBREG GR32:$src1, sub_8bit))>,
-      Requires<[In64BitMode]>;
-// r & (2^8-1) ==> movz
-def : Pat<(and GR16:$src1, 0xff),
-           (EXTRACT_SUBREG (MOVZX32rr8 (i8
-            (EXTRACT_SUBREG GR16:$src1, sub_8bit))), sub_16bit)>,
-      Requires<[In64BitMode]>;
 } // AddedComplexity = 1
 
 
@@ -1447,16 +1475,11 @@ def : Pat<(and GR16:$src1, 0xff),
 def : Pat<(sext_inreg GR32:$src, i16),
           (MOVSX32rr16 (EXTRACT_SUBREG GR32:$src, sub_16bit))>;
 def : Pat<(sext_inreg GR32:$src, i8),
-          (MOVSX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src,
-                                                             GR32_ABCD)),
-                                      sub_8bit))>,
-      Requires<[Not64BitMode]>;
+          (MOVSX32rr8 (EXTRACT_SUBREG GR32:$src, sub_8bit))>;
 
 def : Pat<(sext_inreg GR16:$src, i8),
-           (EXTRACT_SUBREG (i32 (MOVSX32rr8 (EXTRACT_SUBREG
-            (i32 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)), sub_8bit))),
-             sub_16bit)>,
-      Requires<[Not64BitMode]>;
+           (EXTRACT_SUBREG (MOVSX32rr8 (EXTRACT_SUBREG GR16:$src, sub_8bit)),
+             sub_16bit)>;
 
 def : Pat<(sext_inreg GR64:$src, i32),
           (MOVSX64rr32 (EXTRACT_SUBREG GR64:$src, sub_32bit))>;
@@ -1464,13 +1487,6 @@ def : Pat<(sext_inreg GR64:$src, i16),
           (MOVSX64rr16 (EXTRACT_SUBREG GR64:$src, sub_16bit))>;
 def : Pat<(sext_inreg GR64:$src, i8),
           (MOVSX64rr8 (EXTRACT_SUBREG GR64:$src, sub_8bit))>;
-def : Pat<(sext_inreg GR32:$src, i8),
-          (MOVSX32rr8 (EXTRACT_SUBREG GR32:$src, sub_8bit))>,
-      Requires<[In64BitMode]>;
-def : Pat<(sext_inreg GR16:$src, i8),
-           (EXTRACT_SUBREG (MOVSX32rr8
-            (EXTRACT_SUBREG GR16:$src, sub_8bit)), sub_16bit)>,
-      Requires<[In64BitMode]>;
 
 // sext, sext_load, zext, zext_load
 def: Pat<(i16 (sext GR8:$src)),
@@ -1508,44 +1524,26 @@ def : Pat<(i8 (trunc GR16:$src)),
 
 // h-register tricks
 def : Pat<(i8 (trunc (srl_su GR16:$src, (i8 8)))),
-          (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                          sub_8bit_hi)>,
+          (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)>,
       Requires<[Not64BitMode]>;
 def : Pat<(i8 (trunc (srl_su (i32 (anyext GR16:$src)), (i8 8)))),
-          (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                          sub_8bit_hi)>,
+          (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)>,
       Requires<[Not64BitMode]>;
 def : Pat<(i8 (trunc (srl_su GR32:$src, (i8 8)))),
-          (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src, GR32_ABCD)),
-                          sub_8bit_hi)>,
+          (EXTRACT_SUBREG GR32:$src, sub_8bit_hi)>,
       Requires<[Not64BitMode]>;
 def : Pat<(srl GR16:$src, (i8 8)),
           (EXTRACT_SUBREG
-            (MOVZX32rr8
-              (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                              sub_8bit_hi)),
-            sub_16bit)>,
-      Requires<[Not64BitMode]>;
+            (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)),
+            sub_16bit)>;
 def : Pat<(i32 (zext (srl_su GR16:$src, (i8 8)))),
-          (MOVZX32rr8 (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src,
-                                                             GR16_ABCD)),
-                                      sub_8bit_hi))>,
-      Requires<[Not64BitMode]>;
+          (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR16:$src, sub_8bit_hi))>;
 def : Pat<(i32 (anyext (srl_su GR16:$src, (i8 8)))),
-          (MOVZX32rr8 (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src,
-                                                             GR16_ABCD)),
-                                      sub_8bit_hi))>,
-      Requires<[Not64BitMode]>;
+          (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR16:$src, sub_8bit_hi))>;
 def : Pat<(and (srl_su GR32:$src, (i8 8)), (i32 255)),
-          (MOVZX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src,
-                                                             GR32_ABCD)),
-                                      sub_8bit_hi))>,
-      Requires<[Not64BitMode]>;
+          (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>;
 def : Pat<(srl (and_su GR32:$src, 0xff00), (i8 8)),
-          (MOVZX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src,
-                                                             GR32_ABCD)),
-                                      sub_8bit_hi))>,
-      Requires<[Not64BitMode]>;
+          (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>;
 
 // h-register tricks.
 // For now, be conservative on x86-64 and use an h-register extract only if the
@@ -1559,68 +1557,35 @@ def : Pat<(and (srl_su GR64:$src, (i8 8)), (i64 255)),
           (SUBREG_TO_REG
             (i64 0),
             (MOVZX32_NOREXrr8
-              (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS GR64:$src, GR64_ABCD)),
-                              sub_8bit_hi)),
+              (EXTRACT_SUBREG GR64:$src, sub_8bit_hi)),
             sub_32bit)>;
-def : Pat<(and (srl_su GR32:$src, (i8 8)), (i32 255)),
-          (MOVZX32_NOREXrr8
-            (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src, GR32_ABCD)),
-                            sub_8bit_hi))>,
-      Requires<[In64BitMode]>;
-def : Pat<(srl (and_su GR32:$src, 0xff00), (i8 8)),
-          (MOVZX32_NOREXrr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src,
-                                                                   GR32_ABCD)),
-                                             sub_8bit_hi))>,
-      Requires<[In64BitMode]>;
-def : Pat<(srl GR16:$src, (i8 8)),
-          (EXTRACT_SUBREG
-            (MOVZX32_NOREXrr8
-              (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                              sub_8bit_hi)),
-            sub_16bit)>,
-      Requires<[In64BitMode]>;
-def : Pat<(i32 (zext (srl_su GR16:$src, (i8 8)))),
-          (MOVZX32_NOREXrr8
-            (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                            sub_8bit_hi))>,
-      Requires<[In64BitMode]>;
-def : Pat<(i32 (anyext (srl_su GR16:$src, (i8 8)))),
-          (MOVZX32_NOREXrr8
-            (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                            sub_8bit_hi))>,
-      Requires<[In64BitMode]>;
 def : Pat<(i64 (zext (srl_su GR16:$src, (i8 8)))),
           (SUBREG_TO_REG
             (i64 0),
             (MOVZX32_NOREXrr8
-              (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                              sub_8bit_hi)),
+              (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)),
             sub_32bit)>;
 def : Pat<(i64 (anyext (srl_su GR16:$src, (i8 8)))),
           (SUBREG_TO_REG
             (i64 0),
             (MOVZX32_NOREXrr8
-              (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                              sub_8bit_hi)),
+              (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)),
             sub_32bit)>;
 
 // h-register extract and store.
 def : Pat<(store (i8 (trunc_su (srl_su GR64:$src, (i8 8)))), addr:$dst),
           (MOV8mr_NOREX
             addr:$dst,
-            (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS GR64:$src, GR64_ABCD)),
-                            sub_8bit_hi))>;
+            (EXTRACT_SUBREG GR64:$src, sub_8bit_hi))>;
 def : Pat<(store (i8 (trunc_su (srl_su GR32:$src, (i8 8)))), addr:$dst),
           (MOV8mr_NOREX
             addr:$dst,
-            (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src, GR32_ABCD)),
-                            sub_8bit_hi))>,
+            (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>,
       Requires<[In64BitMode]>;
 def : Pat<(store (i8 (trunc_su (srl_su GR16:$src, (i8 8)))), addr:$dst),
           (MOV8mr_NOREX
             addr:$dst,
-            (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
-                            sub_8bit_hi))>,
+            (EXTRACT_SUBREG GR16:$src, sub_8bit_hi))>,
       Requires<[In64BitMode]>;
 
 
@@ -1635,7 +1600,13 @@ def : Pat<(shl GR16:$src1, (i8 1)), (ADD16rr GR16:$src1, GR16:$src1)>;
 def : Pat<(shl GR32:$src1, (i8 1)), (ADD32rr GR32:$src1, GR32:$src1)>;
 def : Pat<(shl GR64:$src1, (i8 1)), (ADD64rr GR64:$src1, GR64:$src1)>;
 
-// Helper imms that check if a mask doesn't change significant shift bits.
+// Helper imms to check if a mask doesn't change significant shift/rotate bits.
+def immShift8 : ImmLeaf<i8, [{
+  return countTrailingOnes<uint64_t>(Imm) >= 3;
+}]>;
+def immShift16 : ImmLeaf<i8, [{
+  return countTrailingOnes<uint64_t>(Imm) >= 4;
+}]>;
 def immShift32 : ImmLeaf<i8, [{
   return countTrailingOnes<uint64_t>(Imm) >= 5;
 }]>;
@@ -1662,15 +1633,45 @@ multiclass MaskedShiftAmountPats<SDNode frag, string name> {
   // (shift x (and y, 63)) ==> (shift x, y)
   def : Pat<(frag GR64:$src1, (and CL, immShift64)),
             (!cast<Instruction>(name # "64rCL") GR64:$src1)>;
-  def : Pat<(store (frag (loadi64 addr:$dst), (and CL, 63)), addr:$dst),
+  def : Pat<(store (frag (loadi64 addr:$dst), (and CL, immShift64)), addr:$dst),
             (!cast<Instruction>(name # "64mCL") addr:$dst)>;
 }
 
 defm : MaskedShiftAmountPats<shl, "SHL">;
 defm : MaskedShiftAmountPats<srl, "SHR">;
 defm : MaskedShiftAmountPats<sra, "SAR">;
-defm : MaskedShiftAmountPats<rotl, "ROL">;
-defm : MaskedShiftAmountPats<rotr, "ROR">;
+
+// ROL/ROR instructions allow a stronger mask optimization than shift for 8- and
+// 16-bit. We can remove a mask of any (bitwidth - 1) on the rotation amount
+// because over-rotating produces the same result. This is noted in the Intel
+// docs with: "tempCOUNT <- (COUNT & COUNTMASK) MOD SIZE". Masking the rotation
+// amount could affect EFLAGS results, but that does not matter because we are
+// not tracking flags for these nodes.
+multiclass MaskedRotateAmountPats<SDNode frag, string name> {
+  // (rot x (and y, BitWidth - 1)) ==> (rot x, y)
+  def : Pat<(frag GR8:$src1, (and CL, immShift8)),
+  (!cast<Instruction>(name # "8rCL") GR8:$src1)>;
+  def : Pat<(frag GR16:$src1, (and CL, immShift16)),
+  (!cast<Instruction>(name # "16rCL") GR16:$src1)>;
+  def : Pat<(frag GR32:$src1, (and CL, immShift32)),
+  (!cast<Instruction>(name # "32rCL") GR32:$src1)>;
+  def : Pat<(store (frag (loadi8 addr:$dst), (and CL, immShift8)), addr:$dst),
+  (!cast<Instruction>(name # "8mCL") addr:$dst)>;
+  def : Pat<(store (frag (loadi16 addr:$dst), (and CL, immShift16)), addr:$dst),
+  (!cast<Instruction>(name # "16mCL") addr:$dst)>;
+  def : Pat<(store (frag (loadi32 addr:$dst), (and CL, immShift32)), addr:$dst),
+  (!cast<Instruction>(name # "32mCL") addr:$dst)>;
+
+  // (rot x (and y, 63)) ==> (rot x, y)
+  def : Pat<(frag GR64:$src1, (and CL, immShift64)),
+  (!cast<Instruction>(name # "64rCL") GR64:$src1)>;
+  def : Pat<(store (frag (loadi64 addr:$dst), (and CL, immShift64)), addr:$dst),
+  (!cast<Instruction>(name # "64mCL") addr:$dst)>;
+}
+
+
+defm : MaskedRotateAmountPats<rotl, "ROL">;
+defm : MaskedRotateAmountPats<rotr, "ROR">;
 
 // Double shift amount is implicitly masked.
 multiclass MaskedDoubleShiftAmountPats<SDNode frag, string name> {
@@ -1687,6 +1688,66 @@ multiclass MaskedDoubleShiftAmountPats<SDNode frag, string name> {
 
 defm : MaskedDoubleShiftAmountPats<X86shld, "SHLD">;
 defm : MaskedDoubleShiftAmountPats<X86shrd, "SHRD">;
+
+let Predicates = [HasBMI2] in {
+  let AddedComplexity = 1 in {
+    def : Pat<(sra GR32:$src1, (and GR8:$src2, immShift32)),
+              (SARX32rr GR32:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(sra GR64:$src1, (and GR8:$src2, immShift64)),
+              (SARX64rr GR64:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(srl GR32:$src1, (and GR8:$src2, immShift32)),
+              (SHRX32rr GR32:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(srl GR64:$src1, (and GR8:$src2, immShift64)),
+              (SHRX64rr GR64:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(shl GR32:$src1, (and GR8:$src2, immShift32)),
+              (SHLX32rr GR32:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(shl GR64:$src1, (and GR8:$src2, immShift64)),
+              (SHLX64rr GR64:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  }
+
+  let AddedComplexity = -20 in {
+    def : Pat<(sra (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+              (SARX32rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(sra (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+              (SARX64rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(srl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+              (SHRX32rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(srl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+              (SHRX64rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(shl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+              (SHLX32rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(shl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+              (SHLX64rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  }
+}
 
 // (anyext (setcc_carry)) -> (setcc_carry)
 def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
@@ -1829,7 +1890,7 @@ def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),
 
 // Increment/Decrement reg.
 // Do not make INC/DEC if it is slow
-let Predicates = [NotSlowIncDec] in {
+let Predicates = [UseIncDec] in {
   def : Pat<(add GR8:$src, 1),   (INC8r GR8:$src)>;
   def : Pat<(add GR16:$src, 1),  (INC16r GR16:$src)>;
   def : Pat<(add GR32:$src, 1),  (INC32r GR32:$src)>;

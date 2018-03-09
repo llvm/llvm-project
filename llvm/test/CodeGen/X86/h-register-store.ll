@@ -25,7 +25,7 @@
 ; W64:      movb %ch, (%rdx)
 ; W64-NOT:      mov
 
-; RUN: llc < %s -march=x86 | FileCheck %s -check-prefix=X86
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s -check-prefix=X86
 ; X86-NOT:      mov
 ; X86:      movb %ah, (%e
 ; X86-NOT:      mov

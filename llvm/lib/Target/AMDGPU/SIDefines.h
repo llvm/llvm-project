@@ -67,7 +67,25 @@ enum : uint64_t {
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
   VOPAsmPrefer32Bit = UINT64_C(1) << 41,
-  HasFPClamp = UINT64_C(1) << 42
+  VOP3_OPSEL = UINT64_C(1) << 42,
+  maybeAtomic = UINT64_C(1) << 43,
+  renamedInGFX9 = UINT64_C(1) << 44,
+
+  // Is a clamp on FP type.
+  FPClamp = UINT64_C(1) << 45,
+
+  // Is an integer clamp
+  IntClamp = UINT64_C(1) << 46,
+
+  // Clamps lo component of register.
+  ClampLo = UINT64_C(1) << 47,
+
+  // Clamps hi component of register.
+  // ClampLo and ClampHi set for packed clamp.
+  ClampHi = UINT64_C(1) << 48,
+
+  // Is a packed VOP3P instruction.
+  IsPacked = UINT64_C(1) << 49
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -137,7 +155,8 @@ namespace SISrcMods {
    SEXT = 1 << 0,  // Integer sign-extend modifier
    NEG_HI = ABS,   // Floating-point negate high packed component modifier.
    OP_SEL_0 = 1 << 2,
-   OP_SEL_1 = 1 << 3
+   OP_SEL_1 = 1 << 3,
+   DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
   };
 }
 
@@ -175,8 +194,10 @@ namespace EncValues { // Encoding values of enum9/8/7 operands
 enum {
   SGPR_MIN = 0,
   SGPR_MAX = 101,
-  TTMP_MIN = 112,
-  TTMP_MAX = 123,
+  TTMP_VI_MIN = 112,
+  TTMP_VI_MAX = 123,
+  TTMP_GFX9_MIN = 108,
+  TTMP_GFX9_MAX = 123,
   INLINE_INTEGER_C_MIN = 128,
   INLINE_INTEGER_C_POSITIVE_MAX = 192, // 64
   INLINE_INTEGER_C_MAX = 208,
@@ -349,6 +370,8 @@ enum SDWA9EncValues{
   SRC_VGPR_MAX = 255,
   SRC_SGPR_MIN = 256,
   SRC_SGPR_MAX = 357,
+  SRC_TTMP_MIN = 364,
+  SRC_TTMP_MAX = 379,
 };
 
 } // namespace SDWA
@@ -359,7 +382,9 @@ enum SDWA9EncValues{
 #define   S_00B02C_EXTRA_LDS_SIZE(x)                                  (((x) & 0xFF) << 8)
 #define R_00B128_SPI_SHADER_PGM_RSRC1_VS                                0x00B128
 #define R_00B228_SPI_SHADER_PGM_RSRC1_GS                                0x00B228
+#define R_00B328_SPI_SHADER_PGM_RSRC1_ES                                0x00B328
 #define R_00B428_SPI_SHADER_PGM_RSRC1_HS                                0x00B428
+#define R_00B528_SPI_SHADER_PGM_RSRC1_LS                                0x00B528
 #define R_00B848_COMPUTE_PGM_RSRC1                                      0x00B848
 #define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
 #define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)

@@ -3,12 +3,12 @@
 
 # Check that coalesced registers are removed from live intervals.
 #
-# Check that vreg3 is coalesced into vreg4, and that after coalescing
+# Check that %3 is coalesced into %4, and that after coalescing
 # it is no longer in live intervals.
 
 # CHECK-LABEL: After expand-condsets
 # CHECK: INTERVALS
-# CHECK-NOT: vreg3
+# CHECK-NOT: %3
 # CHECK: MACHINEINSTRS
 
 

@@ -1,4 +1,4 @@
-//===-- SelectionDAGDumper.cpp - Implement SelectionDAG::dump() -----------===//
+//===- SelectionDAGDumper.cpp - Implement SelectionDAG::dump() ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,24 +11,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ScheduleDAGSDNodes.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cstdint>
+#include <iterator>
+
 using namespace llvm;
 
 static cl::opt<bool>
@@ -385,6 +403,7 @@ static Printable PrintNodeId(const SDNode &Node) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SDNode::dump() const { dump(nullptr); }
+
 LLVM_DUMP_METHOD void SDNode::dump(const SelectionDAG *G) const {
   print(dbgs(), G);
   dbgs() << '\n';
@@ -402,6 +421,36 @@ void SDNode::print_types(raw_ostream &OS, const SelectionDAG *G) const {
 }
 
 void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
+  if (getFlags().hasNoUnsignedWrap())
+    OS << " nuw";
+
+  if (getFlags().hasNoSignedWrap())
+    OS << " nsw";
+
+  if (getFlags().hasExact())
+    OS << " exact";
+
+  if (getFlags().hasUnsafeAlgebra())
+    OS << " unsafe";
+
+  if (getFlags().hasNoNaNs())
+    OS << " nnan";
+
+  if (getFlags().hasNoInfs())
+    OS << " ninf";
+
+  if (getFlags().hasNoSignedZeros())
+    OS << " nsz";
+
+  if (getFlags().hasAllowReciprocal())
+    OS << " arcp";
+
+  if (getFlags().hasAllowContract())
+    OS << " contract";
+
+  if (getFlags().hasVectorReduction())
+    OS << " vector-reduction";
+
   if (const MachineSDNode *MN = dyn_cast<MachineSDNode>(this)) {
     if (!MN->memoperands_empty()) {
       OS << "<";
@@ -429,9 +478,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   } else if (const ConstantSDNode *CSDN = dyn_cast<ConstantSDNode>(this)) {
     OS << '<' << CSDN->getAPIntValue() << '>';
   } else if (const ConstantFPSDNode *CSDN = dyn_cast<ConstantFPSDNode>(this)) {
-    if (&CSDN->getValueAPF().getSemantics()==&APFloat::IEEEsingle())
+    if (&CSDN->getValueAPF().getSemantics() == &APFloat::IEEEsingle())
       OS << '<' << CSDN->getValueAPF().convertToFloat() << '>';
-    else if (&CSDN->getValueAPF().getSemantics()==&APFloat::IEEEdouble())
+    else if (&CSDN->getValueAPF().getSemantics() == &APFloat::IEEEdouble())
       OS << '<' << CSDN->getValueAPF().convertToDouble() << '>';
     else {
       OS << "<APFloat(";
@@ -479,7 +528,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << LBB->getName() << " ";
     OS << (const void*)BBDN->getBasicBlock() << ">";
   } else if (const RegisterSDNode *R = dyn_cast<RegisterSDNode>(this)) {
-    OS << ' ' << PrintReg(R->getReg(),
+    OS << ' ' << printReg(R->getReg(),
                           G ? G->getSubtarget().getRegisterInfo() : nullptr);
   } else if (const ExternalSymbolSDNode *ES =
              dyn_cast<ExternalSymbolSDNode>(this)) {
@@ -640,7 +689,8 @@ static bool printOperand(raw_ostream &OS, const SelectionDAG *G,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-typedef SmallPtrSet<const SDNode *, 32> VisitedSDNodeSet;
+using VisitedSDNodeSet = SmallPtrSet<const SDNode *, 32>;
+
 static void DumpNodesr(raw_ostream &OS, const SDNode *N, unsigned indent,
                        const SelectionDAG *G, VisitedSDNodeSet &once) {
   if (!once.insert(N).second) // If we've been here before, return now.

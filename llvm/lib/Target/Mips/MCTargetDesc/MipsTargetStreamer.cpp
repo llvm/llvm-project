@@ -98,6 +98,7 @@ void MipsTargetStreamer::emitDirectiveSetHardFloat() {
   forbidModuleDirective();
 }
 void MipsTargetStreamer::emitDirectiveSetDsp() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveSetDspr2() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
 bool MipsTargetStreamer::emitDirectiveCpRestore(
@@ -560,6 +561,11 @@ void MipsTargetAsmStreamer::emitDirectiveSetMips64R6() {
 void MipsTargetAsmStreamer::emitDirectiveSetDsp() {
   OS << "\t.set\tdsp\n";
   MipsTargetStreamer::emitDirectiveSetDsp();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetDspr2() {
+  OS << "\t.set\tdspr2\n";
+  MipsTargetStreamer::emitDirectiveSetDspr2();
 }
 
 void MipsTargetAsmStreamer::emitDirectiveSetNoDsp() {

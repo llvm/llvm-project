@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+
+  <!--random comment -->
+
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity bar="foo" name="my assembly" version="5"></assemblyIdentity>
+    </dependentAssembly>
+  </dependency>
+
+  <trustInfo>
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="trust1" access="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+</assembly>

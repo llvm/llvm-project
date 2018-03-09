@@ -2,11 +2,11 @@
 
 define x86_thiscallcc i32* @fn4(i32* %this, i8* dereferenceable(1) %p1) {
 entry:
-  %DL = getelementptr inbounds i32, i32* %this, i32 0
-  %call.i = tail call x86_thiscallcc i64 @fn1(i32* %DL)
+  %dl = getelementptr inbounds i32, i32* %this, i32 0
+  %call.i = tail call x86_thiscallcc i64 @fn1(i32* %dl)
   %getTypeAllocSize___trans_tmp_2.i = getelementptr inbounds i32, i32* %this, i32 0
   %0 = load i32, i32* %getTypeAllocSize___trans_tmp_2.i, align 4
-  %call.i8 = tail call x86_thiscallcc i64 @fn1(i32* %DL)
+  %call.i8 = tail call x86_thiscallcc i64 @fn1(i32* %dl)
   %1 = insertelement <2 x i64> undef, i64 %call.i, i32 0
   %2 = insertelement <2 x i64> %1, i64 %call.i8, i32 1
   %3 = add nsw <2 x i64> %2, <i64 7, i64 7>

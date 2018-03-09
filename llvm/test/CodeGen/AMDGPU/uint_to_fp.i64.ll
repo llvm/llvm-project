@@ -21,7 +21,7 @@ define amdgpu_kernel void @s_uint_to_fp_i64_to_f16(half addrspace(1)* %out, i64 
 ; GCN-DAG: v_cmp_eq_u64
 ; GCN-DAG: v_cmp_gt_u64
 
-; GCN: v_add_i32_e32 [[VR:v[0-9]+]]
+; GCN: v_add_{{[iu]}}32_e32 [[VR:v[0-9]+]]
 ; GCN: v_cvt_f16_f32_e32 [[VR_F16:v[0-9]+]], [[VR]]
 ; GCN: {{buffer|flat}}_store_short {{.*}}[[VR_F16]]
 define amdgpu_kernel void @v_uint_to_fp_i64_to_f16(half addrspace(1)* %out, i64 addrspace(1)* %in) #0 {
@@ -52,7 +52,7 @@ define amdgpu_kernel void @s_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64
 ; GCN-DAG: v_cmp_eq_u64
 ; GCN-DAG: v_cmp_gt_u64
 
-; GCN: v_add_i32_e32 [[VR:v[0-9]+]]
+; GCN: v_add_{{[iu]}}32_e32 [[VR:v[0-9]+]]
 ; GCN: {{buffer|flat}}_store_dword {{.*}}[[VR]]
 define amdgpu_kernel void @v_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()

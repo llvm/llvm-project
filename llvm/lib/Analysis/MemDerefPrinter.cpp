@@ -7,9 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"

@@ -1,3 +1,6 @@
+add_definitions(-DGTEST_LANG_CXX11=1)
+add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
+
 add_llvm_library(LLVMTestingSupport
   Error.cpp
 

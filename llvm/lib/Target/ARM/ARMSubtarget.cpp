@@ -28,10 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/Legalizer.h"
-#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -41,8 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Target/TargetOptions.h"
-#include <cassert>
-#include <string>
 
 using namespace llvm;
 
@@ -110,8 +105,6 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                           ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
                           : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
-  assert((isThumb() || hasARMOps()) &&
-         "Target must either be thumb or support ARM operations!");
 
   CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));
   Legalizer.reset(new ARMLegalizerInfo(*this));
@@ -152,7 +145,9 @@ void ARMSubtarget::initializeEnvironment() {
   // MCAsmInfo isn't always present (e.g. in opt) so we can't initialize this
   // directly from it, but we can try to make sure they're consistent when both
   // available.
-  UseSjLjEH = isTargetDarwin() && !isTargetWatchABI();
+  UseSjLjEH = (isTargetDarwin() && !isTargetWatchABI() &&
+               Options.ExceptionModel == ExceptionHandling::None) ||
+              Options.ExceptionModel == ExceptionHandling::SjLj;
   assert((!TM.getMCAsmInfo() ||
           (TM.getMCAsmInfo()->getExceptionHandlingType() ==
            ExceptionHandling::SjLj) == UseSjLjEH) &&
@@ -165,11 +160,11 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
     if (isTargetDarwin()) {
       StringRef ArchName = TargetTriple.getArchName();
-      unsigned ArchKind = ARM::parseArch(ArchName);
-      if (ArchKind == ARM::AK_ARMV7S)
+      ARM::ArchKind AK = ARM::parseArch(ArchName);
+      if (AK == ARM::ArchKind::ARMV7S)
         // Default to the Swift CPU when targeting armv7s/thumbv7s.
         CPUString = "swift";
-      else if (ArchKind == ARM::AK_ARMV7K)
+      else if (AK == ARM::ArchKind::ARMV7K)
         // Default to the Cortex-a7 CPU when targeting armv7k/thumbv7k.
         // ARMv7k does not use SjLj exception handling.
         CPUString = "cortex-a7";
@@ -221,8 +216,8 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // baseline, since the LDM/POP instruction on Thumb doesn't take LR.  This
   // means if we need to reload LR, it takes extra instructions, which outweighs
   // the value of the tail call; but here we don't know yet whether LR is going
-  // to be used. We generate the tail call here and turn it back into CALL/RET
-  // in emitEpilogue if LR is used.
+  // to be used. We take the optimistic approach of generating the tail call and
+  // perhaps taking a hit if we need to restore the LR.
 
   // Thumb1 PIC calls to external symbols use BX, so they can be tail calls,
   // but we need to make sure there are enough registers; the only valid
@@ -281,16 +276,18 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA32:
   case CortexA35:
   case CortexA53:
+  case CortexA55:
   case CortexA57:
   case CortexA72:
   case CortexA73:
+  case CortexA75:
   case CortexR4:
   case CortexR4F:
   case CortexR5:
   case CortexR7:
   case CortexM3:
-  case ExynosM1:
   case CortexR52:
+  case ExynosM1:
   case Kryo:
     break;
   case Krait:
@@ -342,36 +339,27 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   return false;
 }
 
-ARMCP::ARMCPModifier ARMSubtarget::getCPModifier(const GlobalValue *GV) const {
-  if (isTargetELF() && TM.isPositionIndependent() &&
-      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
-    return ARMCP::GOT_PREL;
-  return ARMCP::no_modifier;
+bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
+  return isTargetELF() && TM.isPositionIndependent() &&
+         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {
   return SchedModel.MispredictPenalty;
 }
 
-bool ARMSubtarget::hasSinCos() const {
-  return isTargetWatchOS() ||
-    (isTargetIOS() && !getTargetTriple().isOSVersionLT(7, 0));
-}
-
 bool ARMSubtarget::enableMachineScheduler() const {
-  // Enable the MachineScheduler before register allocation for out-of-order
-  // architectures where we do not use the PostRA scheduler anymore (for now
-  // restricted to swift).
-  return getSchedModel().isOutOfOrder() && isSwift();
+  // Enable the MachineScheduler before register allocation for subtargets
+  // with the use-misched feature.
+  return useMachineScheduler();
 }
 
 // This overrides the PostRAScheduler bit in the SchedModel for any CPU.
 bool ARMSubtarget::enablePostRAScheduler() const {
-  // No need for PostRA scheduling on out of order CPUs (for now restricted to
-  // swift).
-  if (getSchedModel().isOutOfOrder() && isSwift())
+  if (disablePostRAScheduler())
     return false;
-  return (!isThumb() || hasThumb2());
+  // Don't reschedule potential IT blocks.
+  return !isThumb1Only();
 }
 
 bool ARMSubtarget::enableAtomicExpand() const { return hasAnyDataBarrier(); }
@@ -380,7 +368,7 @@ bool ARMSubtarget::useStride4VFPs(const MachineFunction &MF) const {
   // For general targets, the prologue can grow when VFPs are allocated with
   // stride 4 (more vpush instructions). But WatchOS uses a compact unwind
   // format which it's more important to get right.
-  return isTargetWatchABI() || (isSwift() && !MF.getFunction()->optForMinSize());
+  return isTargetWatchABI() || (isSwift() && !MF.getFunction().optForMinSize());
 }
 
 bool ARMSubtarget::useMovt(const MachineFunction &MF) const {
@@ -388,7 +376,7 @@ bool ARMSubtarget::useMovt(const MachineFunction &MF) const {
   // immediates as it is inherently position independent, and may be out of
   // range otherwise.
   return !NoMovt && hasV8MBaselineOps() &&
-         (isTargetWindows() || !MF.getFunction()->optForMinSize() || genExecuteOnly());
+         (isTargetWindows() || !MF.getFunction().optForMinSize() || genExecuteOnly());
 }
 
 bool ARMSubtarget::useFastISel() const {

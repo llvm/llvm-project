@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -march=x86 | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=i686-- | FileCheck %s
 
 ; CHECK-NOT: lea{{.*}}(%esp)
 ; CHECK: {{(mov.* %ebp, %esp)|(lea.*\(%ebp\), %esp)}}

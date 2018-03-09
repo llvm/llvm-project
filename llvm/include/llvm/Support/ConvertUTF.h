@@ -242,10 +242,10 @@ bool ConvertCodePointToUTF8(unsigned Source, char *&ResultPtr);
  *
  * \sa ConvertUTF8toUTF32
  */
-static inline ConversionResult convertUTF8Sequence(const UTF8 **source,
-                                                   const UTF8 *sourceEnd,
-                                                   UTF32 *target,
-                                                   ConversionFlags flags) {
+inline ConversionResult convertUTF8Sequence(const UTF8 **source,
+                                            const UTF8 *sourceEnd,
+                                            UTF32 *target,
+                                            ConversionFlags flags) {
   if (*source == sourceEnd)
     return sourceExhausted;
   unsigned size = getNumBytesForUTF8(**source);

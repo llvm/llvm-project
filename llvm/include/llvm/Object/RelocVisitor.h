@@ -25,7 +25,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
 #include <cstdint>
 #include <system_error>
 
@@ -115,9 +114,10 @@ private:
   }
 
   int64_t getELFAddend(RelocationRef R) {
-    ErrorOr<int64_t> AddendOrErr = ELFRelocationRef(R).getAddend();
-    if (std::error_code EC = AddendOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<int64_t> AddendOrErr = ELFRelocationRef(R).getAddend();
+    handleAllErrors(AddendOrErr.takeError(), [](const ErrorInfoBase &EI) {
+      report_fatal_error(EI.message());
+    });
     return *AddendOrErr;
   }
 
@@ -301,6 +301,8 @@ private:
       case COFF::IMAGE_REL_AMD64_ADDR64:
         return Value;
       }
+      break;
+    default:
       break;
     }
     HasError = true;

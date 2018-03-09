@@ -1,4 +1,4 @@
-//===----- LoadStoreVectorizer.cpp - GPU Load & Store Vectorizer ----------===//
+//===- LoadStoreVectorizer.cpp - GPU Load & Store Vectorizer --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,47 +6,67 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-//===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Vectorize.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdlib>
+#include <tuple>
+#include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "load-store-vectorizer"
+
 STATISTIC(NumVectorInstructions, "Number of vector accesses generated");
 STATISTIC(NumScalarsVectorized, "Number of scalar accesses vectorized");
 
-namespace {
-
 // FIXME: Assuming stack alignment of 4 is always good enough
 static const unsigned StackAdjustedAlignment = 4;
-typedef SmallVector<Instruction *, 8> InstrList;
-typedef MapVector<Value *, InstrList> InstrListMap;
+
+namespace {
+
+using InstrList = SmallVector<Instruction *, 8>;
+using InstrListMap = MapVector<Value *, InstrList>;
 
 class Vectorizer {
   Function &F;
@@ -163,7 +183,10 @@ public:
     AU.setPreservesCFG();
   }
 };
-}
+
+} // end anonymous namespace
+
+char LoadStoreVectorizer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LoadStoreVectorizer, DEBUG_TYPE,
                       "Vectorize load and Store instructions", false, false)
@@ -174,8 +197,6 @@ INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoadStoreVectorizer, DEBUG_TYPE,
                     "Vectorize load and store instructions", false, false)
-
-char LoadStoreVectorizer::ID = 0;
 
 Pass *llvm::createLoadStoreVectorizerPass() {
   return new LoadStoreVectorizer();
@@ -480,6 +501,10 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
         MemoryInstrs.push_back(&I);
       else
         ChainInstrs.push_back(&I);
+    } else if (isa<IntrinsicInst>(&I) &&
+               cast<IntrinsicInst>(&I)->getIntrinsicID() ==
+                   Intrinsic::sideeffect) {
+      // Ignore llvm.sideeffect calls.
     } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
       DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I << '\n');
       break;
@@ -593,7 +618,14 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       // Skip weird non-byte sizes. They probably aren't worth the effort of
       // handling correctly.
       unsigned TySize = DL.getTypeSizeInBits(Ty);
-      if (TySize < 8)
+      if ((TySize % 8) != 0)
+        continue;
+
+      // Skip vectors of pointers. The vectorizeLoadChain/vectorizeStoreChain
+      // functions are currently using an integer type for the vectorized
+      // load/store, and does not support casting between the integer type and a
+      // vector of pointers (e.g. i64 to <2 x i16*>)
+      if (Ty->isVectorTy() && Ty->isPtrOrPtrVectorTy())
         continue;
 
       Value *Ptr = LI->getPointerOperand();
@@ -605,7 +637,7 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
         continue;
 
       // Make sure all the users of a vector are constant-index extracts.
-      if (isa<VectorType>(Ty) && !all_of(LI->users(), [](const User *U) {
+      if (isa<VectorType>(Ty) && !llvm::all_of(LI->users(), [](const User *U) {
             const ExtractElementInst *EEI = dyn_cast<ExtractElementInst>(U);
             return EEI && isa<ConstantInt>(EEI->getOperand(1));
           }))
@@ -614,7 +646,6 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       // Save the load locations.
       Value *ObjPtr = GetUnderlyingObject(Ptr, DL);
       LoadRefs[ObjPtr].push_back(LI);
-
     } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
@@ -627,19 +658,28 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       if (!VectorType::isValidElementType(Ty->getScalarType()))
         continue;
 
+      // Skip vectors of pointers. The vectorizeLoadChain/vectorizeStoreChain
+      // functions are currently using an integer type for the vectorized
+      // load/store, and does not support casting between the integer type and a
+      // vector of pointers (e.g. i64 to <2 x i16*>)
+      if (Ty->isVectorTy() && Ty->isPtrOrPtrVectorTy())
+        continue;
+
       // Skip weird non-byte sizes. They probably aren't worth the effort of
       // handling correctly.
       unsigned TySize = DL.getTypeSizeInBits(Ty);
-      if (TySize < 8)
+      if ((TySize % 8) != 0)
         continue;
 
       Value *Ptr = SI->getPointerOperand();
       unsigned AS = Ptr->getType()->getPointerAddressSpace();
       unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
+
+      // No point in looking at these if they're too big to vectorize.
       if (TySize > VecRegSize / 2)
         continue;
 
-      if (isa<VectorType>(Ty) && !all_of(SI->users(), [](const User *U) {
+      if (isa<VectorType>(Ty) && !llvm::all_of(SI->users(), [](const User *U) {
             const ExtractElementInst *EEI = dyn_cast<ExtractElementInst>(U);
             return EEI && isa<ConstantInt>(EEI->getOperand(1));
           }))
@@ -680,8 +720,8 @@ bool Vectorizer::vectorizeInstructions(ArrayRef<Instruction *> Instrs) {
   SmallVector<int, 16> Heads, Tails;
   int ConsecutiveChain[64];
 
-  // Do a quadratic search on all of the given stores and find all of the pairs
-  // of stores that follow each other.
+  // Do a quadratic search on all of the given loads/stores and find all of the
+  // pairs of loads/stores that follow each other.
   for (int i = 0, e = Instrs.size(); i < e; ++i) {
     ConsecutiveChain[i] = -1;
     for (int j = e - 1; j >= 0; --j) {
@@ -748,7 +788,7 @@ bool Vectorizer::vectorizeStoreChain(
     SmallPtrSet<Instruction *, 16> *InstructionsProcessed) {
   StoreInst *S0 = cast<StoreInst>(Chain[0]);
 
-  // If the vector has an int element, default to int for the whole load.
+  // If the vector has an int element, default to int for the whole store.
   Type *StoreTy;
   for (Instruction *I : Chain) {
     StoreTy = cast<StoreInst>(I)->getValueOperand()->getType();

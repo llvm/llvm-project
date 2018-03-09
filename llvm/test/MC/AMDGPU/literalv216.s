@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx901 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
 
 v_pk_add_f16 v1, 0, v2
 // GFX9: v_pk_add_f16 v1, 0, v2 ; encoding: [0x01,0x00,0x8f,0xd3,0x80,0x04,0x02,0x18]

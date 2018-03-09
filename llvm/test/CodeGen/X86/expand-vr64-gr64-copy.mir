@@ -23,14 +23,14 @@ body: |
     liveins: %xmm0
 
     %xmm0 = PSHUFDri killed %xmm0, -24
-    MOVPQI2QImr %rsp, 1, _, -8, _, killed %xmm0
-    %mm0 = PSWAPDrm %rsp, 1, _, -8, _
+    MOVPQI2QImr %rsp, 1, %noreg, -8, %noreg, killed %xmm0
+    %mm0 = PSWAPDrm %rsp, 1, %noreg, -8, %noreg
   ; CHECK:      %rax = MMX_MOVD64from64rr %mm0
   ; CHECK-NEXT: %mm0 = MMX_MOVD64to64rr %rax
     %rax = COPY %mm0
     %mm0 = COPY %rax
-    MMX_MOVQ64mr %rsp, 1, _, -16, _, killed %mm0
-    %xmm0 = MOVQI2PQIrm %rsp, 1, _, -16, _
+    MMX_MOVQ64mr %rsp, 1, %noreg, -16, %noreg, killed %mm0
+    %xmm0 = MOVQI2PQIrm %rsp, 1, %noreg, -16, %noreg
     %xmm0 = PSHUFDri killed %xmm0, -44
     RETQ %xmm0
 ...

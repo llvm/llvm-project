@@ -1,0 +1,37 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -O binary -j .test2 %t %t.sec
+# RUN: llvm-objcopy -R=.test2 %t %t2
+# RUN: llvm-objcopy -add-section=.test2=%t.sec %t2 %t3
+# RUN: llvm-readobj -file-headers -sections -section-data %t3 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .test1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:        "c3c3c3c3"
+  - Name:            .test2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:        "DEADBEEF"
+  - Name:            .test3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:        "32323232"
+
+# CHECK: SectionHeaderCount: 7
+
+# CHECK: Name: .test1
+# CHECK: Name: .test3
+# CHECK: Name: .symtab
+# CHECK: Name: .strtab
+# CHECK: Name: .shstrtab
+# CHECK: Name: .test2
+# CHECK: SectionData (
+# CHECK-NEXT:   0000: DEADBEEF
+# CHECK-NEXT: )

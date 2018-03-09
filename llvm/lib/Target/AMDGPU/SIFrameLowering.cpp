@@ -38,6 +38,7 @@ void SIFrameLowering::emitFlatScratchInit(const SISubtarget &ST,
                                           MachineBasicBlock &MBB) const {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo* TRI = &TII->getRegisterInfo();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // We don't need this if we only have spills since there is no user facing
   // scratch.
@@ -55,7 +56,7 @@ void SIFrameLowering::emitFlatScratchInit(const SISubtarget &ST,
   MachineBasicBlock::iterator I = MBB.begin();
 
   unsigned FlatScratchInitReg
-    = TRI->getPreloadedValue(MF, SIRegisterInfo::FLAT_SCRATCH_INIT);
+    = MFI->getPreloadedReg(AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.addLiveIn(FlatScratchInitReg);
@@ -64,7 +65,6 @@ void SIFrameLowering::emitFlatScratchInit(const SISubtarget &ST,
   unsigned FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
   unsigned FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
 
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned ScratchWaveOffsetReg = MFI->getScratchWaveOffsetReg();
 
   // Do a 64-bit pointer add.
@@ -219,7 +219,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // Emit debugger prologue if "amdgpu-debugger-emit-prologue" attribute was
   // specified.
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  auto AMDGPUASI = ST.getAMDGPUAS();
   if (ST.debuggerEmitPrologue())
     emitDebuggerPrologue(MF, MBB);
 
@@ -283,13 +282,13 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
 
   // We need to insert initialization of the scratch resource descriptor.
-  unsigned PreloadedScratchWaveOffsetReg = TRI->getPreloadedValue(
-    MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
+  unsigned PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
+    AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
   if (ST.isAmdCodeObjectV2(MF)) {
-    PreloadedPrivateBufferReg = TRI->getPreloadedValue(
-      MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
+    PreloadedPrivateBufferReg = MFI->getPreloadedReg(
+      AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
   }
 
   bool OffsetRegUsed = MRI.isPhysRegUsed(ScratchWaveOffsetReg);
@@ -356,7 +355,64 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
       .addReg(PreloadedPrivateBufferReg, RegState::Kill);
   }
 
-  if (ResourceRegUsed && (ST.isMesaGfxShader(MF) || (PreloadedPrivateBufferReg == AMDGPU::NoRegister))) {
+  if (ResourceRegUsed)
+    emitEntryFunctionScratchSetup(ST, MF, MBB, MFI, I,
+        PreloadedPrivateBufferReg, ScratchRsrcReg);
+}
+
+// Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.
+void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
+      MachineFunction &MF, MachineBasicBlock &MBB, SIMachineFunctionInfo *MFI,
+      MachineBasicBlock::iterator I, unsigned PreloadedPrivateBufferReg,
+      unsigned ScratchRsrcReg) const {
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = &TII->getRegisterInfo();
+  DebugLoc DL;
+
+  if (ST.isAmdPalOS()) {
+    // The pointer to the GIT is formed from the offset passed in and either
+    // the amdgpu-git-ptr-high function attribute or the top part of the PC
+    unsigned RsrcLo = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
+    unsigned RsrcHi = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
+    unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
+
+    const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
+
+    if (MFI->getGITPtrHigh() != 0xffffffff) {
+      BuildMI(MBB, I, DL, SMovB32, RsrcHi)
+        .addImm(MFI->getGITPtrHigh())
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+    } else {
+      const MCInstrDesc &GetPC64 = TII->get(AMDGPU::S_GETPC_B64);
+      BuildMI(MBB, I, DL, GetPC64, Rsrc01);
+    }
+    BuildMI(MBB, I, DL, SMovB32, RsrcLo)
+      .addReg(AMDGPU::SGPR0) // Low address passed in
+      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+    // We now have the GIT ptr - now get the scratch descriptor from the entry
+    // at offset 0.
+    PointerType *PtrTy =
+      PointerType::get(Type::getInt64Ty(MF.getFunction().getContext()),
+                       AMDGPUAS::CONSTANT_ADDRESS);
+    MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
+    const MCInstrDesc &LoadDwordX4 = TII->get(AMDGPU::S_LOAD_DWORDX4_IMM);
+    auto MMO = MF.getMachineMemOperand(PtrInfo,
+                                       MachineMemOperand::MOLoad |
+                                       MachineMemOperand::MOInvariant |
+                                       MachineMemOperand::MODereferenceable,
+                                       0, 0);
+    BuildMI(MBB, I, DL, LoadDwordX4, ScratchRsrcReg)
+      .addReg(Rsrc01)
+      .addImm(0) // offset
+      .addImm(0) // glc
+      .addReg(ScratchRsrcReg, RegState::ImplicitDefine)
+      .addMemOperand(MMO);
+    return;
+  }
+  if (ST.isMesaGfxShader(MF)
+      || (PreloadedPrivateBufferReg == AMDGPU::NoRegister)) {
     assert(!ST.isAmdCodeObjectV2(MF));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
@@ -369,7 +425,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     if (MFI->hasImplicitBufferPtr()) {
       unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
 
-      if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
+      if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
         const MCInstrDesc &Mov64 = TII->get(AMDGPU::S_MOV_B64);
 
         BuildMI(MBB, I, DL, Mov64, Rsrc01)
@@ -379,8 +435,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         const MCInstrDesc &LoadDwordX2 = TII->get(AMDGPU::S_LOAD_DWORDX2_IMM);
 
         PointerType *PtrTy =
-          PointerType::get(Type::getInt64Ty(MF.getFunction()->getContext()),
-                           AMDGPUASI.CONSTANT_ADDRESS);
+          PointerType::get(Type::getInt64Ty(MF.getFunction().getContext()),
+                           AMDGPUAS::CONSTANT_ADDRESS);
         MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
         auto MMO = MF.getMachineMemOperand(PtrInfo,
                                            MachineMemOperand::MOLoad |
@@ -454,6 +510,15 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       .addImm(NumBytes * ST.getWavefrontSize())
       .setMIFlag(MachineInstr::FrameSetup);
   }
+
+  for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
+         : FuncInfo->getSGPRSpillVGPRs()) {
+    if (!Reg.FI.hasValue())
+      continue;
+    TII->storeRegToStackSlot(MBB, MBBI, Reg.VGPR, true,
+                             Reg.FI.getValue(), &AMDGPU::VGPR_32RegClass,
+                             &TII->getRegisterInfo());
+  }
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -462,6 +527,19 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   if (FuncInfo->isEntryFunction())
     return;
 
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+
+  for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
+         : FuncInfo->getSGPRSpillVGPRs()) {
+    if (!Reg.FI.hasValue())
+      continue;
+    TII->loadRegFromStackSlot(MBB, MBBI, Reg.VGPR,
+                              Reg.FI.getValue(), &AMDGPU::VGPR_32RegClass,
+                              &TII->getRegisterInfo());
+  }
+
   unsigned StackPtrReg = FuncInfo->getStackPtrOffsetReg();
   if (StackPtrReg == AMDGPU::NoRegister)
     return;
@@ -469,9 +547,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();
 
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   DebugLoc DL;
 
   // FIXME: Clarify distinction between no set SP and SP. For callee functions,
@@ -573,6 +648,50 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
       TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
     RS->addScavengingFrameIndex(ScavengeFI);
   }
+}
+
+void SIFrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                           RegScavenger *RS) const {
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // The SP is specifically managed and we don't want extra spills of it.
+  SavedRegs.reset(MFI->getStackPtrOffsetReg());
+}
+
+MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(
+  MachineFunction &MF,
+  MachineBasicBlock &MBB,
+  MachineBasicBlock::iterator I) const {
+  int64_t Amount = I->getOperand(0).getImm();
+  if (Amount == 0)
+    return MBB.erase(I);
+
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const DebugLoc &DL = I->getDebugLoc();
+  unsigned Opc = I->getOpcode();
+  bool IsDestroy = Opc == TII->getCallFrameDestroyOpcode();
+  uint64_t CalleePopAmount = IsDestroy ? I->getOperand(1).getImm() : 0;
+
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  if (!TFI->hasReservedCallFrame(MF)) {
+    unsigned Align = getStackAlignment();
+
+    Amount = alignTo(Amount, Align);
+    assert(isUInt<32>(Amount) && "exceeded stack address space size");
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    unsigned SPReg = MFI->getStackPtrOffsetReg();
+
+    unsigned Op = IsDestroy ? AMDGPU::S_SUB_U32 : AMDGPU::S_ADD_U32;
+    BuildMI(MBB, I, DL, TII->get(Op), SPReg)
+      .addReg(SPReg)
+      .addImm(Amount * ST.getWavefrontSize());
+  } else if (CalleePopAmount != 0) {
+    llvm_unreachable("is this used?");
+  }
+
+  return MBB.erase(I);
 }
 
 void SIFrameLowering::emitDebuggerPrologue(MachineFunction &MF,

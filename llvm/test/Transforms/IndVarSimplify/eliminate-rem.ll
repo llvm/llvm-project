@@ -33,9 +33,9 @@ bb12:                                             ; preds = %bb11, %bb
 
 ; Indvars should be able to eliminate the (i+1)%n.
 ; CHECK-LABEL: @f(
-; CHECK-NOT: rem
-; CHECK: rem
-; CHECK-NOT: rem
+; CHECK-NOT: {{[us]}}rem
+; CHECK: {{[us]}}rem
+; CHECK-NOT: {{[us]}}rem
 ; CHECK: ret
 
 define i32 @f(i64* %arg, i64 %arg1, i64 %arg2, i64 %arg3) nounwind {

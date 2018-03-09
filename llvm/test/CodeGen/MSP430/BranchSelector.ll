@@ -579,7 +579,7 @@ begin:
 ; This branch should not be expanded
 ; CHECK-LABEL: .LBB1_1:
 ; CHECK: jeq	.LBB1_1
-; CHECK: BB#2:
+; CHECK: %bb.2:
 ; CHECK: ret
   br i1 %lnot, label %begin, label %end
 

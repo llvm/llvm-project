@@ -20,8 +20,8 @@
 #include "SystemZRegisterInfo.h"
 #include "SystemZSelectionDAGInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER
@@ -90,6 +90,11 @@ public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
+
+  // True if the subtarget should run MachineScheduler after aggressive
+  // coalescing. This currently replaces the SelectionDAG scheduler with the
+  // "source" order scheduler.
+  bool enableMachineScheduler() const override { return true; }
 
   // This is important for reducing register pressure in vector code.
   bool useAA() const override { return true; }

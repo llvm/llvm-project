@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DebugInfo.h"
+#include "llvm-c/DebugInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -23,6 +24,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/Instruction.h"
@@ -311,6 +314,9 @@ bool llvm::stripDebugInfo(Function &F) {
     }
 
     auto *TermInst = BB.getTerminator();
+    if (!TermInst)
+      // This is invalid IR, but we may not have run the verifier yet
+      continue;
     if (auto *LoopID = TermInst->getMetadata(LLVMContext::MD_loop)) {
       auto *NewLoopID = LoopIDsMap.lookup(LoopID);
       if (!NewLoopID)
@@ -665,4 +671,85 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
           M.getModuleFlag("Debug Info Version")))
     return Val->getZExtValue();
   return 0;
+}
+
+void Instruction::applyMergedLocation(const DILocation *LocA,
+                                      const DILocation *LocB) {
+  setDebugLoc(DILocation::getMergedLocation(LocA, LocB, this));
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM C API implementations.
+//===----------------------------------------------------------------------===//
+
+static unsigned map_from_llvmDWARFsourcelanguage(LLVMDWARFSourceLanguage lang) {
+  switch (lang) {
+#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR) \
+case LLVMDWARFSourceLanguage##NAME: return ID;
+#include "llvm/BinaryFormat/Dwarf.def"
+#undef HANDLE_DW_LANG
+  }
+  llvm_unreachable("Unhandled Tag");
+}
+
+unsigned LLVMDebugMetadataVersion() {
+  return DEBUG_METADATA_VERSION;
+}
+
+LLVMDIBuilderRef LLVMCreateDIBuilderDisallowUnresolved(LLVMModuleRef M) {
+  return wrap(new DIBuilder(*unwrap(M), false));
+}
+
+LLVMDIBuilderRef LLVMCreateDIBuilder(LLVMModuleRef M) {
+  return wrap(new DIBuilder(*unwrap(M)));
+}
+
+unsigned LLVMGetModuleDebugMetadataVersion(LLVMModuleRef M) {
+  return getDebugMetadataVersionFromModule(*unwrap(M));
+}
+
+LLVMBool LLVMStripModuleDebugInfo(LLVMModuleRef M) {
+  return StripDebugInfo(*unwrap(M));
+}
+
+void LLVMDisposeDIBuilder(LLVMDIBuilderRef Builder) {
+  delete unwrap(Builder);
+}
+
+void LLVMDIBuilderFinalize(LLVMDIBuilderRef Builder) {
+  unwrap(Builder)->finalize();
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
+    LLVMDIBuilderRef Builder, LLVMDWARFSourceLanguage Lang,
+    LLVMMetadataRef FileRef, const char *Producer, size_t ProducerLen,
+    LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
+    unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
+    LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
+    LLVMBool DebugInfoForProfiling) {
+  auto File = unwrap<DIFile>(FileRef);
+
+  return wrap(unwrap(Builder)->createCompileUnit(
+                 map_from_llvmDWARFsourcelanguage(Lang), File,
+                 StringRef(Producer, ProducerLen), isOptimized,
+                 StringRef(Flags, FlagsLen), RuntimeVer,
+                 StringRef(SplitName, SplitNameLen),
+                 static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
+                 SplitDebugInlining, DebugInfoForProfiling));
+}
+
+LLVMMetadataRef
+LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
+                        size_t FilenameLen, const char *Directory,
+                        size_t DirectoryLen) {
+  return wrap(unwrap(Builder)->createFile(StringRef(Filename, FilenameLen),
+                                          StringRef(Directory, DirectoryLen)));
+}
+
+LLVMMetadataRef
+LLVMDIBuilderCreateDebugLocation(LLVMContextRef Ctx, unsigned Line,
+                                 unsigned Column, LLVMMetadataRef Scope,
+                                 LLVMMetadataRef InlinedAt) {
+  return wrap(DILocation::get(*unwrap(Ctx), Line, Column, unwrap(Scope),
+                              unwrap(InlinedAt)));
 }

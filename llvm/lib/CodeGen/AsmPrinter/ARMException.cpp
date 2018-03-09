@@ -12,26 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfException.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 using namespace llvm;
 
 ARMException::ARMException(AsmPrinter *A) : DwarfCFIExceptionBase(A) {}
@@ -67,16 +60,16 @@ void ARMException::beginFunction(const MachineFunction *MF) {
 ///
 void ARMException::endFunction(const MachineFunction *MF) {
   ARMTargetStreamer &ATS = getTargetStreamer();
-  const Function *F = MF->getFunction();
+  const Function &F = MF->getFunction();
   const Function *Per = nullptr;
-  if (F->hasPersonalityFn())
-    Per = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+  if (F.hasPersonalityFn())
+    Per = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   bool forceEmitPersonality =
-    F->hasPersonalityFn() && !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
-    F->needsUnwindTableEntry();
+    F.hasPersonalityFn() && !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
+    F.needsUnwindTableEntry();
   bool shouldEmitPersonality = forceEmitPersonality ||
     !MF->getLandingPads().empty();
-  if (!Asm->MF->getFunction()->needsUnwindTableEntry() &&
+  if (!Asm->MF->getFunction().needsUnwindTableEntry() &&
       !shouldEmitPersonality)
     ATS.emitCantUnwind();
   else if (shouldEmitPersonality) {

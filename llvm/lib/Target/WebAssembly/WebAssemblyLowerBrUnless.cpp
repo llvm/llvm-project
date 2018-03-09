@@ -99,6 +99,13 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
         case NE_F32: Def->setDesc(TII.get(EQ_F32)); Inverted = true; break;
         case EQ_F64: Def->setDesc(TII.get(NE_F64)); Inverted = true; break;
         case NE_F64: Def->setDesc(TII.get(EQ_F64)); Inverted = true; break;
+        case EQZ_I32: {
+          // Invert an eqz by replacing it with its operand.
+          Cond = Def->getOperand(1).getReg();
+          Def->eraseFromParent();
+          Inverted = true;
+          break;
+        }
         default: break;
         }
       }

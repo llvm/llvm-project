@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -march=ppc32 -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s
 
 declare float @fmaxf(float, float)
 declare double @fmax(double, double)

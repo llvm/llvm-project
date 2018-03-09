@@ -9,7 +9,7 @@
 ; Note that gold picks the first copy of weakfunc() as the prevailing one,
 ; so listing %t2.o first is sufficient to ensure that this copy is
 ; preempted.
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=save-temps \
 ; RUN:     -o %t3.o %t2.o %t.o

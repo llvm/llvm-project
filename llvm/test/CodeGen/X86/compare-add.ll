@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep add
+; RUN: llc < %s -mtriple=i686-- | not grep add
 
 define i1 @X(i32 %X) {
         %Y = add i32 %X, 14             ; <i32> [#uses=1]

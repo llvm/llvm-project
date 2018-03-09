@@ -1,8 +1,13 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32 | FileCheck %s -check-prefix=32
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck %s -check-prefix=32R2
-; RUN: llc  < %s -march=mips64el -mcpu=mips4 -target-abi=n64 | FileCheck %s -check-prefix=64
-; RUN: llc  < %s -march=mips64el -mcpu=mips64 -target-abi=n64 | FileCheck %s -check-prefix=64
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 | FileCheck %s -check-prefix=64R2
+; RUN: llc  < %s -verify-machineinstrs -march=mipsel -mcpu=mips32 \
+; RUN:   | FileCheck %s -check-prefix=32
+; RUN: llc  < %s -verify-machineinstrs -march=mipsel -mcpu=mips32r2 \
+; RUN:   | FileCheck %s -check-prefix=32R2
+; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips4 -target-abi=n64 \
+; RUN:   | FileCheck %s -check-prefix=64
+; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64 -target-abi=n64 \
+; RUN:   | FileCheck %s -check-prefix=64
+; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64r2 -target-abi=n64 \
+; RUN:   | FileCheck %s -check-prefix=64R2
 
 define double @func0(double %d0, double %d1) nounwind readnone {
 entry:
@@ -28,8 +33,8 @@ entry:
 ; 64: dmtc1  $[[OR]], $f0
 
 ; 64R2: dextu  $[[EXT:[0-9]+]], ${{[0-9]+}}, 63, 1
-; 64R2: dins  $[[INS:[0-9]+]], $[[EXT]], 63, 1
-; 64R2: dmtc1 $[[INS]], $f0
+; 64R2: dinsu  $[[INS:[0-9]+]], $[[EXT]], 63, 1
+; 64R2: dmtc1  $[[INS]], $f0
 
   %call = tail call double @copysign(double %d0, double %d1) nounwind readnone
   ret double %call

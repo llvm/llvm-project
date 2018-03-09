@@ -28,6 +28,7 @@
 using namespace llvm;
 using namespace llvm::sys;
 
+namespace {
 // A FileOutputBuffer which creates a temporary file in the same directory
 // as the final output file. The final output file is atomically replaced
 // with the temporary file on commit().
@@ -94,6 +95,7 @@ private:
   OwningMemoryBlock Buffer;
   unsigned Mode;
 };
+} // namespace
 
 static Expected<std::unique_ptr<InMemoryBuffer>>
 createInMemoryBuffer(StringRef Path, size_t Size, unsigned Mode) {

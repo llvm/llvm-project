@@ -181,7 +181,7 @@ def PPCaddiDtprelL   : SDNode<"PPCISD::ADDI_DTPREL_L", SDTIntBinOp>;
 
 def PPCvperm     : SDNode<"PPCISD::VPERM", SDT_PPCvperm, []>;
 def PPCxxsplt    : SDNode<"PPCISD::XXSPLT", SDT_PPCVecSplat, []>;
-def PPCxxinsert  : SDNode<"PPCISD::XXINSERT", SDT_PPCVecInsert, []>;
+def PPCvecinsert : SDNode<"PPCISD::VECINSERT", SDT_PPCVecInsert, []>;
 def PPCxxreverse : SDNode<"PPCISD::XXREVERSE", SDT_PPCVecReverse, []>;
 def PPCxxpermdi  : SDNode<"PPCISD::XXPERMDI", SDT_PPCxxpermdi, []>;
 def PPCvecshl    : SDNode<"PPCISD::VECSHL", SDT_PPCVecShift, []>;
@@ -257,6 +257,13 @@ def PPCvcmp_o     : SDNode<"PPCISD::VCMPo", SDT_PPCvcmp, [SDNPOutGlue]>;
 def PPCcondbranch : SDNode<"PPCISD::COND_BRANCH", SDT_PPCcondbr,
                            [SDNPHasChain, SDNPOptInGlue]>;
 
+// PPC-specific atomic operations.
+def PPCatomicCmpSwap_8 :
+  SDNode<"PPCISD::ATOMIC_CMP_SWAP_8", SDTAtomic3,
+         [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def PPCatomicCmpSwap_16 :
+  SDNode<"PPCISD::ATOMIC_CMP_SWAP_16", SDTAtomic3,
+         [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def PPClbrx       : SDNode<"PPCISD::LBRX", SDT_PPClbrx,
                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstbrx      : SDNode<"PPCISD::STBRX", SDT_PPCstbrx,
@@ -1057,6 +1064,20 @@ multiclass XSForm_1rc<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
   }
 }
 
+multiclass XSForm_1r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+                    string asmbase, string asmstr, InstrItinClass itin,
+                    list<dag> pattern> {
+  let BaseName = asmbase in {
+    def NAME : XSForm_1<opcode, xo, OOL, IOL,
+                       !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
+                       pattern>, RecFormRel;
+    let Defs = [CR0] in
+    def o    : XSForm_1<opcode, xo, OOL, IOL,
+                       !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
+                       []>, isDOT, RecFormRel;
+  }
+}
+
 multiclass XForm_26r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                     string asmbase, string asmstr, InstrItinClass itin,
                     list<dag> pattern> {
@@ -1576,6 +1597,11 @@ def : Pat<(prefetch xoaddr:$dst, (i32 0), imm, (i32 0)),
           (ICBT 0, xoaddr:$dst)>, Requires<[HasICBT]>; // inst prefetch (for read)
 
 // Atomic operations
+// FIXME: some of these might be used with constant operands. This will result
+// in constant materialization instructions that may be redundant. We currently
+// clean this up in PPCMIPeephole with calls to
+// PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
+// in the first place.
 let usesCustomInserter = 1 in {
   let Defs = [CR0] in {
     def ATOMIC_LOAD_ADD_I8 : Pseudo<
@@ -1690,6 +1716,11 @@ let usesCustomInserter = 1 in {
       [(set i32:$dst, (atomic_swap_32 xoaddr:$ptr, i32:$new))]>;
   }
 }
+
+def : Pat<(PPCatomicCmpSwap_8 xoaddr:$ptr, i32:$old, i32:$new),
+        (ATOMIC_CMP_SWAP_I8 xoaddr:$ptr, i32:$old, i32:$new)>;
+def : Pat<(PPCatomicCmpSwap_16 xoaddr:$ptr, i32:$old, i32:$new),
+        (ATOMIC_CMP_SWAP_I16 xoaddr:$ptr, i32:$old, i32:$new)>;
 
 // Instructions to support atomic operations
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
@@ -2571,6 +2602,35 @@ let Uses = [RM] in {
   let Defs = [CR1] in
   def MFFSo : XForm_42<63, 583, (outs f8rc:$rT), (ins),
                       "mffs. $rT", IIC_IntMFFS, []>, isDOT;
+
+  def MFFSCE : X_FRT5_XO2_XO3_XO10<63, 0, 1, 583, (outs f8rc:$rT), (ins),
+                                  "mffsce $rT", IIC_IntMFFS, []>,
+               PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCDRN : X_FRT5_XO2_XO3_FRB5_XO10<63, 2, 4, 583, (outs f8rc:$rT),
+                                         (ins f8rc:$FRB), "mffscdrn $rT, $FRB",
+                                         IIC_IntMFFS, []>,
+                 PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCDRNI : X_FRT5_XO2_XO3_DRM3_XO10<63, 2, 5, 583, (outs f8rc:$rT),
+                                          (ins u3imm:$DRM),
+                                          "mffscdrni $rT, $DRM",
+                                          IIC_IntMFFS, []>,
+                  PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCRN : X_FRT5_XO2_XO3_FRB5_XO10<63, 2, 6, 583, (outs f8rc:$rT),
+                                        (ins f8rc:$FRB), "mffscrn $rT, $FRB",
+                                        IIC_IntMFFS, []>,
+                PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCRNI : X_FRT5_XO2_XO3_RM2_X10<63, 2, 7, 583, (outs f8rc:$rT),
+                                       (ins u2imm:$RM), "mffscrni $rT, $RM",
+                                       IIC_IntMFFS, []>,
+                 PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSL  : X_FRT5_XO2_XO3_XO10<63, 3, 0, 583, (outs f8rc:$rT), (ins),
+                                  "mffsl $rT", IIC_IntMFFS, []>,
+               PPC970_DGroup_Single, PPC970_Unit_FPU;
 }
 
 let Predicates = [IsISA3_0] in {
@@ -3890,6 +3950,63 @@ def STWCIX : XForm_base_r3xo<31, 917, (outs), (ins gprc:$RST, gprc:$A, gprc:$B),
 def STDCIX : XForm_base_r3xo<31, 1013, (outs), (ins gprc:$RST, gprc:$A, gprc:$B),
                              "stdcix $RST, $A, $B", IIC_LdStLoad, []>;
 
+// External PID Load Store Instructions
+
+def LBEPX   : XForm_1<31, 95, (outs gprc:$rD), (ins memrr:$src),
+                      "lbepx $rD, $src", IIC_LdStLoad, []>,
+                      Requires<[IsE500]>;
+
+def LFDEPX  : XForm_25<31, 607, (outs f8rc:$frD), (ins memrr:$src),
+                      "lfdepx $frD, $src", IIC_LdStLFD, []>,
+                      Requires<[IsE500]>;
+
+def LHEPX   : XForm_1<31, 287, (outs gprc:$rD), (ins memrr:$src),
+                      "lhepx $rD, $src", IIC_LdStLoad, []>,
+                      Requires<[IsE500]>;
+
+def LWEPX   : XForm_1<31, 31, (outs gprc:$rD), (ins memrr:$src),
+                      "lwepx $rD, $src", IIC_LdStLoad, []>,
+                      Requires<[IsE500]>;
+
+def STBEPX  : XForm_8<31, 223, (outs), (ins gprc:$rS, memrr:$dst),
+                      "stbepx $rS, $dst", IIC_LdStStore, []>,
+                      Requires<[IsE500]>;
+
+def STFDEPX : XForm_28<31, 735, (outs), (ins f8rc:$frS, memrr:$dst),
+                      "stfdepx $frS, $dst", IIC_LdStSTFD, []>,
+                      Requires<[IsE500]>;
+
+def STHEPX  : XForm_8<31, 415, (outs), (ins gprc:$rS, memrr:$dst),
+                      "sthepx $rS, $dst", IIC_LdStStore, []>,
+                      Requires<[IsE500]>;
+
+def STWEPX  : XForm_8<31, 159, (outs), (ins gprc:$rS, memrr:$dst),
+                      "stwepx $rS, $dst", IIC_LdStStore, []>,
+                      Requires<[IsE500]>;
+
+def DCBFEP  : DCB_Form<127, 0, (outs), (ins memrr:$dst), "dcbfep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def DCBSTEP : DCB_Form<63, 0, (outs), (ins memrr:$dst), "dcbstep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def DCBTEP  : DCB_Form_hint<319, (outs), (ins memrr:$dst, u5imm:$TH),
+                      "dcbtep $TH, $dst", IIC_LdStDCBF, []>,
+                      Requires<[IsE500]>;
+
+def DCBTSTEP : DCB_Form_hint<255, (outs), (ins memrr:$dst, u5imm:$TH),
+                      "dcbtstep $TH, $dst", IIC_LdStDCBF, []>,
+                      Requires<[IsE500]>;
+
+def DCBZEP  : DCB_Form<1023, 0, (outs), (ins memrr:$dst), "dcbzep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def DCBZLEP : DCB_Form<1023, 1, (outs), (ins memrr:$dst), "dcbzlep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def ICBIEP  : XForm_1a<31, 991, (outs), (ins memrr:$src), "icbiep $src",
+                      IIC_LdStICBI, []>, Requires<[IsE500]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Assembler Instruction Aliases
 //
@@ -3908,6 +4025,7 @@ class PPCAsmPseudo<string asm, dag iops>
   let AsmString = asm;
   let isAsmParserOnly = 1;
   let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 def : InstAlias<"sc", (SC 0)>;
@@ -4208,6 +4326,7 @@ def CLRLSLDI : PPCAsmPseudo<"clrlsldi $rA, $rS, $b, $n",
                             (ins g8rc:$rA, g8rc:$rS, u6imm:$b, u6imm:$n)>;
 def CLRLSLDIo : PPCAsmPseudo<"clrlsldi. $rA, $rS, $b, $n",
                              (ins g8rc:$rA, g8rc:$rS, u6imm:$b, u6imm:$n)>;
+def SUBPCIS : PPCAsmPseudo<"subpcis $RT, $D", (ins g8rc:$RT, s16imm:$D)>;
 
 def : InstAlias<"rotldi $rA, $rS, $n", (RLDICL g8rc:$rA, g8rc:$rS, u6imm:$n, 0)>;
 def : InstAlias<"rotldi. $rA, $rS, $n", (RLDICLo g8rc:$rA, g8rc:$rS, u6imm:$n, 0)>;
@@ -4215,8 +4334,9 @@ def : InstAlias<"rotld $rA, $rS, $rB", (RLDCL g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
 def : InstAlias<"rotld. $rA, $rS, $rB", (RLDCLo g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
 def : InstAlias<"clrldi $rA, $rS, $n", (RLDICL g8rc:$rA, g8rc:$rS, 0, u6imm:$n)>;
 def : InstAlias<"clrldi $rA, $rS, $n",
-                (RLDICL_32 gprc:$rA, gprc:$rS, 0, u6imm:$n)>;
+                (RLDICL_32_64 g8rc:$rA, gprc:$rS, 0, u6imm:$n)>;
 def : InstAlias<"clrldi. $rA, $rS, $n", (RLDICLo g8rc:$rA, g8rc:$rS, 0, u6imm:$n)>;
+def : InstAlias<"lnia $RT", (ADDPCIS g8rc:$RT, 0)>;
 
 def RLWINMbm : PPCAsmPseudo<"rlwinm $rA, $rS, $n, $b",
                             (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
@@ -4233,7 +4353,7 @@ def RLWNMobm : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.
-let PPC970_Unit = 7 in {
+let PPC970_Unit = 7, isBranch = 1 in {
   let Defs = [CTR], Uses = [CTR, RM] in {
     def gBC : BForm_3<16, 0, 0, (outs),
                       (ins u5imm:$bo, crbitrc:$bi, condbrtarget:$dst),
@@ -4550,7 +4670,7 @@ def : Pat<(i32 (bitreverse i32:$A)),
 // n = ((n >> 2) & 0x3333333333333333) | ((n << 2) & 0xCCCCCCCCCCCCCCCC);
 // Step 3: 4-bit swap (swap odd 4-bit and even 4-bit):
 // n = ((n >> 4) & 0x0F0F0F0F0F0F0F0F) | ((n << 4) & 0xF0F0F0F0F0F0F0F0);
-// Step 4: byte reverse (Suppose n = [B1,B2,B3,B4,B5,B6,B7,B8]):
+// Step 4: byte reverse (Suppose n = [B0,B1,B2,B3,B4,B5,B6,B7]):
 // Apply the same byte reverse algorithm mentioned above for the fast 32-bit
 // reverse to both the high 32 bit and low 32 bit of the 64 bit value. And
 // then OR them together to get the final result.
@@ -4572,92 +4692,55 @@ def DWMaskValues {
   dag Hi4 = (ORI8 (ORIS8 (RLDICR MaskValues64.Hi4, 32, 31), 0xF0F0), 0xF0F0);
 }
 
-def DWShift1 {
-  dag Right = (RLDICL $A, 63, 1);
-  dag Left = (RLDICR $A, 1, 62);
+def DWSwapInByte {
+  dag Swap1 = (OR8 (AND8 (RLDICL $A, 63, 1), DWMaskValues.Lo1),
+                   (AND8 (RLDICR $A, 1, 62), DWMaskValues.Hi1));
+  dag Swap2 = (OR8 (AND8 (RLDICL DWSwapInByte.Swap1, 62, 2), DWMaskValues.Lo2),
+                   (AND8 (RLDICR DWSwapInByte.Swap1, 2, 61), DWMaskValues.Hi2));
+  dag Swap4 = (OR8 (AND8 (RLDICL DWSwapInByte.Swap2, 60, 4), DWMaskValues.Lo4),
+                   (AND8 (RLDICR DWSwapInByte.Swap2, 4, 59), DWMaskValues.Hi4));
 }
 
-def DWSwap1 {
-  dag Bit = (OR8 (AND8 DWShift1.Right, DWMaskValues.Lo1),
-                 (AND8 DWShift1.Left, DWMaskValues.Hi1));
+// Intra-byte swap is done, now start inter-byte swap.
+def DWBytes4567 {
+  dag Word = (i32 (EXTRACT_SUBREG DWSwapInByte.Swap4, sub_32));
 }
 
-def DWShift2 {
-  dag Right = (RLDICL DWSwap1.Bit, 62, 2);
-  dag Left = (RLDICR DWSwap1.Bit, 2, 61);
+def DWBytes7456 {
+  dag Word = (RLWINM DWBytes4567.Word, 24, 0, 31);
 }
 
-def DWSwap2 {
-  dag Bits = (OR8 (AND8 DWShift2.Right, DWMaskValues.Lo2),
-                  (AND8 DWShift2.Left, DWMaskValues.Hi2));
+def DWBytes7656 {
+  dag Word = (RLWIMI DWBytes7456.Word, DWBytes4567.Word, 8, 8, 15);
 }
 
-def DWShift4 {
-  dag Right = (RLDICL DWSwap2.Bits, 60, 4);
-  dag Left = (RLDICR DWSwap2.Bits, 4, 59);
+// B7 B6 B5 B4 in the right order
+def DWBytes7654 {
+  dag Word = (RLWIMI DWBytes7656.Word, DWBytes4567.Word, 8, 24, 31);
+  dag DWord =
+    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), DWBytes7654.Word, sub_32));
 }
 
-def DWSwap4 {
-  dag Bits = (OR8 (AND8 DWShift4.Right, DWMaskValues.Lo4),
-                  (AND8 DWShift4.Left, DWMaskValues.Hi4));
+def DWBytes0123 {
+  dag Word = (i32 (EXTRACT_SUBREG (RLDICL DWSwapInByte.Swap4, 32, 32), sub_32));
 }
 
-// Bit swap is done, now start byte swap.
-def DWExtractLo32 {
-  dag SubReg = (i32 (EXTRACT_SUBREG DWSwap4.Bits, sub_32));
+def DWBytes3012 {
+  dag Word = (RLWINM DWBytes0123.Word, 24, 0, 31);
 }
 
-def DWRotateLo32 {
-  dag Left24 = (RLWINM DWExtractLo32.SubReg, 24, 0, 31);
+def DWBytes3212 {
+  dag Word = (RLWIMI DWBytes3012.Word, DWBytes0123.Word, 8, 8, 15);
 }
 
-def DWLo32RotateInsertByte3 {
-  dag Left = (RLWIMI DWRotateLo32.Left24, DWExtractLo32.SubReg, 8, 8, 15);
+// B3 B2 B1 B0 in the right order
+def DWBytes3210 {
+  dag Word = (RLWIMI DWBytes3212.Word, DWBytes0123.Word, 8, 24, 31);
+  dag DWord =
+    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), DWBytes3210.Word, sub_32));
 }
 
-// Lower 32 bits in the right order
-def DWLo32RotateInsertByte1 {
-  dag Left =
-    (RLWIMI DWLo32RotateInsertByte3.Left, DWExtractLo32.SubReg, 8, 24, 31);
-}
-
-def ExtendLo32 {
-  dag To64Bit =
-    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-          DWLo32RotateInsertByte1.Left, sub_32));
-}
-
-def DWShiftHi32 { // SRDI DWSwap4.Bits, 32)
-  dag ToLo32 = (RLDICL DWSwap4.Bits, 32, 32);
-}
-
-def DWExtractHi32 {
-  dag SubReg = (i32 (EXTRACT_SUBREG DWShiftHi32.ToLo32, sub_32));
-}
-
-def DWRotateHi32 {
-  dag Left24 = (RLWINM DWExtractHi32.SubReg, 24, 0, 31);
-}
-
-def DWHi32RotateInsertByte3 {
-  dag Left = (RLWIMI DWRotateHi32.Left24, DWExtractHi32.SubReg, 8, 8, 15);
-}
-
-// High 32 bits in the right order, but in the low 32-bit position
-def DWHi32RotateInsertByte1 {
-  dag Left =
-    (RLWIMI DWHi32RotateInsertByte3.Left, DWExtractHi32.SubReg, 8, 24, 31);
-}
-
-def ExtendHi32 {
-  dag To64Bit =
-    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-          DWHi32RotateInsertByte1.Left, sub_32));
-}
-
-def DWShiftLo32 { // SLDI ExtendHi32.To64Bit, 32
-  dag ToHi32 = (RLDICR ExtendHi32.To64Bit, 32, 31);
-}
-
+// Now both high word and low word are reversed, next
+// swap the high word and low word.
 def : Pat<(i64 (bitreverse i64:$A)),
-  (OR8 DWShiftLo32.ToHi32, ExtendLo32.To64Bit)>;
+  (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;

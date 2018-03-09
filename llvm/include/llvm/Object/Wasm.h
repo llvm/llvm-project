@@ -43,20 +43,60 @@ public:
   };
 
   WasmSymbol(StringRef Name, SymbolType Type, uint32_t Section,
-             uint32_t ElementIndex)
-      : Name(Name), Type(Type), Section(Section), ElementIndex(ElementIndex) {}
+             uint32_t ElementIndex, uint32_t FunctionType = 0)
+      : Name(Name), Type(Type), Section(Section), ElementIndex(ElementIndex),
+        FunctionType(FunctionType) {}
 
   StringRef Name;
   SymbolType Type;
   uint32_t Section;
   uint32_t Flags = 0;
 
-  // Index into the imports, exports or functions array of the object depending
-  // on the type
+  // Index into either the function or global index space.
   uint32_t ElementIndex;
 
+  // For function, the type index
+  uint32_t FunctionType;
+
+  // Symbols can be both exported and imported (in the case of the weakly
+  // defined symbol).  In this the import index is stored as AltIndex.
+  uint32_t AltIndex = 0;
+  bool HasAltIndex = false;
+
+  void setAltIndex(uint32_t Index) {
+    HasAltIndex = true;
+    AltIndex = Index;
+  }
+
+  bool isFunction() const {
+    return Type == WasmSymbol::SymbolType::FUNCTION_IMPORT ||
+           Type == WasmSymbol::SymbolType::FUNCTION_EXPORT ||
+           Type == WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME;
+  }
+
+
   bool isWeak() const {
-    return Flags & wasm::WASM_SYMBOL_FLAG_WEAK;
+    return getBinding() == wasm::WASM_SYMBOL_BINDING_WEAK;
+  }
+
+  bool isGlobal() const {
+    return getBinding() == wasm::WASM_SYMBOL_BINDING_GLOBAL;
+  }
+
+  bool isLocal() const {
+    return getBinding() == wasm::WASM_SYMBOL_BINDING_LOCAL;
+  }
+
+  unsigned getBinding() const {
+    return Flags & wasm::WASM_SYMBOL_BINDING_MASK;
+  }
+
+  bool isHidden() const {
+    return getVisibility() == wasm::WASM_SYMBOL_VISIBILITY_HIDDEN;
+  }
+
+  unsigned getVisibility() const {
+    return Flags & wasm::WASM_SYMBOL_VISIBILITY_MASK;
   }
 
   void print(raw_ostream &Out) const {
@@ -97,29 +137,18 @@ public:
 
   static bool classof(const Binary *v) { return v->isWasm(); }
 
-  const std::vector<wasm::WasmSignature>& types() const { return Signatures; }
-  const std::vector<uint32_t>& functionTypes() const { return FunctionTypes; }
-  const std::vector<wasm::WasmImport>& imports() const { return Imports; }
-  const std::vector<wasm::WasmTable>& tables() const { return Tables; }
-  const std::vector<wasm::WasmLimits>& memories() const { return Memories; }
-  const std::vector<wasm::WasmGlobal>& globals() const { return Globals; }
-  const std::vector<wasm::WasmExport>& exports() const { return Exports; }
+  ArrayRef<wasm::WasmSignature> types() const { return Signatures; }
+  ArrayRef<uint32_t> functionTypes() const { return FunctionTypes; }
+  ArrayRef<wasm::WasmImport> imports() const { return Imports; }
+  ArrayRef<wasm::WasmTable> tables() const { return Tables; }
+  ArrayRef<wasm::WasmLimits> memories() const { return Memories; }
+  ArrayRef<wasm::WasmGlobal> globals() const { return Globals; }
+  ArrayRef<wasm::WasmExport> exports() const { return Exports; }
   const wasm::WasmLinkingData& linkingData() const { return LinkingData; }
-
-  uint32_t getNumberOfSymbols() const {
-    return Symbols.size();
-  }
-
-  const std::vector<wasm::WasmElemSegment>& elements() const {
-    return ElemSegments;
-  }
-
-  const std::vector<WasmSegment>& dataSegments() const {
-    return DataSegments;
-  }
-
-  const std::vector<wasm::WasmFunction>& functions() const { return Functions; }
-  const ArrayRef<uint8_t>& code() const { return CodeSection; }
+  uint32_t getNumberOfSymbols() const { return Symbols.size(); }
+  ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
+  ArrayRef<WasmSegment> dataSegments() const { return DataSegments; }
+  ArrayRef<wasm::WasmFunction> functions() const { return Functions; }
   uint32_t startFunction() const { return StartFunction; }
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -132,6 +161,7 @@ public:
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
 
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
+  uint64_t getWasmSymbolValue(const WasmSymbol& Sym) const;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
@@ -169,11 +199,12 @@ public:
   section_iterator section_end() const override;
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
-  unsigned getArch() const override;
+  Triple::ArchType getArch() const override;
   SubtargetFeatures getFeatures() const override;
   bool isRelocatableObject() const override;
 
 private:
+  bool isValidFunctionIndex(uint32_t Index) const;
   const WasmSection &getWasmSection(DataRefImpl Ref) const;
   const wasm::WasmRelocation &getWasmRelocation(DataRefImpl Ref) const;
 
@@ -204,6 +235,8 @@ private:
   Error parseRelocSection(StringRef Name, const uint8_t *Ptr,
                           const uint8_t *End);
 
+  void populateSymbolTable();
+
   wasm::WasmObjectHeader Header;
   std::vector<WasmSection> Sections;
   std::vector<wasm::WasmSignature> Signatures;
@@ -217,10 +250,13 @@ private:
   std::vector<WasmSegment> DataSegments;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
-  ArrayRef<uint8_t> CodeSection;
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
   wasm::WasmLinkingData LinkingData;
+  uint32_t NumImportedGlobals = 0;
+  uint32_t NumImportedFunctions = 0;
+  uint32_t ImportSection = 0;
+  uint32_t ExportSection = 0;
 
   StringMap<uint32_t> SymbolMap;
 };

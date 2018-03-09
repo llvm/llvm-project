@@ -16,7 +16,6 @@
 #include "llvm-c/BitReader.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
   char *CErr = LLVMGetDiagInfoDescription(DI);

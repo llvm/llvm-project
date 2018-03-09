@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -mattr=+sse2 -mcpu=penryn -stats 2>&1 | \
+; RUN: llc < %s -mattr=+sse2 -mcpu=penryn -stats 2>&1 | \
 ; RUN:   grep "twoaddressinstruction" | grep "Number of instructions aggressively commuted"
 ; rdar://6480363
 

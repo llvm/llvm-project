@@ -26,4 +26,4 @@ for.end:                                          ; preds = %for.body
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 ; CHECK-NOT: !{metadata !"llvm.loop.vectorize.width", i32 4}
-; CHECK: !{!"llvm.loop.interleave.count", i32 1}
+; CHECK: !{!"llvm.loop.isvectorized", i32 1}

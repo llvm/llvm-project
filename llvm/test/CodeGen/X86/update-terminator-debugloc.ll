@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=machine-sink -march=x86-64 < %s | FileCheck %s
+; RUN: llc -stop-after=machine-sink < %s | FileCheck %s
 ;
 ; test code:
 ;  1 extern int bar(int x);

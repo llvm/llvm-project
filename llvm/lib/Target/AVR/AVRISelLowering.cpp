@@ -44,6 +44,7 @@ AVRTargetLowering::AVRTargetLowering(AVRTargetMachine &tm)
   setBooleanVectorContents(ZeroOrOneBooleanContent);
   setSchedulingPreference(Sched::RegPressure);
   setStackPointerRegisterToSaveRestore(AVR::SP);
+  setSupportsUnalignedAtomics(true);
 
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
@@ -724,7 +725,7 @@ void AVRTargetLowering::ReplaceNodeResults(SDNode *N,
 /// by AM is legal for this target, for a load/store of the specified type.
 bool AVRTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                               const AddrMode &AM, Type *Ty,
-                                              unsigned AS) const {
+                                              unsigned AS, Instruction *I) const {
   int64_t Offs = AM.BaseOffs;
 
   // Allow absolute addresses.
@@ -1038,7 +1039,7 @@ SDValue AVRTargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
-  analyzeArguments(nullptr, MF.getFunction(), &DL, 0, &Ins, CallConv, ArgLocs, CCInfo,
+  analyzeArguments(nullptr, &MF.getFunction(), &DL, 0, &Ins, CallConv, ArgLocs, CCInfo,
                    false, isVarArg);
 
   SDValue ArgValue;
@@ -1390,7 +1391,7 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // Don't emit the ret/reti instruction when the naked attribute is present in
   // the function being compiled.
-  if (MF.getFunction()->getAttributes().hasAttribute(
+  if (MF.getFunction().getAttributes().hasAttribute(
           AttributeList::FunctionIndex, Attribute::Naked)) {
     return Chain;
   }
@@ -1471,7 +1472,7 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
 
   MachineFunction::iterator I;
-  for (I = F->begin(); I != F->end() && &(*I) != BB; ++I);
+  for (I = BB->getIterator(); I != F->end() && &(*I) != BB; ++I);
   if (I != F->end()) ++I;
 
   // Create loop block.

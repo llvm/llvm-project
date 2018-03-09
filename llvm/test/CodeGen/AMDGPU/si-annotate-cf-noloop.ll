@@ -42,7 +42,6 @@ bb5:                                              ; preds = %bb3, %bb1
 ; GCN: s_and_saveexec_b64
 ; GCN: ; mask branch [[UNIFIED_RET:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: [[UNIFIED_RET]]:
-; GCN-NEXT: s_or_b64 exec, exec
 ; GCN-NEXT: s_endpgm
 ; GCN: .Lfunc_end
 define amdgpu_kernel void @annotate_ret_noloop(<4 x float> addrspace(1)* noalias nocapture readonly %arg) #0 {

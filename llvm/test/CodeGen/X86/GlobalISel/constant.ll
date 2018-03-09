@@ -3,7 +3,7 @@
 
 define i8 @const_i8() {
 ; ALL-LABEL: const_i8:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movb $2, %al
 ; ALL-NEXT:    retq
   ret i8 2
@@ -11,7 +11,7 @@ define i8 @const_i8() {
 
 define i16 @const_i16() {
 ; ALL-LABEL: const_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movw $3, %ax
 ; ALL-NEXT:    retq
   ret i16 3
@@ -19,7 +19,7 @@ define i16 @const_i16() {
 
 define i32 @const_i32() {
 ; ALL-LABEL: const_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl $4, %eax
 ; ALL-NEXT:    retq
   ret i32 4
@@ -27,7 +27,7 @@ define i32 @const_i32() {
 
 define i64 @const_i64() {
 ; ALL-LABEL: const_i64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movabsq $68719476720, %rax # imm = 0xFFFFFFFF0
 ; ALL-NEXT:    retq
   ret i64 68719476720
@@ -36,7 +36,7 @@ define i64 @const_i64() {
 ;i64 value fit into u32
 define i64 @const_i64_u32() {
 ; ALL-LABEL: const_i64_u32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movq $1879048192, %rax # imm = 0x70000000
 ; ALL-NEXT:    retq
   ret i64 1879048192
@@ -45,7 +45,7 @@ define i64 @const_i64_u32() {
 ;i64 value fit into i32
 define i64 @const_i64_i32() {
 ; ALL-LABEL: const_i64_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movq $-1, %rax
 ; ALL-NEXT:    retq
   ret i64 -1
@@ -53,7 +53,7 @@ define i64 @const_i64_i32() {
 
 define void @main(i32 ** %data) {
 ; ALL-LABEL: main:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movq $0, %rax
 ; ALL-NEXT:    movq %rax, (%rdi)
 ; ALL-NEXT:    retq

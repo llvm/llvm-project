@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind readnone uwtable
 define zeroext i16 @cmp_kor_seq_16(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x float> %d, <16 x float> %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: cmp_kor_seq_16:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vcmpgeps %zmm4, %zmm0, %k0
 ; CHECK-NEXT:    vcmpgeps %zmm4, %zmm1, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
@@ -19,7 +19,7 @@ define zeroext i16 @cmp_kor_seq_16(<16 x float> %a, <16 x float> %b, <16 x float
 ; CHECK-NEXT:    korw %k2, %k1, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a, <16 x float> %x, i32 13, i16 -1, i32 4)

@@ -13,33 +13,39 @@
         movs pc, r0
         movs r0, pc
         movs pc, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: error: operand must be a register in range [r0, r14]
 // CHECK-NEXT: movs pc, r0
-// CHECK: error: invalid operand for instruction
+// CHECK: note: operand must be a register in range [r0, r14]
 // CHECK-NEXT: movs r0, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: note: invalid operand for instruction
+// CHECK-NEXT: movs r0, pc
+// CHECK: error: invalid instruction
 // CHECK-NEXT: movs pc, pc
 
         // mov.w selects t2MOVr
         mov.w pc, r0
         mov.w r0, pc
         mov.w pc, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: error: operand must be a register in range [r0, r14]
 // CHECK-NEXT: mov.w pc, r0
-// CHECK: error: invalid operand for instruction
+// CHECK: note: operand must be a register in range [r0, r14]
 // CHECK-NEXT: mov.w r0, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: note: invalid operand for instruction
+// CHECK-NEXT: mov.w r0, pc
+// CHECK: error: invalid instruction
 // CHECK-NEXT: mov.w pc, pc
 
         // movs.w selects t2MOVr
         movs.w pc, r0
         movs.w r0, pc
         movs.w pc, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: error: operand must be a register in range [r0, r14]
 // CHECK-NEXT: movs.w pc, r0
-// CHECK: error: invalid operand for instruction
+// CHECK: note: operand must be a register in range [r0, r14]
 // CHECK-NEXT: movs.w r0, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: note: invalid operand for instruction
+// CHECK-NEXT: movs.w r0, pc
+// CHECK: error: invalid instruction
 // CHECK-NEXT: movs.w pc, pc
 
 
@@ -50,7 +56,7 @@
         movs sp, sp
 // CHECK-V7: error: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs sp, r0
-// CHECK-V7: error: instruction variant requires ARMv8 or later
+// CHECK-V7: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs r0, sp
 // CHECK-V7: error: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs sp, sp
@@ -68,7 +74,7 @@
         movs.w sp, sp
 // CHECK-V7: error: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs.w sp, r0
-// CHECK-V7: error: instruction variant requires ARMv8 or later
+// CHECK-V7: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs.w r0, sp
 // CHECK-V7: error: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs.w sp, sp

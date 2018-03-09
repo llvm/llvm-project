@@ -45,7 +45,7 @@ public:
     if (!ExpectedIndex)
       return ExpectedIndex.takeError();
     const auto &Item = Items[*ExpectedIndex];
-    if (auto EC = checkOffset(Offset, Size))
+    if (auto EC = checkOffsetForRead(Offset, Size))
       return EC;
     if (Size > Traits::length(Item))
       return make_error<BinaryStreamError>(stream_error_code::stream_too_short);

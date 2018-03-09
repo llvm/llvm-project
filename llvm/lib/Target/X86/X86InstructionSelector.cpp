@@ -31,6 +31,8 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -40,8 +42,6 @@
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOpcodes.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <tuple>
@@ -191,7 +191,7 @@ X86InstructionSelector::getRegClass(LLT Ty, unsigned Reg,
   return getRegClass(Ty, RegBank);
 }
 
-unsigned getSubRegIndex(const TargetRegisterClass *RC) {
+static unsigned getSubRegIndex(const TargetRegisterClass *RC) {
   unsigned SubIdx = X86::NoSubRegister;
   if (RC == &X86::GR32RegClass) {
     SubIdx = X86::sub_32bit;
@@ -204,7 +204,7 @@ unsigned getSubRegIndex(const TargetRegisterClass *RC) {
   return SubIdx;
 }
 
-const TargetRegisterClass *getRegClassFromGRPhysReg(unsigned Reg) {
+static const TargetRegisterClass *getRegClassFromGRPhysReg(unsigned Reg) {
   assert(TargetRegisterInfo::isPhysicalRegister(Reg));
   if (X86::GR64RegClass.contains(Reg))
     return &X86::GR64RegClass;

@@ -113,37 +113,31 @@ TEST(Local, ReplaceDbgDeclare) {
 
   // Original C source to get debug info for a local variable:
   // void f() { int x; }
-  std::unique_ptr<Module> M = parseIR(
-      C,
-      "define void @f() !dbg !8 {\n"
-      "entry:\n"
-      "  %x = alloca i32, align 4\n"
-      "  call void @llvm.dbg.declare(metadata i32* %x, metadata !11, metadata "
-      "!DIExpression()), !dbg !13\n"
-      "  call void @llvm.dbg.declare(metadata i32* %x, metadata !11, metadata "
-      "!DIExpression()), !dbg !13\n"
-      "  ret void, !dbg !14\n"
-      "}\n"
-      "declare void @llvm.dbg.declare(metadata, metadata, metadata)\n"
-      "!llvm.dbg.cu = !{!0}\n"
-      "!llvm.module.flags = !{!3, !4}\n"
-      "!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "
-      "\"clang version 6.0.0 \", isOptimized: false, runtimeVersion: 0, "
-      "emissionKind: FullDebug, enums: !2)\n"
-      "!1 = !DIFile(filename: \"t2.c\", directory: \"foo\")\n"
-      "!2 = !{}\n"
-      "!3 = !{i32 2, !\"Dwarf Version\", i32 4}\n"
-      "!4 = !{i32 2, !\"Debug Info Version\", i32 3}\n"
-      "!8 = distinct !DISubprogram(name: \"f\", scope: !1, file: !1, line: 1, "
-      "type: !9, isLocal: false, isDefinition: true, scopeLine: 1, "
-      "isOptimized: false, unit: !0, variables: !2)\n"
-      "!9 = !DISubroutineType(types: !10)\n"
-      "!10 = !{null}\n"
-      "!11 = !DILocalVariable(name: \"x\", scope: !8, file: !1, line: 2, type: "
-      "!12)\n"
-      "!12 = !DIBasicType(name: \"int\", size: 32, encoding: DW_ATE_signed)\n"
-      "!13 = !DILocation(line: 2, column: 7, scope: !8)\n"
-      "!14 = !DILocation(line: 3, column: 1, scope: !8)\n");
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      define void @f() !dbg !8 {
+      entry:
+        %x = alloca i32, align 4
+        call void @llvm.dbg.declare(metadata i32* %x, metadata !11, metadata !DIExpression()), !dbg !13
+        call void @llvm.dbg.declare(metadata i32* %x, metadata !11, metadata !DIExpression()), !dbg !13
+        ret void, !dbg !14
+      }
+      declare void @llvm.dbg.declare(metadata, metadata, metadata)
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
+      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !13 = !DILocation(line: 2, column: 7, scope: !8)
+      !14 = !DILocation(line: 3, column: 1, scope: !8)
+      )");
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -166,4 +160,148 @@ TEST(Local, ReplaceDbgDeclare) {
     if (isa<DbgDeclareInst>(I))
       Declares++;
   EXPECT_EQ(2, Declares);
+}
+
+/// Build the dominator tree for the function and run the Test.
+static void runWithDomTree(
+    Module &M, StringRef FuncName,
+    function_ref<void(Function &F, DominatorTree *DT)> Test) {
+  auto *F = M.getFunction(FuncName);
+  ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
+  // Compute the dominator tree for the function.
+  DominatorTree DT(*F);
+  Test(*F, &DT);
+}
+
+TEST(Local, MergeBasicBlockIntoOnlyPred) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      define i32 @f(i8* %str) {
+      entry:
+        br label %bb2.i
+      bb2.i:                                            ; preds = %bb4.i, %entry
+        br i1 false, label %bb4.i, label %base2flt.exit204
+      bb4.i:                                            ; preds = %bb2.i
+        br i1 false, label %base2flt.exit204, label %bb2.i
+      bb10.i196.bb7.i197_crit_edge:                     ; No predecessors!
+        br label %bb7.i197
+      bb7.i197:                                         ; preds = %bb10.i196.bb7.i197_crit_edge
+        %.reg2mem.0 = phi i32 [ %.reg2mem.0, %bb10.i196.bb7.i197_crit_edge ]
+        br i1 undef, label %base2flt.exit204, label %base2flt.exit204
+      base2flt.exit204:                                 ; preds = %bb7.i197, %bb7.i197, %bb2.i, %bb4.i
+        ret i32 0
+      }
+      )");
+  runWithDomTree(
+      *M, "f", [&](Function &F, DominatorTree *DT) {
+        for (Function::iterator I = F.begin(), E = F.end(); I != E;) {
+          BasicBlock *BB = &*I++;
+          BasicBlock *SinglePred = BB->getSinglePredecessor();
+          if (!SinglePred || SinglePred == BB || BB->hasAddressTaken()) continue;
+          BranchInst *Term = dyn_cast<BranchInst>(SinglePred->getTerminator());
+          if (Term && !Term->isConditional())
+            MergeBasicBlockIntoOnlyPred(BB, DT);
+        }
+        EXPECT_TRUE(DT->verify());
+      });
+}
+
+struct SalvageDebugInfoTest : ::testing::Test {
+  LLVMContext C;
+  std::unique_ptr<Module> M;
+  Function *F = nullptr;
+
+  void SetUp() {
+    M = parseIR(C,
+                R"(
+      define void @f() !dbg !8 {
+      entry:
+        %x = add i32 0, 1
+        %y = add i32 %x, 2
+        call void @llvm.dbg.value(metadata i32 %x, metadata !11, metadata !DIExpression()), !dbg !13
+        call void @llvm.dbg.value(metadata i32 %y, metadata !11, metadata !DIExpression()), !dbg !13
+        ret void, !dbg !14
+      }
+      declare void @llvm.dbg.value(metadata, metadata, metadata)
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
+      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !13 = !DILocation(line: 2, column: 7, scope: !8)
+      !14 = !DILocation(line: 3, column: 1, scope: !8)
+      )");
+
+    auto *GV = M->getNamedValue("f");
+    ASSERT_TRUE(GV);
+    F = dyn_cast<Function>(GV);
+    ASSERT_TRUE(F);
+  }
+
+  bool doesDebugValueDescribeX(const DbgValueInst &DI) {
+    const auto &CI = *cast<ConstantInt>(DI.getValue());
+    if (CI.isZero())
+      return DI.getExpression()->getElements().equals(
+          {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_stack_value});
+    else if (CI.isOneValue())
+      return DI.getExpression()->getElements().empty();
+    return false;
+  }
+
+  bool doesDebugValueDescribeY(const DbgValueInst &DI) {
+    const auto &CI = *cast<ConstantInt>(DI.getValue());
+    if (CI.isZero())
+      return DI.getExpression()->getElements().equals(
+          {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_plus_uconst, 2,
+           dwarf::DW_OP_stack_value});
+    else if (CI.isOneValue())
+      return DI.getExpression()->getElements().equals(
+          {dwarf::DW_OP_plus_uconst, 2, dwarf::DW_OP_stack_value});
+    return false;
+  }
+
+  void verifyDebugValuesAreSalvaged() {
+    // Check that the debug values for %x and %y are preserved.
+    bool FoundX = false;
+    bool FoundY = false;
+    for (const Instruction &I : F->front()) {
+      auto DI = dyn_cast<DbgValueInst>(&I);
+      if (!DI) {
+        // The function should only contain debug values and a terminator.
+        ASSERT_TRUE(isa<TerminatorInst>(&I));
+        continue;
+      }
+      EXPECT_EQ(DI->getVariable()->getName(), "x");
+      FoundX |= doesDebugValueDescribeX(*DI);
+      FoundY |= doesDebugValueDescribeY(*DI);
+    }
+    ASSERT_TRUE(FoundX);
+    ASSERT_TRUE(FoundY);
+  }
+};
+
+TEST_F(SalvageDebugInfoTest, RecursiveInstDeletion) {
+  Instruction *Inst = &F->front().front();
+  Inst = Inst->getNextNode(); // Get %y = add ...
+  ASSERT_TRUE(Inst);
+  bool Deleted = RecursivelyDeleteTriviallyDeadInstructions(Inst);
+  ASSERT_TRUE(Deleted);
+  verifyDebugValuesAreSalvaged();
+}
+
+TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
+  BasicBlock *BB = &F->front();
+  ASSERT_TRUE(BB);
+  bool Deleted = SimplifyInstructionsInBlock(BB);
+  ASSERT_TRUE(Deleted);
+  verifyDebugValuesAreSalvaged();
 }

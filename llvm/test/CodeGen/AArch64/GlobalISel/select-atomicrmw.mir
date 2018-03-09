@@ -30,7 +30,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_xchg_i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr64 = MOVi64imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr64 = SWPALd [[CST]], [[COPY]] :: (load store monotonic 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr64 = SWPX [[CST]], [[COPY]] :: (load store monotonic 8 on %ir.addr)
     ; CHECK: %x0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s64) = G_CONSTANT i64 1
@@ -49,7 +49,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_add_i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr64 = MOVi64imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr64 = LDADDALd [[CST]], [[COPY]] :: (load store monotonic 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr64 = LDADDX [[CST]], [[COPY]] :: (load store monotonic 8 on %ir.addr)
     ; CHECK: %x0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s64) = G_CONSTANT i64 1
@@ -68,7 +68,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_add_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDADDALs [[CST]], [[COPY]] :: (load store seq_cst 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDADDALW [[CST]], [[COPY]] :: (load store seq_cst 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -88,7 +88,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_sub_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDADDALs [[CST]], [[COPY]] :: (load store seq_cst 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDADDALW [[CST]], [[COPY]] :: (load store seq_cst 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -109,7 +109,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[CST2:%[0-9]+]]:gpr32 = ORNWrr %wzr, [[CST]]
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDCLRALs [[CST2]], [[COPY]] :: (load store acquire 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDCLRAW [[CST2]], [[COPY]] :: (load store acquire 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -129,7 +129,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_or_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDSETALs [[CST]], [[COPY]] :: (load store release 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDSETLW [[CST]], [[COPY]] :: (load store release 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -149,7 +149,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_xor_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDEORALs [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDEORALW [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -169,7 +169,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_min_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDSMINALs [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDSMINALW [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -189,7 +189,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_max_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDSMAXALs [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDSMAXALW [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -209,7 +209,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_umin_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDUMINALs [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDUMINALW [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -229,7 +229,7 @@ body:             |
     ; CHECK-LABEL: name: atomicrmw_umax_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDUMAXALs [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:gpr32 = LDUMAXALW [[CST]], [[COPY]] :: (load store acq_rel 8 on %ir.addr)
     ; CHECK: %w0 = COPY [[RES]]
     %0:gpr(p0) = COPY %x0
     %1:gpr(s32) = G_CONSTANT i32 1

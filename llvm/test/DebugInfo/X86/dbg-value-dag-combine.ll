@@ -8,8 +8,8 @@ target triple = "i686-apple-darwin"
 ; CHECK-LABEL: __OpenCL_test_kernel:
 ; CHECK-DAG:  ##DEBUG_VALUE: __OpenCL_test_kernel:ip <- 
 ; CHECK-DAG:  ##DEBUG_VALUE: xxx <- 0
-; CHECK-DAG:  ##DEBUG_VALUE: gid <- %E{{..$}}
-; CHECK-DAG:  ##DEBUG_VALUE: idx <- %E{{..$}}
+; CHECK-DAG:  ##DEBUG_VALUE: gid <- %e{{..$}}
+; CHECK-DAG:  ##DEBUG_VALUE: idx <- %e{{..$}}
 ; CHECK-NOT:  ##DEBUG_VALUE:
 
 declare <4 x i32> @__amdil_get_global_id_int()

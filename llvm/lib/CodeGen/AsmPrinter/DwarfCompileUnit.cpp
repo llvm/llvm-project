@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/DwarfCompileUnit.cpp - Dwarf Compile Units -----------===//
+//===- llvm/CodeGen/DwarfCompileUnit.cpp - Dwarf Compile Units ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,49 +12,58 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfCompileUnit.h"
+#include "AddressPool.h"
+#include "DwarfDebug.h"
 #include "DwarfExpression.h"
+#include "DwarfUnit.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/DIE.h"
+#include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/IR/Constants.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/MC/MachineLocation.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Target/TargetFrameLowering.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Target/TargetOptions.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <string>
+#include <utility>
 
-namespace llvm {
-
-enum DefaultOnOff { Default, Enable, Disable };
-
-static cl::opt<DefaultOnOff>
-DwarfPubSections("generate-dwarf-pub-sections", cl::Hidden,
-                 cl::desc("Generate DWARF pubnames and pubtypes sections"),
-                 cl::values(clEnumVal(Default, "Default for platform"),
-                            clEnumVal(Enable, "Enabled"),
-                            clEnumVal(Disable, "Disabled")),
-                 cl::init(Default));
+using namespace llvm;
 
 DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
                                    AsmPrinter *A, DwarfDebug *DW,
                                    DwarfFile *DWU)
-    : DwarfUnit(dwarf::DW_TAG_compile_unit, Node, A, DW, DWU), UniqueID(UID),
-      Skeleton(nullptr), BaseAddress(nullptr) {
+    : DwarfUnit(dwarf::DW_TAG_compile_unit, Node, A, DW, DWU), UniqueID(UID) {
   insertDIE(Node, &getUnitDie());
   MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
 }
 
 /// addLabelAddress - Add a dwarf label attribute data and value using
 /// DW_FORM_addr or DW_FORM_GNU_addr_index.
-///
 void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
                                        const MCSymbol *Label) {
-
   // Don't use the address pool in non-fission or in the skeleton unit itself.
   // FIXME: Once GDB supports this, it's probably worthwhile using the address
   // pool from the skeleton - maybe even in non-fission (possibly fewer
@@ -181,6 +190,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
       DwarfExpr = llvm::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
     }
 
+    if (Expr)
+      DwarfExpr->addFragmentOffset(Expr);
+
     if (Global) {
       const MCSymbol *Sym = Asm->getSymbol(Global);
       if (Global->isThreadLocal()) {
@@ -216,10 +228,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         addOpAddress(*Loc, Sym);
       }
     }
-    if (Expr) {
-      DwarfExpr->addFragmentOffset(Expr);
+    if (Expr)
       DwarfExpr->addExpression(Expr);
-    }
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
@@ -473,6 +483,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
                                                 bool Abstract) {
   // Define variable debug information entry.
   auto VariableDie = DIE::get(DIEValueAllocator, DV.getTag());
+  insertDIE(DV.getVariable(), VariableDie);
 
   if (Abstract) {
     applyVariableAttributes(DV, *VariableDie);
@@ -556,13 +567,95 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV,
   return Var;
 }
 
+/// Return all DIVariables that appear in count: expressions.
+static SmallVector<const DIVariable *, 2> dependencies(DbgVariable *Var) {
+  SmallVector<const DIVariable *, 2> Result;
+  auto *Array = dyn_cast<DICompositeType>(Var->getType());
+  if (!Array || Array->getTag() != dwarf::DW_TAG_array_type)
+    return Result;
+  for (auto *El : Array->getElements()) {
+    if (auto *Subrange = dyn_cast<DISubrange>(El)) {
+      auto Count = Subrange->getCount();
+      if (auto *Dependency = Count.dyn_cast<DIVariable *>())
+        Result.push_back(Dependency);
+    }
+  }
+  return Result;
+}
+
+/// Sort local variables so that variables appearing inside of helper
+/// expressions come first.
+static SmallVector<DbgVariable *, 8>
+sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
+  SmallVector<DbgVariable *, 8> Result;
+  SmallVector<PointerIntPair<DbgVariable *, 1>, 8> WorkList;
+  // Map back from a DIVariable to its containing DbgVariable.
+  SmallDenseMap<const DILocalVariable *, DbgVariable *> DbgVar;
+  // Set of DbgVariables in Result.
+  SmallDenseSet<DbgVariable *, 8> Visited;
+  // For cycle detection.
+  SmallDenseSet<DbgVariable *, 8> Visiting;
+
+  // Initialize the worklist and the DIVariable lookup table.
+  for (auto Var : reverse(Input)) {
+    DbgVar.insert({Var->getVariable(), Var});
+    WorkList.push_back({Var, 0});
+  }
+
+  // Perform a stable topological sort by doing a DFS.
+  while (!WorkList.empty()) {
+    auto Item = WorkList.back();
+    DbgVariable *Var = Item.getPointer();
+    bool visitedAllDependencies = Item.getInt();
+    WorkList.pop_back();
+
+    // Dependency is in a different lexical scope or a global.
+    if (!Var)
+      continue;
+
+    // Already handled.
+    if (Visited.count(Var))
+      continue;
+
+    // Add to Result if all dependencies are visited.
+    if (visitedAllDependencies) {
+      Visited.insert(Var);
+      Result.push_back(Var);
+      continue;
+    }
+
+    // Detect cycles.
+    auto Res = Visiting.insert(Var);
+    if (!Res.second) {
+      assert(false && "dependency cycle in local variables");
+      return Result;
+    }
+
+    // Push dependencies and this node onto the worklist, so that this node is
+    // visited again after all of its dependencies are handled.
+    WorkList.push_back({Var, 1});
+    for (auto *Dependency : dependencies(Var)) {
+      auto Dep = dyn_cast_or_null<const DILocalVariable>(Dependency);
+      WorkList.push_back({DbgVar[Dep], 0});
+    }
+  }
+  return Result;
+}
+
 DIE *DwarfCompileUnit::createScopeChildrenDIE(LexicalScope *Scope,
                                               SmallVectorImpl<DIE *> &Children,
                                               bool *HasNonScopeChildren) {
   assert(Children.empty());
   DIE *ObjectPointer = nullptr;
 
-  for (DbgVariable *DV : DU->getScopeVariables().lookup(Scope))
+  // Emit function arguments (order is significant).
+  auto Vars = DU->getScopeVariables().lookup(Scope);
+  for (auto &DV : Vars.Args)
+    Children.push_back(constructVariableDIE(*DV.second, *Scope, ObjectPointer));
+
+  // Emit local variables.
+  auto Locals = sortLocalVars(Vars.Locals);
+  for (DbgVariable *DV : Locals)
     Children.push_back(constructVariableDIE(*DV, *Scope, ObjectPointer));
 
   // Skip imported directives in gmlt-like data.
@@ -734,7 +827,7 @@ DbgVariable *DwarfCompileUnit::getExistingAbstractVariable(
 void DwarfCompileUnit::createAbstractVariable(const DILocalVariable *Var,
                                         LexicalScope *Scope) {
   assert(Scope && Scope->isAbstractScope());
-  auto AbsDbgVariable = make_unique<DbgVariable>(Var, /* IA */ nullptr);
+  auto AbsDbgVariable = llvm::make_unique<DbgVariable>(Var, /* IA */ nullptr);
   DU->addScopeVariable(Scope, AbsDbgVariable.get());
   getAbstractVariables()[Var] = std::move(AbsDbgVariable);
 }
@@ -758,10 +851,7 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
   if (CUNode->getGnuPubnames())
     return true;
 
-  if (DwarfPubSections == Default)
-    return DD->tuneForGDB() && !includeMinimalInlineScopes();
-
-  return DwarfPubSections == Enable;
+  return DD->tuneForGDB() && !includeMinimalInlineScopes();
 }
 
 /// addGlobalName - Add a new global name to the compile unit.
@@ -810,6 +900,12 @@ void DwarfCompileUnit::addGlobalTypeUnitType(const DIType *Ty,
 /// DbgVariable based on provided MachineLocation.
 void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
                                           MachineLocation Location) {
+  // addBlockByrefAddress is obsolete and will be removed soon.
+  // The clang frontend always generates block byref variables with a
+  // complex expression that encodes exactly what addBlockByrefAddress
+  // would do.
+  assert((!DV.isBlockByrefVariable() || DV.hasComplexAddress()) &&
+         "block byref variable without a complex expression");
   if (DV.hasComplexAddress())
     addComplexAddress(DV, Die, dwarf::DW_AT_location, Location);
   else if (DV.isBlockByrefVariable())
@@ -907,4 +1003,3 @@ bool DwarfCompileUnit::includeMinimalInlineScopes() const {
   return getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly ||
          (DD->useSplitDwarf() && !Skeleton);
 }
-} // end llvm namespace

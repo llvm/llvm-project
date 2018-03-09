@@ -1,3 +1,10 @@
+; XFAIL: *
+
+; This test used to generate a region that caused it to delete the entry block,
+; but it does not anymore after the changes to handling of infinite loops in the
+; PostDominatorTree.
+; TODO: This should be either replaced with another IR or deleted completely.
+
 ; RUN: opt -S -o - -structurizecfg -verify-dom-info < %s | FileCheck %s
 
 ; CHECK-LABEL: @no_branch_to_entry_undef(

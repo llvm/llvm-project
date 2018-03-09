@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+cmov -x86-cmov-converter=false | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+cmov -x86-cmov-converter=false | FileCheck %s
 ;
 ; Test scheduling a multi-use compare. We should neither spill flags
 ; nor clone the compare.

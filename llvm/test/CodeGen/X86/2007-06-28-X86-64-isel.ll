@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+sse2
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2
 
 define void @test() {
 	%tmp1 = call <8 x i16> @llvm.x86.sse2.pmins.w( <8 x i16> zeroinitializer, <8 x i16> bitcast (<4 x i32> < i32 7, i32 7, i32 7, i32 7 > to <8 x i16>) )

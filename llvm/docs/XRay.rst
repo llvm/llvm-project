@@ -75,11 +75,11 @@ GCC-style attributes or C++11-style attributes.
 
 .. code-block:: c++
 
-    [[clang::xray_always_intrument]] void always_instrumented();
+    [[clang::xray_always_instrument]] void always_instrumented();
 
     [[clang::xray_never_instrument]] void never_instrumented();
 
-    void alt_always_instrumented() __attribute__((xray_always_intrument));
+    void alt_always_instrumented() __attribute__((xray_always_instrument));
 
     void alt_never_instrumented() __attribute__((xray_never_instrument));
 
@@ -143,16 +143,29 @@ variable, where we list down the options and their defaults below.
 |                   |                 |               | instrumentation points |
 |                   |                 |               | before main.           |
 +-------------------+-----------------+---------------+------------------------+
-| xray_naive_log    | ``bool``        | ``true``      | Whether to install     |
-|                   |                 |               | the naive log          |
-|                   |                 |               | implementation.        |
+| xray_mode         | ``const char*`` | ``""``        | Default mode to        |
+|                   |                 |               | install and initialize |
+|                   |                 |               | before ``main``.       |
 +-------------------+-----------------+---------------+------------------------+
 | xray_logfile_base | ``const char*`` | ``xray-log.`` | Filename base for the  |
 |                   |                 |               | XRay logfile.          |
 +-------------------+-----------------+---------------+------------------------+
-| xray_fdr_log      | ``bool``        | ``false``     | Whether to install the |
-|                   |                 |               | Flight Data Recorder   |
+| xray_naive_log    | ``bool``        | ``false``     | **DEPRECATED:** Use    |
+|                   |                 |               | xray_mode=xray-basic   |
+|                   |                 |               | instead. Whether to    |
+|                   |                 |               | install the basic log  |
+|                   |                 |               | the naive log          |
+|                   |                 |               | implementation.        |
++-------------------+-----------------+---------------+------------------------+
+| xray_fdr_log      | ``bool``        | ``false``     | **DEPRECATED:** Use    |
+|                   |                 |               | xray_mode=xray-fdr     |
+|                   |                 |               | instead. Whether to    |
+|                   |                 |               | install the Flight     |
+|                   |                 |               | Data Recorder          |
 |                   |                 |               | (FDR) mode.            |
++-------------------+-----------------+---------------+------------------------+
+| verbosity         | ``int``         | ``0``         | Runtime verbosity      |
+|                   |                 |               | level.                 |
 +-------------------+-----------------+---------------+------------------------+
 
 
@@ -196,6 +209,9 @@ on your application, you may set the ``xray_fdr_log`` option to ``true`` in the
 ``XRAY_OPTIONS`` environment variable (while also optionally setting the
 ``xray_naive_log`` to ``false``).
 
+When the buffers are flushed to disk, the result is a binary trace format
+described by `XRay FDR format <XRayFDRFormat.html>`_
+
 When FDR mode is on, it will keep writing and recycling memory buffers until
 the logging implementation is finalized -- at which point it can be flushed and
 re-initialised later. To do this programmatically, we follow the workflow
@@ -238,6 +254,14 @@ following API:
 - ``__xray_set_log_impl(...)``: This function takes a struct of type
   ``XRayLogImpl``, which is defined in ``xray/xray_log_interface.h``, part of
   the XRay compiler-rt installation.
+- ``__xray_log_register_mode(...)``: Register a logging implementation against
+  a string Mode. The implementation is an instance of ``XRayLogImpl`` defined
+  in ``xray/xray_log_interface.h``.
+- ``__xray_log_select_mode(...)``: Select the mode to install, associated with
+  a string Mode. Only implementations registered with
+  ``__xray_log_register_mode(...)`` can be chosen with this function. When
+  successful, has the same effects as calling ``__xray_set_log_impl(...)`` with
+  the registered logging implementation.
 - ``__xray_log_init(...)``: This function allows for initializing and
   re-initializing an installed logging implementation. See
   ``xray/xray_log_interface.h`` for details, part of the XRay compiler-rt
@@ -255,10 +279,15 @@ supports the following subcommands:
 - ``account``: Performs basic function call accounting statistics with various
   options for sorting, and output formats (supports CSV, YAML, and
   console-friendly TEXT).
-- ``convert``: Converts an XRay log file from one format to another. Currently
-  only converts to YAML.
+- ``convert``: Converts an XRay log file from one format to another. We can
+  convert from binary XRay traces (both naive and FDR mode) to YAML,
+  `flame-graph <https://github.com/brendangregg/FlameGraph>`_ friendly text
+  formats, as well as `Chrome Trace Viewer (catapult)
+  <https://github.com/catapult-project/catapult>` formats.
 - ``graph``: Generates a DOT graph of the function call relationships between
   functions found in an XRay trace.
+- ``stack``: Reconstructs function call stacks from a timeline of function
+  calls in an XRay trace.
 
 These subcommands use various library components found as part of the XRay
 libraries, distributed with the LLVM distribution. These are:
@@ -271,7 +300,7 @@ libraries, distributed with the LLVM distribution. These are:
   associated with edges and vertices.
 - ``llvm/XRay/InstrumentationMap.h``: A convenient tool for analyzing the
   instrumentation map in XRay-instrumented object files and binaries. The
-  ``extract`` subcommand uses this particular library.
+  ``extract`` and ``stack`` subcommands uses this particular library.
 
 Future Work
 ===========
@@ -279,13 +308,17 @@ Future Work
 There are a number of ongoing efforts for expanding the toolset building around
 the XRay instrumentation system.
 
-Trace Analysis
---------------
+Trace Analysis Tools
+--------------------
 
-We have more subcommands and modes that we're thinking of developing, in the
-following forms:
-
-- ``stack``: Reconstruct the function call stacks in a timeline.
+- Work is in progress to integrate with or develop tools to visualize findings
+  from an XRay trace. Particularly, the ``stack`` tool is being expanded to
+  output formats that allow graphing and exploring the duration of time in each
+  call stack.
+- With a large instrumented binary, the size of generated XRay traces can
+  quickly become unwieldy. We are working on integrating pruning techniques and
+  heuristics for the analysis tools to sift through the traces and surface only
+  relevant information.
 
 More Platforms
 --------------

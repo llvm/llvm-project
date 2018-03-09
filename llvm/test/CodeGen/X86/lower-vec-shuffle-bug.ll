@@ -3,7 +3,7 @@
 
 define <4 x double> @test1(<4 x double> %A, <4 x double> %B) {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -13,7 +13,7 @@ entry:
 
 define <4 x double> @test2(<4 x double> %A, <4 x double> %B) {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -23,7 +23,7 @@ entry:
 
 define <4 x double> @test3(<4 x double> %A, <4 x double> %B) {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -33,7 +33,7 @@ entry:
 
 define <4 x double> @test4(<4 x double> %A, <4 x double> %B) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:

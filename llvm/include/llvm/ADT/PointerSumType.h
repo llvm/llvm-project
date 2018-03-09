@@ -11,8 +11,10 @@
 #define LLVM_ADT_POINTERSUMTYPE_H
 
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <cassert>
+#include <cstdint>
+#include <type_traits>
 
 namespace llvm {
 
@@ -24,16 +26,15 @@ template <uintptr_t N, typename PointerArgT,
           typename TraitsArgT = PointerLikeTypeTraits<PointerArgT>>
 struct PointerSumTypeMember {
   enum { Tag = N };
-  typedef PointerArgT PointerT;
-  typedef TraitsArgT TraitsT;
+  using PointerT = PointerArgT;
+  using TraitsT = TraitsArgT;
 };
 
 namespace detail {
 
-template <typename TagT, typename... MemberTs>
-struct PointerSumTypeHelper;
+template <typename TagT, typename... MemberTs> struct PointerSumTypeHelper;
 
-}
+} // end namespace detail
 
 /// A sum type over pointer-like types.
 ///
@@ -60,12 +61,12 @@ struct PointerSumTypeHelper;
 /// There is no support for constructing or accessing with a dynamic tag as
 /// that would fundamentally violate the type safety provided by the sum type.
 template <typename TagT, typename... MemberTs> class PointerSumType {
-  uintptr_t Value;
+  uintptr_t Value = 0;
 
-  typedef detail::PointerSumTypeHelper<TagT, MemberTs...> HelperT;
+  using HelperT = detail::PointerSumTypeHelper<TagT, MemberTs...>;
 
 public:
-  PointerSumType() : Value(0) {}
+  constexpr PointerSumType() = default;
 
   /// A typed constructor for a specific tagged member of the sum type.
   template <TagT N>
@@ -128,14 +129,14 @@ struct PointerSumTypeHelper : MemberTs... {
   template <TagT N> static void LookupOverload(...);
   template <TagT N> struct Lookup {
     // Compute a particular member type by resolving the lookup helper ovorload.
-    typedef decltype(LookupOverload<N>(
-        static_cast<PointerSumTypeHelper *>(nullptr))) MemberT;
+    using MemberT = decltype(
+        LookupOverload<N>(static_cast<PointerSumTypeHelper *>(nullptr)));
 
     /// The Nth member's pointer type.
-    typedef typename MemberT::PointerT PointerT;
+    using PointerT = typename MemberT::PointerT;
 
     /// The Nth member's traits type.
-    typedef typename MemberT::TraitsT TraitsT;
+    using TraitsT = typename MemberT::TraitsT;
   };
 
   // Next we need to compute the number of bits available for the discriminant
@@ -171,35 +172,36 @@ struct PointerSumTypeHelper : MemberTs... {
                 "Each member must pass the checker.");
 };
 
-}
+} // end namespace detail
 
 // Teach DenseMap how to use PointerSumTypes as keys.
 template <typename TagT, typename... MemberTs>
 struct DenseMapInfo<PointerSumType<TagT, MemberTs...>> {
-  typedef PointerSumType<TagT, MemberTs...> SumType;
-
-  typedef detail::PointerSumTypeHelper<TagT, MemberTs...> HelperT;
+  using SumType = PointerSumType<TagT, MemberTs...>;
+  using HelperT = detail::PointerSumTypeHelper<TagT, MemberTs...>;
   enum { SomeTag = HelperT::MinTag };
-  typedef typename HelperT::template Lookup<HelperT::MinTag>::PointerT
-      SomePointerT;
-  typedef DenseMapInfo<SomePointerT> SomePointerInfo;
+  using SomePointerT =
+      typename HelperT::template Lookup<HelperT::MinTag>::PointerT;
+  using SomePointerInfo = DenseMapInfo<SomePointerT>;
 
   static inline SumType getEmptyKey() {
     return SumType::create<SomeTag>(SomePointerInfo::getEmptyKey());
   }
+
   static inline SumType getTombstoneKey() {
-    return SumType::create<SomeTag>(
-        SomePointerInfo::getTombstoneKey());
+    return SumType::create<SomeTag>(SomePointerInfo::getTombstoneKey());
   }
+
   static unsigned getHashValue(const SumType &Arg) {
     uintptr_t OpaqueValue = Arg.getOpaqueValue();
     return DenseMapInfo<uintptr_t>::getHashValue(OpaqueValue);
   }
+
   static bool isEqual(const SumType &LHS, const SumType &RHS) {
     return LHS == RHS;
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_POINTERSUMTYPE_H

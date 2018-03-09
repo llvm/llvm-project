@@ -5,7 +5,7 @@
 
 define void @test(i32 %x, float* %y) nounwind {
 ; X32-LABEL: test:
-; X32:       ## BB#0: ## %entry
+; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    shrl $23, %ecx
@@ -14,7 +14,7 @@ define void @test(i32 %x, float* %y) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       ## BB#0: ## %entry
+; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    shrl $23, %edi
 ; X64-NEXT:    cvtsi2ssl %edi, %xmm0
 ; X64-NEXT:    movss %xmm0, (%rsi)

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck  %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck  %s
 
 @x = internal thread_local global i32 0, align 4
 @y = internal thread_local global i32 0, align 4

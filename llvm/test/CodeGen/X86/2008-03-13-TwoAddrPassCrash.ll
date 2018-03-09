@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 define signext i16 @t(i32 %depth)  nounwind  {
 entry:

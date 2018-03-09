@@ -46,11 +46,11 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
     ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY]]
     ; CHECK: %w0 = COPY [[ADDWrr]]
-    ; CHECK: DBG_VALUE debug-use [[ADDWrr]], debug-use _, !7, !DIExpression(), debug-location !9
+    ; CHECK: DBG_VALUE debug-use [[ADDWrr]], debug-use %noreg, !7, !DIExpression(), debug-location !9
     %0:gpr(s32) = COPY %w0
     %1:gpr(s32) = G_ADD %0, %0
     %w0 = COPY %1(s32)
-    DBG_VALUE debug-use %1(s32), debug-use _, !7, !DIExpression(), debug-location !9
+    DBG_VALUE debug-use %1(s32), debug-use %noreg, !7, !DIExpression(), debug-location !9
 ...
 
 ---
@@ -62,7 +62,7 @@ body: |
     liveins: %w0
     ; CHECK-LABEL: name: test_dbg_value_dead
     ; CHECK-NOT: COPY
-    ; CHECK: DBG_VALUE debug-use _, debug-use _, !7, !DIExpression(), debug-location !9
+    ; CHECK: DBG_VALUE debug-use %noreg, debug-use %noreg, !7, !DIExpression(), debug-location !9
     %0:gpr(s32) = COPY %w0
-    DBG_VALUE debug-use %0(s32), debug-use _, !7, !DIExpression(), debug-location !9
+    DBG_VALUE debug-use %0(s32), debug-use %noreg, !7, !DIExpression(), debug-location !9
 ...

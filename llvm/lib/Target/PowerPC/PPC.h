@@ -26,8 +26,10 @@ namespace llvm {
   class PassRegistry;
   class FunctionPass;
   class MachineInstr;
+  class MachineOperand;
   class AsmPrinter;
   class MCInst;
+  class MCOperand;
 
   FunctionPass *createPPCCTRLoops();
 #ifndef NDEBUG
@@ -39,20 +41,28 @@ namespace llvm {
   FunctionPass *createPPCVSXCopyPass();
   FunctionPass *createPPCVSXFMAMutatePass();
   FunctionPass *createPPCVSXSwapRemovalPass();
+  FunctionPass *createPPCReduceCRLogicalsPass();
   FunctionPass *createPPCMIPeepholePass();
   FunctionPass *createPPCBranchSelectionPass();
+  FunctionPass *createPPCBranchCoalescingPass();
   FunctionPass *createPPCQPXLoadSplatPass();
   FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOpt::Level OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
   FunctionPass *createPPCExpandISELPass();
+  FunctionPass *createPPCPreEmitPeepholePass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP, bool isDarwin);
+  bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
+                                         MCOperand &OutMO, AsmPrinter &AP,
+                                         bool isDarwin);
 
   void initializePPCVSXFMAMutatePass(PassRegistry&);
   void initializePPCBoolRetToIntPass(PassRegistry&);
   void initializePPCExpandISELPass(PassRegistry &);
+  void initializePPCPreEmitPeepholePass(PassRegistry &);
   void initializePPCTLSDynamicCallPass(PassRegistry &);
+  void initializePPCMIPeepholePass(PassRegistry&);
   extern char &PPCVSXFMAMutateID;
 
   namespace PPCII {

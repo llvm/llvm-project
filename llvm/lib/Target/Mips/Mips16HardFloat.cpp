@@ -1,4 +1,4 @@
-//===---- Mips16HardFloat.cpp for Mips16 Hard Float               --------===//
+//===- Mips16HardFloat.cpp for Mips16 Hard Float --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -25,6 +25,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mips16-hard-float"
 
 namespace {
+
   class Mips16HardFloat : public ModulePass {
   public:
     static char ID;
@@ -41,20 +42,20 @@ namespace {
     bool runOnModule(Module &M) override;
   };
 
-  static void EmitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
-    std::vector<llvm::Type *> AsmArgTypes;
-    std::vector<llvm::Value *> AsmArgs;
+} // end anonymous namespace
 
-    llvm::FunctionType *AsmFTy =
-        llvm::FunctionType::get(Type::getVoidTy(C), AsmArgTypes, false);
-    llvm::InlineAsm *IA =
-        llvm::InlineAsm::get(AsmFTy, AsmText, "", true,
-                             /* IsAlignStack */ false, llvm::InlineAsm::AD_ATT);
-    CallInst::Create(IA, AsmArgs, "", BB);
-  }
+static void EmitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
+  std::vector<Type *> AsmArgTypes;
+  std::vector<Value *> AsmArgs;
 
-  char Mips16HardFloat::ID = 0;
+  FunctionType *AsmFTy =
+      FunctionType::get(Type::getVoidTy(C), AsmArgTypes, false);
+  InlineAsm *IA = InlineAsm::get(AsmFTy, AsmText, "", true,
+                                 /* IsAlignStack */ false, InlineAsm::AD_ATT);
+  CallInst::Create(IA, AsmArgs, "", BB);
 }
+
+char Mips16HardFloat::ID = 0;
 
 //
 // Return types that matter for hard float are:
@@ -89,18 +90,15 @@ static FPReturnVariant whichFPReturnVariant(Type *T) {
   return NoFPRet;
 }
 
-//
 // Parameter type that matter are float, (float, float), (float, double),
 // double, (double, double), (double, float)
-//
 enum FPParamVariant {
   FSig, FFSig, FDSig,
   DSig, DDSig, DFSig, NoSig
 };
 
 // which floating point parameter signature variant we are dealing with
-//
-typedef Type::TypeID TypeID;
+using TypeID = Type::TypeID;
 const Type::TypeID FloatTyID = Type::FloatTyID;
 const Type::TypeID DoubleTyID = Type::DoubleTyID;
 
@@ -154,7 +152,6 @@ static FPParamVariant whichFPParamVariantNeeded(Function &F) {
 // Figure out if we need float point based on the function parameters.
 // We need to move variables in and/or out of floating point
 // registers because of the ABI
-//
 static bool needsFPStubFromParams(Function &F) {
   if (F.arg_size() >=1) {
     Type *ArgType = F.getFunctionType()->getParamType(0);
@@ -183,10 +180,8 @@ static bool needsFPHelperFromSig(Function &F) {
   return needsFPStubFromParams(F) || needsFPReturnHelper(F);
 }
 
-//
 // We swap between FP and Integer registers to allow Mips16 and Mips32 to
 // interoperate
-//
 static std::string swapFPIntParams(FPParamVariant PV, Module *M, bool LE,
                                    bool ToFP) {
   std::string MI = ToFP ? "mtc1 ": "mfc1 ";
@@ -255,10 +250,8 @@ static std::string swapFPIntParams(FPParamVariant PV, Module *M, bool LE,
   return AsmText;
 }
 
-//
 // Make sure that we know we already need a stub for this function.
 // Having called needsFPHelperFromSig
-//
 static void assureFPCallStub(Function &F, Module *M,
                              const MipsTargetMachine &TM) {
   // for now we only need them for static relocation
@@ -277,9 +270,9 @@ static void assureFPCallStub(Function &F, Module *M,
   FStub = Function::Create(F.getFunctionType(),
                            Function::InternalLinkage, StubName, M);
   FStub->addFnAttr("mips16_fp_stub");
-  FStub->addFnAttr(llvm::Attribute::Naked);
-  FStub->addFnAttr(llvm::Attribute::NoInline);
-  FStub->addFnAttr(llvm::Attribute::NoUnwind);
+  FStub->addFnAttr(Attribute::Naked);
+  FStub->addFnAttr(Attribute::NoInline);
+  FStub->addFnAttr(Attribute::NoUnwind);
   FStub->addFnAttr("nomips16");
   FStub->setSection(SectionName);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", FStub);
@@ -350,9 +343,7 @@ static void assureFPCallStub(Function &F, Module *M,
   new UnreachableInst(Context, BB);
 }
 
-//
 // Functions that are llvm intrinsics and don't need helpers.
-//
 static const char *const IntrinsicInline[] = {
   "fabs", "fabsf",
   "llvm.ceil.f32", "llvm.ceil.f64",
@@ -379,10 +370,9 @@ static bool isIntrinsicInline(Function *F) {
   return std::binary_search(std::begin(IntrinsicInline),
                             std::end(IntrinsicInline), F->getName());
 }
-//
+
 // Returns of float, double and complex need to be handled with a helper
 // function.
-//
 static bool fixupFPReturnAndCall(Function &F, Module *M,
                                  const MipsTargetMachine &TM) {
   bool Modified = false;
@@ -465,9 +455,9 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
     (F->getFunctionType(),
      Function::InternalLinkage, StubName, M);
   FStub->addFnAttr("mips16_fp_stub");
-  FStub->addFnAttr(llvm::Attribute::Naked);
-  FStub->addFnAttr(llvm::Attribute::NoUnwind);
-  FStub->addFnAttr(llvm::Attribute::NoInline);
+  FStub->addFnAttr(Attribute::Naked);
+  FStub->addFnAttr(Attribute::NoUnwind);
+  FStub->addFnAttr(Attribute::NoInline);
   FStub->addFnAttr("nomips16");
   FStub->setSection(SectionName);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", FStub);
@@ -489,9 +479,7 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
   new UnreachableInst(FStub->getContext(), BB);
 }
 
-//
 // remove the use-soft-float attribute
-//
 static void removeUseSoftFloat(Function &F) {
   AttrBuilder B;
   DEBUG(errs() << "removing -use-soft-float\n");
@@ -503,8 +491,6 @@ static void removeUseSoftFloat(Function &F) {
   F.addAttributes(AttributeList::FunctionIndex, B);
 }
 
-
-//
 // This pass only makes sense when the underlying chip has floating point but
 // we are compiling as mips16.
 // For all mips16 functions (that are not stubs we have already generated), or
@@ -521,7 +507,6 @@ static void removeUseSoftFloat(Function &F) {
 //    4) TBD. For pic, calls to extern functions of unknown type are handled by
 //       predefined helper functions in libc but this work is currently done
 //       during call lowering but it should be moved here in the future.
-//
 bool Mips16HardFloat::runOnModule(Module &M) {
   auto &TM = static_cast<const MipsTargetMachine &>(
       getAnalysis<TargetPassConfig>().getTM<TargetMachine>());
@@ -544,7 +529,6 @@ bool Mips16HardFloat::runOnModule(Module &M) {
   }
   return Modified;
 }
-
 
 ModulePass *llvm::createMips16HardFloatPass() {
   return new Mips16HardFloat();

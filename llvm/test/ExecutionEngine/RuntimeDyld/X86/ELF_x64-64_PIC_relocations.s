@@ -21,7 +21,7 @@
 	.align	16, 0x90
 	.type	foo,@function
 foo:                                    # @foo
-# BB#0:
+# %bb.0:
 	movq	G@GOTPCREL(%rip), %rax
 	movl	(%rax), %eax
 	retq

@@ -110,8 +110,8 @@ define i32 @f9(i32 %dummy, i64 %base, i64 %index, i32 %b) {
 ; use the sequence above.
 define i32 @f10(i32 %dummy, i32 *%src) {
 ; CHECK-LABEL: f10:
-; CHECK: llill [[VALUE:%r[0-9+]]], 40000
-; CHECK: l %r2, 0(%r3)
+; CHECK-DAG: llill [[VALUE:%r[0-9+]]], 40000
+; CHECK-DAG: l %r2, 0(%r3)
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK: cs %r2, [[VALUE]], 0(%r3)
 ; CHECK: jl [[LABEL]]

@@ -65,15 +65,6 @@ static MCAsmInfo *createXCoreMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
-                              CodeModel::Model &CM) {
-  if (CM == CodeModel::Default) {
-    CM = CodeModel::Small;
-  }
-  if (CM != CodeModel::Small && CM != CodeModel::Large)
-    report_fatal_error("Target only supports CodeModel Small or Large");
-}
-
 static MCInstPrinter *createXCoreMCInstPrinter(const Triple &T,
                                                unsigned SyntaxVariant,
                                                const MCAsmInfo &MAI,
@@ -133,10 +124,6 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
 extern "C" void LLVMInitializeXCoreTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(getTheXCoreTarget(), createXCoreMCAsmInfo);
-
-  // Register the MC codegen info.
-  TargetRegistry::registerMCAdjustCodeGenOpts(getTheXCoreTarget(),
-                                              adjustCodeGenOpts);
 
   // Register the MC instruction info.
   TargetRegistry::RegisterMCInstrInfo(getTheXCoreTarget(),

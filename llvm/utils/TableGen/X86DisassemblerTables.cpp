@@ -74,33 +74,34 @@ static inline const char* stringForOperandEncoding(OperandEncoding encoding) {
 /// @param parent - The class that may be the superset
 /// @return       - True if child is a subset of parent, false otherwise.
 static inline bool inheritsFrom(InstructionContext child,
-                                InstructionContext parent,
-                                bool VEX_LIG = false, bool AdSize64 = false) {
+                                InstructionContext parent, bool noPrefix = true,
+                                bool VEX_LIG = false, bool VEX_WIG = false,
+                                bool AdSize64 = false) {
   if (child == parent)
     return true;
 
   switch (parent) {
   case IC:
     return(inheritsFrom(child, IC_64BIT, AdSize64) ||
-           inheritsFrom(child, IC_OPSIZE) ||
+           (noPrefix && inheritsFrom(child, IC_OPSIZE, noPrefix)) ||
            inheritsFrom(child, IC_ADSIZE) ||
-           inheritsFrom(child, IC_XD) ||
-           inheritsFrom(child, IC_XS));
+           (noPrefix && inheritsFrom(child, IC_XD, noPrefix)) ||
+           (noPrefix && inheritsFrom(child, IC_XS, noPrefix)));
   case IC_64BIT:
     return(inheritsFrom(child, IC_64BIT_REXW)   ||
-           inheritsFrom(child, IC_64BIT_OPSIZE) ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_OPSIZE, noPrefix)) ||
            (!AdSize64 && inheritsFrom(child, IC_64BIT_ADSIZE)) ||
-           inheritsFrom(child, IC_64BIT_XD)     ||
-           inheritsFrom(child, IC_64BIT_XS));
+           (noPrefix && inheritsFrom(child, IC_64BIT_XD, noPrefix))     ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_XS, noPrefix)));
   case IC_OPSIZE:
     return inheritsFrom(child, IC_64BIT_OPSIZE) ||
            inheritsFrom(child, IC_OPSIZE_ADSIZE);
   case IC_ADSIZE:
-    return inheritsFrom(child, IC_OPSIZE_ADSIZE);
+    return (noPrefix && inheritsFrom(child, IC_OPSIZE_ADSIZE, noPrefix));
   case IC_OPSIZE_ADSIZE:
     return false;
   case IC_64BIT_ADSIZE:
-    return inheritsFrom(child, IC_64BIT_OPSIZE_ADSIZE);
+    return (noPrefix && inheritsFrom(child, IC_64BIT_OPSIZE_ADSIZE, noPrefix));
   case IC_64BIT_OPSIZE_ADSIZE:
     return false;
   case IC_XD:
@@ -112,9 +113,9 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_XS_OPSIZE:
     return inheritsFrom(child, IC_64BIT_XS_OPSIZE);
   case IC_64BIT_REXW:
-    return(inheritsFrom(child, IC_64BIT_REXW_XS) ||
-           inheritsFrom(child, IC_64BIT_REXW_XD) ||
-           inheritsFrom(child, IC_64BIT_REXW_OPSIZE) ||
+    return((noPrefix && inheritsFrom(child, IC_64BIT_REXW_XS, noPrefix)) ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_REXW_XD, noPrefix)) ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_REXW_OPSIZE, noPrefix)) ||
            (!AdSize64 && inheritsFrom(child, IC_64BIT_REXW_ADSIZE)));
   case IC_64BIT_OPSIZE:
     return inheritsFrom(child, IC_64BIT_REXW_OPSIZE) ||
@@ -133,20 +134,20 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_64BIT_REXW_ADSIZE:
     return false;
   case IC_VEX:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W)) ||
-           inheritsFrom(child, IC_VEX_W) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L));
   case IC_VEX_XS:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W_XS)) ||
-           inheritsFrom(child, IC_VEX_W_XS) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XS)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W_XS)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L_XS));
   case IC_VEX_XD:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W_XD)) ||
-           inheritsFrom(child, IC_VEX_W_XD) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XD)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W_XD)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L_XD));
   case IC_VEX_OPSIZE:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE)) ||
-           inheritsFrom(child, IC_VEX_W_OPSIZE) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W_OPSIZE)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L_OPSIZE));
   case IC_VEX_W:
     return VEX_LIG && inheritsFrom(child, IC_VEX_L_W);
@@ -157,193 +158,392 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_VEX_W_OPSIZE:
     return VEX_LIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE);
   case IC_VEX_L:
-    return inheritsFrom(child, IC_VEX_L_W);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W);
   case IC_VEX_L_XS:
-    return inheritsFrom(child, IC_VEX_L_W_XS);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XS);
   case IC_VEX_L_XD:
-    return inheritsFrom(child, IC_VEX_L_W_XD);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XD);
   case IC_VEX_L_OPSIZE:
-    return inheritsFrom(child, IC_VEX_L_W_OPSIZE);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE);
   case IC_VEX_L_W:
   case IC_VEX_L_W_XS:
   case IC_VEX_L_W_XD:
   case IC_VEX_L_W_OPSIZE:
     return false;
   case IC_EVEX:
-    return inheritsFrom(child, IC_EVEX_W) ||
-           inheritsFrom(child, IC_EVEX_L_W);
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2));
   case IC_EVEX_XS:
-    return inheritsFrom(child, IC_EVEX_W_XS) ||
-           inheritsFrom(child, IC_EVEX_L_W_XS);
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XS)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XS)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XS));
   case IC_EVEX_XD:
-    return inheritsFrom(child, IC_EVEX_W_XD) ||
-           inheritsFrom(child, IC_EVEX_L_W_XD);
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XD)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XD)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XD));
   case IC_EVEX_OPSIZE:
-    return inheritsFrom(child, IC_EVEX_W_OPSIZE) ||
-           inheritsFrom(child, IC_EVEX_L_W_OPSIZE);
-  case IC_EVEX_B:
-    return false;
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_OPSIZE)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE));
+  case IC_EVEX_K:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_K)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_K)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_K));
+  case IC_EVEX_XS_K:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_K)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_K)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XS_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XS_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XS_K));
+  case IC_EVEX_XD_K:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_K)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_K)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XD_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XD_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XD_K));
+  case IC_EVEX_OPSIZE_K:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_K)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_K)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_OPSIZE_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_K));
+  case IC_EVEX_KZ:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_KZ)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_KZ)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_KZ));
+  case IC_EVEX_XS_KZ:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_KZ)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_KZ)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XS_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XS_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XS_KZ));
+  case IC_EVEX_XD_KZ:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_KZ)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_KZ)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XD_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XD_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XD_KZ));
+  case IC_EVEX_OPSIZE_KZ:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_KZ)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_KZ)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_OPSIZE_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ));
   case IC_EVEX_W:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W));
   case IC_EVEX_W_XS:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XS));
   case IC_EVEX_W_XD:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XD)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XD));
   case IC_EVEX_W_OPSIZE:
-    return false;
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE));
+  case IC_EVEX_W_K:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_K));
+  case IC_EVEX_W_XS_K:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XS_K));
+  case IC_EVEX_W_XD_K:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XD_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XD_K));
+  case IC_EVEX_W_OPSIZE_K:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_K)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_K));
+  case IC_EVEX_W_KZ:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_KZ));
+  case IC_EVEX_W_XS_KZ:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XS_KZ));
+  case IC_EVEX_W_XD_KZ:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XD_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XD_KZ));
+  case IC_EVEX_W_OPSIZE_KZ:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_KZ)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_KZ));
   case IC_EVEX_L:
-  case IC_EVEX_L_K_B:
-  case IC_EVEX_L_KZ_B:
-  case IC_EVEX_L_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W);
   case IC_EVEX_L_XS:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS);
   case IC_EVEX_L_XD:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD);
   case IC_EVEX_L_OPSIZE:
-    return false;
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE);
+  case IC_EVEX_L_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_K);
+  case IC_EVEX_L_XS_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_K);
+  case IC_EVEX_L_XD_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_K);
+  case IC_EVEX_L_OPSIZE_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_K);
+  case IC_EVEX_L_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_KZ);
+  case IC_EVEX_L_XS_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_KZ);
+  case IC_EVEX_L_XD_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_KZ);
+  case IC_EVEX_L_OPSIZE_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_KZ);
   case IC_EVEX_L_W:
   case IC_EVEX_L_W_XS:
   case IC_EVEX_L_W_XD:
   case IC_EVEX_L_W_OPSIZE:
     return false;
-  case IC_EVEX_L2:
-  case IC_EVEX_L2_XS:
-  case IC_EVEX_L2_XD:
-  case IC_EVEX_L2_OPSIZE:
+  case IC_EVEX_L_W_K:
+  case IC_EVEX_L_W_XS_K:
+  case IC_EVEX_L_W_XD_K:
+  case IC_EVEX_L_W_OPSIZE_K:
     return false;
+  case IC_EVEX_L_W_KZ:
+  case IC_EVEX_L_W_XS_KZ:
+  case IC_EVEX_L_W_XD_KZ:
+  case IC_EVEX_L_W_OPSIZE_KZ:
+    return false;
+  case IC_EVEX_L2:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W);
+  case IC_EVEX_L2_XS:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS);
+  case IC_EVEX_L2_XD:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD);
+  case IC_EVEX_L2_OPSIZE:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE);
+  case IC_EVEX_L2_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_K);
+  case IC_EVEX_L2_XS_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_K);
+  case IC_EVEX_L2_XD_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_K);
+  case IC_EVEX_L2_OPSIZE_K:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_K);
+  case IC_EVEX_L2_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_KZ);
+  case IC_EVEX_L2_XS_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_KZ);
+  case IC_EVEX_L2_XD_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_KZ);
+  case IC_EVEX_L2_OPSIZE_KZ:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_KZ);
   case IC_EVEX_L2_W:
   case IC_EVEX_L2_W_XS:
   case IC_EVEX_L2_W_XD:
   case IC_EVEX_L2_W_OPSIZE:
     return false;
-  case IC_EVEX_K:
-    return inheritsFrom(child, IC_EVEX_W_K) ||
-           inheritsFrom(child, IC_EVEX_L_W_K);
-  case IC_EVEX_XS_K:
-  case IC_EVEX_XS_K_B:
-  case IC_EVEX_XS_KZ_B:
-    return inheritsFrom(child, IC_EVEX_W_XS_K) ||
-           inheritsFrom(child, IC_EVEX_L_W_XS_K);
-  case IC_EVEX_XD_K:
-  case IC_EVEX_XD_K_B:
-  case IC_EVEX_XD_KZ_B:
-    return inheritsFrom(child, IC_EVEX_W_XD_K) ||
-           inheritsFrom(child, IC_EVEX_L_W_XD_K);
-  case IC_EVEX_XS_B:
-  case IC_EVEX_XD_B:
-  case IC_EVEX_K_B:
-  case IC_EVEX_KZ:
-    return false;
-  case IC_EVEX_XS_KZ:
-    return inheritsFrom(child, IC_EVEX_W_XS_KZ) ||
-           inheritsFrom(child, IC_EVEX_L_W_XS_KZ);
-  case IC_EVEX_XD_KZ:
-    return inheritsFrom(child, IC_EVEX_W_XD_KZ) ||
-           inheritsFrom(child, IC_EVEX_L_W_XD_KZ);
-  case IC_EVEX_KZ_B:
-  case IC_EVEX_OPSIZE_K:
-  case IC_EVEX_OPSIZE_B:
-  case IC_EVEX_OPSIZE_K_B:
-  case IC_EVEX_OPSIZE_KZ:
-  case IC_EVEX_OPSIZE_KZ_B:
-    return false;
-  case IC_EVEX_W_K:
-  case IC_EVEX_W_B:
-  case IC_EVEX_W_K_B:
-  case IC_EVEX_W_KZ_B:
-  case IC_EVEX_W_XS_K:
-  case IC_EVEX_W_XD_K:
-  case IC_EVEX_W_OPSIZE_K:
-  case IC_EVEX_W_OPSIZE_B:
-  case IC_EVEX_W_OPSIZE_K_B:
-    return false;
-  case IC_EVEX_L_K:
-  case IC_EVEX_L_XS_K:
-  case IC_EVEX_L_XD_K:
-  case IC_EVEX_L_XD_B:
-  case IC_EVEX_L_XD_K_B:
-  case IC_EVEX_L_OPSIZE_K:
-  case IC_EVEX_L_OPSIZE_B:
-  case IC_EVEX_L_OPSIZE_K_B:
-    return false;
-  case IC_EVEX_W_KZ:
-  case IC_EVEX_W_XS_KZ:
-  case IC_EVEX_W_XD_KZ:
-  case IC_EVEX_W_XS_B:
-  case IC_EVEX_W_XD_B:
-  case IC_EVEX_W_XS_K_B:
-  case IC_EVEX_W_XD_K_B:
-  case IC_EVEX_W_XS_KZ_B:
-  case IC_EVEX_W_XD_KZ_B:
-  case IC_EVEX_W_OPSIZE_KZ:
-  case IC_EVEX_W_OPSIZE_KZ_B:
-    return false;
-  case IC_EVEX_L_KZ:
-  case IC_EVEX_L_XS_KZ:
-  case IC_EVEX_L_XS_B:
-  case IC_EVEX_L_XS_K_B:
-  case IC_EVEX_L_XS_KZ_B:
-  case IC_EVEX_L_XD_KZ:
-  case IC_EVEX_L_XD_KZ_B:
-  case IC_EVEX_L_OPSIZE_KZ:
-  case IC_EVEX_L_OPSIZE_KZ_B:
-    return false;
-  case IC_EVEX_L_W_K:
-  case IC_EVEX_L_W_B:
-  case IC_EVEX_L_W_K_B:
-  case IC_EVEX_L_W_XS_K:
-  case IC_EVEX_L_W_XS_B:
-  case IC_EVEX_L_W_XS_K_B:
-  case IC_EVEX_L_W_XS_KZ:
-  case IC_EVEX_L_W_XS_KZ_B:
-  case IC_EVEX_L_W_OPSIZE_K:
-  case IC_EVEX_L_W_OPSIZE_B:
-  case IC_EVEX_L_W_OPSIZE_K_B:
-  case IC_EVEX_L_W_KZ:
-  case IC_EVEX_L_W_KZ_B:
-  case IC_EVEX_L_W_XD_K:
-  case IC_EVEX_L_W_XD_B:
-  case IC_EVEX_L_W_XD_K_B:
-  case IC_EVEX_L_W_XD_KZ:
-  case IC_EVEX_L_W_XD_KZ_B:
-  case IC_EVEX_L_W_OPSIZE_KZ:
-  case IC_EVEX_L_W_OPSIZE_KZ_B:
-    return false;
-  case IC_EVEX_L2_K:
-  case IC_EVEX_L2_B:
-  case IC_EVEX_L2_K_B:
-  case IC_EVEX_L2_KZ_B:
-  case IC_EVEX_L2_XS_K:
-  case IC_EVEX_L2_XS_K_B:
-  case IC_EVEX_L2_XS_B:
-  case IC_EVEX_L2_XD_B:
-  case IC_EVEX_L2_XD_K:
-  case IC_EVEX_L2_XD_K_B:
-  case IC_EVEX_L2_OPSIZE_K:
-  case IC_EVEX_L2_OPSIZE_B:
-  case IC_EVEX_L2_OPSIZE_K_B:
-  case IC_EVEX_L2_KZ:
-  case IC_EVEX_L2_XS_KZ:
-  case IC_EVEX_L2_XS_KZ_B:
-  case IC_EVEX_L2_XD_KZ:
-  case IC_EVEX_L2_XD_KZ_B:
-  case IC_EVEX_L2_OPSIZE_KZ:
-  case IC_EVEX_L2_OPSIZE_KZ_B:
-    return false;
   case IC_EVEX_L2_W_K:
-  case IC_EVEX_L2_W_B:
-  case IC_EVEX_L2_W_K_B:
-  case IC_EVEX_L2_W_KZ_B:
   case IC_EVEX_L2_W_XS_K:
-  case IC_EVEX_L2_W_XS_B:
-  case IC_EVEX_L2_W_XS_K_B:
   case IC_EVEX_L2_W_XD_K:
-  case IC_EVEX_L2_W_XD_B:
   case IC_EVEX_L2_W_OPSIZE_K:
-  case IC_EVEX_L2_W_OPSIZE_B:
-  case IC_EVEX_L2_W_OPSIZE_K_B:
+    return false;
   case IC_EVEX_L2_W_KZ:
   case IC_EVEX_L2_W_XS_KZ:
-  case IC_EVEX_L2_W_XS_KZ_B:
   case IC_EVEX_L2_W_XD_KZ:
-  case IC_EVEX_L2_W_XD_K_B:
-  case IC_EVEX_L2_W_XD_KZ_B:
   case IC_EVEX_L2_W_OPSIZE_KZ:
+    return false;
+  case IC_EVEX_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_B));
+  case IC_EVEX_XS_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XS_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XS_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XS_B));
+  case IC_EVEX_XD_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XD_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XD_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XD_B));
+  case IC_EVEX_OPSIZE_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_OPSIZE_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_B));
+  case IC_EVEX_K_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_K_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_K_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_K_B));
+  case IC_EVEX_XS_K_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_K_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_K_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XS_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XS_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XS_K_B));
+  case IC_EVEX_XD_K_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_K_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_K_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XD_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XD_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XD_K_B));
+  case IC_EVEX_OPSIZE_K_B:
+    return (VEX_LIG && VEX_WIG &&
+            inheritsFrom(child, IC_EVEX_L_W_OPSIZE_K_B)) ||
+           (VEX_LIG && VEX_WIG &&
+            inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_K_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_OPSIZE_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_K_B));
+  case IC_EVEX_KZ_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_KZ_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_KZ_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_KZ_B));
+  case IC_EVEX_XS_KZ_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_KZ_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_KZ_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XS_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XS_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XS_KZ_B));
+  case IC_EVEX_XD_KZ_B:
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_KZ_B)) ||
+           (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_KZ_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_XD_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_XD_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_XD_KZ_B));
+  case IC_EVEX_OPSIZE_KZ_B:
+    return (VEX_LIG && VEX_WIG &&
+            inheritsFrom(child, IC_EVEX_L_W_OPSIZE_KZ_B)) ||
+           (VEX_LIG && VEX_WIG &&
+            inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_KZ_B)) ||
+           (VEX_WIG && inheritsFrom(child, IC_EVEX_W_OPSIZE_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ_B));
+  case IC_EVEX_W_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_B));
+  case IC_EVEX_W_XS_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XS_B));
+  case IC_EVEX_W_XD_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XD_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XD_B));
+  case IC_EVEX_W_OPSIZE_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_B));
+  case IC_EVEX_W_K_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_K_B));
+  case IC_EVEX_W_XS_K_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XS_K_B));
+  case IC_EVEX_W_XD_K_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XD_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XD_K_B));
+  case IC_EVEX_W_OPSIZE_K_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_K_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_K_B));
+  case IC_EVEX_W_KZ_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_KZ_B));
+  case IC_EVEX_W_XS_KZ_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XS_KZ_B));
+  case IC_EVEX_W_XD_KZ_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XD_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_XD_KZ_B));
+  case IC_EVEX_W_OPSIZE_KZ_B:
+    return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_KZ_B)) ||
+           (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_KZ_B));
+  case IC_EVEX_L_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_B);
+  case IC_EVEX_L_XS_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_B);
+  case IC_EVEX_L_XD_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_B);
+  case IC_EVEX_L_OPSIZE_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_B);
+  case IC_EVEX_L_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_K_B);
+  case IC_EVEX_L_XS_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_K_B);
+  case IC_EVEX_L_XD_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_K_B);
+  case IC_EVEX_L_OPSIZE_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_K_B);
+  case IC_EVEX_L_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_KZ_B);
+  case IC_EVEX_L_XS_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XS_KZ_B);
+  case IC_EVEX_L_XD_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_XD_KZ_B);
+  case IC_EVEX_L_OPSIZE_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L_W_OPSIZE_KZ_B);
+  case IC_EVEX_L_W_B:
+  case IC_EVEX_L_W_XS_B:
+  case IC_EVEX_L_W_XD_B:
+  case IC_EVEX_L_W_OPSIZE_B:
+    return false;
+  case IC_EVEX_L_W_K_B:
+  case IC_EVEX_L_W_XS_K_B:
+  case IC_EVEX_L_W_XD_K_B:
+  case IC_EVEX_L_W_OPSIZE_K_B:
+    return false;
+  case IC_EVEX_L_W_KZ_B:
+  case IC_EVEX_L_W_XS_KZ_B:
+  case IC_EVEX_L_W_XD_KZ_B:
+  case IC_EVEX_L_W_OPSIZE_KZ_B:
+    return false;
+  case IC_EVEX_L2_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_B);
+  case IC_EVEX_L2_XS_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_B);
+  case IC_EVEX_L2_XD_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_B);
+  case IC_EVEX_L2_OPSIZE_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_B);
+  case IC_EVEX_L2_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_K_B);
+  case IC_EVEX_L2_XS_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_K_B);
+  case IC_EVEX_L2_XD_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_K_B);
+  case IC_EVEX_L2_OPSIZE_K_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_K_B);
+  case IC_EVEX_L2_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_KZ_B);
+  case IC_EVEX_L2_XS_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XS_KZ_B);
+  case IC_EVEX_L2_XD_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_XD_KZ_B);
+  case IC_EVEX_L2_OPSIZE_KZ_B:
+    return VEX_WIG && inheritsFrom(child, IC_EVEX_L2_W_OPSIZE_KZ_B);
+  case IC_EVEX_L2_W_B:
+  case IC_EVEX_L2_W_XS_B:
+  case IC_EVEX_L2_W_XD_B:
+  case IC_EVEX_L2_W_OPSIZE_B:
+    return false;
+  case IC_EVEX_L2_W_K_B:
+  case IC_EVEX_L2_W_XS_K_B:
+  case IC_EVEX_L2_W_XD_K_B:
+  case IC_EVEX_L2_W_OPSIZE_K_B:
+    return false;
+  case IC_EVEX_L2_W_KZ_B:
+  case IC_EVEX_L2_W_XS_KZ_B:
+  case IC_EVEX_L2_W_XD_KZ_B:
   case IC_EVEX_L2_W_OPSIZE_KZ_B:
     return false;
   default:
@@ -908,7 +1108,9 @@ void DisassemblerTables::setTableFields(OpcodeType          type,
                                         const ModRMFilter   &filter,
                                         InstrUID            uid,
                                         bool                is32bit,
+                                        bool                noPrefix,
                                         bool                ignoresVEX_L,
+                                        bool                ignoresVEX_W,
                                         unsigned            addressSize) {
   ContextDecision &decision = *Tables[type];
 
@@ -919,8 +1121,8 @@ void DisassemblerTables::setTableFields(OpcodeType          type,
 
     bool adSize64 = addressSize == 64;
     if (inheritsFrom((InstructionContext)index,
-                     InstructionSpecifiers[uid].insnContext, ignoresVEX_L,
-                     adSize64))
+                     InstructionSpecifiers[uid].insnContext, noPrefix,
+                     ignoresVEX_L, ignoresVEX_W, adSize64))
       setTableFields(decision.opcodeDecisions[index].modRMDecisions[opcode],
                      filter,
                      uid,

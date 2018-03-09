@@ -14,6 +14,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -78,7 +79,6 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
                                                MCContext &Ctx) const {
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
 
-  unsigned Type = 0;
   if (IsPCRel) {
     switch ((unsigned)Fixup.getKind()) {
     default:
@@ -86,220 +86,159 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_NONE;
     case FK_Data_4:
       switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
+      default:
+        llvm_unreachable("Unsupported Modifier");
       case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_REL32;
-        break;
-      case MCSymbolRefExpr::VK_TLSGD:
-        llvm_unreachable("unimplemented");
+        return ELF::R_ARM_REL32;
       case MCSymbolRefExpr::VK_GOTTPOFF:
-        Type = ELF::R_ARM_TLS_IE32;
-        break;
+        return ELF::R_ARM_TLS_IE32;
       case MCSymbolRefExpr::VK_ARM_GOT_PREL:
-        Type = ELF::R_ARM_GOT_PREL;
-        break;
+        return ELF::R_ARM_GOT_PREL;
       case MCSymbolRefExpr::VK_ARM_PREL31:
-        Type = ELF::R_ARM_PREL31;
-        break;
+        return ELF::R_ARM_PREL31;
       }
-      break;
     case ARM::fixup_arm_blx:
     case ARM::fixup_arm_uncondbl:
       switch (Modifier) {
       case MCSymbolRefExpr::VK_PLT:
-        Type = ELF::R_ARM_CALL;
-        break;
+        return ELF::R_ARM_CALL;
       case MCSymbolRefExpr::VK_TLSCALL:
-        Type = ELF::R_ARM_TLS_CALL;
-        break;
+        return ELF::R_ARM_TLS_CALL;
       default:
-        Type = ELF::R_ARM_CALL;
-        break;
+        return ELF::R_ARM_CALL;
       }
-      break;
     case ARM::fixup_arm_condbl:
     case ARM::fixup_arm_condbranch:
     case ARM::fixup_arm_uncondbranch:
-      Type = ELF::R_ARM_JUMP24;
-      break;
+      return ELF::R_ARM_JUMP24;
     case ARM::fixup_t2_condbranch:
-      Type = ELF::R_ARM_THM_JUMP19;
-      break;
+      return ELF::R_ARM_THM_JUMP19;
     case ARM::fixup_t2_uncondbranch:
-      Type = ELF::R_ARM_THM_JUMP24;
-      break;
+      return ELF::R_ARM_THM_JUMP24;
     case ARM::fixup_arm_movt_hi16:
-      Type = ELF::R_ARM_MOVT_PREL;
-      break;
+      return ELF::R_ARM_MOVT_PREL;
     case ARM::fixup_arm_movw_lo16:
-      Type = ELF::R_ARM_MOVW_PREL_NC;
-      break;
+      return ELF::R_ARM_MOVW_PREL_NC;
     case ARM::fixup_t2_movt_hi16:
-      Type = ELF::R_ARM_THM_MOVT_PREL;
-      break;
+      return ELF::R_ARM_THM_MOVT_PREL;
     case ARM::fixup_t2_movw_lo16:
-      Type = ELF::R_ARM_THM_MOVW_PREL_NC;
-      break;
+      return ELF::R_ARM_THM_MOVW_PREL_NC;
     case ARM::fixup_arm_thumb_br:
-      Type = ELF::R_ARM_THM_JUMP11;
-      break;
+      return ELF::R_ARM_THM_JUMP11;
     case ARM::fixup_arm_thumb_bcc:
-      Type = ELF::R_ARM_THM_JUMP8;
-      break;
+      return ELF::R_ARM_THM_JUMP8;
     case ARM::fixup_arm_thumb_bl:
     case ARM::fixup_arm_thumb_blx:
       switch (Modifier) {
       case MCSymbolRefExpr::VK_TLSCALL:
-        Type = ELF::R_ARM_THM_TLS_CALL;
-        break;
+        return ELF::R_ARM_THM_TLS_CALL;
       default:
-        Type = ELF::R_ARM_THM_CALL;
-        break;
+        return ELF::R_ARM_THM_CALL;
       }
-      break;
-    }
-  } else {
-    switch ((unsigned)Fixup.getKind()) {
-    default:
-      Ctx.reportFatalError(Fixup.getLoc(), "unsupported relocation on symbol");
-      return ELF::R_ARM_NONE;
-    case FK_Data_1:
-      switch (Modifier) {
-      default: llvm_unreachable("unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_ABS8;
-        break;
-      }
-      break;
-    case FK_Data_2:
-      switch (Modifier) {
-      default: llvm_unreachable("unsupported modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_ABS16;
-        break;
-      }
-      break;
-    case FK_Data_4:
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_ARM_NONE:
-        Type = ELF::R_ARM_NONE;
-        break;
-      case MCSymbolRefExpr::VK_GOT:
-        Type = ELF::R_ARM_GOT_BREL;
-        break;
-      case MCSymbolRefExpr::VK_TLSGD:
-        Type = ELF::R_ARM_TLS_GD32;
-        break;
-      case MCSymbolRefExpr::VK_TPOFF:
-        Type = ELF::R_ARM_TLS_LE32;
-        break;
-      case MCSymbolRefExpr::VK_GOTTPOFF:
-        Type = ELF::R_ARM_TLS_IE32;
-        break;
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_ABS32;
-        break;
-      case MCSymbolRefExpr::VK_GOTOFF:
-        Type = ELF::R_ARM_GOTOFF32;
-        break;
-      case MCSymbolRefExpr::VK_ARM_GOT_PREL:
-        Type = ELF::R_ARM_GOT_PREL;
-        break;
-      case MCSymbolRefExpr::VK_ARM_TARGET1:
-        Type = ELF::R_ARM_TARGET1;
-        break;
-      case MCSymbolRefExpr::VK_ARM_TARGET2:
-        Type = ELF::R_ARM_TARGET2;
-        break;
-      case MCSymbolRefExpr::VK_ARM_PREL31:
-        Type = ELF::R_ARM_PREL31;
-        break;
-      case MCSymbolRefExpr::VK_ARM_SBREL:
-        Type = ELF::R_ARM_SBREL32;
-        break;
-      case MCSymbolRefExpr::VK_ARM_TLSLDO:
-        Type = ELF::R_ARM_TLS_LDO32;
-        break;
-      case MCSymbolRefExpr::VK_TLSCALL:
-        Type = ELF::R_ARM_TLS_CALL;
-        break;
-      case MCSymbolRefExpr::VK_TLSDESC:
-        Type = ELF::R_ARM_TLS_GOTDESC;
-        break;
-      case MCSymbolRefExpr::VK_TLSLDM:
-        Type = ELF::R_ARM_TLS_LDM32;
-        break;
-      case MCSymbolRefExpr::VK_ARM_TLSDESCSEQ:
-        Type = ELF::R_ARM_TLS_DESCSEQ;
-        break;
-      }
-      break;
-    case ARM::fixup_arm_ldst_pcrel_12:
-    case ARM::fixup_arm_pcrel_10:
-    case ARM::fixup_arm_adr_pcrel_12:
-    case ARM::fixup_arm_thumb_bl:
-    case ARM::fixup_arm_thumb_cb:
-    case ARM::fixup_arm_thumb_cp:
-    case ARM::fixup_arm_thumb_br:
-      llvm_unreachable("Unimplemented");
-    case ARM::fixup_arm_condbranch:
-    case ARM::fixup_arm_uncondbranch:
-      Type = ELF::R_ARM_JUMP24;
-      break;
-    case ARM::fixup_arm_movt_hi16:
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_MOVT_ABS;
-        break;
-      case MCSymbolRefExpr::VK_ARM_SBREL:
-        Type = ELF:: R_ARM_MOVT_BREL;
-        break;
-      }
-      break;
-    case ARM::fixup_arm_movw_lo16:
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_MOVW_ABS_NC;
-        break;
-      case MCSymbolRefExpr::VK_ARM_SBREL:
-        Type = ELF:: R_ARM_MOVW_BREL_NC;
-        break;
-      }
-      break;
-    case ARM::fixup_t2_movt_hi16:
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_THM_MOVT_ABS;
-        break;
-      case MCSymbolRefExpr::VK_ARM_SBREL:
-        Type = ELF:: R_ARM_THM_MOVT_BREL;
-        break;
-      }
-      break;
-    case ARM::fixup_t2_movw_lo16:
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_ARM_THM_MOVW_ABS_NC;
-        break;
-      case MCSymbolRefExpr::VK_ARM_SBREL:
-        Type = ELF:: R_ARM_THM_MOVW_BREL_NC;
-        break;
-      }
-      break;
     }
   }
-
-  return Type;
+  switch ((unsigned)Fixup.getKind()) {
+  default:
+    Ctx.reportFatalError(Fixup.getLoc(), "unsupported relocation on symbol");
+    return ELF::R_ARM_NONE;
+  case FK_Data_1:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_ARM_ABS8;
+    }
+  case FK_Data_2:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("unsupported modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_ARM_ABS16;
+    }
+  case FK_Data_4:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_ARM_NONE:
+      return ELF::R_ARM_NONE;
+    case MCSymbolRefExpr::VK_GOT:
+      return ELF::R_ARM_GOT_BREL;
+    case MCSymbolRefExpr::VK_TLSGD:
+      return ELF::R_ARM_TLS_GD32;
+    case MCSymbolRefExpr::VK_TPOFF:
+      return ELF::R_ARM_TLS_LE32;
+    case MCSymbolRefExpr::VK_GOTTPOFF:
+      return ELF::R_ARM_TLS_IE32;
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_ARM_ABS32;
+    case MCSymbolRefExpr::VK_GOTOFF:
+      return ELF::R_ARM_GOTOFF32;
+    case MCSymbolRefExpr::VK_ARM_GOT_PREL:
+      return ELF::R_ARM_GOT_PREL;
+    case MCSymbolRefExpr::VK_ARM_TARGET1:
+      return ELF::R_ARM_TARGET1;
+    case MCSymbolRefExpr::VK_ARM_TARGET2:
+      return ELF::R_ARM_TARGET2;
+    case MCSymbolRefExpr::VK_ARM_PREL31:
+      return ELF::R_ARM_PREL31;
+    case MCSymbolRefExpr::VK_ARM_SBREL:
+      return ELF::R_ARM_SBREL32;
+    case MCSymbolRefExpr::VK_ARM_TLSLDO:
+      return ELF::R_ARM_TLS_LDO32;
+    case MCSymbolRefExpr::VK_TLSCALL:
+      return ELF::R_ARM_TLS_CALL;
+    case MCSymbolRefExpr::VK_TLSDESC:
+      return ELF::R_ARM_TLS_GOTDESC;
+    case MCSymbolRefExpr::VK_TLSLDM:
+      return ELF::R_ARM_TLS_LDM32;
+    case MCSymbolRefExpr::VK_ARM_TLSDESCSEQ:
+      return ELF::R_ARM_TLS_DESCSEQ;
+    }
+  case ARM::fixup_arm_condbranch:
+  case ARM::fixup_arm_uncondbranch:
+    return ELF::R_ARM_JUMP24;
+  case ARM::fixup_arm_movt_hi16:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_ARM_MOVT_ABS;
+    case MCSymbolRefExpr::VK_ARM_SBREL:
+      return ELF::R_ARM_MOVT_BREL;
+    }
+  case ARM::fixup_arm_movw_lo16:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_ARM_MOVW_ABS_NC;
+    case MCSymbolRefExpr::VK_ARM_SBREL:
+      return ELF::R_ARM_MOVW_BREL_NC;
+    }
+  case ARM::fixup_t2_movt_hi16:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_ARM_THM_MOVT_ABS;
+    case MCSymbolRefExpr::VK_ARM_SBREL:
+      return ELF::R_ARM_THM_MOVT_BREL;
+    }
+  case ARM::fixup_t2_movw_lo16:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_ARM_THM_MOVW_ABS_NC;
+    case MCSymbolRefExpr::VK_ARM_SBREL:
+      return ELF::R_ARM_THM_MOVW_BREL_NC;
+    }
+  }
 }
 
-MCObjectWriter *llvm::createARMELFObjectWriter(raw_pwrite_stream &OS,
-                                               uint8_t OSABI,
-                                               bool IsLittleEndian) {
-  MCELFObjectTargetWriter *MOTW = new ARMELFObjectWriter(OSABI);
-  return createELFObjectWriter(MOTW, OS, IsLittleEndian);
+std::unique_ptr<MCObjectWriter>
+llvm::createARMELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
+                               bool IsLittleEndian) {
+  return createELFObjectWriter(llvm::make_unique<ARMELFObjectWriter>(OSABI), OS,
+                               IsLittleEndian);
 }

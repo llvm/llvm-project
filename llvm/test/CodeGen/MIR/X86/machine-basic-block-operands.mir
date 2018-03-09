@@ -36,13 +36,13 @@ name:            foo
 body: |
   ; CHECK: bb.0.entry
   bb.0.entry:
-    successors: %bb.1.less, %bb.2.exit
+    successors: %bb.1, %bb.2
 
     %eax = MOV32rm %rdi, 1, _, 0, _
     ; CHECK:      CMP32ri8 %eax, 10
-    ; CHECK-NEXT: JG_1 %bb.2.exit
+    ; CHECK-NEXT: JG_1 %bb.2
     CMP32ri8 %eax, 10, implicit-def %eflags
-    JG_1 %bb.2.exit, implicit %eflags
+    JG_1 %bb.2, implicit %eflags
   ; CHECK: bb.1.less:
 
   bb.1.less:

@@ -1,4 +1,4 @@
-//===- MILexer.h - Lexer for machine instructions -------------------------===//
+//===- MILexer.h - Lexer for machine instructions ---------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,7 +18,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include <functional>
+#include <string>
 
 namespace llvm {
 
@@ -60,6 +60,7 @@ struct MIToken {
     kw_internal,
     kw_early_clobber,
     kw_debug_use,
+    kw_renamable,
     kw_tied_def,
     kw_frame_setup,
     kw_debug_location,
@@ -91,6 +92,7 @@ struct MIToken {
     kw_non_temporal,
     kw_invariant,
     kw_align,
+    kw_addrspace,
     kw_stack,
     kw_got,
     kw_jump_table,
@@ -142,14 +144,14 @@ struct MIToken {
   };
 
 private:
-  TokenKind Kind;
+  TokenKind Kind = Error;
   StringRef Range;
   StringRef StringValue;
   std::string StringValueStorage;
   APSInt IntVal;
 
 public:
-  MIToken() : Kind(Error) {}
+  MIToken() = default;
 
   MIToken &reset(TokenKind Kind, StringRef Range);
 
@@ -174,7 +176,8 @@ public:
     return Kind == kw_implicit || Kind == kw_implicit_define ||
            Kind == kw_def || Kind == kw_dead || Kind == kw_killed ||
            Kind == kw_undef || Kind == kw_internal ||
-           Kind == kw_early_clobber || Kind == kw_debug_use;
+           Kind == kw_early_clobber || Kind == kw_debug_use ||
+           Kind == kw_renamable;
   }
 
   bool isMemoryOperandFlag() const {
@@ -213,4 +216,4 @@ StringRef lexMIToken(
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_CODEGEN_MIRPARSER_MILEXER_H

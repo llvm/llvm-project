@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mattr=slow-incdec -verify-machineinstrs | FileCheck %s --check-prefix SLOW_INC
+; RUN: llc < %s -mtriple=x86_64-- -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=slow-incdec -verify-machineinstrs | FileCheck %s --check-prefix SLOW_INC
 
 ; rdar://7103704
 

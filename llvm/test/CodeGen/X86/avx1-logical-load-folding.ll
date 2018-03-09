@@ -5,7 +5,7 @@
 ; Function Attrs: nounwind ssp uwtable
 define void @test1(float* %A, float* %C) #0 {
 ; X86-LABEL: test1:
-; X86:       ## BB#0:
+; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %ymm0
@@ -15,7 +15,7 @@ define void @test1(float* %A, float* %C) #0 {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
@@ -34,7 +34,7 @@ define void @test1(float* %A, float* %C) #0 {
 ; Function Attrs: nounwind ssp uwtable
 define void @test2(float* %A, float* %C) #0 {
 ; X86-LABEL: test2:
-; X86:       ## BB#0:
+; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %ymm0
@@ -44,7 +44,7 @@ define void @test2(float* %A, float* %C) #0 {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
@@ -63,7 +63,7 @@ define void @test2(float* %A, float* %C) #0 {
 ; Function Attrs: nounwind ssp uwtable
 define void @test3(float* %A, float* %C) #0 {
 ; X86-LABEL: test3:
-; X86:       ## BB#0:
+; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %ymm0
@@ -73,7 +73,7 @@ define void @test3(float* %A, float* %C) #0 {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
@@ -91,7 +91,7 @@ define void @test3(float* %A, float* %C) #0 {
 
 define void @test4(float* %A, float* %C) #0 {
 ; X86-LABEL: test4:
-; X86:       ## BB#0:
+; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %ymm0
@@ -101,7 +101,7 @@ define void @test4(float* %A, float* %C) #0 {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    vandnps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)

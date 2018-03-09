@@ -82,6 +82,10 @@
 ; RUN:     -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=DWARF-V7-FP-ELIM
 
+; RUN: llc -mtriple thumbv7-windows-gnu \
+; RUN:     -filetype=asm -o - %s \
+; RUN:   | FileCheck %s --check-prefix=DWARF-WIN-FP-ELIM
+
 ;-------------------------------------------------------------------------------
 ; Test 1
 ;-------------------------------------------------------------------------------
@@ -289,6 +293,26 @@ declare void @_ZSt9terminatev()
 ; DWARF-V7-FP-ELIM:    pop {r4, pc}
 ; DWARF-V7-FP-ELIM:    .cfi_endproc
 
+; DWARF-WIN-FP-ELIM-LABEL: _Z4testiiiiiddddd:
+; DWARF-WIN-FP-ELIM:    .cfi_startproc
+; DWARF-WIN-FP-ELIM:    .cfi_personality 0, __gxx_personality_v0
+; DWARF-WIN-FP-ELIM:    .cfi_lsda 0, .Lexception0
+; DWARF-WIN-FP-ELIM:    push {r4, lr}
+; DWARF-WIN-FP-ELIM:    .cfi_def_cfa_offset 8
+; DWARF-WIN-FP-ELIM:    .cfi_offset lr, -4
+; DWARF-WIN-FP-ELIM:    .cfi_offset r4, -8
+; DWARF-WIN-FP-ELIM:    vpush {d8, d9, d10, d11, d12}
+; DWARF-WIN-FP-ELIM:    .cfi_offset d12, -16
+; DWARF-WIN-FP-ELIM:    .cfi_offset d11, -24
+; DWARF-WIN-FP-ELIM:    .cfi_offset d10, -32
+; DWARF-WIN-FP-ELIM:    .cfi_offset d9, -40
+; DWARF-WIN-FP-ELIM:    sub sp, #8
+; DWARF-WIN-FP-ELIM:    .cfi_def_cfa_offset 56
+; DWARF-WIN-FP-ELIM:    add sp, #8
+; DWARF-WIN-FP-ELIM:    vpop {d8, d9, d10, d11, d12}
+; DWARF-WIN-FP-ELIM:    pop {r4, pc}
+; DWARF-WIN-FP-ELIM:    .cfi_endproc
+
 ;-------------------------------------------------------------------------------
 ; Test 2
 ;-------------------------------------------------------------------------------
@@ -376,6 +400,15 @@ entry:
 ; DWARF-V7-FP-ELIM:    .cfi_offset r11, -8
 ; DWARF-V7-FP-ELIM:    pop  {r11, pc}
 ; DWARF-V7-FP-ELIM:    .cfi_endproc
+
+; DWARF-WIN-FP-ELIM-LABEL: test2:
+; DWARF-WIN-FP-ELIM:    .cfi_startproc
+; DWARF-WIN-FP-ELIM:    push.w {r11, lr}
+; DWARF-WIN-FP-ELIM:    .cfi_def_cfa_offset 8
+; DWARF-WIN-FP-ELIM:    .cfi_offset lr, -4
+; DWARF-WIN-FP-ELIM:    .cfi_offset r11, -8
+; DWARF-WIN-FP-ELIM:    pop.w  {r11, pc}
+; DWARF-WIN-FP-ELIM:    .cfi_endproc
 
 
 ;-------------------------------------------------------------------------------
@@ -483,6 +516,17 @@ entry:
 ; DWARF-V7-FP-ELIM:    pop  {r4, r5, r11, pc}
 ; DWARF-V7-FP-ELIM:    .cfi_endproc
 
+; DWARF-WIN-FP-ELIM-LABEL: test3:
+; DWARF-WIN-FP-ELIM:    .cfi_startproc
+; DWARF-WIN-FP-ELIM:    push.w {r4, r5, r11, lr}
+; DWARF-WIN-FP-ELIM:    .cfi_def_cfa_offset 16
+; DWARF-WIN-FP-ELIM:    .cfi_offset lr, -4
+; DWARF-WIN-FP-ELIM:    .cfi_offset r11, -8
+; DWARF-WIN-FP-ELIM:    .cfi_offset r5, -12
+; DWARF-WIN-FP-ELIM:    .cfi_offset r4, -16
+; DWARF-WIN-FP-ELIM:    pop.w  {r4, r5, r11, pc}
+; DWARF-WIN-FP-ELIM:    .cfi_endproc
+
 
 ;-------------------------------------------------------------------------------
 ; Test 4
@@ -540,3 +584,8 @@ entry:
 ; DWARF-V7-FP-ELIM:     bx lr
 ; DWARF-V7-FP-ELIM-NOT: .cfi_endproc
 ; DWARF-V7-FP-ELIM:     .size test4,
+
+; DWARF-WIN-FP-ELIM-LABEL: test4:
+; DWARF-WIN-FP-ELIM-NOT: .cfi_startproc
+; DWARF-WIN-FP-ELIM:     bx lr
+; DWARF-WIN-FP-ELIM-NOT: .cfi_endproc

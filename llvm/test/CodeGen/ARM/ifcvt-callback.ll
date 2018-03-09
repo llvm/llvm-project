@@ -1,4 +1,4 @@
-; RUN: llc -march thumb %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumb-- %s -o - | FileCheck %s
 
 ; This test checks that if-conversion pass is unconditionally added to the pass
 ; pipeline and is conditionally executed based on the per-function targert-cpu

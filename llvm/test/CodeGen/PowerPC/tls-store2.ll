@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -march=ppc64 -mcpu=pwr7 -O2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O2 -relocation-model=pic < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"

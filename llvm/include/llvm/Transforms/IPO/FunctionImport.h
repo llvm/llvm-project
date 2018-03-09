@@ -7,23 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FUNCTIONIMPORT_H
-#define LLVM_FUNCTIONIMPORT_H
+#ifndef LLVM_TRANSFORMS_IPO_FUNCTIONIMPORT_H
+#define LLVM_TRANSFORMS_IPO_FUNCTIONIMPORT_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
-
 #include <functional>
 #include <map>
+#include <memory>
+#include <string>
+#include <system_error>
 #include <unordered_set>
 #include <utility>
 
 namespace llvm {
-class LLVMContext;
-class GlobalValueSummary;
+
 class Module;
 
 /// The function importer is automatically importing function from other modules
@@ -34,19 +37,19 @@ public:
   /// containing all the functions to import for a source module.
   /// The keys is the GUID identifying a function to import, and the value
   /// is the threshold applied when deciding to import it.
-  typedef std::map<GlobalValue::GUID, unsigned> FunctionsToImportTy;
+  using FunctionsToImportTy = std::map<GlobalValue::GUID, unsigned>;
 
   /// The map contains an entry for every module to import from, the key being
   /// the module identifier to pass to the ModuleLoader. The value is the set of
   /// functions to import.
-  typedef StringMap<FunctionsToImportTy> ImportMapTy;
+  using ImportMapTy = StringMap<FunctionsToImportTy>;
 
   /// The set contains an entry for every global value the module exports.
-  typedef std::unordered_set<GlobalValue::GUID> ExportSetTy;
+  using ExportSetTy = std::unordered_set<GlobalValue::GUID>;
 
   /// A function of this type is used to load modules referenced by the index.
-  typedef std::function<Expected<std::unique_ptr<Module>>(StringRef Identifier)>
-      ModuleLoaderTy;
+  using ModuleLoaderTy =
+      std::function<Expected<std::unique_ptr<Module>>(StringRef Identifier)>;
 
   /// Create a Function Importer.
   FunctionImporter(const ModuleSummaryIndex &Index, ModuleLoaderTy ModuleLoader)
@@ -95,6 +98,15 @@ void ComputeCrossModuleImportForModule(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList);
 
+/// Mark all external summaries in \p Index for import into the given module.
+/// Used for distributed builds using a distributed index.
+///
+/// \p ImportList will be populated with a map that can be passed to
+/// FunctionImporter::importFunctions() above (see description there).
+void ComputeCrossModuleImportForModuleFromIndex(
+    StringRef ModulePath, const ModuleSummaryIndex &Index,
+    FunctionImporter::ImportMapTy &ImportList);
+
 /// Compute all the symbols that are "dead": i.e these that can't be reached
 /// in the graph from any of the given symbols listed in
 /// \p GUIDPreservedSymbols.
@@ -132,6 +144,7 @@ void thinLTOResolveWeakForLinkerModule(Module &TheModule,
 /// during global summary-based analysis.
 void thinLTOInternalizeModule(Module &TheModule,
                               const GVSummaryMapTy &DefinedGlobals);
-}
 
-#endif // LLVM_FUNCTIONIMPORT_H
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_IPO_FUNCTIONIMPORT_H

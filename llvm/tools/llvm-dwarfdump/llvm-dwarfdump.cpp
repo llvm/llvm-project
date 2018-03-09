@@ -19,7 +19,6 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/RelocVisitor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
@@ -32,10 +31,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cstring>
-#include <string>
-#include <system_error>
 
 using namespace llvm;
 using namespace object;
@@ -161,8 +156,7 @@ static list<std::string> Name(
          "the -regex option <pattern> is interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
-static opt<unsigned>
-    Lookup("lookup",
+static opt<unsigned long long> Lookup("lookup",
            desc("Lookup <address> in the debug information and print out any"
                 "available file, function, block and line table details."),
            value_desc("address"), cat(DwarfDumpCategory));
@@ -369,7 +363,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
   if (!Find.empty()) {
     DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
       for (auto Name : Find) {
-        auto find = [&](const DWARFAcceleratorTable &Accel)
+        auto find = [&](const AppleAcceleratorTable &Accel)
             -> llvm::Optional<uint64_t> {
           for (auto Entry : Accel.equal_range(Name))
             for (auto Atom : Entry)
@@ -383,6 +377,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
           return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
         if (auto Offset = find(DICtx.getAppleNamespaces()))
           return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        // TODO: Add .debug_names support
       }
       return None;
     }();
@@ -483,6 +478,8 @@ static bool handleFile(StringRef Filename, HandlerFn HandleObj,
 static std::vector<std::string> expandBundle(const std::string &InputPath) {
   std::vector<std::string> BundlePaths;
   SmallString<256> BundlePath(InputPath);
+  // Normalize input path. This is necessary to accept `bundle.dSYM/`.
+  sys::path::remove_dots(BundlePath);
   // Manually open up the bundle to avoid introducing additional dependencies.
   if (sys::fs::is_directory(BundlePath) &&
       sys::path::extension(BundlePath) == ".dSYM") {
@@ -530,11 +527,11 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  std::unique_ptr<tool_output_file> OutputFile;
+  std::unique_ptr<ToolOutputFile> OutputFile;
   if (!OutputFilename.empty()) {
     std::error_code EC;
-    OutputFile =
-        make_unique<tool_output_file>(OutputFilename, EC, sys::fs::F_None);
+    OutputFile = llvm::make_unique<ToolOutputFile>(OutputFilename, EC,
+                                                     sys::fs::F_None);
     error("Unable to open output file" + OutputFilename, EC);
     // Don't remove output file if we exit with an error.
     OutputFile->keep();

@@ -113,5 +113,71 @@ define void @single_access_no_preloop_with_offset(i32 *%arr, i32 *%a_len_ptr, i3
 ; CHECK: %next.postloop = icmp slt i32 %idx.next.postloop, %n
 ; CHECK: br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
 
+; Make sure that we do not do IRCE if we know that the safe iteration range of
+; the main loop is empty.
+
+define void @single_access_empty_range(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
+ entry:
+  %len = load i32, i32* %a_len_ptr, !range !0
+  %first.itr.check = icmp sgt i32 %n, 0
+  br i1 %first.itr.check, label %loop, label %exit
+
+ loop:
+  %idx = phi i32 [ 0, %entry ] , [ %idx.next, %in.bounds ]
+  %idx.next = add i32 %idx, 1
+  %abc = icmp slt i32 %idx, 0
+  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+
+ in.bounds:
+  %addr = getelementptr i32, i32* %arr, i32 %idx
+  store i32 0, i32* %addr
+  %next = icmp slt i32 %idx.next, %n
+  br i1 %next, label %loop, label %exit
+
+ out.of.bounds:
+  ret void
+
+ exit:
+  ret void
+}
+
+; CHECK-LABEL: @single_access_empty_range(
+; CHECK-NOT:   br i1 false
+; CHECK-NOT:   preloop
+; CHECK-NOT:   postloop
+
+define void @single_access_empty_range_2(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
+ entry:
+  %len = load i32, i32* %a_len_ptr, !range !0
+  %first.itr.check = icmp sgt i32 %n, 0
+  br i1 %first.itr.check, label %loop, label %exit
+
+ loop:
+  %idx = phi i32 [ 0, %entry ] , [ %idx.next, %in.bounds2 ]
+  %idx.next = add i32 %idx, 1
+  %abc = icmp slt i32 %idx, 60
+  br i1 %abc, label %in.bounds1, label %out.of.bounds, !prof !1
+
+ in.bounds1:
+  %def = icmp slt i32 %idx, 0
+  br i1 %def, label %in.bounds2, label %out.of.bounds, !prof !1
+
+in.bounds2:
+  %addr = getelementptr i32, i32* %arr, i32 %idx
+  store i32 0, i32* %addr
+  %next = icmp slt i32 %idx.next, %n
+  br i1 %next, label %loop, label %exit
+
+ out.of.bounds:
+  ret void
+
+ exit:
+  ret void
+}
+
+; CHECK-LABEL: @single_access_empty_range_2(
+; CHECK-NOT:   br i1 false
+; CHECK-NOT:   preloop
+
 !0 = !{i32 0, i32 2147483647}
 !1 = !{!"branch_weights", i32 64, i32 4}

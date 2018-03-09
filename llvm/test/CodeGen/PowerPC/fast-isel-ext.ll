@@ -19,21 +19,21 @@ define i32 @zext_16_32(i16 %a) nounwind {
 define i64 @zext_8_64(i8 %a) nounwind {
 ; ELF64: zext_8_64
   %r = zext i8 %a to i64
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
   ret i64 %r
 }
 
 define i64 @zext_16_64(i16 %a) nounwind {
 ; ELF64: zext_16_64
   %r = zext i16 %a to i64
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
   ret i64 %r
 }
 
 define i64 @zext_32_64(i32 %a) nounwind {
 ; ELF64: zext_32_64
   %r = zext i32 %a to i64
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 32
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 32
   ret i64 %r
 }
 

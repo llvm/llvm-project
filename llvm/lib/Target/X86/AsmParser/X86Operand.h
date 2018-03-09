@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_X86_ASMPARSER_X86OPERAND_H
 #define LLVM_LIB_TARGET_X86_ASMPARSER_X86OPERAND_H
 
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86AsmParserCommon.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,12 +29,7 @@ namespace llvm {
 /// X86Operand - Instances of this class represent a parsed X86 machine
 /// instruction.
 struct X86Operand : public MCParsedAsmOperand {
-  enum KindTy {
-    Token,
-    Register,
-    Immediate,
-    Memory
-  } Kind;
+  enum KindTy { Token, Register, Immediate, Memory, Prefix } Kind;
 
   SMLoc StartLoc, EndLoc;
   SMLoc OffsetOfLoc;
@@ -48,6 +44,10 @@ struct X86Operand : public MCParsedAsmOperand {
 
   struct RegOp {
     unsigned RegNo;
+  };
+
+  struct PrefOp {
+    unsigned Prefixes;
   };
 
   struct ImmOp {
@@ -73,6 +73,7 @@ struct X86Operand : public MCParsedAsmOperand {
     struct RegOp Reg;
     struct ImmOp Imm;
     struct MemOp Mem;
+    struct PrefOp Pref;
   };
 
   X86Operand(KindTy K, SMLoc Start, SMLoc End)
@@ -109,6 +110,11 @@ struct X86Operand : public MCParsedAsmOperand {
   unsigned getReg() const override {
     assert(Kind == Register && "Invalid access!");
     return Reg.RegNo;
+  }
+
+  unsigned getPrefix() const {
+    assert(Kind == Prefix && "Invalid access!");
+    return Pref.Prefixes;
   }
 
   const MCExpr *getImm() const {
@@ -387,6 +393,7 @@ struct X86Operand : public MCParsedAsmOperand {
     return isMemOffs() && Mem.ModeSize == 64 && (!Mem.Size || Mem.Size == 64);
   }
 
+  bool isPrefix() const { return Kind == Prefix; }
   bool isReg() const override { return Kind == Register; }
 
   bool isGR32orGR64() const {
@@ -506,6 +513,13 @@ struct X86Operand : public MCParsedAsmOperand {
     Res->OffsetOfLoc = OffsetOfLoc;
     Res->SymName = SymName;
     Res->OpDecl = OpDecl;
+    return Res;
+  }
+
+  static std::unique_ptr<X86Operand>
+  CreatePrefix(unsigned Prefixes, SMLoc StartLoc, SMLoc EndLoc) {
+    auto Res = llvm::make_unique<X86Operand>(Prefix, StartLoc, EndLoc);
+    Res->Pref.Prefixes = Prefixes;
     return Res;
   }
 

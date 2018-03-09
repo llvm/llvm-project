@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -52,6 +53,10 @@ bool TargetSubtargetInfo::enableJoinGlobalCopies() const {
 bool TargetSubtargetInfo::enableRALocalReassignment(
     CodeGenOpt::Level OptLevel) const {
   return true;
+}
+
+bool TargetSubtargetInfo::enableAdvancedRASplitCost() const {
+  return false;
 }
 
 bool TargetSubtargetInfo::enablePostRAScheduler() const {
@@ -97,9 +102,15 @@ std::string TargetSubtargetInfo::getSchedInfoStr(MCInst const &MCI) const {
   // that could be changed during the compilation
   TargetSchedModel TSchedModel;
   TSchedModel.init(getSchedModel(), this, getInstrInfo());
-  if (!TSchedModel.hasInstrSchedModel())
+  unsigned Latency;
+  if (TSchedModel.hasInstrSchedModel())
+    Latency = TSchedModel.computeInstrLatency(MCI.getOpcode());
+  else if (TSchedModel.hasInstrItineraries()) {
+    auto *ItinData = TSchedModel.getInstrItineraries();
+    Latency = ItinData->getStageLatency(
+        getInstrInfo()->get(MCI.getOpcode()).getSchedClass());
+  } else
     return std::string();
-  unsigned Latency = TSchedModel.computeInstrLatency(MCI.getOpcode());
   Optional<double> RThroughput =
       TSchedModel.computeInstrRThroughput(MCI.getOpcode());
   return createSchedInfoStr(Latency, RThroughput);

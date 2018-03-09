@@ -3,13 +3,11 @@
 
 define fastcc float @foo(float %x) unnamed_addr #0 {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    calll .L0$pb
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:  .L0$pb:
 ; CHECK-NEXT:    popl %eax
-; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %eax

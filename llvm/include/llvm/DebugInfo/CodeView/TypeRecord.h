@@ -334,6 +334,11 @@ public:
   uint32_t Attrs;
   Optional<MemberPointerInfo> MemberInfo;
 
+  void setAttrs(PointerKind PK, PointerMode PM, PointerOptions PO,
+                uint8_t Size) {
+    Attrs = calcAttrs(PK, PM, PO, Size);
+  }
+
 private:
   static uint32_t calcAttrs(PointerKind PK, PointerMode PM, PointerOptions PO,
                             uint8_t Size) {
@@ -410,6 +415,14 @@ public:
 
   bool hasUniqueName() const {
     return (Options & ClassOptions::HasUniqueName) != ClassOptions::None;
+  }
+
+  bool isNested() const {
+    return (Options & ClassOptions::Nested) != ClassOptions::None;
+  }
+
+  bool isForwardRef() const {
+    return (Options & ClassOptions::ForwardReference) != ClassOptions::None;
   }
 
   uint16_t getMemberCount() const { return MemberCount; }

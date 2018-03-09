@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -simplifycfg < %s | FileCheck -enable-var-scope %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -25,7 +25,7 @@ define i64 @test1b(i64 %A) {
 ; CHECK-LABEL: @test1b(
 ; CHECK: [[ICMP:%[A-Za-z0-9]+]] = icmp eq i64 %A, 0
 ; CHECK-NEXT: [[CTTZ:%[A-Za-z0-9]+]] = tail call i64 @llvm.cttz.i64(i64 %A, i1 true)
-; CHECK-NEXT: [[SEL:%[A-Za-z0-9.]+]] = select i1 [[ICMP]], i64 64, i64 [[CTLZ]]
+; CHECK-NEXT: [[SEL:%[A-Za-z0-9.]+]] = select i1 [[ICMP]], i64 64, i64 [[CTTZ]]
 ; CHECK-NEXT: ret i64 [[SEL]]
 entry:
   %tobool = icmp eq i64 %A, 0

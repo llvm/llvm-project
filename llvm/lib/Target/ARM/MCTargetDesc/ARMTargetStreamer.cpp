@@ -71,9 +71,9 @@ void ARMTargetStreamer::emitTextAttribute(unsigned Attribute,
 void ARMTargetStreamer::emitIntTextAttribute(unsigned Attribute,
                                              unsigned IntValue,
                                              StringRef StringValue) {}
-void ARMTargetStreamer::emitArch(unsigned Arch) {}
+void ARMTargetStreamer::emitArch(ARM::ArchKind Arch) {}
 void ARMTargetStreamer::emitArchExtension(unsigned ArchExt) {}
-void ARMTargetStreamer::emitObjectArch(unsigned Arch) {}
+void ARMTargetStreamer::emitObjectArch(ARM::ArchKind Arch) {}
 void ARMTargetStreamer::emitFPU(unsigned FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {}

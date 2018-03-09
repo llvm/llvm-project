@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -sink-common-insts -S | FileCheck -enable-var-scope %s
 
 define zeroext i1 @test1(i1 zeroext %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
 entry:
@@ -340,7 +340,7 @@ if.end:
 ; CHECK-LABEL: test13
 ; CHECK-DAG: select
 ; CHECK-DAG: load volatile
-; CHECK: store volatile {{.*}}, !tbaa ![[TBAA:[0-9]]]
+; CHECK: store volatile {{.*}}, !tbaa ![[$TBAA:[0-9]]]
 ; CHECK-NOT: load
 ; CHECK-NOT: store
 
@@ -842,6 +842,6 @@ if.end:
 ; CHECK: insertvalue
 ; CHECK-NOT: insertvalue
 
-; CHECK: ![[TBAA]] = !{![[TYPE:[0-9]]], ![[TYPE]], i64 0}
+; CHECK: ![[$TBAA]] = !{![[TYPE:[0-9]]], ![[TYPE]], i64 0}
 ; CHECK: ![[TYPE]] = !{!"float", ![[TEXT:[0-9]]]}
 ; CHECK: ![[TEXT]] = !{!"an example type tree"}

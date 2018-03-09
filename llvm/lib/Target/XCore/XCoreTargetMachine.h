@@ -31,8 +31,8 @@ class XCoreTargetMachine : public LLVMTargetMachine {
 public:
   XCoreTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, CodeModel::Model CM,
-                     CodeGenOpt::Level OL);
+                     Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                     CodeGenOpt::Level OL, bool JIT);
   ~XCoreTargetMachine() override;
 
   const XCoreSubtarget *getSubtargetImpl() const { return &Subtarget; }
@@ -43,7 +43,7 @@ public:
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  TargetIRAnalysis getTargetIRAnalysis() override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();

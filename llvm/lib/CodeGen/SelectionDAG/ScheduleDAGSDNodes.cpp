@@ -23,14 +23,14 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "pre-RA-sched"
@@ -716,7 +716,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
     if (!Order || DVOrder == Order) {
       MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
       if (DbgMI) {
-        Orders.push_back(std::make_pair(DVOrder, DbgMI));
+        Orders.push_back({DVOrder, DbgMI});
         BB->insert(InsertPos, DbgMI);
       }
       DV->setIsInvalidated();
@@ -741,16 +741,17 @@ ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
   }
 
   MachineBasicBlock *BB = Emitter.getBlock();
-  if (Emitter.getInsertPos() == BB->begin() || BB->back().isPHI() ||
+  auto IP = Emitter.getInsertPos();
+  if (IP == BB->begin() || BB->back().isPHI() ||
       // Fast-isel may have inserted some instructions, in which case the
       // BB->back().isPHI() test will not fire when we want it to.
-      std::prev(Emitter.getInsertPos())->isPHI()) {
+      std::prev(IP)->isPHI()) {
     // Did not insert any instruction.
-    Orders.push_back(std::make_pair(Order, (MachineInstr*)nullptr));
+    Orders.push_back({Order, (MachineInstr *)nullptr});
     return;
   }
 
-  Orders.push_back(std::make_pair(Order, &*std::prev(Emitter.getInsertPos())));
+  Orders.push_back({Order, &*std::prev(IP)});
   ProcessSDDbgValues(N, DAG, Emitter, Orders, VRBaseMap, Order);
 }
 

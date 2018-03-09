@@ -1,4 +1,4 @@
-; RUN: llvm-as -disable-output -verify-debug-info -o - < %s 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output -o - < %s 2>&1 | FileCheck %s
 ; ModuleID = 'test.c'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"

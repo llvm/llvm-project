@@ -23,7 +23,6 @@
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -135,29 +134,28 @@ struct BinaryPathProvider {
 struct StreamPurposeProvider {
   explicit StreamPurposeProvider(uint32_t MaxLen) : MaxLen(MaxLen) {}
 
-  DiffResult compare(const std::pair<StreamPurpose, std::string> &L,
-                     const std::pair<StreamPurpose, std::string> &R) {
-    if (L.first != R.first)
+  DiffResult compare(const StreamInfo &L, const StreamInfo &R) {
+    if (L.getPurpose() != R.getPurpose())
       return DiffResult::DIFFERENT;
-    if (L.first == StreamPurpose::ModuleStream) {
+    if (L.getPurpose() == StreamPurpose::ModuleStream) {
       BinaryPathProvider PathProvider(MaxLen);
-      return PathProvider.compare(L.second, R.second);
+      return PathProvider.compare(L.getShortName(), R.getShortName());
     }
-    return (L.second == R.second) ? DiffResult::IDENTICAL
-                                  : DiffResult::DIFFERENT;
+    return (L.getShortName() == R.getShortName()) ? DiffResult::IDENTICAL
+                                                  : DiffResult::DIFFERENT;
   }
 
-  std::string format(const std::pair<StreamPurpose, std::string> &P,
-                     bool Right) {
-    if (P.first == StreamPurpose::Other)
-      return truncateStringBack(P.second, MaxLen);
-    if (P.first == StreamPurpose::NamedStream)
-      return truncateQuotedNameBack("Named Stream", P.second, MaxLen);
+  std::string format(const StreamInfo &P, bool Right) {
+    if (P.getPurpose() == StreamPurpose::Other ||
+        P.getPurpose() == StreamPurpose::Symbols)
+      return truncateStringBack(P.getShortName(), MaxLen);
+    if (P.getPurpose() == StreamPurpose::NamedStream)
+      return truncateQuotedNameBack("Named Stream", P.getShortName(), MaxLen);
 
-    assert(P.first == StreamPurpose::ModuleStream);
+    assert(P.getPurpose() == StreamPurpose::ModuleStream);
     uint32_t ExtraChars = strlen("Module \"\"");
     BinaryPathProvider PathProvider(MaxLen - ExtraChars);
-    std::string Result = PathProvider.format(P.second, Right);
+    std::string Result = PathProvider.format(P.getShortName(), Right);
     return formatv("Module \"{0}\"", Result);
   }
 
@@ -256,8 +254,8 @@ Error DiffStyle::diffStreamDirectory() {
                   truncateStringFront(File1.getFilePath(), 18),
                   truncateStringFront(File2.getFilePath(), 18));
 
-  SmallVector<std::pair<StreamPurpose, std::string>, 32> P;
-  SmallVector<std::pair<StreamPurpose, std::string>, 32> Q;
+  SmallVector<StreamInfo, 32> P;
+  SmallVector<StreamInfo, 32> Q;
   discoverStreamPurposes(File1, P);
   discoverStreamPurposes(File2, Q);
   D.print("Stream Count", File1.getNumStreams(), File2.getNumStreams());
@@ -425,45 +423,82 @@ Error DiffStyle::diffInfoStream() {
   return Error::success();
 }
 
-static std::vector<std::pair<uint32_t, DbiModuleDescriptor>>
+typedef std::pair<uint32_t, DbiModuleDescriptor> IndexedModuleDescriptor;
+typedef std::vector<IndexedModuleDescriptor> IndexedModuleDescriptorList;
+
+static IndexedModuleDescriptorList
 getModuleDescriptors(const DbiModuleList &ML) {
-  std::vector<std::pair<uint32_t, DbiModuleDescriptor>> List;
+  IndexedModuleDescriptorList List;
   List.reserve(ML.getModuleCount());
   for (uint32_t I = 0; I < ML.getModuleCount(); ++I)
     List.emplace_back(I, ML.getModuleDescriptor(I));
   return List;
 }
 
-static void
-diffOneModule(DiffPrinter &D,
-              const std::pair<uint32_t, DbiModuleDescriptor> Item,
-              std::vector<std::pair<uint32_t, DbiModuleDescriptor>> &Other,
-              bool ItemIsRight) {
+static IndexedModuleDescriptorList::iterator
+findOverrideEquivalentModule(uint32_t Modi,
+                             IndexedModuleDescriptorList &OtherList) {
+  auto &EqMap = opts::diff::Equivalences;
+
+  auto Iter = EqMap.find(Modi);
+  if (Iter == EqMap.end())
+    return OtherList.end();
+
+  uint32_t EqValue = Iter->second;
+
+  return llvm::find_if(OtherList,
+                       [EqValue](const IndexedModuleDescriptor &Desc) {
+                         return Desc.first == EqValue;
+                       });
+}
+
+static IndexedModuleDescriptorList::iterator
+findEquivalentModule(const IndexedModuleDescriptor &Item,
+                     IndexedModuleDescriptorList &OtherList, bool ItemIsRight) {
+
+  if (!ItemIsRight) {
+    uint32_t Modi = Item.first;
+    auto OverrideIter = findOverrideEquivalentModule(Modi, OtherList);
+    if (OverrideIter != OtherList.end())
+      return OverrideIter;
+  }
+
+  BinaryPathProvider PathProvider(28);
+
+  auto Iter = OtherList.begin();
+  auto End = OtherList.end();
+  for (; Iter != End; ++Iter) {
+    const IndexedModuleDescriptor *Left = &Item;
+    const IndexedModuleDescriptor *Right = &*Iter;
+    if (ItemIsRight)
+      std::swap(Left, Right);
+    DiffResult Result = PathProvider.compare(Left->second.getModuleName(),
+                                             Right->second.getModuleName());
+    if (Result == DiffResult::EQUIVALENT || Result == DiffResult::IDENTICAL)
+      return Iter;
+  }
+  return OtherList.end();
+}
+
+static void diffOneModule(DiffPrinter &D, const IndexedModuleDescriptor &Item,
+                          IndexedModuleDescriptorList &Other,
+                          bool ItemIsRight) {
   StreamPurposeProvider HeaderProvider(70);
-  std::pair<StreamPurpose, std::string> Header;
-  Header.first = StreamPurpose::ModuleStream;
-  Header.second = Item.second.getModuleName();
-  D.printFullRow(HeaderProvider.format(Header, ItemIsRight));
+  StreamInfo Info = StreamInfo::createModuleStream(
+      Item.second.getModuleName(), Item.second.getModuleStreamIndex(),
+      Item.first);
+  D.printFullRow(HeaderProvider.format(Info, ItemIsRight));
 
   const auto *L = &Item;
 
-  BinaryPathProvider PathProvider(28);
-  auto Iter = llvm::find_if(
-      Other, [&PathProvider, ItemIsRight,
-              L](const std::pair<uint32_t, DbiModuleDescriptor> &Other) {
-        const auto *Left = L;
-        const auto *Right = &Other;
-        if (ItemIsRight)
-          std::swap(Left, Right);
-        DiffResult Result = PathProvider.compare(Left->second.getModuleName(),
-                                                 Right->second.getModuleName());
-        return Result == DiffResult::EQUIVALENT ||
-               Result == DiffResult::IDENTICAL;
-      });
+  auto Iter = findEquivalentModule(Item, Other, ItemIsRight);
   if (Iter == Other.end()) {
     // We didn't find this module at all on the other side.  Just print one row
     // and continue.
-    D.print<ModiProvider>("- Modi", Item.first, None);
+    if (ItemIsRight)
+      D.print<ModiProvider>("- Modi", None, Item.first);
+    else
+      D.print<ModiProvider>("- Modi", Item.first, None);
     return;
   }
 
@@ -472,6 +507,7 @@ diffOneModule(DiffPrinter &D,
   if (ItemIsRight)
     std::swap(L, R);
 
+  BinaryPathProvider PathProvider(28);
   D.print<ModiProvider>("- Modi", L->first, R->first);
   D.print<BinaryPathProvider>("- Obj File Name", L->second.getObjFileName(),
                               R->second.getObjFileName(), PathProvider);

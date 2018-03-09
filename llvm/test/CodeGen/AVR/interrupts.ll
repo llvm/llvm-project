@@ -7,7 +7,7 @@ define avr_intrcc void @interrupt_handler() {
 ; CHECK-NEXT: push r1
 ; CHECK-NEXT: in r0, 63
 ; CHECK-NEXT: push r0
-; CHECK: eor r0, r0
+; CHECK: clr r0
 ; CHECK: pop r0
 ; CHECK-NEXT: out 63, r0
 ; CHECK-NEXT: pop r1
@@ -23,7 +23,7 @@ define avr_signalcc void @signal_handler() {
 ; CHECK-NEXT: push r1
 ; CHECK-NEXT: in r0, 63
 ; CHECK-NEXT: push r0
-; CHECK: eor r0, r0
+; CHECK: clr r0
 ; CHECK: pop r0
 ; CHECK-NEXT: out 63, r0
 ; CHECK-NEXT: pop r1

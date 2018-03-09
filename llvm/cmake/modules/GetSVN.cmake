@@ -1,17 +1,15 @@
 # CMake project that writes Subversion revision information to a header.
 #
 # Input variables:
-#   FIRST_SOURCE_DIR  - First source directory
-#   FIRST_NAME        - The macro prefix for the first repository's info
-#   SECOND_SOURCE_DIR - Second source directory (opt)
-#   SECOND_NAME       - The macro prefix for the second repository's info (opt)
-#   HEADER_FILE       - The header file to write
+#   SOURCE_DIRS - A list of source directories.
+#   NAMES       - A list of macro prefixes for each of the source directories.
+#   HEADER_FILE - The header file to write
 #
-# The output header will contain macros FIRST_REPOSITORY and FIRST_REVISION,
-# and SECOND_REPOSITORY and SECOND_REVISION if requested, where "FIRST" and
-# "SECOND" are substituted with the names specified in the input variables.
+# The output header will contain macros <NAME>_REPOSITORY and <NAME>_REVISION,
+# where "<NAME>" and is substituted with the names specified in the input
+# variables, for each of the SOURCE_DIRS given.
 
-# Chop off cmake/modules/GetSVN.cmake 
+# Chop off cmake/modules/GetSVN.cmake
 get_filename_component(LLVM_DIR "${CMAKE_SCRIPT_MODE_FILE}" PATH)
 get_filename_component(LLVM_DIR "${LLVM_DIR}" PATH)
 get_filename_component(LLVM_DIR "${LLVM_DIR}" PATH)
@@ -86,7 +84,7 @@ endmacro()
 function(get_source_info path revision repository)
   if (EXISTS "${path}/.svn")
     get_source_info_svn("${path}" revision repository)
-  elseif (EXISTS "${path}/.git/svn")
+  elseif (EXISTS "${path}/.git/svn/refs")
     get_source_info_git_svn("${path}" revision repository)
   elseif (EXISTS "${path}/.git")
     get_source_info_git("${path}" revision repository)
@@ -103,9 +101,37 @@ function(append_info name path)
     "#define ${name}_REPOSITORY \"${repository}\"\n")
 endfunction()
 
-append_info(${FIRST_NAME} "${FIRST_SOURCE_DIR}")
-if(DEFINED SECOND_SOURCE_DIR)
-  append_info(${SECOND_NAME} "${SECOND_SOURCE_DIR}")
+function(validate_inputs source_dirs names)
+  list(LENGTH source_dirs source_dirs_length)
+  list(LENGTH names names_length)
+  if (NOT source_dirs_length EQUAL names_length)
+    message(FATAL_ERROR
+            "GetSVN.cmake takes two arguments: a list of source directories, "
+            "and a list of names. Expected two lists must be of equal length, "
+            "but got ${source_dirs_length} source directories and "
+            "${names_length} names.")
+  endif()
+endfunction()
+
+if (DEFINED SOURCE_DIRS AND DEFINED NAMES)
+  validate_inputs("${SOURCE_DIRS}" "${NAMES}")
+
+  list(LENGTH SOURCE_DIRS source_dirs_length)
+  math(EXPR source_dirs_max_index ${source_dirs_length}-1)
+  foreach(index RANGE ${source_dirs_max_index})
+    list(GET SOURCE_DIRS ${index} source_dir)
+    list(GET NAMES ${index} name)
+    append_info(${name} ${source_dir})
+  endforeach()
+endif()
+
+# Allow -DFIRST_SOURCE_DIR arguments until Clang migrates to the new
+# -DSOURCE_DIRS argument.
+if(DEFINED FIRST_SOURCE_DIR)
+  append_info(${FIRST_NAME} "${FIRST_SOURCE_DIR}")
+  if(DEFINED SECOND_SOURCE_DIR)
+    append_info(${SECOND_NAME} "${SECOND_SOURCE_DIR}")
+  endif()
 endif()
 
 # Copy the file only if it has changed.

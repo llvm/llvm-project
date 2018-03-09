@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -mattr=-sse | FileCheck %s -check-prefix=WITHNANS
-; RUN: llc < %s -march=x86 -mattr=-sse -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck %s -check-prefix=NONANS
+; RUN: llc < %s -mtriple=i686-- -mattr=-sse | FileCheck %s -check-prefix=WITHNANS
+; RUN: llc < %s -mtriple=i686-- -mattr=-sse -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck %s -check-prefix=NONANS
 
 ; WITHNANS-LABEL: test:
 ; WITHNANS: setnp

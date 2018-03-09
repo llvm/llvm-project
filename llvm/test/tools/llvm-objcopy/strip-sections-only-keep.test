@@ -1,0 +1,20 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -strip-sections -only-keep=.test %t %t2
+# RUN: od -Ax -t x1 %t2 | FileCheck %s
+# RUN: od -Ax -t c  %t2 | FileCheck %s -check-prefix=TEXT
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .test
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Content:        "DEADBEEF"
+
+# CHECK: de ad be ef
+
+# TEXT-NOT: t e s t

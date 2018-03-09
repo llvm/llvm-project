@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -tailcallopt=false | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -tailcallopt=false | FileCheck %s
 
 	%struct.foo = type { [4 x i32] }
 

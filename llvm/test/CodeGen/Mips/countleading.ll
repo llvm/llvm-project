@@ -5,7 +5,6 @@
 ; RUN: llc -march=mips64el -mcpu=mips64   < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
 ; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
 ; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
-; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=micromips < %s | FileCheck -check-prefixes=ALL,MICROMIPS64 %s
 
 ; Prefixes:
 ;   ALL      - All
@@ -22,8 +21,6 @@ entry:
 
 ; MIPS64-GT-R1:  clz $2, $4
 
-; MICROMIPS64:   clz $2, $4
-
   %tmp1 = tail call i32 @llvm.ctlz.i32(i32 %X, i1 true)
   ret i32 %tmp1
 }
@@ -39,8 +36,6 @@ entry:
 ; MIPS32-GT-R1:  clo $2, $4
 
 ; MIPS64-GT-R1:  clo $2, $4
-
-; MICROMIPS64:   clo $2, $4
 
   %neg = xor i32 %X, -1
   %tmp1 = tail call i32 @llvm.ctlz.i32(i32 %neg, i1 true)
@@ -63,7 +58,6 @@ entry:
 ; MIPS32-GT-R1-DAG: addiu $3, $zero, 0
 
 ; MIPS64-GT-R1:  dclz $2, $4
-; MICROMIPS64:   dclz $2, $4
 
   %tmp1 = tail call i64 @llvm.ctlz.i64(i64 %X, i1 true)
   ret i64 %tmp1
@@ -89,7 +83,6 @@ entry:
 ; MIPS32-GT-R1-DAG: addiu $3, $zero, 0
 
 ; MIPS64-GT-R1:  dclo $2, $4
-; MICROMIPS64:   dclo $2, $4
 
   %neg = xor i64 %X, -1
   %tmp1 = tail call i64 @llvm.ctlz.i64(i64 %neg, i1 true)

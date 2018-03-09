@@ -26,14 +26,14 @@
 ; ASM:         .cv_file        1 "D:\\src\\llvm\\build\\t.cpp"
 ; ASM:         .cv_loc 0 1 7 0 is_stmt 0       # t.cpp:7:0
 ; ASM: .seh_proc f
-; ASM: # BB#0:                                 # %entry
+; ASM: # %bb.0:                                 # %entry
 ; ASM:         subq    $56, %rsp
 ; ASM:         movl    %ecx, 52(%rsp)
 ; ASM: [[prologue_end:\.Ltmp.*]]:
 ; ASM:         .cv_loc 0 1 8 7                 # t.cpp:8:7
 ; ASM:         testl   %ecx, %ecx
 ; ASM:         je      .LBB0_2
-; ASM: # BB#1:                                 # %if.then
+; ASM: # %bb.1:                                 # %if.then
 ; ASM: [[if_start:\.Ltmp.*]]:
 ; ASM:         .cv_loc 0 1 9 9                 # t.cpp:9:9
 ; ASM:         movl    $42, 40(%rsp)
@@ -111,7 +111,7 @@
 ; OBJ:      VarName: param
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: 335
+; OBJ:      BaseRegister: RSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 52
@@ -128,7 +128,7 @@
 ; OBJ:      VarName: a
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: 335
+; OBJ:      BaseRegister: RSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 40
@@ -145,7 +145,7 @@
 ; OBJ:      VarName: b
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: 335
+; OBJ:      BaseRegister: RSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 36
@@ -173,7 +173,7 @@
 ; OBJ:      VarName: v
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: 335
+; OBJ:      BaseRegister: RSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 44
@@ -203,7 +203,7 @@
 ; OBJ:      VarName: v
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: 335
+; OBJ:      BaseRegister: RSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 48

@@ -9,7 +9,7 @@
 
 define i16 @test_mul_i16(i16 %arg1, i16 %arg2) {
 ; X64-LABEL: test_mul_i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    imulw %di, %si
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
@@ -19,7 +19,7 @@ define i16 @test_mul_i16(i16 %arg1, i16 %arg2) {
 
 define i32 @test_mul_i32(i32 %arg1, i32 %arg2) {
 ; X64-LABEL: test_mul_i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    imull %edi, %esi
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
@@ -29,7 +29,7 @@ define i32 @test_mul_i32(i32 %arg1, i32 %arg2) {
 
 define i64 @test_mul_i64(i64 %arg1, i64 %arg2) {
 ; X64-LABEL: test_mul_i64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    imulq %rdi, %rsi
 ; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    retq

@@ -53,7 +53,7 @@ bool AVRFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 void AVRFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  CallingConv::ID CallConv = MF.getFunction()->getCallingConv();
+  CallingConv::ID CallConv = MF.getFunction().getCallingConv();
   DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
@@ -143,7 +143,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
 
 void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
-  CallingConv::ID CallConv = MF.getFunction()->getCallingConv();
+  CallingConv::ID CallConv = MF.getFunction().getCallingConv();
   bool isHandler = (CallConv == CallingConv::AVR_INTR ||
                     CallConv == CallingConv::AVR_SIGNAL);
 
@@ -275,7 +275,7 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
 
 bool AVRFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    const std::vector<CalleeSavedInfo> &CSI,
+    std::vector<CalleeSavedInfo> &CSI,
     const TargetRegisterInfo *TRI) const {
   if (CSI.empty()) {
     return false;

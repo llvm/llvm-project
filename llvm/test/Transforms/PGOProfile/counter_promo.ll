@@ -5,6 +5,9 @@
 
 define void @foo(i32 %n, i32 %N) {
 ; PROMO-LABEL: @foo
+; PROMO: {{.*}} = load {{.*}} @__profc_foo{{.*}} 3)
+; PROMO-NEXT: add 
+; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}3)
 bb:
   %tmp = add nsw i32 %n, 1
   %tmp1 = add nsw i32 %n, -1
@@ -57,9 +60,6 @@ bb12:                                             ; preds = %bb9
 ; ATOMIC_PROMO: atomicrmw add {{.*}} @__profc_foo{{.*}}0), i64 %[[LIVEOUT1]] seq_cst
 ; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}}1), i64 %[[LIVEOUT2]] seq_cst
 ; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}}2), i64 %[[LIVEOUT3]] seq_cst
-; PROMO: {{.*}} = load {{.*}} @__profc_foo{{.*}} 3)
-; PROMO-NEXT: add 
-; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}3)
 ; PROMO-NOT: @__profc_foo
 
 

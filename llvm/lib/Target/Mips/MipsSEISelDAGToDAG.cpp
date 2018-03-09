@@ -161,7 +161,7 @@ void MipsSEDAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
     // lui $v0, %hi(%neg(%gp_rel(fname)))
     // daddu $v1, $v0, $t9
     // daddiu $globalbasereg, $v1, %lo(%neg(%gp_rel(fname)))
-    const GlobalValue *FName = MF.getFunction();
+    const GlobalValue *FName = &MF.getFunction();
     BuildMI(MBB, I, DL, TII.get(Mips::LUi64), V0)
       .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
     BuildMI(MBB, I, DL, TII.get(Mips::DADDu), V1).addReg(V0)
@@ -190,7 +190,7 @@ void MipsSEDAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
     // lui $v0, %hi(%neg(%gp_rel(fname)))
     // addu $v1, $v0, $t9
     // addiu $globalbasereg, $v1, %lo(%neg(%gp_rel(fname)))
-    const GlobalValue *FName = MF.getFunction();
+    const GlobalValue *FName = &MF.getFunction();
     BuildMI(MBB, I, DL, TII.get(Mips::LUi), V0)
       .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
     BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0).addReg(Mips::T9);
@@ -905,6 +905,64 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     break;
   }
 
+  // Manually match MipsISD::Ins nodes to get the correct instruction. It has
+  // to be done in this fashion so that we respect the differences between
+  // dins and dinsm, as the difference is that the size operand has the range
+  // 0 < size <= 32 for dins while dinsm has the range 2 <= size <= 64 which
+  // means SelectionDAGISel would have to test all the operands at once to
+  // match the instruction.
+  case MipsISD::Ins: {
+
+    // Sanity checking for the node operands.
+    if (Node->getValueType(0) != MVT::i32 && Node->getValueType(0) != MVT::i64)
+      return false;
+
+    if (Node->getNumOperands() != 4)
+      return false;
+
+    if (Node->getOperand(1)->getOpcode() != ISD::Constant ||
+        Node->getOperand(2)->getOpcode() != ISD::Constant)
+      return false;
+
+    MVT ResTy = Node->getSimpleValueType(0);
+    uint64_t Pos = Node->getConstantOperandVal(1);
+    uint64_t Size = Node->getConstantOperandVal(2);
+
+    // Size has to be >0 for 'ins', 'dins' and 'dinsu'.
+    if (!Size)
+      return false;
+
+    if (Pos + Size > 64)
+      return false;
+
+    if (ResTy != MVT::i32 && ResTy != MVT::i64)
+      return false;
+
+    unsigned Opcode = 0;
+    if (ResTy == MVT::i32) {
+      if (Pos + Size <= 32)
+        Opcode = Mips::INS;
+    } else {
+      if (Pos + Size <= 32)
+        Opcode = Mips::DINS;
+      else if (Pos < 32 && 1 < Size)
+        Opcode = Mips::DINSM;
+      else
+        Opcode = Mips::DINSU;
+    }
+
+    if (Opcode) {
+      SDValue Ops[4] = {
+          Node->getOperand(0), CurDAG->getTargetConstant(Pos, DL, MVT::i32),
+          CurDAG->getTargetConstant(Size, DL, MVT::i32), Node->getOperand(3)};
+
+      ReplaceNode(Node, CurDAG->getMachineNode(Opcode, DL, ResTy, Ops));
+      return true;
+    }
+
+    return false;
+  }
+
   case MipsISD::ThreadPointer: {
     EVT PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
     unsigned RdhwrOpc, DestReg;
@@ -1188,9 +1246,12 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
         // The obvious "missing" case is when both are zero, but that case is
         // handled by the ldi case.
         if (ResNonZero) {
+          IntegerType *Int32Ty =
+              IntegerType::get(MF->getFunction().getContext(), 32);
+          const ConstantInt *Const32 = ConstantInt::get(Int32Ty, 32);
           SDValue Ops[4] = {HiResNonZero ? SDValue(HiRes, 0) : Zero64Val,
-                            CurDAG->getTargetConstant(64, DL, MVT::i32),
-                            CurDAG->getTargetConstant(32, DL, MVT::i32),
+                            CurDAG->getConstant(*Const32, DL, MVT::i32),
+                            CurDAG->getConstant(*Const32, DL, MVT::i32),
                             SDValue(Res, 0)};
 
           Res = CurDAG->getMachineNode(Mips::DINSU, DL, MVT::i64, Ops);

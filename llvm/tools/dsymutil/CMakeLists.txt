@@ -22,5 +22,5 @@ add_llvm_tool(llvm-dsymutil
   )
 
 IF(APPLE)
-  target_link_libraries(llvm-dsymutil "-framework CoreFoundation")
+  target_link_libraries(llvm-dsymutil PRIVATE "-framework CoreFoundation")
 ENDIF(APPLE)

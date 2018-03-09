@@ -16,10 +16,10 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetLowering.h"
 
 using namespace llvm;
 
@@ -108,7 +108,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      ArrayRef<ArgInfo> Args,
                                      ValueHandler &Handler) const {
   MachineFunction &MF = MIRBuilder.getMF();
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;

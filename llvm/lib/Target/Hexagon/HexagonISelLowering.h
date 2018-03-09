@@ -20,10 +20,10 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/Target/TargetLowering.h"
 #include <cstdint>
 #include <utility>
 
@@ -51,7 +51,6 @@ namespace HexagonISD {
       CP,          // Constant pool.
 
       COMBINE,
-      PACKHL,
       VSPLAT,
       VASL,
       VASR,
@@ -64,10 +63,14 @@ namespace HexagonISD {
       VCOMBINE,
       VPACKE,
       VPACKO,
+      VEXTRACTW,
+      VINSERTW0,
+      VROR,
       TC_RETURN,
       EH_RETURN,
       DCFETCH,
       READCYCLE,
+      VZERO,
 
       OP_END
     };
@@ -89,6 +92,8 @@ namespace HexagonISD {
     explicit HexagonTargetLowering(const TargetMachine &TM,
                                    const HexagonSubtarget &ST);
 
+    bool isHVXVectorType(MVT Ty) const;
+
     /// IsEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization. Targets which want to do tail call
     /// optimization should implement this function.
@@ -97,6 +102,10 @@ namespace HexagonISD {
         bool isCallerStructRet, const SmallVectorImpl<ISD::OutputArg> &Outs,
         const SmallVectorImpl<SDValue> &OutVals,
         const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
+
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+                            MachineFunction &MF,
+                            unsigned Intrinsic) const override;
 
     bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
     bool isTruncateFree(EVT VT1, EVT VT2) const override;
@@ -113,18 +122,22 @@ namespace HexagonISD {
     bool shouldExpandBuildVectorWithShuffles(EVT VT,
         unsigned DefinedValues) const override;
 
-    bool isShuffleMaskLegal(const SmallVectorImpl<int> &Mask, EVT VT)
+    bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override;
+    TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(EVT VT)
         const override;
 
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
     const char *getTargetNodeName(unsigned Opcode) const override;
+
+    SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerEXTRACT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerEXTRACT_SUBVECTOR_HVX(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerINSERT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
@@ -231,7 +244,8 @@ namespace HexagonISD {
     /// mode is legal for a load/store of any legal type.
     /// TODO: Handle pre/postinc as well.
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                               Type *Ty, unsigned AS) const override;
+                               Type *Ty, unsigned AS,
+                               Instruction *I = nullptr) const override;
     /// Return true if folding a constant offset with the given GlobalAddress
     /// is legal.  It is frequently not legal in PIC relocation models.
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
@@ -269,7 +283,88 @@ namespace HexagonISD {
       return AtomicExpansionKind::LLSC;
     }
 
-  protected:
+  private:
+    bool getBuildVectorConstInts(ArrayRef<SDValue> Values, MVT VecTy,
+                                 SelectionDAG &DAG,
+                                 MutableArrayRef<ConstantInt*> Consts) const;
+    SDValue buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
+                          SelectionDAG &DAG) const;
+    SDValue buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
+                          SelectionDAG &DAG) const;
+    SDValue extractVector(SDValue VecV, SDValue IdxV, const SDLoc &dl,
+                          MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
+    SDValue insertVector(SDValue VecV, SDValue ValV, SDValue IdxV,
+                         const SDLoc &dl, MVT ValTy, SelectionDAG &DAG) const;
+    bool isUndef(SDValue Op) const {
+      if (Op.isMachineOpcode())
+        return Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+      return Op.getOpcode() == ISD::UNDEF;
+    }
+    SDValue getNode(unsigned MachineOpc, const SDLoc &dl, MVT Ty,
+                    ArrayRef<SDValue> Ops, SelectionDAG &DAG) const {
+      SDNode *N = DAG.getMachineNode(MachineOpc, dl, Ty, Ops);
+      return SDValue(N, 0);
+    }
+    SDValue getZero(const SDLoc &dl, MVT Ty, SelectionDAG &DAG) const;
+
+    using VectorPair = std::pair<SDValue, SDValue>;
+    using TypePair = std::pair<MVT, MVT>;
+
+    SDValue getInt(unsigned IntId, MVT ResTy, ArrayRef<SDValue> Ops,
+                   const SDLoc &dl, SelectionDAG &DAG) const;
+
+    MVT ty(SDValue Op) const {
+      return Op.getValueType().getSimpleVT();
+    }
+    TypePair ty(const VectorPair &Ops) const {
+      return { Ops.first.getValueType().getSimpleVT(),
+               Ops.second.getValueType().getSimpleVT() };
+    }
+    MVT tyScalar(MVT Ty) const {
+      if (!Ty.isVector())
+        return Ty;
+      return MVT::getIntegerVT(Ty.getSizeInBits());
+    }
+    MVT tyVector(MVT Ty, MVT ElemTy) const {
+      if (Ty.isVector() && Ty.getVectorElementType() == ElemTy)
+        return Ty;
+      unsigned TyWidth = Ty.getSizeInBits(), ElemWidth = ElemTy.getSizeInBits();
+      assert((TyWidth % ElemWidth) == 0);
+      return MVT::getVectorVT(ElemTy, TyWidth/ElemWidth);
+    }
+
+    MVT typeJoin(const TypePair &Tys) const;
+    TypePair typeSplit(MVT Ty) const;
+    MVT typeExtElem(MVT VecTy, unsigned Factor) const;
+    MVT typeTruncElem(MVT VecTy, unsigned Factor) const;
+
+    SDValue opJoin(const VectorPair &Ops, const SDLoc &dl,
+                   SelectionDAG &DAG) const;
+    VectorPair opSplit(SDValue Vec, const SDLoc &dl, SelectionDAG &DAG) const;
+    SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
+
+    SDValue convertToByteIndex(SDValue ElemIdx, MVT ElemTy,
+                               SelectionDAG &DAG) const;
+    SDValue getIndexInWord32(SDValue Idx, MVT ElemTy, SelectionDAG &DAG) const;
+    SDValue getByteShuffle(const SDLoc &dl, SDValue Op0, SDValue Op1,
+                           ArrayRef<int> Mask, SelectionDAG &DAG) const;
+
+    MVT getVecBoolVT() const;
+
+    SDValue buildHvxVectorSingle(ArrayRef<SDValue> Values, const SDLoc &dl,
+                                 MVT VecTy, SelectionDAG &DAG) const;
+    SDValue buildHvxVectorPred(ArrayRef<SDValue> Values, const SDLoc &dl,
+                               MVT VecTy, SelectionDAG &DAG) const;
+
+    SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxExtractElement(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxExtractSubvector(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxMul(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
+
     std::pair<const TargetRegisterClass*, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
         const override;

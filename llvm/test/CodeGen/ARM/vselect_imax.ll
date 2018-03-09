@@ -1,4 +1,4 @@
-; RUN: opt < %s  -cost-model -analyze -mtriple=thumbv7-apple-ios6.0.0 -march=arm -mcpu=cortex-a8 | FileCheck %s --check-prefix=COST
+; RUN: opt < %s  -cost-model -analyze -mtriple=arm-apple-ios6.0.0 -mcpu=cortex-a8 | FileCheck %s --check-prefix=COST
 ; RUN: llc -mtriple=arm-eabi -mattr=+neon %s -o - | FileCheck %s
 ; Make sure that ARM backend with NEON handles vselect.
 

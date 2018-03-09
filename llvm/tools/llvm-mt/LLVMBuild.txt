@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-mt
 parent = Tools
-required_libraries = Option Support
+required_libraries = Option Support WindowsManifest

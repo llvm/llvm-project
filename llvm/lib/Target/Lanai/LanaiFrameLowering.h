@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_LANAI_LANAIFRAMELOWERING_H
 
 #include "Lanai.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 

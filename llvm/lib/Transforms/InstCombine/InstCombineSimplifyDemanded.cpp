@@ -396,50 +396,50 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     /// If the high-bits of an ADD/SUB are not demanded, then we do not care
     /// about the high bits of the operands.
     unsigned NLZ = DemandedMask.countLeadingZeros();
-    if (NLZ > 0) {
-      // Right fill the mask of bits for this ADD/SUB to demand the most
-      // significant bit and all those below it.
-      APInt DemandedFromOps(APInt::getLowBitsSet(BitWidth, BitWidth-NLZ));
-      if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
-          SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1) ||
-          ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
-          SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1)) {
+    // Right fill the mask of bits for this ADD/SUB to demand the most
+    // significant bit and all those below it.
+    APInt DemandedFromOps(APInt::getLowBitsSet(BitWidth, BitWidth-NLZ));
+    if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1) ||
+        ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1)) {
+      if (NLZ > 0) {
         // Disable the nsw and nuw flags here: We can no longer guarantee that
         // we won't wrap after simplification. Removing the nsw/nuw flags is
         // legal here because the top bit is not demanded.
         BinaryOperator &BinOP = *cast<BinaryOperator>(I);
         BinOP.setHasNoSignedWrap(false);
         BinOP.setHasNoUnsignedWrap(false);
-        return I;
       }
-
-      // If we are known to be adding/subtracting zeros to every bit below
-      // the highest demanded bit, we just return the other side.
-      if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
-        return I->getOperand(0);
-      // We can't do this with the LHS for subtraction, unless we are only
-      // demanding the LSB.
-      if ((I->getOpcode() == Instruction::Add ||
-           DemandedFromOps.isOneValue()) &&
-          DemandedFromOps.isSubsetOf(LHSKnown.Zero))
-        return I->getOperand(1);
+      return I;
     }
 
-    // Otherwise just hand the add/sub off to computeKnownBits to fill in
-    // the known zeros and ones.
-    computeKnownBits(V, Known, Depth, CxtI);
+    // If we are known to be adding/subtracting zeros to every bit below
+    // the highest demanded bit, we just return the other side.
+    if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
+      return I->getOperand(0);
+    // We can't do this with the LHS for subtraction, unless we are only
+    // demanding the LSB.
+    if ((I->getOpcode() == Instruction::Add ||
+         DemandedFromOps.isOneValue()) &&
+        DemandedFromOps.isSubsetOf(LHSKnown.Zero))
+      return I->getOperand(1);
+
+    // Otherwise just compute the known bits of the result.
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    Known = KnownBits::computeForAddSub(I->getOpcode() == Instruction::Add,
+                                        NSW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Shl: {
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
       const APInt *ShrAmt;
-      if (match(I->getOperand(0), m_Shr(m_Value(), m_APInt(ShrAmt)))) {
-        Instruction *Shr = cast<Instruction>(I->getOperand(0));
-        if (Value *R = simplifyShrShlDemandedBits(
-                Shr, *ShrAmt, I, *SA, DemandedMask, Known))
-          return R;
-      }
+      if (match(I->getOperand(0), m_Shr(m_Value(), m_APInt(ShrAmt))))
+        if (Instruction *Shr = dyn_cast<Instruction>(I->getOperand(0)))
+          if (Value *R = simplifyShrShlDemandedBits(Shr, *ShrAmt, I, *SA,
+                                                    DemandedMask, Known))
+            return R;
 
       uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
       APInt DemandedMaskIn(DemandedMask.lshr(ShiftAmt));
@@ -521,26 +521,25 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
 
+      unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
+
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-      // Compute the new bits that are at the top now.
-      APInt HighBits(APInt::getHighBitsSet(BitWidth, ShiftAmt));
+      // Compute the new bits that are at the top now plus sign bits.
+      APInt HighBits(APInt::getHighBitsSet(
+          BitWidth, std::min(SignBits + ShiftAmt - 1, BitWidth)));
       Known.Zero.lshrInPlace(ShiftAmt);
       Known.One.lshrInPlace(ShiftAmt);
 
-      // Handle the sign bits.
-      APInt SignMask(APInt::getSignMask(BitWidth));
-      // Adjust to where it is now in the mask.
-      SignMask.lshrInPlace(ShiftAmt);
-
       // If the input sign bit is known to be zero, or if none of the top bits
       // are demanded, turn this into an unsigned shift right.
-      if (BitWidth <= ShiftAmt || Known.Zero[BitWidth-ShiftAmt-1] ||
+      assert(BitWidth > ShiftAmt && "Shift amount not saturated?");
+      if (Known.Zero[BitWidth-ShiftAmt-1] ||
           !DemandedMask.intersects(HighBits)) {
         BinaryOperator *LShr = BinaryOperator::CreateLShr(I->getOperand(0),
                                                           I->getOperand(1));
         LShr->setIsExact(cast<BinaryOperator>(I)->isExact());
         return InsertNewInstWith(LShr, *I);
-      } else if (Known.One.intersects(SignMask)) { // New bits are known one.
+      } else if (Known.One[BitWidth-ShiftAmt-1]) { // New bits are known one.
         Known.One |= HighBits;
       }
     }
@@ -993,21 +992,22 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       break;
     }
 
+    // The element inserted overwrites whatever was there, so the input demanded
+    // set is simpler than the output set.
+    unsigned IdxNo = Idx->getZExtValue();
+    APInt PreInsertDemandedElts = DemandedElts;
+    if (IdxNo < VWidth)
+      PreInsertDemandedElts.clearBit(IdxNo);
+    TmpV = SimplifyDemandedVectorElts(I->getOperand(0), PreInsertDemandedElts,
+                                      UndefElts, Depth + 1);
+    if (TmpV) { I->setOperand(0, TmpV); MadeChange = true; }
+
     // If this is inserting an element that isn't demanded, remove this
     // insertelement.
-    unsigned IdxNo = Idx->getZExtValue();
     if (IdxNo >= VWidth || !DemandedElts[IdxNo]) {
       Worklist.Add(I);
       return I->getOperand(0);
     }
-
-    // Otherwise, the element inserted overwrites whatever was there, so the
-    // input demanded set is simpler than the output set.
-    APInt DemandedElts2 = DemandedElts;
-    DemandedElts2.clearBit(IdxNo);
-    TmpV = SimplifyDemandedVectorElts(I->getOperand(0), DemandedElts2,
-                                      UndefElts, Depth + 1);
-    if (TmpV) { I->setOperand(0, TmpV); MadeChange = true; }
 
     // The inserted element is defined.
     UndefElts.clearBit(IdxNo);

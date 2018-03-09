@@ -1,0 +1,75 @@
+# RUN: llc -run-pass=arm-pseudo -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  target triple = "armv7---gnueabi"
+
+  define i32 @test1(i32 %x) {
+  entry:
+    unreachable
+  }
+  define i32 @test2(i32 %x) {
+  entry:
+    unreachable
+  }
+  define i32 @test3(i32 %x) {
+  entry:
+    unreachable
+  }
+...
+---
+name:            test1
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '%r0', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: %r0
+
+    %r1 = MOVi 2, 14, %noreg, %noreg
+    CMPri killed %r0, 0, 14, %noreg, implicit-def %cpsr
+    %r1 = MOVCCi16 killed %r1, 500, 0, killed %cpsr
+    %r0 = MOVr killed %r1, 14, %noreg, %noreg
+    BX_RET 14, %noreg, implicit %r0
+
+...
+---
+name:            test2
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '%r0', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: %r0
+
+    %r1 = MOVi 2, 14, %noreg, %noreg
+    CMPri killed %r0, 0, 14, %noreg, implicit-def %cpsr
+    %r1 = MOVCCi32imm killed %r1, 500500500, 0, killed %cpsr
+    %r0 = MOVr killed %r1, 14, %noreg, %noreg
+    BX_RET 14, %noreg, implicit %r0
+
+...
+---
+name:            test3
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '%r0', virtual-reg: '' }
+  - { reg: '%r1', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: %r0, %r1
+
+    CMPri %r1, 500, 14, %noreg, implicit-def %cpsr
+    %r0 = MOVCCr killed %r0, killed %r1, 12, killed %cpsr
+    BX_RET 14, %noreg, implicit %r0
+
+...
+
+# CHECK-LABEL: name: test1
+# CHECK: %r1 = MOVi16 500, 0, killed %cpsr, implicit killed %r1
+# CHECK-LABEL: name: test2
+# CHECK:    %r1 = MOVi16 2068, 0, %cpsr, implicit killed %r1
+# CHECK:    %r1 = MOVTi16 %r1, 7637, 0, %cpsr
+# CHECK-LABEL: name: test3
+# CHECK: %r0 = MOVr killed %r1, 12, killed %cpsr, %noreg, implicit killed %r0

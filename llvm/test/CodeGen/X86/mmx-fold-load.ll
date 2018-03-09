@@ -4,7 +4,7 @@
 
 define i64 @t0(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t0:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -22,7 +22,7 @@ define i64 @t0(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t0:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psllq %mm1, %mm0
@@ -40,7 +40,7 @@ declare x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx, i32)
 
 define i64 @t1(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t1:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -58,7 +58,7 @@ define i64 @t1(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrlq %mm1, %mm0
@@ -76,7 +76,7 @@ declare x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx, i32)
 
 define i64 @t2(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -94,7 +94,7 @@ define i64 @t2(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psllw %mm1, %mm0
@@ -112,7 +112,7 @@ declare x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx, i32)
 
 define i64 @t3(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t3:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -130,7 +130,7 @@ define i64 @t3(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrlw %mm1, %mm0
@@ -148,7 +148,7 @@ declare x86_mmx @llvm.x86.mmx.psrli.w(x86_mmx, i32)
 
 define i64 @t4(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t4:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -166,7 +166,7 @@ define i64 @t4(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    pslld %mm1, %mm0
@@ -184,7 +184,7 @@ declare x86_mmx @llvm.x86.mmx.pslli.d(x86_mmx, i32)
 
 define i64 @t5(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t5:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -202,7 +202,7 @@ define i64 @t5(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t5:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrld %mm1, %mm0
@@ -220,7 +220,7 @@ declare x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx, i32)
 
 define i64 @t6(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t6:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -238,7 +238,7 @@ define i64 @t6(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t6:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psraw %mm1, %mm0
@@ -256,7 +256,7 @@ declare x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx, i32)
 
 define i64 @t7(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-LABEL: t7:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -274,7 +274,7 @@ define i64 @t7(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t7:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrad %mm1, %mm0
@@ -292,7 +292,7 @@ declare x86_mmx @llvm.x86.mmx.psrai.d(x86_mmx, i32)
 
 define i64 @tt0(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt0:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -308,7 +308,7 @@ define i64 @tt0(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt0:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddb (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -325,7 +325,7 @@ declare void @llvm.x86.mmx.emms()
 
 define i64 @tt1(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt1:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -341,7 +341,7 @@ define i64 @tt1(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddw (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -357,7 +357,7 @@ declare x86_mmx @llvm.x86.mmx.padd.w(x86_mmx, x86_mmx)
 
 define i64 @tt2(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -373,7 +373,7 @@ define i64 @tt2(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddd (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -389,7 +389,7 @@ declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)
 
 define i64 @tt3(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt3:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -405,7 +405,7 @@ define i64 @tt3(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddq (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -421,7 +421,7 @@ declare x86_mmx @llvm.x86.mmx.padd.q(x86_mmx, x86_mmx)
 
 define i64 @tt4(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt4:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -437,7 +437,7 @@ define i64 @tt4(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddusb (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -453,7 +453,7 @@ declare x86_mmx @llvm.x86.mmx.paddus.b(x86_mmx, x86_mmx)
 
 define i64 @tt5(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt5:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -469,7 +469,7 @@ define i64 @tt5(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt5:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddusw (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -485,7 +485,7 @@ declare x86_mmx @llvm.x86.mmx.paddus.w(x86_mmx, x86_mmx)
 
 define i64 @tt6(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt6:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -501,7 +501,7 @@ define i64 @tt6(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt6:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psrlw (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -517,7 +517,7 @@ declare x86_mmx @llvm.x86.mmx.psrl.w(x86_mmx, x86_mmx)
 
 define i64 @tt7(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt7:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -533,7 +533,7 @@ define i64 @tt7(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt7:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psrld (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -549,7 +549,7 @@ declare x86_mmx @llvm.x86.mmx.psrl.d(x86_mmx, x86_mmx)
 
 define i64 @tt8(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-LABEL: tt8:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -565,7 +565,7 @@ define i64 @tt8(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: tt8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psrlq (%rdi), %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    emms
@@ -581,7 +581,7 @@ declare x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx, x86_mmx)
 
 define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X86-LABEL: test_psrlq_by_volatile_shift_amount:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -599,7 +599,7 @@ define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_psrlq_by_volatile_shift_amount:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movd -{{[0-9]+}}(%rsp), %mm0
 ; X64-NEXT:    movl $255, %eax

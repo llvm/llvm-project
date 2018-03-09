@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -30,50 +31,92 @@ template <typename T> class SmallVectorImpl;
 using OperandVector = SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>>;
 
 enum AsmRewriteKind {
-  AOK_Delete = 0,     // Rewrite should be ignored.
   AOK_Align,          // Rewrite align as .align.
   AOK_EVEN,           // Rewrite even as .even.
-  AOK_DotOperator,    // Rewrite a dot operator expression as an immediate.
-                      // E.g., [eax].foo.bar -> [eax].8
   AOK_Emit,           // Rewrite _emit as .byte.
-  AOK_Imm,            // Rewrite as $$N.
-  AOK_ImmPrefix,      // Add $$ before a parsed Imm.
   AOK_Input,          // Rewrite in terms of $N.
   AOK_Output,         // Rewrite in terms of $N.
   AOK_SizeDirective,  // Add a sizing directive (e.g., dword ptr).
   AOK_Label,          // Rewrite local labels.
   AOK_EndOfStatement, // Add EndOfStatement (e.g., "\n\t").
-  AOK_Skip            // Skip emission (e.g., offset/type operators).
+  AOK_Skip,           // Skip emission (e.g., offset/type operators).
+  AOK_IntelExpr       // SizeDirective SymDisp [BaseReg + IndexReg * Scale + ImmDisp]
 };
 
 const char AsmRewritePrecedence [] = {
-  0, // AOK_Delete
   2, // AOK_Align
   2, // AOK_EVEN
-  2, // AOK_DotOperator
   2, // AOK_Emit
-  4, // AOK_Imm
-  4, // AOK_ImmPrefix
   3, // AOK_Input
   3, // AOK_Output
   5, // AOK_SizeDirective
   1, // AOK_Label
   5, // AOK_EndOfStatement
-  2  // AOK_Skip
+  2, // AOK_Skip
+  2  // AOK_IntelExpr
+};
+
+// Represnt the various parts which makes up an intel expression,
+// used for emitting compound intel expressions
+struct IntelExpr {
+  bool NeedBracs;
+  int64_t Imm;
+  StringRef BaseReg;
+  StringRef IndexReg;
+  unsigned Scale;
+
+  IntelExpr(bool needBracs = false) : NeedBracs(needBracs), Imm(0),
+    BaseReg(StringRef()), IndexReg(StringRef()),
+    Scale(1) {}
+  // Compund immediate expression
+  IntelExpr(int64_t imm, bool needBracs) : IntelExpr(needBracs) {
+    Imm = imm;
+  }
+  // [Reg + ImmediateExpression]
+  // We don't bother to emit an immediate expression evaluated to zero
+  IntelExpr(StringRef reg, int64_t imm = 0, unsigned scale = 0,
+    bool needBracs = true) :
+    IntelExpr(imm, needBracs) {
+    IndexReg = reg;
+    if (scale)
+      Scale = scale;
+  }
+  // [BaseReg + IndexReg * ScaleExpression + ImmediateExpression]
+  IntelExpr(StringRef baseReg, StringRef indexReg, unsigned scale = 0,
+    int64_t imm = 0, bool needBracs = true) :
+    IntelExpr(indexReg, imm, scale, needBracs) {
+    BaseReg = baseReg;
+  }
+  bool hasBaseReg() const {
+    return BaseReg.size();
+  }
+  bool hasIndexReg() const {
+    return IndexReg.size();
+  }
+  bool hasRegs() const {
+    return hasBaseReg() || hasIndexReg();
+  }
+  bool isValid() const {
+    return (Scale == 1) ||
+           (hasIndexReg() && (Scale == 2 || Scale == 4 || Scale == 8));
+  }
 };
 
 struct AsmRewrite {
   AsmRewriteKind Kind;
   SMLoc Loc;
   unsigned Len;
-  unsigned Val;
+  int64_t Val;
   StringRef Label;
+  IntelExpr IntelExp;
 
 public:
-  AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, unsigned val = 0)
+  AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, int64_t val = 0)
     : Kind(kind), Loc(loc), Len(len), Val(val) {}
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len, StringRef label)
-    : Kind(kind), Loc(loc), Len(len), Val(0), Label(label) {}
+    : AsmRewrite(kind, loc, len) { Label = label; }
+  AsmRewrite(SMLoc loc, unsigned len, IntelExpr exp)
+    : AsmRewrite(AOK_IntelExpr, loc, len) { IntelExp = exp; }
 };
 
 struct ParseInstructionInfo {
@@ -90,6 +133,139 @@ enum OperandMatchResultTy {
   MatchOperand_ParseFail // operand matched but had errors
 };
 
+// When matching of an assembly instruction fails, there may be multiple
+// encodings that are close to being a match. It's often ambiguous which one
+// the programmer intended to use, so we want to report an error which mentions
+// each of these "near-miss" encodings. This struct contains information about
+// one such encoding, and why it did not match the parsed instruction.
+class NearMissInfo {
+public:
+  enum NearMissKind {
+    NoNearMiss,
+    NearMissOperand,
+    NearMissFeature,
+    NearMissPredicate,
+    NearMissTooFewOperands,
+  };
+
+  // The encoding is valid for the parsed assembly string. This is only used
+  // internally to the table-generated assembly matcher.
+  static NearMissInfo getSuccess() { return NearMissInfo(); }
+
+  // The instruction encoding is not valid because it requires some target
+  // features that are not currently enabled. MissingFeatures has a bit set for
+  // each feature that the encoding needs but which is not enabled.
+  static NearMissInfo getMissedFeature(uint64_t MissingFeatures) {
+    NearMissInfo Result;
+    Result.Kind = NearMissFeature;
+    Result.Features = MissingFeatures;
+    return Result;
+  }
+
+  // The instruction encoding is not valid because the target-specific
+  // predicate function returned an error code. FailureCode is the
+  // target-specific error code returned by the predicate.
+  static NearMissInfo getMissedPredicate(unsigned FailureCode) {
+    NearMissInfo Result;
+    Result.Kind = NearMissPredicate;
+    Result.PredicateError = FailureCode;
+    return Result;
+  }
+
+  // The instruction encoding is not valid because one (and only one) parsed
+  // operand is not of the correct type. OperandError is the error code
+  // relating to the operand class expected by the encoding. OperandClass is
+  // the type of the expected operand. Opcode is the opcode of the encoding.
+  // OperandIndex is the index into the parsed operand list.
+  static NearMissInfo getMissedOperand(unsigned OperandError,
+                                       unsigned OperandClass, unsigned Opcode,
+                                       unsigned OperandIndex) {
+    NearMissInfo Result;
+    Result.Kind = NearMissOperand;
+    Result.MissedOperand.Error = OperandError;
+    Result.MissedOperand.Class = OperandClass;
+    Result.MissedOperand.Opcode = Opcode;
+    Result.MissedOperand.Index = OperandIndex;
+    return Result;
+  }
+
+  // The instruction encoding is not valid because it expects more operands
+  // than were parsed. OperandClass is the class of the expected operand that
+  // was not provided. Opcode is the instruction encoding.
+  static NearMissInfo getTooFewOperands(unsigned OperandClass,
+                                        unsigned Opcode) {
+    NearMissInfo Result;
+    Result.Kind = NearMissTooFewOperands;
+    Result.TooFewOperands.Class = OperandClass;
+    Result.TooFewOperands.Opcode = Opcode;
+    return Result;
+  }
+
+  operator bool() const { return Kind != NoNearMiss; }
+
+  NearMissKind getKind() const { return Kind; }
+
+  // Feature flags required by the instruction, that the current target does
+  // not have.
+  uint64_t getFeatures() const {
+    assert(Kind == NearMissFeature);
+    return Features;
+  }
+  // Error code returned by the target predicate when validating this
+  // instruction encoding.
+  unsigned getPredicateError() const {
+    assert(Kind == NearMissPredicate);
+    return PredicateError;
+  }
+  // MatchClassKind of the operand that we expected to see.
+  unsigned getOperandClass() const {
+    assert(Kind == NearMissOperand || Kind == NearMissTooFewOperands);
+    return MissedOperand.Class;
+  }
+  // Opcode of the encoding we were trying to match.
+  unsigned getOpcode() const {
+    assert(Kind == NearMissOperand || Kind == NearMissTooFewOperands);
+    return MissedOperand.Opcode;
+  }
+  // Error code returned when validating the operand.
+  unsigned getOperandError() const {
+    assert(Kind == NearMissOperand);
+    return MissedOperand.Error;
+  }
+  // Index of the actual operand we were trying to match in the list of parsed
+  // operands.
+  unsigned getOperandIndex() const {
+    assert(Kind == NearMissOperand);
+    return MissedOperand.Index;
+  }
+
+private:
+  NearMissKind Kind;
+
+  // These two structs share a common prefix, so we can safely rely on the fact
+  // that they overlap in the union.
+  struct MissedOpInfo {
+    unsigned Class;
+    unsigned Opcode;
+    unsigned Error;
+    unsigned Index;
+  };
+
+  struct TooFewOperandsInfo {
+    unsigned Class;
+    unsigned Opcode;
+  };
+
+  union {
+    uint64_t Features;
+    unsigned PredicateError;
+    MissedOpInfo MissedOperand;
+    TooFewOperandsInfo TooFewOperands;
+  };
+
+  NearMissInfo() : Kind(NoNearMiss) {}
+};
+
 /// MCTargetAsmParser - Generic interface to target specific assembly parsers.
 class MCTargetAsmParser : public MCAsmParserExtension {
 public:
@@ -98,11 +274,13 @@ public:
     Match_MissingFeature,
     Match_MnemonicFail,
     Match_Success,
+    Match_NearMisses,
     FIRST_TARGET_MATCH_RESULT_TY
   };
 
 protected: // Can only create subclasses.
-  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI);
+  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI,
+                    const MCInstrInfo &MII);
 
   /// Create a copy of STI and return a non-const reference to it.
   MCSubtargetInfo &copySTI();
@@ -122,6 +300,8 @@ protected: // Can only create subclasses.
 
   /// Current STI.
   const MCSubtargetInfo *STI;
+
+  const MCInstrInfo &MII;
 
 public:
   MCTargetAsmParser(const MCTargetAsmParser &) = delete;
@@ -224,6 +404,8 @@ public:
   virtual bool equalIsAsmAssignment() { return true; };
   // Return whether this start of statement identifier is a label
   virtual bool isLabel(AsmToken &Token) { return true; };
+  // Return whether this parser accept star as start of statement
+  virtual bool starIsStartOfStatement() { return false; };
 
   virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
                                             MCSymbolRefExpr::VariantKind,

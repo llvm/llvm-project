@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file defines ObjC ARC optimizations. ARC stands for Automatic
 /// Reference Counting and is a system for managing reference counts for objects
@@ -21,7 +22,7 @@
 /// WARNING: This file knows about how certain Objective-C library functions are
 /// used. Naive LLVM IR transformations which would otherwise be
 /// behavior-preserving may break these assumptions.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #include "ARCRuntimeEntryPoints.h"
@@ -31,16 +32,41 @@
 #include "ProvenanceAnalysis.h"
 #include "PtrState.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAliasAnalysis.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
+#include "llvm/Analysis/ObjCARCInstKind.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::objcarc;
@@ -147,14 +173,15 @@ STATISTIC(NumReleasesAfterOpt,
 #endif
 
 namespace {
+
   /// \brief Per-BasicBlock state.
   class BBState {
     /// The number of unique control paths from the entry which can reach this
     /// block.
-    unsigned TopDownPathCount;
+    unsigned TopDownPathCount = 0;
 
     /// The number of unique control paths to exits from this block.
-    unsigned BottomUpPathCount;
+    unsigned BottomUpPathCount = 0;
 
     /// The top-down traversal uses this to record information known about a
     /// pointer at the bottom of each block.
@@ -175,10 +202,10 @@ namespace {
   public:
     static const unsigned OverflowOccurredValue;
 
-    BBState() : TopDownPathCount(0), BottomUpPathCount(0) { }
+    BBState() = default;
 
-    typedef decltype(PerPtrTopDown)::iterator top_down_ptr_iterator;
-    typedef decltype(PerPtrTopDown)::const_iterator const_top_down_ptr_iterator;
+    using top_down_ptr_iterator = decltype(PerPtrTopDown)::iterator;
+    using const_top_down_ptr_iterator = decltype(PerPtrTopDown)::const_iterator;
 
     top_down_ptr_iterator top_down_ptr_begin() { return PerPtrTopDown.begin(); }
     top_down_ptr_iterator top_down_ptr_end() { return PerPtrTopDown.end(); }
@@ -192,9 +219,9 @@ namespace {
       return !PerPtrTopDown.empty();
     }
 
-    typedef decltype(PerPtrBottomUp)::iterator bottom_up_ptr_iterator;
-    typedef decltype(
-        PerPtrBottomUp)::const_iterator const_bottom_up_ptr_iterator;
+    using bottom_up_ptr_iterator = decltype(PerPtrBottomUp)::iterator;
+    using const_bottom_up_ptr_iterator =
+        decltype(PerPtrBottomUp)::const_iterator;
 
     bottom_up_ptr_iterator bottom_up_ptr_begin() {
       return PerPtrBottomUp.begin();
@@ -270,7 +297,8 @@ namespace {
     }
 
     // Specialized CFG utilities.
-    typedef SmallVectorImpl<BasicBlock *>::const_iterator edge_iterator;
+    using edge_iterator = SmallVectorImpl<BasicBlock *>::const_iterator;
+
     edge_iterator pred_begin() const { return Preds.begin(); }
     edge_iterator pred_end() const { return Preds.end(); }
     edge_iterator succ_begin() const { return Succs.begin(); }
@@ -282,13 +310,16 @@ namespace {
     bool isExit() const { return Succs.empty(); }
   };
 
-  const unsigned BBState::OverflowOccurredValue = 0xffffffff;
-}
+} // end anonymous namespace
+
+const unsigned BBState::OverflowOccurredValue = 0xffffffff;
 
 namespace llvm {
+
 raw_ostream &operator<<(raw_ostream &OS,
                         BBState &BBState) LLVM_ATTRIBUTE_UNUSED;
-}
+
+} // end namespace llvm
 
 void BBState::InitFromPred(const BBState &Other) {
   PerPtrTopDown = Other.PerPtrTopDown;
@@ -391,7 +422,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, BBState &BBInfo) {
   // Dump the pointers we are tracking.
   OS << "    TopDown State:\n";
   if (!BBInfo.hasTopDownPtrs()) {
-    DEBUG(llvm::dbgs() << "        NONE!\n");
+    DEBUG(dbgs() << "        NONE!\n");
   } else {
     for (auto I = BBInfo.top_down_ptr_begin(), E = BBInfo.top_down_ptr_end();
          I != E; ++I) {
@@ -411,7 +442,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, BBState &BBInfo) {
 
   OS << "    BottomUp State:\n";
   if (!BBInfo.hasBottomUpPtrs()) {
-    DEBUG(llvm::dbgs() << "        NONE!\n");
+    DEBUG(dbgs() << "        NONE!\n");
   } else {
     for (auto I = BBInfo.bottom_up_ptr_begin(), E = BBInfo.bottom_up_ptr_end();
          I != E; ++I) {
@@ -513,13 +544,16 @@ namespace {
 
   public:
     static char ID;
+
     ObjCARCOpt() : FunctionPass(ID) {
       initializeObjCARCOptPass(*PassRegistry::getPassRegistry());
     }
   };
-}
+
+} // end anonymous namespace
 
 char ObjCARCOpt::ID = 0;
+
 INITIALIZE_PASS_BEGIN(ObjCARCOpt,
                       "objc-arc", "ObjC ARC optimization", false, false)
 INITIALIZE_PASS_DEPENDENCY(ObjCARCAAWrapperPass)
@@ -643,7 +677,6 @@ void ObjCARCOpt::OptimizeAutoreleaseRVCall(Function &F,
   Class = ARCInstKind::Autorelease;
 
   DEBUG(dbgs() << "New: " << *AutoreleaseRV << "\n");
-
 }
 
 /// Visit each call, one at a time, and make simplifications without doing any
@@ -692,7 +725,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
         new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
                       Constant::getNullValue(Ty),
                       CI);
-        llvm::Value *NewValue = UndefValue::get(CI->getType());
+        Value *NewValue = UndefValue::get(CI->getType());
         DEBUG(dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
                        "\nOld = " << *CI << "\nNew = " << *NewValue << "\n");
         CI->replaceAllUsesWith(NewValue);
@@ -712,7 +745,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
                       Constant::getNullValue(Ty),
                       CI);
 
-        llvm::Value *NewValue = UndefValue::get(CI->getType());
+        Value *NewValue = UndefValue::get(CI->getType());
         DEBUG(dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
                         "\nOld = " << *CI << "\nNew = " << *NewValue << "\n");
 
@@ -1045,12 +1078,11 @@ ObjCARCOpt::CheckForCFGHazards(const BasicBlock *BB,
           continue;
         break;
       }
-      case S_CanRelease: {
+      case S_CanRelease:
         CheckForCanReleaseCFGHazard(SuccSSeq, SuccSRRIKnownSafe, S,
                                     SomeSuccHasSame, AllSuccsHaveSame,
                                     NotAllSeqEqualButKnownSafe);
         break;
-      }
       case S_Retain:
       case S_None:
       case S_Stop:
@@ -1105,7 +1137,7 @@ bool ObjCARCOpt::VisitInstructionBottomUp(
       // Don't do retain+release tracking for ARCInstKind::RetainRV, because
       // it's better to let it remain as the first instruction after a call.
       if (Class != ARCInstKind::RetainRV) {
-        DEBUG(llvm::dbgs() << "        Matching with: " << *Inst << "\n");
+        DEBUG(dbgs() << "        Matching with: " << *Inst << "\n");
         Retains[Inst] = S.GetRRInfo();
       }
       S.ClearSequenceProgress();
@@ -1147,7 +1179,6 @@ bool ObjCARCOpt::VisitInstructionBottomUp(
 bool ObjCARCOpt::VisitBottomUp(BasicBlock *BB,
                                DenseMap<const BasicBlock *, BBState> &BBStates,
                                BlotMapVector<Value *, RRInfo> &Retains) {
-
   DEBUG(dbgs() << "\n== ObjCARCOpt::VisitBottomUp ==\n");
 
   bool NestingDetected = false;
@@ -1171,8 +1202,8 @@ bool ObjCARCOpt::VisitBottomUp(BasicBlock *BB,
     }
   }
 
-  DEBUG(llvm::dbgs() << "Before:\n" << BBStates[BB] << "\n"
-                     << "Performing Dataflow:\n");
+  DEBUG(dbgs() << "Before:\n" << BBStates[BB] << "\n"
+               << "Performing Dataflow:\n");
 
   // Visit all the instructions, bottom-up.
   for (BasicBlock::iterator I = BB->end(), E = BB->begin(); I != E; --I) {
@@ -1197,7 +1228,7 @@ bool ObjCARCOpt::VisitBottomUp(BasicBlock *BB,
       NestingDetected |= VisitInstructionBottomUp(II, BB, Retains, MyStates);
   }
 
-  DEBUG(llvm::dbgs() << "\nFinal State:\n" << BBStates[BB] << "\n");
+  DEBUG(dbgs() << "\nFinal State:\n" << BBStates[BB] << "\n");
 
   return NestingDetected;
 }
@@ -1210,7 +1241,7 @@ ObjCARCOpt::VisitInstructionTopDown(Instruction *Inst,
   ARCInstKind Class = GetARCInstKind(Inst);
   const Value *Arg = nullptr;
 
-  DEBUG(llvm::dbgs() << "        Class: " << Class << "\n");
+  DEBUG(dbgs() << "        Class: " << Class << "\n");
 
   switch (Class) {
   case ARCInstKind::RetainBlock:
@@ -1236,7 +1267,7 @@ ObjCARCOpt::VisitInstructionTopDown(Instruction *Inst,
     if (S.MatchWithRelease(MDKindCache, Inst)) {
       // If we succeed, copy S's RRInfo into the Release -> {Retain Set
       // Map}. Then we clear S.
-      DEBUG(llvm::dbgs() << "        Matching with: " << *Inst << "\n");
+      DEBUG(dbgs() << "        Matching with: " << *Inst << "\n");
       Releases[Inst] = S.GetRRInfo();
       S.ClearSequenceProgress();
     }
@@ -1298,8 +1329,8 @@ ObjCARCOpt::VisitTopDown(BasicBlock *BB,
     }
   }
 
-  DEBUG(llvm::dbgs() << "Before:\n" << BBStates[BB]  << "\n"
-                     << "Performing Dataflow:\n");
+  DEBUG(dbgs() << "Before:\n" << BBStates[BB]  << "\n"
+               << "Performing Dataflow:\n");
 
   // Visit all the instructions, top-down.
   for (Instruction &Inst : *BB) {
@@ -1308,10 +1339,10 @@ ObjCARCOpt::VisitTopDown(BasicBlock *BB,
     NestingDetected |= VisitInstructionTopDown(&Inst, Releases, MyStates);
   }
 
-  DEBUG(llvm::dbgs() << "\nState Before Checking for CFG Hazards:\n"
-                     << BBStates[BB] << "\n\n");
+  DEBUG(dbgs() << "\nState Before Checking for CFG Hazards:\n"
+               << BBStates[BB] << "\n\n");
   CheckForCFGHazards(BB, BBStates, MyStates);
-  DEBUG(llvm::dbgs() << "Final State:\n" << BBStates[BB] << "\n");
+  DEBUG(dbgs() << "Final State:\n" << BBStates[BB] << "\n");
   return NestingDetected;
 }
 
@@ -1400,7 +1431,6 @@ bool ObjCARCOpt::Visit(Function &F,
                        DenseMap<const BasicBlock *, BBState> &BBStates,
                        BlotMapVector<Value *, RRInfo> &Retains,
                        DenseMap<Value *, RRInfo> &Releases) {
-
   // Use reverse-postorder traversals, because we magically know that loops
   // will be well behaved, i.e. they won't repeatedly call retain on a single
   // pointer without doing a release. We can't use the ReversePostOrderTraversal
@@ -1414,12 +1444,12 @@ bool ObjCARCOpt::Visit(Function &F,
 
   // Use reverse-postorder on the reverse CFG for bottom-up.
   bool BottomUpNestingDetected = false;
-  for (BasicBlock *BB : reverse(ReverseCFGPostOrder))
+  for (BasicBlock *BB : llvm::reverse(ReverseCFGPostOrder))
     BottomUpNestingDetected |= VisitBottomUp(BB, BBStates, Retains);
 
   // Use reverse-postorder for top-down.
   bool TopDownNestingDetected = false;
-  for (BasicBlock *BB : reverse(PostOrder))
+  for (BasicBlock *BB : llvm::reverse(PostOrder))
     TopDownNestingDetected |= VisitTopDown(BB, BBStates, Releases);
 
   return TopDownNestingDetected && BottomUpNestingDetected;
@@ -1476,7 +1506,6 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
     DeadInsts.push_back(OrigRelease);
     DEBUG(dbgs() << "Deleting release: " << *OrigRelease << "\n");
   }
-
 }
 
 bool ObjCARCOpt::PairUpRetainsAndReleases(
@@ -1524,7 +1553,6 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
           return false;
 
         if (ReleasesToMove.Calls.insert(NewRetainRelease).second) {
-
           // If we overflow when we compute the path count, don't remove/move
           // anything.
           const BBState &NRRBBState = BBStates[NewRetainRelease->getParent()];
@@ -1651,8 +1679,9 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
     // At this point, we are not going to remove any RR pairs, but we still are
     // able to move RR pairs. If one of our pointers is afflicted with
     // CFGHazards, we cannot perform such code motion so exit early.
-    const bool WillPerformCodeMotion = RetainsToMove.ReverseInsertPts.size() ||
-      ReleasesToMove.ReverseInsertPts.size();
+    const bool WillPerformCodeMotion =
+        !RetainsToMove.ReverseInsertPts.empty() ||
+        !ReleasesToMove.ReverseInsertPts.empty();
     if (CFGHazardAfflicted && WillPerformCodeMotion)
       return false;
   }
@@ -2064,10 +2093,10 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
 #ifndef NDEBUG
 void
 ObjCARCOpt::GatherStatistics(Function &F, bool AfterOptimization) {
-  llvm::Statistic &NumRetains =
-    AfterOptimization? NumRetainsAfterOpt : NumRetainsBeforeOpt;
-  llvm::Statistic &NumReleases =
-    AfterOptimization? NumReleasesAfterOpt : NumReleasesBeforeOpt;
+  Statistic &NumRetains =
+      AfterOptimization ? NumRetainsAfterOpt : NumRetainsBeforeOpt;
+  Statistic &NumReleases =
+      AfterOptimization ? NumReleasesAfterOpt : NumReleasesBeforeOpt;
 
   for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ) {
     Instruction *Inst = &*I++;

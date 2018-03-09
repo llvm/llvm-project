@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=pentium -mtriple=x86-linux-gnu -float-abi=soft | FileCheck %s 
+; RUN: llc < %s -mcpu=pentium -mtriple=i686-linux-gnu -float-abi=soft | FileCheck %s
 
 define i1 @test1(double %d) #0 {
 entry:

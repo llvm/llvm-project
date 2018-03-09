@@ -1,5 +1,4 @@
 ; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck -check-prefixes=ALL,MIPS %s
-; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=micromips < %s | FileCheck -check-prefixes=ALL,MICROMIPS %s
 
 define i64 @f0(i64 %a0, i64 %a1) nounwind readnone {
 entry:

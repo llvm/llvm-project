@@ -24,7 +24,6 @@ def CortexR52Model : SchedMachineModel {
   let IssueWidth = 2;         // 2 micro-ops dispatched per cycle
   let LoadLatency = 1;        // Optimistic, assuming no misses
   let MispredictPenalty = 8;  // A branch direction mispredict, including PFU
-  let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
   let CompleteModel = 0;      // Covers instructions applicable to cortex-r52.
 }
 

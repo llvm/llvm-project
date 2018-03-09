@@ -1,4 +1,4 @@
-//=- llvm/CodeGen/CriticalAntiDepBreaker.h - Anti-Dep Support -*- C++ -*-=//
+//===- llvm/CodeGen/CriticalAntiDepBreaker.h - Anti-Dep Support -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,16 +18,21 @@
 
 #include "AntiDepBreaker.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/Compiler.h"
+#include <map>
+#include <vector>
 
 namespace llvm {
+
+class MachineBasicBlock;
+class MachineFunction;
+class MachineInstr;
+class MachineOperand;
+class MachineRegisterInfo;
 class RegisterClassInfo;
 class TargetInstrInfo;
+class TargetRegisterClass;
 class TargetRegisterInfo;
-class MachineFunction;
 
 class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
     MachineFunction& MF;
@@ -46,12 +51,13 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
     /// corresponding value is null. If the register is live but used in
     /// multiple register classes, the corresponding value is -1 casted to a
     /// pointer.
-    std::vector<const TargetRegisterClass*> Classes;
+    std::vector<const TargetRegisterClass *> Classes;
 
     /// Map registers to all their references within a live range.
     std::multimap<unsigned, MachineOperand *> RegRefs;
-    typedef std::multimap<unsigned, MachineOperand *>::const_iterator
-      RegRefIter;
+
+    using RegRefIter =
+        std::multimap<unsigned, MachineOperand *>::const_iterator;
 
     /// The index of the most recent kill (proceeding bottom-up),
     /// or ~0u if the register is not live.
@@ -66,7 +72,7 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
     BitVector KeepRegs;
 
   public:
-    CriticalAntiDepBreaker(MachineFunction& MFi, const RegisterClassInfo&);
+    CriticalAntiDepBreaker(MachineFunction& MFi, const RegisterClassInfo &RCI);
     ~CriticalAntiDepBreaker() override;
 
     /// Initialize anti-dep breaking for a new basic block.
@@ -74,7 +80,7 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
 
     /// Identifiy anti-dependencies along the critical path
     /// of the ScheduleDAG and break them by renaming registers.
-    unsigned BreakAntiDependencies(const std::vector<SUnit>& SUnits,
+    unsigned BreakAntiDependencies(const std::vector<SUnit> &SUnits,
                                    MachineBasicBlock::iterator Begin,
                                    MachineBasicBlock::iterator End,
                                    unsigned InsertPosIndex,
@@ -101,6 +107,7 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
                                       const TargetRegisterClass *RC,
                                       SmallVectorImpl<unsigned> &Forbid);
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_CRITICALANTIDEPBREAKER_H

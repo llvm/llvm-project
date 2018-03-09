@@ -27,6 +27,10 @@ public:
                     MachineBasicBlock &MBB) const override {}
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
+
+  bool hasFP(const MachineFunction &MF) const override {
+    return false;
+  }
 };
 
 } // end namespace llvm

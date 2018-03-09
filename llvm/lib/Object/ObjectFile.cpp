@@ -81,6 +81,31 @@ section_iterator ObjectFile::getRelocatedSection(DataRefImpl Sec) const {
   return section_iterator(SectionRef(Sec, this));
 }
 
+Triple ObjectFile::makeTriple() const {
+  Triple TheTriple;
+  auto Arch = getArch();
+  TheTriple.setArch(Triple::ArchType(Arch));
+
+  // For ARM targets, try to use the build attributes to build determine
+  // the build target. Target features are also added, but later during
+  // disassembly.
+  if (Arch == Triple::arm || Arch == Triple::armeb)
+    setARMSubArch(TheTriple);
+
+  // TheTriple defaults to ELF, and COFF doesn't have an environment:
+  // the best we can do here is indicate that it is mach-o.
+  if (isMachO())
+    TheTriple.setObjectFormat(Triple::MachO);
+
+  if (isCOFF()) {
+    const auto COFFObj = dyn_cast<COFFObjectFile>(this);
+    if (COFFObj->getArch() == Triple::thumb)
+      TheTriple.setTriple("thumbv7-windows");
+  }
+
+  return TheTriple;
+}
+
 Expected<std::unique_ptr<ObjectFile>>
 ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   StringRef Data = Object.getBuffer();
@@ -100,7 +125,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
-    return errorOrToExpected(createELFObjectFile(Object));
+    return createELFObjectFile(Object);
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:
@@ -116,7 +141,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   case file_magic::coff_object:
   case file_magic::coff_import_library:
   case file_magic::pecoff_executable:
-    return errorOrToExpected(createCOFFObjectFile(Object));
+    return createCOFFObjectFile(Object);
   case file_magic::wasm_object:
     return createWasmObjectFile(Object);
   }

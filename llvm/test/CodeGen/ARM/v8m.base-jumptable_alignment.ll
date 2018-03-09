@@ -30,7 +30,7 @@ for.cond7.preheader.i.us.i.i:                     ; preds = %for.cond7.preheader
   unreachable
 
 for.cond14.preheader.us.i.i.i:                    ; preds = %for.inc459.us.i.i.i, %for.cond7.preheader.i.i.preheader.i
-; CHECK: @ BB#4
+; CHECK: @ %bb.4
 ; CHECK-NEXT: .p2align 2
   switch i4 undef, label %func_1.exit.loopexit [
     i4 0, label %for.inc459.us.i.i.i

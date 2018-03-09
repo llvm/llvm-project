@@ -124,6 +124,7 @@ enum class CPUType : uint16_t {
   ARM_XMAC = 0x66,
   ARM_WMMX = 0x67,
   ARM7 = 0x68,
+  ARM64 = 0x69,
   Omni = 0x70,
   Ia64 = 0x80,
   Ia64_2 = 0x81,
@@ -157,7 +158,11 @@ enum SourceLanguage : uint8_t {
   Java = 0x0d,
   JScript = 0x0e,
   MSIL = 0x0f,
-  HLSL = 0x10
+  HLSL = 0x10,
+
+  /// The DMD compiler emits 'D' for the CV source language. Microsoft doesn't
+  /// have an enumerator for it yet.
+  D = 'D',
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented
@@ -500,55 +505,9 @@ enum class FrameCookieKind : uint8_t {
 
 // Corresponds to CV_HREG_e enum.
 enum class RegisterId : uint16_t {
-  Unknown = 0,
-  VFrame = 30006,
-  AL = 1,
-  CL = 2,
-  DL = 3,
-  BL = 4,
-  AH = 5,
-  CH = 6,
-  DH = 7,
-  BH = 8,
-  AX = 9,
-  CX = 10,
-  DX = 11,
-  BX = 12,
-  SP = 13,
-  BP = 14,
-  SI = 15,
-  DI = 16,
-  EAX = 17,
-  ECX = 18,
-  EDX = 19,
-  EBX = 20,
-  ESP = 21,
-  EBP = 22,
-  ESI = 23,
-  EDI = 24,
-  ES = 25,
-  CS = 26,
-  SS = 27,
-  DS = 28,
-  FS = 29,
-  GS = 30,
-  IP = 31,
-  RAX = 328,
-  RBX = 329,
-  RCX = 330,
-  RDX = 331,
-  RSI = 332,
-  RDI = 333,
-  RBP = 334,
-  RSP = 335,
-  R8 = 336,
-  R9 = 337,
-  R10 = 338,
-  R11 = 339,
-  R12 = 340,
-  R13 = 341,
-  R14 = 342,
-  R15 = 343,
+#define CV_REGISTER(name, value) name = value,
+#include "CodeViewRegisters.def"
+#undef CV_REGISTER
 };
 
 /// These values correspond to the THUNK_ORDINAL enumeration.

@@ -3,7 +3,7 @@
 
 define <8 x i8> @vpaddi8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vpaddi8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vpadd.i8 d16, d17, d16
@@ -17,7 +17,7 @@ define <8 x i8> @vpaddi8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <4 x i16> @vpaddi16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: vpaddi16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vpadd.i16 d16, d17, d16
@@ -31,7 +31,7 @@ define <4 x i16> @vpaddi16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 
 define <2 x i32> @vpaddi32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK-LABEL: vpaddi32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vpadd.i32 d16, d17, d16
@@ -45,7 +45,7 @@ define <2 x i32> @vpaddi32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 
 define <2 x float> @vpaddf32(<2 x float>* %A, <2 x float>* %B) nounwind {
 ; CHECK-LABEL: vpaddf32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vpadd.f32 d16, d17, d16
@@ -65,7 +65,7 @@ declare <2 x float> @llvm.arm.neon.vpadd.v2f32(<2 x float>, <2 x float>) nounwin
 
 define <4 x i16> @vpaddls8(<8 x i8>* %A) nounwind {
 ; CHECK-LABEL: vpaddls8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vpaddl.s8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -77,7 +77,7 @@ define <4 x i16> @vpaddls8(<8 x i8>* %A) nounwind {
 
 define <2 x i32> @vpaddls16(<4 x i16>* %A) nounwind {
 ; CHECK-LABEL: vpaddls16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vpaddl.s16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -89,7 +89,7 @@ define <2 x i32> @vpaddls16(<4 x i16>* %A) nounwind {
 
 define <1 x i64> @vpaddls32(<2 x i32>* %A) nounwind {
 ; CHECK-LABEL: vpaddls32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vpaddl.s32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -101,7 +101,7 @@ define <1 x i64> @vpaddls32(<2 x i32>* %A) nounwind {
 
 define <4 x i16> @vpaddlu8(<8 x i8>* %A) nounwind {
 ; CHECK-LABEL: vpaddlu8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vpaddl.u8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -113,7 +113,7 @@ define <4 x i16> @vpaddlu8(<8 x i8>* %A) nounwind {
 
 define <2 x i32> @vpaddlu16(<4 x i16>* %A) nounwind {
 ; CHECK-LABEL: vpaddlu16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vpaddl.u16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -125,7 +125,7 @@ define <2 x i32> @vpaddlu16(<4 x i16>* %A) nounwind {
 
 define <1 x i64> @vpaddlu32(<2 x i32>* %A) nounwind {
 ; CHECK-LABEL: vpaddlu32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vpaddl.u32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -137,7 +137,7 @@ define <1 x i64> @vpaddlu32(<2 x i32>* %A) nounwind {
 
 define <8 x i16> @vpaddlQs8(<16 x i8>* %A) nounwind {
 ; CHECK-LABEL: vpaddlQs8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.s8 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -150,7 +150,7 @@ define <8 x i16> @vpaddlQs8(<16 x i8>* %A) nounwind {
 
 define <4 x i32> @vpaddlQs16(<8 x i16>* %A) nounwind {
 ; CHECK-LABEL: vpaddlQs16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.s16 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -163,7 +163,7 @@ define <4 x i32> @vpaddlQs16(<8 x i16>* %A) nounwind {
 
 define <2 x i64> @vpaddlQs32(<4 x i32>* %A) nounwind {
 ; CHECK-LABEL: vpaddlQs32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.s32 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -176,7 +176,7 @@ define <2 x i64> @vpaddlQs32(<4 x i32>* %A) nounwind {
 
 define <8 x i16> @vpaddlQu8(<16 x i8>* %A) nounwind {
 ; CHECK-LABEL: vpaddlQu8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.u8 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -189,7 +189,7 @@ define <8 x i16> @vpaddlQu8(<16 x i8>* %A) nounwind {
 
 define <4 x i32> @vpaddlQu16(<8 x i16>* %A) nounwind {
 ; CHECK-LABEL: vpaddlQu16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.u16 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -202,7 +202,7 @@ define <4 x i32> @vpaddlQu16(<8 x i16>* %A) nounwind {
 
 define <2 x i64> @vpaddlQu32(<4 x i32>* %A) nounwind {
 ; CHECK-LABEL: vpaddlQu32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.u32 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -216,7 +216,7 @@ define <2 x i64> @vpaddlQu32(<4 x i32>* %A) nounwind {
 ; Combine vuzp+vadd->vpadd.
 define void @addCombineToVPADD_i8(<16 x i8> *%cbcr, <8 x i8> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADD_i8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpadd.i8 d16, d16, d17
 ; CHECK-NEXT:    vstr d16, [r1]
@@ -233,7 +233,7 @@ define void @addCombineToVPADD_i8(<16 x i8> *%cbcr, <8 x i8> *%X) nounwind ssp {
 ; Combine vuzp+vadd->vpadd.
 define void @addCombineToVPADD_i16(<8 x i16> *%cbcr, <4 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADD_i16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpadd.i16 d16, d16, d17
 ; CHECK-NEXT:    vstr d16, [r1]
@@ -249,7 +249,7 @@ define void @addCombineToVPADD_i16(<8 x i16> *%cbcr, <4 x i16> *%X) nounwind ssp
 ; Combine vtrn+vadd->vpadd.
 define void @addCombineToVPADD_i32(<4 x i32> *%cbcr, <2 x i32> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADD_i32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpadd.i32 d16, d16, d17
 ; CHECK-NEXT:    vstr d16, [r1]
@@ -265,7 +265,7 @@ define void @addCombineToVPADD_i32(<4 x i32> *%cbcr, <2 x i32> *%X) nounwind ssp
 ; Combine vuzp+vaddl->vpaddl
 define void @addCombineToVPADDLq_s8(<16 x i8> *%cbcr, <8 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_s8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.s8 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
@@ -284,7 +284,7 @@ define void @addCombineToVPADDLq_s8(<16 x i8> *%cbcr, <8 x i16> *%X) nounwind ss
 ; FIXME: Legalization butchers the shuffles.
 define void @addCombineToVPADDL_s8(<16 x i8> *%cbcr, <4 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDL_s8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16	d16, #0x8
 ; CHECK-NEXT:    vld1.64	{d18, d19}, [r0]
 ; CHECK-NEXT:    vext.8	d17, d18, d16, #1
@@ -309,7 +309,7 @@ define void @addCombineToVPADDL_s8(<16 x i8> *%cbcr, <4 x i16> *%X) nounwind ssp
 ; Combine vuzp+vaddl->vpaddl
 define void @addCombineToVPADDLq_u8(<16 x i8> *%cbcr, <8 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_u8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.u8 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
@@ -328,7 +328,7 @@ define void @addCombineToVPADDLq_u8(<16 x i8> *%cbcr, <8 x i16> *%X) nounwind ss
 ; shuffle is awkward, so this doesn't match at the moment.
 define void @addCombineToVPADDLq_u8_early_zext(<16 x i8> *%cbcr, <8 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_u8_early_zext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vmovl.u8 q9, d17
 ; CHECK-NEXT:    vmovl.u8 q8, d16
@@ -349,7 +349,7 @@ define void @addCombineToVPADDLq_u8_early_zext(<16 x i8> *%cbcr, <8 x i16> *%X) 
 ; FIXME: Legalization butchers the shuffle.
 define void @addCombineToVPADDL_u8(<16 x i8> *%cbcr, <4 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDL_u8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vext.8 d18, d16, d16, #1
 ; CHECK-NEXT:    vbic.i16 d16, #0xff00
@@ -370,7 +370,7 @@ define void @addCombineToVPADDL_u8(<16 x i8> *%cbcr, <4 x i16> *%X) nounwind ssp
 ; Matching to vpaddl.8 requires matching shuffle(zext()).
 define void @addCombineToVPADDL_u8_early_zext(<16 x i8> *%cbcr, <4 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDL_u8_early_zext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vmovl.u8 q8, d16
 ; CHECK-NEXT:    vpadd.i16 d16, d16, d17
@@ -388,7 +388,7 @@ define void @addCombineToVPADDL_u8_early_zext(<16 x i8> *%cbcr, <4 x i16> *%X) n
 ; Combine vuzp+vaddl->vpaddl
 define void @addCombineToVPADDLq_s16(<8 x i16> *%cbcr, <4 x i32> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_s16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.s16 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
@@ -406,7 +406,7 @@ define void @addCombineToVPADDLq_s16(<8 x i16> *%cbcr, <4 x i32> *%X) nounwind s
 ; Combine vuzp+vaddl->vpaddl
 define void @addCombineToVPADDLq_u16(<8 x i16> *%cbcr, <4 x i32> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_u16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.u16 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
@@ -424,7 +424,7 @@ define void @addCombineToVPADDLq_u16(<8 x i16> *%cbcr, <4 x i32> *%X) nounwind s
 ; Combine vtrn+vaddl->vpaddl
 define void @addCombineToVPADDLq_s32(<4 x i32> *%cbcr, <2 x i64> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_s32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.s32 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
@@ -442,7 +442,7 @@ define void @addCombineToVPADDLq_s32(<4 x i32> *%cbcr, <2 x i64> *%X) nounwind s
 ; Combine vtrn+vaddl->vpaddl
 define void @addCombineToVPADDLq_u32(<4 x i32> *%cbcr, <2 x i64> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_u32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vpaddl.u32 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
@@ -460,7 +460,7 @@ define void @addCombineToVPADDLq_u32(<4 x i32> *%cbcr, <2 x i64> *%X) nounwind s
 ; Legalization promotes the <4 x i8> to <4 x i16>.
 define <4 x i8> @fromExtendingExtractVectorElt_i8(<8 x i8> %in) {
 ; CHECK-LABEL: fromExtendingExtractVectorElt_i8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vpaddl.s8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -474,7 +474,7 @@ define <4 x i8> @fromExtendingExtractVectorElt_i8(<8 x i8> %in) {
 ; Legalization promotes the <2 x i16> to <2 x i32>.
 define <2 x i16> @fromExtendingExtractVectorElt_i16(<4 x i16> %in) {
 ; CHECK-LABEL: fromExtendingExtractVectorElt_i16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vpaddl.s16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16

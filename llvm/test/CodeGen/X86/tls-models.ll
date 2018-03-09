@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X64_PIC %s
-; RUN: llc < %s -march=x86 -mtriple=i386-linux-gnu | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -march=x86 -mtriple=i386-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X32_PIC %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X64_PIC %s
+; RUN: llc < %s -mtriple=i386-linux-gnu | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -mtriple=i386-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X32_PIC %s
 
 ; Darwin always uses the same model.
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN %s
 
 @external_gd = external thread_local global i32
 @internal_gd = internal thread_local global i32 42

@@ -5,9 +5,9 @@
 ; There is no memory form of 128-bit subtraction.
 define void @f1(fp128 *%ptr, float %f2) {
 ; CHECK-LABEL: f1:
-; CHECK: lxebr %f0, %f0
-; CHECK: ld %f1, 0(%r2)
-; CHECK: ld %f3, 8(%r2)
+; CHECK-DAG: lxebr %f0, %f0
+; CHECK-DAG: ld %f1, 0(%r2)
+; CHECK-DAG: ld %f3, 8(%r2)
 ; CHECK: sxbr %f1, %f0
 ; CHECK: std %f1, 0(%r2)
 ; CHECK: std %f3, 8(%r2)

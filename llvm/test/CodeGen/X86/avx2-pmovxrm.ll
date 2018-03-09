@@ -6,13 +6,13 @@
 
 define <16 x i16> @test_llvm_x86_avx2_pmovsxbw(<16 x i8>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxbw:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovsxbw (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovsxbw:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxbw (%rdi), %ymm0
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a, align 1
@@ -22,13 +22,13 @@ define <16 x i16> @test_llvm_x86_avx2_pmovsxbw(<16 x i8>* %a) {
 
 define <8 x i32> @test_llvm_x86_avx2_pmovsxbd(<16 x i8>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxbd:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovsxbd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovsxbd:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxbd (%rdi), %ymm0
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a, align 1
@@ -39,13 +39,13 @@ define <8 x i32> @test_llvm_x86_avx2_pmovsxbd(<16 x i8>* %a) {
 
 define <4 x i64> @test_llvm_x86_avx2_pmovsxbq(<16 x i8>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxbq:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovsxbq (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovsxbq:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxbq (%rdi), %ymm0
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a, align 1
@@ -56,13 +56,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovsxbq(<16 x i8>* %a) {
 
 define <8 x i32> @test_llvm_x86_avx2_pmovsxwd(<8 x i16>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxwd:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovsxwd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovsxwd:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxwd (%rdi), %ymm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a, align 1
@@ -72,13 +72,13 @@ define <8 x i32> @test_llvm_x86_avx2_pmovsxwd(<8 x i16>* %a) {
 
 define <4 x i64> @test_llvm_x86_avx2_pmovsxwq(<8 x i16>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxwq:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovsxwq (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovsxwq:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxwq (%rdi), %ymm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a, align 1
@@ -89,13 +89,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovsxwq(<8 x i16>* %a) {
 
 define <4 x i64> @test_llvm_x86_avx2_pmovsxdq(<4 x i32>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxdq:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovsxdq (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovsxdq:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxdq (%rdi), %ymm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a, align 1
@@ -105,13 +105,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovsxdq(<4 x i32>* %a) {
 
 define <16 x i16> @test_llvm_x86_avx2_pmovzxbw(<16 x i8>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxbw:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxbw:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a, align 1
@@ -121,13 +121,13 @@ define <16 x i16> @test_llvm_x86_avx2_pmovzxbw(<16 x i8>* %a) {
 
 define <8 x i32> @test_llvm_x86_avx2_pmovzxbd(<16 x i8>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxbd:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxbd:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a, align 1
@@ -138,13 +138,13 @@ define <8 x i32> @test_llvm_x86_avx2_pmovzxbd(<16 x i8>* %a) {
 
 define <4 x i64> @test_llvm_x86_avx2_pmovzxbq(<16 x i8>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxbq:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovzxbq {{.*#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxbq:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxbq {{.*#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a, align 1
@@ -155,13 +155,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxbq(<16 x i8>* %a) {
 
 define <8 x i32> @test_llvm_x86_avx2_pmovzxwd(<8 x i16>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxwd:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxwd:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a, align 1
@@ -171,13 +171,13 @@ define <8 x i32> @test_llvm_x86_avx2_pmovzxwd(<8 x i16>* %a) {
 
 define <4 x i64> @test_llvm_x86_avx2_pmovzxwq(<8 x i16>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxwq:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovzxwq {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxwq:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxwq {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a, align 1
@@ -188,13 +188,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxwq(<8 x i16>* %a) {
 
 define <4 x i64> @test_llvm_x86_avx2_pmovzxdq(<4 x i32>* %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxdq:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmovzxdq {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxdq:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxdq {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a, align 1

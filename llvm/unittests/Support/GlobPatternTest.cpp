@@ -67,4 +67,13 @@ TEST_F(GlobPatternTest, Invalid) {
   EXPECT_FALSE((bool)Pat1);
   handleAllErrors(Pat1.takeError(), [&](ErrorInfoBase &EIB) {});
 }
+
+TEST_F(GlobPatternTest, ExtSym) {
+  Expected<GlobPattern> Pat1 = GlobPattern::create("a*\xFF");
+  EXPECT_TRUE((bool)Pat1);
+  EXPECT_TRUE(Pat1->match("axxx\xFF"));
+  Expected<GlobPattern> Pat2 = GlobPattern::create("[\xFF-\xFF]");
+  EXPECT_TRUE((bool)Pat2);
+  EXPECT_TRUE(Pat2->match("\xFF"));
+}
 }

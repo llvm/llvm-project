@@ -18,7 +18,7 @@ entry:
   %tobool = icmp eq i32 %0, 0
   %1 = load i32, i32* @c, align 4
   %. = select i1 %tobool, i32 0, i32 %1
-; CHECK:  r1 = <MCOperand Expr:(b)>ll
+; CHECK:  r1 = b
 ; CHECK:  r1 = *(u32 *)(r1 + 0)
 ; CHECK:  if r1 == 0 goto
   ret i32 %.
@@ -53,7 +53,7 @@ define i32 @foo(i8*) local_unnamed_addr #0 {
   %3 = tail call i64 @llvm.bpf.load.word(i8* %0, i64 104)
   %4 = add i64 %3, %2
   %5 = icmp ne i64 %4, 8589934591
-; CHECK:  r{{[0-9]+}} = 8589934591ll
+; CHECK:  r{{[0-9]+}} = 8589934591 ll
   %6 = sext i1 %5 to i32
   ret i32 %6
 }

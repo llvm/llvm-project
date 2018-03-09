@@ -1,5 +1,9 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.1a,+lse -show-encoding < %s 2> %t | FileCheck %s
 // RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a55 -show-encoding < %s 2> %t | FileCheck %s
+// RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a75 -show-encoding < %s 2> %t | FileCheck %s
+// RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
   .text
 
   cas w0, w1, [x2]

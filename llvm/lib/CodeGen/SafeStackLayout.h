@@ -1,4 +1,4 @@
-//===-- SafeStackLayout.h - SafeStack frame layout -------------*- C++ -*--===//
+//===- SafeStackLayout.h - SafeStack frame layout --------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,14 @@
 #define LLVM_LIB_CODEGEN_SAFESTACKLAYOUT_H
 
 #include "SafeStackColoring.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
+
+class raw_ostream;
+class Value;
+
 namespace safestack {
 
 /// Compute the layout of an unsafe stack frame.
@@ -23,10 +29,12 @@ class StackLayout {
     unsigned Start;
     unsigned End;
     StackColoring::LiveRange Range;
+
     StackRegion(unsigned Start, unsigned End,
                 const StackColoring::LiveRange &Range)
         : Start(Start), End(End), Range(Range) {}
   };
+
   /// The list of current stack regions, sorted by StackRegion::Start.
   SmallVector<StackRegion, 16> Regions;
 
@@ -35,6 +43,7 @@ class StackLayout {
     unsigned Size, Alignment;
     StackColoring::LiveRange Range;
   };
+
   SmallVector<StackObject, 8> StackObjects;
 
   DenseMap<const Value *, unsigned> ObjectOffsets;
@@ -43,6 +52,7 @@ class StackLayout {
 
 public:
   StackLayout(unsigned StackAlignment) : MaxAlignment(StackAlignment) {}
+
   /// Add an object to the stack frame. Value pointer is opaque and used as a
   /// handle to retrieve the object's offset in the frame later.
   void addObject(const Value *V, unsigned Size, unsigned Alignment,
@@ -59,10 +69,12 @@ public:
 
   /// Returns the alignment of the frame.
   unsigned getFrameAlignment() { return MaxAlignment; }
+
   void print(raw_ostream &OS);
 };
 
-} // namespace safestack
-} // namespace llvm
+} // end namespace safestack
+
+} // end namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_SAFESTACKLAYOUT_H

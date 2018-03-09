@@ -132,6 +132,14 @@ End-user Options
  Specify which EABI version should conform to.  Valid EABI versions are *gnu*,
  *4* and *5*.  Default value (*default*) depends on the triple.
 
+.. option:: -stack-size-section
+
+ Emit the .stack_sizes section which contains stack size metadata. The section
+ contains an array of pairs of function symbol references (8 byte) and stack
+ sizes (unsigned LEB128). The stack size values only include the space allocated
+ in the function prologue. Functions with dynamic stack allocations are not
+ included.
+
 
 Tuning/Configuration Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
-; CHECK: vmpybsu
+; CHECK: vmpybu
 ; CHECK: vtrunehb
 
 define <4 x i8> @t_i4x8(<4 x i8> %a, <4 x i8> %b) nounwind {

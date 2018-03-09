@@ -39,6 +39,8 @@ public:
   void printUnwindInfo() override;
   void printStackMap() const override;
 
+  void printNeededLibraries() override;
+
   // MachO-specific.
   void printMachODataInCode() override;
   void printMachOVersionMin() override;
@@ -673,6 +675,34 @@ void MachODumper::printStackMap() const {
   else
      prettyPrintStackMap(llvm::outs(),
                          StackMapV2Parser<support::big>(StackMapContentsArray));
+}
+
+void MachODumper::printNeededLibraries() {
+  ListScope D(W, "NeededLibraries");
+
+  using LibsTy = std::vector<StringRef>;
+  LibsTy Libs;
+
+  for (const auto &Command : Obj->load_commands()) {
+    if (Command.C.cmd == MachO::LC_LOAD_DYLIB ||
+        Command.C.cmd == MachO::LC_ID_DYLIB ||
+        Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB ||
+        Command.C.cmd == MachO::LC_REEXPORT_DYLIB ||
+        Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB ||
+        Command.C.cmd == MachO::LC_LOAD_UPWARD_DYLIB) {
+      MachO::dylib_command Dl = Obj->getDylibIDLoadCommand(Command);
+      if (Dl.dylib.name < Dl.cmdsize) {
+        auto *P = static_cast<const char*>(Command.Ptr) + Dl.dylib.name;
+        Libs.push_back(P);
+      }
+    }
+  }
+
+  std::stable_sort(Libs.begin(), Libs.end());
+
+  for (const auto &L : Libs) {
+    outs() << "  " << L << "\n";
+  }
 }
 
 void MachODumper::printMachODataInCode() {

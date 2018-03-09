@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86-64 -mcpu=core2 -pre-RA-sched=source -enable-misched -stats 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -pre-RA-sched=source -enable-misched -stats 2>&1 | FileCheck %s
 ;
 ; Verify that register pressure heuristics are working in MachineScheduler.
 ;

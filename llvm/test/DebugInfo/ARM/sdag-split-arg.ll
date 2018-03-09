@@ -19,8 +19,8 @@ target triple = "thumbv7k-apple-watchos2.0.0"
 ; Function Attrs: optsize ssp
 define i64 @_Z3foox(i64 returned) local_unnamed_addr #0 !dbg !13 {
   tail call void @llvm.dbg.value(metadata i64 %0, metadata !17, metadata !DIExpression()), !dbg !18
-  ; CHECK: @DEBUG_VALUE: foo:offset <- [DW_OP_LLVM_fragment 0 32] %R5
-  ; CHECK: @DEBUG_VALUE: foo:offset <- [DW_OP_LLVM_fragment 32 32] %R4
+  ; CHECK: @DEBUG_VALUE: foo:offset <- [DW_OP_LLVM_fragment 0 32] %r5
+  ; CHECK: @DEBUG_VALUE: foo:offset <- [DW_OP_LLVM_fragment 32 32] %r4
 
   %2 = load i64, i64* @g, align 8, !dbg !19, !tbaa !21
   %3 = icmp eq i64 %2, %0, !dbg !19

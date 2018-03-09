@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -check-prefix=GCN %s
 
 
 ; FIXME: We should use llvm-mc for this, but we can't even parse our own output.
@@ -24,7 +24,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; GCN-NEXT: s_cbranch_scc1 [[BB3:BB[0-9]+_[0-9]+]]
 
 
-; GCN-NEXT: ; BB#1: ; %bb2
+; GCN-NEXT: ; %bb.1: ; %bb2
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: v_nop_e64
 ; GCN-NEXT: v_nop_e64
@@ -141,7 +141,6 @@ bb3:
 ; GCN: buffer_load_dword
 ; GCN: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64 [[SAVE]], exec, [[SAVE]]
 
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
@@ -276,7 +275,7 @@ bb4:
 }
 
 ; GCN-LABEL: {{^}}uniform_unconditional_min_long_backward_branch:
-; GCN-NEXT: ; BB#0: ; %entry
+; GCN-NEXT: ; %bb.0: ; %entry
 
 ; GCN-NEXT: [[LOOP:BB[0-9]_[0-9]+]]: ; %loop
 ; GCN-NEXT: ; =>This Inner Loop Header: Depth=1
@@ -312,7 +311,7 @@ loop:
 ; branch from %bb0 to %bb2
 
 ; GCN-LABEL: {{^}}expand_requires_expand:
-; GCN-NEXT: ; BB#0: ; %bb0
+; GCN-NEXT: ; %bb.0: ; %bb0
 ; GCN: s_load_dword
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 0{{$}}
 ; GCN-NEXT: s_cbranch_scc0 [[BB1:BB[0-9]+_[0-9]+]]
@@ -385,7 +384,6 @@ bb3:
 ; GCN-LABEL: {{^}}uniform_inside_divergent:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN-NEXT: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN-NEXT: ; mask branch [[ENDIF:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: s_cbranch_execnz [[IF:BB[0-9]+_[0-9]+]]
 
@@ -400,7 +398,7 @@ bb3:
 ; GCN: s_cmp_lg_u32
 ; GCN: s_cbranch_scc1 [[ENDIF]]
 
-; GCN-NEXT: ; BB#2: ; %if_uniform
+; GCN-NEXT: ; %bb.2: ; %if_uniform
 ; GCN: buffer_store_dword
 
 ; GCN-NEXT: [[ENDIF]]: ; %endif
@@ -430,25 +428,13 @@ endif:
 }
 
 ; si_mask_branch
-; s_cbranch_execz
-; s_branch
 
 ; GCN-LABEL: {{^}}analyze_mask_branch:
 ; GCN: v_cmp_lt_f32_e32 vcc
 ; GCN-NEXT: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_xor_b64 [[MASK]], exec, [[MASK]]
 ; GCN-NEXT: ; mask branch [[RET:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_cbranch_execz [[BRANCH_SKIP:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_branch [[LOOP_BODY:BB[0-9]+_[0-9]+]]
 
-; GCN-NEXT: [[BRANCH_SKIP]]: ; %entry
-; GCN-NEXT: s_getpc_b64 vcc
-; GCN-NEXT: s_add_u32 vcc_lo, vcc_lo, [[RET]]-([[BRANCH_SKIP]]+4)
-; GCN-NEXT: s_addc_u32 vcc_hi, vcc_hi, 0
-; GCN-NEXT: s_setpc_b64 vcc
-
-; GCN-NEXT: [[LOOP_BODY]]: ; %loop_body
-; GCN: s_mov_b64 vcc, -1{{$}}
+; GCN-NEXT: [[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop_body
 ; GCN: ;;#ASMSTART
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
@@ -457,7 +443,6 @@ endif:
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: ;;#ASMEND
-; GCN-NEXT: s_cbranch_vccz [[RET]]
 
 ; GCN-NEXT: [[LONGBB:BB[0-9]+_[0-9]+]]: ; %loop_body
 ; GCN-NEXT: ; in Loop: Header=[[LOOP_BODY]] Depth=1
@@ -466,7 +451,7 @@ endif:
 ; GCN-NEXT: s_subb_u32 vcc_hi, vcc_hi, 0
 ; GCN-NEXT: s_setpc_b64 vcc
 
-; GCN-NEXT: [[RET]]: ; %Flow
+; GCN-NEXT: [[RET]]: ; %ret
 ; GCN-NEXT: s_or_b64 exec, exec, [[MASK]]
 ; GCN: buffer_store_dword
 ; GCN-NEXT: s_endpgm

@@ -1,0 +1,50 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
+
+---
+# Check for awareness that s_or_saveexec_b64 clobbers SCC
+#
+#CHECK: S_OR_SAVEEXEC_B64
+#CHECK: S_CMP_LT_I32
+#CHECK: S_CSELECT_B32
+name:            test_wwm_scc
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: sgpr_32, preferred-register: '' }
+  - { id: 1, class: sgpr_32, preferred-register: '' }
+  - { id: 2, class: sgpr_32, preferred-register: '' }
+  - { id: 3, class: vgpr_32, preferred-register: '' }
+  - { id: 4, class: vgpr_32, preferred-register: '' }
+  - { id: 5, class: sgpr_32, preferred-register: '' }
+  - { id: 6, class: vgpr_32, preferred-register: '' }
+  - { id: 7, class: vgpr_32, preferred-register: '' }
+  - { id: 8, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 9, class: sreg_32, preferred-register: '' }
+  - { id: 10, class: sreg_32, preferred-register: '' }
+  - { id: 11, class: vgpr_32, preferred-register: '' }
+  - { id: 12, class: vgpr_32, preferred-register: '' }
+liveins:         
+  - { reg: '%sgpr0', virtual-reg: '%0' }
+  - { reg: '%sgpr1', virtual-reg: '%1' }
+  - { reg: '%sgpr2', virtual-reg: '%2' }
+  - { reg: '%vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: %sgpr0, %sgpr1, %sgpr2, %vgpr0
+  
+    %3 = COPY %vgpr0
+    %2 = COPY %sgpr2
+    %1 = COPY %sgpr1
+    %0 = COPY %sgpr0
+    S_CMP_LT_I32 0, %0, implicit-def %scc
+    %12 = V_ADD_I32_e32 %3, %3, implicit-def %vcc, implicit %exec
+    %5 = S_CSELECT_B32 %2, %1, implicit %scc
+    %11 = V_ADD_I32_e32 %5, %12, implicit-def %vcc, implicit %exec
+    %vgpr0 = WWM %11, implicit %exec
+    SI_RETURN_TO_EPILOG %vgpr0
+
+...

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep mov | count 1
+; RUN: llc < %s -mtriple=i686-- | grep mov | count 1
 
 define signext i16 @t()   {
 entry:

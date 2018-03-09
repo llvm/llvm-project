@@ -10,6 +10,9 @@
 // custom diagnostic reporting.
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_IR_DIAGNOSTICHANDLER_H
+#define LLVM_IR_DIAGNOSTICHANDLER_H
+
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -67,4 +70,6 @@ struct DiagnosticHandler {
   /// Return true if any type of remarks are enabled for any pass.
   virtual bool isAnyRemarkEnabled() const;
 };
-}
+} // namespace llvm
+
+#endif // LLVM_IR_DIAGNOSTICHANDLER_H

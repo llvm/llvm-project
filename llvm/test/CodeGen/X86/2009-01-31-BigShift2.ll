@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep "mov.*56"
+; RUN: llc < %s -mtriple=i686-- | grep "mov.*56"
 ; PR3449
 
 define void @test(<8 x double>* %P, i64* %Q) nounwind {

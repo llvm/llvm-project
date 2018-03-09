@@ -161,11 +161,38 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)
   OS << *T;
 }
 
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, StringRef S)
+    : Key(Key), Val(S.str()) {}
+
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
+    : Key(Key), Val(itostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, long N)
+    : Key(Key), Val(itostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, long long N)
     : Key(Key), Val(itostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, unsigned N)
     : Key(Key), Val(utostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   unsigned long N)
+    : Key(Key), Val(utostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   unsigned long long N)
+    : Key(Key), Val(utostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)
+    : Key(Key), Loc(Loc) {
+  if (Loc) {
+    Val = (Loc->getFilename() + ":" + Twine(Loc.getLine()) + ":" +
+           Twine(Loc.getCol())).str();
+  } else {
+    Val = "<UNKNOWN LOCATION>";
+  }
+}
 
 void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
   DP << getLocationStr() << ": " << getMsg();
@@ -262,42 +289,6 @@ void DiagnosticInfoMIRParser::print(DiagnosticPrinter &DP) const {
   DP << Diagnostic;
 }
 
-void llvm::emitOptimizationRemark(LLVMContext &Ctx, const char *PassName,
-                                  const Function &Fn,
-                                  const DiagnosticLocation &Loc,
-                                  const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemark(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkMissed(LLVMContext &Ctx, const char *PassName,
-                                        const Function &Fn,
-                                        const DiagnosticLocation &Loc,
-                                        const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkMissed(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkAnalysis(LLVMContext &Ctx,
-                                          const char *PassName,
-                                          const Function &Fn,
-                                          const DiagnosticLocation &Loc,
-                                          const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkAnalysis(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkAnalysisFPCommute(
-    LLVMContext &Ctx, const char *PassName, const Function &Fn,
-    const DiagnosticLocation &Loc, const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkAnalysisFPCommute(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkAnalysisAliasing(LLVMContext &Ctx,
-                                                  const char *PassName,
-                                                  const Function &Fn,
-                                                  const DiagnosticLocation &Loc,
-                                                  const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkAnalysisAliasing(PassName, Fn, Loc, Msg));
-}
-
 DiagnosticInfoOptimizationFailure::DiagnosticInfoOptimizationFailure(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
     const Value *CodeRegion)
@@ -350,3 +341,83 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
     OS << Arg.Val;
   return OS.str();
 }
+
+namespace llvm {
+namespace yaml {
+
+void MappingTraits<DiagnosticInfoOptimizationBase *>::mapping(
+    IO &io, DiagnosticInfoOptimizationBase *&OptDiag) {
+  assert(io.outputting() && "input not yet implemented");
+
+  if (io.mapTag("!Passed",
+                (OptDiag->getKind() == DK_OptimizationRemark ||
+                 OptDiag->getKind() == DK_MachineOptimizationRemark)))
+    ;
+  else if (io.mapTag(
+               "!Missed",
+               (OptDiag->getKind() == DK_OptimizationRemarkMissed ||
+                OptDiag->getKind() == DK_MachineOptimizationRemarkMissed)))
+    ;
+  else if (io.mapTag(
+               "!Analysis",
+               (OptDiag->getKind() == DK_OptimizationRemarkAnalysis ||
+                OptDiag->getKind() == DK_MachineOptimizationRemarkAnalysis)))
+    ;
+  else if (io.mapTag("!AnalysisFPCommute",
+                     OptDiag->getKind() ==
+                         DK_OptimizationRemarkAnalysisFPCommute))
+    ;
+  else if (io.mapTag("!AnalysisAliasing",
+                     OptDiag->getKind() ==
+                         DK_OptimizationRemarkAnalysisAliasing))
+    ;
+  else if (io.mapTag("!Failure", OptDiag->getKind() == DK_OptimizationFailure))
+    ;
+  else
+    llvm_unreachable("Unknown remark type");
+
+  // These are read-only for now.
+  DiagnosticLocation DL = OptDiag->getLocation();
+  StringRef FN =
+      GlobalValue::dropLLVMManglingEscape(OptDiag->getFunction().getName());
+
+  StringRef PassName(OptDiag->PassName);
+  io.mapRequired("Pass", PassName);
+  io.mapRequired("Name", OptDiag->RemarkName);
+  if (!io.outputting() || DL.isValid())
+    io.mapOptional("DebugLoc", DL);
+  io.mapRequired("Function", FN);
+  io.mapOptional("Hotness", OptDiag->Hotness);
+  io.mapOptional("Args", OptDiag->Args);
+}
+
+template <> struct MappingTraits<DiagnosticLocation> {
+  static void mapping(IO &io, DiagnosticLocation &DL) {
+    assert(io.outputting() && "input not yet implemented");
+
+    StringRef File = DL.getFilename();
+    unsigned Line = DL.getLine();
+    unsigned Col = DL.getColumn();
+
+    io.mapRequired("File", File);
+    io.mapRequired("Line", Line);
+    io.mapRequired("Column", Col);
+  }
+
+  static const bool flow = true;
+};
+
+// Implement this as a mapping for now to get proper quotation for the value.
+template <> struct MappingTraits<DiagnosticInfoOptimizationBase::Argument> {
+  static void mapping(IO &io, DiagnosticInfoOptimizationBase::Argument &A) {
+    assert(io.outputting() && "input not yet implemented");
+    io.mapRequired(A.Key.data(), A.Val);
+    if (A.Loc.isValid())
+      io.mapOptional("DebugLoc", A.Loc);
+  }
+};
+
+} // end namespace yaml
+} // end namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(DiagnosticInfoOptimizationBase::Argument)

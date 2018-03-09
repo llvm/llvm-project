@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -march=x86-64 |FileCheck %s
+; RUN: llc < %s -O3 -mtriple=x86_64-- |FileCheck %s
 define i64 @foo(i64 %data1, i64 %data2, i64 %data3)
 {
 ; If constant 4294967295 is hoisted to a variable, then we won't be able to

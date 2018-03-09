@@ -4,6 +4,8 @@
 ; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s -check-prefix=PROLOG
 ; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-runtime-epilog=false -unroll-count=2 -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine
 
+; REQUIRES: asserts
+
 ; the third and fifth RUNs generate an epilog/prolog remainder block for all the test
 ; cases below (it does not generate a loop).
 
@@ -477,4 +479,46 @@ latch:                                              ; preds = %innerH
 
 exit:                                              ; preds = %latch
   ret void
+}
+
+declare i8 addrspace(1)* @foo(i32)
+; inner loop prolog unrolled
+; a value from outer loop is used in exit block of inner loop.
+; Don't create VMap entries for such values (%trip).
+define i8 addrspace(1)* @test9(i8* nocapture readonly %arg, i32 %n) {
+; PROLOG: test9(
+; PROLOG: header.prol:
+; PROLOG-NEXT: %phi.prol = phi i64 [ 0, %header.prol.preheader ], [ %iv.next.prol, %latch.prol ]
+; PROLOG: latch.prol:
+; PROLOG-NOT: trip
+; PROLOG:     br i1 %prol.iter.cmp, label %header.prol.loopexit.unr-lcssa, label %header.prol
+bb:
+  br label %outerloopHdr
+
+outerloopHdr:                                              ; preds = %outerLatch, %bb
+  %trip = add i32 %n, -1
+  %outercnd = icmp slt i32 0, %trip
+  br i1 %outercnd, label %preheader, label %outerLatch
+
+preheader:                                              ; preds = %outerloopHdr
+  %tmp4 = zext i32 0 to i64
+  br label %header
+
+header:                                              ; preds = %latch, %preheader
+  %phi = phi i64 [ %tmp4, %preheader ], [ %iv.next, %latch ]
+  %tmp7 = trunc i64 %phi to i32
+  br i1 true, label %latch, label %innerexit
+
+innerexit:                                              ; preds = %header
+  %tmp9 = call i8 addrspace(1)* @foo(i32 %trip)
+  ret i8 addrspace(1)* %tmp9
+
+latch:                                             ; preds = %header
+  %tmp11 = add nsw i32 %tmp7, 1
+  %innercnd = icmp slt i32 %tmp11, %trip
+  %iv.next = add nuw nsw i64 %phi, 1
+  br i1 %innercnd, label %header, label %outerLatch
+
+outerLatch:                                             ; preds = %latch, %outerloopHdr
+  br label %outerloopHdr
 }

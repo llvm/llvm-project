@@ -69,6 +69,7 @@ def NVExtFrm      : Format<39>;
 def NVMulSLFrm    : Format<40>;
 def NVTBLFrm      : Format<41>;
 def DPSoRegImmFrm  : Format<42>;
+def N3RegCplxFrm  : Format<43>;
 
 // Misc flags.
 
@@ -2512,6 +2513,80 @@ multiclass NEONDTAnyInstAlias<string opc, string asm, dag Result, bit EmitPriori
 // for instalias defs.
 class NEONDataTypeAsmPseudoInst<string opc, string dt, string asm, dag iops> :
   AsmPseudoInst<!strconcat(opc, dt, "\t", asm), iops>, Requires<[HasNEON]>;
+
+// Extension of NEON 3-vector data processing instructions in coprocessor 8
+// encoding space, introduced in ARMv8.3-A.
+class N3VCP8<bits<2> op24_23, bits<2> op21_20, bit op6, bit op4,
+             dag oops, dag iops, InstrItinClass itin,
+             string opc, string dt, string asm, string cstr, list<dag> pattern>
+  : NeonInp<oops, iops, AddrModeNone, IndexModeNone, N3RegCplxFrm, itin, opc,
+            dt, asm, cstr, pattern> {
+  bits<5> Vd;
+  bits<5> Vn;
+  bits<5> Vm;
+
+  let DecoderNamespace = "VFPV8";
+  // These have the same encodings in ARM and Thumb2
+  let PostEncoderMethod = "";
+
+  let Inst{31-25} = 0b1111110;
+  let Inst{24-23} = op24_23;
+  let Inst{22}    = Vd{4};
+  let Inst{21-20} = op21_20;
+  let Inst{19-16} = Vn{3-0};
+  let Inst{15-12} = Vd{3-0};
+  let Inst{11-8}  = 0b1000;
+  let Inst{7}     = Vn{4};
+  let Inst{6}     = op6;
+  let Inst{5}     = Vm{4};
+  let Inst{4}     = op4;
+  let Inst{3-0}   = Vm{3-0};
+}
+
+// Extension of NEON 2-vector-and-scalar data processing instructions in
+// coprocessor 8 encoding space, introduced in ARMv8.3-A.
+class N3VLaneCP8<bit op23, bits<2> op21_20, bit op6, bit op4,
+             dag oops, dag iops, InstrItinClass itin,
+             string opc, string dt, string asm, string cstr, list<dag> pattern>
+  : NeonInp<oops, iops, AddrModeNone, IndexModeNone, N3RegCplxFrm, itin, opc,
+            dt, asm, cstr, pattern> {
+  bits<5> Vd;
+  bits<5> Vn;
+  bits<5> Vm;
+
+  let DecoderNamespace = "VFPV8";
+  // These have the same encodings in ARM and Thumb2
+  let PostEncoderMethod = "";
+
+  let Inst{31-24} = 0b11111110;
+  let Inst{23}    = op23;
+  let Inst{22}    = Vd{4};
+  let Inst{21-20} = op21_20;
+  let Inst{19-16} = Vn{3-0};
+  let Inst{15-12} = Vd{3-0};
+  let Inst{11-8}  = 0b1000;
+  let Inst{7}     = Vn{4};
+  let Inst{6}     = op6;
+  // Bit 5 set by sub-classes
+  let Inst{4}     = op4;
+  let Inst{3-0}   = Vm{3-0};
+}
+
+// Operand types for complex instructions
+class ComplexRotationOperand<int Angle, int Remainder, string Type, string Diag>
+  : AsmOperandClass {
+  let PredicateMethod = "isComplexRotation<" # Angle # ", " # Remainder # ">";
+  let DiagnosticString = "complex rotation must be " # Diag;
+  let Name = "ComplexRotation" # Type;
+}
+def complexrotateop : Operand<i32> {
+  let ParserMatchClass = ComplexRotationOperand<90, 0, "Even", "0, 90, 180 or 270">;
+  let PrintMethod = "printComplexRotationOp<90, 0>";
+}
+def complexrotateopodd : Operand<i32> {
+  let ParserMatchClass = ComplexRotationOperand<180, 90, "Odd", "90 or 270">;
+  let PrintMethod = "printComplexRotationOp<180, 90>";
+}
 
 // Data type suffix token aliases. Implements Table A7-3 in the ARM ARM.
 def : TokenAlias<".s8", ".i8">;

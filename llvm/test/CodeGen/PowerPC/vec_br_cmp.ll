@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 -o %t
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 -o %t
 ; RUN: grep vcmpeqfp. %t
 ; RUN: not grep mfcr %t
 

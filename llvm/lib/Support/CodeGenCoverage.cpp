@@ -12,8 +12,10 @@
 
 #include "llvm/Support/CodeGenCoverage.h"
 
+#include "llvm/Config/config.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -96,8 +98,8 @@ bool CodeGenCoverage::emit(StringRef CoveragePrefix,
 
     std::error_code EC;
     sys::fs::OpenFlags OpenFlags = sys::fs::F_Append;
-    std::unique_ptr<tool_output_file> CoverageFile =
-        llvm::make_unique<tool_output_file>(CoverageFilename, EC, OpenFlags);
+    std::unique_ptr<ToolOutputFile> CoverageFile =
+        llvm::make_unique<ToolOutputFile>(CoverageFilename, EC, OpenFlags);
     if (EC)
       return false;
 

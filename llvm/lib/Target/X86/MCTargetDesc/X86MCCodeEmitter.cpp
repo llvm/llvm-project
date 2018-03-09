@@ -380,7 +380,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
         return X86::reloc_riprel_4byte_movq_load;
       case X86::CALL64m:
       case X86::JMP64m:
-      case X86::TEST64rm:
+      case X86::TEST64mr:
       case X86::ADC64rm:
       case X86::ADD64rm:
       case X86::AND64rm:
@@ -396,10 +396,14 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
 
     // rip-relative addressing is actually relative to the *next* instruction.
     // Since an immediate can follow the mod/rm byte for an instruction, this
-    // means that we need to bias the immediate field of the instruction with
-    // the size of the immediate field.  If we have this case, add it into the
+    // means that we need to bias the displacement field of the instruction with
+    // the size of the immediate field. If we have this case, add it into the
     // expression to emit.
-    int ImmSize = X86II::hasImm(TSFlags) ? X86II::getSizeOfImm(TSFlags) : 0;
+    // Note: rip-relative addressing using immediate displacement values should
+    // not be adjusted, assuming it was the user's intent.
+    int ImmSize = !Disp.isImm() && X86II::hasImm(TSFlags)
+                      ? X86II::getSizeOfImm(TSFlags)
+                      : 0;
 
     EmitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(FixupKind),
                   CurByte, OS, Fixups, -ImmSize);
@@ -1108,7 +1112,7 @@ bool X86MCCodeEmitter::emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
     EmitByte(0x66, CurByte, OS);
 
   // Emit the LOCK opcode prefix.
-  if (TSFlags & X86II::LOCK)
+  if (TSFlags & X86II::LOCK || MI.getFlags() & X86::IP_HAS_LOCK)
     EmitByte(0xF0, CurByte, OS);
 
   switch (TSFlags & X86II::OpPrefixMask) {
@@ -1130,6 +1134,8 @@ bool X86MCCodeEmitter::emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
       EmitByte(0x40 | REX, CurByte, OS);
       Ret = true;
     }
+  } else {
+    assert(!(TSFlags & X86II::REX_W) && "REX.W requires 64bit mode.");
   }
 
   // 0x0F escape code must be emitted just before the opcode.
@@ -1159,6 +1165,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   unsigned Opcode = MI.getOpcode();
   const MCInstrDesc &Desc = MCII.get(Opcode);
   uint64_t TSFlags = Desc.TSFlags;
+  unsigned Flags = MI.getFlags();
 
   // Pseudo instructions don't get encoded.
   if ((TSFlags & X86II::FormMask) == X86II::Pseudo)
@@ -1194,8 +1201,10 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
                               MI, OS);
 
   // Emit the repeat opcode prefix as needed.
-  if (TSFlags & X86II::REP)
+  if (TSFlags & X86II::REP || Flags & X86::IP_HAS_REPEAT)
     EmitByte(0xF3, CurByte, OS);
+  if (Flags & X86::IP_HAS_REPEAT_NE)
+    EmitByte(0xF2, CurByte, OS);
 
   // Emit the address size opcode prefix as needed.
   bool need_address_override;

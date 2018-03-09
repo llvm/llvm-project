@@ -1,0 +1,70 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj -program-headers %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x1000
+    Size:            0x1000
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2000
+    AddressAlign:    0x1000
+    Size:            0x1000
+  - Name:            .text3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x3000
+    AddressAlign:    0x1000
+    Size:            0x1000
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Sections:
+      - Section: .text
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x3000
+    PAddr: 0x3000
+    Sections:
+      - Section: .text3
+
+# CHECK:     ProgramHeaders [
+# CHECK-NEXT:  ProgramHeader {
+# CHECK-NEXT:    Type: PT_LOAD (0x1)
+# CHECK-NEXT:    Offset: 0x1000
+# CHECK-NEXT:    VirtualAddress: 0x1000
+# CHECK-NEXT:    PhysicalAddress: 0x1000
+# CHECK-NEXT:    FileSize: 4096
+# CHECK-NEXT:    MemSize: 4096
+# CHECK-NEXT:    Flags [ (0x4)
+# CHECK-NEXT:      PF_R (0x4)
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    Alignment: 4096
+# CHECK-NEXT:  }
+# CHECK-NEXT:  ProgramHeader {
+# CHECK-NEXT:    Type: PT_LOAD (0x1)
+# CHECK-NEXT:    Offset: 0x2000
+# CHECK-NEXT:    VirtualAddress: 0x3000
+# CHECK-NEXT:    PhysicalAddress: 0x3000
+# CHECK-NEXT:    FileSize: 4096
+# CHECK-NEXT:    MemSize: 4096
+# CHECK-NEXT:    Flags [ (0x5)
+# CHECK-NEXT:      PF_R (0x4)
+# CHECK-NEXT:      PF_X (0x1)
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    Alignment: 4096
+# CHECK-NEXT:  }
+# CHECK-NEXT:]

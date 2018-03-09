@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Process.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
@@ -26,9 +27,14 @@ using namespace sys;
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-Optional<std::string> Process::FindInEnvPath(const std::string& EnvName,
-                                             const std::string& FileName)
-{
+Optional<std::string> Process::FindInEnvPath(StringRef EnvName,
+                                             StringRef FileName) {
+  return FindInEnvPath(EnvName, FileName, {});
+}
+
+Optional<std::string> Process::FindInEnvPath(StringRef EnvName,
+                                             StringRef FileName,
+                                             ArrayRef<std::string> IgnoreList) {
   assert(!path::is_absolute(FileName));
   Optional<std::string> FoundPath;
   Optional<std::string> OptPath = Process::GetEnv(EnvName);
@@ -39,8 +45,11 @@ Optional<std::string> Process::FindInEnvPath(const std::string& EnvName,
   SmallVector<StringRef, 8> Dirs;
   SplitString(OptPath.getValue(), Dirs, EnvPathSeparatorStr);
 
-  for (const auto &Dir : Dirs) {
+  for (StringRef Dir : Dirs) {
     if (Dir.empty())
+      continue;
+
+    if (any_of(IgnoreList, [&](StringRef S) { return fs::equivalent(S, Dir); }))
       continue;
 
     SmallString<128> FilePath(Dir);

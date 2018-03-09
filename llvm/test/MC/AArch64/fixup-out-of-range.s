@@ -1,4 +1,5 @@
 // RUN: not llvm-mc -triple aarch64--none-eabi -filetype obj < %s -o /dev/null 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple aarch64-windows -filetype obj < %s -o /dev/null 2>&1 | FileCheck %s
 
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: fixup value out of range
   adr x0, distant

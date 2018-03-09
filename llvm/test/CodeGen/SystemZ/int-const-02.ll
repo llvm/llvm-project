@@ -283,3 +283,20 @@ define i64 @f31() {
   call void @foo(i64 32768, i64 65536, i64 4294967296, i64 281474976710656)
   ret i64 42
 }
+
+; Verify that we do not crash on OR with two constant inputs
+; (this was PR34859).
+define i64 @f32(i64 *%ptr) {
+; CHECK-LABEL: f32:
+; CHECK: llihf %r1, 918324340
+; CHECK: oilf %r1, 1806197964
+; CHECK: la %r0, 1(%r1)
+  store i64 -1, i64* %ptr, align 8
+  %1 = load i64, i64* %ptr, align 8
+  %2 = icmp ne i64 %1, 0
+  %3 = zext i1 %2 to i64
+  %4 = or i64 %3, 3944173009226982604
+  store i64 %4, i64* %ptr, align 8
+  ret i64 3944173009226982604
+}
+

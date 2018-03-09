@@ -6,7 +6,7 @@
 
 define i8 @test1(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpb %sil, %dil
 ; CHECK-NEXT:    adcb $0, %sil
 ; CHECK-NEXT:    movl %esi, %eax
@@ -19,7 +19,7 @@ define i8 @test1(i8 %a, i8 %b) nounwind {
 
 define i32 @test2(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    adcl $0, %esi
 ; CHECK-NEXT:    movl %esi, %eax
@@ -32,7 +32,7 @@ define i32 @test2(i32 %a, i32 %b) nounwind {
 
 define i64 @test3(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    adcq $0, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
@@ -45,7 +45,7 @@ define i64 @test3(i64 %a, i64 %b) nounwind {
 
 define i8 @test4(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpb %sil, %dil
 ; CHECK-NEXT:    sbbb $0, %sil
 ; CHECK-NEXT:    movl %esi, %eax
@@ -58,7 +58,7 @@ define i8 @test4(i8 %a, i8 %b) nounwind {
 
 define i32 @test5(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    sbbl $0, %esi
 ; CHECK-NEXT:    movl %esi, %eax
@@ -71,7 +71,7 @@ define i32 @test5(i32 %a, i32 %b) nounwind {
 
 define i64 @test6(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    sbbq $0, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
@@ -84,7 +84,7 @@ define i64 @test6(i64 %a, i64 %b) nounwind {
 
 define i8 @test7(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpb %sil, %dil
 ; CHECK-NEXT:    adcb $0, %sil
 ; CHECK-NEXT:    movl %esi, %eax
@@ -97,7 +97,7 @@ define i8 @test7(i8 %a, i8 %b) nounwind {
 
 define i32 @test8(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    adcl $0, %esi
 ; CHECK-NEXT:    movl %esi, %eax
@@ -110,7 +110,7 @@ define i32 @test8(i32 %a, i32 %b) nounwind {
 
 define i64 @test9(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test9:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    adcq $0, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax

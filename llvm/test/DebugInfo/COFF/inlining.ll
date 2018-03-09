@@ -49,11 +49,11 @@
 ; ASM: .long   0
 ; ASM: # Inlined function bar starts at t.cpp:8
 ; ASM: .long   4098                    # Type index of inlined function
-; ASM: .long   0                       # Offset into filechecksum table
+; ASM: .cv_filechecksumoffset 1        # Offset into filechecksum table
 ; ASM: .long   8                       # Starting line number
 ; ASM: # Inlined function foo starts at t.cpp:2
 ; ASM: .long   4099
-; ASM: .long   0
+; ASM: .cv_filechecksumoffset 1        # Offset into filechecksum table
 ; ASM: .long   2
 ; ASM: [[inline_end]]:
 
@@ -71,6 +71,8 @@
 ; ASM: .cv_inline_linetable 2 1 2 Lfunc_begin0 Lfunc_end0
 ; ASM: .short  4430
 ; ASM: .short  4430
+
+; ASM: .cv_filechecksums
 
 ; ASM: .section .debug$T,"dr"
 ; ASM: .long 4 # Debug section magic

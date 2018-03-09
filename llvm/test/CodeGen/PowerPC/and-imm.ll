@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep "ori\|lis"
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep "ori\|lis"
 
 ; andi. r3, r3, 32769	
 define i32 @test(i32 %X) {

@@ -9,12 +9,12 @@
 ; This test verifies that we use an xor with a constant to flip the sign bits; no subtraction needed.
 define <4 x float> @t1(<4 x float> %Q) nounwind {
 ; X32-SSE-LABEL: t1:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: t1:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
   %tmp = fsub <4 x float> < float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00 >, %Q
@@ -24,14 +24,14 @@ define <4 x float> @t1(<4 x float> %Q) nounwind {
 ; This test verifies that we generate an FP subtraction because "0.0 - x" is not an fneg.
 define <4 x float> @t2(<4 x float> %Q) nounwind {
 ; X32-SSE-LABEL: t2:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE-NEXT:    subps %xmm0, %xmm1
 ; X32-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: t2:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X64-SSE-NEXT:    subps %xmm0, %xmm1
 ; X64-SSE-NEXT:    movaps %xmm1, %xmm0
@@ -53,7 +53,7 @@ define <4 x float> @t2(<4 x float> %Q) nounwind {
 
 define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X32-SSE1-LABEL: fneg_bitcast:
-; X32-SSE1:       # BB#0:
+; X32-SSE1:       # %bb.0:
 ; X32-SSE1-NEXT:    pushl %ebp
 ; X32-SSE1-NEXT:    movl %esp, %ebp
 ; X32-SSE1-NEXT:    andl $-16, %esp
@@ -70,7 +70,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X32-SSE1-NEXT:    retl
 ;
 ; X32-SSE2-LABEL: fneg_bitcast:
-; X32-SSE2:       # BB#0:
+; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE2-NEXT:    xorl %eax, %ecx
@@ -81,7 +81,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSE1-LABEL: fneg_bitcast:
-; X64-SSE1:       # BB#0:
+; X64-SSE1:       # %bb.0:
 ; X64-SSE1-NEXT:    movabsq $-9223372034707292160, %rax # imm = 0x8000000080000000
 ; X64-SSE1-NEXT:    xorq %rdi, %rax
 ; X64-SSE1-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
@@ -89,7 +89,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X64-SSE1-NEXT:    retq
 ;
 ; X64-SSE2-LABEL: fneg_bitcast:
-; X64-SSE2:       # BB#0:
+; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movabsq $-9223372034707292160, %rax # imm = 0x8000000080000000
 ; X64-SSE2-NEXT:    xorq %rdi, %rax
 ; X64-SSE2-NEXT:    movq %rax, %xmm0

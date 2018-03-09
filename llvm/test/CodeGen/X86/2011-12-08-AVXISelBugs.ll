@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7-avx -mattr=+avx
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7-avx -mattr=+avx
 ; Various missing patterns causing crashes.
 ; rdar://10538793
 

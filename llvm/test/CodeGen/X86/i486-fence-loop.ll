@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -mcpu=i486 -o - %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -mcpu=i486 -o - %s | FileCheck %s
 
 ; Main test here was that ISelDAG could cope with a MachineNode in the chain
 ; from the first load to the "X86ISD::SUB". Previously it thought that meant no

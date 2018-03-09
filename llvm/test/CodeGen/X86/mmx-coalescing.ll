@@ -8,7 +8,7 @@
 define i32 @test(%SA* %pSA, i16* %A, i32 %B, i32 %C, i32 %D, i8* %E) {
 entry:
 ; CHECK-LABEL: test
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:  pshufw
 ; CHECK-NEXT:  movd
 ; CHECK-NOT:  movd

@@ -226,8 +226,8 @@ public:
 
   sampleprof_error addCalledTargetSamples(uint32_t LineOffset,
                                           uint32_t Discriminator,
-                                          const std::string &FName,
-                                          uint64_t Num, uint64_t Weight = 1) {
+                                          StringRef FName, uint64_t Num,
+                                          uint64_t Weight = 1) {
     return BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(
         FName, Num, Weight);
   }
@@ -298,9 +298,32 @@ public:
   /// Return the total number of samples collected inside the function.
   uint64_t getTotalSamples() const { return TotalSamples; }
 
-  /// Return the total number of samples collected at the head of the
-  /// function.
+  /// Return the total number of branch samples that have the function as the
+  /// branch target. This should be equivalent to the sample of the first
+  /// instruction of the symbol. But as we directly get this info for raw
+  /// profile without referring to potentially inaccurate debug info, this
+  /// gives more accurate profile data and is preferred for standalone symbols.
   uint64_t getHeadSamples() const { return TotalHeadSamples; }
+
+  /// Return the sample count of the first instruction of the function.
+  /// The function can be either a standalone symbol or an inlined function.
+  uint64_t getEntrySamples() const {
+    // Use either BodySamples or CallsiteSamples which ever has the smaller
+    // lineno.
+    if (!BodySamples.empty() &&
+        (CallsiteSamples.empty() ||
+         BodySamples.begin()->first < CallsiteSamples.begin()->first))
+      return BodySamples.begin()->second.getSamples();
+    if (!CallsiteSamples.empty()) {
+      uint64_t T = 0;
+      // An indirect callsite may be promoted to several inlined direct calls.
+      // We need to get the sum of them.
+      for (const auto &N_FS : CallsiteSamples.begin()->second)
+        T += N_FS.second.getEntrySamples();
+      return T;
+    }
+    return 0;
+  }
 
   /// Return all the samples collected in the body of the function.
   const BodySampleMap &getBodySamples() const { return BodySamples; }
@@ -331,19 +354,27 @@ public:
     return Result;
   }
 
-  /// Recursively traverses all children, if the corresponding function is
-  /// not defined in module \p M, and its total sample is no less than
-  /// \p Threshold, add its corresponding GUID to \p S.
-  void findImportedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
-                             uint64_t Threshold) const {
+  /// Recursively traverses all children, if the total sample count of the
+  /// corresponding function is no less than \p Threshold, add its corresponding
+  /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
+  /// to \p S.
+  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
+                            uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
-    Function *F = M->getFunction(Name);
-    if (!F || !F->getSubprogram())
-      S.insert(Function::getGUID(Name));
-    for (auto CS : CallsiteSamples)
+    S.insert(Function::getGUID(Name));
+    // Import hot CallTargets, which may not be available in IR because full
+    // profile annotation cannot be done until backend compilation in ThinLTO.
+    for (const auto &BS : BodySamples)
+      for (const auto &TS : BS.second.getCallTargets())
+        if (TS.getValue() > Threshold) {
+          Function *Callee = M->getFunction(TS.getKey());
+          if (!Callee || !Callee->getSubprogram())
+            S.insert(Function::getGUID(TS.getKey()));
+        }
+    for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findImportedFunctions(S, M, Threshold);
+        NameFS.second.findInlinedFunctions(S, M, Threshold);
   }
 
   /// Set the name of the function.

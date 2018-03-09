@@ -71,7 +71,7 @@ define double @test_simplify6(double %x) {
 define float @test_simplify7(float %x) {
 ; CHECK-LABEL: @test_simplify7(
   %retval = call float @powf(float %x, float 0.5)
-; CHECK-NEXT: [[SQRTF:%[a-z0-9]+]] = call float @sqrtf(float %x) [[NUW_RO:#[0-9]+]]
+; CHECK-NEXT: [[SQRTF:%[a-z0-9]+]] = call float @sqrtf(float %x) [[$NUW_RO:#[0-9]+]]
 ; CHECK-NEXT: [[FABSF:%[a-z0-9]+]] = call float @llvm.fabs.f32(float [[SQRTF]])
 ; CHECK-NEXT: [[FCMP:%[a-z0-9]+]] = fcmp oeq float %x, 0xFFF0000000000000
 ; CHECK-NEXT: [[SELECT:%[a-z0-9]+]] = select i1 [[FCMP]], float 0x7FF0000000000000, float [[FABSF]]
@@ -82,7 +82,7 @@ define float @test_simplify7(float %x) {
 define double @test_simplify8(double %x) {
 ; CHECK-LABEL: @test_simplify8(
   %retval = call double @pow(double %x, double 0.5)
-; CHECK-NEXT: [[SQRT:%[a-z0-9]+]] = call double @sqrt(double %x) [[NUW_RO]]
+; CHECK-NEXT: [[SQRT:%[a-z0-9]+]] = call double @sqrt(double %x) [[$NUW_RO]]
 ; CHECK-NEXT: [[FABS:%[a-z0-9]+]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT: [[FCMP:%[a-z0-9]+]] = fcmp oeq double %x, 0xFFF0000000000000
 ; CHECK-NEXT: [[SELECT:%[a-z0-9]+]] = select i1 [[FCMP]], double 0x7FF0000000000000, double [[FABS]]
@@ -124,38 +124,53 @@ define double @test_simplify12(double %x) {
 
 ; Check pow(x, 2.0) -> x*x.
 
-define float @test_simplify13(float %x) {
-; CHECK-LABEL: @test_simplify13(
-  %retval = call float @powf(float %x, float 2.0)
-; CHECK-NEXT: [[SQUARE:%[a-z0-9]+]] = fmul float %x, %x
-  ret float %retval
-; CHECK-NEXT: ret float [[SQUARE]]
+define float @pow2_strict(float %x) {
+; CHECK-LABEL: @pow2_strict(
+; CHECK-NEXT:    [[POW2:%.*]] = fmul float %x, %x
+; CHECK-NEXT:    ret float [[POW2]]
+;
+  %r = call float @powf(float %x, float 2.0)
+  ret float %r
 }
 
-define double @test_simplify14(double %x) {
-; CHECK-LABEL: @test_simplify14(
-  %retval = call double @pow(double %x, double 2.0)
-; CHECK-NEXT: [[SQUARE:%[a-z0-9]+]] = fmul double %x, %x
-  ret double %retval
-; CHECK-NEXT: ret double [[SQUARE]]
+define double @pow2_double_strict(double %x) {
+; CHECK-LABEL: @pow2_double_strict(
+; CHECK-NEXT:    [[POW2:%.*]] = fmul double %x, %x
+; CHECK-NEXT:    ret double [[POW2]]
+;
+  %r = call double @pow(double %x, double 2.0)
+  ret double %r
+}
+
+; Don't drop the FMF - PR35601 ( https://bugs.llvm.org/show_bug.cgi?id=35601 )
+
+define float @pow2_fast(float %x) {
+; CHECK-LABEL: @pow2_fast(
+; CHECK-NEXT:    [[POW2:%.*]] = fmul fast float %x, %x
+; CHECK-NEXT:    ret float [[POW2]]
+;
+  %r = call fast float @powf(float %x, float 2.0)
+  ret float %r
 }
 
 ; Check pow(x, -1.0) -> 1.0/x.
 
-define float @test_simplify15(float %x) {
-; CHECK-LABEL: @test_simplify15(
-  %retval = call float @powf(float %x, float -1.0)
-; CHECK-NEXT: [[RECIPROCAL:%[a-z0-9]+]] = fdiv float 1.000000e+00, %x
-  ret float %retval
-; CHECK-NEXT: ret float [[RECIPROCAL]]
+define float @pow_neg1_strict(float %x) {
+; CHECK-LABEL: @pow_neg1_strict(
+; CHECK-NEXT:    [[POWRECIP:%.*]] = fdiv float 1.000000e+00, %x
+; CHECK-NEXT:    ret float [[POWRECIP]]
+;
+  %r = call float @powf(float %x, float -1.0)
+  ret float %r
 }
 
-define double @test_simplify16(double %x) {
-; CHECK-LABEL: @test_simplify16(
-  %retval = call double @pow(double %x, double -1.0)
-; CHECK-NEXT: [[RECIPROCAL:%[a-z0-9]+]] = fdiv double 1.000000e+00, %x
-  ret double %retval
-; CHECK-NEXT: ret double [[RECIPROCAL]]
+define double @pow_neg1_double_fast(double %x) {
+; CHECK-LABEL: @pow_neg1_double_fast(
+; CHECK-NEXT:    [[POWRECIP:%.*]] = fdiv fast double 1.000000e+00, %x
+; CHECK-NEXT:    ret double [[POWRECIP]]
+;
+  %r = call fast double @pow(double %x, double -1.0)
+  ret double %r
 }
 
 declare double @llvm.pow.f64(double %Val, double %Power)
@@ -175,7 +190,7 @@ define double @test_simplify17(double %x) {
 define float @test_simplify18(float %x) {
 ; CHECK-LABEL: @test_simplify18(
   %retval = call float @powf(float 10.0, float %x)
-; CHECK-EXP10: [[EXP10F:%[_a-z0-9]+]] = call float @__exp10f(float %x) [[NUW_RO:#[0-9]+]]
+; CHECK-EXP10: [[EXP10F:%[_a-z0-9]+]] = call float @__exp10f(float %x) [[$NUW_RO:#[0-9]+]]
   ret float %retval
 ; CHECK-EXP10: ret float [[EXP10F]]
 ; CHECK-NO-EXP10: call float @powf
@@ -184,11 +199,11 @@ define float @test_simplify18(float %x) {
 define double @test_simplify19(double %x) {
 ; CHECK-LABEL: @test_simplify19(
   %retval = call double @pow(double 10.0, double %x)
-; CHECK-EXP10: [[EXP10:%[_a-z0-9]+]] = call double @__exp10(double %x) [[NUW_RO]]
+; CHECK-EXP10: [[EXP10:%[_a-z0-9]+]] = call double @__exp10(double %x) [[$NUW_RO]]
   ret double %retval
 ; CHECK-EXP10: ret double [[EXP10]]
 ; CHECK-NO-EXP10: call double @pow
 }
 
-; CHECK: attributes [[NUW_RO]] = { nounwind readonly }
+; CHECK: attributes [[$NUW_RO]] = { nounwind readonly }
 

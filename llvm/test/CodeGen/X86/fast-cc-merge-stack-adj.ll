@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -march=x86 -x86-asm-syntax=intel | FileCheck %s
+; RUN: llc < %s -mcpu=generic -x86-asm-syntax=intel | FileCheck %s
 ; CHECK: add esp, 8
 
 target triple = "i686-pc-linux-gnu"

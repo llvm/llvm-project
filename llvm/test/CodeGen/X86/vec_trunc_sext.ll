@@ -10,7 +10,7 @@
 
 define <4 x i32> @trunc_sext(<4 x i16>* %in) {
 ; NO_SSE_41-LABEL: trunc_sext:
-; NO_SSE_41:       # BB#0:
+; NO_SSE_41:       # %bb.0:
 ; NO_SSE_41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; NO_SSE_41-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; NO_SSE_41-NEXT:    pslld $24, %xmm0
@@ -18,7 +18,7 @@ define <4 x i32> @trunc_sext(<4 x i16>* %in) {
 ; NO_SSE_41-NEXT:    retq
 ;
 ; SSE_41-LABEL: trunc_sext:
-; SSE_41:       # BB#0:
+; SSE_41:       # %bb.0:
 ; SSE_41-NEXT:    pmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; SSE_41-NEXT:    pslld $24, %xmm0
 ; SSE_41-NEXT:    psrad $24, %xmm0

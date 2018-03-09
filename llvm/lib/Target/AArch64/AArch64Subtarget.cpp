@@ -21,13 +21,9 @@
 #include "AArch64CallLowering.h"
 #include "AArch64LegalizerInfo.h"
 #include "AArch64RegisterBankInfo.h"
-#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/Legalizer.h"
-#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -95,6 +91,11 @@ void AArch64Subtarget::initializeProperties() {
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 8;
     break;
+  case Saphira:
+    MaxInterleaveFactor = 4;
+    // FIXME: remove this to enable 64-bit SLP if performance looks good.
+    MinVectorRegisterBitWidth = 128;
+    break;
   case Kryo:
     MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
@@ -127,11 +128,13 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case CortexA35: break;
-  case CortexA53: break;
-  case CortexA72:
-    PrefFunctionAlignment = 4;
+  case CortexA53:
+    PrefFunctionAlignment = 3;
     break;
+  case CortexA55: break;
+  case CortexA72:
   case CortexA73:
+  case CortexA75:
     PrefFunctionAlignment = 4;
     break;
   case Others: break;
@@ -186,15 +189,18 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (TM.getCodeModel() == CodeModel::Large && isTargetMachO())
     return AArch64II::MO_GOT;
 
+  unsigned Flags = GV->hasDLLImportStorageClass() ? AArch64II::MO_DLLIMPORT
+                                                  : AArch64II::MO_NO_FLAG;
+
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
-    return AArch64II::MO_GOT;
+    return AArch64II::MO_GOT | Flags;
 
   // The small code model's direct accesses use ADRP, which cannot
   // necessarily produce the value 0 (if the code is above 4GB).
   if (useSmallAddressing() && GV->hasExternalWeakLinkage())
-    return AArch64II::MO_GOT;
+    return AArch64II::MO_GOT | Flags;
 
-  return AArch64II::MO_NO_FLAG;
+  return Flags;
 }
 
 unsigned char AArch64Subtarget::classifyGlobalFunctionReference(
@@ -212,19 +218,6 @@ unsigned char AArch64Subtarget::classifyGlobalFunctionReference(
     return AArch64II::MO_GOT;
 
   return AArch64II::MO_NO_FLAG;
-}
-
-/// This function returns the name of a function which has an interface
-/// like the non-standard bzero function, if such a function exists on
-/// the current subtarget and it is considered prefereable over
-/// memset with zero passed as the second argument. Otherwise it
-/// returns null.
-const char *AArch64Subtarget::getBZeroEntry() const {
-  // Prefer bzero on Darwin only.
-  if(isTargetDarwin())
-    return "bzero";
-
-  return nullptr;
 }
 
 void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,

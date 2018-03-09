@@ -8,7 +8,7 @@ target triple = "thumbv7-unknown-unknown"
 %struct.gs_color_s = type { i16, i16, i16, i16, i8, i8 }
 
 ; In this case, the if converter was cloning the return instruction so that we had
-;   r2<def> = ...
+;   r2 = ...
 ;   return [pred] r2<dead,def>
 ;   ldr <r2, kill>
 ;   return

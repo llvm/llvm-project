@@ -7,7 +7,7 @@ declare {i32, i32} @llvm.x86.rdseed.32()
 
 define i32 @_rdseed16_step(i16* %random_val) {
 ; X86-LABEL: _rdseed16_step:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    rdseedw %ax
 ; X86-NEXT:    movzwl %ax, %edx
@@ -17,7 +17,7 @@ define i32 @_rdseed16_step(i16* %random_val) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _rdseed16_step:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rdseedw %ax
 ; X64-NEXT:    movzwl %ax, %ecx
 ; X64-NEXT:    movl $1, %eax
@@ -33,7 +33,7 @@ define i32 @_rdseed16_step(i16* %random_val) {
 
 define i32 @_rdseed32_step(i32* %random_val) {
 ; X86-LABEL: _rdseed32_step:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    rdseedl %edx
 ; X86-NEXT:    movl $1, %eax
@@ -42,7 +42,7 @@ define i32 @_rdseed32_step(i32* %random_val) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _rdseed32_step:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rdseedl %ecx
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    cmovael %ecx, %eax

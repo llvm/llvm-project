@@ -9,7 +9,7 @@
 define void @f1(i32 *%dest, i32 %a) {
 ; CHECK-LABEL: f1:
 ; CHECK-NOT: sllg
-; CHECK: st %r3, 0({{%r[1-5],%r[1-5]}})
+; CHECK: st %r3, 400({{%r[1-5],%r[1-5]}})
 ; CHECK: br %r14
 entry:
   br label %loop
@@ -238,4 +238,85 @@ for.body:                           ; preds = %for.body.preheader, %for.body
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %S
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
+}
+
+; Test that a memcpy loop does not get a lot of lays before each mvc (D12 and no index-reg).
+%0 = type { %1, %2* }
+%1 = type { %2*, %2* }
+%2 = type <{ %3, i32, [4 x i8] }>
+%3 = type { i16*, i16*, i16* }
+
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #0
+
+define void @f8() {
+; CHECK-Z13-LABEL: f8:
+; CHECK-Z13: mvc
+; CHECK-Z13-NEXT: mvc
+; CHECK-Z13-NEXT: mvc
+; CHECK-Z13-NEXT: mvc
+
+bb:
+  %tmp = load %0*, %0** undef, align 8
+  br i1 undef, label %bb2, label %bb1
+
+bb1:                                              ; preds = %bb
+  br label %bb2
+
+bb2:                                              ; preds = %bb1, %bb
+  %tmp3 = phi %0* [ %tmp, %bb ], [ undef, %bb1 ]
+  %tmp4 = phi %0* [ undef, %bb ], [ undef, %bb1 ]
+  br label %bb5
+
+bb5:                                              ; preds = %bb5, %bb2
+  %tmp6 = phi %0* [ %tmp21, %bb5 ], [ %tmp3, %bb2 ]
+  %tmp7 = phi %0* [ %tmp20, %bb5 ], [ %tmp4, %bb2 ]
+  %tmp8 = getelementptr inbounds %0, %0* %tmp7, i64 -1
+  %tmp9 = getelementptr inbounds %0, %0* %tmp6, i64 -1
+  %tmp10 = bitcast %0* %tmp9 to i8*
+  %tmp11 = bitcast %0* %tmp8 to i8*
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp10, i8* %tmp11, i64 24, i32 8, i1 false)
+  %tmp12 = getelementptr inbounds %0, %0* %tmp7, i64 -2
+  %tmp13 = getelementptr inbounds %0, %0* %tmp6, i64 -2
+  %tmp14 = bitcast %0* %tmp13 to i8*
+  %tmp15 = bitcast %0* %tmp12 to i8*
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp14, i8* %tmp15, i64 24, i32 8, i1 false)
+  %tmp16 = getelementptr inbounds %0, %0* %tmp7, i64 -3
+  %tmp17 = getelementptr inbounds %0, %0* %tmp6, i64 -3
+  %tmp18 = bitcast %0* %tmp17 to i8*
+  %tmp19 = bitcast %0* %tmp16 to i8*
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp18, i8* %tmp19, i64 24, i32 8, i1 false)
+  %tmp20 = getelementptr inbounds %0, %0* %tmp7, i64 -4
+  %tmp21 = getelementptr inbounds %0, %0* %tmp6, i64 -4
+  %tmp22 = bitcast %0* %tmp21 to i8*
+  %tmp23 = bitcast %0* %tmp20 to i8*
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp22, i8* %tmp23, i64 24, i32 8, i1 false)
+  br label %bb5
+}
+
+; Test that a chsi does not need an aghik inside the loop (no index reg)
+define void @f9() {
+; CHECK-Z13-LABEL: f9:
+; CHECK-Z13: # =>This Inner Loop Header: Depth=1
+; CHECK-Z13-NOT: aghik
+; CHECK-Z13: chsi
+
+entry:
+  br label %for.body.i63
+
+for.body.i63:                                     ; preds = %for.inc.i, %entry
+  %indvars.iv155.i = phi i64 [ 0, %entry ], [ %indvars.iv.next156.i.3, %for.inc.i ]
+  %arrayidx.i62 = getelementptr inbounds i32, i32* undef, i64 %indvars.iv155.i
+  %tmp = load i32, i32* %arrayidx.i62, align 4
+  %cmp9.i = icmp eq i32 %tmp, 0
+  br i1 %cmp9.i, label %for.inc.i, label %if.then10.i
+
+if.then10.i:                                      ; preds = %for.body.i63
+  unreachable
+
+for.inc.i:                                        ; preds = %for.body.i63
+  %indvars.iv.next156.i = or i64 %indvars.iv155.i, 1
+  %arrayidx.i62.1 = getelementptr inbounds i32, i32* undef, i64 %indvars.iv.next156.i
+  %tmp1 = load i32, i32* %arrayidx.i62.1, align 4
+  %indvars.iv.next156.i.3 = add nsw i64 %indvars.iv155.i, 4
+  br label %for.body.i63
 }

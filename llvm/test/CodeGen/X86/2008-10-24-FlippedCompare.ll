@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 -o - | not grep "ucomiss[^,]*esp"
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -o - | not grep "ucomiss[^,]*esp"
 
 define void @f(float %wt) {
 entry:

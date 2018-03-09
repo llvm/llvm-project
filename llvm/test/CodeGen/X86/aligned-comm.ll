@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; RUN: llc < %s -mtriple=i386-apple-darwin10 | grep "array,16512,7"
 ; RUN: llc < %s -mtriple=i386-apple-darwin9 | grep "array,16512,7"
 

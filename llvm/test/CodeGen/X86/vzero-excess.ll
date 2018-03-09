@@ -6,7 +6,7 @@
 
 define <4 x float> @zeroupper_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: zeroupper_v4f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $48, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
@@ -33,7 +33,7 @@ define <4 x float> @zeroupper_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 
 define <8 x float> @zeroupper_v8f32(<8 x float> %x) nounwind {
 ; CHECK-LABEL: zeroupper_v8f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    vzeroupper
@@ -48,7 +48,7 @@ define <8 x float> @zeroupper_v8f32(<8 x float> %x) nounwind {
 
 define <4 x float> @zeroall_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: zeroall_v4f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $48, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
@@ -75,7 +75,7 @@ define <4 x float> @zeroall_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 
 define <8 x float> @zeroall_v8f32(<8 x float> %x) nounwind {
 ; CHECK-LABEL: zeroall_v8f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    vzeroall

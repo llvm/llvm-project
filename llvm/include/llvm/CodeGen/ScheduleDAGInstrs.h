@@ -24,9 +24,9 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <list>
@@ -274,6 +274,11 @@ namespace llvm {
 
     /// Returns an existing SUnit for this MI, or nullptr.
     SUnit *getSUnit(MachineInstr *MI) const;
+
+    /// If this method returns true, handling of the scheduling regions
+    /// themselves (in case of a scheduling boundary in MBB) will be done
+    /// beginning with the topmost region of MBB.
+    virtual bool doMBBSchedRegionsTopDown() const { return false; }
 
     /// Prepares to perform scheduling in the given block.
     virtual void startBlock(MachineBasicBlock *BB);

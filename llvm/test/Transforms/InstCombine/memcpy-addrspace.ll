@@ -45,7 +45,7 @@ entry:
 ; CHECK: alloca
 ; CHECK: call void @llvm.memcpy.p0i8.p2i8.i64
 ; CHECK-NOT: addrspacecast
-; CHECK: call i32 @foo(i32* %{{.*}})
+; CHECK: call i32 @foo(i32* nonnull %{{.*}})
 define void @test_call(i32 addrspace(1)* %out, i64 %x) {
 entry:
   %data = alloca [8 x i32], align 4
@@ -62,7 +62,7 @@ entry:
 ; CHECK: alloca
 ; CHECK: call void @llvm.memcpy.p0i8.p2i8.i64
 ; CHECK: load i32, i32* %{{.*}}
-; CHECK: call i32 @foo(i32* %{{.*}})
+; CHECK: call i32 @foo(i32* nonnull %{{.*}})
 ; CHECK-NOT: addrspacecast
 ; CHECK-NOT: load i32, i32 addrspace(2)*
 define void @test_load_and_call(i32 addrspace(1)* %out, i64 %x, i64 %y) {

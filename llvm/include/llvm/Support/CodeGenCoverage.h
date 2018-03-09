@@ -13,10 +13,10 @@
 #define LLVM_SUPPORT_CODEGENCOVERAGE_H
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/Config/config.h"
 
 namespace llvm {
 class LLVMContext;
+class MemoryBuffer;
 
 class CodeGenCoverage {
 protected:

@@ -60,6 +60,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
@@ -78,7 +79,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "tailcallelim"
@@ -177,7 +177,8 @@ struct AllocaDerivedValueTracker {
 };
 }
 
-static bool markTails(Function &F, bool &AllCallsAreTailCalls) {
+static bool markTails(Function &F, bool &AllCallsAreTailCalls,
+                      OptimizationRemarkEmitter *ORE) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
   AllCallsAreTailCalls = true;
@@ -228,7 +229,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls) {
         Escaped = ESCAPED;
 
       CallInst *CI = dyn_cast<CallInst>(&I);
-      if (!CI || CI->isTailCall())
+      if (!CI || CI->isTailCall() || isa<DbgInfoIntrinsic>(&I))
         continue;
 
       bool IsNoTail = CI->isNoTailCall() || CI->hasOperandBundles();
@@ -252,9 +253,11 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls) {
           break;
         }
         if (SafeToTail) {
-          emitOptimizationRemark(
-              F.getContext(), "tailcallelim", F, CI->getDebugLoc(),
-              "marked this readnone call a tail call candidate");
+          using namespace ore;
+          ORE->emit([&]() {
+            return OptimizationRemark(DEBUG_TYPE, "tailcall-readnone", CI)
+                   << "marked as tail call candidate (readnone)";
+          });
           CI->setTailCall();
           Modified = true;
           continue;
@@ -299,9 +302,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls) {
     if (Visited[CI->getParent()] != ESCAPED) {
       // If the escape point was part way through the block, calls after the
       // escape point wouldn't have been put into DeferredTails.
-      emitOptimizationRemark(F.getContext(), "tailcallelim", F,
-                             CI->getDebugLoc(),
-                             "marked this call a tail call candidate");
+      DEBUG(dbgs() << "Marked as tail call candidate: " << *CI << "\n");
       CI->setTailCall();
       Modified = true;
     } else {
@@ -330,7 +331,7 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
       // Writes to memory only matter if they may alias the pointer
       // being loaded from.
       const DataLayout &DL = L->getModule()->getDataLayout();
-      if ((AA->getModRefInfo(CI, MemoryLocation::get(L)) & MRI_Mod) ||
+      if (isModSet(AA->getModRefInfo(CI, MemoryLocation::get(L))) ||
           !isSafeToLoadUnconditionally(L->getPointerOperand(),
                                        L->getAlignment(), DL, L))
         return false;
@@ -491,7 +492,8 @@ static bool eliminateRecursiveTailCall(CallInst *CI, ReturnInst *Ret,
                                        BasicBlock *&OldEntry,
                                        bool &TailCallsAreMarkedTail,
                                        SmallVectorImpl<PHINode *> &ArgumentPHIs,
-                                       AliasAnalysis *AA) {
+                                       AliasAnalysis *AA,
+                                       OptimizationRemarkEmitter *ORE) {
   // If we are introducing accumulator recursion to eliminate operations after
   // the call instruction that are both associative and commutative, the initial
   // value for the accumulator is placed in this variable.  If this value is set
@@ -551,8 +553,11 @@ static bool eliminateRecursiveTailCall(CallInst *CI, ReturnInst *Ret,
   BasicBlock *BB = Ret->getParent();
   Function *F = BB->getParent();
 
-  emitOptimizationRemark(F->getContext(), "tailcallelim", *F, CI->getDebugLoc(),
-                         "transforming tail recursion to loop");
+  using namespace ore;
+  ORE->emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "tailcall-recursion", CI)
+           << "transforming tail recursion into loop";
+  });
 
   // OK! We can transform this tail call.  If this is the first one found,
   // create the new entry block, allowing us to branch back to the old entry.
@@ -666,13 +671,11 @@ static bool eliminateRecursiveTailCall(CallInst *CI, ReturnInst *Ret,
   return true;
 }
 
-static bool foldReturnAndProcessPred(BasicBlock *BB, ReturnInst *Ret,
-                                     BasicBlock *&OldEntry,
-                                     bool &TailCallsAreMarkedTail,
-                                     SmallVectorImpl<PHINode *> &ArgumentPHIs,
-                                     bool CannotTailCallElimCallsMarkedTail,
-                                     const TargetTransformInfo *TTI,
-                                     AliasAnalysis *AA) {
+static bool foldReturnAndProcessPred(
+    BasicBlock *BB, ReturnInst *Ret, BasicBlock *&OldEntry,
+    bool &TailCallsAreMarkedTail, SmallVectorImpl<PHINode *> &ArgumentPHIs,
+    bool CannotTailCallElimCallsMarkedTail, const TargetTransformInfo *TTI,
+    AliasAnalysis *AA, OptimizationRemarkEmitter *ORE) {
   bool Change = false;
 
   // Make sure this block is a trivial return block.
@@ -708,7 +711,7 @@ static bool foldReturnAndProcessPred(BasicBlock *BB, ReturnInst *Ret,
         BB->eraseFromParent();
 
       eliminateRecursiveTailCall(CI, RI, OldEntry, TailCallsAreMarkedTail,
-                                 ArgumentPHIs, AA);
+                                 ArgumentPHIs, AA, ORE);
       ++NumRetDuped;
       Change = true;
     }
@@ -722,23 +725,25 @@ static bool processReturningBlock(ReturnInst *Ret, BasicBlock *&OldEntry,
                                   SmallVectorImpl<PHINode *> &ArgumentPHIs,
                                   bool CannotTailCallElimCallsMarkedTail,
                                   const TargetTransformInfo *TTI,
-                                  AliasAnalysis *AA) {
+                                  AliasAnalysis *AA,
+                                  OptimizationRemarkEmitter *ORE) {
   CallInst *CI = findTRECandidate(Ret, CannotTailCallElimCallsMarkedTail, TTI);
   if (!CI)
     return false;
 
   return eliminateRecursiveTailCall(CI, Ret, OldEntry, TailCallsAreMarkedTail,
-                                    ArgumentPHIs, AA);
+                                    ArgumentPHIs, AA, ORE);
 }
 
 static bool eliminateTailRecursion(Function &F, const TargetTransformInfo *TTI,
-                                   AliasAnalysis *AA) {
+                                   AliasAnalysis *AA,
+                                   OptimizationRemarkEmitter *ORE) {
   if (F.getFnAttribute("disable-tail-calls").getValueAsString() == "true")
     return false;
 
   bool MadeChange = false;
   bool AllCallsAreTailCalls = false;
-  MadeChange |= markTails(F, AllCallsAreTailCalls);
+  MadeChange |= markTails(F, AllCallsAreTailCalls, ORE);
   if (!AllCallsAreTailCalls)
     return MadeChange;
 
@@ -765,13 +770,13 @@ static bool eliminateTailRecursion(Function &F, const TargetTransformInfo *TTI,
   for (Function::iterator BBI = F.begin(), E = F.end(); BBI != E; /*in loop*/) {
     BasicBlock *BB = &*BBI++; // foldReturnAndProcessPred may delete BB.
     if (ReturnInst *Ret = dyn_cast<ReturnInst>(BB->getTerminator())) {
-      bool Change =
-          processReturningBlock(Ret, OldEntry, TailCallsAreMarkedTail,
-                                ArgumentPHIs, !CanTRETailMarkedCall, TTI, AA);
+      bool Change = processReturningBlock(Ret, OldEntry, TailCallsAreMarkedTail,
+                                          ArgumentPHIs, !CanTRETailMarkedCall,
+                                          TTI, AA, ORE);
       if (!Change && BB->getFirstNonPHIOrDbg() == Ret)
         Change = foldReturnAndProcessPred(BB, Ret, OldEntry,
                                           TailCallsAreMarkedTail, ArgumentPHIs,
-                                          !CanTRETailMarkedCall, TTI, AA);
+                                          !CanTRETailMarkedCall, TTI, AA, ORE);
       MadeChange |= Change;
     }
   }
@@ -802,6 +807,7 @@ struct TailCallElim : public FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 
@@ -811,7 +817,8 @@ struct TailCallElim : public FunctionPass {
 
     return eliminateTailRecursion(
         F, &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
-        &getAnalysis<AAResultsWrapperPass>().getAAResults());
+        &getAnalysis<AAResultsWrapperPass>().getAAResults(),
+        &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE());
   }
 };
 }
@@ -820,6 +827,7 @@ char TailCallElim::ID = 0;
 INITIALIZE_PASS_BEGIN(TailCallElim, "tailcallelim", "Tail Call Elimination",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(TailCallElim, "tailcallelim", "Tail Call Elimination",
                     false, false)
 
@@ -833,8 +841,9 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
 
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  bool Changed = eliminateTailRecursion(F, &TTI, &AA);
+  bool Changed = eliminateTailRecursion(F, &TTI, &AA, &ORE);
 
   if (!Changed)
     return PreservedAnalyses::all();

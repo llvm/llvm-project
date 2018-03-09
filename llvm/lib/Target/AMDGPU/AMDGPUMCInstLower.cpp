@@ -121,21 +121,39 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createExpr(Expr);
     return true;
   }
+  case MachineOperand::MO_RegisterMask:
+    // Regmasks are like implicit defs.
+    return false;
   }
 }
 
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
+  const auto *TII = ST.getInstrInfo();
 
   // FIXME: Should be able to handle this with emitPseudoExpansionLowering. We
   // need to select it to the subtarget specific version, and there's no way to
   // do that with a single pseudo source operation.
   if (Opcode == AMDGPU::S_SETPC_B64_return)
     Opcode = AMDGPU::S_SETPC_B64;
+  else if (Opcode == AMDGPU::SI_CALL) {
+    // SI_CALL is just S_SWAPPC_B64 with an additional operand to track the
+    // called function (which we need to remove here).
+    OutMI.setOpcode(TII->pseudoToMCOpcode(AMDGPU::S_SWAPPC_B64));
+    MCOperand Dest, Src;
+    lowerOperand(MI->getOperand(0), Dest);
+    lowerOperand(MI->getOperand(1), Src);
+    OutMI.addOperand(Dest);
+    OutMI.addOperand(Src);
+    return;
+  } else if (Opcode == AMDGPU::SI_TCRETURN) {
+    // TODO: How to use branch immediate and avoid register+add?
+    Opcode = AMDGPU::S_SETPC_B64;
+  }
 
-  int MCOpcode = ST.getInstrInfo()->pseudoToMCOpcode(Opcode);
+  int MCOpcode = TII->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction()->getContext();
+    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "
                 "a target-specific version: " + Twine(MI->getOpcode()));
   }
@@ -187,7 +205,7 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction()->getContext();
+    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }
@@ -212,7 +230,7 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
         const MCSymbolRefExpr *Expr
           = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
         Expr->print(Str, MAI);
-        OutStreamer->emitRawComment(" mask branch " + BBStr);
+        OutStreamer->emitRawComment(Twine(" mask branch ") + BBStr);
       }
 
       return;

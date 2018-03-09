@@ -1,4 +1,4 @@
-//===--- HexagonRDFOpt.cpp ------------------------------------------------===//
+//===- HexagonRDFOpt.cpp --------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,49 +9,65 @@
 
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
+#include "MCTargetDesc/HexagonBaseInfo.h"
 #include "RDFCopy.h"
 #include "RDFDeadCode.h"
 #include "RDFGraph.h"
 #include "RDFLiveness.h"
+#include "RDFRegisters.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <limits>
+#include <utility>
 
 using namespace llvm;
 using namespace rdf;
 
 namespace llvm {
+
   void initializeHexagonRDFOptPass(PassRegistry&);
   FunctionPass *createHexagonRDFOpt();
-}
+
+} // end namespace llvm
+
+static unsigned RDFCount = 0;
+
+static cl::opt<unsigned> RDFLimit("rdf-limit",
+    cl::init(std::numeric_limits<unsigned>::max()));
+static cl::opt<bool> RDFDump("rdf-dump", cl::init(false));
 
 namespace {
-  unsigned RDFCount = 0;
-  cl::opt<unsigned> RDFLimit("rdf-limit", cl::init(UINT_MAX));
-  cl::opt<bool> RDFDump("rdf-dump", cl::init(false));
 
   class HexagonRDFOpt : public MachineFunctionPass {
   public:
-    HexagonRDFOpt() : MachineFunctionPass(ID) {
-      initializeHexagonRDFOptPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonRDFOpt() : MachineFunctionPass(ID) {}
+
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineDominatorTree>();
       AU.addRequired<MachineDominanceFrontier>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
+
     StringRef getPassName() const override {
       return "Hexagon RDF optimizations";
     }
+
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
@@ -66,32 +82,32 @@ namespace {
     MachineRegisterInfo *MRI;
   };
 
-  char HexagonRDFOpt::ID = 0;
-}
-
-INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "rdfopt", "Hexagon RDF opt", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
-INITIALIZE_PASS_END(HexagonRDFOpt, "rdfopt", "Hexagon RDF opt", false, false)
-
-
-namespace {
 struct HexagonCP : public CopyPropagation {
   HexagonCP(DataFlowGraph &G) : CopyPropagation(G) {}
+
   bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) override;
 };
-
 
 struct HexagonDCE : public DeadCodeElimination {
   HexagonDCE(DataFlowGraph &G, MachineRegisterInfo &MRI)
     : DeadCodeElimination(G, MRI) {}
+
   bool rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove);
   void removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum);
 
   bool run();
 };
+
 } // end anonymous namespace
 
+char HexagonRDFOpt::ID = 0;
+
+INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "hexagon-rdf-opt",
+      "Hexagon RDF optimizations", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_END(HexagonRDFOpt, "hexagon-rdf-opt",
+      "Hexagon RDF optimizations", false, false)
 
 bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
   auto mapRegs = [&EM] (RegisterRef DstR, RegisterRef SrcR) -> void {
@@ -130,7 +146,6 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
   return CopyPropagation::interpretAsCopy(MI, EM);
 }
 
-
 bool HexagonDCE::run() {
   bool Collected = collect();
   if (!Collected)
@@ -139,7 +154,8 @@ bool HexagonDCE::run() {
   const SetVector<NodeId> &DeadNodes = getDeadNodes();
   const SetVector<NodeId> &DeadInstrs = getDeadInstrs();
 
-  typedef DenseMap<NodeId,NodeId> RefToInstrMap;
+  using RefToInstrMap = DenseMap<NodeId, NodeId>;
+
   RefToInstrMap R2I;
   SetVector<NodeId> PartlyDead;
   DataFlowGraph &DFG = getDFG();
@@ -156,7 +172,6 @@ bool HexagonDCE::run() {
     }
   }
 
-
   // Nodes to remove.
   SetVector<NodeId> Remove = DeadInstrs;
 
@@ -170,7 +185,6 @@ bool HexagonDCE::run() {
 
   return erase(Remove) || Changed;
 }
-
 
 void HexagonDCE::removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum) {
   MachineInstr *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
@@ -197,7 +211,6 @@ void HexagonDCE::removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum) {
       RA.Addr->setRegRef(&MI->getOperand(N-1), DFG);
   }
 }
-
 
 bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
   if (!getDFG().IsCode<NodeAttrs::Stmt>(IA))
@@ -246,7 +259,7 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
     if (&DA.Addr->getOp() != &Op)
       continue;
     Defs = DFG.getRelatedRefs(IA, DA);
-    if (!all_of(Defs, IsDead))
+    if (!llvm::all_of(Defs, IsDead))
       return false;
     break;
   }
@@ -266,9 +279,8 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
   return true;
 }
 
-
 bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   if (RDFLimit.getPosition()) {
@@ -323,7 +335,6 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
 
   return false;
 }
-
 
 FunctionPass *llvm::createHexagonRDFOpt() {
   return new HexagonRDFOpt();

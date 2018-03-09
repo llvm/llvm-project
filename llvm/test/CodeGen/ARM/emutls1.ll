@@ -1,6 +1,6 @@
-; RUN: llc < %s -emulated-tls -march=arm -mtriple=arm-linux-androideabi \
+; RUN: llc < %s -emulated-tls -mtriple=arm-linux-androideabi \
 ; RUN:     | FileCheck %s
-; RUN: llc < %s -emulated-tls -march=arm -mtriple=arm-linux-androideabi \
+; RUN: llc < %s -emulated-tls -mtriple=arm-linux-androideabi \
 ; RUN:     -relocation-model=pic | FileCheck %s --check-prefix=PIC
 
 ; Compared with tls1.ll, emulated mode should not use __aeabi_read_tp or __tls_get_addr.

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--
 
 define ppc_fp128 @__floatditf(i64 %u) nounwind  {
 entry:

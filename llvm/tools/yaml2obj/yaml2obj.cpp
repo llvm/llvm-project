@@ -65,7 +65,7 @@ static int convertYAML(yaml::Input &YIn, raw_ostream &Out) {
     }
   } while (YIn.nextDocument());
 
-  error("yaml2obj: Cannot find the " + utostr(DocNum) +
+  error("yaml2obj: Cannot find the " + Twine(DocNum) +
         llvm::getOrdinalSuffix(DocNum) + " document");
 }
 
@@ -79,8 +79,8 @@ int main(int argc, char **argv) {
     OutputFilename = "-";
 
   std::error_code EC;
-  std::unique_ptr<tool_output_file> Out(
-      new tool_output_file(OutputFilename, EC, sys::fs::F_None));
+  std::unique_ptr<ToolOutputFile> Out(
+      new ToolOutputFile(OutputFilename, EC, sys::fs::F_None));
   if (EC)
     error("yaml2obj: Error opening '" + OutputFilename + "': " + EC.message());
 

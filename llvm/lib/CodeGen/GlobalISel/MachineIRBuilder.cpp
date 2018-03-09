@@ -15,10 +15,10 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetOpcodes.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -263,7 +263,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
 
   const ConstantInt *NewVal = &Val;
   if (Ty.getSizeInBits() != Val.getBitWidth())
-    NewVal = ConstantInt::get(MF->getFunction()->getContext(),
+    NewVal = ConstantInt::get(MF->getFunction().getContext(),
                               Val.getValue().sextOrTrunc(Ty.getSizeInBits()));
 
   return buildInstr(TargetOpcode::G_CONSTANT).addDef(Res).addCImm(NewVal);
@@ -271,7 +271,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
                                                     int64_t Val) {
-  auto IntN = IntegerType::get(MF->getFunction()->getContext(),
+  auto IntN = IntegerType::get(MF->getFunction().getContext(),
                                MRI->getType(Res).getSizeInBits());
   ConstantInt *CI = ConstantInt::get(IntN, Val, true);
   return buildConstant(Res, *CI);

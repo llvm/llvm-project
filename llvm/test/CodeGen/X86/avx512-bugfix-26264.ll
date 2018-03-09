@@ -3,7 +3,7 @@
 
 define <32 x double> @test_load_32f64(<32 x double>* %ptrs, <32 x i1> %mask, <32 x double> %src0)  {
 ; AVX512BW-LABEL: test_load_32f64:
-; AVX512BW:       ## BB#0:
+; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovb2m %zmm0, %k1
 ; AVX512BW-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
@@ -21,7 +21,7 @@ define <32 x double> @test_load_32f64(<32 x double>* %ptrs, <32 x i1> %mask, <32
 
 define <32 x i64> @test_load_32i64(<32 x i64>* %ptrs, <32 x i1> %mask, <32 x i64> %src0)  {
 ; AVX512BW-LABEL: test_load_32i64:
-; AVX512BW:       ## BB#0:
+; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovb2m %zmm0, %k1
 ; AVX512BW-NEXT:    vpblendmq (%rdi), %zmm1, %zmm0 {%k1}

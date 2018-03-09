@@ -107,7 +107,7 @@ body:             |
     ; CHECK: %eax = ADD32rr %eax, killed %ebp
     ; CHECK: %eax = ADD32ri8 %eax, -5
  
-    %eax = LEA32r killed %eax, 1, killed %ebp, -5, _
+    %eax = LEA32r killed %eax, 1, killed %ebp, -5, %noreg
     RETQ %eax
 
 ...
@@ -142,7 +142,7 @@ body:             |
     ; CHECK: %ebp = ADD32rr %ebp, killed %eax
     ; CHECK: %ebp = ADD32ri8 %ebp, -5
  
-    %ebp = LEA32r killed %ebp, 1, killed %eax, -5, _
+    %ebp = LEA32r killed %ebp, 1, killed %eax, -5, %noreg
     RETQ %ebp
 
 ...
@@ -176,7 +176,7 @@ body:             |
     liveins: %eax, %ebp
     ; CHECK: %ebp = ADD32rr %ebp, killed %eax
  
-    %ebp = LEA32r killed %ebp, 1, killed %eax, 0, _
+    %ebp = LEA32r killed %ebp, 1, killed %eax, 0, %noreg
     RETQ %ebp
 
 ...
@@ -212,7 +212,7 @@ body:             |
     ; CHECK: %ebx = LEA32r killed %eax, 1, killed %ebp, 0
     ; CHECK: %ebx = ADD32ri8 %ebx, -5
  
-    %ebx = LEA32r killed %eax, 1, killed %ebp, -5, _
+    %ebx = LEA32r killed %eax, 1, killed %ebp, -5, %noreg
     RETQ %ebx
 
 ...
@@ -245,10 +245,10 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: %eax, %ebp
-    ; CHECK: %ebx = LEA32r killed %eax, 1, killed %ebp, 0, _
+    ; CHECK: %ebx = LEA32r killed %eax, 1, killed %ebp, 0, %noreg
     ; CHECK: %ebx = ADD32ri8  %ebx, -5
  
-    %ebx = LEA32r killed %ebp, 1, killed %eax, -5, _
+    %ebx = LEA32r killed %ebp, 1, killed %eax, -5, %noreg
     RETQ %ebx
 
 ...
@@ -281,9 +281,9 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: %eax, %ebp
-    ; CHECK: %ebx = LEA32r killed %eax, 1, killed %ebp, 0, _
+    ; CHECK: %ebx = LEA32r killed %eax, 1, killed %ebp, 0, %noreg
  
-    %ebx = LEA32r killed %ebp, 1, killed %eax, 0, _
+    %ebx = LEA32r killed %ebp, 1, killed %eax, 0, %noreg
     RETQ %ebx
 
 ...
@@ -318,7 +318,7 @@ body:             |
     ; CHECK: %eax = ADD32rr %eax, killed %ebp
     ; CHECK: %eax = ADD32ri %eax, 129
  
-    %eax = LEA32r killed %eax, 1, killed %ebp, 129, _
+    %eax = LEA32r killed %eax, 1, killed %ebp, 129, %noreg
     RETQ %eax
 
 ...
@@ -354,7 +354,7 @@ body:             |
     ; CHECK: %ebx = MOV32rr  %ebp
     ; CHECK: %ebx = ADD32rr %ebx, %ebp
  
-    %ebx = LEA32r %ebp, 1, %ebp, 0, _
+    %ebx = LEA32r %ebp, 1, %ebp, 0, %noreg
     RETQ %ebx
 
 ...
@@ -386,10 +386,10 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: %eax, %ebp, %ebx
-    ; CHECK: %ebx = LEA32r _, 1, %ebp, 5, _
+    ; CHECK: %ebx = LEA32r %noreg, 1, %ebp, 5, %noreg
     ; CHECK: %ebx = ADD32rr %ebx, %ebp
  
-    %ebx = LEA32r %ebp, 1, %ebp, 5, _
+    %ebx = LEA32r %ebp, 1, %ebp, 5, %noreg
     RETQ %ebx
 
 ...
@@ -421,10 +421,10 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: %eax, %ebp, %ebx
-    ; CHECK: %ebx = LEA32r _, 4, %ebp, 5, _
+    ; CHECK: %ebx = LEA32r %noreg, 4, %ebp, 5, %noreg
     ; CHECK: %ebx = ADD32rr %ebx, %ebp
  
-    %ebx = LEA32r %ebp, 4, %ebp, 5, _
+    %ebx = LEA32r %ebp, 4, %ebp, 5, %noreg
     RETQ %ebx
 
 ...
@@ -456,9 +456,9 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: %eax, %ebp, %ebx
-    ; CHECK: %ebp = LEA32r killed %ebp, 4, killed %ebp, 0, _
+    ; CHECK: %ebp = LEA32r killed %ebp, 4, killed %ebp, 0, %noreg
  
-    %ebp = LEA32r killed %ebp, 4, killed %ebp, 0, _
+    %ebp = LEA32r killed %ebp, 4, killed %ebp, 0, %noreg
     RETQ %ebp
 
 ...
@@ -490,17 +490,17 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: %eax, %ebp, %ebx
-    ; CHECK: %ebx = LEA32r killed %eax, 4, killed %eax, 5, _
-    ; CHECK: %ebp = LEA32r killed %ebx, 4, killed %ebx, 0, _
+    ; CHECK: %ebx = LEA32r killed %eax, 4, killed %eax, 5, %noreg
+    ; CHECK: %ebp = LEA32r killed %ebx, 4, killed %ebx, 0, %noreg
     ; CHECK: %ebp = ADD32ri8 %ebp, 5
    
     CMP32rr   %eax, killed %ebx, implicit-def %eflags
-    %ebx = LEA32r killed %eax, 4, killed %eax, 5, _
+    %ebx = LEA32r killed %eax, 4, killed %eax, 5, %noreg
     JE_1 %bb.1, implicit %eflags
     RETQ %ebx
   bb.1:
     liveins: %eax, %ebp, %ebx
-    %ebp = LEA32r killed %ebx, 4, killed %ebx, 5, _
+    %ebp = LEA32r killed %ebx, 4, killed %ebx, 5, %noreg
     RETQ %ebp
 
 ...

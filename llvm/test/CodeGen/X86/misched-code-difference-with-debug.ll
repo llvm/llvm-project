@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-unknown -mcpu=generic | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=generic | FileCheck %s
 ; Both functions should produce the same code. The presence of debug values
 ; should not affect the scheduling strategy.
 ; Generated from:

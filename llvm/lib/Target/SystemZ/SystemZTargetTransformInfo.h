@@ -48,6 +48,8 @@ public:
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 
+  bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
+                     TargetTransformInfo::LSRCost &C2);
   /// @}
 
   /// \name Vector TTI Implementations
@@ -60,7 +62,9 @@ public:
   unsigned getPrefetchDistance() { return 2000; }
   unsigned getMinPrefetchStride() { return 2048; }
 
+  bool hasDivRemOp(Type *DataType, bool IsSigned);
   bool prefersVectorizedAddressing() { return false; }
+  bool LSRWithInstrQueries() { return true; }
   bool supportsEfficientVectorElementLoadStore() { return true; }
   bool enableInterleavedAccessVectorization() { return true; }
 

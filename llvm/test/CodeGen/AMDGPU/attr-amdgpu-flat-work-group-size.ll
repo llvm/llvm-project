@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=HSAMD %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
 ; CHECK: SGPRBlocks: 0
@@ -127,3 +128,15 @@ define amdgpu_kernel void @min_1024_max_2048() #3 {
   ret void
 }
 attributes #3 = {"amdgpu-flat-work-group-size"="1024,2048"}
+
+; HSAMD: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
+; HSAMD: Version: [ 1, 0 ]
+; HSAMD: Kernels:
+; HSAMD: - Name:                 min_64_max_64
+; HSAMD:   MaxFlatWorkGroupSize: 64
+; HSAMD: - Name:                 min_64_max_128
+; HSAMD:   MaxFlatWorkGroupSize: 128
+; HSAMD: - Name:                 min_128_max_128
+; HSAMD:   MaxFlatWorkGroupSize: 128
+; HSAMD: - Name:                 min_1024_max_2048
+; HSAMD:   MaxFlatWorkGroupSize: 2048

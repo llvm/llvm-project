@@ -6,7 +6,7 @@
 
 define <2 x double> @test_x86_sse41_blendpd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse41_blendpd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; CHECK-NEXT:    retl
   %res = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %a0, <2 x double> %a1, i32 6) ; <<2 x double>> [#uses=1]
@@ -17,7 +17,7 @@ declare <2 x double> @llvm.x86.sse41.blendpd(<2 x double>, <2 x double>, i32) no
 
 define <4 x float> @test_x86_sse41_blendps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse41_blendps:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; CHECK-NEXT:    retl
   %res = call <4 x float> @llvm.x86.sse41.blendps(<4 x float> %a0, <4 x float> %a1, i32 7) ; <<4 x float>> [#uses=1]
@@ -28,7 +28,7 @@ declare <4 x float> @llvm.x86.sse41.blendps(<4 x float>, <4 x float>, i32) nounw
 
 define <2 x double> @test_x86_sse41_dppd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse41_dppd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    dppd $7, %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <2 x double> @llvm.x86.sse41.dppd(<2 x double> %a0, <2 x double> %a1, i32 7) ; <<2 x double>> [#uses=1]
@@ -39,7 +39,7 @@ declare <2 x double> @llvm.x86.sse41.dppd(<2 x double>, <2 x double>, i32) nounw
 
 define <4 x float> @test_x86_sse41_dpps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse41_dpps:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    dpps $7, %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> %a0, <4 x float> %a1, i32 7) ; <<4 x float>> [#uses=1]
@@ -50,7 +50,7 @@ declare <4 x float> @llvm.x86.sse41.dpps(<4 x float>, <4 x float>, i32) nounwind
 
 define <4 x float> @test_x86_sse41_insertps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse41_insertps:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    retl
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i32 17) ; <<4 x float>> [#uses=1]
@@ -61,7 +61,7 @@ declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i32) noun
 
 define <2 x i64> @test_x86_sse41_movntdqa(<2 x i64>* %a0) {
 ; CHECK-LABEL: test_x86_sse41_movntdqa:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movntdqa (%eax), %xmm0
 ; CHECK-NEXT:    retl
@@ -74,7 +74,7 @@ declare <2 x i64> @llvm.x86.sse41.movntdqa(i8*) nounwind readnone
 
 define <8 x i16> @test_x86_sse41_mpsadbw(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: test_x86_sse41_mpsadbw:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    mpsadbw $7, %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %a0, <16 x i8> %a1, i32 7) ; <<8 x i16>> [#uses=1]
@@ -85,7 +85,7 @@ declare <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8>, <16 x i8>, i32) nounwind re
 
 define <8 x i16> @test_x86_sse41_pblendw(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: test_x86_sse41_pblendw:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3,4,5,6,7]
 ; CHECK-NEXT:    retl
   %res = call <8 x i16> @llvm.x86.sse41.pblendw(<8 x i16> %a0, <8 x i16> %a1, i32 7) ; <<8 x i16>> [#uses=1]
@@ -96,7 +96,7 @@ declare <8 x i16> @llvm.x86.sse41.pblendw(<8 x i16>, <8 x i16>, i32) nounwind re
 
 define <4 x i32> @test_x86_sse41_pmovsxbd(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovsxbd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovsxbd %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pmovsxbd(<16 x i8> %a0) ; <<4 x i32>> [#uses=1]
@@ -107,7 +107,7 @@ declare <4 x i32> @llvm.x86.sse41.pmovsxbd(<16 x i8>) nounwind readnone
 
 define <2 x i64> @test_x86_sse41_pmovsxbq(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovsxbq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovsxbq %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <2 x i64> @llvm.x86.sse41.pmovsxbq(<16 x i8> %a0) ; <<2 x i64>> [#uses=1]
@@ -118,7 +118,7 @@ declare <2 x i64> @llvm.x86.sse41.pmovsxbq(<16 x i8>) nounwind readnone
 
 define <8 x i16> @test_x86_sse41_pmovsxbw(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovsxbw:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovsxbw %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <8 x i16> @llvm.x86.sse41.pmovsxbw(<16 x i8> %a0) ; <<8 x i16>> [#uses=1]
@@ -129,7 +129,7 @@ declare <8 x i16> @llvm.x86.sse41.pmovsxbw(<16 x i8>) nounwind readnone
 
 define <2 x i64> @test_x86_sse41_pmovsxdq(<4 x i32> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovsxdq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovsxdq %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <2 x i64> @llvm.x86.sse41.pmovsxdq(<4 x i32> %a0) ; <<2 x i64>> [#uses=1]
@@ -140,7 +140,7 @@ declare <2 x i64> @llvm.x86.sse41.pmovsxdq(<4 x i32>) nounwind readnone
 
 define <4 x i32> @test_x86_sse41_pmovsxwd(<8 x i16> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovsxwd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovsxwd %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pmovsxwd(<8 x i16> %a0) ; <<4 x i32>> [#uses=1]
@@ -151,7 +151,7 @@ declare <4 x i32> @llvm.x86.sse41.pmovsxwd(<8 x i16>) nounwind readnone
 
 define <2 x i64> @test_x86_sse41_pmovsxwq(<8 x i16> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovsxwq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovsxwq %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <2 x i64> @llvm.x86.sse41.pmovsxwq(<8 x i16> %a0) ; <<2 x i64>> [#uses=1]
@@ -162,7 +162,7 @@ declare <2 x i64> @llvm.x86.sse41.pmovsxwq(<8 x i16>) nounwind readnone
 
 define <4 x i32> @test_x86_sse41_pmovzxbd(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovzxbd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pmovzxbd(<16 x i8> %a0) ; <<4 x i32>> [#uses=1]
@@ -173,7 +173,7 @@ declare <4 x i32> @llvm.x86.sse41.pmovzxbd(<16 x i8>) nounwind readnone
 
 define <2 x i64> @test_x86_sse41_pmovzxbq(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovzxbq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    retl
   %res = call <2 x i64> @llvm.x86.sse41.pmovzxbq(<16 x i8> %a0) ; <<2 x i64>> [#uses=1]
@@ -184,7 +184,7 @@ declare <2 x i64> @llvm.x86.sse41.pmovzxbq(<16 x i8>) nounwind readnone
 
 define <8 x i16> @test_x86_sse41_pmovzxbw(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovzxbw:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    retl
   %res = call <8 x i16> @llvm.x86.sse41.pmovzxbw(<16 x i8> %a0) ; <<8 x i16>> [#uses=1]
@@ -195,7 +195,7 @@ declare <8 x i16> @llvm.x86.sse41.pmovzxbw(<16 x i8>) nounwind readnone
 
 define <2 x i64> @test_x86_sse41_pmovzxdq(<4 x i32> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovzxdq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; CHECK-NEXT:    retl
   %res = call <2 x i64> @llvm.x86.sse41.pmovzxdq(<4 x i32> %a0) ; <<2 x i64>> [#uses=1]
@@ -206,7 +206,7 @@ declare <2 x i64> @llvm.x86.sse41.pmovzxdq(<4 x i32>) nounwind readnone
 
 define <4 x i32> @test_x86_sse41_pmovzxwd(<8 x i16> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovzxwd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pmovzxwd(<8 x i16> %a0) ; <<4 x i32>> [#uses=1]
@@ -217,7 +217,7 @@ declare <4 x i32> @llvm.x86.sse41.pmovzxwd(<8 x i16>) nounwind readnone
 
 define <2 x i64> @test_x86_sse41_pmovzxwq(<8 x i16> %a0) {
 ; CHECK-LABEL: test_x86_sse41_pmovzxwq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-NEXT:    retl
   %res = call <2 x i64> @llvm.x86.sse41.pmovzxwq(<8 x i16> %a0) ; <<2 x i64>> [#uses=1]
@@ -227,7 +227,7 @@ declare <2 x i64> @llvm.x86.sse41.pmovzxwq(<8 x i16>) nounwind readnone
 
 define <16 x i8> @max_epi8(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: max_epi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmaxsb %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <16 x i8> @llvm.x86.sse41.pmaxsb(<16 x i8> %a0, <16 x i8> %a1)
@@ -237,7 +237,7 @@ declare <16 x i8> @llvm.x86.sse41.pmaxsb(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <16 x i8> @min_epi8(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: min_epi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pminsb %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <16 x i8> @llvm.x86.sse41.pminsb(<16 x i8> %a0, <16 x i8> %a1)
@@ -247,7 +247,7 @@ declare <16 x i8> @llvm.x86.sse41.pminsb(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <8 x i16> @max_epu16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: max_epu16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmaxuw %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <8 x i16> @llvm.x86.sse41.pmaxuw(<8 x i16> %a0, <8 x i16> %a1)
@@ -257,7 +257,7 @@ declare <8 x i16> @llvm.x86.sse41.pmaxuw(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <8 x i16> @min_epu16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: min_epu16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pminuw %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <8 x i16> @llvm.x86.sse41.pminuw(<8 x i16> %a0, <8 x i16> %a1)
@@ -267,7 +267,7 @@ declare <8 x i16> @llvm.x86.sse41.pminuw(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <4 x i32> @max_epi32(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: max_epi32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmaxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32> %a0, <4 x i32> %a1)
@@ -277,7 +277,7 @@ declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <4 x i32> @min_epi32(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: min_epi32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pminsd %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32> %a0, <4 x i32> %a1)
@@ -287,7 +287,7 @@ declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <4 x i32> @max_epu32(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: max_epu32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pmaxud %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> %a1)
@@ -297,7 +297,7 @@ declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <4 x i32> @min_epu32(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: min_epu32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pminud %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = call <4 x i32> @llvm.x86.sse41.pminud(<4 x i32> %a0, <4 x i32> %a1)

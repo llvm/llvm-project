@@ -13,9 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
-#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instructions.h"
 using namespace llvm;
 
 /// Checks if we should import SGV as a definition, otherwise import as a
@@ -23,21 +21,15 @@ using namespace llvm;
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
     const GlobalValue *SGV, SetVector<GlobalValue *> *GlobalsToImport) {
 
-  // For alias, we tie the definition to the base object. Extract it and recurse
-  if (auto *GA = dyn_cast<GlobalAlias>(SGV)) {
-    if (GA->isInterposable())
-      return false;
-    const GlobalObject *GO = GA->getBaseObject();
-    if (!GO->hasLinkOnceODRLinkage())
-      return false;
-    return FunctionImportGlobalProcessing::doImportAsDefinition(
-        GO, GlobalsToImport);
-  }
   // Only import the globals requested for importing.
-  if (GlobalsToImport->count(const_cast<GlobalValue *>(SGV)))
-    return true;
-  // Otherwise no.
-  return false;
+  if (!GlobalsToImport->count(const_cast<GlobalValue *>(SGV)))
+    return false;
+
+  assert(!isa<GlobalAlias>(SGV) &&
+         "Unexpected global alias in the import list.");
+
+  // Otherwise yes.
+  return true;
 }
 
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
@@ -132,8 +124,10 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     return SGV->getLinkage();
 
   switch (SGV->getLinkage()) {
+  case GlobalValue::LinkOnceAnyLinkage:
+  case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::ExternalLinkage:
-    // External defnitions are converted to available_externally
+    // External and linkonce definitions are converted to available_externally
     // definitions upon import, so that they are available for inlining
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
@@ -148,12 +142,6 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     if (!doImportAsDefinition(SGV))
       return GlobalValue::ExternalLinkage;
     // An imported available_externally declaration stays that way.
-    return SGV->getLinkage();
-
-  case GlobalValue::LinkOnceAnyLinkage:
-  case GlobalValue::LinkOnceODRLinkage:
-    // These both stay the same when importing the definition.
-    // The ThinLTO pass will eventually force-import their definitions.
     return SGV->getLinkage();
 
   case GlobalValue::WeakAnyLinkage:
@@ -213,6 +201,23 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
 }
 
 void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
+
+  // Check the summaries to see if the symbol gets resolved to a known local
+  // definition.
+  if (GV.hasName()) {
+    ValueInfo VI = ImportIndex.getValueInfo(GV.getGUID());
+    if (VI) {
+      // Need to check all summaries are local in case of hash collisions.
+      bool IsLocal = VI.getSummaryList().size() &&
+          llvm::all_of(VI.getSummaryList(),
+                       [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                         return Summary->isDSOLocal();
+                       });
+      if (IsLocal)
+        GV.setDSOLocal(true);
+    }
+  }
+
   bool DoPromote = false;
   if (GV.hasLocalLinkage() &&
       ((DoPromote = shouldPromoteLocalToGlobal(&GV)) || isPerformingImport())) {

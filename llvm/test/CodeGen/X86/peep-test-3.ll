@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -march=x86 -post-RA-scheduler=false | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=i686-- -post-RA-scheduler=false | FileCheck %s
 ; rdar://7226797
 
 ; LLVM should omit the testl and use the flags result from the orl.

@@ -56,6 +56,13 @@ public:
 
   size_type size() const { return Vector.size(); }
 
+  /// Grow the MapVector so that it can contain at least \p NumEntries items
+  /// before resizing again.
+  void reserve(size_type NumEntries) {
+    Map.reserve(NumEntries);
+    Vector.reserve(NumEntries);
+  }
+
   iterator begin() { return Vector.begin(); }
   const_iterator begin() const { return Vector.begin(); }
   iterator end() { return Vector.end(); }

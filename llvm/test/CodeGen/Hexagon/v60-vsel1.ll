@@ -65,5 +65,5 @@ declare <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32>) #1
 declare <16 x i32> @llvm.hexagon.V6.vand(<16 x i32>, <16 x i32>) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }

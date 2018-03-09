@@ -34,14 +34,14 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -56,18 +56,27 @@ static cl::opt<bool>
                cl::desc("Avoid optimizing x86 call frames for size"),
                cl::init(false), cl::Hidden);
 
+namespace llvm {
+void initializeX86CallFrameOptimizationPass(PassRegistry &);
+}
+
 namespace {
 
 class X86CallFrameOptimization : public MachineFunctionPass {
 public:
-  X86CallFrameOptimization() : MachineFunctionPass(ID) {}
+  X86CallFrameOptimization() : MachineFunctionPass(ID) {
+    initializeX86CallFrameOptimizationPass(
+        *PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  static char ID;
 
 private:
   // Information we know about a particular call site
   struct CallContext {
-    CallContext() : FrameSetup(nullptr), MovVector(4, nullptr) {}
+    CallContext() : FrameSetup(nullptr), ArgStoreVector(4, nullptr) {}
 
     // Iterator referring to the frame setup instruction
     MachineBasicBlock::iterator FrameSetup;
@@ -81,8 +90,8 @@ private:
     // The total displacement of all passed parameters
     int64_t ExpectedDist = 0;
 
-    // The sequence of movs used to pass the parameters
-    SmallVector<MachineInstr *, 4> MovVector;
+    // The sequence of storing instructions used to pass the parameters
+    SmallVector<MachineInstr *, 4> ArgStoreVector;
 
     // True if this call site has no stack parameters
     bool NoStackParams = false;
@@ -120,12 +129,12 @@ private:
   MachineRegisterInfo *MRI;
   unsigned SlotSize;
   unsigned Log2SlotSize;
-  static char ID;
 };
 
-char X86CallFrameOptimization::ID = 0;
-
 } // end anonymous namespace
+char X86CallFrameOptimization::ID = 0;
+INITIALIZE_PASS(X86CallFrameOptimization, DEBUG_TYPE,
+                "X86 Call Frame Optimization", false, false)
 
 // This checks whether the transformation is legal.
 // Also returns false in cases where it's potentially legal, but
@@ -139,7 +148,7 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
   // is a danger of that being generated.
   if (STI->isTargetDarwin() &&
       (!MF.getLandingPads().empty() ||
-       (MF.getFunction()->needsUnwindTableEntry() && !TFL->hasFP(MF))))
+       (MF.getFunction().needsUnwindTableEntry() && !TFL->hasFP(MF))))
     return false;
 
   // It is not valid to change the stack pointer outside the prolog/epilog
@@ -234,7 +243,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   assert(isPowerOf2_32(SlotSize) && "Expect power of 2 stack slot size");
   Log2SlotSize = Log2_32(SlotSize);
 
-  if (skipFunction(*MF.getFunction()) || !isLegal(MF))
+  if (skipFunction(MF.getFunction()) || !isLegal(MF))
     return false;
 
   unsigned FrameSetupOpcode = TII->getCallFrameSetupOpcode();
@@ -271,11 +280,27 @@ X86CallFrameOptimization::classifyInstruction(
   if (MI == MBB.end())
     return Exit;
 
-  // The instructions we actually care about are movs onto the stack
-  int Opcode = MI->getOpcode();
-  if (Opcode == X86::MOV32mi   || Opcode == X86::MOV32mr ||
-      Opcode == X86::MOV64mi32 || Opcode == X86::MOV64mr)
-    return Convert;
+  // The instructions we actually care about are movs onto the stack or special
+  // cases of constant-stores to stack
+  switch (MI->getOpcode()) {
+    case X86::AND16mi8:
+    case X86::AND32mi8:
+    case X86::AND64mi8: {
+      MachineOperand ImmOp = MI->getOperand(X86::AddrNumOperands);
+      return ImmOp.getImm() == 0 ? Convert : Exit;
+    }
+    case X86::OR16mi8:
+    case X86::OR32mi8:
+    case X86::OR64mi8: {
+      MachineOperand ImmOp = MI->getOperand(X86::AddrNumOperands);
+      return ImmOp.getImm() == -1 ? Convert : Exit;
+    }
+    case X86::MOV32mi:
+    case X86::MOV32mr:
+    case X86::MOV64mi32:
+    case X86::MOV64mr:
+      return Convert;
+  }
 
   // Not all calling conventions have only stack MOVs between the stack
   // adjust and the call.
@@ -354,32 +379,40 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
     ++I;
 
   unsigned StackPtr = RegInfo.getStackRegister();
+  auto StackPtrCopyInst = MBB.end();
   // SelectionDAG (but not FastISel) inserts a copy of ESP into a virtual
-  // register here.  If it's there, use that virtual register as stack pointer
-  // instead.
-  if (I->isCopy() && I->getOperand(0).isReg() && I->getOperand(1).isReg() &&
-      I->getOperand(1).getReg() == StackPtr) {
-    Context.SPCopy = &*I++;
-    StackPtr = Context.SPCopy->getOperand(0).getReg();
-  }
+  // register.  If it's there, use that virtual register as stack pointer
+  // instead. Also, we need to locate this instruction so that we can later
+  // safely ignore it while doing the conservative processing of the call chain.
+  // The COPY can be located anywhere between the call-frame setup
+  // instruction and its first use. We use the call instruction as a boundary
+  // because it is usually cheaper to check if an instruction is a call than
+  // checking if an instruction uses a register.
+  for (auto J = I; !J->isCall(); ++J)
+    if (J->isCopy() && J->getOperand(0).isReg() && J->getOperand(1).isReg() &&
+        J->getOperand(1).getReg() == StackPtr) {
+      StackPtrCopyInst = J;
+      Context.SPCopy = &*J++;
+      StackPtr = Context.SPCopy->getOperand(0).getReg();
+      break;
+    }
 
   // Scan the call setup sequence for the pattern we're looking for.
   // We only handle a simple case - a sequence of store instructions that
   // push a sequence of stack-slot-aligned values onto the stack, with
   // no gaps between them.
   if (MaxAdjust > 4)
-    Context.MovVector.resize(MaxAdjust, nullptr);
+    Context.ArgStoreVector.resize(MaxAdjust, nullptr);
 
-  InstClassification Classification;
   DenseSet<unsigned int> UsedRegs;
 
-  while ((Classification = classifyInstruction(MBB, I, RegInfo, UsedRegs)) !=
-         Exit) {
-    if (Classification == Skip) {
-      ++I;
+  for (InstClassification Classification = Skip; Classification != Exit; ++I) {
+    // If this is the COPY of the stack pointer, it's ok to ignore.
+    if (I == StackPtrCopyInst)
       continue;
-    }
-
+    Classification = classifyInstruction(MBB, I, RegInfo, UsedRegs);
+    if (Classification != Convert)
+      continue;
     // We know the instruction has a supported store opcode.
     // We only want movs of the form:
     // mov imm/reg, k(%StackPtr)
@@ -407,13 +440,13 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       return;
     StackDisp >>= Log2SlotSize;
 
-    assert((size_t)StackDisp < Context.MovVector.size() &&
+    assert((size_t)StackDisp < Context.ArgStoreVector.size() &&
            "Function call has more parameters than the stack is adjusted for.");
 
     // If the same stack slot is being filled twice, something's fishy.
-    if (Context.MovVector[StackDisp] != nullptr)
+    if (Context.ArgStoreVector[StackDisp] != nullptr)
       return;
-    Context.MovVector[StackDisp] = &*I;
+    Context.ArgStoreVector[StackDisp] = &*I;
 
     for (const MachineOperand &MO : I->uses()) {
       if (!MO.isReg())
@@ -422,9 +455,9 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       if (RegInfo.isPhysicalRegister(Reg))
         UsedRegs.insert(Reg);
     }
-
-    ++I;
   }
+
+  --I;
 
   // We now expect the end of the sequence. If we stopped early,
   // or reached the end of the block without finding a call, bail.
@@ -436,14 +469,14 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
     return;
 
   // Now, go through the vector, and see that we don't have any gaps,
-  // but only a series of MOVs.
-  auto MMI = Context.MovVector.begin(), MME = Context.MovVector.end();
+  // but only a series of storing instructions.
+  auto MMI = Context.ArgStoreVector.begin(), MME = Context.ArgStoreVector.end();
   for (; MMI != MME; ++MMI, Context.ExpectedDist += SlotSize)
     if (*MMI == nullptr)
       break;
 
   // If the call had no parameters, do nothing
-  if (MMI == Context.MovVector.begin())
+  if (MMI == Context.ArgStoreVector.begin())
     return;
 
   // We are either at the last parameter, or a gap.
@@ -466,17 +499,23 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
   DebugLoc DL = FrameSetup->getDebugLoc();
   bool Is64Bit = STI->is64Bit();
-  // Now, iterate through the vector in reverse order, and replace the movs
-  // with pushes. MOVmi/MOVmr doesn't have any defs, so no need to
+  // Now, iterate through the vector in reverse order, and replace the store to
+  // stack with pushes. MOVmi/MOVmr doesn't have any defs, so no need to
   // replace uses.
   for (int Idx = (Context.ExpectedDist >> Log2SlotSize) - 1; Idx >= 0; --Idx) {
-    MachineBasicBlock::iterator MOV = *Context.MovVector[Idx];
-    MachineOperand PushOp = MOV->getOperand(X86::AddrNumOperands);
+    MachineBasicBlock::iterator Store = *Context.ArgStoreVector[Idx];
+    MachineOperand PushOp = Store->getOperand(X86::AddrNumOperands);
     MachineBasicBlock::iterator Push = nullptr;
     unsigned PushOpcode;
-    switch (MOV->getOpcode()) {
+    switch (Store->getOpcode()) {
     default:
       llvm_unreachable("Unexpected Opcode!");
+    case X86::AND16mi8:
+    case X86::AND32mi8:
+    case X86::AND64mi8:
+    case X86::OR16mi8:
+    case X86::OR32mi8:
+    case X86::OR64mi8:
     case X86::MOV32mi:
     case X86::MOV64mi32:
       PushOpcode = Is64Bit ? X86::PUSH64i32 : X86::PUSHi32;
@@ -497,7 +536,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
       // If storing a 32-bit vreg on 64-bit targets, extend to a 64-bit vreg
       // in preparation for the PUSH64. The upper 32 bits can be undef.
-      if (Is64Bit && MOV->getOpcode() == X86::MOV32mr) {
+      if (Is64Bit && Store->getOpcode() == X86::MOV32mr) {
         unsigned UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
         Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
         BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg);
@@ -541,7 +580,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
           MBB, std::next(Push), DL,
           MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
 
-    MBB.erase(MOV);
+    MBB.erase(Store);
   }
 
   // The stack-pointer copy is no longer used in the call sequences.

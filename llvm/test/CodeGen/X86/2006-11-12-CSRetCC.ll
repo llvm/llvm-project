@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s | FileCheck %s
 
 target triple = "i686-pc-linux-gnu"
 @str = internal constant [9 x i8] c"%f+%f*i\0A\00"              ; <[9 x i8]*> [#uses=1]

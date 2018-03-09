@@ -8,11 +8,9 @@
 ; register live-ranges, we end up with a useless copy.
 define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-LABEL: val_compare_and_swap:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi1:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rcx, %r9
 ; CHECK-NEXT:    movq %rsi, %rax
@@ -28,11 +26,9 @@ define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 
 define void @fetch_and_nand(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_nand:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi2:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi3:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -48,7 +44,7 @@ define void @fetch_and_nand(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    notq %rcx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB1_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -60,11 +56,9 @@ define void @fetch_and_nand(i128* %p, i128 %bits) {
 
 define void @fetch_and_or(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_or:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi4:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi5:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -78,7 +72,7 @@ define void @fetch_and_or(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    orq %r8, %rcx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB2_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -90,11 +84,9 @@ define void @fetch_and_or(i128* %p, i128 %bits) {
 
 define void @fetch_and_add(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_add:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi6:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi7:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -108,7 +100,7 @@ define void @fetch_and_add(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    adcq %r8, %rcx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB3_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -120,11 +112,9 @@ define void @fetch_and_add(i128* %p, i128 %bits) {
 
 define void @fetch_and_sub(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_sub:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi8:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi9:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -138,7 +128,7 @@ define void @fetch_and_sub(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    sbbq %r8, %rcx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB4_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -150,11 +140,9 @@ define void @fetch_and_sub(i128* %p, i128 %bits) {
 
 define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_min:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi10:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi11:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -165,26 +153,13 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    cmpq %rax, %rsi
 ; CHECK-NEXT:    movq %r8, %rcx
 ; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    setge %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    jne LBB5_3
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:  LBB5_3: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    jne LBB5_5
-; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:  LBB5_5: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
+; CHECK-NEXT:    cmovgeq %rdx, %rcx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    cmovgeq %rax, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB5_1
-; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -196,11 +171,9 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 
 define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_max:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi12:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi13:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -211,26 +184,13 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    sbbq %r8, %rcx
-; CHECK-NEXT:    setge %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    jne LBB6_3
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:  LBB6_3: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    jne LBB6_5
-; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:  LBB6_5: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
+; CHECK-NEXT:    cmovgeq %rdx, %rcx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    cmovgeq %rax, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB6_1
-; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -242,11 +202,9 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 
 define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_umin:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi14:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi15:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -257,26 +215,13 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    cmpq %rax, %rsi
 ; CHECK-NEXT:    movq %r8, %rcx
 ; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    jne LBB7_3
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:  LBB7_3: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    jne LBB7_5
-; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:  LBB7_5: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
+; CHECK-NEXT:    cmovaeq %rdx, %rcx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    cmovaeq %rax, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB7_1
-; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -288,11 +233,9 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 
 define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_umax:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi16:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi17:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -303,26 +246,13 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    cmpq %rax, %rsi
 ; CHECK-NEXT:    movq %r8, %rcx
 ; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    jne LBB8_3
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:  LBB8_3: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    jne LBB8_5
-; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:  LBB8_5: ## %atomicrmw.start
-; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
+; CHECK-NEXT:    cmovbq %rdx, %rcx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    cmovbq %rax, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB8_1
-; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -334,11 +264,9 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 
 define i128 @atomic_load_seq_cst(i128* %p) {
 ; CHECK-LABEL: atomic_load_seq_cst:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi18:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi19:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
@@ -353,11 +281,9 @@ define i128 @atomic_load_seq_cst(i128* %p) {
 
 define i128 @atomic_load_relaxed(i128* %p) {
 ; CHECK-LABEL: atomic_load_relaxed:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi20:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi21:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
@@ -372,11 +298,9 @@ define i128 @atomic_load_relaxed(i128* %p) {
 
 define void @atomic_store_seq_cst(i128* %p, i128 %in) {
 ; CHECK-LABEL: atomic_store_seq_cst:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi22:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi23:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
@@ -387,7 +311,7 @@ define void @atomic_store_seq_cst(i128* %p, i128 %in) {
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB11_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
    store atomic i128 %in, i128* %p seq_cst, align 16
@@ -396,11 +320,9 @@ define void @atomic_store_seq_cst(i128* %p, i128 %in) {
 
 define void @atomic_store_release(i128* %p, i128 %in) {
 ; CHECK-LABEL: atomic_store_release:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi24:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi25:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
@@ -411,7 +333,7 @@ define void @atomic_store_release(i128* %p, i128 %in) {
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB12_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
    store atomic i128 %in, i128* %p release, align 16
@@ -420,11 +342,9 @@ define void @atomic_store_release(i128* %p, i128 %in) {
 
 define void @atomic_store_relaxed(i128* %p, i128 %in) {
 ; CHECK-LABEL: atomic_store_relaxed:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi26:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi27:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
@@ -435,7 +355,7 @@ define void @atomic_store_relaxed(i128* %p, i128 %in) {
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB13_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
    store atomic i128 %in, i128* %p unordered, align 16

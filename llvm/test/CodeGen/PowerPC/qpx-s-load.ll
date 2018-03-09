@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mcpu=a2q | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=a2q | FileCheck %s
 target triple = "powerpc64-bgq-linux"
 
 define <4 x float> @foo(<4 x float>* %p) {

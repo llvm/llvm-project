@@ -281,21 +281,19 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
 // We build up the list of spills for every case where a use is separated
 // from the definition by a suspend point.
 
-struct Spill : std::pair<Value *, Instruction *> {
-  using base = std::pair<Value *, Instruction *>;
+namespace {
+class Spill {
+  Value *Def;
+  Instruction *User;
 
-  Spill(Value *Def, User *U) : base(Def, cast<Instruction>(U)) {}
+public:
+  Spill(Value *Def, llvm::User *U) : Def(Def), User(cast<Instruction>(U)) {}
 
-  Value *def() const { return first; }
-  Instruction *user() const { return second; }
-  BasicBlock *userBlock() const { return second->getParent(); }
-
-  std::pair<Value *, BasicBlock *> getKey() const {
-    return {def(), userBlock()};
-  }
-
-  bool operator<(Spill const &rhs) const { return getKey() < rhs.getKey(); }
+  Value *def() const { return Def; }
+  Instruction *user() const { return User; }
+  BasicBlock *userBlock() const { return User->getParent(); }
 };
+} // namespace
 
 // Note that there may be more than one record with the same value of Def in
 // the SpillInfo vector.
@@ -734,8 +732,8 @@ static bool materializable(Instruction &V) {
 // Check for structural coroutine intrinsics that should not be spilled into
 // the coroutine frame.
 static bool isCoroutineStructureIntrinsic(Instruction &I) {
-  return isa<CoroIdInst>(&I) || isa<CoroBeginInst>(&I) ||
-         isa<CoroSaveInst>(&I) || isa<CoroSuspendInst>(&I);
+  return isa<CoroIdInst>(&I) || isa<CoroSaveInst>(&I) ||
+         isa<CoroSuspendInst>(&I);
 }
 
 // For every use of the value that is across suspend point, recreate that value
@@ -1053,7 +1051,7 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.
-    if (isCoroutineStructureIntrinsic(I))
+    if (isCoroutineStructureIntrinsic(I) || &I == Shape.CoroBegin)
       continue;
 
     // The Coroutine Promise always included into coroutine frame, no need to

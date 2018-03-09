@@ -1,0 +1,12 @@
+# RUN: llc -mtriple=armv7-none-eabi -verify-machineinstrs -run-pass arm-ldst-opt %s -o - | FileCheck %s
+---
+# CHECK-LABEL: name: f
+name:            f
+# Make sure the load into %r0 doesn't clobber the base register before the second load uses it.
+# CHECK: %r3 = LDRi12 %r0, 12, 14, %noreg
+# CHECK-NEXT: %r0 = LDRi12 %r0, 8, 14, %noreg
+body:             |
+  bb.0:
+    liveins: %r0, %r3
+    %r0, %r3 = LDRD %r0, %noreg, 8, 14, %noreg
+...

@@ -84,9 +84,9 @@ entry:
   %0 = tail call <4 x i32> @llvm.x86.sha256rnds2(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
   ret <4 x i32> %0
   ; CHECK: test_sha256rnds2rr
-  ; CHECK: movaps %xmm0, [[XMM_TMP1:%xmm[1-9][0-9]?]]
+  ; CHECK: movaps %xmm0, [[xmm_TMP1:%xmm[1-9][0-9]?]]
   ; CHECK: movaps %xmm2, %xmm0
-  ; CHECK: sha256rnds2 %xmm0, %xmm1, [[XMM_TMP1]]
+  ; CHECK: sha256rnds2 %xmm0, %xmm1, [[xmm_TMP1]]
 }
 
 define <4 x i32> @test_sha256rnds2rm(<4 x i32> %a, <4 x i32>* %b, <4 x i32> %c) nounwind uwtable {
@@ -95,9 +95,9 @@ entry:
   %1 = tail call <4 x i32> @llvm.x86.sha256rnds2(<4 x i32> %a, <4 x i32> %0, <4 x i32> %c)
   ret <4 x i32> %1
   ; CHECK: test_sha256rnds2rm
-  ; CHECK: movaps %xmm0, [[XMM_TMP2:%xmm[1-9][0-9]?]]
+  ; CHECK: movaps %xmm0, [[xmm_TMP2:%xmm[1-9][0-9]?]]
   ; CHECK: movaps %xmm1, %xmm0
-  ; CHECK: sha256rnds2 %xmm0, (%rdi), [[XMM_TMP2]]
+  ; CHECK: sha256rnds2 %xmm0, (%rdi), [[xmm_TMP2]]
 }
 
 declare <4 x i32> @llvm.x86.sha256msg1(<4 x i32>, <4 x i32>) nounwind readnone

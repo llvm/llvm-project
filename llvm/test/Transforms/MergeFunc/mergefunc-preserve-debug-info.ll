@@ -96,8 +96,8 @@ define i32 @maxB(i32 %x, i32 %y) !dbg !34 {
 
 ; OPTIMIZATION_LEVEL_2: define i32 @maxB(i32 %x, i32 %y)
 ; OPTIMIZATION_LEVEL_2-NEXT: entry:
-; OPTIMIZATION_LEVEL_2-NEXT: tail call void @llvm.dbg.value(metadata i32 %x, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
-; OPTIMIZATION_LEVEL_2-NEXT: tail call void @llvm.dbg.value(metadata i32 %y, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT: call void @llvm.dbg.value(metadata i32 %x, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT: call void @llvm.dbg.value(metadata i32 %y, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_2-NEXT: %0 = tail call i32 @maxA(i32 %x, i32 %y) #{{[0-9]+}}, !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_2-NEXT: ret i32 %0, !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_2-NEXT: }

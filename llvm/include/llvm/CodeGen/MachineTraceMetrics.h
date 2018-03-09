@@ -47,17 +47,18 @@
 #ifndef LLVM_CODEGEN_MACHINETRACEMETRICS_H
 #define LLVM_CODEGEN_MACHINETRACEMETRICS_H
 
+#include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
 
 class AnalysisUsage;
-class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
 class MachineLoop;
@@ -67,6 +68,22 @@ struct MCSchedClassDesc;
 class raw_ostream;
 class TargetInstrInfo;
 class TargetRegisterInfo;
+
+// Keep track of physreg data dependencies by recording each live register unit.
+// Associate each regunit with an instruction operand. Depending on the
+// direction instructions are scanned, it could be the operand that defined the
+// regunit, or the highest operand to read the regunit.
+struct LiveRegUnit {
+  unsigned RegUnit;
+  unsigned Cycle = 0;
+  const MachineInstr *MI = nullptr;
+  unsigned Op = 0;
+
+  unsigned getSparseSetIndex() const { return RegUnit; }
+
+  LiveRegUnit(unsigned RU) : RegUnit(RU) {}
+};
+
 
 class MachineTraceMetrics : public MachineFunctionPass {
   const MachineFunction *MF = nullptr;
@@ -343,6 +360,18 @@ public:
     /// Get the trace that passes through MBB.
     /// The trace is computed on demand.
     Trace getTrace(const MachineBasicBlock *MBB);
+
+    /// Updates the depth of an machine instruction, given RegUnits.
+    void updateDepth(TraceBlockInfo &TBI, const MachineInstr&,
+                     SparseSet<LiveRegUnit> &RegUnits);
+    void updateDepth(const MachineBasicBlock *, const MachineInstr&,
+                     SparseSet<LiveRegUnit> &RegUnits);
+
+    /// Updates the depth of the instructions from Start to End.
+    void updateDepths(MachineBasicBlock::iterator Start,
+                      MachineBasicBlock::iterator End,
+                      SparseSet<LiveRegUnit> &RegUnits);
+
   };
 
   /// Strategies for selecting traces.

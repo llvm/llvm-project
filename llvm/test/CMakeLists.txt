@@ -8,15 +8,21 @@ llvm_canonicalize_cmake_booleans(
   HAVE_LIBXAR
   LLVM_ENABLE_DIA_SDK
   LLVM_ENABLE_FFI
-  BUILD_SHARED_LIBS)
+  BUILD_SHARED_LIBS
+  LLVM_LINK_LLVM_DYLIB
+  )
 
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   )
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
   )
 
 # Don't include check-llvm into check-all without LLVM_BUILD_TOOLS.
@@ -41,6 +47,7 @@ set(LLVM_TEST_DEPENDS
           llvm-bcanalyzer
           llvm-c-test
           llvm-cat
+          llvm-cfi-verify
           llvm-cxxfilt
           llvm-config
           llvm-cov
@@ -53,6 +60,8 @@ set(LLVM_TEST_DEPENDS
           llvm-dwarfdump
           llvm-dwp
           llvm-extract
+          llvm-isel-fuzzer
+          llvm-opt-fuzzer
           llvm-lib
           llvm-link
           llvm-lto2
@@ -61,11 +70,13 @@ set(LLVM_TEST_DEPENDS
           llvm-modextract
           llvm-mt
           llvm-nm
+          llvm-objcopy
           llvm-objdump
           llvm-opt-report
           llvm-pdbutil
           llvm-profdata
           llvm-ranlib
+          llvm-rc
           llvm-readobj
           llvm-readelf
           llvm-rtdyld
@@ -145,15 +156,11 @@ set_target_properties(llvm-test-depends PROPERTIES FOLDER "Tests")
 
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  PARAMS llvm_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-         llvm_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
-  PARAMS llvm_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-         llvm_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
 

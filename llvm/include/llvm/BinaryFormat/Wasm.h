@@ -91,12 +91,17 @@ struct WasmLocalDecl {
 struct WasmFunction {
   std::vector<WasmLocalDecl> Locals;
   ArrayRef<uint8_t> Body;
+  uint32_t CodeSectionOffset;
+  uint32_t Size;
 };
 
 struct WasmDataSegment {
   uint32_t MemoryIndex;
   WasmInitExpr Offset;
   ArrayRef<uint8_t> Content;
+  StringRef Name;
+  uint32_t Alignment;
+  uint32_t Flags;
 };
 
 struct WasmElemSegment {
@@ -112,9 +117,14 @@ struct WasmRelocation {
   int64_t Addend;  // A value to add to the symbol.
 };
 
+struct WasmInitFunc {
+  uint32_t Priority;
+  uint32_t FunctionIndex;
+};
+
 struct WasmLinkingData {
   uint32_t DataSize;
-  uint32_t DataAlignment;
+  std::vector<WasmInitFunc> InitFunctions;
 };
 
 enum : unsigned {
@@ -180,20 +190,25 @@ enum class ValType {
 
 // Linking metadata kinds.
 enum : unsigned {
-  WASM_STACK_POINTER  = 0x1,
   WASM_SYMBOL_INFO    = 0x2,
   WASM_DATA_SIZE      = 0x3,
-  WASM_DATA_ALIGNMENT = 0x4,
+  WASM_SEGMENT_INFO   = 0x5,
+  WASM_INIT_FUNCS     = 0x6,
 };
 
-enum : unsigned {
-  WASM_SYMBOL_FLAG_WEAK = 0x1,
-};
+const unsigned WASM_SYMBOL_BINDING_MASK       = 0x3;
+const unsigned WASM_SYMBOL_VISIBILITY_MASK    = 0x4;
+
+const unsigned WASM_SYMBOL_BINDING_GLOBAL     = 0x0;
+const unsigned WASM_SYMBOL_BINDING_WEAK       = 0x1;
+const unsigned WASM_SYMBOL_BINDING_LOCAL      = 0x2;
+const unsigned WASM_SYMBOL_VISIBILITY_DEFAULT = 0x0;
+const unsigned WASM_SYMBOL_VISIBILITY_HIDDEN  = 0x4;
 
 #define WASM_RELOC(name, value) name = value,
 
 enum : unsigned {
-#include "WasmRelocs/WebAssembly.def"
+#include "WasmRelocs.def"
 };
 
 #undef WASM_RELOC

@@ -31,18 +31,44 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) {
 ; i386-NEXT: sahf
 ; i386-NEXT: jne
 
+; In the following case we get a long chain of EFLAGS save/restore due to
+; a sequence of:
+; cmpxchg8b (implicit-def eflags)
+; eax = copy eflags
+; adjcallstackdown32
+; ...
+; use of eax
+; During PEI the adjcallstackdown32 is replaced with the subl which
+; clobbers eflags, effectively interfering in the liveness interval.
+; Is this a case we care about? Maybe no, considering this issue
+; happens with the fast pre-regalloc scheduler enforced. A more
+; performant scheduler would move the adjcallstackdown32 out of the
+; eflags liveness interval.
+
 ; i386f-LABEL: test_intervening_call:
 ; i386f: cmpxchg8b
-; i386f-NEXT: movl %eax, (%esp)
-; i386f-NEXT: movl %edx, 4(%esp)
-; i386f-NEXT: seto %al
+; i386f-NEXT: pushl  %eax
+; i386f-NEXT: seto  %al
 ; i386f-NEXT: lahf
-; i386f-NEXT: movl %eax, [[FLAGS:%.*]]
-; i386f-NEXT: calll bar
-; i386f-NEXT: movl [[FLAGS]], %eax
-; i386f-NEXT: addb $127, %al
+; i386f-NEXT: movl  %eax, [[FLAGS:%.*]]
+; i386f-NEXT: popl  %eax
+; i386f-NEXT: subl  $8, %esp
+; i386f-NEXT: pushl  %eax
+; i386f-NEXT: movl  %ecx, %eax
+; i386f-NEXT: addb  $127, %al
 ; i386f-NEXT: sahf
-; i386f-NEXT: jne
+; i386f-NEXT: popl  %eax
+; i386f-NEXT: pushl  %eax
+; i386f-NEXT: seto  %al
+; i386f-NEXT: lahf
+; i386f-NEXT: movl  %eax, %esi
+; i386f-NEXT: popl  %eax
+; i386f-NEXT: pushl  %edx
+; i386f-NEXT: pushl  %eax
+; i386f-NEXT: calll  bar
+; i386f-NEXT: addl  $16, %esp
+; i386f-NEXT: movl  %esi, %eax
+; i386f-NEXT: addb  $127, %al
 
 ; x8664-LABEL: test_intervening_call:
 ; x8664: cmpxchgq

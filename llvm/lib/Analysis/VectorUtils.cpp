@@ -91,7 +91,8 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
     return Intrinsic::not_intrinsic;
 
   if (isTriviallyVectorizable(ID) || ID == Intrinsic::lifetime_start ||
-      ID == Intrinsic::lifetime_end || ID == Intrinsic::assume)
+      ID == Intrinsic::lifetime_end || ID == Intrinsic::assume ||
+      ID == Intrinsic::sideeffect)
     return ID;
   return Intrinsic::not_intrinsic;
 }

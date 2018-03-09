@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep jmp
+; RUN: llc < %s -mtriple=i686-- | not grep jmp
 
 	%struct..0anon = type { i32 }
 	%struct.binding_level = type { %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.binding_level*, i8, i8, i8, i8, i8, i32, %struct.tree_node* }

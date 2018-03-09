@@ -12,24 +12,33 @@ main_body:
   ret <4 x float> %tex
 }
 
-; Check that WQM is triggered by image samples and left untouched for loads...
+; Check that WQM is triggered by code calculating inputs to image samples and is disabled as soon as possible
 ;
 ;CHECK-LABEL: {{^}}test2:
 ;CHECK-NEXT: ; %main_body
+;CHECK-NEXT: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
 ;CHECK-NEXT: s_wqm_b64 exec, exec
+;CHECK: interp
+;CHECK: s_and_b64 exec, exec, [[ORIG]]
+;CHECK-NOT: interp
+;CHECK: image_sample
 ;CHECK-NOT: exec
-define amdgpu_ps void @test2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x float> %c) {
+;CHECK: .size test2
+define amdgpu_ps <4 x float> @test2(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) #6 {
 main_body:
-  %c.1 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> %c, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
-  %c.2 = bitcast <4 x float> %c.1 to <4 x i32>
-  %c.3 = extractelement <4 x i32> %c.2, i32 0
-  %gep = getelementptr float, float addrspace(1)* %ptr, i32 %c.3
-  %data = load float, float addrspace(1)* %gep
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %data, float undef, float undef, float undef, i1 true, i1 true) #1
-  ret void
+  %inst23 = extractelement <2 x float> %pos, i32 0
+  %inst24 = extractelement <2 x float> %pos, i32 1
+  %inst25 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 0, i32 0, i32 %m0)
+  %inst26 = tail call float @llvm.amdgcn.interp.p2(float %inst25, float %inst24, i32 0, i32 0, i32 %m0)
+  %inst27 = insertelement <2 x float> undef, float %inst26, i32 0
+  %inst28 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 1, i32 0, i32 %m0)
+  %inst29 = tail call float @llvm.amdgcn.interp.p2(float %inst28, float %inst24, i32 1, i32 0, i32 %m0)
+  %inst30 = insertelement <2 x float> %inst27, float %inst29, i32 1
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %inst30, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
+  ret <4 x float> %tex
 }
 
-; ... but disabled for stores (and, in this simple case, not re-enabled).
+; ... but disabled for stores (and, in this simple case, not re-enabled) ...
 ;
 ;CHECK-LABEL: {{^}}test3:
 ;CHECK-NEXT: ; %main_body
@@ -49,6 +58,36 @@ main_body:
   call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %tex, <4 x i32> undef, i32 %tex.2, i32 0, i1 0, i1 0)
 
   ret <4 x float> %tex
+}
+
+; ... and disabled for export.
+;
+;CHECK-LABEL: {{^}}test3x:
+;CHECK-NEXT: ; %main_body
+;CHECK-NEXT: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
+;CHECK-NEXT: s_wqm_b64 exec, exec
+;CHECK: s_and_b64 exec, exec, [[ORIG]]
+;CHECK: image_sample
+;CHECK: exp
+;CHECK-NOT: exec
+;CHECK: .size test3x
+define amdgpu_ps void @test3x(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) #6 {
+main_body:
+  %inst23 = extractelement <2 x float> %pos, i32 0
+  %inst24 = extractelement <2 x float> %pos, i32 1
+  %inst25 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 0, i32 0, i32 %m0)
+  %inst26 = tail call float @llvm.amdgcn.interp.p2(float %inst25, float %inst24, i32 0, i32 0, i32 %m0)
+  %inst27 = insertelement <2 x float> undef, float %inst26, i32 0
+  %inst28 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 1, i32 0, i32 %m0)
+  %inst29 = tail call float @llvm.amdgcn.interp.p2(float %inst28, float %inst24, i32 1, i32 0, i32 %m0)
+  %inst30 = insertelement <2 x float> %inst27, float %inst29, i32 1
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %inst30, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
+  %tex.0 = extractelement <4 x float> %tex, i32 0
+  %tex.1 = extractelement <4 x float> %tex, i32 1
+  %tex.2 = extractelement <4 x float> %tex, i32 2
+  %tex.3 = extractelement <4 x float> %tex, i32 3
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tex.0, float %tex.1, float %tex.2, float %tex.3, i1 true, i1 true)
+  ret void
 }
 
 ; Check that WQM is re-enabled when required.
@@ -72,6 +111,229 @@ main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.f32.v8i32(float %c.1.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
   %dtex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> %tex, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
   ret <4 x float> %dtex
+}
+
+; Check that WQM is triggered by the wqm intrinsic.
+;
+;CHECK-LABEL: {{^}}test5:
+;CHECK: s_wqm_b64 exec, exec
+;CHECK: buffer_load_dword
+;CHECK: buffer_load_dword
+;CHECK: v_add_f32_e32
+define amdgpu_ps float @test5(i32 inreg %idx0, i32 inreg %idx1) {
+main_body:
+  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %out = fadd float %src0, %src1
+  %out.0 = call float @llvm.amdgcn.wqm.f32(float %out)
+  ret float %out.0
+}
+
+; Check that the wqm intrinsic works correctly for integers.
+;
+;CHECK-LABEL: {{^}}test6:
+;CHECK: s_wqm_b64 exec, exec
+;CHECK: buffer_load_dword
+;CHECK: buffer_load_dword
+;CHECK: v_add_f32_e32
+define amdgpu_ps float @test6(i32 inreg %idx0, i32 inreg %idx1) {
+main_body:
+  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %out = fadd float %src0, %src1
+  %out.0 = bitcast float %out to i32
+  %out.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %out.0)
+  %out.2 = bitcast i32 %out.1 to float
+  ret float %out.2
+}
+
+; Check that WWM is triggered by the wwm intrinsic.
+;
+;CHECK-LABEL: {{^}}test_wwm1:
+;CHECK: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
+;CHECK: buffer_load_dword
+;CHECK: buffer_load_dword
+;CHECK: v_add_f32_e32
+define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1) {
+main_body:
+  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %out = fadd float %src0, %src1
+  %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
+  ret float %out.0
+}
+
+; Same as above, but with an integer type.
+;
+;CHECK-LABEL: {{^}}test_wwm2:
+;CHECK: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
+;CHECK: buffer_load_dword
+;CHECK: buffer_load_dword
+;CHECK: v_add_{{[iu]}}32_e32
+define amdgpu_ps float @test_wwm2(i32 inreg %idx0, i32 inreg %idx1) {
+main_body:
+  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0.0 = bitcast float %src0 to i32
+  %src1.0 = bitcast float %src1 to i32
+  %out = add i32 %src0.0, %src1.0
+  %out.0 = call i32 @llvm.amdgcn.wwm.i32(i32 %out)
+  %out.1 = bitcast i32 %out.0 to float
+  ret float %out.1
+}
+
+; Check that we don't leave WWM on for computations that don't require WWM,
+; since that will lead clobbering things that aren't supposed to be clobbered
+; in cases like this.
+;
+;CHECK-LABEL: {{^}}test_wwm3:
+;CHECK: s_or_saveexec_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], -1
+;CHECK: buffer_load_dword
+;CHECK: v_add_f32_e32
+;CHECK: s_mov_b64 exec, [[ORIG]]
+;CHECK: v_add_f32_e32
+define amdgpu_ps float @test_wwm3(i32 inreg %idx) {
+main_body:
+  ; use mbcnt to make sure the branch is divergent
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %cc = icmp uge i32 %hi, 32
+  br i1 %cc, label %endif, label %if
+
+if:
+  %src = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i1 0, i1 0)
+  %out = fadd float %src, %src
+  %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
+  %out.1 = fadd float %src, %out.0
+  br label %endif
+
+endif:
+  %out.2 = phi float [ %out.1, %if ], [ 0.0, %main_body ]
+  ret float %out.2
+}
+
+; Check that WWM writes aren't coalesced with non-WWM writes, since the WWM
+; write could clobber disabled channels in the non-WWM one.
+;
+;CHECK-LABEL: {{^}}test_wwm4:
+;CHECK: s_or_saveexec_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], -1
+;CHECK: buffer_load_dword
+;CHECK: v_add_f32_e32
+;CHECK: s_mov_b64 exec, [[ORIG]]
+;CHECK-NEXT: v_mov_b32_e32
+define amdgpu_ps float @test_wwm4(i32 inreg %idx) {
+main_body:
+  ; use mbcnt to make sure the branch is divergent
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %cc = icmp uge i32 %hi, 32
+  br i1 %cc, label %endif, label %if
+
+if:
+  %src = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i1 0, i1 0)
+  %out = fadd float %src, %src
+  %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
+  br label %endif
+
+endif:
+  %out.1 = phi float [ %out.0, %if ], [ 0.0, %main_body ]
+  ret float %out.1
+}
+
+; Make sure the transition from Exact to WWM then WQM works properly.
+;
+;CHECK-LABEL: {{^}}test_wwm5:
+;CHECK: buffer_load_dword
+;CHECK: buffer_store_dword
+;CHECK: s_or_saveexec_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], -1
+;CHECK: buffer_load_dword
+;CHECK: v_add_f32_e32
+;CHECK: s_mov_b64 exec, [[ORIG]]
+;CHECK: s_wqm_b64 exec, exec
+define amdgpu_ps float @test_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
+main_body:
+  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.buffer.store.f32(float %src0, <4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %temp = fadd float %src1, %src1
+  %temp.0 = call float @llvm.amdgcn.wwm.f32(float %temp)
+  %out = fadd float %temp.0, %temp.0
+  %out.0 = call float @llvm.amdgcn.wqm.f32(float %out)
+  ret float %out.0
+}
+
+; Check that WWM is turned on correctly across basic block boundaries.
+;
+;CHECK-LABEL: {{^}}test_wwm6:
+;CHECK: s_or_saveexec_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], -1
+;SI-CHECK: buffer_load_dword
+;VI-CHECK: flat_load_dword
+;CHECK: s_mov_b64 exec, [[ORIG]]
+;CHECK: %if
+;CHECK: s_or_saveexec_b64 [[ORIG2:s\[[0-9]+:[0-9]+\]]], -1
+;SI-CHECK: buffer_load_dword
+;VI-CHECK: flat_load_dword
+;CHECK: v_add_f32_e32
+;CHECK: s_mov_b64 exec, [[ORIG2]]
+define amdgpu_ps float @test_wwm6() {
+main_body:
+  %src0 = load volatile float, float addrspace(1)* undef
+  ; use mbcnt to make sure the branch is divergent
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %cc = icmp uge i32 %hi, 32
+  br i1 %cc, label %endif, label %if
+
+if:
+  %src1 = load volatile float, float addrspace(1)* undef
+  %out = fadd float %src0, %src1
+  %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
+  br label %endif
+
+endif:
+  %out.1 = phi float [ %out.0, %if ], [ 0.0, %main_body ]
+  ret float %out.1
+}
+
+; Check that @llvm.amdgcn.set.inactive disables WWM.
+;
+;CHECK-LABEL: {{^}}test_set_inactive1:
+;CHECK: buffer_load_dword
+;CHECK: s_not_b64 exec, exec
+;CHECK: v_mov_b32_e32
+;CHECK: s_not_b64 exec, exec
+;CHECK: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
+;CHECK: v_add_{{[iu]}}32_e32
+define amdgpu_ps void @test_set_inactive1(i32 inreg %idx) {
+main_body:
+  %src = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i1 0, i1 0)
+  %src.0 = bitcast float %src to i32
+  %src.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src.0, i32 0)
+  %out = add i32 %src.1, %src.1
+  %out.0 = call i32 @llvm.amdgcn.wwm.i32(i32 %out)
+  %out.1 = bitcast i32 %out.0 to float
+  call void @llvm.amdgcn.buffer.store.f32(float %out.1, <4 x i32> undef, i32 %idx, i32 0, i1 0, i1 0)
+  ret void
+}
+
+; Check that enabling WQM anywhere enables WQM for the set.inactive source.
+;
+;CHECK-LABEL: {{^}}test_set_inactive2:
+;CHECK: s_wqm_b64 exec, exec
+;CHECK: buffer_load_dword
+;CHECK: buffer_load_dword
+define amdgpu_ps void @test_set_inactive2(i32 inreg %idx0, i32 inreg %idx1) {
+main_body:
+  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src1.0 = bitcast float %src1 to i32
+  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 undef)
+  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  %src0.0 = bitcast float %src0 to i32
+  %src0.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %src0.0)
+  %out = add i32 %src0.1, %src1.1
+  %out.0 = bitcast i32 %out to float
+  call void @llvm.amdgcn.buffer.store.f32(float %out.0, <4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  ret void
 }
 
 ; Check a case of one branch of an if-else requiring WQM, the other requiring
@@ -211,8 +473,8 @@ END:
 ;CHECK: image_sample
 ;CHECK: s_and_b64 exec, exec, [[ORIG]]
 ;CHECK: image_sample
-;CHECK: v_cmp
-;CHECK: store
+;CHECK-DAG: v_cmp
+;CHECK-DAG: store
 define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %coord) {
 main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.f32.v8i32(float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
@@ -331,7 +593,7 @@ main_body:
 ; CHECK: s_wqm_b64 exec, exec
 ; CHECK: v_add_f32_e32 v0,
 ; CHECK: s_and_b64 exec, exec, [[ORIG]]
-define amdgpu_ps float @test_prolog_1(float %a, float %b) #4 {
+define amdgpu_ps float @test_prolog_1(float %a, float %b) #5 {
 main_body:
   %s = fadd float %a, %b
   ret float %s
@@ -494,8 +756,21 @@ declare <4 x float> @llvm.amdgcn.image.sample.v4f32.f32.v8i32(float, <8 x i32>, 
 declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #3
 declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #3
 declare void @llvm.AMDGPU.kill(float) #1
+declare float @llvm.amdgcn.wqm.f32(float) #3
+declare i32 @llvm.amdgcn.wqm.i32(i32) #3
+declare float @llvm.amdgcn.wwm.f32(float) #3
+declare i32 @llvm.amdgcn.wwm.i32(i32) #3
+declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #4
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #3
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #3
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #3
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #1
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
 attributes #3 = { nounwind readnone }
-attributes #4 = { "amdgpu-ps-wqm-outputs" }
+attributes #4 = { nounwind readnone convergent }
+attributes #5 = { "amdgpu-ps-wqm-outputs" }
+attributes #6 = { nounwind "InitialPSInputAddr"="2" }

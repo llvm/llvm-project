@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 | grep div | count 16
-; RUN: llc < %s -march=x86-64 | grep fmodf | count 8
+; RUN: llc < %s -mtriple=x86_64-- | grep div | count 16
+; RUN: llc < %s -mtriple=x86_64-- | grep fmodf | count 8
 
 define <8 x i32> @foo(<8 x i32> %t, <8 x i32> %u) {
 	%m = srem <8 x i32> %t, %u

@@ -1,7 +1,7 @@
 ; XFAIL: *
 ; fixme rev16 pattern is not matching
 
-; RUN: llc < %s -march=thumb -mcpu=arm1156t2-s -mattr=+thumb2 | grep "rev16\W*r[0-9]*,\W*r[0-9]*" | count 1
+; RUN: llc < %s -mtriple=thumb-- -mcpu=arm1156t2-s -mattr=+thumb2 | grep "rev16\W*r[0-9]*,\W*r[0-9]*" | count 1
 
 ; 0xff00ff00 = 4278255360
 ; 0x00ff00ff = 16711935

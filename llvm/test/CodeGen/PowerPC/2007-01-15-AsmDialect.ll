@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 | \
 ; RUN:    grep cntlz
 
 define i32 @foo() nounwind {

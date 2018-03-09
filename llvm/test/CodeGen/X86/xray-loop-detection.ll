@@ -19,5 +19,4 @@ Exit:
 ; CHECK-LABEL: xray_sled_0:
 ; CHECK-NEXT:  .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
-; CHECK-LABEL: Ltmp0:
 

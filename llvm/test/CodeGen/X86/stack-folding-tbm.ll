@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-unknown"
 
 define i32 @stack_fold_bextri_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_bextri_u32
-  ;CHECK:       # BB#0:
+  ;CHECK:       # %bb.0:
   ;CHECK:       bextr $2814, {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = tail call i32 @llvm.x86.tbm.bextri.u32(i32 %a0, i32 2814)
@@ -20,7 +20,7 @@ declare i32 @llvm.x86.tbm.bextri.u32(i32, i32)
 
 define i64 @stack_fold_bextri_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_bextri_u64
-  ;CHECK:       # BB#0:
+  ;CHECK:       # %bb.0:
   ;CHECK:       bextr $2814, {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = tail call i64 @llvm.x86.tbm.bextri.u64(i64 %a0, i64 2814)

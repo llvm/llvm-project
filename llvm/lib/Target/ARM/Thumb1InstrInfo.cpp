@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/MCInst.h"
 
 using namespace llvm;
@@ -141,4 +140,17 @@ void Thumb1InstrInfo::expandLoadStackGuard(
     expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi);
   else
     expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::tLDRi);
+}
+
+bool Thumb1InstrInfo::canCopyGluedNodeDuringSchedule(SDNode *N) const {
+  // In Thumb1 the scheduler may need to schedule a cross-copy between GPRS and CPSR
+  // but this is not always possible there, so allow the Scheduler to clone tADCS and tSBCS
+  // even if they have glue.
+  // FIXME. Actually implement the cross-copy where it is possible (post v6)
+  // because these copies entail more spilling.
+  unsigned Opcode = N->getMachineOpcode();
+  if (Opcode == ARM::tADCS || Opcode == ARM::tSBCS)
+    return true;
+
+  return false;
 }

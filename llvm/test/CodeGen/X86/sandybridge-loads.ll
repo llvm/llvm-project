@@ -3,7 +3,7 @@
 
 define void @wideloads(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: wideloads:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps (%rsi), %ymm1
@@ -28,7 +28,7 @@ define void @wideloads(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 
 define void @widestores(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: widestores:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vmovaps (%rsi), %ymm1
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsi)

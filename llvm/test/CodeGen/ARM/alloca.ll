@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mtriple=arm-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=arm-linux-gnu | FileCheck %s
 
 define void @f(i32 %a) {
 entry:

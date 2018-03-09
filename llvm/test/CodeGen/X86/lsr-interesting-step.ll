@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -relocation-model=static -mtriple=x86_64-unknown-linux-gnu -asm-verbose=0 | FileCheck %s
+; RUN: llc < %s -relocation-model=static -mtriple=x86_64-unknown-linux-gnu -asm-verbose=0 | FileCheck %s
 
 ; The inner loop should require only one add (and no leas either).
 ; rdar://8100380

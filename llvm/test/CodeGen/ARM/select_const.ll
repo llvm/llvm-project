@@ -8,7 +8,7 @@
 
 define i32 @select_0_or_1(i1 %cond) {
 ; CHECK-LABEL: select_0_or_1:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #1
 ; CHECK-NEXT:    bic r0, r1, r0
 ; CHECK-NEXT:    mov pc, lr
@@ -18,7 +18,7 @@ define i32 @select_0_or_1(i1 %cond) {
 
 define i32 @select_0_or_1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_0_or_1_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    eor r0, r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i32 0, i32 1
@@ -27,7 +27,7 @@ define i32 @select_0_or_1_zeroext(i1 zeroext %cond) {
 
 define i32 @select_0_or_1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_0_or_1_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #1
 ; CHECK-NEXT:    bic r0, r1, r0
 ; CHECK-NEXT:    mov pc, lr
@@ -39,7 +39,7 @@ define i32 @select_0_or_1_signext(i1 signext %cond) {
 
 define i32 @select_1_or_0(i1 %cond) {
 ; CHECK-LABEL: select_1_or_0:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i32 1, i32 0
@@ -48,7 +48,7 @@ define i32 @select_1_or_0(i1 %cond) {
 
 define i32 @select_1_or_0_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_1_or_0_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
@@ -56,7 +56,7 @@ define i32 @select_1_or_0_zeroext(i1 zeroext %cond) {
 
 define i32 @select_1_or_0_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_1_or_0_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i32 1, i32 0
@@ -67,7 +67,7 @@ define i32 @select_1_or_0_signext(i1 signext %cond) {
 
 define i32 @select_0_or_neg1(i1 %cond) {
 ; CHECK-LABEL: select_0_or_neg1:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #1
 ; CHECK-NEXT:    bic r0, r1, r0
 ; CHECK-NEXT:    rsb r0, r0, #0
@@ -78,7 +78,7 @@ define i32 @select_0_or_neg1(i1 %cond) {
 
 define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    eor r0, r0, #1
 ; CHECK-NEXT:    rsb r0, r0, #0
 ; CHECK-NEXT:    mov pc, lr
@@ -88,7 +88,7 @@ define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 
 define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mvn r0, r0
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i32 0, i32 -1
@@ -97,7 +97,7 @@ define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 
 define i32 @select_0_or_neg1_alt(i1 %cond) {
 ; CHECK-LABEL: select_0_or_neg1_alt:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    sub r0, r0, #1
 ; CHECK-NEXT:    mov pc, lr
@@ -108,7 +108,7 @@ define i32 @select_0_or_neg1_alt(i1 %cond) {
 
 define i32 @select_0_or_neg1_alt_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_alt_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sub r0, r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %z = zext i1 %cond to i32
@@ -118,7 +118,7 @@ define i32 @select_0_or_neg1_alt_zeroext(i1 zeroext %cond) {
 
 define i32 @select_0_or_neg1_alt_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_alt_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mvn r0, r0
 ; CHECK-NEXT:    mov pc, lr
   %z = zext i1 %cond to i32
@@ -130,7 +130,7 @@ define i32 @select_0_or_neg1_alt_signext(i1 signext %cond) {
 
 define i32 @select_neg1_or_0(i1 %cond) {
 ; CHECK-LABEL: select_neg1_or_0:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    rsb r0, r0, #0
 ; CHECK-NEXT:    mov pc, lr
@@ -140,7 +140,7 @@ define i32 @select_neg1_or_0(i1 %cond) {
 
 define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    rsb r0, r0, #0
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i32 -1, i32 0
@@ -149,7 +149,7 @@ define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 
 define i32 @select_neg1_or_0_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -159,7 +159,7 @@ define i32 @select_neg1_or_0_signext(i1 signext %cond) {
 
 define i32 @select_Cplus1_C(i1 %cond) {
 ; CHECK-LABEL: select_Cplus1_C:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #41
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    movne r1, #42
@@ -171,7 +171,7 @@ define i32 @select_Cplus1_C(i1 %cond) {
 
 define i32 @select_Cplus1_C_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_Cplus1_C_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #41
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    movne r1, #42
@@ -183,7 +183,7 @@ define i32 @select_Cplus1_C_zeroext(i1 zeroext %cond) {
 
 define i32 @select_Cplus1_C_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_Cplus1_C_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #41
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    movne r1, #42
@@ -197,7 +197,7 @@ define i32 @select_Cplus1_C_signext(i1 signext %cond) {
 
 define i32 @select_C_Cplus1(i1 %cond) {
 ; CHECK-LABEL: select_C_Cplus1:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #42
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    movne r1, #41
@@ -209,7 +209,7 @@ define i32 @select_C_Cplus1(i1 %cond) {
 
 define i32 @select_C_Cplus1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_C_Cplus1_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #42
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    movne r1, #41
@@ -221,7 +221,7 @@ define i32 @select_C_Cplus1_zeroext(i1 zeroext %cond) {
 
 define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_C_Cplus1_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #42
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    movne r1, #41
@@ -236,7 +236,7 @@ define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 
 define i32 @select_C1_C2(i1 %cond) {
 ; CHECK-LABEL: select_C1_C2:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #165
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    orr r1, r1, #256
@@ -249,7 +249,7 @@ define i32 @select_C1_C2(i1 %cond) {
 
 define i32 @select_C1_C2_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_C1_C2_zeroext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #165
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    orr r1, r1, #256
@@ -262,7 +262,7 @@ define i32 @select_C1_C2_zeroext(i1 zeroext %cond) {
 
 define i32 @select_C1_C2_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_C1_C2_signext:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #165
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    orr r1, r1, #256
@@ -278,7 +278,7 @@ define i32 @select_C1_C2_signext(i1 signext %cond) {
 
 define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; CHECK-LABEL: opaque_constant1:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    mov lr, #1
@@ -310,7 +310,7 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 
 define i64 @opaque_constant2(i1 %cond, i64 %x) {
 ; CHECK-LABEL: opaque_constant2:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #1
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    orr r1, r1, #65536

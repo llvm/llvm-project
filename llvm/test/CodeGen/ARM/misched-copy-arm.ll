@@ -4,7 +4,7 @@
 ; Loop counter copies should be eliminated.
 ; There is also a MUL here, but we don't care where it is scheduled.
 ; CHECK: postinc
-; CHECK: *** Final schedule for BB#2 ***
+; CHECK: *** Final schedule for %bb.2 ***
 ; CHECK: t2LDRs
 ; CHECK: t2ADDrr
 ; CHECK: t2CMPrr
@@ -32,10 +32,10 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; This case was a crasher in constrainLocalCopy.
 ; The problem was the t2LDR_PRE defining both the global and local lrg.
-; CHECK-LABEL: *** Final schedule for BB#5 ***
-; CHECK: %[[R4:vreg[0-9]+]]<def>, %[[R1:vreg[0-9]+]]<def,tied2> = t2LDR_PRE %[[R1]]<tied1>
-; CHECK: %vreg{{[0-9]+}}<def> = COPY %[[R1]]
-; CHECK: %vreg{{[0-9]+}}<def> = COPY %[[R4]]
+; CHECK-LABEL: *** Final schedule for %bb.5 ***
+; CHECK: %[[R4:[0-9]+]]:gpr, %[[R1:[0-9]+]]:gpr = t2LDR_PRE %[[R1]]
+; CHECK: %{{[0-9]+}}:gpr = COPY %[[R1]]
+; CHECK: %{{[0-9]+}}:gpr = COPY %[[R4]]
 ; CHECK-LABEL: MACHINEINSTRS
 %struct.rtx_def = type { [4 x i8], [1 x %union.rtunion_def] }
 %union.rtunion_def = type { i64 }

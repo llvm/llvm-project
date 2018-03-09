@@ -10,8 +10,6 @@
 // A class to get a color from a specified gradient.
 //
 //===----------------------------------------------------------------------===//
-#include <algorithm>
-#include <iostream>
 
 #include "xray-color-helper.h"
 #include "llvm/Support/FormatVariadic.h"

@@ -3,7 +3,7 @@
 
 define fastcc void @t1() nounwind {
 ; CHECK-LABEL: t1:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    pushl $188
 ; CHECK-NEXT:    pushl $0
@@ -17,7 +17,7 @@ entry:
 
 define fastcc void @t2(i8 signext %c) nounwind {
 ; CHECK-LABEL: t2:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $76, {{[0-9]+}}(%esp)
@@ -31,7 +31,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
 
 define void @t3(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-LABEL: t3:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    imull $16843009, %ecx, %ecx ## imm = 0x1010101
@@ -45,7 +45,7 @@ entry:
 
 define void @t4(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-LABEL: t4:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    imull $16843009, %ecx, %ecx ## imm = 0x1010101

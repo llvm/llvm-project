@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -march=x86-64 |FileCheck %s
+; RUN: llc < %s -O3 -mtriple=x86_64-- |FileCheck %s
 define i64 @foo(i1 %z, i192* %p, i192* %q)
 {
 ; If const 128 is hoisted to a variable, then in basic block L_val2 we would

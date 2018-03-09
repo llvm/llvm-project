@@ -1,0 +1,12 @@
+# binary files
+test/Object/Inputs/*.a-* binary
+test/tools/dsymutil/Inputs/* binary
+test/tools/llvm-ar/Inputs/*.lib binary
+test/tools/llvm-objdump/Inputs/*.a binary
+test/tools/llvm-rc/Inputs/* binary
+test/tools/llvm-strings/Inputs/numbers binary
+test/MC/AsmParser/incbin_abcd binary
+test/YAMLParser/spec-09-02.test binary
+
+# Windows line ending test
+test/MC/AsmParser/preserve-comments-crlf.s text eol=crlf

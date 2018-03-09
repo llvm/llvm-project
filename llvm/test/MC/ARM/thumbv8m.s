@@ -19,12 +19,12 @@ mov.w r0, r0
 .arm
 
 // And only +dsp has DSP and instructions
-// UNDEF-BASELINE: error: instruction requires: arm-mode
-// UNDEF-MAINLINE: error: instruction requires: arm-mode
+// UNDEF-BASELINE: error: instruction requires: dsp thumb2
+// UNDEF-MAINLINE: error: instruction requires: dsp
 // UNDEF-MAINLINE_DSP-NOT: error: instruction requires:
 qadd16 r0, r0, r0
-// UNDEF-BASELINE: error: instruction requires: arm-mode
-// UNDEF-MAINLINE: error: instruction requires: arm-mode
+// UNDEF-BASELINE: error: instruction requires: dsp thumb2
+// UNDEF-MAINLINE: error: instruction requires: dsp
 // UNDEF-MAINLINE_DSP-NOT: error: instruction requires:
 uxtab16 r0, r1, r2
 
@@ -146,7 +146,7 @@ sg
 // CHECK: bxns r0                    @ encoding: [0x04,0x47]
 bxns r0
 
-// UNDEF-BASELINE: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
 // UNDEF-BASELINE: error: conditional execution not supported in Thumb1
 // CHECK-MAINLINE: it eq                      @ encoding: [0x08,0xbf]
 // CHECK-MAINLINE: bxnseq r1                  @ encoding: [0x0c,0x47]
@@ -159,7 +159,7 @@ bxns lr
 // CHECK: blxns r0                   @ encoding: [0x84,0x47]
 blxns r0
 
-// UNDEF-BASELINE: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
 // UNDEF-BASELINE: error: conditional execution not supported in Thumb1
 // CHECK-MAINLINE: it eq                      @ encoding: [0x08,0xbf]
 // CHECK-MAINLINE: blxnseq r1                 @ encoding: [0x8c,0x47]
@@ -215,68 +215,65 @@ MSR PSPLIM,r9
 // CHECK: msr psplim, r9             @ encoding: [0x89,0xf3,0x0b,0x88]
 
 MRS r10, MSPLIM_NS
-// CHECK-MAINLINE: mrs r10, msplim_ns    @ encoding: [0xef,0xf3,0x8a,0x8a]
-// UNDEF-BASELINE: error: invalid operand for instruction
+// CHECK: mrs r10, msplim_ns    @ encoding: [0xef,0xf3,0x8a,0x8a]
 MSR PSPLIM_NS, r11
-// CHECK-MAINLINE: msr psplim_ns, r11    @ encoding: [0x8b,0xf3,0x8b,0x88]
-// UNDEF-BASELINE: error: invalid operand for instruction
+// CHECK: msr psplim_ns, r11    @ encoding: [0x8b,0xf3,0x8b,0x88]
 MRS r12, BASEPRI_NS
 // CHECK-MAINLINE: mrs r12, basepri_ns   @ encoding: [0xef,0xf3,0x91,0x8c]
-// UNDEF-BASELINE: error: invalid operand for instruction
-MRS r12, BASEPRI_MAX_NS
-// CHECK-MAINLINE: mrs r12, basepri_max_ns @ encoding: [0xef,0xf3,0x92,0x8c]
 // UNDEF-BASELINE: error: invalid operand for instruction
 MSR FAULTMASK_NS, r14
 // CHECK-MAINLINE: msr faultmask_ns, lr  @ encoding: [0x8e,0xf3,0x93,0x88]
 // UNDEF-BASELINE: error: invalid operand for instruction
 
 // Invalid operand tests
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     sg #0
 sg #0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     sg r0
 sg r0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     bxns r0, r1
 bxns r0, r1
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     blxns r0, #0
 blxns r0, #0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     blxns label
 blxns label
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     tt r0, r1, r2
 tt r0, r1, r2
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     tt r0, [r1]
 tt r0, [r1]
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     tt r0, r1, #4
 tt r0, r1, #4
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     tt r0, #4
 tt r0, #4
 
 // Unpredictable operands
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     blxns pc
 blxns pc
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r12] or r14
 // UNDEF:     tt sp, r0
 tt sp, r0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r12] or r14
 // UNDEF:     tt pc, r0
 tt pc, r0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     tt r0, pc
 tt r0, pc
 
-// UNDEF: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
+// UNDEF-MAINLINE: error: operand must be a register in range [r0, r14]
 // UNDEF:     vlldm pc
 vlldm pc
 
-// UNDEF: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
+// UNDEF-MAINLINE: error: operand must be a register in range [r0, r14]
 // UNDEF:     vlstm pc
 vlstm pc

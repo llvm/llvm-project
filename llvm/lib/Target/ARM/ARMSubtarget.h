@@ -26,10 +26,10 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <memory>
 #include <string>
 
@@ -54,10 +54,12 @@ protected:
     CortexA35,
     CortexA5,
     CortexA53,
+    CortexA55,
     CortexA57,
     CortexA7,
     CortexA72,
     CortexA73,
+    CortexA75,
     CortexA8,
     CortexA9,
     CortexM3,
@@ -102,6 +104,7 @@ protected:
     ARMv7ve,
     ARMv81a,
     ARMv82a,
+    ARMv83a,
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
@@ -147,6 +150,7 @@ protected:
   bool HasV8Ops = false;
   bool HasV8_1aOps = false;
   bool HasV8_2aOps = false;
+  bool HasV8_3aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
 
@@ -157,6 +161,9 @@ protected:
   bool HasVFPv4 = false;
   bool HasFPARMv8 = false;
   bool HasNEON = false;
+
+  /// HasDotProd - True if the ARMv8.2A dot product instructions are supported.
+  bool HasDotProd = false;
 
   /// UseNEONForSinglePrecisionFP - if the NEONFP attribute has been
   /// specified. Use the method useNEONForSinglePrecisionFP() to
@@ -183,6 +190,13 @@ protected:
 
   /// UseSoftFloat - True if we're using software floating point features.
   bool UseSoftFloat = false;
+
+  /// UseMISched - True if MachineScheduler should be used for this subtarget.
+  bool UseMISched = false;
+
+  /// DisablePostRAScheduler - False if scheduling should happen again after
+  /// register allocation.
+  bool DisablePostRAScheduler = false;
 
   /// HasThumb2 - True if Thumb2 instructions are supported.
   bool HasThumb2 = false;
@@ -221,6 +235,10 @@ protected:
   /// HasDataBarrier - True if the subtarget supports DMB / DSB data barrier
   /// instructions.
   bool HasDataBarrier = false;
+
+  /// HasFullDataBarrier - True if the subtarget supports DFB data barrier
+  /// instruction.
+  bool HasFullDataBarrier = false;
 
   /// HasV7Clrex - True if the subtarget supports CLREX instructions
   bool HasV7Clrex = false;
@@ -331,6 +349,9 @@ protected:
 
   /// If true, VFP/NEON VMLA/VMLS have special RAW hazards.
   bool HasVMLxHazards = false;
+
+  // If true, read thread pointer from coprocessor register.
+  bool ReadTPHard = false;
 
   /// If true, VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.
   bool UseNEONForFPMovs = false;
@@ -488,6 +509,7 @@ public:
   bool hasV8Ops()   const { return HasV8Ops;  }
   bool hasV8_1aOps() const { return HasV8_1aOps; }
   bool hasV8_2aOps() const { return HasV8_2aOps; }
+  bool hasV8_3aOps() const { return HasV8_3aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
 
@@ -514,6 +536,7 @@ public:
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON;  }
   bool hasCrypto() const { return HasCrypto; }
+  bool hasDotProd() const { return HasDotProd; }
   bool hasCRC() const { return HasCRC; }
   bool hasRAS() const { return HasRAS; }
   bool hasVirtualization() const { return HasVirtualization; }
@@ -525,6 +548,7 @@ public:
   bool hasDivideInThumbMode() const { return HasHardwareDivideInThumb; }
   bool hasDivideInARMMode() const { return HasHardwareDivideInARM; }
   bool hasDataBarrier() const { return HasDataBarrier; }
+  bool hasFullDataBarrier() const { return HasFullDataBarrier; }
   bool hasV7Clrex() const { return HasV7Clrex; }
   bool hasAcquireRelease() const { return HasAcquireRelease; }
 
@@ -647,6 +671,8 @@ public:
   bool isROPI() const;
   bool isRWPI() const;
 
+  bool useMachineScheduler() const { return UseMISched; }
+  bool disablePostRAScheduler() const { return DisablePostRAScheduler; }
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
   bool isThumb1Only() const { return InThumbMode && !HasThumb2; }
@@ -655,6 +681,7 @@ public:
   bool isMClass() const { return ARMProcClass == MClass; }
   bool isRClass() const { return ARMProcClass == RClass; }
   bool isAClass() const { return ARMProcClass == AClass; }
+  bool isReadTPHard() const { return ReadTPHard; }
 
   bool isR9Reserved() const {
     return isTargetMachO() ? (ReserveR9 || !HasV6Ops) : ReserveR9;
@@ -689,10 +716,6 @@ public:
   bool isLittle() const { return IsLittle; }
 
   unsigned getMispredictionPenalty() const;
-
-  /// This function returns true if the target has sincos() routine in its
-  /// compiler runtime or math libraries.
-  bool hasSinCos() const;
 
   /// Returns true if machine scheduler should be enabled.
   bool enableMachineScheduler() const override;
@@ -730,7 +753,7 @@ public:
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
   /// Returns the constant pool modifier needed to access the GV.
-  ARMCP::ARMCPModifier getCPModifier(const GlobalValue *GV) const;
+  bool isGVInGOT(const GlobalValue *GV) const;
 
   /// True if fast-isel is used.
   bool useFastISel() const;
@@ -744,6 +767,13 @@ public:
     if (hasV4TOps())
       return ARM::BX_RET;
     return ARM::MOVPCLR;
+  }
+
+  /// Allow movt+movw for PIC global address calculation.
+  /// ELF does not have GOT relocations for movt+movw.
+  /// ROPI does not use GOT.
+  bool allowPositionIndependentMovt() const {
+    return isROPI() || !isTargetELF();
   }
 };
 

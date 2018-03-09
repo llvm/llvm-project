@@ -13,13 +13,11 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -85,12 +83,11 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(BasicBlock *BB) {
         unsigned i = 0;
         for (auto *Pred : predecessors(BB))
           Phi->addIncoming(PhiOps[i++], Pred);
+        InsertedPHIs.push_back(Phi);
       }
-
       Result = Phi;
     }
-    if (MemoryPhi *MP = dyn_cast<MemoryPhi>(Result))
-      InsertedPHIs.push_back(MP);
+
     // Set ourselves up for the next variable by resetting visited state.
     VisitedBlocks.erase(BB);
     return Result;

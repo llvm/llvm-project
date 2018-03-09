@@ -19,15 +19,15 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 #define DEBUG_TYPE "instruction-select"
 
@@ -189,7 +189,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   if (MF.size() != NumBlocks) {
     MachineOptimizationRemarkMissed R("gisel-select", "GISelFailure",
-                                      MF.getFunction()->getSubprogram(),
+                                      MF.getFunction().getSubprogram(),
                                       /*MBB=*/nullptr);
     R << "inserting blocks is not supported yet";
     reportGISelFailure(MF, TPC, MORE, R);

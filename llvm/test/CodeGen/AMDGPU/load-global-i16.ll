@@ -179,8 +179,8 @@ define amdgpu_kernel void @global_sextload_v2i16_to_v2i32(<2 x i32> addrspace(1)
 ; GCN-NOHSA: buffer_load_dwordx2
 ; GCN-HSA: flat_load_dwordx2
 
-; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}}
 ; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_LO:T[0-9]]], {{T[0-9]\.[XYZW]}}
+; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}}
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}},
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9]\.[XYZW]}},
 ; EGCM-DAG: VTX_READ_32 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 0, #1
@@ -188,8 +188,6 @@ define amdgpu_kernel void @global_sextload_v2i16_to_v2i32(<2 x i32> addrspace(1)
 ; TODO: This should use DST, but for some there are redundant MOVs
 ; EGCM: LSHR {{[* ]*}}[[ST_LO]].Y, {{T[0-9]\.[XYZW]}}, literal
 ; EGCM: 16
-; EGCM: AND_INT {{[* ]*}}[[ST_LO]].X, {{T[0-9]\.[XYZW]}}, literal
-; EGCM: AND_INT {{[* ]*}}[[ST_HI]].X, [[DST_HI]], literal
 define amdgpu_kernel void @global_zextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(1)* %in) {
 entry:
   %ld = load <3 x i16>, <3 x i16> addrspace(1)* %in
@@ -202,8 +200,8 @@ entry:
 ; GCN-NOHSA: buffer_load_dwordx2
 ; GCN-HSA: flat_load_dwordx2
 
-; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}}
 ; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_LO:T[0-9]]], {{T[0-9]\.[XYZW]}}
+; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}}
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}},
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9]\.[XYZW]}},
 ; EGCM-DAG: VTX_READ_32 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9].[XYZW]}}, 0, #1

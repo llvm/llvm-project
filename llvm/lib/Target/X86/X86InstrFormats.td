@@ -157,9 +157,10 @@ def EncEVEX   : Encoding<3>;
 class OperandSize<bits<2> val> {
   bits<2> Value = val;
 }
-def OpSizeFixed : OperandSize<0>; // Never needs a 0x66 prefix.
-def OpSize16    : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
-def OpSize32    : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
+def OpSizeFixed  : OperandSize<0>; // Never needs a 0x66 prefix.
+def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
+def OpSize32     : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
+def OpSizeIgnore : OperandSize<3>; // Takes 0x66 prefix, never emits.
 
 // Address size for encodings that change based on mode.
 class AddressSize<bits<2> val> {
@@ -174,6 +175,7 @@ def AdSize64 : AddressSize<3>; // Encodes a 64-bit address.
 // emitter that various prefix bytes are required.
 class OpSize16 { OperandSize OpSize = OpSize16; }
 class OpSize32 { OperandSize OpSize = OpSize32; }
+class OpSizeIgnore { OperandSize OpSize = OpSizeIgnore; }
 class AdSize16 { AddressSize AdSize = AdSize16; }
 class AdSize32 { AddressSize AdSize = AdSize32; }
 class AdSize64 { AddressSize AdSize = AdSize64; }
@@ -230,6 +232,9 @@ class XOP_4V : XOP { bit hasVEX_4V = 1; }
 class FoldGenData<string _RegisterForm> {
     string FoldGenRegForm = _RegisterForm;
 }
+
+// Mark the instruction as "illegal to memory fold/unfold"
+class NotMemoryFoldable { bit isMemoryFoldable = 0; }
 
 class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
               string AsmStr,
@@ -314,6 +319,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   // instruction to replace the current one in case it got picked during generation.
   string FoldGenRegForm = ?;
 
+  bit isMemoryFoldable = 1;     // Is it allowed to memory fold/unfold this instruction?
+
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
   let TSFlags{6-0}   = FormBits;
   let TSFlags{8-7}   = OpSizeBits;
@@ -342,8 +349,9 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{54}    = hasEVEX_RC;
 }
 
-class PseudoI<dag oops, dag iops, list<dag> pattern>
-  : X86Inst<0, Pseudo, NoImm, oops, iops, "", NoItinerary> {
+class PseudoI<dag oops, dag iops, list<dag> pattern,
+              InstrItinClass itin = NoItinerary>
+  : X86Inst<0, Pseudo, NoImm, oops, iops, "", itin> {
   let Pattern = pattern;
 }
 
@@ -416,9 +424,8 @@ class FPI<bits<8> o, Format F, dag outs, dag ins, string asm,
 // FpI_ - Floating Point Pseudo Instruction template. Not Predicated.
 class FpI_<dag outs, dag ins, FPFormat fp, list<dag> pattern,
            InstrItinClass itin = NoItinerary>
-  : X86Inst<0, Pseudo, NoImm, outs, ins, "", itin> {
+  : PseudoI<outs, ins, pattern, itin> {
   let FPForm = fp;
-  let Pattern = pattern;
 }
 
 // Templates for instructions that use a 16- or 32-bit segmented address as
@@ -822,7 +829,7 @@ class AVX512PIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 class AVX512PI<bits<8> o, Format F, dag outs, dag ins, string asm,
               list<dag> pattern, Domain d, InstrItinClass itin = NoItinerary>
       : I<o, F, outs, ins, asm, pattern, itin, d>, Requires<[HasAVX512]>;
-class AVX512FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
+class AVX512FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern, InstrItinClass itin = NoItinerary>
       : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
         EVEX_4V, Requires<[HasAVX512]>;
@@ -839,33 +846,43 @@ class AVX512<bits<8> o, Format F, dag outs, dag ins, string asm,
 class AES8I<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag>pattern, InstrItinClass itin = IIC_AES>
       : I<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, T8PD,
-        Requires<[HasAES]>;
+        Requires<[NoAVX, HasAES]>;
 
 class AESAI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern, InstrItinClass itin = NoItinerary>
       : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        Requires<[HasAES]>;
+        Requires<[NoAVX, HasAES]>;
 
 // PCLMUL Instruction Templates
 class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        Requires<[HasPCLMUL]>;
-
-class AVXPCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
-                  list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        VEX_4V, Requires<[HasAVX, HasPCLMUL]>;
+      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD;
 
 // FMA3 Instruction Templates
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern, InstrItinClass itin = NoItinerary>
       : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA, NoVLX]>;
+        VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoVLX]>;
+class FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
+            list<dag>pattern, InstrItinClass itin = NoItinerary>
+      : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
+        VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoAVX512]>;
+class FMA3S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
+                list<dag>pattern, InstrItinClass itin = NoItinerary>
+      : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
+        VEX_4V, FMASC, Requires<[HasFMA, NoAVX512]>;
 
 // FMA4 Instruction Templates
 class FMA4<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern, InstrItinClass itin = NoItinerary>
+      : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
+        VEX_4V, FMASC, Requires<[HasFMA4, NoVLX]>;
+class FMA4S<bits<8> o, Format F, dag outs, dag ins, string asm,
+            list<dag>pattern, InstrItinClass itin = NoItinerary>
+      : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
+        VEX_4V, FMASC, Requires<[HasFMA4, NoAVX512]>;
+class FMA4S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
+                list<dag>pattern, InstrItinClass itin = NoItinerary>
       : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
         VEX_4V, FMASC, Requires<[HasFMA4]>;
 

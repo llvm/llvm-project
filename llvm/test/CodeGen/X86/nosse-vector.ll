@@ -4,7 +4,7 @@
 
 define void @fadd_2f64_mem(<2 x double>* %p0, <2 x double>* %p1, <2 x double>* %p2) nounwind {
 ; X32-LABEL: fadd_2f64_mem:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -18,7 +18,7 @@ define void @fadd_2f64_mem(<2 x double>* %p0, <2 x double>* %p1, <2 x double>* %
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fadd_2f64_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    fldl 8(%rdi)
 ; X64-NEXT:    fldl (%rdi)
 ; X64-NEXT:    faddl (%rsi)
@@ -36,7 +36,7 @@ define void @fadd_2f64_mem(<2 x double>* %p0, <2 x double>* %p1, <2 x double>* %
 
 define void @fadd_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2) nounwind {
 ; X32-LABEL: fadd_4f32_mem:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -59,7 +59,7 @@ define void @fadd_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fadd_4f32_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    flds 12(%rdi)
 ; X64-NEXT:    flds 8(%rdi)
 ; X64-NEXT:    flds 4(%rdi)
@@ -86,7 +86,7 @@ define void @fadd_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2)
 
 define void @fdiv_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2) nounwind {
 ; X32-LABEL: fdiv_4f32_mem:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -109,7 +109,7 @@ define void @fdiv_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fdiv_4f32_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    flds 12(%rdi)
 ; X64-NEXT:    flds 8(%rdi)
 ; X64-NEXT:    flds 4(%rdi)
@@ -136,7 +136,7 @@ define void @fdiv_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2)
 
 define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
 ; X32-LABEL: sitofp_4i64_4f32_mem:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    pushl %ebx
@@ -182,7 +182,7 @@ define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_4i64_4f32_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq 24(%rdi), %rax
 ; X64-NEXT:    movq 16(%rdi), %rcx
 ; X64-NEXT:    movq (%rdi), %rdx
@@ -208,7 +208,7 @@ define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
 
 define void @sitofp_4i32_4f32_mem(<4 x i32>* %p0, <4 x float>* %p1) nounwind {
 ; X32-LABEL: sitofp_4i32_4f32_mem:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $16, %esp
@@ -236,7 +236,7 @@ define void @sitofp_4i32_4f32_mem(<4 x i32>* %p0, <4 x float>* %p1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_4i32_4f32_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl 12(%rdi), %eax
 ; X64-NEXT:    movl 8(%rdi), %ecx
 ; X64-NEXT:    movl (%rdi), %edx
@@ -262,7 +262,7 @@ define void @sitofp_4i32_4f32_mem(<4 x i32>* %p0, <4 x float>* %p1) nounwind {
 
 define void @add_2i64_mem(<2 x i64>* %p0, <2 x i64>* %p1, <2 x i64>* %p2) nounwind {
 ; X32-LABEL: add_2i64_mem:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
@@ -287,7 +287,7 @@ define void @add_2i64_mem(<2 x i64>* %p0, <2 x i64>* %p1, <2 x i64>* %p2) nounwi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: add_2i64_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    movq 8(%rdi), %rcx
 ; X64-NEXT:    addq (%rsi), %rax
@@ -304,7 +304,7 @@ define void @add_2i64_mem(<2 x i64>* %p0, <2 x i64>* %p1, <2 x i64>* %p2) nounwi
 
 define void @add_4i32_mem(<4 x i32>* %p0, <4 x i32>* %p1, <4 x i32>* %p2) nounwind {
 ; X32-LABEL: add_4i32_mem:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
@@ -329,7 +329,7 @@ define void @add_4i32_mem(<4 x i32>* %p0, <4 x i32>* %p1, <4 x i32>* %p2) nounwi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: add_4i32_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl 12(%rdi), %eax
 ; X64-NEXT:    movl 8(%rdi), %ecx
 ; X64-NEXT:    movl (%rdi), %r8d

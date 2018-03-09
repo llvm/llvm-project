@@ -67,8 +67,11 @@ public:
 
   void reset(ArrayRef<uint8_t> Data, uint32_t RecordCountHint);
   void reset(StringRef Data, uint32_t RecordCountHint);
+  void reset(BinaryStreamReader &Reader, uint32_t RecordCountHint);
 
   uint32_t getOffsetOfType(TypeIndex Index);
+
+  Optional<CVType> tryGetType(TypeIndex Index);
 
   CVType getType(TypeIndex Index) override;
   StringRef getTypeName(TypeIndex Index) override;

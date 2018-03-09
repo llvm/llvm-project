@@ -86,45 +86,6 @@ static void LowerLargeShift(MCInst& Inst) {
   case Mips::DROTR:
     Inst.setOpcode(Mips::DROTR32);
     return;
-  case Mips::DSLL_MM64R6:
-    Inst.setOpcode(Mips::DSLL32_MM64R6);
-    return;
-  case Mips::DSRL_MM64R6:
-    Inst.setOpcode(Mips::DSRL32_MM64R6);
-    return;
-  case Mips::DSRA_MM64R6:
-    Inst.setOpcode(Mips::DSRA32_MM64R6);
-    return;
-  case Mips::DROTR_MM64R6:
-    Inst.setOpcode(Mips::DROTR32_MM64R6);
-    return;
-  }
-}
-
-// Pick a DINS instruction variant based on the pos and size operands
-static void LowerDins(MCInst& InstIn) {
-  assert(InstIn.getNumOperands() == 5 &&
-         "Invalid no. of machine operands for DINS!");
-
-  assert(InstIn.getOperand(2).isImm());
-  int64_t pos = InstIn.getOperand(2).getImm();
-  assert(InstIn.getOperand(3).isImm());
-  int64_t size = InstIn.getOperand(3).getImm();
-
-  assert((pos + size) <= 64 &&
-         "DINS cannot have position plus size over 64");
-  if (pos < 32) {
-    if ((pos + size) > 0 && (pos + size) <= 32)
-      return; // DINS, do nothing
-    else if ((pos + size) > 32) {
-      //DINSM
-      InstIn.getOperand(3).setImm(size - 32);
-      InstIn.setOpcode(Mips::DINSM);
-    }
-  } else if ((pos + size) > 32 && (pos + size) <= 64) {
-    // DINSU
-    InstIn.getOperand(2).setImm(pos - 32);
-    InstIn.setOpcode(Mips::DINSU);
   }
 }
 
@@ -205,15 +166,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case Mips::DSRL:
   case Mips::DSRA:
   case Mips::DROTR:
-  case Mips::DSLL_MM64R6:
-  case Mips::DSRL_MM64R6:
-  case Mips::DSRA_MM64R6:
-  case Mips::DROTR_MM64R6:
     LowerLargeShift(TmpInst);
-    break;
-    // Double extract instruction is chosen by pos and size operands
-  case Mips::DINS:
-    LowerDins(TmpInst);
     break;
   // Compact branches, enforce encoding restrictions.
   case Mips::BEQC:
@@ -235,7 +188,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // so we have to special check for them.
   unsigned Opcode = TmpInst.getOpcode();
   if ((Opcode != Mips::NOP) && (Opcode != Mips::SLL) &&
-      (Opcode != Mips::SLL_MM) && !Binary)
+      (Opcode != Mips::SLL_MM) && (Opcode != Mips::SLL_MMR6) && !Binary)
     llvm_unreachable("unimplemented opcode in encodeInstruction()");
 
   int NewOpcode = -1;
@@ -1143,6 +1096,29 @@ MipsMCCodeEmitter::getMovePRegPairOpValue(const MCInst &MI, unsigned OpNo,
     res = 7;
 
   return res;
+}
+
+unsigned
+MipsMCCodeEmitter::getMovePRegSingleOpValue(const MCInst &MI, unsigned OpNo,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  assert(((OpNo == 2) || (OpNo == 3)) &&
+         "Unexpected OpNo for movep operand encoding!");
+
+  MCOperand Op = MI.getOperand(OpNo);
+  assert(Op.isReg() && "Operand of movep is not a register!");
+  switch (Op.getReg()) {
+  default:
+    llvm_unreachable("Unknown register for movep!");
+  case Mips::ZERO:  return 0;
+  case Mips::S1:    return 1;
+  case Mips::V0:    return 2;
+  case Mips::V1:    return 3;
+  case Mips::S0:    return 4;
+  case Mips::S2:    return 5;
+  case Mips::S3:    return 6;
+  case Mips::S4:    return 7;
+  }
 }
 
 unsigned

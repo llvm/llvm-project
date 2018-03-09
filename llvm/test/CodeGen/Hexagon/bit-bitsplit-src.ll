@@ -32,4 +32,4 @@ b0:
 ; Function Attrs: nounwind
 declare void @printf(i8* nocapture readonly, ...) local_unnamed_addr #0
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

@@ -19,9 +19,9 @@ entry:
 
 do.body.i:
 ; CHECK-LABEL: do.body.i:
-; CHECK:          %uglygep1 = getelementptr i8, i8* %uglygep, i64 %3
-; CHECK-NEXT:     %4 = bitcast i8* %uglygep1 to i32*
-; CHECK-NOT:      %uglygep1 = getelementptr i8, i8* %uglygep, i64 1032
+; CHECK:          %uglygep2 = getelementptr i8, i8* %uglygep, i64 %3
+; CHECK-NEXT:     %4 = bitcast i8* %uglygep2 to i32*
+; CHECK-NOT:      %uglygep2 = getelementptr i8, i8* %uglygep, i64 1032
 
 
   %0 = phi i32 [ 256, %entry ], [ %.be, %do.body.i.backedge ]

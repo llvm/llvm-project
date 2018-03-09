@@ -25,9 +25,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <cstdint>
 
@@ -110,12 +110,8 @@ static bool isCCLiveOut(MachineBasicBlock &MBB) {
   return false;
 }
 
-// Return true if any CC result of MI would reflect the value of Reg.
-static bool resultTests(MachineInstr &MI, unsigned Reg) {
-  if (MI.getNumOperands() > 0 && MI.getOperand(0).isReg() &&
-      MI.getOperand(0).isDef() && MI.getOperand(0).getReg() == Reg)
-    return true;
-
+// Returns true if MI is an instruction whose output equals the value in Reg.
+static bool preservesValueOf(MachineInstr &MI, unsigned Reg) {
   switch (MI.getOpcode()) {
   case SystemZ::LR:
   case SystemZ::LGR:
@@ -134,6 +130,16 @@ static bool resultTests(MachineInstr &MI, unsigned Reg) {
   }
 
   return false;
+}
+
+// Return true if any CC result of MI would (perhaps after conversion)
+// reflect the value of Reg.
+static bool resultTests(MachineInstr &MI, unsigned Reg) {
+  if (MI.getNumOperands() > 0 && MI.getOperand(0).isReg() &&
+      MI.getOperand(0).isDef() && MI.getOperand(0).getReg() == Reg)
+    return true;
+
+  return (preservesValueOf(MI, Reg));
 }
 
 // Describe the references to Reg or any of its aliases in MI.
@@ -421,11 +427,34 @@ bool SystemZElimCompare::optimizeCompareZero(
     }
     SrcRefs |= getRegReferences(MI, SrcReg);
     if (SrcRefs.Def)
-      return false;
+      break;
     CCRefs |= getRegReferences(MI, SystemZ::CC);
     if (CCRefs.Use && CCRefs.Def)
+      break;
+  }
+
+  // Also do a forward search to handle cases where an instruction after the
+  // compare can be converted like
+  //
+  // LTEBRCompare %f0s, %f0s, implicit-def %cc LTEBRCompare %f0s, %f0s,
+  // implicit-def %cc %f2s = LER %f0s
+  //
+  MBBI = Compare, MBBE = MBB.end();
+  while (++MBBI != MBBE) {
+    MachineInstr &MI = *MBBI;
+    if (preservesValueOf(MI, SrcReg)) {
+      // Try to eliminate Compare by reusing a CC result from MI.
+      if (convertToLoadAndTest(MI)) {
+        EliminatedComparisons += 1;
+        return true;
+      }
+    }
+    if (getRegReferences(MI, SrcReg).Def)
+      return false;
+    if (getRegReferences(MI, SystemZ::CC))
       return false;
   }
+
   return false;
 }
 
@@ -564,7 +593,7 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
 }
 
 bool SystemZElimCompare::runOnMachineFunction(MachineFunction &F) {
-  if (skipFunction(*F.getFunction()))
+  if (skipFunction(F.getFunction()))
     return false;
 
   TII = static_cast<const SystemZInstrInfo *>(F.getSubtarget().getInstrInfo());

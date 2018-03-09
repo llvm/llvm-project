@@ -29,6 +29,9 @@ const struct ModifierEntry {
 
     {"pm_lo8", AVRMCExpr::VK_AVR_PM_LO8}, {"pm_hi8", AVRMCExpr::VK_AVR_PM_HI8},
     {"pm_hh8", AVRMCExpr::VK_AVR_PM_HH8},
+
+    {"lo8_gs", AVRMCExpr::VK_AVR_LO8_GS}, {"hi8_gs", AVRMCExpr::VK_AVR_HI8_GS},
+    {"gs", AVRMCExpr::VK_AVR_GS},
 };
 
 } // end of anonymous namespace
@@ -99,24 +102,38 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
 
   switch (Kind) {
   case AVRMCExpr::VK_AVR_LO8:
+    Value &= 0xff;
     break;
   case AVRMCExpr::VK_AVR_HI8:
+    Value &= 0xff00;
     Value >>= 8;
     break;
   case AVRMCExpr::VK_AVR_HH8:
+    Value &= 0xff0000;
     Value >>= 16;
     break;
   case AVRMCExpr::VK_AVR_HHI8:
+    Value &= 0xff000000;
     Value >>= 24;
     break;
   case AVRMCExpr::VK_AVR_PM_LO8:
-    Value >>= 1;
+  case AVRMCExpr::VK_AVR_LO8_GS:
+    Value >>= 1; // Program memory addresses must always be shifted by one.
+    Value &= 0xff;
     break;
   case AVRMCExpr::VK_AVR_PM_HI8:
-    Value >>= 9;
+  case AVRMCExpr::VK_AVR_HI8_GS:
+    Value >>= 1; // Program memory addresses must always be shifted by one.
+    Value &= 0xff00;
+    Value >>= 8;
     break;
   case AVRMCExpr::VK_AVR_PM_HH8:
-    Value >>= 17;
+    Value >>= 1; // Program memory addresses must always be shifted by one.
+    Value &= 0xff0000;
+    Value >>= 16;
+    break;
+  case AVRMCExpr::VK_AVR_GS:
+    Value >>= 1; // Program memory addresses must always be shifted by one.
     break;
 
   case AVRMCExpr::VK_AVR_None:
@@ -150,6 +167,15 @@ AVR::Fixups AVRMCExpr::getFixupKind() const {
     break;
   case VK_AVR_PM_HH8:
     Kind = isNegated() ? AVR::fixup_hh8_ldi_pm_neg : AVR::fixup_hh8_ldi_pm;
+    break;
+  case VK_AVR_GS:
+    Kind = AVR::fixup_16_pm;
+    break;
+  case VK_AVR_LO8_GS:
+    Kind = AVR::fixup_lo8_ldi_gs;
+    break;
+  case VK_AVR_HI8_GS:
+    Kind = AVR::fixup_hi8_ldi_gs;
     break;
 
   case VK_AVR_None:

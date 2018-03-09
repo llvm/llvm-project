@@ -68,6 +68,7 @@ class SubtargetEmitter {
     }
   };
 
+  const CodeGenTarget &TGT;
   RecordKeeper &Records;
   CodeGenSchedModels &SchedModels;
   std::string Target;
@@ -106,12 +107,14 @@ class SubtargetEmitter {
   void EmitProcessorLookup(raw_ostream &OS);
   void EmitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void EmitSchedModel(raw_ostream &OS);
+  void EmitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
   void ParseFeaturesFunction(raw_ostream &OS, unsigned NumFeatures,
                              unsigned NumProcs);
 
 public:
-  SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT):
-    Records(R), SchedModels(TGT.getSchedModels()), Target(TGT.getName()) {}
+  SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT)
+    : TGT(TGT), Records(R), SchedModels(TGT.getSchedModels()),
+      Target(TGT.getName()) {}
 
   void run(raw_ostream &o);
 };
@@ -139,15 +142,12 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   OS << "enum {\n";
 
   // For each record
-  for (unsigned i = 0; i < N;) {
+  for (unsigned i = 0; i < N; ++i) {
     // Next record
     Record *Def = DefList[i];
 
     // Get and emit name
-    OS << "  " << Def->getName() << " = " << i;
-    if (++i < N) OS << ",";
-
-    OS << "\n";
+    OS << "  " << Def->getName() << " = " << i << ",\n";
   }
 
   // Close enumeration and namespace
@@ -200,15 +200,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
       OS << " " << Target << "::" << ImpliesList[j]->getName();
       if (++j < M) OS << ",";
     }
-    OS << " }";
-
-    OS << " }";
+    OS << " } },\n";
     ++NumFeatures;
-
-    // Depending on 'if more in the list' emit comma
-    if ((i + 1) < N) OS << ",";
-
-    OS << "\n";
   }
 
   // End feature table
@@ -233,10 +226,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
      << "SubTypeKV[] = {\n";
 
   // For each processor
-  for (unsigned i = 0, N = ProcessorList.size(); i < N;) {
-    // Next processor
-    Record *Processor = ProcessorList[i];
-
+  for (Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
     const std::vector<Record*> &FeatureList =
       Processor->getValueAsListOfDefs("Features");
@@ -251,15 +241,8 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
       OS << " " << Target << "::" << FeatureList[j]->getName();
       if (++j < M) OS << ",";
     }
-    OS << " }";
-
     // The { } is for the "implies" section of this data structure.
-    OS << ", { } }";
-
-    // Depending on 'if more in the list' emit comma
-    if (++i < N) OS << ",";
-
-    OS << "\n";
+    OS << " }, { } },\n";
   }
 
   // End processor table
@@ -597,12 +580,10 @@ void SubtargetEmitter::EmitProcessorProp(raw_ostream &OS, const Record *R,
 
 void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
                                               raw_ostream &OS) {
-  char Sep = ProcModel.ProcResourceDefs.empty() ? ' ' : ',';
-
   OS << "\n// {Name, NumUnits, SuperIdx, IsBuffered}\n";
   OS << "static const llvm::MCProcResourceDesc "
      << ProcModel.ModelName << "ProcResources" << "[] = {\n"
-     << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0}" << Sep << "\n";
+     << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0},\n";
 
   for (unsigned i = 0, e = ProcModel.ProcResourceDefs.size(); i < e; ++i) {
     Record *PRDef = ProcModel.ProcResourceDefs[i];
@@ -620,20 +601,19 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
     else {
       // Find the SuperIdx
       if (PRDef->getValueInit("Super")->isComplete()) {
-        SuperDef = SchedModels.findProcResUnits(
-          PRDef->getValueAsDef("Super"), ProcModel);
+        SuperDef =
+            SchedModels.findProcResUnits(PRDef->getValueAsDef("Super"),
+                                         ProcModel, PRDef->getLoc());
         SuperIdx = ProcModel.getProcResourceIdx(SuperDef);
       }
       NumUnits = PRDef->getValueAsInt("NumUnits");
     }
     // Emit the ProcResourceDesc
-    if (i+1 == e)
-      Sep = ' ';
     OS << "  {DBGFIELD(\"" << PRDef->getName() << "\") ";
     if (PRDef->getName().size() < 15)
       OS.indent(15 - PRDef->getName().size());
     OS << NumUnits << ", " << SuperIdx << ", "
-       << BufferSize << "}" << Sep << " // #" << i+1;
+       << BufferSize << "}, // #" << i+1;
     if (SuperDef)
       OS << ", Super=" << SuperDef->getName();
     OS << "\n";
@@ -688,8 +668,8 @@ Record *SubtargetEmitter::FindWriteResources(
   // then call FindWriteResources recursively with that model here.
   if (!ResDef) {
     PrintFatalError(ProcModel.ModelDef->getLoc(),
-                  std::string("Processor does not define resources for ")
-                  + SchedWrite.TheDef->getName());
+                    Twine("Processor does not define resources for ") +
+                    SchedWrite.TheDef->getName());
   }
   return ResDef;
 }
@@ -740,8 +720,8 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
   // then call FindReadAdvance recursively with that model here.
   if (!ResDef && SchedRead.TheDef->getName() != "ReadDefault") {
     PrintFatalError(ProcModel.ModelDef->getLoc(),
-                  std::string("Processor does not define resources for ")
-                  + SchedRead.TheDef->getName());
+                    Twine("Processor does not define resources for ") +
+                    SchedRead.TheDef->getName());
   }
   return ResDef;
 }
@@ -760,7 +740,7 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
       SubResources = PRDef->getValueAsListOfDefs("Resources");
     else {
       SubResources.push_back(PRDef);
-      PRDef = SchedModels.findProcResUnits(PRVec[i], PM);
+      PRDef = SchedModels.findProcResUnits(PRDef, PM, PRDef->getLoc());
       for (Record *SubDef = PRDef;
            SubDef->getValueInit("Super")->isComplete();) {
         if (SubDef->isSubClassOf("ProcResGroup")) {
@@ -769,7 +749,8 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
                           " cannot be a super resources.");
         }
         Record *SuperDef =
-          SchedModels.findProcResUnits(SubDef->getValueAsDef("Super"), PM);
+            SchedModels.findProcResUnits(SubDef->getValueAsDef("Super"), PM,
+                                         SubDef->getLoc());
         PRVec.push_back(SuperDef);
         Cycles.push_back(Cycles[i]);
         SubDef = SuperDef;
@@ -818,14 +799,10 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
 
     // A Variant SchedClass has no resources of its own.
     bool HasVariants = false;
-    for (std::vector<CodeGenSchedTransition>::const_iterator
-           TI = SC.Transitions.begin(), TE = SC.Transitions.end();
-         TI != TE; ++TI) {
-      if (TI->ProcIndices[0] == 0) {
-        HasVariants = true;
-        break;
-      }
-      if (is_contained(TI->ProcIndices, ProcModel.Index)) {
+    for (const CodeGenSchedTransition &CGT :
+           make_range(SC.Transitions.begin(), SC.Transitions.end())) {
+      if (CGT.ProcIndices[0] == 0 ||
+          is_contained(CGT.ProcIndices, ProcModel.Index)) {
         HasVariants = true;
         break;
       }
@@ -1132,10 +1109,8 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
          << ", " << format("%2d", MCDesc.WriteLatencyIdx)
          << ", " << MCDesc.NumWriteLatencyEntries
          << ", " << format("%2d", MCDesc.ReadAdvanceIdx)
-         << ", " << MCDesc.NumReadAdvanceEntries << "}";
-      if (SCIdx + 1 < SCEnd)
-        OS << ',';
-      OS << " // #" << SCIdx << '\n';
+         << ", " << MCDesc.NumReadAdvanceEntries
+         << "}, // #" << SCIdx << '\n';
     }
     OS << "}; // " << PI->ModelName << "SchedClasses\n";
   }
@@ -1184,9 +1159,10 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
       OS << "  nullptr, nullptr, 0, 0,"
          << " // No instruction-level machine model.\n";
     if (PM.hasItineraries())
-      OS << "  " << PM.ItinsDef->getName() << "};\n";
+      OS << "  " << PM.ItinsDef->getName() << "\n";
     else
-      OS << "  nullptr}; // No Itinerary\n";
+      OS << "  nullptr // No Itinerary\n";
+    OS << "};\n";
   }
 }
 
@@ -1206,21 +1182,13 @@ void SubtargetEmitter::EmitProcessorLookup(raw_ostream &OS) {
      << Target << "ProcSchedKV[] = {\n";
 
   // For each processor
-  for (unsigned i = 0, N = ProcessorList.size(); i < N;) {
-    // Next processor
-    Record *Processor = ProcessorList[i];
-
+  for (Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
     const std::string &ProcModelName =
       SchedModels.getModelForProc(Processor).ModelName;
 
     // Emit as { "cpu", procinit },
-    OS << "  { \"" << Name << "\", (const void *)&" << ProcModelName << " }";
-
-    // Depending on ''if more in the list'' emit comma
-    if (++i < N) OS << ",";
-
-    OS << "\n";
+    OS << "  { \"" << Name << "\", (const void *)&" << ProcModelName << " },\n";
   }
 
   // End processor table
@@ -1234,7 +1202,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   OS << "#ifdef DBGFIELD\n"
      << "#error \"<target>GenSubtargetInfo.inc requires a DBGFIELD macro\"\n"
      << "#endif\n"
-     << "#ifndef NDEBUG\n"
+     << "#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)\n"
      << "#define DBGFIELD(x) x,\n"
      << "#else\n"
      << "#define DBGFIELD(x)\n"
@@ -1260,7 +1228,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   // Emit the processor lookup data
   EmitProcessorLookup(OS);
 
-  OS << "#undef DBGFIELD";
+  OS << "\n#undef DBGFIELD";
 }
 
 void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
@@ -1327,6 +1295,22 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
   }
   OS << "  report_fatal_error(\"Expected a variant SchedClass\");\n"
      << "} // " << ClassName << "::resolveSchedClass\n";
+}
+
+void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
+                                       raw_ostream &OS) {
+  const CodeGenHwModes &CGH = TGT.getHwModes();
+  assert(CGH.getNumModeIds() > 0);
+  if (CGH.getNumModeIds() == 1)
+    return;
+
+  OS << "unsigned " << ClassName << "::getHwMode() const {\n";
+  for (unsigned M = 1, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
+    const HwMode &HM = CGH.getMode(M);
+    OS << "  if (checkFeatures(\"" << HM.Features
+       << "\")) return " << M << ";\n";
+  }
+  OS << "  return 0;\n}\n";
 }
 
 //
@@ -1408,7 +1392,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 #endif
 
   // MCInstrInfo initialization routine.
-  OS << "static inline MCSubtargetInfo *create" << Target
+  OS << "\nstatic inline MCSubtargetInfo *create" << Target
      << "MCSubtargetInfoImpl("
      << "const Triple &TT, StringRef CPU, StringRef FS) {\n";
   OS << "  return new MCSubtargetInfo(TT, CPU, FS, ";
@@ -1462,9 +1446,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " const MachineInstr *DefMI,"
      << " const TargetSchedModel *SchedModel) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
-     << " const;\n"
-     << "};\n";
-  OS << "} // end namespace llvm\n\n";
+     << " const;\n";
+  if (TGT.getHwModes().getNumModeIds() > 1)
+    OS << "  unsigned getHwMode() const override;\n";
+  OS << "};\n"
+     << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_HEADER\n\n";
 
@@ -1515,6 +1501,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << ") {}\n\n";
 
   EmitSchedModelHelpers(ClassName, OS);
+  EmitHwModeCheck(ClassName, OS);
 
   OS << "} // end namespace llvm\n\n";
 

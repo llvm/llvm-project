@@ -14,12 +14,12 @@
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 
 using namespace llvm;
 
@@ -465,7 +465,7 @@ LiveRangeEdit::calculateRegClassAndHint(MachineFunction &MF,
     if (MRI.recomputeRegClass(LI.reg))
       DEBUG({
         const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-        dbgs() << "Inflated " << PrintReg(LI.reg) << " to "
+        dbgs() << "Inflated " << printReg(LI.reg) << " to "
                << TRI->getRegClassName(MRI.getRegClass(LI.reg)) << '\n';
       });
     VRAI.calculateSpillWeightAndHint(LI);

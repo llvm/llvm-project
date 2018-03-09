@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -march=thumb -mcpu=cortex-m3 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXM3
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -march=thumb -mcpu=cortex-m4 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXM4
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -march=thumb -mcpu=cortex-m7 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXM7
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -march=thumb -mcpu=cortex-a8 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXA8
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -mcpu=cortex-m3 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXM3
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -mcpu=cortex-m4 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXM4
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -mcpu=cortex-m7 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXM7
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -mcpu=cortex-a8 | FileCheck %s -check-prefix=CHECK -check-prefix=CORTEXA8
 
 
 define float @foo(float %a, float %b) {

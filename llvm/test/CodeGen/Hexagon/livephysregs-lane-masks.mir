@@ -36,5 +36,5 @@ body: |
   bb.2:
     liveins: %r0
         %d8 = L2_loadrd_io %r29, 8
-        L4_return implicit-def %r29, implicit-def %r30, implicit-def %r31, implicit-def %pc, implicit %r30
+        %d15 = L4_return %r29, implicit-def %r29, implicit-def %pc, implicit %r30, implicit %framekey
 

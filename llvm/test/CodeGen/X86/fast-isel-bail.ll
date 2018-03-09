@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -O0
+; RUN: llc < %s -mtriple=i686-- -O0
 
 ; This file is for regression tests for cases where FastISel needs
 ; to gracefully bail out and let SelectionDAGISel take over.

@@ -138,6 +138,6 @@ b42:                                              ; preds = %b40
   br label %b39
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }

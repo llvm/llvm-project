@@ -144,17 +144,40 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   FastMathFlags FMF;
   Builder.setFastMathFlags(FMF);
 
+  // By default, no flags are set.
   F = Builder.CreateFAdd(F, F);
   EXPECT_FALSE(Builder.getFastMathFlags().any());
+  ASSERT_TRUE(isa<Instruction>(F));
+  FAdd = cast<Instruction>(F);
+  EXPECT_FALSE(FAdd->hasNoNaNs());
+  EXPECT_FALSE(FAdd->hasNoInfs());
+  EXPECT_FALSE(FAdd->hasNoSignedZeros());
+  EXPECT_FALSE(FAdd->hasAllowReciprocal());
+  EXPECT_FALSE(FAdd->hasAllowContract());
+  EXPECT_FALSE(FAdd->hasAllowReassoc());
+  EXPECT_FALSE(FAdd->hasApproxFunc());
 
-  FMF.setUnsafeAlgebra();
+  // Set all flags in the instruction.
+  FAdd->setFast(true);
+  EXPECT_TRUE(FAdd->hasNoNaNs());
+  EXPECT_TRUE(FAdd->hasNoInfs());
+  EXPECT_TRUE(FAdd->hasNoSignedZeros());
+  EXPECT_TRUE(FAdd->hasAllowReciprocal());
+  EXPECT_TRUE(FAdd->hasAllowContract());
+  EXPECT_TRUE(FAdd->hasAllowReassoc());
+  EXPECT_TRUE(FAdd->hasApproxFunc());
+
+  // All flags are set in the builder.
+  FMF.setFast();
   Builder.setFastMathFlags(FMF);
 
   F = Builder.CreateFAdd(F, F);
   EXPECT_TRUE(Builder.getFastMathFlags().any());
+  EXPECT_TRUE(Builder.getFastMathFlags().all());
   ASSERT_TRUE(isa<Instruction>(F));
   FAdd = cast<Instruction>(F);
   EXPECT_TRUE(FAdd->hasNoNaNs());
+  EXPECT_TRUE(FAdd->isFast());
 
   // Now, try it with CreateBinOp
   F = Builder.CreateBinOp(Instruction::FAdd, F, F);
@@ -162,21 +185,23 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   ASSERT_TRUE(isa<Instruction>(F));
   FAdd = cast<Instruction>(F);
   EXPECT_TRUE(FAdd->hasNoNaNs());
+  EXPECT_TRUE(FAdd->isFast());
 
   F = Builder.CreateFDiv(F, F);
-  EXPECT_TRUE(Builder.getFastMathFlags().any());
-  EXPECT_TRUE(Builder.getFastMathFlags().UnsafeAlgebra);
+  EXPECT_TRUE(Builder.getFastMathFlags().all());
   ASSERT_TRUE(isa<Instruction>(F));
   FDiv = cast<Instruction>(F);
   EXPECT_TRUE(FDiv->hasAllowReciprocal());
 
+  // Clear all FMF in the builder.
   Builder.clearFastMathFlags();
 
   F = Builder.CreateFDiv(F, F);
   ASSERT_TRUE(isa<Instruction>(F));
   FDiv = cast<Instruction>(F);
   EXPECT_FALSE(FDiv->hasAllowReciprocal());
-
+ 
+  // Try individual flags.
   FMF.clear();
   FMF.setAllowReciprocal();
   Builder.setFastMathFlags(FMF);
@@ -225,7 +250,25 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   FAdd = cast<Instruction>(FC);
   EXPECT_TRUE(FAdd->hasAllowContract());
 
+  FMF.setApproxFunc();
   Builder.clearFastMathFlags();
+  Builder.setFastMathFlags(FMF);
+  // Now 'aml' and 'contract' are set.
+  F = Builder.CreateFMul(F, F);
+  FAdd = cast<Instruction>(F);
+  EXPECT_TRUE(FAdd->hasApproxFunc());
+  EXPECT_TRUE(FAdd->hasAllowContract());
+  EXPECT_FALSE(FAdd->hasAllowReassoc());
+  
+  FMF.setAllowReassoc();
+  Builder.clearFastMathFlags();
+  Builder.setFastMathFlags(FMF);
+  // Now 'aml' and 'contract' and 'reassoc' are set.
+  F = Builder.CreateFMul(F, F);
+  FAdd = cast<Instruction>(F);
+  EXPECT_TRUE(FAdd->hasApproxFunc());
+  EXPECT_TRUE(FAdd->hasAllowContract());
+  EXPECT_TRUE(FAdd->hasAllowReassoc());
 
   // Test a call with FMF.
   auto CalleeTy = FunctionType::get(Type::getFloatTy(Ctx),

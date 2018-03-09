@@ -4,7 +4,8 @@ RUN: yaml2obj %S/Inputs/coff.yaml -o %t-coff.o
 RUN: rm -f %t.ar
 RUN: llvm-ar crs %t.ar %t-macho.o
 RUN: grep -q __.SYMDEF %t.ar
-RUN: llvm-ar crs %t.ar %t-coff.o
+Test that an option string prefixed by a dash works.
+RUN: llvm-ar -crs %t.ar %t-coff.o
 RUN: grep -q __.SYMDEF %t.ar
 
 RUN: rm -f %t.ar

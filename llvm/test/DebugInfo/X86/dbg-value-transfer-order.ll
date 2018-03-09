@@ -28,12 +28,12 @@
 ; CHECK:         movl    $32, %ecx
 ; CHECK:         testl   {{.*}}
 ; CHECK:         jne     .LBB0_3
-; CHECK: # BB#2:                                 # %if.then
+; CHECK: # %bb.2:                                 # %if.then
 ; CHECK:         callq   if_then
 ; CHECK:         movl    %eax, %ecx
 ; CHECK: .LBB0_3:                                # %if.end
 ;        Check that this DEBUG_VALUE comes before the left shift.
-; CHECK:         #DEBUG_VALUE: bit_offset <- %ECX
+; CHECK:         #DEBUG_VALUE: bit_offset <- %ecx
 ; CHECK:         .cv_loc 0 1 8 28                # t.c:8:28
 ; CHECK:         movl    $1, %[[reg:[^ ]*]]
 ; CHECK:         shll    %cl, %[[reg]]

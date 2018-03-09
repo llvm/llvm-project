@@ -4,7 +4,7 @@
 
 define <8 x i32*> @SHUFF0(<4 x i32*> %ptrv) nounwind {
 ; CHECK-LABEL: SHUFF0:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,1,2]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,1]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
@@ -16,7 +16,7 @@ entry:
 
 define <4 x i32*> @SHUFF1(<4 x i32*> %ptrv) nounwind {
 ; CHECK-LABEL: SHUFF1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,3,2]
 ; CHECK-NEXT:    retl
 entry:
@@ -26,7 +26,7 @@ entry:
 
 define <4 x i8*> @SHUFF3(<4 x i8*> %ptrv) nounwind {
 ; CHECK-LABEL: SHUFF3:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,1,2]
 ; CHECK-NEXT:    retl
 entry:
@@ -36,7 +36,7 @@ entry:
 
 define <4 x i8*> @LOAD0(<4 x i8*>* %p) nounwind {
 ; CHECK-LABEL: LOAD0:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movaps (%eax), %xmm0
 ; CHECK-NEXT:    retl
@@ -47,7 +47,7 @@ entry:
 
 define <4 x i8*> @LOAD1(<4 x i8*>* %p) nounwind {
 ; CHECK-LABEL: LOAD1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movdqa (%eax), %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,0,3]
@@ -62,7 +62,7 @@ entry:
 
 define <4 x i8*> @LOAD2(<4 x i8*>* %p) nounwind {
 ; CHECK-LABEL: LOAD2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subl $28, %esp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movaps (%eax), %xmm0
@@ -79,7 +79,7 @@ entry:
 
 define <4 x i32> @INT2PTR0(<4 x i8*>* %p) nounwind {
 ; CHECK-LABEL: INT2PTR0:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movaps (%eax), %xmm0
 ; CHECK-NEXT:    retl
@@ -91,7 +91,7 @@ entry:
 
 define <4 x i32*> @INT2PTR1(<4 x i8>* %p) nounwind {
 ; CHECK-LABEL: INT2PTR1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; CHECK-NEXT:    retl
@@ -103,7 +103,7 @@ entry:
 
 define <4 x i32*> @BITCAST0(<4 x i8*>* %p) nounwind {
 ; CHECK-LABEL: BITCAST0:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movaps (%eax), %xmm0
 ; CHECK-NEXT:    retl
@@ -115,7 +115,7 @@ entry:
 
 define <2 x i32*> @BITCAST1(<2 x i8*>* %p) nounwind {
 ; CHECK-LABEL: BITCAST1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
 ; CHECK-NEXT:    retl
@@ -127,7 +127,7 @@ entry:
 
 define <4 x i32> @ICMP0(<4 x i8*>* %p0, <4 x i8*>* %p1) nounwind {
 ; CHECK-LABEL: ICMP0:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movdqa (%ecx), %xmm0
@@ -146,7 +146,7 @@ entry:
 
 define <4 x i32> @ICMP1(<4 x i8*>* %p0, <4 x i8*>* %p1) nounwind {
 ; CHECK-LABEL: ICMP1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movdqa (%ecx), %xmm0

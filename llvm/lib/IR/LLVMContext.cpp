@@ -59,6 +59,8 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     {MD_section_prefix, "section_prefix"},
     {MD_absolute_symbol, "absolute_symbol"},
     {MD_associated, "associated"},
+    {MD_callees, "callees"},
+    {MD_irr_loop, "irr_loop"},
   };
 
   for (auto &MDKind : MDKinds) {
@@ -199,8 +201,12 @@ static bool isDiagnosticEnabled(const DiagnosticInfo &DI) {
   // pattern, passed via one of the -pass-remarks* flags, matches the name of
   // the pass that is emitting the diagnostic. If there is no match, ignore the
   // diagnostic and return.
+  //
+  // Also noisy remarks are only enabled if we have hotness information to sort
+  // them.
   if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
-    return Remark->isEnabled();
+    return Remark->isEnabled() &&
+           (!Remark->isVerbose() || Remark->getHotness());
 
   return true;
 }
@@ -221,6 +227,14 @@ LLVMContext::getDiagnosticMessagePrefix(DiagnosticSeverity Severity) {
 }
 
 void LLVMContext::diagnose(const DiagnosticInfo &DI) {
+  if (auto *OptDiagBase = dyn_cast<DiagnosticInfoOptimizationBase>(&DI)) {
+    yaml::Output *Out = getDiagnosticsOutputFile();
+    if (Out) {
+      // For remarks the << operator takes a reference to a pointer.
+      auto *P = const_cast<DiagnosticInfoOptimizationBase *>(OptDiagBase);
+      *Out << P;
+    }
+  }
   // If there is a report handler, use it.
   if (pImpl->DiagHandler &&
       (!pImpl->RespectDiagnosticFilters || isDiagnosticEnabled(DI)) &&

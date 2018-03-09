@@ -1,4 +1,4 @@
-; RUN: llc -O0 -asm-verbose -mtriple=x86_64-macosx -generate-dwarf-pub-sections=Enable < %s | FileCheck %s
+; RUN: llc -O0 -asm-verbose -mtriple=x86_64-macosx -debugger-tune=gdb < %s | FileCheck %s
 ; CHECK-NOT: .asciz "X" ## External Name
 ; CHECK: .asciz "Y" ## External Name
 ; Test to check type with no definition is listed in pubtypes section.

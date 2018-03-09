@@ -46,9 +46,6 @@
 #include "regutils.h"
 #include "regex2.h"
 
-#include "regcclass.h"
-#include "regcname.h"
-
 #include "llvm/Config/config.h"
 #if HAVE_STDINT_H
 #include <stdint.h>
@@ -56,6 +53,141 @@
 /* Pessimistically bound memory use */
 #define SIZE_MAX UINT_MAX
 #endif
+
+/* character-class table */
+static struct cclass {
+	const char *name;
+	const char *chars;
+	const char *multis;
+} cclasses[] = {
+	{ "alnum",	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\
+0123456789",				""} ,
+	{ "alpha",	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+					""} ,
+	{ "blank",	" \t",		""} ,
+	{ "cntrl",	"\007\b\t\n\v\f\r\1\2\3\4\5\6\16\17\20\21\22\23\24\
+\25\26\27\30\31\32\33\34\35\36\37\177",	""} ,
+	{ "digit",	"0123456789",	""} ,
+	{ "graph",	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\
+0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",
+					""} ,
+	{ "lower",	"abcdefghijklmnopqrstuvwxyz",
+					""} ,
+	{ "print",	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\
+0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ",
+					""} ,
+	{ "punct",	"!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",
+					""} ,
+	{ "space",	"\t\n\v\f\r ",	""} ,
+	{ "upper",	"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+					""} ,
+	{ "xdigit",	"0123456789ABCDEFabcdef",
+					""} ,
+	{ NULL,		0,		"" }
+};
+
+/* character-name table */
+static struct cname {
+	const char *name;
+	char code;
+} cnames[] = {
+	{ "NUL",			'\0' },
+	{ "SOH",			'\001' },
+	{ "STX",			'\002' },
+	{ "ETX",			'\003' },
+	{ "EOT",			'\004' },
+	{ "ENQ",			'\005' },
+	{ "ACK",			'\006' },
+	{ "BEL",			'\007' },
+	{ "alert",			'\007' },
+	{ "BS",				'\010' },
+	{ "backspace",			'\b' },
+	{ "HT",				'\011' },
+	{ "tab",			'\t' },
+	{ "LF",				'\012' },
+	{ "newline",			'\n' },
+	{ "VT",				'\013' },
+	{ "vertical-tab",		'\v' },
+	{ "FF",				'\014' },
+	{ "form-feed",			'\f' },
+	{ "CR",				'\015' },
+	{ "carriage-return",		'\r' },
+	{ "SO",				'\016' },
+	{ "SI",				'\017' },
+	{ "DLE",			'\020' },
+	{ "DC1",			'\021' },
+	{ "DC2",			'\022' },
+	{ "DC3",			'\023' },
+	{ "DC4",			'\024' },
+	{ "NAK",			'\025' },
+	{ "SYN",			'\026' },
+	{ "ETB",			'\027' },
+	{ "CAN",			'\030' },
+	{ "EM",				'\031' },
+	{ "SUB",			'\032' },
+	{ "ESC",			'\033' },
+	{ "IS4",			'\034' },
+	{ "FS",				'\034' },
+	{ "IS3",			'\035' },
+	{ "GS",				'\035' },
+	{ "IS2",			'\036' },
+	{ "RS",				'\036' },
+	{ "IS1",			'\037' },
+	{ "US",				'\037' },
+	{ "space",			' ' },
+	{ "exclamation-mark",		'!' },
+	{ "quotation-mark",		'"' },
+	{ "number-sign",		'#' },
+	{ "dollar-sign",		'$' },
+	{ "percent-sign",		'%' },
+	{ "ampersand",			'&' },
+	{ "apostrophe",			'\'' },
+	{ "left-parenthesis",		'(' },
+	{ "right-parenthesis",		')' },
+	{ "asterisk",			'*' },
+	{ "plus-sign",			'+' },
+	{ "comma",			',' },
+	{ "hyphen",			'-' },
+	{ "hyphen-minus",		'-' },
+	{ "period",			'.' },
+	{ "full-stop",			'.' },
+	{ "slash",			'/' },
+	{ "solidus",			'/' },
+	{ "zero",			'0' },
+	{ "one",			'1' },
+	{ "two",			'2' },
+	{ "three",			'3' },
+	{ "four",			'4' },
+	{ "five",			'5' },
+	{ "six",			'6' },
+	{ "seven",			'7' },
+	{ "eight",			'8' },
+	{ "nine",			'9' },
+	{ "colon",			':' },
+	{ "semicolon",			';' },
+	{ "less-than-sign",		'<' },
+	{ "equals-sign",		'=' },
+	{ "greater-than-sign",		'>' },
+	{ "question-mark",		'?' },
+	{ "commercial-at",		'@' },
+	{ "left-square-bracket",	'[' },
+	{ "backslash",			'\\' },
+	{ "reverse-solidus",		'\\' },
+	{ "right-square-bracket",	']' },
+	{ "circumflex",			'^' },
+	{ "circumflex-accent",		'^' },
+	{ "underscore",			'_' },
+	{ "low-line",			'_' },
+	{ "grave-accent",		'`' },
+	{ "left-brace",			'{' },
+	{ "left-curly-bracket",		'{' },
+	{ "vertical-line",		'|' },
+	{ "right-brace",		'}' },
+	{ "right-curly-bracket",	'}' },
+	{ "tilde",			'~' },
+	{ "DEL",			'\177' },
+	{ NULL,				0 }
+};
 
 /*
  * parse structure, passed up and down to avoid global variables and
@@ -876,7 +1008,7 @@ p_b_coll_elem(struct parse *p,
 {
 	char *sp = p->next;
 	struct cname *cp;
-	int len;
+	size_t len;
 
 	while (MORE() && !SEETWO(endc, ']'))
 		NEXT();
@@ -886,7 +1018,7 @@ p_b_coll_elem(struct parse *p,
 	}
 	len = p->next - sp;
 	for (cp = cnames; cp->name != NULL; cp++)
-		if (strncmp(cp->name, sp, len) == 0 && cp->name[len] == '\0')
+		if (strncmp(cp->name, sp, len) == 0 && strlen(cp->name) == len)
 			return(cp->code);	/* known name */
 	if (len == 1)
 		return(*sp);	/* single character */

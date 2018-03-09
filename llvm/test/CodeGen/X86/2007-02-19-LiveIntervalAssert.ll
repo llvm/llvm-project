@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mtriple=i686-pc-linux-gnu -relocation-model=pic
+; RUN: llc < %s -mtriple=i686-pc-linux-gnu -relocation-model=pic
 ; PR1027
 
 	%struct._IO_FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct._IO_FILE*, i32, i32, i32, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i32, i32, [40 x i8] }

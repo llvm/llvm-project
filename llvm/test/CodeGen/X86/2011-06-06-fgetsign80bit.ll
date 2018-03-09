@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s
+; RUN: llc -mtriple=x86_64-- < %s
 define i32 @signbitl(x86_fp80 %x) nounwind uwtable readnone {
 entry:
   %tmp4 = bitcast x86_fp80 %x to i80

@@ -83,9 +83,9 @@ void WasmDumper::printRelocation(const SectionRef &Section,
 
   bool HasAddend = false;
   switch (RelocType) {
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
     HasAddend = true;
     break;
   default:
@@ -100,8 +100,8 @@ void WasmDumper::printRelocation(const SectionRef &Section,
       W.printNumber("Addend", WasmReloc.Addend);
   } else {
     raw_ostream& OS = W.startLine();
-    OS << W.hex(Reloc.getOffset())
-       << " " << RelocTypeName << "[" << WasmReloc.Index << "]";
+    OS << W.hex(Reloc.getOffset()) << " " << RelocTypeName << "["
+       << WasmReloc.Index << "]";
     if (HasAddend)
       OS << " " << WasmReloc.Addend;
     OS << "\n";
@@ -148,7 +148,7 @@ void WasmDumper::printSections() {
     const WasmSection &WasmSec = Obj->getWasmSection(Section);
     DictScope SectionD(W, "Section");
     W.printEnum("Type", WasmSec.Type, makeArrayRef(WasmSectionTypes));
-    W.printNumber("Size", (uint64_t)WasmSec.Content.size());
+    W.printNumber("Size", static_cast<uint64_t>(WasmSec.Content.size()));
     W.printNumber("Offset", WasmSec.Offset);
     switch (WasmSec.Type) {
     case wasm::WASM_SEC_CUSTOM:
@@ -156,10 +156,27 @@ void WasmDumper::printSections() {
       if (WasmSec.Name == "linking") {
         const wasm::WasmLinkingData &LinkingData = Obj->linkingData();
         W.printNumber("DataSize", LinkingData.DataSize);
-        if (LinkingData.DataAlignment)
-          W.printNumber("DataAlignment", LinkingData.DataAlignment);
+        if (!LinkingData.InitFunctions.empty()) {
+          ListScope Group(W, "InitFunctions");
+          for (const wasm::WasmInitFunc &F: LinkingData.InitFunctions)
+            W.startLine() << F.FunctionIndex << " (priority=" << F.Priority
+                          << ")\n";
+        }
       }
       break;
+    case wasm::WASM_SEC_DATA: {
+      ListScope Group(W, "Segments");
+      for (const WasmSegment &Segment : Obj->dataSegments()) {
+        const wasm::WasmDataSegment& Seg = Segment.Data;
+        DictScope Group(W, "Segment");
+        if (!Seg.Name.empty())
+          W.printString("Name", Seg.Name);
+        W.printNumber("Size", static_cast<uint64_t>(Seg.Content.size()));
+        if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I32_CONST)
+          W.printNumber("Offset", Seg.Offset.Value.Int32);
+      }
+      break;
+    }
     case wasm::WASM_SEC_MEMORY:
       ListScope Group(W, "Memories");
       for (const wasm::WasmLimits &Memory : Obj->memories()) {

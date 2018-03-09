@@ -32,7 +32,7 @@ define i32 @test() local_unnamed_addr #0 {
 
 entry:
     tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds (%struct.test_t2, %struct.test_t2* @g, i64 0, i32 0), i8* getelementptr inbounds (%struct.test_t2, %struct.test_t2* @test.t2, i64 0, i32 0), i64 32, i32 4, i1 false)
-; CHECK:  r1 = <MCOperand Expr:(g)>ll
+; CHECK:  r1 = g
 ; CHECK:  r2 = 0
 ; CHECK:  *(u32 *)(r1 + 28) = r2
 ; CHECK:  r3 = 3

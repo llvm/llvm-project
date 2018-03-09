@@ -96,3 +96,20 @@ define void @test11(i64 %a) {
 }
 
 declare void @use(i16 signext, i64)
+
+; CHECK-LABEL: test_complex_node:
+; CHECK: ldr d0, [x0], #8
+; CHECK: ubfx x[[VAL:[0-9]+]], x0, #5, #27
+; CHECK: str w[[VAL]], [x2]
+define <2 x i32> @test_complex_node(<2 x i32>* %addr, <2 x i32>** %addr2, i32* %bf ) {
+  %vec = load <2 x i32>, <2 x i32>* %addr
+
+  %vec.next = getelementptr <2 x i32>, <2 x i32>* %addr, i32 1
+  store <2 x i32>* %vec.next, <2 x i32>** %addr2
+  %lo = ptrtoint <2 x i32>* %vec.next to i32
+
+  %val = lshr i32 %lo, 5
+  store i32 %val, i32* %bf
+
+  ret <2 x i32> %vec
+}

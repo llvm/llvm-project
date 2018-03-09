@@ -221,3 +221,4 @@ add_custom_target(ocaml_make_directory
   COMMAND "${CMAKE_COMMAND}" "-E" "make_directory" "${LLVM_LIBRARY_DIR}/ocaml/llvm")
 add_custom_target("ocaml_all")
 set_target_properties(ocaml_all PROPERTIES FOLDER "Misc")
+set_target_properties(ocaml_make_directory PROPERTIES FOLDER "Misc")

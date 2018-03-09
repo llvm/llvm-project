@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=thumb -mtriple=thumbv7-eabi -mcpu=cortex-a8 -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-eabi -mcpu=cortex-a8 -show-mc-encoding | FileCheck %s
 define void @coproc(i8* %i) nounwind {
 entry:
   ; CHECK: mrc p7, #1, r{{[0-9]+}}, c1, c1, #4

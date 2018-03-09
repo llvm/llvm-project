@@ -7,7 +7,7 @@ Sections:
     Tables:         
       - ElemType:          ANYFUNC
         Limits:
-          Flags:           0x00000001
+          Flags:           [ HAS_MAX ]
           Initial:         0x00000010
           Maximum:         0x00000011
   - Type:            ELEM

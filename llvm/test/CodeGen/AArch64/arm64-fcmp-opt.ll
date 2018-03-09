@@ -41,7 +41,7 @@ entry:
 define float @fcmp_oeq(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_oeq
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], eq
 
@@ -53,7 +53,7 @@ define float @fcmp_oeq(float %a, float %b) nounwind ssp {
 define float @fcmp_ogt(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_ogt
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], gt
 
@@ -65,7 +65,7 @@ define float @fcmp_ogt(float %a, float %b) nounwind ssp {
 define float @fcmp_oge(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_oge
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], ge
 
@@ -77,7 +77,7 @@ define float @fcmp_oge(float %a, float %b) nounwind ssp {
 define float @fcmp_olt(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_olt
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], mi
 
@@ -89,7 +89,7 @@ define float @fcmp_olt(float %a, float %b) nounwind ssp {
 define float @fcmp_ole(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_ole
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], ls
 
@@ -101,7 +101,7 @@ define float @fcmp_ole(float %a, float %b) nounwind ssp {
 define float @fcmp_ord(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_ord
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], vc
   %cmp = fcmp ord float %a, %b
@@ -112,7 +112,7 @@ define float @fcmp_ord(float %a, float %b) nounwind ssp {
 define float @fcmp_uno(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_uno
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], vs
   %cmp = fcmp uno float %a, %b
@@ -123,7 +123,7 @@ define float @fcmp_uno(float %a, float %b) nounwind ssp {
 define float @fcmp_ugt(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_ugt
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], hi
   %cmp = fcmp ugt float %a, %b
@@ -134,7 +134,7 @@ define float @fcmp_ugt(float %a, float %b) nounwind ssp {
 define float @fcmp_uge(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_uge
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], pl
   %cmp = fcmp uge float %a, %b
@@ -145,7 +145,7 @@ define float @fcmp_uge(float %a, float %b) nounwind ssp {
 define float @fcmp_ult(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_ult
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], lt
   %cmp = fcmp ult float %a, %b
@@ -156,7 +156,7 @@ define float @fcmp_ult(float %a, float %b) nounwind ssp {
 define float @fcmp_ule(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_ule
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], le
   %cmp = fcmp ule float %a, %b
@@ -167,7 +167,7 @@ define float @fcmp_ule(float %a, float %b) nounwind ssp {
 define float @fcmp_une(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_une
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel s0, s[[ONE]], s[[ZERO]], ne
   %cmp = fcmp une float %a, %b
@@ -180,7 +180,7 @@ define float @fcmp_une(float %a, float %b) nounwind ssp {
 define float @fcmp_one(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_one
 ;	fcmp	s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel [[TMP:s[0-9]+]], s[[ONE]], s[[ZERO]], mi
 ; CHECK: fcsel s0, s[[ONE]], [[TMP]], gt
@@ -194,7 +194,7 @@ define float @fcmp_one(float %a, float %b) nounwind ssp {
 define float @fcmp_ueq(float %a, float %b) nounwind ssp {
 ; CHECK-LABEL: @fcmp_ueq
 ; CHECK: fcmp s0, s1
-; CHECK-DAG: movi.2d v[[ZERO:[0-9]+]], #0
+; CHECK-DAG: fmov s[[ZERO:[0-9]+]], wzr
 ; CHECK-DAG: fmov s[[ONE:[0-9]+]], #1.0
 ; CHECK: fcsel [[TMP:s[0-9]+]], s[[ONE]], s[[ZERO]], eq
 ; CHECK: fcsel s0, s[[ONE]], [[TMP]], vs

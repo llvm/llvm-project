@@ -18,10 +18,11 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -484,10 +485,10 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilder<> &B,
     uint64_t LenTrue = GetStringLength(SI->getTrueValue(), CharSize);
     uint64_t LenFalse = GetStringLength(SI->getFalseValue(), CharSize);
     if (LenTrue && LenFalse) {
-      Function *Caller = CI->getParent()->getParent();
-      emitOptimizationRemark(CI->getContext(), "simplify-libcalls", *Caller,
-                             SI->getDebugLoc(),
-                             "folded strlen(select) to select of constants");
+      ORE.emit([&]() {
+        return OptimizationRemark("instcombine", "simplify-libcalls", CI)
+               << "folded strlen(select) to select of constants";
+      });
       return B.CreateSelect(SI->getCondition(),
                             ConstantInt::get(CI->getType(), LenTrue - 1),
                             ConstantInt::get(CI->getType(), LenFalse - 1));
@@ -509,6 +510,9 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilder<> &B) {
   Module &M = *CI->getParent()->getParent()->getParent();
   unsigned WCharSize = TLI->getWCharSize(M) * 8;
+  // We cannot perform this optimization without wchar_size metadata.
+  if (WCharSize == 0)
+    return nullptr;
 
   return optimizeStringLength(CI, B, WCharSize);
 }
@@ -753,29 +757,44 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
   }
 
   // memcmp(S1,S2,N/8)==0 -> (*(intN_t*)S1 != *(intN_t*)S2)==0
+  // TODO: The case where both inputs are constants does not need to be limited
+  // to legal integers or equality comparison. See block below this.
   if (DL.isLegalInteger(Len * 8) && isOnlyUsedInZeroEqualityComparison(CI)) {
-
     IntegerType *IntType = IntegerType::get(CI->getContext(), Len * 8);
     unsigned PrefAlignment = DL.getPrefTypeAlignment(IntType);
 
-    if (getKnownAlignment(LHS, DL, CI) >= PrefAlignment &&
-        getKnownAlignment(RHS, DL, CI) >= PrefAlignment) {
+    // First, see if we can fold either argument to a constant.
+    Value *LHSV = nullptr;
+    if (auto *LHSC = dyn_cast<Constant>(LHS)) {
+      LHSC = ConstantExpr::getBitCast(LHSC, IntType->getPointerTo());
+      LHSV = ConstantFoldLoadFromConstPtr(LHSC, IntType, DL);
+    }
+    Value *RHSV = nullptr;
+    if (auto *RHSC = dyn_cast<Constant>(RHS)) {
+      RHSC = ConstantExpr::getBitCast(RHSC, IntType->getPointerTo());
+      RHSV = ConstantFoldLoadFromConstPtr(RHSC, IntType, DL);
+    }
 
-      Type *LHSPtrTy =
-          IntType->getPointerTo(LHS->getType()->getPointerAddressSpace());
-      Type *RHSPtrTy =
-          IntType->getPointerTo(RHS->getType()->getPointerAddressSpace());
-
-      Value *LHSV =
-          B.CreateLoad(B.CreateBitCast(LHS, LHSPtrTy, "lhsc"), "lhsv");
-      Value *RHSV =
-          B.CreateLoad(B.CreateBitCast(RHS, RHSPtrTy, "rhsc"), "rhsv");
-
+    // Don't generate unaligned loads. If either source is constant data,
+    // alignment doesn't matter for that source because there is no load.
+    if ((LHSV || getKnownAlignment(LHS, DL, CI) >= PrefAlignment) &&
+        (RHSV || getKnownAlignment(RHS, DL, CI) >= PrefAlignment)) {
+      if (!LHSV) {
+        Type *LHSPtrTy =
+            IntType->getPointerTo(LHS->getType()->getPointerAddressSpace());
+        LHSV = B.CreateLoad(B.CreateBitCast(LHS, LHSPtrTy), "lhsv");
+      }
+      if (!RHSV) {
+        Type *RHSPtrTy =
+            IntType->getPointerTo(RHS->getType()->getPointerAddressSpace());
+        RHSV = B.CreateLoad(B.CreateBitCast(RHS, RHSPtrTy), "rhsv");
+      }
       return B.CreateZExt(B.CreateICmpNE(LHSV, RHSV), CI->getType(), "memcmp");
     }
   }
 
-  // Constant folding: memcmp(x, y, l) -> cnst (all arguments are constant)
+  // Constant folding: memcmp(x, y, Len) -> constant (all arguments are const).
+  // TODO: This is limited to i8 arrays.
   StringRef LHSStr, RHSStr;
   if (getConstantStringInfo(LHS, LHSStr) &&
       getConstantStringInfo(RHS, RHSStr)) {
@@ -1014,6 +1033,35 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   return B.CreateFPExt(V, B.getDoubleTy());
 }
 
+// cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
+Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilder<> &B) {
+  if (!CI->isFast())
+    return nullptr;
+
+  // Propagate fast-math flags from the existing call to new instructions.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+
+  Value *Real, *Imag;
+  if (CI->getNumArgOperands() == 1) {
+    Value *Op = CI->getArgOperand(0);
+    assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
+    Real = B.CreateExtractValue(Op, 0, "real");
+    Imag = B.CreateExtractValue(Op, 1, "imag");
+  } else {
+    assert(CI->getNumArgOperands() == 2 && "Unexpected signature for cabs!");
+    Real = CI->getArgOperand(0);
+    Imag = CI->getArgOperand(1);
+  }
+
+  Value *RealReal = B.CreateFMul(Real, Real);
+  Value *ImagImag = B.CreateFMul(Imag, Imag);
+
+  Function *FSqrt = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::sqrt,
+                                              CI->getType());
+  return B.CreateCall(FSqrt, B.CreateFAdd(RealReal, ImagImag), "cabs");
+}
+
 Value *LibCallSimplifier::optimizeCos(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
@@ -1055,6 +1103,51 @@ static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilder<> &B) {
   return InnerChain[Exp];
 }
 
+/// Use square root in place of pow(x, +/-0.5).
+Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilder<> &B) {
+  // TODO: There is some subset of 'fast' under which these transforms should
+  // be allowed.
+  if (!Pow->isFast())
+    return nullptr;
+
+  const APFloat *Arg1C;
+  if (!match(Pow->getArgOperand(1), m_APFloat(Arg1C)))
+    return nullptr;
+  if (!Arg1C->isExactlyValue(0.5) && !Arg1C->isExactlyValue(-0.5))
+    return nullptr;
+
+  // Fast-math flags from the pow() are propagated to all replacement ops.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(Pow->getFastMathFlags());
+  Type *Ty = Pow->getType();
+  Value *Sqrt;
+  if (Pow->hasFnAttr(Attribute::ReadNone)) {
+    // We know that errno is never set, so replace with an intrinsic:
+    // pow(x, 0.5) --> llvm.sqrt(x)
+    // llvm.pow(x, 0.5) --> llvm.sqrt(x)
+    auto *F = Intrinsic::getDeclaration(Pow->getModule(), Intrinsic::sqrt, Ty);
+    Sqrt = B.CreateCall(F, Pow->getArgOperand(0));
+  } else if (hasUnaryFloatFn(TLI, Ty, LibFunc_sqrt, LibFunc_sqrtf,
+                             LibFunc_sqrtl)) {
+    // Errno could be set, so we must use a sqrt libcall.
+    // TODO: We also should check that the target can in fact lower the sqrt
+    // libcall. We currently have no way to ask this question, so we ask
+    // whether the target has a sqrt libcall which is not exactly the same.
+    Sqrt = emitUnaryFloatFnCall(Pow->getArgOperand(0),
+                                TLI->getName(LibFunc_sqrt), B,
+                                Pow->getCalledFunction()->getAttributes());
+  } else {
+    // We can't replace with an intrinsic or a libcall.
+    return nullptr;
+  }
+
+  // If this is pow(x, -0.5), get the reciprocal.
+  if (Arg1C->isExactlyValue(-0.5))
+    Sqrt = B.CreateFDiv(ConstantFP::get(Ty, 1.0), Sqrt);
+
+  return Sqrt;
+}
+
 Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
@@ -1092,7 +1185,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   // Example: x = 1000, y = 0.001.
   // pow(exp(x), y) = pow(inf, 0.001) = inf, whereas exp(x*y) = exp(1).
   auto *OpC = dyn_cast<CallInst>(Op1);
-  if (OpC && OpC->hasUnsafeAlgebra() && CI->hasUnsafeAlgebra()) {
+  if (OpC && OpC->isFast() && CI->isFast()) {
     LibFunc Func;
     Function *OpCCallee = OpC->getCalledFunction();
     if (OpCCallee && TLI->getLibFunc(OpCCallee->getName(), Func) &&
@@ -1105,6 +1198,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     }
   }
 
+  if (Value *Sqrt = replacePowWithSqrt(CI, B))
+    return Sqrt;
+
   ConstantFP *Op2C = dyn_cast<ConstantFP>(Op2);
   if (!Op2C)
     return Ret;
@@ -1112,42 +1208,10 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   if (Op2C->getValueAPF().isZero()) // pow(x, 0.0) -> 1.0
     return ConstantFP::get(CI->getType(), 1.0);
 
-  if (Op2C->isExactlyValue(-0.5) &&
-      hasUnaryFloatFn(TLI, Op2->getType(), LibFunc_sqrt, LibFunc_sqrtf,
-                      LibFunc_sqrtl)) {
-    // If -ffast-math:
-    // pow(x, -0.5) -> 1.0 / sqrt(x)
-    if (CI->hasUnsafeAlgebra()) {
-      IRBuilder<>::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-
-      // TODO: If the pow call is an intrinsic, we should lower to the sqrt
-      // intrinsic, so we match errno semantics.  We also should check that the
-      // target can in fact lower the sqrt intrinsic -- we currently have no way
-      // to ask this question other than asking whether the target has a sqrt
-      // libcall, which is a sufficient but not necessary condition.
-      Value *Sqrt = emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
-                                         Callee->getAttributes());
-
-      return B.CreateFDiv(ConstantFP::get(CI->getType(), 1.0), Sqrt, "sqrtrecip");
-    }
-  }
-
+  // FIXME: Correct the transforms and pull this into replacePowWithSqrt().
   if (Op2C->isExactlyValue(0.5) &&
       hasUnaryFloatFn(TLI, Op2->getType(), LibFunc_sqrt, LibFunc_sqrtf,
                       LibFunc_sqrtl)) {
-
-    // In -ffast-math, pow(x, 0.5) -> sqrt(x).
-    if (CI->hasUnsafeAlgebra()) {
-      IRBuilder<>::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-
-      // TODO: As above, we should lower to the sqrt intrinsic if the pow is an
-      // intrinsic, to match errno semantics.
-      return emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
-                                  Callee->getAttributes());
-    }
-
     // Expand pow(x, 0.5) to (x == -infinity ? +infinity : fabs(sqrt(x))).
     // This is faster than calling pow, and still handles negative zero
     // and negative infinity correctly.
@@ -1169,25 +1233,27 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     return Sel;
   }
 
-  if (Op2C->isExactlyValue(1.0)) // pow(x, 1.0) -> x
+  // Propagate fast-math-flags from the call to any created instructions.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+  // pow(x, 1.0) --> x
+  if (Op2C->isExactlyValue(1.0))
     return Op1;
-  if (Op2C->isExactlyValue(2.0)) // pow(x, 2.0) -> x*x
+  // pow(x, 2.0) --> x * x
+  if (Op2C->isExactlyValue(2.0))
     return B.CreateFMul(Op1, Op1, "pow2");
-  if (Op2C->isExactlyValue(-1.0)) // pow(x, -1.0) -> 1.0/x
+  // pow(x, -1.0) --> 1.0 / x
+  if (Op2C->isExactlyValue(-1.0))
     return B.CreateFDiv(ConstantFP::get(CI->getType(), 1.0), Op1, "powrecip");
 
   // In -ffast-math, generate repeated fmul instead of generating pow(x, n).
-  if (CI->hasUnsafeAlgebra()) {
+  if (CI->isFast()) {
     APFloat V = abs(Op2C->getValueAPF());
     // We limit to a max of 7 fmul(s). Thus max exponent is 32.
     // This transformation applies to integer exponents only.
     if (V.compare(APFloat(V.getSemantics(), 32.0)) == APFloat::cmpGreaterThan ||
         !V.isInteger())
       return nullptr;
-
-    // Propagate fast math flags.
-    IRBuilder<>::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
 
     // We will memoize intermediate products of the Addition Chain.
     Value *InnerChain[33] = {nullptr};
@@ -1196,8 +1262,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
 
     // We cannot readily convert a non-double type (like float) to a double.
     // So we first convert V to something which could be converted to double.
-    bool ignored;
-    V.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
+    bool Ignored;
+    V.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &Ignored);
     
     Value *FMul = getPow(InnerChain, V.convertToDouble(), B);
     // For negative exponents simply compute the reciprocal.
@@ -1265,9 +1331,9 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
 
   IRBuilder<>::FastMathFlagGuard Guard(B);
   FastMathFlags FMF;
-  if (CI->hasUnsafeAlgebra()) {
-    // Unsafe algebra sets all fast-math-flags to true.
-    FMF.setUnsafeAlgebra();
+  if (CI->isFast()) {
+    // If the call is 'fast', then anything we create here will also be 'fast'.
+    FMF.setFast();
   } else {
     // At a minimum, no-nans-fp-math must be true.
     if (!CI->hasNoNaNs())
@@ -1298,13 +1364,13 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
   if (UnsafeFPShrink && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
 
-  if (!CI->hasUnsafeAlgebra())
+  if (!CI->isFast())
     return Ret;
   Value *Op1 = CI->getArgOperand(0);
   auto *OpC = dyn_cast<CallInst>(Op1);
 
-  // The earlier call must also be unsafe in order to do these transforms.
-  if (!OpC || !OpC->hasUnsafeAlgebra())
+  // The earlier call must also be 'fast' in order to do these transforms.
+  if (!OpC || !OpC->isFast())
     return Ret;
 
   // log(pow(x,y)) -> y*log(x)
@@ -1314,7 +1380,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
 
   IRBuilder<>::FastMathFlagGuard Guard(B);
   FastMathFlags FMF;
-  FMF.setUnsafeAlgebra();
+  FMF.setFast();
   B.setFastMathFlags(FMF);
 
   LibFunc Func;
@@ -1346,11 +1412,11 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
                                   Callee->getIntrinsicID() == Intrinsic::sqrt))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
 
-  if (!CI->hasUnsafeAlgebra())
+  if (!CI->isFast())
     return Ret;
 
   Instruction *I = dyn_cast<Instruction>(CI->getArgOperand(0));
-  if (!I || I->getOpcode() != Instruction::FMul || !I->hasUnsafeAlgebra())
+  if (!I || I->getOpcode() != Instruction::FMul || !I->isFast())
     return Ret;
 
   // We're looking for a repeated factor in a multiplication tree,
@@ -1372,8 +1438,7 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
     Value *OtherMul0, *OtherMul1;
     if (match(Op0, m_FMul(m_Value(OtherMul0), m_Value(OtherMul1)))) {
       // Pattern: sqrt((x * y) * z)
-      if (OtherMul0 == OtherMul1 &&
-          cast<Instruction>(Op0)->hasUnsafeAlgebra()) {
+      if (OtherMul0 == OtherMul1 && cast<Instruction>(Op0)->isFast()) {
         // Matched: sqrt((x * x) * z)
         RepeatOp = OtherMul0;
         OtherOp = Op1;
@@ -1418,8 +1483,8 @@ Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilder<> &B) {
   if (!OpC)
     return Ret;
 
-  // Both calls must allow unsafe optimizations in order to remove them.
-  if (!CI->hasUnsafeAlgebra() || !OpC->hasUnsafeAlgebra())
+  // Both calls must be 'fast' in order to remove them.
+  if (!CI->isFast() || !OpC->isFast())
     return Ret;
 
   // tan(atan(x)) -> x
@@ -2043,13 +2108,107 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   return nullptr;
 }
 
+Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
+                                                       LibFunc Func,
+                                                       IRBuilder<> &Builder) {
+  // Don't optimize calls that require strict floating point semantics.
+  if (CI->isStrictFP())
+    return nullptr;
+
+  switch (Func) {
+  case LibFunc_cosf:
+  case LibFunc_cos:
+  case LibFunc_cosl:
+    return optimizeCos(CI, Builder);
+  case LibFunc_sinpif:
+  case LibFunc_sinpi:
+  case LibFunc_cospif:
+  case LibFunc_cospi:
+    return optimizeSinCosPi(CI, Builder);
+  case LibFunc_powf:
+  case LibFunc_pow:
+  case LibFunc_powl:
+    return optimizePow(CI, Builder);
+  case LibFunc_exp2l:
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+    return optimizeExp2(CI, Builder);
+  case LibFunc_fabsf:
+  case LibFunc_fabs:
+  case LibFunc_fabsl:
+    return replaceUnaryCall(CI, Builder, Intrinsic::fabs);
+  case LibFunc_sqrtf:
+  case LibFunc_sqrt:
+  case LibFunc_sqrtl:
+    return optimizeSqrt(CI, Builder);
+  case LibFunc_log:
+  case LibFunc_log10:
+  case LibFunc_log1p:
+  case LibFunc_log2:
+  case LibFunc_logb:
+    return optimizeLog(CI, Builder);
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+    return optimizeTan(CI, Builder);
+  case LibFunc_ceil:
+    return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
+  case LibFunc_floor:
+    return replaceUnaryCall(CI, Builder, Intrinsic::floor);
+  case LibFunc_round:
+    return replaceUnaryCall(CI, Builder, Intrinsic::round);
+  case LibFunc_nearbyint:
+    return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
+  case LibFunc_rint:
+    return replaceUnaryCall(CI, Builder, Intrinsic::rint);
+  case LibFunc_trunc:
+    return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
+  case LibFunc_acos:
+  case LibFunc_acosh:
+  case LibFunc_asin:
+  case LibFunc_asinh:
+  case LibFunc_atan:
+  case LibFunc_atanh:
+  case LibFunc_cbrt:
+  case LibFunc_cosh:
+  case LibFunc_exp:
+  case LibFunc_exp10:
+  case LibFunc_expm1:
+  case LibFunc_sin:
+  case LibFunc_sinh:
+  case LibFunc_tanh:
+    if (UnsafeFPShrink && hasFloatVersion(CI->getCalledFunction()->getName()))
+      return optimizeUnaryDoubleFP(CI, Builder, true);
+    return nullptr;
+  case LibFunc_copysign:
+    if (hasFloatVersion(CI->getCalledFunction()->getName()))
+      return optimizeBinaryDoubleFP(CI, Builder);
+    return nullptr;
+  case LibFunc_fminf:
+  case LibFunc_fmin:
+  case LibFunc_fminl:
+  case LibFunc_fmaxf:
+  case LibFunc_fmax:
+  case LibFunc_fmaxl:
+    return optimizeFMinFMax(CI, Builder);
+  case LibFunc_cabs:
+  case LibFunc_cabsf:
+  case LibFunc_cabsl:
+    return optimizeCAbs(CI, Builder);
+  default:
+    return nullptr;
+  }
+}
+
 Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
+  // TODO: Split out the code below that operates on FP calls so that
+  //       we can all non-FP calls with the StrictFP attribute to be
+  //       optimized.
   if (CI->isNoBuiltin())
     return nullptr;
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
-  StringRef FuncName = Callee->getName();
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
@@ -2057,15 +2216,19 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   bool isCallingConvC = isCallingConvCCompatible(CI);
 
   // Command-line parameter overrides instruction attribute.
+  // This can't be moved to optimizeFloatingPointLibCall() because it may be
+  // used by the intrinsic optimizations.
   if (EnableUnsafeFPShrink.getNumOccurrences() > 0)
     UnsafeFPShrink = EnableUnsafeFPShrink;
-  else if (isa<FPMathOperator>(CI) && CI->hasUnsafeAlgebra())
+  else if (isa<FPMathOperator>(CI) && CI->isFast())
     UnsafeFPShrink = true;
 
   // First, check for intrinsics.
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI)) {
     if (!isCallingConvC)
       return nullptr;
+    // The FP intrinsics have corresponding constrained versions so we don't
+    // need to check for the StrictFP attribute here.
     switch (II->getIntrinsicID()) {
     case Intrinsic::pow:
       return optimizePow(CI, Builder);
@@ -2106,32 +2269,9 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return nullptr;
     if (Value *V = optimizeStringMemoryLibCall(CI, Builder))
       return V;
+    if (Value *V = optimizeFloatingPointLibCall(CI, Func, Builder))
+      return V;
     switch (Func) {
-    case LibFunc_cosf:
-    case LibFunc_cos:
-    case LibFunc_cosl:
-      return optimizeCos(CI, Builder);
-    case LibFunc_sinpif:
-    case LibFunc_sinpi:
-    case LibFunc_cospif:
-    case LibFunc_cospi:
-      return optimizeSinCosPi(CI, Builder);
-    case LibFunc_powf:
-    case LibFunc_pow:
-    case LibFunc_powl:
-      return optimizePow(CI, Builder);
-    case LibFunc_exp2l:
-    case LibFunc_exp2:
-    case LibFunc_exp2f:
-      return optimizeExp2(CI, Builder);
-    case LibFunc_fabsf:
-    case LibFunc_fabs:
-    case LibFunc_fabsl:
-      return replaceUnaryCall(CI, Builder, Intrinsic::fabs);
-    case LibFunc_sqrtf:
-    case LibFunc_sqrt:
-    case LibFunc_sqrtl:
-      return optimizeSqrt(CI, Builder);
     case LibFunc_ffs:
     case LibFunc_ffsl:
     case LibFunc_ffsll:
@@ -2160,18 +2300,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeFWrite(CI, Builder);
     case LibFunc_fputs:
       return optimizeFPuts(CI, Builder);
-    case LibFunc_log:
-    case LibFunc_log10:
-    case LibFunc_log1p:
-    case LibFunc_log2:
-    case LibFunc_logb:
-      return optimizeLog(CI, Builder);
     case LibFunc_puts:
       return optimizePuts(CI, Builder);
-    case LibFunc_tan:
-    case LibFunc_tanf:
-    case LibFunc_tanl:
-      return optimizeTan(CI, Builder);
     case LibFunc_perror:
       return optimizeErrorReporting(CI, Builder);
     case LibFunc_vfprintf:
@@ -2179,46 +2309,6 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeErrorReporting(CI, Builder, 0);
     case LibFunc_fputc:
       return optimizeErrorReporting(CI, Builder, 1);
-    case LibFunc_ceil:
-      return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
-    case LibFunc_floor:
-      return replaceUnaryCall(CI, Builder, Intrinsic::floor);
-    case LibFunc_round:
-      return replaceUnaryCall(CI, Builder, Intrinsic::round);
-    case LibFunc_nearbyint:
-      return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
-    case LibFunc_rint:
-      return replaceUnaryCall(CI, Builder, Intrinsic::rint);
-    case LibFunc_trunc:
-      return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
-    case LibFunc_acos:
-    case LibFunc_acosh:
-    case LibFunc_asin:
-    case LibFunc_asinh:
-    case LibFunc_atan:
-    case LibFunc_atanh:
-    case LibFunc_cbrt:
-    case LibFunc_cosh:
-    case LibFunc_exp:
-    case LibFunc_exp10:
-    case LibFunc_expm1:
-    case LibFunc_sin:
-    case LibFunc_sinh:
-    case LibFunc_tanh:
-      if (UnsafeFPShrink && hasFloatVersion(FuncName))
-        return optimizeUnaryDoubleFP(CI, Builder, true);
-      return nullptr;
-    case LibFunc_copysign:
-      if (hasFloatVersion(FuncName))
-        return optimizeBinaryDoubleFP(CI, Builder);
-      return nullptr;
-    case LibFunc_fminf:
-    case LibFunc_fmin:
-    case LibFunc_fminl:
-    case LibFunc_fmaxf:
-    case LibFunc_fmax:
-    case LibFunc_fmaxl:
-      return optimizeFMinFMax(CI, Builder);
     default:
       return nullptr;
     }
@@ -2228,9 +2318,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
 
 LibCallSimplifier::LibCallSimplifier(
     const DataLayout &DL, const TargetLibraryInfo *TLI,
+    OptimizationRemarkEmitter &ORE,
     function_ref<void(Instruction *, Value *)> Replacer)
-    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), UnsafeFPShrink(false),
-      Replacer(Replacer) {}
+    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), ORE(ORE),
+      UnsafeFPShrink(false), Replacer(Replacer) {}
 
 void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
   // Indirect through the replacer used in this instance.

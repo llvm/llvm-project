@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-linux-gnuabi -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64_be-linux-gnuabi -O0 < %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -mtriple=aarch64-linux-gnuabi -O0 -fast-isel < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64_be-linux-gnuabi -O0 -fast-isel < %s | FileCheck %s --check-prefix=CHECK-BE
 
 define void @test_bitcast_v8f16_to_v4f32(<8 x half> %a) {
 ; CHECK-LABEL: test_bitcast_v8f16_to_v4f32:

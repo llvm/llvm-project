@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s -disable-fp-elim | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s -disable-fp-elim | FileCheck %s
 
 ; This test is checking that we don't crash and we don't incorrectly fold
 ; a large displacement and a frame index into a single lea.

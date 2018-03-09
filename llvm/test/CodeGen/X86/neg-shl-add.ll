@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s | not grep negq
+; RUN: llc -mtriple=x86_64-- < %s | not grep negq
 
 ; These sequences don't need neg instructions; they can be done with
 ; a single shift and sub each.

@@ -19,9 +19,19 @@ entry:
 
 ; PR25763 - folding constant vector comparisons with sign-extended result
 define <8 x i16> @dotests_458() {
+; CHECK-LABEL: .LCPI1_0:
+; CHECK:       .hword  0                       // 0x0
+; CHECK-NEXT:  .hword  0                       // 0x0
+; CHECK-NEXT:  .hword  65535                   // 0xffff
+; CHECK-NEXT:  .hword  0                       // 0x0
+; CHECK-NEXT:  .hword  0                       // 0x0
+; CHECK-NEXT:  .hword  0                       // 0x0
+; CHECK-NEXT:  .hword  0                       // 0x0
+; CHECK-NEXT:  .hword  0                       // 0x0
+
 ; CHECK-LABEL: dotests_458
-; CHECK:       movi d0, #0x00000000ff0000
-; CHECK-NEXT:  sshll v0.8h, v0.8b, #0
+; CHECK:       adrp    x8, .LCPI1_0
+; CHECK-NEXT:  ldr     q0, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:  ret
 entry:
   %vclz_v.i = call <8 x i8> @llvm.ctlz.v8i8(<8 x i8> <i8 127, i8 38, i8 -1, i8 -128, i8 127, i8 0, i8 0, i8 0>, i1 false) #6

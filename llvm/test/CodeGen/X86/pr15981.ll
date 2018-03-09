@@ -8,17 +8,17 @@
 
 define i32 @fn1(i32, i32) {
 ; X86-LABEL: fn1:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # BB#1:
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fn1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    cmovel %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
@@ -30,21 +30,24 @@ define i32 @fn1(i32, i32) {
 
 define void @fn2() {
 ; X86-LABEL: fn2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl b, %eax
 ; X86-NEXT:    decl a
 ; X86-NEXT:    jne .LBB1_2
-; X86-NEXT:  # BB#1:
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    movl %eax, c
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fn2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    decl {{.*}}(%rip)
-; X64-NEXT:    cmovnel {{.*}}(%rip), %eax
+; X64-NEXT:    je .LBB1_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    movl {{.*}}(%rip), %eax
+; X64-NEXT:  .LBB1_2:
 ; X64-NEXT:    movl %eax, {{.*}}(%rip)
 ; X64-NEXT:    retq
   %1 = load volatile i32, i32* @b, align 4

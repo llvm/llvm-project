@@ -47,12 +47,12 @@ entry:
 
 ; ASM-LABEL: f: # @f
 ; ASM: movl    %ecx, [[OFF_X:[0-9]+]](%rsp)
-; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [%RSP+0]
+; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [%rsp+0]
 ; ASM: callq   escape
 ; ASM: #DEBUG_VALUE: f:x <- 1
 ; ASM: movl    $1, global(%rip)
 ; FIXME: Needs a fix to LiveDebugVariables
-; ASMX: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [%RSP+0]
+; ASMX: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [%rsp+0]
 ; ASM: movl    $2, [[OFF_X]](%rsp)
 ; ASM: callq   escape
 ; ASM: retq
@@ -61,8 +61,7 @@ entry:
 ; DWARF-NEXT:   DW_AT_location        (0x00000000
 ; DWARF-NEXT:      {{[^:]*}}: DW_OP_breg7 RSP+{{[0-9]+}}
 ; DWARF-NEXT:      {{[^:]*}}: DW_OP_consts +1, DW_OP_stack_value
-; FIXME: Needs a fix to LiveDebugVariables
-; DWARFX-NEXT:      {{[^:]*}}: DW_OP_breg7 RSP+{{[0-9]+}})
+; DWARF-NEXT:      {{[^:]*}}: DW_OP_breg7 RSP+{{[0-9]+}})
 ; DWARF-NEXT:   DW_AT_name    ("x")
 
 attributes #0 = { nounwind uwtable }

@@ -9,7 +9,7 @@ target triple = "i686-apple-darwin8"
 
 define void @fn1() {
 ; CHECK-LABEL: fn1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl Y, %eax
 ; CHECK-NEXT:    shll $3, %eax
 ; CHECK-NEXT:    orl %eax, X
@@ -24,7 +24,7 @@ define void @fn1() {
 
 define i32 @fn2(i32 %X, i32 %Y) {
 ; CHECK-LABEL: fn2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shll $3, %eax
 ; CHECK-NEXT:    orl {{[0-9]+}}(%esp), %eax

@@ -6,12 +6,16 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// Implementation of the pointer use visitors.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/PtrUseVisitor.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include <algorithm>
 
 using namespace llvm;
 

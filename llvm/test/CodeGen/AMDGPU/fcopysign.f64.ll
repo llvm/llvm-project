@@ -24,7 +24,8 @@ define amdgpu_kernel void @test_copysign_f64(double addrspace(1)* %out, double %
 }
 
 ; FUNC-LABEL: {{^}}test_copysign_f64_f32:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[SMAG_LO:[0-9]+]]:[[SMAG_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}
+; SI-DAG: s_load_dwordx2 s{{\[}}[[SMAG_LO:[0-9]+]]:[[SMAG_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xb
+; VI-DAG: s_load_dwordx2 s{{\[}}[[SMAG_LO:[0-9]+]]:[[SMAG_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; GCN-DAG: s_load_dword s[[SSIGN:[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-DAG: s_brev_b32 [[SCONST:s[0-9]+]], -2{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[VMAG_HI:[0-9]+]], s[[SMAG_HI]]

@@ -1638,7 +1638,7 @@ struct LessRecordRegister {
     if (LHSNumParts != RHSNumParts)
       return LHSNumParts < RHSNumParts;
 
-    // We expect the registers to be of the form [_a-zA-z]+([0-9]*[_a-zA-Z]*)*.
+    // We expect the registers to be of the form [_a-zA-Z]+([0-9]*[_a-zA-Z]*)*.
     for (size_t I = 0, E = LHSNumParts; I < E; I+=2) {
       std::pair<bool, StringRef> LHSPart = LHSParts.getPart(I);
       std::pair<bool, StringRef> RHSPart = RHSParts.getPart(I);

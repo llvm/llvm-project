@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @merge_double(double* noalias nocapture %st, double* noalias nocapture readonly %ld) #0 {
 ; CHECK-LABEL: merge_double:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, (%rdi)
@@ -31,7 +31,7 @@ define void @merge_double(double* noalias nocapture %st, double* noalias nocaptu
 
 define void @merge_loadstore_int(i64* noalias nocapture readonly %p, i64* noalias nocapture %q) local_unnamed_addr #0 {
 ; CHECK-LABEL: merge_loadstore_int:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq 8(%rdi), %rcx
 ; CHECK-NEXT:    movq %rax, (%rsi)
@@ -55,7 +55,7 @@ entry:
 
 define i64 @merge_loadstore_int_with_extra_use(i64* noalias nocapture readonly %p, i64* noalias nocapture %q) local_unnamed_addr #0 {
 ; CHECK-LABEL: merge_loadstore_int_with_extra_use:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq 8(%rdi), %rcx
 ; CHECK-NEXT:    movq %rax, (%rsi)

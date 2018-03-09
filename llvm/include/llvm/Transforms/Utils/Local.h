@@ -1,4 +1,4 @@
-//===-- Local.h - Functions to perform local transformations ----*- C++ -*-===//
+//===- Local.h - Functions to perform local transformations -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,41 +15,95 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOCAL_H
 #define LLVM_TRANSFORMS_UTILS_LOCAL_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <cstdint>
+#include <limits>
 
 namespace llvm {
 
-class User;
-class BasicBlock;
-class Function;
-class BranchInst;
-class Instruction;
-class CallInst;
-class DbgDeclareInst;
-class DbgInfoIntrinsic;
-class DbgValueInst;
-class StoreInst;
-class LoadInst;
-class Value;
-class PHINode;
 class AllocaInst;
 class AssumptionCache;
-class ConstantExpr;
-class DataLayout;
+class BasicBlock;
+class BranchInst;
+class CallInst;
+class DbgInfoIntrinsic;
+class DbgValueInst;
+class DIBuilder;
+class Function;
+class Instruction;
+class LazyValueInfo;
+class LoadInst;
+class MDNode;
+class PHINode;
+class StoreInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-class DIBuilder;
-class DominatorTree;
-class LazyValueInfo;
 
-template<typename T> class SmallVectorImpl;
+/// A set of parameters used to control the transforms in the SimplifyCFG pass.
+/// Options may change depending on the position in the optimization pipeline.
+/// For example, canonical form that includes switches and branches may later be
+/// replaced by lookup tables and selects.
+struct SimplifyCFGOptions {
+  int BonusInstThreshold;
+  bool ForwardSwitchCondToPhi;
+  bool ConvertSwitchToLookupTable;
+  bool NeedCanonicalLoop;
+  bool SinkCommonInsts;
+  AssumptionCache *AC;
+
+  SimplifyCFGOptions(unsigned BonusThreshold = 1,
+                     bool ForwardSwitchCond = false,
+                     bool SwitchToLookup = false, bool CanonicalLoops = true,
+                     bool SinkCommon = false,
+                     AssumptionCache *AssumpCache = nullptr)
+      : BonusInstThreshold(BonusThreshold),
+        ForwardSwitchCondToPhi(ForwardSwitchCond),
+        ConvertSwitchToLookupTable(SwitchToLookup),
+        NeedCanonicalLoop(CanonicalLoops),
+        SinkCommonInsts(SinkCommon),
+        AC(AssumpCache) {}
+
+  // Support 'builder' pattern to set members by name at construction time.
+  SimplifyCFGOptions &bonusInstThreshold(int I) {
+    BonusInstThreshold = I;
+    return *this;
+  }
+  SimplifyCFGOptions &forwardSwitchCondToPhi(bool B) {
+    ForwardSwitchCondToPhi = B;
+    return *this;
+  }
+  SimplifyCFGOptions &convertSwitchToLookupTable(bool B) {
+    ConvertSwitchToLookupTable = B;
+    return *this;
+  }
+  SimplifyCFGOptions &needCanonicalLoops(bool B) {
+    NeedCanonicalLoop = B;
+    return *this;
+  }
+  SimplifyCFGOptions &sinkCommonInsts(bool B) {
+    SinkCommonInsts = B;
+    return *this;
+  }
+  SimplifyCFGOptions &setAssumptionCache(AssumptionCache *Cache) {
+    AC = Cache;
+    return *this;
+  }
+};
 
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
@@ -135,17 +189,15 @@ bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB);
 /// values, but instcombine orders them so it usually won't matter.
 bool EliminateDuplicatePHINodes(BasicBlock *BB);
 
-/// This function is used to do simplification of a CFG.  For
-/// example, it adjusts branches to branches to eliminate the extra hop, it
-/// eliminates unreachable basic blocks, and does other "peephole" optimization
-/// of the CFG.  It returns true if a modification was made, possibly deleting
-/// the basic block that was pointed to. LoopHeaders is an optional input
-/// parameter, providing the set of loop header that SimplifyCFG should not
-/// eliminate.
-bool SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                 unsigned BonusInstThreshold, AssumptionCache *AC = nullptr,
-                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr,
-                 bool LateSimplifyCFG = false);
+/// This function is used to do simplification of a CFG.  For example, it
+/// adjusts branches to branches to eliminate the extra hop, it eliminates
+/// unreachable basic blocks, and does other peephole optimization of the CFG.
+/// It returns true if a modification was made, possibly deleting the basic
+/// block that was pointed to. LoopHeaders is an optional input parameter
+/// providing the set of loop headers that SimplifyCFG should not eliminate.
+bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
+                 const SimplifyCFGOptions &Options = {},
+                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
@@ -187,10 +239,10 @@ unsigned getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
                                     const DominatorTree *DT = nullptr);
 
 /// Try to infer an alignment for the specified pointer.
-static inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
-                                         const Instruction *CxtI = nullptr,
-                                         AssumptionCache *AC = nullptr,
-                                         const DominatorTree *DT = nullptr) {
+inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
+                                  const Instruction *CxtI = nullptr,
+                                  AssumptionCache *AC = nullptr,
+                                  const DominatorTree *DT = nullptr) {
   return getOrEnforceKnownAlignment(V, 0, DL, CxtI, AC, DT);
 }
 
@@ -212,7 +264,8 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
   // Build a mask for high order bits.
   unsigned IntPtrWidth = IntPtrTy->getScalarType()->getIntegerBitWidth();
-  uint64_t PtrSizeMask = ~0ULL >> (64 - IntPtrWidth);
+  uint64_t PtrSizeMask =
+      std::numeric_limits<uint64_t>::max() >> (64 - IntPtrWidth);
 
   gep_type_iterator GTI = gep_type_begin(GEP);
   for (User::op_iterator i = GEP->op_begin() + 1, e = GEP->op_end(); i != e;
@@ -282,6 +335,10 @@ void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
 /// llvm.dbg.value intrinsics.
 bool LowerDbgDeclare(Function &F);
 
+/// Propagate dbg.value intrinsics through the newly inserted PHIs.
+void insertDebugValuesForPHIs(BasicBlock *BB,
+                              SmallVectorImpl<PHINode *> &InsertedPHIs);
+
 /// Finds all intrinsics declaring local variables as living in the memory that
 /// 'V' points to. This may include a mix of dbg.declare and
 /// dbg.addr intrinsics.
@@ -289,6 +346,9 @@ TinyPtrVector<DbgInfoIntrinsic *> FindDbgAddrUses(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
+
+/// Finds the debug info intrinsics describing a value.
+void findDbgUsers(SmallVectorImpl<DbgInfoIntrinsic *> &DbgInsts, Value *V);
 
 /// Replaces llvm.dbg.declare instruction when the address it
 /// describes is replaced with a new value. If Deref is true, an
@@ -375,7 +435,6 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlock *BB);
 
-
 /// Return true if the CallSite CS calls a gc leaf function.
 ///
 /// A leaf function is a function that does not safepoint the thread during its
@@ -384,7 +443,7 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 ///
 /// Most passes can and should ignore this information, and it is only used
 /// during lowering by the GC infrastructure.
-bool callsGCLeafFunction(ImmutableCallSite CS);
+bool callsGCLeafFunction(ImmutableCallSite CS, const TargetLibraryInfo &TLI);
 
 /// Copy a nonnull metadata node to a new load instruction.
 ///
@@ -403,7 +462,7 @@ void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI, MDNode *N,
 //  Intrinsic pattern matching
 //
 
-/// Try and match a bswap or bitreverse idiom.
+/// Try to match a bswap or bitreverse idiom.
 ///
 /// If an idiom is matched, an intrinsic call is inserted before \c I. Any added
 /// instructions are returned in \c InsertedInsts. They will all have been added
@@ -437,6 +496,6 @@ void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
 /// value?
 bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_UTILS_LOCAL_H

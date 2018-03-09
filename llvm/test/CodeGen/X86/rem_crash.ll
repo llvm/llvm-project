@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=i686--
+; RUN: llc < %s -mtriple=x86_64--
 
 define i8 @test_minsize_uu8(i8 %x) minsize optsize {
 entry:

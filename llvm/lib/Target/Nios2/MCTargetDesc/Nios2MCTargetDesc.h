@@ -14,11 +14,26 @@
 #ifndef LLVM_LIB_TARGET_NIOS2_MCTARGETDESC_NIOS2MCTARGETDESC_H
 #define LLVM_LIB_TARGET_NIOS2_MCTARGETDESC_NIOS2MCTARGETDESC_H
 
+#include <memory>
+
 namespace llvm {
+class MCAsmBackend;
+class MCObjectWriter;
+class MCRegisterInfo;
+class MCTargetOptions;
 class Target;
 class Triple;
+class StringRef;
+class raw_pwrite_stream;
 
 Target &getTheNios2Target();
+
+MCAsmBackend *createNios2AsmBackend(const Target &T, const MCRegisterInfo &MRI,
+                                    const Triple &TT, StringRef CPU,
+                                    const MCTargetOptions &Options);
+
+std::unique_ptr<MCObjectWriter>
+createNios2ELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI);
 
 } // namespace llvm
 
@@ -30,5 +45,8 @@ Target &getTheNios2Target();
 // Defines symbolic names for the Nios2 instructions.
 #define GET_INSTRINFO_ENUM
 #include "Nios2GenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "Nios2GenSubtargetInfo.inc"
 
 #endif

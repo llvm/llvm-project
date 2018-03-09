@@ -1,0 +1,44 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel -global-isel-abort=0 %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64"
+  
+  define fp128 @x(fp128 %a) {
+  entry:
+    %a.addr = alloca fp128, align 16
+    store fp128 %a, fp128* %a.addr, align 16
+    %0 = load fp128, fp128* %a.addr, align 16
+    %sub = fsub fp128 0xL00000000000000008000000000000000, %0
+    ret fp128 %sub
+  }
+  
+...
+---
+name:            x
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+fixedStack:      
+stack:           
+  - { id: 0, name: a.addr, type: default, offset: 0, size: 16, alignment: 16, 
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      di-variable: '', di-expression: '', di-location: '' }
+body:             |
+  bb.1.entry:
+    liveins: %q0
+
+    ; This test just checks we don't crash on G_FNEG of FP128 types. Expect to fall
+    ; back until support is added for fp128.
+    ; CHECK: ret
+    %0:_(s128) = COPY %q0
+    %1:_(p0) = G_FRAME_INDEX %stack.0.a.addr
+    G_STORE %0(s128), %1(p0) :: (store 16 into %ir.a.addr)
+    %2:_(s128) = G_LOAD %1(p0) :: (load 16 from %ir.a.addr)
+    %3:_(s128) = G_FNEG %2
+    %q0 = COPY %3(s128)
+    RET_ReallyLR implicit %q0
+
+...

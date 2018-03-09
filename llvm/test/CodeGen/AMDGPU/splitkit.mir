@@ -37,13 +37,13 @@ body: |
 # CHECK: [[REG0:%sgpr[0-9]+]] = COPY %sgpr0
 # CHECK: [[REG1:%sgpr[0-9]+]] = COPY %sgpr2
 # CHECK: S_NOP 0
-# CHECK: S_NOP 0, implicit [[REG0]]
-# CHECK: S_NOP 0, implicit [[REG1]]
-# CHECK: %sgpr0 = COPY [[REG0]]
-# CHECK: %sgpr2 = COPY [[REG1]]
+# CHECK: S_NOP 0, implicit renamable [[REG0]]
+# CHECK: S_NOP 0, implicit renamable [[REG1]]
+# CHECK: %sgpr0 = COPY renamable [[REG0]]
+# CHECK: %sgpr2 = COPY renamable [[REG1]]
 # CHECK: S_NOP
-# CHECK: S_NOP 0, implicit %sgpr0
-# CHECK: S_NOP 0, implicit %sgpr2
+# CHECK: S_NOP 0, implicit renamable %sgpr0
+# CHECK: S_NOP 0, implicit renamable %sgpr2
 name: func1
 tracksRegLiveness: true
 body: |
@@ -67,8 +67,8 @@ body: |
 # Check that copy hoisting out of loops works. This mainly should not crash the
 # compiler when it hoists a subreg copy sequence.
 # CHECK-LABEL: name: splitHoist
-# CHECK: S_NOP 0, implicit-def %sgpr0
-# CHECK: S_NOP 0, implicit-def %sgpr3
+# CHECK: S_NOP 0, implicit-def renamable %sgpr0
+# CHECK: S_NOP 0, implicit-def renamable %sgpr3
 # CHECK-NEXT: SI_SPILL_S128_SAVE
 name: splitHoist
 tracksRegLiveness: true

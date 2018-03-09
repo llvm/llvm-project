@@ -9,14 +9,14 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 define i32 @PR32420() {
 ; CHECK-LABEL: PR32420:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq _a@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    movzwl (%rax), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shll $12, %ecx
 ; CHECK-NEXT:    sarw $12, %cx
 ; CHECK-NEXT:    movq _b@{{.*}}(%rip), %rdx
-; CHECK-NEXT:    movw %cx, %si
+; CHECK-NEXT:    movl %ecx, %esi
 ; CHECK-NEXT:    orw (%rdx), %si
 ; CHECK-NEXT:    andl %ecx, %esi
 ; CHECK-NEXT:    movw %si, (%rdx)

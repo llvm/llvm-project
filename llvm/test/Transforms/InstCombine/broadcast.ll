@@ -51,6 +51,22 @@ define <4 x float> @good4(float %arg) {
   ret <4 x float> %tmp7
 }
 
+; CHECK-LABEL: @good5(
+; CHECK-NEXT:    %ins1 = insertelement <4 x float> undef, float %v, i32 0
+; CHECK-NEXT:    %a1 = fadd <4 x float> %ins1, %ins1
+; CHECK-NEXT:    %ins4 = shufflevector <4 x float> %ins1, <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    %res = fadd <4 x float> %a1, %ins4
+; CHECK-NEXT: ret <4 x float> %res
+define <4 x float> @good5(float %v) {
+  %ins1 = insertelement <4 x float> undef, float %v, i32 0
+  %a1 = fadd <4 x float> %ins1, %ins1
+  %ins2 = insertelement<4 x float> %ins1, float %v, i32 1
+  %ins3 = insertelement<4 x float> %ins2, float %v, i32 2
+  %ins4 = insertelement<4 x float> %ins3, float %v, i32 3
+  %res = fadd <4 x float> %a1, %ins4
+  ret <4 x float> %res
+}
+
 ; CHECK-LABEL: bad1
 ; CHECK-NOT: shufflevector
 define <4 x float> @bad1(float %arg) {
@@ -106,4 +122,16 @@ define <4 x float> @bad6(float %arg, i32 %k) {
   %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 %k
   %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
   ret <4 x float> %tmp6
+}
+
+; CHECK-LABEL: @bad7(
+; CHECK-NOT: shufflevector
+define <4 x float> @bad7(float %v) {
+  %ins1 = insertelement <4 x float> undef, float %v, i32 1
+  %a1 = fadd <4 x float> %ins1, %ins1
+  %ins2 = insertelement<4 x float> %ins1, float %v, i32 2
+  %ins3 = insertelement<4 x float> %ins2, float %v, i32 3
+  %ins4 = insertelement<4 x float> %ins3, float %v, i32 0
+  %res = fadd <4 x float> %a1, %ins4
+  ret <4 x float> %res
 }

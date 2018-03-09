@@ -5,7 +5,7 @@
 	.align	16, 0x90
 	.type	main,@function
 main:                                   # @main
-# BB#0:
+# %bb.0:
 	subq	$8, %rsp
 	movl	$.L.str1, %edi
 	callq	puts
