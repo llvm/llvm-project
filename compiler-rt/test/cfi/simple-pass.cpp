@@ -1,3 +1,6 @@
+// -mretpoline does not work yet on Darwin.
+// XFAIL: darwin
+
 // RUN: %clangxx_cfi -o %t %s
 // RUN: %run %t
 // RUN: %clangxx_cfi -mretpoline -o %t2 %s

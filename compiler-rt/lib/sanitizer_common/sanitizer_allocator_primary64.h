@@ -80,8 +80,6 @@ class SizeClassAllocator64 {
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
     MapWithCallbackOrDie(SpaceEnd(), AdditionalSize());
-    // Check that the RegionInfo array is aligned on the CacheLine size.
-    DCHECK_EQ(SpaceEnd() & (kCacheLineSize - 1), 0);
   }
 
   s32 ReleaseToOSIntervalMs() const {
@@ -304,7 +302,7 @@ class SizeClassAllocator64 {
 
   static uptr AdditionalSize() {
     return RoundUpTo(sizeof(RegionInfo) * kNumClassesRounded,
-        GetPageSizeCached());
+                     GetPageSizeCached());
   }
 
   typedef SizeClassMap SizeClassMapT;
@@ -586,7 +584,7 @@ class SizeClassAllocator64 {
     u64 last_released_bytes;
   };
 
-  struct ALIGNED(kCacheLineSize) RegionInfo {
+  struct RegionInfo {
     BlockingMutex mutex;
     uptr num_freed_chunks;  // Number of elements in the freearray.
     uptr mapped_free_array;  // Bytes mapped for freearray.
@@ -599,11 +597,12 @@ class SizeClassAllocator64 {
     Stats stats;
     ReleaseToOsInfo rtoi;
   };
-  COMPILER_CHECK(sizeof(RegionInfo) % kCacheLineSize == 0);
+  COMPILER_CHECK(sizeof(RegionInfo) >= kCacheLineSize);
 
   RegionInfo *GetRegionInfo(uptr class_id) const {
-    DCHECK_LT(class_id, kNumClasses);
-    RegionInfo *regions = reinterpret_cast<RegionInfo *>(SpaceEnd());
+    CHECK_LT(class_id, kNumClasses);
+    RegionInfo *regions =
+        reinterpret_cast<RegionInfo *>(SpaceBeg() + kSpaceSize);
     return &regions[class_id];
   }
 

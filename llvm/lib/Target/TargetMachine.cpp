@@ -116,12 +116,24 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (GV && GV->isDSOLocal())
     return true;
 
-  // According to the llvm language reference, we should be able to just return
-  // false in here if we have a GV, as we know it is dso_preemptable.
-  // At this point in time, the various IR producers have not been transitioned
-  // to always produce a dso_local when it is possible to do so. As a result we
-  // still have some pre-dso_local logic in here to improve the quality of the
-  // generated code:
+  // If we are not supossed to use a PLT, we cannot assume that intrinsics are
+  // local since the linker can convert some direct access to access via plt.
+  if (M.getRtLibUseGOT() && !GV)
+    return false;
+
+  // According to the llvm language reference, we should be able to
+  // just return false in here if we have a GV, as we know it is
+  // dso_preemptable.  At this point in time, the various IR producers
+  // have not been transitioned to always produce a dso_local when it
+  // is possible to do so.
+  // In the case of intrinsics, GV is null and there is nowhere to put
+  // dso_local. Returning false for those will produce worse code in some
+  // architectures. For example, on x86 the caller has to set ebx before calling
+  // a plt.
+  // As a result we still have some logic in here to improve the quality of the
+  // generated code.
+  // FIXME: Add a module level metadata for whether intrinsics should be assumed
+  // local.
 
   Reloc::Model RM = getRelocationModel();
   const Triple &TT = getTargetTriple();
@@ -137,27 +149,20 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
     return true;
 
-  // If GV is null we know that this is a call to an intrinsic. For ELF and
-  // MachO we don't need to assume those are local since the liker can trivially
-  // convert a call to a PLT to a direct call if the target (in the runtime
-  // library) turns out to be local.
-  if (!GV)
-    return false;
-
   // Most PIC code sequences that assume that a symbol is local cannot
   // produce a 0 if it turns out the symbol is undefined. While this
   // is ABI and relocation depended, it seems worth it to handle it
   // here.
-  if (isPositionIndependent() && GV->hasExternalWeakLinkage())
+  if (GV && isPositionIndependent() && GV->hasExternalWeakLinkage())
     return false;
 
-  if (!GV->hasDefaultVisibility())
+  if (GV && !GV->hasDefaultVisibility())
     return true;
 
   if (TT.isOSBinFormatMachO()) {
     if (RM == Reloc::Static)
       return true;
-    return GV->isStrongDefinitionForLinker();
+    return GV && GV->isStrongDefinitionForLinker();
   }
 
   assert(TT.isOSBinFormatELF());
@@ -167,19 +172,19 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       RM == Reloc::Static || M.getPIELevel() != PIELevel::Default;
   if (IsExecutable) {
     // If the symbol is defined, it cannot be preempted.
-    if (!GV->isDeclarationForLinker())
+    if (GV && !GV->isDeclarationForLinker())
       return true;
 
     // A symbol marked nonlazybind should not be accessed with a plt. If the
     // symbol turns out to be external, the linker will convert a direct
     // access to an access via the plt, so don't assume it is local.
-    const Function *F = dyn_cast<Function>(GV);
+    const Function *F = dyn_cast_or_null<Function>(GV);
     if (F && F->hasFnAttribute(Attribute::NonLazyBind))
       return false;
 
-    bool IsTLS = GV->isThreadLocal();
+    bool IsTLS = GV && GV->isThreadLocal();
     bool IsAccessViaCopyRelocs =
-        Options.MCOptions.MCPIECopyRelocations && isa<GlobalVariable>(GV);
+        GV && Options.MCOptions.MCPIECopyRelocations && isa<GlobalVariable>(GV);
     Triple::ArchType Arch = TT.getArch();
     bool IsPPC =
         Arch == Triple::ppc || Arch == Triple::ppc64 || Arch == Triple::ppc64le;

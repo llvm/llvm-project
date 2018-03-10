@@ -820,7 +820,7 @@ public:
       if (Found)
         return true;
       if (MaxSteps != 0 && Visited.size() >= MaxSteps)
-        return false;
+        return true;
     }
     return false;
   }

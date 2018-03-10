@@ -288,7 +288,7 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
     return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.setAsmPrinterFlag(AC_EVEX_2_VEX);
+  MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
   return true;
 }
 

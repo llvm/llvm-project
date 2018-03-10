@@ -2256,7 +2256,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         ISD::CondCode NewCC = (Cond == ISD::SETGE) ? ISD::SETGT : ISD::SETUGT;
         if ((DCI.isBeforeLegalizeOps() ||
              isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
-            (!N1C->isOpaque() || (N1C->isOpaque() && C.getBitWidth() <= 64 &&
+            (!N1C->isOpaque() || (C.getBitWidth() <= 64 &&
                                   isLegalICmpImmediate(C.getSExtValue())))) {
           return DAG.getSetCC(dl, VT, N0,
                               DAG.getConstant(C, dl, N1.getValueType()),
@@ -2276,7 +2276,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         ISD::CondCode NewCC = (Cond == ISD::SETLE) ? ISD::SETLT : ISD::SETULT;
         if ((DCI.isBeforeLegalizeOps() ||
              isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
-            (!N1C->isOpaque() || (N1C->isOpaque() && C.getBitWidth() <= 64 &&
+            (!N1C->isOpaque() || (C.getBitWidth() <= 64 &&
                                   isLegalICmpImmediate(C.getSExtValue())))) {
           return DAG.getSetCC(dl, VT, N0,
                               DAG.getConstant(C, dl, N1.getValueType()),

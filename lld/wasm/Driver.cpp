@@ -239,8 +239,7 @@ static void handleWeakUndefines() {
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
-    StringRef StubName =
-        Saver.save("undefined function " + toString(*Sym, false));
+    StringRef StubName = Saver.save("undefined function " + toString(*Sym));
     SyntheticFunction *Func = make<SyntheticFunction>(Sig, StubName);
     Func->setBody(UnreachableFn);
     // Ensure it compares equal to the null pointer, and so that table relocs

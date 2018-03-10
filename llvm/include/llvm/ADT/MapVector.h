@@ -36,13 +36,13 @@ template<typename KeyT, typename ValueT,
          typename MapType = DenseMap<KeyT, unsigned>,
          typename VectorType = std::vector<std::pair<KeyT, ValueT>>>
 class MapVector {
-  using value_type = typename VectorType::value_type;
-  using size_type = typename VectorType::size_type;
-
   MapType Map;
   VectorType Vector;
 
 public:
+  using value_type = typename VectorType::value_type;
+  using size_type = typename VectorType::size_type;
+
   using iterator = typename VectorType::iterator;
   using const_iterator = typename VectorType::const_iterator;
   using reverse_iterator = typename VectorType::reverse_iterator;
