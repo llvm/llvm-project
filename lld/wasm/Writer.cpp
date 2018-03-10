@@ -750,15 +750,23 @@ void Writer::calculateTypes() {
 
 void Writer::assignIndexes() {
   uint32_t FunctionIndex = NumImportedFunctions + InputFunctions.size();
+  auto AddDefinedFunction = [&](InputFunction *Func) {
+    if (!Func->Live)
+      return;
+    InputFunctions.emplace_back(Func);
+    Func->setOutputIndex(FunctionIndex++);
+  };
+
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
-    for (InputFunction *Func : File->Functions) {
-      if (!Func->Live)
-        continue;
-      InputFunctions.emplace_back(Func);
-      Func->setOutputIndex(FunctionIndex++);
-    }
+    for (InputFunction *Func : File->Functions)
+      AddDefinedFunction(Func);
   }
+
+  // TODO Move synthetic functions to come before (so __wasm_call_ctors can be
+  // compiled immediately by the browser).  Will reorder tests.
+  for (InputFunction *Func : Symtab->SyntheticFunctions)
+    AddDefinedFunction(Func);
 
   uint32_t TableIndex = kInitialTableOffset;
   auto HandleRelocs = [&](InputChunk *Chunk) {
@@ -806,8 +814,8 @@ void Writer::assignIndexes() {
     }
   };
 
-  if (WasmSym::StackPointer)
-    AddDefinedGlobal(WasmSym::StackPointer->Global);
+  for (InputGlobal *Global : Symtab->SyntheticGlobals)
+    AddDefinedGlobal(Global);
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
@@ -852,8 +860,6 @@ static const int OPCODE_END = 0xb;
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
 void Writer::createCtorFunction() {
-  uint32_t FunctionIndex = NumImportedFunctions + InputFunctions.size();
-
   // First write the body's contents to a string.
   std::string BodyContent;
   {
@@ -874,15 +880,8 @@ void Writer::createCtorFunction() {
     OS << BodyContent;
   }
 
-  const WasmSignature *Sig = WasmSym::CallCtors->getFunctionType();
-  SyntheticFunction *F =
-      make<SyntheticFunction>(*Sig, toArrayRef(Saver.save(FunctionBody)),
-                              WasmSym::CallCtors->getName());
-
-  F->setOutputIndex(FunctionIndex);
-  F->Live = true;
-  WasmSym::CallCtors->Function = F;
-  InputFunctions.emplace_back(F);
+  ArrayRef<uint8_t> Body = toArrayRef(Saver.save(FunctionBody));
+  cast<SyntheticFunction>(WasmSym::CallCtors->Function)->setBody(Body);
 }
 
 // Populate InitFunctions vector with init functions from all input objects.
