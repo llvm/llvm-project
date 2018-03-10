@@ -180,10 +180,10 @@ DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
 
 void LazySymbol::fetch() { cast<ArchiveFile>(File)->addMember(&ArchiveSymbol); }
 
-std::string lld::toString(const wasm::Symbol &Sym) {
+std::string lld::toString(const wasm::Symbol &Sym, bool QuoteDemangled) {
   if (Config->Demangle)
     if (Optional<std::string> S = demangleItanium(Sym.getName()))
-      return "`" + *S + "'";
+      return QuoteDemangled ? ("`" + *S + "'") : *S;
   return Sym.getName();
 }
 

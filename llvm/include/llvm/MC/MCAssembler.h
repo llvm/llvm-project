@@ -206,6 +206,8 @@ private:
   handleFixup(const MCAsmLayout &Layout, MCFragment &F, const MCFixup &Fixup);
 
 public:
+  std::vector<std::pair<StringRef, const MCSymbol *>> Symvers;
+
   /// Construct a new assembler instance.
   //
   // FIXME: How are we going to parameterize this? Two obvious options are stay

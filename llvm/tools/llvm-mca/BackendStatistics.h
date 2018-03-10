@@ -124,10 +124,11 @@ public:
   void onCycleEnd(unsigned Cycle) override { updateHistograms(); }
 
   void printView(llvm::raw_ostream &OS) const override {
-    printDispatchStalls(OS, B.getNumRATStalls(), B.getNumRCUStalls(), B.getNumSQStalls(),
-                        B.getNumLDQStalls(), B.getNumSTQStalls(), B.getNumDispatchGroupStalls());
+    printDispatchStalls(OS, B.getNumRATStalls(), B.getNumRCUStalls(),
+                        B.getNumSQStalls(), B.getNumLDQStalls(),
+                        B.getNumSTQStalls(), B.getNumDispatchGroupStalls());
     printRATStatistics(OS, B.getTotalRegisterMappingsCreated(),
-                           B.getMaxUsedRegisterMappings());
+                       B.getMaxUsedRegisterMappings());
     printDispatchUnitStatistics(OS);
     printSchedulerStatistics(OS);
     printRetireUnitStatistics(OS);

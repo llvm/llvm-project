@@ -307,7 +307,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
 }
 
 static bool getPIE(const ArgList &Args, const toolchains::Linux &ToolChain) {
-  if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_static))
+  if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_static) ||
+      Args.hasArg(options::OPT_r))
     return false;
 
   Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,

@@ -129,15 +129,15 @@
 .Lnames_entries0:
 .Lnames0:
 	.byte	46                      # Abbrev code
-	.long	.Ldie_bar               # DW_IDX_die_offset
+	.long	.Ldie_bar-.Lcu_begin0   # DW_IDX_die_offset
 	.long	0                       # End of list: bar
 .Lnames1:
 	.byte	46                      # Abbrev code
-	.long	.Ldie_foo               # DW_IDX_die_offset
+	.long	.Ldie_foo-.Lcu_begin0   # DW_IDX_die_offset
 	.long	0                       # End of list: foo
 .Lnames2:
 	.byte	46                      # Abbrev code
-	.long	.Ldie_foo               # DW_IDX_die_offset
+	.long	.Ldie_foo-.Lcu_begin0   # DW_IDX_die_offset
 	.long	0                       # End of list: _Z3foov
 	.p2align	2
 .Lnames_end0:
@@ -171,12 +171,12 @@
 .Lnames_entries1:
 .Lnames3:
 	.byte	46                      # Abbrev code
-	.long	.Ldie_baz               # DW_IDX_die_offset
+	.long	.Ldie_baz-.Lcu_begin1   # DW_IDX_die_offset
 	.long	0                       # End of list: baz
 	.p2align	2
 .Lnames4:
 	.byte	46                      # Abbrev code
-	.long	.Ldie_bazz              # DW_IDX_die_offset
+	.long	.Ldie_bazz-.Lcu_begin1  # DW_IDX_die_offset
 	.long	0                       # End of list: baz
 	.p2align	2
 .Lnames_end1:

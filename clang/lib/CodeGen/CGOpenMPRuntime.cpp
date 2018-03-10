@@ -5422,6 +5422,9 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
         CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
             CGF, CGM.getContext().VoidPtrTy,
             generateUniqueName(CGM, "reduction", RCG.getRefExpr(N)));
+    SharedAddr = CGF.EmitLoadOfPointer(
+        SharedAddr,
+        CGM.getContext().VoidPtrTy.castAs<PointerType>()->getTypePtr());
     SharedLVal = CGF.MakeAddrLValue(SharedAddr, CGM.getContext().VoidPtrTy);
   } else {
     SharedLVal = CGF.MakeNaturalAlignAddrLValue(

@@ -1240,17 +1240,22 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
                                                 uint64_t Src) {
-  auto Res = ThunkedSymbols.insert({&Sym, std::vector<Thunk *>()});
-  if (!Res.second) {
-    // Check existing Thunks for Sym to see if they can be reused
-    for (Thunk *ET : Res.first->second)
-      if (ET->isCompatibleWith(Type) &&
-          Target->inBranchRange(Type, Src, ET->ThunkSym->getVA()))
-        return std::make_pair(ET, false);
-  }
+  std::vector<Thunk *> *ThunkVec = nullptr;
+  // We use (section, offset) pair to find the thunk position if possible so
+  // that we create only one thunk for aliased symbols or ICFed sections.
+  if (auto *D = dyn_cast<Defined>(&Sym))
+    if (!D->isInPlt() && D->Section)
+      ThunkVec = &ThunkedSymbolsBySection[{D->Section->Repl, D->Value}];
+  if (!ThunkVec)
+    ThunkVec = &ThunkedSymbols[&Sym];
+  // Check existing Thunks for Sym to see if they can be reused
+  for (Thunk *ET : *ThunkVec)
+    if (ET->isCompatibleWith(Type) &&
+        Target->inBranchRange(Type, Src, ET->ThunkSym->getVA()))
+      return std::make_pair(ET, false);
   // No existing compatible Thunk in range, create a new one
   Thunk *T = addThunk(Type, Sym);
-  Res.first->second.push_back(T);
+  ThunkVec->push_back(T);
   return std::make_pair(T, true);
 }
 

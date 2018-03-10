@@ -7,6 +7,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "XRefs.h"
+#include "AST.h"
 #include "Logger.h"
 #include "SourceCode.h"
 #include "URI.h"
@@ -133,7 +134,7 @@ private:
 };
 
 llvm::Optional<Location>
-getDeclarationLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
+makeLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   const LangOptions &LangOpts = AST.getASTContext().getLangOpts();
   SourceLocation LocStart = ValSourceRange.getBegin();
@@ -200,8 +201,9 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   std::vector<const Decl *> Decls = DeclMacrosFinder->takeDecls();
   std::vector<MacroDecl> MacroInfos = DeclMacrosFinder->takeMacroInfos();
 
-  for (auto Item : Decls) {
-    auto L = getDeclarationLocation(AST, Item->getSourceRange());
+  for (auto D : Decls) {
+    auto Loc = findNameLoc(D);
+    auto L = makeLocation(AST, SourceRange(Loc, Loc));
     if (L)
       Result.push_back(*L);
   }
@@ -209,7 +211,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   for (auto Item : MacroInfos) {
     SourceRange SR(Item.Info->getDefinitionLoc(),
                    Item.Info->getDefinitionEndLoc());
-    auto L = getDeclarationLocation(AST, SR);
+    auto L = makeLocation(AST, SR);
     if (L)
       Result.push_back(*L);
   }

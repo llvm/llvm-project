@@ -1,5 +1,5 @@
 ; RUN: llc -stop-before=expand-isel-pseudos -pre-RA-sched=linearize < %s | FileCheck %s
-source_filename = "/Data/llvm/test/DebugInfo/X86/linear-dbg-value.ll"
+source_filename = "linear-dbg-value.ll"
 
 ; Function Attrs: nounwind readonly uwtable
 define i32 @foo(i32* nocapture readonly %a, i32 %N) local_unnamed_addr #0 !dbg !6 {

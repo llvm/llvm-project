@@ -94,6 +94,11 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
+static cl::opt<bool> EnableDS128(
+  "amdgpu-ds128",
+  cl::desc("Use DS_read/write_b128"),
+  cl::init(false));
+
 static cl::opt<unsigned> AssumeFrameIndexHighZeroBits(
   "amdgpu-frame-index-zero-bits",
   cl::desc("High bits of frame index assumed to be zero"),
@@ -5425,14 +5430,13 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUASI.LOCAL_ADDRESS) {
-    if (NumElements > 2)
-      return SplitVectorLoad(Op, DAG);
-
-    if (NumElements == 2)
+    // Use ds_read_b128 if possible.
+    if (Subtarget->useDS128(EnableDS128) && Load->getAlignment() >= 16 &&
+        MemVT.getStoreSize() == 16)
       return SDValue();
 
-    // If properly aligned, if we split we might be able to use ds_read_b64.
-    return SplitVectorLoad(Op, DAG);
+    if (NumElements > 2)
+      return SplitVectorLoad(Op, DAG);
   }
   return SDValue();
 }

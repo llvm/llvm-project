@@ -40,10 +40,12 @@ const uptr kWordSize = SANITIZER_WORDSIZE / 8;
 const uptr kWordSizeInBits = 8 * kWordSize;
 
 #if defined(__powerpc__) || defined(__powerpc64__)
-  const uptr kCacheLineSize = 128;
+  constexpr uptr kCacheLineSize = 128;
 #else
-  const uptr kCacheLineSize = 64;
+  constexpr uptr kCacheLineSize = 64;
 #endif
+// Check that the CacheLine size is a power-of-two.
+COMPILER_CHECK((kCacheLineSize & (kCacheLineSize - 1)) == 0);
 
 const uptr kMaxPathLength = 4096;
 

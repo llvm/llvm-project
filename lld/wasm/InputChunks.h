@@ -44,7 +44,7 @@ class OutputSegment;
 
 class InputChunk {
 public:
-  enum Kind { DataSegment, Function };
+  enum Kind { DataSegment, Function, SyntheticFunction };
 
   Kind kind() const { return SectionKind; }
 
@@ -120,7 +120,8 @@ public:
       : InputChunk(F, InputChunk::Function), Signature(S), Function(Func) {}
 
   static bool classof(const InputChunk *C) {
-    return C->kind() == InputChunk::Function;
+    return C->kind() == InputChunk::Function ||
+           C->kind() == InputChunk::SyntheticFunction;
   }
 
   StringRef getName() const override { return Function->Name; }
@@ -150,12 +151,19 @@ protected:
 
 class SyntheticFunction : public InputFunction {
 public:
-  SyntheticFunction(const WasmSignature &S, ArrayRef<uint8_t> Body,
-                    StringRef Name)
-      : InputFunction(S, nullptr, nullptr), Name(Name), Body(Body) {}
+  SyntheticFunction(const WasmSignature &S, StringRef Name)
+      : InputFunction(S, nullptr, nullptr), Name(Name) {
+    SectionKind = InputChunk::SyntheticFunction;
+  }
+
+  static bool classof(const InputChunk *C) {
+    return C->kind() == InputChunk::SyntheticFunction;
+  }
 
   StringRef getName() const override { return Name; }
   StringRef getComdat() const override { return StringRef(); }
+
+  void setBody(ArrayRef<uint8_t> Body_) { Body = Body_; }
 
 protected:
   ArrayRef<uint8_t> data() const override { return Body; }

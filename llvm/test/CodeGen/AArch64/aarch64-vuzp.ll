@@ -58,3 +58,13 @@ entry:
   store <4 x i32> %y, <4 x i32>* %z, align 4
   ret void
 }
+
+; Check that this pattern is recognized as a VZIP and
+; that the vector blend transform does not scramble the pattern.
+; CHECK-LABEL: vzipNoBlend:
+; CHECK: zip1
+define <8 x i8> @vzipNoBlend(<8 x i8>* %A, <8 x i16>* %B) nounwind {
+  %t = load <8 x i8>, <8 x i8>* %A
+  %vzip = shufflevector <8 x i8> %t, <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef>, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  ret <8 x i8> %vzip
+}

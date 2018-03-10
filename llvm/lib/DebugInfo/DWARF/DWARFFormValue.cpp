@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "SyntaxHighlighting.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -19,6 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <cstdint>
@@ -26,7 +26,6 @@
 
 using namespace llvm;
 using namespace dwarf;
-using namespace syntax;
 
 static const DWARFFormValue::FormClass DWARF5FormClasses[] = {
     DWARFFormValue::FC_Unknown,  // 0x0
@@ -421,8 +420,9 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
 void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   uint64_t UValue = Value.uval;
   bool CURelativeOffset = false;
-  raw_ostream &AddrOS =
-      DumpOpts.ShowAddresses ? WithColor(OS, syntax::Address).get() : nulls();
+  raw_ostream &AddrOS = DumpOpts.ShowAddresses
+                            ? WithColor(OS, HighlightColor::Address).get()
+                            : nulls();
   switch (Form) {
   case DW_FORM_addr:
     AddrOS << format("0x%016" PRIx64, UValue);
@@ -584,7 +584,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (CURelativeOffset) {
     if (DumpOpts.Verbose)
       OS << " => {";
-    WithColor(OS, syntax::Address).get()
+    WithColor(OS, HighlightColor::Address).get()
         << format("0x%8.8" PRIx64, UValue + (U ? U->getOffset() : 0));
     if (DumpOpts.Verbose)
       OS << "}";
@@ -594,7 +594,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
 void DWARFFormValue::dumpString(raw_ostream &OS) const {
   Optional<const char *> DbgStr = getAsCString();
   if (DbgStr.hasValue()) {
-    auto COS = WithColor(OS, syntax::String);
+    auto COS = WithColor(OS, HighlightColor::String);
     COS.get() << '"';
     COS.get().write_escaped(DbgStr.getValue());
     COS.get() << '"';

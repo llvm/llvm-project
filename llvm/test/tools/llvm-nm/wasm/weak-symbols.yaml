@@ -18,16 +18,11 @@ Sections:
         Field:           weak_import_func
         Kind:            FUNCTION
         SigIndex:        0
-      - Module:          env
-        Field:           weak_import_global
-        Kind:            GLOBAL
-        GlobalType:      I32
-        GlobalMutable:   false
   - Type:            FUNCTION
     FunctionTypes: [ 0 ]
   - Type:            GLOBAL
     Globals:
-      - Index:       1
+      - Index:       0
         Type:        I32
         Mutable:     false
         InitExpr:
@@ -64,7 +59,7 @@ Sections:
          Kind:            GLOBAL
          Name:            weak_defined_global
          Flags:           [ BINDING_WEAK ]
-         Global:          1
+         Global:          0
        - Index:           3
          Kind:            DATA
          Name:            weak_import_data
@@ -74,11 +69,6 @@ Sections:
          Name:            weak_import_func
          Flags:           [ BINDING_WEAK, UNDEFINED ]
          Function:        0
-       - Index:           5
-         Kind:            GLOBAL
-         Name:            weak_import_global
-         Flags:           [ BINDING_WEAK, UNDEFINED ]
-         Global:          0
     SegmentInfo:
       - Index:           0
         Name:            .rodata.constantData
@@ -88,7 +78,6 @@ Sections:
 
 # CHECK:      00000000 W weak_defined_data
 # CHECK-NEXT: 00000001 W weak_defined_func
-# CHECK-NEXT: 00000001 W weak_defined_global
+# CHECK-NEXT: 00000000 W weak_defined_global
 # CHECK-NEXT:          w weak_import_data
 # CHECK-NEXT:          w weak_import_func
-# CHECK-NEXT:          w weak_import_global

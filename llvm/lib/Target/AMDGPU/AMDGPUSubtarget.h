@@ -414,6 +414,12 @@ public:
     return FlatForGlobal;
   }
 
+  /// \returns If target supports ds_read/write_b128 and user enables generation
+  /// of ds_read/write_b128.
+  bool useDS128(bool UserEnable) const {
+    return CIInsts && UserEnable;
+  }
+
   /// \returns If MUBUF instructions always perform range checking, even for
   /// buffer resources used for private memory access.
   bool privateMemoryResourceIsRangeChecked() const {
