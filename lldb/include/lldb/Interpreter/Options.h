@@ -25,6 +25,8 @@
 
 namespace lldb_private {
 
+struct Option;
+
 static inline bool isprint8(int ch) {
   if (ch & 0xffffff00u)
     return false;
@@ -36,10 +38,8 @@ static inline bool isprint8(int ch) {
 /// @brief A command line option parsing protocol class.
 ///
 /// Options is designed to be subclassed to contain all needed
-/// options for a given command. The options can be parsed by calling:
-/// \code
-///     Status Args::ParseOptions (Options &);
-/// \endcode
+/// options for a given command. The options can be parsed by calling the Parse
+/// function.
 ///
 /// The options are specified using the format defined for the libc
 /// options parsing function getopt_long_only:
@@ -49,74 +49,6 @@ static inline bool isprint8(int ch) {
 ///     *optstring, const struct option *longopts, int *longindex);
 /// \endcode
 ///
-/// Example code:
-/// \code
-///     #include <getopt.h>
-///     #include <string>
-///
-///     class CommandOptions : public Options
-///     {
-///     public:
-///         virtual struct option *
-///         GetLongOptions() {
-///             return g_options;
-///         }
-///
-///         virtual Status
-///         SetOptionValue (uint32_t option_idx, int option_val, const char
-///         *option_arg)
-///         {
-///             Status error;
-///             switch (option_val)
-///             {
-///             case 'g': debug = true; break;
-///             case 'v': verbose = true; break;
-///             case 'l': log_file = option_arg; break;
-///             case 'f': log_flags = strtoull(option_arg, nullptr, 0); break;
-///             default:
-///                 error.SetErrorStringWithFormat("unrecognized short option
-///                 %c", option_val);
-///                 break;
-///             }
-///
-///             return error;
-///         }
-///
-///         CommandOptions (CommandInterpreter &interpreter) : debug (true),
-///         verbose (false), log_file (), log_flags (0)
-///         {}
-///
-///         bool debug;
-///         bool verbose;
-///         std::string log_file;
-///         uint32_t log_flags;
-///
-///         static struct option g_options[];
-///
-///     };
-///
-///     struct option CommandOptions::g_options[] =
-///     {
-///         { "debug",              no_argument,        nullptr,   'g' },
-///         { "log-file",           required_argument,  nullptr,   'l' },
-///         { "log-flags",          required_argument,  nullptr,   'f' },
-///         { "verbose",            no_argument,        nullptr,   'v' },
-///         { nullptr,              0,                  nullptr,   0   }
-///     };
-///
-///     int main (int argc, const char **argv, const char **envp)
-///     {
-///         CommandOptions options;
-///         Args main_command;
-///         main_command.SetArguments(argc, argv, false);
-///         main_command.ParseOptions(options);
-///
-///         if (options.verbose)
-///         {
-///             std::cout << "verbose is on" << std::endl;
-///         }
-///     }
-/// \endcode
 //----------------------------------------------------------------------
 class Options {
 public:
@@ -170,6 +102,36 @@ public:
   // Option::OptionParsingStarting() like they did before. This was error
   // prone and subclasses shouldn't have to do it.
   void NotifyOptionParsingStarting(ExecutionContext *execution_context);
+
+  //------------------------------------------------------------------
+  /// Parse the provided arguments.
+  ///
+  /// The parsed options are set via calls to SetOptionValue. In case of a
+  /// successful parse, the function returns a copy of the input arguments with
+  /// the parsed options removed. Otherwise, it returns an error.
+  ///
+  /// param[in] platform_sp
+  ///   The platform used for option validation.  This is necessary
+  ///   because an empty execution_context is not enough to get us
+  ///   to a reasonable platform.  If the platform isn't given,
+  ///   we'll try to get it from the execution context.  If we can't
+  ///   get it from the execution context, we'll skip validation.
+  ///
+  /// param[in] require_validation
+  ///   When true, it will fail option parsing if validation could
+  ///   not occur due to not having a platform.
+  //------------------------------------------------------------------
+  llvm::Expected<Args> Parse(const Args &args,
+                             ExecutionContext *execution_context,
+                             lldb::PlatformSP platform_sp,
+                             bool require_validation);
+
+  llvm::Expected<Args> ParseAlias(const Args &args,
+                                  OptionArgVector *option_arg_vector,
+                                  std::string &input_line);
+
+  OptionElementVector ParseForCompletion(const Args &args,
+                                         uint32_t cursor_index);
 
   Status NotifyOptionParsingFinished(ExecutionContext *execution_context);
 

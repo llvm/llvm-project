@@ -1013,6 +1013,7 @@ public:
 };
 
 EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
   // We are abusing the options data model here so that we can parse
   // options without requiring the Debugger instance.
 
@@ -1051,15 +1052,16 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
       args.Shift();
   }
 
-  // ParseOptions calls getopt_long_only, which always skips the zero'th item in
-  // the array and starts at position 1,
-  // so we need to push a dummy value into position zero.
-  args.Unshift(llvm::StringRef("dummy_string"));
   bool require_validation = false;
-  error = args.ParseOptions(*options_sp.get(), &exe_ctx, PlatformSP(),
-                            require_validation);
-  if (!error.Success())
+  llvm::Expected<Args> args_or =
+      options_sp->Parse(args, &exe_ctx, PlatformSP(), require_validation);
+  if (!args_or) {
+    LLDB_LOG_ERROR(
+        log, args_or.takeError(),
+        "Parsing plugin.structured-data.darwin-log.auto-enable-options value "
+        "failed: {0}");
     return EnableOptionsSP();
+  }
 
   if (!options_sp->VerifyOptions(result))
     return EnableOptionsSP();

@@ -145,7 +145,7 @@ insert-before or insert-after.");
     const size_t argc = input.GetArgumentCount();
     const char *arg = nullptr;
     int setting_var_idx;
-    for (setting_var_idx = 1; setting_var_idx < static_cast<int>(argc);
+    for (setting_var_idx = 0; setting_var_idx < static_cast<int>(argc);
          ++setting_var_idx) {
       arg = input.GetArgumentAtIndex(setting_var_idx);
       if (arg && arg[0] != '-')
