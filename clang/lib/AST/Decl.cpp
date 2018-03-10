@@ -3931,7 +3931,8 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
       HasObjectMember(false), HasVolatileMember(false),
       LoadedFieldsFromExternalStorage(false),
       NonTrivialToPrimitiveDefaultInitialize(false),
-      NonTrivialToPrimitiveCopy(false), NonTrivialToPrimitiveDestroy(false) {
+      NonTrivialToPrimitiveCopy(false), NonTrivialToPrimitiveDestroy(false),
+      CanPassInRegisters(true) {
   assert(classof(static_cast<Decl*>(this)) && "Invalid Kind!");
 }
 

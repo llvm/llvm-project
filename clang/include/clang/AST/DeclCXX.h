@@ -467,12 +467,6 @@ class CXXRecordDecl : public RecordDecl {
     /// constructor.
     unsigned HasDefaultedDefaultConstructor : 1;
 
-    /// \brief True if this class can be passed in a non-address-preserving
-    /// fashion (such as in registers) according to the C++ language rules.
-    /// This does not imply anything about how the ABI in use will actually
-    /// pass an object of this class.
-    unsigned CanPassInRegisters : 1;
-
     /// \brief True if a defaulted default constructor for this class would
     /// be constexpr.
     unsigned DefaultedDefaultConstructorIsConstexpr : 1;
@@ -1472,18 +1466,6 @@ public:
   /// and will call only irrelevant destructors.
   bool hasIrrelevantDestructor() const {
     return data().HasIrrelevantDestructor;
-  }
-
-  /// \brief Determine whether this class has at least one trivial, non-deleted
-  /// copy or move constructor.
-  bool canPassInRegisters() const {
-    return data().CanPassInRegisters;
-  }
-
-  /// \brief Set that we can pass this RecordDecl in registers.
-  // FIXME: This should be set as part of completeDefinition.
-  void setCanPassInRegisters(bool CanPass) {
-    data().CanPassInRegisters = CanPass;
   }
 
   /// Determine whether the triviality for the purpose of calls for this class
