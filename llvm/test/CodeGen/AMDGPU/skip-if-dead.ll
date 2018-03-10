@@ -275,9 +275,9 @@ exit:
 
 ; CHECK: [[ENDBB]]:
 ; CHECK-NEXT: s_endpgm
-define amdgpu_ps void @phi_use_def_before_kill() #0 {
+define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 bb:
-  %tmp = fadd float undef, 1.000000e+00
+  %tmp = fadd float %x, 1.000000e+00
   %tmp1 = fcmp olt float 0.000000e+00, %tmp
   %tmp2 = select i1 %tmp1, float -1.000000e+00, float 0.000000e+00
   call void @llvm.AMDGPU.kill(float %tmp2)

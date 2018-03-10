@@ -572,6 +572,12 @@ public:
   }
   MachineInstrBuilder buildFConstant(unsigned Res, const ConstantFP &Val);
 
+  template <typename DstType>
+  MachineInstrBuilder buildFConstant(DstType &&Res, double Val) {
+    return buildFConstant(getDestFromArg(Res), Val);
+  }
+  MachineInstrBuilder buildFConstant(unsigned Res, double Val);
+
   /// Build and insert \p Res = COPY Op
   ///
   /// Register-to-register COPY sets \p Res to \p Op.

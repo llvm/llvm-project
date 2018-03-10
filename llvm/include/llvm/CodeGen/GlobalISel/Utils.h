@@ -33,6 +33,7 @@ class TargetRegisterInfo;
 class TargetRegisterClass;
 class Twine;
 class ConstantFP;
+class APFloat;
 
 /// Try to constrain Reg to the specified register class. If this fails,
 /// create a new virtual register in the correct class and insert a COPY before
@@ -99,5 +100,7 @@ const ConstantFP* getConstantFPVRegVal(unsigned VReg,
 MachineInstr *getOpcodeDef(unsigned Opcode, unsigned Reg,
                            const MachineRegisterInfo &MRI);
 
+/// Returns an APFloat from Val converted to the appropriate size.
+APFloat getAPFloatFromSize(double Val, unsigned Size);
 } // End namespace llvm.
 #endif

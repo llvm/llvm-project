@@ -21,7 +21,7 @@ class Symbol;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
-class OutputSection;
+class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
 typedef uint32_t RelType;
@@ -161,6 +161,8 @@ private:
   bool normalizeExistingThunk(Relocation &Rel, uint64_t Src);
 
   // Record all the available Thunks for a Symbol
+  llvm::DenseMap<std::pair<SectionBase *, uint64_t>, std::vector<Thunk *>>
+      ThunkedSymbolsBySection;
   llvm::DenseMap<Symbol *, std::vector<Thunk *>> ThunkedSymbols;
 
   // Find a Thunk from the Thunks symbol definition, we can use this to find

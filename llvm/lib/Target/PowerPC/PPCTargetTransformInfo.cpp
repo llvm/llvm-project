@@ -256,19 +256,6 @@ bool PPCTTIImpl::enableInterleavedAccessVectorization() {
   return true;
 }
 
-bool PPCTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
-                               TargetTransformInfo::LSRCost &C2) {
-  // This is mainly the default cost calculation. The only difference
-  //  is that now the number of instructions is the most important
-  //  metric.
-  return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost,
-                  C1.NumIVMuls, C1.NumBaseAdds,
-                  C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
-         std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost,
-                  C2.NumIVMuls, C2.NumBaseAdds,
-                  C2.ScaleCost, C2.ImmCost, C2.SetupCost);
-}
-
 unsigned PPCTTIImpl::getNumberOfRegisters(bool Vector) {
   if (Vector && !ST->hasAltivec() && !ST->hasQPX())
     return 0;

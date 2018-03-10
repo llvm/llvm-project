@@ -24,6 +24,7 @@
 #include "BackendPrinter.h"
 #include "BackendStatistics.h"
 #include "ResourcePressureView.h"
+#include "SummaryView.h"
 #include "TimelineView.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -321,26 +322,27 @@ int main(int argc, char **argv) {
       LoadQueueSize, StoreQueueSize, AssumeNoAlias);
 
   std::unique_ptr<mca::BackendPrinter> Printer =
-      llvm::make_unique<mca::BackendPrinter>(*B, *IP);
+      llvm::make_unique<mca::BackendPrinter>(*B);
+
+  std::unique_ptr<mca::SummaryView> SV = llvm::make_unique<mca::SummaryView>(
+      *B, *IP, S->getNumIterations(), S->size(), Width);
+  Printer->addView(std::move(SV));
 
   if (PrintModeVerbose) {
     std::unique_ptr<mca::BackendStatistics> BS =
         llvm::make_unique<mca::BackendStatistics>(*B);
-    B->addEventListener(BS.get());
     Printer->addView(std::move(BS));
   }
 
   std::unique_ptr<mca::ResourcePressureView> RPV =
       llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S,
                                                    B->getProcResourceMasks());
-  B->addEventListener(RPV.get());
   Printer->addView(std::move(RPV));
 
   if (PrintTimelineView) {
     std::unique_ptr<mca::TimelineView> TV =
         llvm::make_unique<mca::TimelineView>(
             *STI, *IP, *S, TimelineMaxIterations, TimelineMaxCycles);
-    B->addEventListener(TV.get());
     Printer->addView(std::move(TV));
   }
 

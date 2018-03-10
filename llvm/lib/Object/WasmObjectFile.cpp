@@ -422,6 +422,11 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
           IsDefined != isDefinedGlobalIndex(Info.ElementIndex))
         return make_error<GenericBinaryError>("invalid global symbol index",
                                               object_error::parse_failed);
+      if (!IsDefined &&
+          (Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+              wasm::WASM_SYMBOL_BINDING_WEAK)
+        return make_error<GenericBinaryError>("undefined weak global symbol",
+                                              object_error::parse_failed);
       if (IsDefined) {
         Info.Name = readString(Ptr);
         unsigned GlobalIndex = Info.ElementIndex - NumImportedGlobals;

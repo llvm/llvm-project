@@ -198,6 +198,19 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
                    QName("foo::bar::v2"), QName("foo::baz")}));
 }
 
+TEST_F(SymbolCollectorTest, Template) {
+  Annotations Header(R"(
+    // Template is indexed, specialization and instantiation is not.
+    template <class T> struct [[Tmpl]] {T x = 0};
+    template <> struct Tmpl<int> {};
+    extern template struct Tmpl<float>;
+    template struct Tmpl<double>;
+  )");
+  runSymbolCollector(Header.code(), /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAreArray({AllOf(
+                           QName("Tmpl"), DeclRange(Header.offsetRange()))}));
+}
+
 TEST_F(SymbolCollectorTest, Locations) {
   Annotations Header(R"cpp(
     // Declared in header, defined in main.

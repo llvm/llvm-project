@@ -638,13 +638,13 @@ define void @setL(<1 x i8> %t) {
 ; CHECK: [[LOH_LABEL1:Lloh[0-9]+]]:
 ; CHECK: ldr q[[IDX:[0-9]+]], {{\[}}[[ADRP_REG]], [[CONSTPOOL]]@PAGEOFF]
 ; The tuple comes from the next instruction.
-; CHECK-NEXT: tbl.16b v{{[0-9]+}}, { v{{[0-9]+}}, v{{[0-9]+}} }, v[[IDX]]
+; CHECK: ext.16b v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, #1
 ; CHECK: ret
 ; CHECK: .loh AdrpLdr [[LOH_LABEL0]], [[LOH_LABEL1]]
 define void @uninterestingSub(i8* nocapture %row) #0 {
   %tmp = bitcast i8* %row to <16 x i8>*
   %tmp1 = load <16 x i8>, <16 x i8>* %tmp, align 16
-  %vext43 = shufflevector <16 x i8> <i8 undef, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> %tmp1, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
+  %vext43 = shufflevector <16 x i8> <i8 undef, i8 16, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2>, <16 x i8> %tmp1, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   %add.i.414 = add <16 x i8> zeroinitializer, %vext43
   store <16 x i8> %add.i.414, <16 x i8>* %tmp, align 16
   %add.ptr51 = getelementptr inbounds i8, i8* %row, i64 16

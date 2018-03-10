@@ -643,17 +643,6 @@ bool isLoadOrStore(const Instruction *I) {
 }
 
 
-static
-Value *getPointerOperand(Instruction *I) {
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerOperand();
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand();
-  llvm_unreachable("Value is not load or store instruction");
-  return nullptr;
-}
-
-
 // Examines the loop nesting of the Src and Dst
 // instructions and establishes their shared loops. Sets the variables
 // CommonLevels, SrcLevels, and MaxLevels.
@@ -3176,8 +3165,10 @@ void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
 /// for each loop level.
 bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
                                     SmallVectorImpl<Subscript> &Pair) {
-  Value *SrcPtr = getPointerOperand(Src);
-  Value *DstPtr = getPointerOperand(Dst);
+  assert(isLoadOrStore(Src) && "instruction is not load or store");
+  assert(isLoadOrStore(Dst) && "instruction is not load or store");
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
 
   Loop *SrcLoop = LI->getLoopFor(Src->getParent());
   Loop *DstLoop = LI->getLoopFor(Dst->getParent());
@@ -3302,8 +3293,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     return make_unique<Dependence>(Src, Dst);
   }
 
-  Value *SrcPtr = getPointerOperand(Src);
-  Value *DstPtr = getPointerOperand(Dst);
+  assert(isLoadOrStore(Src) && "instruction is not load or store");
+  assert(isLoadOrStore(Dst) && "instruction is not load or store");
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
 
   switch (underlyingObjectsAlias(AA, F->getParent()->getDataLayout(), DstPtr,
                                  SrcPtr)) {
@@ -3720,8 +3713,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   assert(Dst->mayReadFromMemory() || Dst->mayWriteToMemory());
   assert(isLoadOrStore(Src));
   assert(isLoadOrStore(Dst));
-  Value *SrcPtr = getPointerOperand(Src);
-  Value *DstPtr = getPointerOperand(Dst);
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
   assert(underlyingObjectsAlias(AA, F->getParent()->getDataLayout(), DstPtr,
                                 SrcPtr) == MustAlias);
 

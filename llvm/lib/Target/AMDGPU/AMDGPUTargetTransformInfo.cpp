@@ -265,11 +265,11 @@ unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
     return 512;
   }
 
-  if (AddrSpace == AS.FLAT_ADDRESS)
-    return 128;
-  if (AddrSpace == AS.LOCAL_ADDRESS ||
+  if (AddrSpace == AS.FLAT_ADDRESS ||
+      AddrSpace == AS.LOCAL_ADDRESS ||
       AddrSpace == AS.REGION_ADDRESS)
-    return 64;
+    return 128;
+
   if (AddrSpace == AS.PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 

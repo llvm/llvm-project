@@ -1087,16 +1087,6 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
   return Stride;
 }
 
-/// Take the pointer operand from the Load/Store instruction.
-/// Returns NULL if this is not a valid Load/Store instruction.
-static Value *getPointerOperand(Value *I) {
-  if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerOperand();
-  if (auto *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand();
-  return nullptr;
-}
-
 /// Take the address space operand from the Load/Store instruction.
 /// Returns -1 if this is not a valid Load/Store instruction.
 static unsigned getAddressSpaceOperand(Value *I) {
@@ -1110,8 +1100,8 @@ static unsigned getAddressSpaceOperand(Value *I) {
 /// Returns true if the memory operations \p A and \p B are consecutive.
 bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                                ScalarEvolution &SE, bool CheckType) {
-  Value *PtrA = getPointerOperand(A);
-  Value *PtrB = getPointerOperand(B);
+  Value *PtrA = getLoadStorePointerOperand(A);
+  Value *PtrB = getLoadStorePointerOperand(B);
   unsigned ASA = getAddressSpaceOperand(A);
   unsigned ASB = getAddressSpaceOperand(B);
 

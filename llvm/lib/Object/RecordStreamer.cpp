@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RecordStreamer.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
@@ -112,8 +113,9 @@ void RecordStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   markDefined(*Symbol);
 }
 
-void RecordStreamer::emitELFSymverDirective(MCSymbol *Alias,
+void RecordStreamer::emitELFSymverDirective(StringRef AliasName,
                                             const MCSymbol *Aliasee) {
+  MCSymbol *Alias = getContext().getOrCreateSymbol(AliasName);
   const MCExpr *Value = MCSymbolRefExpr::create(Aliasee, getContext());
   EmitAssignment(Alias, Value);
   SymverAliasMap[Aliasee].push_back(Alias);

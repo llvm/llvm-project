@@ -627,9 +627,10 @@ std::string SymbolFilePDB::GetSourceFileNameForPDBCompiland(
       auto file_extension = file_spec.GetFileNameExtension();
       if (pdb_lang == PDB_Lang::Cpp || pdb_lang == PDB_Lang::C) {
         static const char* exts[] = { "cpp", "c", "cc", "cxx" };
-        if (llvm::is_contained(exts, file_extension.GetStringRef().lower()))
+        if (llvm::is_contained(exts, file_extension.GetStringRef().lower())) {
           source_file_name = file_up->getFileName();
-        break;
+          break;
+        }
       } else if (pdb_lang == PDB_Lang::Masm &&
                  ConstString::Compare(file_extension, ConstString("ASM"),
                                       false) == 0) {
