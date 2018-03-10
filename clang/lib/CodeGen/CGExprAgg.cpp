@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicInst.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -48,7 +49,7 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
 
   // Calls `Fn` with a valid return value slot, potentially creating a temporary
   // to do so. If a temporary is created, an appropriate copy into `Dest` will
-  // be emitted.
+  // be emitted, as will lifetime markers.
   //
   // The given function should take a ReturnValueSlot, and return an RValue that
   // points to said slot.
@@ -250,16 +251,28 @@ void AggExprEmitter::withReturnValueSlot(
                  (RequiresDestruction && !Dest.getAddress().isValid());
 
   Address RetAddr = Address::invalid();
+
+  EHScopeStack::stable_iterator LifetimeEndBlock;
+  llvm::Value *LifetimeSizePtr = nullptr;
+  llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
   } else {
     RetAddr = CGF.CreateMemTemp(RetTy);
     uint64_t Size =
         CGF.CGM.getDataLayout().getTypeAllocSize(CGF.ConvertTypeForMem(RetTy));
-    if (llvm::Value *LifetimeSizePtr =
-            CGF.EmitLifetimeStart(Size, RetAddr.getPointer()))
+    LifetimeSizePtr = CGF.EmitLifetimeStart(Size, RetAddr.getPointer());
+    if (LifetimeSizePtr) {
+      LifetimeStartInst =
+          cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
+      assert(LifetimeStartInst->getIntrinsicID() ==
+                 llvm::Intrinsic::lifetime_start &&
+             "Last insertion wasn't a lifetime.start?");
+
       CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
           NormalEHLifetimeMarker, RetAddr, LifetimeSizePtr);
+      LifetimeEndBlock = CGF.EHStack.stable_begin();
+    }
   }
 
   RValue Src =
@@ -268,9 +281,18 @@ void AggExprEmitter::withReturnValueSlot(
   if (RequiresDestruction)
     CGF.pushDestroy(RetTy.isDestructedType(), Src.getAggregateAddress(), RetTy);
 
-  if (UseTemp) {
-    assert(Dest.getPointer() != Src.getAggregatePointer());
-    EmitFinalDestCopy(E->getType(), Src);
+  if (!UseTemp)
+    return;
+
+  assert(Dest.getPointer() != Src.getAggregatePointer());
+  EmitFinalDestCopy(E->getType(), Src);
+
+  if (!RequiresDestruction && LifetimeStartInst) {
+    // If there's no dtor to run, the copy was the last use of our temporary.
+    // Since we're not guaranteed to be in an ExprWithCleanups, clean up
+    // eagerly.
+    CGF.DeactivateCleanupBlock(LifetimeEndBlock, LifetimeStartInst);
+    CGF.EmitLifetimeEnd(LifetimeSizePtr, RetAddr.getPointer());
   }
 }
 

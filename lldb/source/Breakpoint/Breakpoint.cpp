@@ -792,8 +792,8 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
           // from both maps as we go.
 
           if (old_id_vec.size() == new_id_vec.size()) {
-            sort(old_id_vec.begin(), old_id_vec.end());
-            sort(new_id_vec.begin(), new_id_vec.end());
+            llvm::sort(old_id_vec.begin(), old_id_vec.end());
+            llvm::sort(new_id_vec.begin(), new_id_vec.end());
             size_t num_elements = old_id_vec.size();
             for (size_t idx = 0; idx < num_elements; idx++) {
               BreakpointLocationSP old_loc_sp =
