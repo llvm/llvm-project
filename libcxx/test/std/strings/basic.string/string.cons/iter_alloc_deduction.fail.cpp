@@ -9,7 +9,7 @@
 
 // <string>
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// XFAIL: libcpp-no-deduction-guides
+// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class InputIterator,
 //      class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
