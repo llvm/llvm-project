@@ -4,4 +4,6 @@
 
 // RUN: %clang -### %s -fno-escaping-block-tail-calls -fescaping-block-tail-calls 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DISABLE < %t %s
+// RUN: %clang -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-DISABLE < %t %s
 // CHECK-NO-DISABLE-NOT: "-fno-escaping-block-tail-calls"

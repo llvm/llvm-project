@@ -48,7 +48,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   // If verbose assembly is enabled, we can print some informative comments.
   if (CommentStream)
     HasCustomInstComment =
-        EmitAnyX86InstComments(MI, *CommentStream, getRegisterName);
+        EmitAnyX86InstComments(MI, *CommentStream, MII, getRegisterName);
 
   unsigned Flags = MI->getFlags();
   if ((TSFlags & X86II::LOCK) || (Flags & X86::IP_HAS_LOCK))

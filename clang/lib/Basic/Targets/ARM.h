@@ -69,6 +69,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   unsigned Crypto : 1;
   unsigned DSP : 1;
   unsigned Unaligned : 1;
+  unsigned HasFullFP16 : 1;
 
   enum {
     LDREX_B = (1 << 0), /// byte (8-bit)
