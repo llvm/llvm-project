@@ -39,12 +39,12 @@ define void @add512(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "required-ve
 define void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "required-vector-width"="256" {
 ; CHECK-LABEL: avg_v64i8_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm0
-; CHECK-NEXT:    vmovdqa (%rsi), %ymm1
-; CHECK-NEXT:    vpavgb (%rdi), %ymm1, %ymm1
-; CHECK-NEXT:    vpavgb 32(%rsi), %ymm0, %ymm0
-; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm1
+; CHECK-NEXT:    vpavgb (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vpavgb 32(%rdi), %ymm1, %ymm1
 ; CHECK-NEXT:    vmovdqu %ymm1, (%rax)
+; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = load <64 x i8>, <64 x i8>* %a

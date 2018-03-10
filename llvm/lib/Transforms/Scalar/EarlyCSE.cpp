@@ -532,12 +532,7 @@ private:
 
     Value *getPointerOperand() const {
       if (IsTargetMemInst) return Info.PtrVal;
-      if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
-        return LI->getPointerOperand();
-      } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-        return SI->getPointerOperand();
-      }
-      return nullptr;
+      return getLoadStorePointerOperand(Inst);
     }
 
     bool mayReadFromMemory() const {

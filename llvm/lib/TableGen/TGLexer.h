@@ -30,7 +30,7 @@ namespace tgtok {
   enum TokKind {
     // Markers
     Eof, Error,
-    
+
     // Tokens with no info.
     minus, plus,        // - +
     l_square, r_square, // [ ]
@@ -56,7 +56,7 @@ namespace tgtok {
     // Binary constant.  Note that these are sized according to the number of
     // bits given.
     BinaryIntVal,
-    
+
     // String valued tokens.
     Id, StrVal, VarName, CodeFragment
   };
@@ -65,7 +65,7 @@ namespace tgtok {
 /// TGLexer - TableGen Lexer class.
 class TGLexer {
   SourceMgr &SrcMgr;
-  
+
   const char *CurPtr;
   StringRef CurBuf;
 
@@ -95,11 +95,11 @@ public:
   const DependenciesMapTy &getDependencies() const {
     return Dependencies;
   }
-  
+
   tgtok::TokKind getCode() const { return CurCode; }
 
   const std::string &getCurStrVal() const {
-    assert((CurCode == tgtok::Id || CurCode == tgtok::StrVal || 
+    assert((CurCode == tgtok::Id || CurCode == tgtok::StrVal ||
             CurCode == tgtok::VarName || CurCode == tgtok::CodeFragment) &&
            "This token doesn't have a string value");
     return CurStrVal;
@@ -115,13 +115,13 @@ public:
   }
 
   SMLoc getLoc() const;
-  
+
 private:
   /// LexToken - Read the next token and return its code.
   tgtok::TokKind LexToken();
-  
+
   tgtok::TokKind ReturnError(const char *Loc, const Twine &Msg);
-  
+
   int getNextChar();
   int peekNextChar(int Index);
   void SkipBCPLComment();
@@ -134,7 +134,7 @@ private:
   tgtok::TokKind LexBracket();
   tgtok::TokKind LexExclaim();
 };
-  
+
 } // end namespace llvm
 
 #endif

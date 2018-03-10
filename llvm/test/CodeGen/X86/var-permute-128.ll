@@ -37,6 +37,7 @@ define <2 x i64> @var_shuffle_v2i64(<2 x i64> %v, <2 x i64> %indices) nounwind {
 ;
 ; AVX-LABEL: var_shuffle_v2i64:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %index0 = extractelement <2 x i64> %indices, i32 0
@@ -221,6 +222,7 @@ define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) noun
 ;
 ; AVX-LABEL: var_shuffle_v2f64:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %index0 = extractelement <2 x i64> %indices, i32 0

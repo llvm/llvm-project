@@ -23,7 +23,7 @@
 ; Ensure that typeids are in the index.
 ; RUN: llvm-bcanalyzer -dump %t.o.thinlto.bc | FileCheck %s
 ; CHECK-LABEL: <GLOBALVAL_SUMMARY_BLOCK
-; CHECK: <TYPE_ID op0=0 op1=6 op2=4 op3=7 op4=0 op5=0 op6=0 op7=0 op8=0 op9=0 op10=6 op11=0 op12=0 op13=8 op14=1 op15=6 op16=9 op17=0/>
+; CHECK: <TYPE_ID op0=0 op1=6 op2=4 op3=7 op4=0 op5=0 op6=0 op7=0 op8=0 op9=2 op10=6 op11=0 op12=0 op13=8 op14=1 op15=6 op16=9 op17=0/>
 ; CHECK-LABEL: </GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-LABEL: <STRTAB_BLOCK
 ; CHECK: blob data = '_ZTS1A_ZN1A1nEi'

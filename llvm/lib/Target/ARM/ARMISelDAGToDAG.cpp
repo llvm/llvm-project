@@ -500,7 +500,7 @@ bool ARMDAGToDAGISel::canExtractShiftFromMul(const SDValue &N,
 
 void ARMDAGToDAGISel::replaceDAGValue(const SDValue &N, SDValue M) {
   CurDAG->RepositionNode(N.getNode()->getIterator(), M.getNode());
-  CurDAG->ReplaceAllUsesWith(N, M);
+  ReplaceUses(N, M);
 }
 
 bool ARMDAGToDAGISel::SelectImmShifterOperand(SDValue N,

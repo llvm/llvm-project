@@ -656,8 +656,11 @@ struct TypeTestResolution {
 
 struct WholeProgramDevirtResolution {
   enum Kind {
-    Indir,      ///< Just do a regular virtual call
-    SingleImpl, ///< Single implementation devirtualization
+    Indir,        ///< Just do a regular virtual call
+    SingleImpl,   ///< Single implementation devirtualization
+    BranchFunnel, ///< When retpoline mitigation is enabled, use a branch funnel
+                  ///< that is defined in the merged module. Otherwise same as
+                  ///< Indir.
   } TheKind = Indir;
 
   std::string SingleImplName;

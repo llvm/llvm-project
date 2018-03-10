@@ -73,8 +73,25 @@ void lld::wasm::markLive() {
     InputChunk *C = Q.pop_back_val();
 
     for (const WasmRelocation Reloc : C->getRelocations()) {
-      if (Reloc.Type != R_WEBASSEMBLY_TYPE_INDEX_LEB)
-        Enqueue(C->File->getSymbol(Reloc.Index));
+      if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB)
+        continue;
+      Symbol *Sym = C->File->getSymbol(Reloc.Index);
+
+      // If the function has been assigned the special index zero in the table,
+      // the relocation doesn't pull in the function body, since the function
+      // won't actually go in the table (the runtime will trap attempts to call
+      // that index, since we don't use it).  A function with a table index of
+      // zero is only reachable via "call", not via "call_indirect".  The stub
+      // functions used for weak-undefined symbols have this behaviour (compare
+      // equal to null pointer, only reachable via direct call).
+      if (Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_SLEB ||
+          Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_I32) {
+        FunctionSymbol *FuncSym = cast<FunctionSymbol>(Sym);
+        if (FuncSym->hasTableIndex() && FuncSym->getTableIndex() == 0)
+          continue;
+      }
+
+      Enqueue(Sym);
     }
   }
 
