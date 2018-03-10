@@ -65,14 +65,8 @@ uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
 uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   switch (Reloc.Type) {
   case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB: {
-    // The null case is possible, if you take the address of a weak function
-    // that's simply not supplied.
-    FunctionSymbol *Sym = getFunctionSymbol(Reloc.Index);
-    if (Sym->hasTableIndex())
-      return Sym->getTableIndex();
-    return 0;
-  }
+  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+    return getFunctionSymbol(Reloc.Index)->getTableIndex();
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_I32:
   case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
