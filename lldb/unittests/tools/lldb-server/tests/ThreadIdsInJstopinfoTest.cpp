@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+#if 0
 #include "TestBase.h"
 #include "TestClient.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -53,3 +53,4 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
   }
 }
 
+#endif

@@ -871,7 +871,6 @@
 		942F52271BC44E780004C182 /* NSSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E50D1BBEFCF6000A48DC /* NSSet.cpp */; };
 		942F52281BC44E780004C182 /* NSString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E5141BBF3199000A48DC /* NSString.cpp */; };
 		94380B8219940B0A00BFE4A8 /* StringLexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94380B8119940B0A00BFE4A8 /* StringLexer.cpp */; };
-		9438287719F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9438287619F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp */; };
 		943BDEFE1AA7B2F800789CE8 /* LLDBAssert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 943BDEFD1AA7B2F800789CE8 /* LLDBAssert.cpp */; };
 		9441816E1C8F5EC900E5A8D9 /* CommandAlias.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9441816D1C8F5EC900E5A8D9 /* CommandAlias.cpp */; };
 		944372DC171F6B4300E57C32 /* RegisterContextDummy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 944372DA171F6B4300E57C32 /* RegisterContextDummy.cpp */; };
@@ -2888,8 +2887,6 @@
 		942B8F7D1AC48372008C2EEF /* RegisterContextPOSIXCore_arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RegisterContextPOSIXCore_arm64.h; sourceTree = "<group>"; };
 		94380B8019940B0300BFE4A8 /* StringLexer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = StringLexer.h; path = include/lldb/Utility/StringLexer.h; sourceTree = "<group>"; };
 		94380B8119940B0A00BFE4A8 /* StringLexer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringLexer.cpp; path = source/Utility/StringLexer.cpp; sourceTree = "<group>"; };
-		9438287519F5A3F000134CD1 /* SwiftMangledNameVisitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftMangledNameVisitor.h; path = include/lldb/Symbol/SwiftMangledNameVisitor.h; sourceTree = "<group>"; };
-		9438287619F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftMangledNameVisitor.cpp; path = source/Symbol/SwiftMangledNameVisitor.cpp; sourceTree = "<group>"; };
 		9438E18B19217ABA00AE7A2A /* main.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		943B90FC1B991586007BA499 /* VectorIterator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = VectorIterator.h; path = include/lldb/DataFormatters/VectorIterator.h; sourceTree = "<group>"; };
 		943BDEFC1AA7B2DE00789CE8 /* LLDBAssert.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LLDBAssert.h; path = include/lldb/Utility/LLDBAssert.h; sourceTree = "<group>"; };
@@ -5217,8 +5214,6 @@
 				4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */,
 				4C848E0518D288FC00EC6DD0 /* SwiftASTContext.h */,
 				4C848E0718D2892900EC6DD0 /* SwiftASTContext.cpp */,
-				9438287519F5A3F000134CD1 /* SwiftMangledNameVisitor.h */,
-				9438287619F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp */,
 				26BC7C5F10F1B6E900F91463 /* Symbol.h */,
 				26BC7F1B10F1B8EC00F91463 /* Symbol.cpp */,
 				26BC7C6010F1B6E900F91463 /* SymbolContext.h */,
@@ -8475,7 +8470,6 @@
 				26A527C114E24F5F00F3A14A /* ProcessMachCore.cpp in Sources */,
 				26A527C314E24F5F00F3A14A /* ThreadMachCore.cpp in Sources */,
 				B299580B14F2FA1400050A04 /* DisassemblerLLVMC.cpp in Sources */,
-				9438287719F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp in Sources */,
 				26FFC19914FC072100087D58 /* AuxVector.cpp in Sources */,
 				26FFC19B14FC072100087D58 /* DYLDRendezvous.cpp in Sources */,
 				AF0F6E501739A76D009180FE /* RegisterContextKDP_arm64.cpp in Sources */,
