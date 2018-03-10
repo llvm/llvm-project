@@ -1140,6 +1140,12 @@ def FENTRY_CALL : StandardPseudoInstruction {
   let mayStore = 1;
   let hasSideEffects = 1;
 }
+def ICALL_BRANCH_FUNNEL : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "";
+  let hasSideEffects = 1;
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"

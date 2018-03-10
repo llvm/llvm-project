@@ -317,6 +317,7 @@ protected:
     IK_UnOpInit,
     IK_LastOpInit,
     IK_FoldOpInit,
+    IK_IsAOpInit,
     IK_StringInit,
     IK_VarInit,
     IK_VarListElementInit,
@@ -951,6 +952,39 @@ public:
   std::string getAsString() const override;
 };
 
+/// !isa<type>(expr) - Dynamically determine the type of an expression.
+class IsAOpInit : public TypedInit, public FoldingSetNode {
+private:
+  RecTy *CheckType;
+  Init *Expr;
+
+  IsAOpInit(RecTy *CheckType, Init *Expr)
+      : TypedInit(IK_IsAOpInit, IntRecTy::get()), CheckType(CheckType),
+        Expr(Expr) {}
+
+public:
+  IsAOpInit(const IsAOpInit &) = delete;
+  IsAOpInit &operator=(const IsAOpInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_IsAOpInit; }
+
+  static IsAOpInit *get(RecTy *CheckType, Init *Expr);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // possible to fold.
+  Init *Fold() const;
+
+  bool isComplete() const override { return false; }
+
+  Init *resolveReferences(Resolver &R) const override;
+
+  Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
 /// 'Opcode' - Represent a reference to an entire variable object.
 class VarInit : public TypedInit {
   Init *VarName;
@@ -1169,6 +1203,7 @@ public:
   Init *getBit(unsigned Bit) const override;
 
   Init *resolveReferences(Resolver &R) const override;
+  Init *Fold() const;
 
   std::string getAsString() const override {
     return Rec->getAsString() + "." + FieldName->getValue().str();
@@ -1577,6 +1612,7 @@ class RecordKeeper {
   using RecordMap = std::map<std::string, std::unique_ptr<Record>>;
   RecordMap Classes, Defs;
   FoldingSet<RecordRecTy> RecordTypePool;
+  std::map<std::string, Init *> ExtraGlobals;
   unsigned AnonCounter = 0;
 
 public:
@@ -1593,6 +1629,13 @@ public:
     return I == Defs.end() ? nullptr : I->second.get();
   }
 
+  Init *getGlobal(StringRef Name) const {
+    if (Record *R = getDef(Name))
+      return R->getDefInit();
+    auto It = ExtraGlobals.find(Name);
+    return It == ExtraGlobals.end() ? nullptr : It->second;
+  }
+
   void addClass(std::unique_ptr<Record> R) {
     bool Ins = Classes.insert(std::make_pair(R->getName(),
                                              std::move(R))).second;
@@ -1605,6 +1648,13 @@ public:
                                           std::move(R))).second;
     (void)Ins;
     assert(Ins && "Record already exists");
+  }
+
+  void addExtraGlobal(StringRef Name, Init *I) {
+    bool Ins = ExtraGlobals.insert(std::make_pair(Name, I)).second;
+    (void)Ins;
+    assert(!getDef(Name));
+    assert(Ins && "Global already exists");
   }
 
   Init *getNewAnonymousName();

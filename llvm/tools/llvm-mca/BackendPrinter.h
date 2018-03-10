@@ -10,10 +10,7 @@
 ///
 /// This file implements class BackendPrinter.
 ///
-/// BackendPrinter allows the customization of the performance report.  With the
-/// help of this class, users can specify their own custom sequence of views.
-/// Each view is then printed out in sequence when method printReport() is
-/// called.
+/// BackendPrinter allows the customization of the performance report.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -21,15 +18,14 @@
 #define LLVM_TOOLS_LLVM_MCA_BACKENDPRINTER_H
 
 #include "Backend.h"
+#include "View.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
 
 namespace mca {
 
-class View;
 
 /// \brief A printer class that knows how to collects statistics on the
 /// code analyzed by the llvm-mca tool.
@@ -39,23 +35,17 @@ class View;
 /// classes the task of printing out timeline information as well as
 /// resource pressure.
 class BackendPrinter {
-  const Backend &B;
-  llvm::MCInstPrinter &MCIP;
+  Backend &B;
   llvm::SmallVector<std::unique_ptr<View>, 8> Views;
 
-  void printGeneralStatistics(llvm::raw_ostream &OS,
-                              unsigned Iterations, unsigned Cycles,
-                              unsigned Instructions,
-                              unsigned DispatchWidth) const;
-  void printInstructionInfo(llvm::raw_ostream &OS) const;
-
 public:
-  BackendPrinter(const Backend &backend, llvm::MCInstPrinter &IP)
-      : B(backend), MCIP(IP) {}
+  BackendPrinter(Backend &backend) : B(backend) {}
 
-  llvm::MCInstPrinter &getMCInstPrinter() const { return MCIP; }
+  void addView(std::unique_ptr<View> V) {
+    B.addEventListener(V.get());
+    Views.emplace_back(std::move(V));
+  }
 
-  void addView(std::unique_ptr<View> V) { Views.emplace_back(std::move(V)); }
   void printReport(llvm::raw_ostream &OS) const;
 };
 

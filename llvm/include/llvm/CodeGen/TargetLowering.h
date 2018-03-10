@@ -2117,6 +2117,9 @@ public:
     return false;
   }
 
+  /// Return true if the target has a vector blend instruction.
+  virtual bool hasVectorBlend() const { return false; }
+
   /// \brief Get the maximum supported factor for interleaved memory accesses.
   /// Default to be the minimum interleave factor: 2.
   virtual unsigned getMaxSupportedInterleaveFactor() const { return 2; }

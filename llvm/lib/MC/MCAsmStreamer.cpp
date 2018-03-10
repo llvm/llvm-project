@@ -130,7 +130,7 @@ public:
 
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
 
-  void emitELFSymverDirective(MCSymbol *Alias,
+  void emitELFSymverDirective(StringRef AliasName,
                               const MCSymbol *Aliasee) override;
 
   void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
@@ -417,12 +417,11 @@ void MCAsmStreamer::ChangeSection(MCSection *Section,
   }
 }
 
-void MCAsmStreamer::emitELFSymverDirective(MCSymbol *Alias,
+void MCAsmStreamer::emitELFSymverDirective(StringRef AliasName,
                                            const MCSymbol *Aliasee) {
   OS << ".symver ";
   Aliasee->print(OS, MAI);
-  OS << ", ";
-  Alias->print(OS, MAI);
+  OS << ", " << AliasName;
   EmitEOL();
 }
 

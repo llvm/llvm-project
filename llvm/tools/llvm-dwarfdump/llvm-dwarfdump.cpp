@@ -340,7 +340,7 @@ template <typename AccelTable>
 static llvm::Optional<uint64_t> getDIEOffset(const AccelTable &Accel,
                                        StringRef Name) {
   for (const auto &Entry : Accel.equal_range(Name))
-    if (llvm::Optional<uint64_t> Off = Entry.getDIEOffset())
+    if (llvm::Optional<uint64_t> Off = Entry.getDIESectionOffset())
       return *Off;
   return None;
 }

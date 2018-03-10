@@ -1454,7 +1454,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   // Add a comment about EVEX-2-VEX compression for AVX-512 instrs that
   // are compressed from EVEX encoding to VEX encoding.
   if (TM.Options.MCOptions.ShowMCEncoding) {
-    if (MI->getAsmPrinterFlags() & AC_EVEX_2_VEX)
+    if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_VEX)
       OutStreamer->AddComment("EVEX TO VEX Compression ", false);
   }
 

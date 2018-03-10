@@ -128,8 +128,6 @@ class ELFObjectWriter : public MCObjectWriter {
   /// @name Symbol Table Data
   /// @{
 
-  BumpPtrAllocator Alloc;
-  StringSaver VersionSymSaver{Alloc};
   StringTableBuilder StrTabBuilder{StringTableBuilder::ELF};
 
   /// @}
@@ -391,27 +389,29 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                const MCAsmLayout &Layout) {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
-  for (const MCSymbol &A : Asm.symbols()) {
-    const auto &Alias = cast<MCSymbolELF>(A);
-    // Not an alias.
-    if (!Alias.isVariable())
-      continue;
-    auto *Ref = dyn_cast<MCSymbolRefExpr>(Alias.getVariableValue());
-    if (!Ref)
-      continue;
-    const auto &Symbol = cast<MCSymbolELF>(Ref->getSymbol());
-
-    StringRef AliasName = Alias.getName();
+  for (const std::pair<StringRef, const MCSymbol *> &P : Asm.Symvers) {
+    StringRef AliasName = P.first;
+    const auto &Symbol = cast<MCSymbolELF>(*P.second);
     size_t Pos = AliasName.find('@');
-    if (Pos == StringRef::npos)
-      continue;
+    assert(Pos != StringRef::npos);
+
+    StringRef Prefix = AliasName.substr(0, Pos);
+    StringRef Rest = AliasName.substr(Pos);
+    StringRef Tail = Rest;
+    if (Rest.startswith("@@@"))
+      Tail = Rest.substr(Symbol.isUndefined() ? 2 : 1);
+
+    auto *Alias =
+        cast<MCSymbolELF>(Asm.getContext().getOrCreateSymbol(Prefix + Tail));
+    Asm.registerSymbol(*Alias);
+    const MCExpr *Value = MCSymbolRefExpr::create(&Symbol, Asm.getContext());
+    Alias->setVariableValue(Value);
 
     // Aliases defined with .symvar copy the binding from the symbol they alias.
     // This is the first place we are able to copy this information.
-    Alias.setExternal(Symbol.isExternal());
-    Alias.setBinding(Symbol.getBinding());
+    Alias->setExternal(Symbol.isExternal());
+    Alias->setBinding(Symbol.getBinding());
 
-    StringRef Rest = AliasName.substr(Pos);
     if (!Symbol.isUndefined() && !Rest.startswith("@@@"))
       continue;
 
@@ -420,7 +420,7 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
         !Rest.startswith("@@@"))
       report_fatal_error("A @@ version cannot be undefined");
 
-    Renames.insert(std::make_pair(&Symbol, &Alias));
+    Renames.insert(std::make_pair(&Symbol, Alias));
   }
 }
 
@@ -836,44 +836,7 @@ void ELFObjectWriter::computeSymbolTable(
         HasLargeSectionIndex = true;
     }
 
-    // The @@@ in symbol version is replaced with @ in undefined symbols and @@
-    // in defined ones.
-    //
-    // FIXME: All name handling should be done before we get to the writer,
-    // including dealing with GNU-style version suffixes.  Fixing this isn't
-    // trivial.
-    //
-    // We thus have to be careful to not perform the symbol version replacement
-    // blindly:
-    //
-    // The ELF format is used on Windows by the MCJIT engine.  Thus, on
-    // Windows, the ELFObjectWriter can encounter symbols mangled using the MS
-    // Visual Studio C++ name mangling scheme. Symbols mangled using the MSVC
-    // C++ name mangling can legally have "@@@" as a sub-string. In that case,
-    // the EFLObjectWriter should not interpret the "@@@" sub-string as
-    // specifying GNU-style symbol versioning. The ELFObjectWriter therefore
-    // checks for the MSVC C++ name mangling prefix which is either "?", "@?",
-    // "__imp_?" or "__imp_@?".
-    //
-    // It would have been interesting to perform the MS mangling prefix check
-    // only when the target triple is of the form *-pc-windows-elf. But, it
-    // seems that this information is not easily accessible from the
-    // ELFObjectWriter.
     StringRef Name = Symbol.getName();
-    SmallString<32> Buf;
-    if (!Name.startswith("?") && !Name.startswith("@?") &&
-        !Name.startswith("__imp_?") && !Name.startswith("__imp_@?")) {
-      // This symbol isn't following the MSVC C++ name mangling convention. We
-      // can thus safely interpret the @@@ in symbol names as specifying symbol
-      // versioning.
-      size_t Pos = Name.find("@@@");
-      if (Pos != StringRef::npos) {
-        Buf += Name.substr(0, Pos);
-        unsigned Skip = MSD.SectionIndex == ELF::SHN_UNDEF ? 2 : 1;
-        Buf += Name.substr(Pos + Skip);
-        Name = VersionSymSaver.save(Buf.c_str());
-      }
-    }
 
     // Sections have their own string table
     if (Symbol.getType() != ELF::STT_SECTION) {

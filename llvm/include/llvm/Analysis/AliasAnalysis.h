@@ -76,7 +76,7 @@ class Value;
 ///
 /// See docs/AliasAnalysis.html for more information on the specific meanings
 /// of these values.
-enum AliasResult {
+enum AliasResult : uint8_t {
   /// The two locations do not alias at all.
   ///
   /// This value is arranged to convert to false, while all other values
@@ -97,7 +97,7 @@ enum AliasResult {
 /// a modification and a reference. These are specifically structured such that
 /// they form a three bit matrix and bit-tests for 'mod' or 'ref' or 'must'
 /// work with any of the possible values.
-enum class ModRefInfo {
+enum class ModRefInfo : uint8_t {
   /// Must is provided for completeness, but no routines will return only
   /// Must today. See definition of Must below.
   Must = 0,

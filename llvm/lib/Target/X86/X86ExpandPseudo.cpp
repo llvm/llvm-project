@@ -59,11 +59,111 @@ public:
   }
 
 private:
+  void ExpandICallBranchFunnel(MachineBasicBlock *MBB,
+                               MachineBasicBlock::iterator MBBI);
+
   bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool ExpandMBB(MachineBasicBlock &MBB);
 };
 char X86ExpandPseudo::ID = 0;
 } // End anonymous namespace.
+
+void X86ExpandPseudo::ExpandICallBranchFunnel(
+    MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
+  MachineBasicBlock *JTMBB = MBB;
+  MachineInstr *JTInst = &*MBBI;
+  MachineFunction *MF = MBB->getParent();
+  const BasicBlock *BB = MBB->getBasicBlock();
+  auto InsPt = MachineFunction::iterator(MBB);
+  ++InsPt;
+
+  std::vector<std::pair<MachineBasicBlock *, unsigned>> TargetMBBs;
+  DebugLoc DL = JTInst->getDebugLoc();
+  MachineOperand Selector = JTInst->getOperand(0);
+  const GlobalValue *CombinedGlobal = JTInst->getOperand(1).getGlobal();
+
+  auto CmpTarget = [&](unsigned Target) {
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::LEA64r), X86::R11)
+        .addReg(X86::RIP)
+        .addImm(1)
+        .addReg(0)
+        .addGlobalAddress(CombinedGlobal,
+                          JTInst->getOperand(2 + 2 * Target).getImm())
+        .addReg(0);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::CMP64rr))
+        .add(Selector)
+        .addReg(X86::R11);
+  };
+
+  auto CreateMBB = [&]() {
+    auto *NewMBB = MF->CreateMachineBasicBlock(BB);
+    MBB->addSuccessor(NewMBB);
+    return NewMBB;
+  };
+
+  auto EmitCondJump = [&](unsigned Opcode, MachineBasicBlock *ThenMBB) {
+    BuildMI(*MBB, MBBI, DL, TII->get(Opcode)).addMBB(ThenMBB);
+
+    auto *ElseMBB = CreateMBB();
+    MF->insert(InsPt, ElseMBB);
+    MBB = ElseMBB;
+    MBBI = MBB->end();
+  };
+
+  auto EmitCondJumpTarget = [&](unsigned Opcode, unsigned Target) {
+    auto *ThenMBB = CreateMBB();
+    TargetMBBs.push_back({ThenMBB, Target});
+    EmitCondJump(Opcode, ThenMBB);
+  };
+
+  auto EmitTailCall = [&](unsigned Target) {
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::TAILJMPd64))
+        .add(JTInst->getOperand(3 + 2 * Target));
+  };
+
+  std::function<void(unsigned, unsigned)> EmitBranchFunnel =
+      [&](unsigned FirstTarget, unsigned NumTargets) {
+    if (NumTargets == 1) {
+      EmitTailCall(FirstTarget);
+      return;
+    }
+
+    if (NumTargets == 2) {
+      CmpTarget(FirstTarget + 1);
+      EmitCondJumpTarget(X86::JB_1, FirstTarget);
+      EmitTailCall(FirstTarget + 1);
+      return;
+    }
+
+    if (NumTargets < 6) {
+      CmpTarget(FirstTarget + 1);
+      EmitCondJumpTarget(X86::JB_1, FirstTarget);
+      EmitCondJumpTarget(X86::JE_1, FirstTarget + 1);
+      EmitBranchFunnel(FirstTarget + 2, NumTargets - 2);
+      return;
+    }
+
+    auto *ThenMBB = CreateMBB();
+    CmpTarget(FirstTarget + (NumTargets / 2));
+    EmitCondJump(X86::JB_1, ThenMBB);
+    EmitCondJumpTarget(X86::JE_1, FirstTarget + (NumTargets / 2));
+    EmitBranchFunnel(FirstTarget + (NumTargets / 2) + 1,
+                  NumTargets - (NumTargets / 2) - 1);
+
+    MF->insert(InsPt, ThenMBB);
+    MBB = ThenMBB;
+    MBBI = MBB->end();
+    EmitBranchFunnel(FirstTarget, NumTargets / 2);
+  };
+
+  EmitBranchFunnel(0, (JTInst->getNumOperands() - 2) / 2);
+  for (auto P : TargetMBBs) {
+    MF->insert(InsPt, P.first);
+    BuildMI(P.first, DL, TII->get(X86::TAILJMPd64))
+        .add(JTInst->getOperand(3 + 2 * P.second));
+  }
+  JTMBB->erase(JTInst);
+}
 
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
@@ -259,6 +359,9 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MBBI->eraseFromParent();
     return true;
   }
+  case TargetOpcode::ICALL_BRANCH_FUNNEL:
+    ExpandICallBranchFunnel(&MBB, MBBI);
+    return true;
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }

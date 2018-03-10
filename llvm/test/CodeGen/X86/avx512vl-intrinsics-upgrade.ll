@@ -1484,7 +1484,7 @@ define <2 x i64>@test_int_x86_avx512_mask_punpckhqd_q_128(<2 x i64> %x0, <2 x i6
 ; CHECK-NEXT:    ## xmm3 = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpunpckhqdq %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x09,0x6d,0xd1]
-; CHECK-NEXT:    ## xmm2 = xmm0[1],xmm1[1]
+; CHECK-NEXT:    ## xmm2 {%k1} = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    vpaddq %xmm3, %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.punpckhqd.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3)
@@ -1502,7 +1502,7 @@ define <2 x i64>@test_int_x86_avx512_mask_punpcklqd_q_128(<2 x i64> %x0, <2 x i6
 ; CHECK-NEXT:    ## xmm3 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpunpcklqdq %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x09,0x6c,0xd1]
-; CHECK-NEXT:    ## xmm2 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    ## xmm2 {%k1} = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vpaddq %xmm3, %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.punpcklqd.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3)
@@ -1520,7 +1520,7 @@ define <4 x i64>@test_int_x86_avx512_mask_punpcklqd_q_256(<4 x i64> %x0, <4 x i6
 ; CHECK-NEXT:    ## ymm3 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpunpcklqdq %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x29,0x6c,0xd1]
-; CHECK-NEXT:    ## ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-NEXT:    ## ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    vpaddq %ymm3, %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xed,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx512.mask.punpcklqd.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x3)
@@ -1538,7 +1538,7 @@ define <4 x i64>@test_int_x86_avx512_mask_punpckhqd_q_256(<4 x i64> %x0, <4 x i6
 ; CHECK-NEXT:    ## ymm3 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpunpckhqdq %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x29,0x6d,0xd1]
-; CHECK-NEXT:    ## ymm2 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-NEXT:    ## ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-NEXT:    vpaddq %ymm3, %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xed,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx512.mask.punpckhqd.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x3)

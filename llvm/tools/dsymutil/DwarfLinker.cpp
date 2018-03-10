@@ -76,6 +76,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -564,7 +565,31 @@ static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
   return false;
 }
 
+static raw_ostream &error_ostream() {
+  return WithColor(errs(), HighlightColor::Error).get() << "error: ";
+}
+
+static raw_ostream &warn_ostream() {
+  return WithColor(errs(), HighlightColor::Warning).get() << "warning: ";
+}
+
+static raw_ostream &note_ostream() {
+  return WithColor(errs(), HighlightColor::Note).get() << "note: ";
+}
 } // end anonymous namespace
+
+void warn(Twine Warning, Twine Context) {
+  warn_ostream() << Warning + "\n";
+  if (!Context.isTriviallyEmpty())
+    note_ostream() << Twine("while processing ") + Context + ":\n";
+}
+
+bool error(Twine Error, Twine Context) {
+  error_ostream() << Error + "\n";
+  if (!Context.isTriviallyEmpty())
+    note_ostream() << Twine("while processing ") + Context + ":\n";
+  return false;
+}
 
 void CompileUnit::markEverythingAsKept() {
   unsigned Idx = 0;
@@ -2092,7 +2117,7 @@ void DwarfLinker::reportWarning(const Twine &Warning,
   DumpOpts.RecurseDepth = 0;
   DumpOpts.Verbose = Options.Verbose;
 
-  errs() << "    in DIE:\n";
+  note_ostream() << "    in DIE:\n";
   DIE->dump(errs(), 6 /* Indent */, DumpOpts);
 }
 
@@ -3882,9 +3907,9 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
         // cache has expired and was pruned by clang.  A more adventurous
         // dsymutil would invoke clang to rebuild the module now.
         if (!ModuleCacheHintDisplayed) {
-          errs() << "note: The clang module cache may have expired since this "
-                    "object file was built. Rebuilding the object file will "
-                    "rebuild the module cache.\n";
+          note_ostream() << "The clang module cache may have expired since "
+                            "this object file was built. Rebuilding the "
+                            "object file will rebuild the module cache.\n";
           ModuleCacheHintDisplayed = true;
         }
       } else if (isArchive) {
@@ -3893,11 +3918,12 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
         // was built on a different machine. We don't want to discourage module
         // debugging for convenience libraries within a project though.
         if (!ArchiveHintDisplayed) {
-          errs() << "note: Linking a static library that was built with "
-                    "-gmodules, but the module cache was not found.  "
-                    "Redistributable static libraries should never be built "
-                    "with module debugging enabled.  The debug experience will "
-                    "be degraded due to incomplete debug information.\n";
+          note_ostream() << "Linking a static library that was built with "
+                            "-gmodules, but the module cache was not found.  "
+                            "Redistributable static libraries should never be "
+                            "built with module debugging enabled.  The debug "
+                            "experience will be degraded due to incomplete "
+                            "debug information.\n";
           ArchiveHintDisplayed = true;
         }
       }
@@ -3921,7 +3947,7 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
             (Filename +
              ": Clang modules are expected to have exactly 1 compile unit.\n")
                 .str();
-        errs() << Err;
+        error(Err);
         return make_error<StringError>(Err, inconvertibleErrorCode());
       }
       // FIXME: Until PR27449 (https://llvm.org/bugs/show_bug.cgi?id=27449) is
@@ -4034,15 +4060,16 @@ bool DwarfLinker::link(const DebugMap &Map) {
         continue;
       }
       sys::fs::file_status Stat;
-      if (auto errc = sys::fs::status(File, Stat)) {
-        errs() << "Warning: " << errc.message() << "\n";
+      if (auto Err = sys::fs::status(File, Stat)) {
+        warn(Err.message());
         continue;
       }
       if (!Options.NoTimestamp && Stat.getLastModificationTime() !=
                                       sys::TimePoint<>(Obj->getTimestamp())) {
-        errs() << "Warning: Timestamp mismatch for " << File << ": "
-               << Stat.getLastModificationTime() << " and "
-               << sys::TimePoint<>(Obj->getTimestamp()) << "\n";
+        // Not using the helper here as we can easily stream TimePoint<>.
+        warn_ostream() << "Timestamp mismatch for " << File << ": "
+                       << Stat.getLastModificationTime() << " and "
+                       << sys::TimePoint<>(Obj->getTimestamp()) << "\n";
         continue;
       }
 

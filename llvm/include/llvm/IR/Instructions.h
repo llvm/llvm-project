@@ -5043,6 +5043,26 @@ public:
   }
 };
 
+/// A helper function that returns the pointer operand of a load or store
+/// instruction. Returns nullptr if not load or store.
+inline Value *getLoadStorePointerOperand(Value *V) {
+  if (auto *Load = dyn_cast<LoadInst>(V))
+    return Load->getPointerOperand();
+  if (auto *Store = dyn_cast<StoreInst>(V))
+    return Store->getPointerOperand();
+  return nullptr;
+}
+
+/// A helper function that returns the pointer operand of a load, store
+/// or GEP instruction. Returns nullptr if not load, store, or GEP.
+inline Value *getPointerOperand(Value *V) {
+  if (auto *Ptr = getLoadStorePointerOperand(V))
+    return Ptr;
+  if (auto *Gep = dyn_cast<GetElementPtrInst>(V))
+    return Gep->getPointerOperand();
+  return nullptr;
+}
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INSTRUCTIONS_H
