@@ -40,7 +40,6 @@
 
 using namespace llvm;
 using namespace llvm::object;
-using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
 namespace lld {
@@ -307,10 +306,10 @@ bool ThumbV7PILongThunk::isCompatibleWith(RelType Type) const {
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
 void MipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
   uint64_t S = Destination.getVA();
-  write32(Buf, 0x3c190000, Config->Endianness); // lui   $25, %hi(func)
-  write32(Buf + 4, 0x08000000 | (S >> 2), Config->Endianness); // j     func
-  write32(Buf + 8, 0x27390000, Config->Endianness); // addiu $25, $25, %lo(func)
-  write32(Buf + 12, 0x00000000, Config->Endianness); // nop
+  write32(Buf, 0x3c190000); // lui   $25, %hi(func)
+  write32(Buf + 4, 0x08000000 | (S >> 2)); // j     func
+  write32(Buf + 8, 0x27390000); // addiu $25, $25, %lo(func)
+  write32(Buf + 12, 0x00000000); // nop
   Target->relocateOne(Buf, R_MIPS_HI16, S);
   Target->relocateOne(Buf + 8, R_MIPS_LO16, S);
 }
@@ -330,10 +329,10 @@ InputSection *MipsThunk::getTargetInputSection() const {
 // to call PIC function from the non-PIC one.
 void MicroMipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
   uint64_t S = Destination.getVA() | 1;
-  write16(Buf, 0x41b9, Config->Endianness);       // lui   $25, %hi(func)
-  write16(Buf + 4, 0xd400, Config->Endianness);   // j     func
-  write16(Buf + 8, 0x3339, Config->Endianness);   // addiu $25, $25, %lo(func)
-  write16(Buf + 12, 0x0c00, Config->Endianness);  // nop
+  write16(Buf, 0x41b9);       // lui   $25, %hi(func)
+  write16(Buf + 4, 0xd400);   // j     func
+  write16(Buf + 8, 0x3339);   // addiu $25, $25, %lo(func)
+  write16(Buf + 12, 0x0c00);  // nop
   Target->relocateOne(Buf, R_MICROMIPS_HI16, S);
   Target->relocateOne(Buf + 4, R_MICROMIPS_26_S1, S);
   Target->relocateOne(Buf + 8, R_MICROMIPS_LO16, S);
@@ -356,9 +355,9 @@ InputSection *MicroMipsThunk::getTargetInputSection() const {
 void MicroMipsR6Thunk::writeTo(uint8_t *Buf, ThunkSection &) const {
   uint64_t S = Destination.getVA() | 1;
   uint64_t P = ThunkSym->getVA();
-  write16(Buf, 0x1320, Config->Endianness);       // lui   $25, %hi(func)
-  write16(Buf + 4, 0x3339, Config->Endianness);   // addiu $25, $25, %lo(func)
-  write16(Buf + 8, 0x9400, Config->Endianness);   // bc    func
+  write16(Buf, 0x1320);       // lui   $25, %hi(func)
+  write16(Buf + 4, 0x3339);   // addiu $25, $25, %lo(func)
+  write16(Buf + 8, 0x9400);   // bc    func
   Target->relocateOne(Buf, R_MICROMIPS_HI16, S);
   Target->relocateOne(Buf + 4, R_MICROMIPS_LO16, S);
   Target->relocateOne(Buf + 8, R_MICROMIPS_PC26_S1, S - P - 12);

@@ -28,8 +28,6 @@
 
 namespace lldb_private {
 
-struct Option;
-
 typedef std::vector<std::tuple<std::string, int, std::string>> OptionArgVector;
 typedef std::shared_ptr<OptionArgVector> OptionArgVectorSP;
 
@@ -161,10 +159,10 @@ public:
   llvm::ArrayRef<ArgEntry> entries() const { return m_entries; }
   char GetArgumentQuoteCharAtIndex(size_t idx) const;
 
-  std::vector<ArgEntry>::const_iterator begin() const {
-    return m_entries.begin();
-  }
-  std::vector<ArgEntry>::const_iterator end() const { return m_entries.end(); }
+  using const_iterator = std::vector<ArgEntry>::const_iterator;
+
+  const_iterator begin() const { return m_entries.begin(); }
+  const_iterator end() const { return m_entries.end(); }
 
   size_t size() const { return GetArgumentCount(); }
   const ArgEntry &operator[](size_t n) const { return m_entries[n]; }
@@ -310,44 +308,6 @@ public:
   void Unshift(llvm::StringRef arg_str, char quote_char = '\0');
 
   //------------------------------------------------------------------
-  /// Parse the arguments in the contained arguments.
-  ///
-  /// The arguments that are consumed by the argument parsing process
-  /// will be removed from the argument vector. The arguments that
-  /// get processed start at the second argument. The first argument
-  /// is assumed to be the command and will not be touched.
-  ///
-  /// param[in] platform_sp
-  ///   The platform used for option validation.  This is necessary
-  ///   because an empty execution_context is not enough to get us
-  ///   to a reasonable platform.  If the platform isn't given,
-  ///   we'll try to get it from the execution context.  If we can't
-  ///   get it from the execution context, we'll skip validation.
-  ///
-  /// param[in] require_validation
-  ///   When true, it will fail option parsing if validation could
-  ///   not occur due to not having a platform.
-  ///
-  /// @see class Options
-  //------------------------------------------------------------------
-  Status ParseOptions(Options &options, ExecutionContext *execution_context,
-                      lldb::PlatformSP platform_sp, bool require_validation);
-
-  bool IsPositionalArgument(const char *arg);
-
-  // The following works almost identically to ParseOptions, except that no
-  // option is required to have arguments, and it builds up the
-  // option_arg_vector as it parses the options.
-
-  std::string ParseAliasOptions(Options &options, CommandReturnObject &result,
-                                OptionArgVector *option_arg_vector,
-                                llvm::StringRef raw_input_line);
-
-  void ParseArgsForCompletion(Options &options,
-                              OptionElementVector &option_element_vector,
-                              uint32_t cursor_index);
-
-  //------------------------------------------------------------------
   // Clear the arguments.
   //
   // For re-setting or blanking out the list of arguments.
@@ -441,13 +401,8 @@ public:
                                                char quote_char);
 
 private:
-  size_t FindArgumentIndexForOption(Option *long_options,
-                                    int long_options_index) const;
-
   std::vector<ArgEntry> m_entries;
   std::vector<char *> m_argv;
-
-  void UpdateArgsAfterOptionParsing();
 };
 
 } // namespace lldb_private

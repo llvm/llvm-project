@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolCollector.h"
+#include "../AST.h"
 #include "../CodeCompletionStrings.h"
 #include "../Logger.h"
 #include "../URI.h"
@@ -115,10 +116,16 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
   //   * enum constants in unscoped enum decl (e.g. "red" in "enum {red};")
   auto InTopLevelScope = hasDeclContext(
       anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
+  // Don't index template specializations.
+  auto IsSpecialization =
+      anyOf(functionDecl(isExplicitTemplateSpecialization()),
+            cxxRecordDecl(isExplicitTemplateSpecialization()),
+            varDecl(isExplicitTemplateSpecialization()));
   if (match(decl(allOf(unless(isExpansionInMainFile()),
                        anyOf(InTopLevelScope,
                              hasDeclContext(enumDecl(InTopLevelScope,
-                                                     unless(isScoped())))))),
+                                                     unless(isScoped())))),
+                       unless(IsSpecialization))),
             *ND, *ASTCtx)
           .empty())
     return true;
@@ -178,30 +185,16 @@ getIncludeHeader(llvm::StringRef QName, const SourceManager &SM,
 llvm::Optional<SymbolLocation> getSymbolLocation(
     const NamedDecl &D, SourceManager &SM, const SymbolCollector::Options &Opts,
     const clang::LangOptions &LangOpts, std::string &FileURIStorage) {
-  SourceLocation SpellingLoc = SM.getSpellingLoc(D.getLocation());
-  if (D.getLocation().isMacroID()) {
-    std::string PrintLoc = SpellingLoc.printToString(SM);
-    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
-        llvm::StringRef(PrintLoc).startswith("<command line>")) {
-      // We use the expansion location for the following symbols, as spelling
-      // locations of these symbols are not interesting to us:
-      //   * symbols formed via macro concatenation, the spelling location will
-      //     be "<scratch space>"
-      //   * symbols controlled and defined by a compile command-line option
-      //     `-DName=foo`, the spelling location will be "<command line>".
-      SpellingLoc = SM.getExpansionRange(D.getLocation()).first;
-    }
-  }
-
-  auto U = toURI(SM, SM.getFilename(SpellingLoc), Opts);
+  SourceLocation NameLoc = findNameLoc(&D);
+  auto U = toURI(SM, SM.getFilename(NameLoc), Opts);
   if (!U)
     return llvm::None;
   FileURIStorage = std::move(*U);
   SymbolLocation Result;
   Result.FileURI = FileURIStorage;
-  Result.StartOffset = SM.getFileOffset(SpellingLoc);
+  Result.StartOffset = SM.getFileOffset(NameLoc);
   Result.EndOffset = Result.StartOffset + clang::Lexer::MeasureTokenLength(
-                                              SpellingLoc, SM, LangOpts);
+                                              NameLoc, SM, LangOpts);
   return std::move(Result);
 }
 

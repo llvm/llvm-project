@@ -14,7 +14,6 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
-using namespace llvm::support::endian;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
@@ -112,14 +111,14 @@ void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   // be a pointer to the function descriptor in the .opd section. Using
   // this scheme is simpler, but requires an extra indirection per PLT dispatch.
 
-  write32be(Buf, 0xf8410028);                       // std %r2, 40(%r1)
-  write32be(Buf + 4, 0x3d620000 | applyPPCHa(Off)); // addis %r11, %r2, X@ha
-  write32be(Buf + 8, 0xe98b0000 | applyPPCLo(Off)); // ld %r12, X@l(%r11)
-  write32be(Buf + 12, 0xe96c0000);                  // ld %r11,0(%r12)
-  write32be(Buf + 16, 0x7d6903a6);                  // mtctr %r11
-  write32be(Buf + 20, 0xe84c0008);                  // ld %r2,8(%r12)
-  write32be(Buf + 24, 0xe96c0010);                  // ld %r11,16(%r12)
-  write32be(Buf + 28, 0x4e800420);                  // bctr
+  write32(Buf, 0xf8410028);                       // std %r2, 40(%r1)
+  write32(Buf + 4, 0x3d620000 | applyPPCHa(Off)); // addis %r11, %r2, X@ha
+  write32(Buf + 8, 0xe98b0000 | applyPPCLo(Off)); // ld %r12, X@l(%r11)
+  write32(Buf + 12, 0xe96c0000);                  // ld %r11,0(%r12)
+  write32(Buf + 16, 0x7d6903a6);                  // mtctr %r11
+  write32(Buf + 20, 0xe84c0008);                  // ld %r2,8(%r12)
+  write32(Buf + 24, 0xe96c0010);                  // ld %r11,16(%r12)
+  write32(Buf + 28, 0x4e800420);                  // bctr
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
@@ -152,58 +151,58 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     checkAlignment<4>(Loc, Val, Type);
     // Preserve the AA/LK bits in the branch instruction
     uint8_t AALK = Loc[3];
-    write16be(Loc + 2, (AALK & 3) | (Val & 0xfffc));
+    write16(Loc + 2, (AALK & 3) | (Val & 0xfffc));
     break;
   }
   case R_PPC64_ADDR16:
     checkInt<16>(Loc, Val, Type);
-    write16be(Loc, Val);
+    write16(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
     checkInt<16>(Loc, Val, Type);
-    write16be(Loc, (read16be(Loc) & 3) | (Val & ~3));
+    write16(Loc, (read16(Loc) & 3) | (Val & ~3));
     break;
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
-    write16be(Loc, applyPPCHa(Val));
+    write16(Loc, applyPPCHa(Val));
     break;
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
-    write16be(Loc, applyPPCHi(Val));
+    write16(Loc, applyPPCHi(Val));
     break;
   case R_PPC64_ADDR16_HIGHER:
-    write16be(Loc, applyPPCHigher(Val));
+    write16(Loc, applyPPCHigher(Val));
     break;
   case R_PPC64_ADDR16_HIGHERA:
-    write16be(Loc, applyPPCHighera(Val));
+    write16(Loc, applyPPCHighera(Val));
     break;
   case R_PPC64_ADDR16_HIGHEST:
-    write16be(Loc, applyPPCHighest(Val));
+    write16(Loc, applyPPCHighest(Val));
     break;
   case R_PPC64_ADDR16_HIGHESTA:
-    write16be(Loc, applyPPCHighesta(Val));
+    write16(Loc, applyPPCHighesta(Val));
     break;
   case R_PPC64_ADDR16_LO:
-    write16be(Loc, applyPPCLo(Val));
+    write16(Loc, applyPPCLo(Val));
     break;
   case R_PPC64_ADDR16_LO_DS:
   case R_PPC64_REL16_LO:
-    write16be(Loc, (read16be(Loc) & 3) | (applyPPCLo(Val) & ~3));
+    write16(Loc, (read16(Loc) & 3) | (applyPPCLo(Val) & ~3));
     break;
   case R_PPC64_ADDR32:
   case R_PPC64_REL32:
     checkInt<32>(Loc, Val, Type);
-    write32be(Loc, Val);
+    write32(Loc, Val);
     break;
   case R_PPC64_ADDR64:
   case R_PPC64_REL64:
   case R_PPC64_TOC:
-    write64be(Loc, Val);
+    write64(Loc, Val);
     break;
   case R_PPC64_REL24: {
     uint32_t Mask = 0x03FFFFFC;
     checkInt<24>(Loc, Val, Type);
-    write32be(Loc, (read32be(Loc) & ~Mask) | (Val & Mask));
+    write32(Loc, (read32(Loc) & ~Mask) | (Val & Mask));
     break;
   }
   default:

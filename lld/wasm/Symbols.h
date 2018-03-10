@@ -134,13 +134,8 @@ protected:
 
 class DefinedFunction : public FunctionSymbol {
 public:
-  // Primary constructor for file-defined functions.
   DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
                   InputFunction *Function);
-
-  // Second constructor used when creating synthetic functions.
-  DefinedFunction(StringRef Name, uint32_t Flags, const WasmSignature *Type)
-      : FunctionSymbol(Name, DefinedFunctionKind, Flags, nullptr, Type) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == DefinedFunctionKind;

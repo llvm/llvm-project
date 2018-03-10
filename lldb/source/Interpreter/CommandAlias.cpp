@@ -40,12 +40,17 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
     ExecutionContext exe_ctx =
         cmd_obj_sp->GetCommandInterpreter().GetExecutionContext();
     options->NotifyOptionParsingStarting(&exe_ctx);
-    args.Unshift(llvm::StringRef("dummy_arg"));
-    options_string = args.ParseAliasOptions(*options, result, option_arg_vector,
-                                            options_args);
-    args.Shift();
-    if (result.Succeeded())
-      options->VerifyPartialOptions(result);
+
+    llvm::Expected<Args> args_or =
+        options->ParseAlias(args, option_arg_vector, options_string);
+    if (!args_or) {
+      result.AppendError(toString(args_or.takeError()));
+      result.AppendError("Unable to create requested alias.\n");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+    args = std::move(*args_or);
+    options->VerifyPartialOptions(result);
     if (!result.Succeeded() &&
         result.GetStatus() != lldb::eReturnStatusStarted) {
       result.AppendError("Unable to create requested alias.\n");

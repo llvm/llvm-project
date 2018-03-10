@@ -218,6 +218,37 @@
 # PPC64-NEXT:   StringTableSectionIndex:
 # PPC64-NEXT: }
 
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %tppc64le
+# RUN: ld.lld -m elf64lppc %tppc64le -o %t2ppc64le
+# RUN: llvm-readobj -file-headers %t2ppc64le | FileCheck --check-prefix=PPC64LE %s
+# RUN: ld.lld %tppc64le -o %t3ppc64le
+# RUN: llvm-readobj -file-headers %t3ppc64le | FileCheck --check-prefix=PPC64LE %s
+# PPC64LE:      ElfHeader {
+# PPC64LE-NEXT:   Ident {
+# PPC64LE-NEXT:     Magic: (7F 45 4C 46)
+# PPC64LE-NEXT:     Class: 64-bit (0x2)
+# PPC64LE-NEXT:     DataEncoding: LittleEndian (0x1)
+# PPC64LE-NEXT:     FileVersion: 1
+# PPC64LE-NEXT:     OS/ABI: SystemV (0x0)
+# PPC64LE-NEXT:     ABIVersion: 0
+# PPC64LE-NEXT:     Unused: (00 00 00 00 00 00 00)
+# PPC64LE-NEXT:   }
+# PPC64LE-NEXT:   Type: Executable (0x2)
+# PPC64LE-NEXT:   Machine: EM_PPC64 (0x15)
+# PPC64LE-NEXT:   Version: 1
+# PPC64LE-NEXT:   Entry:
+# PPC64LE-NEXT:   ProgramHeaderOffset: 0x40
+# PPC64LE-NEXT:   SectionHeaderOffset:
+# PPC64LE-NEXT:   Flags [ (0x0)
+# PPC64LE-NEXT:   ]
+# PPC64LE-NEXT:   HeaderSize: 64
+# PPC64LE-NEXT:   ProgramHeaderEntrySize: 56
+# PPC64LE-NEXT:   ProgramHeaderCount:
+# PPC64LE-NEXT:   SectionHeaderEntrySize: 64
+# PPC64LE-NEXT:   SectionHeaderCount:
+# PPC64LE-NEXT:   StringTableSectionIndex:
+# PPC64LE-NEXT: }
+
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %tmips
 # RUN: ld.lld -m elf32btsmip -e _start %tmips -o %t2mips
 # RUN: llvm-readobj -file-headers %t2mips | FileCheck --check-prefix=MIPS %s

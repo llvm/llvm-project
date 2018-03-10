@@ -67,7 +67,7 @@ using namespace lldb_private;
 namespace {
 
 PropertyDefinition g_properties[] = {
-    {"modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
+    {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
      nullptr,
      "The path to the clang modules cache directory (-fmodules-cache-path)."},
     {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
@@ -77,7 +77,7 @@ enum { ePropertyClangModulesCachePath };
 } // namespace
 
 ModuleListProperties::ModuleListProperties() {
-  m_collection_sp.reset(new OptionValueProperties(ConstString("clang")));
+  m_collection_sp.reset(new OptionValueProperties(ConstString("symbols")));
   m_collection_sp->Initialize(g_properties);
 
   llvm::SmallString<128> path;
