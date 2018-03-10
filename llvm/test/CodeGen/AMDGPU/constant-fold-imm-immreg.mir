@@ -804,3 +804,30 @@ body:             |
     S_ENDPGM
 
 ...
+---
+# Make sure there is no crash if one of the operands is a physical register
+# GCN-LABEL: name: constant_fold_physreg_op{{$}}
+# GCN: %3:sreg_64 = S_AND_B64 $exec, 0, implicit-def dead $scc
+
+name: constant_fold_physreg_op
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %19:sreg_64 = IMPLICIT_DEF
+    %0:sreg_64 = SI_IF killed %19, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    %6:sreg_64 = S_MOV_B64 0
+    %7:sreg_64 = S_AND_B64 $exec, killed %6, implicit-def dead $scc
+    $vcc = COPY %7
+
+  bb.3:
+    liveins: $vcc
+    SI_END_CF %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_ENDPGM implicit $vcc
+
+...

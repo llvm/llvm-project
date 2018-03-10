@@ -10,9 +10,9 @@ for.body4:                                        ; preds = %for.body4, %entry
   %conv.4 = sitofp i32 %inp1 to double
   %conv.5 = sitofp i32 %inp1 to double
   %mul.4.v.i0.1 = insertelement <2 x double> undef, double %conv.4, i32 0
-  %mul.4.v.i0.2 = insertelement <2 x double> %mul.4.v.i0.1, double %conv.5, i32 1
-  %mul.4 = fmul <2 x double> %mul.4.v.i0.2, undef
-  %add7.4 = fadd <2 x double> undef, %mul.4
+  %v = insertelement <2 x double> %mul.4.v.i0.1, double %conv.5, i32 1
+  %vv = fmul <2 x double> %v, %v
+  %add7.4 = fadd <2 x double> %vv, %vv
   store <2 x double> %add7.4, <2 x double>* undef, align 16
   br i1 undef, label %for.end, label %for.body4
 

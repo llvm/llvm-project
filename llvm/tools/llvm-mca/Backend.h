@@ -70,7 +70,7 @@ public:
             this, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
             RegisterFileSize, MaxRetirePerCycle, DispatchWidth, HWS.get())),
         SM(Source), Cycles(0) {
-    IB = llvm::make_unique<InstrBuilder>(MCII, getProcResourceMasks());
+    IB = llvm::make_unique<InstrBuilder>(MCII, HWS->getProcResourceMasks());
   }
 
   void run() {
@@ -92,9 +92,6 @@ public:
   const llvm::MCSubtargetInfo &getSTI() const { return STI; }
   const llvm::MCSchedModel &getSchedModel() const {
     return STI.getSchedModel();
-  }
-  const llvm::ArrayRef<uint64_t> getProcResourceMasks() const {
-    return HWS->getProcResourceMasks();
   }
 
   double getRThroughput(const InstrDesc &ID) const {

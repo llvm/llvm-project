@@ -160,6 +160,46 @@ using namespace llvm;
   CASE_MASKZ_INS_COMMON(SHUFF##Inst, Z256, r##src##i) \
   CASE_MASKZ_INS_COMMON(SHUFI##Inst, Z256, r##src##i)
 
+#define CASE_AVX512_FMA(Inst, suf)                \
+  CASE_AVX512_INS_COMMON(Inst, Z, suf)            \
+  CASE_AVX512_INS_COMMON(Inst, Z256, suf)         \
+  CASE_AVX512_INS_COMMON(Inst, Z128, suf)
+
+#define CASE_FMA(Inst, suf)                       \
+  CASE_AVX512_FMA(Inst, suf)                      \
+  CASE_AVX_INS_COMMON(Inst, , suf)                \
+  CASE_AVX_INS_COMMON(Inst, Y, suf)
+
+#define CASE_FMA_PACKED_REG(Inst)                 \
+  CASE_FMA(Inst##PD, r)                           \
+  CASE_FMA(Inst##PS, r)
+
+#define CASE_FMA_PACKED_MEM(Inst)                 \
+  CASE_FMA(Inst##PD, m)                           \
+  CASE_FMA(Inst##PS, m)                           \
+  CASE_AVX512_FMA(Inst##PD, mb)                   \
+  CASE_AVX512_FMA(Inst##PS, mb)
+
+#define CASE_FMA_SCALAR_REG(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD, , r)              \
+  CASE_AVX_INS_COMMON(Inst##SS, , r)              \
+  CASE_AVX_INS_COMMON(Inst##SD, , r_Int)          \
+  CASE_AVX_INS_COMMON(Inst##SS, , r_Int)          \
+  CASE_AVX_INS_COMMON(Inst##SD, Z, r)             \
+  CASE_AVX_INS_COMMON(Inst##SS, Z, r)             \
+  CASE_AVX512_INS_COMMON(Inst##SD, Z, r_Int)      \
+  CASE_AVX512_INS_COMMON(Inst##SS, Z, r_Int)
+
+#define CASE_FMA_SCALAR_MEM(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD, , m)              \
+  CASE_AVX_INS_COMMON(Inst##SS, , m)              \
+  CASE_AVX_INS_COMMON(Inst##SD, , m_Int)          \
+  CASE_AVX_INS_COMMON(Inst##SS, , m_Int)          \
+  CASE_AVX_INS_COMMON(Inst##SD, Z, m)             \
+  CASE_AVX_INS_COMMON(Inst##SS, Z, m)             \
+  CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
+  CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
+
 static unsigned getVectorRegSize(unsigned RegNo) {
   if (X86::ZMM0 <= RegNo && RegNo <= X86::ZMM31)
     return 512;
@@ -232,6 +272,249 @@ static void printMasking(raw_ostream &OS, const MCInst *MI,
     OS << " {z}";
 }
 
+static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS,
+                              const char *(*getRegName)(unsigned)) {
+  const char *Mul1Name = nullptr, *Mul2Name = nullptr, *AccName = nullptr;
+  unsigned NumOperands = MI->getNumOperands();
+  bool RegForm = false;
+  bool Negate = false;
+  StringRef AccStr = "+";
+
+  // The operands for FMA instructions without rounding fall into two forms.
+  //  dest, src1, src2, src3
+  //  dest, src1, mask, src2, src3
+  // Where src3 is either a register or 5 memory address operands. So to find
+  // dest and src1 we can index from the front. To find src2 and src3 we can
+  // index from the end by taking into account memory vs register form when
+  // finding src2.
+
+  switch (MI->getOpcode()) {
+  default:
+    return false;
+  CASE_FMA_PACKED_REG(FMADD132)
+  CASE_FMA_SCALAR_REG(FMADD132)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMADD132)
+  CASE_FMA_SCALAR_MEM(FMADD132)
+    AccName = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    break;
+
+  CASE_FMA_PACKED_REG(FMADD213)
+  CASE_FMA_SCALAR_REG(FMADD213)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMADD213)
+  CASE_FMA_SCALAR_MEM(FMADD213)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul2Name = getRegName(MI->getOperand(1).getReg());
+    break;
+
+  CASE_FMA_PACKED_REG(FMADD231)
+  CASE_FMA_SCALAR_REG(FMADD231)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMADD231)
+  CASE_FMA_SCALAR_MEM(FMADD231)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    AccName = getRegName(MI->getOperand(1).getReg());
+    break;
+
+  CASE_FMA_PACKED_REG(FMSUB132)
+  CASE_FMA_SCALAR_REG(FMSUB132)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMSUB132)
+  CASE_FMA_SCALAR_MEM(FMSUB132)
+    AccName = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    break;
+
+  CASE_FMA_PACKED_REG(FMSUB213)
+  CASE_FMA_SCALAR_REG(FMSUB213)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMSUB213)
+  CASE_FMA_SCALAR_MEM(FMSUB213)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul2Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    break;
+
+  CASE_FMA_PACKED_REG(FMSUB231)
+  CASE_FMA_SCALAR_REG(FMSUB231)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMSUB231)
+  CASE_FMA_SCALAR_MEM(FMSUB231)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    AccName = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    break;
+
+  CASE_FMA_PACKED_REG(FNMADD132)
+  CASE_FMA_SCALAR_REG(FNMADD132)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FNMADD132)
+  CASE_FMA_SCALAR_MEM(FNMADD132)
+    AccName = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    Negate = true;
+    break;
+
+  CASE_FMA_PACKED_REG(FNMADD213)
+  CASE_FMA_SCALAR_REG(FNMADD213)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FNMADD213)
+  CASE_FMA_SCALAR_MEM(FNMADD213)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul2Name = getRegName(MI->getOperand(1).getReg());
+    Negate = true;
+    break;
+
+  CASE_FMA_PACKED_REG(FNMADD231)
+  CASE_FMA_SCALAR_REG(FNMADD231)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FNMADD231)
+  CASE_FMA_SCALAR_MEM(FNMADD231)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    AccName = getRegName(MI->getOperand(1).getReg());
+    Negate = true;
+    break;
+
+  CASE_FMA_PACKED_REG(FNMSUB132)
+  CASE_FMA_SCALAR_REG(FNMSUB132)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FNMSUB132)
+  CASE_FMA_SCALAR_MEM(FNMSUB132)
+    AccName = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    Negate = true;
+    break;
+
+  CASE_FMA_PACKED_REG(FNMSUB213)
+  CASE_FMA_SCALAR_REG(FNMSUB213)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FNMSUB213)
+  CASE_FMA_SCALAR_MEM(FNMSUB213)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul2Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    Negate = true;
+    break;
+
+  CASE_FMA_PACKED_REG(FNMSUB231)
+  CASE_FMA_SCALAR_REG(FNMSUB231)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FNMSUB231)
+  CASE_FMA_SCALAR_MEM(FNMSUB231)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    AccName = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    Negate = true;
+    break;
+
+  CASE_FMA_PACKED_REG(FMADDSUB132)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMADDSUB132)
+    AccName = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "+/-";
+    break;
+
+  CASE_FMA_PACKED_REG(FMADDSUB213)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMADDSUB213)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul2Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "+/-";
+    break;
+
+  CASE_FMA_PACKED_REG(FMADDSUB231)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMADDSUB231)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    AccName = getRegName(MI->getOperand(1).getReg());
+    AccStr = "+/-";
+    break;
+
+  CASE_FMA_PACKED_REG(FMSUBADD132)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMSUBADD132)
+    AccName = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-/+";
+    break;
+
+  CASE_FMA_PACKED_REG(FMSUBADD213)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMSUBADD213)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    Mul2Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-/+";
+    break;
+
+  CASE_FMA_PACKED_REG(FMSUBADD231)
+    Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+  CASE_FMA_PACKED_MEM(FMSUBADD231)
+    Mul1Name = getRegName(MI->getOperand(NumOperands-(RegForm?2:6)).getReg());
+    AccName = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-/+";
+    break;
+  }
+
+  const char *DestName = getRegName(MI->getOperand(0).getReg());
+
+  if (!Mul1Name) Mul1Name = "mem";
+  if (!Mul2Name) Mul2Name = "mem";
+  if (!AccName)  AccName = "mem";
+
+  OS << DestName << " = ";
+  // TODO: Print masking information?
+
+  if (Negate)
+    OS << '-';
+
+  OS << '(' << Mul1Name << " * " << Mul2Name << ") " << AccStr << ' '
+     << AccName;
+
+  return true;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Top Level Entrypoint
 //===----------------------------------------------------------------------===//
@@ -247,6 +530,9 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   const char *DestName = nullptr, *Src1Name = nullptr, *Src2Name = nullptr;
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
+
+  if (printFMA3Comments(MI, OS, getRegName))
+    return true;
 
   switch (MI->getOpcode()) {
   default:

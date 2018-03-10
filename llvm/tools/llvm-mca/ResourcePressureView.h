@@ -87,14 +87,13 @@ class ResourcePressureView : public View {
                                          unsigned Executions) const;
   void printResourcePressurePerInstruction(llvm::raw_ostream &OS,
                                            unsigned Executions) const;
-  void initialize(const llvm::ArrayRef<uint64_t> ProcResoureMasks);
+  void initialize();
 
 public:
   ResourcePressureView(const llvm::MCSubtargetInfo &ST,
-                       llvm::MCInstPrinter &Printer, const SourceMgr &SM,
-                       const llvm::ArrayRef<uint64_t> ProcResourceMasks)
+                       llvm::MCInstPrinter &Printer, const SourceMgr &SM)
       : STI(ST), MCIP(Printer), Source(SM) {
-    initialize(ProcResourceMasks);
+    initialize();
   }
 
   void onInstructionIssued(

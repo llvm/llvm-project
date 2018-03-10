@@ -1012,8 +1012,14 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       // [any flop] undef, undef -> undef
       if (isa<UndefValue>(C1) && isa<UndefValue>(C2))
         return C1;
-      // TODO: Handle one undef operand and some other constant.
-      return nullptr;
+      // [any flop] C, undef -> NaN
+      // [any flop] undef, C -> NaN
+      // We could potentially specialize NaN/Inf constants vs. 'normal'
+      // constants (possibly differently depending on opcode and operand). This
+      // would allow returning undef sometimes. But it is always safe to fold to
+      // NaN because we can choose the undef operand as NaN, and any FP opcode
+      // with a NaN operand will propagate NaN.
+      return ConstantFP::getNaN(C1->getType());
     case Instruction::BinaryOpsEnd:
       llvm_unreachable("Invalid BinaryOp");
     }
