@@ -843,6 +843,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::MOVPQI2QIrr:
   case X86::MOVZPQILo2PQIrr:
   case X86::VMOVPQI2QIrr:
+  case X86::VMOVPQI2QIZrr:
   case X86::VMOVZPQILo2PQIrr:
   case X86::VMOVZPQILo2PQIZrr:
     Src1Name = getRegName(MI->getOperand(1).getReg());

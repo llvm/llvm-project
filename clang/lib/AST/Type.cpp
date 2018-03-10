@@ -2214,11 +2214,14 @@ QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
     if (RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize())
       return PDIK_Struct;
 
-  Qualifiers::ObjCLifetime Lifetime = getQualifiers().getObjCLifetime();
-  if (Lifetime == Qualifiers::OCL_Strong)
+  switch (getQualifiers().getObjCLifetime()) {
+  case Qualifiers::OCL_Strong:
     return PDIK_ARCStrong;
-
-  return PDIK_Trivial;
+  case Qualifiers::OCL_Weak:
+    return PDIK_ARCWeak;
+  default:
+    return PDIK_Trivial;
+  }
 }
 
 QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
@@ -2228,15 +2231,30 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
       return PCK_Struct;
 
   Qualifiers Qs = getQualifiers();
-  if (Qs.getObjCLifetime() == Qualifiers::OCL_Strong)
+  switch (Qs.getObjCLifetime()) {
+  case Qualifiers::OCL_Strong:
     return PCK_ARCStrong;
-
-  return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
+  case Qualifiers::OCL_Weak:
+    return PCK_ARCWeak;
+  default:
+    return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
+  }
 }
 
 QualType::PrimitiveCopyKind
 QualType::isNonTrivialToPrimitiveDestructiveMove() const {
   return isNonTrivialToPrimitiveCopy();
+}
+
+bool QualType::canPassInRegisters() const {
+  if (const auto *RT =
+          getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
+    return RT->getDecl()->canPassInRegisters();
+
+  if (getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
+    return false;
+
+  return true;
 }
 
 bool Type::isLiteralType(const ASTContext &Ctx) const {
