@@ -1,5 +1,7 @@
 ; REQUIRES: arm-registered-target
 ; REQUIRES: asserts
+; Temporary hack: some bots have this file hanging around. Get rid of it.
+; RUN: rm -f %S/vecreduce-propagate-sd-flags.s
 ; RUN: llc -o /dev/null %s -debug-only=legalize-types 2>&1 | FileCheck %s
 
 ; This test check that when v4f64 gets broken down to two v2f64 it maintains

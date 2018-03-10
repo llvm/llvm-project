@@ -26,7 +26,11 @@
 // RUN: echo "interceptor_name:strcat" > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t
 
-// REQUIRES: (target-is-x86_64 || target-is-x86_64h) && !ios
+// This test when run with suppressions invokes undefined
+// behavior which can cause all sorts of bad things to happen
+// depending on how strcat() is implemented. For now only run
+// on platforms where we know the test passes.
+// REQUIRES: x86_64h-darwin || x86_64-darwin || i386-darwin || x86_64-linux || i386-linux
 // UNSUPPORTED: win32
 // UNSUPPORTED: android
 

@@ -28,7 +28,7 @@ define double @strict(double %e) nounwind {
 define double @fast(double %e) nounwind {
 ; CHECK-LABEL: fast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp sin@PLT # TAILCALL
+; CHECK-NEXT:    jmp sin # TAILCALL
   %f = fsub fast double 0.0, %e
   %g = call double @sin(double %f) readonly
   %h = fsub fast double 0.0, %g
@@ -40,7 +40,7 @@ define double @fast(double %e) nounwind {
 define double @nsz(double %e) nounwind {
 ; CHECK-LABEL: nsz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp sin@PLT # TAILCALL
+; CHECK-NEXT:    jmp sin # TAILCALL
   %f = fsub nsz double 0.0, %e
   %g = call double @sin(double %f) readonly
   %h = fsub nsz double 0.0, %g
@@ -88,7 +88,7 @@ define double @semi_strict2(double %e) nounwind {
 define double @fn_attr(double %e) nounwind #0 {
 ; CHECK-LABEL: fn_attr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp sin@PLT # TAILCALL
+; CHECK-NEXT:    jmp sin # TAILCALL
   %f = fsub double 0.0, %e
   %g = call double @sin(double %f) readonly
   %h = fsub double 0.0, %g

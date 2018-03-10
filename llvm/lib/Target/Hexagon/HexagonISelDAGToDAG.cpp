@@ -662,7 +662,7 @@ void HexagonDAGToDAGISel::SelectBitcast(SDNode *N) {
     return;
   }
 
-  ReplaceUses(SDValue(N, 0), N->getOperand(0));
+  CurDAG->ReplaceAllUsesOfValueWith(SDValue(N,0), N->getOperand(0));
   CurDAG->RemoveDeadNode(N);
 }
 
@@ -726,6 +726,7 @@ void HexagonDAGToDAGISel::SelectTypecast(SDNode *N) {
   SDNode *T = CurDAG->MorphNodeTo(N, N->getOpcode(),
                                   CurDAG->getVTList(OpTy), {Op});
   ReplaceNode(T, Op.getNode());
+  CurDAG->RemoveDeadNode(T);
 }
 
 void HexagonDAGToDAGISel::SelectP2D(SDNode *N) {
@@ -2184,3 +2185,4 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
   RootHeights.clear();
   RootWeights.clear();
 }
+
