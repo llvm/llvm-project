@@ -349,18 +349,15 @@ Value *getOrCreateDefaultLocation(Module *M) {
 
 llvm::OpenMPABI::OpenMPABI() {}
 
-/// \brief Get/Create the worker count for the spawning function.
-Value *llvm::OpenMPABI::GetOrCreateWorker8(Function &F) {
-  /*
-  // Value* W8 = F.getValueSymbolTable()->lookup(worker8_name);
-  // if (W8) return W8;
-  IRBuilder<> B(F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
-  Value *P0 = B.CreateCall(CILKRTS_FUNC(get_nworkers, *F.getParent()));
-  Value *P8 = B.CreateMul(P0, ConstantInt::get(P0->getType(), 8), worker8_name);
-  return P8;
-  */
-  assert(0 && "OpenMP for loop / worker count not supported");
-  return nullptr;
+/// \brief Lower a call to get the grainsize of this Tapir loop.
+Value *llvm::OpenMPABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
+  Value *Limit = GrainsizeCall->getArgOperand(0);
+  Module *M = GrainsizeCall->getModule();
+  IRBuilder<> Builder(GrainsizeCall);
+
+  Constant *StaticGrainsize = ConstantInt::get(Limit->getType(), 2048);
+  GrainsizeCall->replaceAllUsesWith(StaticGrainsize);
+  return StaticGrainsize;
 }
 
 void llvm::OpenMPABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {

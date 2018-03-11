@@ -1376,14 +1376,37 @@ static bool makeFunctionDetachable(
 
 CilkABI::CilkABI() {}
 
-/// \brief Get/Create the worker count for the spawning function.
-Value *CilkABI::GetOrCreateWorker8(Function &F) {
-  // Value* W8 = F.getValueSymbolTable()->lookup(worker8_name);
-  // if (W8) return W8;
-  IRBuilder<> B(F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
-  Value *P0 = B.CreateCall(CILKRTS_FUNC(get_nworkers, *F.getParent()));
-  Value *P8 = B.CreateMul(P0, ConstantInt::get(P0->getType(), 8), worker8_name);
-  return P8;
+/// \brief Lower a call to get the grainsize of this Tapir loop.
+///
+/// The grainsize is computed by the following equation:
+///
+///     Grainsize = min(2048, ceil(Limit / (8 * workers)))
+///
+/// This computation is inserted into the preheader of the loop.
+Value *CilkABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
+  Value *Limit = GrainsizeCall->getArgOperand(0);
+  Module *M = GrainsizeCall->getModule();
+  IRBuilder<> Builder(GrainsizeCall);
+
+  // Get 8 * workers
+  Value *Workers = Builder.CreateCall(CILKRTS_FUNC(get_nworkers, *M));
+  Value *WorkersX8 = Builder.CreateIntCast(
+      Builder.CreateMul(Workers, ConstantInt::get(Workers->getType(), 8)),
+      Limit->getType(), false);
+  // Compute ceil(limit / 8 * workers) =
+  //           (limit + 8 * workers - 1) / (8 * workers)
+  Value *SmallLoopVal =
+    Builder.CreateUDiv(Builder.CreateSub(Builder.CreateAdd(Limit, WorkersX8),
+                                         ConstantInt::get(Limit->getType(), 1)),
+                       WorkersX8);
+  // Compute min
+  Value *LargeLoopVal = ConstantInt::get(Limit->getType(), 2048);
+  Value *Cmp = Builder.CreateICmpULT(LargeLoopVal, SmallLoopVal);
+  Value *Grainsize = Builder.CreateSelect(Cmp, LargeLoopVal, SmallLoopVal);
+
+  // Replace uses of grainsize intrinsic call with this grainsize value.
+  GrainsizeCall->replaceAllUsesWith(Grainsize);
+  return Grainsize;
 }
 
 void CilkABI::createSync(SyncInst &SI,
@@ -1481,7 +1504,7 @@ static inline void inlineCilkFunctions(Function &F) {
           if (Fn->getName().startswith("__cilk")) {
             InlineFunctionInfo IFI;
             if (InlineFunction(Call, IFI)) {
-              if (Fn->getNumUses() == 0)
+              if (Fn->hasNUses(0))
                 Fn->eraseFromParent();
               Changed = true;
               break;

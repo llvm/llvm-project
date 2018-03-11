@@ -18,6 +18,7 @@
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 
 namespace llvm {
+class Value;
 
 /// CilkABILoopSpawning uses the Cilk Plus ABI to handle Tapir loops.
 class CilkABILoopSpawning : public LoopOutline {
@@ -51,7 +52,7 @@ protected:
 class CilkABI : public TapirTarget {
 public:
   CilkABI();
-  Value *GetOrCreateWorker8(Function &F) override final;
+  Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
   void createSync(SyncInst &inst, ValueToValueMapTy &DetachCtxToStackFrame)
     override final;
 

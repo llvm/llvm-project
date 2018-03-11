@@ -469,38 +469,17 @@ void LoopOutline::unlinkLoop() {
 }
 
 /// \brief Compute the grainsize of the loop, based on the limit.
-///
-/// The grainsize is computed by the following equation:
-///
-///     Grainsize = min(2048, ceil(Limit / (8 * workers)))
-///
-/// This computation is inserted into the preheader of the loop.
-///
-/// TODO: This method is the only method that depends on the CilkABI.
-/// Generalize this method for other grainsize calculations and to query TLI.
 Value* DACLoopSpawning::computeGrainsize(Value *Limit) {
   Loop *L = OrigLoop;
 
-  Value *Grainsize;
   BasicBlock *Preheader = L->getLoopPreheader();
   assert(Preheader && "No Preheader found for loop.");
-
+  Module *M = Preheader->getModule();
   IRBuilder<> Builder(Preheader->getTerminator());
 
-  // Get 8 * workers
-  Value *Workers8 = Builder.CreateIntCast(tapirTarget->GetOrCreateWorker8(*Preheader->getParent()),
-                                          Limit->getType(), false);
-  // Compute ceil(limit / 8 * workers) = (limit + 8 * workers - 1) / (8 * workers)
-  Value *SmallLoopVal =
-    Builder.CreateUDiv(Builder.CreateSub(Builder.CreateAdd(Limit, Workers8),
-                                         ConstantInt::get(Limit->getType(), 1)),
-                       Workers8);
-  // Compute min
-  Value *LargeLoopVal = ConstantInt::get(Limit->getType(), 2048);
-  Value *Cmp = Builder.CreateICmpULT(LargeLoopVal, SmallLoopVal);
-  Grainsize = Builder.CreateSelect(Cmp, LargeLoopVal, SmallLoopVal);
-
-  return Grainsize;
+  return Builder.CreateCall(
+      Intrinsic::getDeclaration(M, Intrinsic::tapir_loop_grainsize,
+                                { Limit->getType() }), { Limit });
 }
 
 /// \brief Method to help convertLoopToDACIterSpawn convert the Tapir
@@ -1237,9 +1216,7 @@ bool DACLoopSpawning::processLoop() {
   {
     // Collect reattach instructions.
     SmallVector<Instruction *, 4> ReattachPoints;
-    for (pred_iterator PI = pred_begin(Latch), PE = pred_end(Latch);
-         PI != PE; ++PI) {
-      BasicBlock *Pred = *PI;
+    for (BasicBlock *Pred : predecessors(Latch)) {
       if (!isa<ReattachInst>(Pred->getTerminator())) continue;
       if (L->contains(Pred))
         ReattachPoints.push_back(cast<BasicBlock>(VMap[Pred])->getTerminator());

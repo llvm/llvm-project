@@ -308,9 +308,7 @@ Function *llvm::extractDetachBodyToFunction(
   for (BasicBlock *BB : FunctionPieces) {
     DEBUG(dbgs() << *BB);
     if (ExitBlocks.count(BB)) continue;
-    for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-      BasicBlock *Pred = *PI;
-
+    for (BasicBlock *Pred : predecessors(BB)) {
       if (Pred == Detach.getParent()) {
         // Verify the CFG structure of the entry block of the detached task.
         assert(BB == Detached &&
@@ -499,7 +497,14 @@ Function *llvm::extractDetachBodyToFunction(
 bool TapirTarget::shouldProcessFunction(const Function &F) {
   if (F.getName() == "main")
     return true;
+
   if (canDetach(&F))
     return true;
+
+  for (const Instruction &I : instructions(&F))
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+      if (Intrinsic::tapir_loop_grainsize == II->getIntrinsicID())
+        return true;
+
   return false;
 }

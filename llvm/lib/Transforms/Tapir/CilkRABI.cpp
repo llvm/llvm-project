@@ -851,9 +851,8 @@ static Function *GetCilkParentEpilogue(Module &M) {
     Value *Flags = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
                                 StackFrameBuilder::flags, /*isVolatile=*/false,
                                 AtomicOrdering::Acquire);
-    Value *Cond = B.CreateICmpNE(Flags,
-                                 ConstantInt::get(Flags->getType(),
-                                                  CILK_FRAME_VERSION));
+    Value *Cond = B.CreateICmpNE(
+        Flags, ConstantInt::get(Flags->getType(), CILK_FRAME_VERSION));
     B.CreateCondBr(Cond, B1, Exit);
   }
 
@@ -900,43 +899,36 @@ static AllocaInst *CreateStackFrame(Function &F) {
   return SF;
 }
 
-Value* GetOrInitCilkStackFrame(Function &F,
-                               ValueToValueMapTy &DetachCtxToStackFrame,
-                               bool Helper = true) {
-  Value *V = DetachCtxToStackFrame[&F];
-  if (V) return V;
+static Value* GetOrInitCilkStackFrame(
+    Function &F, ValueToValueMapTy &DetachCtxToStackFrame, bool Helper = true) {
+  if (Value *V = DetachCtxToStackFrame[&F])
+    return V;
 
-  AllocaInst* alloc = CreateStackFrame(F);
-  DetachCtxToStackFrame[&F] = alloc;
-  BasicBlock::iterator II = F.getEntryBlock().getFirstInsertionPt();
-  AllocaInst* curinst;
-  do {
-    curinst = dyn_cast<AllocaInst>(II);
-    II++;
-  } while (curinst != alloc);
-  IRBuilder<> IRB(&(F.getEntryBlock()), II);
+  Module *M = F.getParent();
 
-  Value *args[1] = { alloc };
+  AllocaInst *SF = CreateStackFrame(F);
+  DetachCtxToStackFrame[&F] = SF;
+  BasicBlock::iterator InsertPt = ++SF->getIterator();
+  IRBuilder<> IRB(&(F.getEntryBlock()), InsertPt);
+
+  Value *args[1] = { SF };
   if (Helper)
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast, *F.getParent()), args);
+    IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast, *M), args);
   else
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame, *F.getParent()), args);
-  /* inst->insertAfter(alloc); */
+    IRB.CreateCall(CILKRTS_FUNC(enter_frame, *M), args);
 
   EscapeEnumerator EE(F, "cilkabi_epilogue", false);
   while (IRBuilder<> *AtExit = EE.Next()) {
     if (isa<ReturnInst>(AtExit->GetInsertPoint()))
-      AtExit->CreateCall(GetCilkParentEpilogue(*F.getParent()),
-                         args, "");
+      AtExit->CreateCall(GetCilkParentEpilogue(*M), args, "");
   }
-  return alloc;
+  return SF;
 }
 
-static inline
-bool makeFunctionDetachable(Function &extracted,
-                            ValueToValueMapTy &DetachCtxToStackFrame) {
-  Module *M = extracted.getParent();
-  // LLVMContext& Context = extracted.getContext();
+static bool makeFunctionDetachable(Function &Extracted,
+                                   ValueToValueMapTy &DetachCtxToStackFrame) {
+  Module *M = Extracted.getParent();
+  // LLVMContext& Context = Extracted.getContext();
   // const DataLayout& DL = M->getDataLayout();
   /*
     __cilkrts_stack_frame sf;
@@ -945,42 +937,29 @@ bool makeFunctionDetachable(Function &extracted,
     *x = f(y);
   */
 
-  Value *SF = CreateStackFrame(extracted);
-  DetachCtxToStackFrame[&extracted] = SF;
+  AllocaInst *SF = CreateStackFrame(Extracted);
+  DetachCtxToStackFrame[&Extracted] = SF;
   assert(SF);
   Value *args[1] = { SF };
 
   // Scan function to see if it detaches.
-  bool SimpleHelper = true;
-  for (BasicBlock &BB : extracted) {
-    if (isa<DetachInst>(BB.getTerminator())) {
-      SimpleHelper = false;
-      break;
-    }
-  }
-  if (!SimpleHelper)
-    DEBUG(dbgs() << "Detachable helper function itself detaches.\n");
+  DEBUG({
+      bool SimpleHelper = !canDetach(&Extracted);
+      if (!SimpleHelper)
+        dbgs() << "NOTE: Detachable helper function itself detaches.\n";
+    });
 
-  BasicBlock::iterator II = extracted.getEntryBlock().getFirstInsertionPt();
-  AllocaInst* curinst;
-  do {
-    curinst = dyn_cast<AllocaInst>(II);
-    II++;
-  } while (curinst != SF);
-  // Value *StackSave;
-  IRBuilder<> IRB(&(extracted.getEntryBlock()), II);
+  BasicBlock::iterator InsertPt = ++SF->getIterator();
+  IRBuilder<> IRB(&(Extracted.getEntryBlock()), InsertPt);
 
-  if (SimpleHelper)
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast, *M), args);
-  else
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame, *M), args);
+  IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast, *M), args);
 
   // Call __cilkrts_detach
   {
     IRB.CreateCall(CILKRTS_FUNC(detach, *M), args);
   }
 
-  EscapeEnumerator EE(extracted, "cilkrabi_epilogue", false);
+  EscapeEnumerator EE(Extracted, "cilkrabi_epilogue", false);
   while (IRBuilder<> *AtExit = EE.Next()) {
     if (isa<ReturnInst>(AtExit->GetInsertPoint()))
       AtExit->CreateCall(GetCilkParentEpilogue(*M), args, "");
@@ -1018,18 +997,39 @@ bool makeFunctionDetachable(Function &extracted,
   return true;
 }
 
-//##############################################################################
-
 CilkRABI::CilkRABI() {}
 
-/// \brief Get/Create the worker count for the spawning function.
-Value *CilkRABI::GetOrCreateWorker8(Function &F) {
-  // Value* W8 = F.getValueSymbolTable()->lookup(worker8_name);
-  // if (W8) return W8;
-  IRBuilder<> B(F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
-  Value *P0 = B.CreateCall(CILKRTS_FUNC(get_nworkers, *F.getParent()));
-  Value *P8 = B.CreateMul(P0, ConstantInt::get(P0->getType(), 8), worker8_name);
-  return P8;
+/// \brief Lower a call to get the grainsize of this Tapir loop.
+///
+/// The grainsize is computed by the following equation:
+///
+///     Grainsize = min(2048, ceil(Limit / (8 * workers)))
+///
+/// This computation is inserted into the preheader of the loop.
+Value *CilkRABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
+  Value *Limit = GrainsizeCall->getArgOperand(0);
+  Module *M = GrainsizeCall->getModule();
+  IRBuilder<> Builder(GrainsizeCall);
+
+  // Get 8 * workers
+  Value *Workers = Builder.CreateCall(CILKRTS_FUNC(get_nworkers, *M));
+  Value *WorkersX8 = Builder.CreateIntCast(
+      Builder.CreateMul(Workers, ConstantInt::get(Workers->getType(), 8)),
+      Limit->getType(), false);
+  // Compute ceil(limit / 8 * workers) =
+  //           (limit + 8 * workers - 1) / (8 * workers)
+  Value *SmallLoopVal =
+    Builder.CreateUDiv(Builder.CreateSub(Builder.CreateAdd(Limit, WorkersX8),
+                                         ConstantInt::get(Limit->getType(), 1)),
+                       WorkersX8);
+  // Compute min
+  Value *LargeLoopVal = ConstantInt::get(Limit->getType(), 2048);
+  Value *Cmp = Builder.CreateICmpULT(LargeLoopVal, SmallLoopVal);
+  Value *Grainsize = Builder.CreateSelect(Cmp, LargeLoopVal, SmallLoopVal);
+
+  // Replace uses of grainsize intrinsic call with this grainsize value.
+  GrainsizeCall->replaceAllUsesWith(Grainsize);
+  return Grainsize;
 }
 
 void CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
@@ -1039,7 +1039,7 @@ void CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame
   Value *SF = GetOrInitCilkStackFrame(Fn, DetachCtxToStackFrame,
                                       /*isFast*/false);
   Value *args[] = { SF };
-  assert( args[0] && "sync used in function without frame!" );
+  assert(args[0] && "sync used in function without frame!");
   CallInst *CI = CallInst::Create(GetCilkSyncFn(M), args, "",
                                   /*insert before*/&SI);
   CI->setDebugLoc(SI.getDebugLoc());
@@ -1050,14 +1050,14 @@ void CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame
   Fn.addFnAttr(Attribute::Stealable);
 }
 
-Function *CilkRABI::createDetach(DetachInst &detach,
+Function *CilkRABI::createDetach(DetachInst &Detach,
                                  ValueToValueMapTy &DetachCtxToStackFrame,
                                  DominatorTree &DT, AssumptionCache &AC) {
-  BasicBlock *detB = detach.getParent();
-  Function &F = *(detB->getParent());
+  BasicBlock *Detacher = Detach.getParent();
+  Function &F = *(Detacher->getParent());
 
-  BasicBlock *Spawned  = detach.getDetached();
-  BasicBlock *Continue = detach.getContinue();
+  BasicBlock *Detached = Detach.getDetached();
+  BasicBlock *Continue = Detach.getContinue();
 
   Module *M = F.getParent();
   //replace with branch to succesor
@@ -1067,7 +1067,7 @@ Function *CilkRABI::createDetach(DetachInst &detach,
   assert(SF && "null stack frame unexpected");
 
   Instruction *CallSite = nullptr;
-  Function *Extracted = extractDetachBodyToFunction(detach, DT, AC, &CallSite);
+  Function *Extracted = extractDetachBodyToFunction(Detach, DT, AC, &CallSite);
   assert(Extracted && "could not extract detach body to function");
 
   // Unlink the detached CFG in the original function.  The heavy lifting of
@@ -1075,16 +1075,7 @@ Function *CilkRABI::createDetach(DetachInst &detach,
 
   // Replace the detach with a branch to the continuation.
   BranchInst *ContinueBr = BranchInst::Create(Continue);
-  ReplaceInstWithInst(&detach, ContinueBr);
-
-  // Rewrite phis in the detached block.
-  {
-    BasicBlock::iterator BI = Spawned->begin();
-    while (PHINode *P = dyn_cast<PHINode>(BI)) {
-      P->removeIncomingValue(detB);
-      ++BI;
-    }
-  }
+  ReplaceInstWithInst(&Detach, ContinueBr);
 
   Value *SetJmpRes;
   {
@@ -1095,14 +1086,14 @@ Function *CilkRABI::createDetach(DetachInst &detach,
   // Conditionally call the new helper function based on the result of the
   // setjmp.
   {
-    BasicBlock *CallBlock = SplitBlock(detB, CallSite, &DT);
+    BasicBlock *CallBlock = SplitBlock(Detacher, CallSite, &DT);
     BasicBlock *CallCont = SplitBlock(CallBlock,
                                       CallBlock->getTerminator(), &DT);
-    IRBuilder<> B(detB->getTerminator());
+    IRBuilder<> B(Detacher->getTerminator());
     SetJmpRes = B.CreateICmpEQ(SetJmpRes,
                                ConstantInt::get(SetJmpRes->getType(), 0));
     B.CreateCondBr(SetJmpRes, CallBlock, CallCont);
-    detB->getTerminator()->eraseFromParent();
+    Detacher->getTerminator()->eraseFromParent();
   }
 
   // Mark this function as stealable.
@@ -1117,27 +1108,25 @@ Function *CilkRABI::createDetach(DetachInst &detach,
 // functions when possible.  This inlining is necessary to properly implement
 // some Cilk runtime "calls," such as __cilkrts_detach().
 static inline void inlineCilkFunctions(Function &F) {
-  bool inlining = true;
-  while (inlining) {
-    inlining = false;
-    for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
-      if (CallInst *cal = dyn_cast<CallInst>(&*I))
-        if (Function *fn = cal->getCalledFunction())
-          if (fn->getName().startswith("__cilk")) {
+  bool Changed;
+  do {
+    Changed = false;
+    for (Instruction &I : instructions(F))
+      if (CallInst *Call = dyn_cast<CallInst>(&I))
+        if (Function *Fn = Call->getCalledFunction())
+          if (Fn->getName().startswith("__cilk")) {
             InlineFunctionInfo IFI;
-            if (InlineFunction(cal, IFI)) {
-              if (fn->getNumUses()==0)
-                fn->eraseFromParent();
-              inlining = true;
+            if (InlineFunction(Call, IFI)) {
+              if (Fn->hasNUses(0))
+                Fn->eraseFromParent();
+              Changed = true;
               break;
             }
           }
-  }
+  } while (Changed);
 
-  if (verifyFunction(F, &errs())) {
-    DEBUG(F.dump());
-    assert(0);
-  }
+  if (verifyFunction(F, &errs()))
+    llvm_unreachable("Tapir->CilkABI lowering produced bad IR!");
 }
 
 void CilkRABI::preProcessFunction(Function &F) {

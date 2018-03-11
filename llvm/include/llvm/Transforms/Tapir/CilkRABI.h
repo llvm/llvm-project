@@ -17,11 +17,12 @@
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 
 namespace llvm {
+class Value;
 
 class CilkRABI : public TapirTarget {
 public:
   CilkRABI();
-  Value *GetOrCreateWorker8(Function &F) override final;
+  Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
   void createSync(SyncInst &inst, ValueToValueMapTy &DetachCtxToStackFrame)
     override final;
 

@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 
 namespace llvm {
+class Value;
 
 enum OpenMPRuntimeFunction {
   OMPRTL__kmpc_fork_call,
@@ -38,7 +39,7 @@ enum OpenMPSchedType {
 class OpenMPABI : public TapirTarget {
 public:
 OpenMPABI();
-Value *GetOrCreateWorker8(Function &F) override final;
+Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
 void createSync(SyncInst &inst, ValueToValueMapTy &DetachCtxToStackFrame) override final;
 
 Function *createDetach(DetachInst &Detach,
