@@ -5081,6 +5081,20 @@ static SDValue insert256BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
   return insertSubVector(Result, Vec, IdxVal, DAG, dl, 256);
 }
 
+/// Widen a vector to a larger size with the same scalar type, with the new
+/// elements either zero or undef.
+static SDValue widenSubVector(MVT VT, SDValue Vec, bool ZeroNewElements,
+                              const X86Subtarget &Subtarget, SelectionDAG &DAG,
+                              const SDLoc &dl) {
+  assert(Vec.getValueSizeInBits() < VT.getSizeInBits() &&
+         Vec.getValueType().getScalarType() == VT.getScalarType() &&
+         "Unsupported vector widening type");
+  SDValue Res = ZeroNewElements ? getZeroVector(VT, Subtarget, DAG, dl)
+                                : DAG.getUNDEF(VT);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT, Res, Vec,
+                     DAG.getIntPtrConstant(0, dl));
+}
+
 // Helper for splitting operands of a binary operation to legal target size and
 // apply a function on each part.
 // Useful for operations that are available on SSE2 in 128-bit, on AVX2 in
@@ -7930,9 +7944,7 @@ SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
   if (SrcVec.getValueSizeInBits() > VT.getSizeInBits())
     return SDValue();
   else if (SrcVec.getValueSizeInBits() < VT.getSizeInBits())
-    SrcVec =
-        DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(SrcVec), VT, DAG.getUNDEF(VT),
-                    SrcVec, DAG.getIntPtrConstant(0, SDLoc(SrcVec)));
+    SrcVec = widenSubVector(VT, SrcVec, false, Subtarget, DAG, SDLoc(SrcVec));
 
   auto ScaleIndices = [&DAG](SDValue Idx, uint64_t Scale) {
     assert(isPowerOf2_64(Scale) && "Illegal variable permute shuffle scale");
@@ -8023,22 +8035,41 @@ SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
   case MVT::v8i32:
     if (Subtarget.hasAVX2())
       Opcode = X86ISD::VPERMV;
-    else if (Subtarget.hasXOP()) {
+    else if (Subtarget.hasAVX()) {
       SrcVec = DAG.getBitcast(MVT::v8f32, SrcVec);
       SDValue LoLo = DAG.getVectorShuffle(MVT::v8f32, DL, SrcVec, SrcVec,
                                           {0, 1, 2, 3, 0, 1, 2, 3});
       SDValue HiHi = DAG.getVectorShuffle(MVT::v8f32, DL, SrcVec, SrcVec,
                                           {4, 5, 6, 7, 4, 5, 6, 7});
-      return DAG.getBitcast(VT, DAG.getNode(X86ISD::VPERMIL2, DL, MVT::v8f32,
-                                            LoLo, HiHi, IndicesVec,
-                                            DAG.getConstant(0, DL, MVT::i8)));
+      if (Subtarget.hasXOP())
+        return DAG.getBitcast(VT, DAG.getNode(X86ISD::VPERMIL2, DL, MVT::v8f32,
+                                              LoLo, HiHi, IndicesVec,
+                                              DAG.getConstant(0, DL, MVT::i8)));
+      // Permute Lo and Hi and then select based on index range.
+      // This works as VPERMILPS only uses index bits[0:1] to permute elements.
+      SDValue Res = DAG.getSelectCC(
+          DL, IndicesVec, DAG.getConstant(3, DL, MVT::v8i32),
+          DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v8f32, HiHi, IndicesVec),
+          DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v8f32, LoLo, IndicesVec),
+          ISD::CondCode::SETGT);
+      return DAG.getBitcast(VT, Res);
     }
     break;
   case MVT::v4i64:
   case MVT::v4f64:
-    if (Subtarget.hasVLX())
+    if (Subtarget.hasAVX512()) {
+      if (!Subtarget.hasVLX()) {
+        MVT WidenSrcVT = MVT::getVectorVT(VT.getScalarType(), 8);
+        SrcVec = widenSubVector(WidenSrcVT, SrcVec, false, Subtarget, DAG,
+                                SDLoc(SrcVec));
+        IndicesVec = widenSubVector(MVT::v8i64, IndicesVec, false, Subtarget,
+                                    DAG, SDLoc(IndicesVec));
+        SDValue Res = createVariablePermute(WidenSrcVT, SrcVec, IndicesVec, DL,
+                                            DAG, Subtarget);
+        return extract256BitVector(Res, 0, DAG, DL);
+      }
       Opcode = X86ISD::VPERMV;
-    else if (Subtarget.hasXOP()) {
+    } else if (Subtarget.hasAVX()) {
       SrcVec = DAG.getBitcast(MVT::v4f64, SrcVec);
       SDValue LoLo =
           DAG.getVectorShuffle(MVT::v4f64, DL, SrcVec, SrcVec, {0, 1, 0, 1});
@@ -8046,12 +8077,18 @@ SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
           DAG.getVectorShuffle(MVT::v4f64, DL, SrcVec, SrcVec, {2, 3, 2, 3});
       // VPERMIL2PD selects with bit#1 of the index vector, so scale IndicesVec.
       IndicesVec = DAG.getNode(ISD::ADD, DL, IndicesVT, IndicesVec, IndicesVec);
-      return DAG.getBitcast(VT, DAG.getNode(X86ISD::VPERMIL2, DL, MVT::v4f64,
-                                            LoLo, HiHi, IndicesVec,
-                                            DAG.getConstant(0, DL, MVT::i8)));
-    } else if (Subtarget.hasAVX2()) {
-      Opcode = X86ISD::VPERMV;
-      ShuffleVT = MVT::v8f32;
+      if (Subtarget.hasXOP())
+        return DAG.getBitcast(VT, DAG.getNode(X86ISD::VPERMIL2, DL, MVT::v4f64,
+                                              LoLo, HiHi, IndicesVec,
+                                              DAG.getConstant(0, DL, MVT::i8)));
+      // Permute Lo and Hi and then select based on index range.
+      // This works as VPERMILPD only uses index bit[1] to permute elements.
+      SDValue Res = DAG.getSelectCC(
+          DL, IndicesVec, DAG.getConstant(2, DL, MVT::v4i64),
+          DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v4f64, HiHi, IndicesVec),
+          DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v4f64, LoLo, IndicesVec),
+          ISD::CondCode::SETGT);
+      return DAG.getBitcast(VT, Res);
     }
     break;
   case MVT::v64i8:
@@ -8612,12 +8649,8 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
   // of a node with instruction that zeroes all upper (irrelevant) bits of the
   // output register, mark it as legal and catch the pattern in instruction
   // selection to avoid emitting extra instructions (for zeroing upper bits).
-  if (SDValue Promoted = isTypePromotionOfi1ZeroUpBits(Op)) {
-    SDValue ZeroC = DAG.getIntPtrConstant(0, dl);
-    SDValue AllZeros = getZeroVector(ResVT, Subtarget, DAG, dl);
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, AllZeros, Promoted,
-                       ZeroC);
-  }
+  if (SDValue Promoted = isTypePromotionOfi1ZeroUpBits(Op))
+    return widenSubVector(ResVT, Promoted, true, Subtarget, DAG, dl);
 
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
