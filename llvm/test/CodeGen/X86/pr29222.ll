@@ -10,11 +10,9 @@ define i32 @PR29222(i32) nounwind {
 ; X86-SSE-NEXT:    pushl %ebp
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-8, %esp
-; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; X86-SSE-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movq {{[0-9]+}}(%esp), %mm0
+; X86-SSE-NEXT:    subl $8, %esp
+; X86-SSE-NEXT:    movd 8(%ebp), %mm0
+; X86-SSE-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-SSE-NEXT:    packsswb %mm0, %mm0
 ; X86-SSE-NEXT:    movq %mm0, (%esp)
 ; X86-SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -29,10 +27,9 @@ define i32 @PR29222(i32) nounwind {
 ; X86-AVX-NEXT:    pushl %ebp
 ; X86-AVX-NEXT:    movl %esp, %ebp
 ; X86-AVX-NEXT:    andl $-8, %esp
-; X86-AVX-NEXT:    subl $16, %esp
-; X86-AVX-NEXT:    vbroadcastss 8(%ebp), %xmm0
-; X86-AVX-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movq {{[0-9]+}}(%esp), %mm0
+; X86-AVX-NEXT:    subl $8, %esp
+; X86-AVX-NEXT:    movd 8(%ebp), %mm0
+; X86-AVX-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-AVX-NEXT:    packsswb %mm0, %mm0
 ; X86-AVX-NEXT:    movq %mm0, (%esp)
 ; X86-AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
@@ -44,10 +41,8 @@ define i32 @PR29222(i32) nounwind {
 ;
 ; X64-SSE-LABEL: PR29222:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movd %edi, %xmm0
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; X64-SSE-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
+; X64-SSE-NEXT:    movd %edi, %mm0
+; X64-SSE-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X64-SSE-NEXT:    packsswb %mm0, %mm0
 ; X64-SSE-NEXT:    movq2dq %mm0, %xmm0
 ; X64-SSE-NEXT:    packsswb %xmm0, %xmm0
@@ -56,10 +51,8 @@ define i32 @PR29222(i32) nounwind {
 ;
 ; X64-AVX-LABEL: PR29222:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovd %edi, %xmm0
-; X64-AVX-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-AVX-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
+; X64-AVX-NEXT:    movd %edi, %mm0
+; X64-AVX-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X64-AVX-NEXT:    packsswb %mm0, %mm0
 ; X64-AVX-NEXT:    movq2dq %mm0, %xmm0
 ; X64-AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
