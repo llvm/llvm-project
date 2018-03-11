@@ -165,46 +165,6 @@ public:
   }
 };
 
-// /// CilkSpawnExpr - Wrapper for expressions whose evaluation is spawned.
-// ///
-// class CilkSpawnExpr : public Expr {
-//   SourceLocation SpawnLoc;
-//   Expr *SpawnedExpr;
-
-// public:
-//   CilkSpawnExpr(Expr *SpawnedExpr, SourceLocation SpawnLoc)
-//       : Expr(CilkSpawnExprClass, SpawnedExpr->getType(),
-//              SpawnedExpr->getValueKind(), SpawnedExpr->getObjectKind(),
-//              SpawnedExpr->isTypeDependent(), SpawnedExpr->isValueDependent(),
-//              SpawnedExpr->isInstantiationDependen(),
-//              SpawnedExpr->containsUnexpandedParameterPack()),
-//         SpawnedExpr(SpawnedExpr), SpawnLoc(SpawnLoc) {
-//   }
-
-//   const Expr *getSpawnedExpr() const;
-//   Expr *getSpawnedExpr();
-//   void setSpawnedExpr(Expr *E) { SpawnedExpr = E; }
-
-//   SourceLocation getSpawnLoc() const { return SpawnLoc; }
-//   void setSpawnLoc(SourceLocation L) { SpawnLoc = L; }
-
-//   SourceLocation getLocStart() const LLVM_READONLY {
-//     return SpawnedExpr->getLocStart();
-//   }
-//   SourceLocation getLocEnd() const LLVM_READONLY {
-//     return SpawnedExpr->getLocEnd();
-//   }
-
-//   static bool classof(const Stmt *T) {
-//     return T->getStmtClass() == CilkSpawnExprClass;
-//   }
-
-//   // Iterators
-//   child_range children() {
-//     return child_range(child_iterator(), child_iterator());
-//   }
-// };
-
 }  // end namespace clang
 
 #endif

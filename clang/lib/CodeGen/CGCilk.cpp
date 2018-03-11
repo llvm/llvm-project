@@ -28,16 +28,6 @@ static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
   delete BB;
 }
 
-CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
-    : CGF(CGF) {
-  assert(!CGF->IsSanitizerScope);
-  CGF->IsSanitizerScope = true;
-}
-
-CodeGenFunction::SanitizerScope::~SanitizerScope() {
-  CGF->IsSanitizerScope = false;
-}
-
 CodeGenFunction::IsSpawnedScope::IsSpawnedScope(CodeGenFunction *CGF)
     : CGF(CGF), OldIsSpawned(CGF->IsSpawned) {
   CGF->IsSpawned = false;
