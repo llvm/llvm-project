@@ -45,10 +45,13 @@ class Instruction;
 class DetachAccess;
 class LLVMContext;
 class raw_ostream;
+
 namespace DSSAHelpers {
+
 struct AllAccessTag {};
 struct DefsOnlyTag {};
-}
+
+} // end namespace DSSAHelpers
 
 enum {
   // Used to signify what the default invalid ID is for DetachAccess's
@@ -92,8 +95,8 @@ public:
   void dump() const;
 
   /// \brief The user iterators for a detach access
-  typedef user_iterator iterator;
-  typedef const_user_iterator const_iterator;
+  using iterator = user_iterator;
+  using const_iterator = const_user_iterator;
 
   /// \brief This iterator walks over all of the defs in a given
   /// DetachAccess. For DetachPhi nodes, this walks arguments. For
@@ -131,11 +134,11 @@ public:
   }
 
 protected:
-  friend class DetachSSA;
-  friend class DetachUseOrDef;
-  friend class DetachUse;
   friend class DetachDef;
   friend class DetachPhi;
+  friend class DetachSSA;
+  friend class DetachUse;
+  friend class DetachUseOrDef;
 
   /// \brief Used by DetachSSA to change the block of a DetachAccess when it is
   /// moved.
@@ -168,7 +171,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DetachAccess &DA) {
 /// DetachDef instead.
 class DetachUseOrDef : public DetachAccess {
 public:
-  void *operator new(size_t, unsigned) = delete;
   void *operator new(size_t) = delete;
 
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(DetachAccess);
@@ -196,11 +198,13 @@ public:
 
 protected:
   friend class DetachSSA;
+
   DetachUseOrDef(LLVMContext &C, DetachAccess *DDA, unsigned Vty,
                  DeleteValueTy DeleteValue, Instruction *TI, BasicBlock *BB)
       : DetachAccess(C, Vty, DeleteValue, BB, 1), DAInst(TI) {
     setDefiningAccess(DDA);
   }
+
   void setDefiningAccess(DetachAccess *DDA, bool Optimized = false) {
     if (!Optimized) {
       setOperand(0, DDA);
@@ -229,7 +233,6 @@ public:
 
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
-  void *operator new(size_t, unsigned) = delete;
 
   static inline bool classof(const Value *DA) {
     return DA->getValueID() == DetachUseVal;
@@ -337,12 +340,10 @@ public:
     allocHungoffUses(ReservedSpace);
   }
 
-  void *operator new(size_t, unsigned) = delete;
-
   // Block iterator interface. This provides access to the list of incoming
   // basic blocks, which parallels the list of incoming values.
-  typedef BasicBlock **block_iterator;
-  typedef BasicBlock *const *const_block_iterator;
+  using block_iterator = BasicBlock **;
+  using const_block_iterator = BasicBlock *const *;
 
   block_iterator block_begin() {
     auto *Ref = reinterpret_cast<Use::UserRef *>(op_begin() + ReservedSpace);
