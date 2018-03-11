@@ -45,14 +45,13 @@
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Tapir.h"
+#include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <utility>
-
-using std::make_pair;
 
 using namespace llvm;
 
@@ -224,6 +223,72 @@ private:
 };
 } // end anonymous namespace
 
+/// Helper routine to get all exit blocks of a loop.
+void LoopOutline::getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
+                             const BasicBlock *DetachUnwind,
+                             const Value *SyncRegion,
+                             SmallVectorImpl<BasicBlock *> &EHExits) {
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+
+  // Create a work list of exits from the Tapir loop body.
+  SmallVector<BasicBlock *, 4> WorkList;
+  for (BasicBlock *Exit : ExitBlocks) {
+    if (Exit == DesignatedExitBlock) continue;
+    if (Exit == DetachUnwind) continue;
+    EHExits.push_back(Exit);
+    WorkList.push_back(Exit);
+  }
+
+  // Now traverse the CFG from these frontier blocks to find all blocks involved
+  // in exception-handling exit code.  Exits from the loop body should be
+  // ultimately terminated by a detached rethrow.
+  SmallPtrSet<BasicBlock *, 4> Visited;
+  while (!WorkList.empty()) {
+    BasicBlock *BB = WorkList.pop_back_val();
+    if (!Visited.insert(BB).second)
+      continue;
+
+    // Check that the exception handling blocks do not reenter the loop.
+    assert(!L->contains(BB) &&
+           "Exception handling blocks re-enter loop.");
+
+    if (isDetachedRethrow(BB->getTerminator(), SyncRegion))
+      continue;
+
+    for (BasicBlock *Succ : successors(BB)) {
+      EHExits.push_back(Succ);
+      WorkList.push_back(Succ);
+    }
+  }
+}
+
+/// Convert a pointer to an integer type.
+///
+/// Copied from Transforms/Vectorizer/LoopVectorize.cpp.
+static Type *convertPointerToIntegerType(const DataLayout &DL, Type *Ty) {
+  if (Ty->isPointerTy())
+    return DL.getIntPtrType(Ty);
+
+  // It is possible that char's or short's overflow when we ask for the loop's
+  // trip count, work around this by changing the type size.
+  if (Ty->getScalarSizeInBits() < 32)
+    return Type::getInt32Ty(Ty->getContext());
+
+  return Ty;
+}
+
+/// Get the wider of two integer types.
+///
+/// Copied from Transforms/Vectorizer/LoopVectorize.cpp.
+Type *LoopOutline::getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
+  Ty0 = convertPointerToIntegerType(DL, Ty0);
+  Ty1 = convertPointerToIntegerType(DL, Ty1);
+  if (Ty0->getScalarSizeInBits() > Ty1->getScalarSizeInBits())
+    return Ty0;
+  return Ty1;
+}
+
 /// Canonicalize the induction variables in the loop.  Return the canonical
 /// induction variable created or inserted by the scalar evolution expander.
 PHINode* LoopOutline::canonicalizeIVs(Type *Ty) {
@@ -253,7 +318,7 @@ PHINode* LoopOutline::canonicalizeIVs(Type *Ty) {
 /// equal to the limit.
 ///
 /// This method assumes that the loop has a single loop latch.
-Value* LoopOutline::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
+Value *LoopOutline::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
   Loop *L = OrigLoop;
 
   Value *NewCondition;
@@ -285,9 +350,44 @@ Value* LoopOutline::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
   return NewCondition;
 }
 
-/// Unlink the specified loop, and update analysis accordingly.  The heavy
-/// lifting of deleting the loop is carried out by a run of LoopDeletion after
-/// this pass.
+/// \brief Returns true if the specified value is used anywhere in the given set
+/// LoopBlocks other than Latch.  Returns false otherwise.
+bool LoopOutline::isUsedInLoopBody(
+    const Value *V, std::vector<BasicBlock *> &LoopBlocks,
+    const Instruction *Cond) {
+  for (BasicBlock *BB : LoopBlocks) {
+    if (V->isUsedInBasicBlock(BB)) {
+      if (Cond->getParent() != BB)
+        return true;
+      for (const User *Usr : V->users()) {
+        const Instruction *IUser = dyn_cast<Instruction>(Usr);
+        if (!IUser) continue;
+        if (IUser->getParent() != BB) continue;
+        if (IUser == Cond) continue;
+        // We have an Instruction  user in BB that is not Cond.
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// Insert a sync before the specified escape, which is either a return or a
+/// resume.
+SyncInst *LoopOutline::insertSyncBeforeEscape(
+    BasicBlock *Esc, Instruction *SyncReg, DominatorTree *DT, LoopInfo *LI) {
+  BasicBlock *NewEsc = SplitBlock(Esc, Esc->getTerminator(), DT, LI);
+  Instruction *OldTerm = Esc->getTerminator();
+  IRBuilder<> Builder(OldTerm);
+  SyncInst *NewSync = Builder.CreateSync(NewEsc, SyncReg);
+  OldTerm->eraseFromParent();
+  return NewSync;
+}
+
+/// \brief Unlink the specified loop, and update analysis accordingly.
+///
+/// The heavy lifting of deleting the loop is carried out by a run of
+/// LoopDeletion after this pass.
 ///
 /// Much of this code is borrowed from deleteDeadLoop in
 /// Transforms/Utils/LoopUtils.cpp.  There are minor differences between this
@@ -617,83 +717,6 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
   }
 }
 
-/// Helper routine to get all exit blocks of a loop that are unreachable.
-static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
-                       const BasicBlock *DetachUnwind, const Value *SyncRegion,
-                       SmallVectorImpl<BasicBlock *> &EHExits) {
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-
-  // Create a work list of exits from the Tapir loop body.
-  SmallVector<BasicBlock *, 4> WorkList;
-  for (BasicBlock *Exit : ExitBlocks) {
-    if (Exit == DesignatedExitBlock) continue;
-    if (Exit == DetachUnwind) continue;
-    EHExits.push_back(Exit);
-    WorkList.push_back(Exit);
-  }
-
-  // Now traverse the CFG from these frontier blocks to find all blocks involved
-  // in exception-handling exit code.  Exits from the loop body should be
-  // ultimately terminated by a detached rethrow.
-  SmallPtrSet<BasicBlock *, 4> Visited;
-  while (!WorkList.empty()) {
-    BasicBlock *BB = WorkList.pop_back_val();
-    if (!Visited.insert(BB).second)
-      continue;
-
-    // Check that the exception handling blocks do not reenter the loop.
-    assert(!L->contains(BB) &&
-           "Exception handling blocks re-enter loop.");
-
-    if (isDetachedRethrow(BB->getTerminator(), SyncRegion))
-      continue;
-
-    for (BasicBlock *Succ : successors(BB)) {
-      EHExits.push_back(Succ);
-      WorkList.push_back(Succ);
-    }
-  }
-}
-
-/// Convert a pointer to an integer type.
-///
-/// Copied from Transforms/Vectorizer/LoopVectorize.cpp.
-static Type *convertPointerToIntegerType(const DataLayout &DL, Type *Ty) {
-  if (Ty->isPointerTy())
-    return DL.getIntPtrType(Ty);
-
-  // It is possible that char's or short's overflow when we ask for the loop's
-  // trip count, work around this by changing the type size.
-  if (Ty->getScalarSizeInBits() < 32)
-    return Type::getInt32Ty(Ty->getContext());
-
-  return Ty;
-}
-
-/// Get the wider of two integer types.
-///
-/// Copied from Transforms/Vectorizer/LoopVectorize.cpp.
-static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
-  Ty0 = convertPointerToIntegerType(DL, Ty0);
-  Ty1 = convertPointerToIntegerType(DL, Ty1);
-  if (Ty0->getScalarSizeInBits() > Ty1->getScalarSizeInBits())
-    return Ty0;
-  return Ty1;
-}
-
-/// Insert a sync before the specified escape, which is either a return or a
-/// resume.
-static SyncInst *insertSyncBeforeEscape(BasicBlock *Esc, Instruction *SyncReg,
-                                        DominatorTree *DT, LoopInfo *LI) {
-  BasicBlock *NewEsc = SplitBlock(Esc, Esc->getTerminator(), DT, LI);
-  Instruction *OldTerm = Esc->getTerminator();
-  IRBuilder<> Builder(OldTerm);
-  SyncInst *NewSync = Builder.CreateSync(NewEsc, SyncReg);
-  OldTerm->eraseFromParent();
-  return NewSync;
-}
-
 /// Top-level call to convert loop to spawn its iterations in a
 /// divide-and-conquer fashion.
 bool DACLoopSpawning::processLoop() {
@@ -789,10 +812,9 @@ bool DACLoopSpawning::processLoop() {
   Type *CanonicalIVTy = Limit->getType();
   {
     const DataLayout &DL = M->getDataLayout();
-    for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
-      PHINode *PN = cast<PHINode>(II);
-      if (PN->getType()->isFloatingPointTy()) continue;
-      CanonicalIVTy = getWiderType(DL, PN->getType(), CanonicalIVTy);
+    for (PHINode &PN : Header->phis()) {
+      if (PN.getType()->isFloatingPointTy()) continue;
+      CanonicalIVTy = getWiderType(DL, PN.getType(), CanonicalIVTy);
     }
     Limit = SE.getNoopOrAnyExtend(Limit, CanonicalIVTy);
   }
@@ -814,18 +836,15 @@ bool DACLoopSpawning::processLoop() {
   // Remove all IV's other than CanonicalIV.
   // First, check that we can do this.
   bool CanRemoveIVs = true;
-  for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
-    PHINode *PN = cast<PHINode>(II);
-    if (CanonicalIV == PN) continue;
-    // dbgs() << "IV " << *PN;
-    const SCEV *S = SE.getSCEV(PN);
-    // dbgs() << " SCEV " << *S << "\n";
+  for (PHINode &PN : Header->phis()) {
+    if (CanonicalIV == &PN) continue;
+    const SCEV *S = SE.getSCEV(&PN);
     if (SE.getCouldNotCompute() == S) {
       // emitAnalysis(LoopSpawningReport(PN)
       //              << "Could not compute the scalar evolution.\n");
-      ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "NoSCEV", PN)
+      ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "NoSCEV", &PN)
                << "could not compute scalar evolution of "
-               << NV("PHINode", PN));
+               << NV("PHINode", &PN));
       CanRemoveIVs = false;
     }
   }
@@ -848,17 +867,16 @@ bool DACLoopSpawning::processLoop() {
   // don't require all IV's to be canonical.
   {
     SmallVector<PHINode*, 8> IVsToRemove;
-    for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
-      PHINode *PN = cast<PHINode>(II);
-      if (PN == CanonicalIV) continue;
-      const SCEV *S = SE.getSCEV(PN);
-      DEBUG(dbgs() << "Removing the IV " << *PN << " (" << *S << ")\n");
-      ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "RemoveIV", PN)
+    for (PHINode &PN : Header->phis()) {
+      if (&PN == CanonicalIV) continue;
+      const SCEV *S = SE.getSCEV(&PN);
+      DEBUG(dbgs() << "Removing the IV " << PN << " (" << *S << ")\n");
+      ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "RemoveIV", &PN)
                << "removing the IV "
-               << NV("PHINode", PN));
+               << NV("PHINode", &PN));
       Value *NewIV = Exp.expandCodeFor(S, S->getType(), CanonicalIV);
-      PN->replaceAllUsesWith(NewIV);
-      IVsToRemove.push_back(PN);
+      PN.replaceAllUsesWith(NewIV);
+      IVsToRemove.push_back(&PN);
     }
     for (PHINode *PN : IVsToRemove)
       PN->eraseFromParent();
@@ -870,11 +888,10 @@ bool DACLoopSpawning::processLoop() {
   // don't require all IV's to be canonical.
   SmallVector<PHINode*, 8> IVs;
   bool AllCanonical = true;
-  for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
-    PHINode *PN = cast<PHINode>(II);
+  for (PHINode &PN : Header->phis()) {
     DEBUG({
         const SCEVAddRecExpr *PNSCEV =
-          dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(PN));
+          dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(&PN));
         assert(PNSCEV && "PHINode did not have corresponding SCEVAddRecExpr");
         assert(PNSCEV->getStart()->isZero() &&
                "PHINode SCEV does not start at 0");
@@ -884,28 +901,28 @@ bool DACLoopSpawning::processLoop() {
                "PHINode SCEV step is not 1");
       });
     if (ConstantInt *C =
-        dyn_cast<ConstantInt>(PN->getIncomingValueForBlock(Preheader))) {
+        dyn_cast<ConstantInt>(PN.getIncomingValueForBlock(Preheader))) {
       if (C->isZero()) {
         DEBUG({
-            if (PN != CanonicalIV) {
+            if (&PN != CanonicalIV) {
               const SCEVAddRecExpr *PNSCEV =
-                dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(PN));
-              dbgs() << "Saving the canonical IV " << *PN << " (" << *PNSCEV << ")\n";
+                dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(&PN));
+              dbgs() << "Saving the canonical IV " << PN << " (" << *PNSCEV << ")\n";
             }
           });
-        if (PN != CanonicalIV)
-          ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "SaveIV", PN)
+        if (&PN != CanonicalIV)
+          ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "SaveIV", &PN)
                    << "saving the canonical the IV "
-                   << NV("PHINode", PN));
-        IVs.push_back(PN);
+                   << NV("PHINode", &PN));
+        IVs.push_back(&PN);
       }
     } else {
       AllCanonical = false;
-      DEBUG(dbgs() << "Remaining non-canonical PHI Node found: " << *PN <<
+      DEBUG(dbgs() << "Remaining non-canonical PHI Node found: " << PN <<
             "\n");
       // emitAnalysis(LoopSpawningReport(PN)
       //              << "Found a remaining non-canonical IV.\n");
-      ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "NonCanonicalIV", PN)
+      ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "NonCanonicalIV", &PN)
                << "found a remaining noncanonical IV");
     }
   }
@@ -921,7 +938,8 @@ bool DACLoopSpawning::processLoop() {
   assert(SE.isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT,
                                         CanonicalSCEV, Limit) &&
          "Loop backedge is not guarded by canonical comparison with limit.");
-  Value *NewCond = canonicalizeLoopLatch(CanonicalIV, LimitVar);
+  Instruction *NewCond =
+    cast<Instruction>(canonicalizeLoopLatch(CanonicalIV, LimitVar));
 
   // Insert computation of grainsize into the Preheader.
   // For debugging:
@@ -947,6 +965,7 @@ bool DACLoopSpawning::processLoop() {
   ValueToValueMapTy VMap, InputMap;
   std::vector<BasicBlock *> LoopBlocks;
   Value *SRetInput = nullptr;
+  bool NeedSeparateEndArg;
 
   // Get the sync region containing this Tapir loop.
   const Instruction *InputSyncRegion;
@@ -1026,14 +1045,13 @@ bool DACLoopSpawning::processLoop() {
     // the latch in the outlined loop to use this explicit argument.
     // Furthermore, this pass does not prevent outliner from recognizing the
     // loop limit as a potential argument to the function.
-    if (isa<Constant>(LimitVar) || !LimitVar->hasOneUse()) {
+    NeedSeparateEndArg = (isa<Constant>(LimitVar) ||
+                          isUsedInLoopBody(LimitVar, LoopBlocks, NewCond));
+    if (NeedSeparateEndArg) {
       Argument *EndArg = new Argument(LimitVar->getType(), "end");
       Inputs.insert(EndArg);
       InputMap[LimitVar] = EndArg;
     } else {
-      // If the limit var is not constant and has exactly one use, then the
-      // limit var is the result of some nontrivial computation, and that one
-      // use is the new condition inserted.
       Inputs.insert(LimitVar);
       InputMap[LimitVar] = LimitVar;
     }
@@ -1182,13 +1200,13 @@ bool DACLoopSpawning::processLoop() {
   // where the loop limit was constant or used elsewhere within the loop, this
   // pass rewrites the outlined loop-latch condition to use the explicit
   // end-iteration argument.
-  if (isa<Constant>(LimitVar) || !LimitVar->hasOneUse()) {
+  if (NeedSeparateEndArg) {
     CmpInst *HelperCond = cast<CmpInst>(VMap[NewCond]);
-    assert(((isa<Constant>(LimitVar) &&
-             HelperCond->getOperand(1) == LimitVar) ||
-            (!LimitVar->hasOneUse() &&
-             HelperCond->getOperand(1) == VMap[LimitVar])) &&
-           "Unexpected condition in loop latch.");
+    // assert(((isa<Constant>(LimitVar) &&
+    //          HelperCond->getOperand(1) == LimitVar) ||
+    //         (!LimitVar->hasOneUse() &&
+    //          HelperCond->getOperand(1) == VMap[LimitVar])) &&
+    //        "Unexpected condition in loop latch.");
     IRBuilder<> Builder(HelperCond);
     Value *NewHelperCond = Builder.CreateICmpULT(HelperCond->getOperand(0),
                                                  VMap[InputMap[LimitVar]]);

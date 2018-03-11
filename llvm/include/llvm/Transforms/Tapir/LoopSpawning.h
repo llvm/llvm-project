@@ -29,8 +29,12 @@ class Function;
 class LoopAccessInfo;
 class LoopInfo;
 class OptimizationRemarkEmitter;
+class PHINode;
+class Value;
 class ScalarEvolution;
+class SyncInst;
 class TargetTransformInfo;
+class Type;
 
 /// LoopOutline serves as a base class for different variants of LoopSpawning.
 /// LoopOutline implements common parts of LoopSpawning transformations, namely,
@@ -58,8 +62,35 @@ public:
   virtual ~LoopOutline() {}
 
 protected:
-  PHINode* canonicalizeIVs(Type *Ty);
-  Value* canonicalizeLoopLatch(PHINode *IV, Value *Limit);
+  /// \brief Helper routine to get all exit blocks of a loop.
+  static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
+                         const BasicBlock *DetachUnwind,
+                         const Value *SyncRegion,
+                         SmallVectorImpl<BasicBlock *> &EHExits);
+
+  /// \brief Get the wider of two integer types.
+  static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1);
+
+  /// \brief Canonicalize the induction variables in the loop.  Return the
+  /// canonical induction variable created or inserted by the scalar evolution
+  /// expander.
+  PHINode *canonicalizeIVs(Type *Ty);
+
+  /// \brief Replace the latch of the loop to check that IV is always less than
+  /// or equal to the limit.
+  Value *canonicalizeLoopLatch(PHINode *IV, Value *Limit);
+
+  /// \brief Returns true if the specified value is used anywhere in the given
+  /// set LoopBlocks other than Latch.  Returns false otherwise.
+  bool isUsedInLoopBody(const Value *V, std::vector<BasicBlock *> &LoopBlocks,
+                        const Instruction *Cond);
+
+  /// \brief Insert a sync before the specified escape, which is either a return
+  /// or a resume.
+  static SyncInst *insertSyncBeforeEscape(BasicBlock *Esc, Instruction *SyncReg,
+                                          DominatorTree *DT, LoopInfo *LI);
+
+  /// \brief Unlink the specified loop, and update analysis accordingly.
   void unlinkLoop();
 
   /// The original loop.

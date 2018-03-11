@@ -22,11 +22,11 @@ namespace llvm {
 /// CilkABILoopSpawning uses the Cilk Plus ABI to handle Tapir loops.
 class CilkABILoopSpawning : public LoopOutline {
 public:
-  CilkABILoopSpawning(Loop *OrigLoop, ScalarEvolution &SE,
-                      LoopInfo *LI, DominatorTree *DT,
-                      AssumptionCache *AC,
+  CilkABILoopSpawning(Loop *OrigLoop, unsigned Grainsize, ScalarEvolution &SE,
+                      LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                       OptimizationRemarkEmitter &ORE)
-      : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE)
+      : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE),
+        SpecifiedGrainsize(Grainsize)
   {}
 
   bool processLoop();
@@ -35,8 +35,9 @@ public:
 
 protected:
   // PHINode* canonicalizeIVs(Type *Ty);
-  Value* canonicalizeLoopLatch(PHINode *IV, Value *Limit);
+  Value *canonicalizeLoopLatch(PHINode *IV, Value *Limit);
 
+  unsigned SpecifiedGrainsize;
 // private:
 //   /// Report an analysis message to assist the user in diagnosing loops that are
 //   /// not transformed.  These are handled as LoopAccessReport rather than

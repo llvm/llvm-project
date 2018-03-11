@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Tapir/CilkABI.h"
-#include "llvm/Transforms/Tapir/OpenMPABI.h"
 #include "llvm/Transforms/Tapir/CilkRABI.h"
+#include "llvm/Transforms/Tapir/OpenMPABI.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -25,6 +27,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "tapir"
+
+static cl::opt<bool> StructTaskArgs(
+    "use-struct-for-task-args", cl::init(false), cl::Hidden,
+    cl::desc("Use a struct to store arguments for detached tasks"));
 
 TapirTarget *llvm::getTapirTargetFromType(TapirTargetType Type) {
   switch (Type) {
@@ -95,10 +101,7 @@ bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
     } else if (isa<UnreachableInst>(Term)) {
       continue;
     } else {
-      DEBUG(Term->dump());
-      DEBUG(Term->getParent()->getParent()->dump());
-      assert(!error && "Detached block did not absolutely terminate in reattach");
-      return false;
+      llvm_unreachable("Detached block did not absolutely terminate in reattach");
     }
   }
   {
@@ -209,10 +212,7 @@ bool llvm::populateDetachedCFG(
     } else if (isa<UnreachableInst>(Term)) {
       continue;
     } else {
-      DEBUG(Term->dump());
-      DEBUG(Term->getParent()->getParent()->dump());
       llvm_unreachable("Detached block did not absolutely terminate in reattach");
-      return false;
     }
   }
 
@@ -350,10 +350,13 @@ Function *llvm::extractDetachBodyToFunction(
 
   // Fix up the inputs.
   SetVector<Value *> Inputs;
+  SmallVector<Value *, 8> StructInputs;
+  SmallVector<Type *, 8> StructIT;
+  AllocaInst *Closure;
   {
     // Scan for any sret parameters in BodyInputs and add them first.
     Value *SRetInput = nullptr;
-    if (F.hasStructRetAttr()) {
+    if (F.hasStructRetAttr() && !StructTaskArgs) {
       Function::arg_iterator ArgIter = F.arg_begin();
       if (F.hasParamAttribute(0, Attribute::StructRet))
 	if (BodyInputs.count(&*ArgIter))
@@ -367,15 +370,54 @@ Function *llvm::extractDetachBodyToFunction(
     if (SRetInput) {
       DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
       Inputs.insert(SRetInput);
+      StructInputs.push_back(SRetInput);
+      StructIT.push_back(SRetInput->getType());
     }
     // Add the remaining inputs.
     for (Value *V : BodyInputs) {
       if (V == SyncRegion) continue;
-      if (!Inputs.count(V))
+      if (!Inputs.count(V)) {
 	Inputs.insert(V);
+        StructInputs.push_back(V);
+        StructIT.push_back(V->getType());
+      }
     }
   }
+  SetVector<Value *> HelperInputs;
+  if (StructTaskArgs) {
+    StructType *ST = StructType::get(F.getContext(), StructIT);
+    DEBUG(dbgs() << "Closure struct type " << *ST << "\n");
+    {
+      BasicBlock *AllocaInsertBlk = &F.getEntryBlock();
+      IRBuilder<> Builder(&*AllocaInsertBlk->getFirstInsertionPt());
+      Closure = Builder.CreateAlloca(ST);
+    }
+    IRBuilder<> B(Detacher->getTerminator());
+    IRBuilder<> B2(Detached->getFirstNonPHIOrDbgOrLifetime());
+    for (unsigned i = 0; i < StructInputs.size(); ++i) {
+      B.CreateStore(StructInputs[i], B.CreateConstGEP2_32(ST, Closure, 0, i));
+    }
+    for (unsigned i = 0; i < StructInputs.size(); ++i) {
+      auto STGEP = cast<Instruction>(B2.CreateConstGEP2_32(ST, Closure, 0, i));
+      auto STLoad = B2.CreateLoad(STGEP);
 
+      // Update all uses of the struct inputs in the loop body.
+      auto UI = StructInputs[i]->use_begin(), E = StructInputs[i]->use_end();
+      for (; UI != E;) {
+        Use &U = *UI;
+        ++UI;
+        auto *Usr = dyn_cast<Instruction>(U.getUser());
+        if (!Usr || !FunctionPieces.count(Usr->getParent()))
+          continue;
+        // if (StructInputs[i] == LimitVar && Usr == NewCond)
+        //   continue;
+        U.set(STLoad);
+      }
+    }
+    HelperInputs.insert(Closure);
+  } else {
+    HelperInputs = Inputs;
+  }
   // Clone the detached CFG into a helper function.
   ValueToValueMapTy VMap;
   Function *Extracted;
@@ -384,7 +426,7 @@ Function *llvm::extractDetachBodyToFunction(
     std::vector<BasicBlock *> Blocks(FunctionPieces.begin(),
                                      FunctionPieces.end());
 
-    Extracted = CreateHelper(Inputs, Outputs, Blocks,
+    Extracted = CreateHelper(HelperInputs, Outputs, Blocks,
                              Detached, Detacher, Continue,
                              VMap, F.getParent(),
                              F.getSubprogram() != nullptr, Returns, ".cilk",
@@ -400,14 +442,14 @@ Function *llvm::extractDetachBodyToFunction(
 
   // Add alignment assumptions to arguments of helper, based on alignment of
   // values in old function.
-  AddAlignmentAssumptions(&F, Inputs, VMap, &Detach, &AC, &DT);
+  AddAlignmentAssumptions(&F, HelperInputs, VMap, &Detach, &AC, &DT);
 
   // Add call to new helper function in original function.
   if (!Unwind) {
     CallInst *TopCall;
     // Create call instruction.
     IRBuilder<> Builder(&Detach);
-    TopCall = Builder.CreateCall(Extracted, Inputs.getArrayRef());
+    TopCall = Builder.CreateCall(Extracted, HelperInputs.getArrayRef());
     // Use a fast calling convention for the helper.
     TopCall->setCallingConv(CallingConv::Fast);
     TopCall->setDebugLoc(Detach.getDebugLoc());
@@ -420,7 +462,7 @@ Function *llvm::extractDetachBodyToFunction(
     BasicBlock *CallDest = SplitBlock(CallBlock, &Detach, &DT);
     // Create invoke instruction.
     TopCall = InvokeInst::Create(Extracted, CallDest, Unwind,
-                                 Inputs.getArrayRef());
+                                 HelperInputs.getArrayRef());
     ReplaceInstWithInst(CallBlock->getTerminator(), TopCall);
     // Use a fast calling convention for the helper.
     TopCall->setCallingConv(CallingConv::Fast);

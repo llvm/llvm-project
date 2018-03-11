@@ -1149,9 +1149,8 @@ static Function *GetCilkParentEpilogue(Module &M, bool instrument = false) {
     Value *Flags = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
                                 StackFrameBuilder::flags, /*isVolatile=*/false,
                                 AtomicOrdering::Acquire);
-    Value *Cond = B.CreateICmpNE(Flags,
-                                 ConstantInt::get(Flags->getType(),
-                                                  CILK_FRAME_VERSION));
+    Value *Cond = B.CreateICmpNE(
+        Flags, ConstantInt::get(Flags->getType(), CILK_FRAME_VERSION));
     B.CreateCondBr(Cond, B1, Exit);
   }
 
@@ -1200,15 +1199,13 @@ static AllocaInst *CreateStackFrame(Function &F) {
   return SF;
 }
 
-Value *GetOrInitCilkStackFrame(Function &F,
-                               ValueToValueMapTy &DetachCtxToStackFrame,
-                               bool Helper, bool instrument = false) {
+static Value *GetOrInitCilkStackFrame(
+    Function &F, ValueToValueMapTy &DetachCtxToStackFrame,
+    bool Helper, bool instrument = false) {
   if (Value *V = DetachCtxToStackFrame[&F])
     return V;
 
   Module *M = F.getParent();
-  LLVMContext &Ctx = M->getContext();
-  const DataLayout &DL = M->getDataLayout();
 
   AllocaInst *SF = CreateStackFrame(F);
   DetachCtxToStackFrame[&F] = SF;
@@ -1492,10 +1489,8 @@ static inline void inlineCilkFunctions(Function &F) {
           }
   } while (Changed);
 
-  if (verifyFunction(F, &errs())) {
-    DEBUG(F.dump());
-    assert(0);
-  }
+  if (verifyFunction(F, &errs()))
+    llvm_unreachable("Tapir->CilkABI lowering produced bad IR!");
 }
 
 void CilkABI::preProcessFunction(Function &F) {
@@ -1521,7 +1516,7 @@ void CilkABI::postProcessHelper(Function &F) {
 /// equal to the limit.
 ///
 /// This method assumes that the loop has a single loop latch.
-Value* CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
+Value *CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
   Loop *L = OrigLoop;
 
   Value *NewCondition;
@@ -1534,10 +1529,8 @@ Value* CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
   // This process assumes that IV's increment is in Latch.
 
   // Create comparison between IV and Limit at top of Latch.
-  NewCondition =
-    Builder.CreateICmpULT(Builder.CreateAdd(IV,
-                                            ConstantInt::get(IV->getType(), 1)),
-                          Limit);
+  NewCondition = Builder.CreateICmpULT(
+      Builder.CreateAdd(IV, ConstantInt::get(IV->getType(), 1)), Limit);
 
   // Replace the conditional branch at the end of Latch.
   BranchInst *LatchBr = dyn_cast_or_null<BranchInst>(Latch->getTerminator());
@@ -1547,7 +1540,11 @@ Value* CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
   Builder.CreateCondBr(NewCondition, Header, ExitBlock);
 
   // Erase the old conditional branch.
+  Value *OldCond = LatchBr->getCondition();
   LatchBr->eraseFromParent();
+  if (!OldCond->hasNUsesOrMore(1))
+    if (Instruction *OldCondInst = dyn_cast<Instruction>(OldCond))
+      OldCondInst->eraseFromParent();
 
   return NewCondition;
 }
@@ -1561,6 +1558,14 @@ bool CilkABILoopSpawning::processLoop() {
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
 
+  DEBUG({
+      LoopBlocksDFS DFS(L);
+      DFS.perform(LI);
+      dbgs() << "Blocks in loop (from DFS):\n";
+      for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO()))
+        dbgs() << *BB;
+    });
+
   using namespace ore;
 
   // Check the exit blocks of the loop.
@@ -1573,11 +1578,30 @@ bool CilkABILoopSpawning::processLoop() {
     return false;
   }
 
+  // Get the unwind destination of the detach in the header.
+  BasicBlock *DetachUnwind = nullptr;
+  Value *SyncRegion = nullptr;
+  {
+    DetachInst *DI = cast<DetachInst>(Header->getTerminator());
+    SyncRegion = DI->getSyncRegion();
+    if (DI->hasUnwindDest())
+      DetachUnwind = DI->getUnwindDest();
+  }
+  // Get special exits from this loop.
+  SmallVector<BasicBlock *, 4> EHExits;
+  getEHExits(L, ExitBlock, DetachUnwind, SyncRegion, EHExits);
+
+  // Check the exit blocks of the loop.
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
-  for (const BasicBlock *Exit : ExitBlocks) {
+
+  SmallPtrSet<BasicBlock *, 4> HandledExits;
+  for (BasicBlock *BB : EHExits)
+    HandledExits.insert(BB);
+  for (BasicBlock *Exit : ExitBlocks) {
     if (Exit == ExitBlock) continue;
-    if (!isa<UnreachableInst>(Exit->getTerminator())) {
+    if (Exit == DetachUnwind) continue;
+    if (!HandledExits.count(Exit)) {
       DEBUG(dbgs() << "LS loop contains a bad exit block " << *Exit);
       ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "BadExit",
                                           L->getStartLoc(),
@@ -1588,13 +1612,10 @@ bool CilkABILoopSpawning::processLoop() {
   }
 
   Function *F = Header->getParent();
-  Module* M = F->getParent();
+  Module *M = F->getParent();
 
   DEBUG(dbgs() << "LS loop header:" << *Header);
   DEBUG(dbgs() << "LS loop latch:" << *Latch);
-
-  // DEBUG(dbgs() << "LS SE backedge taken count: " << *(SE.getBackedgeTakenCount(L)) << "\n");
-  // DEBUG(dbgs() << "LS SE max backedge taken count: " << *(SE.getMaxBackedgeTakenCount(L)) << "\n");
   DEBUG(dbgs() << "LS SE exit count: " << *(SE.getExitCount(L, Latch)) << "\n");
 
   /// Get loop limit.
@@ -1617,8 +1638,18 @@ bool CilkABILoopSpawning::processLoop() {
   // ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "LoopLimit", L->getStartLoc(),
   //                                     Header)
   //          << "loop limit: " << NV("Limit", Limit));
+  /// Determine the type of the canonical IV.
+  Type *CanonicalIVTy = Limit->getType();
+  {
+    const DataLayout &DL = M->getDataLayout();
+    for (PHINode &PN : Header->phis()) {
+      if (PN.getType()->isFloatingPointTy()) continue;
+      CanonicalIVTy = getWiderType(DL, PN.getType(), CanonicalIVTy);
+    }
+    Limit = SE.getNoopOrAnyExtend(Limit, CanonicalIVTy);
+  }
   /// Clean up the loop's induction variables.
-  PHINode *CanonicalIV = canonicalizeIVs(Limit->getType());
+  PHINode *CanonicalIV = canonicalizeIVs(CanonicalIVTy);
   if (!CanonicalIV) {
     DEBUG(dbgs() << "Could not get canonical IV.\n");
     // emitAnalysis(LoopSpawningReport()
@@ -1635,18 +1666,15 @@ bool CilkABILoopSpawning::processLoop() {
   // Remove all IV's other can CanonicalIV.
   // First, check that we can do this.
   bool CanRemoveIVs = true;
-  for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
-    PHINode *PN = cast<PHINode>(II);
-    if (CanonicalIV == PN) continue;
-    // dbgs() << "IV " << *PN;
-    const SCEV *S = SE.getSCEV(PN);
-    // dbgs() << " SCEV " << *S << "\n";
+  for (PHINode &PN : Header->phis()) {
+    if (CanonicalIV == &PN) continue;
+    const SCEV *S = SE.getSCEV(&PN);
     if (SE.getCouldNotCompute() == S) {
       // emitAnalysis(LoopSpawningReport(PN)
       //              << "Could not compute the scalar evolution.\n");
-      ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "NoSCEV", PN)
+      ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "NoSCEV", &PN)
                << "could not compute scalar evolution of "
-               << NV("PHINode", PN));
+               << NV("PHINode", &PN));
       CanRemoveIVs = false;
     }
   }
@@ -1669,13 +1697,12 @@ bool CilkABILoopSpawning::processLoop() {
   // IV's to be canonical.
   {
     SmallVector<PHINode*, 8> IVsToRemove;
-    for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
-      PHINode *PN = cast<PHINode>(II);
-      if (PN == CanonicalIV) continue;
-      const SCEV *S = SE.getSCEV(PN);
+    for (PHINode &PN : Header->phis()) {
+      if (&PN == CanonicalIV) continue;
+      const SCEV *S = SE.getSCEV(&PN);
       Value *NewIV = Exp.expandCodeFor(S, S->getType(), CanonicalIV);
-      PN->replaceAllUsesWith(NewIV);
-      IVsToRemove.push_back(PN);
+      PN.replaceAllUsesWith(NewIV);
+      IVsToRemove.push_back(&PN);
     }
     for (PHINode *PN : IVsToRemove)
       PN->eraseFromParent();
@@ -1687,11 +1714,10 @@ bool CilkABILoopSpawning::processLoop() {
   // IV's to be canonical.
   SmallVector<PHINode*, 8> IVs;
   bool AllCanonical = true;
-  for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
-    PHINode *PN = cast<PHINode>(II);
+  for (PHINode &PN : Header->phis()) {
     DEBUG({
         const SCEVAddRecExpr *PNSCEV =
-          dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(PN));
+          dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(&PN));
         assert(PNSCEV && "PHINode did not have corresponding SCEVAddRecExpr");
         assert(PNSCEV->getStart()->isZero() &&
                "PHINode SCEV does not start at 0");
@@ -1701,15 +1727,27 @@ bool CilkABILoopSpawning::processLoop() {
                "PHINode SCEV step is not 1");
       });
     if (ConstantInt *C =
-        dyn_cast<ConstantInt>(PN->getIncomingValueForBlock(Preheader))) {
-      if (C->isZero())
-        IVs.push_back(PN);
+        dyn_cast<ConstantInt>(PN.getIncomingValueForBlock(Preheader))) {
+      if (C->isZero()) {
+        DEBUG({
+            if (&PN != CanonicalIV) {
+              const SCEVAddRecExpr *PNSCEV =
+                dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(&PN));
+              dbgs() << "Saving the canonical IV " << PN << " (" << *PNSCEV << ")\n";
+            }
+          });
+        if (&PN != CanonicalIV)
+          ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "SaveIV", &PN)
+                   << "saving the canonical the IV "
+                   << NV("PHINode", &PN));
+        IVs.push_back(&PN);
+      }
     } else {
       AllCanonical = false;
-      DEBUG(dbgs() << "Remaining non-canonical PHI Node found: " << *PN << "\n");
+      DEBUG(dbgs() << "Remaining non-canonical PHI Node found: " << PN << "\n");
       // emitAnalysis(LoopSpawningReport(PN)
       //              << "Found a remaining non-canonical IV.\n");
-      ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "NonCanonicalIV", PN)
+      ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "NonCanonicalIV", &PN)
                << "found a remaining noncanonical IV");
     }
   }
@@ -1722,52 +1760,58 @@ bool CilkABILoopSpawning::processLoop() {
   DEBUG(dbgs() << "LimitVar: " << *LimitVar << "\n");
 
   // Canonicalize the loop latch.
-  Value *NewCond = canonicalizeLoopLatch(CanonicalIV, LimitVar);
+  Instruction *NewCond =
+    cast<Instruction>(canonicalizeLoopLatch(CanonicalIV, LimitVar));
 
   /// Clone the loop into a new function.
 
   // Get the inputs and outputs for the Loop blocks.
-  SetVector<Value*> Inputs, Outputs;
-  SetVector<Value*> BodyInputs, BodyOutputs;
+  SetVector<Value *> Inputs, Outputs;
+  SetVector<Value *> BodyInputs, BodyOutputs;
   ValueToValueMapTy VMap, InputMap;
   std::vector<BasicBlock *> LoopBlocks;
-  AllocaInst* closure;
+  AllocaInst *Closure;
+  SetVector<Value *> HelperInputs;
+  SmallVector<Instruction *, 8> StructInputLoads;
+  bool NeedSeparateEndArg;
+
+  // Get the correct CilkForABI call.
+  Function *CilkForABI;
+  if (LimitVar->getType()->isIntegerTy(32))
+    CilkForABI = CILKRTS_FUNC(cilk_for_32, *M);
+  else if (LimitVar->getType()->isIntegerTy(64))
+    CilkForABI = CILKRTS_FUNC(cilk_for_64, *M);
+  else
+    llvm_unreachable("Invalid integer type for Tapir loop limit.");
+
+  // Get the sync region containing this Tapir loop.
+  const Instruction *InputSyncRegion;
+  {
+    const DetachInst *DI = cast<DetachInst>(Header->getTerminator());
+    InputSyncRegion = cast<Instruction>(DI->getSyncRegion());
+  }
+
   // Add start iteration, end iteration, and grainsize to inputs.
   {
     LoopBlocks = L->getBlocks();
-    // // Add exit blocks terminated by unreachable.  There should not be any other
-    // // exit blocks in the loop.
-    // SmallSet<BasicBlock *, 4> UnreachableExits;
-    // for (BasicBlock *Exit : ExitBlocks) {
-    //   if (Exit == ExitBlock) continue;
-    //   assert(isa<UnreachableInst>(Exit->getTerminator()) &&
-    //          "Found problematic exit block.");
-    //   UnreachableExits.insert(Exit);
-    // }
 
-    // // Add unreachable and exception-handling exits to the set of loop blocks to
-    // // clone.
-    // for (BasicBlock *BB : UnreachableExits)
-    //   LoopBlocks.push_back(BB);
-    // for (BasicBlock *BB : EHExits)
-    //   LoopBlocks.push_back(BB);
-
-    // DEBUG({
-    //     dbgs() << "LoopBlocks: ";
-    //     for (BasicBlock *LB : LoopBlocks)
-    //       dbgs() << LB->getName() << "("
-    //              << *(LB->getTerminator()) << "), ";
-    //     dbgs() << "\n";
-    //   });
+    // Add unreachable and exception-handling exits to the set of loop blocks to
+    // clone.
+    DEBUG({
+        dbgs() << "Handled exits of loop:";
+        for (BasicBlock *HE : HandledExits)
+          dbgs() << *HE;
+        dbgs() << "\n";
+      });
+    for (BasicBlock *HE : HandledExits)
+      LoopBlocks.push_back(HE);
 
     // Get the inputs and outputs for the loop body.
     {
-      // CodeExtractor Ext(LoopBlocks, DT);
-      // Ext.findInputsOutputs(BodyInputs, BodyOutputs);
       SmallPtrSet<BasicBlock *, 32> Blocks;
       for (BasicBlock *BB : LoopBlocks)
         Blocks.insert(BB);
-      findInputsOutputs(Blocks, BodyInputs, BodyOutputs);
+      findInputsOutputs(Blocks, BodyInputs, BodyOutputs, &HandledExits, DT);
     }
 
     // Add argument for start of CanonicalIV.
@@ -1783,72 +1827,91 @@ bool CilkABILoopSpawning::processLoop() {
     Inputs.insert(StartArg);
     InputMap[CanonicalIV] = StartArg;
 
+    // Determine if the end argument and loop limit are distinct entities, i.e.,
+    // because the loop limit is a constant (and the end argument is guaranteed
+    // to be a parameter), or because the loop limit is separately used in the
+    // loop body.
+    NeedSeparateEndArg = (isa<Constant>(LimitVar) ||
+                          isUsedInLoopBody(LimitVar, LoopBlocks, NewCond));
     // Add argument for end.
-    Value* ea;
-    if (isa<Constant>(LimitVar)) {
+    if (NeedSeparateEndArg) {
       Argument *EndArg = new Argument(LimitVar->getType(), "end");
       Inputs.insert(EndArg);
-      ea = InputMap[LimitVar] = EndArg;
+      InputMap[LimitVar] = EndArg;
     } else {
       Inputs.insert(LimitVar);
-      ea = InputMap[LimitVar] = LimitVar;
+      InputMap[LimitVar] = LimitVar;
     }
 
     // Put all of the inputs together, and clear redundant inputs from
     // the set for the loop body.
-    SmallVector<Value*, 8> BodyInputsToRemove;
-    SmallVector<Value*, 8> StructInputs;
-    SmallVector<Type*, 8> StructIT;
-    for (Value *V : BodyInputs) {
-      if (!Inputs.count(V)) {
+    SmallVector<Value *, 8> BodyInputsToRemove;
+    SmallVector<Value *, 8> StructInputs;
+    SmallVector<Type *, 8> StructIT;
+    for (Value *V : BodyInputs)
+      if (V == InputSyncRegion)
+        BodyInputsToRemove.push_back(V);
+      else if (!Inputs.count(V)) {
+        Inputs.insert(V);
         StructInputs.push_back(V);
         StructIT.push_back(V->getType());
-      }
-      else
+      } else
         BodyInputsToRemove.push_back(V);
+    for (Value *V : BodyInputsToRemove)
+      BodyInputs.remove(V);
+    DEBUG({
+        for (Value *V : BodyInputs)
+          dbgs() << "Remaining body input: " << *V << "\n";
+      });
+    for (Value *V : BodyOutputs)
+      dbgs() << "EL output: " << *V << "\n";
+    assert(BodyOutputs.empty() &&
+           "All results from parallel loop should be passed by memory already.");
+
+    StructType *ST = StructType::get(F->getContext(), StructIT);
+    DEBUG(dbgs() << "Closure struct type " << *ST << "\n");
+    {
+      BasicBlock *AllocaInsertBlk = GetDetachedCtx(Preheader);
+      IRBuilder<> Builder(&*AllocaInsertBlk->getFirstInsertionPt());
+      Closure = Builder.CreateAlloca(ST);
     }
-    StructType* ST = StructType::create(StructIT);
-    IRBuilder<> B(L->getLoopPreheader()->getTerminator());
-    IRBuilder<> B2(L->getHeader()->getFirstNonPHIOrDbgOrLifetime());
-    closure = B.CreateAlloca(ST);
-    for(unsigned i=0; i<StructInputs.size(); i++) {
-      B.CreateStore(StructInputs[i], B.CreateConstGEP2_32(ST, closure, 0, i));
-      auto l2 = B2.CreateLoad(B2.CreateConstGEP2_32(ST, closure, 0, i));
+    IRBuilder<> B(Preheader->getTerminator());
+    IRBuilder<> B2(Header->getFirstNonPHIOrDbgOrLifetime());
+    for (unsigned i = 0; i < StructInputs.size(); ++i) {
+      B.CreateStore(StructInputs[i], B.CreateConstGEP2_32(ST, Closure, 0, i));
+    }
+    for (unsigned i = 0; i < StructInputs.size(); ++i) {
+      auto STGEP = cast<Instruction>(B2.CreateConstGEP2_32(ST, Closure, 0, i));
+      auto STLoad = B2.CreateLoad(STGEP);
+      // Save these two instructions, so they can be moved later.
+      StructInputLoads.push_back(STGEP);
+      StructInputLoads.push_back(STLoad);
+
+      // Update all uses of the struct inputs in the loop body.
       auto UI = StructInputs[i]->use_begin(), E = StructInputs[i]->use_end();
       for (; UI != E;) {
         Use &U = *UI;
         ++UI;
         auto *Usr = dyn_cast<Instruction>(U.getUser());
-        if (Usr && !L->contains(Usr->getParent()))
+        if (!Usr || !L->contains(Usr->getParent()))
           continue;
-        U.set(l2);
+        U.set(STLoad);
       }
     }
-    Inputs.insert(closure);
-    //errs() << "<B>\n";
-    //for(auto& a : Inputs) a->dump();
-    //errs() << "</B>\n";
-    //StartArg->dump();
-    //ea->dump();
-    Inputs.remove(StartArg);
-    Inputs.insert(StartArg);
-    Inputs.remove(ea);
-    Inputs.insert(ea);
-    //errs() << "<A>\n";
-    //for(auto& a : Inputs) a->dump();
-    //errs() << "</A>\n";
-    for (Value *V : BodyInputsToRemove)
-      BodyInputs.remove(V);
-    assert(0 == BodyOutputs.size() &&
-           "All results from parallel loop should be passed by memory already.");
+    DEBUG(dbgs() << "New preheader:" << *Preheader << "\n");
+    DEBUG(dbgs() << "New header:" << *Header << "\n");
+    HelperInputs.insert(Closure);
+    HelperInputs.insert(StartArg);
+    HelperInputs.insert(cast<Value>(InputMap[LimitVar]));
   }
   DEBUG({
       for (Value *V : Inputs)
         dbgs() << "EL input: " << *V << "\n";
       for (Value *V : Outputs)
         dbgs() << "EL output: " << *V << "\n";
+      for (Value *V : HelperInputs)
+        dbgs() << "Helper input: " << *V << "\n";
     });
-
 
   Function *Helper;
   {
@@ -1856,10 +1919,11 @@ bool CilkABILoopSpawning::processLoop() {
 
     // LowerDbgDeclare(*(Header->getParent()));
 
-    Helper = CreateHelper(Inputs, Outputs, L->getBlocks(),
-                          Header, Preheader, ExitBlock/*L->getExitBlock()*/,
+    Helper = CreateHelper(HelperInputs, Outputs, LoopBlocks,
+                          Header, Preheader, ExitBlock,
                           VMap, M,
                           F->getSubprogram() != nullptr, Returns, ".ls",
+                          &HandledExits, DetachUnwind, InputSyncRegion,
                           nullptr, nullptr, nullptr);
 
     assert(Returns.empty() && "Returns cloned when cloning loop.");
@@ -1867,6 +1931,37 @@ bool CilkABILoopSpawning::processLoop() {
     // Use a fast calling convention for the helper.
     //Helper->setCallingConv(CallingConv::Fast);
     // Helper->setCallingConv(Header->getParent()->getCallingConv());
+  }
+
+  // Add a sync to the helper's return.
+  BasicBlock *HelperHeader = cast<BasicBlock>(VMap[Header]);
+  {
+    assert(isa<ReturnInst>(cast<BasicBlock>(VMap[ExitBlock])->getTerminator()));
+    SyncInst *NewSync =
+      insertSyncBeforeEscape(cast<BasicBlock>(VMap[ExitBlock]),
+                             cast<Instruction>(VMap[InputSyncRegion]), DT, LI);
+    // Set debug info of new sync to match that of terminator of the header of
+    // the cloned loop.
+    NewSync->setDebugLoc(HelperHeader->getTerminator()->getDebugLoc());
+  }
+
+  // Add syncs to the helper's resume blocks.
+  if (DetachUnwind) {
+    assert(
+        isa<ResumeInst>(cast<BasicBlock>(VMap[DetachUnwind])->getTerminator()));
+    SyncInst *NewSync =
+      insertSyncBeforeEscape(cast<BasicBlock>(VMap[DetachUnwind]),
+                             cast<Instruction>(VMap[InputSyncRegion]), DT, LI);
+    NewSync->setDebugLoc(HelperHeader->getTerminator()->getDebugLoc());
+
+  }
+  for (BasicBlock *BB : HandledExits) {
+    if (!isDetachedRethrow(BB->getTerminator(), InputSyncRegion)) continue;
+    assert(isa<ResumeInst>(cast<BasicBlock>(VMap[BB])->getTerminator()));
+    SyncInst *NewSync =
+      insertSyncBeforeEscape(cast<BasicBlock>(VMap[BB]),
+                             cast<Instruction>(VMap[InputSyncRegion]), DT, LI);
+    NewSync->setDebugLoc(HelperHeader->getTerminator()->getDebugLoc());
   }
 
   BasicBlock *NewPreheader = cast<BasicBlock>(VMap[Preheader]);
@@ -1920,11 +2015,10 @@ bool CilkABILoopSpawning::processLoop() {
                        /*TypeMapper=*/nullptr, /*Materializer=*/nullptr);
   }
 
-  // If the loop limit is constant, then rewrite the loop latch
-  // condition to use the end-iteration argument.
-  if (isa<Constant>(LimitVar)) {
+  // If the loop limit and end iteration are distinct, then rewrite the loop
+  // latch condition to use the end-iteration argument.
+  if (NeedSeparateEndArg) {
     CmpInst *HelperCond = cast<CmpInst>(VMap[NewCond]);
-    assert(HelperCond->getOperand(1) == LimitVar);
     IRBuilder<> Builder(HelperCond);
     Value *NewHelperCond = Builder.CreateICmpULT(HelperCond->getOperand(0),
                                                  VMap[InputMap[LimitVar]]);
@@ -1932,72 +2026,174 @@ bool CilkABILoopSpawning::processLoop() {
     HelperCond->eraseFromParent();
   }
 
-  // For debugging:
   BasicBlock *NewHeader = cast<BasicBlock>(VMap[Header]);
   SerializeDetachedCFG(cast<DetachInst>(NewHeader->getTerminator()), nullptr);
-  {
-    Value* v = &*Helper->arg_begin();
-    auto UI = v->use_begin(), E = v->use_end();
-    for (; UI != E;) {
-      Use &U = *UI;
-      ++UI;
-      auto *Usr = dyn_cast<Instruction>(U.getUser());
-      Usr->moveBefore(Helper->getEntryBlock().getTerminator());
+  // Move the loads from the Helper's struct input to the Helper's entry block.
+  for (Instruction *STLoad : StructInputLoads) {
+    Instruction *NewSTLoad = cast<Instruction>(VMap[STLoad]);
+    NewSTLoad->moveBefore(NewPreheader->getTerminator());
+  }
 
-      auto UI2 = Usr->use_begin(), E2 = Usr->use_end();
-      for (; UI2 != E2;) {
-        Use &U2 = *UI2;
-        ++UI2;
-        auto *Usr2 = dyn_cast<Instruction>(U2.getUser());
-        Usr2->moveBefore(Helper->getEntryBlock().getTerminator());
-      }
+  if (verifyFunction(*Helper, &dbgs()))
+    return false;
+
+  // Update allocas in cloned loop body.
+  {
+    // Collect reattach instructions.
+    SmallVector<Instruction *, 4> ReattachPoints;
+    for (BasicBlock *Pred : predecessors(Latch)) {
+      if (!isa<ReattachInst>(Pred->getTerminator())) continue;
+      if (L->contains(Pred))
+        ReattachPoints.push_back(cast<BasicBlock>(VMap[Pred])->getTerminator());
+    }
+    // The cloned loop should be serialized by this point.
+    BasicBlock *ClonedLoopBodyEntry =
+      cast<BasicBlock>(VMap[Header])->getSingleSuccessor();
+    assert(ClonedLoopBodyEntry &&
+           "Head of cloned loop body has multiple successors.");
+    bool ContainsDynamicAllocas =
+      MoveStaticAllocasInBlock(&Helper->getEntryBlock(), ClonedLoopBodyEntry,
+                               ReattachPoints);
+
+    // If the cloned loop contained dynamic alloca instructions, wrap the cloned
+    // loop with llvm.stacksave/llvm.stackrestore intrinsics.
+    if (ContainsDynamicAllocas) {
+      Module *M = Helper->getParent();
+      // Get the two intrinsics we care about.
+      Function *StackSave = Intrinsic::getDeclaration(M, Intrinsic::stacksave);
+      Function *StackRestore =
+        Intrinsic::getDeclaration(M,Intrinsic::stackrestore);
+
+      // Insert the llvm.stacksave.
+      CallInst *SavedPtr =
+        IRBuilder<>(&*ClonedLoopBodyEntry, ClonedLoopBodyEntry->begin())
+        .CreateCall(StackSave, {}, "savedstack");
+
+      // Insert a call to llvm.stackrestore before the reattaches in the
+      // original Tapir loop.
+      for (Instruction *ExitPoint : ReattachPoints)
+        IRBuilder<>(ExitPoint).CreateCall(StackRestore, SavedPtr);
     }
   }
 
   if (verifyFunction(*Helper, &dbgs()))
     return false;
 
+  // Add alignment assumptions to arguments of helper, based on alignment of
+  // values in old function.
+  AddAlignmentAssumptions(F, HelperInputs, VMap,
+                          Preheader->getTerminator(), AC, DT);
+
   // Add call to new helper function in original function.
   {
+    DEBUG(dbgs() << "CilkForABI function " << *CilkForABI << "\n");
     // Setup arguments for call.
-    SetVector<Value*> TopCallArgs;
-    // Add start iteration 0.
-    assert(CanonicalSCEV->getStart()->isZero() &&
-           "Canonical IV does not start at zero.");
-    TopCallArgs.insert(ConstantInt::get(CanonicalIV->getType(), 0));
-    // Add loop limit.
-    TopCallArgs.insert(LimitVar);
-    // Add grainsize.
-    //TopCallArgs.insert(GrainVar);
-    // Add the rest of the arguments.
-    for (Value *V : BodyInputs)
-      TopCallArgs.insert(V);
-
-    // Create call instruction.
+    SmallVector<Value *, 4> TopCallArgs;
     IRBuilder<> Builder(Preheader->getTerminator());
-
-    Function* F;
-    if( ((IntegerType*)LimitVar->getType())->getBitWidth() == 32 )
-      F = CILKRTS_FUNC(cilk_for_32, *M);
-    else {
-      assert( ((IntegerType*)LimitVar->getType())->getBitWidth() == 64 );
-      F = CILKRTS_FUNC(cilk_for_64, *M);
+    // Add a pointer to the helper function.
+    {
+      Value *HelperPtr = Builder.CreatePointerCast(
+          Helper, CilkForABI->getFunctionType()->getParamType(0));
+      TopCallArgs.push_back(HelperPtr);
     }
-    Value* args[] = {
-      Builder.CreatePointerCast(Helper, F->getFunctionType()->getParamType(0)),
-      Builder.CreatePointerCast(closure, F->getFunctionType()->getParamType(1)),
-      LimitVar,
-      ConstantInt::get(IntegerType::get(F->getContext(), sizeof(int)*8),0)
-    };
-
-    /*CallInst *TopCall = */Builder.CreateCall(F, args);
-
-    // Use a fast calling convention for the helper.
-    //TopCall->setCallingConv(CallingConv::Fast);
-    // TopCall->setCallingConv(Helper->getCallingConv());
-    //TopCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
-    // // Update CG graph with the call we just added.
-    // CG[F]->addCalledFunction(TopCall, CG[Helper]);
+    // Add a pointer to the context.
+    {
+      Value *ClosurePtr = Builder.CreatePointerCast(
+          Closure, CilkForABI->getFunctionType()->getParamType(1));
+      TopCallArgs.push_back(ClosurePtr);
+    }
+    // Add loop limit.
+    TopCallArgs.push_back(LimitVar);
+    // Add grainsize.
+    if (!SpecifiedGrainsize)
+      TopCallArgs.push_back(
+          ConstantInt::get(IntegerType::getInt32Ty(F->getContext()), 0));
+    else
+      TopCallArgs.push_back(
+          ConstantInt::get(IntegerType::getInt32Ty(F->getContext()),
+                           SpecifiedGrainsize));
+    DEBUG({
+        dbgs() << "TopCallArgs:\n";
+        for (Value *Arg : TopCallArgs)
+          dbgs() << "\t" << *Arg << "\n";
+      });
+    // Create call instruction.
+    if (!DetachUnwind) {
+      IRBuilder<> Builder(Preheader->getTerminator());
+      CallInst *TopCall = Builder.CreateCall(
+          CilkForABI, ArrayRef<Value *>(TopCallArgs));
+      // Use a fast calling convention for the helper.
+      TopCall->setCallingConv(CallingConv::Fast);
+      // TopCall->setCallingConv(Helper->getCallingConv());
+      TopCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
+      // // Update CG graph with the call we just added.
+      // CG[F]->addCalledFunction(TopCall, CG[Helper]);
+    } else {
+      BasicBlock *CallDest = SplitBlock(Preheader, Preheader->getTerminator(),
+                                        DT, LI);
+      InvokeInst *TopCall = InvokeInst::Create(CilkForABI, CallDest, DetachUnwind,
+                                               ArrayRef<Value *>(TopCallArgs));
+      // Update PHI nodes in DetachUnwind
+      for (PHINode &P : DetachUnwind->phis()) {
+        int j = P.getBasicBlockIndex(Header);
+        assert(j >= 0 && "Can't find exiting block in exit block's phi node!");
+        DEBUG({
+            if (Instruction *I = dyn_cast<Instruction>(P.getIncomingValue(j)))
+              assert(I->getParent() != Header &&
+                     "DetachUnwind PHI node uses value from header!");
+          });
+        P.addIncoming(P.getIncomingValue(j), Preheader);
+      }
+      // Update the dominator tree by informing it about the new edge from the
+      // preheader to the detach unwind destination.
+      if (DT)
+        DT->insertEdge(Preheader, DetachUnwind);
+      ReplaceInstWithInst(Preheader->getTerminator(), TopCall);
+      // Use a fast calling convention for the helper.
+      TopCall->setCallingConv(CallingConv::Fast);
+      // TopCall->setCallingConv(Helper->getCallingConv());
+      TopCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
+      // // Update CG graph with the call we just added.
+      // CG[F]->addCalledFunction(TopCall, CG[Helper]);
+    }
+  }
+  // Remove sync of loop in parent.
+  {
+    // Get the sync region for this loop's detached iterations.
+    DetachInst *HeadDetach = cast<DetachInst>(Header->getTerminator());
+    Value *SyncRegion = HeadDetach->getSyncRegion();
+    // Check the Tapir instructions contained in this sync region.  Look for a
+    // single sync instruction among those Tapir instructions.  Meanwhile,
+    // verify that the only detach instruction in this sync region is the detach
+    // in theloop header.  If these conditions are met, then we assume that the
+    // sync applies to this loop.  Otherwise, something more complicated is
+    // going on, and we give up.
+    SyncInst *LoopSync = nullptr;
+    bool SingleSyncJustForLoop = true;
+    for (User *U : SyncRegion->users()) {
+      // Skip the detach in the loop header.
+      if (HeadDetach == U) continue;
+      // Remember the first sync instruction we find.  If we find multiple sync
+      // instructions, then something nontrivial is going on.
+      if (SyncInst *SI = dyn_cast<SyncInst>(U)) {
+        if (!LoopSync)
+          LoopSync = SI;
+        else
+          SingleSyncJustForLoop = false;
+      }
+      // If we find a detach instruction that is not the loop header's, then
+      // something nontrivial is going on.
+      if (isa<DetachInst>(U))
+        SingleSyncJustForLoop = false;
+    }
+    if (LoopSync && SingleSyncJustForLoop)
+      // Replace the sync with a branch.
+      ReplaceInstWithInst(LoopSync,
+                          BranchInst::Create(LoopSync->getSuccessor(0)));
+    else if (!LoopSync)
+      DEBUG(dbgs() << "No sync found for this loop.\n");
+    else
+      DEBUG(dbgs() << "No single sync found that only affects this loop.\n");
   }
 
   ++LoopsConvertedToCilkABI;
