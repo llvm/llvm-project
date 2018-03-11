@@ -19,8 +19,7 @@ namespace mca {
 
 using namespace llvm;
 
-void ResourcePressureView::initialize(
-    const ArrayRef<uint64_t> ProcResourceMasks) {
+void ResourcePressureView::initialize() {
   // Populate the map of resource descriptors.
   unsigned R2VIndex = 0;
   const MCSchedModel &SM = STI.getSchedModel();
@@ -31,9 +30,7 @@ void ResourcePressureView::initialize(
     if (ProcResource.SubUnitsIdxBegin || !NumUnits)
       continue;
 
-    uint64_t ResourceMask = ProcResourceMasks[I];
-    Resource2VecIndex.insert(
-        std::pair<uint64_t, unsigned>(ResourceMask, R2VIndex));
+    Resource2VecIndex.insert(std::pair<uint64_t, unsigned>(I, R2VIndex));
     R2VIndex += ProcResource.NumUnits;
   }
 

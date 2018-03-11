@@ -205,9 +205,8 @@ bb2:                                              ; preds = %bb6, %bb
   br i1 %tmp5, label %bb1, label %bb6
 
 bb6:                                              ; preds = %bb2
-  %tmp4 = fmul float %tmp, undef
-  %tmp7 = fmul float %tmp4, 0x40E55DD180000000
-  %tmp8 = fadd float %tmp7, undef
+  %tmp7 = fmul float %tmp, 0x40E55DD180000000
+  %tmp8 = fadd float %tmp7, %tmp
   br label %bb2
 }
 

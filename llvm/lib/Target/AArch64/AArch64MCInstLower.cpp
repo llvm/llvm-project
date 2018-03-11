@@ -173,11 +173,20 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
 
 MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
                                                      MCSymbol *Sym) const {
-  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, RefKind, Ctx);
+  AArch64MCExpr::VariantKind RefKind = AArch64MCExpr::VK_NONE;
+  if (MO.getTargetFlags() & AArch64II::MO_TLS) {
+    if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGEOFF)
+      RefKind = AArch64MCExpr::VK_SECREL_LO12;
+    else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
+             AArch64II::MO_HI12)
+      RefKind = AArch64MCExpr::VK_SECREL_HI12;
+  }
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+  Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);
   return MCOperand::createExpr(Expr);
 }
 
