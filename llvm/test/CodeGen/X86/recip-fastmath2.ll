@@ -96,8 +96,8 @@ define float @f32_one_step_2(float %x) #1 {
 ; FMA-RECIP-LABEL: f32_one_step_2:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; FMA-RECIP-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0
-; FMA-RECIP-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem
+; FMA-RECIP-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
 ; FMA-RECIP-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-RECIP-NEXT:    retq
 ;
@@ -126,8 +126,8 @@ define float @f32_one_step_2(float %x) #1 {
 ; HASWELL-LABEL: f32_one_step_2:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
-; HASWELL-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0 # sched: [10:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -145,16 +145,16 @@ define float @f32_one_step_2(float %x) #1 {
 ; KNL-LABEL: f32_one_step_2:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
-; KNL-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; KNL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0 # sched: [10:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: f32_one_step_2:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
-; SKX-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.33]
 ; SKX-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast float 3456.0, %x
@@ -190,8 +190,8 @@ define float @f32_one_step_2_divs(float %x) #1 {
 ; FMA-RECIP-LABEL: f32_one_step_2_divs:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; FMA-RECIP-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0
-; FMA-RECIP-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem
+; FMA-RECIP-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
 ; FMA-RECIP-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
 ; FMA-RECIP-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; FMA-RECIP-NEXT:    retq
@@ -223,8 +223,8 @@ define float @f32_one_step_2_divs(float %x) #1 {
 ; HASWELL-LABEL: f32_one_step_2_divs:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
-; HASWELL-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1 # sched: [10:0.50]
 ; HASWELL-NEXT:    vmulss %xmm0, %xmm1, %xmm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -244,8 +244,8 @@ define float @f32_one_step_2_divs(float %x) #1 {
 ; KNL-LABEL: f32_one_step_2_divs:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
-; KNL-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; KNL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1 # sched: [10:0.50]
 ; KNL-NEXT:    vmulss %xmm0, %xmm1, %xmm0 # sched: [5:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
@@ -253,8 +253,8 @@ define float @f32_one_step_2_divs(float %x) #1 {
 ; SKX-LABEL: f32_one_step_2_divs:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
-; SKX-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.33]
 ; SKX-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1 # sched: [9:0.50]
 ; SKX-NEXT:    vmulss %xmm0, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -302,10 +302,10 @@ define float @f32_two_step_2(float %x) #2 {
 ; FMA-RECIP-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
 ; FMA-RECIP-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; FMA-RECIP-NEXT:    vmovaps %xmm1, %xmm3
-; FMA-RECIP-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3
-; FMA-RECIP-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm3
-; FMA-RECIP-NEXT:    vfnmadd213ss %xmm2, %xmm3, %xmm0
-; FMA-RECIP-NEXT:    vfmadd132ss %xmm3, %xmm3, %xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2
+; FMA-RECIP-NEXT:    vfmadd132ss {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1
+; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2
+; FMA-RECIP-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3
 ; FMA-RECIP-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-RECIP-NEXT:    retq
 ;
@@ -344,10 +344,10 @@ define float @f32_two_step_2(float %x) #2 {
 ; HASWELL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
 ; HASWELL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:0.50]
 ; HASWELL-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
-; HASWELL-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm3 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ss %xmm2, %xmm3, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ss %xmm3, %xmm3, %xmm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0 # sched: [10:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -371,10 +371,10 @@ define float @f32_two_step_2(float %x) #2 {
 ; KNL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
 ; KNL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:0.50]
 ; KNL-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
-; KNL-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm3 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ss %xmm2, %xmm3, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ss %xmm3, %xmm3, %xmm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ss {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [5:0.50]
 ; KNL-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0 # sched: [10:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -383,10 +383,10 @@ define float @f32_two_step_2(float %x) #2 {
 ; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:0.33]
-; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm3 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm3, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ss %xmm3, %xmm3, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [4:0.33]
 ; SKX-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast float 6789.0, %x
@@ -420,8 +420,8 @@ define <4 x float> @v4f32_one_step2(<4 x float> %x) #1 {
 ; FMA-RECIP-LABEL: v4f32_one_step2:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %xmm0, %xmm1
-; FMA-RECIP-NEXT:    vfnmadd213ps {{.*}}(%rip), %xmm1, %xmm0
-; FMA-RECIP-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
 ; FMA-RECIP-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-RECIP-NEXT:    retq
 ;
@@ -451,8 +451,8 @@ define <4 x float> @v4f32_one_step2(<4 x float> %x) #1 {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0 # sched: [11:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -471,16 +471,16 @@ define <4 x float> @v4f32_one_step2(<4 x float> %x) #1 {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; KNL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
-; KNL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0 # sched: [11:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: v4f32_one_step2:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
-; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to4}, %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, %x
@@ -516,8 +516,8 @@ define <4 x float> @v4f32_one_step_2_divs(<4 x float> %x) #1 {
 ; FMA-RECIP-LABEL: v4f32_one_step_2_divs:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %xmm0, %xmm1
-; FMA-RECIP-NEXT:    vfnmadd213ps {{.*}}(%rip), %xmm1, %xmm0
-; FMA-RECIP-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
 ; FMA-RECIP-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm1
 ; FMA-RECIP-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-RECIP-NEXT:    retq
@@ -550,8 +550,8 @@ define <4 x float> @v4f32_one_step_2_divs(<4 x float> %x) #1 {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm1 # sched: [11:0.50]
 ; HASWELL-NEXT:    vmulps %xmm0, %xmm1, %xmm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -572,8 +572,8 @@ define <4 x float> @v4f32_one_step_2_divs(<4 x float> %x) #1 {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; KNL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
-; KNL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm1 # sched: [11:0.50]
 ; KNL-NEXT:    vmulps %xmm0, %xmm1, %xmm0 # sched: [5:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
@@ -581,8 +581,8 @@ define <4 x float> @v4f32_one_step_2_divs(<4 x float> %x) #1 {
 ; SKX-LABEL: v4f32_one_step_2_divs:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
-; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to4}, %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm1 # sched: [10:0.50]
 ; SKX-NEXT:    vmulps %xmm0, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -630,10 +630,10 @@ define <4 x float> @v4f32_two_step2(<4 x float> %x) #2 {
 ; FMA-RECIP-NEXT:    vrcpps %xmm0, %xmm1
 ; FMA-RECIP-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
 ; FMA-RECIP-NEXT:    vmovaps %xmm1, %xmm3
-; FMA-RECIP-NEXT:    vfnmadd213ps %xmm2, %xmm0, %xmm3
-; FMA-RECIP-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm3
-; FMA-RECIP-NEXT:    vfnmadd213ps %xmm2, %xmm3, %xmm0
-; FMA-RECIP-NEXT:    vfmadd132ps %xmm3, %xmm3, %xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3
 ; FMA-RECIP-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-RECIP-NEXT:    retq
 ;
@@ -672,10 +672,10 @@ define <4 x float> @v4f32_two_step2(<4 x float> %x) #2 {
 ; HASWELL-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
 ; HASWELL-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
-; HASWELL-NEXT:    vfnmadd213ps %xmm2, %xmm0, %xmm3 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm3 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %xmm2, %xmm3, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %xmm3, %xmm3, %xmm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0 # sched: [11:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -699,10 +699,10 @@ define <4 x float> @v4f32_two_step2(<4 x float> %x) #2 {
 ; KNL-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; KNL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
 ; KNL-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
-; KNL-NEXT:    vfnmadd213ps %xmm2, %xmm0, %xmm3 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm3 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ps %xmm2, %xmm3, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %xmm3, %xmm3, %xmm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0 # sched: [11:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -711,10 +711,10 @@ define <4 x float> @v4f32_two_step2(<4 x float> %x) #2 {
 ; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
 ; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:0.33]
-; SKX-NEXT:    vfnmadd213ps %xmm2, %xmm0, %xmm3 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm3 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ps %xmm2, %xmm3, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps %xmm3, %xmm3, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, %x
@@ -756,8 +756,8 @@ define <8 x float> @v8f32_one_step2(<8 x float> %x) #1 {
 ; FMA-RECIP-LABEL: v8f32_one_step2:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %ymm0, %ymm1
-; FMA-RECIP-NEXT:    vfnmadd213ps {{.*}}(%rip), %ymm1, %ymm0
-; FMA-RECIP-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1
 ; FMA-RECIP-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0
 ; FMA-RECIP-NEXT:    retq
 ;
@@ -787,8 +787,8 @@ define <8 x float> @v8f32_one_step2(<8 x float> %x) #1 {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpps %ymm0, %ymm1 # sched: [11:2.00]
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [12:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -807,16 +807,16 @@ define <8 x float> @v8f32_one_step2(<8 x float> %x) #1 {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vrcpps %ymm0, %ymm1 # sched: [11:2.00]
 ; KNL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; KNL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [12:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: v8f32_one_step2:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
-; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to8}, %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, %x
@@ -861,8 +861,8 @@ define <8 x float> @v8f32_one_step_2_divs(<8 x float> %x) #1 {
 ; FMA-RECIP-LABEL: v8f32_one_step_2_divs:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %ymm0, %ymm1
-; FMA-RECIP-NEXT:    vfnmadd213ps {{.*}}(%rip), %ymm1, %ymm0
-; FMA-RECIP-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1
 ; FMA-RECIP-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm1
 ; FMA-RECIP-NEXT:    vmulps %ymm0, %ymm1, %ymm0
 ; FMA-RECIP-NEXT:    retq
@@ -895,8 +895,8 @@ define <8 x float> @v8f32_one_step_2_divs(<8 x float> %x) #1 {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpps %ymm0, %ymm1 # sched: [11:2.00]
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm1 # sched: [12:0.50]
 ; HASWELL-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -917,8 +917,8 @@ define <8 x float> @v8f32_one_step_2_divs(<8 x float> %x) #1 {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vrcpps %ymm0, %ymm1 # sched: [11:2.00]
 ; KNL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; KNL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm1 # sched: [12:0.50]
 ; KNL-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [5:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
@@ -926,8 +926,8 @@ define <8 x float> @v8f32_one_step_2_divs(<8 x float> %x) #1 {
 ; SKX-LABEL: v8f32_one_step_2_divs:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
-; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to8}, %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm1 # sched: [11:0.50]
 ; SKX-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -989,10 +989,10 @@ define <8 x float> @v8f32_two_step2(<8 x float> %x) #2 {
 ; FMA-RECIP-NEXT:    vrcpps %ymm0, %ymm1
 ; FMA-RECIP-NEXT:    vmovaps {{.*#+}} ymm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
 ; FMA-RECIP-NEXT:    vmovaps %ymm1, %ymm3
-; FMA-RECIP-NEXT:    vfnmadd213ps %ymm2, %ymm0, %ymm3
-; FMA-RECIP-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm3
-; FMA-RECIP-NEXT:    vfnmadd213ps %ymm2, %ymm3, %ymm0
-; FMA-RECIP-NEXT:    vfmadd132ps %ymm3, %ymm3, %ymm0
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} ymm3 = -(ymm0 * ymm3) + ymm2
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} ymm3 = (ymm3 * ymm1) + ymm1
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm2
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm3) + ymm3
 ; FMA-RECIP-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0
 ; FMA-RECIP-NEXT:    retq
 ;
@@ -1031,10 +1031,10 @@ define <8 x float> @v8f32_two_step2(<8 x float> %x) #2 {
 ; HASWELL-NEXT:    vrcpps %ymm0, %ymm1 # sched: [11:2.00]
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
 ; HASWELL-NEXT:    vmovaps %ymm1, %ymm3 # sched: [1:1.00]
-; HASWELL-NEXT:    vfnmadd213ps %ymm2, %ymm0, %ymm3 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm3 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %ymm2, %ymm3, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps %ymm3, %ymm3, %ymm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm3 = -(ymm0 * ymm3) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} ymm3 = (ymm3 * ymm1) + ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm3) + ymm3 sched: [5:0.50]
 ; HASWELL-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [12:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1058,10 +1058,10 @@ define <8 x float> @v8f32_two_step2(<8 x float> %x) #2 {
 ; KNL-NEXT:    vrcpps %ymm0, %ymm1 # sched: [11:2.00]
 ; KNL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
 ; KNL-NEXT:    vmovaps %ymm1, %ymm3 # sched: [1:1.00]
-; KNL-NEXT:    vfnmadd213ps %ymm2, %ymm0, %ymm3 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm3 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ps %ymm2, %ymm3, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps %ymm3, %ymm3, %ymm0 # sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} ymm3 = -(ymm0 * ymm3) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} ymm3 = (ymm3 * ymm1) + ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm3) + ymm3 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [12:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1070,10 +1070,10 @@ define <8 x float> @v8f32_two_step2(<8 x float> %x) #2 {
 ; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
 ; SKX-NEXT:    vmovaps %ymm1, %ymm3 # sched: [1:0.33]
-; SKX-NEXT:    vfnmadd213ps %ymm2, %ymm0, %ymm3 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm3 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ps %ymm2, %ymm3, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps %ymm3, %ymm3, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm3 = -(ymm0 * ymm3) + ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm3 = (ymm3 * ymm1) + ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm3) + ymm3 sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, %x

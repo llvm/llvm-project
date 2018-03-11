@@ -3976,6 +3976,67 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   return DAG.getNode(ISD::ADD, DL, PtrVT, ThreadBase, TPOff);
 }
 
+SDValue
+AArch64TargetLowering::LowerWindowsGlobalTLSAddress(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  assert(Subtarget->isTargetWindows() && "Windows specific TLS lowering");
+
+  SDValue Chain = DAG.getEntryNode();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDLoc DL(Op);
+
+  SDValue TEB = DAG.getRegister(AArch64::X18, MVT::i64);
+
+  // Load the ThreadLocalStoragePointer from the TEB
+  // A pointer to the TLS array is located at offset 0x58 from the TEB.
+  SDValue TLSArray =
+      DAG.getNode(ISD::ADD, DL, PtrVT, TEB, DAG.getIntPtrConstant(0x58, DL));
+  TLSArray = DAG.getLoad(PtrVT, DL, Chain, TLSArray, MachinePointerInfo());
+  Chain = TLSArray.getValue(1);
+
+  // Load the TLS index from the C runtime;
+  // This does the same as getAddr(), but without having a GlobalAddressSDNode.
+  // This also does the same as LOADgot, but using a generic i32 load,
+  // while LOADgot only loads i64.
+  SDValue TLSIndexHi =
+      DAG.getTargetExternalSymbol("_tls_index", PtrVT, AArch64II::MO_PAGE);
+  SDValue TLSIndexLo = DAG.getTargetExternalSymbol(
+      "_tls_index", PtrVT, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  SDValue ADRP = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, TLSIndexHi);
+  SDValue TLSIndex =
+      DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ADRP, TLSIndexLo);
+  TLSIndex = DAG.getLoad(MVT::i32, DL, Chain, TLSIndex, MachinePointerInfo());
+  Chain = TLSIndex.getValue(1);
+
+  // The pointer to the thread's TLS data area is at the TLS Index scaled by 8
+  // offset into the TLSArray.
+  TLSIndex = DAG.getNode(ISD::ZERO_EXTEND, DL, PtrVT, TLSIndex);
+  SDValue Slot = DAG.getNode(ISD::SHL, DL, PtrVT, TLSIndex,
+                             DAG.getConstant(3, DL, PtrVT));
+  SDValue TLS = DAG.getLoad(PtrVT, DL, Chain,
+                            DAG.getNode(ISD::ADD, DL, PtrVT, TLSArray, Slot),
+                            MachinePointerInfo());
+  Chain = TLS.getValue(1);
+
+  const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+  const GlobalValue *GV = GA->getGlobal();
+  SDValue TGAHi = DAG.getTargetGlobalAddress(
+      GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_HI12);
+  SDValue TGALo = DAG.getTargetGlobalAddress(
+      GV, DL, PtrVT, 0,
+      AArch64II::MO_TLS | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+
+  // Add the offset from the start of the .tls section (section base).
+  SDValue Addr =
+      SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, TLS, TGAHi,
+                                 DAG.getTargetConstant(0, DL, MVT::i32)),
+              0);
+  Addr = SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr, TGALo,
+                                    DAG.getTargetConstant(0, DL, MVT::i32)),
+                 0);
+  return Addr;
+}
+
 SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
                                                      SelectionDAG &DAG) const {
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
@@ -3986,6 +4047,8 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
     return LowerDarwinGlobalTLSAddress(Op, DAG);
   if (Subtarget->isTargetELF())
     return LowerELFGlobalTLSAddress(Op, DAG);
+  if (Subtarget->isTargetWindows())
+    return LowerWindowsGlobalTLSAddress(Op, DAG);
 
   llvm_unreachable("Unexpected platform trying to use TLS");
 }

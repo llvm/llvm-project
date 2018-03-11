@@ -46,9 +46,10 @@ void ResourceState::dump() const {
 // ResourceDescriptor. Map 'Resources' allows to quickly obtain ResourceState
 // objects from resource mask identifiers.
 void ResourceManager::addResource(const MCProcResourceDesc &Desc,
+                                  unsigned Index,
                                   uint64_t Mask) {
   assert(Resources.find(Mask) == Resources.end() && "Resource already added!");
-  Resources[Mask] = llvm::make_unique<ResourceState>(Desc, Mask);
+  Resources[Mask] = llvm::make_unique<ResourceState>(Desc, Index, Mask);
 }
 
 // Populate vector ProcResID2Mask with resource masks. One per each processor
@@ -219,6 +220,9 @@ void ResourceManager::issueInstruction(
       ResourceRef Pipe = selectPipe(R.first);
       use(Pipe);
       BusyResources[Pipe] += CS.size();
+      // Replace the resource mask with a valid processor resource index.
+      const ResourceState &RS = *Resources[Pipe.first];
+      Pipe.first = RS.getProcResourceID();
       Pipes.emplace_back(std::pair<ResourceRef, unsigned>(Pipe, CS.size()));
     } else {
       assert((countPopulation(R.first) > 1) && "Expected a group!");
