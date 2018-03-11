@@ -2074,18 +2074,16 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
 
   const Instruction *I = StartingAccess->getMemoryInst();
   UpwardsMemoryQuery Q(I, StartingAccess);
-  // We can't sanely do anything with a fences, they conservatively
-  // clobber all memory, and have no locations to get pointers from to
-  // try to disambiguate.
+  // We can't sanely do anything with a fence, since they conservatively clobber
+  // all memory, and have no locations to get pointers from to try to
+  // disambiguate.
   if (!Q.IsCall && I->isFenceLike())
     return StartingAccess;
 
   if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
     MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
-    if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess)) {
-      MUD->setOptimized(LiveOnEntry);
-      MUD->setOptimizedAccessType(None);
-    }
+    StartingAccess->setOptimized(LiveOnEntry);
+    StartingAccess->setOptimizedAccessType(None);
     return LiveOnEntry;
   }
 
@@ -2095,10 +2093,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   // At this point, DefiningAccess may be the live on entry def.
   // If it is, we will not get a better result.
   if (MSSA->isLiveOnEntryDef(DefiningAccess)) {
-    if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess)) {
-      MUD->setOptimized(DefiningAccess);
-      MUD->setOptimizedAccessType(None);
-    }
+    StartingAccess->setOptimized(DefiningAccess);
+    StartingAccess->setOptimizedAccessType(None);
     return DefiningAccess;
   }
 
@@ -2108,13 +2104,11 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
   DEBUG(dbgs() << *Result << "\n");
 
-  if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess)) {
-    MUD->setOptimized(Result);
-    if (MSSA->isLiveOnEntryDef(Result))
-      MUD->setOptimizedAccessType(None);
-    else if (Q.AR == MustAlias)
-      MUD->setOptimizedAccessType(MustAlias);
-  }
+  StartingAccess->setOptimized(Result);
+  if (MSSA->isLiveOnEntryDef(Result))
+    StartingAccess->setOptimizedAccessType(None);
+  else if (Q.AR == MustAlias)
+    StartingAccess->setOptimizedAccessType(MustAlias);
 
   return Result;
 }

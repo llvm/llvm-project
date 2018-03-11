@@ -739,8 +739,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     // TODO: add support for non-SDWA instructions as OtherInst.
     // For now this only works with SDWA instructions. For regular instructions
-    // there is no way to determine if instruction write only 8/16/24-bit out of
-    // full register size and all registers are at min 32-bit wide.
+    // there is no way to determine if the instruction writes only 8/16/24-bit
+    // out of full register size and all registers are at min 32-bit wide.
     if (!TII->isSDWA(*OtherInst))
       break;
 
