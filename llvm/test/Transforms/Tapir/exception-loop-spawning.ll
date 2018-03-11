@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-spawning -ls-tapir-target=cilk -S | FileCheck %s
+; RUN: opt < %s -loop-spawning -S | FileCheck %s
 
 %class.Foo = type { i8 }
 

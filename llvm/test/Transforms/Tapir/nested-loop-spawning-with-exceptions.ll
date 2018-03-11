@@ -4,7 +4,7 @@
 ; Credit to Tim Kaler for producing the source code that inspired this test
 ; case.
 ;
-; RUN: opt < %s -loop-spawning -ls-tapir-target=cilk -simplifycfg -instcombine -S | FileCheck %s
+; RUN: opt < %s -loop-spawning -simplifycfg -instcombine -S | FileCheck %s
 
 %"class.std::vector.0" = type { %"struct.std::_Vector_base.1" }
 %"struct.std::_Vector_base.1" = type { %"struct.std::_Vector_base<std::tuple<int, double, int>, std::allocator<std::tuple<int, double, int> > >::_Vector_impl" }

@@ -1,7 +1,7 @@
 ; Test that Tapir's loop spawning pass correctly transforms a loop
 ; that reads its original end iteration count.
 
-; RUN: opt < %s -loop-spawning -S -ls-tapir-target=cilk | FileCheck %s
+; RUN: opt < %s -loop-spawning -S | FileCheck %s
 
 source_filename = "looplimittest.c"
 

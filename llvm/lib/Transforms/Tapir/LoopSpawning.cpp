@@ -61,19 +61,9 @@ STATISTIC(LoopsAnalyzed, "Number of Tapir loops analyzed");
 STATISTIC(LoopsConvertedToDAC,
           "Number of Tapir loops converted to divide-and-conquer iteration spawning");
 
-static cl::opt<TapirTargetType> ClTapirTarget(
-    "ls-tapir-target", cl::desc("Target runtime for Tapir"),
-    cl::init(TapirTargetType::Cilk),
-    cl::values(clEnumValN(TapirTargetType::None,
-                          "none", "None"),
-               clEnumValN(TapirTargetType::Serial,
-                          "serial", "Serial code"),
-               clEnumValN(TapirTargetType::Cilk,
-                          "cilk", "Cilk Plus"),
-               clEnumValN(TapirTargetType::OpenMP,
-                          "openmp", "OpenMP"),
-               clEnumValN(TapirTargetType::CilkR,
-                          "cilkr", "CilkR")));
+static cl::opt<bool> UseCilkABI(
+    "use-cilk-abi", cl::init(false), cl::Hidden,
+    cl::desc("Use the Cilk ABI for Tapir loops"));
 
 namespace {
 
@@ -145,10 +135,9 @@ public:
   // {}
   DACLoopSpawning(
       Loop *OrigLoop, unsigned Grainsize, ScalarEvolution &SE, LoopInfo *LI,
-      DominatorTree *DT, AssumptionCache *AC, OptimizationRemarkEmitter &ORE,
-      TapirTarget* tapirTarget)
+      DominatorTree *DT, AssumptionCache *AC, OptimizationRemarkEmitter &ORE)
       : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE),
-        tapirTarget(tapirTarget), SpecifiedGrainsize(Grainsize)
+        SpecifiedGrainsize(Grainsize)
   {}
 
   bool processLoop();
@@ -164,7 +153,6 @@ protected:
       LoopInfo *LI, bool CanonicalIVFlagNUW = false,
       bool CanonicalIVFlagNSW = false);
 
-  TapirTarget* tapirTarget;
   unsigned SpecifiedGrainsize;
 // private:
 //   /// Report an analysis message to assist the user in diagnosing loops that are
@@ -195,8 +183,8 @@ struct LoopSpawningImpl {
   // {}
   LoopSpawningImpl(Function &F, LoopInfo &LI, ScalarEvolution &SE,
                    DominatorTree &DT, AssumptionCache &AC,
-                   OptimizationRemarkEmitter &ORE, TapirTarget* tapirTarget)
-      : F(F), LI(LI), SE(SE), DT(DT), AC(AC), ORE(ORE), tapirTarget(tapirTarget)
+                   OptimizationRemarkEmitter &ORE)
+      : F(F), LI(LI), SE(SE), DT(DT), AC(AC), ORE(ORE)
   {}
 
   bool run();
@@ -218,8 +206,6 @@ private:
   // AliasAnalysis *AA;
   AssumptionCache &AC;
   OptimizationRemarkEmitter &ORE;
-
-  TapirTarget* tapirTarget;
 };
 } // end anonymous namespace
 
@@ -699,9 +685,6 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
 /// Top-level call to convert loop to spawn its iterations in a
 /// divide-and-conquer fashion.
 bool DACLoopSpawning::processLoop() {
-  if (!tapirTarget)
-    return false;
-
   Loop *L = OrigLoop;
 
   BasicBlock *Header = L->getHeader();
@@ -1572,27 +1555,49 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
     {
       DebugLoc DLoc = L->getStartLoc();
       BasicBlock *Header = L->getHeader();
-      DACLoopSpawning DLS(L, Hints.getGrainsize(), SE, &LI, &DT, &AC, ORE, tapirTarget);
-      // CilkABILoopSpawning DLS(L, SE, &LI, &DT, &AC, ORE);
-      // DACLoopSpawning DLS(L, SE, LI, DT, TLI, TTI, ORE);
-      if (DLS.processLoop()) {
-        DEBUG({
-            if (verifyFunction(*F, &dbgs())) {
-              dbgs() << "Transformed function is invalid.\n";
-              return false;
-            }
-          });
-        // Report success.
-        ORE.emit(OptimizationRemark(LS_NAME, "DACSpawning", DLoc, Header)
-                 << "spawning iterations using divide-and-conquer");
-        return true;
+      if (UseCilkABI) {
+        CilkABILoopSpawning DLS(L, Hints.getGrainsize(), SE, &LI, &DT, &AC, ORE);
+        if (DLS.processLoop()) {
+          DEBUG({
+              if (verifyFunction(*F, &dbgs())) {
+                dbgs() << "Transformed function is invalid.\n";
+                return false;
+              }
+            });
+          // Report success.
+          ORE.emit(OptimizationRemark(LS_NAME, "DACSpawning", DLoc, Header)
+                   << "spawning iterations using divide-and-conquer");
+          return true;
+        } else {
+          // Report failure.
+          ORE.emit(OptimizationRemarkMissed(LS_NAME, "NoDACSpawning", DLoc,
+                                            Header)
+                   << "cannot spawn iterations using divide-and-conquer");
+          emitMissedWarning(F, L, Hints, &ORE);
+          return false;
+        }
       } else {
-        // Report failure.
-        ORE.emit(OptimizationRemarkMissed(LS_NAME, "NoDACSpawning", DLoc,
-                                          Header)
-                 << "cannot spawn iterations using divide-and-conquer");
-        emitMissedWarning(F, L, Hints, &ORE);
-        return false;
+        DACLoopSpawning DLS(L, Hints.getGrainsize(), SE, &LI, &DT, &AC, ORE);
+        // DACLoopSpawning DLS(L, SE, LI, DT, TLI, TTI, ORE);
+        if (DLS.processLoop()) {
+          DEBUG({
+              if (verifyFunction(*F, &dbgs())) {
+                dbgs() << "Transformed function is invalid.\n";
+                return false;
+              }
+            });
+          // Report success.
+          ORE.emit(OptimizationRemark(LS_NAME, "DACSpawning", DLoc, Header)
+                   << "spawning iterations using divide-and-conquer");
+          return true;
+        } else {
+          // Report failure.
+          ORE.emit(OptimizationRemarkMissed(LS_NAME, "NoDACSpawning", DLoc,
+                                            Header)
+                   << "cannot spawn iterations using divide-and-conquer");
+          emitMissedWarning(F, L, Hints, &ORE);
+          return false;
+        }
       }
     }
     break;
@@ -1653,7 +1658,7 @@ PreservedAnalyses LoopSpawningPass::run(Function &F,
     AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   // OptimizationRemarkEmitter ORE(F);
 
-  bool Changed = LoopSpawningImpl(F, LI, SE, DT, AC, ORE, tapirTarget).run();
+  bool Changed = LoopSpawningImpl(F, LI, SE, DT, AC, ORE).run();
 
   AM.invalidate<ScalarEvolutionAnalysis>(F);
 
@@ -1666,13 +1671,7 @@ namespace {
 struct LoopSpawning : public FunctionPass {
   /// Pass identification, replacement for typeid
   static char ID;
-  TapirTarget* tapirTarget;
-  explicit LoopSpawning(TapirTarget* tapirTarget = nullptr)
-      : FunctionPass(ID), tapirTarget(tapirTarget) {
-    if (!this->tapirTarget)
-      this->tapirTarget = getTapirTargetFromType(ClTapirTarget);
-
-    assert(this->tapirTarget);
+  explicit LoopSpawning() : FunctionPass(ID) {
     initializeLoopSpawningPass(*PassRegistry::getPassRegistry());
   }
 
@@ -1696,7 +1695,7 @@ struct LoopSpawning : public FunctionPass {
       getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     // OptimizationRemarkEmitter ORE(F);
 
-    return LoopSpawningImpl(F, LI, SE, DT, AC, ORE, tapirTarget).run();
+    return LoopSpawningImpl(F, LI, SE, DT, AC, ORE).run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1734,7 +1733,7 @@ INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(LoopSpawning, LS_NAME, ls_name, false, false)
 
 namespace llvm {
-Pass *createLoopSpawningPass(TapirTarget* target) {
-  return new LoopSpawning(target);
+Pass *createLoopSpawningPass() {
+  return new LoopSpawning();
 }
 }

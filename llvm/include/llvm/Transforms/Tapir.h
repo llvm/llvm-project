@@ -25,7 +25,7 @@ class TapirTarget;
 //
 // LoopSpawning - Create a loop spawning pass.
 //
-Pass *createLoopSpawningPass(TapirTarget*);
+Pass *createLoopSpawningPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -59,7 +59,7 @@ FunctionPass *createSpawnUnswitchPass();
 
 //===----------------------------------------------------------------------===//
 //
-// PromoteDetachToCilk
+// LowerTapirToTarget - Lower Tapir constructs to a specified parallel runtime.
 //
 ModulePass *createLowerTapirToTargetPass(TapirTarget*);
 

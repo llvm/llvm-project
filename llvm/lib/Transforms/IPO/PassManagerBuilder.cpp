@@ -815,7 +815,7 @@ void PassManagerBuilder::populateModulePassManager(
     // relies on the rotated form.  Disable header duplication at -Oz.
     MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
 
-    MPM.add(createLoopSpawningPass(tapirTarget));
+    MPM.add(createLoopSpawningPass());
 
     // The LoopSpawning pass may leave cruft around.  Clean it up.
     MPM.add(createLoopDeletionPass());

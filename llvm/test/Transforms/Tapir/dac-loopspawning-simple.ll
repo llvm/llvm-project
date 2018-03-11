@@ -1,7 +1,7 @@
 ; Test that Tapir's loop spawning pass transforms this simple loop
 ; into recursive divide-and-conquer.
 
-; RUN: opt < %s -loop-spawning -S -ls-tapir-target=cilk | FileCheck %s
+; RUN: opt < %s -loop-spawning -S | FileCheck %s
 
 ; Function Attrs: nounwind uwtable
 define void @foo(i32 %n) local_unnamed_addr #0 {

@@ -4,7 +4,7 @@
 ; Credit to Tim Kaler for producing the source code that inspired this test
 ; case.
 ;
-; RUN: opt < %s -loop-spawning -ls-tapir-target=cilk -simplifycfg -S | FileCheck %s --check-prefix=LS
+; RUN: opt < %s -loop-spawning -simplifycfg -S | FileCheck %s --check-prefix=LS
 ; RUN: opt < %s -tapir2target -tapir-target=cilk -simplifycfg -S | FileCheck %s --check-prefix=TT
 
 ; ModuleID = 'sret-test.cpp'
