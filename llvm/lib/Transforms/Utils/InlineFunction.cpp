@@ -577,6 +577,53 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
   return nullptr;
 }
 
+/// detachedTaskCanThrow - Return true if task detached by the given detach
+/// instruction can throw, false otherwise.
+static bool CheckDetachedTaskForCallsThatThrow(const DetachInst *DI) {
+  const BasicBlock *Detached = DI->getDetached();
+  SmallVector<const BasicBlock *, 4> WorkList;
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  WorkList.push_back(Detached);
+  while (!WorkList.empty()) {
+    const BasicBlock *CurBB = WorkList.pop_back_val();
+    if (!Visited.insert(CurBB).second)
+      continue;
+
+    for (const Instruction &I : *CurBB)
+      // Check for a call instruction that can throw.
+      if (const CallInst *CI = dyn_cast<CallInst>(&I))
+        if (!CI->doesNotThrow())
+          return true;
+
+    // Handle nested detached tasks recursively.
+    if (const DetachInst *NestedDI =
+        dyn_cast<DetachInst>(CurBB->getTerminator())) {
+      if (!NestedDI->hasUnwindDest() &&
+          CheckDetachedTaskForCallsThatThrow(NestedDI))
+        return true;
+      else {
+        // Only add the continuations of the detach for additional search.
+        WorkList.push_back(NestedDI->getContinue());
+        if (NestedDI->hasUnwindDest())
+          WorkList.push_back(NestedDI->getUnwindDest());
+        continue;
+      }
+    }
+
+    // Terminate search at matching reattaches and detached rethrows.
+    if (const ReattachInst *RI = dyn_cast<ReattachInst>(CurBB->getTerminator()))
+      if (ReattachMatchesDetach(RI, DI))
+        continue;
+    if (isDetachedRethrow(CurBB->getTerminator(), DI->getSyncRegion()))
+      continue;
+
+    // Add successors of this basic block.
+    for (const BasicBlock *Succ : successors(CurBB))
+      WorkList.push_back(Succ);
+  }
+  return false;
+}
+
 /// If we inlined an invoke site, we need to convert calls
 /// in the body of the inlined function into invokes.
 ///
@@ -621,6 +668,15 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         Invoke.addIncomingPHIValuesFor(NewBB);
+
+#ifndef NDEBUG
+    if (DetachInst *DI = dyn_cast<DetachInst>(BB->getTerminator()))
+      // Check if any calls in the detached task might throw, requiring a new
+      // unwind destination to be added to this detach.
+      assert((!DI->hasUnwindDest() ||
+              !CheckDetachedTaskForCallsThatThrow(DI)) &&
+             "Need to add an unwind destination to an inlined detach!");
+#endif
 
     // Forward any resumes that are remaining here.
     if (ResumeInst *RI = dyn_cast<ResumeInst>(BB->getTerminator()))
