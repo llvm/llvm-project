@@ -14,8 +14,10 @@
 #include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -31,6 +33,38 @@ bool llvm::isDetachedRethrow(const Instruction *I, const Value *SyncRegion) {
         if (!SyncRegion || (SyncRegion == II->getArgOperand(0)))
           return true;
   return false;
+}
+
+/// Returns true if the reattach instruction appears to match the given detach
+/// instruction, false otherwise.
+///
+/// If a dominator tree is not given, then this method does a best-effort check.
+/// In particular, this function might return true when the reattach instruction
+/// does not actually match the detach instruction, but instead matches a
+/// sibling detach instruction with the same continuation.  This best-effort
+/// check is sufficient in some cases, such as during a traversal of a detached
+/// task..
+bool llvm::ReattachMatchesDetach(const ReattachInst *RI, const DetachInst *DI,
+                                 DominatorTree *DT) {
+  // Check that the reattach instruction belonds to the same sync region as the
+  // detach instruction.
+  if (RI->getSyncRegion() != DI->getSyncRegion())
+    return false;
+
+  // Check that the destination of the reattach matches the continue destination
+  // of the detach.
+  if (RI->getDetachContinue() != DI->getContinue())
+    return false;
+
+  // If we have a dominator tree, check that the detach edge dominates the
+  // reattach.
+  if (DT) {
+    BasicBlockEdge DetachEdge(DI->getParent(), DI->getDetached());
+    if (!DT->dominates(DetachEdge, RI->getParent()))
+      return false;
+  }
+
+  return true;
 }
 
 /// Return the result of AI->isStaticAlloca() if AI were moved to the entry
@@ -329,6 +363,9 @@ bool llvm::isCriticalContinueEdge(const TerminatorInst *TI, unsigned SuccNum) {
   const BasicBlock *DetachPred = TI->getParent();
   for (; I != E; ++I) {
     if (DetachPred == *I) continue;
+    // Even if a reattach instruction isn't associated with the detach
+    // instruction TI, we can safely skip it, because it will be associated with
+    // a different detach instruction that precedes this block.
     if (isa<ReattachInst>((*I)->getTerminator())) continue;
     return true;
   }

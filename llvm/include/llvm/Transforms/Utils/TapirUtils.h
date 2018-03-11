@@ -30,12 +30,16 @@ class TerminatorInst;
 /// otherwise.
 bool isDetachedRethrow(const Instruction *I, const Value *SyncRegion = nullptr);
 
+/// Returns true if the reattach instruction appears to match the given detach
+/// instruction, false otherwise.
+bool ReattachMatchesDetach(const ReattachInst *RI, const DetachInst *DI,
+                           DominatorTree *DT = nullptr);
+
 /// Move static allocas in a block into the specified entry block.  Leave
 /// lifetime markers behind for those static allocas.  Returns true if the
 /// cloned block still contains dynamic allocas, which cannot be moved.
-bool MoveStaticAllocasInBlock(
-    BasicBlock *Entry, BasicBlock *Block,
-    SmallVectorImpl<Instruction *> &ExitPoints);
+bool MoveStaticAllocasInBlock(BasicBlock *Entry, BasicBlock *Block,
+                              SmallVectorImpl<Instruction *> &ExitPoints);
 
 /// Serialize the sub-CFG detached by the specified detach
 /// instruction.  Removes the detach instruction and returns a pointer

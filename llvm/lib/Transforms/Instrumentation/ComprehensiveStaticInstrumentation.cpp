@@ -693,6 +693,49 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   }
 }
 
+static void getTaskExits(
+    DetachInst *DI, SmallVectorImpl<BasicBlock *> &TaskReturns,
+    SmallVectorImpl<BasicBlock *> &TaskResumes,
+    DominatorTree *DT) {
+  BasicBlock *Detached = DI->getDetached();
+  BasicBlockEdge DetachEdge(DI->getParent(), Detached);
+  SmallVector<BasicBlock *, 4> WorkList;
+  SmallPtrSet<BasicBlock *, 8> Visited;
+  WorkList.push_back(Detached);
+  while (!WorkList.empty()) {
+    BasicBlock *CurBB = WorkList.pop_back_val();
+    if (!Visited.insert(CurBB).second)
+      continue;
+
+    // TODO: Exit blocks of a detached task might be shared between tasks.  Add
+    // code to these exit blocks to properly compute the CSI ID of the hook.
+
+    // Handle nested detached tasks recursively.
+    if (DetachInst *NestedDI = dyn_cast<DetachInst>(CurBB->getTerminator())) {
+      // Only add the continuations of the detach for additional search.
+      WorkList.push_back(NestedDI->getContinue());
+      if (NestedDI->hasUnwindDest())
+        WorkList.push_back(NestedDI->getUnwindDest());
+      continue;
+    }
+
+    // Terminate search at matching reattaches and detached rethrows.
+    if (ReattachInst *RI = dyn_cast<ReattachInst>(CurBB->getTerminator()))
+      if (ReattachMatchesDetach(RI, DI)) {
+        TaskReturns.push_back(CurBB);
+        continue;
+      }
+    if (isDetachedRethrow(CurBB->getTerminator(), DI->getSyncRegion())) {
+      TaskResumes.push_back(CurBB);
+      continue;
+    }
+
+    // Add successors of this basic block.
+    for (BasicBlock *Succ : successors(CurBB))
+      WorkList.push_back(Succ);
+  }
+}
+
 void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
   // Instrument the detach instruction itself
   Value *DetachID;
@@ -707,11 +750,11 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
   // Find the detached block, continuation, and associated reattaches.
   BasicBlock *DetachedBlock = DI->getDetached();
   BasicBlock *ContinueBlock = DI->getContinue();
-  SmallVector<BasicBlock *, 8> TaskExits;
-  // TODO: Extend this loop to find EH exits of the detached task.
-  for (BasicBlock *Pred : predecessors(ContinueBlock))
-    if (isa<ReattachInst>(Pred->getTerminator()))
-      TaskExits.push_back(Pred);
+  BasicBlock *UnwindBlock = nullptr;
+  if (DI->hasUnwindDest())
+    UnwindBlock = DI->getUnwindDest();
+  SmallVector<BasicBlock *, 8> TaskExits, TaskResumes;
+  getTaskExits(DI, TaskExits, TaskResumes, DT);
 
   // Instrument the entry and exit points of the detached task.
   {
@@ -724,13 +767,22 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
     setInstrumentationDebugLoc(*DetachedBlock, Call);
 
     // Instrument the exit points of the detached tasks.
-    for (BasicBlock *TaskExit : TaskExits) {
-      IRBuilder<> IRB(TaskExit->getTerminator());
-      uint64_t LocalID = TaskExitFED.add(*TaskExit->getTerminator());
-      Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+    for (BasicBlock *Exit : TaskExits) {
+      IRBuilder<> IRB(Exit->getTerminator());
+      uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
+      Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
       Instruction *Call = IRB.CreateCall(CsiTaskExit,
-                                         {TaskExitID, TaskID, DetachID});
-      setInstrumentationDebugLoc(TaskExit->getTerminator(), Call);
+                                         {ExitID, TaskID, DetachID});
+      setInstrumentationDebugLoc(Exit->getTerminator(), Call);
+    }
+    // Instrument the EH exits of the detached task.
+    for (BasicBlock *Exit : TaskResumes) {
+      IRBuilder<> IRB(Exit->getTerminator());
+      uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
+      Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      Instruction *Call = IRB.CreateCall(CsiTaskExit,
+                                         {ExitID, TaskID, DetachID});
+      setInstrumentationDebugLoc(Exit->getTerminator(), Call);
     }
   }
 
@@ -748,6 +800,20 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
                                        {ContinueID, DetachID});
     setInstrumentationDebugLoc(*ContinueBlock, Call);
   }
+  // Instrument the unwind of the detach, if it exists.
+  if (DI->hasUnwindDest()) {
+    // if (isCriticalContinueEdge(DI, 2))
+    //   UnwindBlock = SplitCriticalEdge(
+    //       DI, 2,
+    //       CriticalEdgeSplittingOptions(DT).setSplitDetachContinue());
+
+    IRBuilder<> IRB(&*UnwindBlock->getFirstInsertionPt());
+    uint64_t LocalID = DetachContinueFED.add(*UnwindBlock);
+    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
+    Instruction *Call = IRB.CreateCall(CsiDetachContinue,
+                                       {ContinueID, DetachID});
+    setInstrumentationDebugLoc(*UnwindBlock, Call);
+  }
 }
 
 void CSIImpl::instrumentSync(SyncInst *SI) {
@@ -758,6 +824,7 @@ void CSIImpl::instrumentSync(SyncInst *SI) {
   // Insert instrumentation before the sync.
   Instruction *Call = IRB.CreateCall(CsiSync, {SyncID});
   setInstrumentationDebugLoc(SI, Call);
+  // TODO: Insert after-sync instrumentation.
 }
 
 void CSIImpl::insertConditionalHookCall(Instruction *I, Function *HookFunction,
