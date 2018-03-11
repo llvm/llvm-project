@@ -35,12 +35,11 @@ define <2 x i32> @test_pf2id(<2 x float> %a) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    pf2id {{[0-9]+}}(%esp), %mm0
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    pf2id %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -71,18 +70,15 @@ define <2 x float> @test_pfacc(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfacc {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfacc %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -113,18 +109,15 @@ define <2 x float> @test_pfadd(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfadd {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfadd %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -155,18 +148,15 @@ define <2 x i32> @test_pfcmpeq(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfcmpeq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfcmpeq %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -198,18 +188,15 @@ define <2 x i32> @test_pfcmpge(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfcmpge {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfcmpge %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -241,18 +228,15 @@ define <2 x i32> @test_pfcmpgt(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfcmpgt {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfcmpgt %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -284,18 +268,15 @@ define <2 x float> @test_pfmax(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfmax {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfmax %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -326,18 +307,15 @@ define <2 x float> @test_pfmin(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfmin {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfmin %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -368,18 +346,15 @@ define <2 x float> @test_pfmul(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfmul {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfmul %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -410,12 +385,11 @@ define <2 x float> @test_pfrcp(<2 x float> %a) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    pfrcp {{[0-9]+}}(%esp), %mm0
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    pfrcp %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
@@ -445,18 +419,15 @@ define <2 x float> @test_pfrcpit1(<2 x float> %a, <2 x float> %b) nounwind readn
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfrcpit1 {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfrcpit1 %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -487,18 +458,15 @@ define <2 x float> @test_pfrcpit2(<2 x float> %a, <2 x float> %b) nounwind readn
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfrcpit2 {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfrcpit2 %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -529,12 +497,11 @@ define <2 x float> @test_pfrsqrt(<2 x float> %a) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    pfrsqrt {{[0-9]+}}(%esp), %mm0
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    pfrsqrt %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
@@ -564,18 +531,15 @@ define <2 x float> @test_pfrsqit1(<2 x float> %a, <2 x float> %b) nounwind readn
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfrsqit1 {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfrsqit1 %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -606,18 +570,15 @@ define <2 x float> @test_pfsub(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfsub {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfsub %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -648,18 +609,15 @@ define <2 x float> @test_pfsubr(<2 x float> %a, <2 x float> %b) nounwind readnon
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfsubr {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfsubr %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -748,12 +706,11 @@ define <2 x i32> @test_pf2iw(<2 x float> %a) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    pf2iw {{[0-9]+}}(%esp), %mm0
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    pf2iw %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -784,18 +741,15 @@ define <2 x float> @test_pfnacc(<2 x float> %a, <2 x float> %b) nounwind readnon
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfnacc {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfnacc %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -826,18 +780,15 @@ define <2 x float> @test_pfpnacc(<2 x float> %a, <2 x float> %b) nounwind readno
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 20(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 16(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    pfpnacc {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 20(%ebp), %mm0
+; X86-NEXT:    movd 16(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm2
+; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    pfpnacc %mm1, %mm2
+; X86-NEXT:    movq %mm2, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -899,12 +850,11 @@ define <2 x float> @test_pswapdsf(<2 x float> %a) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    flds 12(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds 8(%ebp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    pswapd {{[0-9]+}}(%esp), %mm0 # mm0 = mem[1,0]
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    pswapd %mm1, %mm0 # mm0 = mm1[1,0]
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
@@ -932,12 +882,11 @@ define <2 x i32> @test_pswapdsi(<2 x i32> %a) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    pswapd {{[0-9]+}}(%esp), %mm0 # mm0 = mem[1,0]
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movd 12(%ebp), %mm0
+; X86-NEXT:    movd 8(%ebp), %mm1
+; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X86-NEXT:    pswapd %mm1, %mm0 # mm0 = mm1[1,0]
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
