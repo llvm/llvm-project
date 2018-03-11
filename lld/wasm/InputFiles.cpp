@@ -49,10 +49,9 @@ void ObjFile::dumpInfo() const {
       "\n       Global Imports : " + Twine(WasmObj->getNumImportedGlobals()));
 }
 
-// Relocations contain an index into the function, global or table index
-// space of the input file.  This function takes a relocation and returns the
-// relocated index (i.e. translates from the input index space to the output
-// index space).
+// Relocations contain either symbol or type indices.  This function takes a
+// relocation and returns relocated index (i.e. translates from the input
+// sybmol/type space to the output symbol/type space).
 uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
   if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB) {
     assert(TypeIsUsed[Reloc.Index]);
