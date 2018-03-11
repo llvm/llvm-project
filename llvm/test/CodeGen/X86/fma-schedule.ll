@@ -15,84 +15,84 @@ define void @test_vfmaddpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-LABEL: test_vfmaddpd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmaddpd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmadd231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddpd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddpd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmadd132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddpd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmadd231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [11:0.50]
+; KNL-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddpd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmadd132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; SKX-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddpd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd132pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd231pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmadd132pd $2, $1, $0 \0A\09 vfmadd213pd $2, $1, $0 \0A\09 vfmadd231pd $2, $1, $0 \0A\09 vfmadd132pd $3, $1, $0 \0A\09 vfmadd213pd $3, $1, $0 \0A\09 vfmadd231pd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -103,12 +103,12 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-LABEL: test_vfmaddpd_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -116,12 +116,12 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; HASWELL-LABEL: test_vfmaddpd_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -129,12 +129,12 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; BROADWELL-LABEL: test_vfmaddpd_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -142,12 +142,12 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; SKYLAKE-LABEL: test_vfmaddpd_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmadd132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -155,24 +155,24 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; KNL-LABEL: test_vfmaddpd_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
+; KNL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddpd_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmadd132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
+; SKX-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -180,12 +180,12 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; ZNVER1-LABEL: test_vfmaddpd_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -197,84 +197,84 @@ define void @test_vfmaddps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-LABEL: test_vfmaddps_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmaddps_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmadd231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddps_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddps_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmadd132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddps_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmadd231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [11:0.50]
+; KNL-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddps_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmadd132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; SKX-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddps_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd231ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmadd132ps $2, $1, $0 \0A\09 vfmadd213ps $2, $1, $0 \0A\09 vfmadd231ps $2, $1, $0 \0A\09 vfmadd132ps $3, $1, $0 \0A\09 vfmadd213ps $3, $1, $0 \0A\09 vfmadd231ps $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -285,12 +285,12 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-LABEL: test_vfmaddps_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -298,12 +298,12 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; HASWELL-LABEL: test_vfmaddps_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -311,12 +311,12 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; BROADWELL-LABEL: test_vfmaddps_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -324,12 +324,12 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; SKYLAKE-LABEL: test_vfmaddps_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmadd132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -337,24 +337,24 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; KNL-LABEL: test_vfmaddps_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
+; KNL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddps_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmadd132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
+; SKX-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -362,12 +362,12 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; ZNVER1-LABEL: test_vfmaddps_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -379,84 +379,84 @@ define void @test_vfmaddsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-LABEL: test_vfmaddsd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmaddsd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmadd231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddsd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmadd132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmadd231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddsd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmadd231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; KNL-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmadd132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmadd231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; SKX-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddsd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd132sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd231sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmadd132sd $2, $1, $0 \0A\09 vfmadd213sd $2, $1, $0 \0A\09 vfmadd231sd $2, $1, $0 \0A\09 vfmadd132sd $3, $1, $0 \0A\09 vfmadd213sd $3, $1, $0 \0A\09 vfmadd231sd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -467,84 +467,84 @@ define void @test_vfmaddss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-LABEL: test_vfmaddss_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmaddss_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmadd231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; HASWELL-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddss_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmadd132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmadd231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddss_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmadd132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmadd132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmadd231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddss_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmadd231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; KNL-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddss_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmadd132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmadd231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
+; SKX-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddss_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmadd132ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmadd231ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmadd132ss $2, $1, $0 \0A\09 vfmadd213ss $2, $1, $0 \0A\09 vfmadd231ss $2, $1, $0 \0A\09 vfmadd132ss $3, $1, $0 \0A\09 vfmadd213ss $3, $1, $0 \0A\09 vfmadd231ss $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -559,84 +559,84 @@ define void @test_vfmaddsubpd_128(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ; GENERIC-LABEL: test_vfmaddsubpd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmaddsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmaddsubpd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmaddsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmaddsub231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubpd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmaddsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmaddsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddsubpd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmaddsub132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddsubpd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmaddsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmaddsub231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [11:0.50]
+; KNL-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubpd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmaddsub132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmaddsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; SKX-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddsubpd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmaddsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub132pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub231pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmaddsub132pd $2, $1, $0 \0A\09 vfmaddsub213pd $2, $1, $0 \0A\09 vfmaddsub231pd $2, $1, $0 \0A\09 vfmaddsub132pd $3, $1, $0 \0A\09 vfmaddsub213pd $3, $1, $0 \0A\09 vfmaddsub231pd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -647,12 +647,12 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-LABEL: test_vfmaddsubpd_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmaddsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -660,12 +660,12 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; HASWELL-LABEL: test_vfmaddsubpd_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmaddsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmaddsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -673,12 +673,12 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; BROADWELL-LABEL: test_vfmaddsubpd_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmaddsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmaddsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -686,12 +686,12 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; SKYLAKE-LABEL: test_vfmaddsubpd_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmaddsub132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -699,24 +699,24 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; KNL-LABEL: test_vfmaddsubpd_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmaddsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmaddsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
+; KNL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubpd_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmaddsub132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmaddsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
+; SKX-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -724,12 +724,12 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; ZNVER1-LABEL: test_vfmaddsubpd_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmaddsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -741,84 +741,84 @@ define void @test_vfmaddsubps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; GENERIC-LABEL: test_vfmaddsubps_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmaddsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmaddsubps_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmaddsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmaddsub231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubps_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmaddsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmaddsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddsubps_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmaddsub132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddsubps_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmaddsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmaddsub231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [11:0.50]
+; KNL-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubps_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmaddsub132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmaddsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; SKX-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddsubps_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmaddsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub132ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub231ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmaddsub132ps $2, $1, $0 \0A\09 vfmaddsub213ps $2, $1, $0 \0A\09 vfmaddsub231ps $2, $1, $0 \0A\09 vfmaddsub132ps $3, $1, $0 \0A\09 vfmaddsub213ps $3, $1, $0 \0A\09 vfmaddsub231ps $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -829,12 +829,12 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-LABEL: test_vfmaddsubps_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmaddsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -842,12 +842,12 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; HASWELL-LABEL: test_vfmaddsubps_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmaddsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmaddsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -855,12 +855,12 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; BROADWELL-LABEL: test_vfmaddsubps_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmaddsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmaddsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmaddsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -868,12 +868,12 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; SKYLAKE-LABEL: test_vfmaddsubps_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmaddsub132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmaddsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmaddsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -881,24 +881,24 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; KNL-LABEL: test_vfmaddsubps_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmaddsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmaddsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
+; KNL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubps_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmaddsub132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmaddsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmaddsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
+; SKX-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -906,12 +906,12 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; ZNVER1-LABEL: test_vfmaddsubps_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmaddsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmaddsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmaddsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -927,84 +927,84 @@ define void @test_vfmsubaddpd_128(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ; GENERIC-LABEL: test_vfmsubaddpd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsubadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmsubaddpd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsubadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsubadd231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddpd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsubadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsubadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubaddpd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsubadd132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubaddpd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsubadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsubadd231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [11:0.50]
+; KNL-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddpd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsubadd132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsubadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; SKX-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubaddpd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsubadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd132pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd231pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmsubadd132pd $2, $1, $0 \0A\09 vfmsubadd213pd $2, $1, $0 \0A\09 vfmsubadd231pd $2, $1, $0 \0A\09 vfmsubadd132pd $3, $1, $0 \0A\09 vfmsubadd213pd $3, $1, $0 \0A\09 vfmsubadd231pd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -1015,12 +1015,12 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-LABEL: test_vfmsubaddpd_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsubadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1028,12 +1028,12 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; HASWELL-LABEL: test_vfmsubaddpd_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsubadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsubadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -1041,12 +1041,12 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; BROADWELL-LABEL: test_vfmsubaddpd_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsubadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsubadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -1054,12 +1054,12 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; SKYLAKE-LABEL: test_vfmsubaddpd_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsubadd132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -1067,24 +1067,24 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; KNL-LABEL: test_vfmsubaddpd_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsubadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsubadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
+; KNL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddpd_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsubadd132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsubadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
+; SKX-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -1092,12 +1092,12 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; ZNVER1-LABEL: test_vfmsubaddpd_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsubadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1109,84 +1109,84 @@ define void @test_vfmsubaddps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; GENERIC-LABEL: test_vfmsubaddps_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsubadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmsubaddps_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsubadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsubadd231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddps_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsubadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsubadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubaddps_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsubadd132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubaddps_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsubadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsubadd231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [11:0.50]
+; KNL-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddps_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsubadd132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsubadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; SKX-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubaddps_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsubadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd132ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd231ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmsubadd132ps $2, $1, $0 \0A\09 vfmsubadd213ps $2, $1, $0 \0A\09 vfmsubadd231ps $2, $1, $0 \0A\09 vfmsubadd132ps $3, $1, $0 \0A\09 vfmsubadd213ps $3, $1, $0 \0A\09 vfmsubadd231ps $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -1197,12 +1197,12 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-LABEL: test_vfmsubaddps_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsubadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1210,12 +1210,12 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; HASWELL-LABEL: test_vfmsubaddps_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsubadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsubadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -1223,12 +1223,12 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; BROADWELL-LABEL: test_vfmsubaddps_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsubadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsubadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsubadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -1236,12 +1236,12 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; SKYLAKE-LABEL: test_vfmsubaddps_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsubadd132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsubadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsubadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -1249,24 +1249,24 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; KNL-LABEL: test_vfmsubaddps_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsubadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsubadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
+; KNL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddps_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsubadd132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsubadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsubadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
+; SKX-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -1274,12 +1274,12 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; ZNVER1-LABEL: test_vfmsubaddps_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsubadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsubadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsubadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1295,84 +1295,84 @@ define void @test_vfmsubpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-LABEL: test_vfmsubpd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmsubpd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsub231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubpd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubpd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsub132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubpd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsub231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [11:0.50]
+; KNL-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubpd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsub132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; SKX-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubpd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub132pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub231pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmsub132pd $2, $1, $0 \0A\09 vfmsub213pd $2, $1, $0 \0A\09 vfmsub231pd $2, $1, $0 \0A\09 vfmsub132pd $3, $1, $0 \0A\09 vfmsub213pd $3, $1, $0 \0A\09 vfmsub231pd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -1383,12 +1383,12 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-LABEL: test_vfmsubpd_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1396,12 +1396,12 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; HASWELL-LABEL: test_vfmsubpd_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -1409,12 +1409,12 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; BROADWELL-LABEL: test_vfmsubpd_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -1422,12 +1422,12 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; SKYLAKE-LABEL: test_vfmsubpd_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsub132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -1435,24 +1435,24 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; KNL-LABEL: test_vfmsubpd_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
+; KNL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubpd_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsub132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
+; SKX-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -1460,12 +1460,12 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; ZNVER1-LABEL: test_vfmsubpd_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1477,84 +1477,84 @@ define void @test_vfmsubps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-LABEL: test_vfmsubps_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmsubps_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfmsub231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [11:0.50]
+; HASWELL-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubps_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubps_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsub132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfmsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubps_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfmsub231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [11:0.50]
+; KNL-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubps_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsub132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfmsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; SKX-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubps_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub231ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmsub132ps $2, $1, $0 \0A\09 vfmsub213ps $2, $1, $0 \0A\09 vfmsub231ps $2, $1, $0 \0A\09 vfmsub132ps $3, $1, $0 \0A\09 vfmsub213ps $3, $1, $0 \0A\09 vfmsub231ps $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -1565,12 +1565,12 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-LABEL: test_vfmsubps_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1578,12 +1578,12 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; HASWELL-LABEL: test_vfmsubps_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfmsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
+; HASWELL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -1591,12 +1591,12 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; BROADWELL-LABEL: test_vfmsubps_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfmsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -1604,12 +1604,12 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; SKYLAKE-LABEL: test_vfmsubps_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsub132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfmsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -1617,24 +1617,24 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; KNL-LABEL: test_vfmsubps_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfmsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
+; KNL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubps_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsub132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfmsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
+; SKX-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -1642,12 +1642,12 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; ZNVER1-LABEL: test_vfmsubps_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1659,84 +1659,84 @@ define void @test_vfmsubsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-LABEL: test_vfmsubsd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmsubsd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmsub231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; HASWELL-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubsd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubsd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsub132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmsub231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubsd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmsub231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; KNL-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubsd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsub132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmsub231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; SKX-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubsd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub231sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmsub132sd $2, $1, $0 \0A\09 vfmsub213sd $2, $1, $0 \0A\09 vfmsub231sd $2, $1, $0 \0A\09 vfmsub132sd $3, $1, $0 \0A\09 vfmsub213sd $3, $1, $0 \0A\09 vfmsub231sd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -1747,84 +1747,84 @@ define void @test_vfmsubss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-LABEL: test_vfmsubss_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfmsubss_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfmsub231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; HASWELL-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubss_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfmsub132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfmsub231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubss_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfmsub132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfmsub132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfmsub231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubss_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfmsub231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; KNL-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubss_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfmsub132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfmsub132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfmsub231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
+; SKX-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubss_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfmsub132ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfmsub231ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfmsub132ss $2, $1, $0 \0A\09 vfmsub213ss $2, $1, $0 \0A\09 vfmsub231ss $2, $1, $0 \0A\09 vfmsub132ss $3, $1, $0 \0A\09 vfmsub213ss $3, $1, $0 \0A\09 vfmsub231ss $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -1839,84 +1839,84 @@ define void @test_vfnmaddpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-LABEL: test_vfnmaddpd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmaddpd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmadd231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [11:0.50]
+; HASWELL-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmaddpd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmaddpd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmadd132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmaddpd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmadd231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [11:0.50]
+; KNL-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmaddpd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmadd132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmadd231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; SKX-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmaddpd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmadd132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd132pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd231pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmadd132pd $2, $1, $0 \0A\09 vfnmadd213pd $2, $1, $0 \0A\09 vfnmadd231pd $2, $1, $0 \0A\09 vfnmadd132pd $3, $1, $0 \0A\09 vfnmadd213pd $3, $1, $0 \0A\09 vfnmadd231pd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -1927,12 +1927,12 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-LABEL: test_vfnmaddpd_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1940,12 +1940,12 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; HASWELL-LABEL: test_vfnmaddpd_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
+; HASWELL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -1953,12 +1953,12 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; BROADWELL-LABEL: test_vfnmaddpd_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -1966,12 +1966,12 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; SKYLAKE-LABEL: test_vfnmaddpd_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmadd132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -1979,24 +1979,24 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; KNL-LABEL: test_vfnmaddpd_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
+; KNL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmaddpd_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmadd132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmadd231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; SKX-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -2004,12 +2004,12 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; ZNVER1-LABEL: test_vfnmaddpd_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmadd132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2021,84 +2021,84 @@ define void @test_vfnmaddps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-LABEL: test_vfnmaddps_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmaddps_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmadd231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [11:0.50]
+; HASWELL-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmaddps_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmaddps_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmadd132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmaddps_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmadd231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [11:0.50]
+; KNL-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmaddps_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmadd132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmadd231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; SKX-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmaddps_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmadd132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd132ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd231ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmadd132ps $2, $1, $0 \0A\09 vfnmadd213ps $2, $1, $0 \0A\09 vfnmadd231ps $2, $1, $0 \0A\09 vfnmadd132ps $3, $1, $0 \0A\09 vfnmadd213ps $3, $1, $0 \0A\09 vfnmadd231ps $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -2109,12 +2109,12 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-LABEL: test_vfnmaddps_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2122,12 +2122,12 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; HASWELL-LABEL: test_vfnmaddps_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
+; HASWELL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -2135,12 +2135,12 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; BROADWELL-LABEL: test_vfnmaddps_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -2148,12 +2148,12 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; SKYLAKE-LABEL: test_vfnmaddps_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmadd132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -2161,24 +2161,24 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; KNL-LABEL: test_vfnmaddps_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
+; KNL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmaddps_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmadd132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmadd231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
+; SKX-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -2186,12 +2186,12 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; ZNVER1-LABEL: test_vfnmaddps_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmadd132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2203,84 +2203,84 @@ define void @test_vfnmaddsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-LABEL: test_vfnmaddsd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmaddsd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmadd231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; HASWELL-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmaddsd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmaddsd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmadd132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmadd231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmaddsd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmadd231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; KNL-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmaddsd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmadd132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmadd231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; SKX-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmaddsd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmadd132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd132sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd231sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmadd132sd $2, $1, $0 \0A\09 vfnmadd213sd $2, $1, $0 \0A\09 vfnmadd231sd $2, $1, $0 \0A\09 vfnmadd132sd $3, $1, $0 \0A\09 vfnmadd213sd $3, $1, $0 \0A\09 vfnmadd231sd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -2291,84 +2291,84 @@ define void @test_vfnmaddss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-LABEL: test_vfnmaddss_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmaddss_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmadd231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; HASWELL-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmaddss_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmadd132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmadd231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmaddss_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmadd132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmadd132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmadd231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmaddss_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmadd231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; KNL-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmaddss_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmadd132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmadd231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
+; SKX-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmaddss_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmadd132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmadd132ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmadd231ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmadd132ss $2, $1, $0 \0A\09 vfnmadd213ss $2, $1, $0 \0A\09 vfnmadd231ss $2, $1, $0 \0A\09 vfnmadd132ss $3, $1, $0 \0A\09 vfnmadd213ss $3, $1, $0 \0A\09 vfnmadd231ss $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -2383,84 +2383,84 @@ define void @test_vfnmsubpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-LABEL: test_vfnmsubpd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231pd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmsubpd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmsub231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [11:0.50]
+; HASWELL-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsubpd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmsubpd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmsub132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmsubpd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub132pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmsub231pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [11:0.50]
+; KNL-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsubpd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmsub132pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub231pd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub132pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmsub231pd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; SKX-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmsubpd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmsub132pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub231pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub132pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub231pd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmsub132pd $2, $1, $0 \0A\09 vfnmsub213pd $2, $1, $0 \0A\09 vfnmsub231pd $2, $1, $0 \0A\09 vfnmsub132pd $3, $1, $0 \0A\09 vfnmsub213pd $3, $1, $0 \0A\09 vfnmsub231pd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -2471,12 +2471,12 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-LABEL: test_vfnmsubpd_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231pd (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2484,12 +2484,12 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; HASWELL-LABEL: test_vfnmsubpd_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
+; HASWELL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -2497,12 +2497,12 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; BROADWELL-LABEL: test_vfnmsubpd_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -2510,12 +2510,12 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; SKYLAKE-LABEL: test_vfnmsubpd_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmsub132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -2523,24 +2523,24 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; KNL-LABEL: test_vfnmsubpd_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
+; KNL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsubpd_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmsub132pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub231pd %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub132pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmsub231pd (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
+; SKX-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -2548,12 +2548,12 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; ZNVER1-LABEL: test_vfnmsubpd_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmsub132pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub231pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub132pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub231pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2565,84 +2565,84 @@ define void @test_vfnmsubps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-LABEL: test_vfnmsubps_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231ps (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmsubps_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; HASWELL-NEXT:    vfnmsub231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [11:0.50]
+; HASWELL-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [11:0.50]
+; HASWELL-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [11:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsubps_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmsubps_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmsub132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKYLAKE-NEXT:    vfnmsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; SKYLAKE-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmsubps_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub132ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
-; KNL-NEXT:    vfnmsub231ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [11:0.50]
+; KNL-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [11:0.50]
+; KNL-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [11:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsubps_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmsub132ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub231ps %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub132ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; SKX-NEXT:    vfnmsub231ps (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; SKX-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; SKX-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmsubps_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmsub132ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub231ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub132ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub231ps (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmsub132ps $2, $1, $0 \0A\09 vfnmsub213ps $2, $1, $0 \0A\09 vfnmsub231ps $2, $1, $0 \0A\09 vfnmsub132ps $3, $1, $0 \0A\09 vfnmsub213ps $3, $1, $0 \0A\09 vfnmsub231ps $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind
@@ -2653,12 +2653,12 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-LABEL: test_vfnmsubps_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231ps (%rdi), %ymm1, %ymm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2666,12 +2666,12 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; HASWELL-LABEL: test_vfnmsubps_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; HASWELL-NEXT:    vfnmsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [12:0.50]
+; HASWELL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
+; HASWELL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -2679,12 +2679,12 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; BROADWELL-LABEL: test_vfnmsubps_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; BROADWELL-NEXT:    vfnmsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
+; BROADWELL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -2692,12 +2692,12 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; SKYLAKE-LABEL: test_vfnmsubps_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmsub132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKYLAKE-NEXT:    vfnmsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
+; SKYLAKE-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -2705,24 +2705,24 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; KNL-LABEL: test_vfnmsubps_256:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; KNL-NEXT:    vfnmsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [12:0.50]
+; KNL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
+; KNL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsubps_256:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmsub132ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub231ps %ymm2, %ymm1, %ymm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub132ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
-; SKX-NEXT:    vfnmsub231ps (%rdi), %ymm1, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [11:0.50]
+; SKX-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
+; SKX-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -2730,12 +2730,12 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; ZNVER1-LABEL: test_vfnmsubps_256:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmsub132ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub231ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub132ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub231ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2747,84 +2747,84 @@ define void @test_vfnmsubsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-LABEL: test_vfnmsubsd_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmsubsd_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmsub231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; HASWELL-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsubsd_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmsubsd_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmsub132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmsub231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmsubsd_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub132sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmsub231sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; KNL-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsubsd_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmsub132sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub231sd %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub132sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmsub231sd (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; SKX-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmsubsd_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmsub132sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub231sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub132sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub231sd (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmsub132sd $2, $1, $0 \0A\09 vfnmsub213sd $2, $1, $0 \0A\09 vfnmsub231sd $2, $1, $0 \0A\09 vfnmsub132sd $3, $1, $0 \0A\09 vfnmsub213sd $3, $1, $0 \0A\09 vfnmsub231sd $3, $1, $0", "x,x,x,*m"(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) nounwind
@@ -2835,84 +2835,84 @@ define void @test_vfnmsubss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-LABEL: test_vfnmsubss_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vfnmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; GENERIC-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vfnmsubss_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    vfnmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; HASWELL-NEXT:    vfnmsub231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; HASWELL-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; HASWELL-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; HASWELL-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsubss_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    vfnmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; BROADWELL-NEXT:    vfnmsub132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; BROADWELL-NEXT:    vfnmsub231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; BROADWELL-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; BROADWELL-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmsubss_128:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    vfnmsub132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vfnmsub132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKYLAKE-NEXT:    vfnmsub231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.50]
+; SKYLAKE-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; SKYLAKE-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmsubss_128:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    vfnmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub132ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
-; KNL-NEXT:    vfnmsub231ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; KNL-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; KNL-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; KNL-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsubss_128:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    vfnmsub132ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub231ss %xmm2, %xmm1, %xmm0 # sched: [4:0.33]
-; SKX-NEXT:    vfnmsub132ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
-; SKX-NEXT:    vfnmsub231ss (%rdi), %xmm1, %xmm0 # sched: [9:0.50]
+; SKX-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [4:0.33]
+; SKX-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
+; SKX-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
+; SKX-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmsubss_128:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    vfnmsub132ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub231ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; ZNVER1-NEXT:    vfnmsub132ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vfnmsub231ss (%rdi), %xmm1, %xmm0 # sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
+; ZNVER1-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [12:0.50]
+; ZNVER1-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [12:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "vfnmsub132ss $2, $1, $0 \0A\09 vfnmsub213ss $2, $1, $0 \0A\09 vfnmsub231ss $2, $1, $0 \0A\09 vfnmsub132ss $3, $1, $0 \0A\09 vfnmsub213ss $3, $1, $0 \0A\09 vfnmsub231ss $3, $1, $0", "x,x,x,*m"(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> *%a3) nounwind

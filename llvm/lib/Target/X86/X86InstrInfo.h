@@ -29,6 +29,12 @@ class X86RegisterInfo;
 class X86Subtarget;
 
 namespace X86 {
+
+enum AsmComments {
+  // For instr that was compressed from EVEX to VEX.
+  AC_EVEX_2_VEX = MachineInstr::TAsmComments
+};
+
 // X86 specific condition code. These correspond to X86_*_COND in
 // X86InstrInfo.td. They must be kept in synch.
 enum CondCode {

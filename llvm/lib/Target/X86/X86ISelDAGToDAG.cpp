@@ -2109,86 +2109,52 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
       LoadNode->getOffset() != StoreNode->getOffset())
     return false;
 
-  bool FoundLoad = false;
-  SmallVector<SDValue, 4> ChainOps;
-  SmallVector<const SDNode *, 4> LoopWorklist;
-  SmallPtrSet<const SDNode *, 16> Visited;
-  const unsigned int Max = 1024;
-
-  //  Visualization of Load-Op-Store fusion:
-  // -------------------------
-  // Legend:
-  //    *-lines = Chain operand dependencies.
-  //    |-lines = Normal operand dependencies.
-  //    Dependencies flow down and right. n-suffix references multiple nodes.
-  //
-  //        C                        Xn  C
-  //        *                         *  *
-  //        *                          * *
-  //  Xn  A-LD    Yn                    TF         Yn
-  //   *    * \   |                       *        |
-  //    *   *  \  |                        *       |
-  //     *  *   \ |             =>       A--LD_OP_ST
-  //      * *    \|                                 \
-  //       TF    OP                                  \
-  //         *   | \                                  Zn
-  //          *  |  \
-  //         A-ST    Zn
-  //
-
-  // This merge induced dependences from: #1: Xn -> LD, OP, Zn
-  //                                      #2: Yn -> LD
-  //                                      #3: ST -> Zn
-
-  // Ensure the transform is safe by checking for the dual
-  // dependencies to make sure we do not induce a loop.
-
-  // As LD is a predecessor to both OP and ST we can do this by checking:
-  //  a). if LD is a predecessor to a member of Xn or Yn.
-  //  b). if a Zn is a predecessor to ST.
-
-  // However, (b) can only occur through being a chain predecessor to
-  // ST, which is the same as Zn being a member or predecessor of Xn,
-  // which is a subset of LD being a predecessor of Xn. So it's
-  // subsumed by check (a).
-
+  // Check if the chain is produced by the load or is a TokenFactor with
+  // the load output chain as an operand. Return InputChain by reference.
   SDValue Chain = StoreNode->getChain();
 
-  // Gather X elements in ChainOps.
+  bool ChainCheck = false;
   if (Chain == Load.getValue(1)) {
-    FoundLoad = true;
-    ChainOps.push_back(Load.getOperand(0));
+    ChainCheck = true;
+    InputChain = LoadNode->getChain();
   } else if (Chain.getOpcode() == ISD::TokenFactor) {
+    SmallVector<SDValue, 4> ChainOps;
     for (unsigned i = 0, e = Chain.getNumOperands(); i != e; ++i) {
       SDValue Op = Chain.getOperand(i);
       if (Op == Load.getValue(1)) {
-        FoundLoad = true;
+        ChainCheck = true;
         // Drop Load, but keep its chain. No cycle check necessary.
         ChainOps.push_back(Load.getOperand(0));
         continue;
       }
-      LoopWorklist.push_back(Op.getNode());
+
+      // Make sure using Op as part of the chain would not cause a cycle here.
+      // In theory, we could check whether the chain node is a predecessor of
+      // the load. But that can be very expensive. Instead visit the uses and
+      // make sure they all have smaller node id than the load.
+      int LoadId = LoadNode->getNodeId();
+      for (SDNode::use_iterator UI = Op.getNode()->use_begin(),
+             UE = UI->use_end(); UI != UE; ++UI) {
+        if (UI.getUse().getResNo() != 0)
+          continue;
+        if (UI->getNodeId() > LoadId)
+          return false;
+      }
+
       ChainOps.push_back(Op);
     }
+
+    if (ChainCheck)
+      // Make a new TokenFactor with all the other input chains except
+      // for the load.
+      InputChain = CurDAG->getNode(ISD::TokenFactor, SDLoc(Chain),
+                                   MVT::Other, ChainOps);
   }
-
-  if (!FoundLoad)
+  if (!ChainCheck)
     return false;
 
-  // Worklist is currently Xn. Add Yn to worklist.
-  for (SDValue Op : StoredVal->ops())
-    if (Op.getNode() != LoadNode)
-      LoopWorklist.push_back(Op.getNode());
-
-  // Check (a) if Load is a predecessor to Xn + Yn
-  if (SDNode::hasPredecessorHelper(Load.getNode(), Visited, LoopWorklist, Max,
-                                   true))
-    return false;
-
-  InputChain =
-      CurDAG->getNode(ISD::TokenFactor, SDLoc(Chain), MVT::Other, ChainOps);
   return true;
-  }
+}
 
 // Change a chain of {load; op; store} of the same value into a simple op
 // through memory of that value, if the uses of the modified value and its
@@ -2417,8 +2383,6 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   MemOp[1] = LoadNode->getMemOperand();
   Result->setMemRefs(MemOp, MemOp + 2);
 
-  // Update Load Chain uses as well.
-  ReplaceUses(SDValue(LoadNode, 1), SDValue(Result, 1));
   ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
   ReplaceUses(SDValue(StoredVal.getNode(), 1), SDValue(Result, 0));
   CurDAG->RemoveDeadNode(Node);
@@ -3130,7 +3094,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       // Emit a testl or testw.
       SDNode *NewNode = CurDAG->getMachineNode(Op, dl, MVT::i32, Reg, Imm);
       // Replace CMP with TEST.
-      ReplaceNode(Node, NewNode);
+      CurDAG->ReplaceAllUsesWith(Node, NewNode);
+      CurDAG->RemoveDeadNode(Node);
       return;
     }
     break;

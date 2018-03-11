@@ -75,7 +75,7 @@ define float @test_extend32(half* %addr) #0 {
 ; CHECK-LIBCALL-LABEL: test_extend32:
 ; CHECK-LIBCALL:       # %bb.0:
 ; CHECK-LIBCALL-NEXT:    movzwl (%rdi), %edi
-; CHECK-LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
+; CHECK-LIBCALL-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
 ;
 ; BWON-F16C-LABEL: test_extend32:
 ; BWON-F16C:       # %bb.0:

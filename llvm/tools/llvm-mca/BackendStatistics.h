@@ -108,7 +108,7 @@ class BackendStatistics : public View {
 
 public:
   BackendStatistics(const Backend &backend)
-      : B(backend), NumDispatched(0), NumIssued(0), NumRetired(0) {}
+      : B(backend), NumDispatched(0), NumIssued(0), NumRetired(0), NumCycles(0) {}
 
   void onInstructionDispatched(unsigned Index) override { NumDispatched++; }
   void

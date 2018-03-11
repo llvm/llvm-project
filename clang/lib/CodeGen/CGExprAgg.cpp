@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicInst.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -37,23 +38,6 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   AggValueSlot Dest;
   bool IsResultUnused;
 
-  /// We want to use 'dest' as the return slot except under two
-  /// conditions:
-  ///   - The destination slot requires garbage collection, so we
-  ///     need to use the GC API.
-  ///   - The destination slot is potentially aliased.
-  bool shouldUseDestForReturnSlot() const {
-    return !(Dest.requiresGCollection() || Dest.isPotentiallyAliased());
-  }
-
-  ReturnValueSlot getReturnValueSlot() const {
-    if (!shouldUseDestForReturnSlot())
-      return ReturnValueSlot();
-
-    return ReturnValueSlot(Dest.getAddress(), Dest.isVolatile(),
-                           IsResultUnused);
-  }
-
   AggValueSlot EnsureSlot(QualType T) {
     if (!Dest.isIgnored()) return Dest;
     return CGF.CreateAggTemp(T, "agg.tmp.ensured");
@@ -62,6 +46,15 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
     if (!Dest.isIgnored()) return;
     Dest = CGF.CreateAggTemp(T, "agg.tmp.ensured");
   }
+
+  // Calls `Fn` with a valid return value slot, potentially creating a temporary
+  // to do so. If a temporary is created, an appropriate copy into `Dest` will
+  // be emitted, as will lifetime markers.
+  //
+  // The given function should take a ReturnValueSlot, and return an RValue that
+  // points to said slot.
+  void withReturnValueSlot(const Expr *E,
+                           llvm::function_ref<RValue(ReturnValueSlot)> Fn);
 
 public:
   AggExprEmitter(CodeGenFunction &cgf, AggValueSlot Dest, bool IsResultUnused)
@@ -242,34 +235,65 @@ bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
   return Record->hasObjectMember();
 }
 
-/// \brief Perform the final move to DestPtr if for some reason
-/// getReturnValueSlot() didn't use it directly.
-///
-/// The idea is that you do something like this:
-///   RValue Result = EmitSomething(..., getReturnValueSlot());
-///   EmitMoveFromReturnSlot(E, Result);
-///
-/// If nothing interferes, this will cause the result to be emitted
-/// directly into the return value slot.  Otherwise, a final move
-/// will be performed.
-void AggExprEmitter::EmitMoveFromReturnSlot(const Expr *E, RValue src) {
-  // Push destructor if the result is ignored and the type is a C struct that
-  // is non-trivial to destroy.
-  QualType Ty = E->getType();
-  if (Dest.isIgnored() &&
-      Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
-    CGF.pushDestroy(Ty.isDestructedType(), src.getAggregateAddress(), Ty);
+void AggExprEmitter::withReturnValueSlot(
+    const Expr *E, llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
+  QualType RetTy = E->getType();
+  bool RequiresDestruction =
+      Dest.isIgnored() &&
+      RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct;
 
-  if (shouldUseDestForReturnSlot()) {
-    // Logically, Dest.getAddr() should equal Src.getAggregateAddr().
-    // The possibility of undef rvalues complicates that a lot,
-    // though, so we can't really assert.
-    return;
+  // If it makes no observable difference, save a memcpy + temporary.
+  //
+  // We need to always provide our own temporary if destruction is required.
+  // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
+  // its lifetime before we have the chance to emit a proper destructor call.
+  bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
+                 (RequiresDestruction && !Dest.getAddress().isValid());
+
+  Address RetAddr = Address::invalid();
+
+  EHScopeStack::stable_iterator LifetimeEndBlock;
+  llvm::Value *LifetimeSizePtr = nullptr;
+  llvm::IntrinsicInst *LifetimeStartInst = nullptr;
+  if (!UseTemp) {
+    RetAddr = Dest.getAddress();
+  } else {
+    RetAddr = CGF.CreateMemTemp(RetTy);
+    uint64_t Size =
+        CGF.CGM.getDataLayout().getTypeAllocSize(CGF.ConvertTypeForMem(RetTy));
+    LifetimeSizePtr = CGF.EmitLifetimeStart(Size, RetAddr.getPointer());
+    if (LifetimeSizePtr) {
+      LifetimeStartInst =
+          cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
+      assert(LifetimeStartInst->getIntrinsicID() ==
+                 llvm::Intrinsic::lifetime_start &&
+             "Last insertion wasn't a lifetime.start?");
+
+      CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
+          NormalEHLifetimeMarker, RetAddr, LifetimeSizePtr);
+      LifetimeEndBlock = CGF.EHStack.stable_begin();
+    }
   }
 
-  // Otherwise, copy from there to the destination.
-  assert(Dest.getPointer() != src.getAggregatePointer());
-  EmitFinalDestCopy(E->getType(), src);
+  RValue Src =
+      EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused));
+
+  if (RequiresDestruction)
+    CGF.pushDestroy(RetTy.isDestructedType(), Src.getAggregateAddress(), RetTy);
+
+  if (!UseTemp)
+    return;
+
+  assert(Dest.getPointer() != Src.getAggregatePointer());
+  EmitFinalDestCopy(E->getType(), Src);
+
+  if (!RequiresDestruction && LifetimeStartInst) {
+    // If there's no dtor to run, the copy was the last use of our temporary.
+    // Since we're not guaranteed to be in an ExprWithCleanups, clean up
+    // eagerly.
+    CGF.DeactivateCleanupBlock(LifetimeEndBlock, LifetimeStartInst);
+    CGF.EmitLifetimeEnd(LifetimeSizePtr, RetAddr.getPointer());
+  }
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
@@ -828,13 +852,15 @@ void AggExprEmitter::VisitCallExpr(const CallExpr *E) {
     return;
   }
 
-  RValue RV = CGF.EmitCallExpr(E, getReturnValueSlot());
-  EmitMoveFromReturnSlot(E, RV);
+  withReturnValueSlot(E, [&](ReturnValueSlot Slot) {
+    return CGF.EmitCallExpr(E, Slot);
+  });
 }
 
 void AggExprEmitter::VisitObjCMessageExpr(ObjCMessageExpr *E) {
-  RValue RV = CGF.EmitObjCMessageExpr(E, getReturnValueSlot());
-  EmitMoveFromReturnSlot(E, RV);
+  withReturnValueSlot(E, [&](ReturnValueSlot Slot) {
+    return CGF.EmitObjCMessageExpr(E, Slot);
+  });
 }
 
 void AggExprEmitter::VisitBinComma(const BinaryOperator *E) {

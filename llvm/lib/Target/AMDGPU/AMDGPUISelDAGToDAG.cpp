@@ -766,11 +766,12 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
 
   if (ProduceCarry) {
     // Replace the carry-use
-    ReplaceUses(SDValue(N, 1), SDValue(AddHi, 1));
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 1), SDValue(AddHi, 1));
   }
 
   // Replace the remaining uses.
-  ReplaceNode(N, RegSequence);
+  CurDAG->ReplaceAllUsesWith(N, RegSequence);
+  CurDAG->RemoveDeadNode(N);
 }
 
 void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {

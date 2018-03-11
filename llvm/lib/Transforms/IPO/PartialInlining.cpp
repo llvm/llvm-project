@@ -769,12 +769,12 @@ bool PartialInlinerImpl::shouldPartialInline(
     BlockFrequency WeightedOutliningRcost) {
   using namespace ore;
 
-  if (SkipCostAnalysis)
-    return true;
-
   Instruction *Call = CS.getInstruction();
   Function *Callee = CS.getCalledFunction();
   assert(Callee == Cloner.ClonedFunc);
+
+  if (SkipCostAnalysis)
+    return isInlineViable(*Callee);
 
   Function *Caller = CS.getCaller();
   auto &CalleeTTI = (*GetTTI)(*Callee);

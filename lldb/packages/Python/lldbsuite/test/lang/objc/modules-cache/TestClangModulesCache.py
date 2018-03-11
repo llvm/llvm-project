@@ -32,7 +32,7 @@ class ObjCModulesTestCase(TestBase):
           shutil.rmtree(mod_cache)
         self.assertFalse(os.path.isdir(mod_cache),
                          "module cache should not exist")
-        self.runCmd('settings set clang.modules-cache-path "%s"' % mod_cache)
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % mod_cache)
         self.runCmd('settings set target.clang-module-search-paths "%s"'
                     % self.getSourceDir())
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(

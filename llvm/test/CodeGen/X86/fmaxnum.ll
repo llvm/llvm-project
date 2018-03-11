@@ -43,7 +43,7 @@ define float @test_fmaxf(float %x, float %y) {
 define float @test_fmaxf_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: test_fmaxf_minsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp fmaxf@PLT # TAILCALL
+; CHECK-NEXT:    jmp fmaxf # TAILCALL
   %z = call float @fmaxf(float %x, float %y) readnone
   ret float %z
 }
@@ -82,7 +82,7 @@ define x86_fp80 @test_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
-; CHECK-NEXT:    callq fmaxl@PLT
+; CHECK-NEXT:    callq fmaxl
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
   %z = call x86_fp80 @fmaxl(x86_fp80 %x, x86_fp80 %y) readnone
@@ -144,7 +144,7 @@ define x86_fp80 @test_intrinsic_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
-; CHECK-NEXT:    callq fmaxl@PLT
+; CHECK-NEXT:    callq fmaxl
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
   %z = call x86_fp80 @llvm.maxnum.f80(x86_fp80 %x, x86_fp80 %y) readnone

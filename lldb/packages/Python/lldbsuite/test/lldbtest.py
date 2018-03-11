@@ -1921,7 +1921,7 @@ class TestBase(Base):
         if self.child:
             assert(self.getDebugInfo() == 'default')
             mod_cache = os.path.join(self.getBuildDir(), "module-cache")
-            self.runCmd('settings set clang.modules-cache-path "%s"'
+            self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                         % mod_cache)
 
 

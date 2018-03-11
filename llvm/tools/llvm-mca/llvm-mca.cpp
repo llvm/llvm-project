@@ -335,8 +335,7 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<mca::ResourcePressureView> RPV =
-      llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S,
-                                                   B->getProcResourceMasks());
+      llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S);
   Printer->addView(std::move(RPV));
 
   if (PrintTimelineView) {
