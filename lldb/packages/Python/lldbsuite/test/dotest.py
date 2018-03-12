@@ -307,6 +307,9 @@ def parseOptionsAndInitTestdirs():
     if args.log_success:
         lldbtest_config.log_success = args.log_success
 
+    if args.out_of_tree_debugserver:
+        lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
+
     # Set SDKROOT if we are using an Apple SDK
     if platform_system == 'Darwin' and args.apple_sdk:
         os.environ['SDKROOT'] = seven.get_command_output(
