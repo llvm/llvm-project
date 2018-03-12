@@ -1383,6 +1383,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       if (ParseIntelDotOperator(SM, End))
         return true;
       break;
+    case AsmToken::At:
     case AsmToken::String:
     case AsmToken::Identifier: {
       SMLoc IdentLoc = Tok.getLoc();
@@ -1390,7 +1391,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       UpdateLocLex = false;
       // Register
       unsigned Reg;
-      if (Tok.isNot(AsmToken::String) && !ParseRegister(Reg, IdentLoc, End)) {
+      if (Tok.is(AsmToken::Identifier) && !ParseRegister(Reg, IdentLoc, End)) {
         if (SM.onRegister(Reg, ErrMsg))
           return Error(Tok.getLoc(), ErrMsg);
         break;
@@ -1428,6 +1429,9 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         break;
       }
       // MS InlineAsm identifier
+      // Call parseIdentifier() to combine @ with the identifier behind it.
+      if (TK == AsmToken::At && Parser.parseIdentifier(Identifier))
+        return Error(IdentLoc, "expected identifier");
       if (ParseIntelInlineAsmIdentifier(Val, Identifier, Info, false, End))
         return true;
       else if (SM.onIdentifierExpr(Val, Identifier, Info, true, ErrMsg))
