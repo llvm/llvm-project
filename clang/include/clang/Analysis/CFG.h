@@ -183,14 +183,16 @@ class CFGCXXRecordTypedCall : public CFGStmt {
 public:
   /// Returns true when call expression \p CE needs to be represented
   /// by CFGCXXRecordTypedCall, as opposed to a regular CFGStmt.
-  static bool isCXXRecordTypedCall(CallExpr *CE) {
-    return CE->getType().getCanonicalType()->getAsCXXRecordDecl();
+  static bool isCXXRecordTypedCall(CallExpr *CE, const ASTContext &ACtx) {
+    return CE->getCallReturnType(ACtx).getCanonicalType()->getAsCXXRecordDecl();
   }
 
   explicit CFGCXXRecordTypedCall(CallExpr *CE,
-                             const TemporaryObjectConstructionContext *C)
+                                 const TemporaryObjectConstructionContext *C)
       : CFGStmt(CE, CXXRecordTypedCall) {
-    assert(isCXXRecordTypedCall(CE));
+    // FIXME: This is not protected against squeezing a non-record-typed-call
+    // into the constructor. An assertion would require passing an ASTContext
+    // which would mean paying for something we don't use.
     assert(C);
     Data2.setPointer(const_cast<TemporaryObjectConstructionContext *>(C));
   }
