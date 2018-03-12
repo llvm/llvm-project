@@ -596,7 +596,9 @@ TEST(GoToInclude, All) {
   auto FooH = testPath("foo.h");
   auto FooHUri = URIForFile{FooH};
 
-  const char *HeaderContents = R"cpp([[]]int a;)cpp";
+  const char *HeaderContents = R"cpp([[]]#pragma once
+                                     int a;
+                                     )cpp";
   Annotations HeaderAnnotations(HeaderContents);
   FS.Files[FooH] = HeaderAnnotations.code();
 

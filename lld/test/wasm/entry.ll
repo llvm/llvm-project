@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            entry
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:
 
 ; The __wasm_call_ctors is somewhat special.  Make sure we can use it
