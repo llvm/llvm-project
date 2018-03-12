@@ -854,9 +854,9 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   6: CFGScopeBegin(__end1)
 // CHECK-NEXT:   7: __range1
 // CHECK-NEXT:   8: [B5.7] (ImplicitCastExpr, ArrayToPointerDecay, class A *)
-// CHECK-NEXT:   9: 10L
+// CHECK-NEXT:   9: 10
 // CHECK-NEXT:  10: [B5.8] + [B5.9]
-// CHECK-NEXT:  11: auto __end1 = __range1 + 10L;
+// CHECK-NEXT:  11: auto __end1 = __range1 + 10
 // CHECK-NEXT:  12: __range1
 // CHECK-NEXT:  13: [B5.12] (ImplicitCastExpr, ArrayToPointerDecay, class A *)
 // CHECK-NEXT:  14: auto __begin1 = __range1;
