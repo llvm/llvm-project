@@ -330,28 +330,33 @@ void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
 
 void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
   Server.codeComplete(Params.textDocument.uri.file(), Params.position, CCOpts,
-                      [](Tagged<CompletionList> List) { reply(List.Value); });
+                      [](llvm::Expected<CompletionList> List) {
+                        if (!List)
+                          return replyError(ErrorCode::InvalidParams,
+                                            llvm::toString(List.takeError()));
+                        reply(*List);
+                      });
 }
 
 void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams &Params) {
   Server.signatureHelp(Params.textDocument.uri.file(), Params.position,
-                       [](llvm::Expected<Tagged<SignatureHelp>> SignatureHelp) {
+                       [](llvm::Expected<SignatureHelp> SignatureHelp) {
                          if (!SignatureHelp)
                            return replyError(
                                ErrorCode::InvalidParams,
                                llvm::toString(SignatureHelp.takeError()));
-                         reply(SignatureHelp->Value);
+                         reply(*SignatureHelp);
                        });
 }
 
 void ClangdLSPServer::onGoToDefinition(TextDocumentPositionParams &Params) {
   Server.findDefinitions(
       Params.textDocument.uri.file(), Params.position,
-      [](llvm::Expected<Tagged<std::vector<Location>>> Items) {
+      [](llvm::Expected<std::vector<Location>> Items) {
         if (!Items)
           return replyError(ErrorCode::InvalidParams,
                             llvm::toString(Items.takeError()));
-        reply(json::ary(Items->Value));
+        reply(json::ary(*Items));
       });
 }
 
@@ -363,24 +368,24 @@ void ClangdLSPServer::onSwitchSourceHeader(TextDocumentIdentifier &Params) {
 void ClangdLSPServer::onDocumentHighlight(TextDocumentPositionParams &Params) {
   Server.findDocumentHighlights(
       Params.textDocument.uri.file(), Params.position,
-      [](llvm::Expected<Tagged<std::vector<DocumentHighlight>>> Highlights) {
+      [](llvm::Expected<std::vector<DocumentHighlight>> Highlights) {
         if (!Highlights)
           return replyError(ErrorCode::InternalError,
                             llvm::toString(Highlights.takeError()));
-        reply(json::ary(Highlights->Value));
+        reply(json::ary(*Highlights));
       });
 }
 
 void ClangdLSPServer::onHover(TextDocumentPositionParams &Params) {
   Server.findHover(Params.textDocument.uri.file(), Params.position,
-                   [](llvm::Expected<Tagged<Hover>> H) {
+                   [](llvm::Expected<Hover> H) {
                      if (!H) {
                        replyError(ErrorCode::InternalError,
                                   llvm::toString(H.takeError()));
                        return;
                      }
 
-                     reply(H->Value);
+                     reply(*H);
                    });
 }
 
@@ -437,12 +442,12 @@ std::vector<Fix> ClangdLSPServer::getFixes(StringRef File,
   return FixItsIter->second;
 }
 
-void ClangdLSPServer::onDiagnosticsReady(
-    PathRef File, Tagged<std::vector<Diag>> Diagnostics) {
+void ClangdLSPServer::onDiagnosticsReady(PathRef File,
+                                         std::vector<Diag> Diagnostics) {
   json::ary DiagnosticsJSON;
 
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
-  for (auto &Diag : Diagnostics.Value) {
+  for (auto &Diag : Diagnostics) {
     toLSPDiags(Diag, [&](clangd::Diagnostic Diag, llvm::ArrayRef<Fix> Fixes) {
       DiagnosticsJSON.push_back(json::obj{
           {"range", Diag.range},
