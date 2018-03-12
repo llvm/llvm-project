@@ -81,6 +81,7 @@ public:
 
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(llvm::StringRef path);
+  bool GetEnableExternalLookup() const;
 }; 
 
 //----------------------------------------------------------------------
