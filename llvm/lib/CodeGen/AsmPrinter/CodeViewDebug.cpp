@@ -1100,7 +1100,7 @@ void CodeViewDebug::calculateRanges(
       auto J = std::next(I);
       const DIExpression *DIExpr = DVInst->getDebugExpression();
       while (J != E &&
-             !fragmentsOverlap(DIExpr, J->first->getDebugExpression()))
+             !DIExpr->fragmentsOverlap(J->first->getDebugExpression()))
         ++J;
       if (J != E)
         End = getLabelBeforeInsn(J->first);
