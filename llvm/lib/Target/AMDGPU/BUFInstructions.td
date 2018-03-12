@@ -449,6 +449,7 @@ class MUBUF_Load_Pseudo <string opName,
     MUBUF_SetupAddr<addrKindCopy> {
   let PseudoInstr = opName # !if(isLds, "_lds", "") #
                     "_" # getAddrName<addrKindCopy>.ret;
+  let AsmMatchConverter = !if(isLds, "cvtMubufLds", "cvtMubuf");
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
   let mayLoad = 1;
@@ -548,6 +549,23 @@ multiclass MUBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
   }
 }
 
+class MUBUF_Pseudo_Store_Lds<string opName>
+  : MUBUF_Pseudo<opName,
+                 (outs),
+                 (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, GLC:$glc, slc:$slc),
+                 " $srsrc, $soffset$offset lds$glc$slc"> {
+  let mayLoad = 0;
+  let mayStore = 1;
+  let maybeAtomic = 1;
+
+  let has_vdata = 0;
+  let has_vaddr = 0;
+  let has_tfe = 0;
+  let lds = 1;
+
+  let Uses = [EXEC, M0];
+  let AsmMatchConverter = "cvtMubufLds";
+}
 
 class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in,
                           list<RegisterClass> vaddrList=[]> {
@@ -876,6 +894,10 @@ defm BUFFER_ATOMIC_INC_X2 : MUBUF_Pseudo_Atomics <
 defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_dec_x2", VReg_64, i64, atomic_dec_global
 >;
+
+let SubtargetPredicate = isVI in {
+def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
+}
 
 let SubtargetPredicate = isSI in { // isn't on CI & VI
 /*
@@ -1951,6 +1973,8 @@ defm BUFFER_ATOMIC_OR_X2        : MUBUF_Real_Atomic_vi <0x69>;
 defm BUFFER_ATOMIC_XOR_X2       : MUBUF_Real_Atomic_vi <0x6a>;
 defm BUFFER_ATOMIC_INC_X2       : MUBUF_Real_Atomic_vi <0x6b>;
 defm BUFFER_ATOMIC_DEC_X2       : MUBUF_Real_Atomic_vi <0x6c>;
+
+def BUFFER_STORE_LDS_DWORD_vi   : MUBUF_Real_vi <0x3d, BUFFER_STORE_LDS_DWORD>;
 
 def BUFFER_WBINVL1_vi           : MUBUF_Real_vi <0x3e, BUFFER_WBINVL1>;
 def BUFFER_WBINVL1_VOL_vi       : MUBUF_Real_vi <0x3f, BUFFER_WBINVL1_VOL>;

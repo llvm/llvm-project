@@ -37,6 +37,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
@@ -94,18 +95,25 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
   bool Changed = false;
   for (auto &F : M.functions()) {
     if (F.hasFnAttribute("enqueued-block")) {
+      if (!F.hasName()) {
+        SmallString<64> Name;
+        Mangler::getNameWithPrefix(Name, "__amdgpu_enqueued_kernel",
+                                   M.getDataLayout());
+        F.setName(Name);
+      }
+      auto RuntimeHandle = (F.getName() + ".runtime_handle").str();
+      auto *GV = new GlobalVariable(
+          M, Type::getInt8Ty(C)->getPointerTo(AMDGPUAS::GLOBAL_ADDRESS),
+          /*IsConstant=*/true, GlobalValue::ExternalLinkage,
+          /*Initializer=*/nullptr, RuntimeHandle, /*InsertBefore=*/nullptr,
+          GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS,
+          /*IsExternallyInitialized=*/true);
+      DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
+
       for (auto U : F.users()) {
         if (!isa<ConstantExpr>(&*U))
           continue;
         auto *BitCast = cast<ConstantExpr>(&*U);
-        auto RuntimeHandle = (F.getName() + "_runtime_handle").str();
-        auto *GV = new GlobalVariable(
-            M, Type::getInt8Ty(C)->getPointerTo(AMDGPUAS::GLOBAL_ADDRESS),
-            /*IsConstant=*/true, GlobalValue::ExternalLinkage,
-            /*Initializer=*/nullptr, RuntimeHandle, /*InsertBefore=*/nullptr,
-            GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS,
-            /*IsExternallyInitialized=*/true);
-        DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
         auto *NewPtr = ConstantExpr::getPointerCast(GV, BitCast->getType());
         BitCast->replaceAllUsesWith(NewPtr);
         F.addFnAttr("runtime-handle", RuntimeHandle);

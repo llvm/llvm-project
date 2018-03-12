@@ -63,7 +63,7 @@ public:
   /// \p File was not part of it before.
   /// FIXME(ibiryukov): remove the callback from this function.
   void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD,
-              UniqueFunction<void(std::vector<DiagWithFixIts>)> OnUpdated);
+              UniqueFunction<void(std::vector<Diag>)> OnUpdated);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
   /// resources.

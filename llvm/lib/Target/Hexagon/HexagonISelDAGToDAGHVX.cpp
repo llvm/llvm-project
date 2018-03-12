@@ -2035,6 +2035,10 @@ void HexagonDAGToDAGISel::SelectHvxVAlign(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
+  if (!HST->usePackets()) {
+    report_fatal_error("Support for gather requires packets, "
+                       "which are disabled");
+  }
   const SDLoc &dl(N);
   SDValue Chain = N->getOperand(0);
   SDValue Address = N->getOperand(2);
@@ -2075,6 +2079,10 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
+  if (!HST->usePackets()) {
+    report_fatal_error("Support for gather requires packets, "
+                       "which are disabled");
+  }
   const SDLoc &dl(N);
   SDValue Chain = N->getOperand(0);
   SDValue Address = N->getOperand(2);

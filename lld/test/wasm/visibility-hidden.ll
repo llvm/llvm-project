@@ -44,11 +44,11 @@ entry:
 ; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:       - Name:            objectDefault
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            archiveDefault
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:   - Type:

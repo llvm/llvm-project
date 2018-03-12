@@ -58,3 +58,10 @@ image_atomic_add v[6:7], v255, s[8:15] dmask:0x2 tfe
 
 image_atomic_cmpswap v[4:7], v[192:195], s[28:35] dmask:0xe tfe
 // NOGCN: error: invalid atomic image dmask
+
+//===----------------------------------------------------------------------===//
+// Image Gather
+//===----------------------------------------------------------------------===//
+
+image_gather4_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x3
+// NOGCN: error: invalid image_gather dmask: only one bit must be set

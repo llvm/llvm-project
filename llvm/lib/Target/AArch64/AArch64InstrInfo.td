@@ -396,6 +396,15 @@ def MOVaddrEXT
              [(set GPR64:$dst, (AArch64addlow (AArch64adrp texternalsym:$hi),
                                             texternalsym:$low))]>,
       Sched<[WriteAdrAdr]>;
+// Normally AArch64addlow either gets folded into a following ldr/str,
+// or together with an adrp into MOVaddr above. For cases with TLS, it
+// might appear without either of them, so allow lowering it into a plain
+// add.
+def ADDlowTLS
+    : Pseudo<(outs GPR64:$dst), (ins GPR64:$src, i64imm:$low),
+             [(set GPR64:$dst, (AArch64addlow GPR64:$src,
+                                            tglobaltlsaddr:$low))]>,
+      Sched<[WriteAdr]>;
 
 } // isReMaterializable, isCodeGenOnly
 

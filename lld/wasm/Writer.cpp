@@ -657,12 +657,11 @@ void Writer::calculateImports() {
       continue;
 
     DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
-    Sym->setOutputIndex(ImportedSymbols.size());
     ImportedSymbols.emplace_back(Sym);
     if (isa<FunctionSymbol>(Sym))
-      ++NumImportedFunctions;
+      Sym->setOutputIndex(NumImportedFunctions++);
     else
-      ++NumImportedGlobals;
+      Sym->setOutputIndex(NumImportedGlobals++);
   }
 }
 
@@ -757,16 +756,14 @@ void Writer::assignIndexes() {
     Func->setOutputIndex(FunctionIndex++);
   };
 
+  for (InputFunction *Func : Symtab->SyntheticFunctions)
+    AddDefinedFunction(Func);
+
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
     for (InputFunction *Func : File->Functions)
       AddDefinedFunction(Func);
   }
-
-  // TODO Move synthetic functions to come before (so __wasm_call_ctors can be
-  // compiled immediately by the browser).  Will reorder tests.
-  for (InputFunction *Func : Symtab->SyntheticFunctions)
-    AddDefinedFunction(Func);
 
   uint32_t TableIndex = kInitialTableOffset;
   auto HandleRelocs = [&](InputChunk *Chunk) {

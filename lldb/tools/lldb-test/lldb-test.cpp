@@ -98,9 +98,12 @@ void opts::breakpoint::dumpState(const BreakpointList &List, LinePrinter &P) {
       AutoIndent Indent(P, 2);
       P.formatLine("Enabled: {0}", Loc->IsEnabled());
       P.formatLine("Resolved: {0}", Loc->IsResolved());
-      P.formatLine("Address: {0}+{1:x}",
-                   Loc->GetAddress().GetSection()->GetName(),
-                   Loc->GetAddress().GetOffset());
+      SymbolContext sc;
+      Loc->GetAddress().CalculateSymbolContext(&sc);
+      lldb_private::StreamString S;
+      sc.DumpStopContext(&S, BP->GetTarget().GetProcessSP().get(),
+                         Loc->GetAddress(), false, true, false, true, true);
+      P.formatLine("Address: {0}", S.GetString());
     }
   }
   P.NewLine();

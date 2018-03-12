@@ -121,6 +121,10 @@ namespace HexagonISD {
     bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
     bool isTruncateFree(EVT VT1, EVT VT2) const override;
 
+    bool isCheapToSpeculateCttz() const override { return true; }
+    bool isCheapToSpeculateCtlz() const override { return true; }
+    bool isCtlzFast() const override { return true; }
+
     bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
 
     /// Return true if an FMA operation is faster than a pair of mul and add

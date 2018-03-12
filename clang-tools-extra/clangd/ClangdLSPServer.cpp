@@ -8,6 +8,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
+#include "Diagnostics.h"
 #include "JSONRPCDispatcher.h"
 #include "SourceCode.h"
 #include "URI.h"
@@ -313,12 +314,12 @@ void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
 
   json::ary Commands;
   for (Diagnostic &D : Params.context.diagnostics) {
-    auto Edits = getFixIts(Params.textDocument.uri.file(), D);
-    if (!Edits.empty()) {
+    for (auto &F : getFixes(Params.textDocument.uri.file(), D)) {
       WorkspaceEdit WE;
+      std::vector<TextEdit> Edits(F.Edits.begin(), F.Edits.end());
       WE.changes = {{Params.textDocument.uri.uri(), std::move(Edits)}};
       Commands.push_back(json::obj{
-          {"title", llvm::formatv("Apply FixIt {0}", D.message)},
+          {"title", llvm::formatv("Apply fix: {0}", F.Message)},
           {"command", ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND},
           {"arguments", {WE}},
       });
@@ -421,8 +422,8 @@ bool ClangdLSPServer::run(std::istream &In, JSONStreamStyle InputStyle) {
   return ShutdownRequestReceived;
 }
 
-std::vector<TextEdit> ClangdLSPServer::getFixIts(StringRef File,
-                                                 const clangd::Diagnostic &D) {
+std::vector<Fix> ClangdLSPServer::getFixes(StringRef File,
+                                           const clangd::Diagnostic &D) {
   std::lock_guard<std::mutex> Lock(FixItsMutex);
   auto DiagToFixItsIter = FixItsMap.find(File);
   if (DiagToFixItsIter == FixItsMap.end())
@@ -437,21 +438,22 @@ std::vector<TextEdit> ClangdLSPServer::getFixIts(StringRef File,
 }
 
 void ClangdLSPServer::onDiagnosticsReady(
-    PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
+    PathRef File, Tagged<std::vector<Diag>> Diagnostics) {
   json::ary DiagnosticsJSON;
 
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
-  for (auto &DiagWithFixes : Diagnostics.Value) {
-    auto Diag = DiagWithFixes.Diag;
-    DiagnosticsJSON.push_back(json::obj{
-        {"range", Diag.range},
-        {"severity", Diag.severity},
-        {"message", Diag.message},
+  for (auto &Diag : Diagnostics.Value) {
+    toLSPDiags(Diag, [&](clangd::Diagnostic Diag, llvm::ArrayRef<Fix> Fixes) {
+      DiagnosticsJSON.push_back(json::obj{
+          {"range", Diag.range},
+          {"severity", Diag.severity},
+          {"message", Diag.message},
+      });
+
+      auto &FixItsForDiagnostic = LocalFixIts[Diag];
+      std::copy(Fixes.begin(), Fixes.end(),
+                std::back_inserter(FixItsForDiagnostic));
     });
-    // We convert to Replacements to become independent of the SourceManager.
-    auto &FixItsForDiagnostic = LocalFixIts[Diag];
-    std::copy(DiagWithFixes.FixIts.begin(), DiagWithFixes.FixIts.end(),
-              std::back_inserter(FixItsForDiagnostic));
   }
 
   // Cache FixIts
