@@ -7999,13 +7999,13 @@ SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
   default:
     break;
   case MVT::v16i8:
-    if (Subtarget.hasSSE3())
+    if (Subtarget.hasSSSE3())
       Opcode = X86ISD::PSHUFB;
     break;
   case MVT::v8i16:
     if (Subtarget.hasVLX() && Subtarget.hasBWI())
       Opcode = X86ISD::VPERMV;
-    else if (Subtarget.hasSSE3()) {
+    else if (Subtarget.hasSSSE3()) {
       Opcode = X86ISD::PSHUFB;
       ShuffleVT = MVT::v16i8;
     }
@@ -8015,7 +8015,7 @@ SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
     if (Subtarget.hasAVX()) {
       Opcode = X86ISD::VPERMILPV;
       ShuffleVT = MVT::v4f32;
-    } else if (Subtarget.hasSSE3()) {
+    } else if (Subtarget.hasSSSE3()) {
       Opcode = X86ISD::PSHUFB;
       ShuffleVT = MVT::v16i8;
     }
@@ -22532,13 +22532,17 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   //
   //  Hi = psllqi(AloBhi + AhiBlo, 32);
   //  return AloBlo + Hi;
+  KnownBits AKnown, BKnown;
+  DAG.computeKnownBits(A, AKnown);
+  DAG.computeKnownBits(B, BKnown);
+
   APInt LowerBitsMask = APInt::getLowBitsSet(64, 32);
-  bool ALoIsZero = DAG.MaskedValueIsZero(A, LowerBitsMask);
-  bool BLoIsZero = DAG.MaskedValueIsZero(B, LowerBitsMask);
+  bool ALoIsZero = LowerBitsMask.isSubsetOf(AKnown.Zero);
+  bool BLoIsZero = LowerBitsMask.isSubsetOf(BKnown.Zero);
 
   APInt UpperBitsMask = APInt::getHighBitsSet(64, 32);
-  bool AHiIsZero = DAG.MaskedValueIsZero(A, UpperBitsMask);
-  bool BHiIsZero = DAG.MaskedValueIsZero(B, UpperBitsMask);
+  bool AHiIsZero = UpperBitsMask.isSubsetOf(AKnown.Zero);
+  bool BHiIsZero = UpperBitsMask.isSubsetOf(BKnown.Zero);
 
   // If DQI is supported we can use MULLQ, but MULUDQ is still better if the
   // the high bits are known to be zero.

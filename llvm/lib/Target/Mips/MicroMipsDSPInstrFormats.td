@@ -9,7 +9,7 @@
 
 class MMDSPInst<string opstr = "">
     : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>, PredicateControl {
-  let InsnPredicates = [HasDSP];
+  let ASEPredicate = [HasDSP];
   let AdditionalPredicates = [InMicroMips];
   string BaseOpcode = opstr;
   string Arch = "mmdsp";
@@ -18,7 +18,7 @@ class MMDSPInst<string opstr = "">
 
 class MMDSPInstAlias<string Asm, dag Result, bit Emit = 0b1>
     : InstAlias<Asm, Result, Emit>, PredicateControl {
-  let InsnPredicates = [HasDSP];
+  let ASEPredicate = [HasDSP];
   let AdditionalPredicates = [InMicroMips];
 }
 

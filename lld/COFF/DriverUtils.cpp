@@ -139,7 +139,7 @@ void parseGuard(StringRef FullArg) {
     else if (Arg.equals_lower("cf") || Arg.equals_lower("longjmp"))
       Config->GuardCF = GuardCFLevel::Full;
     else
-      fatal("invalid argument to /GUARD: " + Arg);
+      fatal("invalid argument to /guard: " + Arg);
   }
 }
 

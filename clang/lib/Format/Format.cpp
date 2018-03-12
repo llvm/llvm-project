@@ -766,6 +766,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.JavaScriptWrapImports = false;
   } else if (Language == FormatStyle::LK_Proto) {
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+    GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.SpacesInContainerLiterals = false;
     GoogleStyle.Cpp11BracedListStyle = false;
     // This affects protocol buffer options specifications and text protos.

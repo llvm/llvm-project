@@ -361,10 +361,7 @@ class ISA_MICROMIPS32_NOT_MIPS32R6 {
   list<Predicate> InsnPredicates = [NotMips32r6];
   list<Predicate> EncodingPredicates = [InMicroMips];
 }
-class INSN_EVA { list<Predicate> InsnPredicates = [HasEVA]; }
-class INSN_EVA_NOT_32R6_64R6 {
-  list<Predicate> InsnPredicates = [NotMips32r6, NotMips64r6, HasEVA];
-}
+class ASE_EVA { list<Predicate> ASEPredicate = [HasEVA]; }
 
 // The portions of MIPS-III that were also added to MIPS32
 class INSN_MIPS3_32 {
@@ -419,31 +416,31 @@ class INSN_MIPS5_32R2_NOT_32R6_64R6 {
 }
 
 class ASE_CNMIPS {
-  list<Predicate> InsnPredicates = [HasCnMips];
+  list<Predicate> ASEPredicate = [HasCnMips];
 }
 
 class NOT_ASE_CNMIPS {
-  list<Predicate> InsnPredicates = [NotCnMips];
+  list<Predicate> ASEPredicate = [NotCnMips];
 }
 
 class ASE_MIPS64_CNMIPS {
-  list<Predicate> InsnPredicates = [HasMips64, HasCnMips];
+  list<Predicate> ASEPredicate = [HasMips64, HasCnMips];
 }
 
 class ASE_MSA {
-  list<Predicate> InsnPredicates = [HasMSA];
+  list<Predicate> ASEPredicate = [HasMSA];
 }
 
 class ASE_MSA_NOT_MSA64 {
-  list<Predicate> InsnPredicates = [HasMSA, NotMips64];
+  list<Predicate> ASEPredicate = [HasMSA, NotMips64];
 }
 
 class ASE_MSA64 {
-  list<Predicate> InsnPredicates = [HasMSA, HasMips64];
+  list<Predicate> ASEPredicate = [HasMSA, HasMips64];
 }
 
 class ASE_MT {
-  list <Predicate> InsnPredicates = [HasMT];
+  list <Predicate> ASEPredicate = [HasMT];
 }
 
 // Class used for separating microMIPSr6 and microMIPS (r3) instruction.
@@ -454,7 +451,7 @@ class ISA_MICROMIPS_NOT_32R6 : PredicateControl {
 }
 
 class ASE_NOT_DSP {
-  list<Predicate> InsnPredicates = [NotDSP];
+  list<Predicate> ASEPredicate = [NotDSP];
 }
 
 class MADD4 {
