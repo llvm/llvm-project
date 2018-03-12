@@ -2946,8 +2946,20 @@ private:
         Matched.clear();
       }
       if (IsMatched) {
-        // Replace all matched values and erase them.
+        // If we matched phi node to different but identical phis then
+        // make a simplification here.
+        DenseMap<PHINode *, PHINode *> MatchedPHINodeMapping;
         for (auto MV : Matched) {
+          auto AlreadyMatched = MatchedPHINodeMapping.find(MV.first);
+          if (AlreadyMatched != MatchedPHINodeMapping.end()) {
+            MV.second->replaceAllUsesWith(AlreadyMatched->second);
+            ST.Put(MV.second, AlreadyMatched->second);
+            MV.second->eraseFromParent();
+          } else
+            MatchedPHINodeMapping.insert({ MV.first, MV.second });
+        }
+        // Replace all matched values and erase them.
+        for (auto MV : MatchedPHINodeMapping) {
           MV.first->replaceAllUsesWith(MV.second);
           PhiNodesToMatch.erase(MV.first);
           ST.Put(MV.first, MV.second);

@@ -450,7 +450,7 @@ void ScriptParser::readSections() {
   }
 
   if (!atEOF() && consume("INSERT")) {
-    consume("AFTER");
+    expect("AFTER");
     std::vector<BaseCommand *> &Dest = Script->InsertAfterCommands[next()];
     Dest.insert(Dest.end(), V.begin(), V.end());
     return;

@@ -123,7 +123,7 @@ void SymbolTable::reportRemainingUndefines() {
     if (Config->WarnLocallyDefinedImported)
       if (Symbol *Imp = LocalImports.lookup(B))
         warn("<root>: locally defined symbol imported: " + Imp->getName() +
-             " (defined in " + toString(Imp->getFile()) + ")");
+             " (defined in " + toString(Imp->getFile()) + ") [LNK4217]");
   }
 
   for (ObjFile *File : ObjFile::Instances) {
@@ -136,7 +136,7 @@ void SymbolTable::reportRemainingUndefines() {
         if (Symbol *Imp = LocalImports.lookup(Sym))
           warn(toString(File) + ": locally defined symbol imported: " +
                Imp->getName() + " (defined in " + toString(Imp->getFile()) +
-               ")");
+               ") [LNK4217]");
     }
   }
 }
