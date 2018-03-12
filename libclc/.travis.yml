@@ -54,6 +54,28 @@ matrix:
             # From sources above
             - llvm-5.0-dev
             - clang-5.0
+    - env:
+        - LABEL="make gcc LLVM-6.0"
+        - LLVM_VERSION=6.0
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
+        - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+      addons:
+        apt:
+          sources:
+            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main'
+            - ubuntu-toolchain-r-test
+          packages:
+            - libedit-dev
+            # LLVM-6 needs libstdc++4.9
+            - g++-4.9
+            # From sources above
+            - llvm-6.0-dev
+            - clang-6.0
+
+before_install:
+    - eval "${MATRIX_EVAL}"
 
 script:
   - $PYTHON ./configure.py --with-llvm-config=$LLVM_CONFIG --with-cxx-compiler=$CXX && make -j4

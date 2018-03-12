@@ -33,7 +33,6 @@
 #include "Plugins/ABI/SysV-s390x/ABISysV_s390x.h"
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
-#include "Plugins/Architecture/PPC64/ArchitecturePPC64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOS.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
@@ -163,7 +162,6 @@ void SystemInitializerTest::Initialize() {
   ABISysV_s390x::Initialize();
 
   ArchitectureArm::Initialize();
-  ArchitecturePPC64::Initialize();
 
   DisassemblerLLVMC::Initialize();
 

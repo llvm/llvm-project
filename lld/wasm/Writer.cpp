@@ -67,7 +67,7 @@ struct WasmSignatureDenseMapInfo {
 // An init entry to be written to either the synthetic init func or the
 // linking metadata.
 struct WasmInitEntry {
-  const Symbol *Sym;
+  const FunctionSymbol *Sym;
   uint32_t Priority;
 };
 
@@ -287,10 +287,10 @@ void Writer::createExportSection() {
     WasmExport Export;
     DEBUG(dbgs() << "Export: " << Name << "\n");
 
-    if (isa<DefinedFunction>(Sym))
-      Export = {Name, WASM_EXTERNAL_FUNCTION, Sym->getOutputIndex()};
-    else if (isa<DefinedGlobal>(Sym))
-      Export = {Name, WASM_EXTERNAL_GLOBAL, Sym->getOutputIndex()};
+    if (auto *F = dyn_cast<DefinedFunction>(Sym))
+      Export = {Name, WASM_EXTERNAL_FUNCTION, F->getFunctionIndex()};
+    else if (auto *G = dyn_cast<DefinedGlobal>(Sym))
+      Export = {Name, WASM_EXTERNAL_GLOBAL, G->getGlobalIndex()};
     else if (isa<DefinedData>(Sym))
       Export = {Name, WASM_EXTERNAL_GLOBAL, FakeGlobalIndex++};
     else
@@ -317,7 +317,7 @@ void Writer::createElemSection() {
   uint32_t TableIndex = kInitialTableOffset;
   for (const FunctionSymbol *Sym : IndirectFunctions) {
     assert(Sym->getTableIndex() == TableIndex);
-    writeUleb128(OS, Sym->getOutputIndex(), "function index");
+    writeUleb128(OS, Sym->getFunctionIndex(), "function index");
     ++TableIndex;
   }
 }
@@ -428,14 +428,16 @@ void Writer::createLinkingSection() {
       writeU8(Sub.OS, Kind, "sym kind");
       writeUleb128(Sub.OS, Flags, "sym flags");
 
-      switch (Kind) {
-      case llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION:
-      case llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL:
-        writeUleb128(Sub.OS, Sym->getOutputIndex(), "index");
+      if (auto *F = dyn_cast<FunctionSymbol>(Sym)) {
+        writeUleb128(Sub.OS, F->getFunctionIndex(), "index");
         if (Sym->isDefined())
           writeStr(Sub.OS, Sym->getName(), "sym name");
-        break;
-      case llvm::wasm::WASM_SYMBOL_TYPE_DATA:
+      } else if (auto *G = dyn_cast<GlobalSymbol>(Sym)) {
+        writeUleb128(Sub.OS, G->getGlobalIndex(), "index");
+        if (Sym->isDefined())
+          writeStr(Sub.OS, Sym->getName(), "sym name");
+      } else {
+        assert(isa<DataSymbol>(Sym));
         writeStr(Sub.OS, Sym->getName(), "sym name");
         if (auto *DataSym = dyn_cast<DefinedData>(Sym)) {
           writeUleb128(Sub.OS, DataSym->getOutputSegmentIndex(), "index");
@@ -443,7 +445,6 @@ void Writer::createLinkingSection() {
                        "data offset");
           writeUleb128(Sub.OS, DataSym->getSize(), "data size");
         }
-        break;
       }
     }
 
@@ -481,7 +482,7 @@ void Writer::createLinkingSection() {
     StringRef Comdat = F->getComdat();
     if (!Comdat.empty())
       Comdats[Comdat].emplace_back(
-          ComdatEntry{WASM_COMDAT_FUNCTION, F->getOutputIndex()});
+          ComdatEntry{WASM_COMDAT_FUNCTION, F->getFunctionIndex()});
   }
   for (uint32_t I = 0; I < Segments.size(); ++I) {
     const auto &InputSegments = Segments[I]->InputSegments;
@@ -531,14 +532,14 @@ void Writer::createNameSection() {
   // and InputFunctions are numbered in order with imported functions coming
   // first.
   for (const Symbol *S : ImportedSymbols) {
-    if (!isa<FunctionSymbol>(S))
-      continue;
-    writeUleb128(Sub.OS, S->getOutputIndex(), "import index");
-    writeStr(Sub.OS, S->getName(), "symbol name");
+    if (auto *F = dyn_cast<FunctionSymbol>(S)) {
+      writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
+      writeStr(Sub.OS, F->getName(), "symbol name");
+    }
   }
   for (const InputFunction *F : InputFunctions) {
     if (!F->getName().empty()) {
-      writeUleb128(Sub.OS, F->getOutputIndex(), "func index");
+      writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
       writeStr(Sub.OS, F->getName(), "symbol name");
     }
   }
@@ -658,10 +659,10 @@ void Writer::calculateImports() {
 
     DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
     ImportedSymbols.emplace_back(Sym);
-    if (isa<FunctionSymbol>(Sym))
-      Sym->setOutputIndex(NumImportedFunctions++);
+    if (auto *F = dyn_cast<FunctionSymbol>(Sym))
+      F->setFunctionIndex(NumImportedFunctions++);
     else
-      Sym->setOutputIndex(NumImportedGlobals++);
+      cast<GlobalSymbol>(Sym)->setGlobalIndex(NumImportedGlobals++);
   }
 }
 
@@ -753,7 +754,7 @@ void Writer::assignIndexes() {
     if (!Func->Live)
       return;
     InputFunctions.emplace_back(Func);
-    Func->setOutputIndex(FunctionIndex++);
+    Func->setFunctionIndex(FunctionIndex++);
   };
 
   for (InputFunction *Func : Symtab->SyntheticFunctions)
@@ -775,7 +776,7 @@ void Writer::assignIndexes() {
       if (Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_I32 ||
           Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_SLEB) {
         FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
-        if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
+        if (Sym->hasTableIndex() || !Sym->hasFunctionIndex())
           continue;
         Sym->setTableIndex(TableIndex++);
         IndirectFunctions.emplace_back(Sym);
@@ -806,7 +807,7 @@ void Writer::assignIndexes() {
   auto AddDefinedGlobal = [&](InputGlobal *Global) {
     if (Global->Live) {
       DEBUG(dbgs() << "AddDefinedGlobal: " << GlobalIndex << "\n");
-      Global->setOutputIndex(GlobalIndex++);
+      Global->setGlobalIndex(GlobalIndex++);
       InputGlobals.push_back(Global);
     }
   };
@@ -864,7 +865,7 @@ void Writer::createCtorFunction() {
     writeUleb128(OS, 0, "num locals");
     for (const WasmInitEntry &F : InitFunctions) {
       writeU8(OS, OPCODE_CALL, "CALL");
-      writeUleb128(OS, F.Sym->getOutputIndex(), "function index");
+      writeUleb128(OS, F.Sym->getFunctionIndex(), "function index");
     }
     writeU8(OS, OPCODE_END, "END");
   }
