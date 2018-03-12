@@ -56,13 +56,13 @@ using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::Each;
 using ::testing::ElementsAre;
+using ::testing::Field;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
-using ::testing::Field;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(
-      PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {}
+  void onDiagnosticsReady(PathRef File,
+                          Tagged<std::vector<Diag>> Diagnostics) override {}
 };
 
 // GMock helpers for matching completion items.
@@ -319,11 +319,11 @@ TEST(CompletionTest, CompletionOptions) {
   };
   // We used to test every combination of options, but that got too slow (2^N).
   auto Flags = {
-    &clangd::CodeCompleteOptions::IncludeMacros,
-    &clangd::CodeCompleteOptions::IncludeBriefComments,
-    &clangd::CodeCompleteOptions::EnableSnippets,
-    &clangd::CodeCompleteOptions::IncludeCodePatterns,
-    &clangd::CodeCompleteOptions::IncludeIneligibleResults,
+      &clangd::CodeCompleteOptions::IncludeMacros,
+      &clangd::CodeCompleteOptions::IncludeBriefComments,
+      &clangd::CodeCompleteOptions::EnableSnippets,
+      &clangd::CodeCompleteOptions::IncludeCodePatterns,
+      &clangd::CodeCompleteOptions::IncludeIneligibleResults,
   };
   // Test default options.
   Test({});
@@ -547,7 +547,6 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   auto WithoutIndex = runCodeComplete(Server, File, Test.point(), Opts).Value;
   EXPECT_THAT(WithoutIndex.items,
               UnorderedElementsAre(Named("local"), Named("preamble")));
-
 }
 
 TEST(CompletionTest, DynamicIndexMultiFile) {

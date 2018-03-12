@@ -48,5 +48,13 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   return P;
 }
 
+Range halfOpenToRange(const SourceManager &SM, CharSourceRange R) {
+  // Clang is 1-based, LSP uses 0-based indexes.
+  Position Begin = sourceLocToPosition(SM, R.getBegin());
+  Position End = sourceLocToPosition(SM, R.getEnd());
+
+  return {Begin, End};
+}
+
 } // namespace clangd
 } // namespace clang

@@ -691,7 +691,9 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     }
   }
 
-  if (Style.Language == FormatStyle::LK_JavaScript &&
+  if ((Style.Language == FormatStyle::LK_JavaScript ||
+       Style.Language == FormatStyle::LK_Proto ||
+       Style.Language == FormatStyle::LK_TextProto) &&
       Tok.is(tok::char_constant)) {
     Tok.Tok.setKind(tok::string_literal);
   }

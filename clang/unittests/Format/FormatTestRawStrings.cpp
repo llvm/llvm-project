@@ -164,6 +164,20 @@ t = R"pb(item:1)pb";)test",
                    getRawStringPbStyleWithColumns(40)));
 }
 
+TEST_F(FormatTestRawStrings, RespectsClangFormatOff) {
+  expect_eq(R"test(
+// clang-format off
+s = R"pb(item:      1)pb";
+// clang-format on
+t = R"pb(item: 1)pb";)test",
+            format(R"test(
+// clang-format off
+s = R"pb(item:      1)pb";
+// clang-format on
+t = R"pb(item:      1)pb";)test",
+                   getRawStringPbStyleWithColumns(40)));
+}
+
 TEST_F(FormatTestRawStrings, ReformatsShortRawStringsOnSingleLine) {
   expect_eq(
       R"test(P p = TP(R"pb()pb");)test",

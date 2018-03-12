@@ -131,6 +131,9 @@ struct Symbol {
   //   * For non-inline functions, the canonical declaration typically appears
   //     in the ".h" file corresponding to the definition.
   SymbolLocation CanonicalDeclaration;
+  // The number of translation units that reference this symbol from their main
+  // file. This number is only meaningful if aggregated in an index.
+  unsigned References = 0;
 
   /// A brief description of the symbol that can be displayed in the completion
   /// candidate list. For example, "Foo(X x, Y y) const" is a labal for a
