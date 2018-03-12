@@ -3822,15 +3822,35 @@ Assembler
 AMDGPU backend has LLVM-MC based assembler which is currently in development.
 It supports AMDGCN GFX6-GFX9.
 
-This section describes general syntax for instructions and operands. For more
-information about instructions, their semantics and supported combinations of
+This section describes general syntax for instructions and operands.
+
+Instructions
+~~~~~~~~~~~~
+
+.. toctree::
+   :hidden:
+
+   AMDGPUAsmGFX7
+   AMDGPUAsmGFX8
+   AMDGPUAsmGFX9
+   AMDGPUOperandSyntax
+
+An instruction has the following syntax:
+
+    *<opcode> <operand0>, <operand1>,... <modifier0> <modifier1>...*
+
+Note that operands are normally comma-separated while modifiers are space-separated.
+
+The order of operands and modifiers is fixed. Most modifiers are optional and may be omitted.
+
+See detailed instruction syntax description for :doc:`GFX7<AMDGPUAsmGFX7>`,
+:doc:`GFX8<AMDGPUAsmGFX8>` and :doc:`GFX9<AMDGPUAsmGFX9>`.
+
+Note that features under development are not included in this description.
+
+For more information about instructions, their semantics and supported combinations of
 operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_ and [AMD-GCN-GFX9]_.
-
-An instruction has the following syntax (register operands are normally
-comma-separated while extra operands are space-separated):
-
-*<opcode> <register_operand0>, ... <extra_operand0> ...*
 
 Operands
 ~~~~~~~~
@@ -3847,34 +3867,16 @@ The following syntax for register operands is supported:
 * Register index expressions: v[2*2], s[1-1:2-1]
 * 'off' indicates that an operand is not enabled
 
-The following extra operands are supported:
+Modifiers
+~~~~~~~~~
 
-* offset, offset0, offset1
-* idxen, offen bits
-* glc, slc, tfe bits
-* waitcnt: integer or combination of counter values
-* VOP3 modifiers:
-
-  - abs (\| \|), neg (\-)
-
-* DPP modifiers:
-
-  - row_shl, row_shr, row_ror, row_rol
-  - row_mirror, row_half_mirror, row_bcast
-  - wave_shl, wave_shr, wave_ror, wave_rol, quad_perm
-  - row_mask, bank_mask, bound_ctrl
-
-* SDWA modifiers:
-
-  - dst_sel, src0_sel, src1_sel (BYTE_N, WORD_M, DWORD)
-  - dst_unused (UNUSED_PAD, UNUSED_SEXT, UNUSED_PRESERVE)
-  - abs, neg, sext
+Detailed description of modifiers may be found :doc:`here<AMDGPUOperandSyntax>`.
 
 Instruction Examples
 ~~~~~~~~~~~~~~~~~~~~
 
 DS
-~~
+++
 
 .. code-block:: nasm
 

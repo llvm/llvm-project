@@ -119,6 +119,9 @@ struct Range {
   friend bool operator==(const Range &LHS, const Range &RHS) {
     return std::tie(LHS.start, LHS.end) == std::tie(RHS.start, RHS.end);
   }
+  friend bool operator!=(const Range &LHS, const Range &RHS) {
+    return !(LHS == RHS);
+  }
   friend bool operator<(const Range &LHS, const Range &RHS) {
     return std::tie(LHS.start, LHS.end) < std::tie(RHS.start, RHS.end);
   }
@@ -410,13 +413,14 @@ struct Diagnostic {
   /// The diagnostic's message.
   std::string message;
 };
+
 /// A LSP-specific comparator used to find diagnostic in a container like
 /// std:map.
 /// We only use the required fields of Diagnostic to do the comparsion to avoid
 /// any regression issues from LSP clients (e.g. VScode), see
 /// https://git.io/vbr29
 struct LSPDiagnosticCompare {
-  bool operator()(const Diagnostic& LHS, const Diagnostic& RHS) const {
+  bool operator()(const Diagnostic &LHS, const Diagnostic &RHS) const {
     return std::tie(LHS.range, LHS.message) < std::tie(RHS.range, RHS.message);
   }
 };

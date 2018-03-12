@@ -93,6 +93,7 @@ using namespace ELF;
   using Elf_Word = typename ELFT::Word;                                        \
   using Elf_Hash = typename ELFT::Hash;                                        \
   using Elf_GnuHash = typename ELFT::GnuHash;                                  \
+  using Elf_Note  = typename ELFT::Note;                                       \
   using Elf_Sym_Range = typename ELFT::SymRange;                               \
   using Elf_Versym = typename ELFT::Versym;                                    \
   using Elf_Verneed = typename ELFT::Verneed;                                  \
@@ -3540,62 +3541,57 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
   bool IsCore = e->e_type == ELF::ET_CORE;
 
-  auto process = [&](const typename ELFT::Off Offset,
-                     const typename ELFT::Addr Size) {
-    if (Size <= 0)
-      return;
-
-    const auto *P = static_cast<const uint8_t *>(Obj->base() + Offset);
-    const auto *E = P + Size;
-
+  auto PrintHeader = [&](const typename ELFT::Off Offset,
+                         const typename ELFT::Addr Size) {
     OS << "Displaying notes found at file offset " << format_hex(Offset, 10)
        << " with length " << format_hex(Size, 10) << ":\n"
        << "  Owner                 Data size\tDescription\n";
+  };
 
-    while (P < E) {
-      const Elf_Word *Words = reinterpret_cast<const Elf_Word *>(&P[0]);
+  auto ProcessNote = [&](const Elf_Note &Note) {
+    StringRef Name = Note.getName();
+    ArrayRef<Elf_Word> Descriptor = Note.getDesc();
+    Elf_Word Type = Note.getType();
 
-      uint32_t NameSize = Words[0];
-      uint32_t DescriptorSize = Words[1];
-      uint32_t Type = Words[2];
+    OS << "  " << Name << std::string(22 - Name.size(), ' ')
+       << format_hex(Descriptor.size(), 10) << '\t';
 
-      ArrayRef<Elf_Word> Descriptor(&Words[3 + (alignTo<4>(NameSize) / 4)],
-                                    alignTo<4>(DescriptorSize) / 4);
-
-      StringRef Name;
-      if (NameSize)
-        Name =
-            StringRef(reinterpret_cast<const char *>(&Words[3]), NameSize - 1);
-
-      OS << "  " << Name << std::string(22 - NameSize, ' ')
-         << format_hex(DescriptorSize, 10) << '\t';
-
-      if (Name == "GNU") {
-        OS << getGNUNoteTypeName(Type) << '\n';
-        printGNUNote<ELFT>(OS, Type, Descriptor, DescriptorSize);
-      } else if (Name == "FreeBSD") {
-        OS << getFreeBSDNoteTypeName(Type) << '\n';
-      } else if (Name == "AMD") {
-        OS << getAMDGPUNoteTypeName(Type) << '\n';
-        printAMDGPUNote<ELFT>(OS, Type, Descriptor, DescriptorSize);
-      } else {
-        OS << "Unknown note type: (" << format_hex(Type, 10) << ')';
-      }
-      OS << '\n';
-
-      P = P + 3 * sizeof(Elf_Word) + alignTo<4>(NameSize) +
-          alignTo<4>(DescriptorSize);
+    if (Name == "GNU") {
+      OS << getGNUNoteTypeName(Type) << '\n';
+      printGNUNote<ELFT>(OS, Type, Descriptor, Descriptor.size());
+    } else if (Name == "FreeBSD") {
+      OS << getFreeBSDNoteTypeName(Type) << '\n';
+    } else if (Name == "AMD") {
+      OS << getAMDGPUNoteTypeName(Type) << '\n';
+      printAMDGPUNote<ELFT>(OS, Type, Descriptor, Descriptor.size());
+    } else {
+      OS << "Unknown note type: (" << format_hex(Type, 10) << ')';
     }
+    OS << '\n';
   };
 
   if (IsCore) {
-    for (const auto &P : unwrapOrError(Obj->program_headers()))
-      if (P.p_type == PT_NOTE)
-        process(P.p_offset, P.p_filesz);
+    for (const auto &P : unwrapOrError(Obj->program_headers())) {
+      if (P.p_type != PT_NOTE)
+        continue;
+      PrintHeader(P.p_offset, P.p_filesz);
+      Error Err = Error::success();
+      for (const auto &Note : Obj->notes(P, Err))
+        ProcessNote(Note);
+      if (Err)
+        error(std::move(Err));
+    }
   } else {
-    for (const auto &S : unwrapOrError(Obj->sections()))
-      if (S.sh_type == SHT_NOTE)
-        process(S.sh_offset, S.sh_size);
+    for (const auto &S : unwrapOrError(Obj->sections())) {
+      if (S.sh_type != SHT_NOTE)
+        continue;
+      PrintHeader(S.sh_offset, S.sh_size);
+      Error Err = Error::success();
+      for (const auto &Note : Obj->notes(S, Err))
+        ProcessNote(Note);
+      if (Err)
+        error(std::move(Err));
+    }
   }
 }
 

@@ -26,13 +26,13 @@ entry:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ReturnType:      I32
-; CHECK-NEXT:         ParamTypes:
-; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         ReturnType:      I32
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 0, 0, 0, 0, 1 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 1, 1, 1, 1, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -76,78 +76,78 @@ entry:
 ; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            alias_fn
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            direct_fn
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:       - Name:            call_direct
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:       - Name:            call_alias
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:       - Name:            call_alias_ptr
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           5
+; CHECK-NEXT:         Index:           6
 ; CHECK-NEXT:       - Name:            call_direct_ptr
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           6
+; CHECK-NEXT:         Index:           7
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
-; CHECK-NEXT:         Functions:       [ 0, 2 ]
+; CHECK-NEXT:         Functions:       [ 1, 3 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            41010B
+; CHECK-NEXT:         Body:            0B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            1080808080001A0B
+; CHECK-NEXT:         Body:            41010B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            41000B
+; CHECK-NEXT:         Body:            1081808080001A0B
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            1082808080000B
+; CHECK-NEXT:         Body:            41000B
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            1080808080000B
+; CHECK-NEXT:         Body:            1083808080000B
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:           - Type:            I32
-; CHECK-NEXT:             Count:           2
-; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081080808080002101200041106A24808080800020010B
+; CHECK-NEXT:         Body:            1081808080000B
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
-; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004182808080003602081082808080002101200041106A24808080800020010B
+; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081081808080002101200041106A24808080800020010B
 ; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            0B
+; CHECK-NEXT:           - Type:            I32
+; CHECK-NEXT:             Count:           2
+; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004182808080003602081083808080002101200041106A24808080800020010B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            alias_fn
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Name:            _start
-; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Name:            direct_fn
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Name:            call_direct
-; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Name:            call_alias
-; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Name:            call_alias_ptr
-; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Name:            call_direct_ptr
-; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Name:            __wasm_call_ctors
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            alias_fn
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Name:            _start
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Name:            direct_fn
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Name:            call_direct
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Name:            call_alias
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Name:            call_alias_ptr
+; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:         Name:            call_direct_ptr
 ; CHECK-NEXT: ...

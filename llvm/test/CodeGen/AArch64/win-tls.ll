@@ -35,10 +35,7 @@ define i64 @getVar64() {
 
 ; CHECK: ldr [[TLS:x[0-9]+]], {{\[}}[[TLS_POINTER]], x[[TLS_INDEX]], lsl #3]
 ; CHECK: add [[TLS]], [[TLS]], :secrel_hi12:tlsVar
-; This add+ldr could also be folded into a single ldr with a :secrel_lo12:
-; offset.
-; CHECK: add [[TLS]], [[TLS]], :secrel_lo12:tlsVar
-; CHECK: ldr w0, {{\[}}[[TLS]]{{\]}}
+; CHECK: ldr w0, {{\[}}[[TLS]], :secrel_lo12:tlsVar{{\]}}
 
 ; CHECK-LABEL: getPtr
 ; CHECK: adrp [[TLS_INDEX_ADDR:x[0-9]+]], _tls_index
@@ -56,17 +53,12 @@ define i64 @getVar64() {
 
 ; CHECK: ldr [[TLS:x[0-9]+]], {{\[}}[[TLS_POINTER]], x[[TLS_INDEX]], lsl #3]
 ; CHECK: add [[TLS]], [[TLS]], :secrel_hi12:tlsVar
-; This add+ldr could also be folded into a single ldr with a :secrel_lo12:
-; offset.
-; CHECK: add [[TLS]], [[TLS]], :secrel_lo12:tlsVar
-; CHECK: str w0, {{\[}}[[TLS]]{{\]}}
+; CHECK: str w0, {{\[}}[[TLS]], :secrel_lo12:tlsVar{{\]}}
 
 ; CHECK-LABEL: getVar8
 ; CHECK: add [[TLS:x[0-9]+]], [[TLS]], :secrel_hi12:tlsVar8
-; CHECK: add [[TLS]], [[TLS]], :secrel_lo12:tlsVar8
-; CHECK: ldrb w0, {{\[}}[[TLS]]{{\]}}
+; CHECK: ldrb w0, {{\[}}[[TLS]], :secrel_lo12:tlsVar8{{\]}}
 
 ; CHECK-LABEL: getVar64
 ; CHECK: add [[TLS:x[0-9]+]], [[TLS]], :secrel_hi12:tlsVar64
-; CHECK: add [[TLS]], [[TLS]], :secrel_lo12:tlsVar64
-; CHECK: ldr x0, {{\[}}[[TLS]]{{\]}}
+; CHECK: ldr x0, {{\[}}[[TLS]], :secrel_lo12:tlsVar64{{\]}}

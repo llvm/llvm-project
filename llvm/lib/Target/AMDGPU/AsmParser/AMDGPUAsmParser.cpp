@@ -864,7 +864,7 @@ private:
                            unsigned& RegNum, unsigned& RegWidth,
                            unsigned *DwordRegIndex);
   void cvtMubufImpl(MCInst &Inst, const OperandVector &Operands,
-                    bool IsAtomic, bool IsAtomicReturn);
+                    bool IsAtomic, bool IsAtomicReturn, bool IsLds = false);
   void cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
                  bool IsGdsHardcoded);
 
@@ -1053,6 +1053,7 @@ private:
   bool validateEarlyClobberLimitations(const MCInst &Inst);
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
+  bool validateMIMGGatherDMask(const MCInst &Inst);
   bool validateMIMGDataSize(const MCInst &Inst);
   bool validateMIMGR128(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
@@ -1092,6 +1093,7 @@ public:
   void cvtMubuf(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false); }
   void cvtMubufAtomic(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, false); }
   void cvtMubufAtomicReturn(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, true); }
+  void cvtMubufLds(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false, true); }
   void cvtMtbuf(MCInst &Inst, const OperandVector &Operands);
 
   AMDGPUOperand::Ptr defaultGLC() const;
@@ -2299,7 +2301,7 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
     return true;
 
-  // Gather4 instructions seem to have special rules not described in spec.
+  // Gather4 instructions do not need validation: dst size is hardcoded.
   if (Desc.TSFlags & SIInstrFlags::Gather4)
     return true;
 
@@ -2343,6 +2345,25 @@ bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
   // may use 0x1 and 0x3. However these limitations are
   // verified when we check that dmask matches dst size.
   return DMask == 0x1 || DMask == 0x3 || DMask == 0xf;
+}
+
+bool AMDGPUAsmParser::validateMIMGGatherDMask(const MCInst &Inst) {
+
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::Gather4) == 0)
+    return true;
+
+  int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
+  unsigned DMask = Inst.getOperand(DMaskIdx).getImm() & 0xf;
+
+  // GATHER4 instructions use dmask in a different fashion compared to
+  // other MIMG instructions. The only useful DMASK values are
+  // 1=red, 2=green, 4=blue, 8=alpha. (e.g. 1 returns
+  // (red,red,red,red) etc.) The ISA document doesn't mention
+  // this.
+  return DMask == 0x1 || DMask == 0x2 || DMask == 0x4 || DMask == 0x8;
 }
 
 bool AMDGPUAsmParser::validateMIMGR128(const MCInst &Inst) {
@@ -2410,6 +2431,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGAtomicDMask(Inst)) {
     Error(IDLoc,
       "invalid atomic image dmask");
+    return false;
+  }
+  if (!validateMIMGGatherDMask(Inst)) {
+    Error(IDLoc,
+      "invalid image_gather dmask: only one bit must be set");
     return false;
   }
 
@@ -4081,7 +4107,10 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultTFE() const {
 
 void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
                                const OperandVector &Operands,
-                               bool IsAtomic, bool IsAtomicReturn) {
+                               bool IsAtomic,
+                               bool IsAtomicReturn,
+                               bool IsLds) {
+  bool IsLdsOpcode = IsLds;
   bool HasLdsModifier = false;
   OptionalImmIndexMap OptionalIdx;
   assert(IsAtomicReturn ? IsAtomic : true);
@@ -4121,10 +4150,11 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   // optional modifiers and llvm asm matcher regards this 'lds'
   // modifier as an optional one. As a result, an lds version
   // of opcode may be selected even if it has no 'lds' modifier.
-  if (!HasLdsModifier) {
+  if (IsLdsOpcode && !HasLdsModifier) {
     int NoLdsOpcode = AMDGPU::getMUBUFNoLdsInst(Inst.getOpcode());
     if (NoLdsOpcode != -1) { // Got lds version - correct it.
       Inst.setOpcode(NoLdsOpcode);
+      IsLdsOpcode = false;
     }
   }
 
@@ -4140,7 +4170,7 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   }
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
 
-  if (!HasLdsModifier) { // tfe is not legal with lds opcodes
+  if (!IsLdsOpcode) { // tfe is not legal with lds opcodes
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   }
 }

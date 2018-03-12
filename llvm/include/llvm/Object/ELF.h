@@ -67,6 +67,9 @@ public:
   using Elf_Versym = typename ELFT::Versym;
   using Elf_Hash = typename ELFT::Hash;
   using Elf_GnuHash = typename ELFT::GnuHash;
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
+  using Elf_Note_Iterator = typename ELFT::NoteIterator;
   using Elf_Dyn_Range = typename ELFT::DynRange;
   using Elf_Shdr_Range = typename ELFT::ShdrRange;
   using Elf_Sym_Range = typename ELFT::SymRange;
@@ -153,6 +156,73 @@ public:
     auto *Begin =
         reinterpret_cast<const Elf_Phdr *>(base() + getHeader()->e_phoff);
     return makeArrayRef(Begin, Begin + getHeader()->e_phnum);
+  }
+
+  /// Get an iterator over notes in a program header.
+  ///
+  /// The program header must be of type \c PT_NOTE.
+  ///
+  /// \param Phdr the program header to iterate over.
+  /// \param Err [out] an error to support fallible iteration, which should
+  ///  be checked after iteration ends.
+  Elf_Note_Iterator notes_begin(const Elf_Phdr &Phdr, Error &Err) const {
+    if (Phdr.p_type != ELF::PT_NOTE) {
+      Err = createError("attempt to iterate notes of non-note program header");
+      return Elf_Note_Iterator(Err);
+    }
+    if (Phdr.p_offset + Phdr.p_filesz > getBufSize()) {
+      Err = createError("invalid program header offset/size");
+      return Elf_Note_Iterator(Err);
+    }
+    return Elf_Note_Iterator(base() + Phdr.p_offset, Phdr.p_filesz, Err);
+  }
+
+  /// Get an iterator over notes in a section.
+  ///
+  /// The section must be of type \c SHT_NOTE.
+  ///
+  /// \param Shdr the section to iterate over.
+  /// \param Err [out] an error to support fallible iteration, which should
+  ///  be checked after iteration ends.
+  Elf_Note_Iterator notes_begin(const Elf_Shdr &Shdr, Error &Err) const {
+    if (Shdr.sh_type != ELF::SHT_NOTE) {
+      Err = createError("attempt to iterate notes of non-note section");
+      return Elf_Note_Iterator(Err);
+    }
+    if (Shdr.sh_offset + Shdr.sh_size > getBufSize()) {
+      Err = createError("invalid section offset/size");
+      return Elf_Note_Iterator(Err);
+    }
+    return Elf_Note_Iterator(base() + Shdr.sh_offset, Shdr.sh_size, Err);
+  }
+
+  /// Get the end iterator for notes.
+  Elf_Note_Iterator notes_end() const {
+    return Elf_Note_Iterator();
+  }
+
+  /// Get an iterator range over notes of a program header.
+  ///
+  /// The program header must be of type \c PT_NOTE.
+  ///
+  /// \param Phdr the program header to iterate over.
+  /// \param Err [out] an error to support fallible iteration, which should
+  ///  be checked after iteration ends.
+  iterator_range<Elf_Note_Iterator> notes(const Elf_Phdr &Phdr,
+                                          Error &Err) const {
+    return make_range(notes_begin(Phdr, Err), notes_end());
+  }
+
+  /// Get an iterator range over notes of a section.
+  ///
+  /// The section must be of type \c SHT_NOTE.
+  ///
+  /// \param Shdr the section to iterate over.
+  /// \param Err [out] an error to support fallible iteration, which should
+  ///  be checked after iteration ends.
+  iterator_range<Elf_Note_Iterator> notes(const Elf_Shdr &Shdr,
+                                          Error &Err) const {
+    return make_range(notes_begin(Shdr, Err), notes_end());
   }
 
   Expected<StringRef> getSectionStringTable(Elf_Shdr_Range Sections) const;

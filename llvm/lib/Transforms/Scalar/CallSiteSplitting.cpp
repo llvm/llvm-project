@@ -302,7 +302,7 @@ static void splitCallSite(
   // `musttail` calls must be followed by optional `bitcast`, and `ret`. The
   // split blocks will be terminated right after that so there're no users for
   // this phi in a `TailBB`.
-  if (!IsMustTailCall && Instr->getNumUses())
+  if (!IsMustTailCall && !Instr->use_empty())
     CallPN = PHINode::Create(Instr->getType(), Preds.size(), "phi.call");
 
   DEBUG(dbgs() << "split call-site : " << *Instr << " into \n");

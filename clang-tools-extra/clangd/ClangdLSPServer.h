@@ -46,9 +46,8 @@ public:
 
 private:
   // Implement DiagnosticsConsumer.
-  virtual void
-  onDiagnosticsReady(PathRef File,
-                     Tagged<std::vector<DiagWithFixIts>> Diagnostics) override;
+  void onDiagnosticsReady(PathRef File,
+                          Tagged<std::vector<Diag>> Diagnostics) override;
 
   // Implement ProtocolCallbacks.
   void onInitialize(InitializeParams &Params) override;
@@ -74,7 +73,7 @@ private:
   void onHover(TextDocumentPositionParams &Params) override;
   void onChangeConfiguration(DidChangeConfigurationParams &Params) override;
 
-  std::vector<TextEdit> getFixIts(StringRef File, const clangd::Diagnostic &D);
+  std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
   JSONOutput &Out;
   /// Used to indicate that the 'shutdown' request was received from the
@@ -87,8 +86,7 @@ private:
   bool IsDone = false;
 
   std::mutex FixItsMutex;
-  typedef std::map<clangd::Diagnostic, std::vector<TextEdit>,
-                   LSPDiagnosticCompare>
+  typedef std::map<clangd::Diagnostic, std::vector<Fix>, LSPDiagnosticCompare>
       DiagnosticToReplacementMap;
   /// Caches FixIts per file and diagnostics
   llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;

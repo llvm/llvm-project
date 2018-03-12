@@ -107,6 +107,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
   setAction({G_LOAD, 1, S64}, Legal);
   setAction({G_STORE, 1, S64}, Legal);
 
+  for (unsigned Op : {G_EXTRACT_VECTOR_ELT, G_INSERT_VECTOR_ELT}) {
+    getActionDefinitionsBuilder(Op)
+      .legalIf([=](const LegalityQuery &Query) {
+          const LLT &VecTy = Query.Types[1];
+          const LLT &IdxTy = Query.Types[2];
+          return VecTy.getSizeInBits() % 32 == 0 &&
+            VecTy.getSizeInBits() <= 512 &&
+            IdxTy.getSizeInBits() == 32;
+        });
+  }
+
   // FIXME: Doesn't handle extract of illegal sizes.
   getActionDefinitionsBuilder(G_EXTRACT)
     .unsupportedIf([=](const LegalityQuery &Query) {
@@ -118,6 +129,33 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
         return (Ty0.getSizeInBits() % 32 == 0) &&
                (Ty1.getSizeInBits() % 32 == 0);
       });
+
+  // Merge/Unmerge
+  for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
+    unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
+    unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
+
+    getActionDefinitionsBuilder(Op)
+      .legalIf([=](const LegalityQuery &Query) {
+          const LLT &BigTy = Query.Types[BigTyIdx];
+          const LLT &LitTy = Query.Types[LitTyIdx];
+          return BigTy.getSizeInBits() % 32 == 0 &&
+                 LitTy.getSizeInBits() % 32 == 0 &&
+                 BigTy.getSizeInBits() <= 512;
+        })
+      // Any vectors left are the wrong size. Scalarize them.
+      .fewerElementsIf([](const LegalityQuery &Query) { return true; },
+                       [](const LegalityQuery &Query) {
+                         return std::make_pair(
+                           0, Query.Types[0].getElementType());
+                       })
+      .fewerElementsIf([](const LegalityQuery &Query) { return true; },
+                       [](const LegalityQuery &Query) {
+                         return std::make_pair(
+                           1, Query.Types[1].getElementType());
+                       });
+
+  }
 
   computeTables();
 }

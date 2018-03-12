@@ -45,6 +45,8 @@ public:
     /// If set, this is used to map symbol #include path to a potentially
     /// different #include path.
     const CanonicalIncludes *Includes = nullptr;
+    // Populate the Symbol.References field.
+    bool CountReferences = false;
   };
 
   SymbolCollector(Options Opts);
@@ -63,6 +65,8 @@ public:
 
   SymbolSlab takeSymbols() { return std::move(Symbols).build(); }
 
+  void finish() override;
+
 private:
   const Symbol *addDeclaration(const NamedDecl &, SymbolID);
   void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
@@ -74,6 +78,8 @@ private:
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
   std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
   Options Opts;
+  // Decls referenced from the current TU, flushed on finish().
+  llvm::DenseSet<const NamedDecl *> ReferencedDecls;
 };
 
 } // namespace clangd

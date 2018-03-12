@@ -225,6 +225,8 @@ TEST(MergeTest, Merge) {
   L.Name = R.Name = "Foo";                    // same in both
   L.CanonicalDeclaration.FileURI = "file:///left.h"; // differs
   R.CanonicalDeclaration.FileURI = "file:///right.h";
+  L.References = 1;
+  R.References = 2;
   L.CompletionPlainInsertText = "f00";        // present in left only
   R.CompletionSnippetInsertText = "f0{$1:0}"; // present in right only
   Symbol::Details DetL, DetR;
@@ -238,6 +240,7 @@ TEST(MergeTest, Merge) {
   Symbol M = mergeSymbol(L, R, &Scratch);
   EXPECT_EQ(M.Name, "Foo");
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:///left.h");
+  EXPECT_EQ(M.References, 3u);
   EXPECT_EQ(M.CompletionPlainInsertText, "f00");
   EXPECT_EQ(M.CompletionSnippetInsertText, "f0{$1:0}");
   ASSERT_TRUE(M.Detail);

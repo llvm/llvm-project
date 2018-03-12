@@ -99,6 +99,7 @@ public:
     auto CollectorOpts = SymbolCollector::Options();
     CollectorOpts.FallbackDir = AssumedHeaderDir;
     CollectorOpts.CollectIncludePath = true;
+    CollectorOpts.CountReferences = true;
     auto Includes = llvm::make_unique<CanonicalIncludes>();
     addSystemHeadersMapping(Includes.get());
     CollectorOpts.Includes = Includes.get();

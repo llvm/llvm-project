@@ -98,6 +98,7 @@
 #include <clc/math/maxmag.h>
 #include <clc/math/minmag.h>
 #include <clc/math/modf.h>
+#include <clc/math/nan.h>
 #include <clc/math/nextafter.h>
 #include <clc/math/pow.h>
 #include <clc/math/pown.h>

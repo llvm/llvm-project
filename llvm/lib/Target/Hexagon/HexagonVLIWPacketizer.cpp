@@ -199,11 +199,12 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 }
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
-  if (DisablePacketizer || skipFunction(MF.getFunction()))
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (DisablePacketizer || !HST.usePackets() || skipFunction(MF.getFunction()))
     return false;
 
-  HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
-  HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  HII = HST.getInstrInfo();
+  HRI = HST.getRegisterInfo();
   auto &MLI = getAnalysis<MachineLoopInfo>();
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *MBPI = &getAnalysis<MachineBranchProbabilityInfo>();

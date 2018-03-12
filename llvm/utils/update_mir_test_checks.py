@@ -392,8 +392,8 @@ def update_test_file(llc, test, remove_common_prefixes=False, verbose=False):
             if not m:
                 state = 'ir function body'
                 add_checks_for_function(test, output_lines, run_list,
-                                        func_dict, func_name, add_vreg_checks,
-                                        single_bb=False, verbose=verbose)
+                                        func_dict, func_name, single_bb=False,
+                                        verbose=verbose)
 
             if should_add_line_to_output(input_line, prefix_set):
                 output_lines.append(input_line)

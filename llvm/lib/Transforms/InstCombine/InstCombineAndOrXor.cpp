@@ -1192,7 +1192,7 @@ Instruction *InstCombiner::narrowMaskedBinOp(BinaryOperator &And) {
     return nullptr;
 
   Value *X;
-  if (!match(Op1, m_ZExt(m_Value(X))) || Op1->getNumUses() > 2)
+  if (!match(Op1, m_ZExt(m_Value(X))) || Op1->hasNUsesOrMore(3))
     return nullptr;
 
   Type *Ty = And.getType();
@@ -2471,13 +2471,13 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   // We're relying on the fact that we only do this transform when the shift has
   // exactly 2 uses and the add has exactly 1 use (otherwise, we might increase
   // instructions).
-  if (Op0->getNumUses() == 2)
+  if (Op0->hasNUses(2))
     std::swap(Op0, Op1);
 
   const APInt *ShAmt;
   Type *Ty = I.getType();
   if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
-      Op1->getNumUses() == 2 && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
+      Op1->hasNUses(2) && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
       match(Op0, m_OneUse(m_c_Add(m_Specific(A), m_Specific(Op1))))) {
     // B = ashr i32 A, 31 ; smear the sign bit
     // xor (add A, B), B  ; add -1 and flip bits if negative

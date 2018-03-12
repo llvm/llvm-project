@@ -73,6 +73,7 @@ mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
     S.Definition = O.Definition;
   if (!S.CanonicalDeclaration)
     S.CanonicalDeclaration = O.CanonicalDeclaration;
+  S.References += O.References;
   if (S.CompletionLabel == "")
     S.CompletionLabel = O.CompletionLabel;
   if (S.CompletionFilterText == "")
