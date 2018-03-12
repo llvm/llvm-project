@@ -30,11 +30,11 @@ public:
 
   const WasmGlobalType &getType() const { return Global.Type; }
 
-  uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
-  bool hasOutputIndex() const { return OutputIndex.hasValue(); }
-  void setOutputIndex(uint32_t Index) {
-    assert(!hasOutputIndex());
-    OutputIndex = Index;
+  uint32_t getGlobalIndex() const { return GlobalIndex.getValue(); }
+  bool hasGlobalIndex() const { return GlobalIndex.hasValue(); }
+  void setGlobalIndex(uint32_t Index) {
+    assert(!hasGlobalIndex());
+    GlobalIndex = Index;
   }
 
   bool Live = false;
@@ -42,7 +42,7 @@ public:
   WasmGlobal Global;
 
 protected:
-  llvm::Optional<uint32_t> OutputIndex;
+  llvm::Optional<uint32_t> GlobalIndex;
 };
 
 } // namespace wasm

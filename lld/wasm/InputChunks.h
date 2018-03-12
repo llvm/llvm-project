@@ -126,9 +126,9 @@ public:
 
   StringRef getName() const override { return Function->Name; }
   StringRef getComdat() const override { return Function->Comdat; }
-  uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
-  bool hasOutputIndex() const { return OutputIndex.hasValue(); }
-  void setOutputIndex(uint32_t Index);
+  uint32_t getFunctionIndex() const { return FunctionIndex.getValue(); }
+  bool hasFunctionIndex() const { return FunctionIndex.hasValue(); }
+  void setFunctionIndex(uint32_t Index);
   uint32_t getTableIndex() const { return TableIndex.getValue(); }
   bool hasTableIndex() const { return TableIndex.hasValue(); }
   void setTableIndex(uint32_t Index);
@@ -145,7 +145,7 @@ protected:
   }
 
   const WasmFunction *Function;
-  llvm::Optional<uint32_t> OutputIndex;
+  llvm::Optional<uint32_t> FunctionIndex;
   llvm::Optional<uint32_t> TableIndex;
 };
 

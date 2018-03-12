@@ -4,6 +4,9 @@ Clang-Doc
 
 .. contents::
 
+.. toctree::
+   :maxdepth: 1
+
 :program:`clang-doc` is a tool for generating C and C++ documenation from 
 source code and comments. 
 

@@ -86,9 +86,7 @@ INTERCEPTOR(void*, realloc, void *q, uptr size) {
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
-  *memptr = lsan_memalign(alignment, size, stack);
-  // FIXME: Return ENOMEM if user requested more than max alloc size.
-  return 0;
+  return lsan_posix_memalign(memptr, alignment, size, stack);
 }
 
 INTERCEPTOR(void*, valloc, uptr size) {
