@@ -1,4 +1,4 @@
-//===- GCDAsyncSemaphoreChecker.cpp -----------------------------*- C++ -*-==//
+//===- GCDAntipatternChecker.cpp ---------------------------------*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines GCDAsyncSemaphoreChecker which checks against a common
+// This file defines GCDAntipatternChecker which checks against a common
 // antipattern when synchronous API is emulated from asynchronous callbacks
-// using a semaphor:
+// using a semaphore:
 //
-//   dispatch_semapshore_t sema = dispatch_semaphore_create(0);
-
+//   dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+//
 //   AnyCFunctionCall(^{
 //     // code…
-//     dispatch_semapshore_signal(sema);
+//     dispatch_semaphore_signal(sema);
 //   })
-//   dispatch_semapshore_wait(sema, *)
+//   dispatch_semaphore_wait(sema, *)
 //
 // Such code is a common performance problem, due to inability of GCD to
-// properly handle QoS when a combination of queues and semaphors is used.
+// properly handle QoS when a combination of queues and semaphores is used.
 // Good code would either use asynchronous API (when available), or perform
 // the necessary action in asynchronous callback.
 //
@@ -37,8 +37,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "gcdasyncsemaphorechecker"
-
 using namespace clang;
 using namespace ento;
 using namespace ast_matchers;
@@ -47,7 +45,7 @@ namespace {
 
 const char *WarningBinding = "semaphore_wait";
 
-class GCDAsyncSemaphoreChecker : public Checker<check::ASTCodeBody> {
+class GCDAntipatternChecker : public Checker<check::ASTCodeBody> {
 public:
   void checkASTCodeBody(const Decl *D,
                         AnalysisManager &AM,
@@ -56,13 +54,13 @@ public:
 
 class Callback : public MatchFinder::MatchCallback {
   BugReporter &BR;
-  const GCDAsyncSemaphoreChecker *C;
+  const GCDAntipatternChecker *C;
   AnalysisDeclContext *ADC;
 
 public:
   Callback(BugReporter &BR,
            AnalysisDeclContext *ADC,
-           const GCDAsyncSemaphoreChecker *C) : BR(BR), C(C), ADC(ADC) {}
+           const GCDAntipatternChecker *C) : BR(BR), C(C), ADC(ADC) {}
 
   virtual void run(const MatchFinder::MatchResult &Result) override;
 };
@@ -83,7 +81,7 @@ auto bindAssignmentToDecl(const char *DeclName) -> decltype(hasLHS(expr())) {
                          declRefExpr(to(varDecl().bind(DeclName)))));
 }
 
-void GCDAsyncSemaphoreChecker::checkASTCodeBody(const Decl *D,
+void GCDAntipatternChecker::checkASTCodeBody(const Decl *D,
                                                AnalysisManager &AM,
                                                BugReporter &BR) const {
 
@@ -92,6 +90,14 @@ void GCDAsyncSemaphoreChecker::checkASTCodeBody(const Decl *D,
     std::string DeclName = ND->getNameAsString();
     if (StringRef(DeclName).startswith("test"))
       return;
+  }
+  if (const auto *OD = dyn_cast<ObjCMethodDecl>(D)) {
+    if (const auto *CD = dyn_cast<ObjCContainerDecl>(OD->getParent())) {
+      std::string ContainerName = CD->getNameAsString();
+      StringRef CN(ContainerName);
+      if (CN.contains_lower("test") || CN.contains_lower("mock"))
+        return;
+    }
   }
 
   const char *SemaphoreBinding = "semaphore_name";
@@ -146,14 +152,15 @@ void Callback::run(const MatchFinder::MatchResult &Result) {
       ADC->getDecl(), C,
       /*Name=*/"Semaphore performance anti-pattern",
       /*Category=*/"Performance",
-      "Possible semaphore performance anti-pattern: wait on a semaphore "
-      "signalled to in a callback",
+      "Waiting on a semaphore with Grand Central Dispatch creates useless "
+      "threads and is subject to priority inversion; consider "
+      "using a synchronous API or changing the caller to be asynchronous",
       PathDiagnosticLocation::createBegin(SW, BR.getSourceManager(), ADC),
       SW->getSourceRange());
 }
 
 }
 
-void ento::registerGCDAsyncSemaphoreChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<GCDAsyncSemaphoreChecker>();
+void ento::registerGCDAntipattern(CheckerManager &Mgr) {
+  Mgr.registerChecker<GCDAntipatternChecker>();
 }
