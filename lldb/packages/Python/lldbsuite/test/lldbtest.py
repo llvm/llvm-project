@@ -1891,8 +1891,8 @@ class TestBase(Base):
         if self.child:
             assert(self.getDebugInfo() == 'default')
             mod_cache = os.path.join(self.getBuildDir(), "module-cache")
-            self.runCmd("settings set target.clang-modules-cache-path "
-                        + mod_cache)
+            self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
+                        % mod_cache)
 
 
         if "LLDB_MAX_LAUNCH_COUNT" in os.environ:

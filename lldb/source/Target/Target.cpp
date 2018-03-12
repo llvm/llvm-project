@@ -3695,9 +3695,6 @@ static PropertyDefinition g_properties[] = {
      "one is _sigtramp."},
     {"sdk-path", OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
      "The path to the SDK used to build the current target."},
-    {"clang-modules-cache-path",
-     OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
-     "The path to the clang modules cache directory (-fmodules-cache-path)."},
     {"display-runtime-support-values", OptionValue::eTypeBoolean, false, false,
      nullptr, nullptr, "If true, LLDB will show variables that are meant to "
                        "support the operation of a language's runtime "
@@ -3751,7 +3748,6 @@ enum {
   ePropertyDisplayExpressionsInCrashlogs,
   ePropertyTrapHandlerNames,
   ePropertySDKPath,
-  ePropertyClangModulesCachePath,
   ePropertyDisplayRuntimeSupportValues,
   ePropertyNonStopModeEnabled,
   ePropertyExperimental
@@ -4140,15 +4136,6 @@ FileSpecList &TargetProperties::GetDebugFileSearchPaths() {
   OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                                    false, idx);
-  assert(option_value);
-  return option_value->GetCurrentValue();
-}
-
-FileSpec &TargetProperties::GetClangModulesCachePath() {
-  const uint32_t idx = ePropertyClangModulesCachePath;
-  OptionValueFileSpec *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
-                                                               idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
