@@ -348,7 +348,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 
-  // Disable default sanitizers that are incompatible with the default ones.
+  // Disable default sanitizers that are incompatible with explicitly requested
+  // ones.
   for (auto G : IncompatibleGroups) {
     SanitizerMask Group = G.first;
     if ((Default & Group) && (Kinds & G.second))

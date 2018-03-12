@@ -51,7 +51,6 @@ private:
 } // namespace
 
 template <class ELFT> X86_64<ELFT>::X86_64() {
-  GotBaseSymOff = -1;
   CopyRel = R_X86_64_COPY;
   GotRel = R_X86_64_GLOB_DAT;
   PltRel = R_X86_64_JUMP_SLOT;
