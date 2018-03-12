@@ -614,6 +614,9 @@ getLocationForCaller(const StackFrameContext *SFC,
     return PathDiagnosticLocation::createEnd(Dtor.getBindTemporaryExpr(), SM,
                                              CallerCtx);
   }
+  case CFGElement::ScopeBegin:
+  case CFGElement::ScopeEnd:
+    llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
   case CFGElement::LoopExit:
     llvm_unreachable("CFGElement kind should not be on callsite!");

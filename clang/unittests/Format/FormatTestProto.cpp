@@ -158,9 +158,8 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
                "    key: 'a'  //\n"
                "  }\n"
                "];");
-  verifyFormat("optional string test = 1 [default =\n"
-               "                              \"test\"\n"
-               "                              \"test\"];");
+  verifyFormat("optional string test = 1 [default = \"test\"\n"
+               "                                    \"test\"];");
   verifyFormat("optional Aaaaaaaa aaaaaaaa = 12 [\n"
                "  (aaa) = aaaa,\n"
                "  (bbbbbbbbbbbbbbbbbbbbbbbbbb) = {\n"

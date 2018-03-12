@@ -143,6 +143,23 @@ TEST_F(FormatTestTextProto, AddsNewlinesAfterTrailingComments) {
                "}");
 }
 
+TEST_F(FormatTestTextProto, ImplicitStringLiteralConcatenation) {
+  verifyFormat("field_a: 'aaaaa'\n"
+               "         'bbbbb'");
+  verifyFormat("field_a: \"aaaaa\"\n"
+               "         \"bbbbb\"");
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
+  Style.AlwaysBreakBeforeMultilineStrings = true;
+  verifyFormat("field_a:\n"
+               "    'aaaaa'\n"
+               "    'bbbbb'",
+               Style);
+  verifyFormat("field_a:\n"
+               "    \"aaaaa\"\n"
+               "    \"bbbbb\"",
+               Style);
+}
+
 TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
   // Single-line tests
   verifyFormat("msg_field <>");

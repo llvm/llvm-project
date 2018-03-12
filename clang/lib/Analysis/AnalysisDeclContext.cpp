@@ -66,9 +66,9 @@ AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
 AnalysisDeclContextManager::AnalysisDeclContextManager(
     ASTContext &ASTCtx, bool useUnoptimizedCFG, bool addImplicitDtors,
     bool addInitializers, bool addTemporaryDtors, bool addLifetime,
-    bool addLoopExit, bool synthesizeBodies, bool addStaticInitBranch,
-    bool addCXXNewAllocator, bool addRichCXXConstructors,
-    CodeInjector *injector)
+    bool addLoopExit, bool addScopes, bool synthesizeBodies,
+    bool addStaticInitBranch, bool addCXXNewAllocator,
+    bool addRichCXXConstructors, CodeInjector *injector)
     : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
@@ -77,6 +77,7 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
   cfgBuildOptions.AddTemporaryDtors = addTemporaryDtors;
   cfgBuildOptions.AddLifetime = addLifetime;
   cfgBuildOptions.AddLoopExit = addLoopExit;
+  cfgBuildOptions.AddScopes = addScopes;
   cfgBuildOptions.AddStaticInitBranches = addStaticInitBranch;
   cfgBuildOptions.AddCXXNewAllocator = addCXXNewAllocator;
   cfgBuildOptions.AddRichCXXConstructors = addRichCXXConstructors;

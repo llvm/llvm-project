@@ -2912,7 +2912,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
     if ((Style.Language == FormatStyle::LK_Proto ||
          Style.Language == FormatStyle::LK_TextProto) &&
-        Right.isStringLiteral())
+        !Style.AlwaysBreakBeforeMultilineStrings && Right.isStringLiteral())
       return false;
     return true;
   }
