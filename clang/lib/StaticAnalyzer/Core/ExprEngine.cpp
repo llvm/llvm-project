@@ -612,6 +612,7 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
   switch (E.getKind()) {
     case CFGElement::Statement:
     case CFGElement::Constructor:
+    case CFGElement::CXXRecordTypedCall:
       ProcessStmt(E.castAs<CFGStmt>().getStmt(), Pred);
       return;
     case CFGElement::Initializer:

@@ -483,8 +483,8 @@ class CFGBuilder {
 
   // Information about the currently visited C++ object construction site.
   // This is set in the construction trigger and read when the constructor
-  // itself is being visited.
-  llvm::DenseMap<CXXConstructExpr *, const ConstructionContextLayer *>
+  // or a function that returns an object by value is being visited.
+  llvm::DenseMap<Expr *, const ConstructionContextLayer *>
       ConstructionContextMap;
 
   using DeclsWithEndedScopeSetTy = llvm::SmallSetVector<VarDecl *, 16>;
@@ -673,7 +673,7 @@ private:
   // Remember to apply the construction context based on the current \p Layer
   // when constructing the CFG element for \p CE.
   void consumeConstructionContext(const ConstructionContextLayer *Layer,
-                                  CXXConstructExpr *CE);
+                                  Expr *E);
 
   // Scan \p Child statement to find constructors in it, while keeping in mind
   // that its parent statement is providing a partial construction context
@@ -684,9 +684,9 @@ private:
                                 Stmt *Child);
 
   // Unset the construction context after consuming it. This is done immediately
-  // after adding the CFGConstructor element, so there's no need to
-  // do this manually in every Visit... function.
-  void cleanupConstructionContext(CXXConstructExpr *CE);
+  // after adding the CFGConstructor or CFGCXXRecordTypedCall element, so
+  // there's no need to do this manually in every Visit... function.
+  void cleanupConstructionContext(Expr *E);
 
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
   CFGBlock *createBlock(bool add_successor = true);
@@ -742,6 +742,27 @@ private:
         B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
         cleanupConstructionContext(CE);
         return;
+      }
+    }
+
+    // No valid construction context found. Fall back to statement.
+    B->appendStmt(CE, cfg->getBumpVectorContext());
+  }
+
+  void appendCall(CFGBlock *B, CallExpr *CE) {
+    if (BuildOpts.AddRichCXXConstructors) {
+      if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE)) {
+        if (const ConstructionContextLayer *Layer =
+                ConstructionContextMap.lookup(CE)) {
+          const ConstructionContext *CC =
+              ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
+                                                    Layer);
+          B->appendCXXRecordTypedCall(
+              CE, cast<TemporaryObjectConstructionContext>(CC),
+              cfg->getBumpVectorContext());
+          cleanupConstructionContext(CE);
+          return;
+        }
       }
     }
 
@@ -1209,16 +1230,16 @@ static const VariableArrayType *FindVA(const Type *t) {
 }
 
 void CFGBuilder::consumeConstructionContext(
-    const ConstructionContextLayer *Layer, CXXConstructExpr *CE) {
+    const ConstructionContextLayer *Layer, Expr *E) {
   if (const ConstructionContextLayer *PreviouslyStoredLayer =
-          ConstructionContextMap.lookup(CE)) {
+          ConstructionContextMap.lookup(E)) {
     (void)PreviouslyStoredLayer;
     // We might have visited this child when we were finding construction
     // contexts within its parents.
     assert(PreviouslyStoredLayer->isStrictlyMoreSpecificThan(Layer) &&
            "Already within a different construction context!");
   } else {
-    ConstructionContextMap[CE] = Layer;
+    ConstructionContextMap[E] = Layer;
   }
 }
 
@@ -1234,6 +1255,18 @@ void CFGBuilder::findConstructionContexts(
   case Stmt::CXXConstructExprClass:
   case Stmt::CXXTemporaryObjectExprClass: {
     consumeConstructionContext(Layer, cast<CXXConstructExpr>(Child));
+    break;
+  }
+  // FIXME: This, like the main visit, doesn't support CUDAKernelCallExpr.
+  // FIXME: An isa<> would look much better but this whole switch is a
+  // workaround for an internal compiler error in MSVC 2015 (see r326021).
+  case Stmt::CallExprClass:
+  case Stmt::CXXMemberCallExprClass:
+  case Stmt::CXXOperatorCallExprClass:
+  case Stmt::UserDefinedLiteralClass: {
+    auto *CE = cast<CallExpr>(Child);
+    if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE))
+      consumeConstructionContext(Layer, CE);
     break;
   }
   case Stmt::ExprWithCleanupsClass: {
@@ -1277,12 +1310,12 @@ void CFGBuilder::findConstructionContexts(
   }
 }
 
-void CFGBuilder::cleanupConstructionContext(CXXConstructExpr *CE) {
+void CFGBuilder::cleanupConstructionContext(Expr *E) {
   assert(BuildOpts.AddRichCXXConstructors &&
          "We should not be managing construction contexts!");
-  assert(ConstructionContextMap.count(CE) &&
+  assert(ConstructionContextMap.count(E) &&
          "Cannot exit construction context without the context!");
-  ConstructionContextMap.erase(CE);
+  ConstructionContextMap.erase(E);
 }
 
 
@@ -2360,7 +2393,10 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   }
 
   if (!NoReturn && !AddEHEdge) {
-    return VisitStmt(C, asc.withAlwaysAdd(true));
+    autoCreateBlock();
+    appendCall(Block, C);
+
+    return VisitChildren(C);
   }
 
   if (Block) {
@@ -2374,7 +2410,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   else
     Block = createBlock();
 
-  appendStmt(Block, C);
+  appendCall(Block, C);
 
   if (AddEHEdge) {
     // Add exceptional edges.
@@ -4516,6 +4552,7 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
     case CFGElement::LifetimeEnds:
     case CFGElement::Statement:
     case CFGElement::Constructor:
+    case CFGElement::CXXRecordTypedCall:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
       llvm_unreachable("getDestructorDecl should only be used with "
@@ -4868,6 +4905,49 @@ static void print_initializer(raw_ostream &OS, StmtPrinterHelper &Helper,
     OS << " (Member initializer)";
 }
 
+static void print_construction_context(raw_ostream &OS,
+                                       StmtPrinterHelper &Helper,
+                                       const ConstructionContext *CC) {
+  const Stmt *S1 = nullptr, *S2 = nullptr;
+  switch (CC->getKind()) {
+  case ConstructionContext::ConstructorInitializerKind: {
+    OS << ", ";
+    const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
+    print_initializer(OS, Helper, ICC->getCXXCtorInitializer());
+    break;
+  }
+  case ConstructionContext::SimpleVariableKind: {
+    const auto *DSCC = cast<SimpleVariableConstructionContext>(CC);
+    S1 = DSCC->getDeclStmt();
+    break;
+  }
+  case ConstructionContext::NewAllocatedObjectKind: {
+    const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
+    S1 = NECC->getCXXNewExpr();
+    break;
+  }
+  case ConstructionContext::ReturnedValueKind: {
+    const auto *RSCC = cast<ReturnedValueConstructionContext>(CC);
+    S1 = RSCC->getReturnStmt();
+    break;
+  }
+  case ConstructionContext::TemporaryObjectKind: {
+    const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
+    S1 = TOCC->getCXXBindTemporaryExpr();
+    S2 = TOCC->getMaterializedTemporaryExpr();
+    break;
+  }
+  }
+  if (S1) {
+    OS << ", ";
+    Helper.handledStmt(const_cast<Stmt *>(S1), OS);
+  }
+  if (S2) {
+    OS << ", ";
+    Helper.handledStmt(const_cast<Stmt *>(S2), OS);
+  }
+}
+
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
                        const CFGElement &E) {
   if (Optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
@@ -4897,54 +4977,22 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     }
     S->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
 
-    if (isa<CXXOperatorCallExpr>(S)) {
+    if (auto VTC = E.getAs<CFGCXXRecordTypedCall>()) {
+      if (isa<CXXOperatorCallExpr>(S))
+        OS << " (OperatorCall)";
+      OS << " (CXXRecordTypedCall";
+      print_construction_context(OS, Helper, VTC->getConstructionContext());
+      OS << ")";
+    } else if (isa<CXXOperatorCallExpr>(S)) {
       OS << " (OperatorCall)";
     } else if (isa<CXXBindTemporaryExpr>(S)) {
       OS << " (BindTemporary)";
     } else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
-      OS << " (CXXConstructExpr, ";
+      OS << " (CXXConstructExpr";
       if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
-        const ConstructionContext *CC = CE->getConstructionContext();
-        const Stmt *S1 = nullptr, *S2 = nullptr;
-        switch (CC->getKind()) {
-        case ConstructionContext::ConstructorInitializerKind: {
-          const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
-          print_initializer(OS, Helper, ICC->getCXXCtorInitializer());
-          OS << ", ";
-          break;
-        }
-        case ConstructionContext::SimpleVariableKind: {
-          const auto *DSCC = cast<SimpleVariableConstructionContext>(CC);
-          S1 = DSCC->getDeclStmt();
-          break;
-        }
-        case ConstructionContext::NewAllocatedObjectKind: {
-          const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
-          S1 = NECC->getCXXNewExpr();
-          break;
-        }
-        case ConstructionContext::ReturnedValueKind: {
-          const auto *RSCC = cast<ReturnedValueConstructionContext>(CC);
-          S1 = RSCC->getReturnStmt();
-          break;
-        }
-        case ConstructionContext::TemporaryObjectKind: {
-          const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
-          S1 = TOCC->getCXXBindTemporaryExpr();
-          S2 = TOCC->getMaterializedTemporaryExpr();
-          break;
-        }
-        }
-        if (S1) {
-          Helper.handledStmt(const_cast<Stmt *>(S1), OS);
-          OS << ", ";
-        }
-        if (S2) {
-          Helper.handledStmt(const_cast<Stmt *>(S2), OS);
-          OS << ", ";
-        }
+        print_construction_context(OS, Helper, CE->getConstructionContext());
       }
-      OS << CCE->getType().getAsString() << ")";
+      OS << ", " << CCE->getType().getAsString() << ")";
     } else if (const CastExpr *CE = dyn_cast<CastExpr>(S)) {
       OS << " (" << CE->getStmtClassName() << ", "
          << CE->getCastKindName()
