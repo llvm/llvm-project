@@ -85,7 +85,7 @@ public:
   ~ASTWorker();
 
   void update(ParseInputs Inputs, WantDiagnostics,
-              UniqueFunction<void(std::vector<DiagWithFixIts>)> OnUpdated);
+              UniqueFunction<void(std::vector<Diag>)> OnUpdated);
   void runWithAST(llvm::StringRef Name,
                   UniqueFunction<void(llvm::Expected<InputsAndAST>)> Action);
   bool blockUntilIdle(Deadline Timeout) const;
@@ -135,8 +135,8 @@ private:
   // Result of getUsedBytes() after the last rebuild or read of AST.
   std::size_t LastASTSize; /* GUARDED_BY(Mutex) */
   // Set to true to signal run() to finish processing.
-  bool Done;                           /* GUARDED_BY(Mutex) */
-  std::deque<Request> Requests;        /* GUARDED_BY(Mutex) */
+  bool Done;                    /* GUARDED_BY(Mutex) */
+  std::deque<Request> Requests; /* GUARDED_BY(Mutex) */
   mutable std::condition_variable RequestsCV;
 };
 
@@ -210,9 +210,8 @@ ASTWorker::~ASTWorker() {
 #endif
 }
 
-void ASTWorker::update(
-    ParseInputs Inputs, WantDiagnostics WantDiags,
-    UniqueFunction<void(std::vector<DiagWithFixIts>)> OnUpdated) {
+void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
+                       UniqueFunction<void(std::vector<Diag>)> OnUpdated) {
   auto Task = [=](decltype(OnUpdated) OnUpdated) mutable {
     FileInputs = Inputs;
     auto Diags = AST.rebuild(std::move(Inputs));
@@ -447,9 +446,9 @@ bool TUScheduler::blockUntilIdle(Deadline D) const {
   return true;
 }
 
-void TUScheduler::update(
-    PathRef File, ParseInputs Inputs, WantDiagnostics WantDiags,
-    UniqueFunction<void(std::vector<DiagWithFixIts>)> OnUpdated) {
+void TUScheduler::update(PathRef File, ParseInputs Inputs,
+                         WantDiagnostics WantDiags,
+                         UniqueFunction<void(std::vector<Diag>)> OnUpdated) {
   std::unique_ptr<FileData> &FD = Files[File];
   if (!FD) {
     // Create a new worker to process the AST-related tasks.

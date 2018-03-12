@@ -12,6 +12,7 @@ add_clang_library(clangDaemon
   CompileArgsCache.cpp
   Compiler.cpp
   Context.cpp
+  Diagnostics.cpp
   DraftStore.cpp
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp

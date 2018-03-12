@@ -18,40 +18,12 @@
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
 # CHECK-NEXT:        "severity": 2
-# CHECK-NEXT:      },
-# CHECK-NEXT:      {
-# CHECK-NEXT:        "message": "place parentheses around the assignment to silence this warning",
-# CHECK-NEXT:        "range": {
-# CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 35,
-# CHECK-NEXT:            "line": 0
-# CHECK-NEXT:          },
-# CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 34,
-# CHECK-NEXT:            "line": 0
-# CHECK-NEXT:          }
-# CHECK-NEXT:        },
-# CHECK-NEXT:        "severity": 3
-# CHECK-NEXT:      },
-# CHECK-NEXT:      {
-# CHECK-NEXT:        "message": "use '==' to turn this assignment into an equality comparison",
-# CHECK-NEXT:        "range": {
-# CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 35,
-# CHECK-NEXT:            "line": 0
-# CHECK-NEXT:          },
-# CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 34,
-# CHECK-NEXT:            "line": 0
-# CHECK-NEXT:          }
-# CHECK-NEXT:        },
-# CHECK-NEXT:        "severity": 3
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
 # CHECK-NEXT:  }
 ---
-{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"using the result of an assignment as a condition without parentheses"}]}}}
 #      CHECK:  "id": 2,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
@@ -91,7 +63,7 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
 # CHECK-NEXT:      "command": "clangd.applyFix",
-# CHECK-NEXT:      "title": "Apply FixIt place parentheses around the assignment to silence this warning"
+# CHECK-NEXT:      "title": "Apply fix: place parentheses around the assignment to silence this warning"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
@@ -116,11 +88,11 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
 # CHECK-NEXT:      "command": "clangd.applyFix",
-# CHECK-NEXT:      "title": "Apply FixIt use '==' to turn this assignment into an equality comparison"
+# CHECK-NEXT:      "title": "Apply fix: use '==' to turn this assignment into an equality comparison"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 ---
-{"jsonrpc":"2.0","id":3,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"code":"1","source":"foo","message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
+{"jsonrpc":"2.0","id":3,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"using the result of an assignment as a condition without parentheses"}]}}}
 # Make sure unused "code" and "source" fields ignored gracefully
 #      CHECK:  "id": 3,
 # CHECK-NEXT:  "jsonrpc": "2.0",
@@ -161,7 +133,7 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
 # CHECK-NEXT:      "command": "clangd.applyFix",
-# CHECK-NEXT:      "title": "Apply FixIt place parentheses around the assignment to silence this warning"
+# CHECK-NEXT:      "title": "Apply fix: place parentheses around the assignment to silence this warning"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
@@ -186,7 +158,7 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
 # CHECK-NEXT:      "command": "clangd.applyFix",
-# CHECK-NEXT:      "title": "Apply FixIt use '==' to turn this assignment into an equality comparison"
+# CHECK-NEXT:      "title": "Apply fix: use '==' to turn this assignment into an equality comparison"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 ---

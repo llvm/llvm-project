@@ -70,9 +70,8 @@ public:
   virtual ~DiagnosticsConsumer() = default;
 
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
-  virtual void
-  onDiagnosticsReady(PathRef File,
-                     Tagged<std::vector<DiagWithFixIts>> Diagnostics) = 0;
+  virtual void onDiagnosticsReady(PathRef File,
+                                  Tagged<std::vector<Diag>> Diagnostics) = 0;
 };
 
 class FileSystemProvider {

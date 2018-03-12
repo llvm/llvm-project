@@ -41,8 +41,8 @@ using testing::Matcher;
 using testing::UnorderedElementsAreArray;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(
-      PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {}
+  void onDiagnosticsReady(PathRef File,
+                          Tagged<std::vector<Diag>> Diagnostics) override {}
 };
 
 // FIXME: this is duplicated with FileIndexTests. Share it.

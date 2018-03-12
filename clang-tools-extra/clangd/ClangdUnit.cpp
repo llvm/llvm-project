@@ -9,7 +9,9 @@
 
 #include "ClangdUnit.h"
 #include "Compiler.h"
+#include "Diagnostics.h"
 #include "Logger.h"
+#include "SourceCode.h"
 #include "Trace.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -81,22 +83,6 @@ private:
   std::vector<const Decl *> TopLevelDecls;
 };
 
-// Converts a half-open clang source range to an LSP range.
-// Note that clang also uses closed source ranges, which this can't handle!
-Range toRange(CharSourceRange R, const SourceManager &M) {
-  // Clang is 1-based, LSP uses 0-based indexes.
-  Position Begin;
-  Begin.line = static_cast<int>(M.getSpellingLineNumber(R.getBegin())) - 1;
-  Begin.character =
-      static_cast<int>(M.getSpellingColumnNumber(R.getBegin())) - 1;
-
-  Position End;
-  End.line = static_cast<int>(M.getSpellingLineNumber(R.getEnd())) - 1;
-  End.character = static_cast<int>(M.getSpellingColumnNumber(R.getEnd())) - 1;
-
-  return {Begin, End};
-}
-
 class InclusionLocationsCollector : public PPCallbacks {
 public:
   InclusionLocationsCollector(SourceManager &SourceMgr,
@@ -115,7 +101,7 @@ public:
     if (SourceMgr.isInMainFile(SR.getBegin())) {
       // Only inclusion directives in the main file make sense. The user cannot
       // select directives not in the main file.
-      IncLocations.emplace_back(toRange(FilenameRange, SourceMgr),
+      IncLocations.emplace_back(halfOpenToRange(SourceMgr, FilenameRange),
                                 File->tryGetRealPathName());
     }
   }
@@ -170,113 +156,6 @@ private:
   SourceManager *SourceMgr = nullptr;
 };
 
-/// Convert from clang diagnostic level to LSP severity.
-static int getSeverity(DiagnosticsEngine::Level L) {
-  switch (L) {
-  case DiagnosticsEngine::Remark:
-    return 4;
-  case DiagnosticsEngine::Note:
-    return 3;
-  case DiagnosticsEngine::Warning:
-    return 2;
-  case DiagnosticsEngine::Fatal:
-  case DiagnosticsEngine::Error:
-    return 1;
-  case DiagnosticsEngine::Ignored:
-    return 0;
-  }
-  llvm_unreachable("Unknown diagnostic level!");
-}
-
-// Checks whether a location is within a half-open range.
-// Note that clang also uses closed source ranges, which this can't handle!
-bool locationInRange(SourceLocation L, CharSourceRange R,
-                     const SourceManager &M) {
-  assert(R.isCharRange());
-  if (!R.isValid() || M.getFileID(R.getBegin()) != M.getFileID(R.getEnd()) ||
-      M.getFileID(R.getBegin()) != M.getFileID(L))
-    return false;
-  return L != R.getEnd() && M.isPointWithin(L, R.getBegin(), R.getEnd());
-}
-
-// Clang diags have a location (shown as ^) and 0 or more ranges (~~~~).
-// LSP needs a single range.
-Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
-  auto &M = D.getSourceManager();
-  auto Loc = M.getFileLoc(D.getLocation());
-  // Accept the first range that contains the location.
-  for (const auto &CR : D.getRanges()) {
-    auto R = Lexer::makeFileCharRange(CR, M, L);
-    if (locationInRange(Loc, R, M))
-      return toRange(R, M);
-  }
-  // The range may be given as a fixit hint instead.
-  for (const auto &F : D.getFixItHints()) {
-    auto R = Lexer::makeFileCharRange(F.RemoveRange, M, L);
-    if (locationInRange(Loc, R, M))
-      return toRange(R, M);
-  }
-  // If no suitable range is found, just use the token at the location.
-  auto R = Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Loc), M, L);
-  if (!R.isValid()) // Fall back to location only, let the editor deal with it.
-    R = CharSourceRange::getCharRange(Loc);
-  return toRange(R, M);
-}
-
-TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
-                    const LangOptions &L) {
-  TextEdit Result;
-  Result.range = toRange(Lexer::makeFileCharRange(FixIt.RemoveRange, M, L), M);
-  Result.newText = FixIt.CodeToInsert;
-  return Result;
-}
-
-llvm::Optional<DiagWithFixIts> toClangdDiag(const clang::Diagnostic &D,
-                                            DiagnosticsEngine::Level Level,
-                                            const LangOptions &LangOpts) {
-  if (!D.hasSourceManager() || !D.getLocation().isValid() ||
-      !D.getSourceManager().isInMainFile(D.getLocation())) {
-    IgnoreDiagnostics::log(Level, D);
-    return llvm::None;
-  }
-
-  SmallString<64> Message;
-  D.FormatDiagnostic(Message);
-
-  DiagWithFixIts Result;
-  Result.Diag.range = diagnosticRange(D, LangOpts);
-  Result.Diag.severity = getSeverity(Level);
-  Result.Diag.message = Message.str();
-  for (const FixItHint &Fix : D.getFixItHints())
-    Result.FixIts.push_back(toTextEdit(Fix, D.getSourceManager(), LangOpts));
-  return std::move(Result);
-}
-
-class StoreDiagsConsumer : public DiagnosticConsumer {
-public:
-  StoreDiagsConsumer(std::vector<DiagWithFixIts> &Output) : Output(Output) {}
-
-  // Track language options in case we need to expand token ranges.
-  void BeginSourceFile(const LangOptions &Opts, const Preprocessor *) override {
-    LangOpts = Opts;
-  }
-
-  void EndSourceFile() override { LangOpts = llvm::None; }
-
-  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const clang::Diagnostic &Info) override {
-    DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
-
-    if (LangOpts)
-      if (auto D = toClangdDiag(Info, DiagLevel, *LangOpts))
-        Output.push_back(std::move(*D));
-  }
-
-private:
-  std::vector<DiagWithFixIts> &Output;
-  llvm::Optional<LangOptions> LangOpts;
-};
-
 } // namespace
 
 void clangd::dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
@@ -289,14 +168,13 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
                  IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  std::vector<DiagWithFixIts> ASTDiags;
-  StoreDiagsConsumer UnitDiagsConsumer(/*ref*/ ASTDiags);
-
   const PrecompiledPreamble *PreamblePCH =
       Preamble ? &Preamble->Preamble : nullptr;
-  auto Clang = prepareCompilerInstance(
-      std::move(CI), PreamblePCH, std::move(Buffer), std::move(PCHs),
-      std::move(VFS), /*ref*/ UnitDiagsConsumer);
+
+  StoreDiags ASTDiags;
+  auto Clang =
+      prepareCompilerInstance(std::move(CI), PreamblePCH, std::move(Buffer),
+                              std::move(PCHs), std::move(VFS), ASTDiags);
   if (!Clang)
     return llvm::None;
 
@@ -328,10 +206,12 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
   Clang->getDiagnostics().setClient(new IgnoreDiagnostics);
+  // CompilerInstance won't run this callback, do it directly.
+  ASTDiags.EndSourceFile();
 
   std::vector<const Decl *> ParsedDecls = Action->takeTopLevelDecls();
   return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
-                   std::move(ParsedDecls), std::move(ASTDiags),
+                   std::move(ParsedDecls), ASTDiags.take(),
                    std::move(IncLocations));
 }
 
@@ -399,14 +279,12 @@ ArrayRef<const Decl *> ParsedAST::getTopLevelDecls() {
   return TopLevelDecls;
 }
 
-const std::vector<DiagWithFixIts> &ParsedAST::getDiagnostics() const {
-  return Diags;
-}
+const std::vector<Diag> &ParsedAST::getDiagnostics() const { return Diags; }
 
 std::size_t ParsedAST::getUsedBytes() const {
   auto &AST = getASTContext();
   // FIXME(ibiryukov): we do not account for the dynamically allocated part of
-  // SmallVector<FixIt> inside each Diag.
+  // Message and Fixes inside each diagnostic.
   return AST.getASTAllocatedMemory() + AST.getSideTableAllocatedMemory() +
          ::getUsedBytes(TopLevelDecls) + ::getUsedBytes(Diags);
 }
@@ -417,7 +295,7 @@ const InclusionLocations &ParsedAST::getInclusionLocations() const {
 
 PreambleData::PreambleData(PrecompiledPreamble Preamble,
                            std::vector<serialization::DeclID> TopLevelDeclIDs,
-                           std::vector<DiagWithFixIts> Diags,
+                           std::vector<Diag> Diags,
                            InclusionLocations IncLocations)
     : Preamble(std::move(Preamble)),
       TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)),
@@ -427,8 +305,7 @@ ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      std::vector<const Decl *> TopLevelDecls,
-                     std::vector<DiagWithFixIts> Diags,
-                     InclusionLocations IncLocations)
+                     std::vector<Diag> Diags, InclusionLocations IncLocations)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Diags(std::move(Diags)),
       TopLevelDecls(std::move(TopLevelDecls)), PreambleDeclsDeserialized(false),
@@ -445,8 +322,7 @@ CppFile::CppFile(PathRef FileName, bool StorePreamblesInMemory,
   log("Created CppFile for " + FileName);
 }
 
-llvm::Optional<std::vector<DiagWithFixIts>>
-CppFile::rebuild(ParseInputs &&Inputs) {
+llvm::Optional<std::vector<Diag>> CppFile::rebuild(ParseInputs &&Inputs) {
   log("Rebuilding file " + FileName + " with command [" +
       Inputs.CompileCommand.Directory + "] " +
       llvm::join(Inputs.CompileCommand.CommandLine, " "));
@@ -500,12 +376,11 @@ CppFile::rebuild(ParseInputs &&Inputs) {
                               std::move(ContentsBuffer), PCHs, Inputs.FS);
   }
 
-  std::vector<DiagWithFixIts> Diagnostics;
+  std::vector<Diag> Diagnostics;
   if (NewAST) {
     // Collect diagnostics from both the preamble and the AST.
     if (NewPreamble)
-      Diagnostics.insert(Diagnostics.begin(), NewPreamble->Diags.begin(),
-                         NewPreamble->Diags.end());
+      Diagnostics = NewPreamble->Diags;
     Diagnostics.insert(Diagnostics.end(), NewAST->getDiagnostics().begin(),
                        NewAST->getDiagnostics().end());
   }
@@ -557,11 +432,10 @@ CppFile::rebuildPreamble(CompilerInvocation &CI,
 
   trace::Span Tracer("Preamble");
   SPAN_ATTACH(Tracer, "File", FileName);
-  std::vector<DiagWithFixIts> PreambleDiags;
-  StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
+  StoreDiags PreambleDiagnostics;
   IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
       CompilerInstance::createDiagnostics(&CI.getDiagnosticOpts(),
-                                          &PreambleDiagnosticsConsumer, false);
+                                          &PreambleDiagnostics, false);
 
   // Skip function bodies when building the preamble to speed up building
   // the preamble and make it smaller.
@@ -584,7 +458,7 @@ CppFile::rebuildPreamble(CompilerInvocation &CI,
     return std::make_shared<PreambleData>(
         std::move(*BuiltPreamble),
         SerializedDeclsCollector.takeTopLevelDeclIDs(),
-        std::move(PreambleDiags),
+        PreambleDiagnostics.take(),
         SerializedDeclsCollector.takeInclusionLocations());
   } else {
     log("Could not build a preamble for file " + Twine(FileName));
