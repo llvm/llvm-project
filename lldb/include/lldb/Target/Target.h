@@ -139,8 +139,6 @@ public:
 
   FileSpec &GetSDKPath();
 
-  FileSpec &GetClangModulesCachePath();
-
   FileSpecList &GetClangModuleSearchPaths();
 
   FileSpecList &GetSwiftFrameworkSearchPaths();
