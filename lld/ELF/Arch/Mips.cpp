@@ -50,6 +50,7 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
   DefaultMaxPageSize = 65536;
   GotEntrySize = sizeof(typename ELFT::uint);
   GotPltEntrySize = sizeof(typename ELFT::uint);
+  GotBaseSymInGotPlt = false;
   PltEntrySize = 16;
   PltHeaderSize = 32;
   CopyRel = R_MIPS_COPY;

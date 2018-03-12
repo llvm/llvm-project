@@ -59,6 +59,7 @@ MATCHER_P(DefRange, Offsets, "") {
   return arg.Definition.StartOffset == Offsets.first &&
          arg.Definition.EndOffset == Offsets.second;
 }
+MATCHER_P(Refs, R, "") { return int(arg.References) == R; }
 
 namespace clang {
 namespace clangd {
@@ -201,7 +202,7 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
 TEST_F(SymbolCollectorTest, Template) {
   Annotations Header(R"(
     // Template is indexed, specialization and instantiation is not.
-    template <class T> struct [[Tmpl]] {T x = 0};
+    template <class T> struct [[Tmpl]] {T x = 0;};
     template <> struct Tmpl<int> {};
     extern template struct Tmpl<float>;
     template struct Tmpl<double>;
@@ -240,6 +241,31 @@ TEST_F(SymbolCollectorTest, Locations) {
           AllOf(QName("print"), DeclRange(Header.offsetRange("printdecl")),
                 DefRange(Main.offsetRange("printdef"))),
           AllOf(QName("Z"), DeclRange(Header.offsetRange("zdecl")))));
+}
+
+TEST_F(SymbolCollectorTest, References) {
+  const std::string Header = R"(
+    class W;
+    class X {};
+    class Y;
+    class Z {}; // not used anywhere
+    Y* y = nullptr;  // used in header doesn't count
+  )";
+  const std::string Main = R"(
+    W* w = nullptr;
+    W* w2 = nullptr; // only one usage counts
+    X x();
+    class V;
+    V* v = nullptr; // Used, but not eligible for indexing.
+    class Y{}; // definition doesn't count as a reference
+  )";
+  CollectorOpts.CountReferences = true;
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(QName("W"), Refs(1)),
+                                   AllOf(QName("X"), Refs(1)),
+                                   AllOf(QName("Y"), Refs(0)),
+                                   AllOf(QName("Z"), Refs(0)), QName("y")));
 }
 
 TEST_F(SymbolCollectorTest, SymbolRelativeNoFallback) {
