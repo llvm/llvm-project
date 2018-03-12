@@ -30,6 +30,10 @@ Position offsetToPosition(llvm::StringRef Code, size_t Offset);
 /// Turn a SourceLocation into a [line, column] pair.
 Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc);
 
+// Converts a half-open clang source range to an LSP range.
+// Note that clang also uses closed source ranges, which this can't handle!
+Range halfOpenToRange(const SourceManager &SM, CharSourceRange R);
+
 } // namespace clangd
 } // namespace clang
 #endif

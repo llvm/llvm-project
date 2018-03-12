@@ -1333,7 +1333,7 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
   // the select.
   Value *MinMaxOp = nullptr;
   Value *ThirdOp = nullptr;
-  if (LHS->getNumUses() <= 2 && RHS->getNumUses() > 2) {
+  if (!LHS->hasNUsesOrMore(3) && RHS->hasNUsesOrMore(3)) {
     // If the LHS is only used in this chain and the RHS is used outside of it,
     // reuse the RHS min/max because that will eliminate the LHS.
     if (D == A || C == A) {
@@ -1347,7 +1347,7 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
       MinMaxOp = RHS;
       ThirdOp = A;
     }
-  } else if (RHS->getNumUses() <= 2) {
+  } else if (!RHS->hasNUsesOrMore(3)) {
     // Reuse the LHS. This will eliminate the RHS.
     if (D == A || D == B) {
       // min(min(a, b), min(c, a)) --> min(min(a, b), c)

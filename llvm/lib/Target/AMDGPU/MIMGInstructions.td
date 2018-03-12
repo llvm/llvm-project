@@ -283,7 +283,10 @@ multiclass MIMG_Sampler_WQM <bits<7> op, string asm> : MIMG_Sampler<op, asm, 1>;
 
 class MIMG_Gather_Helper <bits<7> op, string asm,
                           RegisterClass dst_rc,
-                          RegisterClass src_rc, bit wqm, bit d16_bit=0> : MIMG <
+                          RegisterClass src_rc,
+                          bit wqm,
+                          bit d16_bit=0,
+                          string dns=""> : MIMG <
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
        dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
@@ -305,47 +308,35 @@ class MIMG_Gather_Helper <bits<7> op, string asm,
   let WQM = wqm;
   let D16 = d16;
 
-  let isAsmParserOnly = 1; // TBD: fix it later
+  let DecoderNamespace = dns;
+  let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
 }
 
-
-multiclass MIMG_Gather_Src_Helper_Helper <bits<7> op, string asm,
-                                    RegisterClass dst_rc,
-                                    int channels, bit wqm,
-                                    bit d16_bit, string suffix> {
-  def _V1 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VGPR_32, wqm, d16_bit>,
-                     MIMG_Mask<asm#"_V1"#suffix, channels>;
-  def _V2 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_64, wqm, d16_bit>,
-                     MIMG_Mask<asm#"_V2"#suffix, channels>;
-  def _V4 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_128, wqm, d16_bit>,
-                     MIMG_Mask<asm#"_V4"#suffix, channels>;
-  def _V8 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_256, wqm, d16_bit>,
-                     MIMG_Mask<asm#"_V8"#suffix, channels>;
-  def _V16 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_512, wqm, d16_bit>,
-                      MIMG_Mask<asm#"_V16"#suffix, channels>;
-}
 
 multiclass MIMG_Gather_Src_Helper <bits<7> op, string asm,
                                     RegisterClass dst_rc,
-                                    int channels, bit wqm> {
-  defm : MIMG_Gather_Src_Helper_Helper<op, asm, dst_rc, channels, wqm, 0, "">;
-
-  let d16 = 1 in {
-    let SubtargetPredicate = HasPackedD16VMem in {
-      defm : MIMG_Gather_Src_Helper_Helper<op, asm, dst_rc, channels, wqm, 1, "_D16">;
-    } // End HasPackedD16VMem.
-
-    let SubtargetPredicate = HasUnpackedD16VMem, DecoderNamespace = "GFX80_UNPACKED" in {
-      defm : MIMG_Gather_Src_Helper_Helper<op, asm, dst_rc, channels, wqm, 1, "_D16_gfx80">;
-    } // End HasUnpackedD16VMem.
-  } // End d16 = 1.
+                                    bit wqm, bit d16_bit,
+                                    string prefix,
+                                    string suffix> {
+  def prefix # _V1 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VGPR_32, wqm, d16_bit, "AMDGPU">;
+  def prefix # _V2 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_64, wqm, d16_bit>;
+  def prefix # _V4 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_128, wqm, d16_bit>;
+  def prefix # _V8 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_256, wqm, d16_bit>;
+  def prefix # _V16 # suffix : MIMG_Gather_Helper <op, asm, dst_rc, VReg_512, wqm, d16_bit>;
 }
 
 multiclass MIMG_Gather <bits<7> op, string asm, bit wqm=0> {
-  defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1, wqm>;
-  defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2, wqm>;
-  defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3, wqm>;
-  defm _V4 : MIMG_Gather_Src_Helper<op, asm, VReg_128, 4, wqm>;
+  defm : MIMG_Gather_Src_Helper<op, asm, VReg_128, wqm, 0, "_V4", "">;
+
+  let d16 = 1 in {
+    let AssemblerPredicate = HasPackedD16VMem in {
+      defm : MIMG_Gather_Src_Helper<op, asm, VReg_64, wqm, 1, "_V2", "_D16">;
+    } // End HasPackedD16VMem.
+
+    let AssemblerPredicate = HasUnpackedD16VMem, DecoderNamespace = "GFX80_UNPACKED" in {
+      defm : MIMG_Gather_Src_Helper<op, asm, VReg_128, wqm, 1, "_V4", "_D16_gfx80">;
+    } // End HasUnpackedD16VMem.
+  } // End d16 = 1.
 }
 
 multiclass MIMG_Gather_WQM <bits<7> op, string asm> : MIMG_Gather<op, asm, 1>;
@@ -510,6 +501,22 @@ multiclass ImageSampleAltPatterns<SDPatternOperator name, string opcode> {
 
   let SubtargetPredicate = HasPackedD16VMem in {
     defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V1), i32, "_D16">;
+    defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V2), v2i32, "_D16">;
+  } // End HasPackedD16VMem.
+}
+
+// ImageGather4 patterns.
+multiclass ImageGather4Patterns<SDPatternOperator name, string opcode> {
+  defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V4), v4f32>;
+}
+
+// ImageGather4 alternative patterns for illegal vector half Types.
+multiclass ImageGather4AltPatterns<SDPatternOperator name, string opcode> {
+  let SubtargetPredicate = HasUnpackedD16VMem in {
+    defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V4), v4i32, "_D16_gfx80">;
+  } // End HasUnpackedD16VMem.
+
+  let SubtargetPredicate = HasPackedD16VMem in {
     defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V2), v2i32, "_D16">;
   } // End HasPackedD16VMem.
 }
@@ -695,36 +702,36 @@ defm : ImageSamplePatterns<int_amdgcn_image_sample_c_cd_o,    "IMAGE_SAMPLE_C_CD
 defm : ImageSamplePatterns<int_amdgcn_image_sample_c_cd_cl_o, "IMAGE_SAMPLE_C_CD_CL_O">;
 
 // Basic gather4.
-defm : ImageSamplePatterns<int_amdgcn_image_gather4,           "IMAGE_GATHER4">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_cl,        "IMAGE_GATHER4_CL">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_l,         "IMAGE_GATHER4_L">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_b,         "IMAGE_GATHER4_B">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_b_cl,      "IMAGE_GATHER4_B_CL">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_lz,        "IMAGE_GATHER4_LZ">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4,           "IMAGE_GATHER4">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_cl,        "IMAGE_GATHER4_CL">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_l,         "IMAGE_GATHER4_L">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_b,         "IMAGE_GATHER4_B">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_b_cl,      "IMAGE_GATHER4_B_CL">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_lz,        "IMAGE_GATHER4_LZ">;
 
 // Gather4 with comparison.
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c,         "IMAGE_GATHER4_C">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_cl,      "IMAGE_GATHER4_C_CL">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_l,       "IMAGE_GATHER4_C_L">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_b,       "IMAGE_GATHER4_C_B">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_b_cl,    "IMAGE_GATHER4_C_B_CL">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_lz,      "IMAGE_GATHER4_C_LZ">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c,         "IMAGE_GATHER4_C">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_cl,      "IMAGE_GATHER4_C_CL">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_l,       "IMAGE_GATHER4_C_L">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_b,       "IMAGE_GATHER4_C_B">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_b_cl,    "IMAGE_GATHER4_C_B_CL">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_lz,      "IMAGE_GATHER4_C_LZ">;
 
 // Gather4 with offsets.
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_o,         "IMAGE_GATHER4_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_cl_o,      "IMAGE_GATHER4_CL_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_l_o,       "IMAGE_GATHER4_L_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_b_o,       "IMAGE_GATHER4_B_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_b_cl_o,    "IMAGE_GATHER4_B_CL_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_lz_o,      "IMAGE_GATHER4_LZ_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_o,         "IMAGE_GATHER4_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_cl_o,      "IMAGE_GATHER4_CL_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_l_o,       "IMAGE_GATHER4_L_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_b_o,       "IMAGE_GATHER4_B_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_b_cl_o,    "IMAGE_GATHER4_B_CL_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_lz_o,      "IMAGE_GATHER4_LZ_O">;
 
 // Gather4 with comparison and offsets.
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_o,       "IMAGE_GATHER4_C_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_cl_o,    "IMAGE_GATHER4_C_CL_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_l_o,     "IMAGE_GATHER4_C_L_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_b_o,     "IMAGE_GATHER4_C_B_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_b_cl_o,  "IMAGE_GATHER4_C_B_CL_O">;
-defm : ImageSamplePatterns<int_amdgcn_image_gather4_c_lz_o,    "IMAGE_GATHER4_C_LZ_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_o,       "IMAGE_GATHER4_C_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_cl_o,    "IMAGE_GATHER4_C_CL_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_l_o,     "IMAGE_GATHER4_C_L_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_b_o,     "IMAGE_GATHER4_C_B_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_b_cl_o,  "IMAGE_GATHER4_C_B_CL_O">;
+defm : ImageGather4Patterns<int_amdgcn_image_gather4_c_lz_o,    "IMAGE_GATHER4_C_LZ_O">;
 
 // Basic sample alternative.
 defm : ImageSampleAltPatterns<SIImage_sample,           "IMAGE_SAMPLE">;
@@ -775,36 +782,36 @@ defm : ImageSampleAltPatterns<SIImage_sample_c_cd_o,    "IMAGE_SAMPLE_C_CD_O">;
 defm : ImageSampleAltPatterns<SIImage_sample_c_cd_cl_o, "IMAGE_SAMPLE_C_CD_CL_O">;
 
 // Basic gather4 alternative.
-defm : ImageSampleAltPatterns<SIImage_gather4,           "IMAGE_GATHER4">;
-defm : ImageSampleAltPatterns<SIImage_gather4_cl,        "IMAGE_GATHER4_CL">;
-defm : ImageSampleAltPatterns<SIImage_gather4_l,         "IMAGE_GATHER4_L">;
-defm : ImageSampleAltPatterns<SIImage_gather4_b,         "IMAGE_GATHER4_B">;
-defm : ImageSampleAltPatterns<SIImage_gather4_b_cl,      "IMAGE_GATHER4_B_CL">;
-defm : ImageSampleAltPatterns<SIImage_gather4_lz,        "IMAGE_GATHER4_LZ">;
+defm : ImageGather4AltPatterns<SIImage_gather4,           "IMAGE_GATHER4">;
+defm : ImageGather4AltPatterns<SIImage_gather4_cl,        "IMAGE_GATHER4_CL">;
+defm : ImageGather4AltPatterns<SIImage_gather4_l,         "IMAGE_GATHER4_L">;
+defm : ImageGather4AltPatterns<SIImage_gather4_b,         "IMAGE_GATHER4_B">;
+defm : ImageGather4AltPatterns<SIImage_gather4_b_cl,      "IMAGE_GATHER4_B_CL">;
+defm : ImageGather4AltPatterns<SIImage_gather4_lz,        "IMAGE_GATHER4_LZ">;
 
 // Gather4 with comparison alternative.
-defm : ImageSampleAltPatterns<SIImage_gather4_c,         "IMAGE_GATHER4_C">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_cl,      "IMAGE_GATHER4_C_CL">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_l,       "IMAGE_GATHER4_C_L">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_b,       "IMAGE_GATHER4_C_B">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_b_cl,    "IMAGE_GATHER4_C_B_CL">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_lz,      "IMAGE_GATHER4_C_LZ">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c,         "IMAGE_GATHER4_C">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_cl,      "IMAGE_GATHER4_C_CL">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_l,       "IMAGE_GATHER4_C_L">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_b,       "IMAGE_GATHER4_C_B">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_b_cl,    "IMAGE_GATHER4_C_B_CL">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_lz,      "IMAGE_GATHER4_C_LZ">;
 
 // Gather4 with offsets alternative.
-defm : ImageSampleAltPatterns<SIImage_gather4_o,         "IMAGE_GATHER4_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_cl_o,      "IMAGE_GATHER4_CL_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_l_o,       "IMAGE_GATHER4_L_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_b_o,       "IMAGE_GATHER4_B_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_b_cl_o,    "IMAGE_GATHER4_B_CL_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_lz_o,      "IMAGE_GATHER4_LZ_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_o,         "IMAGE_GATHER4_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_cl_o,      "IMAGE_GATHER4_CL_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_l_o,       "IMAGE_GATHER4_L_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_b_o,       "IMAGE_GATHER4_B_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_b_cl_o,    "IMAGE_GATHER4_B_CL_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_lz_o,      "IMAGE_GATHER4_LZ_O">;
 
 // Gather4 with comparison and offsets alternative.
-defm : ImageSampleAltPatterns<SIImage_gather4_c_o,       "IMAGE_GATHER4_C_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_cl_o,    "IMAGE_GATHER4_C_CL_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_l_o,     "IMAGE_GATHER4_C_L_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_b_o,     "IMAGE_GATHER4_C_B_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_b_cl_o,  "IMAGE_GATHER4_C_B_CL_O">;
-defm : ImageSampleAltPatterns<SIImage_gather4_c_lz_o,    "IMAGE_GATHER4_C_LZ_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_o,       "IMAGE_GATHER4_C_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_cl_o,    "IMAGE_GATHER4_C_CL_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_l_o,     "IMAGE_GATHER4_C_L_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_b_o,     "IMAGE_GATHER4_C_B_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_b_cl_o,  "IMAGE_GATHER4_C_B_CL_O">;
+defm : ImageGather4AltPatterns<SIImage_gather4_c_lz_o,    "IMAGE_GATHER4_C_LZ_O">;
 
 defm : ImageSamplePatterns<int_amdgcn_image_getlod, "IMAGE_GET_LOD">;
 

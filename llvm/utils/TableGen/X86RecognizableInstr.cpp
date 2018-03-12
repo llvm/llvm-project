@@ -666,36 +666,29 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(immediate)
     HANDLE_OPERAND(immediate)
     break;
-  case X86Local::MRM_F8:
-    if (Opcode == 0xc6) {
-      assert(numPhysicalOperands == 1 &&
-             "Unexpected number of operands for X86Local::MRM_F8");
-      HANDLE_OPERAND(immediate)
-    } else if (Opcode == 0xc7) {
-      assert(numPhysicalOperands == 1 &&
-             "Unexpected number of operands for X86Local::MRM_F8");
-      HANDLE_OPERAND(relocation)
-    }
-    break;
   case X86Local::MRM_C0: case X86Local::MRM_C1: case X86Local::MRM_C2:
-  case X86Local::MRM_C3: case X86Local::MRM_C4: case X86Local::MRM_C8:
+  case X86Local::MRM_C3: case X86Local::MRM_C4: case X86Local::MRM_C5:
+  case X86Local::MRM_C6: case X86Local::MRM_C7: case X86Local::MRM_C8:
   case X86Local::MRM_C9: case X86Local::MRM_CA: case X86Local::MRM_CB:
+  case X86Local::MRM_CC: case X86Local::MRM_CD: case X86Local::MRM_CE:
   case X86Local::MRM_CF: case X86Local::MRM_D0: case X86Local::MRM_D1:
-  case X86Local::MRM_D4: case X86Local::MRM_D5: case X86Local::MRM_D6:
-  case X86Local::MRM_D7: case X86Local::MRM_D8: case X86Local::MRM_D9:
-  case X86Local::MRM_DA: case X86Local::MRM_DB: case X86Local::MRM_DC:
-  case X86Local::MRM_DD: case X86Local::MRM_DE: case X86Local::MRM_DF:
-  case X86Local::MRM_E0: case X86Local::MRM_E1: case X86Local::MRM_E2:
-  case X86Local::MRM_E3: case X86Local::MRM_E4: case X86Local::MRM_E5:
-  case X86Local::MRM_E8: case X86Local::MRM_E9: case X86Local::MRM_EA:
-  case X86Local::MRM_EB: case X86Local::MRM_EC: case X86Local::MRM_ED:
-  case X86Local::MRM_EE: case X86Local::MRM_EF: case X86Local::MRM_F0:
-  case X86Local::MRM_F1: case X86Local::MRM_F2: case X86Local::MRM_F3:
-  case X86Local::MRM_F4: case X86Local::MRM_F5: case X86Local::MRM_F6:
-  case X86Local::MRM_F7: case X86Local::MRM_F9: case X86Local::MRM_FA:
-  case X86Local::MRM_FB: case X86Local::MRM_FC: case X86Local::MRM_FD:
-  case X86Local::MRM_FE: case X86Local::MRM_FF:
-    // Ignored.
+  case X86Local::MRM_D2: case X86Local::MRM_D3: case X86Local::MRM_D4:
+  case X86Local::MRM_D5: case X86Local::MRM_D6: case X86Local::MRM_D7:
+  case X86Local::MRM_D8: case X86Local::MRM_D9: case X86Local::MRM_DA:
+  case X86Local::MRM_DB: case X86Local::MRM_DC: case X86Local::MRM_DD:
+  case X86Local::MRM_DE: case X86Local::MRM_DF: case X86Local::MRM_E0:
+  case X86Local::MRM_E1: case X86Local::MRM_E2: case X86Local::MRM_E3:
+  case X86Local::MRM_E4: case X86Local::MRM_E5: case X86Local::MRM_E6:
+  case X86Local::MRM_E7: case X86Local::MRM_E8: case X86Local::MRM_E9:
+  case X86Local::MRM_EA: case X86Local::MRM_EB: case X86Local::MRM_EC:
+  case X86Local::MRM_ED: case X86Local::MRM_EE: case X86Local::MRM_EF:
+  case X86Local::MRM_F0: case X86Local::MRM_F1: case X86Local::MRM_F2:
+  case X86Local::MRM_F3: case X86Local::MRM_F4: case X86Local::MRM_F5:
+  case X86Local::MRM_F6: case X86Local::MRM_F7: case X86Local::MRM_F8:
+  case X86Local::MRM_F9: case X86Local::MRM_FA: case X86Local::MRM_FB:
+  case X86Local::MRM_FC: case X86Local::MRM_FD: case X86Local::MRM_FE:
+  case X86Local::MRM_FF:
+    HANDLE_OPTIONAL(relocation)
     break;
   }
 

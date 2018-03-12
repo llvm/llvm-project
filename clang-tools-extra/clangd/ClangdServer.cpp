@@ -541,8 +541,7 @@ void ClangdServer::scheduleReparseAndDiags(
   Path FileStr = File.str();
   VFSTag Tag = std::move(TaggedFS.Tag);
 
-  auto Callback = [this, Version, FileStr,
-                   Tag](std::vector<DiagWithFixIts> Diags) {
+  auto Callback = [this, Version, FileStr, Tag](std::vector<Diag> Diags) {
     // We need to serialize access to resulting diagnostics to avoid calling
     // `onDiagnosticsReady` in the wrong order.
     std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);

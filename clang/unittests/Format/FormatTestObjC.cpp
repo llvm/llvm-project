@@ -845,6 +845,15 @@ TEST_F(FormatTestObjC, ObjCAt) {
   verifyFormat("@ /*foo*/ interface");
 }
 
+TEST_F(FormatTestObjC, ObjCBlockTypesAndVariables) {
+  verifyFormat("void DoStuffWithBlockType(int (^)(char));");
+  verifyFormat("int (^foo)(char, float);");
+  verifyFormat("int (^foo[10])(char, float);");
+  verifyFormat("int (^foo[kNumEntries])(char, float);");
+  verifyFormat("int (^foo[kNumEntries + 10])(char, float);");
+  verifyFormat("int (^foo[(kNumEntries + 10)])(char, float);");
+}
+
 TEST_F(FormatTestObjC, ObjCSnippets) {
   verifyFormat("@autoreleasepool {\n"
                "  foo();\n"

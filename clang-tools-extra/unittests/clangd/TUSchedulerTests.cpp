@@ -21,7 +21,7 @@ namespace clangd {
 using ::testing::Pair;
 using ::testing::Pointee;
 
-void ignoreUpdate(llvm::Optional<std::vector<DiagWithFixIts>>) {}
+void ignoreUpdate(llvm::Optional<std::vector<Diag>>) {}
 void ignoreError(llvm::Error Err) {
   handleAllErrors(std::move(Err), [](const llvm::ErrorInfoBase &) {});
 }
@@ -102,20 +102,20 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
         /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero());
     auto Path = testPath("foo.cpp");
     S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes,
-             [&](std::vector<DiagWithFixIts>) { Ready.wait(); });
+             [&](std::vector<Diag>) { Ready.wait(); });
 
     S.update(Path, getInputs(Path, "request diags"), WantDiagnostics::Yes,
-             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+             [&](std::vector<Diag> Diags) { ++CallbackCount; });
     S.update(Path, getInputs(Path, "auto (clobbered)"), WantDiagnostics::Auto,
-             [&](std::vector<DiagWithFixIts> Diags) {
+             [&](std::vector<Diag> Diags) {
                ADD_FAILURE() << "auto should have been cancelled by auto";
              });
     S.update(Path, getInputs(Path, "request no diags"), WantDiagnostics::No,
-             [&](std::vector<DiagWithFixIts> Diags) {
+             [&](std::vector<Diag> Diags) {
                ADD_FAILURE() << "no diags should not be called back";
              });
     S.update(Path, getInputs(Path, "auto (produces)"), WantDiagnostics::Auto,
-             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+             [&](std::vector<Diag> Diags) { ++CallbackCount; });
     Ready.notify();
   }
   EXPECT_EQ(2, CallbackCount);
@@ -131,15 +131,15 @@ TEST_F(TUSchedulerTests, Debounce) {
     // FIXME: we could probably use timeouts lower than 1 second here.
     auto Path = testPath("foo.cpp");
     S.update(Path, getInputs(Path, "auto (debounced)"), WantDiagnostics::Auto,
-             [&](std::vector<DiagWithFixIts> Diags) {
+             [&](std::vector<Diag> Diags) {
                ADD_FAILURE() << "auto should have been debounced and canceled";
              });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     S.update(Path, getInputs(Path, "auto (timed out)"), WantDiagnostics::Auto,
-             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+             [&](std::vector<Diag> Diags) { ++CallbackCount; });
     std::this_thread::sleep_for(std::chrono::seconds(2));
     S.update(Path, getInputs(Path, "auto (shut down)"), WantDiagnostics::Auto,
-             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+             [&](std::vector<Diag> Diags) { ++CallbackCount; });
   }
   EXPECT_EQ(2, CallbackCount);
 }
@@ -190,8 +190,8 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
           S.update(File, Inputs, WantDiagnostics::Auto,
-                   [Nonce, &Mut, &TotalUpdates](
-                       llvm::Optional<std::vector<DiagWithFixIts>> Diags) {
+                   [Nonce, &Mut,
+                    &TotalUpdates](llvm::Optional<std::vector<Diag>> Diags) {
                      EXPECT_THAT(Context::current().get(NonceKey),
                                  Pointee(Nonce));
 

@@ -40,6 +40,9 @@ template <class ELFT> struct Elf_Versym_Impl;
 template <class ELFT> struct Elf_Hash_Impl;
 template <class ELFT> struct Elf_GnuHash_Impl;
 template <class ELFT> struct Elf_Chdr_Impl;
+template <class ELFT> struct Elf_Nhdr_Impl;
+template <class ELFT> class Elf_Note_Impl;
+template <class ELFT> class Elf_Note_Iterator_Impl;
 
 template <endianness E, bool Is64> struct ELFType {
 private:
@@ -66,6 +69,9 @@ public:
   using Hash = Elf_Hash_Impl<ELFType<E, Is64>>;
   using GnuHash = Elf_GnuHash_Impl<ELFType<E, Is64>>;
   using Chdr = Elf_Chdr_Impl<ELFType<E, Is64>>;
+  using Nhdr = Elf_Nhdr_Impl<ELFType<E, Is64>>;
+  using Note = Elf_Note_Impl<ELFType<E, Is64>>;
+  using NoteIterator = Elf_Note_Iterator_Impl<ELFType<E, Is64>>;
   using DynRange = ArrayRef<Dyn>;
   using ShdrRange = ArrayRef<Shdr>;
   using SymRange = ArrayRef<Sym>;
@@ -549,6 +555,127 @@ struct Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
   Elf_Word ch_reserved;
   Elf_Xword ch_size;
   Elf_Xword ch_addralign;
+};
+
+/// Note header
+template <class ELFT>
+struct Elf_Nhdr_Impl {
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+  Elf_Word n_namesz;
+  Elf_Word n_descsz;
+  Elf_Word n_type;
+
+  /// The alignment of the name and descriptor.
+  ///
+  /// Implementations differ from the specification here: in practice all
+  /// variants align both the name and descriptor to 4-bytes.
+  static const unsigned int Align = 4;
+
+  /// Get the size of the note, including name, descriptor, and padding.
+  size_t getSize() const {
+    return sizeof(*this) + alignTo<Align>(n_namesz) + alignTo<Align>(n_descsz);
+  }
+};
+
+/// An ELF note.
+///
+/// Wraps a note header, providing methods for accessing the name and
+/// descriptor safely.
+template <class ELFT>
+class Elf_Note_Impl {
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+
+  const Elf_Nhdr_Impl<ELFT> &Nhdr;
+
+  template <class NoteIteratorELFT> friend class Elf_Note_Iterator_Impl;
+
+  Elf_Note_Impl(const Elf_Nhdr_Impl<ELFT> &Nhdr) : Nhdr(Nhdr) {}
+
+public:
+  /// Get the note's name, excluding the terminating null byte.
+  StringRef getName() const {
+    if (!Nhdr.n_namesz)
+      return StringRef();
+    return StringRef(reinterpret_cast<const char *>(&Nhdr) + sizeof(Nhdr),
+                     Nhdr.n_namesz - 1);
+  }
+
+  /// Get the note's descriptor.
+  ArrayRef<Elf_Word> getDesc() const {
+    if (!Nhdr.n_descsz)
+      return ArrayRef<Elf_Word>();
+    return ArrayRef<Elf_Word>(
+        reinterpret_cast<const Elf_Word *>(
+            reinterpret_cast<const uint8_t *>(&Nhdr) + sizeof(Nhdr) +
+            alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Nhdr.n_namesz)),
+        Nhdr.n_descsz);
+  }
+
+  /// Get the note's type.
+  Elf_Word getType() const { return Nhdr.n_type; }
+};
+
+template <class ELFT>
+class Elf_Note_Iterator_Impl
+    : std::iterator<std::forward_iterator_tag, Elf_Note_Impl<ELFT>> {
+  // Nhdr being a nullptr marks the end of iteration.
+  const Elf_Nhdr_Impl<ELFT> *Nhdr = nullptr;
+  size_t RemainingSize = 0u;
+  Error *Err = nullptr;
+
+  template <class ELFFileELFT> friend class ELFFile;
+
+  // Stop iteration and indicate an overflow.
+  void stopWithOverflowError() {
+    Nhdr = nullptr;
+    *Err = make_error<StringError>("ELF note overflows container",
+                                   object_error::parse_failed);
+  }
+
+  // Advance Nhdr by NoteSize bytes, starting from NhdrPos.
+  //
+  // Assumes NoteSize <= RemainingSize. Ensures Nhdr->getSize() <= RemainingSize
+  // upon returning. Handles stopping iteration when reaching the end of the
+  // container, either cleanly or with an overflow error.
+  void advanceNhdr(const uint8_t *NhdrPos, size_t NoteSize) {
+    RemainingSize -= NoteSize;
+    if (RemainingSize == 0u)
+      Nhdr = nullptr;
+    else if (sizeof(*Nhdr) > RemainingSize)
+      stopWithOverflowError();
+    else {
+      Nhdr = reinterpret_cast<const Elf_Nhdr_Impl<ELFT> *>(NhdrPos + NoteSize);
+      if (Nhdr->getSize() > RemainingSize)
+        stopWithOverflowError();
+    }
+  }
+
+  Elf_Note_Iterator_Impl() {}
+  explicit Elf_Note_Iterator_Impl(Error &Err) : Err(&Err) {}
+  Elf_Note_Iterator_Impl(const uint8_t *Start, size_t Size, Error &Err)
+      : RemainingSize(Size), Err(&Err) {
+    assert(Start && "ELF note iterator starting at NULL");
+    advanceNhdr(Start, 0u);
+  }
+
+public:
+  Elf_Note_Iterator_Impl &operator++() {
+    assert(Nhdr && "incremented ELF note end iterator");
+    const uint8_t *NhdrPos = reinterpret_cast<const uint8_t *>(Nhdr);
+    size_t NoteSize = Nhdr->getSize();
+    advanceNhdr(NhdrPos, NoteSize);
+    return *this;
+  }
+  bool operator==(Elf_Note_Iterator_Impl Other) const {
+    return Nhdr == Other.Nhdr;
+  }
+  bool operator!=(Elf_Note_Iterator_Impl Other) const {
+    return !(*this == Other);
+  }
+  Elf_Note_Impl<ELFT> operator*() const {
+    assert(Nhdr && "dereferenced ELF note end iterator");
+    return Elf_Note_Impl<ELFT>(*Nhdr);
+  }
 };
 
 // MIPS .reginfo section

@@ -18,14 +18,14 @@ declare i32 @ret32(float) local_unnamed_addr #1
 ; CHECK:       - Type:            TYPE
 ; CHECK-NEXT:    Signatures:
 ; CHECK-NEXT:      - Index:           0
+; CHECK-NEXT:        ReturnType:      NORESULT
+; CHECK-NEXT:        ParamTypes:
+; CHECK-NEXT:      - Index:           1
 ; CHECK-NEXT:        ReturnType:      I32
 ; CHECK-NEXT:        ParamTypes:
 ; CHECK-NEXT:          - F32
-; CHECK-NEXT:      - Index:           1
-; CHECK-NEXT:        ReturnType:      NORESULT
-; CHECK-NEXT:        ParamTypes:
 ; CHECK-NEXT:  - Type:            FUNCTION
-; CHECK-NEXT:    FunctionTypes:   [ 0, 1, 1 ]
+; CHECK-NEXT:    FunctionTypes:   [ 0, 1, 0 ]
 ; CHECK:       - Type:            CODE
 ; CHECK-NEXT:    Functions:
 ; CHECK:           - Index:       0
@@ -34,9 +34,9 @@ declare i32 @ret32(float) local_unnamed_addr #1
 ; CHECK:         Name:            name
 ; CHECK-NEXT:    FunctionNames:
 ; CHECK-NEXT:      - Index:           0
-; CHECK-NEXT:        Name:            ret32
-; CHECK-NEXT:      - Index:           1
-; CHECK-NEXT:        Name:            _start
-; CHECK-NEXT:      - Index:           2
 ; CHECK-NEXT:        Name:            __wasm_call_ctors
+; CHECK-NEXT:      - Index:           1
+; CHECK-NEXT:        Name:            ret32
+; CHECK-NEXT:      - Index:           2
+; CHECK-NEXT:        Name:            _start
 ; CHECK-NEXT: ...

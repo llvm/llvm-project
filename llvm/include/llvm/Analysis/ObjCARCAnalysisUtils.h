@@ -86,6 +86,16 @@ inline const Value *GetUnderlyingObjCPtr(const Value *V,
   return V;
 }
 
+/// A wrapper for GetUnderlyingObjCPtr used for results memoization.
+inline const Value *
+GetUnderlyingObjCPtrCached(const Value *V, const DataLayout &DL,
+                           DenseMap<const Value *, const Value *> &Cache) {
+  if (auto InCache = Cache.lookup(V))
+    return InCache;
+
+  return Cache[V] = GetUnderlyingObjCPtr(V, DL);
+}
+
 /// The RCIdentity root of a value \p V is a dominating value U for which
 /// retaining or releasing U is equivalent to retaining or releasing V. In other
 /// words, ARC operations on \p V are equivalent to ARC operations on \p U.

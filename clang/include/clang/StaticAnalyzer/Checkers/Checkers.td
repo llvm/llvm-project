@@ -610,12 +610,12 @@ def ObjCSuperDeallocChecker : Checker<"SuperDealloc">,
 
 } // end "osx.cocoa"
 
-let ParentPackage = OSXAlpha in {
+let ParentPackage = Performance in {
 
-def GCDAsyncSemaphoreChecker : Checker<"GCDAsyncSemaphore">,
-  HelpText<"Checker for performance anti-pattern when using semaphors from async API">,
-  DescFile<"GCDAsyncSemaphoreChecker.cpp">;
-} // end "alpha.osx"
+def GCDAntipattern : Checker<"GCDAntipattern">,
+  HelpText<"Check for performance anti-patterns when using Grand Central Dispatch">,
+  DescFile<"GCDAntipatternChecker.cpp">;
+} // end "optin.performance"
 
 let ParentPackage = CocoaAlpha in {
 

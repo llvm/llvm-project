@@ -2307,21 +2307,6 @@ void CodeGenFunction::EmitARCCopyWeak(Address dst, Address src) {
                        "objc_copyWeak");
 }
 
-void CodeGenFunction::emitARCCopyAssignWeak(QualType Ty, Address DstAddr,
-                                            Address SrcAddr) {
-  llvm::Value *Object = EmitARCLoadWeakRetained(SrcAddr);
-  Object = EmitObjCConsumeObject(Ty, Object);
-  EmitARCStoreWeak(DstAddr, Object, false);
-}
-
-void CodeGenFunction::emitARCMoveAssignWeak(QualType Ty, Address DstAddr,
-                                            Address SrcAddr) {
-  llvm::Value *Object = EmitARCLoadWeakRetained(SrcAddr);
-  Object = EmitObjCConsumeObject(Ty, Object);
-  EmitARCStoreWeak(DstAddr, Object, false);
-  EmitARCDestroyWeak(SrcAddr);
-}
-
 /// Produce the code to do a objc_autoreleasepool_push.
 ///   call i8* \@objc_autoreleasePoolPush(void)
 llvm::Value *CodeGenFunction::EmitObjCAutoreleasePoolPush() {
