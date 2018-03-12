@@ -1259,6 +1259,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       Preamble.reset();
       PreambleDiagnostics.clear();
       TopLevelDeclsInPreamble.clear();
+      PreambleSrcLocCache.clear();
       PreambleRebuildCounter = 1;
     }
   }
