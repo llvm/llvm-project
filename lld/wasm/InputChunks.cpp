@@ -23,6 +23,15 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::wasm;
 
+StringRef ReloctTypeToString(uint8_t RelocType) {
+  switch (RelocType) {
+#define WASM_RELOC(NAME, REL) case REL: return #NAME;
+#include "llvm/BinaryFormat/WasmRelocs.def"
+#undef WASM_RELOC
+  }
+  llvm_unreachable("unknown reloc type");
+}
+
 std::string lld::toString(const InputChunk *C) {
   return (toString(C->File) + ":(" + C->getName() + ")").str();
 }
@@ -46,14 +55,14 @@ void InputChunk::writeTo(uint8_t *Buf) const {
   if (Relocations.empty())
     return;
 
-  DEBUG(dbgs() << "applyRelocations: count=" << Relocations.size() << "\n");
+  DEBUG(dbgs() << "applying relocations: count=" << Relocations.size() << "\n");
   int32_t Off = OutputOffset - getInputSectionOffset();
 
   for (const WasmRelocation &Rel : Relocations) {
     uint8_t *Loc = Buf + Rel.Offset + Off;
-    uint64_t Value = File->calcNewValue(Rel);
-
-    DEBUG(dbgs() << "write reloc: type=" << Rel.Type << " index=" << Rel.Index
+    uint32_t Value = File->calcNewValue(Rel);
+    DEBUG(dbgs() << "apply reloc: type=" << ReloctTypeToString(Rel.Type)
+                 << " addend=" << Rel.Addend << " index=" << Rel.Index
                  << " value=" << Value << " offset=" << Rel.Offset << "\n");
 
     switch (Rel.Type) {
