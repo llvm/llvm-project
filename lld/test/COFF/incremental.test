@@ -59,8 +59,8 @@
 # RUN: lld-link -out:%t.dll -dll -debug -opt:ref %t.obj
 # RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
 
-# NOWARN-NOT: ignoring '/INCREMENTAL'
-# WARN-ICF: ignoring '/INCREMENTAL' because ICF is enabled; use '/OPT:NOICF' to disable
-# WARN-REF: ignoring '/INCREMENTAL' because REF is enabled; use '/OPT:NOREF' to disable
+# NOWARN-NOT: ignoring '/incremental'
+# WARN-ICF: ignoring '/incremental' because ICF is enabled; use '/opt:noicf' to disable
+# WARN-REF: ignoring '/incremental' because REF is enabled; use '/opt:noref' to disable
 # KEEP: {{Feb 1 1980|1980-02-01}}
 # NOKEEP-NOT: {{Feb 1 1980|1980-02-01}}

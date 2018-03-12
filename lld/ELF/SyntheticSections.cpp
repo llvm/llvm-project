@@ -626,8 +626,9 @@ void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
 bool GotSection::empty() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
   // relative to GOT(such as GOTOFFREL) or there's a symbol that points to a GOT
-  // (i.e. _GLOBAL_OFFSET_TABLE_).
-  return NumEntries == 0 && !HasGotOffRel && !ElfSym::GlobalOffsetTable;
+  // (i.e. _GLOBAL_OFFSET_TABLE_) that the target defines relative to the .got.
+  return NumEntries == 0 && !HasGotOffRel &&
+         !(ElfSym::GlobalOffsetTable && !Target->GotBaseSymInGotPlt);
 }
 
 void GotSection::writeTo(uint8_t *Buf) {
@@ -896,6 +897,14 @@ void GotPltSection::writeTo(uint8_t *Buf) {
     Target->writeGotPlt(Buf, *B);
     Buf += Config->Wordsize;
   }
+}
+
+bool GotPltSection::empty() const {
+  // We need to emit a GOT.PLT even if it's empty if there's a symbol that
+  // references the _GLOBAL_OFFSET_TABLE_ and the Target defines the symbol
+  // relative to the .got.plt section.
+  return Entries.empty() &&
+         !(ElfSym::GlobalOffsetTable && Target->GotBaseSymInGotPlt);
 }
 
 // On ARM the IgotPltSection is part of the GotSection, on other Targets it is
