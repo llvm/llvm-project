@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.osx.GCDAsyncSemaphore %s -fblocks -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.performance.GCDAntipattern %s -fblocks -verify
 typedef signed char BOOL;
 @protocol NSObject  - (BOOL)isEqual:(id)object; @end
 @interface NSObject <NSObject> {}
@@ -27,7 +27,7 @@ void use_semaphor_antipattern() {
   func(^{
       dispatch_semaphore_signal(sema);
   });
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 // It's OK to use pattern in tests.
@@ -47,14 +47,14 @@ void use_semaphor_antipattern_multiple_times() {
   func(^{
       dispatch_semaphore_signal(sema1);
   });
-  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 
   dispatch_semaphore_t sema2 = dispatch_semaphore_create(0);
 
   func(^{
       dispatch_semaphore_signal(sema2);
   });
-  dispatch_semaphore_wait(sema2, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema2, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 void use_semaphor_antipattern_multiple_wait() {
@@ -64,8 +64,8 @@ void use_semaphor_antipattern_multiple_wait() {
       dispatch_semaphore_signal(sema1);
   });
   // FIXME: multiple waits on same semaphor should not raise a warning.
-  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
-  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
+  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 void warn_incorrect_order() {
@@ -73,7 +73,7 @@ void warn_incorrect_order() {
   // if out of order.
   dispatch_semaphore_t sema = dispatch_semaphore_create(0);
 
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
   func(^{
       dispatch_semaphore_signal(sema);
   });
@@ -85,7 +85,7 @@ void warn_w_typedef() {
   func_w_typedef(^{
       dispatch_semaphore_signal(sema);
   });
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 void warn_nested_ast() {
@@ -100,7 +100,7 @@ void warn_nested_ast() {
          dispatch_semaphore_signal(sema);
          });
   }
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 void use_semaphore_assignment() {
@@ -110,7 +110,7 @@ void use_semaphore_assignment() {
   func(^{
       dispatch_semaphore_signal(sema);
   });
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 void use_semaphore_assignment_init() {
@@ -120,7 +120,7 @@ void use_semaphore_assignment_init() {
   func(^{
       dispatch_semaphore_signal(sema);
   });
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 void differentsemaphoreok() {
@@ -172,17 +172,17 @@ void warn_with_cast() {
   func(^{
       dispatch_semaphore_signal((int)sema);
   });
-  dispatch_semaphore_wait((int)sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait((int)sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
-@interface Test1 : NSObject
+@interface MyInterface1 : NSObject
 -(void)use_method_warn;
 -(void)use_objc_callback_warn;
 -(void)testNoWarn;
 -(void)acceptBlock:(block_t)callback;
 @end
 
-@implementation Test1
+@implementation MyInterface1
 
 -(void)use_method_warn {
   dispatch_semaphore_t sema = dispatch_semaphore_create(0);
@@ -190,7 +190,7 @@ void warn_with_cast() {
   func(^{
       dispatch_semaphore_signal(sema);
   });
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
 -(void)testNoWarn {
@@ -212,23 +212,55 @@ void warn_with_cast() {
   [self acceptBlock:^{
       dispatch_semaphore_signal(sema);
   }];
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
-void use_objc_and_c_callback(Test1 *t) {
+void use_objc_and_c_callback(MyInterface1 *t) {
   dispatch_semaphore_t sema = dispatch_semaphore_create(0);
 
   func(^{
       dispatch_semaphore_signal(sema);
   });
-  dispatch_semaphore_wait(sema, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 
   dispatch_semaphore_t sema1 = dispatch_semaphore_create(0);
 
   [t acceptBlock:^{
       dispatch_semaphore_signal(sema1);
   }];
-  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Possible semaphore performance anti-pattern}}
+  dispatch_semaphore_wait(sema1, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
+@end
 
+// No warnings: class name contains "test"
+@interface Test1 : NSObject
+-(void)use_method_warn;
+@end
+
+@implementation Test1
+-(void)use_method_warn {
+  dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+
+  func(^{
+      dispatch_semaphore_signal(sema);
+  });
+  dispatch_semaphore_wait(sema, 100);
+}
+@end
+
+
+// No warnings: class name contains "mock"
+@interface Mock1 : NSObject
+-(void)use_method_warn;
+@end
+
+@implementation Mock1
+-(void)use_method_warn {
+  dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+
+  func(^{
+      dispatch_semaphore_signal(sema);
+  });
+  dispatch_semaphore_wait(sema, 100);
+}
 @end
