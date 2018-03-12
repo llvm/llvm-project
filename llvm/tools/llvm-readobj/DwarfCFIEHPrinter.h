@@ -11,6 +11,7 @@
 #define LLVM_TOOLS_LLVM_READOBJ_DWARFCFIEHPRINTER_H
 
 #include "Error.h"
+#include "llvm-readobj.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Object/ELF.h"

@@ -178,37 +178,37 @@ class PREFE_DESC   : CACHEE_DESC_BASE<"prefe", mem_simm9, II_PREFE>;
 //===----------------------------------------------------------------------===//
 
 /// Load and Store EVA Instructions
-def LBE     : MMRel, LBE_ENC, LBE_DESC, INSN_EVA;
-def LBuE    : MMRel, LBuE_ENC, LBuE_DESC, INSN_EVA;
-def LHE     : MMRel, LHE_ENC, LHE_DESC, INSN_EVA;
-def LHuE    : MMRel, LHuE_ENC, LHuE_DESC, INSN_EVA;
+def LBE     : MMRel, LBE_ENC, LBE_DESC, ASE_EVA;
+def LBuE    : MMRel, LBuE_ENC, LBuE_DESC, ASE_EVA;
+def LHE     : MMRel, LHE_ENC, LHE_DESC, ASE_EVA;
+def LHuE    : MMRel, LHuE_ENC, LHuE_DESC, ASE_EVA;
 let AdditionalPredicates = [NotInMicroMips] in {
-def LWE     : MMRel, LWE_ENC, LWE_DESC, INSN_EVA;
+def LWE     : MMRel, LWE_ENC, LWE_DESC, ASE_EVA;
 }
-def SBE     : MMRel, SBE_ENC, SBE_DESC, INSN_EVA;
-def SHE     : MMRel, SHE_ENC, SHE_DESC, INSN_EVA;
+def SBE     : MMRel, SBE_ENC, SBE_DESC, ASE_EVA;
+def SHE     : MMRel, SHE_ENC, SHE_DESC, ASE_EVA;
 let AdditionalPredicates = [NotInMicroMips] in {
-def SWE     : MMRel, SWE_ENC, SWE_DESC, INSN_EVA;
+def SWE     : MMRel, SWE_ENC, SWE_DESC, ASE_EVA;
 }
 
 /// load/store left/right EVA
 let AdditionalPredicates = [NotInMicroMips] in {
-def LWLE    : LWLE_ENC, LWLE_DESC, INSN_EVA_NOT_32R6_64R6;
-def LWRE    : LWRE_ENC, LWRE_DESC, INSN_EVA_NOT_32R6_64R6;
-def SWLE    : SWLE_ENC, SWLE_DESC, INSN_EVA_NOT_32R6_64R6;
-def SWRE    : SWRE_ENC, SWRE_DESC, INSN_EVA_NOT_32R6_64R6;
+def LWLE    : LWLE_ENC, LWLE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
+def LWRE    : LWRE_ENC, LWRE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
+def SWLE    : SWLE_ENC, SWLE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
+def SWRE    : SWRE_ENC, SWRE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
 }
 
 /// Load-linked EVA, Store-conditional EVA
 let AdditionalPredicates = [NotInMicroMips] in {
-def LLE     : MMRel, LLE_ENC, LLE_DESC, INSN_EVA;
-def SCE     : MMRel, SCE_ENC, SCE_DESC, INSN_EVA;
+def LLE     : MMRel, LLE_ENC, LLE_DESC, ASE_EVA;
+def SCE     : MMRel, SCE_ENC, SCE_DESC, ASE_EVA;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def TLBINV  : TLBINV_ENC, TLBINV_DESC, INSN_EVA;
-  def TLBINVF : TLBINVF_ENC, TLBINVF_DESC, INSN_EVA;
+  def TLBINV  : TLBINV_ENC, TLBINV_DESC, ASE_EVA;
+  def TLBINVF : TLBINVF_ENC, TLBINVF_DESC, ASE_EVA;
 }
 
-def CACHEE  : MMRel, CACHEE_ENC, CACHEE_DESC, INSN_EVA;
-def PREFE   : MMRel, PREFE_ENC, PREFE_DESC, INSN_EVA;
+def CACHEE  : MMRel, CACHEE_ENC, CACHEE_DESC, ASE_EVA;
+def PREFE   : MMRel, PREFE_ENC, PREFE_DESC, ASE_EVA;

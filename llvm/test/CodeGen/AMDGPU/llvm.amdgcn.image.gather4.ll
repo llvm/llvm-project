@@ -320,24 +320,6 @@ main_body:
   ret void
 }
 
-; GCN-LABEL: {{^}}gather4_f32:
-; GCN: image_gather4 {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x1 da
-define amdgpu_kernel void @gather4_f32(float addrspace(1)* %out) {
-main_body:
-  %r = call float @llvm.amdgcn.image.gather4.f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 1, i1 0, i1 0, i1 0, i1 0, i1 1)
-  store float %r, float addrspace(1)* %out
-  ret void
-}
-
-; GCN-LABEL: {{^}}gather4_v2f32:
-; GCN: image_gather4 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x3 da
-define amdgpu_kernel void @gather4_v2f32(<2 x float> addrspace(1)* %out) {
-main_body:
-  %r = call <2 x float> @llvm.amdgcn.image.gather4.v2f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 3, i1 0, i1 0, i1 0, i1 0, i1 1)
-  store <2 x float> %r, <2 x float> addrspace(1)* %out
-  ret void
-}
-
 declare <4 x float> @llvm.amdgcn.image.gather4.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.gather4.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.gather4.cl.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
@@ -376,8 +358,5 @@ declare <4 x float> @llvm.amdgcn.image.gather4.c.b.o.v4f32.v8f32.v8i32(<8 x floa
 declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.o.v4f32.v8f32.v8i32(<8 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.o.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.o.v4f32.v8f32.v8i32(<8 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
-
-declare float @llvm.amdgcn.image.gather4.f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
-declare <2 x float> @llvm.amdgcn.image.gather4.v2f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 
 attributes #0 = { nounwind readnone }

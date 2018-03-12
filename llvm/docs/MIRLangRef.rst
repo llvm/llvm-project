@@ -185,15 +185,15 @@ of such YAML document:
      name:            inc
      tracksRegLiveness: true
      liveins:
-       - { reg: '%rdi' }
+       - { reg: '$rdi' }
      body: |
        bb.0.entry:
-         liveins: %rdi
+         liveins: $rdi
 
-         %eax = MOV32rm %rdi, 1, _, 0, _
-         %eax = INC32r killed %eax, implicit-def dead %eflags
-         MOV32mr killed %rdi, 1, _, 0, _, %eax
-         RETQ %eax
+         $eax = MOV32rm $rdi, 1, _, 0, _
+         $eax = INC32r killed $eax, implicit-def dead $eflags
+         MOV32mr killed $rdi, 1, _, 0, _, $eax
+         RETQ $eax
      ...
 
 The document above consists of attributes that represent the various
@@ -307,7 +307,7 @@ the instructions:
 .. code-block:: text
 
     bb.0.entry:
-      liveins: %edi, %esi
+      liveins: $edi, $esi
 
 The list of live in registers and successors can be empty. The language also
 allows multiple live in register and successor lists - they are combined into
@@ -344,7 +344,7 @@ operand:
 
 .. code-block:: text
 
-    RETQ %eax
+    RETQ $eax
 
 However, if the machine instruction has one or more explicitly defined register
 operands, the instruction's name has to be specified after them. The example
@@ -353,7 +353,7 @@ defined register operands:
 
 .. code-block:: text
 
-    %sp, %fp, %lr = LDPXpost %sp, 2
+    $sp, $fp, $lr = LDPXpost $sp, 2
 
 The instruction names are serialized using the exact definitions from the
 target's ``*InstrInfo.td`` files, and they are case sensitive. This means that
@@ -370,11 +370,11 @@ instruction's name:
 
 .. code-block:: text
 
-    %fp = frame-setup ADDXri %sp, 0, 0
+    $fp = frame-setup ADDXri $sp, 0, 0
 
 .. code-block:: text
 
-    %x21, %x20 = frame-destroy LDPXi %sp
+    $x21, $x20 = frame-destroy LDPXi $sp
 
 .. _registers:
 
@@ -385,9 +385,9 @@ The syntax for bundled instructions is the following:
 
 .. code-block:: text
 
-    BUNDLE implicit-def %r0, implicit-def %r1, implicit %r2 {
-      %r0 = SOME_OP %r2
-      %r1 = ANOTHER_OP internal %r0
+    BUNDLE implicit-def $r0, implicit-def $r1, implicit $r2 {
+      $r0 = SOME_OP $r2
+      $r1 = ANOTHER_OP internal $r0
     }
 
 The first instruction is often a bundle header. The instructions between ``{``
@@ -402,23 +402,23 @@ serialization language. They are primarly used in the
 but they can also be used in a number of other places, like the
 :ref:`basic block's live in list <bb-liveins>`.
 
-The physical registers are identified by their name. They use the following
-syntax:
+The physical registers are identified by their name and by the '$' prefix sigil.
+They use the following syntax:
 
 .. code-block:: text
 
-    %<name>
+    $<name>
 
 The example below shows three X86 physical registers:
 
 .. code-block:: text
 
-    %eax
-    %r15
-    %eflags
+    $eax
+    $r15
+    $eflags
 
-The virtual registers are identified by their ID number. They use the following
-syntax:
+The virtual registers are identified by their ID number and by the '%' sigil.
+They use the following syntax:
 
 .. code-block:: text
 
@@ -431,7 +431,7 @@ Example:
     %0
 
 The null registers are represented using an underscore ('``_``'). They can also be
-represented using a '``%noreg``' named register, although the former syntax
+represented using a '``$noreg``' named register, although the former syntax
 is preferred.
 
 .. _machine-operands:
@@ -452,7 +452,7 @@ immediate machine operand ``-42``:
 
 .. code-block:: text
 
-    %eax = MOV32ri -42
+    $eax = MOV32ri -42
 
 An immediate operand is also used to represent a subregister index when the
 machine instruction has one of the following opcodes:
@@ -510,7 +510,7 @@ This example shows an instance of the X86 ``XOR32rr`` instruction that has
 
 .. code-block:: text
 
-  dead %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, implicit-def %al
+  dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
 
 .. _register-flags:
 
@@ -630,7 +630,7 @@ a global value operand named ``G``:
 
 .. code-block:: text
 
-    %rax = MOV64rm %rip, 1, _, @G, _
+    $rax = MOV64rm $rip, 1, _, @G, _
 
 The named global values are represented using an identifier with the '@' prefix.
 If the identifier doesn't match the regular expression
@@ -652,7 +652,7 @@ and the offset 8:
 
 .. code-block:: text
 
-    %sgpr2 = S_ADD_U32 _, target-index(amdgpu-constdata-start) + 8, implicit-def _, implicit-def _
+    $sgpr2 = S_ADD_U32 _, target-index(amdgpu-constdata-start) + 8, implicit-def _, implicit-def _
 
 Jump-table Index Operands
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -661,7 +661,7 @@ A jump-table index operand with the index 0 is printed as following:
 
 .. code-block:: text
 
-    tBR_JTr killed %r0, %jump-table.0
+    tBR_JTr killed $r0, %jump-table.0
 
 A machine jump-table entry contains a list of ``MachineBasicBlocks``. When serializing all the function's jump-table entries, the following format is used:
 
@@ -690,7 +690,7 @@ Example:
 External Symbol Operands
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An external symbol operand is represented using an identifier with the ``$``
+An external symbol operand is represented using an identifier with the ``&``
 prefix. The identifier is surrounded with ""'s and escaped if it has any
 special non-printable characters in it.
 
@@ -698,7 +698,7 @@ Example:
 
 .. code-block:: text
 
-    CALL64pcrel32 $__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &__stack_chk_fail, csr_64, implicit $rsp, implicit-def $rsp
 
 MCSymbol Operands
 ^^^^^^^^^^^^^^^^^
@@ -725,7 +725,7 @@ The syntax is:
 
 .. code-block:: text
 
-    CFI_INSTRUCTION offset %w30, -16
+    CFI_INSTRUCTION offset $w30, -16
 
 which may be emitted later in the MC layer as:
 
@@ -742,7 +742,7 @@ The syntax for the ``returnaddress`` intrinsic is:
 
 .. code-block:: text
 
-   %x0 = COPY intrinsic(@llvm.returnaddress)
+   $x0 = COPY intrinsic(@llvm.returnaddress)
 
 Predicate Operands
 ^^^^^^^^^^^^^^^^^^

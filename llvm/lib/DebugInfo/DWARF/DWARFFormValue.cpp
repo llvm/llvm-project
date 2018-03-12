@@ -161,7 +161,7 @@ DWARFFormValue::getFixedByteSize(dwarf::Form Form,
     return 0;
 
   default:
-    llvm_unreachable("Handle this form in this switch statement");
+    break;
   }
   return None;
 }
