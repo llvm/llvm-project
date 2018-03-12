@@ -265,55 +265,9 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   assert(C || getCurrentCFGElement().getAs<CFGStmt>());
   const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
 
-  bool IsReturnedIntoParentStackFrame = false;
-  const CXXBindTemporaryExpr *BTE = nullptr;
-  const MaterializeTemporaryExpr *MTE = nullptr;
-
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
     Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
-
-    if (CC) {
-      // In case of temporary object construction, extract data necessary for
-      // destruction and lifetime extension.
-      const auto *TCC = dyn_cast<TemporaryObjectConstructionContext>(CC);
-
-      // If the temporary is being returned from the function, it will be
-      // destroyed or lifetime-extended in the caller stack frame.
-      if (const auto *RCC = dyn_cast<ReturnedValueConstructionContext>(CC)) {
-        const StackFrameContext *SFC = LCtx->getCurrentStackFrame();
-        assert(SFC);
-        if (SFC->getParent()) {
-          IsReturnedIntoParentStackFrame = true;
-          const CFGElement &CallElem =
-              (*SFC->getCallSiteBlock())[SFC->getIndex()];
-          if (auto RTCElem = CallElem.getAs<CFGCXXRecordTypedCall>()) {
-            TCC = cast<TemporaryObjectConstructionContext>(
-                RTCElem->getConstructionContext());
-          }
-        }
-      }
-
-      if (TCC) {
-        assert(CallOpts.IsTemporaryCtorOrDtor);
-        assert(!CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion);
-        if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
-          BTE = TCC->getCXXBindTemporaryExpr();
-          MTE = TCC->getMaterializedTemporaryExpr();
-          if (!BTE) {
-            // FIXME: lifetime extension for temporaries without destructors
-            // is not implemented yet.
-            MTE = nullptr;
-          }
-          if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
-            // If the temporary is lifetime-extended, don't save the BTE,
-            // because we don't need a temporary destructor, but an automatic
-            // destructor.
-            BTE = nullptr;
-          }
-        }
-      }
-    }
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -408,21 +362,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
         State = State->bindDefault(loc::MemRegionVal(Target), ZeroVal, LCtx);
       }
 
-      // Set up destruction and lifetime extension information.
-      const LocationContext *TempLCtx =
-          IsReturnedIntoParentStackFrame
-              ? LCtx->getCurrentStackFrame()->getParent()
-              : LCtx;
-
-      if (BTE) {
-        State = addInitializedTemporary(State, BTE, TempLCtx,
-                                        cast<CXXTempObjectRegion>(Target));
-      }
-
-      if (MTE) {
-        State = addTemporaryMaterialization(State, MTE, TempLCtx,
-                                            cast<CXXTempObjectRegion>(Target));
-      }
+      State = addAllNecessaryTemporaryInfo(State, CC, LCtx, Target);
 
       Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
                         ProgramPoint::PreStmtKind);
