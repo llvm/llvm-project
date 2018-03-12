@@ -671,6 +671,12 @@ public:
   /// emit CopyFromReg of the specified type Ty. Return empty SDValue() otherwise.
   SDValue getCopyFromRegs(const Value *V, Type *Ty);
 
+  /// If we have dangling debug info that describes \p Variable, or an
+  /// overlapping part of variable considering the \p Expr, then this method
+  /// weill drop that debug info as it isn't valid any longer.
+  void dropDanglingDebugInfo(const DILocalVariable *Variable,
+                             const DIExpression *Expr);
+
   // resolveDanglingDebugInfo - if we saw an earlier dbg_value referring to V,
   // generate the debug data structures now that we've seen its definition.
   void resolveDanglingDebugInfo(const Value *V, SDValue Val);
