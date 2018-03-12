@@ -24,6 +24,7 @@
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
+#include "HexagonSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -461,9 +462,9 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
       MF.getSubtarget().getRegisterInfo());
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
 
-  if (DisableNewValueJumps) {
+  if (DisableNewValueJumps ||
+      !MF.getSubtarget<HexagonSubtarget>().useNewValueJumps())
     return false;
-  }
 
   int nvjCount = DbgNVJCount;
   int nvjGenerated = 0;

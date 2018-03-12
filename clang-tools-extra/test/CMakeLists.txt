@@ -41,6 +41,7 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-apply-replacements
   clang-change-namespace
   clangd
+  clang-doc
   clang-include-fixer
   clang-move
   clang-query

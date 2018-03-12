@@ -705,7 +705,7 @@ def VSPLTH : VXForm_1<588, (outs vrrc:$vD), (ins u5imm:$UIMM, vrrc:$vB),
                         (vsplth_shuffle:$UIMM v16i8:$vB, (undef)))]>;
 def VSPLTW : VXForm_1<652, (outs vrrc:$vD), (ins u5imm:$UIMM, vrrc:$vB),
                       "vspltw $vD, $vB, $UIMM", IIC_VecPerm,
-                      [(set v16i8:$vD, 
+                      [(set v16i8:$vD,
                         (vspltw_shuffle:$UIMM v16i8:$vB, (undef)))]>;
 let isCodeGenOnly = 1 in {
   def VSPLTBs : VXForm_1<524, (outs vrrc:$vD), (ins u5imm:$UIMM, vfrc:$vB),
@@ -962,7 +962,7 @@ def : Pat<(and v4i32:$A, (vnot_ppc v4i32:$B)),
 
 def : Pat<(fmul v4f32:$vA, v4f32:$vB),
           (VMADDFP $vA, $vB,
-             (v4i32 (VSLW (V_SETALLONES), (V_SETALLONES))))>; 
+             (v4i32 (VSLW (v4i32 (V_SETALLONES)), (v4i32 (V_SETALLONES)))))>; 
 
 // Fused multiply add and multiply sub for packed float.  These are represented
 // separately from the real instructions above, for operations that must have
@@ -991,7 +991,7 @@ def : Pat<(v8i16 (shl v8i16:$vA, v8i16:$vB)),
 def : Pat<(v4i32 (shl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSLW $vA, $vB))>;
 def : Pat<(v1i128 (shl v1i128:$vA, v1i128:$vB)),
-          (v1i128 (VSL (VSLO $vA, $vB), (VSPLTB 15, $vB)))>;
+          (v1i128 (VSL (v16i8 (VSLO $vA, $vB)), (v16i8 (VSPLTB 15, $vB))))>;
 def : Pat<(v16i8 (PPCshl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSLB $vA, $vB))>;
 def : Pat<(v8i16 (PPCshl v8i16:$vA, v8i16:$vB)),
@@ -999,7 +999,7 @@ def : Pat<(v8i16 (PPCshl v8i16:$vA, v8i16:$vB)),
 def : Pat<(v4i32 (PPCshl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSLW $vA, $vB))>;
 def : Pat<(v1i128 (PPCshl v1i128:$vA, v1i128:$vB)),
-          (v1i128 (VSL (VSLO $vA, $vB), (VSPLTB 15, $vB)))>;
+          (v1i128 (VSL (v16i8 (VSLO $vA, $vB)), (v16i8 (VSPLTB 15, $vB))))>;
 
 def : Pat<(v16i8 (srl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRB $vA, $vB))>;
@@ -1008,7 +1008,7 @@ def : Pat<(v8i16 (srl v8i16:$vA, v8i16:$vB)),
 def : Pat<(v4i32 (srl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSRW $vA, $vB))>;
 def : Pat<(v1i128 (srl v1i128:$vA, v1i128:$vB)),
-          (v1i128 (VSR (VSRO $vA, $vB), (VSPLTB 15, $vB)))>;
+          (v1i128 (VSR (v16i8 (VSRO $vA, $vB)), (v16i8 (VSPLTB 15, $vB))))>;
 def : Pat<(v16i8 (PPCsrl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRB $vA, $vB))>;
 def : Pat<(v8i16 (PPCsrl v8i16:$vA, v8i16:$vB)),
@@ -1016,7 +1016,7 @@ def : Pat<(v8i16 (PPCsrl v8i16:$vA, v8i16:$vB)),
 def : Pat<(v4i32 (PPCsrl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSRW $vA, $vB))>;
 def : Pat<(v1i128 (PPCsrl v1i128:$vA, v1i128:$vB)),
-          (v1i128 (VSR (VSRO $vA, $vB), (VSPLTB 15, $vB)))>;
+          (v1i128 (VSR (v16i8 (VSRO $vA, $vB)), (v16i8 (VSPLTB 15, $vB))))>;
 
 def : Pat<(v16i8 (sra v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRAB $vA, $vB))>;
@@ -1078,10 +1078,12 @@ def VMINUD : VX1_Int_Ty<706, "vminud", int_ppc_altivec_vminud, v2i64>;
 // Vector merge 
 def VMRGEW : VXForm_1<1932, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vmrgew $vD, $vA, $vB", IIC_VecFP,
-                      [(set v16i8:$vD, (vmrgew_shuffle v16i8:$vA, v16i8:$vB))]>;
+                      [(set v16i8:$vD,
+                            (v16i8 (vmrgew_shuffle v16i8:$vA, v16i8:$vB)))]>;
 def VMRGOW : VXForm_1<1676, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vmrgow $vD, $vA, $vB", IIC_VecFP,
-                      [(set v16i8:$vD, (vmrgow_shuffle v16i8:$vA, v16i8:$vB))]>;
+                      [(set v16i8:$vD,
+                            (v16i8 (vmrgow_shuffle v16i8:$vA, v16i8:$vB)))]>;
 
 // Match vmrgew(x,x) and vmrgow(x,x)
 def:Pat<(vmrgew_unary_shuffle v16i8:$vA, undef),
@@ -1503,11 +1505,11 @@ def VABSDUW : VXForm_1<1155, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                        [(set v4i32:$vD, (int_ppc_altivec_vabsduw v4i32:$vA, v4i32:$vB))]>;
 
 def : Pat<(v16i8:$vD (abs v16i8:$vA)),
-          (v16i8 (VABSDUB $vA, (V_SET0B)))>;
+          (v16i8 (VABSDUB $vA, (v16i8 (V_SET0B))))>;
 def : Pat<(v8i16:$vD (abs v8i16:$vA)),
-          (v8i16 (VABSDUH $vA, (V_SET0H)))>;
+          (v8i16 (VABSDUH $vA, (v8i16 (V_SET0H))))>;
 def : Pat<(v4i32:$vD (abs v4i32:$vA)),
-          (v4i32 (VABSDUW $vA, (V_SET0)))>;
+          (v4i32 (VABSDUW $vA, (v4i32 (V_SET0))))>;
 
 def : Pat<(v16i8:$vD (abs (sub v16i8:$vA, v16i8:$vB))),
           (v16i8 (VABSDUB $vA, $vB))>;

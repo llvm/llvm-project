@@ -42,12 +42,10 @@ using ::testing::UnorderedElementsAre;
 
 namespace {
 
-static bool diagsContainErrors(ArrayRef<DiagWithFixIts> Diagnostics) {
-  for (const auto &DiagAndFixIts : Diagnostics) {
-    // FIXME: severities returned by clangd should have a descriptive
-    // diagnostic severity enum
-    const int ErrorSeverity = 1;
-    if (DiagAndFixIts.Diag.severity == ErrorSeverity)
+static bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
+  for (auto D : Diagnostics) {
+    if (D.Severity == DiagnosticsEngine::Error ||
+        D.Severity == DiagnosticsEngine::Fatal)
       return true;
   }
   return false;
@@ -55,9 +53,8 @@ static bool diagsContainErrors(ArrayRef<DiagWithFixIts> Diagnostics) {
 
 class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
-  void
-  onDiagnosticsReady(PathRef File,
-                     Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+  void onDiagnosticsReady(PathRef File,
+                          Tagged<std::vector<Diag>> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics.Value);
 
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -82,9 +79,8 @@ private:
 /// least one error.
 class MultipleErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
-  void
-  onDiagnosticsReady(PathRef File,
-                     Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+  void onDiagnosticsReady(PathRef File,
+                          Tagged<std::vector<Diag>> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics.Value);
 
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -612,9 +608,8 @@ int d;
   public:
     TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
 
-    void onDiagnosticsReady(
-        PathRef File,
-        Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+    void onDiagnosticsReady(PathRef File,
+                            Tagged<std::vector<Diag>> Diagnostics) override {
       StringRef FileIndexStr = llvm::sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
 
@@ -881,8 +876,7 @@ TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
     NoConcurrentAccessDiagConsumer(std::promise<void> StartSecondReparse)
         : StartSecondReparse(std::move(StartSecondReparse)) {}
 
-    void onDiagnosticsReady(PathRef,
-                            Tagged<std::vector<DiagWithFixIts>>) override {
+    void onDiagnosticsReady(PathRef, Tagged<std::vector<Diag>>) override {
       ++Count;
       std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());
       ASSERT_TRUE(Lock.owns_lock())
@@ -945,8 +939,8 @@ TEST_F(ClangdVFSTest, InsertIncludes) {
 
   auto FooCpp = testPath("foo.cpp");
   const auto Code = R"cpp(
-#include "z.h"
 #include "x.h"
+#include "z.h"
 
 void f() {}
 )cpp";
@@ -967,7 +961,7 @@ void f() {}
         .contains((llvm::Twine("#include ") + Expected + "").str());
   };
 
-  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"","\"y.h\""));
+  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"", "\"y.h\""));
   EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"\"Y.h\"", "\"Y.h\""));
   EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
   EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
@@ -1000,8 +994,8 @@ TEST_F(ClangdVFSTest, FormatCode) {
 
   auto Path = testPath("foo.cpp");
   std::string Code = R"cpp(
-#include "y.h"
 #include "x.h"
+#include "y.h"
 
 void f(  )  {}
 )cpp";

@@ -48,6 +48,8 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
 
   bool UseMemOps, UseHVX64BOps, UseHVX128BOps;
   bool UseLongCalls;
+  bool UsePackets = false;
+  bool UseNewValueJumps = false;
   bool ModeIEEERndNear;
 
   bool HasMemNoShuf = false;
@@ -153,6 +155,9 @@ public:
   bool useHVXOps() const { return HexagonHVXVersion > Hexagon::ArchEnum::V4; }
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
+  bool usePackets() const { return UsePackets; }
+  bool useNewValueJumps() const { return UseNewValueJumps; }
+
   bool hasMemNoShuf() const { return HasMemNoShuf; }
   bool hasReservedR19() const { return ReservedR19; }
   bool useLongCalls() const { return UseLongCalls; }

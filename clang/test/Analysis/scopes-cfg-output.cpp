@@ -837,7 +837,7 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   4: *[B4.3]
 // CHECK-NEXT:   5: auto &i = *__begin1;
 // CHECK-NEXT:   6: operator=
-// CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, FunctionToPointerDecay, class A &(*)(const class A &) noexcept)
+// CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, FunctionToPointerDecay, class A &(*)(const class A &)
 // CHECK-NEXT:   8: i
 // CHECK-NEXT:   9: b
 // CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, NoOp, const class A)

@@ -29,7 +29,9 @@ namespace format {
 #define LIST_TOKEN_TYPES                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
+  TYPE(AttributeColon)                                                         \
   TYPE(AttributeParen)                                                         \
+  TYPE(AttributeSquare)                                                        \
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \

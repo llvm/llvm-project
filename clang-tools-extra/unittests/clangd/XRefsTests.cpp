@@ -41,8 +41,8 @@ using testing::Matcher;
 using testing::UnorderedElementsAreArray;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(
-      PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {}
+  void onDiagnosticsReady(PathRef File,
+                          Tagged<std::vector<Diag>> Diagnostics) override {}
 };
 
 // FIXME: this is duplicated with FileIndexTests. Share it.
@@ -596,7 +596,9 @@ TEST(GoToInclude, All) {
   auto FooH = testPath("foo.h");
   auto FooHUri = URIForFile{FooH};
 
-  const char *HeaderContents = R"cpp([[]]int a;)cpp";
+  const char *HeaderContents = R"cpp([[]]#pragma once
+                                     int a;
+                                     )cpp";
   Annotations HeaderAnnotations(HeaderContents);
   FS.Files[FooH] = HeaderAnnotations.code();
 

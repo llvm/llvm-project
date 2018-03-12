@@ -94,12 +94,16 @@ public:
 
   uint32_t calcNewIndex(const WasmRelocation &Reloc) const;
   uint32_t calcNewValue(const WasmRelocation &Reloc) const;
+  uint32_t calcExpectedValue(const WasmRelocation &Reloc) const;
 
   const WasmSection *CodeSection = nullptr;
   const WasmSection *DataSection = nullptr;
 
+  // Maps input type indices to output type indices
   std::vector<uint32_t> TypeMap;
   std::vector<bool> TypeIsUsed;
+  // Maps function indices to table indices
+  std::vector<uint32_t> TableEntries;
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
   std::vector<InputGlobal *> Globals;

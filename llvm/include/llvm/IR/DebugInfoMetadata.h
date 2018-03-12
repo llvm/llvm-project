@@ -2415,6 +2415,32 @@ public:
   static Optional<DIExpression *>
   createFragmentExpression(const DIExpression *Expr, unsigned OffsetInBits,
                            unsigned SizeInBits);
+
+  /// Determine the relative position of the fragments described by this
+  /// DIExpression and \p Other.
+  /// Returns -1 if this is entirely before Other, 0 if this and Other overlap,
+  /// 1 if this is entirely after Other.
+  int fragmentCmp(const DIExpression *Other) const {
+    auto Fragment1 = *getFragmentInfo();
+    auto Fragment2 = *Other->getFragmentInfo();
+    unsigned l1 = Fragment1.OffsetInBits;
+    unsigned l2 = Fragment2.OffsetInBits;
+    unsigned r1 = l1 + Fragment1.SizeInBits;
+    unsigned r2 = l2 + Fragment2.SizeInBits;
+    if (r1 <= l2)
+      return -1;
+    else if (r2 <= l1)
+      return 1;
+    else
+      return 0;
+  }
+
+  /// Check if fragments overlap between this DIExpression and \p Other.
+  bool fragmentsOverlap(const DIExpression *Other) const {
+    if (!isFragment() || !Other->isFragment())
+      return true;
+    return fragmentCmp(Other) == 0;
+  }
 };
 
 /// Global variables.

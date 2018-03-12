@@ -15260,6 +15260,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     // Get the type for the field.
     const Type *FDTy = FD->getType().getTypePtr();
+    Qualifiers QS = FD->getType().getQualifiers();
 
     if (!FD->isAnonymousStructOrUnion()) {
       // Remember all fields written by the user.
@@ -15400,7 +15401,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       QualType T = Context.getObjCObjectPointerType(FD->getType());
       FD->setType(T);
     } else if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
-               Record && !ObjCFieldLifetimeErrReported && Record->isUnion()) {
+               Record && !ObjCFieldLifetimeErrReported &&
+               ((!getLangOpts().CPlusPlus &&
+                 QS.getObjCLifetime() == Qualifiers::OCL_Weak) ||
+                Record->isUnion())) {
       // It's an error in ARC or Weak if a field has lifetime.
       // We don't want to report this in a system header, though,
       // so we just make the field unavailable.
@@ -15446,8 +15450,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         Record->setNonTrivialToPrimitiveCopy();
       if (FT.isDestructedType())
         Record->setNonTrivialToPrimitiveDestroy();
-      if (!FT.canPassInRegisters())
-        Record->setCanPassInRegisters(false);
     }
 
     if (Record && FD->getType().isVolatileQualified())
