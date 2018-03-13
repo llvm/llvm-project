@@ -67,6 +67,7 @@
 #include <assert.h>    // for assert
 #include <ctype.h>     // for isspace
 #include <errno.h>     // for EINTR, errno
+#include <locale.h>    // for setlocale
 #include <stdint.h>    // for uint32_t, UINT32_MAX
 #include <stdio.h>     // for size_t, fprintf, feof
 #include <string.h>    // for strlen

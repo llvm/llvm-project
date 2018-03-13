@@ -1,10 +1,14 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: echo "SECTIONS { . = SIZEOF_HEADERS; \
-# RUN:         .tbss : { *(.tbss) }         \
-# RUN:         .foo : { bar = .; } }" > %t.script
-# RUN: ld.lld -o %t --script %t.script %t.o
+# RUN: echo '.section .tbss,"awT",@nobits; .quad 0' \
+# RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t.o
+# RUN: ld.lld -o %t --script %s %t.o
 # RUN: llvm-readobj -s %t | FileCheck %s
+
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .tbss : { *(.tbss) }
+  .foo : { bar = .; }
+}
 
 ## Check .foo does not get SHF_TLS flag.
 # CHECK:     Section {
@@ -15,6 +19,3 @@
 # CHECK-NEXT:    SHF_ALLOC
 # CHECK-NEXT:    SHF_WRITE
 # CHECK-NEXT:  ]
-
-.section .tbss,"awT",@nobits
-.quad 0

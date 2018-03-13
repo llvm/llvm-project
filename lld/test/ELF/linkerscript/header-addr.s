@@ -1,12 +1,14 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: echo "PHDRS {all PT_LOAD PHDRS;} \
-# RUN:       SECTIONS { \
-# RUN:       . = 0x2000 + SIZEOF_HEADERS; \
-# RUN:       .text : {*(.text)} :all \
-# RUN:     }" > %t.script
-# RUN: ld.lld --hash-style=sysv -o %t.so --script %t.script %t.o -shared
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux /dev/null -o %t.o
+# RUN: ld.lld --hash-style=sysv -o %t.so --script %s %t.o -shared
 # RUN: llvm-readobj -program-headers %t.so | FileCheck %s
+
+PHDRS { all PT_LOAD PHDRS; }
+
+SECTIONS {
+  . = 0x2000 + SIZEOF_HEADERS;
+  .text : {*(.text)} :all
+}
 
 # CHECK:      ProgramHeaders [
 # CHECK-NEXT:   ProgramHeader {
@@ -25,7 +27,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# RUN: ld.lld --hash-style=sysv -o %t2.so --script %t.script %t.o -shared -z max-page-size=0x2000
+# RUN: ld.lld --hash-style=sysv -o %t2.so --script %s %t.o -shared -z max-page-size=0x2000
 # RUN: llvm-readobj -program-headers %t2.so \
 # RUN:   | FileCheck --check-prefix=MAXPAGE %s
 
