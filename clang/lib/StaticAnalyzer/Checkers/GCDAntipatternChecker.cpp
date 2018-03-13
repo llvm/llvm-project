@@ -121,11 +121,11 @@ void GCDAntipatternChecker::checkASTCodeBody(const Decl *D,
             hasCanonicalType(blockPointerType())
             ));
 
-  auto ArgCallsSignalM = hasArgument(0, hasDescendant(callExpr(
+  auto ArgCallsSignalM = hasAnyArgument(stmt(hasDescendant(callExpr(
           allOf(
               callsName("dispatch_semaphore_signal"),
               equalsBoundArgDecl(0, SemaphoreBinding)
-              ))));
+              )))));
 
   auto HasBlockAndCallsSignalM = allOf(HasBlockArgumentM, ArgCallsSignalM);
 
