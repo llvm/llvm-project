@@ -24,6 +24,7 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_get_value_as_unsigned_sbapi(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
         self.build()
@@ -34,7 +35,7 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
 
     def getvalue_commands(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_source_regexp(
             self, r"break here", num_expected_locations=1)
 

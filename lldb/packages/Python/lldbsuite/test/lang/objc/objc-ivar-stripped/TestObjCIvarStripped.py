@@ -31,12 +31,12 @@ class TestObjCIvarStripped(TestBase):
     def test_with_python_api(self):
         """Test that we can find stripped Objective-C ivars in the runtime"""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out.stripped")
+        exe = self.getBuildArtifact("a.out.stripped")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        self.dbg.HandleCommand("add-dsym a.out.dSYM")
+        self.dbg.HandleCommand("add-dsym "+self.getBuildArtifact("a.out.dSYM"))
 
         breakpoint = target.BreakpointCreateByLocation(
             self.main_source, self.stop_line)

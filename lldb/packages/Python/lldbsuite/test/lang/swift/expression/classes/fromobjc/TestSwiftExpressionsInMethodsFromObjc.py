@@ -26,6 +26,7 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_expressions_from_objc(self):
         """Tests that we can run simple Swift expressions correctly"""
         self.build()
@@ -51,7 +52,7 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
     def do_test(self):
         """Test simple swift expressions"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

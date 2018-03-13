@@ -66,7 +66,7 @@ class TestObjCIVarDiscovery(TestBase):
         """Test that we can correctly see ivars from the Objective-C runtime"""
         exe_name = "main"
         src_main = lldb.SBFileSpec("main.swift")
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         if dbg:
             self.runCmd("type category disable runtime-synthetics")

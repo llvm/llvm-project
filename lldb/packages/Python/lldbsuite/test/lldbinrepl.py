@@ -152,7 +152,7 @@ class REPLTest(TestBase):
         self.using_dsym = False
         self.BuildSourceFile()
         self.BuildMakefile()
-        self.buildDwarf()
+        self.buildDefault()
         self.do_test()
 
     def __test_with_dwo(self):
@@ -166,7 +166,7 @@ class REPLTest(TestBase):
 
     def do_test(self):
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
         target = self.dbg.CreateTarget(exe)
 
         parser = CommandParser(self)

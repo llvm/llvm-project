@@ -122,9 +122,13 @@ public:
 
   static ConstString GetPluginNameStatic();
 
+  /// Create a SwiftASTContext from a Module.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module *module, Target *target,
-                                           const char *compiler_options);
+                                           Module &module);
+  /// Create a SwiftASTContext from a Target.
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Target &target,
+                                           const char *extra_options);
 
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
@@ -503,9 +507,6 @@ public:
   static bool GetProtocolTypeInfo(const CompilerType &type,
                                   ProtocolInfo &protocol_info);
 
-  static bool IsOptionalChain(CompilerType type, CompilerType &payload_type,
-                              uint32_t &depth);
-
   enum class TypeAllocationStrategy { eInline, ePointer, eDynamic, eUnknown };
 
   static TypeAllocationStrategy GetAllocationStrategy(const CompilerType &type);
@@ -632,8 +633,10 @@ public:
 
   size_t GetNumTemplateArguments(void *type) override;
 
-  CompilerType GetTemplateArgument(void *type, size_t idx,
-                                   lldb::TemplateArgumentKind &kind) override;
+  lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx) override;
+  CompilerType GetUnboundGenericType(void *type, size_t idx);
+  CompilerType GetBoundGenericType(void *type, size_t idx);
+  CompilerType GetGenericArgumentType(void *type, size_t idx) override;
 
   CompilerType GetTypeForFormatters(void *type) override;
 
@@ -747,9 +750,6 @@ public:
 
   bool IsReferenceType(void *type, CompilerType *pointee_type,
                        bool *is_rvalue) override;
-
-  static bool IsInoutType(const CompilerType &compiler_type,
-                          CompilerType *original_type);
 
   bool
   ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;

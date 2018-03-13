@@ -19,14 +19,18 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeMap.h"
+#include "lldb/Utility/RegularExpression.h"
 
 #include "llvm/DebugInfo/PDB/GenericError.h"
+#include "llvm/DebugInfo/PDB/IPDBDataStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
+#include "llvm/DebugInfo/PDB/IPDBTable.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompilandDetails.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFuncDebugEnd.h"
@@ -93,6 +97,10 @@ SymbolFilePDB::SymbolFilePDB(lldb_private::ObjectFile *object_file)
 SymbolFilePDB::~SymbolFilePDB() {}
 
 uint32_t SymbolFilePDB::CalculateAbilities() {
+  uint32_t abilities = 0;
+  if (!m_obj_file)
+    return 0;
+
   if (!m_session_up) {
     // Lazily load and match the PDB file, but only do this once.
     std::string exePath = m_obj_file->GetFileSpec().GetPath();
@@ -100,10 +108,46 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
                                 m_session_up);
     if (error) {
       llvm::consumeError(std::move(error));
-      return 0;
+      auto module_sp = m_obj_file->GetModule();
+      if (!module_sp)
+        return 0;
+      // See if any symbol file is specified through `--symfile` option.
+      FileSpec symfile = module_sp->GetSymbolFileFileSpec();
+      if (!symfile)
+        return 0;
+      error = loadDataForPDB(PDB_ReaderType::DIA,
+                             llvm::StringRef(symfile.GetPath()),
+                             m_session_up);
+      if (error) {
+        llvm::consumeError(std::move(error));
+        return 0;
+      }
     }
   }
-  return CompileUnits | LineTables;
+  if (!m_session_up.get())
+    return 0;
+
+  auto enum_tables_up = m_session_up->getEnumTables();
+  if (!enum_tables_up)
+    return 0;
+  while (auto table_up = enum_tables_up->getNext()) {
+    if (table_up->getItemCount() == 0)
+      continue;
+    auto type = table_up->getTableType();
+    switch (type) {
+    case PDB_TableType::Symbols:
+      // This table represents a store of symbols with types listed in
+      // PDBSym_Type
+      abilities |= (CompileUnits | Functions | Blocks |
+                    GlobalVariables | LocalVariables | VariableTypes);
+      break;
+    case PDB_TableType::LineNumbers:
+      abilities |= LineTables;
+      break;
+    default: break;
+    }
+  }
+  return abilities;
 }
 
 void SymbolFilePDB::InitializeObject() {
@@ -250,7 +294,8 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
     return nullptr;
 
   lldb::TypeSP result = pdb->CreateLLDBTypeFromPDBType(*pdb_type);
-  m_types.insert(std::make_pair(type_uid, result));
+  if (result.get())
+    m_types.insert(std::make_pair(type_uid, result));
   return result.get();
 }
 
@@ -385,19 +430,16 @@ uint32_t SymbolFilePDB::FindTypes(
 
   std::string name_str = name.AsCString();
 
-  // If this might be a regex, we have to return EVERY symbol and process them
-  // one by one, which is going to destroy performance on large PDB files.  So
-  // try really hard not to use a regex match.
-  if (name_str.find_first_of("[]?*.-+\\") != std::string::npos)
-    FindTypesByRegex(name_str, max_matches, types);
-  else
-    FindTypesByName(name_str, max_matches, types);
+  // There is an assumption 'name' is not a regex
+  FindTypesByName(name_str, max_matches, types);
+   
   return types.GetSize();
 }
 
-void SymbolFilePDB::FindTypesByRegex(const std::string &regex,
-                                     uint32_t max_matches,
-                                     lldb_private::TypeMap &types) {
+void
+SymbolFilePDB::FindTypesByRegex(const lldb_private::RegularExpression &regex,
+                                uint32_t max_matches,
+                                lldb_private::TypeMap &types) {
   // When searching by regex, we need to go out of our way to limit the search
   // space as much as possible since this searches EVERYTHING in the PDB,
   // manually doing regex comparisons.  PDB library isn't optimized for regex
@@ -408,8 +450,6 @@ void SymbolFilePDB::FindTypesByRegex(const std::string &regex,
                                   PDB_SymType::UDT};
   auto global = m_session_up->getGlobalScope();
   std::unique_ptr<IPDBEnumSymbols> results;
-
-  std::regex re(regex);
 
   uint32_t matches = 0;
 
@@ -433,7 +473,7 @@ void SymbolFilePDB::FindTypesByRegex(const std::string &regex,
         continue;
       }
 
-      if (!std::regex_match(type_name, re))
+      if (!regex.Execute(type_name))
         continue;
 
       // This should cause the type to get cached and stored in the `m_types`

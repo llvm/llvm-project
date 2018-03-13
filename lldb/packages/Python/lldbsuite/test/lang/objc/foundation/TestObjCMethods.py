@@ -35,7 +35,7 @@ class FoundationTestCase(TestBase):
     def test_break(self):
         """Test setting objc breakpoints using '_regexp-break' and 'breakpoint set'."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Stop at +[NSString stringWithFormat:].
@@ -117,7 +117,7 @@ class FoundationTestCase(TestBase):
     def test_data_type_and_expr(self):
         """Lookup objective-c data types and evaluate expressions."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Stop at -[MyString description].
@@ -230,7 +230,7 @@ class FoundationTestCase(TestBase):
         self.build()
         # See: <rdar://problem/8717050> lldb needs to use the ObjC runtime symbols for ivar offsets
         # Only fails for the ObjC 2.0 runtime.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -280,7 +280,7 @@ class FoundationTestCase(TestBase):
     def test_expression_lookups_objc(self):
         """Test running an expression detect spurious debug info lookups (DWARF)."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Stop at -[MyString initWithNSString:].
@@ -296,7 +296,7 @@ class FoundationTestCase(TestBase):
         # Log any DWARF lookups
         ++file_index
         logfile = os.path.join(
-            os.getcwd(),
+            self.getBuildDir(),
             "dwarf-lookups-" +
             self.getArchitecture() +
             "-" +

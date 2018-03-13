@@ -38,7 +38,7 @@ class ChangeValueAPITestCase(TestBase):
         d = {'EXE': self.exe_name}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

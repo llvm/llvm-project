@@ -53,7 +53,7 @@ class TestSwiftStructChangeRerun(TestBase):
         print 'build with main1.swift'
         self.build()
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

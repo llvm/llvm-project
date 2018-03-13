@@ -51,7 +51,7 @@ class CppValueCastTestCase(TestBase):
 
     def do_sbvalue_cast(self, exe_name):
         """Test SBValue::Cast(SBType) API for C++ types."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create a target from the debugger.
 

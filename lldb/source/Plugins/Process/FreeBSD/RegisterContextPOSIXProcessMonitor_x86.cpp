@@ -58,6 +58,9 @@ RegisterContextPOSIXProcessMonitor_x86_64::
   // Store byte offset of fctrl (i.e. first register of FPR) wrt 'UserArea'
   const RegisterInfo *reg_info_fctrl = GetRegisterInfoByName("fctrl");
   m_fctrl_offset_in_userarea = reg_info_fctrl->byte_offset;
+
+  m_iovec.iov_base = &m_fpr.xsave;
+  m_iovec.iov_len = sizeof(m_fpr.xsave);
 }
 
 ProcessMonitor &RegisterContextPOSIXProcessMonitor_x86_64::GetMonitor() {
@@ -74,12 +77,12 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::ReadGPR() {
 bool RegisterContextPOSIXProcessMonitor_x86_64::ReadFPR() {
   ProcessMonitor &monitor = GetMonitor();
   if (GetFPRType() == eFXSAVE)
-    return monitor.ReadFPR(m_thread.GetID(), &m_fpr.xstate.fxsave,
-                           sizeof(m_fpr.xstate.fxsave));
+    return monitor.ReadFPR(m_thread.GetID(), &m_fpr.fxsave,
+                           sizeof(m_fpr.fxsave));
 
   if (GetFPRType() == eXSAVE)
     return monitor.ReadRegisterSet(m_thread.GetID(), &m_iovec,
-                                   sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
+                                   sizeof(m_fpr.xsave), NT_X86_XSTATE);
   return false;
 }
 
@@ -91,12 +94,12 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::WriteGPR() {
 bool RegisterContextPOSIXProcessMonitor_x86_64::WriteFPR() {
   ProcessMonitor &monitor = GetMonitor();
   if (GetFPRType() == eFXSAVE)
-    return monitor.WriteFPR(m_thread.GetID(), &m_fpr.xstate.fxsave,
-                            sizeof(m_fpr.xstate.fxsave));
+    return monitor.WriteFPR(m_thread.GetID(), &m_fpr.fxsave,
+                            sizeof(m_fpr.fxsave));
 
   if (GetFPRType() == eXSAVE)
     return monitor.WriteRegisterSet(m_thread.GetID(), &m_iovec,
-                                    sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
+                                    sizeof(m_fpr.xsave), NT_X86_XSTATE);
   return false;
 }
 
@@ -209,17 +212,14 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::ReadRegister(
 
     if (byte_order != ByteOrder::eByteOrderInvalid) {
       if (reg >= m_reg_info.first_st && reg <= m_reg_info.last_st)
-        value.SetBytes(
-            m_fpr.xstate.fxsave.stmm[reg - m_reg_info.first_st].bytes,
-            reg_info->byte_size, byte_order);
+        value.SetBytes(m_fpr.fxsave.stmm[reg - m_reg_info.first_st].bytes,
+                       reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_mm && reg <= m_reg_info.last_mm)
-        value.SetBytes(
-            m_fpr.xstate.fxsave.stmm[reg - m_reg_info.first_mm].bytes,
-            reg_info->byte_size, byte_order);
+        value.SetBytes(m_fpr.fxsave.stmm[reg - m_reg_info.first_mm].bytes,
+                       reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_xmm && reg <= m_reg_info.last_xmm)
-        value.SetBytes(
-            m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
-            reg_info->byte_size, byte_order);
+        value.SetBytes(m_fpr.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
+                       reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_ymm && reg <= m_reg_info.last_ymm) {
         // Concatenate ymm using the register halves in xmm.bytes and ymmh.bytes
         if (GetFPRType() == eXSAVE && CopyXSTATEtoYMM(reg, byte_order))
@@ -233,7 +233,7 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::ReadRegister(
     return false;
   }
 
-  // Get pointer to m_fpr.xstate.fxsave variable and set the data from it.
+  // Get pointer to m_fpr.fxsave variable and set the data from it.
   // Byte offsets of all registers are calculated wrt 'UserArea' structure.
   // However, ReadFPR() reads fpu registers {using ptrace(PT_GETFPREGS,..)}
   // and stores them in 'm_fpr' (of type FPR structure). To extract values of
@@ -276,15 +276,15 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::WriteRegister(
   if (IsFPR(reg, GetFPRType())) {
     if (reg_info->encoding == eEncodingVector) {
       if (reg >= m_reg_info.first_st && reg <= m_reg_info.last_st)
-        ::memcpy(m_fpr.xstate.fxsave.stmm[reg - m_reg_info.first_st].bytes,
+        ::memcpy(m_fpr.fxsave.stmm[reg - m_reg_info.first_st].bytes,
                  value.GetBytes(), value.GetByteSize());
 
       if (reg >= m_reg_info.first_mm && reg <= m_reg_info.last_mm)
-        ::memcpy(m_fpr.xstate.fxsave.stmm[reg - m_reg_info.first_mm].bytes,
+        ::memcpy(m_fpr.fxsave.stmm[reg - m_reg_info.first_mm].bytes,
                  value.GetBytes(), value.GetByteSize());
 
       if (reg >= m_reg_info.first_xmm && reg <= m_reg_info.last_xmm)
-        ::memcpy(m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
+        ::memcpy(m_fpr.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
                  value.GetBytes(), value.GetByteSize());
 
       if (reg >= m_reg_info.first_ymm && reg <= m_reg_info.last_ymm) {
@@ -299,7 +299,7 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::WriteRegister(
           return false;
       }
     } else {
-      // Get pointer to m_fpr.xstate.fxsave variable and set the data to it.
+      // Get pointer to m_fpr.fxsave variable and set the data to it.
       // Byte offsets of all registers are calculated wrt 'UserArea' structure.
       // However, WriteFPR() takes m_fpr (of type FPR structure) and writes only
       // fpu
@@ -353,7 +353,7 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::ReadAllRegisterValues(
       ::memcpy(dst, &m_gpr_x86_64, GetGPRSize());
       dst += GetGPRSize();
       if (GetFPRType() == eFXSAVE)
-        ::memcpy(dst, &m_fpr.xstate.fxsave, sizeof(m_fpr.xstate.fxsave));
+        ::memcpy(dst, &m_fpr.fxsave, sizeof(m_fpr.fxsave));
     }
 
     if (GetFPRType() == eXSAVE) {
@@ -385,9 +385,9 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::WriteAllRegisterValues(
       if (WriteGPR()) {
         src += GetGPRSize();
         if (GetFPRType() == eFXSAVE)
-          ::memcpy(&m_fpr.xstate.fxsave, src, sizeof(m_fpr.xstate.fxsave));
+          ::memcpy(&m_fpr.fxsave, src, sizeof(m_fpr.fxsave));
         if (GetFPRType() == eXSAVE)
-          ::memcpy(&m_fpr.xstate.xsave, src, sizeof(m_fpr.xstate.xsave));
+          ::memcpy(&m_fpr.xsave, src, sizeof(m_fpr.xsave));
 
         success = WriteFPR();
         if (success) {

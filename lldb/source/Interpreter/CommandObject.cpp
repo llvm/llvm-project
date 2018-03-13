@@ -17,8 +17,8 @@
 #include <stdlib.h>
 
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Utility/ArchSpec.h"
 
 // These are for the Sourcename completers.
 // FIXME: Make a separate file for the completers.
@@ -57,7 +57,7 @@ llvm::StringRef CommandObject::GetHelp() { return m_cmd_help_short; }
 llvm::StringRef CommandObject::GetHelpLong() { return m_cmd_help_long; }
 
 llvm::StringRef CommandObject::GetSyntax() {
-  if (m_cmd_syntax.empty())
+  if (!m_cmd_syntax.empty())
     return m_cmd_syntax;
 
   StreamString syntax_str;

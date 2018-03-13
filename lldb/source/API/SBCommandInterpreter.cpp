@@ -161,6 +161,10 @@ bool SBCommandInterpreter::IsActive() {
   return (IsValid() ? m_opaque_ptr->IsActive() : false);
 }
 
+bool SBCommandInterpreter::WasInterrupted() const {
+  return (IsValid() ? m_opaque_ptr->WasInterrupted() : false);
+}
+
 const char *SBCommandInterpreter::GetIOHandlerControlSequence(char ch) {
   return (IsValid()
               ? m_opaque_ptr->GetDebugger()

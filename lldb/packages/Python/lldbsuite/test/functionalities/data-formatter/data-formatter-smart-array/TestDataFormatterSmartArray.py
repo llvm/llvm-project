@@ -20,6 +20,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24462, Data formatters have problems on Windows")
+    @decorators.skipIf(debug_info=["gmodules"]) # rdar://36996703
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()
@@ -33,7 +34,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
     def data_formatter_commands(self):
         """Test that that file and class static variables display correctly."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)

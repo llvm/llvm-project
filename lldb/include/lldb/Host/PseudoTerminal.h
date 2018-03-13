@@ -9,14 +9,13 @@
 
 #ifndef LLDB_HOST_PSEUDOTERMINAL_H
 #define LLDB_HOST_PSEUDOTERMINAL_H
-#if defined(__cplusplus)
 
 #include <fcntl.h>
 #include <string>
 
 #include "lldb/lldb-defines.h"
 
-namespace lldb_utility {
+namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class PseudoTerminal PseudoTerminal.h "lldb/Host/PseudoTerminal.h"
@@ -246,7 +245,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PseudoTerminal);
 };
 
-} // namespace lldb_utility
+} // namespace lldb_private
 
-#endif // #if defined(__cplusplus)
 #endif // #ifndef liblldb_PseudoTerminal_h_

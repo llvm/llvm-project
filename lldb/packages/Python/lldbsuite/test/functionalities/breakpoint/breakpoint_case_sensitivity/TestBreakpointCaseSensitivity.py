@@ -39,21 +39,21 @@ class BreakpointCaseSensitivityTestCase(TestBase):
         if case_insensitive:
             exe = exe.upper()
 
-        exe = os.path.join(os.getcwd(), exe)
+        exe = self.getBuildArtifact(exe)
 
         # Create a target by the debugger.
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
-        cwd = os.getcwd()
+        srcdir = self.getSourceDir()
 
         # try both BreakpointCreateByLocation and BreakpointCreateBySourceRegex
         for regex in [False, True]:
             # should always hit
             self.check_breakpoint('main.c', regex, True)
             # should always hit
-            self.check_breakpoint(os.path.join(cwd, 'main.c'), regex, True)
+            self.check_breakpoint(os.path.join(srcdir, 'main.c'), regex, True)
             # different case for directory
-            self.check_breakpoint(os.path.join(cwd.upper(), 'main.c'),
+            self.check_breakpoint(os.path.join(srcdir.upper(), 'main.c'),
                                   regex,
                                   case_insensitive)
             # different case for file
@@ -61,7 +61,7 @@ class BreakpointCaseSensitivityTestCase(TestBase):
                                   regex,
                                   case_insensitive)
             # different case for both
-            self.check_breakpoint(os.path.join(cwd.upper(), 'Main.c'),
+            self.check_breakpoint(os.path.join(srcdir.upper(), 'Main.c'),
                                   regex,
                                   case_insensitive)
 

@@ -8,16 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ModuleList.h"
-
-#include "lldb/Core/ArchSpec.h"     // for ArchSpec
 #include "lldb/Core/FileSpecList.h" // for FileSpecList
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Symbols.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/OptionValueFileSpec.h"
+#include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h" // for SymbolContextList, SymbolCon...
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/ArchSpec.h"    // for ArchSpec
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for GetLogIfAnyCategoriesSet
@@ -32,6 +34,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h" // for fs
+#include "clang/Driver/Driver.h"
 
 #include <chrono> // for operator!=, time_point
 #include <memory> // for shared_ptr
@@ -62,6 +65,50 @@ using namespace lldb;
 using namespace lldb_private;
 
 static bool KeepLookingInDylinker(SymbolContextList &sc_list, size_t start_idx);
+
+namespace {
+
+PropertyDefinition g_properties[] = {
+    {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
+     nullptr,
+     "Control the use of external tools or libraries to locate symbol files. "
+     "On macOS, Spotlight is used to locate a matching .dSYM bundle based on "
+     "the UUID of the executable."},
+    {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
+     nullptr,
+     "The path to the clang modules cache directory (-fmodules-cache-path)."},
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+
+enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
+
+} // namespace
+
+ModuleListProperties::ModuleListProperties() {
+  m_collection_sp.reset(new OptionValueProperties(ConstString("symbols")));
+  m_collection_sp->Initialize(g_properties);
+
+  llvm::SmallString<128> path;
+  clang::driver::Driver::getDefaultModuleCachePath(path);
+  SetClangModulesCachePath(path);
+}
+
+bool ModuleListProperties::GetEnableExternalLookup() const {
+  const uint32_t idx = ePropertyEnableExternalLookup;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
+FileSpec ModuleListProperties::GetClangModulesCachePath() const {
+  return m_collection_sp
+      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+                                                ePropertyClangModulesCachePath)
+      ->GetCurrentValue();
+}
+
+bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
+  return m_collection_sp->SetPropertyAtIndexAsString(
+      nullptr, ePropertyClangModulesCachePath, path);
+}
 
 ModuleList::ModuleList()
     : m_modules(), m_modules_mutex(), m_notifier(nullptr) {}
@@ -746,17 +793,32 @@ size_t ModuleList::GetIndexForModule(const Module *module) const {
   return LLDB_INVALID_INDEX32;
 }
 
-static ModuleList &GetSharedModuleList() {
-  static ModuleList *g_shared_module_list = nullptr;
-  static std::once_flag g_once_flag;
+namespace {
+struct SharedModuleListInfo {
+  ModuleList module_list;
+  ModuleListProperties module_list_properties;
+};
+}
+static SharedModuleListInfo &GetSharedModuleListInfo()
+{
+  static SharedModuleListInfo *g_shared_module_list_info = nullptr;
+  static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
     // NOTE: Intentionally leak the module list so a program doesn't have to
     // cleanup all modules and object files as it exits. This just wastes time
     // doing a bunch of cleanup that isn't required.
-    if (g_shared_module_list == nullptr)
-      g_shared_module_list = new ModuleList(); // <--- Intentional leak!!!
+    if (g_shared_module_list_info == nullptr)
+      g_shared_module_list_info = new SharedModuleListInfo();
   });
-  return *g_shared_module_list;
+  return *g_shared_module_list_info;
+}
+
+static ModuleList &GetSharedModuleList() {
+  return GetSharedModuleListInfo().module_list;
+}
+
+ModuleListProperties &ModuleList::GetGlobalModuleListProperties() {
+  return GetSharedModuleListInfo().module_list_properties;
 }
 
 bool ModuleList::ModuleIsInCache(const Module *module_ptr) {

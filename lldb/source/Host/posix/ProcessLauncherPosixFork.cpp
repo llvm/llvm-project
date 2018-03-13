@@ -29,7 +29,7 @@
 #define PT_TRACE_ME PTRACE_TRACEME
 #endif
 
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 21
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 15
 #include <linux/personality.h>
 #elif defined(__linux__)
 #include <sys/personality.h>
@@ -95,10 +95,6 @@ static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
 
 static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
                                               const ProcessLaunchInfo &info) {
-  // First, make sure we disable all logging. If we are logging to stdout, our
-  // logs can be mistaken for inferior output.
-  Log::DisableAllLogChannels();
-
   // Do not inherit setgid powers.
   if (setgid(getgid()) != 0)
     ExitWithError(error_fd, "setgid");

@@ -25,7 +25,7 @@ class TestObjCGlobalVar(TestBase):
     def test_with_python_api(self):
         """Test that a global ObjC object found before the process is started updates correctly."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

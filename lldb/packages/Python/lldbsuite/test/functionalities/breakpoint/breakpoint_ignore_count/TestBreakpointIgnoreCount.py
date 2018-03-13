@@ -46,7 +46,7 @@ class BreakpointIgnoreCountTestCase(TestBase):
 
     def breakpoint_ignore_count(self):
         """Exercise breakpoint ignore count with 'breakpoint set -i <count>'."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Create a breakpoint in main.c at line1.
@@ -101,7 +101,7 @@ class BreakpointIgnoreCountTestCase(TestBase):
 
     def breakpoint_ignore_count_python(self):
         """Use Python APIs to set breakpoint ignore count."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

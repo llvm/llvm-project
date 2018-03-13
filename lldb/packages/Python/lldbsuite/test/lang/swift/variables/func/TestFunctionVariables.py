@@ -25,6 +25,7 @@ class TestFunctionVariables(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_function_variables(self):
         """Tests that function type variables display correctly"""
         self.build()
@@ -38,7 +39,7 @@ class TestFunctionVariables(TestBase):
     def do_test(self):
         """Tests that Enum variables display correctly"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

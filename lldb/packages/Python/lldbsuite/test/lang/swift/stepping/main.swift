@@ -182,7 +182,7 @@ func main () -> Void
 
     switch point  // At the beginning of the switch. 
     {
-        case (0, 0):  // Where swift currently thinks the switch begins...       
+        case (0, 0):
             print("(0, 0) is at the origin")
         case (_, 0):
             print("(\(point.0), 0) is on the x-axis")

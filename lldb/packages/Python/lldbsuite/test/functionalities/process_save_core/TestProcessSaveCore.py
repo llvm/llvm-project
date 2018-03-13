@@ -21,8 +21,8 @@ class ProcessSaveCoreTestCase(TestBase):
     def test_cannot_save_core_unless_process_stopped(self):
         """Test that SaveCore fails if the process isn't stopped."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-        core = os.path.join(os.getcwd(), "core.dmp")
+        exe = self.getBuildArtifact("a.out")
+        core = self.getBuildArtifact("core.dmp")
         target = self.dbg.CreateTarget(exe)
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
@@ -35,8 +35,8 @@ class ProcessSaveCoreTestCase(TestBase):
     def test_save_windows_mini_dump(self):
         """Test that we can save a Windows mini dump."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-        core = os.path.join(os.getcwd(), "core.dmp")
+        exe = self.getBuildArtifact("a.out")
+        core = self.getBuildArtifact("core.dmp")
         try:
             target = self.dbg.CreateTarget(exe)
             breakpoint = target.BreakpointCreateByName("bar")

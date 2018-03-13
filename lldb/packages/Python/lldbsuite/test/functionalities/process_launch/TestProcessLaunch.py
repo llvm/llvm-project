@@ -33,7 +33,7 @@ class ProcessLaunchTestCase(TestBase):
     def test_io(self):
         """Test that process launch I/O redirection flags work properly."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out"])
 
@@ -125,14 +125,15 @@ class ProcessLaunchTestCase(TestBase):
         d = {'CXX_SOURCES': 'print_cwd.cpp'}
         self.build(dictionary=d)
         self.setTearDownCleanup(d)
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe)
 
         mywd = 'my_working_dir'
         out_file_name = "my_working_dir_test.out"
         err_file_name = "my_working_dir_test.err"
 
-        my_working_dir_path = os.path.join(os.getcwd(), mywd)
+        my_working_dir_path = self.getBuildArtifact(mywd)
+        lldbutil.mkdir_p(my_working_dir_path)
         out_file_path = os.path.join(my_working_dir_path, out_file_name)
         err_file_path = os.path.join(my_working_dir_path, err_file_name)
 
@@ -195,7 +196,7 @@ class ProcessLaunchTestCase(TestBase):
         d = {'CXX_SOURCES': source}
         self.build(dictionary=d)
         self.setTearDownCleanup(d)
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         evil_var = 'INIT*MIDDLE}TAIL'
 

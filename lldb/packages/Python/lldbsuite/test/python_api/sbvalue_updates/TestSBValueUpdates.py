@@ -28,7 +28,7 @@ class TestSBValueUpdates(lldbtest.TestBase):
         """Test that an SBValue can update and format itself as its type
         changes"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

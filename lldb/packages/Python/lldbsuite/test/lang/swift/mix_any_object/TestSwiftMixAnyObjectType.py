@@ -26,7 +26,6 @@ class TestSwiftMixAnyObjectType(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureDarwin("rdar://35650693")
     def test_any_object_type(self):
         """Test the AnyObject type in different combinations"""
         self.build()
@@ -40,7 +39,7 @@ class TestSwiftMixAnyObjectType(TestBase):
     def do_test(self):
         """Test the AnyObject type in different combinations"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

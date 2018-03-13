@@ -97,7 +97,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def plain_data_formatter_commands(self):
         """Test basic ObjC formatting behavior."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
@@ -163,7 +163,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def appkit_common_data_formatters_command(self):
         """Test formatters for AppKit classes."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
@@ -244,7 +244,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def nsdata_data_formatter_commands(self):
         self.expect(
-            'frame variable immutableData mutableData data_ref mutable_data_ref mutable_string_ref',
+            'frame variable immutableData mutableData data_ref mutable_data_ref mutable_string_ref concreteData concreteMutableData',
             substrs=[
                 '(NSData *) immutableData = ',
                 ' 4 bytes',
@@ -255,7 +255,12 @@ class ObjCDataFormatterTestCase(TestBase):
                 '(CFMutableDataRef) mutable_data_ref = ',
                 '@"5 bytes"',
                 '(CFMutableStringRef) mutable_string_ref = ',
-                ' @"Wish ya knew"'])
+                ' @"Wish ya knew"',
+                '(NSData *) concreteData = ',
+                ' 100000 bytes',
+                '(NSMutableData *) concreteMutableData = ',
+                ' 100000 bytes'])
+
 
     def nsurl_data_formatter_commands(self):
         self.expect(
@@ -361,7 +366,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def expr_objc_data_formatter_commands(self):
         """Test common cases of expression parser <--> formatters interaction."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
@@ -409,7 +414,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def cf_data_formatter_commands(self):
         """Test formatters for Core OSX frameworks."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
@@ -464,7 +469,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def kvo_data_formatter_commands(self):
         """Test the behavior of formatters when KVO is in use."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, num_expected_locations=1, loc_exact=True)

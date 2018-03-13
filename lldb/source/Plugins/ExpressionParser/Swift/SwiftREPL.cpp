@@ -31,6 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/CleanUp.h"
 
 #include "swift/Basic/Version.h"
 #include "swift/Frontend/Frontend.h"
@@ -44,201 +45,213 @@ lldb::REPLSP SwiftREPL::CreateInstance(Status &err, lldb::LanguageType language,
                                        Debugger *debugger, Target *target,
                                        const char *repl_options) {
   if (language != eLanguageTypeSwift) {
-    return lldb::REPLSP();
+    // TODO: EnumerateSupportedLanguages should make checking for this
+    // unnecessary.
+    return nullptr;
   }
 
-  if (target) {
-    // Sanity check the target to make sure a REPL would work here.
-    if (!target->GetProcessSP() || !target->GetProcessSP()->IsAlive()) {
-      err.SetErrorString("can't launch a Swift REPL without a running process");
-      return lldb::REPLSP();
-    }
-
-    SymbolContextList sc_list;
-    target->GetImages().FindSymbolsWithNameAndType(
-        ConstString("_swift_release"), eSymbolTypeAny, sc_list);
-
-    if (!sc_list.GetSize()) {
-      err.SetErrorString("can't launch a Swift REPL in a process that doesn't "
-                         "have the Swift standard library");
-      return lldb::REPLSP();
-    }
-
-    // Check that we can get a type system, or we aren't going anywhere:
-    TypeSystem *type_system =
-      target->GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeSwift, 
-                                              true, repl_options);
-    if (!type_system) {
-      err.SetErrorString("Could not construct an expression "
-                         "context for the REPL.\n");
-      return lldb::REPLSP();
-    }
-    // Sanity checks succeeded.  Go ahead.
-    SwiftREPL *repl = new SwiftREPL(*target);
-    REPLSP repl_sp(repl);
-    repl->SetCompilerOptions(repl_options);
-    return repl_sp;
-  } else if (debugger) {
-    const char *bp_name = "repl_main";
-
-    FileSpec repl_executable;
-
-    if (HostInfo::GetLLDBPath(ePathTypeSupportExecutableDir, repl_executable)) {
-      repl_executable.GetFilename().SetCString("repl_swift");
-      std::string repl_exe_path(repl_executable.GetPath());
-      if (repl_executable.Exists()) {
-        const char *target_triple = NULL;
-        bool add_dependent_modules = true;
-        TargetSP target_sp;
-        err = debugger->GetTargetList().CreateTarget(
-            *debugger, repl_exe_path.c_str(), target_triple,
-            add_dependent_modules, NULL, target_sp);
-        if (err.Success()) {
-          // Limit the breakpoint to our executable module
-          FileSpecList containingModules;
-          ModuleSP exe_module_sp(target_sp->GetExecutableModule());
-          if (exe_module_sp) {
-            FileSpec exe_spec(exe_module_sp->GetFileSpec());
-            containingModules.Append(exe_spec);
-            BreakpointSP main_bp_sp = target_sp->CreateBreakpoint(
-                &containingModules, // Limit to these modules
-                NULL,    // Don't limit the breakpoint to any source files
-                bp_name, // Function name
-                eFunctionNameTypeAuto, // Name type
-                eLanguageTypeUnknown,  // Language
-                0,                     // offset
-                eLazyBoolYes,          // skip_prologue,
-                true,                  // internal
-                false);                // request_hardware
-
-            if (main_bp_sp->GetNumLocations() > 0) {
-              main_bp_sp->SetBreakpointKind("REPL");
-
-              assert(main_bp_sp->IsInternal()); // We made an internal
-                                                // breakpoint above, it better
-                                                // say it is internal
-
-              lldb_private::ProcessLaunchInfo launch_info;
-              llvm::StringRef target_settings_argv0 = target_sp->GetArg0();
-
-              if (target_sp->GetDisableASLR())
-                launch_info.GetFlags().Set(eLaunchFlagDisableASLR);
-
-              if (target_sp->GetDisableSTDIO())
-                launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
-
-              if (!target_settings_argv0.empty()) {
-                launch_info.GetArguments().AppendArgument(
-                    target_settings_argv0);
-                launch_info.SetExecutableFile(
-                    exe_module_sp->GetPlatformFileSpec(), false);
-              } else {
-                launch_info.SetExecutableFile(
-                    exe_module_sp->GetPlatformFileSpec(), true);
-              }
-
-              debugger->SetAsyncExecution(false);
-              err = target_sp->Launch(launch_info, nullptr);
-              debugger->SetAsyncExecution(true);
-
-              if (err.Success()) {
-                ProcessSP process_sp(target_sp->GetProcessSP());
-                if (process_sp) {
-                  // Start handling process events automatically
-                  debugger->StartEventHandlerThread();
-
-                  StateType state = process_sp->GetState();
-
-                  if (state == eStateStopped) {
-                    ThreadList &thread_list = process_sp->GetThreadList();
-                    const uint32_t num_threads = thread_list.GetSize();
-                    if (num_threads > 0) {
-                      ThreadSP thread_sp = thread_list.GetSelectedThread();
-                      if (!thread_sp) {
-                        thread_sp = thread_list.GetThreadAtIndex(0);
-                        thread_list.SetSelectedThreadByID(thread_sp->GetID());
-                      }
-                      if (thread_sp) {
-                        thread_sp->SetSelectedFrameByIndex(0);
-
-                        REPLSP repl_sp(new SwiftREPL(*target_sp));
-                        ((SwiftREPL *)repl_sp.get())
-                            ->SetCompilerOptions(repl_options);
-                        target_sp->SetREPL(lldb::eLanguageTypeSwift, repl_sp);
-                        
-                        // Check that we can get a type system, or we aren't 
-                        // going anywhere.  Remember to pass in the repl_options
-                        // in case they set up framework paths we need, etc.
-                        TypeSystem *type_system =
-                            target_sp->GetScratchTypeSystemForLanguage(
-                                nullptr, eLanguageTypeSwift, true,
-                                repl_options);
-                        if (!type_system) {
-                          err.SetErrorString("Could not construct an expression"
-                                             " context for the REPL.\n");
-                          return lldb::REPLSP();
-                        }
-
-                        std::string swift_full_version(
-                            swift::version::getSwiftFullVersion());
-                        printf("Welcome to %s. Type :help for assistance.\n",
-                               swift_full_version.c_str());
-
-                        return repl_sp;
-                      }
-                    } else {
-                      err.SetErrorString(
-                          "process is not in valid state (no threads)");
-                    }
-                  } else {
-                    err.SetErrorString(
-                        "failed to stop process at REPL breakpoint");
-                  }
-
-                  process_sp->Destroy(false);
-
-                  debugger->StopEventHandlerThread();
-                } else {
-                  err.SetErrorString("failed to launch REPL process");
-                }
-              } else {
-                err.SetErrorStringWithFormat(
-                    "failed to launch REPL process: %s", err.AsCString());
-              }
-            } else {
-              err.SetErrorStringWithFormat(
-                  "failed to resolve REPL breakpoint for '%s'", bp_name);
-            }
-          } else {
-            err.SetErrorString("unable to resolve REPL executable module");
-
-            target_sp->Destroy();
-          }
-        } else {
-          err.SetErrorStringWithFormat("failed to create REPL target: %s",
-                                       err.AsCString());
-        }
-      } else {
-        err.SetErrorStringWithFormat("REPL executable does not exist: '%s'",
-                                     repl_exe_path.c_str());
-      }
-    } else {
-      err.SetErrorString("unable to locate REPL executable");
-    }
-
-    return lldb::REPLSP();
-  } else {
+  if (!target && !debugger) {
     err.SetErrorString("must have a debugger or a target to create a REPL");
-    return lldb::REPLSP();
+    return nullptr;
   }
+
+  if (target)
+    return CreateInstanceFromTarget(err, *target, repl_options);
+  else
+    return CreateInstanceFromDebugger(err, *debugger, repl_options);
+}
+
+lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
+                                                 const char *repl_options) {
+  // Sanity check the target to make sure a REPL would work here.
+  if (!target.GetProcessSP() || !target.GetProcessSP()->IsAlive()) {
+    err.SetErrorString("can't launch a Swift REPL without a running process");
+    return nullptr;
+  }
+
+  SymbolContextList sc_list;
+  target.GetImages().FindSymbolsWithNameAndType(ConstString("_swift_release"),
+                                                eSymbolTypeAny, sc_list);
+
+  if (!sc_list.GetSize()) {
+    err.SetErrorString("can't launch a Swift REPL in a process that doesn't "
+                       "have the Swift standard library");
+    return nullptr;
+  }
+
+  // Check that we can get a type system, or we aren't going anywhere:
+  TypeSystem *type_system = target.GetScratchTypeSystemForLanguage(
+      nullptr, eLanguageTypeSwift, true, repl_options);
+  if (!type_system) {
+    err.SetErrorString("Could not construct an expression "
+                       "context for the REPL.\n");
+    return nullptr;
+  }
+
+  // Sanity checks succeeded.  Go ahead.
+  auto repl_sp = lldb::REPLSP(new SwiftREPL(target));
+  repl_sp->SetCompilerOptions(repl_options);
+  return repl_sp;
+}
+
+lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
+                                                   Debugger &debugger,
+                                                   const char *repl_options) {
+  const char *bp_name = "repl_main";
+
+  FileSpec repl_executable;
+
+  if (!HostInfo::GetLLDBPath(ePathTypeSupportExecutableDir, repl_executable)) {
+    err.SetErrorString("unable to locate REPL executable");
+    return nullptr;
+  }
+
+  repl_executable.GetFilename().SetCString("repl_swift");
+  std::string repl_exe_path(repl_executable.GetPath());
+
+  if (!repl_executable.Exists()) {
+    err.SetErrorStringWithFormat("REPL executable does not exist: '%s'",
+                                 repl_exe_path.c_str());
+    return nullptr;
+  }
+
+  const char *target_triple = nullptr;
+  bool add_dependent_modules = true;
+  TargetSP target_sp;
+  err = debugger.GetTargetList().CreateTarget(
+      debugger, repl_exe_path.c_str(), target_triple, add_dependent_modules,
+      nullptr, target_sp);
+  if (!err.Success()) {
+    err.SetErrorStringWithFormat("failed to create REPL target: %s",
+                                 err.AsCString());
+    return nullptr;
+  }
+
+  // Limit the breakpoint to our executable module
+  ModuleSP exe_module_sp(target_sp->GetExecutableModule());
+  if (!exe_module_sp) {
+    err.SetErrorString("unable to resolve REPL executable module");
+    target_sp->Destroy();
+    return nullptr;
+  }
+
+  FileSpecList containingModules;
+  containingModules.Append(exe_module_sp->GetFileSpec());
+
+  BreakpointSP main_bp_sp = target_sp->CreateBreakpoint(
+      &containingModules,    // Limit to these modules
+      NULL,                  // Don't limit the breakpoint to any source files
+      bp_name,               // Function name
+      eFunctionNameTypeAuto, // Name type
+      eLanguageTypeUnknown,  // Language
+      0,                     // offset
+      eLazyBoolYes,          // skip_prologue,
+      true,                  // internal
+      false);                // request_hardware
+
+  if (main_bp_sp->GetNumLocations() == 0) {
+    err.SetErrorStringWithFormat("failed to resolve REPL breakpoint for '%s'",
+                                 bp_name);
+    return nullptr;
+  }
+
+  main_bp_sp->SetBreakpointKind("REPL");
+  assert(main_bp_sp->IsInternal()); // We made an internal
+                                    // breakpoint above, it better
+                                    // say it is internal
+
+  lldb_private::ProcessLaunchInfo launch_info;
+  llvm::StringRef target_settings_argv0 = target_sp->GetArg0();
+
+  if (target_sp->GetDisableASLR())
+    launch_info.GetFlags().Set(eLaunchFlagDisableASLR);
+
+  if (target_sp->GetDisableSTDIO())
+    launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
+
+  if (!target_settings_argv0.empty()) {
+    launch_info.GetArguments().AppendArgument(target_settings_argv0);
+    launch_info.SetExecutableFile(exe_module_sp->GetPlatformFileSpec(), false);
+  } else {
+    launch_info.SetExecutableFile(exe_module_sp->GetPlatformFileSpec(), true);
+  }
+
+  debugger.SetAsyncExecution(false);
+  err = target_sp->Launch(launch_info, nullptr);
+  debugger.SetAsyncExecution(true);
+
+  if (!err.Success()) {
+    err.SetErrorStringWithFormat("failed to launch REPL process: %s",
+                                 err.AsCString());
+    return nullptr;
+  }
+
+  ProcessSP process_sp(target_sp->GetProcessSP());
+  if (!process_sp) {
+    err.SetErrorString("failed to launch REPL process");
+    return nullptr;
+  }
+
+  // Start handling process events automatically
+  debugger.StartEventHandlerThread();
+
+  // Destroy the process and the event handler thread after a fatal error.
+  CleanUp cleanup{[&] {
+    process_sp->Destroy(/*force_kill=*/false);
+    debugger.StopEventHandlerThread();
+  }};
+
+  StateType state = process_sp->GetState();
+
+  if (state != eStateStopped) {
+    err.SetErrorString("failed to stop process at REPL breakpoint");
+    return nullptr;
+  }
+
+  ThreadList &thread_list = process_sp->GetThreadList();
+  const uint32_t num_threads = thread_list.GetSize();
+  if (num_threads == 0) {
+    err.SetErrorString("process is not in valid state (no threads)");
+    return nullptr;
+  }
+
+  ThreadSP thread_sp = thread_list.GetSelectedThread();
+  if (!thread_sp) {
+    thread_sp = thread_list.GetThreadAtIndex(0);
+    thread_list.SetSelectedThreadByID(thread_sp->GetID());
+    assert(thread_sp && "There should be at least one thread");
+  }
+
+  thread_sp->SetSelectedFrameByIndex(0);
+
+  REPLSP repl_sp(new SwiftREPL(*target_sp));
+  repl_sp->SetCompilerOptions(repl_options);
+  target_sp->SetREPL(lldb::eLanguageTypeSwift, repl_sp);
+
+  // Check that we can get a type system, or we aren't
+  // going anywhere.  Remember to pass in the repl_options
+  // in case they set up framework paths we need, etc.
+  TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
+      nullptr, eLanguageTypeSwift, true, repl_options);
+  if (!type_system) {
+    err.SetErrorString("Could not construct an expression"
+                       " context for the REPL.\n");
+    return nullptr;
+  }
+
+  // Disable the cleanup, since we have a valid repl session now.
+  cleanup.disable();
+
+  std::string swift_full_version(swift::version::getSwiftFullVersion());
+  printf("Welcome to %s. Type :help for assistance.\n",
+         swift_full_version.c_str());
+
+  return repl_sp;
 }
 
 void SwiftREPL::EnumerateSupportedLanguages(
     std::set<lldb::LanguageType> &languages) {
-  static std::vector<lldb::LanguageType> s_supported_languages(
-      {lldb::eLanguageTypeSwift});
-
-  languages.insert(s_supported_languages.begin(), s_supported_languages.end());
+  languages.insert(lldb::eLanguageTypeSwift);
 }
 
 void SwiftREPL::Initialize() {

@@ -25,6 +25,7 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_instancepointerset_sp(self):
         """Test that we correctly track instance pointers in ValueObjectPrinter"""
         self.build()
@@ -38,7 +39,7 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
     def do_test(self):
         """Test that we correctly track instance pointers in ValueObjectPrinter"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

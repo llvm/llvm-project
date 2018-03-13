@@ -1,19 +1,22 @@
 LEVEL = ../../../make
 
+all: libPlaygroundsRuntime.dylib PlaygroundStub
+
+EXE=PlaygroundStub
+SWIFT_SOURCES=PlaygroundStub.swift
+LINKFLAGS=-lPlaygroundsRuntime -L$(shell pwd) -I$(shell pwd) 
+SWIFTFLAGS=-g -Onone $(LINKFLAGS)
+
 include $(LEVEL)/Makefile.rules
+
+SWIFTFLAGS_NOLINK=$(subst $(LINKFLAGS),,$(SWIFTFLAGS))
 
 MACOSX_DEPLOYMENT_TARGET ?= 10.10
 SWIFT_TRIPLE ?= -target x86_64-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)
-SDK_PATH ?= $(shell xcrun --show-sdk-path --sdk macosx)
 
-everything: libPlaygroundsRuntime.dylib PlaygroundStub
+libPlaygroundsRuntime.dylib: PlaygroundsRuntime.swift
+	$(SWIFTCC) $(SWIFT_TRIPLE) $(SWIFTFLAGS_NOLINK) -module-name PlaygroundsRuntime -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@ $< 
 
-libPlaygroundsRuntime.dylib:
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -Onone -module-name PlaygroundsRuntime -emit-library -o libPlaygroundsRuntime.dylib PlaygroundsRuntime.swift
-
-PlaygroundStub: libPlaygroundsRuntime.dylib
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -g -Onone PlaygroundStub.swift -o PlaygroundStub -lPlaygroundsRuntime -L. -I.
-
-cleanup:
-	rm -rf *.dSYM *.dylib *.swiftdoc *.swiftmodule PlaygroundStub
+clean::
+	rm -rf *.dSYM *.dylib *.swiftdoc *.swiftmodule PlaygroundStub libPlaygroundsRuntime.dylib
 

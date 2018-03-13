@@ -6,7 +6,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include <stdio.h>
 
 class Point {
 public:
@@ -37,15 +36,11 @@ int main(int argc, char const *argv[]) {
         ptr[i]->point.y = i+1;
     }
 
-    printf("Finished populating data.\n");
     for (int i = 0; i < 1000; ++i) {
         bool dump = argc > 1; // Set breakpoint here.
                               // Evaluate a couple of expressions (2*1000 = 2000 exprs):
                               // expr ptr[i]->point.x
                               // expr ptr[i]->point.y
-        if (dump) {
-            printf("data[%d] = %d (%d, %d)\n", i, ptr[i]->id, ptr[i]->point.x, ptr[i]->point.y);
-        }
     }
     return 0;
 }

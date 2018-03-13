@@ -9,14 +9,10 @@
 
 #include "DynamicRegisterInfo.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/StructuredData.h"

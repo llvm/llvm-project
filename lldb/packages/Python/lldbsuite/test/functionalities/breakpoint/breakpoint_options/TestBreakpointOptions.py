@@ -28,7 +28,7 @@ class BreakpointOptionsTestCase(TestBase):
 
     def breakpoint_options_test(self):
         """Test breakpoint command for different options."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint with 1 locations.
@@ -78,7 +78,7 @@ class BreakpointOptionsTestCase(TestBase):
 
     def breakpoint_options_language_test(self):
         """Test breakpoint command for language option."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint with 1 locations.

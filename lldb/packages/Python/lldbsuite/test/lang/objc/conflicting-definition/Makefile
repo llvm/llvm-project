@@ -1,38 +1,23 @@
 LEVEL = ../../../make
 
-CC ?= clang
-ifeq "$(ARCH)" ""
-	ARCH = x86_64
-endif
+LD_EXTRAS = -lobjc -framework Foundation
 
-ifeq "$(OS)" ""
-	OS = $(shell uname -s)
-endif
+include $(LEVEL)/Makefile.rules
 
-CFLAGS ?= -g -O0
-
-ifeq "$(OS)" "Darwin"
-	CFLAGS += -arch $(ARCH)
-endif
-
-LDFLAGS = $(CFLAGS) -lobjc -framework Foundation
-
-all: a.out libTest.dylib libTestExt.dylib
+all: a.out
 
 libTest.dylib:	Test/Test.m
-	$(CC) $(CFLAGS) -I. -c -o Test.o Test/Test.m
-	$(CC) $(LDFLAGS) -shared -o libTest.dylib Test.o
-	dsymutil libTest.dylib
+	mkdir -p Test
+	$(MAKE) MAKE_DSYM=YES VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/Test/Test.mk all
 
 libTestExt.dylib: TestExt/TestExt.m
-	$(CC) $(CFLAGS) -I. -c -o TestExt.o TestExt/TestExt.m
-	$(CC) $(LDFLAGS) -L. -lTest -shared -o libTestExt.dylib TestExt.o
-	dsymutil libTestExt.dylib
+	mkdir -p TestExt
+	$(MAKE) MAKE_DSYM=YES VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/TestExt/TestExt.mk all
 
 a.out: main.m libTest.dylib libTestExt.dylib
-	$(CC) $(LDFLAGS) -I. -L. -lTest -lTestExt -o a.out main.m 
+	$(CC) $(LDFLAGS) -I$(SRCDIR) -L. -lTest -lTestExt -o a.out $<
 
-.PHONY: clean
-
-clean:
-	rm -rf libTest.dylib libTestExt.dylib a.out Test.o TestExt.o libTest.dylib.dSYM libTest.dylib.dSYM
+clean::
+	rm -rf libTest.dylib libTestExt.dylib a.out Test.o TestExt.o libTest.dylib.dSYM libTestExt.dylib.dSYM
+	$(MAKE) MAKE_DSYM=YES VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/Test/Test.mk clean
+	$(MAKE) MAKE_DSYM=YES VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/TestExt/TestExt.mk clean

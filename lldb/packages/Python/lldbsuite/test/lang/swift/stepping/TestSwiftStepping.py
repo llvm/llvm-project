@@ -25,6 +25,7 @@ class TestSwiftStepping(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_stepping(self):
         """Tests that we can step reliably in swift code."""
         self.build()
@@ -72,7 +73,7 @@ class TestSwiftStepping(lldbtest.TestBase):
     def do_test(self):
         """Tests that we can step reliably in swift code."""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -183,17 +184,9 @@ class TestSwiftStepping(lldbtest.TestBase):
         thread.StepOver()
         self.hit_correct_line(thread, "At point initializer.")
         thread.StepOver()
-        # Due to: <rdar://problem/15888936> we will stop inside the
-        # switch statement instead of at the switch:
-        # self.hit_correct_line (thread, "At the beginning of the switch.")
-        self.hit_correct_line(thread, "case (0, 0):")
+        self.hit_correct_line (thread, "At the beginning of the switch.")
 
         thread.StepOver()
-        self.hit_correct_line(thread, "case (_, 0):")
-        thread.StepInto()
-        self.hit_correct_line(thread, "case (0, _):")
-        thread.StepOver()
-
         stopped_at_case = self.hit_correct_line(
             thread, "case (let x, let y) where", False)
         if stopped_at_case:

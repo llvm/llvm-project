@@ -41,6 +41,7 @@ class MiniDumpTestCase(TestBase):
         stop_description = thread.GetStopDescription(256)
         self.assertTrue("0xc0000005" in stop_description)
 
+    @expectedFailureAll(bugnumber="llvm.org/pr35193", hostoslist=["windows"])
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
         # target create -c fizzbuzz_no_heap.dmp
@@ -49,21 +50,21 @@ class MiniDumpTestCase(TestBase):
         self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        # The crash is in main, so there should be one frame on the stack.
-        self.assertEqual(thread.GetNumFrames(), 1)
-        frame = thread.GetFrameAtIndex(0)
-        self.assertTrue(frame.IsValid())
-        pc = frame.GetPC()
-        eip = frame.FindRegister("pc")
-        self.assertTrue(eip.IsValid())
-        self.assertEqual(pc, eip.GetValueAsUnsigned())
+
+        pc_list = [ 0x00164d14, 0x00167c79, 0x00167e6d, 0x7510336a, 0x77759882, 0x77759855]
+
+        self.assertEqual(thread.GetNumFrames(), len(pc_list))
+        for i in range(len(pc_list)):
+            frame = thread.GetFrameAtIndex(i)
+            self.assertTrue(frame.IsValid())
+            self.assertEqual(frame.GetPC(), pc_list[i])
 
     @skipUnlessWindows # Minidump saving works only on windows
     def test_deeper_stack_in_mini_dump(self):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-        core = os.path.join(os.getcwd(), "core.dmp")
+        exe = self.getBuildArtifact("a.out")
+        core = self.getBuildArtifact("core.dmp")
         try:
             # Set a breakpoint and capture a mini dump.
             target = self.dbg.CreateTarget(exe)
@@ -98,8 +99,8 @@ class MiniDumpTestCase(TestBase):
     def test_local_variables_in_mini_dump(self):
         """Test that we can examine local variables in a mini dump."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-        core = os.path.join(os.getcwd(), "core.dmp")
+        exe = self.getBuildArtifact("a.out")
+        core = self.getBuildArtifact("core.dmp")
         try:
             # Set a breakpoint and capture a mini dump.
             target = self.dbg.CreateTarget(exe)

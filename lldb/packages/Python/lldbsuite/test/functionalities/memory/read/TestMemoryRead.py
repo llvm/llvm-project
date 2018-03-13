@@ -26,7 +26,7 @@ class MemoryReadTestCase(TestBase):
     def test_memory_read(self):
         """Test the 'memory read' command with plain and vector formats."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break in main() aftre the variables are assigned values.

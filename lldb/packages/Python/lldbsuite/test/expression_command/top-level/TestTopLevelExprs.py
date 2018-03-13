@@ -37,7 +37,7 @@ class TopLevelExpressionsTestCase(TestBase):
         """Test top-level expressions."""
         self.build()
 
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=False)
@@ -45,7 +45,8 @@ class TopLevelExpressionsTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
     def run_dummy(self):
-        self.runCmd("file dummy", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("dummy"),
+                    CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -57,23 +58,6 @@ class TopLevelExpressionsTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAndroid(api_levels=[21, 22], bugnumber="llvm.org/pr27787")
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=[
-            "arm",
-            "aarch64"],
-        bugnumber="llvm.org/pr27787")
-    @expectedFailureAll(
-        bugnumber="llvm.org/pr28353",
-        oslist=["linux"],
-        archs=[
-            "i386",
-            "x86_64"],
-        compiler="gcc",
-        compiler_version=[
-            "<",
-            "4.9"])
     @skipIf(debug_info="gmodules")  # not relevant
     @skipIf(oslist=["windows"])  # Error in record layout on Windows
     def test_top_level_expressions(self):

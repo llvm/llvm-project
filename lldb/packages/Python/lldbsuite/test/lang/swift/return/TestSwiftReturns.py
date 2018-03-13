@@ -31,6 +31,7 @@ class TestSwiftReturns(TestBase):
         oslist=["ios"],
         archs=["arm64"],
         bugnumber="rdar://27002915")
+    @decorators.skipIfOutOfTreeDebugserver
     def test_swift_returns(self):
         """Test getting return values"""
         self.build()
@@ -106,7 +107,7 @@ class TestSwiftReturns(TestBase):
     def do_test(self):
         """Tests that we can break and display simple types"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

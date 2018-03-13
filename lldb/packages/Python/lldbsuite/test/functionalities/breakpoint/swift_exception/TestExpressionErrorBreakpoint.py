@@ -67,7 +67,7 @@ class TestSwiftErrorBreakpoint(TestBase):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
 
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

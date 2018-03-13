@@ -24,6 +24,7 @@ class TestSwiftTupleTypes(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_tuple_types(self):
         """Test support for tuple types"""
         self.build()
@@ -37,7 +38,7 @@ class TestSwiftTupleTypes(TestBase):
     def do_test(self):
         """Tests that we can break and display simple types"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

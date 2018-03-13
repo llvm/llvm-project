@@ -25,6 +25,7 @@ class TestSwiftRangeType(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_range_type(self):
         """Test the Swift.Range<T> type"""
         self.build()
@@ -38,7 +39,7 @@ class TestSwiftRangeType(TestBase):
     def do_test(self):
         """Test the Swift.Range<T> type"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -68,9 +69,9 @@ class TestSwiftRangeType(TestBase):
                     '(ClosedRange<Int>) a = 1...100'])
         self.expect("frame variable b", substrs=['(Range<Int>) b = 1..<100'])
         self.expect("frame variable c", substrs=[
-                    '(CountableClosedRange<Int>) c = 1...100'])
+                    '(ClosedRange<Int>) c = 1...100'])
         self.expect("frame variable d", substrs=[
-                    '(CountableRange<Int>) d = 1..<100'])
+                    '(Range<Int>) d = 1..<100'])
 
 if __name__ == '__main__':
     import atexit

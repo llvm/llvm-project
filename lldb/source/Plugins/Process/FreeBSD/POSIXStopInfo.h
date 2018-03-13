@@ -45,19 +45,6 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @class POSIXCrashStopInfo
-/// @brief Represents the stop state of process that is ready to crash.
-///
-class POSIXCrashStopInfo : public POSIXStopInfo {
-public:
-  POSIXCrashStopInfo(FreeBSDThread &thread, uint32_t status, CrashReason reason,
-                     lldb::addr_t fault_addr);
-  ~POSIXCrashStopInfo();
-
-  lldb::StopReason GetStopReason() const;
-};
-
-//===----------------------------------------------------------------------===//
 /// @class POSIXNewThreadStopInfo
 /// @brief Represents the stop state of process when a new thread is spawned.
 ///

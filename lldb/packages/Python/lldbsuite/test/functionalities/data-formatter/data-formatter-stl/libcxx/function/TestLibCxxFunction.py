@@ -27,7 +27,7 @@ class LibCxxFunctionTestCase(TestBase):
     def test(self):
         """Test that std::function as defined by libc++ is correctly printed by LLDB"""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(

@@ -24,6 +24,7 @@ class TestSwiftConditionalBreakpoint(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_conditional_breakpoint(self):
         """Tests that we can set a conditional breakpoint in Swift code"""
         self.build()
@@ -34,7 +35,7 @@ class TestSwiftConditionalBreakpoint(TestBase):
 
     def break_commands(self):
         """Tests that we can set a conditional breakpoint in Swift code"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         bkno = lldbutil.run_break_set_by_source_regexp(
             self, "Set breakpoint here")
         self.runCmd('breakpoint modify ' + str(bkno) + ' -c x==y')

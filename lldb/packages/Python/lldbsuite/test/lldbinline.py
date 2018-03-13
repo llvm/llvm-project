@@ -97,17 +97,19 @@ class InlineTest(TestBase):
             # The test was skipped altogether.
             return ""
         elif self.using_dsym:
-            return "-N dwarf %s" % (self.mydir)
+            return "-N dwarf " + self.mydir
         else:
-            return "-N dsym %s" % (self.mydir)
+            return "-N dsym " + self.mydir
 
     def BuildMakefile(self):
-        if os.path.exists("Makefile"):
+        self.makeBuildDir()
+        makefilePath = self.getBuildArtifact("Makefile")
+        if os.path.exists(makefilePath):
             return
 
         categories = {}
 
-        for f in os.listdir(os.getcwd()):
+        for f in os.listdir(self.getSourceDir()):
             t = source_type(f)
             if t:
                 if t in list(categories.keys()):
@@ -115,7 +117,7 @@ class InlineTest(TestBase):
                 else:
                     categories[t] = [f]
 
-        makefile = open("Makefile", 'w+')
+        makefile = open(makefilePath, 'w+')
 
         level = os.sep.join(
             [".."] * len(self.mydir.split(os.sep))) + os.sep + "make"
@@ -139,45 +141,52 @@ class InlineTest(TestBase):
         makefile.flush()
         makefile.close()
 
-    @skipUnlessDarwin
+    @add_test_categories(["dsym"])
     def __test_with_dsym(self):
         self.using_dsym = True
         self.BuildMakefile()
-        self.buildDsym()
+        self.build()
         self.do_test()
+    __test_with_dsym.debug_info = "dsym"
 
+    @add_test_categories(["dwarf"])
     def __test_with_dwarf(self):
         self.using_dsym = False
         self.BuildMakefile()
-        self.buildDwarf()
+        self.build()
         self.do_test()
+    __test_with_dwarf.debug_info = "dwarf"
 
+    @add_test_categories(["dwo"])
     def __test_with_dwo(self):
         self.using_dsym = False
         self.BuildMakefile()
-        self.buildDwo()
+        self.build()
         self.do_test()
+    __test_with_dwo.debug_info = "dwo"
 
+    @add_test_categories(["gmodules"])
     def __test_with_gmodules(self):
         self.using_dsym = False
         self.BuildMakefile()
-        self.buildGModules()
+        self.build()
         self.do_test()
+    __test_with_gmodules.debug_info = "gmodules"
 
     def execute_user_command(self, __command):
         exec(__command, globals(), locals())
 
     def do_test(self):
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
-        source_files = [f for f in os.listdir(os.getcwd()) if source_type(f)]
+        exe = self.getBuildArtifact("a.out")
+        source_files = [f for f in os.listdir(self.getSourceDir())
+                        if source_type(f)]
         target = self.dbg.CreateTarget(exe)
 
         parser = CommandParser()
         parser.parse_source_files(source_files)
         parser.set_breakpoints(target)
 
-        process = target.LaunchSimple(None, None, os.getcwd())
+        process = target.LaunchSimple(None, None, self.getBuildDir())
 
         while lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint):
             thread = lldbutil.get_stopped_thread(
@@ -212,6 +221,24 @@ def ApplyDecoratorsToFunction(func, decorators):
         tmp = decorators(tmp)
     return tmp
 
+def isEnabled(debug_flavor, target_platform, configuration, decorators):
+    # If the platform is unsupported, skip the test.
+    if not test_categories.is_supported_on_platform(debug_flavor,
+            target_platform, configuration.compiler):
+        return False
+
+    # If the debug flavor is skipped, skip the test.
+    if debug_flavor in configuration.skipCategories:
+        return False
+
+    # If there are any decorators, and we're in swift PR testing mode, skip the
+    # test. We do this because we cannot run x-failed or skipped tests during
+    # PR testing, and we have no other way to prevent this from happening.
+    if configuration.useCategories and 'swiftpr' in configuration.categoriesList:
+        if decorators:
+            return False
+
+    return True
 
 def MakeInlineTest(__file, __globals, decorators=None):
     # Adjust the filename if it ends in .pyc.  We want filenames to
@@ -230,20 +257,16 @@ def MakeInlineTest(__file, __globals, decorators=None):
     test.name = test_name
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-    if test_categories.is_supported_on_platform(
-            "dsym", target_platform, configuration.compiler):
+    if isEnabled("dsym", target_platform, configuration, decorators):
         test.test_with_dsym = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dsym, decorators)
-    if test_categories.is_supported_on_platform(
-            "dwarf", target_platform, configuration.compiler):
+    if isEnabled("dwarf", target_platform, configuration, decorators):
         test.test_with_dwarf = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dwarf, decorators)
-    if test_categories.is_supported_on_platform(
-            "dwo", target_platform, configuration.compiler):
+    if isEnabled("dwo", target_platform, configuration, decorators):
         test.test_with_dwo = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dwo, decorators)
-    if test_categories.is_supported_on_platform(
-            "gmodules", target_platform, configuration.compiler):
+    if isEnabled("gmodules", target_platform, configuration, decorators):
         test.test_with_gmodules = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_gmodules, decorators)
 

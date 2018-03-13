@@ -1,14 +1,15 @@
 LEVEL = ../../../../make
 
+EXE=three
+SWIFT_SOURCES=three.swift
+SWIFTFLAGS=-L$(shell pwd) -I$(shell pwd) -lfooey -Onone -g
+
+all: libfooey.dylib three
+
 include $(LEVEL)/Makefile.rules
 
-everything: three fooey
+libfooey.dylib: one.swift two.swift
+	$(SWIFTCC) -g -Onone $^ -emit-library -module-name fooey -emit-module -Xlinker -install_name -Xlinker @executable_path/$@
 
-three: fooey three.swift
-	$(SWIFTCC) -g -Onone -L. three.swift -lfooey -I.
-
-fooey: one.swift two.swift
-	$(SWIFTCC) -g -Onone one.swift two.swift -emit-library -module-name fooey -emit-module
-
-cleanup:
+clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib three

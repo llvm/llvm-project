@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
+#define LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
+
+#include "lldb/Core/RegisterValue.h"
+#include "lldb/Host/Host.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -18,12 +24,13 @@
 namespace llgs_tests {
 class ThreadInfo;
 typedef llvm::DenseMap<uint64_t, ThreadInfo> ThreadInfoMap;
-typedef llvm::DenseMap<uint64_t, uint64_t> U64Map;
-typedef llvm::DenseMap<unsigned int, std::string> RegisterMap;
+typedef llvm::DenseMap<unsigned int, lldb_private::RegisterValue> RegisterMap;
 
-class ProcessInfo {
+template <typename T> struct Parser { using result_type = T; };
+
+class ProcessInfo : public Parser<ProcessInfo> {
 public:
-  static llvm::Expected<ProcessInfo> Create(llvm::StringRef response);
+  static llvm::Expected<ProcessInfo> create(llvm::StringRef response);
   lldb::pid_t GetPid() const;
   llvm::support::endianness GetEndian() const;
 
@@ -45,10 +52,9 @@ class ThreadInfo {
 public:
   ThreadInfo() = default;
   ThreadInfo(llvm::StringRef name, llvm::StringRef reason,
-             const RegisterMap &registers, unsigned int signal);
+             RegisterMap registers, unsigned int signal);
 
-  llvm::StringRef ReadRegister(unsigned int register_id) const;
-  bool ReadRegisterAsUint64(unsigned int register_id, uint64_t &value) const;
+  const lldb_private::RegisterValue *ReadRegister(unsigned int Id) const;
 
 private:
   std::string m_name;
@@ -57,39 +63,111 @@ private:
   unsigned int m_signal;
 };
 
-class JThreadsInfo {
+class JThreadsInfo : public Parser<JThreadsInfo> {
 public:
-  static llvm::Expected<JThreadsInfo> Create(llvm::StringRef response,
-                                             llvm::support::endianness endian);
+  static llvm::Expected<JThreadsInfo>
+  create(llvm::StringRef Response,
+         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
 
   const ThreadInfoMap &GetThreadInfos() const;
 
 private:
+  static llvm::Expected<RegisterMap>
+  parseRegisters(const lldb_private::StructuredData::Dictionary &Dict,
+                 llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+
   JThreadsInfo() = default;
   ThreadInfoMap m_thread_infos;
 };
 
+struct RegisterInfoParser : public Parser<lldb_private::RegisterInfo> {
+  static llvm::Expected<lldb_private::RegisterInfo>
+  create(llvm::StringRef Response);
+};
+
+llvm::Expected<lldb_private::RegisterValue>
+parseRegisterValue(const lldb_private::RegisterInfo &Info,
+                   llvm::StringRef HexValue, llvm::support::endianness Endian);
+
 class StopReply {
 public:
-  static llvm::Expected<StopReply> Create(llvm::StringRef response,
-                                          llvm::support::endianness endian);
-  const U64Map &GetThreadPcs() const;
+  StopReply() = default;
+  virtual ~StopReply() = default;
+
+  static llvm::Expected<std::unique_ptr<StopReply>>
+  create(llvm::StringRef Response, llvm::support::endianness Endian,
+         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+
+  // for llvm::cast<>
+  virtual lldb_private::WaitStatus getKind() const = 0;
+
+  StopReply(const StopReply &) = delete;
+  void operator=(const StopReply &) = delete;
+};
+
+class StopReplyStop : public StopReply {
+public:
+  StopReplyStop(uint8_t Signal, lldb::tid_t ThreadId, llvm::StringRef Name,
+                RegisterMap ThreadPcs, RegisterMap Registers,
+                llvm::StringRef Reason)
+      : Signal(Signal), ThreadId(ThreadId), Name(Name),
+        ThreadPcs(std::move(ThreadPcs)), Registers(std::move(Registers)),
+        Reason(Reason) {}
+
+  static llvm::Expected<std::unique_ptr<StopReplyStop>>
+  create(llvm::StringRef Response, llvm::support::endianness Endian,
+         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+
+  const RegisterMap &getThreadPcs() const { return ThreadPcs; }
+  lldb::tid_t getThreadId() const { return ThreadId; }
+
+  // for llvm::cast<>
+  lldb_private::WaitStatus getKind() const override {
+    return lldb_private::WaitStatus{lldb_private::WaitStatus::Stop, Signal};
+  }
+  static bool classof(const StopReply *R) {
+    return R->getKind().type == lldb_private::WaitStatus::Stop;
+  }
 
 private:
-  StopReply() = default;
-  void ParseResponse(llvm::StringRef response,
-                     llvm::support::endianness endian);
-  unsigned int m_signal;
-  lldb::tid_t m_thread;
-  std::string m_name;
-  U64Map m_thread_pcs;
-  RegisterMap m_registers;
-  std::string m_reason;
+  static llvm::Expected<RegisterMap> parseRegisters(
+      const llvm::StringMap<llvm::SmallVector<llvm::StringRef, 2>> &Elements,
+      llvm::support::endianness Endian,
+      llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+
+  uint8_t Signal;
+  lldb::tid_t ThreadId;
+  std::string Name;
+  RegisterMap ThreadPcs;
+  RegisterMap Registers;
+  std::string Reason;
+};
+
+class StopReplyExit : public StopReply {
+public:
+  explicit StopReplyExit(uint8_t Status) : Status(Status) {}
+
+  static llvm::Expected<std::unique_ptr<StopReplyExit>>
+  create(llvm::StringRef response);
+
+  // for llvm::cast<>
+  lldb_private::WaitStatus getKind() const override {
+    return lldb_private::WaitStatus{lldb_private::WaitStatus::Exit, Status};
+  }
+  static bool classof(const StopReply *R) {
+    return R->getKind().type == lldb_private::WaitStatus::Exit;
+  }
+
+private:
+  uint8_t Status;
 };
 
 // Common functions for parsing packet data.
 llvm::Expected<llvm::StringMap<llvm::StringRef>>
-SplitPairList(llvm::StringRef caller, llvm::StringRef s);
+SplitUniquePairList(llvm::StringRef caller, llvm::StringRef s);
+
+llvm::StringMap<llvm::SmallVector<llvm::StringRef, 2>>
+SplitPairList(llvm::StringRef s);
 
 template <typename... Args>
 llvm::Error make_parsing_error(llvm::StringRef format, Args &&... args) {
@@ -99,4 +177,11 @@ llvm::Error make_parsing_error(llvm::StringRef format, Args &&... args) {
   return llvm::make_error<llvm::StringError>(error,
                                              llvm::inconvertibleErrorCode());
 }
+
 } // namespace llgs_tests
+
+namespace lldb_private {
+std::ostream &operator<<(std::ostream &OS, const RegisterValue &RegVal);
+}
+
+#endif // LLDB_SERVER_TESTS_MESSAGEOBJECTS_H

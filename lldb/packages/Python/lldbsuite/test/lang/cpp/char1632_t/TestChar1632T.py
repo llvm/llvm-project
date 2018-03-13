@@ -32,7 +32,7 @@ class Char1632TestCase(TestBase):
     def test(self):
         """Test that the C++11 support for char16_t and char32_t works correctly."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

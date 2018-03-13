@@ -16,11 +16,11 @@ from lldbsuite.test import lldbutil
 class SBDirCheckerCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         TestBase.setUp(self)
         self.source = 'main.cpp'
-        self.exe_name = 'a.out'
         self.generateSource(self.source)
 
     @skipIfNoSBHeaders
@@ -34,16 +34,19 @@ class SBDirCheckerCase(TestBase):
             self.skipTest(
                 "LLDB is 64-bit and cannot be linked to 32-bit test program.")
 
-        self.buildDriver(self.source, self.exe_name)
-        self.sanity_check_executable(self.exe_name)
+        exe_name = self.getBuildArtifact("a.out")
+        self.buildDriver(self.source, exe_name)
+        self.sanity_check_executable(exe_name)
 
     def sanity_check_executable(self, exe_name):
         """Sanity check executable compiled from the auto-generated program."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe_name = self.getBuildArtifact("a.out")
+        exe = self.getBuildArtifact(exe_name)
         self.runCmd("file %s" % exe, CURRENT_EXECUTABLE_SET)
 
+        # This test uses a generated source file, so it's in the build directory.
         self.line_to_break = line_number(
-            self.source, '// Set breakpoint here.')
+            self.getBuildArtifact(self.source), '// Set breakpoint here.')
 
         env_cmd = "settings set target.env-vars %s=%s" % (
             self.dylibPath, self.getLLDBLibraryEnvVal())

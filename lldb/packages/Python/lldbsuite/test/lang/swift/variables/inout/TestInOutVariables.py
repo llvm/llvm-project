@@ -25,6 +25,7 @@ class TestInOutVariables(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_in_out_variables(self):
         """Test that @inout variables display reasonably"""
         self.build()
@@ -135,7 +136,7 @@ class TestInOutVariables(TestBase):
     def do_test(self):
         """Test that @inout variables display reasonably"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -153,6 +154,10 @@ class TestInOutVariables(TestBase):
         outer_bkpt = target.BreakpointCreateBySourceRegex(
             'Set breakpoint here for String access', self.main_source_spec)
         self.assertTrue(outer_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
+
+        fn_ptr_bkpt = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here for Function type with inout', self.main_source_spec)
+        self.assertTrue(fn_ptr_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         self.process = target.LaunchSimple(None, None, os.getcwd())
@@ -193,6 +198,20 @@ class TestInOutVariables(TestBase):
         self.process.Continue()
         self.check_next_stop(struct_bkpt)
         self.check_struct("4568")
+
+        # Now we want to run to the fn_ptrs breakpoint.
+        struct_bkpt.SetEnabled(False)
+        class_bkpt.SetEnabled(False)
+        outer_bkpt.SetEnabled(False)
+        
+        self.process.Continue()
+        self.check_next_stop(fn_ptr_bkpt)
+        dict_var = self.frame.FindVariable("dict").GetChildAtIndex(0)
+        self.assertTrue(dict_var.IsValid(), "Got an invalid value for the first element: %s"%(dict_var.GetError().GetCString()))
+        func_value = dict_var.GetChildMemberWithName("value")
+        self.assertTrue(func_value.IsValid(), "Got an invalid value for func ptr: %s"%(func_value.GetError().GetCString()))
+        func_sc = target.ResolveSymbolContextForAddress(target.ResolveLoadAddress(func_value.GetValueAsUnsigned()), lldb.eSymbolContextFunction)
+        self.assertTrue(func_sc.GetFunction().IsValid(), "We couldn't look up the function target.") 
 
 if __name__ == '__main__':
     import atexit

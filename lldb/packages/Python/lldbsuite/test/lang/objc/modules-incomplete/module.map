@@ -2,3 +2,8 @@ module myModule {
   header "myModule.h"
   export *
 }
+
+module minmax {
+  header "minmax.h"
+  export *
+}

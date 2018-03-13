@@ -70,7 +70,7 @@ public:
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));
 };
 
-const unspecified ignore;
+inline constexpr unspecified ignore;
 
 template <class... T> tuple<V...>  make_tuple(T&&...); // constexpr in C++14
 template <class... T> tuple<ATypes...> forward_as_tuple(T&&...) noexcept; // constexpr in C++14
@@ -87,7 +87,7 @@ template <class T, class Tuple>
 template <class T> class tuple_size; // undefined
 template <class... T> class tuple_size<tuple<T...>>;
 template <class T>
- constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17
+ inline constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17
 template <size_t I, class T> class tuple_element; // undefined
 template <size_t I, class... T> class tuple_element<I, tuple<T...>>;
 template <size_t I, class T>
@@ -1079,7 +1079,7 @@ struct __ignore_t
 };
 
 namespace {
-  constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
+  _LIBCPP_INLINE_VAR constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
 }
 
 template <class _Tp>
@@ -1368,7 +1368,7 @@ pair<_T1, _T2>::pair(piecewise_construct_t,
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
+_LIBCPP_INLINE_VAR constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
 
 #define _LIBCPP_NOEXCEPT_RETURN(...) noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }
 

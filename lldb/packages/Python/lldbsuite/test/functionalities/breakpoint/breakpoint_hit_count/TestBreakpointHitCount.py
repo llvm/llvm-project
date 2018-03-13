@@ -32,7 +32,7 @@ class BreakpointHitCountTestCase(TestBase):
 
     def do_test_breakpoint_location_hit_count(self):
         """Use Python APIs to check breakpoint hit count."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

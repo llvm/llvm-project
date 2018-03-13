@@ -25,6 +25,7 @@ class TestSwiftOptionalType(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_optional_type(self):
         """Check formatting for T? and T!"""
         self.build()
@@ -40,7 +41,7 @@ class TestSwiftOptionalType(TestBase):
     def do_check_consistency(self):
         """Check formatting for T? and T!"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

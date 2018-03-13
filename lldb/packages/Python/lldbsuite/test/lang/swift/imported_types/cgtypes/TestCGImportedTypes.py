@@ -26,6 +26,7 @@ class TestSwiftCGImportedTypes(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_cg_imported_types(self):
         """Test that we are able to deal with ObjC-imported types"""
         self.build()
@@ -39,7 +40,7 @@ class TestSwiftCGImportedTypes(TestBase):
     def do_test(self):
         """Test that we are able to deal with C-imported types from CoreGraphics"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

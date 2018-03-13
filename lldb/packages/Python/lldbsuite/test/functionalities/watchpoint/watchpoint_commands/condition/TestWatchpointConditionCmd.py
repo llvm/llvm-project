@@ -33,8 +33,6 @@ class WatchpointConditionCmdTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
@@ -47,7 +45,7 @@ class WatchpointConditionCmdTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.

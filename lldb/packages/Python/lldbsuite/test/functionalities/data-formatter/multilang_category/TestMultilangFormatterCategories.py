@@ -14,6 +14,7 @@ class TestMultilangFormatterCategories(TestBase):
 
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
+    @decorators.add_test_categories(["swiftpr"])
     def test_multilang_formatter_categories(self):
         """Test that formatter categories can work for multiple languages"""
         self.build()
@@ -27,7 +28,7 @@ class TestMultilangFormatterCategories(TestBase):
     def do_test(self):
         """Test that formatter categories can work for multiple languages"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

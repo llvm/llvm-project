@@ -1173,7 +1173,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
       xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
       temp_file_spec.SetFile(xcode_dir_path, false);
       auto dir_buffer =
-          DataBufferLLVM::CreateFromPath(temp_file_spec.GetPath(), true);
+          DataBufferLLVM::CreateFromPath(temp_file_spec.GetPath());
       if (dir_buffer && dir_buffer->GetByteSize() > 0) {
         llvm::StringRef path_ref(dir_buffer->GetChars());
         // Trim tailing newlines and make sure there is enough room for a null

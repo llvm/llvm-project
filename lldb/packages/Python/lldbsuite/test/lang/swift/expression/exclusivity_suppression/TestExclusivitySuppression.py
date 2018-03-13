@@ -31,10 +31,11 @@ class TestExclusivitySuppression(TestBase):
     # Test that we can evaluate w.s.i at Breakpoint 1 without triggering
     # a failure due to exclusivity
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_basic_exclusivity_suppression(self):
         """Test that exclusively owned values can still be accessed"""
 
-        self.buildAll()
+        self.build()
 
         target = self.create_target()
 
@@ -66,9 +67,10 @@ class TestExclusivitySuppression(TestBase):
     # (5) Evaluating w.s.i again to check that finishing the nested expression
     #     did not prematurely re-enable exclusivity checks.
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_exclusivity_suppression_for_concurrent_expressions(self):
         """Test that exclusivity suppression works with concurrent expressions"""
-        self.buildAll()
+        self.build()
 
         target = self.create_target()
 
@@ -109,13 +111,6 @@ class TestExclusivitySuppression(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    def buildAll(self):
-        execute_command("make everything")
-        def cleanup():
-            execute_command("make cleanup")
-
-        self.addTearDownHook(cleanup)
-
     def check_expression(self, frame, expression, expected_result, use_summary=True):
         value = frame.EvaluateExpression(expression)
         self.assertTrue(value.IsValid(), expression + " returned a valid value")
@@ -132,7 +127,7 @@ class TestExclusivitySuppression(TestBase):
 
     def create_target(self):
         exe_name = "main"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

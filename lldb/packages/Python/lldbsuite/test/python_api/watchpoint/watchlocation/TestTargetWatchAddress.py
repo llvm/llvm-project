@@ -30,15 +30,13 @@ class TargetWatchAddressAPITestCase(TestBase):
         self.violating_func = "do_bad_thing_with_location"
 
     @add_test_categories(['pyapi'])
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_watch_address(self):
         """Exercise SBTarget.WatchAddress() API to set a watchpoint."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -107,8 +105,6 @@ class TargetWatchAddressAPITestCase(TestBase):
         # This finishes our test.
 
     @add_test_categories(['pyapi'])
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     # No size constraint on MIPS for watches
     @skipIf(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
     @skipIf(archs=['s390x'])  # Likewise on SystemZ
@@ -116,7 +112,7 @@ class TargetWatchAddressAPITestCase(TestBase):
     def test_watch_address_with_invalid_watch_size(self):
         """Exercise SBTarget.WatchAddress() API but pass an invalid watch_size."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

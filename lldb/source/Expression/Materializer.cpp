@@ -674,6 +674,12 @@ public:
                         extract_error);
 
       if (!extract_error.Success()) {
+        if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift &&
+            valobj_type.GetByteSize(frame_sp.get()) == 0) {
+          // We don't need to dematerialize empty structs in Swift.
+          return;
+        }
+        
         err.SetErrorStringWithFormat("couldn't get the data for variable %s",
                                      m_variable_sp->GetName().AsCString());
         return;
@@ -942,7 +948,6 @@ public:
     if (lang == lldb::eLanguageTypeSwift) {
       SwiftLanguageRuntime *language_runtime =
           process_sp->GetSwiftLanguageRuntime();
-
       if (language_runtime && frame_sp)
         m_type = language_runtime->DoArchetypeBindingForType(*frame_sp, m_type);
     }

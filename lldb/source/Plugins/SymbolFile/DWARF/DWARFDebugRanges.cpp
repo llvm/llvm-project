@@ -15,6 +15,18 @@
 using namespace lldb_private;
 using namespace std;
 
+static dw_addr_t GetBaseAddressMarker(uint32_t addr_size) {
+  switch(addr_size) {
+    case 2:
+      return 0xffff;
+    case 4:
+      return 0xffffffff;
+    case 8:
+      return 0xffffffffffffffff;
+  }
+  llvm_unreachable("GetBaseAddressMarker unsupported address size.");
+}
+
 DWARFDebugRanges::DWARFDebugRanges() : m_range_map() {}
 
 DWARFDebugRanges::~DWARFDebugRanges() {}
@@ -39,38 +51,27 @@ bool DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data,
   const DWARFDataExtractor &debug_ranges_data =
       dwarf2Data->get_debug_ranges_data();
   uint32_t addr_size = debug_ranges_data.GetAddressByteSize();
+  dw_addr_t base_addr = 0;
+  dw_addr_t base_addr_marker = GetBaseAddressMarker(addr_size);
 
   while (
       debug_ranges_data.ValidOffsetForDataOfSize(*offset_ptr, 2 * addr_size)) {
     dw_addr_t begin = debug_ranges_data.GetMaxU64(offset_ptr, addr_size);
     dw_addr_t end = debug_ranges_data.GetMaxU64(offset_ptr, addr_size);
+
     if (!begin && !end) {
       // End of range list
       break;
     }
-    // Extend 4 byte addresses that consists of 32 bits of 1's to be 64 bits
-    // of ones
-    switch (addr_size) {
-    case 2:
-      if (begin == 0xFFFFull)
-        begin = LLDB_INVALID_ADDRESS;
-      break;
 
-    case 4:
-      if (begin == 0xFFFFFFFFull)
-        begin = LLDB_INVALID_ADDRESS;
-      break;
-
-    case 8:
-      break;
-
-    default:
-      llvm_unreachable("DWARFRangeList::Extract() unsupported address size.");
+    if (begin == base_addr_marker) {
+      base_addr = end;
+      continue;
     }
 
     // Filter out empty ranges
     if (begin < end)
-      range_list.Append(DWARFRangeList::Entry(begin, end - begin));
+      range_list.Append(DWARFRangeList::Entry(begin + base_addr, end - begin));
   }
 
   // Make sure we consumed at least something

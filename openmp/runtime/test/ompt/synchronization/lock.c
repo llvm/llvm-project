@@ -10,7 +10,7 @@ int main()
     print_ids(0);
 
   omp_lock_t lock;
-  printf("%" PRIu64 ": &lock: %lli\n", ompt_get_thread_data()->value, (long long) &lock);
+  printf("%" PRIu64 ": &lock: %" PRIu64 "\n", ompt_get_thread_data()->value, (uint64_t) &lock);
   omp_init_lock(&lock);
   print_current_address(1);
   omp_set_lock(&lock);

@@ -27,7 +27,7 @@ class FrameUtilsTestCase(TestBase):
     def test_frame_utils(self):
         """Test utility functions for the frame object."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

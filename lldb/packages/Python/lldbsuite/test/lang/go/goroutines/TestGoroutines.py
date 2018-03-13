@@ -36,7 +36,7 @@ class TestGoASTContext(TestBase):
         self.break_line3 = line_number(self.main_source, '// stop3')
 
     def launchProcess(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
