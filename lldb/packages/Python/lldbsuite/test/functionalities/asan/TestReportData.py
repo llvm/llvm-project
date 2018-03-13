@@ -24,7 +24,7 @@ class AsanTestReportDataCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessAddressSanitizer
-    @expectedFailureAll(archs=['i386'], bugnumber="rdar://28658860")
+    @skipIf(archs=['i386'], bugnumber="llvm.org/PR36710")
     def test(self):
         self.build()
         self.asan_tests()
