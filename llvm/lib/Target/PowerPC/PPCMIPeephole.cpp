@@ -979,9 +979,9 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
 }
 
 // This function will iterate over the input map containing a pair of TOC save
-// instruction and a flag. The flag will be set to false if the TOC save is proven
-// redundant. This function will erase from the basic block all the TOC saves
-// marked as redundant.
+// instruction and a flag. The flag will be set to false if the TOC save is
+// proven redundant. This function will erase from the basic block all the TOC
+// saves marked as redundant.
 bool PPCMIPeephole::eliminateRedundantTOCSaves(
     std::map<MachineInstr *, bool> &TOCSaves) {
   bool Simplified = false;

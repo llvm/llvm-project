@@ -177,9 +177,11 @@ void warn_with_cast() {
 
 @interface MyInterface1 : NSObject
 -(void)use_method_warn;
+-(void) pass_block_as_second_param_warn;
 -(void)use_objc_callback_warn;
 -(void)testNoWarn;
 -(void)acceptBlock:(block_t)callback;
+-(void)flag:(int)flag acceptBlock:(block_t)callback;
 @end
 
 @implementation MyInterface1
@@ -193,6 +195,15 @@ void warn_with_cast() {
   dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
 }
 
+-(void) pass_block_as_second_param_warn {
+  dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+
+  [self flag:1 acceptBlock:^{
+      dispatch_semaphore_signal(sema);
+  }];
+  dispatch_semaphore_wait(sema, 100); // expected-warning{{Waiting on a semaphore with Grand Central Dispatch creates useless threads and is subject to priority inversion}}
+}
+
 -(void)testNoWarn {
   dispatch_semaphore_t sema = dispatch_semaphore_create(0);
 
@@ -203,6 +214,10 @@ void warn_with_cast() {
 }
 
 -(void)acceptBlock:(block_t) callback {
+  callback();
+}
+
+-(void)flag:(int)flag acceptBlock:(block_t)callback {
   callback();
 }
 

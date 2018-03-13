@@ -5259,14 +5259,14 @@ define void @test_div(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [5:1.00]
 ; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    divb %dil # sched: [25:25.00]
-; BTVER2-NEXT:    divb (%r8) # sched: [41:25.00]
-; BTVER2-NEXT:    divw %si # sched: [25:25.00]
-; BTVER2-NEXT:    divw (%r9) # sched: [41:25.00]
+; BTVER2-NEXT:    divb %dil # sched: [12:12.00]
+; BTVER2-NEXT:    divb (%r8) # sched: [15:12.00]
+; BTVER2-NEXT:    divw %si # sched: [17:17.00]
+; BTVER2-NEXT:    divw (%r9) # sched: [20:17.00]
 ; BTVER2-NEXT:    divl %edx # sched: [25:25.00]
-; BTVER2-NEXT:    divl (%rax) # sched: [41:25.00]
-; BTVER2-NEXT:    divq %rcx # sched: [25:25.00]
-; BTVER2-NEXT:    divq (%r10) # sched: [41:25.00]
+; BTVER2-NEXT:    divl (%rax) # sched: [28:25.00]
+; BTVER2-NEXT:    divq %rcx # sched: [41:41.00]
+; BTVER2-NEXT:    divq (%r10) # sched: [44:41.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -5507,14 +5507,14 @@ define void @test_idiv(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32
 ; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [5:1.00]
 ; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    idivb %dil # sched: [25:25.00]
-; BTVER2-NEXT:    idivb (%r8) # sched: [41:25.00]
-; BTVER2-NEXT:    idivw %si # sched: [25:25.00]
-; BTVER2-NEXT:    idivw (%r9) # sched: [41:25.00]
+; BTVER2-NEXT:    idivb %dil # sched: [12:12.00]
+; BTVER2-NEXT:    idivb (%r8) # sched: [15:12.00]
+; BTVER2-NEXT:    idivw %si # sched: [17:17.00]
+; BTVER2-NEXT:    idivw (%r9) # sched: [20:17.00]
 ; BTVER2-NEXT:    idivl %edx # sched: [25:25.00]
-; BTVER2-NEXT:    idivl (%rax) # sched: [41:25.00]
-; BTVER2-NEXT:    idivq %rcx # sched: [25:25.00]
-; BTVER2-NEXT:    idivq (%r10) # sched: [41:25.00]
+; BTVER2-NEXT:    idivl (%rax) # sched: [28:25.00]
+; BTVER2-NEXT:    idivq %rcx # sched: [41:41.00]
+; BTVER2-NEXT:    idivq (%r10) # sched: [44:41.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

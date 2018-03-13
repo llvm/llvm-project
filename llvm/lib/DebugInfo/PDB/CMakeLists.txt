@@ -14,11 +14,13 @@ if(LLVM_ENABLE_DIA_SDK)
   add_pdb_impl_folder(DIA
     DIA/DIADataStream.cpp
     DIA/DIAEnumDebugStreams.cpp
+    DIA/DIAEnumInjectedSources.cpp
     DIA/DIAEnumLineNumbers.cpp
     DIA/DIAEnumSourceFiles.cpp
     DIA/DIAEnumSymbols.cpp
     DIA/DIAEnumTables.cpp
     DIA/DIAError.cpp
+    DIA/DIAInjectedSource.cpp
     DIA/DIALineNumber.cpp
     DIA/DIARawSymbol.cpp
     DIA/DIASession.cpp

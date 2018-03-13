@@ -450,9 +450,15 @@ void ScriptParser::readSections() {
   }
 
   if (!atEOF() && consume("INSERT")) {
-    expect("AFTER");
-    std::vector<BaseCommand *> &Dest = Script->InsertAfterCommands[next()];
-    Dest.insert(Dest.end(), V.begin(), V.end());
+    std::vector<BaseCommand *> *Dest = nullptr;
+    if (consume("AFTER"))
+      Dest = &Script->InsertAfterCommands[next()];
+    else if (consume("BEFORE"))
+      Dest = &Script->InsertBeforeCommands[next()];
+    else
+      setError("expected AFTER/BEFORE, but got '" + next() + "'");
+    if (Dest)
+      Dest->insert(Dest->end(), V.begin(), V.end());
     return;
   }
 

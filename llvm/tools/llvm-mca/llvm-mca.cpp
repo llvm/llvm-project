@@ -324,8 +324,8 @@ int main(int argc, char **argv) {
   std::unique_ptr<mca::BackendPrinter> Printer =
       llvm::make_unique<mca::BackendPrinter>(*B);
 
-  std::unique_ptr<mca::SummaryView> SV = llvm::make_unique<mca::SummaryView>(
-      *B, *IP, S->getNumIterations(), S->size(), Width);
+  std::unique_ptr<mca::SummaryView> SV =
+      llvm::make_unique<mca::SummaryView>(*STI, *MCII, *S, *IP, Width);
   Printer->addView(std::move(SV));
 
   if (PrintModeVerbose) {

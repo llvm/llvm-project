@@ -424,16 +424,6 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   } else if (class_name == g_Dictionary1) {
     value = 1;
   }
-  /*else if (!strcmp(class_name,"__NSCFDictionary"))
-   {
-   Status error;
-   value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + (is_64bit ?
-   20 : 12), 4, 0, error);
-   if (error.Fail())
-   return false;
-   if (is_64bit)
-   value &= ~0x0f1f000000000000UL;
-   }*/
   else {
     auto &map(NSDictionary_Additionals::GetAdditionalSummaries());
     for (auto &candidate : map) {

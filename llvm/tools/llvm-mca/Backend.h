@@ -23,6 +23,7 @@
 namespace mca {
 
 class HWEventListener;
+class HWInstructionEvent;
 
 /// \brief An out of order backend for a specific subtarget.
 ///
@@ -71,6 +72,7 @@ public:
             RegisterFileSize, MaxRetirePerCycle, DispatchWidth, HWS.get())),
         SM(Source), Cycles(0) {
     IB = llvm::make_unique<InstrBuilder>(MCII, HWS->getProcResourceMasks());
+    HWS->setDispatchUnit(DU.get());
   }
 
   void run() {
@@ -80,6 +82,13 @@ public:
 
   unsigned getNumIterations() const { return SM.getNumIterations(); }
   unsigned getNumInstructions() const { return SM.size(); }
+  const Instruction &getInstruction(unsigned Index) const {
+    const auto It = Instructions.find(Index);
+    assert(It != Instructions.end() && "no running instructions with index");
+    assert(It->second);
+    return *It->second;
+  }
+  void eraseInstruction(unsigned Index) { Instructions.erase(Index); }
   unsigned getNumCycles() const { return Cycles; }
   unsigned getTotalRegisterMappingsCreated() const {
     return DU->getTotalRegisterMappingsCreated();
@@ -94,9 +103,6 @@ public:
     return STI.getSchedModel();
   }
 
-  double getRThroughput(const InstrDesc &ID) const {
-    return HWS->getRThroughput(ID);
-  }
   void getBuffersUsage(std::vector<BufferUsageEntry> &Usage) const {
     return HWS->getBuffersUsage(Usage);
   }
@@ -122,14 +128,8 @@ public:
 
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);
-  void notifyInstructionDispatched(unsigned Index);
-  void notifyInstructionReady(unsigned Index);
-  void notifyInstructionIssued(
-      unsigned Index,
-      const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> &Used);
-  void notifyInstructionExecuted(unsigned Index);
+  void notifyInstructionEvent(const HWInstructionEvent &Event);
   void notifyResourceAvailable(const ResourceRef &RR);
-  void notifyInstructionRetired(unsigned Index);
   void notifyCycleEnd(unsigned Cycle);
 };
 

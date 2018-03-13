@@ -11,12 +11,21 @@ multiclass Eq<string name> {
   def _eq: Joined<["--", "-"], name # "=">, Alias<!cast<Separate>(NAME)>;
 }
 
+multiclass B<string name, string help1, string help2> {
+  def NAME: Flag<["--", "-"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
+}
+
 // The follow flags are shared with the ELF linker
 def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
 
 def color_diagnostics_eq: J<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics">;
+
+defm demangle: B<"demangle",
+    "Demangle symbol names",
+    "Do not demangle symbol names">;
 
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
@@ -27,8 +36,9 @@ def error_limit: J<"error-limit=">,
 def fatal_warnings: F<"fatal-warnings">,
   HelpText<"Treat warnings as errors">;
 
-def gc_sections: F<"gc-sections">,
-  HelpText<"Enable garbage collection of unused sections">;
+defm gc_sections: B<"gc-sections",
+    "Enable garbage collection of unused sections",
+    "Disable garbage collection of unused sections">;
 
 def help: F<"help">, HelpText<"Print option help">;
 
@@ -48,17 +58,12 @@ def no_color_diagnostics: F<"no-color-diagnostics">,
 
 def no_fatal_warnings: F<"no-fatal-warnings">;
 
-def no_gc_sections: F<"no-gc-sections">,
-  HelpText<"Disable garbage collection of unused sections">;
-
-def no_print_gc_sections: F<"no-print-gc-sections">,
-  HelpText<"Do not list removed unused sections">;
-
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
-def print_gc_sections: F<"print-gc-sections">,
-  HelpText<"List removed unused sections">;
+defm print_gc_sections: B<"print-gc-sections",
+    "List removed unused sections",
+    "Do not list removed unused sections">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
@@ -91,8 +96,9 @@ def allow_undefined_file: J<"allow-undefined-file=">,
 def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">,
   Alias<allow_undefined_file>;
 
-def check_signatures: F<"check-signatures">,
-  HelpText<"Check function signatures">;
+defm check_signatures: B<"check-signatures",
+    "Check function signatures",
+    "Don't check function signatures">;
 
 defm export: Eq<"export">,
   HelpText<"Force a symbol to be exported">;
@@ -108,9 +114,6 @@ def initial_memory: J<"initial-memory=">,
 
 def max_memory: J<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
-
-def no_check_signatures: F<"no-check-signatures">,
-  HelpText<"Don't check function signatures">;
 
 def no_entry: F<"no-entry">,
   HelpText<"Do not output any entry point">;

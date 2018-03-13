@@ -35,5 +35,5 @@ ARM64-NOT: ---
 
 CHECK: ...
 
-BADARCH: error: Unsupported cpu architecture: 'arm42'
+BADARCH: error: unsupported cpu architecture: 'arm42'
 EMPTY: error: no architecture to link

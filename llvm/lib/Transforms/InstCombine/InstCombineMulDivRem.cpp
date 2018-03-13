@@ -557,14 +557,28 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
 
   // Reassociate constant RHS with another constant to form constant expression.
   if (I.isFast() && match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP()) {
+    Constant *C1;
+    if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
+      // (C1 / X) * C --> (C * C1) / X
+      Constant *CC1 = ConstantExpr::getFMul(C, C1);
+      if (CC1->isNormalFP())
+        return BinaryOperator::CreateFDivFMF(CC1, X, &I);
+    }
+    if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
+      // (X / C1) * C --> X * (C / C1)
+      Constant *CDivC1 = ConstantExpr::getFDiv(C, C1);
+      if (CDivC1->isNormalFP())
+        return BinaryOperator::CreateFMulFMF(X, CDivC1, &I);
+
+      // If the constant was a denormal, try reassociating differently.
+      // (X / C1) * C --> X / (C1 / C)
+      Constant *C1DivC = ConstantExpr::getFDiv(C1, C);
+      if (Op0->hasOneUse() && C1DivC->isNormalFP())
+        return BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
+    }
+
     // Let MDC denote an expression in one of these forms:
     // X * C, C/X, X/C, where C is a constant.
-    //
-    // Try to simplify "MDC * Constant"
-    if (isFMulOrFDivWithConstant(Op0))
-      if (Value *V = foldFMulConst(cast<Instruction>(Op0), C, &I))
-        return replaceInstUsesWith(I, V);
-
     // (MDC +/- C1) * C => (MDC * C) +/- (C1 * C)
     Instruction *FAddSub = dyn_cast<Instruction>(Op0);
     if (FAddSub &&

@@ -1,4 +1,4 @@
-# RUN: llvm-mc --disassemble %s -triple=mipsel-unknown-linux -mattr=micromips \
+# RUN: llvm-mc --disassemble %s -triple=mipsel-unknown-linux -mattr=micromips,eva \
 # RUN: | FileCheck %s
 
 0xf9 0x4f # CHECK: addiusp -16

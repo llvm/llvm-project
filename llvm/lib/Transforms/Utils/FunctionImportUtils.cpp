@@ -206,8 +206,11 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   // definition.
   if (GV.hasName()) {
     ValueInfo VI = ImportIndex.getValueInfo(GV.getGUID());
-    if (VI && VI.isDSOLocal())
+    if (VI && VI.isDSOLocal()) {
       GV.setDSOLocal(true);
+      if (GV.hasDLLImportStorageClass())
+        GV.setDLLStorageClass(GlobalValue::DefaultStorageClass);
+    }
   }
 
   bool DoPromote = false;

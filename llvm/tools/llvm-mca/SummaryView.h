@@ -49,9 +49,11 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 
-#include "Backend.h"
+#include "SourceMgr.h"
 #include "View.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
@@ -66,10 +68,11 @@ namespace mca {
 /// classes the task of printing out timeline information as well as
 /// resource pressure.
 class SummaryView : public View {
-  const Backend &B;
+  const llvm::MCSubtargetInfo &STI;
+  const llvm::MCInstrInfo &MCII;
+  const SourceMgr &Source;
   llvm::MCInstPrinter &MCIP;
-  const unsigned Iterations;
-  const unsigned Instructions;
+
   const unsigned DispatchWidth;
   unsigned TotalCycles;
 
@@ -77,10 +80,10 @@ class SummaryView : public View {
   void printInstructionInfo(llvm::raw_ostream &OS) const;
 
 public:
-  SummaryView(const Backend &backend, llvm::MCInstPrinter &IP,
-              unsigned NumIterations, unsigned NumInstructions, unsigned Width)
-      : B(backend), MCIP(IP), Iterations(NumIterations),
-        Instructions(NumInstructions), DispatchWidth(Width), TotalCycles(0) {}
+  SummaryView(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii,
+              const SourceMgr &S, llvm::MCInstPrinter &IP, unsigned Width)
+      : STI(sti), MCII(mcii), Source(S), MCIP(IP), DispatchWidth(Width),
+        TotalCycles(0) {}
 
   void onCycleEnd(unsigned /* unused */) override { ++TotalCycles; }
 

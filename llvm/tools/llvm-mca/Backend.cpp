@@ -65,50 +65,9 @@ void Backend::notifyCycleBegin(unsigned Cycle) {
   HWS->cycleEvent(Cycle);
 }
 
-void Backend::notifyInstructionDispatched(unsigned Index) {
-  DEBUG(dbgs() << "[E] Instruction Dispatched: " << Index << '\n');
+void Backend::notifyInstructionEvent(const HWInstructionEvent &Event) {
   for (HWEventListener *Listener : Listeners)
-    Listener->onInstructionDispatched(Index);
-}
-
-void Backend::notifyInstructionReady(unsigned Index) {
-  DEBUG(dbgs() << "[E] Instruction Ready: " << Index << '\n');
-  for (HWEventListener *Listener : Listeners)
-    Listener->onInstructionReady(Index);
-}
-
-void Backend::notifyInstructionIssued(
-    unsigned Index, const ArrayRef<std::pair<ResourceRef, unsigned>> &Used) {
-  DEBUG(
-    dbgs() << "[E] Instruction Issued: " << Index << '\n';
-    for (const std::pair<ResourceRef, unsigned> &Resource : Used) {
-      dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
-             << Resource.first.second << "]\n";
-      dbgs() << "           cycles: " << Resource.second << '\n';
-    }
-  );
-
-  for (HWEventListener *Listener : Listeners)
-    Listener->onInstructionIssued(Index, Used);
-}
-
-void Backend::notifyInstructionExecuted(unsigned Index) {
-  DEBUG(dbgs() << "[E] Instruction Executed: " << Index << '\n');
-  for (HWEventListener *Listener : Listeners)
-    Listener->onInstructionExecuted(Index);
-
-  const Instruction &IS = *Instructions[Index];
-  DU->onInstructionExecuted(IS.getRCUTokenID());
-}
-
-void Backend::notifyInstructionRetired(unsigned Index) {
-  DEBUG(dbgs() << "[E] Instruction Retired: " << Index << '\n');
-  for (HWEventListener *Listener : Listeners)
-    Listener->onInstructionRetired(Index);
-
-  const Instruction &IS = *Instructions[Index];
-  DU->invalidateRegisterMappings(IS);
-  Instructions.erase(Index);
+    Listener->onInstructionEvent(Event);
 }
 
 void Backend::notifyResourceAvailable(const ResourceRef &RR) {

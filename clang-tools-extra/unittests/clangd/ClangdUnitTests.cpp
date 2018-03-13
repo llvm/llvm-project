@@ -90,7 +90,7 @@ Position pos(int line, int character) {
   Res.line = line;
   Res.character = character;
   return Res;
-};
+}
 
 /// Matches diagnostic that has exactly one fix with the same range and message
 /// as the diagnostic itself.

@@ -121,19 +121,58 @@ def  : WriteRes<WriteIMulH, [JALU1]> {
   let ResourceCycles = [4];
 }
 
-// FIXME 8/16 bit divisions
+// Worst case (i64 division)
 def : WriteRes<WriteIDiv, [JALU1, JDiv]> {
-  let Latency = 25;
-  let ResourceCycles = [1, 25];
-}
-def : WriteRes<WriteIDivLd, [JALU1, JLAGU, JDiv]> {
   let Latency = 41;
-  let ResourceCycles = [1, 1, 25];
+  let ResourceCycles = [1, 41];
+  let NumMicroOps = 2;
+}
+def : WriteRes<WriteIDivLd, [JLAGU, JALU1, JDiv]> {
+  let Latency = 44;
+  let ResourceCycles = [1, 1, 41];
+  let NumMicroOps = 2;
 }
 
 // This is for simple LEAs with one or two input operands.
 // FIXME: SAGU 3-operand LEA
 def : WriteRes<WriteLEA, [JALU01]>;
+
+def JWriteIDiv8 : SchedWriteRes<[JALU1, JDiv]> {
+  let Latency = 12;
+  let ResourceCycles = [1, 12];
+}
+def JWriteIDiv8Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
+  let Latency = 15;
+  let ResourceCycles = [1, 1, 12];
+}
+def : InstRW<[JWriteIDiv8], (instrs DIV8r, IDIV8r)>;
+def : InstRW<[JWriteIDiv8Ld], (instrs DIV8m, IDIV8m)>;
+
+def JWriteIDiv16 : SchedWriteRes<[JALU1, JDiv]> {
+  let Latency = 17;
+  let ResourceCycles = [1, 17];
+  let NumMicroOps = 2;
+}
+def JWriteIDiv16Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
+  let Latency = 20;
+  let ResourceCycles = [1, 1, 17];
+  let NumMicroOps = 2;
+}
+def : InstRW<[JWriteIDiv16], (instrs DIV16r, IDIV16r)>;
+def : InstRW<[JWriteIDiv16Ld], (instrs DIV16m, IDIV16m)>;
+
+def JWriteIDiv32 : SchedWriteRes<[JALU1, JDiv]> {
+  let Latency = 25;
+  let ResourceCycles = [1, 25];
+  let NumMicroOps = 2;
+}
+def JWriteIDiv32Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
+  let Latency = 28;
+  let ResourceCycles = [1, 1, 25];
+  let NumMicroOps = 2;
+}
+def : InstRW<[JWriteIDiv32], (instrs DIV32r, IDIV32r)>;
+def : InstRW<[JWriteIDiv32Ld], (instrs DIV32m, IDIV32m)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer shifts and rotates.

@@ -86,6 +86,7 @@ public:
 
   bool addInstSelector() override;
   void addMachineSSAOptimization() override;
+  void addPreEmitPass() override;
 };
 }
 
@@ -109,4 +110,12 @@ void BPFPassConfig::addMachineSSAOptimization() {
   const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
   if (Subtarget->getHasAlu32() && !DisableMIPeephole)
     addPass(createBPFMIPeepholePass());
+}
+
+void BPFPassConfig::addPreEmitPass() {
+  const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
+
+  if (getOptLevel() != CodeGenOpt::None)
+    if (Subtarget->getHasAlu32() && !DisableMIPeephole)
+      addPass(createBPFMIPreEmitPeepholePass());
 }

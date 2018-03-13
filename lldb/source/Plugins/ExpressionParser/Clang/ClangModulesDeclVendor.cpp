@@ -169,7 +169,7 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
     : m_diagnostics_engine(std::move(diagnostics_engine)),
       m_compiler_invocation(std::move(compiler_invocation)),
       m_compiler_instance(std::move(compiler_instance)),
-      m_parser(std::move(parser)) {}
+      m_parser(std::move(parser)), m_origin_map() {}
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
     std::set<ClangModulesDeclVendor::ModuleID> &exports,

@@ -15,6 +15,7 @@
 
 #include "Dispatch.h"
 #include "Backend.h"
+#include "HWEventListener.h"
 #include "Scheduler.h"
 #include "llvm/Support/Debug.h"
 
@@ -150,11 +151,19 @@ unsigned RetireControlUnit::reserveSlot(unsigned Index, unsigned NumMicroOps) {
 }
 
 void DispatchUnit::notifyInstructionDispatched(unsigned Index) {
-  Owner->notifyInstructionDispatched(Index);
+  DEBUG(dbgs() << "[E] Instruction Dispatched: " << Index << '\n');
+  Owner->notifyInstructionEvent(
+      HWInstructionEvent(HWInstructionEvent::Dispatched, Index));
 }
 
 void DispatchUnit::notifyInstructionRetired(unsigned Index) {
-  Owner->notifyInstructionRetired(Index);
+  DEBUG(dbgs() << "[E] Instruction Retired: " << Index << '\n');
+  Owner->notifyInstructionEvent(
+      HWInstructionEvent(HWInstructionEvent::Retired, Index));
+
+  const Instruction &IS = Owner->getInstruction(Index);
+  invalidateRegisterMappings(IS);
+  Owner->eraseInstruction(Index);
 }
 
 void RetireControlUnit::cycleEvent() {
@@ -243,7 +252,7 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst) {
   // Reserve slots in the RCU.
   unsigned RCUTokenID = RCU->reserveSlot(IID, NumMicroOps);
   NewInst->setRCUTokenID(RCUTokenID);
-  Owner->notifyInstructionDispatched(IID);
+  notifyInstructionDispatched(IID);
 
   SC->scheduleInstruction(IID, NewInst);
   return RCUTokenID;

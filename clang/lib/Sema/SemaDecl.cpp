@@ -13185,7 +13185,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     // We already have a __builtin___CFStringMakeConstantString,
     // but builds that use -fno-constant-cfstrings don't go through that.
     if (!FD->hasAttr<FormatArgAttr>())
-      FD->addAttr(FormatArgAttr::CreateImplicit(Context, 1,
+      FD->addAttr(FormatArgAttr::CreateImplicit(Context, ParamIdx(1, FD),
                                                 FD->getLocation()));
   }
 }
@@ -15445,12 +15445,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     if (Record && !getLangOpts().CPlusPlus) {
       QualType FT = FD->getType();
       if (FT.isNonTrivialToPrimitiveDefaultInitialize())
-        Record->setNonTrivialToPrimitiveDefaultInitialize();
+        Record->setNonTrivialToPrimitiveDefaultInitialize(true);
       QualType::PrimitiveCopyKind PCK = FT.isNonTrivialToPrimitiveCopy();
       if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
-        Record->setNonTrivialToPrimitiveCopy();
+        Record->setNonTrivialToPrimitiveCopy(true);
       if (FT.isDestructedType())
-        Record->setNonTrivialToPrimitiveDestroy();
+        Record->setNonTrivialToPrimitiveDestroy(true);
     }
 
     if (Record && FD->getType().isVolatileQualified())

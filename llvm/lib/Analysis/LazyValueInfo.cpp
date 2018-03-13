@@ -1145,9 +1145,17 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
              (!isTrueDest && BO->getOpcode() != BinaryOperator::Or))
     return ValueLatticeElement::getOverdefined();
 
-  auto RHS = getValueFromCondition(Val, BO->getOperand(0), isTrueDest, Visited);
-  auto LHS = getValueFromCondition(Val, BO->getOperand(1), isTrueDest, Visited);
-  return intersect(RHS, LHS);
+  // Prevent infinite recursion if Cond references itself as in this example:
+  //  Cond: "%tmp4 = and i1 %tmp4, undef"
+  //    BL: "%tmp4 = and i1 %tmp4, undef"
+  //    BR: "i1 undef"
+  Value *BL = BO->getOperand(0);
+  Value *BR = BO->getOperand(1);
+  if (BL == Cond || BR == Cond)
+    return ValueLatticeElement::getOverdefined();
+
+  return intersect(getValueFromCondition(Val, BL, isTrueDest, Visited),
+                   getValueFromCondition(Val, BR, isTrueDest, Visited));
 }
 
 static ValueLatticeElement
