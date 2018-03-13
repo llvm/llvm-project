@@ -101,6 +101,22 @@ endif()
 if (NOT LLDB_DISABLE_PYTHON)
     # Add a Post-Build Event to copy over Python files and create the symlink
     # to liblldb.so for the Python API(hardlink on Windows)
+    if (APPLE)
+        # FIXME. This replicates the xcode project. We should probably
+        # get rid of this special path and use the same script that
+        # every other platform is using.
+        add_custom_target(finish_swig ALL
+        COMMAND
+           ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finish-swig-wrapper-classes.sh
+               ${LLDB_SOURCE_DIR}
+               ${LLDB_PYTHON_TARGET_DIR}
+               ${LLDB_PYTHON_TARGET_DIR}
+               ""
+        VERBATIM
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/scripts/lldb.py
+        COMMENT "Python script sym-linking LLDB Python API")
+    else()
     add_custom_target(finish_swig ALL
         COMMAND
            ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
@@ -116,6 +132,7 @@ if (NOT LLDB_DISABLE_PYTHON)
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/scripts/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
+    endif()
     # We depend on liblldb being built before we can do this step.
     add_dependencies(finish_swig liblldb lldb-argdumper)
 
