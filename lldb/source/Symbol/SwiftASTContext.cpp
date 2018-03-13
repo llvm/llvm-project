@@ -1143,8 +1143,7 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
     }
     llvm::StringRef module_cache_path =
         rhs.m_compiler_invocation_ap->getClangModuleCachePath();
-    if (!module_cache_path.empty())
-      m_compiler_invocation_ap->setClangModuleCachePath(module_cache_path);
+    m_compiler_invocation_ap->setClangModuleCachePath(module_cache_path);
   }
 
   swift::IRGenOptions &ir_gen_opts =

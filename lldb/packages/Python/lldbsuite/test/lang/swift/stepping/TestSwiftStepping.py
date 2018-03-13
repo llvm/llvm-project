@@ -184,17 +184,9 @@ class TestSwiftStepping(lldbtest.TestBase):
         thread.StepOver()
         self.hit_correct_line(thread, "At point initializer.")
         thread.StepOver()
-        # Due to: <rdar://problem/15888936> we will stop inside the
-        # switch statement instead of at the switch:
-        # self.hit_correct_line (thread, "At the beginning of the switch.")
-        self.hit_correct_line(thread, "case (0, 0):")
+        self.hit_correct_line (thread, "At the beginning of the switch.")
 
         thread.StepOver()
-        self.hit_correct_line(thread, "case (_, 0):")
-        thread.StepInto()
-        self.hit_correct_line(thread, "case (0, _):")
-        thread.StepOver()
-
         stopped_at_case = self.hit_correct_line(
             thread, "case (let x, let y) where", False)
         if stopped_at_case:
