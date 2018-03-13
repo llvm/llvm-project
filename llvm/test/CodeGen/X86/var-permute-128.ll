@@ -40,14 +40,13 @@ define <2 x i64> @var_shuffle_v2i64(<2 x i64> %v, <2 x i64> %indices) nounwind {
 ;
 ; SSE41-LABEL: var_shuffle_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq %xmm1, %rax
-; SSE41-NEXT:    andl $1, %eax
-; SSE41-NEXT:    pextrq $1, %xmm1, %rcx
-; SSE41-NEXT:    andl $1, %ecx
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    pxor %xmm2, %xmm2
+; SSE41-NEXT:    pcmpeqq %xmm1, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v2i64:
@@ -402,13 +401,13 @@ define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) noun
 ;
 ; SSE41-LABEL: var_shuffle_v2f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq %xmm1, %rax
-; SSE41-NEXT:    andl $1, %eax
-; SSE41-NEXT:    pextrq $1, %xmm1, %rcx
-; SSE41-NEXT:    andl $1, %ecx
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pxor %xmm0, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm1, %xmm0
+; SSE41-NEXT:    movddup {{.*#+}} xmm1 = xmm2[0,0]
+; SSE41-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v2f64:

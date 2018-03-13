@@ -24,6 +24,8 @@
 namespace mca {
 
 class Backend;
+class DispatchUnit;
+
 /// Used to notify the internal state of a processor resource.
 ///
 /// A processor resource is available if it is not reserved, and there are
@@ -455,7 +457,10 @@ class Scheduler {
   std::unique_ptr<LSUnit> LSU;
 
   // The Backend gets notified when instructions are ready/issued/executed.
-  Backend *Owner;
+  Backend *const Owner;
+
+  // The dispatch unit gets notified when instructions are executed.
+  DispatchUnit *DU;
 
   using QueueEntryTy = std::pair<unsigned, Instruction *>;
   std::map<unsigned, Instruction *> WaitQueue;
@@ -485,6 +490,8 @@ public:
         LSU(llvm::make_unique<LSUnit>(LoadQueueSize, StoreQueueSize,
                                       AssumeNoAlias)),
         Owner(B) {}
+
+  void setDispatchUnit(DispatchUnit *DispUnit) { DU = DispUnit; }
 
   /// Scheduling events.
   ///

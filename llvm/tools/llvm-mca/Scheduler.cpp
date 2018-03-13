@@ -13,6 +13,7 @@
 
 #include "Scheduler.h"
 #include "Backend.h"
+#include "HWEventListener.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -445,16 +446,30 @@ void Scheduler::updateIssuedQueue() {
 
 void Scheduler::notifyInstructionIssued(
     unsigned Index, const ArrayRef<std::pair<ResourceRef, unsigned>> &Used) {
-  Owner->notifyInstructionIssued(Index, Used);
+  DEBUG(dbgs() << "[E] Instruction Issued: " << Index << '\n';
+        for (const std::pair<ResourceRef, unsigned> &Resource
+             : Used) {
+          dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
+                 << Resource.first.second << "]\n";
+          dbgs() << "           cycles: " << Resource.second << '\n';
+        });
+  Owner->notifyInstructionEvent(HWInstructionIssuedEvent(Index, Used));
 }
 
 void Scheduler::notifyInstructionExecuted(unsigned Index) {
   LSU->onInstructionExecuted(Index);
-  Owner->notifyInstructionExecuted(Index);
+  DEBUG(dbgs() << "[E] Instruction Executed: " << Index << '\n');
+  Owner->notifyInstructionEvent(
+      HWInstructionEvent(HWInstructionEvent::Executed, Index));
+
+  const Instruction &IS = Owner->getInstruction(Index);
+  DU->onInstructionExecuted(IS.getRCUTokenID());
 }
 
 void Scheduler::notifyInstructionReady(unsigned Index) {
-  Owner->notifyInstructionReady(Index);
+  DEBUG(dbgs() << "[E] Instruction Ready: " << Index << '\n');
+  Owner->notifyInstructionEvent(
+      HWInstructionEvent(HWInstructionEvent::Ready, Index));
 }
 
 void Scheduler::notifyResourceAvailable(const ResourceRef &RR) {

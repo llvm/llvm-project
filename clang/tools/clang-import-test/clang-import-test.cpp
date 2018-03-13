@@ -245,7 +245,7 @@ struct CIAndOrigins {
   ASTContext &getASTContext() { return CI->getASTContext(); }
   FileManager &getFileManager() { return CI->getFileManager(); }
   const OriginMap &getOriginMap() {
-    static const OriginMap EmptyOriginMap;
+    static const OriginMap EmptyOriginMap{};
     if (ExternalASTSource *Source = CI->getASTContext().getExternalSource())
       return static_cast<ExternalASTMerger *>(Source)->GetOrigins();
     return EmptyOriginMap;

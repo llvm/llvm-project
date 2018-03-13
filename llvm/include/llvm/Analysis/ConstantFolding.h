@@ -147,6 +147,12 @@ Constant *ConstantFoldCall(ImmutableCallSite CS, Function *F,
                            ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
 
+/// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
+/// returning null if unsuccessful. Can cast pointer to pointer or pointer to
+/// integer and vice versa if their sizes are equal.
+Constant *ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
+                                         const DataLayout &DL);
+
 /// \brief Check whether the given call has no side-effects.
 /// Specifically checks for math routimes which sometimes set errno.
 bool isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI);

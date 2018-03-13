@@ -39,10 +39,13 @@ void ResourcePressureView::initialize() {
   std::fill(ResourceUsage.begin(), ResourceUsage.end(), 0);
 }
 
-void ResourcePressureView::onInstructionIssued(
-    unsigned Index, const ArrayRef<std::pair<ResourceRef, unsigned>> &Used) {
-  unsigned SourceIdx = Index % Source.size();
-  for (const std::pair<ResourceRef, unsigned> &Use : Used) {
+void ResourcePressureView::onInstructionEvent(const HWInstructionEvent &Event) {
+  // We're only interested in Issue events.
+  if (Event.Type != HWInstructionEvent::Issued)
+    return;
+  const auto &IssueEvent = static_cast<const HWInstructionIssuedEvent &>(Event);
+  unsigned SourceIdx = Event.Index % Source.size();
+  for (const std::pair<ResourceRef, unsigned> &Use : IssueEvent.UsedResources) {
     const ResourceRef &RR = Use.first;
     assert(Resource2VecIndex.find(RR.first) != Resource2VecIndex.end());
     unsigned R2VIndex = Resource2VecIndex[RR.first];

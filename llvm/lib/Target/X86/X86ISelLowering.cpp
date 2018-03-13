@@ -8039,6 +8039,14 @@ SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
       IndicesVec = DAG.getNode(ISD::ADD, DL, IndicesVT, IndicesVec, IndicesVec);
       Opcode = X86ISD::VPERMILPV;
       ShuffleVT = MVT::v2f64;
+    } else if (Subtarget.hasSSE41()) {
+      // SSE41 can compare v2i64 - select between indices 0 and 1.
+      return DAG.getSelectCC(
+          DL, IndicesVec,
+          getZeroVector(IndicesVT.getSimpleVT(), Subtarget, DAG, DL),
+          DAG.getVectorShuffle(VT, DL, SrcVec, SrcVec, {0, 0}),
+          DAG.getVectorShuffle(VT, DL, SrcVec, SrcVec, {1, 1}),
+          ISD::CondCode::SETEQ);
     }
     break;
   case MVT::v32i8:

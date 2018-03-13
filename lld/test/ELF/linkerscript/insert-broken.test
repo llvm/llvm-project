@@ -3,4 +3,4 @@ SECTIONS {
 } INSERT .data;
 
 # RUN: not ld.lld -o %t1 --script %s 2>&1 | FileCheck %s
-# CHECK: {{.*}}:3: AFTER expected, but got .data
+# CHECK: {{.*}}:3: expected AFTER/BEFORE, but got '.data'
