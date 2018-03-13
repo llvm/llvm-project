@@ -289,9 +289,10 @@ public:
   // A list of symbols referenced by the script.
   std::vector<llvm::StringRef> ReferencedSymbols;
 
-  // Used to implement INSERT AFTER. Contains commands that need
+  // Used to implement INSERT [AFTER|BEFORE]. Contains commands that need
   // to be inserted into SECTIONS commands list.
   llvm::DenseMap<StringRef, std::vector<BaseCommand *>> InsertAfterCommands;
+  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> InsertBeforeCommands;
 };
 
 extern LinkerScript *Script;
