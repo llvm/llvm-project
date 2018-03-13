@@ -15,6 +15,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUNCTION_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <memory>
 #include <tuple>
@@ -27,6 +28,9 @@ namespace clangd {
 /// A move-only type-erasing function wrapper. Similar to `std::function`, but
 /// allows to store move-only callables.
 template <class> class UniqueFunction;
+/// A Callback<T> is a void function that accepts Expected<T>.
+/// This is accepted by ClangdServer functions that logically return T.
+template <typename T> using Callback = UniqueFunction<void(llvm::Expected<T>)>;
 
 template <class Ret, class... Args> class UniqueFunction<Ret(Args...)> {
 public:

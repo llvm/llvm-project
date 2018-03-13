@@ -26,13 +26,12 @@ buildTestFS(llvm::StringMap<std::string> const &Files);
 // A VFS provider that returns TestFSes containing a provided set of files.
 class MockFSProvider : public FileSystemProvider {
 public:
-  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
-  getTaggedFileSystem(PathRef File) override;
+  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+    return buildTestFS(Files);
+  }
 
-  llvm::Optional<std::string> ExpectedFile;
   // If relative paths are used, they are resolved with testPath().
   llvm::StringMap<std::string> Files;
-  VFSTag Tag = VFSTag();
 };
 
 // A Compilation database that returns a fixed set of compile flags.

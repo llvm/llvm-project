@@ -6,7 +6,7 @@
 ; CHECK-NO-ERASE: @foo(
 ; CHECK-NO-ERASE: @foo_bb9(
 ; CHECK-NO-ERASE: @foo_bb20(
-; CHECK-ERASE-NOT: @foo(
+; CHECK-ERASE: declare i32 @foo(
 ; CHECK-ERASE: @foo_bb9(
 ; CHECK-ERASE: @foo_bb20(
 define i32 @foo(i32 %arg, i32 %arg1) {

@@ -83,7 +83,7 @@ multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
   // Memory variant also uses a cycle on JLAGU and adds 3 cycles to the
   // latency.
   def : WriteRes<SchedRW.Folded, [JLAGU, ExePort]> {
-     let Latency = !add(Lat, 3);
+    let Latency = !add(Lat, 3);
   }
 }
 
@@ -100,9 +100,9 @@ multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
   // Memory variant also uses a cycle on JLAGU and adds 5 cycles to the
   // latency.
   def : WriteRes<SchedRW.Folded, [JLAGU, ExePort]> {
-     let Latency = !add(Lat, 5);
-     let ResourceCycles = [1, Res];
-     let NumMicroOps = UOps;
+    let Latency = !add(Lat, 5);
+    let ResourceCycles = [1, Res];
+    let NumMicroOps = UOps;
   }
 }
 
@@ -194,11 +194,20 @@ def : WriteRes<WriteZero,  []>;
 defm : JWriteResIntPair<WriteJump,  JALU01, 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Special case scheduling classes.
+// FIXME: pipe for system/microcode?
+////////////////////////////////////////////////////////////////////////////////
+
+def : WriteRes<WriteSystem,     [JAny]> { let Latency = 100; }
+def : WriteRes<WriteMicrocoded, [JAny]> { let Latency = 100; }
+def : WriteRes<WriteFence,  [JSAGU]>;
+def : WriteRes<WriteNop, []>;
+
+////////////////////////////////////////////////////////////////////////////////
 // Floating point. This covers both scalar and vector operations.
 // FIXME: should we bother splitting JFPU pipe + unit stages for fast instructions?
 // FIXME: Double precision latencies
 // FIXME: SS vs PS latencies
-// FIXME: ymm latencies
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : JWriteResFpuPair<WriteFAdd,        JFPU0,  3>;
@@ -229,7 +238,11 @@ def : WriteRes<WriteFDivLd, [JFPU1, JLAGU, JFPM]> {
   let ResourceCycles = [1, 1, 19];
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Conversions.
 // FIXME: integer pipes
+////////////////////////////////////////////////////////////////////////////////
+
 defm : JWriteResFpuPair<WriteCvtF2I,    JFPU1,  3>; // Float -> Integer.
 defm : JWriteResFpuPair<WriteCvtI2F,    JFPU1,  3>; // Integer -> Float.
 defm : JWriteResFpuPair<WriteCvtF2F,    JFPU1,  3>; // Float -> Float size conversion.
@@ -332,12 +345,6 @@ def : InstRW<[JWriteFHAddYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUB
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : JWriteResFpuPair<WriteCLMul,   JVIMUL, 2>;
-
-// FIXME: pipe for system/microcode?
-def : WriteRes<WriteSystem,     [JAny]> { let Latency = 100; }
-def : WriteRes<WriteMicrocoded, [JAny]> { let Latency = 100; }
-def : WriteRes<WriteFence,  [JSAGU]>;
-def : WriteRes<WriteNop, []>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE4.1 instructions.

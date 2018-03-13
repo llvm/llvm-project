@@ -2482,6 +2482,8 @@ struct GroupSection {
   StringRef Signature;
   uint64_t ShName;
   uint64_t Index;
+  uint32_t Link;
+  uint32_t Info;
   uint32_t Type;
   std::vector<GroupMember> Members;
 };
@@ -2508,7 +2510,14 @@ std::vector<GroupSection> getGroups(const ELFFile<ELFT> *Obj) {
 
     StringRef Name = unwrapOrError(Obj->getSectionName(&Sec));
     StringRef Signature = StrTable.data() + Sym->st_name;
-    Ret.push_back({Name, Signature, Sec.sh_name, I - 1, Data[0], {}});
+    Ret.push_back({Name, 
+                   Signature, 
+                   Sec.sh_name, 
+                   I - 1,
+                   Sec.sh_link,
+                   Sec.sh_info,
+                   Data[0], 
+                   {}});
 
     std::vector<GroupMember> &GM = Ret.back().Members;
     for (uint32_t Ndx : Data.slice(1)) {
@@ -3780,6 +3789,8 @@ void LLVMStyle<ELFT>::printGroupSections(const ELFO *Obj) {
     DictScope D(W, "Group");
     W.printNumber("Name", G.Name, G.ShName);
     W.printNumber("Index", G.Index);
+    W.printNumber("Link", G.Link);
+    W.printNumber("Info", G.Info);
     W.printHex("Type", getGroupType(G.Type), G.Type);
     W.startLine() << "Signature: " << G.Signature << "\n";
 
