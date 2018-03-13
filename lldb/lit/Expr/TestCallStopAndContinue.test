@@ -1,5 +1,7 @@
 # XFAIL: windows
 # -> llvm.org/pr24489
+# REQUIRES: darwin
+# -> Temporarily disable this test on the Swift Linux builders, due to flakiness (rdar://38378404).
 
 # RUN: %cxx %p/Inputs/call-function.cpp -g -o %t && %lldb -b -s %s -o continue -o "thread list" -- %t 2>&1 | FileCheck %s
 
