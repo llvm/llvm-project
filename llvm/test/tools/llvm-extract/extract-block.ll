@@ -1,6 +1,19 @@
 ; RUN: llvm-extract -S -bb foo:bb4 %s | FileCheck %s
 
+; CHECK: declare void @bar()
+define void @bar() {
+bb:
+  ret void
+}
+
+; CHECK-NOT: @unused()
+define void @unused() {
+bb:
+  ret void
+}
+
 ; CHECK: @foo_bb4
+; CHECK: call void @bar()
 ; CHECK: %tmp5
 define i32 @foo(i32 %arg) {
 bb:
@@ -12,6 +25,7 @@ bb:
   br i1 %tmp3, label %bb4, label %bb7
 
 bb4:                                              ; preds = %bb
+  call void @bar()
   %tmp5 = load i32, i32* %tmp1, align 4
   %tmp6 = add nsw i32 %tmp5, 1
   store i32 %tmp6, i32* %tmp1, align 4

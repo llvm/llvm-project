@@ -110,7 +110,6 @@
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Scalar/LoopDistribute.h"
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
-#include "llvm/Transforms/Scalar/LoopInstSimplify.h"
 #include "llvm/Transforms/Scalar/LoopLoadElimination.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopPredication.h"
@@ -391,9 +390,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // FIXME: Currently this is split into two loop pass pipelines because we run
   // some function passes in between them. These can and should be replaced by
   // loop pass equivalenst but those aren't ready yet. Specifically,
-  // `SimplifyCFGPass` and `InstCombinePass` are used. We have
-  // `LoopSimplifyCFGPass` which isn't yet powerful enough, and the closest to
-  // the other we have is `LoopInstSimplify`.
+  // `SimplifyCFGPass` and `InstCombinePass` are used. We just have
+  // `LoopSimplifyCFGPass` which isn't yet powerful enough.
   LoopPassManager LPM1(DebugLogging), LPM2(DebugLogging);
 
   // Rotate Loop - disable header duplication at -Oz

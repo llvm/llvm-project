@@ -128,6 +128,21 @@ uptr GetMallocUsableSize(const void *p) {
   return m->requested_size;
 }
 
+int lsan_posix_memalign(void **memptr, uptr alignment, uptr size,
+                        const StackTrace &stack) {
+  if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
+    ReturnNullOrDieOnFailure::OnBadRequest();
+    return errno_EINVAL;
+  }
+  void *ptr = Allocate(stack, size, alignment, kAlwaysClearMemory);
+  if (UNLIKELY(!ptr))
+    // OOM error is already taken care of by Allocate.
+    return errno_ENOMEM;
+  CHECK(IsAligned((uptr)ptr, alignment));
+  *memptr = ptr;
+  return 0;
+}
+
 void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;

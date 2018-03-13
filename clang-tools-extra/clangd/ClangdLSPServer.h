@@ -46,8 +46,7 @@ public:
 
 private:
   // Implement DiagnosticsConsumer.
-  void onDiagnosticsReady(PathRef File,
-                          Tagged<std::vector<Diag>> Diagnostics) override;
+  void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
 
   // Implement ProtocolCallbacks.
   void onInitialize(InitializeParams &Params) override;

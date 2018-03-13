@@ -39,6 +39,7 @@ class ASTContext;
 class BinaryOperator;
 class CFG;
 class ConstructionContext;
+class TemporaryObjectConstructionContext;
 class CXXBaseSpecifier;
 class CXXBindTemporaryExpr;
 class CXXCtorInitializer;
@@ -65,8 +66,9 @@ public:
     // stmt kind
     Statement,
     Constructor,
+    CXXRecordTypedCall,
     STMT_BEGIN = Statement,
-    STMT_END = Constructor,
+    STMT_END = CXXRecordTypedCall,
     // dtor kind
     AutomaticObjectDtor,
     DeleteDtor,
@@ -158,10 +160,6 @@ public:
     return static_cast<ConstructionContext *>(Data2.getPointer());
   }
 
-  QualType getType() const {
-    return cast<CXXConstructExpr>(getStmt())->getType();
-  }
-
 private:
   friend class CFGElement;
 
@@ -169,6 +167,48 @@ private:
 
   static bool isKind(const CFGElement &E) {
     return E.getKind() == Constructor;
+  }
+};
+
+/// CFGCXXRecordTypedCall - Represents a function call that returns a C++ object
+/// by value. This, like constructor, requires a construction context, which
+/// will always be that of a temporary object - usually consumed by an elidable
+/// constructor. For such value-typed calls the ReturnedValueConstructionContext
+/// of their return value is naturally complemented by the
+/// TemporaryObjectConstructionContext at the call site (here). In C such
+/// tracking is not necessary because no additional effort is required for
+/// destroying the object or modeling copy elision. Like CFGConstructor, this is
+/// for now only used by the analyzer's CFG.
+class CFGCXXRecordTypedCall : public CFGStmt {
+public:
+  /// Returns true when call expression \p CE needs to be represented
+  /// by CFGCXXRecordTypedCall, as opposed to a regular CFGStmt.
+  static bool isCXXRecordTypedCall(CallExpr *CE, const ASTContext &ACtx) {
+    return CE->getCallReturnType(ACtx).getCanonicalType()->getAsCXXRecordDecl();
+  }
+
+  explicit CFGCXXRecordTypedCall(CallExpr *CE,
+                                 const TemporaryObjectConstructionContext *C)
+      : CFGStmt(CE, CXXRecordTypedCall) {
+    // FIXME: This is not protected against squeezing a non-record-typed-call
+    // into the constructor. An assertion would require passing an ASTContext
+    // which would mean paying for something we don't use.
+    assert(C);
+    Data2.setPointer(const_cast<TemporaryObjectConstructionContext *>(C));
+  }
+
+  const TemporaryObjectConstructionContext *getConstructionContext() const {
+    return static_cast<TemporaryObjectConstructionContext *>(
+        Data2.getPointer());
+  }
+
+private:
+  friend class CFGElement;
+
+  CFGCXXRecordTypedCall() = default;
+
+  static bool isKind(const CFGElement &E) {
+    return E.getKind() == CXXRecordTypedCall;
   }
 };
 
@@ -838,6 +878,12 @@ public:
   void appendConstructor(CXXConstructExpr *CE, const ConstructionContext *CC,
                          BumpVectorContext &C) {
     Elements.push_back(CFGConstructor(CE, CC), C);
+  }
+
+  void appendCXXRecordTypedCall(CallExpr *CE,
+                                const TemporaryObjectConstructionContext *CC,
+                                BumpVectorContext &C) {
+    Elements.push_back(CFGCXXRecordTypedCall(CE, CC), C);
   }
 
   void appendInitializer(CXXCtorInitializer *initializer,

@@ -632,18 +632,19 @@ struct CheckFallThroughDiagnostics {
 
 } // anonymous namespace
 
-/// CheckFallThroughForFunctionDef - Check that we don't fall off the end of a
+/// CheckFallThroughForBody - Check that we don't fall off the end of a
 /// function that should return a value.  Check that we don't fall off the end
 /// of a noreturn function.  We assume that functions and blocks not marked
 /// noreturn will return.
 static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
                                     const BlockExpr *blkExpr,
-                                    const CheckFallThroughDiagnostics& CD,
-                                    AnalysisDeclContext &AC) {
+                                    const CheckFallThroughDiagnostics &CD,
+                                    AnalysisDeclContext &AC,
+                                    sema::FunctionScopeInfo *FSI) {
 
   bool ReturnsVoid = false;
   bool HasNoReturn = false;
-  bool IsCoroutine = S.getCurFunction() && S.getCurFunction()->isCoroutine();
+  bool IsCoroutine = FSI->isCoroutine();
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (const auto *CBody = dyn_cast<CoroutineBodyStmt>(Body))
@@ -675,7 +676,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
   SourceLocation LBrace = Body->getLocStart(), RBrace = Body->getLocEnd();
   auto EmitDiag = [&](SourceLocation Loc, unsigned DiagID) {
     if (IsCoroutine)
-      S.Diag(Loc, DiagID) << S.getCurFunction()->CoroutinePromise->getType();
+      S.Diag(Loc, DiagID) << FSI->CoroutinePromise->getType();
     else
       S.Diag(Loc, DiagID);
   };
@@ -2143,7 +2144,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
                    : (fscope->isCoroutine()
                           ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
                           : CheckFallThroughDiagnostics::MakeForFunction(D)));
-    CheckFallThroughForBody(S, D, Body, blkExpr, CD, AC);
+    CheckFallThroughForBody(S, D, Body, blkExpr, CD, AC, fscope);
   }
 
   // Warning: check for unreachable code

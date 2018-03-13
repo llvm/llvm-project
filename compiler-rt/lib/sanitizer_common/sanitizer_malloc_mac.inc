@@ -170,12 +170,8 @@ INTERCEPTOR(size_t, malloc_good_size, size_t size) {
 INTERCEPTOR(int, posix_memalign, void **memptr, size_t alignment, size_t size) {
   COMMON_MALLOC_ENTER();
   CHECK(memptr);
-  COMMON_MALLOC_MEMALIGN(alignment, size);
-  if (p) {
-    *memptr = p;
-    return 0;
-  }
-  return -1;
+  COMMON_MALLOC_POSIX_MEMALIGN(memptr, alignment, size);
+  return res;
 }
 
 namespace {

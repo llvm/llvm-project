@@ -134,6 +134,7 @@ math/mad.cl
 math/maxmag.cl
 math/minmag.cl
 math/modf.cl
+math/nan.cl
 math/native_cos.cl
 math/native_divide.cl
 math/native_exp.cl

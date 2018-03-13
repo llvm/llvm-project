@@ -1917,12 +1917,17 @@ class TestBase(Base):
         # decorators.
         Base.setUp(self)
 
-        # Set the clang modules cache path.
         if self.child:
+            # Set the clang modules cache path.
             assert(self.getDebugInfo() == 'default')
             mod_cache = os.path.join(self.getBuildDir(), "module-cache")
             self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                         % mod_cache)
+
+            # Disable Spotlight lookup. The testsuite creates
+            # different binaries with the same UUID, because they only
+            # differ in the debug info, which is not being hashed.
+            self.runCmd('settings set symbols.enable-external-lookup false')
 
 
         if "LLDB_MAX_LAUNCH_COUNT" in os.environ:

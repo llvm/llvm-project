@@ -54,12 +54,10 @@ static bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
 class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
   void onDiagnosticsReady(PathRef File,
-                          Tagged<std::vector<Diag>> Diagnostics) override {
-    bool HadError = diagsContainErrors(Diagnostics.Value);
-
+                          std::vector<Diag> Diagnostics) override {
+    bool HadError = diagsContainErrors(Diagnostics);
     std::lock_guard<std::mutex> Lock(Mutex);
     HadErrorInLastDiags = HadError;
-    LastVFSTag = Diagnostics.Tag;
   }
 
   bool hadErrorInLastDiags() {
@@ -67,12 +65,9 @@ public:
     return HadErrorInLastDiags;
   }
 
-  VFSTag lastVFSTag() { return LastVFSTag; }
-
 private:
   std::mutex Mutex;
   bool HadErrorInLastDiags = false;
-  VFSTag LastVFSTag = VFSTag();
 };
 
 /// For each file, record whether the last published diagnostics contained at
@@ -80,8 +75,8 @@ private:
 class MultipleErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
   void onDiagnosticsReady(PathRef File,
-                          Tagged<std::vector<Diag>> Diagnostics) override {
-    bool HadError = diagsContainErrors(Diagnostics.Value);
+                          std::vector<Diag> Diagnostics) override {
+    bool HadError = diagsContainErrors(Diagnostics);
 
     std::lock_guard<std::mutex> Lock(Mutex);
     LastDiagsHadError[File] = HadError;
@@ -149,7 +144,6 @@ protected:
       FS.Files[testPath(FileWithContents.first)] = FileWithContents.second;
 
     auto SourceFilename = testPath(SourceFileRelPath);
-    FS.ExpectedFile = SourceFilename;
     Server.addDocument(SourceFilename, SourceContents);
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
     EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
@@ -208,7 +202,6 @@ int b = a;
 
   FS.Files[testPath("foo.h")] = "int a;";
   FS.Files[FooCpp] = SourceContents;
-  FS.ExpectedFile = FooCpp;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
@@ -245,7 +238,6 @@ int b = a;
 
   FS.Files[FooH] = "int a;";
   FS.Files[FooCpp] = SourceContents;
-  FS.ExpectedFile = FooCpp;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
@@ -268,29 +260,33 @@ int b = a;
   EXPECT_NE(DumpParse1, DumpParseDifferent);
 }
 
-TEST_F(ClangdVFSTest, CheckVersions) {
-  MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+TEST_F(ClangdVFSTest, PropagatesContexts) {
+  static Key<int> Secret;
+  struct FSProvider : public FileSystemProvider {
+    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+      Got = Context::current().getExisting(Secret);
+      return buildTestFS({});
+    }
+    int Got;
+  } FS;
+  struct DiagConsumer : public DiagnosticsConsumer {
+    void onDiagnosticsReady(PathRef File,
+                            std::vector<Diag> Diagnostics) override {
+      Got = Context::current().getExisting(Secret);
+    }
+    int Got;
+  } DiagConsumer;
   MockCompilationDatabase CDB;
+
+  // Verify that the context is plumbed to the FS provider and diagnostics.
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-
-  auto FooCpp = testPath("foo.cpp");
-  const auto SourceContents = "int a;";
-  FS.Files[FooCpp] = SourceContents;
-  FS.ExpectedFile = FooCpp;
-
-  // Use default completion options.
-  clangd::CodeCompleteOptions CCOpts;
-
-  FS.Tag = "123";
-  runAddDocument(Server, FooCpp, SourceContents);
-  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position(), CCOpts).Tag, FS.Tag);
-  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-
-  FS.Tag = "321";
-  runAddDocument(Server, FooCpp, SourceContents);
-  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position(), CCOpts).Tag, FS.Tag);
+  {
+    WithContextValue Entrypoint(Secret, 42);
+    Server.addDocument(testPath("foo.cpp"), "void main(){}");
+  }
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_EQ(FS.Got, 42);
+  EXPECT_EQ(DiagConsumer.Got, 42);
 }
 
 // Only enable this test on Unix
@@ -362,7 +358,6 @@ struct bar { T x; };
 )cpp";
 
   FS.Files[FooCpp] = "";
-  FS.ExpectedFile = FooCpp;
 
   // First parse files in C mode and check they produce errors.
   CDB.ExtraClangFlags = {"-xc"};
@@ -405,7 +400,6 @@ this
 int main() { return 0; }
 )cpp";
   FS.Files[FooCpp] = "";
-  FS.ExpectedFile = FooCpp;
 
   // Parse with define, we expect to see the errors.
   CDB.ExtraClangFlags = {"-DWITH_ERROR"};
@@ -474,8 +468,8 @@ int hello;
 
   auto Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(Locations->Value, ElementsAre(Location{URIForFile{FooCpp},
-                                                     FooSource.range("one")}));
+  EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
+                                               FooSource.range("one")}));
 
   // Undefine MACRO, close baz.cpp.
   CDB.ExtraClangFlags.clear();
@@ -489,8 +483,8 @@ int hello;
 
   Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(Locations->Value, ElementsAre(Location{URIForFile{FooCpp},
-                                                     FooSource.range("two")}));
+  EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
+                                               FooSource.range("two")}));
 }
 
 TEST_F(ClangdVFSTest, MemoryUsage) {
@@ -550,13 +544,13 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name"));
   // FIXME: codeComplete and signatureHelp should also return errors when they
   // can't parse the file.
-  EXPECT_THAT(
-      runCodeComplete(Server, FooCpp, Position(), clangd::CodeCompleteOptions())
-          .Value.items,
-      IsEmpty());
+  EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Position(),
+                                       clangd::CodeCompleteOptions()))
+                  .items,
+              IsEmpty());
   auto SigHelp = runSignatureHelp(Server, FooCpp, Position());
   ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";
-  EXPECT_THAT(SigHelp->Value.signatures, IsEmpty());
+  EXPECT_THAT(SigHelp->signatures, IsEmpty());
 }
 
 class ClangdThreadingTest : public ClangdVFSTest {};
@@ -609,13 +603,13 @@ int d;
     TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
 
     void onDiagnosticsReady(PathRef File,
-                            Tagged<std::vector<Diag>> Diagnostics) override {
+                            std::vector<Diag> Diagnostics) override {
       StringRef FileIndexStr = llvm::sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
 
       unsigned long FileIndex = std::stoul(FileIndexStr.str());
 
-      bool HadError = diagsContainErrors(Diagnostics.Value);
+      bool HadError = diagsContainErrors(Diagnostics);
 
       std::lock_guard<std::mutex> Lock(Mutex);
       if (HadError)
@@ -739,8 +733,8 @@ int d;
       // requests as opposed to AddDocument/RemoveDocument, which are implicitly
       // cancelled by any subsequent AddDocument/RemoveDocument request to the
       // same file.
-      runCodeComplete(Server, FilePaths[FileIndex], Pos,
-                      clangd::CodeCompleteOptions());
+      cantFail(runCodeComplete(Server, FilePaths[FileIndex], Pos,
+                               clangd::CodeCompleteOptions()));
     };
 
     auto FindDefinitionsRequest = [&]() {
@@ -876,7 +870,7 @@ TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
     NoConcurrentAccessDiagConsumer(std::promise<void> StartSecondReparse)
         : StartSecondReparse(std::move(StartSecondReparse)) {}
 
-    void onDiagnosticsReady(PathRef, Tagged<std::vector<Diag>>) override {
+    void onDiagnosticsReady(PathRef, std::vector<Diag>) override {
       ++Count;
       std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());
       ASSERT_TRUE(Lock.owns_lock())
