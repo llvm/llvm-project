@@ -20,6 +20,22 @@ using namespace llvm;
 
 namespace mca {
 
+void BackendStatistics::onInstructionEvent(const HWInstructionEvent &Event) {
+  switch (Event.Type) {
+  case HWInstructionEvent::Retired:
+    ++NumRetired;
+    break;
+  case HWInstructionEvent::Issued:
+    ++NumIssued;
+    break;
+  case HWInstructionEvent::Dispatched:
+    ++NumDispatched;
+    break;
+  default:
+    break;
+  }
+}
+
 void BackendStatistics::printRetireUnitStatistics(llvm::raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);

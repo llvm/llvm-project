@@ -3068,9 +3068,9 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     SDValue Div = DAG.getNode(DivOpcode, DL, VT, N0, N1);
     AddToWorklist(Div.getNode());
     SDValue OptimizedDiv = combine(Div.getNode());
-    if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != Div.getNode()) {
-      assert((OptimizedDiv.getOpcode() != ISD::UDIVREM) &&
-             (OptimizedDiv.getOpcode() != ISD::SDIVREM));
+    if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != Div.getNode() &&
+        OptimizedDiv.getOpcode() != ISD::UDIVREM &&
+        OptimizedDiv.getOpcode() != ISD::SDIVREM) {
       SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, OptimizedDiv, N1);
       SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
       AddToWorklist(Mul.getNode());

@@ -68,9 +68,7 @@
   lapc $7, 1048572         # CHECK: lapc $7, 1048572    # encoding: [0x78,0xe3,0xff,0xff]
   lapc $7, -1048576        # CHECK: lapc $7, -1048576   # encoding: [0x78,0xe4,0x00,0x00]
   lh $2, 8($4)             # CHECK: lh $2, 8($4)        # encoding: [0x3c,0x44,0x00,0x08]
-  lhe $4, 8($2)            # CHECK: lhe $4, 8($2)       # encoding: [0x60,0x82,0x6a,0x08]
   lhu $4, 8($2)            # CHECK: lhu $4, 8($2)       # encoding: [0x34,0x82,0x00,0x08]
-  lhue $4, 8($2)           # CHECK: lhue $4, 8($2)      # encoding: [0x60,0x82,0x62,0x08]
   lsa $2, $3, $4, 3        # CHECK: lsa  $2, $3, $4, 3  # encoding: [0x00,0x43,0x24,0x0f]
   lwpc    $2,268           # CHECK: lwpc $2, 268        # encoding: [0x78,0x48,0x00,0x43]
   lwm $16, $17, $ra, 8($sp)   # CHECK: lwm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x22]
@@ -148,7 +146,6 @@
   xor $3, $4, $5           # CHECK: xor $3, $4, $5      # encoding: [0x00,0xa4,0x1b,0x10]
   xori $3, $4, 1234        # CHECK: xori $3, $4, 1234   # encoding: [0x70,0x64,0x04,0xd2]
   sw $5, 4($6)             # CHECK: sw $5, 4($6)        # encoding: [0xf8,0xa6,0x00,0x04]
-  swe $5, 8($4)            # CHECK: swe $5, 8($4)       # encoding: [0x60,0xa4,0xae,0x08]
   add.s $f3, $f4, $f5      # CHECK: add.s $f3, $f4, $f5 # encoding: [0x54,0xa4,0x18,0x30]
   add.d $f2, $f4, $f6      # CHECK: add.d $f2, $f4, $f6 # encoding: [0x54,0xc4,0x11,0x30]
                            # CHECK-NEXT:                # <MCInst #{{[0-9]+}} FADD_D64_MM
@@ -260,12 +257,7 @@
   lbu16 $3, 4($17)         # CHECK: lbu16 $3, 4($17)    # encoding: [0x09,0x94]
   lbu16 $3, -1($17)        # CHECK: lbu16 $3, -1($17)   # encoding: [0x09,0x9f]
   sb  $4, 6($5)            # CHECK: sb  $4, 6($5)       # encoding: [0x18,0x85,0x00,0x06]
-  sbe $4, 6($5)            # CHECK: sbe $4, 6($5)       # encoding: [0x60,0x85,0xa8,0x06]
-  sce $4, 6($5)            # CHECK: sce $4, 6($5)       # encoding: [0x60,0x85,0xac,0x06]
   sh $4, 6($5)             # CHECK: sh $4, 6($5)        # encoding: [0x38,0x85,0x00,0x06]
-  she $4, 6($5)            # CHECK: she $4, 6($5)       # encoding: [0x60,0x85,0xaa,0x06]
-  lle $4, 6($5)            # CHECK: lle $4, 6($5)       # encoding: [0x60,0x85,0x6c,0x06]
-  lwe $4, 6($5)            # CHECK: lwe $4, 6($5)       # encoding: [0x60,0x85,0x6e,0x06]
   lw $4, 6($5)             # CHECK: lw $4, 6($5)        # encoding: [0xfc,0x85,0x00,0x06]
   lui $6, 17767            # CHECK: lui $6, 17767       # encoding: [0x10,0xc0,0x45,0x67]
   addu16 $6, $17, $4       # CHECK: addu16 $6, $17, $4  # encoding: [0x04,0xcc]
@@ -275,20 +267,30 @@
   or16 $3, $7              # CHECK: or16 $3, $7         # encoding: [0x45,0xf9]
   sll16 $3, $6, 8          # CHECK: sll16 $3, $6, 8     # encoding: [0x25,0xe0]
   srl16 $3, $6, 8          # CHECK: srl16 $3, $6, 8     # encoding: [0x25,0xe1]
-  prefe 1, 8($5)           # CHECK: prefe 1, 8($5)      # encoding: [0x60,0x25,0xa4,0x08]
-  cachee 1, 8($5)          # CHECK: cachee 1, 8($5)     # encoding: [0x60,0x25,0xa6,0x08]
   teq $8, $9               # CHECK: teq $8, $9          # encoding: [0x01,0x28,0x00,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TEQ_MM 
   teq $5, $7, 15           # CHECK: teq $5, $7, 15      # encoding: [0x00,0xe5,0xf0,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TEQ_MM 
   tge $7, $10              # CHECK: tge $7, $10         # encoding: [0x01,0x47,0x02,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGE_MM 
   tge $7, $19, 15          # CHECK: tge $7, $19, 15     # encoding: [0x02,0x67,0xf2,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGE_MM 
   tgeu $22, $gp            # CHECK: tgeu $22, $gp       # encoding: [0x03,0x96,0x04,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGEU_MM 
   tgeu $20, $14, 15        # CHECK: tgeu $20, $14, 15   # encoding: [0x01,0xd4,0xf4,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGEU_MM 
   tlt $15, $13             # CHECK: tlt $15, $13        # encoding: [0x01,0xaf,0x08,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLT_MM 
   tlt $2, $19, 15          # CHECK: tlt $2, $19, 15     # encoding: [0x02,0x62,0xf8,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLT_MM 
   tltu $11, $16            # CHECK: tltu $11, $16       # encoding: [0x02,0x0b,0x0a,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLTU_MM 
   tltu $16, $sp, 15        # CHECK: tltu $16, $sp, 15   # encoding: [0x03,0xb0,0xfa,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLTU_MM 
   tne $6, $17              # CHECK: tne $6, $17         # encoding: [0x02,0x26,0x0c,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TNE_MM 
   tne $7, $8, 15           # CHECK: tne $7, $8, 15      # encoding: [0x01,0x07,0xfc,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TNE_MM 
   break16 8                # CHECK: break16 8           # encoding: [0x46,0x1b]
   li16 $3, -1              # CHECK: li16 $3, -1         # encoding: [0xed,0xff]
   move16 $3, $5            # CHECK: move16 $3, $5       # encoding: [0x0c,0x65]
@@ -297,8 +299,6 @@
   xor16 $17, $5            # CHECK: xor16 $17, $5       # encoding: [0x44,0xd8]
   lb $4, 8($5)             # CHECK: lb $4, 8($5)        # encoding: [0x1c,0x85,0x00,0x08]
   lbu $4, 8($5)            # CHECK: lbu $4, 8($5)       # encoding: [0x14,0x85,0x00,0x08]
-  lbe $4, 8($5)            # CHECK: lbe $4, 8($5)       # encoding: [0x60,0x85,0x68,0x08]
-  lbue $4, 8($5)           # CHECK: lbue $4, 8($5)      # encoding: [0x60,0x85,0x60,0x08]
   recip.s $f2, $f4         # CHECK: recip.s $f2, $f4    # encoding: [0x54,0x44,0x12,0x3b]
   recip.d $f2, $f4         # CHECK: recip.d $f2, $f4    # encoding: [0x54,0x44,0x52,0x3b]
   rint.s $f2, $f4          # CHECK: rint.s $f2, $f4     # encoding: [0x54,0x82,0x00,0x20]

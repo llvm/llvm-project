@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mattr=micromips | FileCheck %s
+# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mattr=micromips,eva | FileCheck %s
 
 .set noat
 addiusp -16                 # CHECK: addiusp -16        # encoding: [0x4f,0xf9]

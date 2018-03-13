@@ -162,14 +162,8 @@ public:
   void initialize(unsigned MaxIterations);
 
   // Event handlers.
-  void onInstructionDispatched(unsigned Index) override;
-  void onInstructionReady(unsigned Index) override;
-  void onInstructionIssued(
-      unsigned Index,
-      const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> &Used) override;
-  void onInstructionExecuted(unsigned Index) override;
-  void onInstructionRetired(unsigned Index) override;
   void onCycleBegin(unsigned Cycle) override { CurrentCycle = Cycle; }
+  void onInstructionEvent(const HWInstructionEvent &Event) override;
 
   // print functionalities.
   void printTimeline(llvm::raw_ostream &OS) const;

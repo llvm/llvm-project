@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include <type_traits>
 
 using namespace llvm;
@@ -32,3 +33,43 @@ const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             0,
                                             0,
                                             nullptr};
+
+int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
+                                      const MCSchedClassDesc &SCDesc) {
+  int Latency = 0;
+  for (unsigned DefIdx = 0, DefEnd = SCDesc.NumWriteLatencyEntries;
+       DefIdx != DefEnd; ++DefIdx) {
+    // Lookup the definition's write latency in SubtargetInfo.
+    const MCWriteLatencyEntry *WLEntry =
+        STI.getWriteLatencyEntry(&SCDesc, DefIdx);
+    // Early exit if we found an invalid latency.
+    if (WLEntry->Cycles < 0)
+      return WLEntry->Cycles;
+    Latency = std::max(Latency, static_cast<int>(WLEntry->Cycles));
+  }
+  return Latency;
+}
+
+
+Optional<double>
+MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
+                                      const MCSchedClassDesc &SCDesc) {
+  Optional<double> Throughput;
+  const MCSchedModel &SchedModel = STI.getSchedModel();
+
+  for (const MCWriteProcResEntry *WPR = STI.getWriteProcResBegin(&SCDesc),
+                                 *WEnd = STI.getWriteProcResEnd(&SCDesc);
+       WPR != WEnd; ++WPR) {
+    if (WPR->Cycles) {
+      unsigned NumUnits =
+          SchedModel.getProcResource(WPR->ProcResourceIdx)->NumUnits;
+      double Temp = NumUnits * 1.0 / WPR->Cycles;
+      Throughput =
+          Throughput.hasValue() ? std::min(Throughput.getValue(), Temp) : Temp;
+    }
+  }
+
+  if (Throughput.hasValue())
+    return 1 / Throughput.getValue();
+  return Throughput;
+}

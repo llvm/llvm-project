@@ -96,9 +96,7 @@ public:
     initialize();
   }
 
-  void onInstructionIssued(
-      unsigned Index,
-      const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> &Used) override;
+  void onInstructionEvent(const HWInstructionEvent &Event) override;
 
   void printView(llvm::raw_ostream &OS) const override {
     unsigned Executions = Source.getNumIterations();

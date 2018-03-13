@@ -1,5 +1,5 @@
-# RUN: llc -O0 -march=mips -mcpu=mips32r3 -mattr=+micromips -start-after=expand-isel-pseudos \
-# RUN:     -filetype obj %s -o - | llvm-objdump -d - | FileCheck %s
+# RUN: llc -O0 -march=mips -mcpu=mips32r3 -mattr=+micromips,+eva -start-after=expand-isel-pseudos \
+# RUN:     -filetype obj %s -o - | llvm-objdump -mattr=+eva -d - | FileCheck %s
 
 --- |
 
