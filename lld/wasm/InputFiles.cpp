@@ -49,16 +49,46 @@ void ObjFile::dumpInfo() const {
       "\n       Global Imports : " + Twine(WasmObj->getNumImportedGlobals()));
 }
 
-// Relocations contain an index into the function, global or table index
-// space of the input file.  This function takes a relocation and returns the
-// relocated index (i.e. translates from the input index space to the output
-// index space).
+// Relocations contain either symbol or type indices.  This function takes a
+// relocation and returns relocated index (i.e. translates from the input
+// sybmol/type space to the output symbol/type space).
 uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
   if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB) {
     assert(TypeIsUsed[Reloc.Index]);
     return TypeMap[Reloc.Index];
   }
   return Symbols[Reloc.Index]->getOutputSymbolIndex();
+}
+
+// Calculate the value we expect to find at the relocation location.
+// This is used as a sanity check before applying a relocation to a given
+// location.  It is useful for catching bugs in the compiler and linker.
+uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
+  switch (Reloc.Type) {
+  case R_WEBASSEMBLY_TABLE_INDEX_I32:
+  case R_WEBASSEMBLY_TABLE_INDEX_SLEB: {
+    const WasmSymbol& Sym = WasmObj->syms()[Reloc.Index];
+    return TableEntries[Sym.Info.ElementIndex];
+  }
+  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
+  case R_WEBASSEMBLY_MEMORY_ADDR_LEB: {
+    const WasmSymbol& Sym = WasmObj->syms()[Reloc.Index];
+    if (Sym.isUndefined())
+      return 0;
+    const WasmSegment& Segment = WasmObj->dataSegments()[Sym.Info.DataRef.Segment];
+    return Segment.Data.Offset.Value.Int32 + Sym.Info.DataRef.Offset;
+  }
+  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
+    return Reloc.Index;
+  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB: {
+    const WasmSymbol& Sym = WasmObj->syms()[Reloc.Index];
+    return Sym.Info.ElementIndex;
+  }
+  default:
+    llvm_unreachable("unknown relocation type");
+  }
 }
 
 // Translate from the relocation's index into the final linked output value.
@@ -76,9 +106,9 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     return TypeMap[Reloc.Index];
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    return getFunctionSymbol(Reloc.Index)->getOutputIndex();
+    return getFunctionSymbol(Reloc.Index)->getFunctionIndex();
   case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-    return getGlobalSymbol(Reloc.Index)->getOutputIndex();
+    return getGlobalSymbol(Reloc.Index)->getGlobalIndex();
   default:
     llvm_unreachable("unknown relocation type");
   }
@@ -97,6 +127,22 @@ void ObjFile::parse() {
 
   Bin.release();
   WasmObj.reset(Obj);
+
+  // Build up a map of function indices to table indices for use when
+  // verifying the existing table index relocations
+  uint32_t TotalFunctions =
+      WasmObj->getNumImportedFunctions() + WasmObj->functions().size();
+  TableEntries.resize(TotalFunctions);
+  for (const WasmElemSegment &Seg : WasmObj->elements()) {
+    if (Seg.Offset.Opcode != WASM_OPCODE_I32_CONST)
+      fatal(toString(this) + ": invalid table elements");
+    uint32_t Offset = Seg.Offset.Value.Int32;
+    for (uint32_t Index = 0; Index < Seg.Functions.size(); Index++) {
+
+      uint32_t FunctionIndex = Seg.Functions[Index];
+      TableEntries[FunctionIndex] = Offset + Index;
+    }
+  }
 
   // Find the code and data sections.  Wasm objects can have at most one code
   // and one data section.

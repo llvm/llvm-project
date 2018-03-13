@@ -39,28 +39,6 @@ WasmSymbolType Symbol::getWasmType() const {
   llvm_unreachable("invalid symbol kind");
 }
 
-bool Symbol::hasOutputIndex() const {
-  if (auto *F = dyn_cast<DefinedFunction>(this))
-    if (F->Function)
-      return F->Function->hasOutputIndex();
-  if (auto *G = dyn_cast<DefinedGlobal>(this))
-    if (G->Global)
-      return G->Global->hasOutputIndex();
-  return OutputIndex != INVALID_INDEX;
-}
-
-uint32_t Symbol::getOutputIndex() const {
-  assert(!isa<DataSymbol>(this));
-  if (auto *F = dyn_cast<DefinedFunction>(this))
-    if (F->Function)
-      return F->Function->getOutputIndex();
-  if (auto *G = dyn_cast<DefinedGlobal>(this))
-    if (G->Global)
-      return G->Global->getOutputIndex();
-  assert(OutputIndex != INVALID_INDEX);
-  return OutputIndex;
-}
-
 InputChunk *Symbol::getChunk() const {
   if (auto *F = dyn_cast<DefinedFunction>(this))
     return F->Function;
@@ -89,13 +67,6 @@ void Symbol::setOutputSymbolIndex(uint32_t Index) {
   OutputSymbolIndex = Index;
 }
 
-void Symbol::setOutputIndex(uint32_t Index) {
-  DEBUG(dbgs() << "setOutputIndex " << Name << " -> " << Index << "\n");
-  assert(!isa<DataSymbol>(this));
-  assert(OutputIndex == INVALID_INDEX);
-  OutputIndex = Index;
-}
-
 bool Symbol::isWeak() const {
   return (Flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK;
 }
@@ -115,6 +86,25 @@ void Symbol::setHidden(bool IsHidden) {
     Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
   else
     Flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
+}
+
+uint32_t FunctionSymbol::getFunctionIndex() const {
+  if (auto *F = dyn_cast<DefinedFunction>(this))
+    return F->Function->getFunctionIndex();
+  assert(FunctionIndex != INVALID_INDEX);
+  return FunctionIndex;
+}
+
+void FunctionSymbol::setFunctionIndex(uint32_t Index) {
+  DEBUG(dbgs() << "setFunctionIndex " << Name << " -> " << Index << "\n");
+  assert(FunctionIndex == INVALID_INDEX);
+  FunctionIndex = Index;
+}
+
+bool FunctionSymbol::hasFunctionIndex() const {
+  if (auto *F = dyn_cast<DefinedFunction>(this))
+    return F->Function->hasFunctionIndex();
+  return FunctionIndex != INVALID_INDEX;
 }
 
 uint32_t FunctionSymbol::getTableIndex() const {
@@ -170,6 +160,25 @@ uint32_t DefinedData::getOutputSegmentOffset() const {
 uint32_t DefinedData::getOutputSegmentIndex() const {
   DEBUG(dbgs() << "getOutputSegmentIndex: " << getName() << "\n");
   return Segment->OutputSeg->Index;
+}
+
+uint32_t GlobalSymbol::getGlobalIndex() const {
+  if (auto *F = dyn_cast<DefinedGlobal>(this))
+    return F->Global->getGlobalIndex();
+  assert(GlobalIndex != INVALID_INDEX);
+  return GlobalIndex;
+}
+
+void GlobalSymbol::setGlobalIndex(uint32_t Index) {
+  DEBUG(dbgs() << "setGlobalIndex " << Name << " -> " << Index << "\n");
+  assert(GlobalIndex == INVALID_INDEX);
+  GlobalIndex = Index;
+}
+
+bool GlobalSymbol::hasGlobalIndex() const {
+  if (auto *F = dyn_cast<DefinedGlobal>(this))
+    return F->Global->hasGlobalIndex();
+  return GlobalIndex != INVALID_INDEX;
 }
 
 DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,

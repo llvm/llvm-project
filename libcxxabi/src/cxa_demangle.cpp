@@ -197,6 +197,7 @@ public:
     KDtorName,
     KUnnamedTypeName,
     KClosureTypeName,
+    KStructuredBindingName,
     KExpr,
     KBracedExpr,
     KBracedRangeExpr,
@@ -1337,6 +1338,19 @@ public:
   }
 };
 
+class StructuredBindingName : public Node {
+  NodeArray Bindings;
+public:
+  StructuredBindingName(NodeArray Bindings_)
+      : Node(KStructuredBindingName), Bindings(Bindings_) {}
+
+  void printLeft(OutputStream &S) const override {
+    S += '[';
+    Bindings.printWithComma(S);
+    S += ']';
+  }
+};
+
 // -- Expression Nodes --
 
 struct Expr : public Node {
@@ -2217,7 +2231,7 @@ Node *Db::parseUnscopedName(NameState *State) {
 //                    ::= <ctor-dtor-name>
 //                    ::= <source-name>
 //                    ::= <unnamed-type-name>
-// FIXME:             ::= DC <source-name>+ E      # structured binding declaration
+//                    ::= DC <source-name>+ E      # structured binding declaration
 Node *Db::parseUnqualifiedName(NameState *State) {
  // <ctor-dtor-name>s are special-cased in parseNestedName().
  Node *Result;
@@ -2225,7 +2239,16 @@ Node *Db::parseUnqualifiedName(NameState *State) {
    Result = parseUnnamedTypeName(State);
  else if (look() >= '1' && look() <= '9')
    Result = parseSourceName(State);
- else
+ else if (consumeIf("DC")) {
+   size_t BindingsBegin = Names.size();
+   do {
+     Node *Binding = parseSourceName(State);
+     if (Binding == nullptr)
+       return nullptr;
+     Names.push_back(Binding);
+   } while (!consumeIf('E'));
+   Result = make<StructuredBindingName>(popTrailingNodeArray(BindingsBegin));
+ } else
    Result = parseOperatorName(State);
  if (Result != nullptr)
    Result = parseAbiTags(Result);
@@ -2689,7 +2712,7 @@ Node *Db::parseNestedName(NameState *State) {
     }
 
     // Parse an <unqualified-name> thats actually a <ctor-dtor-name>.
-    if (look() == 'C' || look() == 'D') {
+    if (look() == 'C' || (look() == 'D' && look(1) != 'C')) {
       if (SoFar == nullptr)
         return nullptr;
       Node *CtorDtor = parseCtorDtorName(SoFar, State);
@@ -4301,6 +4324,8 @@ bool Db::parseCallOffset() {
 //                                     # No <type>
 //                ::= TW <object name> # Thread-local wrapper
 //                ::= TH <object name> # Thread-local initialization
+//                ::= GR <object name> _             # First temporary
+//                ::= GR <object name> <seq-id> _    # Subsequent temporaries
 //      extension ::= TC <first type> <number> _ <second type> # construction vtable for second-in-first
 //      extension ::= GR <object name> # reference temporary for object
 Node *Db::parseSpecialName() {
@@ -4405,10 +4430,16 @@ Node *Db::parseSpecialName() {
       return make<SpecialName>("guard variable for ", Name);
     }
     // GR <object name> # reference temporary for object
+    // GR <object name> _             # First temporary
+    // GR <object name> <seq-id> _    # Subsequent temporaries
     case 'R': {
       First += 2;
       Node *Name = parseName();
       if (Name == nullptr)
+        return nullptr;
+      size_t Count;
+      bool ParsedSeqId = !parseSeqId(&Count);
+      if (!consumeIf('_') && ParsedSeqId)
         return nullptr;
       return make<SpecialName>("reference temporary for ", Name);
     }

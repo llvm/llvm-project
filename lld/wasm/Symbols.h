@@ -76,18 +76,8 @@ public:
 
   void setHidden(bool IsHidden);
 
-  uint32_t getOutputIndex() const;
-
-  // Returns true if an output index has been set for this symbol
-  bool hasOutputIndex() const;
-
-  // Set the output index of the symbol, in the Wasm index space of the output
-  // object - that is, for defined symbols only, its position in the list of
-  // Wasm imports+code for functions, imports+globals for globals.
-  void setOutputIndex(uint32_t Index);
-
-  // Get/set the output symbol index, in the Symbol index space.  This is
-  // only used for relocatable output.
+  // Get/set the index in the output symbol table.  This is only used for
+  // relocatable output.
   uint32_t getOutputSymbolIndex() const;
   void setOutputSymbolIndex(uint32_t Index);
 
@@ -101,7 +91,6 @@ protected:
   Kind SymbolKind;
   uint32_t Flags;
   InputFile *File;
-  uint32_t OutputIndex = INVALID_INDEX;
   uint32_t OutputSymbolIndex = INVALID_INDEX;
 };
 
@@ -114,13 +103,15 @@ public:
 
   const WasmSignature *getFunctionType() const { return FunctionType; }
 
+  // Get/set the table index
+  void setTableIndex(uint32_t Index);
   uint32_t getTableIndex() const;
-
-  // Returns true if a table index has been set for this symbol
   bool hasTableIndex() const;
 
-  // Set the table index of the symbol
-  void setTableIndex(uint32_t Index);
+  // Get/set the function index
+  uint32_t getFunctionIndex() const;
+  void setFunctionIndex(uint32_t Index);
+  bool hasFunctionIndex() const;
 
 protected:
   FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
@@ -128,6 +119,7 @@ protected:
       : Symbol(Name, K, Flags, F), FunctionType(Type) {}
 
   uint32_t TableIndex = INVALID_INDEX;
+  uint32_t FunctionIndex = INVALID_INDEX;
 
   const WasmSignature *FunctionType;
 };
@@ -213,6 +205,11 @@ public:
 
   const WasmGlobalType *getGlobalType() const { return GlobalType; }
 
+  // Get/set the global index
+  uint32_t getGlobalIndex() const;
+  void setGlobalIndex(uint32_t Index);
+  bool hasGlobalIndex() const;
+
 protected:
   GlobalSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
                const WasmGlobalType *GlobalType)
@@ -221,6 +218,7 @@ protected:
   // Explicit function type, needed for undefined or synthetic functions only.
   // For regular defined globals this information comes from the InputChunk.
   const WasmGlobalType *GlobalType;
+  uint32_t GlobalIndex = INVALID_INDEX;
 };
 
 class DefinedGlobal : public GlobalSymbol {
