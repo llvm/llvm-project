@@ -173,6 +173,12 @@ class VariadicUnsignedArgument<string name> : Argument<name, 1>;
 class VariadicExprArgument<string name> : Argument<name, 1>;
 class VariadicStringArgument<string name> : Argument<name, 1>;
 
+// Like VariadicUnsignedArgument except values are ParamIdx.
+class VariadicParamIdxArgument<string name> : Argument<name, 1>;
+
+// Like VariadicParamIdxArgument but for a single function parameter index.
+class ParamIdxArgument<string name, bit opt = 0> : Argument<name, opt>;
+
 // A version of the form major.minor[.subminor].
 class VersionArgument<string name, bit opt = 0> : Argument<name, opt>;
 
@@ -621,6 +627,12 @@ def XRayInstrument : InheritableAttr {
 def XRayLogArgs : InheritableAttr {
   let Spellings = [Clang<"xray_log_args">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
+  // This argument is a count not an index, so it has the same encoding (base
+  // 1 including C++ implicit this parameter) at the source and LLVM levels of
+  // representation, so ParamIdxArgument is inappropriate.  It is never used
+  // at the AST level of representation, so it never needs to be adjusted not
+  // to include any C++ implicit this parameter.  Thus, we just store it and
+  // use it as an unsigned that never needs adjustment.
   let Args = [UnsignedArgument<"ArgumentCount">];
   let Documentation = [XRayDocs];
 }
@@ -1029,7 +1041,8 @@ def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
 def AllocSize : InheritableAttr {
   let Spellings = [GCC<"alloc_size">];
   let Subjects = SubjectList<[Function]>;
-  let Args = [IntArgument<"ElemSizeParam">, IntArgument<"NumElemsParam", 1>];
+  let Args = [ParamIdxArgument<"ElemSizeParam">,
+              ParamIdxArgument<"NumElemsParam", /*opt*/ 1>];
   let TemplateDependent = 1;
   let Documentation = [AllocSizeDocs];
 }
@@ -1116,7 +1129,7 @@ def Format : InheritableAttr {
 
 def FormatArg : InheritableAttr {
   let Spellings = [GCC<"format_arg">];
-  let Args = [IntArgument<"FormatIdx">];
+  let Args = [ParamIdxArgument<"FormatIdx">];
   let Subjects = SubjectList<[ObjCMethod, HasFunctionProto]>;
   let Documentation = [Undocumented];
 }
@@ -1396,16 +1409,16 @@ def NonNull : InheritableParamAttr {
   let Spellings = [GCC<"nonnull">];
   let Subjects = SubjectList<[ObjCMethod, HasFunctionProto, ParmVar], WarnDiag,
                              "functions, methods, and parameters">;
-  let Args = [VariadicUnsignedArgument<"Args">];
-  let AdditionalMembers =
-[{bool isNonNull(unsigned idx) const {
-    if (!args_size())
-      return true;
-    for (const auto &V : args())
-      if (V == idx)
+  let Args = [VariadicParamIdxArgument<"Args">];
+  let AdditionalMembers = [{
+    bool isNonNull(unsigned IdxAST) const {
+      if (!args_size())
         return true;
-    return false;
-  } }];
+      return args_end() != std::find_if(
+          args_begin(), args_end(),
+          [=](const ParamIdx &Idx) { return Idx.getASTIndex() == IdxAST; });
+    }
+  }];
   // FIXME: We should merge duplicates into a single nonnull attribute.
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [NonNullDocs];
@@ -1463,7 +1476,7 @@ def AssumeAligned : InheritableAttr {
 def AllocAlign : InheritableAttr {
   let Spellings = [GCC<"alloc_align">];
   let Subjects = SubjectList<[HasFunctionProto]>;
-  let Args = [IntArgument<"ParamIndex">];
+  let Args = [ParamIdxArgument<"ParamIndex">];
   let Documentation = [AllocAlignDocs];
 }
 
@@ -1684,7 +1697,8 @@ def Ownership : InheritableAttr {
              Returns;
     }
   }];
-  let Args = [IdentifierArgument<"Module">, VariadicUnsignedArgument<"Args">];
+  let Args = [IdentifierArgument<"Module">,
+              VariadicParamIdxArgument<"Args">];
   let Subjects = SubjectList<[HasFunctionProto]>;
   let Documentation = [Undocumented];
 }
@@ -2598,8 +2612,8 @@ def ArgumentWithTypeTag : InheritableAttr {
                    Clang<"pointer_with_type_tag">];
   let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
   let Args = [IdentifierArgument<"ArgumentKind">,
-              UnsignedArgument<"ArgumentIdx">,
-              UnsignedArgument<"TypeTagIdx">,
+              ParamIdxArgument<"ArgumentIdx">,
+              ParamIdxArgument<"TypeTagIdx">,
               BoolArgument<"IsPointer", /*opt*/0, /*fake*/1>];
   let Documentation = [ArgumentWithTypeTagDocs, PointerWithTypeTagDocs];
 }
