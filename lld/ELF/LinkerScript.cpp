@@ -813,7 +813,7 @@ static bool isDiscardable(OutputSection &Sec) {
   for (BaseCommand *Base : Sec.SectionCommands)
     if (!isa<InputSectionDescription>(*Base))
       return false;
-  return getInputSections(&Sec).empty();
+  return true;
 }
 
 void LinkerScript::adjustSectionsBeforeSorting() {
@@ -845,14 +845,18 @@ void LinkerScript::adjustSectionsBeforeSorting() {
       continue;
 
     // A live output section means that some input section was added to it. It
-    // might have been removed (gc, or empty synthetic section), but we at least
-    // know the flags.
+    // might have been removed (if it was empty synthetic section), but we at
+    // least know the flags.
     if (Sec->Live)
-      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
-    else
-      Sec->Flags = Flags;
+      Flags = Sec->Flags;
 
-    if (isDiscardable(*Sec)) {
+    // We do not want to keep any special flags for output section
+    // in case it is empty.
+    bool IsEmpty = getInputSections(Sec).empty();
+    if (IsEmpty)
+      Sec->Flags = Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
+
+    if (IsEmpty && isDiscardable(*Sec)) {
       Sec->Live = false;
       Cmd = nullptr;
     }

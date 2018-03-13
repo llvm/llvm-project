@@ -177,6 +177,15 @@ bool BCECmpBlock::doesOtherWork() const {
 // BCE atoms, returns the comparison.
 BCECmpBlock visitICmp(const ICmpInst *const CmpI,
                       const ICmpInst::Predicate ExpectedPredicate) {
+  // The comparison can only be used once:
+  //  - For intermediate blocks, as a branch condition.
+  //  - For the final block, as an incoming value for the Phi.
+  // If there are any other uses of the comparison, we cannot merge it with
+  // other comparisons as we would create an orphan use of the value.
+  if (!CmpI->hasOneUse()) {
+    DEBUG(dbgs() << "cmp has several uses\n");
+    return {};
+  }
   if (CmpI->getPredicate() == ExpectedPredicate) {
     DEBUG(dbgs() << "cmp "
                  << (ExpectedPredicate == ICmpInst::ICMP_EQ ? "eq" : "ne")

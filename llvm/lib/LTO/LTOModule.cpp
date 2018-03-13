@@ -208,7 +208,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
   std::string errMsg;
   const Target *march = TargetRegistry::lookupTarget(TripleStr, errMsg);
   if (!march)
-    return std::unique_ptr<LTOModule>(nullptr);
+    return make_error_code(object::object_error::arch_not_found);
 
   // construct LTOModule, hand over ownership of module and target
   SubtargetFeatures Features;

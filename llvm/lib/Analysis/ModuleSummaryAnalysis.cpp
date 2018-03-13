@@ -291,6 +291,18 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         if (!CalledValue || isa<Constant>(CalledValue))
           continue;
 
+        // Check if the instruction has a callees metadata. If so, add callees
+        // to CallGraphEdges to reflect the references from the metadata, and
+        // to enable importing for subsequent indirect call promotion and
+        // inlining.
+        if (auto *MD = I.getMetadata(LLVMContext::MD_callees)) {
+          for (auto &Op : MD->operands()) {
+            Function *Callee = mdconst::extract_or_null<Function>(Op);
+            if (Callee)
+              CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
+          }
+        }
+
         uint32_t NumVals, NumCandidates;
         uint64_t TotalCount;
         auto CandidateProfileData =
