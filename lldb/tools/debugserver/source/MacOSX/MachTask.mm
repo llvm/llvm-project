@@ -349,12 +349,14 @@ std::string MachTask::GetProfileData(DNBProfileDataScanType scanType) {
   }
 
   vm_statistics64_data_t vminfo;
-  uint64_t physical_memory;
-  mach_vm_size_t anonymous = 0;
-  mach_vm_size_t phys_footprint = 0;
+  uint64_t physical_memory = 0;
+  uint64_t anonymous = 0;
+  uint64_t phys_footprint = 0;
+  uint64_t memory_cap = 0;
   if (m_vm_memory.GetMemoryProfile(scanType, task, task_info,
                                    m_process->GetCPUType(), pid, vminfo,
-                                   physical_memory, anonymous, phys_footprint)) {
+                                   physical_memory, anonymous,
+                                   phys_footprint, memory_cap)) {
     std::ostringstream profile_data_stream;
 
     if (scanType & eProfileHostCPU) {
@@ -418,11 +420,13 @@ std::string MachTask::GetProfileData(DNBProfileDataScanType scanType) {
       
       profile_data_stream << "phys_footprint:" << phys_footprint << ';';
     }
-
-// proc_pid_rusage pm_sample_task_and_pid pm_energy_impact needs to be tested
-// for weakness in Cab
+    
+    if (scanType & eProfileMemoryCap) {
+      profile_data_stream << "mem_cap:" << memory_cap << ';';
+    }
+    
 #ifdef LLDB_ENERGY
-    if ((scanType & eProfileEnergy) && (pm_sample_task_and_pid != NULL)) {
+    if (scanType & eProfileEnergy) {
       struct rusage_info_v2 info;
       int rc = proc_pid_rusage(pid, RUSAGE_INFO_V2, (rusage_info_t *)&info);
       if (rc == 0) {
