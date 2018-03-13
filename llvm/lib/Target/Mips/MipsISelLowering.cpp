@@ -2949,12 +2949,44 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs, *DAG.getContext(),
       MipsCCState::getSpecialCallingConvForCallee(Callee.getNode(), Subtarget));
 
-  // Allocate the reserved argument area. It seems strange to do this from the
-  // caller side but removing it breaks the frame size calculation.
-  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(CallConv), 1);
-
   const ExternalSymbolSDNode *ES =
       dyn_cast_or_null<const ExternalSymbolSDNode>(Callee.getNode());
+
+  // There is one case where CALLSEQ_START..CALLSEQ_END can be nested, which
+  // is during the lowering of a call with a byval argument which produces
+  // a call to memcpy. For the O32 case, this causes the caller to allocate
+  // stack space for the reserved argument area for the callee, then recursively
+  // again for the memcpy call. In the NEWABI case, this doesn't occur as those
+  // ABIs mandate that the callee allocates the reserved argument area. We do
+  // still produce nested CALLSEQ_START..CALLSEQ_END with zero space though.
+  //
+  // If the callee has a byval argument and memcpy is used, we are mandated
+  // to already have produced a reserved argument area for the callee for O32.
+  // Therefore, the reserved argument area can be reused for both calls.
+  //
+  // Other cases of calling memcpy cannot have a chain with a CALLSEQ_START
+  // present, as we have yet to hook that node onto the chain.
+  //
+  // Hence, the CALLSEQ_START and CALLSEQ_END nodes can be eliminated in this
+  // case. GCC does a similar trick, in that wherever possible, it calculates
+  // the maximum out going argument area (including the reserved area), and
+  // preallocates the stack space on entrance to the caller.
+  //
+  // FIXME: We should do the same for efficency and space.
+
+  // Note: The check on the calling convention below must match
+  //       MipsABIInfo::GetCalleeAllocdArgSizeInBytes().
+  bool MemcpyInByVal = ES &&
+                       StringRef(ES->getSymbol()) == StringRef("memcpy") &&
+                       CallConv != CallingConv::Fast &&
+                       Chain.getOpcode() == ISD::CALLSEQ_START;
+
+  // Allocate the reserved argument area. It seems strange to do this from the
+  // caller side but removing it breaks the frame size calculation.
+  unsigned ReservedArgArea =
+      MemcpyInByVal ? 0 : ABI.GetCalleeAllocdArgSizeInBytes(CallConv);
+  CCInfo.AllocateStack(ReservedArgArea, 1);
+
   CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs(),
                              ES ? ES->getSymbol() : nullptr);
 
@@ -2989,7 +3021,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   NextStackOffset = alignTo(NextStackOffset, StackAlignment);
   SDValue NextStackOffsetVal = DAG.getIntPtrConstant(NextStackOffset, DL, true);
 
-  if (!IsTailCall)
+  if (!(IsTailCall || MemcpyInByVal))
     Chain = DAG.getCALLSEQ_START(Chain, NextStackOffset, 0, DL);
 
   SDValue StackPtr =
@@ -3197,10 +3229,13 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Chain = DAG.getNode(MipsISD::JmpLink, DL, NodeTys, Ops);
   SDValue InFlag = Chain.getValue(1);
 
-  // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, NextStackOffsetVal,
-                             DAG.getIntPtrConstant(0, DL, true), InFlag, DL);
-  InFlag = Chain.getValue(1);
+  // Create the CALLSEQ_END node in the case of where it is not a call to
+  // memcpy.
+  if (!(MemcpyInByVal)) {
+    Chain = DAG.getCALLSEQ_END(Chain, NextStackOffsetVal,
+                               DAG.getIntPtrConstant(0, DL, true), InFlag, DL);
+    InFlag = Chain.getValue(1);
+  }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.

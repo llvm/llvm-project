@@ -176,7 +176,8 @@ static void instantiateDependentAllocAlignAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const AllocAlignAttr *Align, Decl *New) {
   Expr *Param = IntegerLiteral::Create(
-      S.getASTContext(), llvm::APInt(64, Align->getParamIndex()),
+      S.getASTContext(),
+      llvm::APInt(64, Align->getParamIndex().getSourceIndex()),
       S.getASTContext().UnsignedLongLongTy, Align->getLocation());
   S.AddAllocAlignAttr(Align->getLocation(), New, Param,
                       Align->getSpellingListIndex());

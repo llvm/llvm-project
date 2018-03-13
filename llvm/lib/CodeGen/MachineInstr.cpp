@@ -1292,7 +1292,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   if (getFlag(MachineInstr::FrameSetup))
     OS << "frame-setup ";
-  else if (getFlag(MachineInstr::FrameDestroy))
+  if (getFlag(MachineInstr::FrameDestroy))
     OS << "frame-destroy ";
 
   // Print the opcode name.

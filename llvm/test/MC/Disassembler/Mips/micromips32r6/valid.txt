@@ -1,4 +1,4 @@
-# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips32r6 -mattr=micromips | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips32r6 -mattr=micromips,eva | FileCheck %s
 
 0x6f 0x83 # CHECK: addiur1sp $7, 4
 0x6f 0x7e # CHECK: addiur2 $6, $7, -1

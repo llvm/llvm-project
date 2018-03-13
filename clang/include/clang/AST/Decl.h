@@ -3616,24 +3616,24 @@ public:
     return NonTrivialToPrimitiveDefaultInitialize;
   }
 
-  void setNonTrivialToPrimitiveDefaultInitialize() {
-    NonTrivialToPrimitiveDefaultInitialize = true;
+  void setNonTrivialToPrimitiveDefaultInitialize(bool V) {
+    NonTrivialToPrimitiveDefaultInitialize = V;
   }
 
   bool isNonTrivialToPrimitiveCopy() const {
     return NonTrivialToPrimitiveCopy;
   }
 
-  void setNonTrivialToPrimitiveCopy() {
-    NonTrivialToPrimitiveCopy = true;
+  void setNonTrivialToPrimitiveCopy(bool V) {
+    NonTrivialToPrimitiveCopy = V;
   }
 
   bool isNonTrivialToPrimitiveDestroy() const {
     return NonTrivialToPrimitiveDestroy;
   }
 
-  void setNonTrivialToPrimitiveDestroy() {
-    NonTrivialToPrimitiveDestroy = true;
+  void setNonTrivialToPrimitiveDestroy(bool V) {
+    NonTrivialToPrimitiveDestroy = V;
   }
 
   /// \brief Determines whether this declaration represents the

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -triple=mips -show-encoding -mcpu=mips32r6 -mattr=micromips 2>%t1
+# RUN: not llvm-mc %s -triple=mips -show-encoding -mcpu=mips32r6 -mattr=+micromips,+eva 2>%t1
 # RUN: FileCheck %s < %t1
 
   addiur1sp $7, 260        # CHECK: :[[@LINE]]:17: error: expected both 8-bit unsigned immediate and multiple of 4

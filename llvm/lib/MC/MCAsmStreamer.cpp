@@ -87,26 +87,24 @@ public:
 
   void EmitCommentsAndEOL();
 
-  /// isVerboseAsm - Return true if this streamer supports verbose assembly at
-  /// all.
+  /// Return true if this streamer supports verbose assembly at all.
   bool isVerboseAsm() const override { return IsVerboseAsm; }
 
-  /// hasRawTextSupport - We support EmitRawText.
+  /// Do we support EmitRawText?
   bool hasRawTextSupport() const override { return true; }
 
-  /// AddComment - Add a comment that can be emitted to the generated .s
-  /// file if applicable as a QoI issue to make the output of the compiler
-  /// more readable.  This only affects the MCAsmStreamer, and only when
-  /// verbose assembly output is enabled.
+  /// Add a comment that can be emitted to the generated .s file to make the
+  /// output of the compiler more readable. This only affects the MCAsmStreamer
+  /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
 
-  /// AddEncodingComment - Add a comment showing the encoding of an instruction.
-  /// If PrintSchedInfo - is true then the comment sched:[x:y] should
-  //    be added to output if it's being supported by target
+  /// Add a comment showing the encoding of an instruction.
+  /// If PrintSchedInfo is true, then the comment sched:[x:y] will be added to
+  /// the output if supported by the target.
   void AddEncodingComment(const MCInst &Inst, const MCSubtargetInfo &,
                           bool PrintSchedInfo);
 
-  /// GetCommentOS - Return a raw_ostream that comments can be written to.
+  /// Return a raw_ostream that comments can be written to.
   /// Unlike AddComment, you are required to terminate comments with \n if you
   /// use this method.
   raw_ostream &GetCommentOS() override {
@@ -120,7 +118,7 @@ public:
   void addExplicitComment(const Twine &T) override;
   void emitExplicitComments() override;
 
-  /// AddBlankLine - Emit a blank line to a .s file to pretty it up.
+  /// Emit a blank line to a .s file to pretty it up.
   void AddBlankLine() override {
     EmitEOL();
   }
@@ -162,7 +160,7 @@ public:
   void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
 
-  /// EmitLocalCommonSymbol - Emit a local common (.lcomm) symbol.
+  /// Emit a local common (.lcomm) symbol.
   ///
   /// @param Symbol - The common symbol to emit.
   /// @param Size - The size of the common symbol.
@@ -303,9 +301,9 @@ public:
   bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
                           const MCExpr *Expr, SMLoc Loc) override;
 
-  /// EmitRawText - If this file is backed by an assembly streamer, this dumps
-  /// the specified string in the output .s file.  This capability is
-  /// indicated by the hasRawTextSupport() predicate.
+  /// If this file is backed by an assembly streamer, this dumps the specified
+  /// string in the output .s file. This capability is indicated by the
+  /// hasRawTextSupport() predicate.
   void EmitRawTextImpl(StringRef String) override;
 
   void FinishImpl() override;
@@ -313,11 +311,6 @@ public:
 
 } // end anonymous namespace.
 
-/// AddComment - Add a comment that can be emitted to the generated .s
-/// file if applicable as a QoI issue to make the output of the compiler
-/// more readable.  This only affects the MCAsmStreamer, and only when
-/// verbose assembly output is enabled.
-/// By deafult EOL is set to true so that each comment goes on its own line.
 void MCAsmStreamer::AddComment(const Twine &T, bool EOL) {
   if (!IsVerboseAsm) return;
 
@@ -708,10 +701,6 @@ void MCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   EmitEOL();
 }
 
-/// EmitLocalCommonSymbol - Emit a local common (.lcomm) symbol.
-///
-/// @param Symbol - The common symbol to emit.
-/// @param Size - The size of the common symbol.
 void MCAsmStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                           unsigned ByteAlign) {
   OS << "\t.lcomm\t";

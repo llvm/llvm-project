@@ -62,6 +62,46 @@
 #define __ACTIVEMASK() __ballot(1)
 #endif
 
+// arguments needed for L0 parallelism only.
+class omptarget_nvptx_SharedArgs {
+public:
+  // All these methods must be called by the master thread only.
+  INLINE void Init() {
+    args  = buffer;
+    nArgs = MAX_SHARED_ARGS;
+  }
+  INLINE void DeInit() {
+    // Free any memory allocated for outlined parallel function with a large
+    // number of arguments.
+    if (nArgs > MAX_SHARED_ARGS) {
+      SafeFree(args, (char *)"new extended args");
+      Init();
+    }
+  }
+  INLINE void EnsureSize(size_t size) {
+    if (size > nArgs) {
+      if (nArgs > MAX_SHARED_ARGS) {
+        SafeFree(args, (char *)"new extended args");
+      }
+      args = (void **) SafeMalloc(size * sizeof(void *),
+                                  (char *)"new extended args");
+      nArgs = size;
+    }
+  }
+  // Called by all threads.
+  INLINE void **GetArgs() { return args; };
+private:
+  // buffer of pre-allocated arguments.
+  void *buffer[MAX_SHARED_ARGS];
+  // pointer to arguments buffer.
+  // starts off as a pointer to 'buffer' but can be dynamically allocated.
+  void **args;
+  // starts off as MAX_SHARED_ARGS but can increase in size.
+  uint32_t nArgs;
+};
+
+extern __device__ __shared__ omptarget_nvptx_SharedArgs omptarget_nvptx_globalArgs;
+
 // Data sharing related quantities, need to match what is used in the compiler.
 enum DATA_SHARING_SIZES {
   // The maximum number of workers in a kernel.
@@ -80,6 +120,7 @@ enum DATA_SHARING_SIZES {
 struct DataSharingStateTy {
   __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
   void *StackPtr[DS_Max_Warp_Number];
+  __kmpc_data_sharing_slot *TailPtr[DS_Max_Warp_Number];
   void *FramePtr[DS_Max_Warp_Number];
   int32_t ActiveThreads[DS_Max_Warp_Number];
 };
@@ -87,6 +128,7 @@ struct DataSharingStateTy {
 // size of 4*32 bytes.
 struct __kmpc_data_sharing_worker_slot_static {
   __kmpc_data_sharing_slot *Next;
+  __kmpc_data_sharing_slot *Prev;
   void *DataEnd;
   char Data[DS_Worker_Warp_Slot_Size];
 };
@@ -94,6 +136,7 @@ struct __kmpc_data_sharing_worker_slot_static {
 // size of 4 bytes.
 struct __kmpc_data_sharing_master_slot_static {
   __kmpc_data_sharing_slot *Next;
+  __kmpc_data_sharing_slot *Prev;
   void *DataEnd;
   char Data[DS_Slot_Size];
 };
@@ -223,6 +266,7 @@ public:
       master_rootS[0].DataEnd = &master_rootS[0].Data[0] + DS_Slot_Size;
       // We currently do not have a next slot.
       master_rootS[0].Next = 0;
+      master_rootS[0].Prev = 0;
       return (__kmpc_data_sharing_slot *)&master_rootS[0];
     }
     // Initialize the pointer to the end of the slot given the size of the data
@@ -231,6 +275,7 @@ public:
         &worker_rootS[wid].Data[0] + DS_Worker_Warp_Slot_Size;
     // We currently do not have a next slot.
     worker_rootS[wid].Next = 0;
+    worker_rootS[wid].Prev = 0;
     return (__kmpc_data_sharing_slot *)&worker_rootS[wid];
   }
 

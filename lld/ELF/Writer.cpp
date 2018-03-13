@@ -1873,6 +1873,12 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
   FileSize = alignTo(Off, Config->Wordsize);
 }
 
+static std::string rangeToString(uint64_t Addr, uint64_t Len) {
+  if (Len == 0)
+    return "<empty range at 0x" + utohexstr(Addr) + ">";
+  return "[0x" + utohexstr(Addr) + ", 0x" + utohexstr(Addr + Len - 1) + "]";
+}
+
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   uint64_t Off = 0;
@@ -1897,6 +1903,25 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 
   SectionHeaderOff = alignTo(Off, Config->Wordsize);
   FileSize = SectionHeaderOff + (OutputSections.size() + 1) * sizeof(Elf_Shdr);
+
+  // Our logic assumes that sections have rising VA within the same segment.
+  // With use of linker scripts it is possible to violate this rule and get file
+  // offset overlaps or overflows. That should never happen with a valid script
+  // which does not move the location counter backwards and usually scripts do
+  // not do that. Unfortunately, there are apps in the wild, for example, Linux
+  // kernel, which control segment distribution explicitly and move the counter
+  // backwards, so we have to allow doing that to support linking them. We
+  // perform non-critical checks for overlaps in checkNoOverlappingSections(),
+  // but here we want to prevent file size overflows because it would crash the
+  // linker.
+  for (OutputSection *Sec : OutputSections) {
+    if (Sec->Type == SHT_NOBITS)
+      continue;
+    if ((Sec->Offset > FileSize) || (Sec->Offset + Sec->Size > FileSize))
+      error("unable to place section " + Sec->Name + " at file offset " +
+            rangeToString(Sec->Offset, Sec->Offset + Sec->Size) +
+            "; check your linker script for overflows");
+  }
 }
 
 // Finalize the program headers. We call this function after we assign
@@ -1933,12 +1958,6 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
         P->p_memsz = alignTo(P->p_memsz, P->p_align);
     }
   }
-}
-
-static std::string rangeToString(uint64_t Addr, uint64_t Len) {
-  if (Len == 0)
-    return "<empty range at 0x" + utohexstr(Addr) + ">";
-  return "[0x" + utohexstr(Addr) + ", 0x" + utohexstr(Addr + Len - 1) + "]";
 }
 
 // Check whether sections overlap for a specific address range (file offsets,

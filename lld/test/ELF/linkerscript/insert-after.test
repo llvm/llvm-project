@@ -25,5 +25,5 @@ SECTIONS {
 
 # RUN: not ld.lld %t1.o -o %t1 --script %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=ERR
-# ERR-DAG: error: unable to INSERT AFTER .text: section not defined
-# ERR-DAG: error: unable to INSERT AFTER .data: section not defined
+# ERR-DAG: error: unable to INSERT AFTER/BEFORE .text: section not defined
+# ERR-DAG: error: unable to INSERT AFTER/BEFORE .data: section not defined

@@ -123,41 +123,16 @@ initializeUsedResources(InstrDesc &ID, const MCSchedClassDesc &SCDesc,
 static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
                               const MCSchedClassDesc &SCDesc,
                               const MCSubtargetInfo &STI) {
-  unsigned MaxLatency = 0;
-  unsigned NumWriteLatencyEntries = SCDesc.NumWriteLatencyEntries;
-  for (unsigned I = 0, E = NumWriteLatencyEntries; I < E; ++I) {
-    int Cycles = STI.getWriteLatencyEntry(&SCDesc, I)->Cycles;
-    // Check if this is an unknown latency. Conservatively (pessimistically)
-    // assume a latency of 100cy if late.
-    if (Cycles == -1)
-      Cycles = 100;
-    MaxLatency = std::max(MaxLatency, static_cast<unsigned>(Cycles));
-  }
-
   if (MCDesc.isCall()) {
     // We cannot estimate how long this call will take.
     // Artificially set an arbitrarily high latency (100cy).
-    MaxLatency = std::max(100U, MaxLatency);
+    ID.MaxLatency = 100U;
+    return;
   }
 
-  // Check if this instruction consumes any processor resources.
-  // If the latency is unknown, then conservatively set it equal to the maximum
-  // number of cycles for a resource consumed by this instruction.
-  if (!MaxLatency && ID.Resources.size()) {
-    // Check if this instruction consumes any processor resources.
-    // If so, then compute the max of the cycles spent for each resource, and
-    // use it as the MaxLatency.
-    for (const std::pair<uint64_t, ResourceUsage> &Resource : ID.Resources)
-      MaxLatency = std::max(MaxLatency, Resource.second.size());
-  }
-
-  if (SCDesc.isVariant() && MaxLatency == 0) {
-    errs() << "note: unknown latency for a variant opcode. Conservatively"
-           << " assume a default latency of 1cy.\n";
-    MaxLatency = 1;
-  }
-
-  ID.MaxLatency = MaxLatency;
+  int Latency = MCSchedModel::computeInstrLatency(STI, SCDesc);
+  // If latency is unknown, then conservatively assume a MaxLatency of 100cy.
+  ID.MaxLatency = Latency < 0 ? 100U : static_cast<unsigned>(Latency);
 }
 
 static void populateWrites(InstrDesc &ID, const MCInst &MCI,

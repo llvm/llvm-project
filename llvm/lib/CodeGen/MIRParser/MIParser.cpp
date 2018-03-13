@@ -923,11 +923,13 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
 }
 
 bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
-  if (Token.is(MIToken::kw_frame_setup)) {
-    Flags |= MachineInstr::FrameSetup;
-    lex();
-  } else if (Token.is(MIToken::kw_frame_destroy)) {
-    Flags |= MachineInstr::FrameDestroy;
+  // Allow both:
+  // * frame-setup frame-destroy OPCODE
+  // * frame-destroy frame-setup OPCODE
+  while (Token.is(MIToken::kw_frame_setup) ||
+         Token.is(MIToken::kw_frame_destroy)) {
+    Flags |= Token.is(MIToken::kw_frame_setup) ? MachineInstr::FrameSetup
+                                               : MachineInstr::FrameDestroy;
     lex();
   }
   if (Token.isNot(MIToken::Identifier))

@@ -614,7 +614,7 @@ public:
       }
 
       // If we are legalizing by splitting, query the concrete TTI for the cost
-      // of casting the original vector twice. We also need to factor int the
+      // of casting the original vector twice. We also need to factor in the
       // cost of the split itself. Count that as 1, to be consistent with
       // TLI->getTypeLegalizationCost().
       if ((TLI->getTypeAction(Src->getContext(), TLI->getValueType(DL, Src)) ==

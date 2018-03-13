@@ -15,12 +15,14 @@
 #ifndef LLVM_MC_MCSCHEDULE_H
 #define LLVM_MC_MCSCHEDULE_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 
 namespace llvm {
 
 struct InstrItinerary;
+class MCSubtargetInfo;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
@@ -225,6 +227,15 @@ struct MCSchedModel {
     assert(SchedClassIdx < NumSchedClasses && "bad scheduling class idx");
     return &SchedClassTable[SchedClassIdx];
   }
+
+  /// Returns the latency value for the scheduling class.
+  static int computeInstrLatency(const MCSubtargetInfo &STI,
+                                 const MCSchedClassDesc &SCDesc);
+
+  /// Returns the reciprocal throughput information from a MCSchedClassDesc.
+  static Optional<double>
+  getReciprocalThroughput(const MCSubtargetInfo &STI,
+                          const MCSchedClassDesc &SCDesc);
 
   /// Returns the default initialized model.
   static const MCSchedModel &GetDefaultSchedModel() { return Default; }
