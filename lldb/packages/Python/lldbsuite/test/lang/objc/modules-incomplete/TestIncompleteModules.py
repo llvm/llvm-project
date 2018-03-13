@@ -25,13 +25,11 @@ class IncompleteModulesTestCase(TestBase):
     @skipUnlessDarwin
     @expectedFailureDarwin("rdar://24543255")
     @unittest2.expectedFailure("rdar://20416388")
-    @skipIf(macos_version=["<", "10.12"])
+    @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
     def test_expr(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        # Break inside the foo function which takes a bar_ptr argument.
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
 
@@ -48,21 +46,21 @@ class IncompleteModulesTestCase(TestBase):
 
         self.runCmd(
             "settings set target.clang-module-search-paths \"" +
-            os.getcwd() +
+            self.getSourceDir() +
             "\"")
 
         self.expect("expr @import myModule; 3", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["int", "3"])
 
         self.expect(
-            "expr [myObject privateMethod]",
+            "expr private_func()",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=[
                 "int",
                 "5"])
 
-        self.expect("expr MIN(2,3)", "#defined macro was found",
+        self.expect("expr MY_MIN(2,3)", "#defined macro was found",
                     substrs=["int", "2"])
 
-        self.expect("expr MAX(2,3)", "#undefd macro was correcltly not found",
+        self.expect("expr MY_MAX(2,3)", "#undefd macro was correctly not found",
                     error=True)

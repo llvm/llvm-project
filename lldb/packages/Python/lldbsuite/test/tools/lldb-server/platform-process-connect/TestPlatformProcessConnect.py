@@ -20,12 +20,9 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.init_llgs_test(False)
 
         working_dir = lldb.remote_platform.GetWorkingDirectory()
-        err = lldb.remote_platform.Put(
-            lldb.SBFileSpec(
-                os.path.join(
-                    os.getcwd(), "a.out")), lldb.SBFileSpec(
-                os.path.join(
-                    working_dir, "a.out")))
+        src = lldb.SBFileSpec(self.getBuildArtifact("a.out"))
+        dest = lldb.SBFileSpec(os.path.join(working_dir, "a.out"))
+        err = lldb.remote_platform.Put(src, dest)
         if err.Fail():
             raise RuntimeError(
                 "Unable copy '%s' to '%s'.\n>>> %s" %

@@ -105,16 +105,54 @@ class LLDBTestResult(unittest2.TextTestResult):
         else:
             return str(test)
 
+    @staticmethod
+    def _getFileBasedCategories(test):
+        """
+        Returns the list of categories to which this test case belongs by
+        looking for a ".categories" file. We start at the folder the test is in
+        an traverse the hierarchy upwards - we guarantee a .categories to exist
+        at the top level directory so we do not end up looping endlessly.
+        """
+        import inspect
+        import os.path
+        folder = inspect.getfile(test.__class__)
+        folder = os.path.dirname(folder)
+        while folder != '/':
+            categories_file_name = os.path.join(folder, ".categories")
+            if os.path.exists(categories_file_name):
+                categories_file = open(categories_file_name, 'r')
+                categories = categories_file.readline()
+                categories_file.close()
+                categories = str.replace(categories, '\n', '')
+                categories = str.replace(categories, '\r', '')
+                return categories.split(',')
+            else:
+                folder = os.path.dirname(folder)
+                continue
+
+
     def getCategoriesForTest(self, test):
         """
         Gets all the categories for the currently running test method in test case
         """
+
+        # It isn't possible to reliably attach categories to inline tests
+        # because they all share the same instance method. Adding a category to
+        # one inline test causes all inline tests to be added to that category.
+        # This can result in an unpredictable set of tests being run when the
+        # multiprocess test runner is in use.
+        #
+        # To work around the problem, add all inline tests to the swiftpr
+        # category.
+        if any(['_InlineTest__' in field for field in dir(test)]):
+            return ['swiftpr']
+
         test_categories = []
         test_method = getattr(test, test._testMethodName)
         if test_method is not None and hasattr(test_method, "categories"):
             test_categories.extend(test_method.categories)
 
-        test_categories.extend(test.getCategories())
+        test_categories.extend(self._getFileBasedCategories(test))
 
         return test_categories
 
@@ -140,14 +178,7 @@ class LLDBTestResult(unittest2.TextTestResult):
                 configuration.skip_tests, test.id()):
             self.hardMarkAsSkipped(test)
 
-        configuration.setCrashInfoHook(
-            "%s at %s" %
-            (str(test), inspect.getfile(
-                test.__class__)))
         self.counter += 1
-        # if self.counter == 4:
-        #    import crashinfo
-        #    crashinfo.testCrashReporterDescription(None)
         test.test_number = self.counter
         if self.showAll:
             self.stream.write(self.fmt % self.counter)

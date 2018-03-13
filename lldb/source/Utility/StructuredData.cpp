@@ -15,6 +15,7 @@
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h" // for make_unique
+#include "llvm/Support/MemoryBuffer.h"
 #include <cerrno>
 #include <cstdlib>
 #include <inttypes.h>

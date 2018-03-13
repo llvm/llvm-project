@@ -10,8 +10,8 @@
 #ifndef utility_UnwindAssembly_h_
 #define utility_UnwindAssembly_h_
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

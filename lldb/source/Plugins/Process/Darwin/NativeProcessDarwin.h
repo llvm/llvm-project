@@ -22,12 +22,12 @@
 #include <unordered_set>
 
 // Other libraries and framework includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 
@@ -197,20 +197,6 @@ private:
   // waitpid reader callback handle.
   MainLoop::ReadHandleUP m_waitpid_reader_handle;
 
-#if 0
-            ArchSpec m_arch;
-
-            LazyBool m_supports_mem_region;
-            std::vector<MemoryRegionInfo> m_mem_region_cache;
-
-            lldb::tid_t m_pending_notification_tid;
-
-            // List of thread ids stepping with a breakpoint with the address of
-            // the relevan breakpoint
-            std::map<lldb::tid_t, lldb::addr_t>
-            m_threads_stepping_with_breakpoint;
-#endif
-
   // -----------------------------------------------------------------
   // Private Instance Methods
   // -----------------------------------------------------------------
@@ -321,20 +307,6 @@ private:
                      bool exited);
 
   Status SetupSoftwareSingleStepping(NativeThreadDarwin &thread);
-
-#if 0
-            static ::ProcessMessage::CrashReason
-            GetCrashReasonForSIGSEGV(const siginfo_t *info);
-
-            static ::ProcessMessage::CrashReason
-            GetCrashReasonForSIGILL(const siginfo_t *info);
-
-            static ::ProcessMessage::CrashReason
-            GetCrashReasonForSIGFPE(const siginfo_t *info);
-
-            static ::ProcessMessage::CrashReason
-            GetCrashReasonForSIGBUS(const siginfo_t *info);
-#endif
 
   bool HasThreadNoLock(lldb::tid_t thread_id);
 

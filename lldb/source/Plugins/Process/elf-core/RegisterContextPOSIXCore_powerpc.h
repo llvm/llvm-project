@@ -10,11 +10,8 @@
 #ifndef liblldb_RegisterContextCorePOSIX_powerpc_h_
 #define liblldb_RegisterContextCorePOSIX_powerpc_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
+#include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataExtractor.h"
 
 class RegisterContextCorePOSIX_powerpc : public RegisterContextPOSIX_powerpc {
@@ -23,8 +20,7 @@ public:
       lldb_private::Thread &thread,
       lldb_private::RegisterInfoInterface *register_info,
       const lldb_private::DataExtractor &gpregset,
-      const lldb_private::DataExtractor &fpregset,
-      const lldb_private::DataExtractor &vregset);
+      llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   ~RegisterContextCorePOSIX_powerpc() override;
 

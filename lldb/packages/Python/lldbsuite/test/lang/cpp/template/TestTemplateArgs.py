@@ -19,7 +19,7 @@ class TemplateArgsTestCase(TestBase):
         self.build()
 
         # Create a target by the debugger.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 

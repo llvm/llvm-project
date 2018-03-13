@@ -12,7 +12,7 @@
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
-#include "unittests/Utility/Helpers/MockTildeExpressionResolver.h"
+#include "TestingSupport/MockTildeExpressionResolver.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"

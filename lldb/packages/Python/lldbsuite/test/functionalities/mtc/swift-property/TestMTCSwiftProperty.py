@@ -17,6 +17,7 @@ class MTCSwiftPropertyTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @expectedFailureAll(bugnumber="rdar://problem/36557167")
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()
         if self.mtc_dylib_path == "":
@@ -41,8 +42,6 @@ class MTCSwiftPropertyTestCase(TestBase):
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
 
-        self.expect("thread info", substrs=['stop reason = NSView.superview must be used from main thread only'])
-
         self.expect(
             "thread info -s",
             substrs=["instrumentation_class", "api_name", "class_name", "selector", "description"])
@@ -55,3 +54,5 @@ class MTCSwiftPropertyTestCase(TestBase):
         self.assertEqual(data["class_name"], "NSView")
         self.assertEqual(data["selector"], "superview")
         self.assertEqual(data["description"], "NSView.superview must be used from main thread only")
+
+        self.expect("thread info", substrs=['stop reason = NSView.superview must be used from main thread only'])

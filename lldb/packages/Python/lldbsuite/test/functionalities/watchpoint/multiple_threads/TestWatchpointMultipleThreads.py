@@ -18,8 +18,6 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -29,8 +27,6 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         self.setTearDownCleanup()
         self.hello_multiple_threads()
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -51,12 +47,8 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
 
     def hello_multiple_threads(self):
         """Test that lldb watchpoint works for multiple threads."""
-        self.runCmd(
-            "file %s" %
-            os.path.join(
-                os.getcwd(),
-                'a.out'),
-            CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
         lldbutil.run_break_set_by_file_and_line(
@@ -103,12 +95,8 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
 
     def hello_multiple_threads_wp_set_and_then_delete(self):
         """Test that lldb watchpoint works for multiple threads, and after the watchpoint is deleted, the watchpoint event should no longer fires."""
-        self.runCmd(
-            "file %s" %
-            os.path.join(
-                os.getcwd(),
-                'a.out'),
-            CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
         lldbutil.run_break_set_by_file_and_line(

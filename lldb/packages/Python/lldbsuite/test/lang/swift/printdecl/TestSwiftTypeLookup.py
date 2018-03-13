@@ -26,6 +26,7 @@ class TestSwiftTypeLookup(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_type_lookup(self):
         """Test the ability to look for type definitions at the command line"""
         self.build()
@@ -39,7 +40,7 @@ class TestSwiftTypeLookup(TestBase):
     def do_test(self):
         """Test the ability to look for type definitions at the command line"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

@@ -15,6 +15,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
+@skipIfDarwin
 class EventAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -33,7 +34,7 @@ class EventAPITestCase(TestBase):
     def test_listen_for_and_print_event(self):
         """Exercise SBEvent API."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.dbg.SetAsync(True)
 
@@ -122,7 +123,7 @@ class EventAPITestCase(TestBase):
     def test_wait_for_event(self):
         """Exercise SBListener.WaitForEvent() API."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.dbg.SetAsync(True)
 
@@ -201,7 +202,7 @@ class EventAPITestCase(TestBase):
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.dbg.SetAsync(True)
 

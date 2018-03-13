@@ -97,17 +97,8 @@ void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
   if (m_compile_units.empty()) {
     if (m_dwarf2Data != NULL) {
       lldb::offset_t offset = 0;
-      const DWARFDataExtractor &debug_info_data =
-          m_dwarf2Data->get_debug_info_data();
-      while (debug_info_data.ValidOffset(offset)) {
-        DWARFCompileUnitSP cu_sp(new DWARFCompileUnit(m_dwarf2Data));
-        // Out of memory?
-        if (cu_sp.get() == NULL)
-          break;
-
-        if (cu_sp->Extract(debug_info_data, &offset) == false)
-          break;
-
+      DWARFCompileUnitSP cu_sp;
+      while ((cu_sp = DWARFCompileUnit::Extract(m_dwarf2Data, &offset))) {
         m_compile_units.push_back(cu_sp);
 
         offset = cu_sp->GetNextCompileUnitOffset();
@@ -248,12 +239,10 @@ void DWARFDebugInfo::Parse(SymbolFileDWARF *dwarf2Data, Callback callback,
   if (dwarf2Data) {
     lldb::offset_t offset = 0;
     uint32_t depth = 0;
-    DWARFCompileUnitSP cu(new DWARFCompileUnit(dwarf2Data));
-    if (cu.get() == NULL)
-      return;
     DWARFDebugInfoEntry die;
 
-    while (cu->Extract(dwarf2Data->get_debug_info_data(), &offset)) {
+    DWARFCompileUnitSP cu;
+    while ((cu = DWARFCompileUnit::Extract(dwarf2Data, &offset))) {
       const dw_offset_t next_cu_offset = cu->GetNextCompileUnitOffset();
 
       depth = 0;
@@ -287,12 +276,6 @@ void DWARFDebugInfo::Parse(SymbolFileDWARF *dwarf2Data, Callback callback,
       // all parsing
       if (!dwarf2Data->get_debug_info_data().ValidOffset(offset))
         break;
-
-      // See if during the callback anyone retained a copy of the compile
-      // unit other than ourselves and if so, let whomever did own the object
-      // and create a new one for our own use!
-      if (!cu.unique())
-        cu.reset(new DWARFCompileUnit(dwarf2Data));
 
       // Make sure we start on a proper
       offset = next_cu_offset;
@@ -506,81 +489,4 @@ void DWARFDebugInfo::Dump(Stream *s, const uint32_t die_offset,
     if (die)
       die.Dump(s, recurse_depth);
   }
-}
-
-//----------------------------------------------------------------------
-// FindCallbackString
-//
-// A callback function for the static DWARFDebugInfo::Parse() function
-// that gets called each time a compile unit header or debug information
-// entry is successfully parsed.
-//
-// This function will find the die_offset of any items whose DW_AT_name
-// matches the given string
-//----------------------------------------------------------------------
-typedef struct FindCallbackStringInfoTag {
-  const char *name;
-  bool ignore_case;
-  RegularExpression *regex;
-  vector<dw_offset_t> &die_offsets;
-} FindCallbackStringInfo;
-
-static dw_offset_t
-FindCallbackString(SymbolFileDWARF *dwarf2Data, DWARFCompileUnit *cu,
-                   DWARFDebugInfoEntry *die, const dw_offset_t next_offset,
-                   const uint32_t curr_depth, void *userData) {
-  FindCallbackStringInfo *info = (FindCallbackStringInfo *)userData;
-
-  if (!die)
-    return next_offset;
-
-  const char *die_name = die->GetName(dwarf2Data, cu);
-  if (!die_name)
-    return next_offset;
-
-  if (info->regex) {
-    if (info->regex->Execute(llvm::StringRef(die_name)))
-      info->die_offsets.push_back(die->GetOffset());
-  } else {
-    if ((info->ignore_case ? strcasecmp(die_name, info->name)
-                           : strcmp(die_name, info->name)) == 0)
-      info->die_offsets.push_back(die->GetOffset());
-  }
-
-  // Just return the current offset to parse the next CU or DIE entry
-  return next_offset;
-}
-
-//----------------------------------------------------------------------
-// Find
-//
-// Finds all DIE that have a specific DW_AT_name attribute by manually
-// searching through the debug information (not using the
-// .debug_pubnames section). The string must match the entire name
-// and case sensitive searches are an option.
-//----------------------------------------------------------------------
-bool DWARFDebugInfo::Find(const char *name, bool ignore_case,
-                          vector<dw_offset_t> &die_offsets) const {
-  die_offsets.clear();
-  if (name && name[0]) {
-    FindCallbackStringInfo info = {name, ignore_case, NULL, die_offsets};
-    DWARFDebugInfo::Parse(m_dwarf2Data, FindCallbackString, &info);
-  }
-  return !die_offsets.empty();
-}
-
-//----------------------------------------------------------------------
-// Find
-//
-// Finds all DIE that have a specific DW_AT_name attribute by manually
-// searching through the debug information (not using the
-// .debug_pubnames section). The string must match the supplied regular
-// expression.
-//----------------------------------------------------------------------
-bool DWARFDebugInfo::Find(RegularExpression &re,
-                          vector<dw_offset_t> &die_offsets) const {
-  die_offsets.clear();
-  FindCallbackStringInfo info = {NULL, false, &re, die_offsets};
-  DWARFDebugInfo::Parse(m_dwarf2Data, FindCallbackString, &info);
-  return !die_offsets.empty();
 }

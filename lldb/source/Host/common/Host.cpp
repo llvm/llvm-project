@@ -48,10 +48,6 @@
 // C++ Includes
 #include <csignal>
 
-// Other libraries and framework includes
-// Project includes
-
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostProcess.h"
@@ -63,7 +59,6 @@
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"

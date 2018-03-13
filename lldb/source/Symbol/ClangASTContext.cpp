@@ -71,7 +71,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangFunctionCaller.h"
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/DumpDataExtractor.h"
@@ -436,75 +436,12 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   // OpenCL and C++ both have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus;
 
-  //    if (Opts.CPlusPlus)
-  //        Opts.CXXOperatorNames = !Args.hasArg(OPT_fno_operator_names);
-  //
-  //    if (Args.hasArg(OPT_fobjc_gc_only))
-  //        Opts.setGCMode(LangOptions::GCOnly);
-  //    else if (Args.hasArg(OPT_fobjc_gc))
-  //        Opts.setGCMode(LangOptions::HybridGC);
-  //
-  //    if (Args.hasArg(OPT_print_ivar_layout))
-  //        Opts.ObjCGCBitmapPrint = 1;
-  //
-  //    if (Args.hasArg(OPT_faltivec))
-  //        Opts.AltiVec = 1;
-  //
-  //    if (Args.hasArg(OPT_pthread))
-  //        Opts.POSIXThreads = 1;
-  //
-  //    llvm::StringRef Vis = getLastArgValue(Args, OPT_fvisibility,
-  //                                          "default");
-  //    if (Vis == "default")
   Opts.setValueVisibilityMode(DefaultVisibility);
-  //    else if (Vis == "hidden")
-  //        Opts.setVisibilityMode(LangOptions::Hidden);
-  //    else if (Vis == "protected")
-  //        Opts.setVisibilityMode(LangOptions::Protected);
-  //    else
-  //        Diags.Report(diag::err_drv_invalid_value)
-  //        << Args.getLastArg(OPT_fvisibility)->getAsString(Args) << Vis;
-
-  //    Opts.OverflowChecking = Args.hasArg(OPT_ftrapv);
 
   // Mimicing gcc's behavior, trigraphs are only enabled if -trigraphs
   // is specified, or -std is set to a conforming mode.
   Opts.Trigraphs = !Opts.GNUMode;
-  //    if (Args.hasArg(OPT_trigraphs))
-  //        Opts.Trigraphs = 1;
-  //
-  //    Opts.DollarIdents = Args.hasFlag(OPT_fdollars_in_identifiers,
-  //                                     OPT_fno_dollars_in_identifiers,
-  //                                     !Opts.AsmPreprocessor);
-  //    Opts.PascalStrings = Args.hasArg(OPT_fpascal_strings);
-  //    Opts.Microsoft = Args.hasArg(OPT_fms_extensions);
-  //    Opts.WritableStrings = Args.hasArg(OPT_fwritable_strings);
-  //    if (Args.hasArg(OPT_fno_lax_vector_conversions))
-  //        Opts.LaxVectorConversions = 0;
-  //    Opts.Exceptions = Args.hasArg(OPT_fexceptions);
-  //    Opts.RTTI = !Args.hasArg(OPT_fno_rtti);
-  //    Opts.Blocks = Args.hasArg(OPT_fblocks);
   Opts.CharIsSigned = ArchSpec(triple).CharIsSignedByDefault();
-  //    Opts.ShortWChar = Args.hasArg(OPT_fshort_wchar);
-  //    Opts.Freestanding = Args.hasArg(OPT_ffreestanding);
-  //    Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
-  //    Opts.AssumeSaneOperatorNew =
-  //    !Args.hasArg(OPT_fno_assume_sane_operator_new);
-  //    Opts.HeinousExtensions = Args.hasArg(OPT_fheinous_gnu_extensions);
-  //    Opts.AccessControl = Args.hasArg(OPT_faccess_control);
-  //    Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);
-  //    Opts.MathErrno = !Args.hasArg(OPT_fno_math_errno);
-  //    Opts.InstantiationDepth = getLastArgIntValue(Args, OPT_ftemplate_depth,
-  //    99,
-  //                                                 Diags);
-  //    Opts.NeXTRuntime = !Args.hasArg(OPT_fgnu_runtime);
-  //    Opts.ObjCConstantStringClass = getLastArgValue(Args,
-  //                                                   OPT_fconstant_string_class);
-  //    Opts.ObjCNonFragileABI = Args.hasArg(OPT_fobjc_nonfragile_abi);
-  //    Opts.CatchUndefined = Args.hasArg(OPT_fcatch_undefined_behavior);
-  //    Opts.EmitAllDecls = Args.hasArg(OPT_femit_all_decls);
-  //    Opts.PICLevel = getLastArgIntValue(Args, OPT_pic_level, 0, Diags);
-  //    Opts.Static = Args.hasArg(OPT_static_define);
   Opts.OptimizeSize = 0;
 
   // FIXME: Eliminate this dependency.
@@ -519,18 +456,6 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   //
   // FIXME: This is affected by other options (-fno-inline).
   Opts.NoInlineDefine = !Opt;
-
-  //    unsigned SSP = getLastArgIntValue(Args, OPT_stack_protector, 0, Diags);
-  //    switch (SSP) {
-  //        default:
-  //            Diags.Report(diag::err_drv_invalid_value)
-  //            << Args.getLastArg(OPT_stack_protector)->getAsString(Args) <<
-  //            SSP;
-  //            break;
-  //        case 0: Opts.setStackProtectorMode(LangOptions::SSPOff); break;
-  //        case 1: Opts.setStackProtectorMode(LangOptions::SSPOn);  break;
-  //        case 2: Opts.setStackProtectorMode(LangOptions::SSPReq); break;
-  //    }
 }
 
 ClangASTContext::ClangASTContext(const char *target_triple)
@@ -606,8 +531,9 @@ ClangASTContext::CreateInstance(lldb::LanguageType language,
           ast_sp->SetArchitecture(fixed_arch);
           ast_sp->m_scratch_ast_source_ap.reset(
               new ClangASTSource(target->shared_from_this()));
+          lldbassert(ast_sp->getFileManager());
           ast_sp->m_scratch_ast_source_ap->InstallASTContext(
-              ast_sp->getASTContext());
+              *ast_sp->getASTContext(), *ast_sp->getFileManager(), true);
           llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
               ast_sp->m_scratch_ast_source_ap->CreateProxy());
           ast_sp->SetExternalSource(proxy_ast_source);
@@ -2204,21 +2130,21 @@ CompilerType ClangASTContext::GetOrCreateStructForIdentifier(
 CompilerType
 ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
                                        const Declaration &decl,
-                                       const CompilerType &integer_clang_type) {
+                                       const CompilerType &integer_clang_type,
+                                       bool is_scoped) {
   // TODO: Do something intelligent with the Declaration object passed in
   // like maybe filling in the SourceLocation with it...
   ASTContext *ast = getASTContext();
 
   // TODO: ask about these...
-  //    const bool IsScoped = false;
   //    const bool IsFixed = false;
 
   EnumDecl *enum_decl = EnumDecl::Create(
       *ast, decl_ctx, SourceLocation(), SourceLocation(),
       name && name[0] ? &ast->Idents.get(name) : nullptr, nullptr,
-      false,  // IsScoped
-      false,  // IsScopedUsingClassTag
-      false); // IsFixed
+      is_scoped, // IsScoped
+      is_scoped, // IsScopedUsingClassTag
+      false);    // IsFixed
 
   if (enum_decl) {
     // TODO: check if we should be setting the promotion type too?
@@ -4406,6 +4332,9 @@ ClangASTContext::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::ObjCTypeParam:
     break;
+
+  case clang::Type::DependentAddressSpace:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5111,6 +5040,7 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
 
     case clang::BuiltinType::Half:
     case clang::BuiltinType::Float:
+    case clang::BuiltinType::Float16:
     case clang::BuiltinType::Float128:
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
@@ -5272,6 +5202,9 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::Decayed:
     break;
   case clang::Type::ObjCTypeParam:
+    break;
+
+  case clang::Type::DependentAddressSpace:
     break;
   }
   count = 0;
@@ -5435,6 +5368,9 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Decayed:
     break;
   case clang::Type::ObjCTypeParam:
+    break;
+
+  case clang::Type::DependentAddressSpace:
     break;
   }
   // We don't know hot to display this type...
@@ -7670,99 +7606,122 @@ ClangASTContext::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
   return 0;
 }
 
-CompilerType
-ClangASTContext::GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                     size_t arg_idx,
-                                     lldb::TemplateArgumentKind &kind) {
+const clang::ClassTemplateSpecializationDecl *
+ClangASTContext::GetAsTemplateSpecialization(
+    lldb::opaque_compiler_type_t type) {
   if (!type)
-    return CompilerType();
+    return nullptr;
 
   clang::QualType qual_type(GetCanonicalQualType(type));
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
-  case clang::Type::Record:
-    if (GetCompleteType(type)) {
-      const clang::CXXRecordDecl *cxx_record_decl =
-          qual_type->getAsCXXRecordDecl();
-      if (cxx_record_decl) {
-        const clang::ClassTemplateSpecializationDecl *template_decl =
-            llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(
-                cxx_record_decl);
-        if (template_decl &&
-            arg_idx < template_decl->getTemplateArgs().size()) {
-          const clang::TemplateArgument &template_arg =
-              template_decl->getTemplateArgs()[arg_idx];
-          switch (template_arg.getKind()) {
-          case clang::TemplateArgument::Null:
-            kind = eTemplateArgumentKindNull;
-            return CompilerType();
-
-          case clang::TemplateArgument::Type:
-            kind = eTemplateArgumentKindType;
-            return CompilerType(getASTContext(), template_arg.getAsType());
-
-          case clang::TemplateArgument::Declaration:
-            kind = eTemplateArgumentKindDeclaration;
-            return CompilerType();
-
-          case clang::TemplateArgument::Integral:
-            kind = eTemplateArgumentKindIntegral;
-            return CompilerType(getASTContext(),
-                                template_arg.getIntegralType());
-
-          case clang::TemplateArgument::Template:
-            kind = eTemplateArgumentKindTemplate;
-            return CompilerType();
-
-          case clang::TemplateArgument::TemplateExpansion:
-            kind = eTemplateArgumentKindTemplateExpansion;
-            return CompilerType();
-
-          case clang::TemplateArgument::Expression:
-            kind = eTemplateArgumentKindExpression;
-            return CompilerType();
-
-          case clang::TemplateArgument::Pack:
-            kind = eTemplateArgumentKindPack;
-            return CompilerType();
-
-          default:
-            llvm_unreachable("Unhandled clang::TemplateArgument::ArgKind");
-          }
-        }
-      }
-    }
-    break;
+  case clang::Type::Record: {
+    if (! GetCompleteType(type))
+      return nullptr;
+    const clang::CXXRecordDecl *cxx_record_decl =
+        qual_type->getAsCXXRecordDecl();
+    if (!cxx_record_decl)
+      return nullptr;
+    return llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(
+        cxx_record_decl);
+  }
 
   case clang::Type::Typedef:
-    return (CompilerType(getASTContext(),
-                         llvm::cast<clang::TypedefType>(qual_type)
-                             ->getDecl()
-                             ->getUnderlyingType()))
-        .GetTemplateArgument(arg_idx, kind);
+    return GetAsTemplateSpecialization(llvm::cast<clang::TypedefType>(qual_type)
+                                           ->getDecl()
+                                           ->getUnderlyingType()
+                                           .getAsOpaquePtr());
 
   case clang::Type::Auto:
-    return (CompilerType(
-                getASTContext(),
-                llvm::cast<clang::AutoType>(qual_type)->getDeducedType()))
-        .GetTemplateArgument(arg_idx, kind);
+    return GetAsTemplateSpecialization(llvm::cast<clang::AutoType>(qual_type)
+                                           ->getDeducedType()
+                                           .getAsOpaquePtr());
 
   case clang::Type::Elaborated:
-    return (CompilerType(
-                getASTContext(),
-                llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()))
-        .GetTemplateArgument(arg_idx, kind);
+    return GetAsTemplateSpecialization(
+        llvm::cast<clang::ElaboratedType>(qual_type)
+            ->getNamedType()
+            .getAsOpaquePtr());
 
   case clang::Type::Paren:
-    return (CompilerType(getASTContext(),
-                         llvm::cast<clang::ParenType>(qual_type)->desugar()))
-        .GetTemplateArgument(arg_idx, kind);
+    return GetAsTemplateSpecialization(
+        llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr());
 
   default:
-    break;
+    return nullptr;
   }
-  kind = eTemplateArgumentKindNull;
-  return CompilerType();
+}
+
+lldb::TemplateArgumentKind
+ClangASTContext::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
+                                         size_t arg_idx) {
+  const clang::ClassTemplateSpecializationDecl *template_decl =
+      GetAsTemplateSpecialization(type);
+  if (! template_decl || arg_idx >= template_decl->getTemplateArgs().size())
+    return eTemplateArgumentKindNull;
+
+  switch (template_decl->getTemplateArgs()[arg_idx].getKind()) {
+  case clang::TemplateArgument::Null:
+    return eTemplateArgumentKindNull;
+
+  case clang::TemplateArgument::NullPtr:
+    return eTemplateArgumentKindNullPtr;
+
+  case clang::TemplateArgument::Type:
+    return eTemplateArgumentKindType;
+
+  case clang::TemplateArgument::Declaration:
+    return eTemplateArgumentKindDeclaration;
+
+  case clang::TemplateArgument::Integral:
+    return eTemplateArgumentKindIntegral;
+
+  case clang::TemplateArgument::Template:
+    return eTemplateArgumentKindTemplate;
+
+  case clang::TemplateArgument::TemplateExpansion:
+    return eTemplateArgumentKindTemplateExpansion;
+
+  case clang::TemplateArgument::Expression:
+    return eTemplateArgumentKindExpression;
+
+  case clang::TemplateArgument::Pack:
+    return eTemplateArgumentKindPack;
+  }
+  llvm_unreachable("Unhandled clang::TemplateArgument::ArgKind");
+}
+
+CompilerType
+ClangASTContext::GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                         size_t idx) {
+  const clang::ClassTemplateSpecializationDecl *template_decl =
+      GetAsTemplateSpecialization(type);
+  if (!template_decl || idx >= template_decl->getTemplateArgs().size())
+    return CompilerType();
+
+  const clang::TemplateArgument &template_arg =
+      template_decl->getTemplateArgs()[idx];
+  if (template_arg.getKind() != clang::TemplateArgument::Type)
+    return CompilerType();
+
+  return CompilerType(getASTContext(), template_arg.getAsType());
+}
+
+llvm::Optional<CompilerType::IntegralTemplateArgument>
+ClangASTContext::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
+                                             size_t idx) {
+  const clang::ClassTemplateSpecializationDecl *template_decl =
+      GetAsTemplateSpecialization(type);
+  if (! template_decl || idx >= template_decl->getTemplateArgs().size())
+    return llvm::None;
+
+  const clang::TemplateArgument &template_arg =
+      template_decl->getTemplateArgs()[idx];
+  if (template_arg.getKind() != clang::TemplateArgument::Integral)
+    return llvm::None;
+
+  return {{template_arg.getAsIntegral(),
+           CompilerType(getASTContext(), template_arg.getIntegralType())}};
 }
 
 CompilerType ClangASTContext::GetTypeForFormatters(void *type) {
@@ -10259,3 +10218,10 @@ PersistentExpressionState *
 ClangASTContextForExpressions::GetPersistentExpressionState() {
   return m_persistent_variables.get();
 }
+
+clang::ExternalASTMerger &
+ClangASTContextForExpressions::GetMergerUnchecked() {
+  lldbassert(m_scratch_ast_source_ap != nullptr);
+  return m_scratch_ast_source_ap->GetMergerUnchecked();
+}
+

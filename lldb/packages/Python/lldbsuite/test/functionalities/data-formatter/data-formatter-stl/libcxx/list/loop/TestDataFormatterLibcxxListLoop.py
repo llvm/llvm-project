@@ -18,13 +18,14 @@ from lldbsuite.test import lldbutil
 class LibcxxListDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(["libc++"])
     @expectedFailureAndroid(bugnumber="llvm.org/pr32592")
     @skipIfDarwin  # rdar://25499635
     def test_with_run_command(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target and target.IsValid(), "Target is valid")
 

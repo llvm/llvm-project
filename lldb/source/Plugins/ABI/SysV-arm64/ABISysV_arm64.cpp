@@ -2018,7 +2018,7 @@ bool ABISysV_arm64::RegisterIsVolatile(const RegisterInfo *reg_info) {
     if (name[0] == 'l' && name[1] == 'r') // lr
       return false;
 
-    if (name[0] == 'x') {
+    if (name[0] == 'x' || name[0] == 'r') {
       // Volatile registers: x0-x18
       // Although documentation says only x19-28 + sp are callee saved
       // We ll also have to treat x30 as non-volatile.

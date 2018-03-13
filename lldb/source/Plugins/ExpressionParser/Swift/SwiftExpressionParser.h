@@ -14,7 +14,7 @@
 #define liblldb_SwiftExpressionParser_h_
 
 #include "Plugins/ExpressionParser/Clang/IRForTarget.h"
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Expression/ExpressionParser.h"

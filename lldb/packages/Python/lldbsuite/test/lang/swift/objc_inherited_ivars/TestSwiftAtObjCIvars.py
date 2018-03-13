@@ -26,6 +26,7 @@ class TestSwiftAtObjCIvars(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_at_objc_ivars(self):
         """Check that we correctly find offsets for ivars of Swift @objc types"""
         self.build()
@@ -45,7 +46,7 @@ class TestSwiftAtObjCIvars(TestBase):
     def do_test(self):
         """Test the Any type"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

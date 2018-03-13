@@ -6,4 +6,4 @@ OBJC_SOURCES := main.m
 
 include $(LEVEL)/Makefile.rules
 
-CFLAGS += -fmodules -I$(PWD)
+CFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS) -I$(PWD)

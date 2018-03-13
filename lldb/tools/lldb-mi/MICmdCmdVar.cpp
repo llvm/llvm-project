@@ -509,19 +509,19 @@ bool CMICmdCmdVarUpdate::ExamineSBValueForChange(lldb::SBValue &vrwValue,
     return MIstatus::success;
   }
 
-  lldb::SBType valueType = vrwValue.GetType();
-
   const MIuint nChildren = vrwValue.GetNumChildren();
   for (MIuint i = 0; i < nChildren; ++i) {
     lldb::SBValue member = vrwValue.GetChildAtIndex(i);
     if (!member.IsValid())
       continue;
 
-    if (member.GetValueDidChange()) {
-      vrwbChanged = true;
-      return MIstatus::success;
-    } else if (ExamineSBValueForChange(member, vrwbChanged) && vrwbChanged)
-      // Handle composite types (i.e. struct or arrays)
+    // skip pointers and references to avoid infinite loop
+    if (member.GetType().GetTypeFlags() &
+        (lldb::eTypeIsPointer | lldb::eTypeIsReference))
+      continue;
+
+    // Handle composite types (i.e. struct or arrays)
+    if (ExamineSBValueForChange(member, vrwbChanged) && vrwbChanged)
       return MIstatus::success;
   }
   vrwbChanged = false;

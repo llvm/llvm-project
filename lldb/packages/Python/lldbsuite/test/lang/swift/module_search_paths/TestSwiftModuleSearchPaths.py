@@ -33,6 +33,7 @@ class TestSwiftModuleSearchPaths(TestBase):
 
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_module_search_paths(self):
         """
         Tests that we can import modules located using
@@ -43,7 +44,7 @@ class TestSwiftModuleSearchPaths(TestBase):
         self.build()
         
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

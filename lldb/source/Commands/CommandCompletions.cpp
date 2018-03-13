@@ -30,7 +30,6 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
@@ -165,7 +164,7 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
     // search in the fully resolved directory, but CompletionBuffer keeps the
     // unmodified form that the user typed.
     Storage = Resolved;
-    SearchDir = Resolved;
+    SearchDir = Storage;
   } else {
     SearchDir = path::parent_path(CompletionBuffer);
   }
@@ -199,14 +198,14 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
 
     // We have a match.
 
-    fs::file_status st;
-    if ((EC = Entry.status(st)))
+    llvm::ErrorOr<fs::basic_file_status> st = Entry.status();
+    if (!st)
       continue;
 
     // If it's a symlink, then we treat it as a directory as long as the target
     // is a directory.
-    bool is_dir = fs::is_directory(st);
-    if (fs::is_symlink_file(st)) {
+    bool is_dir = fs::is_directory(*st);
+    if (fs::is_symlink_file(*st)) {
       fs::file_status target_st;
       if (!fs::status(Entry.path(), target_st))
         is_dir = fs::is_directory(target_st);

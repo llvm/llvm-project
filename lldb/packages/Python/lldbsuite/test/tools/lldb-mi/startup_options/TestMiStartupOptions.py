@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+import os
 
 class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
@@ -67,14 +68,11 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via absolute path."""
 
         # Prepare path to executable
-        import os
-        path = os.path.join(os.getcwd(), self.myexe)
-
-        self.spawnLldbMi(args="%s" % path)
+        self.spawnLldbMi(args="%s" % self.myexe)
 
         # Test that the executable is loaded when file was specified using
         # absolute path
-        self.expect("-file-exec-and-symbols \"%s\"" % path)
+        self.expect("-file-exec-and-symbols \"%s\"" % self.myexe)
         self.expect("\^done")
 
         # Test that lldb-mi is ready when executable was loaded
@@ -92,8 +90,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via relative path."""
 
         # Prepare path to executable
-        path = "./%s" % self.myexe
-
+        path = os.path.relpath(self.myexe)
         self.spawnLldbMi(args="%s" % path)
 
         # Test that the executable is loaded when file was specified using
@@ -129,6 +126,15 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that lldb-mi is ready when executable was loaded
         self.expect(self.child_prompt, exactly=True)
 
+    def copyScript(self, sourceFile):
+        """copy the script to builddir and replace a.out with the full path"""
+        destFile = os.path.join(os.path.dirname(self.myexe),
+                                sourceFile+'.script')
+        with open(sourceFile, 'r') as src:
+            with open(destFile, 'w+') as dest:
+                dest.write(src.read().replace("a.out", self.myexe))
+        return destFile
+        
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
@@ -137,8 +143,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter' can execute user's commands after initial commands were executed."""
 
         # Prepared source file
-        sourceFile = "start_script"
-
+        sourceFile = self.copyScript("start_script")
         self.spawnLldbMi(args="--source %s" % sourceFile)
 
         # After '-file-exec-and-symbols a.out'
@@ -171,6 +176,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-data-evaluate-expression a")
         self.expect("\^done,value=\"10\"")
         self.expect(self.child_prompt, exactly=True)
+        os.unlink(sourceFile)
 
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
@@ -180,8 +186,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter' can execute a prepared file which passed via --source option."""
 
         # Prepared source file
-        sourceFile = "start_script_exit"
-
+        sourceFile = self.copyScript("start_script_exit")
         self.spawnLldbMi(args="--source %s" % sourceFile)
 
         # After '-file-exec-and-symbols a.out'
@@ -215,6 +220,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("-gdb-exit")
         self.expect("\^exit")
         self.expect("\*stopped,reason=\"exited-normally\"")
+        os.unlink(sourceFile)
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
@@ -222,8 +228,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter' stops execution of initial commands in case of error."""
 
         # Prepared source file
-        sourceFile = "start_script_error"
-
+        sourceFile = self.copyScript("start_script_error")
         self.spawnLldbMi(args="--source %s" % sourceFile)
 
         # After '-file-exec-and-symbols a.out'
@@ -236,6 +241,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Test that lldb-mi is ready after execution of --source start_script
         self.expect(self.child_prompt, exactly=True)
+        os.unlink(sourceFile)
 
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows

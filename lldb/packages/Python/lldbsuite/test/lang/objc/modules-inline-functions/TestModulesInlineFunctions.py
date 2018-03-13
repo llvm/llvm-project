@@ -27,11 +27,10 @@ class ModulesInlineFunctionsTestCase(TestBase):
         self.line = line_number('main.m', '// Set breakpoint here.')
 
     @skipUnlessDarwin
-    @skipIf(macos_version=["<", "10.12"])
-    @expectedFailureDarwin("llvm.org/pr25743")
+    @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
     def test_expr(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the foo function which takes a bar_ptr argument.
@@ -51,7 +50,7 @@ class ModulesInlineFunctionsTestCase(TestBase):
 
         self.runCmd(
             "settings set target.clang-module-search-paths \"" +
-            os.getcwd() +
+            self.getSourceDir() +
             "\"")
 
         self.expect("expr @import myModule; 3", VARIABLES_DISPLAYED_CORRECTLY,

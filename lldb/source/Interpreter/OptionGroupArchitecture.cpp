@@ -8,12 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/OptionGroupArchitecture.h"
-
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Target/Platform.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -34,10 +30,7 @@ llvm::ArrayRef<OptionDefinition> OptionGroupArchitecture::GetDefinitions() {
 
 bool OptionGroupArchitecture::GetArchitecture(Platform *platform,
                                               ArchSpec &arch) {
-  if (m_arch_str.empty())
-    arch.Clear();
-  else
-    arch.SetTriple(m_arch_str.c_str(), platform);
+  arch = Platform::GetAugmentedArchSpec(platform, m_arch_str);
   return arch.IsValid();
 }
 

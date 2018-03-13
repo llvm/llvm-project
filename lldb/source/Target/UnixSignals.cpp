@@ -16,8 +16,8 @@
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/Utility/MipsLinuxSignals.h"
 #include "Plugins/Process/Utility/NetBSDSignals.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/ArchSpec.h"
 
 using namespace lldb_private;
 

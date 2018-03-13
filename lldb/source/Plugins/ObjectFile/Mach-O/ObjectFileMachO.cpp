@@ -17,7 +17,6 @@
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
@@ -39,7 +38,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
-#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
@@ -863,8 +863,7 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
                                             lldb::offset_t file_offset,
                                             lldb::offset_t length) {
   if (!data_sp) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -875,8 +874,7 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -915,8 +913,7 @@ size_t ObjectFileMachO::GetModuleSpecifications(
       size_t header_and_load_cmds =
           header.sizeofcmds + MachHeaderSizeFromMagic(header.magic);
       if (header_and_load_cmds >= data_sp->GetByteSize()) {
-        data_sp = DataBufferLLVM::CreateSliceFromPath(
-            file.GetPath(), header_and_load_cmds, file_offset);
+        data_sp = MapFileData(file, header_and_load_cmds, file_offset);
         data.SetData(data_sp);
         data_offset = MachHeaderSizeFromMagic(header.magic);
       }
@@ -1128,8 +1125,7 @@ bool ObjectFileMachO::ParseHeader() {
                   ReadMemory(process_sp, m_memory_addr, header_and_lc_size);
             } else {
               // Read in all only the load command data from the file on disk
-              data_sp = DataBufferLLVM::CreateSliceFromPath(
-                  m_file.GetPath(), header_and_lc_size, m_file_offset);
+              data_sp = MapFileData(m_file, header_and_lc_size, m_file_offset);
               if (data_sp->GetByteSize() != header_and_lc_size)
                 return false;
             }
@@ -1201,6 +1197,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDWARFDebugAbbrev:
           case eSectionTypeDWARFDebugAddr:
           case eSectionTypeDWARFDebugAranges:
+          case eSectionTypeDWARFDebugCuIndex:
           case eSectionTypeDWARFDebugFrame:
           case eSectionTypeDWARFDebugInfo:
           case eSectionTypeDWARFDebugLine:
@@ -2161,9 +2158,8 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
                                          const ByteOrder byte_order,
                                          const uint32_t addr_byte_size) {
   UUID dsc_uuid;
-  DataBufferSP DscData = DataBufferLLVM::CreateSliceFromPath(
-      dyld_shared_cache.GetPath(),
-      sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
+  DataBufferSP DscData = MapFileData(
+      dyld_shared_cache, sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
   if (!DscData)
     return dsc_uuid;
   DataExtractor dsc_header_data(DscData, byte_order, addr_byte_size);
@@ -2847,9 +2843,8 @@ size_t ObjectFileMachO::ParseSymtab() {
 
       // Process the dyld shared cache header to find the unmapped symbols
 
-      DataBufferSP dsc_data_sp = DataBufferLLVM::CreateSliceFromPath(
-          dsc_filespec.GetPath(), sizeof(struct lldb_copy_dyld_cache_header_v1),
-          0);
+      DataBufferSP dsc_data_sp = MapFileData(
+          dsc_filespec, sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
       if (!dsc_uuid.IsValid()) {
         dsc_uuid = GetSharedCacheUUID(dsc_filespec, byte_order, addr_byte_size);
       }
@@ -2881,11 +2876,9 @@ size_t ObjectFileMachO::ParseSymtab() {
         if (uuid_match &&
             mappingOffset >= sizeof(struct lldb_copy_dyld_cache_header_v1)) {
 
-          DataBufferSP dsc_mapping_info_data_sp =
-              DataBufferLLVM::CreateSliceFromPath(
-                  dsc_filespec.GetPath(),
-                  sizeof(struct lldb_copy_dyld_cache_mapping_info),
-                  mappingOffset);
+          DataBufferSP dsc_mapping_info_data_sp = MapFileData(
+              dsc_filespec, sizeof(struct lldb_copy_dyld_cache_mapping_info),
+              mappingOffset);
 
           DataExtractor dsc_mapping_info_data(dsc_mapping_info_data_sp,
                                               byte_order, addr_byte_size);
@@ -2909,9 +2902,7 @@ size_t ObjectFileMachO::ParseSymtab() {
           if (localSymbolsOffset && localSymbolsSize) {
             // Map the local symbols
             DataBufferSP dsc_local_symbols_data_sp =
-                DataBufferLLVM::CreateSliceFromPath(dsc_filespec.GetPath(),
-                                               localSymbolsSize,
-                                               localSymbolsOffset);
+                MapFileData(dsc_filespec, localSymbolsSize, localSymbolsOffset);
 
             if (dsc_local_symbols_data_sp) {
               DataExtractor dsc_local_symbols_data(dsc_local_symbols_data_sp,
@@ -3892,14 +3883,6 @@ size_t ObjectFileMachO::ParseSymtab() {
                                       nlist.n_type << 16 | nlist.n_desc);
                                   sym[sym_idx].Clear();
                                   continue;
-                                } else {
-                                  if (SwiftLanguageRuntime::IsSwiftSymbol(symbol_name) {
-                                    if (SwiftLanguageRuntime::IsIvarOffset(symbol_name) {
-                                      type = eSymbolTypeIVarOffset;
-                                    } else if (SwiftLanguageRuntime::IsMetadataSymbol(symbol_name) {
-                                      type = eSymbolTypeMetadata;
-                                    }
-                                  }
                                 }
                               }
                             }
@@ -4043,12 +4026,6 @@ size_t ObjectFileMachO::ParseSymtab() {
             // correctly.  To do this right, we should coalesce all the GSYM &
             // global symbols that have the
             // same address.
-            if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == '_'
-                && SwiftLanguageRuntime::IsMetadataSymbol(symbol_name+1)) {
-              add_nlist = false;
-              break;
-            }
-
             is_gsym = true;
             sym[sym_idx].SetExternal(true);
 
@@ -4823,24 +4800,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                     // symbol table
                     sym[GSYM_sym_idx].SetFlags(nlist.n_type << 16 |
                                                nlist.n_desc);
-                    if (SwiftLanguageRuntime::IsSwiftMangledName(gsym_name)) {
-                      if (SwiftLanguageRuntime::IsIvarOffsetSymbol(gsym_name)) {
-                        sym[GSYM_sym_idx].SetType(eSymbolTypeIVarOffset);
-                      } else if (SwiftLanguageRuntime::IsMetadataSymbol(gsym_name)) {
-                        sym[GSYM_sym_idx].SetType(eSymbolTypeMetadata);
-                      }
-                    }
-
                     sym[sym_idx].Clear();
                     continue;
-                  } else {
-                    if (SwiftLanguageRuntime::IsSwiftMangledName(symbol_name)) { 
-                      if (SwiftLanguageRuntime::IsIvarOffsetSymbol(symbol_name)) {
-                        type = eSymbolTypeIVarOffset;
-                      } else if (SwiftLanguageRuntime::IsMetadataSymbol(symbol_name)) {
-                        type = eSymbolTypeMetadata;
-                      }
-                    }
                   }
                 }
               }
@@ -5392,10 +5353,8 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
         FileSpec file_spec = 
             exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
         file_spec = file_spec.GetNormalizedPath();
-        if (file_spec.Exists() && files.AppendIfUnique(file_spec)) {
+        if (file_spec.Exists() && files.AppendIfUnique(file_spec))
           count++;
-          break;
-        }
       }
     }
   }

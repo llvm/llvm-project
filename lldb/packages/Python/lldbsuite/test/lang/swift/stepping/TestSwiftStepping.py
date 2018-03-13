@@ -25,6 +25,7 @@ class TestSwiftStepping(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_stepping(self):
         """Tests that we can step reliably in swift code."""
         self.build()
@@ -72,7 +73,7 @@ class TestSwiftStepping(lldbtest.TestBase):
     def do_test(self):
         """Tests that we can step reliably in swift code."""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

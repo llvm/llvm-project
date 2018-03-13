@@ -30,6 +30,8 @@ if(LLDB_BUILD_FRAMEWORK)
     ${LLDB_FRAMEWORK_INSTALL_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR})
 endif()
 
+get_filename_component(CFGBLDDIR ${LLDB_WRAP_PYTHON} DIRECTORY)
+
 find_package(SWIG)
 if( ${SWIG_FOUND} )
   set(PREPARE_BINDINGS_ARGS
@@ -54,15 +56,15 @@ add_custom_command(
       ${framework_arg}
       --srcRoot=${LLDB_SOURCE_DIR}
       --targetDir=${LLDB_PYTHON_TARGET_DIR}
-      --cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}
+      --cfgBldDir=${CFGBLDDIR}
       --prefix=${CMAKE_BINARY_DIR}
       ${PREPARE_BINDINGS_ARGS}
   VERBATIM
   COMMENT "Python script building LLDB Python wrapper")
-set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
+add_custom_target(swig_wrapper ALL DEPENDS ${LLDB_WRAP_PYTHON})
+
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/lldb.py PROPERTIES GENERATED 1)
 
-add_custom_target(swig_wrapper ALL DEPENDS ${LLDB_WRAP_PYTHON})
 
 # Install the LLDB python module
 install(DIRECTORY ${SWIG_PYTHON_DIR} DESTINATION ${SWIG_INSTALL_DIR})

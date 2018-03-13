@@ -21,8 +21,7 @@ class SymbolContextTwoFilesTestCase(TestBase):
     def test_lookup_by_address(self):
         """Test lookup by address in a module with multiple compilation units"""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
@@ -44,8 +43,7 @@ class SymbolContextTwoFilesTestCase(TestBase):
         """This test verifies that we correctly handle the case when multiple
         compile unit contains DW_AT_ranges and DW_AT_ranges_base attributes."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 

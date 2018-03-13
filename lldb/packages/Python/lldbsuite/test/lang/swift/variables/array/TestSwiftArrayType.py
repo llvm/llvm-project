@@ -31,6 +31,7 @@ class TestSwiftArrayType(lldbtest.TestBase):
 
     @decorators.swiftTest
     @decorators.skipIf(bugnumber='rdar://30663811', oslist=['linux'])
+    @decorators.add_test_categories(["swiftpr"])
     def test_array(self):
         """Check formatting for Swift.Array<T>"""
         self.build()
@@ -39,7 +40,7 @@ class TestSwiftArrayType(lldbtest.TestBase):
     def do_test(self):
         """Check formatting for Swift.Array<T>"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

@@ -535,6 +535,7 @@ eSectionTypeDataObjCCFStrings = _lldb.eSectionTypeDataObjCCFStrings
 eSectionTypeDWARFDebugAbbrev = _lldb.eSectionTypeDWARFDebugAbbrev
 eSectionTypeDWARFDebugAddr = _lldb.eSectionTypeDWARFDebugAddr
 eSectionTypeDWARFDebugAranges = _lldb.eSectionTypeDWARFDebugAranges
+eSectionTypeDWARFDebugCuIndex = _lldb.eSectionTypeDWARFDebugCuIndex
 eSectionTypeDWARFDebugFrame = _lldb.eSectionTypeDWARFDebugFrame
 eSectionTypeDWARFDebugInfo = _lldb.eSectionTypeDWARFDebugInfo
 eSectionTypeDWARFDebugLine = _lldb.eSectionTypeDWARFDebugLine
@@ -3589,6 +3590,42 @@ class SBDebugger(_object):
     def SetSelectedPlatform(self, *args):
         """SetSelectedPlatform(self, SBPlatform platform)"""
         return _lldb.SBDebugger_SetSelectedPlatform(self, *args)
+
+    def GetNumPlatforms(self):
+        """
+        GetNumPlatforms(self) -> uint32_t
+
+        Get the number of currently active platforms.
+        """
+        return _lldb.SBDebugger_GetNumPlatforms(self)
+
+    def GetPlatformAtIndex(self, *args):
+        """
+        GetPlatformAtIndex(self, uint32_t idx) -> SBPlatform
+
+        Get one of the currently active platforms.
+        """
+        return _lldb.SBDebugger_GetPlatformAtIndex(self, *args)
+
+    def GetNumAvailablePlatforms(self):
+        """
+        GetNumAvailablePlatforms(self) -> uint32_t
+
+        Get the number of available platforms.
+        """
+        return _lldb.SBDebugger_GetNumAvailablePlatforms(self)
+
+    def GetAvailablePlatformInfoAtIndex(self, *args):
+        """
+        GetAvailablePlatformInfoAtIndex(self, uint32_t idx) -> SBStructuredData
+
+        Get the name and description of one of the available platforms.
+
+        @param idx Zero-based index of the platform for which info should be
+                   retrieved, must be less than the value returned by
+                   GetNumAvailablePlatforms().
+        """
+        return _lldb.SBDebugger_GetAvailablePlatformInfoAtIndex(self, *args)
 
     def GetSourceManager(self):
         """GetSourceManager(self) -> SBSourceManager"""
@@ -7634,6 +7671,18 @@ class SBProcess(_object):
         """GetMemoryRegions(self) -> SBMemoryRegionInfoList"""
         return _lldb.SBProcess_GetMemoryRegions(self)
 
+    def GetProcessInfo(self):
+        """
+        Get information about the process.
+        Valid process info will only be returned when the process is alive,
+        use IsValid() to check if the info returned is valid.
+
+        process_info = process.GetProcessInfo()
+        if process_info.IsValid():
+            process_info.GetProcessID()
+        """
+        return _lldb.SBProcess_GetProcessInfo(self)
+
     def __get_is_alive__(self):
         '''Returns "True" if the process is currently alive, "False" otherwise'''
         s = self.GetState()
@@ -7774,6 +7823,82 @@ def SBProcess_EventIsProcessEvent(*args):
 def SBProcess_EventIsStructuredDataEvent(*args):
   """SBProcess_EventIsStructuredDataEvent(SBEvent event) -> bool"""
   return _lldb.SBProcess_EventIsStructuredDataEvent(*args)
+
+class SBProcessInfo(_object):
+    """
+    Describes an existing process and any discoverable information that pertains to
+    that process.
+    """
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBProcessInfo, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBProcessInfo, name)
+    __repr__ = _swig_repr
+    def __init__(self, *args): 
+        """
+        __init__(self) -> SBProcessInfo
+        __init__(self, SBProcessInfo rhs) -> SBProcessInfo
+        """
+        this = _lldb.new_SBProcessInfo(*args)
+        try: self.this.append(this)
+        except: self.this = this
+    __swig_destroy__ = _lldb.delete_SBProcessInfo
+    __del__ = lambda self : None;
+    def __nonzero__(self): return self.IsValid()
+    def IsValid(self):
+        """IsValid(self) -> bool"""
+        return _lldb.SBProcessInfo_IsValid(self)
+
+    def GetName(self):
+        """GetName(self) -> str"""
+        return _lldb.SBProcessInfo_GetName(self)
+
+    def GetExecutableFile(self):
+        """GetExecutableFile(self) -> SBFileSpec"""
+        return _lldb.SBProcessInfo_GetExecutableFile(self)
+
+    def GetProcessID(self):
+        """GetProcessID(self) -> pid_t"""
+        return _lldb.SBProcessInfo_GetProcessID(self)
+
+    def GetUserID(self):
+        """GetUserID(self) -> uint32_t"""
+        return _lldb.SBProcessInfo_GetUserID(self)
+
+    def GetGroupID(self):
+        """GetGroupID(self) -> uint32_t"""
+        return _lldb.SBProcessInfo_GetGroupID(self)
+
+    def UserIDIsValid(self):
+        """UserIDIsValid(self) -> bool"""
+        return _lldb.SBProcessInfo_UserIDIsValid(self)
+
+    def GroupIDIsValid(self):
+        """GroupIDIsValid(self) -> bool"""
+        return _lldb.SBProcessInfo_GroupIDIsValid(self)
+
+    def GetEffectiveUserID(self):
+        """GetEffectiveUserID(self) -> uint32_t"""
+        return _lldb.SBProcessInfo_GetEffectiveUserID(self)
+
+    def GetEffectiveGroupID(self):
+        """GetEffectiveGroupID(self) -> uint32_t"""
+        return _lldb.SBProcessInfo_GetEffectiveGroupID(self)
+
+    def EffectiveUserIDIsValid(self):
+        """EffectiveUserIDIsValid(self) -> bool"""
+        return _lldb.SBProcessInfo_EffectiveUserIDIsValid(self)
+
+    def EffectiveGroupIDIsValid(self):
+        """EffectiveGroupIDIsValid(self) -> bool"""
+        return _lldb.SBProcessInfo_EffectiveGroupIDIsValid(self)
+
+    def GetParentProcessID(self):
+        """GetParentProcessID(self) -> pid_t"""
+        return _lldb.SBProcessInfo_GetParentProcessID(self)
+
+SBProcessInfo_swigregister = _lldb.SBProcessInfo_swigregister
+SBProcessInfo_swigregister(SBProcessInfo)
 
 class SBQueue(_object):
     """Proxy of C++ lldb::SBQueue class"""
@@ -12108,15 +12233,15 @@ class SBValue(_object):
     as an SBValue.  For example, we can get the general purpose registers of a
     frame as an SBValue, and iterate through all the registers,
 
-        registerSet = frame.GetRegisters() # Returns an SBValueList.
+        registerSet = frame.registers # Returns an SBValueList.
         for regs in registerSet:
-            if 'general purpose registers' in regs.getName().lower():
+            if 'general purpose registers' in regs.name.lower():
                 GPRs = regs
                 break
 
-        print('%s (number of children = %d):' % (GPRs.GetName(), GPRs.GetNumChildren()))
+        print('%s (number of children = %d):' % (GPRs.name, GPRs.num_children))
         for reg in GPRs:
-            print('Name: ', reg.GetName(), ' Value: ', reg.GetValue())
+            print('Name: ', reg.name, ' Value: ', reg.value)
 
     produces the output:
 

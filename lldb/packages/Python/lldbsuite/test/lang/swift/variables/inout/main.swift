@@ -48,22 +48,33 @@ func foo(_ x: inout Struct) {
 	x.ivar += 1 // Set breakpoint here for Struct access
 }
 
+func fn_ptrs (_ str: Struct) {
+  let dict: [Int : (_ str: inout Struct) -> Void] =
+      [ 0 : foo]
+  let fn = dict[str.ivar] // Set breakpoint here for Function type with inout
+  if fn != nil {
+    print("Found function")
+  }
+}
+
 func foo (_ x: inout String) {
   print(x)
   x = "Set breakpoint here for String access"
 }
 
 func main() {
-	var x : Class = Other()
-	var s = Struct()
+  var x : Class = Other()
+  var s = Struct()
   var t = "Keep going, nothing to see"
 
-	foo(&x)
-	foo(&s)
-	foo(&x)
+  foo(&x)
+  foo(&s)
+  foo(&x)
   foo(&t)
-	foo(&x)
-	foo(&s)
+  foo(&x)
+  foo(&s)
+
+  fn_ptrs(s)
 }
 
 main()

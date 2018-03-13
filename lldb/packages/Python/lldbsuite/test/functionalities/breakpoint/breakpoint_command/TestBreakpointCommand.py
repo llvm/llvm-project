@@ -51,7 +51,7 @@ class BreakpointCommandTestCase(TestBase):
 
     def breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add three breakpoints on the same line.  The first time we don't specify the file,
@@ -237,7 +237,7 @@ class BreakpointCommandTestCase(TestBase):
 
     def breakpoint_command_script_parameters(self):
         """Test that the frame and breakpoint location are being properly passed to the script breakpoint command function."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint.
@@ -280,7 +280,7 @@ class BreakpointCommandTestCase(TestBase):
 
     def breakpoint_commands_on_creation(self):
         """Test that setting breakpoint commands when creating the breakpoint works"""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target.IsValid(), "Created an invalid target.")
 

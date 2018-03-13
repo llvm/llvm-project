@@ -15,7 +15,7 @@ class ObjCSelfTestCase(TestBase):
     def test_with_run_command(self):
         """Test that the appropriate member variables are available when stopped in Objective-C class and instance methods"""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         self.set_breakpoint(line_number('main.m', '// breakpoint 1'))
         self.set_breakpoint(line_number('main.m', '// breakpoint 2'))

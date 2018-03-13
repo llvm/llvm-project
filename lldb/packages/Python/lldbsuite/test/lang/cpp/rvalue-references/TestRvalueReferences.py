@@ -22,7 +22,7 @@ class RvalueReferencesTestCase(TestBase):
     def test_with_run_command(self):
         """Test that rvalues are supported in the C++ expression parser"""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         self.set_breakpoint(line_number('main.cpp', '// breakpoint 1'))
         self.set_breakpoint(line_number('main.cpp', '// breakpoint 2'))

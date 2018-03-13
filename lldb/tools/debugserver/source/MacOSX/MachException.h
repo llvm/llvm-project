@@ -71,6 +71,15 @@ public:
       return (exc_type == EXC_BREAKPOINT ||
               ((exc_type == EXC_SOFTWARE) && exc_data[0] == 1));
     }
+    void AppendExceptionData(mach_exception_data_t Data,
+                             mach_msg_type_number_t Count) {
+      mach_exception_data_type_t Buf;
+      for (mach_msg_type_number_t i = 0; i < Count; ++i) {
+        // Perform an unaligned copy.
+        memcpy(&Buf, Data + i, sizeof(mach_exception_data_type_t));
+        exc_data.push_back(Buf);
+      }
+    }
     void Dump() const;
     void DumpStopReason() const;
     bool GetStopInfo(struct DNBThreadStopInfo *stop_info) const;

@@ -8,8 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Address.h"
-
-#include "lldb/Core/ArchSpec.h" // for ArchSpec
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h" // for ModuleList

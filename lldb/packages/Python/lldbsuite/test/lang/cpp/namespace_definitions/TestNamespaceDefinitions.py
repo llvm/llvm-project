@@ -46,7 +46,7 @@ class NamespaceDefinitionsTestCase(TestBase):
         self.dbg.SetAsync(False)
 
         # Create a target by the debugger.
-        target = self.dbg.CreateTarget("a.out")
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
         # Break inside the foo function which takes a bar_ptr argument.

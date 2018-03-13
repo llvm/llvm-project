@@ -46,11 +46,12 @@ class TestFilePrivate(TestBase):
         self.assertTrue(answer == expected_result, report_str)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""
         self.build()
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

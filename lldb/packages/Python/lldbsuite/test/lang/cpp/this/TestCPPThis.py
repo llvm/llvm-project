@@ -24,7 +24,7 @@ class CPPThisTestCase(TestBase):
     def test_with_run_command(self):
         """Test that the appropriate member variables are available when stopped in C++ static, inline, and const methods"""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         self.set_breakpoint(line_number('main.cpp', '// breakpoint 1'))
         self.set_breakpoint(line_number('main.cpp', '// breakpoint 2'))

@@ -42,6 +42,25 @@ const char *RNBContext::EnvironmentAtIndex(size_t index) {
     return NULL;
 }
 
+static std::string GetEnvironmentKey(const std::string &env) {
+  std::string key = env.substr(0, env.find('='));
+  if (!key.empty() && key.back() == '=')
+    key.pop_back();
+  return key;
+}
+
+void RNBContext::PushEnvironmentIfNeeded(const char *arg) {
+  if (!arg)
+    return;
+  std::string arg_key = GetEnvironmentKey(arg);
+
+  for (const std::string &entry: m_env_vec) {
+    if (arg_key == GetEnvironmentKey(entry))
+      return;
+  }
+  m_env_vec.push_back(arg);
+}
+
 const char *RNBContext::ArgumentAtIndex(size_t index) {
   if (index < m_arg_vec.size())
     return m_arg_vec[index].c_str();

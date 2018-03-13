@@ -29,7 +29,7 @@ class ConvenienceVariablesCase(TestBase):
         """Test convenience variables lldb.debugger, lldb.target, lldb.process, lldb.thread, and lldb.frame."""
         self.build()
         import pexpect
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         prompt = "(lldb) "
         python_prompt = ">>> "
 

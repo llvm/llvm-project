@@ -25,6 +25,8 @@ public:
   SBBreakpointCallbackBaton(SBBreakpointHitCallback callback,
                             void *baton);
 
+  ~SBBreakpointCallbackBaton();
+
   static bool PrivateBreakpointHitCallback(void *baton,
                                            lldb_private::StoppointCallbackContext *ctx,
                                            lldb::user_id_t break_id,

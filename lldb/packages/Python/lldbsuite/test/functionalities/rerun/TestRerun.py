@@ -18,7 +18,7 @@ class TestRerun(TestBase):
 
     def test(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.runCmd("target create %s" % exe)
 

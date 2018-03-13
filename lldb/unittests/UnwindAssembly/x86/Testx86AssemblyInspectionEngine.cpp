@@ -16,8 +16,8 @@
 #include "Plugins/UnwindAssembly/x86/x86AssemblyInspectionEngine.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/TargetSelect.h"
@@ -95,7 +95,7 @@ enum i386_regs {
 
 std::unique_ptr<x86AssemblyInspectionEngine> Getx86_64Inspector() {
 
-  ArchSpec arch("x86_64-apple-macosx", nullptr);
+  ArchSpec arch("x86_64-apple-macosx");
   std::unique_ptr<x86AssemblyInspectionEngine> engine(
       new x86AssemblyInspectionEngine(arch));
 
@@ -114,7 +114,7 @@ std::unique_ptr<x86AssemblyInspectionEngine> Getx86_64Inspector() {
 
 std::unique_ptr<x86AssemblyInspectionEngine> Geti386Inspector() {
 
-  ArchSpec arch("i386-apple-macosx", nullptr);
+  ArchSpec arch("i386-apple-macosx");
   std::unique_ptr<x86AssemblyInspectionEngine> engine(
       new x86AssemblyInspectionEngine(arch));
 

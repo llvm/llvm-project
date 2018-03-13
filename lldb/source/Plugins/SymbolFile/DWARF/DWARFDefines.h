@@ -58,8 +58,6 @@ const char *DW_INL_value_to_name(uint32_t val);
 
 const char *DW_ORD_value_to_name(uint32_t val);
 
-const char *DW_DSC_value_to_name(uint32_t val);
-
 const char *DW_LNS_value_to_name(uint32_t val);
 
 const char *DW_LNE_value_to_name(uint32_t val);

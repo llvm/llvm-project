@@ -1,0 +1,12 @@
+// Test that NSString works in the REPL.
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=NSSTRING
+
+import Foundation
+var aString = "patatino" as NSString
+// NSSTRING: Welcome to Swift
+// NSSTRING-NEXT: aString: NSTaggedPointerString = "patatino"
+
+aString.substring(to: 3)
+// NSSTRING: $R0: String = "pat"

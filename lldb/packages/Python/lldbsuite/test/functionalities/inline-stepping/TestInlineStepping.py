@@ -145,7 +145,7 @@ class TestInlineStepping(TestBase):
 
     def inline_stepping(self):
         """Use Python APIs to test stepping over and hitting breakpoints."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -257,7 +257,7 @@ class TestInlineStepping(TestBase):
 
     def inline_stepping_step_over(self):
         """Use Python APIs to test stepping over and hitting breakpoints."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -288,7 +288,7 @@ class TestInlineStepping(TestBase):
 
     def step_in_template(self):
         """Use Python APIs to test stepping in to templated functions."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

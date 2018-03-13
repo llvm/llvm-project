@@ -15,11 +15,6 @@ class TestCppScopes(TestBase):
     def test_all_but_c(self):
         self.do_test(False)
 
-    # There's a global symbol in libsystem on Darwin that messes up
-    # the lookup of class C.  Breaking that test out from the others
-    # since that is a odd failure, and I don't want it to mask the
-    # real purpose of this test.
-    @expectedFailureDarwin(bugnumber="<rdar://problem/28623427>")
     @expectedFailureAll(oslist=["windows"])
     def test_c(self):
         self.do_test(True)
@@ -28,14 +23,12 @@ class TestCppScopes(TestBase):
         self.build()
 
         # Get main source file
-        src_file = "main.cpp"
+        src_file = os.path.join(self.getSourceDir(), "main.cpp")
         src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
         # Get the path of the executable
-        cwd = os.getcwd()
-        exe_file = "a.out"
-        exe_path = os.path.join(cwd, exe_file)
+        exe_path = self.getBuildArtifact("a.out")
 
         # Load the executable
         target = self.dbg.CreateTarget(exe_path)

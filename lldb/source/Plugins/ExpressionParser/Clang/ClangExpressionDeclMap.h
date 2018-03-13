@@ -613,6 +613,23 @@ private:
   void AddThisType(NameSearchContext &context, TypeFromUser &type,
                    unsigned int current_id);
 
+  //------------------------------------------------------------------
+  /// Move a type out of the current ASTContext into another, but make sure to
+  /// export all components of the type also.
+  ///
+  /// @param[in] target
+  ///     The ClangASTContext to move to.
+  /// @param[in] source
+  ///     The ClangASTContext to move from.  This is assumed to be going away.
+  /// @param[in] parser_type
+  ///     The type as it appears in the source context.
+  ///
+  /// @return
+  ///     Returns the moved type, or an empty type if there was a problem.
+  //------------------------------------------------------------------
+  TypeFromUser DeportType(ClangASTContext &target, ClangASTContext &source,
+                          TypeFromParser parser_type);
+
   ClangASTContext *GetClangASTContext();
 };
 

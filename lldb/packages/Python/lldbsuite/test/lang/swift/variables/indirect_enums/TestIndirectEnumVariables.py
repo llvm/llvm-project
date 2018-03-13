@@ -31,9 +31,8 @@ class TestIndirectEnumVariables(TestBase):
         self.build()
         self.do_test("indirect case break here")
 
+    @decorators.swiftTest
     @decorators.skipIf(bugnumber='rdar://27568868', oslist=['linux'])
-    @decorators.expectedFailureAll(
-        bugnumber="rdar://29953436")
     def test_indirect_enum_variables(self):
         """Tests that indirect Enum variables display correctly when enum is indirect"""
         self.build()
@@ -89,7 +88,7 @@ class TestIndirectEnumVariables(TestBase):
     def do_test(self, break_pattern):
         """Tests that indirect Enum variables display correctly"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

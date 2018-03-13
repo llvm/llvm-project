@@ -1,22 +1,22 @@
 LEVEL = ../../../make
 
+EXE=main
+SWIFT_SOURCES=main.swift
+LINKFLAGS= -lmoda -lmodb -L$(shell pwd) -I$(shell pwd)
+SWIFTFLAGS= -g -Onone $(LINKFLAGS) -Xfrontend -serialize-debugging-options 
+
+all: libmoda.dylib libmodb.dylib main
+
 include $(LEVEL)/Makefile.rules
 
-MACOSX_DEPLOYMENT_TARGET ?= 10.10
-SWIFT_TRIPLE ?= -target x86_64-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)
-SDK_PATH ?= $(shell xcrun --show-sdk-path --sdk macosx)
+SWIFTFLAGS_NOLINK = $(subst $(LINKFLAGS),,$(SWIFTFLAGS))
 
-everything: moda modb main
+libmoda.dylib: moda.swift
+	$(SWIFTCC) $(SWIFTFLAGS_NOLINK) -emit-module -module-name moda $< -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@
 
-moda:
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -g -Onone -Xfrontend -serialize-debugging-options -emit-module -module-name moda moda.swift -emit-library -o libmoda.dylib
+libmodb.dylib: modb.swift
+	$(SWIFTCC) $(SWIFTFLAGS_NOLINK) -emit-module -module-name modb $< -emit-library -o $@ -lmoda -L$(shell pwd) -I$(shell pwd) -Xlinker -install_name -Xlinker @executable_path/$@
 
-modb:
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -g -Onone -Xfrontend -serialize-debugging-options -emit-module -module-name modb modb.swift -emit-library -o libmodb.dylib  -lmoda -L. -I.
-
-main:
-	$(SWIFTCC) $(SWIFT_TRIPLE) -sdk $(SDK_PATH)  -g -Onone main.swift -o a.out -L. -I. -lmoda -lmodb
-
-cleanup:
+clean::
 	rm -rf a.out.dSYM a.out libmoda.dylib libmoda.dylib.dSYM libmodb.dylib libmodb.dylib.dSYM moda.swiftdoc moda.swiftmodule modb.swiftmodule modb.swiftdoc
 

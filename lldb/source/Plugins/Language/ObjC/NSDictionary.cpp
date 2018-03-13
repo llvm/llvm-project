@@ -248,7 +248,7 @@ namespace Foundation1100 {
     CompilerType m_pair_type;
     std::vector<DictionaryItemDescriptor> m_children;
   };
-};
+}
   
 namespace Foundation1428 {
   struct DataDescriptor_32 {
@@ -271,7 +271,7 @@ namespace Foundation1428 {
   
   using NSDictionaryMSyntheticFrontEnd =
     GenericNSDictionaryMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
-};
+}
   
 namespace Foundation1437 {
   static const uint64_t NSDictionaryCapacities[] = {
@@ -354,7 +354,7 @@ namespace Foundation1437 {
     }
   }
 
-};
+}
 } // namespace formatters
 } // namespace lldb_private
 

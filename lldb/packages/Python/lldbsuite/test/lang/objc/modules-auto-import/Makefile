@@ -1,6 +1,6 @@
 LEVEL = ../../../make
 OBJC_SOURCES := main.m
 
-CFLAGS += -fmodules -gmodules -g
+CFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 
 include $(LEVEL)/Makefile.rules

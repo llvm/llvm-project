@@ -31,7 +31,7 @@ class TestObjCIvarsInBlocks(TestBase):
     def test_with_python_api(self):
         """Test printing the ivars of the self when captured in blocks"""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

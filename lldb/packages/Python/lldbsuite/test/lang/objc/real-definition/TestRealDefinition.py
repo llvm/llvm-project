@@ -54,10 +54,6 @@ class TestRealDefinition(TestBase):
                 "foo->_bar->_hidden_ivar = 0x"])
 
     @skipUnlessDarwin
-    @expectedFailureAll(
-        "rdar://23963377",
-        oslist=["macosx"],
-        debug_info="dsym")
     def test_frame_var_after_stop_at_implementation(self):
         """Test that we can find the implementation for an objective C type"""
         if self.getArchitecture() == 'i386':
@@ -96,7 +92,7 @@ class TestRealDefinition(TestBase):
                 "foo->_bar->_hidden_ivar = 0x"])
 
     def common_setup(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the foo function which takes a bar_ptr argument.

@@ -31,7 +31,7 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_set_python_command_from_python(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
         self.target = self.dbg.CreateTarget(exe)

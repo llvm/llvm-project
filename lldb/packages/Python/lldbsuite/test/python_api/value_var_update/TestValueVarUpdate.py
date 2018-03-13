@@ -20,16 +20,16 @@ class HelloWorldTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        # Get the full path to our executable to be attached/debugged.
-        self.exe = os.path.join(os.getcwd(), self.testMethodName)
-        self.d = {'EXE': self.testMethodName}
 
     @add_test_categories(['pyapi'])
     def test_with_process_launch_api(self):
         """Test SBValue::GetValueDidChange"""
-        self.build(dictionary=self.d)
-        self.setTearDownCleanup(dictionary=self.d)
-        target = self.dbg.CreateTarget(self.exe)
+        # Get the full path to our executable to be attached/debugged.
+        exe = self.getBuildArtifact(self.testMethodName)
+        d = {'EXE': exe}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.dbg.CreateTarget(exe)
 
         breakpoint = target.BreakpointCreateBySourceRegex(
             "break here", lldb.SBFileSpec("main.c"))

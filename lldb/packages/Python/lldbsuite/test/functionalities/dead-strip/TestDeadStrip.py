@@ -28,7 +28,7 @@ class DeadStripTestCase(TestBase):
     def test(self):
         """Test breakpoint works correctly with dead-code stripping."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break by function name f1 (live code).

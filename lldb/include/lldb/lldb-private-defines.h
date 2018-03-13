@@ -13,8 +13,7 @@
 #if defined(__cplusplus)
 
 // Include Compiler.h here so we don't define LLVM_FALLTHROUGH and then
-// Compiler.h
-// later tries to redefine it.
+// Compiler.h later tries to redefine it.
 #include "llvm/Support/Compiler.h"
 
 #ifndef LLVM_FALLTHROUGH

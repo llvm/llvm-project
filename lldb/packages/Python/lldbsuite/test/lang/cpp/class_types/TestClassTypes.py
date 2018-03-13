@@ -24,7 +24,7 @@ class ClassTypesTestCase(TestBase):
     def test_with_run_command(self):
         """Test 'frame variable this' when stopped on a class constructor."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break on the ctor function of class C.
@@ -61,7 +61,7 @@ class ClassTypesTestCase(TestBase):
     def test_with_python_api(self):
         """Use Python APIs to create a breakpoint by (filespec, line)."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -72,7 +72,8 @@ class ClassTypesTestCase(TestBase):
         fsDir = os.path.normpath(filespec.GetDirectory())
         fsFile = filespec.GetFilename()
 
-        self.assertTrue(fsDir == os.getcwd() and fsFile == "a.out",
+        self.assertTrue(fsDir == os.path.dirname(self.getBuildArtifact())
+                        and fsFile == "a.out",
                         "FileSpec matches the executable")
 
         bpfilespec = lldb.SBFileSpec("main.cpp", False)
@@ -119,7 +120,7 @@ class ClassTypesTestCase(TestBase):
     def test_with_expr_parser(self):
         """Test 'frame variable this' and 'expr this' when stopped inside a constructor."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # rdar://problem/8516141
@@ -176,7 +177,7 @@ class ClassTypesTestCase(TestBase):
     def test_with_constructor_name(self):
         """Test 'frame variable this' and 'expr this' when stopped inside a constructor."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -187,7 +188,8 @@ class ClassTypesTestCase(TestBase):
         fsDir = os.path.normpath(filespec.GetDirectory())
         fsFile = filespec.GetFilename()
 
-        self.assertTrue(fsDir == os.getcwd() and fsFile == "a.out",
+        self.assertTrue(fsDir == os.path.dirname(self.getBuildArtifact())
+                        and fsFile == "a.out",
                         "FileSpec matches the executable")
 
         bpfilespec = lldb.SBFileSpec("main.cpp", False)

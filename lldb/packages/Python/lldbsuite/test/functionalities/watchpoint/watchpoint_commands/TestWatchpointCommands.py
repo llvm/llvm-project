@@ -36,8 +36,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -48,7 +46,7 @@ class WatchpointCommandsTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
@@ -109,8 +107,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 2'])
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -121,7 +117,7 @@ class WatchpointCommandsTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
@@ -168,8 +164,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("process status",
                     substrs=['exited'])
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -180,7 +174,7 @@ class WatchpointCommandsTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
@@ -230,8 +224,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 2', 'ignore_count = 2'])
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -242,7 +234,7 @@ class WatchpointCommandsTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
@@ -302,8 +294,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 1'])
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -314,7 +304,7 @@ class WatchpointCommandsTestCase(TestBase):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.

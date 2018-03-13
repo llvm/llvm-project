@@ -39,7 +39,7 @@ class DynamicValueChildCountTestCase(TestBase):
         """Test fetching C++ dynamic values from pointers & references."""
         """Get argument vals for the call stack when stopped on a breakpoint."""
         self.build(dictionary=self.getBuildFlags())
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target from the debugger.
 

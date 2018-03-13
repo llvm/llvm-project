@@ -633,6 +633,7 @@ enum SectionType {
   eSectionTypeDWARFDebugAbbrev,
   eSectionTypeDWARFDebugAddr,
   eSectionTypeDWARFDebugAranges,
+  eSectionTypeDWARFDebugCuIndex,
   eSectionTypeDWARFDebugFrame,
   eSectionTypeDWARFDebugInfo,
   eSectionTypeDWARFDebugLine,
@@ -774,8 +775,15 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindTemplate,
   eTemplateArgumentKindTemplateExpansion,
   eTemplateArgumentKindExpression,
-  eTemplateArgumentKindPack
+  eTemplateArgumentKindPack,
+  eTemplateArgumentKindNullPtr
+};
 
+// Kind of argument for generics, either bound or unbound.
+enum GenericKind {
+  eNullGenericKindType = 0,
+  eBoundGenericKindType,
+  eUnboundGenericKindType
 };
 
 //----------------------------------------------------------------------
@@ -941,8 +949,8 @@ enum ExpressionEvaluationPhase {
 // Indicates what types of events cause the watchpoint to fire.
 // Used by Native*Protocol-related classes.
 //----------------------------------------------------------------------
-FLAGS_ENUM(WatchpointKind){eWatchpointKindRead = (1u << 0),
-                           eWatchpointKindWrite = (1u << 1)};
+FLAGS_ENUM(WatchpointKind){eWatchpointKindWrite = (1u << 0),
+                           eWatchpointKindRead = (1u << 1)};
 
 enum GdbSignal {
   eGdbSignalBadAccess = 0x91,

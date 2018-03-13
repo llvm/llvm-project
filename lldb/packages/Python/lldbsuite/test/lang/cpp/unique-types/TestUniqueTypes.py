@@ -33,7 +33,7 @@ class UniqueTypesTestCase(TestBase):
             self.skipTest(
                 "rdar://problem/9173060 lldb hangs while running unique-types for clang version < 3")
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)

@@ -18,7 +18,6 @@ class TestQueues(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(bugnumber="rdar://30915340")
     def test_with_python_api(self):
         """Test queues inspection SB APIs."""
         self.build()
@@ -106,7 +105,7 @@ class TestQueues(TestBase):
 
     def queues(self):
         """Test queues inspection SB APIs without libBacktraceRecording."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -231,8 +230,9 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for unspecified QoS thread")
+        qosName = stream.GetData()
         self.assertTrue(
-            stream.GetData() == "User Initiated",
+            qosName == "User Initiated" or qosName == "Default",
             "unspecified QoS thread name is valid")
         stream.Clear()
         self.assertTrue(
@@ -246,7 +246,7 @@ class TestQueues(TestBase):
 
     def queues_with_libBacktraceRecording(self):
         """Test queues inspection SB APIs with libBacktraceRecording present."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         if not os.path.isfile(
                 '/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib'):

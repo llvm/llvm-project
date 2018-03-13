@@ -37,9 +37,9 @@ class DeepBundleTestCase(TestBase):
 
     def test_attach_and_check_dsyms(self):
         """Test attach to binary, see if the framework dSYM is found"""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
         self.build()
-        popen = self.spawnSubprocess(exe)
+        popen = self.spawnSubprocess(exe, [self.getBuildDir()])
         self.addTearDownHook(self.cleanupSubprocesses)
 
         # Give the inferior time to start up, dlopen a bundle, remove the bundle it linked in
@@ -49,7 +49,6 @@ class DeepBundleTestCase(TestBase):
         # binary & dSYM via target.exec-search-paths 
         settings_str = "settings set target.exec-search-paths " + self.get_process_working_directory() + "/hide.app"
         self.runCmd(settings_str)
-
         self.runCmd("process attach -p " + str(popen.pid))
 
         target = self.dbg.GetSelectedTarget()

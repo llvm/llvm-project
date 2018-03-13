@@ -10,7 +10,6 @@
 #ifndef liblldb_ClangModulesDeclVendor_h
 #define liblldb_ClangModulesDeclVendor_h
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/Platform.h"

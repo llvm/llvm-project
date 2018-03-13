@@ -12,22 +12,27 @@
 
 #ifdef __APPLE__
 #include <mach/mach_time.h>
+#include <dlfcn.h>
 #endif
 
-#ifdef __APPLE__
+#ifdef __gnu_linux__
 #include <dlfcn.h>
 #endif
 
 #define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
 
+__attribute__((optnone))
 int REPL_MAIN() {
   return 0;
 }
 
+__attribute__((optnone))
 int main() {
 #ifdef __APPLE__
   // Force loading of libswiftCore.dylib, which is not linked at build time.
   dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
+#else
+  dlopen("libswiftCore.so", RTLD_LAZY);
 #endif
   
 #ifdef __APPLE__

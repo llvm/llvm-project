@@ -26,9 +26,10 @@ class TestSwiftObjCOptionalType(TestBase):
 
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_objc_optional_type(self):
         """Check formatting for T? and T! when T is an ObjC type"""
-        self.buildDsym()
+        self.build()
         self.do_check_consistency()
         self.do_check_visuals()
         self.do_check_api()
@@ -41,7 +42,7 @@ class TestSwiftObjCOptionalType(TestBase):
     def do_check_consistency(self):
         """Check formatting for T? and T! when T is an ObjC type"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

@@ -29,13 +29,13 @@ class MiLibraryLoadedTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Test =library-loaded
         import os
-        path = os.path.join(os.getcwd(), self.myexe)
+        path = self.getBuildArtifact(self.myexe)
         symbols_path = os.path.join(
             path + ".dSYM",
             "Contents",
             "Resources",
             "DWARF",
-            self.myexe)
+            "a.out")
 
         def add_slashes(x): return x.replace(
             "\\",

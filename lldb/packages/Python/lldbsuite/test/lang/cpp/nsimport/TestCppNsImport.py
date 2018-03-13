@@ -12,20 +12,17 @@ class TestCppNsImport(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr25925")
-    @expectedFailureAll(bugnumber="rdar://problem/28943086")
     def test_with_run_command(self):
         """Tests imported namespaces in C++."""
         self.build()
 
         # Get main source file
-        src_file = "main.cpp"
+        src_file = os.path.join(self.getSourceDir(), "main.cpp")
         src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
         # Get the path of the executable
-        cwd = os.getcwd()
-        exe_file = "a.out"
-        exe_path = os.path.join(cwd, exe_file)
+        exe_path = self.getBuildArtifact("a.out")
 
         # Load the executable
         target = self.dbg.CreateTarget(exe_path)

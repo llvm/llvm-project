@@ -1,4 +1,6 @@
 import lldbsuite.test.lldbinrepl as lldbinrepl
 import lldbsuite.test.lldbtest as lldbtest
+import lldbsuite.test.decorators as decorators
 
-lldbinrepl.MakeREPLTest(__file__, globals(), [])
+lldbinrepl.MakeREPLTest(__file__, globals(),
+        decorators=[decorators.add_test_categories(["swiftpr"])])

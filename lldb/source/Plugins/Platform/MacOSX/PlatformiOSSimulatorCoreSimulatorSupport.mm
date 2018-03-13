@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 
 using namespace lldb_private;
-using namespace lldb_utility;
 // CoreSimulator lives as part of Xcode, which means we can't really link
 // against it, so we dlopen()
 // it at runtime, and error out nicely if that fails

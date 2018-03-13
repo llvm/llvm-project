@@ -20,9 +20,9 @@ using namespace lldb_private::process_netbsd;
 // clang-format on
 
 NativeRegisterContextNetBSD::NativeRegisterContextNetBSD(
-    NativeThreadProtocol &native_thread, uint32_t concrete_frame_idx,
+    NativeThreadProtocol &native_thread,
     RegisterInfoInterface *reg_info_interface_p)
-    : NativeRegisterContextRegisterInfo(native_thread, concrete_frame_idx,
+    : NativeRegisterContextRegisterInfo(native_thread,
                                         reg_info_interface_p) {}
 
 Status NativeRegisterContextNetBSD::ReadGPR() {

@@ -30,8 +30,5 @@ class SequenceFunctionsTestCase(unittest.TestCase):
         for element in random.sample(self.seq, 5):
             self.assertTrue(element in self.seq)
 
-    def getCategories(self):
-        return []
-
 if __name__ == '__main__':
     unittest.main()

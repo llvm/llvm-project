@@ -393,7 +393,7 @@ lldb::ProcessSP PlatformNetBSD::DebugProcess(
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
     int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
-    if (pty_fd != lldb_utility::PseudoTerminal::invalid_fd) {
+    if (pty_fd != PseudoTerminal::invalid_fd) {
       process_sp->SetSTDIOFileDescriptor(pty_fd);
       if (log)
         log->Printf("PlatformNetBSD::%s pid %" PRIu64
@@ -420,13 +420,17 @@ void PlatformNetBSD::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
-uint64_t PlatformNetBSD::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
-                                                   unsigned flags) {
+MmapArgList PlatformNetBSD::GetMmapArgumentList(const ArchSpec &arch,
+                                                addr_t addr, addr_t length,
+                                                unsigned prot, unsigned flags,
+                                                addr_t fd, addr_t offset) {
   uint64_t flags_platform = 0;
 
   if (flags & eMmapFlagsPrivate)
     flags_platform |= MAP_PRIVATE;
   if (flags & eMmapFlagsAnon)
     flags_platform |= MAP_ANON;
-  return flags_platform;
+
+  MmapArgList args({addr, length, prot, flags_platform, fd, offset});
+  return args;
 }

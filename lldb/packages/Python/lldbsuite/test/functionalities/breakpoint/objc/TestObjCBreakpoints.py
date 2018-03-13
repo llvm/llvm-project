@@ -73,7 +73,7 @@ class TestObjCBreakpoints(TestBase):
         self.dbg.SetAsync(False)
 
         # Create a target by the debugger.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
 
