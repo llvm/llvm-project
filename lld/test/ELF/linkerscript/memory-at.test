@@ -1,15 +1,20 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: echo "MEMORY {                                   \
-# RUN:   FLASH (rx) : ORIGIN = 0x1000, LENGTH = 0x100   \
-# RUN:   RAM (rwx)  : ORIGIN = 0x2000, LENGTH = 0x100 } \
-# RUN: SECTIONS {                                       \
-# RUN:  .text : { *(.text*) } > FLASH                   \
-# RUN:  __etext = .;                                    \
-# RUN:  .data : AT (__etext) { *(.data*) } > RAM        \
-# RUN: }" > %t.script
-# RUN: ld.lld %t --script %t.script -o %t2
+# RUN: echo '.section .text,"ax"; .quad 0' > %t.s
+# RUN: echo '.section .data,"aw"; .quad 0' >> %t.s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t.s -o %t
+# RUN: ld.lld %t --script %s -o %t2
 # RUN: llvm-readobj -program-headers %t2 | FileCheck %s
+
+MEMORY {
+  FLASH (rx) : ORIGIN = 0x1000, LENGTH = 0x100
+  RAM (rwx)  : ORIGIN = 0x2000, LENGTH = 0x100
+}
+
+SECTIONS {
+ .text : { *(.text*) } > FLASH
+ __etext = .;
+ .data : AT (__etext) { *(.data*) } > RAM
+}
 
 # CHECK:      ProgramHeaders [
 # CHECK-NEXT:   ProgramHeader {
@@ -38,9 +43,3 @@
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Alignment:
 # CHECK-NEXT:   }
-
-.section .text, "ax"
-.quad 0
-
-.section .data, "aw"
-.quad 0

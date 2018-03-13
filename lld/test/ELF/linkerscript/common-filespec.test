@@ -1,10 +1,16 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %tfile0.o
+# RUN: echo '.long 0; .comm common_uniq_0,4,4; .comm common_multiple,8,8' \
+# RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %tfile0.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/common-filespec1.s -o %tfile1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/common-filespec2.s -o %tfile2.o
-# RUN: echo "SECTIONS { .common_0 : { *file0.o(COMMON) } .common_1 : { *file1.o(COMMON) } .common_2 : { *file2.o(COMMON) } }" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %tfile0.o %tfile1.o %tfile2.o
+# RUN: ld.lld -o %t1 --script %s %tfile0.o %tfile1.o %tfile2.o
 # RUN: llvm-readobj -s -t %t1 | FileCheck %s
+
+SECTIONS {
+  .common_0 : { *file0.o(COMMON) }
+  .common_1 : { *file1.o(COMMON) }
+  .common_2 : { *file2.o(COMMON) }
+}
 
 # Make sure all 3 sections are allocated and they have sizes and alignments
 # corresponding to the commons assigned to them
@@ -96,10 +102,3 @@
 # CHECK-NEXT:    Other: 0
 # CHECK-NEXT:    Section: .common_2
 # CHECK-NEXT:  }
-
-.globl _start
-_start:
-  jmp _start
-
-.comm common_uniq_0,4,4
-.comm common_multiple,8,8

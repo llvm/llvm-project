@@ -1,10 +1,13 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: echo  "PHDRS { ph_tls PT_TLS; }" > %t.script
-# RUN: ld.lld -o %t.so -T %t.script %t.o -shared
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux /dev/null -o %t.o
+# RUN: ld.lld -o %t.so -T %s %t.o -shared
 # RUN: llvm-readobj -l %t.so | FileCheck %s
 
-# test that we don't crash with an empty PT_TLS
+PHDRS {
+  ph_tls PT_TLS;
+}
+
+# Test that we don't crash with an empty PT_TLS
 
 # CHECK:      Type: PT_TLS
 # CHECK-NEXT: Offset: 0x0
