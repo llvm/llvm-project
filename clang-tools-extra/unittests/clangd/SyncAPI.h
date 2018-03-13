@@ -21,17 +21,17 @@ namespace clangd {
 // Calls addDocument and then blockUntilIdleForTest.
 void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents);
 
-Tagged<CompletionList> runCodeComplete(ClangdServer &Server, PathRef File,
-                                       Position Pos,
-                                       clangd::CodeCompleteOptions Opts);
+llvm::Expected<CompletionList>
+runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
+                clangd::CodeCompleteOptions Opts);
 
-llvm::Expected<Tagged<SignatureHelp>>
-runSignatureHelp(ClangdServer &Server, PathRef File, Position Pos);
+llvm::Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server,
+                                               PathRef File, Position Pos);
 
-llvm::Expected<Tagged<std::vector<Location>>>
+llvm::Expected<std::vector<Location>>
 runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos);
 
-llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
+llvm::Expected<std::vector<DocumentHighlight>>
 runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos);
 
 llvm::Expected<std::vector<tooling::Replacement>>

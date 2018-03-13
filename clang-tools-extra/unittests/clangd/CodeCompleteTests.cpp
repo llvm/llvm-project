@@ -62,7 +62,7 @@ using ::testing::UnorderedElementsAre;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
   void onDiagnosticsReady(PathRef File,
-                          Tagged<std::vector<Diag>> Diagnostics) override {}
+                          std::vector<Diag> Diagnostics) override {}
 };
 
 // GMock helpers for matching completion items.
@@ -121,7 +121,8 @@ CompletionList completions(StringRef Text,
   auto File = testPath("foo.cpp");
   Annotations Test(Text);
   runAddDocument(Server, File, Test.code());
-  auto CompletionList = runCodeComplete(Server, File, Test.point(), Opts).Value;
+  auto CompletionList =
+      cantFail(runCodeComplete(Server, File, Test.point(), Opts));
   // Sanity-check that filterText is valid.
   EXPECT_THAT(CompletionList.items, Each(NameContainsFilter()));
   return CompletionList;
@@ -536,15 +537,16 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
 
   auto I = memIndex({var("ns::index")});
   Opts.Index = I.get();
-  auto WithIndex = runCodeComplete(Server, File, Test.point(), Opts).Value;
+  auto WithIndex = cantFail(runCodeComplete(Server, File, Test.point(), Opts));
   EXPECT_THAT(WithIndex.items,
               UnorderedElementsAre(Named("local"), Named("index")));
   auto ClassFromPreamble =
-      runCodeComplete(Server, File, Test.point("2"), Opts).Value;
+      cantFail(runCodeComplete(Server, File, Test.point("2"), Opts));
   EXPECT_THAT(ClassFromPreamble.items, Contains(Named("member")));
 
   Opts.Index = nullptr;
-  auto WithoutIndex = runCodeComplete(Server, File, Test.point(), Opts).Value;
+  auto WithoutIndex =
+      cantFail(runCodeComplete(Server, File, Test.point(), Opts));
   EXPECT_THAT(WithoutIndex.items,
               UnorderedElementsAre(Named("local"), Named("preamble")));
 }
@@ -575,7 +577,7 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
   )cpp");
   runAddDocument(Server, File, Test.code());
 
-  auto Results = runCodeComplete(Server, File, Test.point(), {}).Value;
+  auto Results = cantFail(runCodeComplete(Server, File, Test.point(), {}));
   // "XYZ" and "foo" are not included in the file being completed but are still
   // visible through the index.
   EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
@@ -614,9 +616,7 @@ SignatureHelp signatures(StringRef Text) {
   auto File = testPath("foo.cpp");
   Annotations Test(Text);
   runAddDocument(Server, File, Test.code());
-  auto R = runSignatureHelp(Server, File, Test.point());
-  assert(R);
-  return R.get().Value;
+  return cantFail(runSignatureHelp(Server, File, Test.point()));
 }
 
 MATCHER_P(ParamsAre, P, "") {
