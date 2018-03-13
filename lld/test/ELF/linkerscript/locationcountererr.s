@@ -1,11 +1,11 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t
+# RUN: not ld.lld %t --script %s -o %t1 2>&1 | FileCheck %s
+# CHECK: {{.*}}.s:8: unable to move location counter backward for: .text
 
-# RUN: echo "SECTIONS {" > %t.script
-# RUN: echo ".text 0x2000 : {. = 0x10 ; *(.text) } }" >> %t.script
-# RUN: not ld.lld %t --script %t.script -o %t1 2>&1 | FileCheck %s
-# CHECK: {{.*}}.script:2: unable to move location counter backward for: .text
-
-.globl _start
-_start:
-nop
+SECTIONS {
+  .text 0x2000 : {
+    . = 0x10;
+    *(.text)
+  }
+}
