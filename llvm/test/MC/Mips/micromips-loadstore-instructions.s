@@ -44,14 +44,6 @@
 # CHECK-EL: swm32  $16, $17, 8($sp)           # encoding: [0x5d,0x20,0x08,0xd0]
 # CHECK-EL: swp    $16, 8($4)                 # encoding: [0x04,0x22,0x08,0x90]
 # CHECK-EL: lwp    $16, 8($4)                 # encoding: [0x04,0x22,0x08,0x10]
-# CHECK-EL: lhue   $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x62]
-# CHECK-EL: lbe    $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x68]
-# CHECK-EL: lbue   $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x60]
-# CHECK-EL: lhe    $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x6a]
-# CHECK-EL: lwe    $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x6e]
-# CHECK-EL: sbe    $5, 8($4)                  # encoding: [0xa4,0x60,0x08,0xa8]
-# CHECK-EL: she    $5, 8($4)                  # encoding: [0xa4,0x60,0x08,0xaa]
-# CHECK-EL: swe    $5, 8($4)                  # encoding: [0xa4,0x60,0x08,0xae]
 #------------------------------------------------------------------------------
 # Big endian
 #------------------------------------------------------------------------------
@@ -90,14 +82,6 @@
 # CHECK-EB: swm32  $16, $17, 8($sp)          # encoding: [0x20,0x5d,0xd0,0x08]
 # CHECK-EB: swp    $16, 8($4)                # encoding: [0x22,0x04,0x90,0x08]
 # CHECK-EB: lwp    $16, 8($4)                # encoding: [0x22,0x04,0x10,0x08]
-# CHECK-EB: lhue   $4, 8($2)                 # encoding: [0x60,0x82,0x62,0x08]
-# CHECK-EB: lbe    $4, 8($2)                 # encoding: [0x60,0x82,0x68,0x08]
-# CHECK-EB: lbue   $4, 8($2)                 # encoding: [0x60,0x82,0x60,0x08]
-# CHECK-EB: lhe    $4, 8($2)                 # encoding: [0x60,0x82,0x6a,0x08]
-# CHECK-EB: lwe    $4, 8($2)                 # encoding: [0x60,0x82,0x6e,0x08]
-# CHECK-EB: sbe    $5, 8($4)                 # encoding: [0x60,0xa4,0xa8,0x08]
-# CHECK-EB: she    $5, 8($4)                 # encoding: [0x60,0xa4,0xaa,0x08]
-# CHECK-EB: swe    $5, 8($4)                 # encoding: [0x60,0xa4,0xae,0x08]
      lb     $5, 8($4)
      lbu    $6, 8($4)
      lh     $2, 8($4)
@@ -133,11 +117,4 @@
      swm    $16, $17, 8($sp)
      swp    $16, 8($4)
      lwp    $16, 8($4)
-     lhue   $4, 8($2)
-     lbe    $4, 8($2)
-     lbue   $4, 8($2)
-     lhe    $4, 8($2)
-     lwe    $4, 8($2)
-     sbe    $5, 8($4)
-     she    $5, 8($4)
-     swe    $5, 8($4)
+

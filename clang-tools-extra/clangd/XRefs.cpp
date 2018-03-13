@@ -127,6 +127,16 @@ private:
         MacroInfo *MacroInf = MacroDef.getMacroInfo();
         if (MacroInf) {
           MacroInfos.push_back(MacroDecl{IdentifierInfo->getName(), MacroInf});
+          // Clear all collected delcarations if this is a macro search.
+          //
+          // In theory, there should be no declarataions being collected when we
+          // search a source location that refers to a macro.
+          // The occurrence location returned by `handleDeclOccurence` is
+          // limited (FID, Offset are from expansion location), we will collect
+          // all declarations inside the macro.
+          //
+          // FIXME: Avoid adding decls from inside macros in handlDeclOccurence.
+          Decls.clear();
         }
       }
     }
@@ -209,9 +219,8 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   }
 
   for (auto Item : MacroInfos) {
-    SourceRange SR(Item.Info->getDefinitionLoc(),
-                   Item.Info->getDefinitionEndLoc());
-    auto L = makeLocation(AST, SR);
+    auto Loc = Item.Info->getDefinitionLoc();
+    auto L = makeLocation(AST, SourceRange(Loc, Loc));
     if (L)
       Result.push_back(*L);
   }

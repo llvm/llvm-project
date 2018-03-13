@@ -104,6 +104,7 @@ static std::string ReadPCHRecord(StringRef type) {
     .Case("Expr *", "Record.readExpr()")
     .Case("IdentifierInfo *", "Record.getIdentifierInfo()")
     .Case("StringRef", "Record.readString()")
+    .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
     .Default("Record.readInt()");
 }
 
@@ -122,6 +123,7 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
     .Case("Expr *", "AddStmt(" + std::string(name) + ");\n")
     .Case("IdentifierInfo *", "AddIdentifierRef(" + std::string(name) + ");\n")
     .Case("StringRef", "AddString(" + std::string(name) + ");\n")
+    .Case("ParamIdx", "push_back(" + std::string(name) + ".serialize());\n")
     .Default("push_back(" + std::string(name) + ");\n");
 }
 
@@ -302,9 +304,8 @@ namespace {
     std::string getIsOmitted() const override {
       if (type == "IdentifierInfo *")
         return "!get" + getUpperName().str() + "()";
-      // FIXME: Do this declaratively in Attr.td.
-      if (getAttrName() == "AllocSize")
-        return "0 == get" + getUpperName().str() + "()";
+      if (type == "ParamIdx")
+        return "!get" + getUpperName().str() + "().isValid()";
       return "false";
     }
 
@@ -319,6 +320,8 @@ namespace {
            << "()->getName() : \"\") << \"";
       else if (type == "TypeSourceInfo *")
         OS << "\" << get" << getUpperName() << "().getAsString() << \"";
+      else if (type == "ParamIdx")
+        OS << "\" << get" << getUpperName() << "().getSourceIndex() << \"";
       else
         OS << "\" << get" << getUpperName() << "() << \"";
     }
@@ -341,6 +344,11 @@ namespace {
            << getUpperName() << "\";\n";
       } else if (type == "int" || type == "unsigned") {
         OS << "    OS << \" \" << SA->get" << getUpperName() << "();\n";
+      } else if (type == "ParamIdx") {
+        if (isOptional())
+          OS << "    if (SA->get" << getUpperName() << "().isValid())\n  ";
+        OS << "    OS << \" \" << SA->get" << getUpperName()
+           << "().getSourceIndex();\n";
       } else {
         llvm_unreachable("Unknown SimpleArgument type!");
       }
@@ -618,6 +626,10 @@ namespace {
     virtual void writeValueImpl(raw_ostream &OS) const {
       OS << "    OS << Val;\n";
     }
+    // Assumed to receive a parameter: raw_ostream OS.
+    virtual void writeDumpImpl(raw_ostream &OS) const {
+      OS << "      OS << \" \" << Val;\n";
+    }
 
   public:
     VariadicArgument(const Record &Arg, StringRef Attr, std::string T)
@@ -744,7 +756,22 @@ namespace {
 
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (const auto &Val : SA->" << RangeName << "())\n";
-      OS << "      OS << \" \" << Val;\n";
+      writeDumpImpl(OS);
+    }
+  };
+
+  class VariadicParamIdxArgument : public VariadicArgument {
+  public:
+    VariadicParamIdxArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "ParamIdx") {}
+
+  public:
+    void writeValueImpl(raw_ostream &OS) const override {
+      OS << "    OS << Val.getSourceIndex();\n";
+    }
+
+    void writeDumpImpl(raw_ostream &OS) const override {
+      OS << "      OS << \" \" << Val.getSourceIndex();\n";
     }
   };
 
@@ -1247,6 +1274,10 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<VariadicEnumArgument>(Arg, Attr);
   else if (ArgName == "VariadicExprArgument")
     Ptr = llvm::make_unique<VariadicExprArgument>(Arg, Attr);
+  else if (ArgName == "VariadicParamIdxArgument")
+    Ptr = llvm::make_unique<VariadicParamIdxArgument>(Arg, Attr);
+  else if (ArgName == "ParamIdxArgument")
+    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
   else if (ArgName == "VersionArgument")
     Ptr = llvm::make_unique<VersionArgument>(Arg, Attr);
 

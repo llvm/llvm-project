@@ -336,8 +336,8 @@ define float @log2half_commute(float %x1, float %y) {
 
 define float @fdiv_constant_numerator_fmul(float %x) {
 ; CHECK-LABEL: @fdiv_constant_numerator_fmul(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float 1.200000e+07, [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fdiv fast float 1.200000e+07, [[X:%.*]]
+; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv float 2.0e+3, %x
   %t3 = fmul fast float %t1, 6.0e+3
@@ -365,8 +365,8 @@ define float @fdiv_constant_numerator_fmul_extra_use(float %x) {
 
 define float @fdiv_constant_denominator_fmul(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 3.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv float %x, 2.0e+3
   %t3 = fmul fast float %t1, 6.0e+3
@@ -375,8 +375,8 @@ define float @fdiv_constant_denominator_fmul(float %x) {
 
 define <4 x float> @fdiv_constant_denominator_fmul_vec(<4 x float> %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
   %t1 = fdiv <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
   %t3 = fmul fast <4 x float> %t1, <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3>
@@ -387,8 +387,8 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec(<4 x float> %x) {
 
 define <4 x float> @fdiv_constant_denominator_fmul_vec_constexpr(<4 x float> %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_vec_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
   %constExprMul = bitcast i128 trunc (i160 bitcast (<5 x float> <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3, float undef> to i160) to i128) to <4 x float>
   %t1 = fdiv <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
@@ -416,21 +416,21 @@ define float @fdiv_constant_denominator_fmul_denorm(float %x) {
 
 define float @fdiv_constant_denominator_fmul_denorm_try_harder(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm_try_harder(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float [[X:%.*]], 0x47E8000000000000
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fdiv fast float [[X:%.*]], 0x47E8000000000000
+; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv float %x, 3.0
   %t3 = fmul fast float %t1, 0x3810000000000000
   ret float %t3
 }
 
-; FIXME: We have 2 divisions instead of the 1 we started with.
+; Negative test: we should not have 2 divisions instead of the 1 we started with.
 
 define float @fdiv_constant_denominator_fmul_denorm_try_harder_extra_use(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm_try_harder_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fdiv float [[X:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float [[X]], 0x47E8000000000000
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[T1]], [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T1]], 0x3810000000000000
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[T1]], [[T3]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fdiv float %x, 3.0e+0

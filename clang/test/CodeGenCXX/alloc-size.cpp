@@ -86,3 +86,21 @@ int testIt() {
   return __builtin_object_size(p, 0);
 }
 } // namespace alloc_size_with_cleanups
+
+class C {
+public:
+  void *my_malloc(int N) __attribute__((alloc_size(2)));
+  void *my_calloc(int N, int M) __attribute__((alloc_size(2, 3)));
+};
+
+// CHECK-LABEL: define i32 @_Z16callMemberMallocv
+int callMemberMalloc() {
+  // CHECK: ret i32 16
+  return __builtin_object_size(C().my_malloc(16), 0);
+}
+
+// CHECK-LABEL: define i32 @_Z16callMemberCallocv
+int callMemberCalloc() {
+  // CHECK: ret i32 32
+  return __builtin_object_size(C().my_calloc(16, 2), 0);
+}

@@ -105,7 +105,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   }
 
   if (STI.getHasAlu32()) {
-    setOperationAction(ISD::BSWAP, MVT::i32, Expand);
+    setOperationAction(ISD::BSWAP, MVT::i32, Promote);
     setOperationAction(ISD::BR_CC, MVT::i32, Promote);
   }
 

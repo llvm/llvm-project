@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include <type_traits>
 
 using namespace llvm;
@@ -32,3 +33,19 @@ const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             0,
                                             0,
                                             nullptr};
+
+int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
+                                      const MCSchedClassDesc &SCDesc) {
+  int Latency = 0;
+  for (unsigned DefIdx = 0, DefEnd = SCDesc.NumWriteLatencyEntries;
+       DefIdx != DefEnd; ++DefIdx) {
+    // Lookup the definition's write latency in SubtargetInfo.
+    const MCWriteLatencyEntry *WLEntry =
+        STI.getWriteLatencyEntry(&SCDesc, DefIdx);
+    // Early exit if we found an invalid latency.
+    if (WLEntry->Cycles < 0)
+      return WLEntry->Cycles;
+    Latency = std::max(Latency, static_cast<int>(WLEntry->Cycles));
+  }
+  return Latency;
+}

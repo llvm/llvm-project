@@ -2472,41 +2472,45 @@ def _write_dependencies : Flag<["--"], "write-dependencies">, Alias<MD>;
 def _write_user_dependencies : Flag<["--"], "write-user-dependencies">, Alias<MMD>;
 def _ : Joined<["--"], "">, Flags<[Unsupported]>;
 
-def mieee_rnd_near : Flag<["-"], "mieee-rnd-near">, Group<m_hexagon_Features_Group>;
+// Hexagon feature flags.
+def mieee_rnd_near : Flag<["-"], "mieee-rnd-near">,
+  Group<m_hexagon_Features_Group>;
 def mv4 : Flag<["-"], "mv4">, Group<m_hexagon_Features_Group>,
-          Alias<mcpu_EQ>, AliasArgs<["hexagonv4"]>;
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv4"]>;
 def mv5 : Flag<["-"], "mv5">, Group<m_hexagon_Features_Group>, Alias<mcpu_EQ>,
-          AliasArgs<["hexagonv5"]>;
+  AliasArgs<["hexagonv5"]>;
 def mv55 : Flag<["-"], "mv55">, Group<m_hexagon_Features_Group>,
-           Alias<mcpu_EQ>, AliasArgs<["hexagonv55"]>;
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv55"]>;
 def mv60 : Flag<["-"], "mv60">, Group<m_hexagon_Features_Group>,
-           Alias<mcpu_EQ>, AliasArgs<["hexagonv60"]>;
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv60"]>;
 def mv62 : Flag<["-"], "mv62">, Group<m_hexagon_Features_Group>,
-           Alias<mcpu_EQ>, AliasArgs<["hexagonv62"]>;
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv62"]>;
 def mv65 : Flag<["-"], "mv65">, Group<m_hexagon_Features_Group>,
-           Alias<mcpu_EQ>, AliasArgs<["hexagonv65"]>;
-def mhexagon_hvx : Flag<[ "-" ], "mhvx">,
-                   Group<m_hexagon_Features_HVX_Group>,
-                   HelpText<"Enable Hexagon Vector eXtensions">;
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv65"]>;
+def mhexagon_hvx : Flag<[ "-" ], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
+  HelpText<"Enable Hexagon Vector eXtensions">;
 def mhexagon_hvx_EQ : Joined<[ "-" ], "mhvx=">,
-                     Group<m_hexagon_Features_HVX_Group>,
-                     HelpText<"Enable Hexagon Vector eXtensions">;
+  Group<m_hexagon_Features_HVX_Group>,
+  HelpText<"Enable Hexagon Vector eXtensions">;
 def mno_hexagon_hvx : Flag<[ "-" ], "mno-hvx">,
-                      Group<m_hexagon_Features_HVX_Group>,
-                      HelpText<"Disable Hexagon Vector eXtensions">;
+  Group<m_hexagon_Features_HVX_Group>,
+  HelpText<"Disable Hexagon Vector eXtensions">;
 def mhexagon_hvx_length_EQ : Joined<[ "-" ], "mhvx-length=">,
-                        Group<m_hexagon_Features_HVX_Group>,
-                        HelpText<"Set Hexagon Vector Length">, Values<"64B,128B">;
-// hvx-double deprecrated flag.
-def mhexagon_hvx_double : Flag<[ "-" ], "mhvx-double">,
-                          Group<m_hexagon_Features_HVX_Group>,
-                          HelpText<"Enable Hexagon Double Vector eXtensions">;
-def mno_hexagon_hvx_double
-    : Flag<[ "-" ], "mno-hvx-double">,
-      Group<m_hexagon_Features_HVX_Group>,
-      HelpText<"Disable Hexagon Double Vector eXtensions">;
+  Group<m_hexagon_Features_HVX_Group>, HelpText<"Set Hexagon Vector Length">,
+  Values<"64B,128B">;
 def ffixed_r19: Flag<["-"], "ffixed-r19">,
   HelpText<"Reserve the r19 register (Hexagon only)">;
+def mpackets : Flag<["-"], "mpackets">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable generation of instruction packets">;
+def mno_packets : Flag<["-"], "mno-packets">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable generation of instruction packets">;
+// hvx-double deprecrated flag.
+def mhexagon_hvx_double : Flag<[ "-" ], "mhvx-double">,
+  Group<m_hexagon_Features_HVX_Group>,
+  HelpText<"Enable Hexagon Double Vector eXtensions">;
+def mno_hexagon_hvx_double : Flag<[ "-" ], "mno-hvx-double">,
+  Group<m_hexagon_Features_HVX_Group>,
+  HelpText<"Disable Hexagon Double Vector eXtensions">;
 
 
 // X86 feature flags

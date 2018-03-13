@@ -13,6 +13,7 @@
 
 #include "Scheduler.h"
 #include "Backend.h"
+#include "HWEventListener.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -46,8 +47,7 @@ void ResourceState::dump() const {
 // ResourceDescriptor. Map 'Resources' allows to quickly obtain ResourceState
 // objects from resource mask identifiers.
 void ResourceManager::addResource(const MCProcResourceDesc &Desc,
-                                  unsigned Index,
-                                  uint64_t Mask) {
+                                  unsigned Index, uint64_t Mask) {
   assert(Resources.find(Mask) == Resources.end() && "Resource already added!");
   Resources[Mask] = llvm::make_unique<ResourceState>(Desc, Index, Mask);
 }
@@ -146,8 +146,9 @@ void ResourceManager::release(ResourceRef RR) {
   }
 }
 
-void ResourceManager::reserveDispatchHazardResources(const InstrDesc &Desc) {
-  for (const uint64_t R : Desc.Buffers) {
+void ResourceManager::reserveDispatchHazardResources(
+    const ArrayRef<uint64_t> Buffers) {
+  for (const uint64_t R : Buffers) {
     ResourceState &Resource = *Resources[R];
     if (Resource.isADispatchHazard()) {
       assert(!Resource.isReserved());
@@ -207,7 +208,7 @@ double ResourceManager::getRThroughput(const InstrDesc &ID) const {
 void ResourceManager::issueInstruction(
     unsigned Index, const InstrDesc &Desc,
     SmallVectorImpl<std::pair<ResourceRef, unsigned>> &Pipes) {
-  releaseBuffers(Desc);
+  releaseBuffers(Desc.Buffers);
   for (const std::pair<uint64_t, ResourceUsage> &R : Desc.Resources) {
     const CycleSegment &CS = R.second.CS;
     if (!CS.size()) {
@@ -277,12 +278,12 @@ Instruction *Scheduler::scheduleInstruction(unsigned Idx, Instruction *MCIS) {
 
   // Consume entries in the reservation stations.
   const InstrDesc &Desc = MCIS->getDesc();
-  Resources->reserveBuffers(Desc);
+  Resources->reserveBuffers(Desc.Buffers);
 
   // Mark units with BufferSize=0 as reserved. These resources will only
   // be released after MCIS is issued, and all the ResourceCycles for
   // those units have been consumed.
-  Resources->reserveDispatchHazardResources(Desc);
+  Resources->reserveDispatchHazardResources(Desc.Buffers);
 
   bool MayLoad = Desc.MayLoad;
   bool MayStore = Desc.MayStore;
@@ -345,7 +346,7 @@ Scheduler::Event Scheduler::canBeDispatched(const InstrDesc &Desc) const {
     return HWS_ST_QUEUE_UNAVAILABLE;
 
   Scheduler::Event Event;
-  switch (Resources->canBeDispatched(Desc)) {
+  switch (Resources->canBeDispatched(Desc.Buffers)) {
   case ResourceStateEvent::RS_BUFFER_AVAILABLE:
     Event = HWS_AVAILABLE;
     break;
@@ -445,16 +446,30 @@ void Scheduler::updateIssuedQueue() {
 
 void Scheduler::notifyInstructionIssued(
     unsigned Index, const ArrayRef<std::pair<ResourceRef, unsigned>> &Used) {
-  Owner->notifyInstructionIssued(Index, Used);
+  DEBUG(dbgs() << "[E] Instruction Issued: " << Index << '\n';
+        for (const std::pair<ResourceRef, unsigned> &Resource
+             : Used) {
+          dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
+                 << Resource.first.second << "]\n";
+          dbgs() << "           cycles: " << Resource.second << '\n';
+        });
+  Owner->notifyInstructionEvent(HWInstructionIssuedEvent(Index, Used));
 }
 
 void Scheduler::notifyInstructionExecuted(unsigned Index) {
   LSU->onInstructionExecuted(Index);
-  Owner->notifyInstructionExecuted(Index);
+  DEBUG(dbgs() << "[E] Instruction Executed: " << Index << '\n');
+  Owner->notifyInstructionEvent(
+      HWInstructionEvent(HWInstructionEvent::Executed, Index));
+
+  const Instruction &IS = Owner->getInstruction(Index);
+  DU->onInstructionExecuted(IS.getRCUTokenID());
 }
 
 void Scheduler::notifyInstructionReady(unsigned Index) {
-  Owner->notifyInstructionReady(Index);
+  DEBUG(dbgs() << "[E] Instruction Ready: " << Index << '\n');
+  Owner->notifyInstructionEvent(
+      HWInstructionEvent(HWInstructionEvent::Ready, Index));
 }
 
 void Scheduler::notifyResourceAvailable(const ResourceRef &RR) {
