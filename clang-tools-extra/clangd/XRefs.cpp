@@ -127,6 +127,16 @@ private:
         MacroInfo *MacroInf = MacroDef.getMacroInfo();
         if (MacroInf) {
           MacroInfos.push_back(MacroDecl{IdentifierInfo->getName(), MacroInf});
+          // Clear all collected delcarations if this is a macro search.
+          //
+          // In theory, there should be no declarataions being collected when we
+          // search a source location that refers to a macro.
+          // The occurrence location returned by `handleDeclOccurence` is
+          // limited (FID, Offset are from expansion location), we will collect
+          // all declarations inside the macro.
+          //
+          // FIXME: Avoid adding decls from inside macros in handlDeclOccurence.
+          Decls.clear();
         }
       }
     }
