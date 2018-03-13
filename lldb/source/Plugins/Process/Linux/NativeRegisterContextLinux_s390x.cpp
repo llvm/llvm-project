@@ -10,7 +10,7 @@
 #if defined(__s390x__) && defined(__linux__)
 
 #include "NativeRegisterContextLinux_s390x.h"
-
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
