@@ -207,18 +207,26 @@ static void declareSymbol(SymbolAssignment *Cmd) {
 // the list of script commands to mix sections inserted into.
 void LinkerScript::processInsertCommands() {
   std::vector<BaseCommand *> V;
+  auto Insert = [&](std::vector<BaseCommand *> &From) {
+    V.insert(V.end(), From.begin(), From.end());
+    From.clear();
+  };
+
   for (BaseCommand *Base : SectionCommands) {
-    V.push_back(Base);
-    if (auto *Cmd = dyn_cast<OutputSection>(Base)) {
-      std::vector<BaseCommand *> &W = InsertAfterCommands[Cmd->Name];
-      V.insert(V.end(), W.begin(), W.end());
-      W.clear();
+    if (auto *OS = dyn_cast<OutputSection>(Base)) {
+      Insert(InsertBeforeCommands[OS->Name]);
+      V.push_back(Base);
+      Insert(InsertAfterCommands[OS->Name]);
+      continue;
     }
+    V.push_back(Base);
   }
-  for (std::pair<StringRef, std::vector<BaseCommand *>> &P :
-       InsertAfterCommands)
-    if (!P.second.empty())
-      error("unable to INSERT AFTER " + P.first + ": section not defined");
+
+  for (auto &Cmds : {InsertBeforeCommands, InsertAfterCommands})
+    for (const std::pair<StringRef, std::vector<BaseCommand *>> &P : Cmds)
+      if (!P.second.empty())
+        error("unable to INSERT AFTER/BEFORE " + P.first +
+              ": section not defined");
 
   SectionCommands = std::move(V);
 }

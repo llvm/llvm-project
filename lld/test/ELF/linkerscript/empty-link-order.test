@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: arm
 # RUN: llvm-mc -filetype=obj -triple=arm-arm-none-eabi -o %t.o < /dev/null
 
 SECTIONS {

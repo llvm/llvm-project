@@ -207,10 +207,19 @@ TEST(GoToDefinition, All) {
 
       R"cpp(// Macro
         #define MACRO 0
-        #define [[MACRO 1]]
+        #define [[MACRO]] 1
         int main() { return ^MACRO; }
         #define MACRO 2
         #undef macro
+      )cpp",
+
+      R"cpp(// Macro
+       class TTT { public: int a; };
+       #define [[FF]](S) if (int b = S.a) {}
+       void f() {
+         TTT t;
+         F^F(t);
+       }
       )cpp",
 
       R"cpp(// Forward class declaration

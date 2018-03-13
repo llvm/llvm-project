@@ -90,7 +90,7 @@ statistics from the file. If that fails then the process will quit.
 #endif
 
 // Used to avoid repeating error checking boilerplate. If cond is false, a
-// fatal error has occured in the program. In this event print error_message
+// fatal error has occurred in the program. In this event print error_message
 // to stderr and abort(). Otherwise do nothing. Note that setting
 // AFL_DRIVER_STDERR_DUPLICATE_FILENAME may cause error_message to be appended
 // to the file as well, if the error occurs after the duplication is performed.
@@ -278,7 +278,7 @@ int ExecuteFilesOnyByOne(int argc, char **argv) {
     assert(in);
     LLVMFuzzerTestOneInput(reinterpret_cast<const uint8_t *>(bytes.data()),
                            bytes.size());
-    std::cout << "Execution successfull" << std::endl;
+    std::cout << "Execution successful" << std::endl;
   }
   return 0;
 }

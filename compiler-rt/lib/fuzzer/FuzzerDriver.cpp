@@ -747,7 +747,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       Printf("Dictionary analysis failed\n");
       exit(1);
     }
-    Printf("Dictionary analysis suceeded\n");
+    Printf("Dictionary analysis succeeded\n");
     exit(0);
   }
 
