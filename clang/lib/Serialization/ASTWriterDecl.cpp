@@ -465,6 +465,9 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->isAnonymousStructOrUnion());
   Record.push_back(D->hasObjectMember());
   Record.push_back(D->hasVolatileMember());
+  Record.push_back(D->isNonTrivialToPrimitiveDefaultInitialize());
+  Record.push_back(D->isNonTrivialToPrimitiveCopy());
+  Record.push_back(D->isNonTrivialToPrimitiveDestroy());
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
@@ -1899,6 +1902,14 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // AnonymousStructUnion
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // hasObjectMember
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // hasVolatileMember
+
+  // isNonTrivialToPrimitiveDefaultInitialize
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+  // isNonTrivialToPrimitiveCopy
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+  // isNonTrivialToPrimitiveDestroy
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
