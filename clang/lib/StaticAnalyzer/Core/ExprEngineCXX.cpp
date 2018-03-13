@@ -197,16 +197,19 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       return MRMgr.getCXXTempObjectRegion(CE, LCtx);
     }
     case ConstructionContext::ReturnedValueKind: {
-      // TODO: We should construct into a CXXBindTemporaryExpr or a
-      // MaterializeTemporaryExpr around the call-expression on the previous
-      // stack frame. Currently we re-bind the temporary to the correct region
-      // later, but that's not semantically correct. This of course does not
-      // apply when we're in the top frame. But if we are in an inlined
-      // function, we should be able to take the call-site CFG element,
-      // and it should contain (but right now it wouldn't) some sort of
-      // construction context that'd give us the right temporary expression.
+      // The temporary is to be managed by the parent stack frame.
+      // So build it in the parent stack frame if we're not in the
+      // top frame of the analysis.
+      // TODO: What exactly happens when we are? Does the temporary object live
+      // long enough in the region store in this case? Would checkers think
+      // that this object immediately goes out of scope?
+      const LocationContext *TempLCtx = LCtx;
+      if (const LocationContext *CallerLCtx =
+              LCtx->getCurrentStackFrame()->getParent()) {
+        TempLCtx = CallerLCtx;
+      }
       CallOpts.IsTemporaryCtorOrDtor = true;
-      return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+      return MRMgr.getCXXTempObjectRegion(CE, TempLCtx);
     }
     }
   }
@@ -262,35 +265,9 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   assert(C || getCurrentCFGElement().getAs<CFGStmt>());
   const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
 
-  const CXXBindTemporaryExpr *BTE = nullptr;
-  const MaterializeTemporaryExpr *MTE = nullptr;
-
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
     Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
-
-    // In case of temporary object construction, extract data necessary for
-    // destruction and lifetime extension.
-    if (const auto *TCC =
-            dyn_cast_or_null<TemporaryObjectConstructionContext>(CC)) {
-      assert(CallOpts.IsTemporaryCtorOrDtor);
-      assert(!CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion);
-      if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
-        BTE = TCC->getCXXBindTemporaryExpr();
-        MTE = TCC->getMaterializedTemporaryExpr();
-        if (!BTE) {
-          // FIXME: lifetime extension for temporaries without destructors
-          // is not implemented yet.
-          MTE = nullptr;
-        }
-        if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
-          // If the temporary is lifetime-extended, don't save the BTE,
-          // because we don't need a temporary destructor, but an automatic
-          // destructor.
-          BTE = nullptr;
-        }
-      }
-    }
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -385,15 +362,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
         State = State->bindDefault(loc::MemRegionVal(Target), ZeroVal, LCtx);
       }
 
-      if (BTE) {
-        State = addInitializedTemporary(State, BTE, LCtx,
-                                        cast<CXXTempObjectRegion>(Target));
-      }
-
-      if (MTE) {
-        State = addTemporaryMaterialization(State, MTE, LCtx,
-                                            cast<CXXTempObjectRegion>(Target));
-      }
+      State = addAllNecessaryTemporaryInfo(State, CC, LCtx, Target);
 
       Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
                         ProgramPoint::PreStmtKind);

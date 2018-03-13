@@ -67,12 +67,17 @@ using namespace lldb_private;
 namespace {
 
 PropertyDefinition g_properties[] = {
+    {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
+     nullptr,
+     "Control the use of external tools or libraries to locate symbol files. "
+     "On macOS, Spotlight is used to locate a matching .dSYM bundle based on "
+     "the UUID of the executable."},
     {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
      nullptr,
      "The path to the clang modules cache directory (-fmodules-cache-path)."},
     {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
 
-enum { ePropertyClangModulesCachePath };
+enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
 
 } // namespace
 
@@ -83,6 +88,12 @@ ModuleListProperties::ModuleListProperties() {
   llvm::SmallString<128> path;
   clang::driver::Driver::getDefaultModuleCachePath(path);
   SetClangModulesCachePath(path);
+}
+
+bool ModuleListProperties::GetEnableExternalLookup() const {
+  const uint32_t idx = ePropertyEnableExternalLookup;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {

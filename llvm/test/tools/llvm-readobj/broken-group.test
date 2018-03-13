@@ -20,6 +20,8 @@
 # LLVM-STDOUT-NEXT:   Group {
 # LLVM-STDOUT-NEXT:     Name: .group
 # LLVM-STDOUT-NEXT:     Index: 2
+# LLVM-STDOUT-NEXT:     Link: 5
+# LLVM-STDOUT-NEXT:     Info: 1
 # LLVM-STDOUT-NEXT:     Type: COMDAT
 # LLVM-STDOUT-NEXT:     Signature: bar
 # LLVM-STDOUT-NEXT:     Section(s) in group [
@@ -29,6 +31,8 @@
 # LLVM-STDOUT-NEXT:   Group {
 # LLVM-STDOUT-NEXT:     Name: .group1
 # LLVM-STDOUT-NEXT:     Index: 4
+# LLVM-STDOUT-NEXT:     Link: 5
+# LLVM-STDOUT-NEXT:     Info: 2
 # LLVM-STDOUT-NEXT:     Type: COMDAT
 # LLVM-STDOUT-NEXT:     Signature: zed
 # LLVM-STDOUT-NEXT:     Section(s) in group [

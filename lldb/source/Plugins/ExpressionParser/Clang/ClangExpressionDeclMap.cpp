@@ -2072,6 +2072,15 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
       return;
     }
   } else if (symbol) {
+    // Don't insert a generic function decl for C++ symbol names.
+    // Creating a generic function decl is almost surely going to cause troubles
+    // as it breaks Clang/Sema invariants and causes crashes in clang while
+    // we're trying to evaluate the expression.
+    // This means users can't call C++ functions by mangled name when there
+    // are no debug info (as it happens for C symbol, e.g. printf()).
+    if (CPlusPlusLanguage::IsCPPMangledName(
+            symbol->GetMangled().GetMangledName().GetCString()))
+      return;
     fun_address = symbol->GetAddress();
     function_decl = context.AddGenericFunDecl();
     is_indirect_function = symbol->IsIndirect();
