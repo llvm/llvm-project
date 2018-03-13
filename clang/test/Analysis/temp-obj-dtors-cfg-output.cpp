@@ -205,6 +205,21 @@ int testConsistencyNestedNormalReturn(bool value) {
   return 0;
 }
 
+namespace pass_references_through {
+class C {
+public:
+  ~C() {}
+};
+
+const C &foo1();
+C &&foo2();
+
+// In these examples the foo() expression has record type, not reference type.
+// Don't try to figure out how to perform construction of the record here.
+const C &bar1() { return foo1(); } // no-crash
+C &&bar2() { return foo2(); } // no-crash
+} // end namespace pass_references_through
+
 // CHECK:   [B1 (ENTRY)]
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1111,7 +1126,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:   [B1]
 // CHECK:     1: A::make
 // CHECK:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class A (*)(void))
-// CHECK:     3: [B1.2]()
+// WARNINGS:     3: [B1.2]()
+// ANALYZER:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
 // CHECK:     4: [B1.3] (BindTemporary)
 // CHECK:     5: [B1.4] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     6: [B1.5]
@@ -1130,7 +1146,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:   [B1]
 // CHECK:     1: A::make
 // CHECK:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class A (*)(void))
-// CHECK:     3: [B1.2]()
+// WARNINGS:     3: [B1.2]()
+// ANALYZER:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
 // CHECK:     4: [B1.3] (BindTemporary)
 // CHECK:     5: [B1.4] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     6: [B1.5]
@@ -1139,7 +1156,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     9: [B1.8] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class A &))
 // CHECK:    10: A::make
 // CHECK:    11: [B1.10] (ImplicitCastExpr, FunctionToPointerDecay, class A (*)(void))
-// CHECK:    12: [B1.11]()
+// WARNINGS:    12: [B1.11]()
+// ANALYZER:    12: [B1.11]() (CXXRecordTypedCall, [B1.13], [B1.15])
 // CHECK:    13: [B1.12] (BindTemporary)
 // CHECK:    14: [B1.13] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:    15: [B1.14]
@@ -1399,3 +1417,29 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (2): B8 B1
 // CHECK:   [B0 (EXIT)]
 // CHECK:     Preds (3): B1 B2 B4
+// CHECK:   [B1 (ENTRY)]
+// CHECK:     Succs (1): B0
+// CHECK:   [B0 (EXIT)]
+// CHECK:     Preds (1): B1
+// CHECK:   [B2 (ENTRY)]
+// CHECK:     Succs (1): B1
+// CHECK:   [B1]
+// CHECK:     1: foo1
+// CHECK:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, const class pass_references_through::C &(*)(void))
+// CHECK:     3: [B1.2]()
+// CHECK:     4: return [B1.3];
+// CHECK:     Preds (1): B2
+// CHECK:     Succs (1): B0
+// CHECK:   [B0 (EXIT)]
+// CHECK:     Preds (1): B1
+// CHECK:   [B2 (ENTRY)]
+// CHECK:     Succs (1): B1
+// CHECK:   [B1]
+// CHECK:     1: foo2
+// CHECK:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class pass_references_through::C &&(*)(void))
+// CHECK:     3: [B1.2]()
+// CHECK:     4: return [B1.3];
+// CHECK:     Preds (1): B2
+// CHECK:     Succs (1): B0
+// CHECK:   [B0 (EXIT)]
+// CHECK:     Preds (1): B1

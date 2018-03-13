@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_MAC
 
+#include "sanitizer_common/sanitizer_errno.h"
 #include "tsan_interceptors.h"
 #include "tsan_stack_trace.h"
 
@@ -39,6 +40,15 @@ using namespace __tsan;
   if (cur_thread()->in_symbolizer) return InternalCalloc(count, size); \
   SCOPED_INTERCEPTOR_RAW(calloc, size, count);                         \
   void *p = user_calloc(thr, pc, size, count)
+#define COMMON_MALLOC_POSIX_MEMALIGN(memptr, alignment, size)      \
+  if (cur_thread()->in_symbolizer) {                               \
+    void *p = InternalAlloc(size, nullptr, alignment);             \
+    if (!p) return errno_ENOMEM;                                   \
+    *memptr = p;                                                   \
+    return 0;                                                      \
+  }                                                                \
+  SCOPED_INTERCEPTOR_RAW(posix_memalign, memptr, alignment, size); \
+  int res = user_posix_memalign(thr, pc, memptr, alignment, size);
 #define COMMON_MALLOC_VALLOC(size)                            \
   if (cur_thread()->in_symbolizer)                            \
     return InternalAlloc(size, nullptr, GetPageSizeCached()); \

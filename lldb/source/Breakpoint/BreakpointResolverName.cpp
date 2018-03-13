@@ -16,11 +16,13 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -365,6 +367,12 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
                 sc.symbol->GetPrologueByteSize();
             if (prologue_byte_size)
               break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+            else {
+              Architecture *arch =
+                  m_breakpoint->GetTarget().GetArchitecturePlugin();
+              if (arch)
+                arch->AdjustBreakpointAddress(*sc.symbol, break_addr);
+            }
           }
         }
 

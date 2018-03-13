@@ -38,7 +38,7 @@ void PoisonShadowPartialRightRedzone(uptr addr,
 // performance-critical code with care.
 ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
                                     u8 value) {
-  DCHECK(CanPoisonMemory());
+  DCHECK(!value || CanPoisonMemory());
   uptr shadow_beg = MEM_TO_SHADOW(aligned_beg);
   uptr shadow_end = MEM_TO_SHADOW(
       aligned_beg + aligned_size - SHADOW_GRANULARITY) + 1;

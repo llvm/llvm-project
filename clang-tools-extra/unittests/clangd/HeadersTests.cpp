@@ -29,7 +29,7 @@ protected:
                         bool ExpectError = false) {
     if (Preferred.empty())
       Preferred = Original;
-    auto VFS = FS.getTaggedFileSystem(MainFile).Value;
+    auto VFS = FS.getFileSystem();
     auto Cmd = CDB.getCompileCommand(MainFile);
     assert(static_cast<bool>(Cmd));
     VFS->setCurrentWorkingDirectory(Cmd->Directory);

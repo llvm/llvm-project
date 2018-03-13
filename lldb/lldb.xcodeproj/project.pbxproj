@@ -712,6 +712,7 @@
 		49F811F31E931B2100F4E163 /* CPlusPlusNameParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
 		4C05332B1F62121E00DED368 /* SBBreakpointOptionCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0533291F6211FB00DED368 /* SBBreakpointOptionCommon.cpp */; };
+		4C14CEFB2057258D00DEEF94 /* ArchitecturePPC64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C14CEF82057258D00DEEF94 /* ArchitecturePPC64.cpp */; };
 		4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083321B9A5DE200D5CF24 /* FunctionCaller.cpp */; };
 		4C3ADCD61810D88B00357218 /* BreakpointResolverFileRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAA56141422D986001FFA01 /* BreakpointResolverFileRegex.cpp */; };
 		4C4EB7811E6A4DCC002035C0 /* DumpDataExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C4EB77F1E6A4DB8002035C0 /* DumpDataExtractor.cpp */; };
@@ -2541,6 +2542,8 @@
 		4C08CDEB11C81F1E001610A8 /* ThreadSpec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadSpec.h; path = include/lldb/Target/ThreadSpec.h; sourceTree = "<group>"; };
 		4C09CB73116BD98B00C7A725 /* CommandCompletions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandCompletions.h; path = include/lldb/Interpreter/CommandCompletions.h; sourceTree = "<group>"; };
 		4C09CB74116BD98B00C7A725 /* CommandCompletions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandCompletions.cpp; path = source/Commands/CommandCompletions.cpp; sourceTree = "<group>"; };
+		4C14CEF72057258D00DEEF94 /* ArchitecturePPC64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ArchitecturePPC64.h; sourceTree = "<group>"; };
+		4C14CEF82057258D00DEEF94 /* ArchitecturePPC64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ArchitecturePPC64.cpp; sourceTree = "<group>"; };
 		4C2479BE1BA39843009C9A7B /* ExpressionParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ExpressionParser.h; path = include/lldb/Expression/ExpressionParser.h; sourceTree = "<group>"; };
 		4C29E77D1BA2403F00DFF855 /* ExpressionTypeSystemHelper.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; name = ExpressionTypeSystemHelper.h; path = include/lldb/Expression/ExpressionTypeSystemHelper.h; sourceTree = "<group>"; };
 		4C2FAE2E135E3A70001EDE44 /* SharedCluster.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SharedCluster.h; path = include/lldb/Utility/SharedCluster.h; sourceTree = "<group>"; };
@@ -5963,6 +5966,23 @@
 			name = Clang;
 			sourceTree = "<group>";
 		};
+		4C14CEF52057258D00DEEF94 /* PPC64 */ = {
+			isa = PBXGroup;
+			children = (
+				4C14CEF72057258D00DEEF94 /* ArchitecturePPC64.h */,
+				4C14CEF82057258D00DEEF94 /* ArchitecturePPC64.cpp */,
+				4C14CEF92057258D00DEEF94 /* New Group */,
+			);
+			path = PPC64;
+			sourceTree = "<group>";
+		};
+		4C14CEF92057258D00DEEF94 /* New Group */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = "New Group";
+			sourceTree = "<group>";
+		};
 		4CC7C64B1D5298AB0076FF94 /* OCaml */ = {
 			isa = PBXGroup;
 			children = (
@@ -6600,6 +6620,7 @@
 		AF2E029F1FA2CE8A00A86C34 /* Architecture */ = {
 			isa = PBXGroup;
 			children = (
+				4C14CEF52057258D00DEEF94 /* PPC64 */,
 				AF2E02A01FA2CE9900A86C34 /* Arm */,
 			);
 			path = Architecture;
@@ -7611,6 +7632,7 @@
 				943BDEFE1AA7B2F800789CE8 /* LLDBAssert.cpp in Sources */,
 				26474CB418D0CB180073DEBA /* RegisterContextLinux_x86_64.cpp in Sources */,
 				2689006613353E0E00698AC0 /* DWARFExpression.cpp in Sources */,
+				4C14CEFB2057258D00DEEF94 /* ArchitecturePPC64.cpp in Sources */,
 				2689006713353E0E00698AC0 /* ASTDumper.cpp in Sources */,
 				AFC234091AF85CE100CDE8B6 /* CommandObjectLanguage.cpp in Sources */,
 				2689006813353E0E00698AC0 /* ASTResultSynthesizer.cpp in Sources */,

@@ -23,6 +23,7 @@
 #include "Host/macosx/cfcpp/CFCData.h"
 #include "Host/macosx/cfcpp/CFCReleaser.h"
 #include "Host/macosx/cfcpp/CFCString.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -54,6 +55,13 @@ CFDictionaryRef DBGCopyDSYMPropertyLists(CFURLRef dsym_url);
 
 int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                                        ModuleSpec &return_module_spec) {
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  if (!ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup()) {
+    if (log)
+      log->Printf("Spotlight lookup for .dSYM bundles is disabled.");
+    return 0;
+  }
+  
   return_module_spec = module_spec;
   return_module_spec.GetFileSpec().Clear();
   return_module_spec.GetSymbolFileSpec().Clear();
@@ -79,7 +87,6 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
       if (module_uuid_ref.get()) {
         CFCReleaser<CFURLRef> exec_url;
         const FileSpec *exec_fspec = module_spec.GetFileSpecPtr();
-        Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
         if (exec_fspec) {
           char exec_cf_path[PATH_MAX];
           if (exec_fspec->GetPath(exec_cf_path, sizeof(exec_cf_path)))

@@ -161,8 +161,9 @@ bool BlockExtractor::runOnModule(Module &M) {
   // Erase the functions.
   if (EraseFunctions || BlockExtractorEraseFuncs) {
     for (Function *F : Functions) {
-      DEBUG(dbgs() << "BlockExtractor: Deleting " << F->getName() << "\n");
-      F->eraseFromParent();
+      DEBUG(dbgs() << "BlockExtractor: Trying to delete " << F->getName()
+                   << "\n");
+      F->deleteBody();
     }
     // Set linkage as ExternalLinkage to avoid erasing unreachable functions.
     for (Function &F : M)

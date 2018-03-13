@@ -1,0 +1,2 @@
+# LLDB init file for the LIT tests.
+settings set symbols.enable-external-lookup false

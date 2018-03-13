@@ -774,6 +774,14 @@ private:
                                                 const LocationContext *FromLC,
                                                 const LocationContext *ToLC);
 
+  /// Adds an initialized temporary and/or a materialization, whichever is
+  /// necessary, by looking at the whole construction context. Handles
+  /// function return values, which need the construction context of the parent
+  /// stack frame, automagically.
+  ProgramStateRef addAllNecessaryTemporaryInfo(
+      ProgramStateRef State, const ConstructionContext *CC,
+      const LocationContext *LC, const MemRegion *R);
+
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be
   /// cleared once the respective CXXNewExpr CFGStmt element is processed.

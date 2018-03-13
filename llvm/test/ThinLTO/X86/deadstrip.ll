@@ -14,6 +14,7 @@
 ; RUN:   -r %t1.bc,_dead_func,pl \
 ; RUN:   -r %t1.bc,_baz,l \
 ; RUN:   -r %t1.bc,_boo,l \
+; RUN:   -r %t1.bc,_live_available_externally_func,l \
 ; RUN:   -r %t2.bc,_baz,pl \
 ; RUN:   -r %t2.bc,_boo,pl \
 ; RUN:   -r %t2.bc,_dead_func,l \
@@ -27,6 +28,8 @@
 ; COMBINED-DAG: <COMBINED {{.*}} op2=119
 ; Live, dso_local, Internal
 ; COMBINED-DAG: <COMBINED {{.*}} op2=103
+; Live, Local, AvailableExternally
+; COMBINED-DAG: <COMBINED {{.*}} op2=97
 ; Live, Local, External
 ; COMBINED-DAG: <COMBINED {{.*}} op2=96
 ; COMBINED-DAG: <COMBINED {{.*}} op2=96
@@ -79,6 +82,7 @@
 ; RUN:   -r %t1.bc,_dead_func,pl \
 ; RUN:   -r %t1.bc,_baz,l \
 ; RUN:   -r %t1.bc,_boo,l \
+; RUN:   -r %t1.bc,_live_available_externally_func,l \
 ; RUN:   -r %t3.bc,_baz,pl \
 ; RUN:   -r %t3.bc,_boo,pl \
 ; RUN:   -r %t3.bc,_dead_func,l \
@@ -124,8 +128,13 @@ define void @dead_func() {
     ret void
 }
 
+define available_externally void @live_available_externally_func() {
+    ret void
+}
+
 define void @main() {
     call void @bar()
     call void @bar_internal()
+    call void @live_available_externally_func()
     ret void
 }

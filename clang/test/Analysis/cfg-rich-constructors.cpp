@@ -97,7 +97,7 @@ void simpleVariableWithOperatorNewInBraces() {
 // CHECK: void simpleVariableInitializedByValue()
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], class C)
 // CHECK-NEXT:     6: C c = C::get();
@@ -114,7 +114,7 @@ void simpleVariableInitializedByValue() {
 // CHECK:        [B2]
 // CHECK-NEXT:     1: C::get
 // CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B2.2]()
+// CHECK-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4])
 // CHECK-NEXT:     4: [B2.3]
 // CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.2], class C)
 // CHECK:        [B3]
@@ -172,7 +172,7 @@ void referenceVariableWithInitializer() {
 // CHECK:        [B2]
 // CHECK-NEXT:     1: C::get
 // CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B2.2]()
+// CHECK-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4])
 // CHECK-NEXT:     4: [B2.3]
 // CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.3], class C)
 // CHECK:        [B3]
@@ -217,14 +217,14 @@ public:
 // CHECK: D(double)
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, C([B1.4]) (Base initializer), class C)
 // CHECK-NEXT:     6: C([B1.5]) (Base initializer)
 // CHECK-NEXT:     7: CFGNewAllocator(C *)
 // CHECK-NEXT:     8: C::get
 // CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:    10: [B1.9]()
+// CHECK-NEXT:    10: [B1.9]() (CXXRecordTypedCall, [B1.11])
 // CHECK-NEXT:    11: [B1.10]
 // CHECK-NEXT:    12: [B1.11] (CXXConstructExpr, [B1.13], class C)
 // CHECK-NEXT:    13: new C([B1.12])
@@ -299,7 +299,7 @@ C returnTemporaryWithArgument() {
 // CHECK: C returnTemporaryConstructedByFunction()
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], class C)
 // CHECK-NEXT:     6: return [B1.5];
@@ -310,7 +310,7 @@ C returnTemporaryConstructedByFunction() {
 // CHECK: C returnChainOfCopies()
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], class C)
 // CHECK-NEXT:     6: C([B1.5]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
@@ -435,7 +435,7 @@ void referenceVariableWithInitializer() {
 // CHECK:        [B5]
 // CHECK-NEXT:     1: D::get
 // CHECK-NEXT:     2: [B5.1] (ImplicitCastExpr, FunctionToPointerDecay, class temporary_object_expr_with_dtors::D (*)(void))
-// CHECK-NEXT:     3: [B5.2]()
+// CHECK-NEXT:     3: [B5.2]() (CXXRecordTypedCall, [B5.4], [B5.6])
 // CHECK-NEXT:     4: [B5.3] (BindTemporary)
 // CHECK-NEXT:     5: [B5.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     6: [B5.5]
@@ -518,7 +518,7 @@ void implicitConstructionConversionFromTemporary() {
 // CHECK: void implicitConstructionConversionFromFunctionValue()
 // CHECK:          1: get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class implicit_constructor_conversion::A (*)(void))
-// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.5])
 // CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
 // CHECK-NEXT:     5: [B1.4]
 // CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.8], [B1.10], class implicit_constructor_conversion::B)
@@ -552,7 +552,7 @@ void implicitConstructionConversionFromTemporaryWithLifetimeExtension() {
 // CHECK: void implicitConstructionConversionFromFunctionValueWithLifetimeExtension()
 // CHECK:          1: get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class implicit_constructor_conver
-// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.5])
 // CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
 // CHECK-NEXT:     5: [B1.4]
 // CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.9], class implicit_constructor_conversion::B)
