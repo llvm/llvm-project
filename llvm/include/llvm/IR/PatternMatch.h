@@ -157,17 +157,6 @@ struct match_any_zero {
 /// floating point constants, this will match negative zero and positive zero
 inline match_any_zero m_AnyZero() { return match_any_zero(); }
 
-struct match_nan {
-  template <typename ITy> bool match(ITy *V) {
-    if (const auto *C = dyn_cast<Constant>(V))
-      return C->isNaN();
-    return false;
-  }
-};
-
-/// Match an arbitrary NaN constant. This includes quiet and signalling nans.
-inline match_nan m_NaN() { return match_nan(); }
-
 struct apint_match {
   const APInt *&Res;
 
@@ -420,6 +409,14 @@ struct is_neg_zero {
 /// Match an FP or FP vector with all -0.0 values.
 inline cstfp_pred_ty<is_neg_zero> m_NegZero() {
   return cstfp_pred_ty<is_neg_zero>();
+}
+
+struct is_nan {
+  bool isValue(const APFloat &C) { return C.isNaN(); }
+};
+// Match an arbitrary NaN constant. This includes quiet and signalling nans.
+inline cstfp_pred_ty<is_nan> m_NaN() {
+  return cstfp_pred_ty<is_nan>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
