@@ -353,6 +353,8 @@ enum DNBProfileDataScanType {
 
   eProfileEnergy = (1 << 9),
 
+  eProfileMemoryCap = (1 << 15),
+
   eProfileAll = 0xffffffff
 };
 

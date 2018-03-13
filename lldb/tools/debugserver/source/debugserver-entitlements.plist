@@ -24,5 +24,7 @@
     <true/>
     <key>com.apple.security.network.client</key>
     <true/>
+    <key>com.apple.private.memorystatus</key>
+    <true/>
 </dict>
 </plist>
