@@ -534,13 +534,15 @@ void Writer::createNameSection() {
   for (const Symbol *S : ImportedSymbols) {
     if (auto *F = dyn_cast<FunctionSymbol>(S)) {
       writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      writeStr(Sub.OS, F->getName(), "symbol name");
+      Optional<std::string> Name = demangleItanium(F->getName());
+      writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
     }
   }
   for (const InputFunction *F : InputFunctions) {
     if (!F->getName().empty()) {
       writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      writeStr(Sub.OS, F->getName(), "symbol name");
+      Optional<std::string> Name = demangleItanium(F->getName());
+      writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
     }
   }
 

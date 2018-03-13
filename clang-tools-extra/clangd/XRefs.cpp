@@ -219,9 +219,8 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   }
 
   for (auto Item : MacroInfos) {
-    SourceRange SR(Item.Info->getDefinitionLoc(),
-                   Item.Info->getDefinitionEndLoc());
-    auto L = makeLocation(AST, SR);
+    auto Loc = Item.Info->getDefinitionLoc();
+    auto L = makeLocation(AST, SourceRange(Loc, Loc));
     if (L)
       Result.push_back(*L);
   }
