@@ -322,3 +322,162 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
   DSPRINT0(DSFLAG, "Exiting __kmpc_get_data_sharing_environment_frame\n");
   return P;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Runtime functions for trunk data sharing scheme.
+////////////////////////////////////////////////////////////////////////////////
+
+// Initialize data sharing data structure. This function needs to be called
+// once at the beginning of a data sharing context (coincides with the kernel
+// initialization).
+EXTERN void __kmpc_data_sharing_init_stack() {
+  // This function initializes the stack pointer with the pointer to the
+  // statically allocated shared memory slots. The size of a shared memory
+  // slot is pre-determined to be 256 bytes.
+  unsigned WID = getWarpId();
+  omptarget_nvptx_TeamDescr *teamDescr =
+      &omptarget_nvptx_threadPrivateContext->TeamContext();
+  __kmpc_data_sharing_slot *RootS = teamDescr->RootS(WID);
+
+  DataSharingState.SlotPtr[WID] = RootS;
+  DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
+
+  // We initialize the list of references to arguments here.
+  omptarget_nvptx_globalArgs.Init();
+}
+
+// Called at the time of the kernel initialization. This is used to initilize
+// the list of references to shared variables and to pre-allocate global storage
+// for holding the globalized variables.
+//
+// By default the globalized variables are stored in global memory. If the
+// UseSharedMemory is set to true, the runtime will attempt to use shared memory
+// as long as the size requested fits the pre-allocated size.
+//
+// TODO: allow more than one push per slot to save on calls to malloc.
+// Currently there is only one slot for each push so the data size in the slot
+// is the same size as the size being requested.
+//
+// Called by: master, TODO: call by workers
+EXTERN void* __kmpc_data_sharing_push_stack(size_t size,
+    int16_t UseSharedMemory) {
+  // TODO: Add shared memory support. For now, use global memory only for
+  // storing the data sharing slots so ignore the pre-allocated
+  // shared memory slot.
+
+  // Use global memory for storing the stack.
+  if (IsMasterThread()) {
+    unsigned WID = getWarpId();
+
+    // SlotP will point to either the shared memory slot or an existing
+    // global memory slot.
+    __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
+    __kmpc_data_sharing_slot *&TailSlotP = DataSharingState.TailPtr[WID];
+
+    // The slot for holding the data we are pushing.
+    __kmpc_data_sharing_slot *NewSlot = 0;
+    size_t NewSize = size;
+
+    // Check if there is a next slot.
+    if (__kmpc_data_sharing_slot *ExistingSlot = SlotP->Next) {
+      // Attempt to re-use an existing slot provided the data fits in the slot.
+      // The leftover data space will not be used.
+      ptrdiff_t ExistingSlotSize = (uintptr_t)ExistingSlot->DataEnd -
+                                   (uintptr_t)(&ExistingSlot->Data[0]);
+      if (ExistingSlotSize >= NewSize)
+        NewSlot = ExistingSlot;
+      else
+        free(ExistingSlot);
+    }
+
+    if (!NewSlot) {
+      NewSlot = (__kmpc_data_sharing_slot *)malloc(
+          sizeof(__kmpc_data_sharing_slot) + NewSize);
+      NewSlot->Next = 0;
+      NewSlot->Prev = SlotP;
+
+      // This is the last slot, save it.
+      TailSlotP = NewSlot;
+    }
+
+    NewSlot->DataEnd = &NewSlot->Data[NewSize];
+
+    SlotP->Next = NewSlot;
+    SlotP = NewSlot;
+
+    return (void*)&SlotP->Data[0];
+  }
+
+  // TODO: add memory fence here when this function can be called by
+  // worker threads also. For now, this function is only called by the
+  // master thread of each team.
+
+  // TODO: implement sharing across workers.
+  return 0;
+}
+
+// Pop the stack and free any memory which can be reclaimed.
+//
+// When the pop operation removes the last global memory slot,
+// reclaim all outstanding global memory slots since it is
+// likely we have reached the end of the kernel.
+EXTERN void __kmpc_data_sharing_pop_stack(void *a) {
+  if (IsMasterThread()) {
+    unsigned WID = getWarpId();
+
+    __kmpc_data_sharing_slot *S = DataSharingState.SlotPtr[WID];
+
+    if (S->Prev)
+      S = S->Prev;
+
+    // If this will "pop" the last global memory node then it is likely
+    // that we are at the end of the data sharing region and we can
+    // de-allocate any existing global memory slots.
+    if (!S->Prev) {
+      __kmpc_data_sharing_slot *Tail = DataSharingState.TailPtr[WID];
+
+      while(Tail && Tail->Prev) {
+        Tail = Tail->Prev;
+        free(Tail->Next);
+        Tail->Next=0;
+      }
+    }
+
+    return;
+  }
+
+  // TODO: add memory fence here when this function can be called by
+  // worker threads also. For now, this function is only called by the
+  // master thread of each team.
+
+  // TODO: implement sharing across workers.
+}
+
+// Begin a data sharing context. Maintain a list of references to shared
+// variables. This list of references to shared variables will be passed
+// to one or more threads.
+// In L0 data sharing this is called by master thread.
+// In L1 data sharing this is called by active warp master thread.
+EXTERN void __kmpc_begin_sharing_variables(void ***GlobalArgs, size_t nArgs) {
+  omptarget_nvptx_globalArgs.EnsureSize(nArgs);
+  *GlobalArgs = omptarget_nvptx_globalArgs.GetArgs();
+}
+
+// End a data sharing context. There is no need to have a list of refs
+// to shared variables because the context in which those variables were
+// shared has now ended. This should clean-up the list of references only
+// without affecting the actual global storage of the variables.
+// In L0 data sharing this is called by master thread.
+// In L1 data sharing this is called by active warp master thread.
+EXTERN void __kmpc_end_sharing_variables() {
+  omptarget_nvptx_globalArgs.DeInit();
+}
+
+// This function will return a list of references to global variables. This
+// is how the workers will get a reference to the globalized variable. The
+// members of this list will be passed to the outlined parallel function
+// preserving the order.
+// Called by all workers.
+EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs) {
+  *GlobalArgs = omptarget_nvptx_globalArgs.GetArgs();
+}

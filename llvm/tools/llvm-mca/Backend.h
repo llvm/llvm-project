@@ -86,7 +86,7 @@ public:
     const auto It = Instructions.find(Index);
     assert(It != Instructions.end() && "no running instructions with index");
     assert(It->second);
-    return *Instructions.find(Index)->second;
+    return *It->second;
   }
   void eraseInstruction(unsigned Index) { Instructions.erase(Index); }
   unsigned getNumCycles() const { return Cycles; }
@@ -103,9 +103,6 @@ public:
     return STI.getSchedModel();
   }
 
-  double getRThroughput(const InstrDesc &ID) const {
-    return HWS->getRThroughput(ID);
-  }
   void getBuffersUsage(std::vector<BufferUsageEntry> &Usage) const {
     return HWS->getBuffersUsage(Usage);
   }

@@ -1,0 +1,16 @@
+; RUN: llvm-pdbutil pretty -injected-sources -injected-source-content \
+; RUN:   %p/Inputs/InjectedSource.pdb | FileCheck %s
+; RUN: llvm-pdbutil pretty -injected-sources -injected-source-content \
+; RUN:   %p/Inputs/ClassLayoutTest.pdb | FileCheck --check-prefix=NEGATIVE %s
+
+; CHECK:      ---INJECTED SOURCES---
+; CHECK-NEXT: d:\sandbox\natvistest\natvistest\test.natvis (220 bytes): obj=<null>, vname=d:\sandbox\natvistest\natvistest\test.natvis, crc=2374979362, compression=None
+; CHECK-NEXT: <?xml version="1.0" encoding="utf-8"?>
+; CHECK-NEXT: <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+; CHECK-NEXT:   <Type Name="Foo">
+; CHECK-NEXT:     <DisplayString>This is a test</DisplayString>
+; CHECK-NEXT:   </Type>
+; CHECK-NEXT: </AutoVisualizer>
+
+; NEGATIVE:      ---INJECTED SOURCES---
+; NEGATIVE-NEXT: There are no injected sources.

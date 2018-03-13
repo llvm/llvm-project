@@ -5047,9 +5047,10 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     SDValue Op3 = getValue(I.getArgOperand(2));
-    unsigned Align = MCI.getAlignment();
-    if (!Align)
-      Align = 1; // @llvm.memcpy defines 0 and 1 to both mean no alignment.
+    // @llvm.memcpy defines 0 and 1 to both mean no alignment.
+    unsigned DstAlign = std::max<unsigned>(MCI.getDestAlignment(), 1);
+    unsigned SrcAlign = std::max<unsigned>(MCI.getSourceAlignment(), 1);
+    unsigned Align = MinAlign(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
@@ -5066,9 +5067,8 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     SDValue Op3 = getValue(I.getArgOperand(2));
-    unsigned Align = MSI.getAlignment();
-    if (!Align)
-      Align = 1; // @llvm.memset defines 0 and 1 to both mean no alignment.
+    // @llvm.memset defines 0 and 1 to both mean no alignment.
+    unsigned Align = std::max<unsigned>(MSI.getDestAlignment(), 1);
     bool isVol = MSI.isVolatile();
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     SDValue MS = DAG.getMemset(getRoot(), sdl, Op1, Op2, Op3, Align, isVol,
@@ -5081,9 +5081,10 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     SDValue Op3 = getValue(I.getArgOperand(2));
-    unsigned Align = MMI.getAlignment();
-    if (!Align)
-      Align = 1; // @llvm.memmove defines 0 and 1 to both mean no alignment.
+    // @llvm.memmove defines 0 and 1 to both mean no alignment.
+    unsigned DstAlign = std::max<unsigned>(MMI.getDestAlignment(), 1);
+    unsigned SrcAlign = std::max<unsigned>(MMI.getSourceAlignment(), 1);
+    unsigned Align = MinAlign(DstAlign, SrcAlign);
     bool isVol = MMI.isVolatile();
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memmove DAG

@@ -9,6 +9,7 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
+#include "ErrorReporting.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
@@ -97,7 +98,7 @@ private:
                          StringRef BinaryPath);
 };
 
-static void Warning(const Twine &Msg) { errs() << "warning: " + Msg + "\n"; }
+static void Warning(const Twine &Msg) { warn_ostream() << Msg << '\n'; }
 } // anonymous namespace
 
 /// Reset the parser state corresponding to the current object
@@ -121,16 +122,17 @@ void MachODebugMapParser::switchToNewDebugMapObject(
   auto MachOOrError =
       CurrentObjectHolder.GetFilesAs<MachOObjectFile>(Path, Timestamp);
   if (auto Error = MachOOrError.getError()) {
-    Warning(Twine("cannot open debug object \"") + Path.str() +
-            "\": " + Error.message() + "\n");
+    Warning(Twine("cannot open debug object '") + Path.str() +
+            "': " + Error.message());
     return;
   }
 
   auto ErrOrAchObj =
       CurrentObjectHolder.GetAs<MachOObjectFile>(Result->getTriple());
-  if (auto Err = ErrOrAchObj.getError()) {
-    return Warning(Twine("cannot open debug object \"") + Path.str() +
-                   "\": " + Err.message() + "\n");
+  if (auto Error = ErrOrAchObj.getError()) {
+    Warning(Twine("cannot open debug object '") + Path.str() +
+            "': " + Error.message());
+    return;
   }
 
   CurrentDebugMapObject =

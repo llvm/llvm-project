@@ -17,6 +17,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
@@ -239,7 +240,10 @@ static void handleWeakUndefines() {
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
-    StringRef StubName = Saver.save("undefined function " + toString(*Sym));
+    Optional<std::string> SymName = demangleItanium(Sym->getName());
+    StringRef StubName =
+        Saver.save("undefined function " +
+                   (SymName ? StringRef(*SymName) : Sym->getName()));
     SyntheticFunction *Func = make<SyntheticFunction>(Sig, StubName);
     Func->setBody(UnreachableFn);
     // Ensure it compares equal to the null pointer, and so that table relocs
@@ -280,6 +284,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->CheckSignatures =
       Args.hasFlag(OPT_check_signatures, OPT_no_check_signatures, false);
+  Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->OutputFile = Args.getLastArgValue(OPT_o);

@@ -356,9 +356,10 @@ class ResourceManager {
 public:
   ResourceManager(const llvm::MCSchedModel &SM) { initialize(SM); }
 
-  ResourceStateEvent canBeDispatched(const InstrDesc &Desc) const {
+  ResourceStateEvent
+  canBeDispatched(const llvm::ArrayRef<uint64_t> Buffers) const {
     ResourceStateEvent Result = ResourceStateEvent::RS_BUFFER_AVAILABLE;
-    for (uint64_t Buffer : Desc.Buffers) {
+    for (uint64_t Buffer : Buffers) {
       Result = isBufferAvailable(Buffer);
       if (Result != ResourceStateEvent::RS_BUFFER_AVAILABLE)
         break;
@@ -367,13 +368,13 @@ public:
     return Result;
   }
 
-  void reserveBuffers(const InstrDesc &Desc) {
-    for (const uint64_t R : Desc.Buffers)
+  void reserveBuffers(const llvm::ArrayRef<uint64_t> Buffers) {
+    for (const uint64_t R : Buffers)
       reserveBuffer(R);
   }
 
-  void releaseBuffers(const InstrDesc &Desc) {
-    for (const uint64_t R : Desc.Buffers)
+  void releaseBuffers(const llvm::ArrayRef<uint64_t> Buffers) {
+    for (const uint64_t R : Buffers)
       releaseBuffer(R);
   }
 
@@ -388,14 +389,13 @@ public:
     Resource.clearReserved();
   }
 
-  void reserveDispatchHazardResources(const InstrDesc &Desc);
+  void reserveDispatchHazardResources(const llvm::ArrayRef<uint64_t> Buffers);
 
   // Returns true if all resources are in-order, and there is at least one
   // resource which is a dispatch hazard (BufferSize = 0).
   bool mustIssueImmediately(const InstrDesc &Desc);
 
   bool canBeIssued(const InstrDesc &Desc) const;
-  double getRThroughput(const InstrDesc &Desc) const;
 
   void issueInstruction(
       unsigned Index, const InstrDesc &Desc,
@@ -530,10 +530,6 @@ public:
 
   Event canBeDispatched(const InstrDesc &Desc) const;
   Instruction *scheduleInstruction(unsigned Idx, Instruction *MCIS);
-
-  double getRThroughput(const InstrDesc &Desc) const {
-    return Resources->getRThroughput(Desc);
-  }
 
   void cycleEvent(unsigned Cycle);
 

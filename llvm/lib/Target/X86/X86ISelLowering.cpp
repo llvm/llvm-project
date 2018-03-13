@@ -5142,16 +5142,6 @@ SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
 }
 
-// Helper for splitting operands of a binary operation to legal target size and
-// apply a function on each part.
-template <typename F>
-SDValue SplitBinaryOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
-                               const SDLoc &DL, EVT VT, SDValue Op0,
-                               SDValue Op1, F Builder) {
-  SDValue Ops[] = {Op0, Op1};
-  return SplitOpsAndApply(DAG, Subtarget, DL, VT, makeArrayRef(Ops), Builder);
-}
-
 // Return true if the instruction zeroes the unused upper part of the
 // destination and accepts mask.
 static bool isMaskedZeroUpperBitsvXi1(unsigned int Opcode) {
@@ -31404,8 +31394,8 @@ static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
     return DAG.getNode(X86ISD::PSADBW, DL, VT, Ops);
   };
   MVT SadVT = MVT::getVectorVT(MVT::i64, RegSize / 64);
-  return SplitBinaryOpsAndApply(DAG, Subtarget, DL, SadVT, SadOp0, SadOp1,
-                                PSADBWBuilder);
+  return SplitOpsAndApply(DAG, Subtarget, DL, SadVT, { SadOp0, SadOp1 },
+                          PSADBWBuilder);
 }
 
 // Attempt to replace an min/max v8i16/v16i8 horizontal reduction with
@@ -32238,8 +32228,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       // x >  y ? x-y : 0 --> subus x, y
       if ((CC == ISD::SETUGE || CC == ISD::SETUGT) &&
           Other->getOpcode() == ISD::SUB && DAG.isEqualTo(OpRHS, CondRHS))
-        return SplitBinaryOpsAndApply(DAG, Subtarget, DL, VT, OpLHS, OpRHS,
-                                      SUBUSBuilder);
+        return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
+                                SUBUSBuilder);
 
       if (auto *OpRHSBV = dyn_cast<BuildVectorSDNode>(OpRHS))
         if (isa<BuildVectorSDNode>(CondRHS)) {
@@ -32250,12 +32240,12 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
             return Cond->getAPIntValue() == (-Op->getAPIntValue() - 1);
           };
           if (CC == ISD::SETUGT && Other->getOpcode() == ISD::ADD &&
-              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchSUBUS))
-            return SplitBinaryOpsAndApply(
-                DAG, Subtarget, DL, VT, OpLHS,
-                DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                            OpRHS),
-                SUBUSBuilder);
+              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchSUBUS)) {
+            OpRHS = DAG.getNode(ISD::SUB, DL, VT,
+                                DAG.getConstant(0, DL, VT), OpRHS);
+            return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
+                                    SUBUSBuilder);
+          }
 
           // Another special case: If C was a sign bit, the sub has been
           // canonicalized into a xor.
@@ -32265,13 +32255,13 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
           if (auto *OpRHSConst = OpRHSBV->getConstantSplatNode())
             if (CC == ISD::SETLT && Other.getOpcode() == ISD::XOR &&
                 ISD::isBuildVectorAllZeros(CondRHS.getNode()) &&
-                OpRHSConst->getAPIntValue().isSignMask())
+                OpRHSConst->getAPIntValue().isSignMask()) {
+              OpRHS = DAG.getConstant(OpRHSConst->getAPIntValue(), DL, VT);
               // Note that we have to rebuild the RHS constant here to ensure we
               // don't rely on particular values of undef lanes.
-              return SplitBinaryOpsAndApply(
-                  DAG, Subtarget, DL, VT, OpLHS,
-                  DAG.getConstant(OpRHSConst->getAPIntValue(), DL, VT),
-                  SUBUSBuilder);
+              return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
+                                      SUBUSBuilder);
+            }
         }
     }
   }
@@ -33183,15 +33173,15 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
       !DAG.MaskedValueIsZero(N0, Mask17))
     return SDValue();
 
-  // Use SplitBinaryOpsAndApply to handle AVX splitting.
+  // Use SplitOpsAndApply to handle AVX splitting.
   auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                            ArrayRef<SDValue> Ops) {
     MVT VT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
     return DAG.getNode(X86ISD::VPMADDWD, DL, VT, Ops);
   };
-  return SplitBinaryOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                                DAG.getBitcast(WVT, N0),
-                                DAG.getBitcast(WVT, N1), PMADDWDBuilder);
+  return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
+                          { DAG.getBitcast(WVT, N0), DAG.getBitcast(WVT, N1) },
+                          PMADDWDBuilder);
 }
 
 /// Optimize a single multiply with constant into two operations in order to
@@ -34836,9 +34826,9 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
     SDValue VecOnes = DAG.getConstant(1, DL, InVT);
     Operands[1] = DAG.getNode(ISD::SUB, DL, InVT, Operands[1], VecOnes);
     Operands[1] = DAG.getNode(ISD::TRUNCATE, DL, VT, Operands[1]);
-    return SplitBinaryOpsAndApply(DAG, Subtarget, DL, VT,
-                                  Operands[0].getOperand(0), Operands[1],
-                                  AVGBuilder);
+    return SplitOpsAndApply(DAG, Subtarget, DL, VT,
+                            { Operands[0].getOperand(0), Operands[1] },
+                            AVGBuilder);
   }
 
   if (Operands[0].getOpcode() == ISD::ADD)
@@ -34862,9 +34852,9 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
         return SDValue();
 
     // The pattern is detected, emit X86ISD::AVG instruction(s).
-    return SplitBinaryOpsAndApply(DAG, Subtarget, DL, VT,
-                                  Operands[0].getOperand(0),
-                                  Operands[1].getOperand(0), AVGBuilder);
+    return SplitOpsAndApply(DAG, Subtarget, DL, VT,
+                            { Operands[0].getOperand(0),
+                              Operands[1].getOperand(0) }, AVGBuilder);
   }
 
   return SDValue();
@@ -37859,8 +37849,8 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
     MVT VT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
     return DAG.getNode(X86ISD::VPMADDWD, DL, VT, Ops);
   };
-  SDValue Madd = SplitBinaryOpsAndApply(DAG, Subtarget, DL, MAddVT, N0, N1,
-                                        PMADDWDBuilder);
+  SDValue Madd = SplitOpsAndApply(DAG, Subtarget, DL, MAddVT, { N0, N1 },
+                                  PMADDWDBuilder);
   // Fill the rest of the output with 0
   SDValue Zero = getZeroVector(Madd.getSimpleValueType(), Subtarget, DAG, DL);
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Madd, Zero);
@@ -38069,8 +38059,9 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,
                        DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Ops[0]),
                        DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Ops[1]));
   };
-  return SplitBinaryOpsAndApply(DAG, Subtarget, DL, VT, Mul.getOperand(0),
-                                Mul.getOperand(1), PMADDBuilder);
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT,
+                          { Mul.getOperand(0), Mul.getOperand(1) },
+                          PMADDBuilder);
 }
 
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
@@ -38151,8 +38142,8 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   // PSUBUS doesn't support v8i32/v8i64/v16i32, but it can be enabled with
   // special preprocessing in some cases.
   if (VT != MVT::v8i32 && VT != MVT::v16i32 && VT != MVT::v8i64)
-    return SplitBinaryOpsAndApply(DAG, Subtarget, SDLoc(N), VT, SubusLHS,
-                                  SubusRHS, SUBUSBuilder);
+    return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
+                            { SubusLHS, SubusRHS }, SUBUSBuilder);
 
   // Special preprocessing case can be only applied
   // if the value was zero extended from 16 bit,
@@ -38183,8 +38174,8 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
       DAG.getZExtOrTrunc(SubusLHS, SDLoc(SubusLHS), ShrinkedType);
   SDValue NewSubusRHS = DAG.getZExtOrTrunc(UMin, SDLoc(SubusRHS), ShrinkedType);
   SDValue Psubus =
-      SplitBinaryOpsAndApply(DAG, Subtarget, SDLoc(N), ShrinkedType,
-                             NewSubusLHS, NewSubusRHS, SUBUSBuilder);
+      SplitOpsAndApply(DAG, Subtarget, SDLoc(N), ShrinkedType,
+                       { NewSubusLHS, NewSubusRHS }, SUBUSBuilder);
   // Zero extend the result, it may be used somewhere as 32 bit,
   // if not zext and following trunc will shrink.
   return DAG.getZExtOrTrunc(Psubus, SDLoc(N), ExtType);

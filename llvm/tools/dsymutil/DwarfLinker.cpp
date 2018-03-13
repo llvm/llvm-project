@@ -9,10 +9,12 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
+#include "ErrorReporting.h"
 #include "MachOUtils.h"
 #include "NonRelocatableStringpool.h"
 #include "dsymutil.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -75,8 +77,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -578,19 +580,7 @@ static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
   }
   return false;
 }
-
-static raw_ostream &error_ostream() {
-  return WithColor(errs(), HighlightColor::Error).get() << "error: ";
-}
-
-static raw_ostream &warn_ostream() {
-  return WithColor(errs(), HighlightColor::Warning).get() << "warning: ";
-}
-
-static raw_ostream &note_ostream() {
-  return WithColor(errs(), HighlightColor::Note).get() << "note: ";
-}
-} // end anonymous namespace
+} // namespace
 
 void warn(Twine Warning, Twine Context) {
   warn_ostream() << Warning + "\n";
@@ -4138,6 +4128,14 @@ bool DwarfLinker::link(const DebugMap &Map) {
   unsigned UnitID = 0;
   DebugMap ModuleMap(Map.getTriple(), Map.getBinaryPath());
 
+  // First populate the data structure we need for each iteration of the
+  // parallel loop.
+  unsigned NumObjects = Map.getNumberOfObjects();
+  std::vector<LinkContext> ObjectContexts;
+  ObjectContexts.reserve(NumObjects);
+  for (const auto &Obj : Map.objects())
+    ObjectContexts.emplace_back(Map, *this, *Obj.get(), Options.Verbose);
+
   // This Dwarf string pool which is only used for uniquing. This one should
   // never be used for offsets as its not thread-safe or predictable.
   UniquingStringPool UniquingStringPool;
@@ -4150,11 +4148,10 @@ bool DwarfLinker::link(const DebugMap &Map) {
   // ODR Contexts for the link.
   DeclContextTree ODRContexts;
 
-  for (const auto &Obj : Map.objects()) {
-    LinkContext LinkContext(Map, *this, *Obj.get(), Options.Verbose);
-
+  for (LinkContext &LinkContext : ObjectContexts) {
     if (Options.Verbose)
-      outs() << "DEBUG MAP OBJECT: " << Obj->getObjectFilename() << "\n";
+      outs() << "DEBUG MAP OBJECT: " << LinkContext.DMO.getObjectFilename()
+             << "\n";
 
     // N_AST objects (swiftmodule files) should get dumped directly into the
     // appropriate DWARF section.
@@ -4162,7 +4159,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
       StringRef File = LinkContext.DMO.getObjectFilename();
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        errs() << "Warning: Could not open " << File << "\n";
+        warn("Could not open '" + File + "'\n");
         continue;
       }
       sys::fs::file_status Stat;
@@ -4188,20 +4185,28 @@ bool DwarfLinker::link(const DebugMap &Map) {
     }
 
     if (!LinkContext.ObjectFile)
+
       continue;
 
     // Look for relocations that correspond to debug map entries.
+
     if (LLVM_LIKELY(!Options.Update) &&
         !LinkContext.RelocMgr.findValidRelocsInDebugInfo(
             *LinkContext.ObjectFile, LinkContext.DMO)) {
       if (Options.Verbose)
-        warn("No valid relocations found: skipping\n");
+        outs() << "No valid relocations found. Skipping.\n";
+
+      // Clear this ObjFile entry as a signal to other loops that we should not
+      // process this iteration.
+      LinkContext.ObjectFile = nullptr;
       continue;
     }
 
     // Setup access to the debug info.
     if (!LinkContext.DwarfContext)
       continue;
+
+    startDebugObject(LinkContext);
 
     // In a first phase, just read in the debug info and load all clang modules.
     LinkContext.CompileUnits.reserve(
@@ -4225,71 +4230,109 @@ bool DwarfLinker::link(const DebugMap &Map) {
         maybeUpdateMaxDwarfVersion(CU->getVersion());
       }
     }
+  }
 
-    // Now build the DIE parent links that we will use during the next phase.
-    for (auto &CurrentUnit : LinkContext.CompileUnits)
-      analyzeContextInfo(CurrentUnit->getOrigUnit().getUnitDIE(), 0,
-                         *CurrentUnit, &ODRContexts.getRoot(),
-                         UniquingStringPool, ODRContexts);
+  ThreadPool pool(2);
 
-    // Then mark all the DIEs that need to be present in the linked
-    // output and collect some information about them. Note that this
-    // loop can not be merged with the previous one because cross-CU
-    // references require the ParentIdx to be setup for every CU in
-    // the object file before calling this.
-    if (LLVM_UNLIKELY(Options.Update)) {
+  // These variables manage the list of processed object files.
+  // The mutex and condition variable are to ensure that this is thread safe.
+  std::mutex ProcessedFilesMutex;
+  std::condition_variable ProcessedFilesConditionVariable;
+  BitVector ProcessedFiles(NumObjects, false);
+
+  // Now do analyzeContextInfo in parallel as it is particularly expensive.
+  pool.async([&]() {
+    for (unsigned i = 0, e = NumObjects; i != e; ++i) {
+      auto &LinkContext = ObjectContexts[i];
+
+      if (!LinkContext.ObjectFile) {
+        std::unique_lock<std::mutex> LockGuard(ProcessedFilesMutex);
+        ProcessedFiles.set(i);
+        ProcessedFilesConditionVariable.notify_one();
+        continue;
+      }
+
+      // Now build the DIE parent links that we will use during the next phase.
       for (auto &CurrentUnit : LinkContext.CompileUnits)
-        CurrentUnit->markEverythingAsKept();
-      Streamer->copyInvariantDebugSection(*LinkContext.ObjectFile, Options);
-    } else {
-      for (auto &CurrentUnit : LinkContext.CompileUnits)
-        lookForDIEsToKeep(LinkContext.RelocMgr, LinkContext.Ranges,
-                          LinkContext.CompileUnits,
-                          CurrentUnit->getOrigUnit().getUnitDIE(),
-                          LinkContext.DMO, *CurrentUnit, 0);
+        analyzeContextInfo(CurrentUnit->getOrigUnit().getUnitDIE(), 0,
+                           *CurrentUnit, &ODRContexts.getRoot(),
+                           UniquingStringPool, ODRContexts);
+
+      std::unique_lock<std::mutex> LockGuard(ProcessedFilesMutex);
+      ProcessedFiles.set(i);
+      ProcessedFilesConditionVariable.notify_one();
+    }
+  });
+
+  // And then the remaining work in serial again.
+  // Note, although this loop runs in serial, it can run in parallel with
+  // the analyzeContextInfo loop so long as we process files with indices >=
+  // than those processed by analyzeContextInfo.
+  pool.async([&]() {
+    for (unsigned i = 0, e = NumObjects; i != e; ++i) {
+      {
+        std::unique_lock<std::mutex> LockGuard(ProcessedFilesMutex);
+        if (!ProcessedFiles[i]) {
+          ProcessedFilesConditionVariable.wait(
+              LockGuard, [&]() { return ProcessedFiles[i]; });
+        }
+      }
+
+      auto &LinkContext = ObjectContexts[i];
+      if (!LinkContext.ObjectFile)
+        continue;
+
+      // Then mark all the DIEs that need to be present in the linked output
+      // and collect some information about them.
+      // Note that this loop can not be merged with the previous one because
+      // cross-cu references require the ParentIdx to be setup for every CU in
+      // the object file before calling this.
+      if (LLVM_UNLIKELY(Options.Update)) {
+        for (auto &CurrentUnit : LinkContext.CompileUnits)
+          CurrentUnit->markEverythingAsKept();
+        Streamer->copyInvariantDebugSection(*LinkContext.ObjectFile, Options);
+      } else {
+        for (auto &CurrentUnit : LinkContext.CompileUnits)
+          lookForDIEsToKeep(LinkContext.RelocMgr, LinkContext.Ranges,
+                            LinkContext.CompileUnits,
+                            CurrentUnit->getOrigUnit().getUnitDIE(),
+                            LinkContext.DMO, *CurrentUnit, 0);
+      }
+
+      // The calls to applyValidRelocs inside cloneDIE will walk the reloc
+      // array again (in the same way findValidRelocsInDebugInfo() did). We
+      // need to reset the NextValidReloc index to the beginning.
+      LinkContext.RelocMgr.resetValidRelocs();
+      if (LinkContext.RelocMgr.hasValidRelocs() ||
+          LLVM_UNLIKELY(Options.Update))
+        DIECloner(*this, LinkContext.RelocMgr, DIEAlloc,
+                  LinkContext.CompileUnits, Options)
+            .cloneAllCompileUnits(*LinkContext.DwarfContext, LinkContext.DMO,
+                                  LinkContext.Ranges, OffsetsStringPool);
+      if (!Options.NoOutput && !LinkContext.CompileUnits.empty() &&
+          LLVM_LIKELY(!Options.Update))
+        patchFrameInfoForObject(
+            LinkContext.DMO, LinkContext.Ranges, *LinkContext.DwarfContext,
+            LinkContext.CompileUnits[0]->getOrigUnit().getAddressByteSize());
+
+      // Clean-up before starting working on the next object.
+      endDebugObject(LinkContext);
     }
 
-    // The calls to applyValidRelocs inside cloneDIE will walk the
-    // reloc array again (in the same way findValidRelocsInDebugInfo()
-    // did). We need to reset the NextValidReloc index to the beginning.
-    LinkContext.RelocMgr.resetValidRelocs();
-    if (LinkContext.RelocMgr.hasValidRelocs() || LLVM_UNLIKELY(Options.Update))
-      DIECloner(*this, LinkContext.RelocMgr, DIEAlloc, LinkContext.CompileUnits,
-                Options)
-          .cloneAllCompileUnits(*LinkContext.DwarfContext, LinkContext.DMO,
-                                LinkContext.Ranges, OffsetsStringPool);
-    if (!Options.NoOutput && !LinkContext.CompileUnits.empty() &&
-        LLVM_LIKELY(!Options.Update))
-      patchFrameInfoForObject(
-          LinkContext.DMO, LinkContext.Ranges, *LinkContext.DwarfContext,
-          LinkContext.CompileUnits[0]->getOrigUnit().getAddressByteSize());
+    // Emit everything that's global.
+    if (!Options.NoOutput) {
+      Streamer->emitAbbrevs(Abbreviations, MaxDwarfVersion);
+      Streamer->emitStrings(OffsetsStringPool);
+      Streamer->emitAppleNames(AppleNames);
+      Streamer->emitAppleNamespaces(AppleNamespaces);
+      Streamer->emitAppleTypes(AppleTypes);
+      Streamer->emitAppleObjc(AppleObjc);
+    }
+  });
 
-    // Clean-up before starting working on the next object.
-    endDebugObject(LinkContext);
-  }
-
-  // Emit everything that's global.
-  if (!Options.NoOutput) {
-    Streamer->emitAbbrevs(Abbreviations, MaxDwarfVersion);
-    Streamer->emitStrings(OffsetsStringPool);
-    Streamer->emitAppleNames(AppleNames);
-    Streamer->emitAppleNamespaces(AppleNamespaces);
-    Streamer->emitAppleTypes(AppleTypes);
-    Streamer->emitAppleObjc(AppleObjc);
-  }
+  pool.wait();
 
   return Options.NoOutput ? true : Streamer->finish(Map);
-}
-
-void warn(const Twine &Warning, const Twine &Context) {
-  errs() << Twine("while processing ") + Context + ":\n";
-  errs() << Twine("warning: ") + Warning + "\n";
-}
-
-bool error(const Twine &Error, const Twine &Context) {
-  errs() << Twine("while processing ") + Context + ":\n";
-  errs() << Twine("error: ") + Error + "\n";
-  return false;
 }
 
 bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
@@ -4298,5 +4341,5 @@ bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
   return Linker.link(DM);
 }
 
-} // end namespace dsymutil
-} // end namespace llvm
+} // namespace dsymutil
+} // namespace llvm

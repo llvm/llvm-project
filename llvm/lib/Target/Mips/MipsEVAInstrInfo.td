@@ -95,6 +95,7 @@ class LOAD_LEFT_RIGHT_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
   list<dag> Pattern = [];
   string DecoderMethod = "DecodeMemEVA";
+  string BaseOpcode = instr_asm;
   string Constraints = "$src = $rt";
   bit canFoldAsLoad = 1;
   InstrItinClass Itinerary = itin;
@@ -110,6 +111,7 @@ class STORE_LEFT_RIGHT_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
   list<dag> Pattern = [];
   string DecoderMethod = "DecodeMemEVA";
+  string BaseOpcode = instr_asm;
   InstrItinClass Itinerary = itin;
 }
 
@@ -177,38 +179,32 @@ class PREFE_DESC   : CACHEE_DESC_BASE<"prefe", mem_simm9, II_PREFE>;
 //
 //===----------------------------------------------------------------------===//
 
-/// Load and Store EVA Instructions
-def LBE     : MMRel, LBE_ENC, LBE_DESC, ASE_EVA;
-def LBuE    : MMRel, LBuE_ENC, LBuE_DESC, ASE_EVA;
-def LHE     : MMRel, LHE_ENC, LHE_DESC, ASE_EVA;
-def LHuE    : MMRel, LHuE_ENC, LHuE_DESC, ASE_EVA;
 let AdditionalPredicates = [NotInMicroMips] in {
-def LWE     : MMRel, LWE_ENC, LWE_DESC, ASE_EVA;
-}
-def SBE     : MMRel, SBE_ENC, SBE_DESC, ASE_EVA;
-def SHE     : MMRel, SHE_ENC, SHE_DESC, ASE_EVA;
-let AdditionalPredicates = [NotInMicroMips] in {
-def SWE     : MMRel, SWE_ENC, SWE_DESC, ASE_EVA;
-}
+  /// Load and Store EVA Instructions
+  def LBE     : MMRel, LBE_ENC, LBE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def LBuE    : MMRel, LBuE_ENC, LBuE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def LHE     : MMRel, LHE_ENC, LHE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def LHuE    : MMRel, LHuE_ENC, LHuE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def LWE     : MMRel, LWE_ENC, LWE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def SBE     : MMRel, SBE_ENC, SBE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def SHE     : MMRel, SHE_ENC, SHE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def SWE     : MMRel, SWE_ENC, SWE_DESC, ISA_MIPS32R2, ASE_EVA;
 
-/// load/store left/right EVA
-let AdditionalPredicates = [NotInMicroMips] in {
-def LWLE    : LWLE_ENC, LWLE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
-def LWRE    : LWRE_ENC, LWRE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
-def SWLE    : SWLE_ENC, SWLE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
-def SWRE    : SWRE_ENC, SWRE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
-}
+  /// load/store left/right EVA
+  def LWLE    : MMRel, LWLE_ENC, LWLE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
+  def LWRE    : MMRel, LWRE_ENC, LWRE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
+  def SWLE    : MMRel, SWLE_ENC, SWLE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
+  def SWRE    : MMRel, SWRE_ENC, SWRE_DESC, ISA_MIPS32R2_NOT_32R6_64R6, ASE_EVA;
 
-/// Load-linked EVA, Store-conditional EVA
-let AdditionalPredicates = [NotInMicroMips] in {
-def LLE     : MMRel, LLE_ENC, LLE_DESC, ASE_EVA;
-def SCE     : MMRel, SCE_ENC, SCE_DESC, ASE_EVA;
-}
+  /// Load-linked EVA, Store-conditional EVA
+  def LLE     : MMRel, LLE_ENC, LLE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def SCE     : MMRel, SCE_ENC, SCE_DESC, ISA_MIPS32R2, ASE_EVA;
 
-let AdditionalPredicates = [NotInMicroMips] in {
-  def TLBINV  : TLBINV_ENC, TLBINV_DESC, ASE_EVA;
-  def TLBINVF : TLBINVF_ENC, TLBINVF_DESC, ASE_EVA;
-}
+  /// TLB invalidate instructions
+  def TLBINV  : TLBINV_ENC, TLBINV_DESC, ISA_MIPS32R2, ASE_EVA;
+  def TLBINVF : TLBINVF_ENC, TLBINVF_DESC, ISA_MIPS32R2, ASE_EVA;
 
-def CACHEE  : MMRel, CACHEE_ENC, CACHEE_DESC, ASE_EVA;
-def PREFE   : MMRel, PREFE_ENC, PREFE_DESC, ASE_EVA;
+  /// EVA versions of cache and pref
+  def CACHEE  : MMRel, CACHEE_ENC, CACHEE_DESC, ISA_MIPS32R2, ASE_EVA;
+  def PREFE   : MMRel, PREFE_ENC, PREFE_DESC, ISA_MIPS32R2, ASE_EVA;
+}
