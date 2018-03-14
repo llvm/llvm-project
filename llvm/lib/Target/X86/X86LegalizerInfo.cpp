@@ -86,7 +86,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
 void X86LegalizerInfo::setLegalizerInfo32bit() {
 
-  const LLT p0 = LLT::pointer(0, TM.getPointerSize() * 8);
+  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
@@ -169,7 +169,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT p0 = LLT::pointer(0, TM.getPointerSize() * 8);
+  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);

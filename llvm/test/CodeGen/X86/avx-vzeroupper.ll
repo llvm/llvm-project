@@ -43,18 +43,18 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 ; VZ-NEXT:    addq $56, %rsp
 ; VZ-NEXT:    retq
 ;
-; FAST-YMM-ZMM-LABEL: test01:
-; FAST-YMM-ZMM:       # %bb.0:
-; FAST-YMM-ZMM-NEXT:    subq $56, %rsp
-; FAST-YMM-ZMM-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
-; FAST-YMM-ZMM-NEXT:    vmovaps {{.*}}(%rip), %xmm0
-; FAST-YMM-ZMM-NEXT:    callq do_sse
-; FAST-YMM-ZMM-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
-; FAST-YMM-ZMM-NEXT:    callq do_sse
-; FAST-YMM-ZMM-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
-; FAST-YMM-ZMM-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; FAST-YMM-ZMM-NEXT:    addq $56, %rsp
-; FAST-YMM-ZMM-NEXT:    retq
+; FAST-ymm-zmm-LABEL: test01:
+; FAST-ymm-zmm:       # %bb.0:
+; FAST-ymm-zmm-NEXT:    subq $56, %rsp
+; FAST-ymm-zmm-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
+; FAST-ymm-zmm-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; FAST-ymm-zmm-NEXT:    callq do_sse
+; FAST-ymm-zmm-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; FAST-ymm-zmm-NEXT:    callq do_sse
+; FAST-ymm-zmm-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; FAST-ymm-zmm-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; FAST-ymm-zmm-NEXT:    addq $56, %rsp
+; FAST-ymm-zmm-NEXT:    retq
 ;
 ; BTVER2-LABEL: test01:
 ; BTVER2:       # %bb.0:
@@ -132,35 +132,35 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    popq %rbx
 ; VZ-NEXT:    retq
 ;
-; FAST-YMM-ZMM-LABEL: test03:
-; FAST-YMM-ZMM:       # %bb.0: # %entry
-; FAST-YMM-ZMM-NEXT:    pushq %rbx
-; FAST-YMM-ZMM-NEXT:    subq $16, %rsp
-; FAST-YMM-ZMM-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; FAST-YMM-ZMM-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; FAST-YMM-ZMM-NEXT:    .p2align 4, 0x90
-; FAST-YMM-ZMM-NEXT:  .LBB3_1: # %while.cond
-; FAST-YMM-ZMM-NEXT:    # =>This Inner Loop Header: Depth=1
-; FAST-YMM-ZMM-NEXT:    callq foo
-; FAST-YMM-ZMM-NEXT:    testl %eax, %eax
-; FAST-YMM-ZMM-NEXT:    jne .LBB3_1
-; FAST-YMM-ZMM-NEXT:  # %bb.2: # %for.body.preheader
-; FAST-YMM-ZMM-NEXT:    movl $4, %ebx
-; FAST-YMM-ZMM-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; FAST-YMM-ZMM-NEXT:    .p2align 4, 0x90
-; FAST-YMM-ZMM-NEXT:  .LBB3_3: # %for.body
-; FAST-YMM-ZMM-NEXT:    # =>This Inner Loop Header: Depth=1
-; FAST-YMM-ZMM-NEXT:    callq do_sse
-; FAST-YMM-ZMM-NEXT:    callq do_sse
-; FAST-YMM-ZMM-NEXT:    vmovaps {{.*}}(%rip), %ymm0
-; FAST-YMM-ZMM-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; FAST-YMM-ZMM-NEXT:    callq do_sse
-; FAST-YMM-ZMM-NEXT:    decl %ebx
-; FAST-YMM-ZMM-NEXT:    jne .LBB3_3
-; FAST-YMM-ZMM-NEXT:  # %bb.4: # %for.end
-; FAST-YMM-ZMM-NEXT:    addq $16, %rsp
-; FAST-YMM-ZMM-NEXT:    popq %rbx
-; FAST-YMM-ZMM-NEXT:    retq
+; FAST-ymm-zmm-LABEL: test03:
+; FAST-ymm-zmm:       # %bb.0: # %entry
+; FAST-ymm-zmm-NEXT:    pushq %rbx
+; FAST-ymm-zmm-NEXT:    subq $16, %rsp
+; FAST-ymm-zmm-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; FAST-ymm-zmm-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; FAST-ymm-zmm-NEXT:    .p2align 4, 0x90
+; FAST-ymm-zmm-NEXT:  .LBB3_1: # %while.cond
+; FAST-ymm-zmm-NEXT:    # =>This Inner Loop Header: Depth=1
+; FAST-ymm-zmm-NEXT:    callq foo
+; FAST-ymm-zmm-NEXT:    testl %eax, %eax
+; FAST-ymm-zmm-NEXT:    jne .LBB3_1
+; FAST-ymm-zmm-NEXT:  # %bb.2: # %for.body.preheader
+; FAST-ymm-zmm-NEXT:    movl $4, %ebx
+; FAST-ymm-zmm-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; FAST-ymm-zmm-NEXT:    .p2align 4, 0x90
+; FAST-ymm-zmm-NEXT:  .LBB3_3: # %for.body
+; FAST-ymm-zmm-NEXT:    # =>This Inner Loop Header: Depth=1
+; FAST-ymm-zmm-NEXT:    callq do_sse
+; FAST-ymm-zmm-NEXT:    callq do_sse
+; FAST-ymm-zmm-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; FAST-ymm-zmm-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; FAST-ymm-zmm-NEXT:    callq do_sse
+; FAST-ymm-zmm-NEXT:    decl %ebx
+; FAST-ymm-zmm-NEXT:    jne .LBB3_3
+; FAST-ymm-zmm-NEXT:  # %bb.4: # %for.end
+; FAST-ymm-zmm-NEXT:    addq $16, %rsp
+; FAST-ymm-zmm-NEXT:    popq %rbx
+; FAST-ymm-zmm-NEXT:    retq
 ;
 ; BTVER2-LABEL: test03:
 ; BTVER2:       # %bb.0: # %entry

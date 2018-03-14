@@ -1,4 +1,4 @@
-//===- ThreadSafetyCommon.cpp -----------------------------------*- C++ -*-===//
+//===- ThreadSafetyCommon.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,24 +13,32 @@
 
 #include "clang/Analysis/Analyses/ThreadSafetyCommon.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/StmtCXX.h"
+#include "clang/AST/OperationKinds.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
-#include "clang/Analysis/Analyses/ThreadSafetyTraverse.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
-#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
+#include <cassert>
+#include <string>
+#include <utility>
 
 using namespace clang;
 using namespace threadSafety;
 
 // From ThreadSafetyUtil.h
-std::string threadSafety::getSourceLiteralString(const clang::Expr *CE) {
+std::string threadSafety::getSourceLiteralString(const Expr *CE) {
   switch (CE->getStmtClass()) {
     case Stmt::IntegerLiteralClass:
       return cast<IntegerLiteral>(CE)->getValue().toString(10, true);
@@ -59,7 +67,7 @@ static bool isIncompletePhi(const til::SExpr *E) {
   return false;
 }
 
-typedef SExprBuilder::CallingContext CallingContext;
+using CallingContext = SExprBuilder::CallingContext;
 
 til::SExpr *SExprBuilder::lookupStmt(const Stmt *S) {
   auto It = SMap.find(S);
@@ -74,7 +82,7 @@ til::SCFG *SExprBuilder::buildCFG(CFGWalker &Walker) {
 }
 
 static bool isCalleeArrow(const Expr *E) {
-  const MemberExpr *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts());
+  const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts());
   return ME ? ME->isArrow() : false;
 }
 
@@ -97,20 +105,18 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
 
   // Examine DeclExp to find SelfArg and FunArgs, which are used to substitute
   // for formal parameters when we call buildMutexID later.
-  if (const MemberExpr *ME = dyn_cast<MemberExpr>(DeclExp)) {
+  if (const auto *ME = dyn_cast<MemberExpr>(DeclExp)) {
     Ctx.SelfArg   = ME->getBase();
     Ctx.SelfArrow = ME->isArrow();
-  } else if (const CXXMemberCallExpr *CE =
-             dyn_cast<CXXMemberCallExpr>(DeclExp)) {
+  } else if (const auto *CE = dyn_cast<CXXMemberCallExpr>(DeclExp)) {
     Ctx.SelfArg   = CE->getImplicitObjectArgument();
     Ctx.SelfArrow = isCalleeArrow(CE->getCallee());
     Ctx.NumArgs   = CE->getNumArgs();
     Ctx.FunArgs   = CE->getArgs();
-  } else if (const CallExpr *CE = dyn_cast<CallExpr>(DeclExp)) {
+  } else if (const auto *CE = dyn_cast<CallExpr>(DeclExp)) {
     Ctx.NumArgs = CE->getNumArgs();
     Ctx.FunArgs = CE->getArgs();
-  } else if (const CXXConstructExpr *CE =
-             dyn_cast<CXXConstructExpr>(DeclExp)) {
+  } else if (const auto *CE = dyn_cast<CXXConstructExpr>(DeclExp)) {
     Ctx.SelfArg = nullptr;  // Will be set below
     Ctx.NumArgs = CE->getNumArgs();
     Ctx.FunArgs = CE->getArgs();
@@ -147,7 +153,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   if (!AttrExp)
     return CapabilityExpr(nullptr, false);
 
-  if (auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
+  if (const auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
     if (SLit->getString() == StringRef("*"))
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.
@@ -158,13 +164,13 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   }
 
   bool Neg = false;
-  if (auto *OE = dyn_cast<CXXOperatorCallExpr>(AttrExp)) {
+  if (const auto *OE = dyn_cast<CXXOperatorCallExpr>(AttrExp)) {
     if (OE->getOperator() == OO_Exclaim) {
       Neg = true;
       AttrExp = OE->getArg(0);
     }
   }
-  else if (auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
+  else if (const auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
     if (UO->getOpcode() == UO_LNot) {
       Neg = true;
       AttrExp = UO->getSubExpr();
@@ -179,7 +185,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     return CapabilityExpr(nullptr, false);
 
   // Hack to deal with smart pointers -- strip off top-level pointer casts.
-  if (auto *CE = dyn_cast_or_null<til::Cast>(E)) {
+  if (const auto *CE = dyn_cast_or_null<til::Cast>(E)) {
     if (CE->castOpcode() == til::CAST_objToPtr)
       return CapabilityExpr(CE->expr(), Neg);
   }
@@ -254,7 +260,7 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
   default:
     break;
   }
-  if (const CastExpr *CE = dyn_cast<CastExpr>(S))
+  if (const auto *CE = dyn_cast<CastExpr>(S))
     return translateCastExpr(CE, Ctx);
 
   return new (Arena) til::Undefined(S);
@@ -262,11 +268,11 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
 
 til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
                                                CallingContext *Ctx) {
-  const ValueDecl *VD = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
+  const auto *VD = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
 
   // Function parameters require substitution and/or renaming.
-  if (const ParmVarDecl *PV = dyn_cast_or_null<ParmVarDecl>(VD)) {
-    const FunctionDecl *FD =
+  if (const auto *PV = dyn_cast_or_null<ParmVarDecl>(VD)) {
+    const auto *FD =
         cast<FunctionDecl>(PV->getDeclContext())->getCanonicalDecl();
     unsigned I = PV->getFunctionScopeIndex();
 
@@ -294,13 +300,13 @@ til::SExpr *SExprBuilder::translateCXXThisExpr(const CXXThisExpr *TE,
 }
 
 static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
-  if (auto *V = dyn_cast<til::Variable>(E))
+  if (const auto *V = dyn_cast<til::Variable>(E))
     return V->clangDecl();
-  if (auto *Ph = dyn_cast<til::Phi>(E))
+  if (const auto *Ph = dyn_cast<til::Phi>(E))
     return Ph->clangDecl();
-  if (auto *P = dyn_cast<til::Project>(E))
+  if (const auto *P = dyn_cast<til::Project>(E))
     return P->clangDecl();
-  if (auto *L = dyn_cast<til::LiteralPtr>(E))
+  if (const auto *L = dyn_cast<til::LiteralPtr>(E))
     return L->clangDecl();
   return nullptr;
 }
@@ -309,7 +315,7 @@ static bool hasCppPointerType(const til::SExpr *E) {
   auto *VD = getValueDeclFromSExpr(E);
   if (VD && VD->getType()->isPointerType())
     return true;
-  if (auto *C = dyn_cast<til::Cast>(E))
+  if (const auto *C = dyn_cast<til::Cast>(E))
     return C->castOpcode() == til::CAST_objToPtr;
 
   return false;
@@ -333,9 +339,8 @@ til::SExpr *SExprBuilder::translateMemberExpr(const MemberExpr *ME,
   til::SExpr *BE = translate(ME->getBase(), Ctx);
   til::SExpr *E  = new (Arena) til::SApply(BE);
 
-  const ValueDecl *D =
-      cast<ValueDecl>(ME->getMemberDecl()->getCanonicalDecl());
-  if (auto *VD = dyn_cast<CXXMethodDecl>(D))
+  const auto *D = cast<ValueDecl>(ME->getMemberDecl()->getCanonicalDecl());
+  if (const auto *VD = dyn_cast<CXXMethodDecl>(D))
     D = getFirstVirtualDecl(VD);
 
   til::Project *P = new (Arena) til::Project(E, D);
@@ -356,7 +361,7 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
       LRCallCtx.SelfArg  = SelfE;
       LRCallCtx.NumArgs  = CE->getNumArgs();
       LRCallCtx.FunArgs  = CE->getArgs();
-      return const_cast<til::SExpr*>(
+      return const_cast<til::SExpr *>(
           translateAttrExpr(At->getArg(), &LRCallCtx).sexpr());
     }
   }
@@ -407,10 +412,10 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
   case UO_PreDec:
     return new (Arena) til::Undefined(UO);
 
-  case UO_AddrOf: {
+  case UO_AddrOf:
     if (CapabilityExprMode) {
       // interpret &Graph::mu_ as an existential.
-      if (DeclRefExpr* DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
         if (DRE->getDecl()->isCXXInstanceMember()) {
           // This is a pointer-to-member expression, e.g. &MyClass::mu_.
           // We interpret this syntax specially, as a wildcard.
@@ -421,7 +426,6 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
     }
     // otherwise, & is a no-op
     return translate(UO->getSubExpr(), Ctx);
-  }
 
   // We treat these as no-ops
   case UO_Deref:
@@ -470,7 +474,7 @@ til::SExpr *SExprBuilder::translateBinAssign(til::TIL_BinaryOpcode Op,
 
   const ValueDecl *VD = nullptr;
   til::SExpr *CV = nullptr;
-  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(LHS)) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
     VD = DRE->getDecl();
     CV = lookupVarDecl(VD);
   }
@@ -533,10 +537,10 @@ til::SExpr *SExprBuilder::translateBinaryOperator(const BinaryOperator *BO,
 
 til::SExpr *SExprBuilder::translateCastExpr(const CastExpr *CE,
                                             CallingContext *Ctx) {
-  clang::CastKind K = CE->getCastKind();
+  CastKind K = CE->getCastKind();
   switch (K) {
   case CK_LValueToRValue: {
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(CE->getSubExpr())) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(CE->getSubExpr())) {
       til::SExpr *E0 = lookupVarDecl(DRE->getDecl());
       if (E0)
         return E0;
@@ -584,16 +588,15 @@ SExprBuilder::translateAbstractConditionalOperator(
 til::SExpr *
 SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
   DeclGroupRef DGrp = S->getDeclGroup();
-  for (DeclGroupRef::iterator I = DGrp.begin(), E = DGrp.end(); I != E; ++I) {
-    if (VarDecl *VD = dyn_cast_or_null<VarDecl>(*I)) {
+  for (auto I : DGrp) {
+    if (auto *VD = dyn_cast_or_null<VarDecl>(I)) {
       Expr *E = VD->getInit();
       til::SExpr* SE = translate(E, Ctx);
 
       // Add local variables with trivial type to the variable map
       QualType T = VD->getType();
-      if (T.isTrivialType(VD->getASTContext())) {
+      if (T.isTrivialType(VD->getASTContext()))
         return addVarDecl(VD, SE);
-      }
       else {
         // TODO: add alloca
       }
@@ -632,7 +635,7 @@ til::SExpr *SExprBuilder::lookupVarDecl(const ValueDecl *VD) {
 static void maybeUpdateVD(til::SExpr *E, const ValueDecl *VD) {
   if (!E)
     return;
-  if (til::Variable *V = dyn_cast<til::Variable>(E)) {
+  if (auto *V = dyn_cast<til::Variable>(E)) {
     if (!V->clangDecl())
       V->setClangDecl(VD);
   }
@@ -672,7 +675,7 @@ void SExprBuilder::makePhiNodeVar(unsigned i, unsigned NPreds, til::SExpr *E) {
   if (CurrE->block() == CurrentBB) {
     // We already have a Phi node in the current block,
     // so just add the new variable to the Phi node.
-    til::Phi *Ph = dyn_cast<til::Phi>(CurrE);
+    auto *Ph = dyn_cast<til::Phi>(CurrE);
     assert(Ph && "Expecting Phi node.");
     if (E)
       Ph->values()[ArgIndex] = E;
@@ -690,9 +693,8 @@ void SExprBuilder::makePhiNodeVar(unsigned i, unsigned NPreds, til::SExpr *E) {
   Ph->setClangDecl(CurrentLVarMap[i].first);
   // If E is from a back-edge, or either E or CurrE are incomplete, then
   // mark this node as incomplete; we may need to remove it later.
-  if (!E || isIncompletePhi(E) || isIncompletePhi(CurrE)) {
+  if (!E || isIncompletePhi(E) || isIncompletePhi(CurrE))
     Ph->setStatus(til::Phi::PH_Incomplete);
-  }
 
   // Add Phi node to current block, and update CurrentLVarMap[i]
   CurrentArguments.push_back(Ph);
@@ -721,7 +723,7 @@ void SExprBuilder::mergeEntryMap(LVarDefinitionMap Map) {
   unsigned MSz = Map.size();
   unsigned Sz  = std::min(ESz, MSz);
 
-  for (unsigned i=0; i<Sz; ++i) {
+  for (unsigned i = 0; i < Sz; ++i) {
     if (CurrentLVarMap[i].first != Map[i].first) {
       // We've reached the end of variables in common.
       CurrentLVarMap.makeWritable();
@@ -758,9 +760,8 @@ void SExprBuilder::mergeEntryMapBackEdge() {
   unsigned Sz = CurrentLVarMap.size();
   unsigned NPreds = CurrentBB->numPredecessors();
 
-  for (unsigned i=0; i < Sz; ++i) {
+  for (unsigned i = 0; i < Sz; ++i)
     makePhiNodeVar(i, NPreds, nullptr);
-  }
 }
 
 // Update the phi nodes that were initially created for a back edge
@@ -772,7 +773,7 @@ void SExprBuilder::mergePhiNodesBackEdge(const CFGBlock *Blk) {
   assert(ArgIndex > 0 && ArgIndex < BB->numPredecessors());
 
   for (til::SExpr *PE : BB->arguments()) {
-    til::Phi *Ph = dyn_cast_or_null<til::Phi>(PE);
+    auto *Ph = dyn_cast_or_null<til::Phi>(PE);
     assert(Ph && "Expecting Phi Node.");
     assert(Ph->values()[ArgIndex] == nullptr && "Wrong index for back edge.");
 

@@ -438,30 +438,59 @@ SymbolFilePDB::ParseFunctionBlocks(const lldb_private::SymbolContext &sc) {
 
 size_t SymbolFilePDB::ParseTypes(const lldb_private::SymbolContext &sc) {
   lldbassert(sc.module_sp.get());
-  size_t num_added = 0;
-  auto results_up = m_session_up->getGlobalScope()->findAllChildren();
-  if (!results_up)
+  if (!sc.comp_unit)
     return 0;
-  while (auto symbol_up = results_up->getNext()) {
-    switch (symbol_up->getSymTag()) {
-    case PDB_SymType::Enum:
-    case PDB_SymType::UDT:
-    case PDB_SymType::Typedef:
-      break;
-    default:
-      continue;
+
+  size_t num_added = 0;
+  auto compiland = GetPDBCompilandByUID(sc.comp_unit->GetID());
+  if (!compiland)
+    return 0;
+
+  auto ParseTypesByTagFn = [&num_added, this](const PDBSymbol &raw_sym) {
+    std::unique_ptr<IPDBEnumSymbols> results;
+    PDB_SymType tags_to_search[] = { PDB_SymType::Enum, PDB_SymType::Typedef,
+        PDB_SymType::UDT };
+    for (auto tag : tags_to_search) {
+      results = raw_sym.findAllChildren(tag);
+      if (!results || results->getChildCount() == 0)
+        continue;
+      while (auto symbol = results->getNext()) {
+        switch (symbol->getSymTag()) {
+        case PDB_SymType::Enum:
+        case PDB_SymType::UDT:
+        case PDB_SymType::Typedef:
+          break;
+        default:
+          continue;
+        }
+
+        // This should cause the type to get cached and stored in the `m_types`
+        // lookup.
+        if (!ResolveTypeUID(symbol->getSymIndexId()))
+          continue;
+
+        ++num_added;
+      }
     }
+  };
 
-    auto type_uid = symbol_up->getSymIndexId();
-    if (m_types.find(type_uid) != m_types.end())
-      continue;
+  if (sc.function) {
+    auto pdb_func =
+        m_session_up->getConcreteSymbolById<PDBSymbolFunc>(sc.function->GetID());
+    if (!pdb_func)
+      return 0;
+    ParseTypesByTagFn(*pdb_func);
+  } else {
+    ParseTypesByTagFn(*compiland);
 
-    // This should cause the type to get cached and stored in the `m_types`
-    // lookup.
-    if (!ResolveTypeUID(symbol_up->getSymIndexId()))
-      continue;
-
-    ++num_added;
+    // Also parse global types particularly coming from this compiland.
+    // Unfortunately, PDB has no compiland information for each global type.
+    // We have to parse them all. But ensure we only do this once.
+    static bool parse_all_global_types = false;
+    if (!parse_all_global_types) {
+      ParseTypesByTagFn(*m_global_scope_up);
+      parse_all_global_types = true;
+    }
   }
   return num_added;
 }

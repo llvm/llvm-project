@@ -43,8 +43,8 @@ inline OneUse_match<SubPat> m_OneUse(const SubPat &SP) {
 }
 
 struct ConstantMatch {
-  uint64_t &CR;
-  ConstantMatch(uint64_t &C) : CR(C) {}
+  int64_t &CR;
+  ConstantMatch(int64_t &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, unsigned Reg) {
     if (auto MaybeCst = getConstantVRegVal(Reg, MRI)) {
       CR = *MaybeCst;
@@ -54,7 +54,7 @@ struct ConstantMatch {
   }
 };
 
-inline ConstantMatch m_ICst(uint64_t &Cst) { return ConstantMatch(Cst); }
+inline ConstantMatch m_ICst(int64_t &Cst) { return ConstantMatch(Cst); }
 
 // TODO: Rework this for different kinds of MachineOperand.
 // Currently assumes the Src for a match is a register.
