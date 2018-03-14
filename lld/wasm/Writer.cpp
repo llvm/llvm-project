@@ -117,6 +117,7 @@ private:
 
   uint64_t FileSize = 0;
   uint32_t NumMemoryPages = 0;
+  uint32_t MaxMemoryPages = 0;
 
   std::vector<const WasmSignature *> Types;
   DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
@@ -143,16 +144,6 @@ private:
 
 } // anonymous namespace
 
-static void debugPrint(const char *fmt, ...) {
-  if (!errorHandler().Verbose)
-    return;
-  fprintf(stderr, "lld: ");
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
-}
-
 void Writer::createImportSection() {
   uint32_t NumImports = ImportedSymbols.size();
   if (Config->ImportMemory)
@@ -173,6 +164,10 @@ void Writer::createImportSection() {
     Import.Kind = WASM_EXTERNAL_MEMORY;
     Import.Memory.Flags = 0;
     Import.Memory.Initial = NumMemoryPages;
+    if (MaxMemoryPages != 0) {
+      Import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
+      Import.Memory.Maximum = MaxMemoryPages;
+    }
     writeImport(OS, Import);
   }
 
@@ -219,9 +214,12 @@ void Writer::createMemorySection() {
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_MEMORY);
   raw_ostream &OS = Section->getStream();
 
+  bool HasMax = MaxMemoryPages != 0;
   writeUleb128(OS, 1, "memory count");
-  writeUleb128(OS, 0, "memory limits flags");
+  writeUleb128(OS, HasMax ? WASM_LIMITS_FLAG_HAS_MAX : 0, "memory limits flags");
   writeUleb128(OS, NumMemoryPages, "initial pages");
+  if (HasMax)
+    writeUleb128(OS, MaxMemoryPages, "max pages");
 }
 
 void Writer::createGlobalSection() {
@@ -568,7 +566,7 @@ void Writer::writeSections() {
 void Writer::layoutMemory() {
   uint32_t MemoryPtr = 0;
   MemoryPtr = Config->GlobalBase;
-  debugPrint("mem: global base = %d\n", Config->GlobalBase);
+  log("mem: global base = " + Twine(Config->GlobalBase));
 
   createOutputSegments();
 
@@ -580,8 +578,8 @@ void Writer::layoutMemory() {
   for (OutputSegment *Seg : Segments) {
     MemoryPtr = alignTo(MemoryPtr, Seg->Alignment);
     Seg->StartVA = MemoryPtr;
-    debugPrint("mem: %-15s offset=%-8d size=%-8d align=%d\n",
-               Seg->Name.str().c_str(), MemoryPtr, Seg->Size, Seg->Alignment);
+    log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", Seg->Name,
+                MemoryPtr, Seg->Size, Seg->Alignment));
     MemoryPtr += Seg->Size;
   }
 
@@ -589,29 +587,46 @@ void Writer::layoutMemory() {
   if (WasmSym::DataEnd)
     WasmSym::DataEnd->setVirtualAddress(MemoryPtr);
 
-  debugPrint("mem: static data = %d\n", MemoryPtr - Config->GlobalBase);
+  log("mem: static data = " + Twine(MemoryPtr - Config->GlobalBase));
 
   // Stack comes after static data and bss
   if (!Config->Relocatable) {
     MemoryPtr = alignTo(MemoryPtr, kStackAlignment);
     if (Config->ZStackSize != alignTo(Config->ZStackSize, kStackAlignment))
       error("stack size must be " + Twine(kStackAlignment) + "-byte aligned");
-    debugPrint("mem: stack size  = %d\n", Config->ZStackSize);
-    debugPrint("mem: stack base  = %d\n", MemoryPtr);
+    log("mem: stack size  = " + Twine(Config->ZStackSize));
+    log("mem: stack base  = " + Twine(MemoryPtr));
     MemoryPtr += Config->ZStackSize;
     WasmSym::StackPointer->Global->Global.InitExpr.Value.Int32 = MemoryPtr;
-    debugPrint("mem: stack top   = %d\n", MemoryPtr);
+    log("mem: stack top   = " + Twine(MemoryPtr));
 
     // Set `__heap_base` to directly follow the end of the stack.  We don't
     // allocate any heap memory up front, but instead really on the malloc/brk
     // implementation growing the memory at runtime.
     WasmSym::HeapBase->setVirtualAddress(MemoryPtr);
-    debugPrint("mem: heap base   = %d\n", MemoryPtr);
+    log("mem: heap base   = " + Twine(MemoryPtr));
   }
 
+  if (Config->InitialMemory != 0) {
+    if (Config->InitialMemory != alignTo(Config->InitialMemory, WasmPageSize))
+      error("initial memory must be " + Twine(WasmPageSize) + "-byte aligned");
+    if (MemoryPtr > Config->InitialMemory)
+      error("initial memory too small, " + Twine(MemoryPtr) + " bytes needed");
+    else
+      MemoryPtr = Config->InitialMemory;
+  }
   uint32_t MemSize = alignTo(MemoryPtr, WasmPageSize);
   NumMemoryPages = MemSize / WasmPageSize;
-  debugPrint("mem: total pages = %d\n", NumMemoryPages);
+  log("mem: total pages = " + Twine(NumMemoryPages));
+
+  if (Config->MaxMemory != 0) {
+    if (Config->MaxMemory != alignTo(Config->MaxMemory, WasmPageSize))
+      error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
+    if (MemoryPtr > Config->MaxMemory)
+      error("maximum memory too small, " + Twine(MemoryPtr) + " bytes needed");
+    MaxMemoryPages = Config->MaxMemory / WasmPageSize;
+    log("mem: max pages   = " + Twine(MaxMemoryPages));
+  }
 }
 
 SyntheticSection *Writer::createSyntheticSection(uint32_t Type,
