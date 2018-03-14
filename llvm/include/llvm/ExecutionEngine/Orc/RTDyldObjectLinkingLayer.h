@@ -133,7 +133,12 @@ private:
       std::unique_ptr<RuntimeDyld::LoadedObjectInfo> Info =
           PFC->RTDyld->loadObject(*PFC->Obj.getBinary());
 
-      updateSymbolTable(*PFC->RTDyld);
+      // Copy the symbol table out of the RuntimeDyld instance.
+      {
+        auto SymTab = PFC->RTDyld->getSymbolTable();
+        for (auto &KV : SymTab)
+          SymbolTable[KV.first] = KV.second;
+      }
 
       if (PFC->Parent.NotifyLoaded)
         PFC->Parent.NotifyLoaded(PFC->K, *PFC->Obj.getBinary(), *Info);
@@ -185,11 +190,6 @@ private:
         SymbolTable.insert(
           std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
       }
-    }
-
-    void updateSymbolTable(const RuntimeDyld &RTDyld) {
-      for (auto &SymEntry : SymbolTable)
-        SymEntry.second = RTDyld.getSymbol(SymEntry.first());
     }
 
     // Contains the information needed prior to finalization: the object files,

@@ -347,38 +347,13 @@ getRThroughputFromItineraries(unsigned schedClass,
   return Throughput;
 }
 
-static Optional<double>
-getRThroughputFromInstrSchedModel(const MCSchedClassDesc *SCDesc,
-                                  const TargetSubtargetInfo *STI,
-                                  const MCSchedModel &SchedModel) {
-  Optional<double> Throughput;
-
-  for (const MCWriteProcResEntry *WPR = STI->getWriteProcResBegin(SCDesc),
-                                 *WEnd = STI->getWriteProcResEnd(SCDesc);
-       WPR != WEnd; ++WPR) {
-    if (WPR->Cycles) {
-      unsigned NumUnits =
-          SchedModel.getProcResource(WPR->ProcResourceIdx)->NumUnits;
-      double Temp = NumUnits * 1.0 / WPR->Cycles;
-      Throughput = Throughput.hasValue()
-                       ? std::min(Throughput.getValue(), Temp)
-                       : Temp;
-    }
-  }
-  if (Throughput.hasValue())
-    // We need reciprocal throughput that's why we return such value.
-    return 1 / Throughput.getValue();
-  return Throughput;
-}
-
 Optional<double>
 TargetSchedModel::computeInstrRThroughput(const MachineInstr *MI) const {
   if (hasInstrItineraries())
     return getRThroughputFromItineraries(MI->getDesc().getSchedClass(),
                                          getInstrItineraries());
   if (hasInstrSchedModel())
-    return getRThroughputFromInstrSchedModel(resolveSchedClass(MI), STI,
-                                             SchedModel);
+    return MCSchedModel::getReciprocalThroughput(*STI, *resolveSchedClass(MI));
   return Optional<double>();
 }
 
@@ -388,9 +363,9 @@ TargetSchedModel::computeInstrRThroughput(unsigned Opcode) const {
   if (hasInstrItineraries())
     return getRThroughputFromItineraries(SchedClass, getInstrItineraries());
   if (hasInstrSchedModel()) {
-    const MCSchedClassDesc *SCDesc = SchedModel.getSchedClassDesc(SchedClass);
-    if (SCDesc->isValid() && !SCDesc->isVariant())
-      return getRThroughputFromInstrSchedModel(SCDesc, STI, SchedModel);
+    const MCSchedClassDesc &SCDesc = *SchedModel.getSchedClassDesc(SchedClass);
+    if (SCDesc.isValid() && !SCDesc.isVariant())
+      return MCSchedModel::getReciprocalThroughput(*STI, SCDesc);
   }
   return Optional<double>();
 }

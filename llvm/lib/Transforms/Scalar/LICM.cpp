@@ -1199,7 +1199,7 @@ bool llvm::promoteLoopAccessesToScalars(
   Value *SomePtr = *PointerMustAliases.begin();
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
 
-  // It isn't safe to promote a load/store from the loop if the load/store is
+  // It is not safe to promote a load/store from the loop if the load/store is
   // conditional.  For example, turning:
   //
   //    for () { if (c) *P += 1; }

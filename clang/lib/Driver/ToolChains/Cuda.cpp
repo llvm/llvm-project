@@ -21,6 +21,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include <system_error>
 
@@ -579,6 +580,44 @@ void CudaToolChain::addClangTargetOptions(
     // came with CUDA-7.0.
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+ptx42");
+  }
+
+  if (DeviceOffloadingKind == Action::OFK_OpenMP) {
+    SmallVector<StringRef, 8> LibraryPaths;
+    // Add path to lib and/or lib64 folders.
+    SmallString<256> DefaultLibPath =
+      llvm::sys::path::parent_path(getDriver().Dir);
+    llvm::sys::path::append(DefaultLibPath,
+        Twine("lib") + CLANG_LIBDIR_SUFFIX);
+    LibraryPaths.emplace_back(DefaultLibPath.c_str());
+
+    // Add user defined library paths from LIBRARY_PATH.
+    llvm::Optional<std::string> LibPath =
+        llvm::sys::Process::GetEnv("LIBRARY_PATH");
+    if (LibPath) {
+      SmallVector<StringRef, 8> Frags;
+      const char EnvPathSeparatorStr[] = {llvm::sys::EnvPathSeparator, '\0'};
+      llvm::SplitString(*LibPath, Frags, EnvPathSeparatorStr);
+      for (StringRef Path : Frags)
+        LibraryPaths.emplace_back(Path.trim());
+    }
+
+    std::string LibOmpTargetName =
+      "libomptarget-nvptx-" + GpuArch.str() + ".bc";
+    bool FoundBCLibrary = false;
+    for (StringRef LibraryPath : LibraryPaths) {
+      SmallString<128> LibOmpTargetFile(LibraryPath);
+      llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
+      if (llvm::sys::fs::exists(LibOmpTargetFile)) {
+        CC1Args.push_back("-mlink-cuda-bitcode");
+        CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
+        FoundBCLibrary = true;
+        break;
+      }
+    }
+    if (!FoundBCLibrary)
+      getDriver().Diag(diag::warn_drv_omp_offload_target_missingbcruntime)
+          << LibOmpTargetName;
   }
 }
 

@@ -85,6 +85,8 @@ public:
 
   std::unique_ptr<IPDBEnumTables> getEnumTables() const override;
 
+  std::unique_ptr<IPDBEnumInjectedSources> getInjectedSources() const override;
+
   PDBFile &getPDBFile() { return *Pdb; }
   const PDBFile &getPDBFile() const { return *Pdb; }
 

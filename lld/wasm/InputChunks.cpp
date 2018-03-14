@@ -55,7 +55,8 @@ void InputChunk::writeTo(uint8_t *Buf) const {
   if (Relocations.empty())
     return;
 
-  DEBUG(dbgs() << "applying relocations: count=" << Relocations.size() << "\n");
+  DEBUG(dbgs() << "applying relocations: " << getName()
+               << " count=" << Relocations.size() << "\n");
   int32_t Off = OutputOffset - getInputSectionOffset();
 
   for (const WasmRelocation &Rel : Relocations) {

@@ -249,3 +249,8 @@ std::unique_ptr<IPDBEnumDataStreams> NativeSession::getDebugStreams() const {
 std::unique_ptr<IPDBEnumTables> NativeSession::getEnumTables() const {
   return nullptr;
 }
+
+std::unique_ptr<IPDBEnumInjectedSources>
+NativeSession::getInjectedSources() const {
+  return nullptr;
+}

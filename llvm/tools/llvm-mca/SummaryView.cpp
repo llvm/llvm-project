@@ -21,6 +21,8 @@ namespace mca {
 using namespace llvm;
 
 void SummaryView::printSummary(raw_ostream &OS) const {
+  unsigned Iterations = Source.getNumIterations();
+  unsigned Instructions = Source.size();
   unsigned TotalInstructions = Instructions * Iterations;
   double IPC = (double)TotalInstructions / TotalCycles;
 
@@ -38,6 +40,8 @@ void SummaryView::printSummary(raw_ostream &OS) const {
 void SummaryView::printInstructionInfo(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
+  const MCSchedModel &SM = STI.getSchedModel();
+  unsigned Instructions = Source.size();
 
   TempStream << "\n\nInstruction Info:\n";
   TempStream << "[1]: #uOps\n[2]: Latency\n[3]: RThroughput\n"
@@ -45,34 +49,41 @@ void SummaryView::printInstructionInfo(raw_ostream &OS) const {
 
   TempStream << "[1]    [2]    [3]    [4]    [5]    [6]\tInstructions:\n";
   for (unsigned I = 0, E = Instructions; I < E; ++I) {
-    const MCInst &Inst = B.getMCInstFromIndex(I);
-    const InstrDesc &ID = B.getInstrDesc(Inst);
-    unsigned NumMicroOpcodes = ID.NumMicroOps;
-    unsigned Latency = ID.MaxLatency;
-    double RThroughput = B.getRThroughput(ID);
+    const MCInst &Inst = Source.getMCInstFromIndex(I);
+    const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
+    const MCSchedClassDesc &SCDesc =
+        *SM.getSchedClassDesc(MCDesc.getSchedClass());
+
+    unsigned NumMicroOpcodes = SCDesc.NumMicroOps;
+    unsigned Latency = MCSchedModel::computeInstrLatency(STI, SCDesc);
+    Optional<double> RThroughput =
+        MCSchedModel::getReciprocalThroughput(STI, SCDesc);
+
     TempStream << ' ' << NumMicroOpcodes << "    ";
     if (NumMicroOpcodes < 10)
       TempStream << "  ";
     else if (NumMicroOpcodes < 100)
       TempStream << ' ';
     TempStream << Latency << "   ";
-    if (Latency < 10.0)
+    if (Latency < 10)
       TempStream << "  ";
-    else if (Latency < 100.0)
+    else if (Latency < 100)
       TempStream << ' ';
-    if (RThroughput) {
-      TempStream << format("%.2f", RThroughput) << ' ';
-      if (RThroughput < 10.0)
+
+    if (RThroughput.hasValue()) {
+      double RT = RThroughput.getValue();
+      TempStream << format("%.2f", RT) << ' ';
+      if (RT < 10.0)
         TempStream << "  ";
-      else if (RThroughput < 100.0)
+      else if (RT < 100.0)
         TempStream << ' ';
     } else {
       TempStream << " -     ";
     }
-    TempStream << (ID.MayLoad ? " *     " : "       ");
-    TempStream << (ID.MayStore ? " *     " : "       ");
-    TempStream << (ID.HasSideEffects ? " * " : "   ");
-    MCIP.printInst(&Inst, TempStream, "", B.getSTI());
+    TempStream << (MCDesc.mayLoad() ? " *     " : "       ");
+    TempStream << (MCDesc.mayStore() ? " *     " : "       ");
+    TempStream << (MCDesc.hasUnmodeledSideEffects() ? " * " : "   ");
+    MCIP.printInst(&Inst, TempStream, "", STI);
     TempStream << '\n';
   }
 

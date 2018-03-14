@@ -49,3 +49,27 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
   }
   return Latency;
 }
+
+
+Optional<double>
+MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
+                                      const MCSchedClassDesc &SCDesc) {
+  Optional<double> Throughput;
+  const MCSchedModel &SchedModel = STI.getSchedModel();
+
+  for (const MCWriteProcResEntry *WPR = STI.getWriteProcResBegin(&SCDesc),
+                                 *WEnd = STI.getWriteProcResEnd(&SCDesc);
+       WPR != WEnd; ++WPR) {
+    if (WPR->Cycles) {
+      unsigned NumUnits =
+          SchedModel.getProcResource(WPR->ProcResourceIdx)->NumUnits;
+      double Temp = NumUnits * 1.0 / WPR->Cycles;
+      Throughput =
+          Throughput.hasValue() ? std::min(Throughput.getValue(), Temp) : Temp;
+    }
+  }
+
+  if (Throughput.hasValue())
+    return 1 / Throughput.getValue();
+  return Throughput;
+}

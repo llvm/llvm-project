@@ -1,4 +1,11 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-llvm -o - -DUSESTRUCT -I %S/Inputs %s | FileCheck %s
+
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-pch -I %S/Inputs -o %t %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -include-pch %t -emit-llvm -o - -DUSESTRUCT -I %S/Inputs %s | FileCheck %s
+
+#ifndef HEADER
+#define HEADER
+#include "strong_in_union.h"
 
 typedef void (^BlockTy)(void);
 
@@ -62,6 +69,10 @@ typedef struct {
   volatile int i5 : 2;
   volatile char i6;
 } Bitfield1;
+
+#endif
+
+#ifdef USESTRUCT
 
 StrongSmall getStrongSmall(void);
 StrongOuter getStrongOuter(void);
@@ -520,3 +531,13 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 void test_copy_constructor_Bitfield1(Bitfield1 *a) {
   Bitfield1 t = *a;
 }
+
+// CHECK: define void @test_strong_in_union()
+// CHECK: alloca %{{.*}}
+// CHECK-NEXT: ret void
+
+void test_strong_in_union() {
+  U t;
+}
+
+#endif /* USESTRUCT */

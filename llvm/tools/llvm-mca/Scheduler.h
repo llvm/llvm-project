@@ -396,7 +396,6 @@ public:
   bool mustIssueImmediately(const InstrDesc &Desc);
 
   bool canBeIssued(const InstrDesc &Desc) const;
-  double getRThroughput(const InstrDesc &Desc) const;
 
   void issueInstruction(
       unsigned Index, const InstrDesc &Desc,
@@ -531,10 +530,6 @@ public:
 
   Event canBeDispatched(const InstrDesc &Desc) const;
   Instruction *scheduleInstruction(unsigned Idx, Instruction *MCIS);
-
-  double getRThroughput(const InstrDesc &Desc) const {
-    return Resources->getRThroughput(Desc);
-  }
 
   void cycleEvent(unsigned Cycle);
 

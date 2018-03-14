@@ -217,41 +217,17 @@ a:
         syscall                  # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
         syscall   256            # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         teq     $0,$3            # CHECK: teq $zero, $3          # encoding: [0x00,0x03,0x00,0x34]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TEQ
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TEQ_MM
         teq     $5,$7,620        # CHECK: teq $5, $7, 620        # encoding: [0x00,0xa7,0x9b,0x34]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TEQ
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TEQ_MM
         tge     $7,$10           # CHECK: tge $7, $10            # encoding: [0x00,0xea,0x00,0x30]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TGE
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TGE_MM
         tge     $5,$19,340       # CHECK: tge $5, $19, 340       # encoding: [0x00,0xb3,0x55,0x30]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TGE
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TGE_MM
         tgeu    $22,$28          # CHECK: tgeu $22, $gp          # encoding: [0x02,0xdc,0x00,0x31]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TGEU
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TGEU_MM
         tgeu    $20,$14,379      # CHECK: tgeu $20, $14, 379     # encoding: [0x02,0x8e,0x5e,0xf1]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TGEU
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TGEU_MM
         tlt     $15,$13          # CHECK: tlt $15, $13           # encoding: [0x01,0xed,0x00,0x32]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLT
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLT_MM
         tlt     $2,$19,133       # CHECK: tlt $2, $19, 133       # encoding: [0x00,0x53,0x21,0x72]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLT
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLT_MM
         tltu    $11,$16          # CHECK: tltu $11, $16          # encoding: [0x01,0x70,0x00,0x33]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLTU
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLTU_MM
         tltu    $16,$29,1016     # CHECK: tltu $16, $sp, 1016    # encoding: [0x02,0x1d,0xfe,0x33]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLTU
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLTU_MM
         tne     $6,$17           # CHECK: tne $6, $17            # encoding: [0x00,0xd1,0x00,0x36]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TNE
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TNE_MM
         tne     $7,$8,885        # CHECK: tne $7, $8, 885        # encoding: [0x00,0xe8,0xdd,0x76]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TNE
-                                 # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TNE_MM
         xor     $2, 4            # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
 
 1:

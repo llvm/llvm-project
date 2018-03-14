@@ -314,6 +314,8 @@ private:
 /// @brief An ExecutionSession represents a running JIT program.
 class ExecutionSession {
 public:
+  using ErrorReporter = std::function<void(Error)>;
+
   /// @brief Construct an ExecutionEngine.
   ///
   /// SymbolStringPools may be shared between ExecutionSessions.
@@ -321,6 +323,16 @@ public:
 
   /// @brief Returns the SymbolStringPool for this ExecutionSession.
   SymbolStringPool &getSymbolStringPool() const { return SSP; }
+
+  /// @brief Set the error reporter function.
+  void setErrorReporter(ErrorReporter ReportError) {
+    this->ReportError = std::move(ReportError);
+  }
+
+  /// @brief Report a error for this execution session.
+  ///
+  /// Unhandled errors can be sent here to log them.
+  void reportError(Error Err) { ReportError(std::move(Err)); }
 
   /// @brief Allocate a module key for a new module to add to the JIT.
   VModuleKey allocateVModule();
@@ -331,9 +343,43 @@ public:
   void releaseVModule(VModuleKey Key);
 
 public:
+  static void logErrorsToStdErr(Error Err);
+
   SymbolStringPool &SSP;
   VModuleKey LastKey = 0;
+  ErrorReporter ReportError = logErrorsToStdErr;
 };
+
+/// Runs SymbolSource materializations on the current thread and reports errors
+/// to the given ExecutionSession.
+class MaterializeOnCurrentThread {
+public:
+  MaterializeOnCurrentThread(ExecutionSession &ES) : ES(ES) {}
+
+  void operator()(VSO &V, std::shared_ptr<SymbolSource> Source,
+                  SymbolNameSet Names) {
+    if (auto Err = Source->materialize(V, std::move(Names)))
+      ES.reportError(std::move(Err));
+  }
+
+private:
+  ExecutionSession &ES;
+};
+
+/// Materialization function object wrapper for the lookup method.
+using MaterializationDispatcher = std::function<void(
+    VSO &V, std::shared_ptr<SymbolSource> S, SymbolNameSet Names)>;
+
+/// @brief Look up a set of symbols by searching a list of VSOs.
+///
+/// All VSOs in the list should be non-null.
+Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
+                           MaterializationDispatcher DispatchMaterialization);
+
+/// @brief Look up a symbol by searching a list of VSOs.
+Expected<JITEvaluatedSymbol>
+lookup(const std::vector<VSO *> VSOs, SymbolStringPtr Name,
+       MaterializationDispatcher DispatchMaterialization);
 
 } // End namespace orc
 } // End namespace llvm

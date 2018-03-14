@@ -131,3 +131,33 @@ define <4 x i32> @combine_vec_srem_by_pos1(<4 x i32> %x) {
   %2 = srem <4 x i32> %1, <i32 1, i32 4, i32 8, i32 16>
   ret <4 x i32> %2
 }
+
+; OSS-Fuzz #6883
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6883
+define i32 @ossfuzz6883() {
+; CHECK-LABEL: ossfuzz6883:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rax), %ecx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %ecx
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    movl $1, %edi
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %edi
+; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    divl %edi
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
+  %B17 = or i32 0, 2147483647
+  %L6 = load i32, i32* undef
+  %B11 = sdiv i32 %L6, %L6
+  %B13 = udiv i32 %B17, %B17
+  %B14 = srem i32 %B11, %B13
+  %B16 = srem i32 %L6, %L6
+  %B10 = udiv i32 %L6, %B14
+  %B6 = and i32 %B16, %B10
+  ret i32 %B6
+}

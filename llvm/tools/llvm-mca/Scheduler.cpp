@@ -185,26 +185,6 @@ bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) {
                      });
 }
 
-double ResourceManager::getRThroughput(const InstrDesc &ID) const {
-  double RThroughput = 0;
-  for (const std::pair<uint64_t, ResourceUsage> &Usage : ID.Resources) {
-    const CycleSegment &CS = Usage.second.CS;
-    assert(CS.begin() == 0);
-
-    if (Usage.second.isReserved()) {
-      RThroughput = std::max(RThroughput, (double)CS.size());
-      continue;
-    }
-
-    unsigned Population = std::max(1U, countPopulation(Usage.first) - 1);
-    unsigned NumUnits = Population * getNumUnits(Usage.first);
-    NumUnits -= Usage.second.NumUnits - 1;
-    unsigned Cycles = CS.size();
-    RThroughput = std::max(RThroughput, (double)Cycles / NumUnits);
-  }
-  return RThroughput;
-}
-
 void ResourceManager::issueInstruction(
     unsigned Index, const InstrDesc &Desc,
     SmallVectorImpl<std::pair<ResourceRef, unsigned>> &Pipes) {

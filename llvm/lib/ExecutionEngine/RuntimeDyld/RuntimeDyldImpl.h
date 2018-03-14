@@ -519,6 +519,21 @@ public:
     return JITEvaluatedSymbol(TargetAddr, SymEntry.getFlags());
   }
 
+  std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const {
+    std::map<StringRef, JITEvaluatedSymbol> Result;
+
+    for (auto &KV : GlobalSymbolTable) {
+      auto SectionID = KV.second.getSectionID();
+      uint64_t SectionAddr = 0;
+      if (SectionID != AbsoluteSymbolSection)
+        SectionAddr = getSectionLoadAddress(SectionID);
+      Result[KV.first()] =
+        JITEvaluatedSymbol(SectionAddr + KV.second.getOffset(), KV.second.getFlags());
+    }
+
+    return Result;
+  }
+
   void resolveRelocations();
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);

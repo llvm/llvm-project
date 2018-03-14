@@ -268,29 +268,17 @@
   sll16 $3, $6, 8          # CHECK: sll16 $3, $6, 8     # encoding: [0x25,0xe0]
   srl16 $3, $6, 8          # CHECK: srl16 $3, $6, 8     # encoding: [0x25,0xe1]
   teq $8, $9               # CHECK: teq $8, $9          # encoding: [0x01,0x28,0x00,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TEQ_MM 
   teq $5, $7, 15           # CHECK: teq $5, $7, 15      # encoding: [0x00,0xe5,0xf0,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TEQ_MM 
   tge $7, $10              # CHECK: tge $7, $10         # encoding: [0x01,0x47,0x02,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGE_MM 
   tge $7, $19, 15          # CHECK: tge $7, $19, 15     # encoding: [0x02,0x67,0xf2,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGE_MM 
   tgeu $22, $gp            # CHECK: tgeu $22, $gp       # encoding: [0x03,0x96,0x04,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGEU_MM 
   tgeu $20, $14, 15        # CHECK: tgeu $20, $14, 15   # encoding: [0x01,0xd4,0xf4,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TGEU_MM 
   tlt $15, $13             # CHECK: tlt $15, $13        # encoding: [0x01,0xaf,0x08,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLT_MM 
   tlt $2, $19, 15          # CHECK: tlt $2, $19, 15     # encoding: [0x02,0x62,0xf8,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLT_MM 
   tltu $11, $16            # CHECK: tltu $11, $16       # encoding: [0x02,0x0b,0x0a,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLTU_MM 
   tltu $16, $sp, 15        # CHECK: tltu $16, $sp, 15   # encoding: [0x03,0xb0,0xfa,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TLTU_MM 
   tne $6, $17              # CHECK: tne $6, $17         # encoding: [0x02,0x26,0x0c,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TNE_MM 
   tne $7, $8, 15           # CHECK: tne $7, $8, 15      # encoding: [0x01,0x07,0xfc,0x3c]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} TNE_MM 
   break16 8                # CHECK: break16 8           # encoding: [0x46,0x1b]
   li16 $3, -1              # CHECK: li16 $3, -1         # encoding: [0xed,0xff]
   move16 $3, $5            # CHECK: move16 $3, $5       # encoding: [0x0c,0x65]

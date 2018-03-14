@@ -70,7 +70,7 @@ void DWARFDebugLine::Prologue::clear() {
   SegSelectorSize = 0;
   MinInstLength = MaxOpsPerInst = DefaultIsStmt = LineBase = LineRange = 0;
   OpcodeBase = 0;
-  FormParams = DWARFFormParams({0, 0, DWARF32});
+  FormParams = dwarf::FormParams({0, 0, DWARF32});
   ContentTypes = ContentTypeTracker();
   StandardOpcodeLengths.clear();
   IncludeDirectories.clear();
@@ -194,8 +194,8 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t
 static bool
 parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
                      uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
-                     const DWARFFormParams &FormParams, const DWARFContext
-                     &Ctx, const DWARFUnit *U,
+                     const dwarf::FormParams &FormParams,
+                     const DWARFContext &Ctx, const DWARFUnit *U,
                      DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
@@ -956,6 +956,14 @@ Optional<StringRef> DWARFDebugLine::LineTable::getSourceByIndex(uint64_t FileInd
   return None;
 }
 
+static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
+  // Debug info can contain paths from any OS, not necessarily
+  // an OS we're currently running on. Moreover different compilation units can
+  // be compiled on different operating systems and linked together later.
+  return sys::path::is_absolute(Path, sys::path::Style::posix) ||
+         sys::path::is_absolute(Path, sys::path::Style::windows);
+}
+
 bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
                                                    const char *CompDir,
                                                    FileLineInfoKind Kind,
@@ -965,7 +973,7 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   const FileNameEntry &Entry = Prologue.FileNames[FileIndex - 1];
   StringRef FileName = Entry.Name.getAsCString().getValue();
   if (Kind != FileLineInfoKind::AbsoluteFilePath ||
-      sys::path::is_absolute(FileName)) {
+      isPathAbsoluteOnWindowsOrPosix(FileName)) {
     Result = FileName;
     return true;
   }
@@ -984,7 +992,7 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   // We know that FileName is not absolute, the only way to have an
   // absolute path at this point would be if IncludeDir is absolute.
   if (CompDir && Kind == FileLineInfoKind::AbsoluteFilePath &&
-      sys::path::is_relative(IncludeDir))
+      !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
     sys::path::append(FilePath, CompDir);
 
   // sys::path::append skips empty strings.

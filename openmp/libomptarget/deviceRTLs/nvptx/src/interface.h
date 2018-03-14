@@ -483,11 +483,20 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
                                           int32_t *LaneId, int32_t *NumLanes);
 EXTERN void __kmpc_kernel_end_convergent_simd(void *buffer);
 
+
+EXTERN void __kmpc_data_sharing_init_stack();
+EXTERN void *__kmpc_data_sharing_push_stack(size_t size, int16_t UseSharedMemory);
+EXTERN void __kmpc_data_sharing_pop_stack(void *a);
+EXTERN void __kmpc_begin_sharing_variables(void ***GlobalArgs, size_t nArgs);
+EXTERN void __kmpc_end_sharing_variables();
+EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs);
+
 // The slot used for data sharing by the master and worker threads. We use a
 // complete (default size version and an incomplete one so that we allow sizes
 // greater than the default).
 struct __kmpc_data_sharing_slot {
   __kmpc_data_sharing_slot *Next;
+  __kmpc_data_sharing_slot *Prev;
   void *DataEnd;
   char Data[];
 };

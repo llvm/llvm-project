@@ -142,3 +142,26 @@
 // RUN:   | FileCheck -check-prefix=CHK-NOLIBDEVICE %s
 
 // CHK-NOLIBDEVICE-NOT: error:{{.*}}sm_60
+
+/// ###########################################################################
+
+/// Check that the runtime bitcode library is part of the compile line. Create a bogus
+/// bitcode library and add it to the LIBRARY_PATH.
+// RUN:   env LIBRARY_PATH=%S/Inputs/libomptarget %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   -Xopenmp-target -march=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
+// RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
+
+// CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-cuda-bitcode{{.*}}libomptarget-nvptx-sm_20.bc
+// CHK-BCLIB-NOT: {{error:|warning:}}
+
+/// ###########################################################################
+
+/// Check that the warning is thrown when the libomptarget bitcode library is not found.
+/// Libomptarget requires sm_35 or newer so an sm_20 bitcode library should never exist.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   -Xopenmp-target -march=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
+// RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-BCLIB-WARN %s
+
+// CHK-BCLIB-WARN: No library 'libomptarget-nvptx-sm_20.bc' found in the default clang lib directory or in LIBRARY_PATH. Expect degraded performance due to no inlining of runtime functions on target devices.

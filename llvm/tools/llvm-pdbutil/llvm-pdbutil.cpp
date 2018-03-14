@@ -45,6 +45,7 @@
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/IPDBInjectedSource.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
@@ -146,6 +147,14 @@ namespace pretty {
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input PDB files>"),
                                      cl::OneOrMore, cl::sub(PrettySubcommand));
+
+cl::opt<bool> InjectedSources("injected-sources",
+                              cl::desc("Display injected sources"),
+                              cl::cat(OtherOptions), cl::sub(PrettySubcommand));
+cl::opt<bool> ShowInjectedSourceContent(
+    "injected-source-content",
+    cl::desc("When displaying an injected source, display the file content"),
+    cl::cat(OtherOptions), cl::sub(PrettySubcommand));
 
 cl::opt<bool> Compilands("compilands", cl::desc("Display compilands"),
                          cl::cat(TypeCategory), cl::sub(PrettySubcommand));
@@ -840,6 +849,62 @@ bool opts::pretty::compareDataSymbols(
   return getTypeLength(*F1) > getTypeLength(*F2);
 }
 
+static std::string stringOr(std::string Str, std::string IfEmpty) {
+  return (Str.empty()) ? IfEmpty : Str;
+}
+
+static void dumpInjectedSources(LinePrinter &Printer, IPDBSession &Session) {
+  auto Sources = Session.getInjectedSources();
+  if (0 == Sources->getChildCount()) {
+    Printer.printLine("There are no injected sources.");
+    return;
+  }
+
+  while (auto IS = Sources->getNext()) {
+    Printer.NewLine();
+    std::string File = stringOr(IS->getFileName(), "<null>");
+    uint64_t Size = IS->getCodeByteSize();
+    std::string Obj = stringOr(IS->getObjectFileName(), "<null>");
+    std::string VFName = stringOr(IS->getVirtualFileName(), "<null>");
+    uint32_t CRC = IS->getCrc32();
+
+    std::string CompressionStr;
+    llvm::raw_string_ostream Stream(CompressionStr);
+    Stream << IS->getCompression();
+    WithColor(Printer, PDB_ColorItem::Path).get() << File;
+    Printer << " (";
+    WithColor(Printer, PDB_ColorItem::LiteralValue).get() << Size;
+    Printer << " bytes): ";
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "obj";
+    Printer << "=";
+    WithColor(Printer, PDB_ColorItem::Path).get() << Obj;
+    Printer << ", ";
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "vname";
+    Printer << "=";
+    WithColor(Printer, PDB_ColorItem::Path).get() << VFName;
+    Printer << ", ";
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "crc";
+    Printer << "=";
+    WithColor(Printer, PDB_ColorItem::LiteralValue).get() << CRC;
+    Printer << ", ";
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "compression";
+    Printer << "=";
+    WithColor(Printer, PDB_ColorItem::LiteralValue).get() << Stream.str();
+
+    if (!opts::pretty::ShowInjectedSourceContent)
+      continue;
+
+    // Set the indent level to 0 when printing file content.
+    int Indent = Printer.getIndentLevel();
+    Printer.Unindent(Indent);
+
+    Printer.printLine(IS->getCode());
+
+    // Re-indent back to the original level.
+    Printer.Indent(Indent);
+  }
+}
+
 static void dumpPretty(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
 
@@ -989,6 +1054,19 @@ static void dumpPretty(StringRef Path) {
   if (opts::pretty::Lines) {
     Printer.NewLine();
   }
+  if (opts::pretty::InjectedSources) {
+    Printer.NewLine();
+    WithColor(Printer, PDB_ColorItem::SectionHeader).get()
+        << "---INJECTED SOURCES---";
+    AutoIndent Indent1(Printer);
+
+    if (ReaderType == PDB_ReaderType::Native)
+      Printer.printLine(
+          "Injected sources are not supported with the native reader.");
+    else
+      dumpInjectedSources(Printer, *Session);
+  }
+
   outs().flush();
 }
 

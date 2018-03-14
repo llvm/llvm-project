@@ -689,6 +689,9 @@ public:
     return true;
   }
 
+  void lookup(const LookupRequest &,
+              llvm::function_ref<void(const Symbol &)>) const override {}
+
   const std::vector<FuzzyFindRequest> allRequests() const { return Requests; }
 
 private:

@@ -271,7 +271,7 @@ void SBPlatform::DisconnectRemote() {
 bool SBPlatform::IsConnected() {
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    platform_sp->IsConnected();
+    return platform_sp->IsConnected();
   return false;
 }
 

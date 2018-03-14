@@ -15442,15 +15442,15 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       }
     }
 
-    if (Record && !getLangOpts().CPlusPlus) {
+    if (Record && !getLangOpts().CPlusPlus && !FD->hasAttr<UnavailableAttr>()) {
       QualType FT = FD->getType();
       if (FT.isNonTrivialToPrimitiveDefaultInitialize())
-        Record->setNonTrivialToPrimitiveDefaultInitialize();
+        Record->setNonTrivialToPrimitiveDefaultInitialize(true);
       QualType::PrimitiveCopyKind PCK = FT.isNonTrivialToPrimitiveCopy();
       if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
-        Record->setNonTrivialToPrimitiveCopy();
+        Record->setNonTrivialToPrimitiveCopy(true);
       if (FT.isDestructedType())
-        Record->setNonTrivialToPrimitiveDestroy();
+        Record->setNonTrivialToPrimitiveDestroy(true);
     }
 
     if (Record && FD->getType().isVolatileQualified())

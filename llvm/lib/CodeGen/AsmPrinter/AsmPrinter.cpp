@@ -215,7 +215,9 @@ const DataLayout &AsmPrinter::getDataLayout() const {
 
 // Do not use the cached DataLayout because some client use it without a Module
 // (llvm-dsymutil, llvm-dwarfdump).
-unsigned AsmPrinter::getPointerSize() const { return TM.getPointerSize(); }
+unsigned AsmPrinter::getPointerSize() const {
+  return TM.getPointerSize(0); // FIXME: Default address space
+}
 
 const MCSubtargetInfo &AsmPrinter::getSubtargetInfo() const {
   assert(MF && "getSubtargetInfo requires a valid MachineFunction!");
@@ -979,7 +981,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
 
   const MCSymbol *FunctionSymbol = getSymbol(&MF.getFunction());
   uint64_t StackSize = FrameInfo.getStackSize();
-  OutStreamer->EmitSymbolValue(FunctionSymbol, TM.getPointerSize());
+  OutStreamer->EmitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
   OutStreamer->EmitULEB128IntValue(StackSize);
 
   OutStreamer->PopSection();
