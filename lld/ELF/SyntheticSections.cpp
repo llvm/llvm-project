@@ -1800,13 +1800,15 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
         return !S.Sym->isDefined();
       });
 
-  // Even if the hash table does not contain symbols, we still want to keep the
-  // section to indicate to a loader that the file exports no symbols. We can't
-  // have zero buckets because the android loader doesn't support that. We chose
-  // load factor 4 for the on-disk hash table. For each hash collision, the
-  // dynamic linker will compare a uint32_t hash value. Since the integer
-  // comparison is quite fast, we believe we can make the load factor even
-  // larger. 4 is just a conservative choice.
+  // We chose load factor 4 for the on-disk hash table. For each hash
+  // collision, the dynamic linker will compare a uint32_t hash value.
+  // Since the integer comparison is quite fast, we believe we can
+  // make the load factor even larger. 4 is just a conservative choice.
+  //
+  // Note that we don't want to create a zero-sized hash table because
+  // Android loader as of 2018 doesn't like a .gnu.hash containing such
+  // table. If that's the case, we create a hash table with one unused
+  // dummy slot.
   NBuckets = std::max<size_t>((V.end() - Mid) / 4, 1);
 
   if (Mid == V.end())

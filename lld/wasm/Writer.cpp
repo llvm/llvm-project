@@ -194,7 +194,8 @@ void Writer::createMemorySection() {
 
   bool HasMax = MaxMemoryPages != 0;
   writeUleb128(OS, 1, "memory count");
-  writeUleb128(OS, HasMax ? WASM_LIMITS_FLAG_HAS_MAX : 0, "memory limits flags");
+  writeUleb128(OS, HasMax ? static_cast<unsigned>(WASM_LIMITS_FLAG_HAS_MAX) : 0,
+               "memory limits flags");
   writeUleb128(OS, NumMemoryPages, "initial pages");
   if (HasMax)
     writeUleb128(OS, MaxMemoryPages, "max pages");
