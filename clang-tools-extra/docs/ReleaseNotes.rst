@@ -59,6 +59,8 @@ Improvements to clang-tidy
 
 - New module ``portability``.
 
+- New module ``zircon`` for checks related to Fuchsia's Zircon kernel.
+
 - New `bugprone-throw-keyword-missing
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-throw-keyword-missing.html>`_ check
 
@@ -158,6 +160,11 @@ Improvements to clang-tidy
 
 - The 'misc-undelegated-constructor' check was renamed to `bugprone-undelegated-constructor
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-undelegated-constructor.html>`_
+
+- New `zircon-temporary-objects
+  <http://clang.llvm.org/extra/clang-tidy/checks/zircon-temporary-objects.html>`_ check
+
+  Warns on construction of specific temporary objects in the Zircon kernel.
 
 Improvements to include-fixer
 -----------------------------
