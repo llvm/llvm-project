@@ -477,7 +477,7 @@ void Writer::createLinkingSection() {
   std::map<StringRef, std::vector<ComdatEntry>> Comdats;
 
   for (const InputFunction *F : InputFunctions) {
-    StringRef Comdat = F->getComdat();
+    StringRef Comdat = F->getComdatName();
     if (!Comdat.empty())
       Comdats[Comdat].emplace_back(
           ComdatEntry{WASM_COMDAT_FUNCTION, F->getFunctionIndex()});
@@ -486,10 +486,10 @@ void Writer::createLinkingSection() {
     const auto &InputSegments = Segments[I]->InputSegments;
     if (InputSegments.empty())
       continue;
-    StringRef Comdat = InputSegments[0]->getComdat();
+    StringRef Comdat = InputSegments[0]->getComdatName();
 #ifndef NDEBUG
     for (const InputSegment *IS : InputSegments)
-      assert(IS->getComdat() == Comdat);
+      assert(IS->getComdatName() == Comdat);
 #endif
     if (!Comdat.empty())
       Comdats[Comdat].emplace_back(ComdatEntry{WASM_COMDAT_DATA, I});
