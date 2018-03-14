@@ -25,7 +25,7 @@ endif()
 if(TARGET lldb-server)
   list(APPEND LLDB_TEST_DEPS lldb-server)
 endif()
-  
+
 if(TARGET debugserver)
   if(NOT CMAKE_HOST_APPLE OR LLDB_CODESIGN_IDENTITY)
     list(APPEND LLDB_TEST_DEPS debugserver)
@@ -87,7 +87,7 @@ set(LLDB_TEST_COMMON_ARGS
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   # All tests are currently flaky on Windows, so rerun them all once when they fail.
   set(LLDB_TEST_COMMON_ARGS ${LLDB_TEST_COMMON_ARGS} --rerun-all-issues)
-  
+
   set(LLDB_TEST_DEBUG_TEST_CRASHES
     0
     CACHE BOOL "(Windows only) Enables debugging of tests in the test suite by showing the crash dialog when lldb crashes")
@@ -141,6 +141,24 @@ add_python_test_target(check-lldb
   "-q;${LLDB_DOTEST_ARGS}"
   "Testing LLDB (parallel execution, with a separate subprocess per test)"
   )
+
+# Generate a wrapper for dotest.py in the bin directory.
+string (REPLACE ";" " " LLDB_DOTEST_ARGS_STR  "${LLDB_DOTEST_ARGS}")
+# We need this to substitute variables.
+configure_file(
+  lldb-dotest.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lldb-dotest.configured
+  )
+# We need this to expand the generator expressions.
+file(GENERATE
+  OUTPUT
+  $<TARGET_FILE_DIR:lldb>/lldb-dotest
+  INPUT
+  ${CMAKE_CURRENT_BINARY_DIR}/lldb-dotest.configured
+  )
+# Make this a custom target.
+add_custom_target(lldb-dotest)
+add_dependencies(lldb-dotest ${LLDB_TEST_DEPS})
 
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.
