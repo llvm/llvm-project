@@ -82,8 +82,7 @@ public:
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(llvm::StringRef path);
   bool GetEnableExternalLookup() const;
-  bool GetSwiftUseHeadermaps() const;
-};
+}; 
 
 //----------------------------------------------------------------------
 /// @class ModuleList ModuleList.h "lldb/Core/ModuleList.h"
