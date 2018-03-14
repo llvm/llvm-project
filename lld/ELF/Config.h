@@ -113,6 +113,7 @@ struct Configuration {
   bool BsymbolicFunctions;
   bool CheckSections;
   bool CompressDebugSections;
+  bool Cref;
   bool DefineCommon;
   bool Demangle = true;
   bool DisableVerify;

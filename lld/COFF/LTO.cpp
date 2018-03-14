@@ -64,6 +64,12 @@ static void saveBuffer(StringRef Buffer, const Twine &Path) {
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config Conf;
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
+
+  // Always emit a section per function/datum with LTO. LLVM LTO should get most
+  // of the benefit of linker GC, but there are still opportunities for ICF.
+  Conf.Options.FunctionSections = true;
+  Conf.Options.DataSections = true;
+
   // Use static reloc model on 32-bit x86 because it usually results in more
   // compact code, and because there are also known code generation bugs when
   // using the PIC model (see PR34306).

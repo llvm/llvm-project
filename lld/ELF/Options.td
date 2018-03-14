@@ -75,6 +75,10 @@ def color_diagnostics: F<"color-diagnostics">,
 def color_diagnostics_eq: J<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics">;
 
+defm cref: B<"cref",
+    "Output cross reference table",
+    "Do not output cross reference table">;
+
 defm define_common: B<"define-common",
     "Assign space to common symbols",
     "Do not assign space to common symbols">;
@@ -420,7 +424,6 @@ defm plugin: Eq<"plugin">;
 
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
-def cref: F<"cref">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def g: Flag<["-"], "g">;
 def long_plt: F<"long-plt">;

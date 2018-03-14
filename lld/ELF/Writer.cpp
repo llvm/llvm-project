@@ -475,8 +475,9 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (errorCount())
     return;
 
-  // Handle -Map option.
+  // Handle -Map and -cref options.
   writeMapFile();
+  writeCrossReferenceTable();
   if (errorCount())
     return;
 

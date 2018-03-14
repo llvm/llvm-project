@@ -28,6 +28,8 @@
 #include "SyntheticSections.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -144,5 +146,52 @@ void elf::writeMapFile() {
       for (Symbol *Sym : SectionSyms[IS])
         OS << SymStr[Sym] << '\n';
     }
+  }
+}
+
+static void print(StringRef A, StringRef B) {
+  outs() << left_justify(A, 49) << " " << B << "\n";
+}
+
+// Output a cross reference table to stdout. This is for --cref.
+//
+// For each global symbol, we print out a file that defines the symbol
+// followed by files that uses that symbol. Here is an example.
+//
+//     strlen     /lib/x86_64-linux-gnu/libc.so.6
+//                tools/lld/tools/lld/CMakeFiles/lld.dir/lld.cpp.o
+//                lib/libLLVMSupport.a(PrettyStackTrace.cpp.o)
+//
+// In this case, strlen is defined by libc.so.6 and used by other two
+// files.
+void elf::writeCrossReferenceTable() {
+  if (!Config->Cref)
+    return;
+
+  // Collect symbols and files.
+  MapVector<Symbol *, SetVector<InputFile *>> Map;
+  for (InputFile *File : ObjectFiles) {
+    for (Symbol *Sym : File->getSymbols()) {
+      if (isa<SharedSymbol>(Sym))
+        Map[Sym].insert(File);
+      if (auto *D = dyn_cast<Defined>(Sym))
+        if (!D->isLocal() && (!D->Section || D->Section->Live))
+          Map[D].insert(File);
+    }
+  }
+
+  // Print out a header.
+  outs() << "Cross Reference Table\n\n";
+  print("Symbol", "File");
+
+  // Print out a table.
+  for (auto KV : Map) {
+    Symbol *Sym = KV.first;
+    SetVector<InputFile *> &Files = KV.second;
+
+    print(toString(*Sym), toString(Sym->File));
+    for (InputFile *File : Files)
+      if (File != Sym->File)
+        print("", toString(File));
   }
 }
