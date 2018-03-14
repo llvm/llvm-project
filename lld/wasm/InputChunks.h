@@ -56,8 +56,9 @@ public:
 
   ArrayRef<WasmRelocation> getRelocations() const { return Relocations; }
 
-  virtual StringRef getComdat() const = 0;
   virtual StringRef getName() const = 0;
+  virtual uint32_t getComdat() const = 0;
+  StringRef getComdatName() const;
 
   size_t NumRelocations() const { return Relocations.size(); }
   void writeRelocations(llvm::raw_ostream &OS) const;
@@ -98,7 +99,7 @@ public:
 
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   StringRef getName() const override { return Segment.Data.Name; }
-  StringRef getComdat() const override { return Segment.Data.Comdat; }
+  uint32_t getComdat() const override { return Segment.Data.Comdat; }
 
   const OutputSegment *OutputSeg = nullptr;
   int32_t OutputSegmentOffset = 0;
@@ -125,7 +126,7 @@ public:
   }
 
   StringRef getName() const override { return Function->Name; }
-  StringRef getComdat() const override { return Function->Comdat; }
+  uint32_t getComdat() const override { return Function->Comdat; }
   uint32_t getFunctionIndex() const { return FunctionIndex.getValue(); }
   bool hasFunctionIndex() const { return FunctionIndex.hasValue(); }
   void setFunctionIndex(uint32_t Index);
@@ -161,7 +162,7 @@ public:
   }
 
   StringRef getName() const override { return Name; }
-  StringRef getComdat() const override { return StringRef(); }
+  uint32_t getComdat() const override { return UINT32_MAX; }
 
   void setBody(ArrayRef<uint8_t> Body_) { Body = Body_; }
 

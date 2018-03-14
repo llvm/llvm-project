@@ -152,7 +152,7 @@ void X86_64<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 
   write32le(Buf + 2, GotPltEntryAddr - PltEntryAddr - 6);
   write32le(Buf + 7, Index);
-  write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
+  write32le(Buf + 12, -getPltEntryOffset(Index) - 16);
 }
 
 template <class ELFT> bool X86_64<ELFT>::isPicRel(RelType Type) const {
@@ -522,7 +522,7 @@ void Retpoline<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
-  uint64_t Off = TargetInfo::PltHeaderSize + TargetInfo::PltEntrySize * Index;
+  uint64_t Off = TargetInfo::getPltEntryOffset(Index);
 
   write32le(Buf + 3, GotPltEntryAddr - PltEntryAddr - 7);
   write32le(Buf + 8, -Off - 12 + 32);
@@ -561,8 +561,7 @@ void RetpolineZNow<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   memcpy(Buf, Insn, sizeof(Insn));
 
   write32le(Buf + 3, GotPltEntryAddr - PltEntryAddr - 7);
-  write32le(Buf + 8,
-            -Index * TargetInfo::PltEntrySize - TargetInfo::PltHeaderSize - 12);
+  write32le(Buf + 8, -TargetInfo::getPltEntryOffset(Index) - 12);
 }
 
 template <class ELFT> TargetInfo *getTargetInfo() {

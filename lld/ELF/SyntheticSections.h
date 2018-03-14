@@ -83,6 +83,7 @@ public:
   };
 
   std::vector<FdeData> getFdeData() const;
+  ArrayRef<CieRecord *> getCieRecords() const { return CieRecords; }
 
 private:
   uint64_t Size = 0;
