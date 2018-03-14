@@ -21,6 +21,7 @@
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Object/WasmTraits.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -40,29 +41,6 @@ static constexpr int kStackAlignment = 16;
 static constexpr int kInitialTableOffset = 1;
 
 namespace {
-
-// Traits for using WasmSignature in a DenseMap.
-struct WasmSignatureDenseMapInfo {
-  static WasmSignature getEmptyKey() {
-    WasmSignature Sig;
-    Sig.ReturnType = 1;
-    return Sig;
-  }
-  static WasmSignature getTombstoneKey() {
-    WasmSignature Sig;
-    Sig.ReturnType = 2;
-    return Sig;
-  }
-  static unsigned getHashValue(const WasmSignature &Sig) {
-    unsigned H = hash_value(Sig.ReturnType);
-    for (int32_t Param : Sig.ParamTypes)
-      H = hash_combine(H, Param);
-    return H;
-  }
-  static bool isEqual(const WasmSignature &LHS, const WasmSignature &RHS) {
-    return LHS == RHS;
-  }
-};
 
 // An init entry to be written to either the synthetic init func or the
 // linking metadata.
@@ -120,7 +98,7 @@ private:
   uint32_t MaxMemoryPages = 0;
 
   std::vector<const WasmSignature *> Types;
-  DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
+  DenseMap<WasmSignature, int32_t> TypeIndices;
   std::vector<const Symbol *> ImportedSymbols;
   unsigned NumImportedFunctions = 0;
   unsigned NumImportedGlobals = 0;

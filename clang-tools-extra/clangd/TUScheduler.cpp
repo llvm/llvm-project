@@ -407,7 +407,8 @@ unsigned getDefaultAsyncThreadsCount() {
 
 struct TUScheduler::FileData {
   /// Latest inputs, passed to TUScheduler::update().
-  ParseInputs Inputs;
+  std::string Contents;
+  tooling::CompileCommand Command;
   ASTWorkerHandle Worker;
 };
 
@@ -456,9 +457,11 @@ void TUScheduler::update(PathRef File, ParseInputs Inputs,
         File, WorkerThreads ? WorkerThreads.getPointer() : nullptr, Barrier,
         CppFile(File, StorePreamblesInMemory, PCHOps, ASTCallback),
         UpdateDebounce);
-    FD = std::unique_ptr<FileData>(new FileData{Inputs, std::move(Worker)});
+    FD = std::unique_ptr<FileData>(new FileData{
+        Inputs.Contents, Inputs.CompileCommand, std::move(Worker)});
   } else {
-    FD->Inputs = Inputs;
+    FD->Contents = Inputs.Contents;
+    FD->Command = Inputs.CompileCommand;
   }
   FD->Worker->update(std::move(Inputs), WantDiags, std::move(OnUpdated));
 }
@@ -500,26 +503,28 @@ void TUScheduler::runWithPreamble(
     SPAN_ATTACH(Tracer, "file", File);
     std::shared_ptr<const PreambleData> Preamble =
         It->second->Worker->getPossiblyStalePreamble();
-    Action(InputsAndPreamble{It->second->Inputs, Preamble.get()});
+    Action(InputsAndPreamble{It->second->Contents, It->second->Command,
+                             Preamble.get()});
     return;
   }
 
-  ParseInputs InputsCopy = It->second->Inputs;
   std::shared_ptr<const ASTWorker> Worker = It->second->Worker.lock();
-  auto Task = [InputsCopy, Worker, this](std::string Name, std::string File,
-                                         Context Ctx,
-                                         decltype(Action) Action) mutable {
+  auto Task = [Worker, this](std::string Name, std::string File,
+                             std::string Contents,
+                             tooling::CompileCommand Command, Context Ctx,
+                             decltype(Action) Action) mutable {
     std::lock_guard<Semaphore> BarrierLock(Barrier);
     WithContext Guard(std::move(Ctx));
     trace::Span Tracer(Name);
     SPAN_ATTACH(Tracer, "file", File);
     std::shared_ptr<const PreambleData> Preamble =
         Worker->getPossiblyStalePreamble();
-    Action(InputsAndPreamble{InputsCopy, Preamble.get()});
+    Action(InputsAndPreamble{Contents, Command, Preamble.get()});
   };
 
   PreambleTasks->runAsync("task:" + llvm::sys::path::filename(File),
                           Bind(Task, std::string(Name), std::string(File),
+                               It->second->Contents, It->second->Command,
                                Context::current().clone(), std::move(Action)));
 }
 

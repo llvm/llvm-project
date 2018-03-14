@@ -139,8 +139,7 @@ uint64_t Symbol::getGotPltOffset() const {
 uint64_t Symbol::getPltVA() const {
   if (this->IsInIplt)
     return InX::Iplt->getVA() + PltIndex * Target->PltEntrySize;
-  return InX::Plt->getVA() + Target->PltHeaderSize +
-         PltIndex * Target->PltEntrySize;
+  return InX::Plt->getVA() + Target->getPltEntryOffset(PltIndex);
 }
 
 uint64_t Symbol::getSize() const {

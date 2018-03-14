@@ -67,7 +67,7 @@ int (*g(void))(void) {
   return _Block_copy(^{ ++i; return i; });
 }
 
-// CHECK-BLOCKS-IN-BLOCKS-DECL: @_NSConcreteStackBlock = external dllexport global i8*
+// CHECK-BLOCKS-IN-BLOCKS-DECL: @_NSConcreteStackBlock = external dso_local dllexport global i8*
 // CHECK-BLOCKS-IN-BLOCKS-DEFN: @_NSConcreteStackBlock = common dso_local dllexport global [5 x i32]
 // CHECK-BLOCKS-NOT-IN-BLOCKS: @_NSConcreteStackBlock = external dllimport global i8*
 // CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN: @_NSConcreteStackBlock = external dllimport global i8*

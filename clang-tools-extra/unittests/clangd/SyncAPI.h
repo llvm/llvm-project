@@ -19,7 +19,9 @@ namespace clang {
 namespace clangd {
 
 // Calls addDocument and then blockUntilIdleForTest.
-void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents);
+void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents,
+                    WantDiagnostics WantDiags = WantDiagnostics::Auto,
+                    bool SkipCache = false);
 
 llvm::Expected<CompletionList>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,

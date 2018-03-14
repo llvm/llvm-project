@@ -223,7 +223,7 @@ void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   }
 
   write32le(Buf + 7, RelOff);
-  write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
+  write32le(Buf + 12, -getPltEntryOffset(Index) - 16);
 }
 
 int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
@@ -466,11 +466,12 @@ void RetpolinePic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   memcpy(Buf, Insn, sizeof(Insn));
 
   uint32_t Ebx = InX::Got->getVA() + InX::Got->getSize();
+  unsigned Off = getPltEntryOffset(Index);
   write32le(Buf + 3, GotPltEntryAddr - Ebx);
-  write32le(Buf + 8, -Index * PltEntrySize - PltHeaderSize - 12 + 32);
-  write32le(Buf + 13, -Index * PltEntrySize - PltHeaderSize - 17 + 18);
+  write32le(Buf + 8, -Off - 12 + 32);
+  write32le(Buf + 13, -Off - 17 + 18);
   write32le(Buf + 18, RelOff);
-  write32le(Buf + 23, -Index * PltEntrySize - PltHeaderSize - 27);
+  write32le(Buf + 23, -Off - 27);
 }
 
 RetpolineNoPic::RetpolineNoPic() {
@@ -520,11 +521,12 @@ void RetpolineNoPic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
+  unsigned Off = getPltEntryOffset(Index);
   write32le(Buf + 2, GotPltEntryAddr);
-  write32le(Buf + 7, -Index * PltEntrySize - PltHeaderSize - 11 + 32);
-  write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16 + 17);
+  write32le(Buf + 7, -Off - 11 + 32);
+  write32le(Buf + 12, -Off - 16 + 17);
   write32le(Buf + 17, RelOff);
-  write32le(Buf + 22, -Index * PltEntrySize - PltHeaderSize - 26);
+  write32le(Buf + 22, -Off - 26);
 }
 
 TargetInfo *elf::getX86TargetInfo() {

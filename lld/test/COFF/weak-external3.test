@@ -6,6 +6,7 @@
 # RUN: FileCheck --check-prefix=CHECK2 %s < %t2.map
 
 # CHECK1: lto.tmp
+# CHECK1: lto.tmp
 # CHECK1-NEXT: 0 g
 
 # CHECK2: weak-external3.test.tmp.obj
