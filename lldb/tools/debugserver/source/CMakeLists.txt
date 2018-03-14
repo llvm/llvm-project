@@ -94,22 +94,6 @@ set(lldbDebugserverCommonSources
 
 add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
 
-set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
-  CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
-
-if(NOT LLDB_CODESIGN_IDENTITY STREQUAL "")
-  set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver> CACHE PATH "Path to debugserver.")
-  set(SKIP_DEBUGSERVER OFF CACHE BOOL "Skip building the in-tree debug server")
-else()
-  execute_process(
-    COMMAND xcode-select -p
-    OUTPUT_VARIABLE XCODE_DEV_DIR)
-  string(STRIP ${XCODE_DEV_DIR} XCODE_DEV_DIR)
-  set(DEBUGSERVER_PATH
-    "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver" CACHE PATH "Path to debugserver.")
-  set(SKIP_DEBUGSERVER ON CACHE BOOL "Skip building the in-tree debug server")
-endif()
-message(STATUS "Path to the lldb debugserver: ${DEBUGSERVER_PATH}")
 
 set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
@@ -146,21 +130,6 @@ if (APPLE)
   else()
     find_library(COCOA_LIBRARY Cocoa)
   endif()
-  
-  target_link_libraries(lldbDebugserverCommon
-                        INTERFACE ${COCOA_LIBRARY}
-                        ${CORE_FOUNDATION_LIBRARY}
-                        ${FOUNDATION_LIBRARY}
-                        lldbDebugserverArchSupport
-                        lldbDebugserverDarwin_DarwinLog)
-  
-  set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
-  add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
-    debugserver.cpp
-  
-    LINK_LIBS
-      lldbDebugserverCommon
-    )
 endif()
 
 if(HAVE_LIBCOMPRESSION)
@@ -277,4 +246,7 @@ else()
     )
   endif()
 endif()
-endif()
+
+
+
+
