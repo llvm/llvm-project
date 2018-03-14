@@ -713,11 +713,14 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
+  // Armv8.2-A FP16 vector intrinsic
   if ((FPU & NeonFPU) && HasFullFP16)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
+
+  // Armv8.2-A FP16 scalar intrinsics
   if (HasFullFP16)
-    // fp16 ARM scalar intrinsics are not implemented yet.
     Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
+
 
   switch (ArchKind) {
   default:

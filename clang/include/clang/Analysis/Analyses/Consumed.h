@@ -1,4 +1,4 @@
-//===- Consumed.h ----------------------------------------------*- C++ --*-===//
+//===- Consumed.h -----------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,16 +15,32 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_CONSUMED_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_CONSUMED_H
 
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/ExprCXX.h"
-#include "clang/AST/StmtCXX.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/CFG.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include <list>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace clang {
+
+class AnalysisDeclContext;
+class CXXBindTemporaryExpr;
+class FunctionDecl;
+class PostOrderCFGView;
+class Stmt;
+class VarDecl;
+
 namespace consumed {
   
+  class ConsumedStmtVisitor;
+
   enum ConsumedState {
     // No state information for the given variable.
     CS_None,
@@ -34,16 +50,12 @@ namespace consumed {
     CS_Consumed
   };
   
-  class ConsumedStmtVisitor;
-  
-  typedef SmallVector<PartialDiagnosticAt, 1> OptionalNotes;
-  typedef std::pair<PartialDiagnosticAt, OptionalNotes> DelayedDiag;
-  typedef std::list<DelayedDiag> DiagList;
+  using OptionalNotes = SmallVector<PartialDiagnosticAt, 1>;
+  using DelayedDiag = std::pair<PartialDiagnosticAt, OptionalNotes>;
+  using DiagList = std::list<DelayedDiag>;
 
   class ConsumedWarningsHandlerBase {
-
   public:
-
     virtual ~ConsumedWarningsHandlerBase();
 
     /// \brief Emit the warnings and notes left by the analysis.
@@ -129,23 +141,21 @@ namespace consumed {
   };
 
   class ConsumedStateMap {
-    
-    typedef llvm::DenseMap<const VarDecl *, ConsumedState> VarMapType;
-    typedef llvm::DenseMap<const CXXBindTemporaryExpr *, ConsumedState>
-            TmpMapType;
+    using VarMapType = llvm::DenseMap<const VarDecl *, ConsumedState>;
+    using TmpMapType =
+        llvm::DenseMap<const CXXBindTemporaryExpr *, ConsumedState>;
     
   protected:
-    
-    bool Reachable;
-    const Stmt *From;
+    bool Reachable = true;
+    const Stmt *From = nullptr;
     VarMapType VarMap;
     TmpMapType TmpMap;
     
   public:
-    ConsumedStateMap() : Reachable(true), From(nullptr) {}
+    ConsumedStateMap() = default;
     ConsumedStateMap(const ConsumedStateMap &Other)
-      : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap),
-        TmpMap() {}
+        : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap),
+          TmpMap() {}
     
     /// \brief Warn if any of the parameters being tracked are not in the state
     /// they were declared to be in upon return from a function.
@@ -205,10 +215,8 @@ namespace consumed {
     ConsumedBlockInfo(unsigned int NumBlocks, PostOrderCFGView *SortedGraph)
         : StateMapsArray(NumBlocks), VisitOrder(NumBlocks, 0) {
       unsigned int VisitOrderCounter = 0;
-      for (PostOrderCFGView::iterator BI = SortedGraph->begin(),
-           BE = SortedGraph->end(); BI != BE; ++BI) {
-        VisitOrder[(*BI)->getBlockID()] = VisitOrderCounter++;
-      }
+      for (const auto BI : *SortedGraph)
+        VisitOrder[BI->getBlockID()] = VisitOrderCounter++;
     }
     
     bool allBackEdgesVisited(const CFGBlock *CurrBlock,
@@ -231,7 +239,6 @@ namespace consumed {
 
   /// A class that handles the analysis of uniqueness violations.
   class ConsumedAnalyzer {
-    
     ConsumedBlockInfo BlockInfo;
     std::unique_ptr<ConsumedStateMap> CurrStates;
 
@@ -243,7 +250,6 @@ namespace consumed {
                     const ConsumedStmtVisitor &Visitor);
     
   public:
-    
     ConsumedWarningsHandlerBase &WarningsHandler;
 
     ConsumedAnalyzer(ConsumedWarningsHandlerBase &WarningsHandler)
@@ -259,6 +265,9 @@ namespace consumed {
     /// exactly once.
     void run(AnalysisDeclContext &AC);
   };
-}} // end namespace clang::consumed
 
-#endif
+} // namespace consumed
+
+} // namespace clang
+
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_CONSUMED_H
