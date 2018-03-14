@@ -104,6 +104,7 @@ public:
   std::vector<bool> TypeIsUsed;
   // Maps function indices to table indices
   std::vector<uint32_t> TableEntries;
+  std::vector<bool> UsedComdats;
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
   std::vector<InputGlobal *> Globals;

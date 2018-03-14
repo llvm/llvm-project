@@ -116,29 +116,25 @@ void ClangdServer::setRootPath(PathRef RootPath) {
 }
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
-                               WantDiagnostics WantDiags) {
+                               WantDiagnostics WantDiags, bool SkipCache) {
+  if (SkipCache)
+    CompileArgs.invalidate(File);
+
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
-  scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
-                          WantDiags, FSProvider.getFileSystem());
+  ParseInputs Inputs = {CompileArgs.getCompileCommand(File),
+                        FSProvider.getFileSystem(), Contents.str()};
+
+  Path FileStr = File.str();
+  WorkScheduler.update(File, std::move(Inputs), WantDiags,
+                       [this, FileStr, Version](std::vector<Diag> Diags) {
+                         consumeDiagnostics(FileStr, Version, std::move(Diags));
+                       });
 }
 
 void ClangdServer::removeDocument(PathRef File) {
   DraftMgr.removeDraft(File);
   CompileArgs.invalidate(File);
   WorkScheduler.remove(File);
-}
-
-void ClangdServer::forceReparse(PathRef File) {
-  auto FileContents = DraftMgr.getDraft(File);
-  assert(FileContents.Draft &&
-         "forceReparse() was called for non-added document");
-
-  // forceReparse promises to request new compilation flags from CDB, so we
-  // remove any cahced flags.
-  CompileArgs.invalidate(File);
-
-  scheduleReparseAndDiags(File, std::move(FileContents), WantDiagnostics::Yes,
-                          FSProvider.getFileSystem());
 }
 
 void ClangdServer::codeComplete(PathRef File, Position Pos,
@@ -335,8 +331,8 @@ ClangdServer::insertInclude(PathRef File, StringRef Code,
   // Replacement with offset UINT_MAX and length 0 will be treated as include
   // insertion.
   tooling::Replacement R(File, /*Offset=*/UINT_MAX, 0, "#include " + ToInclude);
-  auto Replaces = format::cleanupAroundReplacements(
-      Code, tooling::Replacements(R), *Style);
+  auto Replaces =
+      format::cleanupAroundReplacements(Code, tooling::Replacements(R), *Style);
   if (!Replaces)
     return Replaces;
   return formatReplacements(Code, *Replaces, *Style);
@@ -499,39 +495,28 @@ void ClangdServer::findHover(PathRef File, Position Pos, Callback<Hover> CB) {
   WorkScheduler.runWithAST("Hover", File, Bind(Action, std::move(CB)));
 }
 
-void ClangdServer::scheduleReparseAndDiags(
-    PathRef File, VersionedDraft Contents, WantDiagnostics WantDiags,
-    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
-  tooling::CompileCommand Command = CompileArgs.getCompileCommand(File);
+void ClangdServer::consumeDiagnostics(PathRef File, DocVersion Version,
+                                      std::vector<Diag> Diags) {
+  // We need to serialize access to resulting diagnostics to avoid calling
+  // `onDiagnosticsReady` in the wrong order.
+  std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
+  DocVersion &LastReportedDiagsVersion = ReportedDiagnosticVersions[File];
 
-  DocVersion Version = Contents.Version;
-  Path FileStr = File.str();
+  // FIXME(ibiryukov): get rid of '<' comparison here. In the current
+  // implementation diagnostics will not be reported after version counters'
+  // overflow. This should not happen in practice, since DocVersion is a
+  // 64-bit unsigned integer.
+  if (Version < LastReportedDiagsVersion)
+    return;
+  LastReportedDiagsVersion = Version;
 
-  auto Callback = [this, Version, FileStr](std::vector<Diag> Diags) {
-    // We need to serialize access to resulting diagnostics to avoid calling
-    // `onDiagnosticsReady` in the wrong order.
-    std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
-    DocVersion &LastReportedDiagsVersion = ReportedDiagnosticVersions[FileStr];
-    // FIXME(ibiryukov): get rid of '<' comparison here. In the current
-    // implementation diagnostics will not be reported after version counters'
-    // overflow. This should not happen in practice, since DocVersion is a
-    // 64-bit unsigned integer.
-    if (Version < LastReportedDiagsVersion)
-      return;
-    LastReportedDiagsVersion = Version;
-
-    DiagConsumer.onDiagnosticsReady(FileStr, std::move(Diags));
-  };
-
-  WorkScheduler.update(File,
-                       ParseInputs{std::move(Command), std::move(FS),
-                                   std::move(*Contents.Draft)},
-                       WantDiags, std::move(Callback));
+  DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
 }
 
 void ClangdServer::reparseOpenedFiles() {
   for (const Path &FilePath : DraftMgr.getActiveFiles())
-    forceReparse(FilePath);
+    addDocument(FilePath, *DraftMgr.getDraft(FilePath).Draft,
+                WantDiagnostics::Auto, /*SkipCache=*/true);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
