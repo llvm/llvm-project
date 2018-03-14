@@ -76,19 +76,6 @@ def : ReadAdvance<ReadAfterLd, 3>;
 // folded loads.
 multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
                             ProcResourceKind ExePort,
-                            int Lat> {
-  // Register variant is using a single cycle on ExePort.
-  def : WriteRes<SchedRW, [ExePort]> { let Latency = Lat; }
-
-  // Memory variant also uses a cycle on JLAGU and adds 3 cycles to the
-  // latency.
-  def : WriteRes<SchedRW.Folded, [JLAGU, ExePort]> {
-    let Latency = !add(Lat, 3);
-  }
-}
-
-multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
-                            ProcResourceKind ExePort,
                             int Lat, int Res = 1, int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, [ExePort]> {
@@ -97,11 +84,30 @@ multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
     let NumMicroOps = UOps;
   }
 
-  // Memory variant also uses a cycle on JLAGU and adds 5 cycles to the
+  // Memory variant also uses a cycle on JLAGU and adds 3 cycles to the
   // latency.
   def : WriteRes<SchedRW.Folded, [JLAGU, ExePort]> {
-    let Latency = !add(Lat, 5);
+    let Latency = !add(Lat, 3);
     let ResourceCycles = [1, Res];
+    let NumMicroOps = UOps;
+  }
+}
+
+multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
+                            list<ProcResourceKind> ExePorts,
+                            int Lat, list<int> Res = [1], int UOps = 1> {
+  // Register variant is using a single cycle on ExePort.
+  def : WriteRes<SchedRW, ExePorts> {
+    let Latency = Lat;
+    let ResourceCycles = Res;
+    let NumMicroOps = UOps;
+  }
+
+  // Memory variant also uses a cycle on JLAGU and adds 5 cycles to the
+  // latency.
+  def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
+    let Latency = !add(Lat, 5);
+    let ResourceCycles = !listconcat([1], Res);
     let NumMicroOps = UOps;
   }
 }
@@ -249,123 +255,66 @@ def : WriteRes<WriteNop, []>;
 // FIXME: SS vs PS latencies
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteFAdd,        JFPU0,  3>;
-defm : JWriteResFpuPair<WriteFMul,        JFPU1,  2>;
-defm : JWriteResFpuPair<WriteFMA,         JFPU1,  2>; // NOTE: Doesn't exist on Jaguar.
-defm : JWriteResFpuPair<WriteFRcp,        JFPU1,  2>;
-defm : JWriteResFpuPair<WriteFRsqrt,      JFPU1,  2>;
-defm : JWriteResFpuPair<WriteFShuffle,   JFPU01,  1>;
-defm : JWriteResFpuPair<WriteFBlend,     JFPU01,  1>;
-defm : JWriteResFpuPair<WriteFVarBlend,  JFPU01,  2, 4, 3>;
-defm : JWriteResFpuPair<WriteFShuffle256, JFPU01, 1>;
-
-def : WriteRes<WriteFSqrt, [JFPU1, JFPM]> {
-  let Latency = 21;
-  let ResourceCycles = [1, 21];
-}
-def : WriteRes<WriteFSqrtLd, [JFPU1, JLAGU, JFPM]> {
-  let Latency = 26;
-  let ResourceCycles = [1, 1, 21];
-}
-
-def : WriteRes<WriteFDiv, [JFPU1, JFPM]> {
-  let Latency = 19;
-  let ResourceCycles = [1, 19];
-}
-def : WriteRes<WriteFDivLd, [JFPU1, JLAGU, JFPM]> {
-  let Latency = 24;
-  let ResourceCycles = [1, 1, 19];
-}
+defm : JWriteResFpuPair<WriteFAdd,         [JFPU0],  3>;
+defm : JWriteResFpuPair<WriteFMul,         [JFPU1],  2>;
+defm : JWriteResFpuPair<WriteFMA,          [JFPU1],  2>; // NOTE: Doesn't exist on Jaguar.
+defm : JWriteResFpuPair<WriteFRcp,         [JFPU1],  2>;
+defm : JWriteResFpuPair<WriteFRsqrt,       [JFPU1],  2>;
+defm : JWriteResFpuPair<WriteFDiv,   [JFPU1, JFPM], 19, [1, 19]>;
+defm : JWriteResFpuPair<WriteFSqrt,  [JFPU1, JFPM], 21, [1, 21]>;
+defm : JWriteResFpuPair<WriteFShuffle,    [JFPU01],  1>;
+defm : JWriteResFpuPair<WriteFBlend,      [JFPU01],  1>;
+defm : JWriteResFpuPair<WriteFVarBlend,   [JFPU01],  2, [4], 3>;
+defm : JWriteResFpuPair<WriteFShuffle256, [JFPU01],  1>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Conversions.
 // FIXME: integer pipes
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteCvtF2I,    JFPU1,  3>; // Float -> Integer.
-defm : JWriteResFpuPair<WriteCvtI2F,    JFPU1,  3>; // Integer -> Float.
-defm : JWriteResFpuPair<WriteCvtF2F,    JFPU1,  3>; // Float -> Float size conversion.
+defm : JWriteResFpuPair<WriteCvtF2I,       [JFPU1], 3>; // Float -> Integer.
+defm : JWriteResFpuPair<WriteCvtI2F,       [JFPU1], 3>; // Integer -> Float.
+defm : JWriteResFpuPair<WriteCvtF2F,       [JFPU1], 3>; // Float -> Float size conversion.
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector integer operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteVecALU,      JFPU01, 1>;
-defm : JWriteResFpuPair<WriteVecShift,    JFPU01, 1>;
-defm : JWriteResFpuPair<WriteVecIMul,     JFPU0,  2>;
-defm : JWriteResFpuPair<WriteMPSAD,       JFPU0,  3, 2>;
-defm : JWriteResFpuPair<WriteShuffle,     JFPU01, 1>;
-defm : JWriteResFpuPair<WriteBlend,       JFPU01, 1>;
-defm : JWriteResFpuPair<WriteVarBlend,    JFPU01, 2, 4, 3>;
-defm : JWriteResFpuPair<WriteVecLogic,    JFPU01, 1>;
-defm : JWriteResFpuPair<WriteShuffle256,  JFPU01, 1>;
-defm : JWriteResFpuPair<WriteVarVecShift, JFPU01, 1>; // NOTE: Doesn't exist on Jaguar.
+defm : JWriteResFpuPair<WriteVecALU,      [JFPU01], 1>;
+defm : JWriteResFpuPair<WriteVecShift,    [JFPU01], 1>;
+defm : JWriteResFpuPair<WriteVecIMul,      [JFPU0], 2>;
+defm : JWriteResFpuPair<WriteMPSAD,        [JFPU0], 3, [2]>;
+defm : JWriteResFpuPair<WriteShuffle,     [JFPU01], 1>;
+defm : JWriteResFpuPair<WriteBlend,       [JFPU01], 1>;
+defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01], 2, [4], 3>;
+defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01], 1>;
+defm : JWriteResFpuPair<WriteShuffle256,  [JFPU01], 1>;
+defm : JWriteResFpuPair<WriteVarVecShift, [JFPU01], 1>; // NOTE: Doesn't exist on Jaguar.
 
 ////////////////////////////////////////////////////////////////////////////////
-// String instructions.
-// Packed Compare Implicit Length Strings, Return Mask
+// SSE42 String instructions.
 // FIXME: approximate latencies + pipe dependencies
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WritePCmpIStrM, [JFPU1,JFPU0]> {
-  let Latency = 8;
-  let ResourceCycles = [2, 2];
-  let NumMicroOps = 3;
-}
-def : WriteRes<WritePCmpIStrMLd, [JLAGU, JFPU1, JFPU0]> {
-  let Latency = 13;
-  let ResourceCycles = [1, 2, 2];
-  let NumMicroOps = 3;
-}
-
-// Packed Compare Explicit Length Strings, Return Mask
-def : WriteRes<WritePCmpEStrM, [JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
-  let Latency = 14;
-  let ResourceCycles = [5, 5, 5, 5, 5];
-  let NumMicroOps = 9;
-}
-def : WriteRes<WritePCmpEStrMLd, [JLAGU, JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
-  let Latency = 19;
-  let ResourceCycles = [1, 5, 5, 5, 5, 5];
-  let NumMicroOps = 9;
-}
-
-// Packed Compare Implicit Length Strings, Return Index
-def : WriteRes<WritePCmpIStrI, [JFPU1, JFPU0]> {
-  let Latency = 7;
-  let ResourceCycles = [2, 2];
-}
-def : WriteRes<WritePCmpIStrILd, [JLAGU, JFPU1, JFPU0]> {
-  let Latency = 12;
-  let ResourceCycles = [1, 2, 2];
-}
-
-// Packed Compare Explicit Length Strings, Return Index
-def : WriteRes<WritePCmpEStrI, [JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
-  let Latency = 14;
-  let ResourceCycles = [5, 5, 5, 5, 5];
-  let NumMicroOps = 9;
-}
-def : WriteRes<WritePCmpEStrILd, [JLAGU, JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
-  let Latency = 19;
-  let ResourceCycles = [1, 5, 5, 5, 5, 5];
-  let NumMicroOps = 9;
-}
+defm : JWriteResFpuPair<WritePCmpIStrI, [JFPU1, JFPU0], 7, [2, 2], 3>;
+defm : JWriteResFpuPair<WritePCmpIStrM, [JFPU1, JFPU0], 8, [2, 2], 3>;
+defm : JWriteResFpuPair<WritePCmpEStrI, [JFPU1, JLAGU, JFPU01, JFPU1, JFPU0], 14, [5, 5, 5, 5, 5], 9>;
+defm : JWriteResFpuPair<WritePCmpEStrM, [JFPU1, JLAGU, JFPU01, JFPU1, JFPU0], 14, [5, 5, 5, 5, 5], 9>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // AES Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteAESIMC,    JVIMUL, 2>;
-defm : JWriteResFpuPair<WriteAESKeyGen, JVIMUL, 2>;
-defm : JWriteResFpuPair<WriteAESDecEnc, JVIMUL, 3>;
+defm : JWriteResFpuPair<WriteAESIMC,    [JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteAESKeyGen, [JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteAESDecEnc, [JVIMUL], 3>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteFHAdd,   JFPU0,  3>;
-defm : JWriteResFpuPair<WritePHAdd,   JFPU01, 1>;
+defm : JWriteResFpuPair<WriteFHAdd,      [JFPU0], 3>;
+defm : JWriteResFpuPair<WritePHAdd,     [JFPU01], 1>;
 
 def JWriteFHAddY: SchedWriteRes<[JFPU0]> {
   let Latency = 3;
@@ -383,7 +332,7 @@ def : InstRW<[JWriteFHAddYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUB
 // Carry-less multiplication instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteCLMul,   JVIMUL, 2>;
+defm : JWriteResFpuPair<WriteCLMul,     [JVIMUL], 2>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE4.1 instructions.

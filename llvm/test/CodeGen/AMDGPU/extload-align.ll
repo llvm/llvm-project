@@ -7,7 +7,7 @@ target datalayout = "A5"
 ; size and not 4 corresponding to the sign-extended size (i32).
 
 ; DEBUG: {{^}}# Machine code for function extload_align:
-; DEBUG: mem:LD2[<unknown>(addrspace=5)]
+; DEBUG: (load 2, addrspace 5)
 ; DEBUG: {{^}}# End machine code for function extload_align.
 
 define amdgpu_kernel void @extload_align(i32 addrspace(5)* %out, i32 %index) #0 {

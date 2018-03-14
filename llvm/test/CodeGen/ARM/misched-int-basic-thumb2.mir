@@ -42,7 +42,7 @@
 # CHECK_SWIFT: Latency    : 2
 # CHECK_R52:   Latency    : 2
 #
-# CHECK:       SU(3):   %3:rgpr = t2LDRi12 %2:rgpr, 0, 14, $noreg; mem:LD4[@g1](dereferenceable)
+# CHECK:       SU(3):   %3:rgpr = t2LDRi12 %2:rgpr, 0, 14, $noreg :: (dereferenceable load 4 from @g1)
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 3
 # CHECK_R52:   Latency    : 4
@@ -57,7 +57,7 @@
 # CHECK_SWIFT: Latency    : 14
 # CHECK_R52:   Latency    : 8
 
-# CHECK:       SU(8):   t2STRi12 %7:rgpr, %2:rgpr, 0, 14, $noreg; mem:ST4[@g1]
+# CHECK:       SU(8):   t2STRi12 %7:rgpr, %2:rgpr, 0, 14, $noreg :: (store 4 into @g1)
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 0
 # CHECK_R52:   Latency    : 4

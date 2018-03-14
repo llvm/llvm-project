@@ -814,7 +814,8 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
     error(
         "can't create dynamic relocation " + toString(Type) + " against " +
         (Sym.getName().empty() ? "local symbol" : "symbol: " + toString(Sym)) +
-        " in readonly segment; recompile object files with -fPIC" +
+        " in readonly segment; recompile object files with -fPIC "
+        "or pass '-Wl,-z,notext' to allow text relocations in the output" +
         getLocation(Sec, Sym, Offset));
     return Expr;
   }

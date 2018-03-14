@@ -28350,9 +28350,9 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
   if (ZeroExtendMask == Mask)
     return true;
 
-  // Make sure the bits in the ZeroExtendMask are also set in the original mask.
-  // TODO: We should be able to set bits that aren't demanded too.
-  if (!ZeroExtendMask.isSubsetOf(Mask))
+  // Make sure the new mask can be represented by a combination of mask bits
+  // and non-demanded bits.
+  if (!ZeroExtendMask.isSubsetOf(Mask | ~Demanded))
     return false;
 
   // Replace the constant with the zero extend mask.
