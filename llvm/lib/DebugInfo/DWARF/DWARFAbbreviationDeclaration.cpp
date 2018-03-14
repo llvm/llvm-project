@@ -96,8 +96,7 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data,
       default:
         // The form has a byte size that doesn't depend on Params.
         // If it's a fixed size, keep track of it.
-        if ((ByteSize =
-                 DWARFFormValue::getFixedByteSize(F, DWARFFormParams()))) {
+        if ((ByteSize = dwarf::getFixedFormByteSize(F, dwarf::FormParams()))) {
           if (FixedAttributeSize)
             FixedAttributeSize->NumBytes += *ByteSize;
           break;
@@ -217,8 +216,7 @@ Optional<int64_t> DWARFAbbreviationDeclaration::AttributeSpec::getByteSize(
   if (ByteSize.HasByteSize)
     return ByteSize.ByteSize;
   Optional<int64_t> S;
-  auto FixedByteSize =
-      DWARFFormValue::getFixedByteSize(Form, U.getFormParams());
+  auto FixedByteSize = dwarf::getFixedFormByteSize(Form, U.getFormParams());
   if (FixedByteSize)
     S = *FixedByteSize;
   return S;

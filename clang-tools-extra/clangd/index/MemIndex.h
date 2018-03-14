@@ -31,6 +31,10 @@ public:
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override;
 
+  virtual void
+  lookup(const LookupRequest &Req,
+         llvm::function_ref<void(const Symbol &)> Callback) const override;
+
 private:
   std::shared_ptr<std::vector<const Symbol *>> Symbols;
   // Index is a set of symbols that are deduplicated by symbol IDs.

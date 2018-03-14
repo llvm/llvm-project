@@ -70,7 +70,7 @@ void DWARFDebugLine::Prologue::clear() {
   SegSelectorSize = 0;
   MinInstLength = MaxOpsPerInst = DefaultIsStmt = LineBase = LineRange = 0;
   OpcodeBase = 0;
-  FormParams = DWARFFormParams({0, 0, DWARF32});
+  FormParams = dwarf::FormParams({0, 0, DWARF32});
   ContentTypes = ContentTypeTracker();
   StandardOpcodeLengths.clear();
   IncludeDirectories.clear();
@@ -194,8 +194,8 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t
 static bool
 parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
                      uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
-                     const DWARFFormParams &FormParams, const DWARFContext
-                     &Ctx, const DWARFUnit *U,
+                     const dwarf::FormParams &FormParams,
+                     const DWARFContext &Ctx, const DWARFUnit *U,
                      DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {

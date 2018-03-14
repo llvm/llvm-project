@@ -187,6 +187,12 @@ typedef enum {
 } LLVMVisibility;
 
 typedef enum {
+  LLVMNoUnnamedAddr,    /**< Address of the GV is significant. */
+  LLVMLocalUnnamedAddr, /**< Address of the GV is locally insignificant. */
+  LLVMGlobalUnnamedAddr /**< Address of the GV is globally insignificant. */
+} LLVMUnnamedAddr;
+
+typedef enum {
   LLVMDefaultStorageClass   = 0,
   LLVMDLLImportStorageClass = 1, /**< Function to be imported from DLL. */
   LLVMDLLExportStorageClass = 2  /**< Function to be accessible from DLL. */
@@ -1844,7 +1850,12 @@ LLVMVisibility LLVMGetVisibility(LLVMValueRef Global);
 void LLVMSetVisibility(LLVMValueRef Global, LLVMVisibility Viz);
 LLVMDLLStorageClass LLVMGetDLLStorageClass(LLVMValueRef Global);
 void LLVMSetDLLStorageClass(LLVMValueRef Global, LLVMDLLStorageClass Class);
+LLVMUnnamedAddr LLVMGetUnnamedAddress(LLVMValueRef Global);
+void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr);
+
+/** Deprecated: Use LLVMGetUnnamedAddress instead. */
 LLVMBool LLVMHasUnnamedAddr(LLVMValueRef Global);
+/** Deprecated: Use LLVMSetUnnamedAddress instead. */
 void LLVMSetUnnamedAddr(LLVMValueRef Global, LLVMBool HasUnnamedAddr);
 
 /**

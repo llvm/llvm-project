@@ -464,7 +464,7 @@ ProgramStateRef ExprEngine::addAllNecessaryTemporaryInfo(
 
     // If the temporary is being returned from the function, it will be
     // destroyed or lifetime-extended in the caller stack frame.
-    if (const auto *RCC = dyn_cast<ReturnedValueConstructionContext>(CC)) {
+    if (isa<ReturnedValueConstructionContext>(CC)) {
       const StackFrameContext *SFC = LC->getCurrentStackFrame();
       assert(SFC);
       if (SFC->getParent()) {

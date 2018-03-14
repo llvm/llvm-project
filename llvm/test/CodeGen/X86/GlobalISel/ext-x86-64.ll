@@ -18,7 +18,14 @@ define i64 @test_zext_i1(i8 %a) {
 define i64 @test_sext_i8(i8 %val) {
 ; X64-LABEL: test_sext_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsbq %dil, %rax
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movq $56, %rcx
+; X64-NEXT:    # kill: def $cl killed $rcx
+; X64-NEXT:    shlq %cl, %rdi
+; X64-NEXT:    movq $56, %rcx
+; X64-NEXT:    # kill: def $cl killed $rcx
+; X64-NEXT:    sarq %cl, %rdi
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %r = sext i8 %val to i64
   ret i64 %r
@@ -27,7 +34,14 @@ define i64 @test_sext_i8(i8 %val) {
 define i64 @test_sext_i16(i16 %val) {
 ; X64-LABEL: test_sext_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movswq %di, %rax
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movq $48, %rcx
+; X64-NEXT:    # kill: def $cl killed $rcx
+; X64-NEXT:    shlq %cl, %rdi
+; X64-NEXT:    movq $48, %rcx
+; X64-NEXT:    # kill: def $cl killed $rcx
+; X64-NEXT:    sarq %cl, %rdi
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %r = sext i16 %val to i64
   ret i64 %r

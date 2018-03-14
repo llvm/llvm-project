@@ -189,6 +189,13 @@ public:
   /// This address is the one used for relocation.
   JITEvaluatedSymbol getSymbol(StringRef Name) const;
 
+  /// Returns a copy of the symbol table. This can be used by on-finalized
+  /// callbacks to extract the symbol table before throwing away the
+  /// RuntimeDyld instance. Because the map keys (StringRefs) are backed by
+  /// strings inside the RuntimeDyld instance, the map should be processed
+  /// before the RuntimeDyld instance is discarded.
+  std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const;
+
   /// Resolve the relocations for all symbols we currently know about.
   void resolveRelocations();
 

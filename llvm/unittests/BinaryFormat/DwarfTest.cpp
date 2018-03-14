@@ -139,4 +139,57 @@ TEST(DwarfTest, getVirtuality) {
   EXPECT_EQ(DW_VIRTUALITY_invalid, getVirtuality("something else"));
 }
 
+TEST(DwarfTest, FixedFormSizes) {
+  Optional<uint8_t> RefSize;
+  Optional<uint8_t> AddrSize;
+
+  // Test 32 bit DWARF version 2 with 4 byte addresses.
+  FormParams Params_2_4_32 = {2, 4, DWARF32};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_4_32);
+  AddrSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_4_32);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(AddrSize.hasValue());
+  EXPECT_EQ(*RefSize, *AddrSize);
+
+  // Test 32 bit DWARF version 2 with 8 byte addresses.
+  FormParams Params_2_8_32 = {2, 8, DWARF32};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_8_32);
+  AddrSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_8_32);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(AddrSize.hasValue());
+  EXPECT_EQ(*RefSize, *AddrSize);
+
+  // DW_FORM_ref_addr is 4 bytes in DWARF 32 in DWARF version 3 and beyond.
+  FormParams Params_3_4_32 = {3, 4, DWARF32};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_3_4_32);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_EQ(*RefSize, 4);
+
+  FormParams Params_4_4_32 = {4, 4, DWARF32};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_4_4_32);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_EQ(*RefSize, 4);
+
+  FormParams Params_5_4_32 = {5, 4, DWARF32};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_5_4_32);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_EQ(*RefSize, 4);
+
+  // DW_FORM_ref_addr is 8 bytes in DWARF 64 in DWARF version 3 and beyond.
+  FormParams Params_3_8_64 = {3, 8, DWARF64};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_3_8_64);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_EQ(*RefSize, 8);
+
+  FormParams Params_4_8_64 = {4, 8, DWARF64};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_4_8_64);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_EQ(*RefSize, 8);
+
+  FormParams Params_5_8_64 = {5, 8, DWARF64};
+  RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_5_8_64);
+  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_EQ(*RefSize, 8);
+}
+
 } // end namespace

@@ -18,13 +18,11 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    #
     # This test depends on not tracking watchpoint expression hits if we have
     # left the watchpoint scope.  We will provide such an ability at some point
     # but the way this was done was incorrect, and it is unclear that for the
     # most part that's not what folks mostly want, so we have to provide a
     # clearer API to express this.
-    #
 
     def setUp(self):
         # Call super's setUp().
@@ -36,7 +34,7 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
 
     # Test hangs due to a kernel bug, see fdfeff0f in the linux kernel for details
     @skipIfTargetAndroid(api_levels=list(range(25+1)), archs=["aarch64", "arm"])
-    @unittest2.expectedFailure("rdar://problem/18685649")
+    @skipIf
     def test_watched_var_should_only_hit_when_in_scope(self):
         """Test that a variable watchpoint should only hit when in scope."""
         self.build(dictionary=self.d)

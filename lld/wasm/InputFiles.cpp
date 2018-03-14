@@ -77,7 +77,8 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
     if (Sym.isUndefined())
       return 0;
     const WasmSegment& Segment = WasmObj->dataSegments()[Sym.Info.DataRef.Segment];
-    return Segment.Data.Offset.Value.Int32 + Sym.Info.DataRef.Offset;
+    return Segment.Data.Offset.Value.Int32 + Sym.Info.DataRef.Offset +
+           Reloc.Addend;
   }
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     return Reloc.Index;
@@ -102,7 +103,7 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
     if (auto *Sym = dyn_cast<DefinedData>(getDataSymbol(Reloc.Index)))
       return Sym->getVirtualAddress() + Reloc.Addend;
-    return Reloc.Addend;
+    return 0;
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     return TypeMap[Reloc.Index];
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:

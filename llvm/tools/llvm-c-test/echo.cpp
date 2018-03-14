@@ -864,7 +864,7 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     LLVMSetLinkage(G, LLVMGetLinkage(Cur));
     LLVMSetSection(G, LLVMGetSection(Cur));
     LLVMSetVisibility(G, LLVMGetVisibility(Cur));
-    LLVMSetUnnamedAddr(G, LLVMHasUnnamedAddr(Cur));
+    LLVMSetUnnamedAddress(G, LLVMGetUnnamedAddress(Cur));
     LLVMSetAlignment(G, LLVMGetAlignment(Cur));
 
     Next = LLVMGetNextGlobal(Cur);

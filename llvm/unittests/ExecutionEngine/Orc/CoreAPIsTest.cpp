@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 
 #include <set>
+#include <thread>
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -323,6 +324,82 @@ TEST(CoreAPIsTest, TestLambdaSymbolResolver) {
   EXPECT_EQ(Unresolved.size(), 1U) << "Expected one unresolved symbol";
   EXPECT_EQ(Unresolved.count(Baz), 1U) << "Expected baz to not be resolved";
   EXPECT_TRUE(OnResolvedRun) << "OnResolved was never run";
+}
+
+TEST(CoreAPIsTest, TestLookupWithUnthreadedMaterialization) {
+  constexpr JITTargetAddress FakeFooAddr = 0xdeadbeef;
+  JITEvaluatedSymbol FooSym(FakeFooAddr, JITSymbolFlags::Exported);
+
+  SymbolStringPool SSP;
+  auto Foo = SSP.intern("foo");
+
+  auto Source = std::make_shared<SimpleSource>(
+      [&](VSO &V, SymbolNameSet Symbols) -> Error {
+        V.resolve({{Foo, FooSym}});
+        V.finalize({Foo});
+        return Error::success();
+      },
+      [](VSO &V, SymbolStringPtr Name) -> Error {
+        llvm_unreachable("Not expecting finalization");
+      });
+
+  VSO V;
+
+  SymbolFlagsMap InitialSymbols({{Foo, JITSymbolFlags::Exported}});
+  cantFail(V.defineLazy(InitialSymbols, Source));
+
+  ExecutionSession ES(SSP);
+  auto FooLookupResult =
+      cantFail(lookup({&V}, Foo, MaterializeOnCurrentThread(ES)));
+
+  EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
+      << "lookup returned an incorrect address";
+  EXPECT_EQ(FooLookupResult.getFlags(), FooSym.getFlags())
+      << "lookup returned incorrect flags";
+}
+
+TEST(CoreAPIsTest, TestLookupWithThreadedMaterialization) {
+#if LLVM_ENABLE_THREADS
+  constexpr JITTargetAddress FakeFooAddr = 0xdeadbeef;
+  JITEvaluatedSymbol FooSym(FakeFooAddr, JITSymbolFlags::Exported);
+
+  SymbolStringPool SSP;
+  auto Foo = SSP.intern("foo");
+
+  auto Source = std::make_shared<SimpleSource>(
+      [&](VSO &V, SymbolNameSet Symbols) -> Error {
+        V.resolve({{Foo, FooSym}});
+        V.finalize({Foo});
+        return Error::success();
+      },
+      [](VSO &V, SymbolStringPtr Name) -> Error {
+        llvm_unreachable("Not expecting finalization");
+      });
+
+  VSO V;
+
+  SymbolFlagsMap InitialSymbols({{Foo, JITSymbolFlags::Exported}});
+  cantFail(V.defineLazy(InitialSymbols, Source));
+
+  ExecutionSession ES(SSP);
+
+  auto MaterializeOnNewThread =
+    [&ES](VSO &V, std::shared_ptr<SymbolSource> Source, SymbolNameSet Names) {
+      std::thread(
+        [&ES, &V, Source, Names]() {
+          if (auto Err = Source->materialize(V, std::move(Names)))
+            ES.reportError(std::move(Err));
+        }).detach();
+    };
+
+  auto FooLookupResult =
+    cantFail(lookup({&V}, Foo, MaterializeOnNewThread));
+
+  EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
+      << "lookup returned an incorrect address";
+  EXPECT_EQ(FooLookupResult.getFlags(), FooSym.getFlags())
+      << "lookup returned incorrect flags";
+#endif
 }
 
 } // namespace

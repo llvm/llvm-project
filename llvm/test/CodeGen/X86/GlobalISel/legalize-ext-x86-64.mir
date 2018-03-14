@@ -77,9 +77,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_sext_i1
     ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s8)
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s1)
-    ; CHECK: $rax = COPY [[SEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s8)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ANYEXT]], [[C]]
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]]
+    ; CHECK: $rax = COPY [[ASHR]](s64)
     ; CHECK: RET 0, implicit $rax
     %0(s8) = COPY $dil
     %1(s1) = G_TRUNC %0(s8)

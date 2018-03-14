@@ -29,7 +29,7 @@ Symbol symbol(llvm::StringRef QName) {
     Sym.Scope = "";
   } else {
     Sym.Name = QName.substr(Pos + 2);
-    Sym.Scope = QName.substr(0, Pos);
+    Sym.Scope = QName.substr(0, Pos + 2);
   }
   return Sym;
 }
@@ -89,13 +89,16 @@ generateNumSymbols(int Begin, int End,
   return generateSymbols(Names, WeakSymbols);
 }
 
+std::string getQualifiedName(const Symbol &Sym) {
+  return (Sym.Scope + Sym.Name).str();
+}
+
 std::vector<std::string> match(const SymbolIndex &I,
                                const FuzzyFindRequest &Req,
                                bool *Incomplete = nullptr) {
   std::vector<std::string> Matches;
   bool IsIncomplete = I.fuzzyFind(Req, [&](const Symbol &Sym) {
-    Matches.push_back(
-        (Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name).str());
+    Matches.push_back(getQualifiedName(Sym));
   });
   if (Incomplete)
     *Incomplete = IsIncomplete;
@@ -178,7 +181,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
   I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  Req.Scopes = {"a"};
+  Req.Scopes = {"a::"};
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2"));
 }
 
@@ -187,7 +190,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
   I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  Req.Scopes = {"a", "b"};
+  Req.Scopes = {"a::", "b::"};
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
 }
 
@@ -196,7 +199,7 @@ TEST(MemIndexTest, NoMatchNestedScopes) {
   I.build(generateSymbols({"a::y1", "a::b::y2"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  Req.Scopes = {"a"};
+  Req.Scopes = {"a::"};
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1"));
 }
 
@@ -205,16 +208,60 @@ TEST(MemIndexTest, IgnoreCases) {
   I.build(generateSymbols({"ns::ABC", "ns::abc"}));
   FuzzyFindRequest Req;
   Req.Query = "AB";
-  Req.Scopes = {"ns"};
+  Req.Scopes = {"ns::"};
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
 }
 
-TEST(MergeTest, MergeIndex) {
+// Returns qualified names of symbols with any of IDs in the index.
+std::vector<std::string> lookup(const SymbolIndex &I,
+                                llvm::ArrayRef<SymbolID> IDs) {
+  LookupRequest Req;
+  Req.IDs.insert(IDs.begin(), IDs.end());
+  std::vector<std::string> Results;
+  I.lookup(Req, [&](const Symbol &Sym) {
+    Results.push_back(getQualifiedName(Sym));
+  });
+  return Results;
+}
+
+TEST(MemIndexTest, Lookup) {
+  MemIndex I;
+  I.build(generateSymbols({"ns::abc", "ns::xyz"}));
+  EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
+  EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
+              UnorderedElementsAre("ns::abc", "ns::xyz"));
+  EXPECT_THAT(lookup(I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
+              UnorderedElementsAre("ns::xyz"));
+  EXPECT_THAT(lookup(I, SymbolID("ns::nonono")), UnorderedElementsAre());
+}
+
+TEST(MergeIndexTest, Lookup) {
+  MemIndex I, J;
+  I.build(generateSymbols({"ns::A", "ns::B"}));
+  J.build(generateSymbols({"ns::B", "ns::C"}));
+  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::A")),
+              UnorderedElementsAre("ns::A"));
+  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::B")),
+              UnorderedElementsAre("ns::B"));
+  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::C")),
+              UnorderedElementsAre("ns::C"));
+  EXPECT_THAT(
+      lookup(*mergeIndex(&I, &J), {SymbolID("ns::A"), SymbolID("ns::B")}),
+      UnorderedElementsAre("ns::A", "ns::B"));
+  EXPECT_THAT(
+      lookup(*mergeIndex(&I, &J), {SymbolID("ns::A"), SymbolID("ns::C")}),
+      UnorderedElementsAre("ns::A", "ns::C"));
+  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::D")),
+              UnorderedElementsAre());
+  EXPECT_THAT(lookup(*mergeIndex(&I, &J), {}), UnorderedElementsAre());
+}
+
+TEST(MergeIndexTest, FuzzyFind) {
   MemIndex I, J;
   I.build(generateSymbols({"ns::A", "ns::B"}));
   J.build(generateSymbols({"ns::B", "ns::C"}));
   FuzzyFindRequest Req;
-  Req.Scopes = {"ns"};
+  Req.Scopes = {"ns::"};
   EXPECT_THAT(match(*mergeIndex(&I, &J), Req),
               UnorderedElementsAre("ns::A", "ns::B", "ns::C"));
 }

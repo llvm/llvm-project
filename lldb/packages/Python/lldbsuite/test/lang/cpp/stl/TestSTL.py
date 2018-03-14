@@ -26,7 +26,7 @@ class STLTestCase(TestBase):
         self.line = line_number(
             self.source, '// Set break point at this line.')
 
-    @expectedFailureAll(bugnumber="rdar://problem/10400981")
+    @expectedFailureAll(bugnumber="llvm.org/PR36713")
     def test(self):
         """Test some expressions involving STL data types."""
         self.build()
@@ -38,9 +38,6 @@ class STLTestCase(TestBase):
 
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        # rdar://problem/8543077
-        # test/stl: clang built binaries results in the breakpoint locations = 3,
-        # is this a problem with clang generated debug info?
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
@@ -60,8 +57,6 @@ class STLTestCase(TestBase):
         self.runCmd(
             'expr for (int i = 0; i < hello_world.length(); ++i) { (void)printf("%c\\n", hello_world[i]); }')
 
-        # rdar://problem/10373783
-        # rdar://problem/10400981
         self.expect('expr associative_array.size()',
                     substrs=[' = 3'])
         self.expect('expr associative_array.count(hello_world)',
