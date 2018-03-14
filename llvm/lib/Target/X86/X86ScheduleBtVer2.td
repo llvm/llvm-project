@@ -640,6 +640,63 @@ def JWriteVCVTPDYLd: SchedWriteRes<[JLAGU, JSTC, JFPU01]> {
 }
 def : InstRW<[JWriteVCVTPDYLd, ReadAfterLd], (instrs VCVTPD2DQYrm, VCVTTPD2DQYrm, VCVTPD2PSYrm)>;
 
+def JWritePSHUFB: SchedWriteRes<[JFPU01]> {
+  let Latency = 2;
+  let ResourceCycles = [4];
+  let NumMicroOps = 3;
+}
+def : InstRW<[JWritePSHUFB], (instrs PSHUFBrr, VPSHUFBrr)>;
+
+def JWritePSHUFBLd: SchedWriteRes<[JLAGU, JFPU01]> {
+  let Latency = 7;
+  let ResourceCycles = [1, 4];
+  let NumMicroOps = 3;
+}
+def : InstRW<[JWritePSHUFBLd, ReadAfterLd], (instrs PSHUFBrm, VPSHUFBrm)>;
+
+def JWriteVPERM: SchedWriteRes<[JFPU01]> {
+  let Latency = 2;
+  let ResourceCycles = [4];
+  let NumMicroOps = 3;
+}
+def : InstRW<[JWriteVPERM], (instrs VPERMILPDrr, VPERMILPSrr)>;
+
+def JWriteVPERMLd: SchedWriteRes<[JLAGU, JFPU01]> {
+  let Latency = 7;
+  let ResourceCycles = [1, 4];
+  let NumMicroOps = 3;
+}
+def : InstRW<[JWriteVPERMLd, ReadAfterLd], (instrs VPERMILPDrm, VPERMILPSrm)>;
+
+def JWriteVPERMY: SchedWriteRes<[JFPU01]> {
+  let Latency = 3;
+  let ResourceCycles = [6];
+  let NumMicroOps = 6;
+}
+def : InstRW<[JWriteVPERMY], (instrs VPERMILPDYrr, VPERMILPSYrr)>;
+
+def JWriteVPERMYLd: SchedWriteRes<[JLAGU, JFPU01]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 6];
+  let NumMicroOps = 6;
+}
+def : InstRW<[JWriteVPERMYLd, ReadAfterLd], (instrs VPERMILPDYrm, VPERMILPSYrm)>;
+
+def JWriteShuffleY: SchedWriteRes<[JFPU01]> {
+  let ResourceCycles = [2];
+  let NumMicroOps = 2;
+}
+def : InstRW<[JWriteShuffleY], (instrs VMOVDDUPYrr, VMOVSHDUPYrr, VMOVSLDUPYrr,
+                                       VPERMILPDYri, VPERMILPSYri, VSHUFPDYrri, VSHUFPSYrri)>;
+
+def JWriteShuffleYLd: SchedWriteRes<[JLAGU, JFPU01]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 2];
+  let NumMicroOps = 2;
+}
+def : InstRW<[JWriteShuffleYLd, ReadAfterLd], (instrs VMOVDDUPYrm, VMOVSHDUPYrm, VMOVSLDUPYrm,
+                                                      VPERMILPDYmi, VPERMILPSYmi, VSHUFPDYrmi, VSHUFPSYrmi)>;
+
 def JWriteVBlendVPY: SchedWriteRes<[JFPU01]> {
   let Latency = 3;
   let ResourceCycles = [6];

@@ -803,7 +803,7 @@ public:
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
   enum BinaryOp : uint8_t { ADD, AND, OR, SHL, SRA, SRL, LISTCONCAT,
-                            STRCONCAT, CONCAT, EQ };
+                            STRCONCAT, CONCAT, EQ, NE, LE, LT, GE, GT };
 
 private:
   Init *LHS, *RHS;
@@ -856,7 +856,7 @@ public:
 /// !op (X, Y, Z) - Combine two inits.
 class TernOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum TernaryOp : uint8_t { SUBST, FOREACH, IF };
+  enum TernaryOp : uint8_t { SUBST, FOREACH, IF, DAG };
 
 private:
   Init *LHS, *MHS, *RHS;

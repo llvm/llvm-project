@@ -40,10 +40,11 @@ define i32 @test_local_exec() {
 
 ; CHECK: mrs x[[R1:[0-9]+]], TPIDR_EL0
 ; CHECK: add x[[R2:[0-9]+]], x[[R1]], :tprel_hi12:local_exec_var
-; CHECK: ldr w0, [x[[R2]], :tprel_lo12_nc:local_exec_var]
+; CHECK: add x[[R3:[0-9]+]], x[[R2]], :tprel_lo12_nc:local_exec_var
+; CHECK: ldr w0, [x[[R3]]]
 
 ; CHECK-RELOC: R_AARCH64_TLSLE_ADD_TPREL_HI12
-; CHECK-RELOC: R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC
+; CHECK-RELOC: R_AARCH64_TLSLE_ADD_TPREL_LO12_NC
   ret i32 %val
 }
 

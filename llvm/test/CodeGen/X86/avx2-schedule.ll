@@ -9,7 +9,7 @@
 define <8 x i32> @test_broadcasti128(<8 x i32> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_broadcasti128:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1] sched: [4:0.50]
+; GENERIC-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1] sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1762,7 +1762,7 @@ define <16 x i8> @test_pbroadcastb(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastb %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastb (%rdi), %xmm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastb (%rdi), %xmm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1811,7 +1811,7 @@ define <32 x i8> @test_pbroadcastb_ymm(<32 x i8> %a0, <32 x i8> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastb_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastb %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastb (%rdi), %ymm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastb (%rdi), %ymm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1860,7 +1860,7 @@ define <4 x i32> @test_pbroadcastd(<4 x i32> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastd %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastd (%rdi), %xmm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastd (%rdi), %xmm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1908,7 +1908,7 @@ define <8 x i32> @test_pbroadcastd_ymm(<8 x i32> %a0, <8 x i32> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastd_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastd %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastd (%rdi), %ymm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastd (%rdi), %ymm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1956,7 +1956,7 @@ define <2 x i64> @test_pbroadcastq(<2 x i64> %a0, <2 x i64> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastq %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastq (%rdi), %xmm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastq (%rdi), %xmm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2004,7 +2004,7 @@ define <4 x i64> @test_pbroadcastq_ymm(<4 x i64> %a0, <4 x i64> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastq_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastq %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastq (%rdi), %ymm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastq (%rdi), %ymm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2052,7 +2052,7 @@ define <8 x i16> @test_pbroadcastw(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastw %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastw (%rdi), %xmm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastw (%rdi), %xmm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2101,7 +2101,7 @@ define <16 x i16> @test_pbroadcastw_ymm(<16 x i16> %a0, <16 x i16> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastw_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastw %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastw (%rdi), %ymm1 # sched: [4:0.50]
+; GENERIC-NEXT:    vpbroadcastw (%rdi), %ymm1 # sched: [5:1.00]
 ; GENERIC-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

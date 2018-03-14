@@ -42,7 +42,8 @@ enum AFL_ASE {
   AFL_ASE_MSA = 0x00000200,       // MSA ASE
   AFL_ASE_MIPS16 = 0x00000400,    // MIPS16 ASE
   AFL_ASE_MICROMIPS = 0x00000800, // MICROMIPS ASE
-  AFL_ASE_XPA = 0x00001000        // XPA ASE
+  AFL_ASE_XPA = 0x00001000,       // XPA ASE
+  AFL_ASE_CRC = 0x00008000        // CRC ASE
 };
 
 // Values for the isa_ext word of an ABI flags structure.

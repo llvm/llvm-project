@@ -131,6 +131,7 @@ public:
 /// writes only partially update the register associated to this read.
 class ReadState {
   const ReadDescriptor &RD;
+  unsigned RegisterID;
   unsigned DependentWrites;
   int CyclesLeft;
   unsigned TotalCycles;
@@ -142,14 +143,15 @@ public:
     return (CyclesLeft == UNKNOWN_CYCLES || CyclesLeft == 0);
   }
 
-  ReadState(const ReadDescriptor &Desc)
-      : RD(Desc), DependentWrites(0), CyclesLeft(UNKNOWN_CYCLES),
-        TotalCycles(0) {}
+  ReadState(const ReadDescriptor &Desc, unsigned RegID)
+      : RD(Desc), RegisterID(RegID), DependentWrites(0),
+        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0) {}
   ReadState(const ReadState &Other) = delete;
   ReadState &operator=(const ReadState &Other) = delete;
 
   const ReadDescriptor &getDescriptor() const { return RD; }
   unsigned getSchedClass() const { return RD.SchedClassID; }
+  unsigned getRegisterID() const { return RegisterID; }
   void cycleEvent();
   void writeStartEvent(unsigned Cycles);
   void setDependentWrites(unsigned Writes) { DependentWrites = Writes; }

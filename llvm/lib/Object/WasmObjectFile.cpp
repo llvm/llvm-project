@@ -485,12 +485,12 @@ Error WasmObjectFile::parseLinkingSectionComdat(const uint8_t *&Ptr,
 {
   uint32_t ComdatCount = readVaruint32(Ptr);
   StringSet<> ComdatSet;
-  while (ComdatCount--) {
+  for (unsigned ComdatIndex = 0; ComdatIndex < ComdatCount; ++ComdatIndex) {
     StringRef Name = readString(Ptr);
     if (Name.empty() || !ComdatSet.insert(Name).second)
       return make_error<GenericBinaryError>("Bad/duplicate COMDAT name " + Twine(Name),
                                             object_error::parse_failed);
-    Comdats.emplace_back(Name);
+    LinkingData.Comdats.emplace_back(Name);
     uint32_t Flags = readVaruint32(Ptr);
     if (Flags != 0)
       return make_error<GenericBinaryError>("Unsupported COMDAT flags",
@@ -508,19 +508,19 @@ Error WasmObjectFile::parseLinkingSectionComdat(const uint8_t *&Ptr,
         if (Index >= DataSegments.size())
           return make_error<GenericBinaryError>("COMDAT data index out of range",
                                                 object_error::parse_failed);
-        if (!DataSegments[Index].Data.Comdat.empty())
+        if (DataSegments[Index].Data.Comdat != UINT32_MAX)
           return make_error<GenericBinaryError>("Data segment in two COMDATs",
                                                 object_error::parse_failed);
-        DataSegments[Index].Data.Comdat = Name;
+        DataSegments[Index].Data.Comdat = ComdatIndex;
         break;
       case wasm::WASM_COMDAT_FUNCTION:
         if (!isDefinedFunctionIndex(Index))
           return make_error<GenericBinaryError>("COMDAT function index out of range",
                                                 object_error::parse_failed);
-        if (!getDefinedFunction(Index).Comdat.empty())
+        if (getDefinedFunction(Index).Comdat != UINT32_MAX)
           return make_error<GenericBinaryError>("Function in two COMDATs",
                                                 object_error::parse_failed);
-        getDefinedFunction(Index).Comdat = Name;
+        getDefinedFunction(Index).Comdat = ComdatIndex;
         break;
       }
     }
@@ -878,6 +878,8 @@ Error WasmObjectFile::parseCodeSection(const uint8_t *Ptr, const uint8_t *End) {
 
     uint32_t BodySize = FunctionEnd - Ptr;
     Function.Body = ArrayRef<uint8_t>(Ptr, BodySize);
+    // This will be set later when reading in the linking metadata section.
+    Function.Comdat = UINT32_MAX;
     Ptr += BodySize;
     assert(Ptr == FunctionEnd);
     Functions.push_back(Function);
@@ -924,8 +926,11 @@ Error WasmObjectFile::parseDataSection(const uint8_t *Ptr, const uint8_t *End) {
       return Err;
     uint32_t Size = readVaruint32(Ptr);
     Segment.Data.Content = ArrayRef<uint8_t>(Ptr, Size);
+    // The rest of these Data fields are set later, when reading in the linking
+    // metadata section.
     Segment.Data.Alignment = 0;
     Segment.Data.Flags = 0;
+    Segment.Data.Comdat = UINT32_MAX;
     Segment.SectionOffset = Ptr - Start;
     Ptr += Size;
     DataSegments.push_back(Segment);

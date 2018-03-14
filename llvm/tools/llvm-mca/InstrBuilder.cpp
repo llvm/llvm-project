@@ -419,14 +419,11 @@ const InstrDesc &InstrBuilder::getOrCreateInstrDesc(const MCSubtargetInfo &STI,
 }
 
 Instruction *InstrBuilder::createInstruction(const MCSubtargetInfo &STI,
-                                             DispatchUnit &DU, unsigned Idx,
-                                             const MCInst &MCI) {
+                                             unsigned Idx, const MCInst &MCI) {
   const InstrDesc &D = getOrCreateInstrDesc(STI, MCI);
   Instruction *NewIS = new Instruction(D);
 
   // Populate Reads first.
-  const MCSchedModel &SM = STI.getSchedModel();
-  SmallVector<WriteState *, 4> DependentWrites;
   for (const ReadDescriptor &RD : D.Reads) {
     int RegID = -1;
     if (RD.OpIndex != -1) {
@@ -447,34 +444,9 @@ Instruction *InstrBuilder::createInstruction(const MCSubtargetInfo &STI,
 
     // Okay, this is a register operand. Create a ReadState for it.
     assert(RegID > 0 && "Invalid register ID found!");
-    ReadState *NewRDS = new ReadState(RD);
+    ReadState *NewRDS = new ReadState(RD, RegID);
     NewIS->getUses().emplace_back(std::unique_ptr<ReadState>(NewRDS));
-    DU.collectWrites(DependentWrites, RegID);
-    NewRDS->setDependentWrites(DependentWrites.size());
-    DEBUG(dbgs() << "Found " << DependentWrites.size()
-                 << " dependent writes\n");
-
-    // We know that this read depends on all the writes in DependentWrites.
-    // For each write, check if we have ReadAdvance information, and use it
-    // to figure out after how many cycles this read becomes available.
-    if (!RD.HasReadAdvanceEntries) {
-      for (WriteState *WS : DependentWrites)
-        WS->addUser(NewRDS, /* ReadAdvance */ 0);
-      // Prepare the set for another round.
-      DependentWrites.clear();
-      continue;
-    }
-
-    const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
-    for (WriteState *WS : DependentWrites) {
-      unsigned WriteResID = WS->getWriteResourceID();
-      int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.OpIndex, WriteResID);
-      WS->addUser(NewRDS, ReadAdvance);
-    }
-
-    // Prepare the set for another round.
-    DependentWrites.clear();
-  }
+ }
 
   // Now populate writes.
   for (const WriteDescriptor &WD : D.Writes) {
@@ -489,11 +461,8 @@ Instruction *InstrBuilder::createInstruction(const MCSubtargetInfo &STI,
     WriteState *NewWS = new WriteState(WD);
     NewIS->getDefs().emplace_back(std::unique_ptr<WriteState>(NewWS));
     NewWS->setRegisterID(RegID);
-    DU.addNewRegisterMapping(*NewWS);
   }
 
-  // Update Latency.
-  NewIS->setCyclesLeft(D.MaxLatency);
   return NewIS;
 }
 
