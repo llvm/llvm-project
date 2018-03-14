@@ -28,7 +28,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Listener.h" // for Listener
 #include "lldb/Core/Mangled.h"  // for Mangled
-#include "lldb/Core/ModuleList.h"  // for Mangled
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamAsynchronousIO.h"

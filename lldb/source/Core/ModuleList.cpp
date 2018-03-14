@@ -77,9 +77,17 @@ PropertyDefinition g_properties[] = {
     {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
      nullptr,
      "The path to the clang modules cache directory (-fmodules-cache-path)."},
+    {"swift-use-headermaps", OptionValue::eTypeBoolean, false, false, nullptr,
+     nullptr,
+     "Use headermap include paths deserialized from Swift modules when "
+     "building Clang module dependencies."},
     {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
 
-enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
+enum {
+  ePropertyEnableExternalLookup,
+  ePropertyClangModulesCachePath,
+  ePropertySwiftUseHeadermaps
+};
 
 } // namespace
 
@@ -108,6 +116,12 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
   return m_collection_sp->SetPropertyAtIndexAsString(
       nullptr, ePropertyClangModulesCachePath, path);
+}
+
+bool ModuleListProperties::GetSwiftUseHeadermaps() const {
+    const uint32_t idx = ePropertySwiftUseHeadermaps;
+    return m_collection_sp->GetPropertyAtIndexAsBoolean(
+             nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
 ModuleList::ModuleList()
