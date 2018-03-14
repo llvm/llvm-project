@@ -159,12 +159,11 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
                   llvm::Expected<InputsAndPreamble> IP) {
     assert(IP && "error when trying to read preamble for codeComplete");
     auto PreambleData = IP->Preamble;
-    auto &Command = IP->Inputs.CompileCommand;
 
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CompletionList Result = clangd::codeComplete(
-        File, Command, PreambleData ? &PreambleData->Preamble : nullptr,
+        File, IP->Command, PreambleData ? &PreambleData->Preamble : nullptr,
         Contents, Pos, FS, PCHs, CodeCompleteOpts);
     CB(std::move(Result));
   };
@@ -191,8 +190,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
       return CB(IP.takeError());
 
     auto PreambleData = IP->Preamble;
-    auto &Command = IP->Inputs.CompileCommand;
-    CB(clangd::signatureHelp(File, Command,
+    CB(clangd::signatureHelp(File, IP->Command,
                              PreambleData ? &PreambleData->Preamble : nullptr,
                              Contents, Pos, FS, PCHs));
   };
