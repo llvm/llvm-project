@@ -346,13 +346,17 @@ else()
 
 endif()
 
-if (HAVE_LIBPTHREAD)
-  list(APPEND system_libs pthread)
-endif(HAVE_LIBPTHREAD)
-
-if (HAVE_LIBDL)
-  list(APPEND system_libs ${CMAKE_DL_LIBS})
+if( WIN32 AND NOT CYGWIN )
+  set(PURE_WINDOWS 1)
 endif()
+
+if(NOT PURE_WINDOWS)
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  find_package(Threads REQUIRED)
+  list(APPEND system_libs ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+list(APPEND system_libs ${CMAKE_DL_LIBS})
 
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.

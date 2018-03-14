@@ -289,6 +289,14 @@ public:
       CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
       ArrayRef<llvm::Value *> Args = llvm::None) const override;
 
+  /// Emits OpenMP-specific function prolog.
+  /// Required for device constructs.
+  void emitFunctionProlog(CodeGenFunction &CGF, const Decl *D) override;
+
+  /// Gets the OpenMP-specific address of the local variable.
+  Address getAddressOfLocalVariable(CodeGenFunction &CGF,
+                                    const VarDecl *VD) override;
+
   /// Target codegen is specialized based on two programming models: the
   /// 'generic' fork-join model of OpenMP, and a more GPU efficient 'spmd'
   /// model for constructs like 'target parallel' that support it.
@@ -300,12 +308,37 @@ public:
     Unknown,
   };
 
+  /// Cleans up references to the objects in finished function.
+  ///
+  void functionFinished(CodeGenFunction &CGF) override;
+
 private:
   // Track the execution mode when codegening directives within a target
   // region. The appropriate mode (generic/spmd) is set on entry to the
   // target region and used by containing directives such as 'parallel'
   // to emit optimized code.
   ExecutionMode CurrentExecutionMode;
+
+  /// Map between an outlined function and its wrapper.
+  llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;
+
+  /// Emit function which wraps the outline parallel region
+  /// and controls the parameters which are passed to this function.
+  /// The wrapper ensures that the outlined function is called
+  /// with the correct arguments when data is shared.
+  llvm::Function *createParallelDataSharingWrapper(
+      llvm::Function *OutlinedParallelFn, const OMPExecutableDirective &D);
+
+  /// The map of local variables to their addresses in the global memory.
+  using DeclToAddrMapTy = llvm::MapVector<const Decl *,
+      std::pair<const FieldDecl *, Address>>;
+  /// Maps the function to the list of the globalized variables with their
+  /// addresses.
+  llvm::DenseMap<llvm::Function *,
+                 std::pair<const RecordDecl *, DeclToAddrMapTy>>
+      FunctionGlobalizedDecls;
+  /// Map from function to global record pointer.
+  llvm::DenseMap<llvm::Function *, llvm::Value *> FunctionToGlobalRecPtr;
 };
 
 } // CodeGen namespace.

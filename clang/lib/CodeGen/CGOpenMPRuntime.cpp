@@ -8100,6 +8100,11 @@ Address CGOpenMPRuntime::getParameterAddress(CodeGenFunction &CGF,
   return CGF.GetAddrOfLocalVar(NativeParam);
 }
 
+Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
+                                                   const VarDecl *VD) {
+  return Address::invalid();
+}
+
 llvm::Value *CGOpenMPSIMDRuntime::emitParallelOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {

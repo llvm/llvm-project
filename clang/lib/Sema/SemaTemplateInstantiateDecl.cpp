@@ -3937,8 +3937,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                          TemplateArgs))
       return;
 
+    StmtResult Body;
     if (PatternDecl->hasSkippedBody()) {
       ActOnSkippedFunctionBody(Function);
+      Body = nullptr;
     } else {
       if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(Function)) {
         // If this is a constructor, instantiate the member initializers.
@@ -3954,16 +3956,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       }
 
       // Instantiate the function body.
-      StmtResult Body = SubstStmt(Pattern, TemplateArgs);
+      Body = SubstStmt(Pattern, TemplateArgs);
 
       if (Body.isInvalid())
         Function->setInvalidDecl();
-
-      // FIXME: finishing the function body while in an expression evaluation
-      // context seems wrong. Investigate more.
-      ActOnFinishFunctionBody(Function, Body.get(),
-                              /*IsInstantiation=*/true);
     }
+    // FIXME: finishing the function body while in an expression evaluation
+    // context seems wrong. Investigate more.
+    ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
 
     PerformDependentDiagnostics(PatternDecl, TemplateArgs);
 
