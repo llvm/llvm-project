@@ -1,3 +1,0 @@
-module Bar {
-  header "Bar.h"
-}
