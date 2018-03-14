@@ -10,6 +10,8 @@
 #include "MachOUtils.h"
 #include "BinaryHolder.h"
 #include "DebugMap.h"
+#include "ErrorReporting.h"
+#include "NonRelocatableStringpool.h"
 #include "dsymutil.h"
 #include "NonRelocatableStringpool.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -39,7 +41,7 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
     Path = sys::findProgramByName("lipo");
 
   if (!Path) {
-    errs() << "error: lipo: " << Path.getError().message() << "\n";
+    error_ostream() << "lipo: " << Path.getError().message() << "\n";
     return false;
   }
 
@@ -47,7 +49,7 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
   int result =
       sys::ExecuteAndWait(*Path, Args.data(), nullptr, {}, 0, 0, &ErrMsg);
   if (result) {
-    errs() << "error: lipo: " << ErrMsg << "\n";
+    error_ostream() << "lipo: " << ErrMsg << "\n";
     return false;
   }
 
@@ -64,8 +66,8 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
     StringRef From(ArchFiles.front().Path);
     if (sys::fs::rename(From, OutputFileName)) {
       if (std::error_code EC = sys::fs::copy_file(From, OutputFileName)) {
-        errs() << "error: while copying " << From << " to " << OutputFileName
-               << ": " << EC.message() << "\n";
+        error_ostream() << "while copying " << From << " to " << OutputFileName
+                        << ": " << EC.message() << "\n";
         return false;
       }
       sys::fs::remove(From);

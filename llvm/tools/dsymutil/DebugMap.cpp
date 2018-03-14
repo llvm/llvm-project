@@ -9,6 +9,7 @@
 
 #include "DebugMap.h"
 #include "BinaryHolder.h"
+#include "ErrorReporting.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -241,7 +242,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   sys::path::append(Path, Filename);
   auto ErrOrObjectFiles = BinHolder.GetObjectFiles(Path);
   if (auto EC = ErrOrObjectFiles.getError()) {
-    errs() << "warning: Unable to open " << Path << " " << EC.message() << '\n';
+    warn_ostream() << "Unable to open " << Path << " " << EC.message() << '\n';
   } else if (auto ErrOrObjectFile = BinHolder.Get(Ctxt.BinaryTriple)) {
     // Rewrite the object file symbol addresses in the debug map. The
     // YAML input is mainly used to test llvm-dsymutil without

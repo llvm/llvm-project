@@ -9,6 +9,7 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
+#include "ErrorReporting.h"
 #include "MachOUtils.h"
 #include "NonRelocatableStringpool.h"
 #include "dsymutil.h"
@@ -76,7 +77,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -560,19 +560,7 @@ static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
   }
   return false;
 }
-
-static raw_ostream &error_ostream() {
-  return WithColor(errs(), HighlightColor::Error).get() << "error: ";
-}
-
-static raw_ostream &warn_ostream() {
-  return WithColor(errs(), HighlightColor::Warning).get() << "warning: ";
-}
-
-static raw_ostream &note_ostream() {
-  return WithColor(errs(), HighlightColor::Note).get() << "note: ";
-}
-} // end anonymous namespace
+} // namespace
 
 void warn(Twine Warning, Twine Context) {
   warn_ostream() << Warning + "\n";
@@ -4071,7 +4059,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
       StringRef File = Obj->getObjectFilename();
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        errs() << "Warning: Could not open " << File << "\n";
+        warn("Could not open '" + File + "'\n");
         continue;
       }
       sys::fs::file_status Stat;
@@ -4227,5 +4215,5 @@ bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
   return Linker.link(DM);
 }
 
-} // end namespace dsymutil
-} // end namespace llvm
+} // namespace dsymutil
+} // namespace llvm
