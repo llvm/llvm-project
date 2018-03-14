@@ -85,8 +85,9 @@ public:
   /// This gives callers two options:
   /// - validate that the preamble is still valid, and only use it in this case
   /// - accept that preamble contents may be outdated, and try to avoid reading
-  /// source code from headers. If an error occurs during processing, it is
-  /// forwarded to the \p Action callback.
+  ///   source code from headers.
+  /// If an error occurs during processing, it is forwarded to the \p Action
+  /// callback.
   void runWithPreamble(llvm::StringRef Name, PathRef File,
                        Callback<InputsAndPreamble> Action);
 
