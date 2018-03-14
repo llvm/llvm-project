@@ -10,6 +10,10 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 
+#if LLVM_ENABLE_THREADS
+#include <future>
+#endif
+
 namespace llvm {
 namespace orc {
 
@@ -344,12 +348,140 @@ VSO::LookupResult VSO::lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
   return {std::move(MaterializationWork), std::move(Names)};
 }
 
+Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
+                           MaterializationDispatcher DispatchMaterialization) {
+#if LLVM_ENABLE_THREADS
+  // In the threaded case we use promises to return the results.
+  std::promise<SymbolMap> PromisedResult;
+  std::mutex ErrMutex;
+  Error ResolutionError = Error::success();
+  std::promise<void> PromisedReady;
+  Error ReadyError = Error::success();
+  auto OnResolve = [&](Expected<SymbolMap> Result) {
+    if (Result)
+      PromisedResult.set_value(std::move(*Result));
+    else {
+      {
+        ErrorAsOutParameter _(&ResolutionError);
+        std::lock_guard<std::mutex> Lock(ErrMutex);
+        ResolutionError = Result.takeError();
+      }
+      PromisedResult.set_value(SymbolMap());
+    }
+  };
+  auto OnReady = [&](Error Err) {
+    if (Err) {
+      ErrorAsOutParameter _(&ReadyError);
+      std::lock_guard<std::mutex> Lock(ErrMutex);
+      ReadyError = std::move(Err);
+    }
+    PromisedReady.set_value();
+  };
+#else
+  SymbolMap Result;
+  Error ResolutionError = Error::success();
+  Error ReadyError = Error::success();
+
+  auto OnResolve = [&](Expected<SymbolMap> R) {
+    ErrorAsOutParameter _(&ResolutionError);
+    if (R)
+      Result = std::move(*R);
+    else
+      ResolutionError = R.takeError();
+  };
+  auto OnReady = [&](Error Err) {
+    ErrorAsOutParameter _(&ReadyError);
+    if (Err)
+      ReadyError = std::move(Err);
+  };
+#endif
+
+  auto Query = std::make_shared<AsynchronousSymbolQuery>(
+      Names, std::move(OnResolve), std::move(OnReady));
+  SymbolNameSet UnresolvedSymbols(std::move(Names));
+
+  for (auto *VSO : VSOs) {
+
+    if (UnresolvedSymbols.empty())
+      break;
+
+    assert(VSO && "VSO pointers in VSOs list should be non-null");
+    auto LR = VSO->lookup(Query, UnresolvedSymbols);
+    UnresolvedSymbols = std::move(LR.UnresolvedSymbols);
+
+    for (auto I = LR.MaterializationWork.begin(),
+              E = LR.MaterializationWork.end();
+         I != E;) {
+      auto Tmp = I++;
+      std::shared_ptr<SymbolSource> Source = Tmp->first;
+      SymbolNameSet Names = std::move(Tmp->second);
+      LR.MaterializationWork.erase(Tmp);
+      DispatchMaterialization(*VSO, std::move(Source), std::move(Names));
+    }
+  }
+
+#if LLVM_ENABLE_THREADS
+  auto ResultFuture = PromisedResult.get_future();
+  auto Result = ResultFuture.get();
+
+  {
+    std::lock_guard<std::mutex> Lock(ErrMutex);
+    if (ResolutionError) {
+      // ReadyError will never be assigned. Consume the success value.
+      cantFail(std::move(ReadyError));
+      return std::move(ResolutionError);
+    }
+  }
+
+  auto ReadyFuture = PromisedReady.get_future();
+  ReadyFuture.get();
+
+  {
+    std::lock_guard<std::mutex> Lock(ErrMutex);
+    if (ReadyError)
+      return std::move(ReadyError);
+  }
+
+  return std::move(Result);
+
+#else
+  if (ResolutionError) {
+    // ReadyError will never be assigned. Consume the success value.
+    cantFail(std::move(ReadyError));
+    return std::move(ResolutionError);
+  }
+
+  if (ReadyError)
+    return std::move(ReadyError);
+
+  return Result;
+#endif
+}
+
+/// @brief Look up a symbol by searching a list of VSOs.
+Expected<JITEvaluatedSymbol>
+lookup(const std::vector<VSO *> VSOs, SymbolStringPtr Name,
+       MaterializationDispatcher DispatchMaterialization) {
+  SymbolNameSet Names({Name});
+  if (auto ResultMap =
+          lookup(VSOs, std::move(Names), std::move(DispatchMaterialization))) {
+    assert(ResultMap->size() == 1 && "Unexpected number of results");
+    assert(ResultMap->count(Name) && "Missing result for symbol");
+    return ResultMap->begin()->second;
+  } else
+    return ResultMap.takeError();
+}
+
 ExecutionSession::ExecutionSession(SymbolStringPool &SSP) : SSP(SSP) {}
 
 VModuleKey ExecutionSession::allocateVModule() { return ++LastKey; }
 
 void ExecutionSession::releaseVModule(VModuleKey VMod) {
   // FIXME: Recycle keys.
+}
+
+void ExecutionSession::logErrorsToStdErr(Error Err) {
+  logAllUnhandledErrors(std::move(Err), errs(), "JIT session error: ");
 }
 
 } // End namespace orc.

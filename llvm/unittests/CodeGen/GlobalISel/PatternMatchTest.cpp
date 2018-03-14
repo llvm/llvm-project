@@ -134,10 +134,10 @@ TEST(PatternMatchInstr, MatchIntConstant) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   B.setInsertPt(*EntryMBB, EntryMBB->end());
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
-  uint64_t Cst;
+  int64_t Cst;
   bool match = mi_match(MIBCst->getOperand(0).getReg(), MRI, m_ICst(Cst));
   ASSERT_TRUE(match);
-  ASSERT_EQ(Cst, (uint64_t)42);
+  ASSERT_EQ(Cst, 42);
 }
 
 TEST(PatternMatchInstr, MatchBinaryOp) {
@@ -189,11 +189,11 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   auto MIBMul2 = B.buildMul(s64, Copies[0], B.buildConstant(s64, 42));
   // Try to match MUL(Cst, Reg) on src of MUL(Reg, Cst) to validate
   // commutativity.
-  uint64_t Cst;
+  int64_t Cst;
   match = mi_match(MIBMul2->getOperand(0).getReg(), MRI,
                    m_GMul(m_ICst(Cst), m_Reg(Src0)));
   ASSERT_TRUE(match);
-  ASSERT_EQ(Cst, (uint64_t)42);
+  ASSERT_EQ(Cst, 42);
   ASSERT_EQ(Src0, Copies[0]);
 
   // Make sure commutative doesn't work with something like SUB.
@@ -208,7 +208,7 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   match = mi_match(MIBFMul->getOperand(0).getReg(), MRI,
                    m_GFMul(m_ICst(Cst), m_Reg(Src0)));
   ASSERT_TRUE(match);
-  ASSERT_EQ(Cst, (uint64_t)42);
+  ASSERT_EQ(Cst, 42);
   ASSERT_EQ(Src0, Copies[0]);
 
   // Build AND %0, %1

@@ -1764,15 +1764,11 @@ define <16 x float> @test_mm512_zextps128_ps512(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm512_zextps128_ps512:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vmovaps %xmm0, %xmm0
-; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_zextps128_ps512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps %xmm0, %xmm0
-; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
   ret <16 x float> %res

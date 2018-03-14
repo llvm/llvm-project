@@ -93,5 +93,11 @@ bool FileIndex::fuzzyFind(
   return Index.fuzzyFind(Req, Callback);
 }
 
+void FileIndex::lookup(
+    const LookupRequest &Req,
+    llvm::function_ref<void(const Symbol &)> Callback) const {
+  Index.lookup(Req, Callback);
+}
+
 } // namespace clangd
 } // namespace clang

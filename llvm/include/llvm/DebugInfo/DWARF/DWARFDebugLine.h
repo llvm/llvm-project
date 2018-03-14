@@ -67,7 +67,7 @@ public:
     /// Version, address size (starting in v5), and DWARF32/64 format; these
     /// parameters affect interpretation of forms (used in the directory and
     /// file tables starting with v5).
-    DWARFFormParams FormParams;
+    dwarf::FormParams FormParams;
     /// The number of bytes following the prologue_length field to the beginning
     /// of the first byte of the statement program itself.
     uint64_t PrologueLength;
@@ -94,7 +94,7 @@ public:
     std::vector<DWARFFormValue> IncludeDirectories;
     std::vector<FileNameEntry> FileNames;
 
-    const DWARFFormParams getFormParams() const { return FormParams; }
+    const dwarf::FormParams getFormParams() const { return FormParams; }
     uint16_t getVersion() const { return FormParams.Version; }
     uint8_t getAddressSize() const { return FormParams.AddrSize; }
     bool isDWARF64() const { return FormParams.Format == dwarf::DWARF64; }

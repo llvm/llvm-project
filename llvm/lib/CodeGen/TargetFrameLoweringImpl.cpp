@@ -100,7 +100,7 @@ unsigned TargetFrameLowering::getStackAlignmentSkew(
   // When HHVM function is called, the stack is skewed as the return address
   // is removed from the stack before we enter the function.
   if (LLVM_UNLIKELY(MF.getFunction().getCallingConv() == CallingConv::HHVM))
-    return MF.getTarget().getPointerSize();
+    return MF.getTarget().getAllocaPointerSize();
 
   return 0;
 }

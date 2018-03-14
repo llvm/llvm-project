@@ -20,59 +20,6 @@ using namespace dwarf;
 
 namespace {
 
-TEST(DWARFFormValue, FixedFormSizes) {
-  Optional<uint8_t> RefSize;
-  Optional<uint8_t> AddrSize;
-
-  // Test 32 bit DWARF version 2 with 4 byte addresses.
-  DWARFFormParams Params_2_4_32 = {2, 4, DWARF32};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_4_32);
-  AddrSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_TRUE(AddrSize.hasValue());
-  EXPECT_EQ(*RefSize, *AddrSize);
-
-  // Test 32 bit DWARF version 2 with 8 byte addresses.
-  DWARFFormParams Params_2_8_32 = {2, 8, DWARF32};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_8_32);
-  AddrSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_8_32);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_TRUE(AddrSize.hasValue());
-  EXPECT_EQ(*RefSize, *AddrSize);
-
-  // DW_FORM_ref_addr is 4 bytes in DWARF 32 in DWARF version 3 and beyond.
-  DWARFFormParams Params_3_4_32 = {3, 4, DWARF32};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_3_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_EQ(*RefSize, 4);
-
-  DWARFFormParams Params_4_4_32 = {4, 4, DWARF32};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_4_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_EQ(*RefSize, 4);
-
-  DWARFFormParams Params_5_4_32 = {5, 4, DWARF32};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_5_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_EQ(*RefSize, 4);
-
-  // DW_FORM_ref_addr is 8 bytes in DWARF 64 in DWARF version 3 and beyond.
-  DWARFFormParams Params_3_8_64 = {3, 8, DWARF64};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_3_8_64);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_EQ(*RefSize, 8);
-
-  DWARFFormParams Params_4_8_64 = {4, 8, DWARF64};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_4_8_64);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_EQ(*RefSize, 8);
-
-  DWARFFormParams Params_5_8_64 = {5, 8, DWARF64};
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_5_8_64);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_EQ(*RefSize, 8);
-}
-
 bool isFormClass(dwarf::Form Form, DWARFFormValue::FormClass FC) {
   return DWARFFormValue(Form).isFormClass(FC);
 }

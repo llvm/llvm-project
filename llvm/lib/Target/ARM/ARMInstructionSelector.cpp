@@ -511,7 +511,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
 
   bool UseMovt = STI.useMovt(MF);
 
-  unsigned Size = TM.getPointerSize();
+  unsigned Size = TM.getPointerSize(0);
   unsigned Alignment = 4;
 
   auto addOpsForConstantPoolLoad = [&MF, Alignment,
@@ -554,7 +554,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     if (Indirect)
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad,
-          TM.getPointerSize(), Alignment));
+          TM.getProgramPointerSize(), Alignment));
 
     return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   }

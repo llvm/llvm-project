@@ -60,6 +60,15 @@ bool MemIndex::fuzzyFind(
   return More;
 }
 
+void MemIndex::lookup(const LookupRequest &Req,
+                      llvm::function_ref<void(const Symbol &)> Callback) const {
+  for (const auto &ID : Req.IDs) {
+    auto I = Index.find(ID);
+    if (I != Index.end())
+      Callback(*I->second);
+  }
+}
+
 std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
   struct Snapshot {
     SymbolSlab Slab;

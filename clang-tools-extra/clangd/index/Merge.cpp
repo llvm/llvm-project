@@ -52,6 +52,28 @@ class MergedIndex : public SymbolIndex {
      return More;
   }
 
+  void
+  lookup(const LookupRequest &Req,
+         llvm::function_ref<void(const Symbol &)> Callback) const override {
+    SymbolSlab::Builder B;
+
+    Dynamic->lookup(Req, [&](const Symbol &S) { B.insert(S); });
+
+    auto RemainingIDs = Req.IDs;
+    Symbol::Details Scratch;
+    Static->lookup(Req, [&](const Symbol &S) {
+      const Symbol *Sym = B.find(S.ID);
+      RemainingIDs.erase(S.ID);
+      if (!Sym)
+        Callback(S);
+      else
+        Callback(mergeSymbol(*Sym, S, &Scratch));
+    });
+    for (const auto &ID : RemainingIDs)
+      if (const Symbol *Sym = B.find(ID))
+        Callback(*Sym);
+  }
+
 private:
   const SymbolIndex *Dynamic, *Static;
 };

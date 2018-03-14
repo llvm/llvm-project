@@ -63,6 +63,9 @@ public:
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override;
 
+  void lookup(const LookupRequest &Req,
+              llvm::function_ref<void(const Symbol &)> Callback) const override;
+
 private:
   FileSymbols FSymbols;
   MemIndex Index;

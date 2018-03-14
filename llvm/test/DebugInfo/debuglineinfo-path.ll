@@ -1,6 +1,9 @@
 ; Make sure that absolute source dir is detected correctly regardless of the platform.
 ; REQUIRES: object-emission
-; RUN: %llc_dwarf -filetype=obj -o %t < %s
+; On powerpc llvm-nm describes win_func as a global variable, not a function. It breaks the test.
+; It is not essential to DWARF path handling code we're testing here.
+; UNSUPPORTED: powerpc
+; RUN: %llc_dwarf -O0 -filetype=obj -o %t < %s
 ; RUN: llvm-nm -radix=o %t | grep posix_absolute_func > %t.posix_absolute_func
 ; RUN: llvm-nm -radix=o %t | grep posix_relative_func > %t.posix_relative_func
 ; RUN: llvm-nm -radix=o %t | grep win_func > %t.win_func
@@ -16,10 +19,6 @@
 
 ;WIN: win_func
 ;WIN: E:\absolute\windows\path{{[\/]}}win.c
-
-
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
 
 define i32 @win_func() #0 !dbg !54 {
   ret i32 5, !dbg !511

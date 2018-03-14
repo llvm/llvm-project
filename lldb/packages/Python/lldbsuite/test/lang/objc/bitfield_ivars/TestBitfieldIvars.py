@@ -5,8 +5,8 @@ lldbinline.MakeInlineTest(
     __file__,
     globals(),
     [
-        decorators.skipIfFreeBSD,
-        decorators.skipIfLinux,
-        decorators.skipIfWindows,
+        # This is a Darwin-only failure related to incorrect expresssion-
+        # evaluation for single-bit ObjC bitfields.
+        decorators.skipUnlessDarwin,
         decorators.expectedFailureAll(
             bugnumber="rdar://problem/17990991")])
