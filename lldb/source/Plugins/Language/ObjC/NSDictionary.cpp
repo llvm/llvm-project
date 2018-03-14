@@ -396,6 +396,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   static const ConstString g_DictionaryMLegacy("__NSDictionaryM_Legacy");
   static const ConstString g_DictionaryMImmutable("__NSDictionaryM_Immutable");
   static const ConstString g_Dictionary1("__NSSingleEntryDictionaryI");
+  static const ConstString g_Dictionary0("__NSDictionary0");
 
   if (class_name.IsEmpty())
     return false;
@@ -423,6 +424,8 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
       return false;
   } else if (class_name == g_Dictionary1) {
     value = 1;
+  } else if (class_name == g_Dictionary0) {
+    value = 0;
   }
   else {
     auto &map(NSDictionary_Additionals::GetAdditionalSummaries());
@@ -481,6 +484,7 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   static const ConstString g_Dictionary1("__NSSingleEntryDictionaryI");
   static const ConstString g_DictionaryImmutable("__NSDictionaryM_Immutable");
   static const ConstString g_DictionaryMLegacy("__NSDictionaryM_Legacy");
+  static const ConstString g_Dictionary0("__NSDictionary0");
 
   if (class_name.IsEmpty())
     return nullptr;
