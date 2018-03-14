@@ -71,9 +71,10 @@ CHECK-ARCHIVE: ...
 Check that we warn about missing object files (this presumes that the files aren't
 present in the machine's /Inputs/ folder, which should be a pretty safe bet).
 
-NOT-FOUND: cannot open{{.*}}"/Inputs/basic1.macho.x86_64.o": {{[Nn]o}} such file
-NOT-FOUND: cannot open{{.*}}"/Inputs/basic2.macho.x86_64.o": {{[Nn]o}} such file
-NOT-FOUND: cannot open{{.*}}"/Inputs/basic3.macho.x86_64.o": {{[Nn]o}} such file
+warning: (x86_64) /Inputs/basic1.macho.x86_64.o unable to open object file:
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic1.macho.x86_64.o unable to open object file: {{[Nn]o}} such file
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic2.macho.x86_64.o unable to open object file: {{[Nn]o}} such file
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic3.macho.x86_64.o unable to open object file: {{[Nn]o}} such file
 NOT-FOUND: ---
 NOT-FOUND-NEXT: triple: 'x86_64-apple-darwin'
 NOT-FOUND-NEXT: binary-path:{{.*}}/Inputs/basic.macho.x86_64
@@ -81,5 +82,5 @@ NOT-FOUND-NEXT: ...
 
 Check that we correctly error out on invalid executatble.
 
-NO-EXECUTABLE: cannot parse{{.*}}/inexistant": {{[Nn]o}} such file
+NO-EXECUTABLE: cannot parse{{.*}}/inexistant': {{[Nn]o}} such file
 NO-EXECUTABLE-NOT: ---

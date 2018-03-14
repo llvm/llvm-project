@@ -9,6 +9,8 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
+#include "ErrorReporting.h"
+#include "MachOUtils.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
@@ -96,9 +98,14 @@ private:
   }
   void dumpOneBinaryStab(const MachOObjectFile &MainBinary,
                          StringRef BinaryPath);
+
+  void Warning(const Twine &Msg, StringRef File = StringRef()) {
+    warn_ostream() << "("
+                   << MachOUtils::getArchName(Result->getTriple().getArchName())
+                   << ") " << File << " " << Msg << "\n";
+  }
 };
 
-static void Warning(const Twine &Msg) { errs() << "warning: " + Msg + "\n"; }
 } // anonymous namespace
 
 /// Reset the parser state coresponding to the current object
@@ -122,16 +129,15 @@ void MachODebugMapParser::switchToNewDebugMapObject(
   auto MachOOrError =
       CurrentObjectHolder.GetFilesAs<MachOObjectFile>(Path, Timestamp);
   if (auto Error = MachOOrError.getError()) {
-    Warning(Twine("cannot open debug object \"") + Path.str() + "\": " +
-            Error.message() + "\n");
+    Warning("unable to open object file: " + Error.message(), Path.str());
     return;
   }
 
   auto ErrOrAchObj =
       CurrentObjectHolder.GetAs<MachOObjectFile>(Result->getTriple());
-  if (auto Err = ErrOrAchObj.getError()) {
-    return Warning(Twine("cannot open debug object \"") + Path.str() + "\": " +
-                   Err.message() + "\n");
+  if (auto Error = ErrOrAchObj.getError()) {
+    Warning("unable to open object file: " + Error.message(), Path.str());
+    return;
   }
 
   CurrentDebugMapObject =
@@ -401,14 +407,16 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
     }
   }
 
-  if (ObjectSymIt == CurrentObjectAddresses.end())
-    return Warning("could not find object file symbol for symbol " +
-                   Twine(Name));
+  if (ObjectSymIt == CurrentObjectAddresses.end()) {
+    Warning("could not find object file symbol for symbol " + Twine(Name));
+    return;
+  }
 
   if (!CurrentDebugMapObject->addSymbol(Name, ObjectSymIt->getValue(), Value,
-                                        Size))
-    return Warning(Twine("failed to insert symbol '") + Name +
-                   "' in the debug map.");
+                                        Size)) {
+    Warning(Twine("failed to insert symbol '") + Name + "' in the debug map.");
+    return;
+  }
 }
 
 /// Load the current object file symbols into CurrentObjectAddresses.
