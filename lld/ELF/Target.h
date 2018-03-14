@@ -43,6 +43,10 @@ public:
   virtual void addPltHeaderSymbols(InputSection &IS) const {}
   virtual void addPltSymbols(InputSection &IS, uint64_t Off) const {}
 
+  unsigned getPltEntryOffset(unsigned Index) const {
+    return Index * PltEntrySize + PltHeaderSize;
+  }
+
   // Returns true if a relocation only uses the low bits of a value such that
   // all those bits are in in the same page. For example, if the relocation
   // only uses the low 12 bits in a system with 4k pages. If this is true, the

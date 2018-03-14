@@ -140,7 +140,7 @@ public:
   ///     /b True this object contains a valid non-empty C string, \b
   ///     false otherwise.
   //------------------------------------------------------------------
-  explicit operator bool() const { return m_string && m_string[0]; }
+  explicit operator bool() const { return !IsEmpty(); }
 
   //------------------------------------------------------------------
   /// Assignment operator
