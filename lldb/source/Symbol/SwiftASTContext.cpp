@@ -1189,21 +1189,6 @@ static std::string &GetDefaultResourceDir() {
   return s_resource_dir;
 }
 
-/// Determine whether this is a headermap include argument.
-static bool isHeadermapArg(StringRef arg) {
-  return (arg.startswith("-I") || arg.startswith("-iquote")) &&
-         arg.endswith(".hmap");
-}
-
-/// Filter the ClangImporter options according to the target options.
-static void
-sanitizeClangImporterOptions(std::vector<std::string> &extraClangArgs) {
-  // The default of this option is false.
-  if (!ModuleList::GetGlobalModuleListProperties().GetSwiftUseHeadermaps())
-    extraClangArgs.erase(std::remove_if(extraClangArgs.begin(),
-                                        extraClangArgs.end(), isHeadermapArg),
-                         extraClangArgs.end());
-}
 
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Module &module) {
@@ -1503,9 +1488,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     }
   }
 
-  sanitizeClangImporterOptions(swift_ast_sp->GetCompilerInvocation()
-                                   .getClangImporterOptions()
-                                   .ExtraArgs);
   if (!swift_ast_sp->GetClangImporter()) {
     if (log) {
       log->Printf("((Module*)%p) [%s]->GetSwiftASTContext() returning NULL "
@@ -1838,17 +1820,15 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // the ClangImporter is made by calling GetClangImporter or these options
   // will be ignored.
 
-  auto &compiler_invocation = swift_ast_sp->GetCompilerInvocation();
   if (extra_options) {
+    swift::CompilerInvocation &compiler_invocation =
+        swift_ast_sp->GetCompilerInvocation();
     Args extra_args(extra_options);
     llvm::ArrayRef<const char *> extra_args_ref(extra_args.GetArgumentVector(),
                                                 extra_args.GetArgumentCount());
     compiler_invocation.parseArgs(extra_args_ref,
                                   swift_ast_sp->GetDiagnosticEngine());
   }
-
-  sanitizeClangImporterOptions(
-      compiler_invocation.getClangImporterOptions().ExtraArgs);
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
@@ -2658,11 +2638,13 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
   if (!m_initialized_clang_importer_options) {
     m_initialized_clang_importer_options = true;
 
-    // Set the Clang modules search path.
-    llvm::SmallString<128> path;
-    auto props = ModuleList::GetGlobalModuleListProperties();
-    props.GetClangModulesCachePath().GetPath(path);
-    clang_importer_options.ModuleCachePath = path.str();
+    // Set the Clang module search path.
+    llvm::SmallString<128> Path;
+    // FIXME: This should be querying
+    // target.GetClangModulesCachePath(), but most of the times there
+    // is no target available when this function is called.
+    clang::driver::Driver::getDefaultModuleCachePath(Path);
+    clang_importer_options.ModuleCachePath = Path.str();
 
     FileSpec clang_dir_spec;
     if (HostInfo::GetLLDBPath(ePathTypeClangDir, clang_dir_spec))
