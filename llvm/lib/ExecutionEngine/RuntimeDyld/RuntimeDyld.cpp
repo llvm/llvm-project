@@ -1198,6 +1198,12 @@ JITEvaluatedSymbol RuntimeDyld::getSymbol(StringRef Name) const {
   return Dyld->getSymbol(Name);
 }
 
+std::map<StringRef, JITEvaluatedSymbol> RuntimeDyld::getSymbolTable() const {
+  if (!Dyld)
+    return std::map<StringRef, JITEvaluatedSymbol>();
+  return Dyld->getSymbolTable();
+}
+
 void RuntimeDyld::resolveRelocations() { Dyld->resolveRelocations(); }
 
 void RuntimeDyld::reassignSectionAddress(unsigned SectionID, uint64_t Addr) {

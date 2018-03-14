@@ -2857,10 +2857,10 @@ Status Process::LoadCore() {
     // state.
     SetPrivateState(eStateStopped);
 
-    // Wait indefinitely for a stopped event since we just posted one above...
+    // Wait for a stopped event since we just posted one above...
     lldb::EventSP event_sp;
-    listener_sp->GetEvent(event_sp, llvm::None);
-    StateType state = ProcessEventData::GetStateFromEvent(event_sp.get());
+    StateType state =
+        WaitForProcessToStop(seconds(10), &event_sp, true, listener_sp);
 
     if (!StateIsStoppedState(state, false)) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));

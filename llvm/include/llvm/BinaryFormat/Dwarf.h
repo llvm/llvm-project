@@ -20,8 +20,10 @@
 #ifndef LLVM_BINARYFORMAT_DWARF_H
 #define LLVM_BINARYFORMAT_DWARF_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 class StringRef;
@@ -56,6 +58,9 @@ enum LLVMConstants : uint32_t {
   DWARF_VENDOR_LLVM = 5,
   DWARF_VENDOR_MIPS = 6
 };
+
+/// Constants that define the DWARF format as 32 or 64 bit.
+enum DwarfFormat : uint8_t { DWARF32, DWARF64 };
 
 /// Special ID values that distinguish a CIE from a FDE in DWARF CFI.
 /// Not inside an enum because a 64-bit value is needed.
@@ -482,6 +487,49 @@ unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
 
+/// A helper struct providing information about the byte size of DW_FORM
+/// values that vary in size depending on the DWARF version, address byte
+/// size, or DWARF32/DWARF64.
+struct FormParams {
+  uint16_t Version;
+  uint8_t AddrSize;
+  DwarfFormat Format;
+
+  /// The definition of the size of form DW_FORM_ref_addr depends on the
+  /// version. In DWARF v2 it's the size of an address; after that, it's the
+  /// size of a reference.
+  uint8_t getRefAddrByteSize() const {
+    if (Version == 2)
+      return AddrSize;
+    return getDwarfOffsetByteSize();
+  }
+
+  /// The size of a reference is determined by the DWARF 32/64-bit format.
+  uint8_t getDwarfOffsetByteSize() const {
+    switch (Format) {
+    case DwarfFormat::DWARF32:
+      return 4;
+    case DwarfFormat::DWARF64:
+      return 8;
+    }
+    llvm_unreachable("Invalid Format value");
+  }
+
+  explicit operator bool() const { return Version && AddrSize; }
+};
+
+/// Get the fixed byte size for a given form.
+///
+/// If the form has a fixed byte size, then an Optional with a value will be
+/// returned. If the form is always encoded using a variable length storage
+/// format (ULEB or SLEB numbers or blocks) then None will be returned.
+///
+/// \param Form DWARF form to get the fixed byte size for.
+/// \param Params DWARF parameters to help interpret forms.
+/// \returns Optional<uint8_t> value with the fixed byte size or None if
+/// \p Form doesn't have a fixed byte size.
+Optional<uint8_t> getFixedFormByteSize(dwarf::Form Form, FormParams Params);
+
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.
 bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
@@ -524,9 +572,6 @@ private:
     LINKAGE_MASK = 1 << LINKAGE_OFFSET
   };
 };
-
-/// Constants that define the DWARF format as 32 or 64 bit.
-enum DwarfFormat : uint8_t { DWARF32, DWARF64 };
 
 } // End of namespace dwarf
 

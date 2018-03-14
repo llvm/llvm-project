@@ -112,6 +112,8 @@ private:
   bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectShift(MachineInstr &I, MachineRegisterInfo &MRI,
+                   MachineFunction &MF) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
   bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
@@ -373,6 +375,10 @@ bool X86InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_IMPLICIT_DEF:
   case TargetOpcode::G_PHI:
     return selectImplicitDefOrPHI(I, MRI);
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+    return selectShift(I, MRI, MF);
   }
 
   return false;
@@ -749,6 +755,70 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
 
   const LLT DstTy = MRI.getType(DstReg);
   const LLT SrcTy = MRI.getType(SrcReg);
+
+  assert(!(SrcTy == LLT::scalar(8) && DstTy == LLT::scalar(32)) &&
+         "8=>32 Zext is handled by tablegen");
+  assert(!(SrcTy == LLT::scalar(16) && DstTy == LLT::scalar(32)) &&
+         "16=>32 Zext is handled by tablegen");
+
+  const static struct ZextEntry {
+    LLT SrcTy;
+    LLT DstTy;
+    unsigned MovOp;
+    bool NeedSubregToReg;
+  } OpTable[] = {
+      {LLT::scalar(8), LLT::scalar(16), X86::MOVZX16rr8, false},  // i8  => i16
+      {LLT::scalar(8), LLT::scalar(64), X86::MOVZX32rr8, true},   // i8  => i64
+      {LLT::scalar(16), LLT::scalar(64), X86::MOVZX32rr16, true}, // i16 => i64
+      {LLT::scalar(32), LLT::scalar(64), 0, true}                 // i32 => i64
+  };
+
+  auto ZextEntryIt =
+      std::find_if(std::begin(OpTable), std::end(OpTable),
+                   [SrcTy, DstTy](const ZextEntry &El) {
+                     return El.DstTy == DstTy && El.SrcTy == SrcTy;
+                   });
+
+  // Here we try to select Zext into a MOVZ and/or SUBREG_TO_REG instruction.
+  if (ZextEntryIt != std::end(OpTable)) {
+    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+    const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+    const TargetRegisterClass *DstRC = getRegClass(DstTy, DstRB);
+    const TargetRegisterClass *SrcRC = getRegClass(SrcTy, SrcRB);
+
+    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
+        !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+      DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                   << " operand\n");
+      return false;
+    }
+
+    unsigned TransitRegTo = DstReg;
+    unsigned TransitRegFrom = SrcReg;
+    if (ZextEntryIt->MovOp) {
+      // If we select Zext into MOVZ + SUBREG_TO_REG, we need to have
+      // a transit register in between: create it here.
+      if (ZextEntryIt->NeedSubregToReg) {
+        TransitRegFrom = MRI.createVirtualRegister(
+            getRegClass(LLT::scalar(32), DstReg, MRI));
+        TransitRegTo = TransitRegFrom;
+      }
+
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(ZextEntryIt->MovOp))
+          .addDef(TransitRegTo)
+          .addReg(SrcReg);
+    }
+    if (ZextEntryIt->NeedSubregToReg) {
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(TargetOpcode::SUBREG_TO_REG))
+          .addDef(DstReg)
+          .addImm(0)
+          .addReg(TransitRegFrom)
+          .addImm(X86::sub_32bit);
+    }
+    I.eraseFromParent();
+    return true;
+  }
 
   if (SrcTy != LLT::scalar(1))
     return false;
@@ -1329,6 +1399,85 @@ bool X86InstructionSelector::selectImplicitDefOrPHI(
   else
     I.setDesc(TII.get(X86::PHI));
 
+  return true;
+}
+
+// Currently GlobalIsel TableGen generates patterns for shift imm and shift 1,
+// but with shiftCount i8. In G_LSHR/G_ASHR/G_SHL like LLVM-IR both arguments
+// has the same type, so for now only shift i8 can use auto generated
+// TableGen patterns.
+bool X86InstructionSelector::selectShift(MachineInstr &I,
+                                         MachineRegisterInfo &MRI,
+                                         MachineFunction &MF) const {
+
+  assert((I.getOpcode() == TargetOpcode::G_SHL ||
+          I.getOpcode() == TargetOpcode::G_ASHR ||
+          I.getOpcode() == TargetOpcode::G_LSHR) &&
+         "unexpected instruction");
+
+  unsigned DstReg = I.getOperand(0).getReg();
+  const LLT DstTy = MRI.getType(DstReg);
+  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+
+  const static struct ShiftEntry {
+    unsigned SizeInBits;
+    unsigned CReg;
+    unsigned OpLSHR;
+    unsigned OpASHR;
+    unsigned OpSHL;
+  } OpTable[] = {
+      {8, X86::CL, X86::SHR8rCL, X86::SAR8rCL, X86::SHL8rCL},      // i8
+      {16, X86::CX, X86::SHR16rCL, X86::SAR16rCL, X86::SHL16rCL},  // i16
+      {32, X86::ECX, X86::SHR32rCL, X86::SAR32rCL, X86::SHL32rCL}, // i32
+      {64, X86::RCX, X86::SHR64rCL, X86::SAR64rCL, X86::SHL64rCL}  // i64
+  };
+
+  if (DstRB.getID() != X86::GPRRegBankID)
+    return false;
+
+  auto ShiftEntryIt = std::find_if(
+      std::begin(OpTable), std::end(OpTable), [DstTy](const ShiftEntry &El) {
+        return El.SizeInBits == DstTy.getSizeInBits();
+      });
+  if (ShiftEntryIt == std::end(OpTable))
+    return false;
+
+  unsigned CReg = ShiftEntryIt->CReg;
+  unsigned Opcode = 0;
+  switch (I.getOpcode()) {
+  case TargetOpcode::G_SHL:
+    Opcode = ShiftEntryIt->OpSHL;
+    break;
+  case TargetOpcode::G_ASHR:
+    Opcode = ShiftEntryIt->OpASHR;
+    break;
+  case TargetOpcode::G_LSHR:
+    Opcode = ShiftEntryIt->OpLSHR;
+    break;
+  default:
+    return false;
+  }
+
+  unsigned Op0Reg = I.getOperand(1).getReg();
+  unsigned Op1Reg = I.getOperand(2).getReg();
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+          ShiftEntryIt->CReg)
+      .addReg(Op1Reg);
+
+  // The shift instruction uses X86::CL. If we defined a super-register
+  // of X86::CL, emit a subreg KILL to precisely describe what we're doing here.
+  if (CReg != X86::CL)
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::KILL),
+            X86::CL)
+        .addReg(CReg, RegState::Kill);
+
+  MachineInstr &ShiftInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode), DstReg)
+           .addReg(Op0Reg);
+
+  constrainSelectedInstRegOperands(ShiftInst, TII, TRI, RBI);
+  I.eraseFromParent();
   return true;
 }
 

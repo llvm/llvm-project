@@ -170,7 +170,7 @@ struct StrOffsetsContributionDescriptor {
   uint64_t Base = 0;
   uint64_t Size = 0;
   /// Format and version.
-  DWARFFormParams FormParams = {0, 0, dwarf::DwarfFormat::DWARF32};
+  dwarf::FormParams FormParams = {0, 0, dwarf::DwarfFormat::DWARF32};
 
   StrOffsetsContributionDescriptor(uint64_t Base, uint64_t Size,
                                    uint8_t Version, dwarf::DwarfFormat Format)
@@ -206,7 +206,7 @@ class DWARFUnit {
   const DWARFUnitSectionBase &UnitSection;
 
   // Version, address size, and DWARF format.
-  DWARFFormParams FormParams;
+  dwarf::FormParams FormParams;
   /// Start, length, and DWARF format of the unit's contribution to the string
   /// offsets table (DWARF v5).
   Optional<StrOffsetsContributionDescriptor> StringOffsetsTableContribution;
@@ -315,7 +315,7 @@ public:
   getStringOffsetsTableContribution() const {
     return StringOffsetsTableContribution;
   }
-  const DWARFFormParams &getFormParams() const { return FormParams; }
+  const dwarf::FormParams &getFormParams() const { return FormParams; }
   uint16_t getVersion() const { return FormParams.Version; }
   dwarf::DwarfFormat getFormat() const { return FormParams.Format; }
   uint8_t getAddressByteSize() const { return FormParams.AddrSize; }

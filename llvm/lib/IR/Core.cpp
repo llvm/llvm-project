@@ -1607,6 +1607,31 @@ void LLVMSetDLLStorageClass(LLVMValueRef Global, LLVMDLLStorageClass Class) {
       static_cast<GlobalValue::DLLStorageClassTypes>(Class));
 }
 
+LLVMUnnamedAddr LLVMGetUnnamedAddress(LLVMValueRef Global) {
+  switch (unwrap<GlobalValue>(Global)->getUnnamedAddr()) {
+  case GlobalVariable::UnnamedAddr::None:
+    return LLVMNoUnnamedAddr;
+  case GlobalVariable::UnnamedAddr::Local:
+    return LLVMLocalUnnamedAddr;
+  case GlobalVariable::UnnamedAddr::Global:
+    return LLVMGlobalUnnamedAddr;
+  }
+  llvm_unreachable("Unknown UnnamedAddr kind!");
+}
+
+void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr) {
+  GlobalValue *GV = unwrap<GlobalValue>(Global);
+
+  switch (UnnamedAddr) {
+  case LLVMNoUnnamedAddr:
+    return GV->setUnnamedAddr(GlobalVariable::UnnamedAddr::None);
+  case LLVMLocalUnnamedAddr:
+    return GV->setUnnamedAddr(GlobalVariable::UnnamedAddr::Local);
+  case LLVMGlobalUnnamedAddr:
+    return GV->setUnnamedAddr(GlobalVariable::UnnamedAddr::Global);
+  }
+}
+
 LLVMBool LLVMHasUnnamedAddr(LLVMValueRef Global) {
   return unwrap<GlobalValue>(Global)->hasGlobalUnnamedAddr();
 }

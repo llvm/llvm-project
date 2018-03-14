@@ -248,6 +248,10 @@ struct FuzzyFindRequest {
   size_t MaxCandidateCount = UINT_MAX;
 };
 
+struct LookupRequest {
+  llvm::DenseSet<SymbolID> IDs;
+};
+
 /// \brief Interface for symbol indexes that can be used for searching or
 /// matching symbols among a set of symbols based on names or unique IDs.
 class SymbolIndex {
@@ -263,8 +267,14 @@ public:
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const = 0;
 
+  /// Looks up symbols with any of the given symbol IDs and applies \p Callback
+  /// on each matched symbol.
+  /// The returned symbol must be deep-copied if it's used outside Callback.
+  virtual void
+  lookup(const LookupRequest &Req,
+         llvm::function_ref<void(const Symbol &)> Callback) const = 0;
+
   // FIXME: add interfaces for more index use cases:
-  //  - Symbol getSymbolInfo(SymbolID);
   //  - getAllOccurrences(SymbolID);
 };
 

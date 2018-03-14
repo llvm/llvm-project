@@ -353,21 +353,28 @@ Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
 #if LLVM_ENABLE_THREADS
   // In the threaded case we use promises to return the results.
   std::promise<SymbolMap> PromisedResult;
+  std::mutex ErrMutex;
   Error ResolutionError = Error::success();
   std::promise<void> PromisedReady;
   Error ReadyError = Error::success();
   auto OnResolve = [&](Expected<SymbolMap> Result) {
-    ErrorAsOutParameter _(&ResolutionError);
     if (Result)
       PromisedResult.set_value(std::move(*Result));
     else {
-      ResolutionError = Result.takeError();
-      PromisedResult.set_value({});
+      {
+        ErrorAsOutParameter _(&ResolutionError);
+        std::lock_guard<std::mutex> Lock(ErrMutex);
+        ResolutionError = Result.takeError();
+      }
+      PromisedResult.set_value(SymbolMap());
     }
   };
   auto OnReady = [&](Error Err) {
-    ErrorAsOutParameter _(&ReadyError);
-    ReadyError = std::move(Err);
+    if (Err) {
+      ErrorAsOutParameter _(&ReadyError);
+      std::lock_guard<std::mutex> Lock(ErrMutex);
+      ReadyError = std::move(Err);
+    }
     PromisedReady.set_value();
   };
 #else
@@ -416,17 +423,24 @@ Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
 #if LLVM_ENABLE_THREADS
   auto ResultFuture = PromisedResult.get_future();
   auto Result = ResultFuture.get();
-  if (ResolutionError) {
-    // ReadyError will never be assigned. Consume the success value.
-    cantFail(std::move(ReadyError));
-    return std::move(ResolutionError);
+
+  {
+    std::lock_guard<std::mutex> Lock(ErrMutex);
+    if (ResolutionError) {
+      // ReadyError will never be assigned. Consume the success value.
+      cantFail(std::move(ReadyError));
+      return std::move(ResolutionError);
+    }
   }
 
   auto ReadyFuture = PromisedReady.get_future();
   ReadyFuture.get();
 
-  if (ReadyError)
-    return std::move(ReadyError);
+  {
+    std::lock_guard<std::mutex> Lock(ErrMutex);
+    if (ReadyError)
+      return std::move(ReadyError);
+  }
 
   return std::move(Result);
 

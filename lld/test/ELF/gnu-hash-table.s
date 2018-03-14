@@ -51,12 +51,12 @@
 # EMPTY-NEXT:   }
 # EMPTY-NEXT: ]
 # EMPTY:      GnuHashTable {
-# EMPTY-NEXT:   Num Buckets: 0
+# EMPTY-NEXT:   Num Buckets: 1
 # EMPTY-NEXT:   First Hashed Symbol Index: 2
 # EMPTY-NEXT:   Num Mask Words: 1
 # EMPTY-NEXT:   Shift Count: 5
 # EMPTY-NEXT:   Bloom Filter: [0x0]
-# EMPTY-NEXT:   Buckets: []
+# EMPTY-NEXT:   Buckets: [0]
 # EMPTY-NEXT:   Values: []
 # EMPTY-NEXT: }
 

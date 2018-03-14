@@ -12,6 +12,16 @@ multiclass Test {
   def Vy#NAME#PD : Instr<3>;
 }
 
+class Arithmetic<int i> {
+  string name = "number"#!add(i, 1);
+}
+
+def A : Arithmetic<5>;
+
+// CHECK: def A {
+// CHECK:   string name = "number6";
+// CHECK: }
+
 defm ADD : Test;
 defm SUB : Test;
 

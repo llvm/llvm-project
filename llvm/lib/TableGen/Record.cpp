@@ -859,8 +859,13 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
     if (LHSs && RHSs) {
       DefInit *LOp = dyn_cast<DefInit>(LHSs->getOperator());
       DefInit *ROp = dyn_cast<DefInit>(RHSs->getOperator());
-      if (!LOp || !ROp || LOp->getDef() != ROp->getDef())
-        PrintFatalError("Concated Dag operators do not match!");
+      if (!LOp || !ROp)
+        break;
+      if (LOp->getDef() != ROp->getDef()) {
+        PrintFatalError(Twine("Concatenated Dag operators do not match: '") +
+                        LHSs->getAsString() + "' vs. '" + RHSs->getAsString() +
+                        "'");
+      }
       SmallVector<Init*, 8> Args;
       SmallVector<StringInit*, 8> ArgNames;
       for (unsigned i = 0, e = LHSs->getNumArgs(); i != e; ++i) {
@@ -893,23 +898,43 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
       return ConcatStringInits(LHSs, RHSs);
     break;
   }
-  case EQ: {
+  case EQ:
+  case NE:
+  case LE:
+  case LT:
+  case GE:
+  case GT: {
     // try to fold eq comparison for 'bit' and 'int', otherwise fallback
     // to string objects.
     IntInit *L =
-      dyn_cast_or_null<IntInit>(LHS->convertInitializerTo(IntRecTy::get()));
+        dyn_cast_or_null<IntInit>(LHS->convertInitializerTo(IntRecTy::get()));
     IntInit *R =
-      dyn_cast_or_null<IntInit>(RHS->convertInitializerTo(IntRecTy::get()));
+        dyn_cast_or_null<IntInit>(RHS->convertInitializerTo(IntRecTy::get()));
 
-    if (L && R)
-      return IntInit::get(L->getValue() == R->getValue());
+    if (L && R) {
+      bool Result;
+      switch (getOpcode()) {
+      case EQ: Result = L->getValue() == R->getValue(); break;
+      case NE: Result = L->getValue() != R->getValue(); break;
+      case LE: Result = L->getValue() <= R->getValue(); break;
+      case LT: Result = L->getValue() < R->getValue(); break;
+      case GE: Result = L->getValue() >= R->getValue(); break;
+      case GT: Result = L->getValue() > R->getValue(); break;
+      default: llvm_unreachable("unhandled comparison");
+      }
+      return BitInit::get(Result);
+    }
 
-    StringInit *LHSs = dyn_cast<StringInit>(LHS);
-    StringInit *RHSs = dyn_cast<StringInit>(RHS);
+    if (getOpcode() == EQ || getOpcode() == NE) {
+      StringInit *LHSs = dyn_cast<StringInit>(LHS);
+      StringInit *RHSs = dyn_cast<StringInit>(RHS);
 
-    // Make sure we've resolved
-    if (LHSs && RHSs)
-      return IntInit::get(LHSs->getValue() == RHSs->getValue());
+      // Make sure we've resolved
+      if (LHSs && RHSs) {
+        bool Equal = LHSs->getValue() == RHSs->getValue();
+        return BitInit::get(getOpcode() == EQ ? Equal : !Equal);
+      }
+    }
 
     break;
   }
@@ -964,6 +989,11 @@ std::string BinOpInit::getAsString() const {
   case SRA: Result = "!sra"; break;
   case SRL: Result = "!srl"; break;
   case EQ: Result = "!eq"; break;
+  case NE: Result = "!ne"; break;
+  case LE: Result = "!le"; break;
+  case LT: Result = "!lt"; break;
+  case GE: Result = "!ge"; break;
+  case GT: Result = "!gt"; break;
   case LISTCONCAT: Result = "!listconcat"; break;
   case STRCONCAT: Result = "!strconcat"; break;
   }
@@ -1114,6 +1144,30 @@ Init *TernOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
     }
     break;
   }
+
+  case DAG: {
+    ListInit *MHSl = dyn_cast<ListInit>(MHS);
+    ListInit *RHSl = dyn_cast<ListInit>(RHS);
+    bool MHSok = MHSl || isa<UnsetInit>(MHS);
+    bool RHSok = RHSl || isa<UnsetInit>(RHS);
+
+    if (isa<UnsetInit>(MHS) && isa<UnsetInit>(RHS))
+      break; // Typically prevented by the parser, but might happen with template args
+
+    if (MHSok && RHSok && (!MHSl || !RHSl || MHSl->size() == RHSl->size())) {
+      SmallVector<std::pair<Init *, StringInit *>, 8> Children;
+      unsigned Size = MHSl ? MHSl->size() : RHSl->size();
+      for (unsigned i = 0; i != Size; ++i) {
+        Init *Node = MHSl ? MHSl->getElement(i) : UnsetInit::get();
+        Init *Name = RHSl ? RHSl->getElement(i) : UnsetInit::get();
+        if (!isa<StringInit>(Name) && !isa<UnsetInit>(Name))
+          return const_cast<TernOpInit *>(this);
+        Children.emplace_back(Node, dyn_cast<StringInit>(Name));
+      }
+      return DagInit::get(LHS, nullptr, Children);
+    }
+    break;
+  }
   }
 
   return const_cast<TernOpInit *>(this);
@@ -1155,6 +1209,7 @@ std::string TernOpInit::getAsString() const {
   case SUBST: Result = "!subst"; break;
   case FOREACH: Result = "!foreach"; break;
   case IF: Result = "!if"; break;
+  case DAG: Result = "!dag"; break;
   }
   return Result + "(" + LHS->getAsString() + ", " + MHS->getAsString() + ", " +
          RHS->getAsString() + ")";

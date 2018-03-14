@@ -3918,7 +3918,10 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
                                    DAG.getTargetConstant(0, DL, MVT::i32)),
                 0);
     SDValue TPWithOff =
-        DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, TPWithOff_lo, LoVar);
+        SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, TPWithOff_lo,
+                                   LoVar,
+                                   DAG.getTargetConstant(0, DL, MVT::i32)),
+                0);
     return TPWithOff;
   } else if (Model == TLSModel::InitialExec) {
     TPOff = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_TLS);
@@ -3955,7 +3958,9 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
     TPOff = SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, TPOff, HiVar,
                                        DAG.getTargetConstant(0, DL, MVT::i32)),
                     0);
-    TPOff = DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, TPOff, LoVar);
+    TPOff = SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, TPOff, LoVar,
+                                       DAG.getTargetConstant(0, DL, MVT::i32)),
+                    0);
   } else if (Model == TLSModel::GeneralDynamic) {
     // The call needs a relocation too for linker relaxation. It doesn't make
     // sense to call it MO_PAGE or MO_PAGEOFF though so we need another copy of
