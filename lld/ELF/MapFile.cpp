@@ -112,6 +112,43 @@ getSymbolStrings(ArrayRef<Symbol *> Syms) {
   return Ret;
 }
 
+// Print .eh_frame contents. Since the section consists of EhSectionPieces,
+// we need a specialized printer for that section.
+//
+// .eh_frame tend to contain a lot of section pieces that are contiguous
+// both in input file and output file. Such pieces are squashed before
+// being displayed to make output compact.
+static void printEhFrame(raw_ostream &OS, OutputSection *OSec) {
+  std::vector<EhSectionPiece> Pieces;
+
+  auto Add = [&](const EhSectionPiece &P) {
+    // If P is adjacent to Last, squash the two.
+    if (!Pieces.empty()) {
+      EhSectionPiece &Last = Pieces.back();
+      if (Last.Sec == P.Sec && Last.InputOff + Last.Size == P.InputOff &&
+          Last.OutputOff + Last.Size == P.OutputOff) {
+        Last.Size += P.Size;
+        return;
+      }
+    }
+    Pieces.push_back(P);
+  };
+
+  // Gather section pieces.
+  for (const CieRecord *Rec : InX::EhFrame->getCieRecords()) {
+    Add(*Rec->Cie);
+    for (const EhSectionPiece *Fde : Rec->Fdes)
+      Add(*Fde);
+  }
+
+  // Print out section pieces.
+  for (EhSectionPiece &P : Pieces) {
+    writeHeader(OS, OSec->Addr + P.OutputOff, P.Size, 0);
+    OS << Indent8 << toString(P.Sec->File) << ":(" << P.Sec->Name << "+0x"
+       << Twine::utohexstr(P.InputOff) + ")\n";
+  }
+}
+
 void elf::writeMapFile() {
   if (Config->MapFile.empty())
     return;
@@ -141,6 +178,11 @@ void elf::writeMapFile() {
 
     // Dump symbols for each input section.
     for (InputSection *IS : getInputSections(OSec)) {
+      if (IS == InX::EhFrame) {
+        printEhFrame(OS, OSec);
+        continue;
+      }
+
       writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(), IS->Alignment);
       OS << Indent8 << toString(IS) << '\n';
       for (Symbol *Sym : SectionSyms[IS])
