@@ -254,6 +254,18 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
   return OS;
 }
 
+raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
+                                   const PDB_SourceCompression &Compression) {
+  switch (Compression) {
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SourceCompression, None, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SourceCompression, Huffman, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SourceCompression, LZ, OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_SourceCompression, RunLengthEncoded, "RLE",
+                               OS)
+  }
+  return OS;
+}
+
 raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const Variant &Value) {
   switch (Value.Type) {
     case PDB_VariantType::Bool:

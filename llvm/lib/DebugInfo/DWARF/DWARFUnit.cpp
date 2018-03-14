@@ -158,7 +158,7 @@ void DWARFUnit::clear() {
   Offset = 0;
   Length = 0;
   Abbrevs = nullptr;
-  FormParams = DWARFFormParams({0, 0, DWARF32});
+  FormParams = dwarf::FormParams({0, 0, DWARF32});
   BaseAddr.reset();
   RangeSectionBase = 0;
   AddrOffsetSectionBase = 0;

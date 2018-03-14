@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumDebugStreams.h"
+#include "llvm/DebugInfo/PDB/DIA/DIAEnumInjectedSources.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSourceFiles.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumTables.h"
@@ -309,4 +310,32 @@ std::unique_ptr<IPDBEnumTables> DIASession::getEnumTables() const {
     return nullptr;
 
   return llvm::make_unique<DIAEnumTables>(DiaEnumerator);
+}
+
+static CComPtr<IDiaEnumInjectedSources>
+getEnumInjectedSources(IDiaSession &Session) {
+  CComPtr<IDiaEnumInjectedSources> EIS;
+  CComPtr<IDiaEnumTables> ET;
+  CComPtr<IDiaTable> Table;
+  ULONG Count = 0;
+
+  if (Session.getEnumTables(&ET) != S_OK)
+    return nullptr;
+
+  while (ET->Next(1, &Table, &Count) == S_OK && Count == 1) {
+    // There is only one table that matches the given iid
+    if (S_OK ==
+        Table->QueryInterface(__uuidof(IDiaEnumInjectedSources), (void **)&EIS))
+      break;
+    Table.Release();
+  }
+  return EIS;
+}
+std::unique_ptr<IPDBEnumInjectedSources>
+DIASession::getInjectedSources() const {
+  CComPtr<IDiaEnumInjectedSources> Files = getEnumInjectedSources(*Session);
+  if (!Files)
+    return nullptr;
+
+  return llvm::make_unique<DIAEnumInjectedSources>(*this, Files);
 }

@@ -130,7 +130,7 @@ std::pair<uint32_t, dwarf::Tag>
 AppleAcceleratorTable::readAtoms(uint32_t &HashDataOffset) {
   uint32_t DieOffset = dwarf::DW_INVALID_OFFSET;
   dwarf::Tag DieTag = dwarf::DW_TAG_null;
-  DWARFFormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
+  dwarf::FormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
 
   for (auto Atom : getAtomsDesc()) {
     DWARFFormValue FormValue(Atom.second);
@@ -179,7 +179,7 @@ Optional<uint64_t> AppleAcceleratorTable::HeaderData::extractOffset(
 bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
                                      SmallVectorImpl<DWARFFormValue> &AtomForms,
                                      uint32_t *DataOffset) const {
-  DWARFFormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
+  dwarf::FormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
   uint32_t NameOffset = *DataOffset;
   if (!AccelSection.isValidOffsetForDataOfSize(*DataOffset, 4)) {
     W.printString("Incorrectly terminated list.");
@@ -276,8 +276,8 @@ AppleAcceleratorTable::Entry::Entry(
 void AppleAcceleratorTable::Entry::extract(
     const AppleAcceleratorTable &AccelTable, uint32_t *Offset) {
 
-  DWARFFormParams FormParams = {AccelTable.Hdr.Version, 0,
-                                dwarf::DwarfFormat::DWARF32};
+  dwarf::FormParams FormParams = {AccelTable.Hdr.Version, 0,
+                                  dwarf::DwarfFormat::DWARF32};
   for (auto &Atom : Values)
     Atom.extractValue(AccelTable.AccelSection, Offset, FormParams);
 }
@@ -634,7 +634,7 @@ DWARFDebugNames::NameIndex::getEntry(uint32_t *Offset) const {
 
   Entry E(*this, *AbbrevIt);
 
-  DWARFFormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
+  dwarf::FormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
   for (auto &Value : E.Values) {
     if (!Value.extractValue(AS, Offset, FormParams))
       return make_error<StringError>("Error extracting index attribute values",

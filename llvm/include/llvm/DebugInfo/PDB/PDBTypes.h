@@ -23,6 +23,7 @@ namespace llvm {
 namespace pdb {
 
 class IPDBDataStream;
+class IPDBInjectedSource;
 class IPDBLineNumber;
 class IPDBSourceFile;
 class IPDBTable;
@@ -65,6 +66,7 @@ using IPDBEnumSourceFiles = IPDBEnumChildren<IPDBSourceFile>;
 using IPDBEnumDataStreams = IPDBEnumChildren<IPDBDataStream>;
 using IPDBEnumLineNumbers = IPDBEnumChildren<IPDBLineNumber>;
 using IPDBEnumTables = IPDBEnumChildren<IPDBTable>;
+using IPDBEnumInjectedSources = IPDBEnumChildren<IPDBInjectedSource>;
 
 /// Specifies which PDB reader implementation is to be used.  Only a value
 /// of PDB_ReaderType::DIA is currently supported, but Native is in the works.
@@ -131,6 +133,13 @@ enum class PDB_Machine {
   SH5 = 0x1A8,
   Thumb = 0x1C2,
   WceMipsV2 = 0x169
+};
+
+enum class PDB_SourceCompression {
+  None,
+  RunLengthEncoded,
+  Huffman,
+  LZ,
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented

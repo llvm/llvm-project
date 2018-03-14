@@ -69,6 +69,9 @@ public:
   virtual std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const = 0;
 
   virtual std::unique_ptr<IPDBEnumTables> getEnumTables() const = 0;
+
+  virtual std::unique_ptr<IPDBEnumInjectedSources>
+  getInjectedSources() const = 0;
 };
 }
 }
