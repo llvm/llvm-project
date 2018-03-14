@@ -154,9 +154,9 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
-  auto Task = [PCHs, Pos, FS, CodeCompleteOpts](
-                  std::string Contents, Path File, Callback<CompletionList> CB,
-                  llvm::Expected<InputsAndPreamble> IP) {
+  auto Task = [PCHs, Pos, FS,
+               CodeCompleteOpts](Path File, Callback<CompletionList> CB,
+                                 llvm::Expected<InputsAndPreamble> IP) {
     assert(IP && "error when trying to read preamble for codeComplete");
     auto PreambleData = IP->Preamble;
 
@@ -164,13 +164,12 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     // both the old and the new version in case only one of them matches.
     CompletionList Result = clangd::codeComplete(
         File, IP->Command, PreambleData ? &PreambleData->Preamble : nullptr,
-        Contents, Pos, FS, PCHs, CodeCompleteOpts);
+        IP->Contents, Pos, FS, PCHs, CodeCompleteOpts);
     CB(std::move(Result));
   };
 
-  WorkScheduler.runWithPreamble(
-      "CodeComplete", File,
-      Bind(Task, std::move(*Latest.Draft), File.str(), std::move(CB)));
+  WorkScheduler.runWithPreamble("CodeComplete", File,
+                                Bind(Task, File.str(), std::move(CB)));
 }
 
 void ClangdServer::signatureHelp(PathRef File, Position Pos,
@@ -183,8 +182,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
   auto PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS, PCHs](std::string Contents, Path File,
-                                Callback<SignatureHelp> CB,
+  auto Action = [Pos, FS, PCHs](Path File, Callback<SignatureHelp> CB,
                                 llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
       return CB(IP.takeError());
@@ -192,12 +190,11 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
     auto PreambleData = IP->Preamble;
     CB(clangd::signatureHelp(File, IP->Command,
                              PreambleData ? &PreambleData->Preamble : nullptr,
-                             Contents, Pos, FS, PCHs));
+                             IP->Contents, Pos, FS, PCHs));
   };
 
-  WorkScheduler.runWithPreamble(
-      "SignatureHelp", File,
-      Bind(Action, std::move(*Latest.Draft), File.str(), std::move(CB)));
+  WorkScheduler.runWithPreamble("SignatureHelp", File,
+                                Bind(Action, File.str(), std::move(CB)));
 }
 
 llvm::Expected<tooling::Replacements>
