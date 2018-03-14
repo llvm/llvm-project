@@ -38,10 +38,12 @@ var x = $R0
 
 x.updateValue(8, forKey : 4)
 x
+// DICT-LABEL: $R5: [Int : Int] = 4 key/value pairs
 // DICT: key = 4
 // DICT-NEXT: value = 8
 
 x[3] = 5
 x
+// DICT-LABEL: $R6: [Int : Int] = 4 key/value pairs
 // DICT: key = 3
 // DICT-NEXT: value = 5
