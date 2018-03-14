@@ -487,8 +487,16 @@ endif
 # Check if we need the Swift/ObjC interop features
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_OBJC_INTEROP)" "1"
-	SWIFTFLAGS += -framework Foundation -framework CoreGraphics
-	LDFLAGS +=-lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
+        ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -framework Foundation -framework CoreGraphics
+		LDFLAGS += -lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
+        else
+                # CFLAGS_EXTRAS is used via "dotest.py -E" to pass the -I and -L paths
+                # for Foundation and libdispatch on Linux.
+                SWIFTFLAGS += $(CFLAGS_EXTRAS)
+                LDFLAGS += $(CFLAGS_EXTRAS)
+        endif
+
 endif
 
 #----------------------------------------------------------------------
