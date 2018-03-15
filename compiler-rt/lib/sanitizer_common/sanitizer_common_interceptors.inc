@@ -6887,7 +6887,7 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags, int fd,
 
 #if SANITIZER_INTERCEPT_MMAP64
 INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags, int fd,
-            OFF_T off) {
+            OFF64_T off) {
   void *ctx;
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return (void *)internal_mmap(addr, sz, prot, flags, fd, off);

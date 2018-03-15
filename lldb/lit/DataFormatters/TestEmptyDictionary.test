@@ -1,7 +1,0 @@
-# Test that foundation NSDictionary0 is formatted correctly (the summary).
-# Foundation is only available on Darwin so just restrict the test to run there.
-# REQUIRES: darwin
-# RUN: %cc %p/Inputs/NSDict.m -framework Foundation -g -o %t && %lldb -b \
-# RUN:  -s %p/Inputs/NSDict.commands -- %t 2>&1 | FileCheck %s
-
-# CHECK: (__NSDictionary0 *) emptyDictionary = {{.*}} 0 key/value pairs
