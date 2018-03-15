@@ -304,6 +304,6 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
   }
 }
 
-bool SymbolTable::addComdat(StringRef Name, const ObjFile *File) {
-  return Comdats.insert({Name, File}).first->second == File;
+bool SymbolTable::addComdat(StringRef Name) {
+  return Comdats.insert(CachedHashStringRef(Name)).second;
 }

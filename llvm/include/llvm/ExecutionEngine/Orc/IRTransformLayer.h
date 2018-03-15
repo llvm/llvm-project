@@ -40,7 +40,7 @@ public:
   ///        the layer below, along with the memory manager and symbol resolver.
   ///
   /// @return A handle for the added modules.
-  Error addModule(VModuleKey K, std::shared_ptr<Module> M) {
+  Error addModule(VModuleKey K, std::unique_ptr<Module> M) {
     return BaseLayer.addModule(std::move(K), Transform(std::move(M)));
   }
 

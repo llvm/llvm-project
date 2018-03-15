@@ -13,11 +13,9 @@
 ; CHECK: Address            Line   Column File   ISA Discriminator Flags
 ; CHECK: ------------------ ------ ------ ------ --- ------------- -------------
 ; CHECK: 0x0000000000000000      1      0      1   0             0  is_stmt
-; FIXME: The next address probably ought to be 0x0000000000000004 but there's
-;        a constant initialization before the prologue's end.
-; CHECK: 0x0000000000000008      2      0      1   0             0  is_stmt prologue_end
-; CHECK: 0x000000000000002c      3      0      1   0             0  is_stmt
-; CHECK: 0x000000000000003c      4      0      1   0             0  is_stmt
+; CHECK: 0x0000000000000004      2      0      1   0             0  is_stmt prologue_end
+; CHECK: 0x0000000000000024      3      0      1   0             0  is_stmt
+; CHECK: 0x0000000000000034      4      0      1   0             0  is_stmt
 ; CHECK: 0x0000000000000048      5      0      1   0             0  is_stmt
 ; CHECK: 0x0000000000000058      5      0      1   0             0  is_stmt end_sequence
 

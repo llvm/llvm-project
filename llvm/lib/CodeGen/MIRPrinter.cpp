@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
@@ -157,14 +156,10 @@ public:
   void print(const MachineBasicBlock &MBB);
 
   void print(const MachineInstr &MI);
-  void printIRValueReference(const Value &V);
   void printStackObjectReference(int FrameIndex);
   void print(const MachineInstr &MI, unsigned OpIdx,
              const TargetRegisterInfo *TRI, bool ShouldPrintRegisterTies,
              LLT TypeToPrint, bool PrintDef = true);
-  void print(const LLVMContext &Context, const TargetInstrInfo &TII,
-             const MachineMemOperand &Op);
-  void printSyncScope(const LLVMContext &Context, SyncScope::ID SSID);
 };
 
 } // end namespace llvm
@@ -698,34 +693,15 @@ void MIPrinter::print(const MachineInstr &MI) {
   if (!MI.memoperands_empty()) {
     OS << " :: ";
     const LLVMContext &Context = MF->getFunction().getContext();
+    const MachineFrameInfo &MFI = MF->getFrameInfo();
     bool NeedComma = false;
     for (const auto *Op : MI.memoperands()) {
       if (NeedComma)
         OS << ", ";
-      print(Context, *TII, *Op);
+      Op->print(OS, MST, SSNs, Context, &MFI, TII);
       NeedComma = true;
     }
   }
-}
-
-void MIPrinter::printIRValueReference(const Value &V) {
-  if (isa<GlobalValue>(V)) {
-    V.printAsOperand(OS, /*PrintType=*/false, MST);
-    return;
-  }
-  if (isa<Constant>(V)) {
-    // Machine memory operands can load/store to/from constant value pointers.
-    OS << '`';
-    V.printAsOperand(OS, /*PrintType=*/true, MST);
-    OS << '`';
-    return;
-  }
-  OS << "%ir.";
-  if (V.hasName()) {
-    printLLVMNameWithoutPrefix(OS, V.getName());
-    return;
-  }
-  MachineOperand::printIRSlotNumber(OS, MST.getLocalSlot(&V));
 }
 
 void MIPrinter::printStackObjectReference(int FrameIndex) {
@@ -783,134 +759,6 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       OS << StringRef(TRI->getRegMaskNames()[RegMaskInfo->second]).lower();
     else
       printCustomRegMask(Op.getRegMask(), OS, TRI);
-    break;
-  }
-  }
-}
-
-static const char *getTargetMMOFlagName(const TargetInstrInfo &TII,
-                                        unsigned TMMOFlag) {
-  auto Flags = TII.getSerializableMachineMemOperandTargetFlags();
-  for (const auto &I : Flags) {
-    if (I.first == TMMOFlag) {
-      return I.second;
-    }
-  }
-  return nullptr;
-}
-
-void MIPrinter::print(const LLVMContext &Context, const TargetInstrInfo &TII,
-                      const MachineMemOperand &Op) {
-  OS << '(';
-  if (Op.isVolatile())
-    OS << "volatile ";
-  if (Op.isNonTemporal())
-    OS << "non-temporal ";
-  if (Op.isDereferenceable())
-    OS << "dereferenceable ";
-  if (Op.isInvariant())
-    OS << "invariant ";
-  if (Op.getFlags() & MachineMemOperand::MOTargetFlag1)
-    OS << '"' << getTargetMMOFlagName(TII, MachineMemOperand::MOTargetFlag1)
-       << "\" ";
-  if (Op.getFlags() & MachineMemOperand::MOTargetFlag2)
-    OS << '"' << getTargetMMOFlagName(TII, MachineMemOperand::MOTargetFlag2)
-       << "\" ";
-  if (Op.getFlags() & MachineMemOperand::MOTargetFlag3)
-    OS << '"' << getTargetMMOFlagName(TII, MachineMemOperand::MOTargetFlag3)
-       << "\" ";
-
-  assert((Op.isLoad() || Op.isStore()) && "machine memory operand must be a load or store (or both)");
-  if (Op.isLoad())
-    OS << "load ";
-  if (Op.isStore())
-    OS << "store ";
-
-  printSyncScope(Context, Op.getSyncScopeID());
-
-  if (Op.getOrdering() != AtomicOrdering::NotAtomic)
-    OS << toIRString(Op.getOrdering()) << ' ';
-  if (Op.getFailureOrdering() != AtomicOrdering::NotAtomic)
-    OS << toIRString(Op.getFailureOrdering()) << ' ';
-
-  OS << Op.getSize();
-  if (const Value *Val = Op.getValue()) {
-    OS << ((Op.isLoad() && Op.isStore()) ? " on "
-                                         : Op.isLoad() ? " from " : " into ");
-    printIRValueReference(*Val);
-  } else if (const PseudoSourceValue *PVal = Op.getPseudoValue()) {
-    OS << ((Op.isLoad() && Op.isStore()) ? " on "
-                                         : Op.isLoad() ? " from " : " into ");
-    assert(PVal && "Expected a pseudo source value");
-    switch (PVal->kind()) {
-    case PseudoSourceValue::Stack:
-      OS << "stack";
-      break;
-    case PseudoSourceValue::GOT:
-      OS << "got";
-      break;
-    case PseudoSourceValue::JumpTable:
-      OS << "jump-table";
-      break;
-    case PseudoSourceValue::ConstantPool:
-      OS << "constant-pool";
-      break;
-    case PseudoSourceValue::FixedStack:
-      printStackObjectReference(
-          cast<FixedStackPseudoSourceValue>(PVal)->getFrameIndex());
-      break;
-    case PseudoSourceValue::GlobalValueCallEntry:
-      OS << "call-entry ";
-      cast<GlobalValuePseudoSourceValue>(PVal)->getValue()->printAsOperand(
-          OS, /*PrintType=*/false, MST);
-      break;
-    case PseudoSourceValue::ExternalSymbolCallEntry:
-      OS << "call-entry &";
-      printLLVMNameWithoutPrefix(
-          OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
-      break;
-    case PseudoSourceValue::TargetCustom:
-      llvm_unreachable("TargetCustom pseudo source values are not supported");
-      break;
-    }
-  }
-  MachineOperand::printOperandOffset(OS, Op.getOffset());
-  if (Op.getBaseAlignment() != Op.getSize())
-    OS << ", align " << Op.getBaseAlignment();
-  auto AAInfo = Op.getAAInfo();
-  if (AAInfo.TBAA) {
-    OS << ", !tbaa ";
-    AAInfo.TBAA->printAsOperand(OS, MST);
-  }
-  if (AAInfo.Scope) {
-    OS << ", !alias.scope ";
-    AAInfo.Scope->printAsOperand(OS, MST);
-  }
-  if (AAInfo.NoAlias) {
-    OS << ", !noalias ";
-    AAInfo.NoAlias->printAsOperand(OS, MST);
-  }
-  if (Op.getRanges()) {
-    OS << ", !range ";
-    Op.getRanges()->printAsOperand(OS, MST);
-  }
-  if (unsigned AS = Op.getAddrSpace())
-    OS << ", addrspace " << AS;
-  OS << ')';
-}
-
-void MIPrinter::printSyncScope(const LLVMContext &Context, SyncScope::ID SSID) {
-  switch (SSID) {
-  case SyncScope::System: {
-    break;
-  }
-  default: {
-    if (SSNs.empty())
-      Context.getSyncScopeNames(SSNs);
-
-    OS << "syncscope(\"";
-    PrintEscapedString(SSNs[SSID], OS);
-    OS << "\") ";
     break;
   }
   }

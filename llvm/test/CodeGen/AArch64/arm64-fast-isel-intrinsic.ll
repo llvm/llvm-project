@@ -8,8 +8,8 @@ define void @t1() {
 ; ARM64: adrp x8, _message@PAGE
 ; ARM64: add x0, x8, _message@PAGEOFF
 ; ARM64: mov w9, wzr
-; ARM64: mov x2, #80
 ; ARM64: uxtb w1, w9
+; ARM64: mov x2, #80
 ; ARM64: bl _memset
   call void @llvm.memset.p0i8.i64(i8* align 16 getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i8 0, i64 80, i1 false)
   ret void

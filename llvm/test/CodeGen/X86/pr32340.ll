@@ -15,31 +15,31 @@ define void @foo() {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    movabsq $-1142377792914660288, %rdx # imm = 0xF02575732E06E440
 ; X64-NEXT:    movw $0, var_825
 ; X64-NEXT:    movzwl var_32, %eax
-; X64-NEXT:    movzwl var_901, %esi
-; X64-NEXT:    movl %eax, %edi
-; X64-NEXT:    xorl %esi, %edi
+; X64-NEXT:    movzwl var_901, %edx
 ; X64-NEXT:    movl %eax, %esi
-; X64-NEXT:    xorl %edi, %esi
-; X64-NEXT:    addl %eax, %esi
-; X64-NEXT:    movslq %esi, %r8
-; X64-NEXT:    movq %r8, var_826
+; X64-NEXT:    xorl %edx, %esi
+; X64-NEXT:    movl %eax, %edx
+; X64-NEXT:    xorl %esi, %edx
+; X64-NEXT:    addl %eax, %edx
+; X64-NEXT:    movslq %edx, %rdi
+; X64-NEXT:    movq %rdi, var_826
 ; X64-NEXT:    movzwl var_32, %eax
-; X64-NEXT:    movl %eax, %r8d
+; X64-NEXT:    movl %eax, %edi
 ; X64-NEXT:    movzwl var_901, %eax
 ; X64-NEXT:    xorl $51981, %eax # imm = 0xCB0D
-; X64-NEXT:    movslq %eax, %r9
-; X64-NEXT:    xorq %rdx, %r9
-; X64-NEXT:    movq %r8, %rdx
-; X64-NEXT:    xorq %r9, %rdx
-; X64-NEXT:    xorq $-1, %rdx
-; X64-NEXT:    xorq %rdx, %r8
-; X64-NEXT:    movq %r8, %rdx
-; X64-NEXT:    orq var_57, %rdx
-; X64-NEXT:    orq %rdx, %r8
-; X64-NEXT:    movw %r8w, %r10w
+; X64-NEXT:    movslq %eax, %r8
+; X64-NEXT:    movabsq $-1142377792914660288, %r9 # imm = 0xF02575732E06E440
+; X64-NEXT:    xorq %r9, %r8
+; X64-NEXT:    movq %rdi, %r9
+; X64-NEXT:    xorq %r8, %r9
+; X64-NEXT:    xorq $-1, %r9
+; X64-NEXT:    xorq %r9, %rdi
+; X64-NEXT:    movq %rdi, %r8
+; X64-NEXT:    orq var_57, %r8
+; X64-NEXT:    orq %r8, %rdi
+; X64-NEXT:    movw %di, %r10w
 ; X64-NEXT:    movw %r10w, var_900
 ; X64-NEXT:    cmpq var_28, %rcx
 ; X64-NEXT:    setne %r11b

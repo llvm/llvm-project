@@ -356,6 +356,9 @@ public:
     unsigned Generation = 0;
     int MatchingId = -1;
     bool IsAtomic = false;
+
+    // TODO: Remove this flag.  It would be strictly stronger to add a record
+    // to the AvailableInvariant table when passing the invariant load instead.
     bool IsInvariant = false;
 
     LoadValue() = default;
@@ -373,6 +376,17 @@ public:
                       LoadMapAllocator>;
 
   LoadHTType AvailableLoads;
+  
+  // A scoped hash table mapping memory locations (represented as typed
+  // addresses) to generation numbers at which that memory location became
+  // (henceforth indefinitely) invariant.
+  using InvariantMapAllocator =
+      RecyclingAllocator<BumpPtrAllocator,
+                         ScopedHashTableVal<MemoryLocation, unsigned>>;
+  using InvariantHTType =
+      ScopedHashTable<MemoryLocation, unsigned, DenseMapInfo<MemoryLocation>,
+                      InvariantMapAllocator>;
+  InvariantHTType AvailableInvariants;
 
   /// \brief A scoped hash table of the current values of read-only call
   /// values.
@@ -401,15 +415,16 @@ private:
   class NodeScope {
   public:
     NodeScope(ScopedHTType &AvailableValues, LoadHTType &AvailableLoads,
-              CallHTType &AvailableCalls)
-        : Scope(AvailableValues), LoadScope(AvailableLoads),
-          CallScope(AvailableCalls) {}
+              InvariantHTType &AvailableInvariants, CallHTType &AvailableCalls)
+      : Scope(AvailableValues), LoadScope(AvailableLoads),
+        InvariantScope(AvailableInvariants), CallScope(AvailableCalls) {}
     NodeScope(const NodeScope &) = delete;
     NodeScope &operator=(const NodeScope &) = delete;
 
   private:
     ScopedHTType::ScopeTy Scope;
     LoadHTType::ScopeTy LoadScope;
+    InvariantHTType::ScopeTy InvariantScope;
     CallHTType::ScopeTy CallScope;
   };
 
@@ -420,10 +435,13 @@ private:
   class StackNode {
   public:
     StackNode(ScopedHTType &AvailableValues, LoadHTType &AvailableLoads,
-              CallHTType &AvailableCalls, unsigned cg, DomTreeNode *n,
-              DomTreeNode::iterator child, DomTreeNode::iterator end)
+              InvariantHTType &AvailableInvariants, CallHTType &AvailableCalls,
+              unsigned cg, DomTreeNode *n, DomTreeNode::iterator child,
+              DomTreeNode::iterator end)
         : CurrentGeneration(cg), ChildGeneration(cg), Node(n), ChildIter(child),
-          EndIter(end), Scopes(AvailableValues, AvailableLoads, AvailableCalls)
+          EndIter(end),
+          Scopes(AvailableValues, AvailableLoads, AvailableInvariants,
+                 AvailableCalls)
           {}
     StackNode(const StackNode &) = delete;
     StackNode &operator=(const StackNode &) = delete;
@@ -563,6 +581,10 @@ private:
                                                  ExpectedType);
   }
 
+  /// Return true if the instruction is known to only operate on memory
+  /// provably invariant in the given "generation".
+  bool isOperatingOnInvariantMemAt(Instruction *I, unsigned GenAt);
+
   bool isSameMemGeneration(unsigned EarlierGeneration, unsigned LaterGeneration,
                            Instruction *EarlierInst, Instruction *LaterInst);
 
@@ -656,6 +678,27 @@ bool EarlyCSE::isSameMemGeneration(unsigned EarlierGeneration,
   return MSSA->dominates(LaterDef, EarlierMA);
 }
 
+bool EarlyCSE::isOperatingOnInvariantMemAt(Instruction *I, unsigned GenAt) {
+  // A location loaded from with an invariant_load is assumed to *never* change
+  // within the visible scope of the compilation.
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    if (LI->getMetadata(LLVMContext::MD_invariant_load))
+      return true;
+
+  auto MemLocOpt = MemoryLocation::getOrNone(I);
+  if (!MemLocOpt)
+    // "target" intrinsic forms of loads aren't currently known to
+    // MemoryLocation::get.  TODO
+    return false;
+  MemoryLocation MemLoc = *MemLocOpt;
+  if (!AvailableInvariants.count(MemLoc))
+    return false;
+
+  // Is the generation at which this became invariant older than the
+  // current one?
+  return AvailableInvariants.lookup(MemLoc) <= GenAt;
+}
+
 bool EarlyCSE::processNode(DomTreeNode *Node) {
   bool Changed = false;
   BasicBlock *BB = Node->getBlock();
@@ -741,18 +784,28 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
-    // Skip invariant.start intrinsics since they only read memory, and we can
-    // forward values across it. Also, we dont need to consume the last store
-    // since the semantics of invariant.start allow us to perform DSE of the
-    // last store, if there was a store following invariant.start. Consider:
+    // We can skip all invariant.start intrinsics since they only read memory,
+    // and we can forward values across it. For invariant starts without
+    // invariant ends, we can use the fact that the invariantness never ends to
+    // start a scope in the current generaton which is true for all future
+    // generations.  Also, we dont need to consume the last store since the
+    // semantics of invariant.start allow us to perform   DSE of the last
+    // store, if there was a store following invariant.start. Consider: 
     //
     // store 30, i8* p
     // invariant.start(p)
     // store 40, i8* p
     // We can DSE the store to 30, since the store 40 to invariant location p
     // causes undefined behaviour.
-    if (match(Inst, m_Intrinsic<Intrinsic::invariant_start>()))
+    if (match(Inst, m_Intrinsic<Intrinsic::invariant_start>())) {
+      // If there are any uses, the scope might end.  
+      if (!Inst->use_empty())
+        continue;
+      auto *CI = cast<CallInst>(Inst);
+      MemoryLocation MemLoc = MemoryLocation::getForArgument(CI, 1, TLI);
+      AvailableInvariants.insert(MemLoc, CurrentGeneration);
       continue;
+    }
 
     if (match(Inst, m_Intrinsic<Intrinsic::experimental_guard>())) {
       if (auto *CondI =
@@ -850,7 +903,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           !MemInst.isVolatile() && MemInst.isUnordered() &&
           // We can't replace an atomic load with one which isn't also atomic.
           InVal.IsAtomic >= MemInst.isAtomic() &&
-          (InVal.IsInvariant || MemInst.isInvariantLoad() ||
+          (InVal.IsInvariant ||
+           isOperatingOnInvariantMemAt(Inst, InVal.Generation) ||
            isSameMemGeneration(InVal.Generation, CurrentGeneration,
                                InVal.DefInst, Inst))) {
         Value *Op = getOrCreateResult(InVal.DefInst, Inst->getType());
@@ -934,8 +988,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           InVal.MatchingId == MemInst.getMatchingId() &&
           // We don't yet handle removing stores with ordering of any kind.
           !MemInst.isVolatile() && MemInst.isUnordered() &&
-          isSameMemGeneration(InVal.Generation, CurrentGeneration,
-                              InVal.DefInst, Inst)) {
+          (isOperatingOnInvariantMemAt(Inst, InVal.Generation) ||
+           isSameMemGeneration(InVal.Generation, CurrentGeneration,
+                               InVal.DefInst, Inst))) {
         // It is okay to have a LastStore to a different pointer here if MemorySSA
         // tells us that the load and store are from the same memory generation.
         // In that case, LastStore should keep its present value since we're
@@ -1027,8 +1082,9 @@ bool EarlyCSE::run() {
 
   // Process the root node.
   nodesToProcess.push_back(new StackNode(
-      AvailableValues, AvailableLoads, AvailableCalls, CurrentGeneration,
-      DT.getRootNode(), DT.getRootNode()->begin(), DT.getRootNode()->end()));
+      AvailableValues, AvailableLoads, AvailableInvariants, AvailableCalls,
+      CurrentGeneration, DT.getRootNode(),
+      DT.getRootNode()->begin(), DT.getRootNode()->end()));
 
   // Save the current generation.
   unsigned LiveOutGeneration = CurrentGeneration;
@@ -1052,9 +1108,9 @@ bool EarlyCSE::run() {
       // Push the next child onto the stack.
       DomTreeNode *child = NodeToProcess->nextChild();
       nodesToProcess.push_back(
-          new StackNode(AvailableValues, AvailableLoads, AvailableCalls,
-                        NodeToProcess->childGeneration(), child, child->begin(),
-                        child->end()));
+          new StackNode(AvailableValues, AvailableLoads, AvailableInvariants,
+                        AvailableCalls, NodeToProcess->childGeneration(),
+                        child, child->begin(), child->end()));
     } else {
       // It has been processed, and there are no more children to process,
       // so delete it and pop it off the stack.

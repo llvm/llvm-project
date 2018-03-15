@@ -94,3 +94,12 @@ merge:
   call void @clobber_and_use(i32 %val1)
   ret void
 }
+
+define void @test_false_negative_dse(i32* %p, i1 %cnd) {
+; CHECK-LABEL: @test_false_negative_dse
+; CHECK: store
+  %v1 = load i32, i32* %p, !invariant.load !{}
+  call void @clobber_and_use(i32 %v1)
+  store i32 %v1, i32* %p
+  ret void
+}

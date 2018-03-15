@@ -38,4 +38,7 @@ union B {
 #if __cplusplus < 201103L
 // expected-warning@-3{{extra ';' outside of a function is a C++11 extension}}
 // expected-warning@-3{{extra ';' outside of a function is a C++11 extension}}
+#elif !defined(PEDANTIC)
+// expected-warning@-6{{extra ';' outside of a function is incompatible with C++98}}
+// expected-warning@-6{{extra ';' outside of a function is incompatible with C++98}}
 #endif

@@ -1,4 +1,4 @@
-//===--- JSONCompilationDatabase.h - ----------------------------*- C++ -*-===//
+//===- JSONCompilationDatabase.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/FileMatchTrie.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -25,6 +26,8 @@
 #include "llvm/Support/YAMLParser.h"
 #include <memory>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -110,10 +113,10 @@ private:
   // Otherwise, each entry in the command line vector is a literal
   // argument to the compiler.
   // The output field may be a nullptr.
-  typedef std::tuple<llvm::yaml::ScalarNode *,
-                     llvm::yaml::ScalarNode *,
-                     std::vector<llvm::yaml::ScalarNode *>,
-                     llvm::yaml::ScalarNode *> CompileCommandRef;
+  using CompileCommandRef =
+      std::tuple<llvm::yaml::ScalarNode *, llvm::yaml::ScalarNode *,
+                 std::vector<llvm::yaml::ScalarNode *>,
+                 llvm::yaml::ScalarNode *>;
 
   /// \brief Converts the given array of CompileCommandRefs to CompileCommands.
   void getCommands(ArrayRef<CompileCommandRef> CommandsRef,
@@ -134,7 +137,7 @@ private:
   llvm::yaml::Stream YAMLStream;
 };
 
-} // end namespace tooling
-} // end namespace clang
+} // namespace tooling
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLING_JSONCOMPILATIONDATABASE_H

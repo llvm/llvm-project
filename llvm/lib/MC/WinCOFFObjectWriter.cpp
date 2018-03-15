@@ -697,12 +697,14 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
     bool InSet, bool IsPCRel) const {
-  // MS LINK expects to be able to replace all references to a function with a
-  // thunk to implement their /INCREMENTAL feature.  Make sure we don't optimize
-  // away any relocations to functions.
+  // Don't drop relocations between functions, even if they are in the same text
+  // section. Multiple Visual C++ linker features depend on having the
+  // relocations present. The /INCREMENTAL flag will cause these relocations to
+  // point to thunks, and the /GUARD:CF flag assumes that it can use relocations
+  // to approximate the set of all address taken functions. LLD's implementation
+  // of /GUARD:CF also relies on the existance of these relocations.
   uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
-  if (Asm.isIncrementalLinkerCompatible() &&
-      (Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
+  if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
     return false;
   return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
                                                                 InSet, IsPCRel);

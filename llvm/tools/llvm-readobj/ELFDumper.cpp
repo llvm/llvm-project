@@ -2261,7 +2261,8 @@ static const EnumEntry<unsigned> ElfMipsASEFlags[] = {
   {"MSA",                Mips::AFL_ASE_MSA},
   {"MIPS16",             Mips::AFL_ASE_MIPS16},
   {"microMIPS",          Mips::AFL_ASE_MICROMIPS},
-  {"XPA",                Mips::AFL_ASE_XPA}
+  {"XPA",                Mips::AFL_ASE_XPA},
+  {"CRC",                Mips::AFL_ASE_CRC},
 };
 
 static const EnumEntry<unsigned> ElfMipsFpABIType[] = {

@@ -381,3 +381,15 @@ define i64 @ashr_imm4_i64(i64 %a) {
   %c = ashr i64 %a, 4
   ret i64 %c
 }
+
+; Make sure we don't crash on out of bounds i8 shifts.
+define i8 @PR36731(i8 %a) {
+; CHECK-LABEL: PR36731:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movb $255, %cl
+; CHECK-NEXT:    shlb %cl, %dil
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %b = shl i8 %a, -1
+  ret i8 %b
+}

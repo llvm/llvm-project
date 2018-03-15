@@ -18,6 +18,7 @@
 
 #include "Instruction.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
 
 namespace mca {
@@ -236,6 +237,7 @@ class DispatchUnit {
   bool checkRCU(const InstrDesc &Desc);
   bool checkScheduler(const InstrDesc &Desc);
 
+  void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
   void notifyInstructionDispatched(unsigned IID);
 
 public:
@@ -263,7 +265,8 @@ public:
     return checkRCU(Desc) && checkRAT(Desc) && checkScheduler(Desc);
   }
 
-  unsigned dispatch(unsigned IID, Instruction *NewInst);
+  unsigned dispatch(unsigned IID, Instruction *NewInst,
+                    const llvm::MCSubtargetInfo &STI);
 
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
                      unsigned RegID) const {

@@ -31,26 +31,18 @@ void Backend::addEventListener(HWEventListener *Listener) {
 void Backend::runCycle(unsigned Cycle) {
   notifyCycleBegin(Cycle);
 
-  if (!SM.hasNext()) {
-    notifyCycleEnd(Cycle);
-    return;
-  }
-
-  InstRef IR = SM.peekNext();
-  const InstrDesc *Desc = &IB->getOrCreateInstrDesc(STI, *IR.second);
-  while (DU->isAvailable(Desc->NumMicroOps) && DU->canDispatch(*Desc)) {
-    Instruction *NewIS = IB->createInstruction(STI, *DU, IR.first, *IR.second);
-    Instructions[IR.first] = std::unique_ptr<Instruction>(NewIS);
-    NewIS->setRCUTokenID(DU->dispatch(IR.first, NewIS));
-
-    // Check if we have dispatched all the instructions.
-    SM.updateNext();
-    if (!SM.hasNext())
+  while (SM.hasNext()) {
+    InstRef IR = SM.peekNext();
+    std::unique_ptr<Instruction> NewIS(
+        IB->createInstruction(STI, IR.first, *IR.second));
+    const InstrDesc &Desc = NewIS->getDesc();
+    if (!DU->isAvailable(Desc.NumMicroOps) || !DU->canDispatch(Desc))
       break;
 
-    // Prepare for the next round.
-    IR = SM.peekNext();
-    Desc = &IB->getOrCreateInstrDesc(STI, *IR.second);
+    Instruction *IS = NewIS.get();
+    Instructions[IR.first] = std::move(NewIS);
+    IS->setRCUTokenID(DU->dispatch(IR.first, IS, STI));
+    SM.updateNext();
   }
 
   notifyCycleEnd(Cycle);

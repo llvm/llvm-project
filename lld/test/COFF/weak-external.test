@@ -5,6 +5,7 @@
 # RUN: FileCheck %s < %t2.map
 
 # CHECK: lto.tmp
+# CHECK-NEXT: lto.tmp
 # CHECK-NEXT: 0 g
 
 --- !COFF

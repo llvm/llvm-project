@@ -1,0 +1,99 @@
+# RUN: llc -run-pass=aarch64-ldst-opt -o - -mtriple=aarch64-- %s | FileCheck %s
+# Check that we merge the MIFlags from both the instructions in the final
+# instruction.
+---
+name:            case11
+# CHECK-LABEL: name: case11
+body:             |
+  bb.0:
+    frame-setup STRWui $w1, $x0, 1 :: (store 4)
+    $w1 = frame-destroy LDRWui $x0, 1 :: (load 4)
+
+  ; CHECK: frame-setup STRWui
+  ; CHECK-NOT: frame-setup
+  ; CHECK-NEXT: frame-destroy ORRWrs
+  ; No merging happening here, make sure we keep the flags of the previous
+  ; instruction.
+    RET_ReallyLR
+
+...
+---
+name:            case12
+# CHECK-LABEL: name: case12
+body:             |
+  bb.0:
+    frame-setup STRWui $w1, $x0, 1 :: (store 4)
+    $w2 = frame-destroy LDRHHui $x0, 2 :: (load 2)
+
+  ; CHECK: frame-setup STRWui
+  ; CHECK-NOT: frame-setup
+  ; CHECK-NEXT: frame-destroy ANDWri
+  ; No merging happening here, make sure we keep the flags of the previous
+  ; instruction.
+    RET_ReallyLR
+
+...
+---
+name:            case13
+# CHECK-LABEL: name: case13
+body:             |
+  bb.0:
+    frame-setup STRWui $w1, $x0, 1 :: (store 4)
+    $w2 = frame-destroy LDRHHui $x0, 3 :: (load 2)
+
+  ; CHECK: frame-setup STRWui
+  ; CHECK-NOT: frame-setup
+  ; CHECK-NEXT: frame-destroy UBFMWri
+  ; No merging happening here, make sure we keep the flags of the previous
+  ; instruction.
+    RET_ReallyLR
+
+...
+---
+name:            case2
+# CHECK-LABEL: name: case2
+body:             |
+  bb.0:
+    frame-setup STRHHui $wzr, $x0, 0 :: (store 4)
+    frame-destroy STRHHui $wzr, $x0, 1 :: (store 4)
+
+  ; CHECK: frame-setup frame-destroy STRWui
+    RET_ReallyLR
+
+...
+---
+name:            case3
+# CHECK-LABEL: name: case3
+body:             |
+  bb.0:
+
+    $x0 = frame-setup LDRXui $x2, 0 :: (load 8)
+    $x1 = frame-destroy LDRXui $x2, 1 :: (load 8)
+
+  ; CHECK: frame-setup frame-destroy LDPXi
+    RET_ReallyLR
+...
+---
+name:            case4
+# CHECK-LABEL: name: case4
+body:             |
+  bb.0:
+    $x26, $x25 = frame-setup LDPXi $sp, 0
+    $sp = frame-destroy ADDXri $sp, 64, 0
+
+  ; CHECK: = frame-setup frame-destroy LDPXpost
+    RET_ReallyLR
+
+...
+---
+name:            case41
+# CHECK-LABEL: name: case41
+body:             |
+  bb.0:
+    $x26 = frame-setup LDRXui $sp, 0
+    $sp = frame-destroy ADDXri $sp, 64, 0
+
+  ; CHECK: = frame-setup frame-destroy LDRXpost
+    RET_ReallyLR
+
+...

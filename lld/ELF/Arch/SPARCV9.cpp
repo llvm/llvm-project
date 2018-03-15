@@ -137,7 +137,7 @@ void SPARCV9::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   };
   memcpy(Buf, PltData, sizeof(PltData));
 
-  uint64_t Off = PltHeaderSize + Index * PltEntrySize;
+  uint64_t Off = getPltEntryOffset(Index);
   relocateOne(Buf, R_SPARC_22, Off);
   relocateOne(Buf + 4, R_SPARC_WDISP19, -(Off + 4 - PltEntrySize));
 }

@@ -15,6 +15,8 @@
 
 .global _start
 _start:
+.cfi_startproc
+.cfi_endproc
  .quad sharedFoo
  .quad sharedBar
  .byte 0xe8
@@ -26,8 +28,8 @@ _start:
 .global _Z1fi
 _Z1fi:
 .cfi_startproc
-.cfi_endproc
 nop
+.cfi_endproc
 .weak bar
 bar:
 .long bar - .
@@ -51,8 +53,10 @@ labs = 0x1AB5
 // CHECK-NEXT: 00000000002002d0 0000000000000030     8         <internal>:(.rela.dyn)
 // CHECK-NEXT: 0000000000200300 0000000000000030     8 .rela.plt
 // CHECK-NEXT: 0000000000200300 0000000000000030     8         <internal>:(.rela.plt)
-// CHECK-NEXT: 0000000000200330 0000000000000030     8 .eh_frame
-// CHECK-NEXT: 0000000000200330 0000000000000030     8         <internal>:(.eh_frame)
+// CHECK-NEXT: 0000000000200330 0000000000000060     8 .eh_frame
+// CHECK-NEXT: 0000000000200330 000000000000002c     0         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x0)
+// CHECK-NEXT: 0000000000200360 0000000000000014     0         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x2c)
+// CHECK-NEXT: 0000000000200378 0000000000000018     0         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.eh_frame+0x18)
 // CHECK-NEXT: 0000000000201000 000000000000002d     4 .text
 // CHECK-NEXT: 0000000000201000 0000000000000028     4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.text)
 // CHECK-NEXT: 0000000000201000 0000000000000000     0                 _start

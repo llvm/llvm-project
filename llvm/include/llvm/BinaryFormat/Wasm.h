@@ -101,7 +101,7 @@ struct WasmFunction {
   uint32_t CodeSectionOffset;
   uint32_t Size;
   StringRef Name; // from the "linking" or "names" section
-  StringRef Comdat; // from the "comdat info" section
+  uint32_t Comdat; // from the "comdat info" section
 };
 
 struct WasmDataSegment {
@@ -111,7 +111,7 @@ struct WasmDataSegment {
   StringRef Name;
   uint32_t Alignment;
   uint32_t Flags;
-  StringRef Comdat; // from the "comdat info" section
+  uint32_t Comdat; // from the "comdat info" section
 };
 
 struct WasmElemSegment {
@@ -160,6 +160,7 @@ struct WasmFunctionName {
 
 struct WasmLinkingData {
   std::vector<WasmInitFunc> InitFunctions;
+  std::vector<StringRef> Comdats;
   std::vector<WasmSymbolInfo> SymbolTable;
 };
 
@@ -265,6 +266,23 @@ enum : unsigned {
 };
 
 #undef WASM_RELOC
+
+// Useful comparison operators
+inline bool operator==(const WasmSignature &LHS, const WasmSignature &RHS) {
+  return LHS.ReturnType == RHS.ReturnType && LHS.ParamTypes == RHS.ParamTypes;
+}
+
+inline bool operator!=(const WasmSignature &LHS, const WasmSignature &RHS) {
+  return !(LHS == RHS);
+}
+
+inline bool operator==(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
+  return LHS.Type == RHS.Type && LHS.Mutable == RHS.Mutable;
+}
+
+inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
+  return !(LHS == RHS);
+}
 
 } // end namespace wasm
 } // end namespace llvm

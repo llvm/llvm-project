@@ -34,6 +34,7 @@ target_link_libraries(clang-tidy
   clangTidyPerformanceModule
   clangTidyPortabilityModule
   clangTidyReadabilityModule
+  clangTidyZirconModule
   clangTooling
   clangToolingCore
   )
