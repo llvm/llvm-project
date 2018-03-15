@@ -231,7 +231,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
   if (!Subtarget->isTargetDarwin() && !Subtarget->isTargetIOS() &&
       !Subtarget->isTargetWatchOS()) {
-    bool IsHFTarget = TM.Options.FloatABIType == FloatABI::Hard;
+    const auto &E = Subtarget->getTargetTriple().getEnvironment();
+
+    bool IsHFTarget = E == Triple::EABIHF || E == Triple::GNUEABIHF ||
+                      E == Triple::MuslEABIHF;
+    // Windows is a special case.  Technically, we will replace all of the "GNU"
+    // calls with calls to MSVCRT if appropriate and adjust the calling
+    // convention then.
+    IsHFTarget = IsHFTarget || Subtarget->isTargetWindows();
+
     for (int LCID = 0; LCID < RTLIB::UNKNOWN_LIBCALL; ++LCID)
       setLibcallCallingConv(static_cast<RTLIB::Libcall>(LCID),
                             IsHFTarget ? CallingConv::ARM_AAPCS_VFP
