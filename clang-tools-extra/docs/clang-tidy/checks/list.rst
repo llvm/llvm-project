@@ -36,6 +36,7 @@ Clang-Tidy Checks
    bugprone-misplaced-widening-cast
    bugprone-move-forwarding-reference
    bugprone-multiple-statement-macro
+   bugprone-sizeof-expression
    bugprone-string-constructor
    bugprone-string-integer-assignment
    bugprone-string-literal-with-embedded-nul
@@ -146,7 +147,6 @@ Clang-Tidy Checks
    misc-non-copyable-objects
    misc-redundant-expression
    misc-sizeof-container
-   misc-sizeof-expression
    misc-static-assert
    misc-throw-by-value-catch-by-reference
    misc-unconventional-assign-operator

@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SIZEOF_EXPRESSION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SIZEOF_EXPRESSION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIZEOFEXPRESSIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIZEOFEXPRESSIONCHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Find suspicious usages of sizeof expression.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-sizeof-expression.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-expression.html
 class SizeofExpressionCheck : public ClangTidyCheck {
 public:
   SizeofExpressionCheck(StringRef Name, ClangTidyContext *Context);
@@ -33,8 +33,8 @@ private:
   const bool WarnOnSizeOfCompareToConstant;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SIZEOF_EXPRESSION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIZEOFEXPRESSIONCHECK_H
