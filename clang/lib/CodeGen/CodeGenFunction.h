@@ -3899,10 +3899,10 @@ private:
   void ExpandTypeFromArgs(QualType Ty, LValue Dst,
                           SmallVectorImpl<llvm::Value *>::iterator &AI);
 
-  /// ExpandTypeToArgs - Expand an RValue \arg RV, with the LLVM type for \arg
+  /// ExpandTypeToArgs - Expand an CallArg \arg Arg, with the LLVM type for \arg
   /// Ty, into individual arguments on the provided vector \arg IRCallArgs,
   /// starting at index \arg IRCallArgPos. See ABIArgInfo::Expand.
-  void ExpandTypeToArgs(QualType Ty, RValue RV, llvm::FunctionType *IRFuncTy,
+  void ExpandTypeToArgs(QualType Ty, CallArg Arg, llvm::FunctionType *IRFuncTy,
                         SmallVectorImpl<llvm::Value *> &IRCallArgs,
                         unsigned &IRCallArgPos);
 

@@ -2077,7 +2077,8 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
 
     QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
-    Address Src(Args[1].RV.getScalarVal(), getNaturalTypeAlignment(SrcTy));
+    Address Src(Args[1].getRValue(*this).getScalarVal(),
+                getNaturalTypeAlignment(SrcTy));
     LValue SrcLVal = MakeAddrLValue(Src, SrcTy);
     QualType DestTy = getContext().getTypeDeclType(ClassDecl);
     LValue DestLVal = MakeAddrLValue(This, DestTy);
@@ -2131,8 +2132,7 @@ void CodeGenFunction::EmitInheritedCXXConstructorCall(
     const CXXConstructorDecl *D, bool ForVirtualBase, Address This,
     bool InheritedFromVBase, const CXXInheritedCtorInitExpr *E) {
   CallArgList Args;
-  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType(getContext()),
-                  /*NeedsCopy=*/false);
+  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType(getContext()));
 
   // Forward the parameters.
   if (InheritedFromVBase &&
@@ -2196,7 +2196,7 @@ void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
   assert(Args.size() >= Params.size() && "too few arguments for call");
   for (unsigned I = 0, N = Args.size(); I != N; ++I) {
     if (I < Params.size() && isa<ImplicitParamDecl>(Params[I])) {
-      const RValue &RV = Args[I].RV;
+      const RValue &RV = Args[I].getRValue(*this);
       assert(!RV.isComplex() && "complex indirect params not supported");
       ParamValue Val = RV.isScalar()
                            ? ParamValue::forDirect(RV.getScalarVal())

@@ -3564,7 +3564,7 @@ define <2 x double> @test_movsd_reg(<2 x double> %a0, <2 x double> %a1) {
 ; SLM-LABEL: test_movsd_reg:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0] sched: [1:1.00]
-; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_movsd_reg:
@@ -8756,7 +8756,7 @@ define <2 x double> @test_sqrtpd(<2 x double> %a0, <2 x double> *%a1) {
 ; SLM-NEXT:    sqrtpd (%rdi), %xmm1 # sched: [18:1.00]
 ; SLM-NEXT:    sqrtpd %xmm0, %xmm0 # sched: [15:1.00]
 ; SLM-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_sqrtpd:
@@ -9284,10 +9284,10 @@ define <2 x double> @test_unpcklpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ; SLM-LABEL: test_unpcklpd:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SLM-NEXT:    movapd %xmm0, %xmm1 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm0, %xmm1 # sched: [1:0.50]
 ; SLM-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [4:1.00]
 ; SLM-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_unpcklpd:

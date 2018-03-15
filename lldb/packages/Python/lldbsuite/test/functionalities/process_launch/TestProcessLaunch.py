@@ -19,6 +19,7 @@ import six
 class ProcessLaunchTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
@@ -37,9 +38,9 @@ class ProcessLaunchTestCase(TestBase):
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out"])
 
-        in_file = "input-file.txt"
-        out_file = "output-test.out"
-        err_file = "output-test.err"
+        in_file = os.path.join(self.getSourceDir(), "input-file.txt")
+        out_file = lldbutil.append_to_process_working_directory(self, "output-test.out")
+        err_file = lldbutil.append_to_process_working_directory(self, "output-test.err")
 
         # Make sure the output files do not exist before launching the process
         try:
@@ -52,8 +53,8 @@ class ProcessLaunchTestCase(TestBase):
         except OSError:
             pass
 
-        launch_command = "process launch -i " + \
-            in_file + " -o " + out_file + " -e " + err_file
+        launch_command = "process launch -i '{0}' -o '{1}' -e '{2}' -w '{3}'".format(
+                in_file, out_file, err_file, self.get_process_working_directory())
 
         if lldb.remote_platform:
             self.runCmd('platform put-file "{local}" "{remote}"'.format(
@@ -62,55 +63,19 @@ class ProcessLaunchTestCase(TestBase):
         self.expect(launch_command,
                     patterns=["Process .* launched: .*a.out"])
 
-        if lldb.remote_platform:
-            self.runCmd('platform get-file "{remote}" "{local}"'.format(
-                remote=out_file, local=out_file))
-            self.runCmd('platform get-file "{remote}" "{local}"'.format(
-                remote=err_file, local=err_file))
-
         success = True
         err_msg = ""
 
-        # Check to see if the 'stdout' file was created
-        try:
-            out_f = open(out_file)
-        except IOError:
+        out = lldbutil.read_file_on_target(self, out_file)
+        if out != "This should go to stdout.\n":
             success = False
-            err_msg = err_msg + "   ERROR: stdout file was not created.\n"
-        else:
-            # Check to see if the 'stdout' file contains the right output
-            line = out_f.readline()
-            if line != "This should go to stdout.\n":
-                success = False
-                err_msg = err_msg + "    ERROR: stdout file does not contain correct output.\n"
-                out_f.close()
+            err_msg = err_msg + "    ERROR: stdout file does not contain correct output.\n"
 
-        # Try to delete the 'stdout' file
-        try:
-            os.remove(out_file)
-        except OSError:
-            pass
 
-        # Check to see if the 'stderr' file was created
-        try:
-            err_f = open(err_file)
-        except IOError:
+        err = lldbutil.read_file_on_target(self, err_file)
+        if err != "This should go to stderr.\n":
             success = False
-            err_msg = err_msg + "     ERROR:  stderr file was not created.\n"
-        else:
-            # Check to see if the 'stderr' file contains the right output
-            line = err_f.readline()
-            if line != "This should go to stderr.\n":
-                success = False
-                err_msg = err_msg + "    ERROR: stderr file does not contain correct output.\n\
-"
-                err_f.close()
-
-        # Try to delete the 'stderr' file
-        try:
-            os.remove(err_file)
-        except OSError:
-            pass
+            err_msg = err_msg + "    ERROR: stderr file does not contain correct output.\n"
 
         if not success:
             self.fail(err_msg)

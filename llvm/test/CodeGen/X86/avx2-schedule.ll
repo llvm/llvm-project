@@ -573,7 +573,7 @@ define <8 x i32> @test_inserti128(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 define <4 x i64> @test_movntdqa(i8* %a0) {
 ; GENERIC-LABEL: test_movntdqa:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovntdqa (%rdi), %ymm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vmovntdqa (%rdi), %ymm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movntdqa:
@@ -3380,7 +3380,7 @@ declare <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16>, <16 x i16>) nounwind readn
 define <4 x i32> @test_pmaskmovd(i8* %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ; GENERIC-LABEL: test_pmaskmovd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [4:0.50]
+; GENERIC-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [6:0.50]
 ; GENERIC-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -3429,7 +3429,7 @@ declare void @llvm.x86.avx2.maskstore.d(i8*, <4 x i32>, <4 x i32>) nounwind
 define <8 x i32> @test_pmaskmovd_ymm(i8* %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; GENERIC-LABEL: test_pmaskmovd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [4:0.50]
+; GENERIC-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [6:0.50]
 ; GENERIC-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -3478,7 +3478,7 @@ declare void @llvm.x86.avx2.maskstore.d.256(i8*, <8 x i32>, <8 x i32>) nounwind
 define <2 x i64> @test_pmaskmovq(i8* %a0, <2 x i64> %a1, <2 x i64> %a2) {
 ; GENERIC-LABEL: test_pmaskmovq:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [4:0.50]
+; GENERIC-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [6:0.50]
 ; GENERIC-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -3527,7 +3527,7 @@ declare void @llvm.x86.avx2.maskstore.q(i8*, <2 x i64>, <2 x i64>) nounwind
 define <4 x i64> @test_pmaskmovq_ymm(i8* %a0, <4 x i64> %a1, <4 x i64> %a2) {
 ; GENERIC-LABEL: test_pmaskmovq_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [4:0.50]
+; GENERIC-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [6:0.50]
 ; GENERIC-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]

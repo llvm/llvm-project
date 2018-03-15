@@ -199,7 +199,8 @@ void RetireControlUnit::dump() const {
 }
 #endif
 
-bool DispatchUnit::checkRAT(const InstrDesc &Desc) {
+bool DispatchUnit::checkRAT(const Instruction &Instr) {
+  const InstrDesc &Desc = Instr.getDesc();
   unsigned NumWrites = Desc.Writes.size();
   if (RAT->isAvailable(NumWrites))
     return true;

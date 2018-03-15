@@ -4820,7 +4820,7 @@ bool LoopVectorizationLegality::canVectorize() {
   // Store the result and return it at the end instead of exiting early, in case
   // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
   bool Result = true;
-  
+
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.

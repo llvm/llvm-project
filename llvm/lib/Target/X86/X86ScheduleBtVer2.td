@@ -38,9 +38,6 @@ def JSAGU : ProcResource<1>; // Integer Pipe3: SAGU (also handles 3-operand LEA)
 def JFPU0 : ProcResource<1>; // Vector/FPU Pipe0: VALU0/VIMUL/FPA
 def JFPU1 : ProcResource<1>; // Vector/FPU Pipe1: VALU1/STC/FPM
 
-// Any pipe - FIXME we need this until we can discriminate between int/fpu load/store/moves properly
-def JAny : ProcResGroup<[JALU0, JALU1, JLAGU, JSAGU, JFPU0, JFPU1]>;
-
 // Integer Pipe Scheduler
 def JALU01 : ProcResGroup<[JALU0, JALU1]> {
   let BufferSize=20;
@@ -214,7 +211,6 @@ def: InstRW<[JWriteSHLDm],(instrs SHLD16mri8, SHLD32mri8, SHLD64mri8,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loads, stores, and moves, not folded with other operations.
-// FIXME: Split x86 and SSE load/store/moves
 ////////////////////////////////////////////////////////////////////////////////
 
 def : WriteRes<WriteLoad,  [JLAGU]> { let Latency = 5; }
@@ -240,11 +236,10 @@ defm : JWriteResIntPair<WriteJump,  JALU01, 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Special case scheduling classes.
-// FIXME: pipe for system/microcode?
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WriteSystem,     [JAny]> { let Latency = 100; }
-def : WriteRes<WriteMicrocoded, [JAny]> { let Latency = 100; }
+def : WriteRes<WriteSystem,     [JALU01]> { let Latency = 100; }
+def : WriteRes<WriteMicrocoded, [JALU01]> { let Latency = 100; }
 def : WriteRes<WriteFence,  [JSAGU]>;
 def : WriteRes<WriteNop, []>;
 
@@ -254,6 +249,10 @@ def : WriteRes<WriteNop, []>;
 // FIXME: Double precision latencies
 // FIXME: SS vs PS latencies
 ////////////////////////////////////////////////////////////////////////////////
+
+def  : WriteRes<WriteFLoad,                [JLAGU]> { let Latency = 5; }
+def  : WriteRes<WriteFStore,               [JSAGU]>;
+def  : WriteRes<WriteFMove,               [JFPU01]>;
 
 defm : JWriteResFpuPair<WriteFAdd,         [JFPU0],  3>;
 defm : JWriteResFpuPair<WriteFMul,         [JFPU1],  2>;
@@ -280,6 +279,10 @@ defm : JWriteResFpuPair<WriteCvtF2F,       [JFPU1], 3>; // Float -> Float size c
 // Vector integer operations.
 ////////////////////////////////////////////////////////////////////////////////
 
+def  : WriteRes<WriteVecLoad,              [JLAGU]> { let Latency = 5; }
+def  : WriteRes<WriteVecStore,             [JSAGU]>;
+def  : WriteRes<WriteVecMove,             [JFPU01]>;
+
 defm : JWriteResFpuPair<WriteVecALU,      [JFPU01], 1>;
 defm : JWriteResFpuPair<WriteVecShift,    [JFPU01], 1>;
 defm : JWriteResFpuPair<WriteVecIMul,      [JFPU0], 2>;
@@ -305,9 +308,9 @@ defm : JWriteResFpuPair<WritePCmpEStrM, [JFPU1, JLAGU, JFPU01, JFPU1, JFPU0], 14
 // AES Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteAESIMC,    [JVIMUL], 2>;
-defm : JWriteResFpuPair<WriteAESKeyGen, [JVIMUL], 2>;
-defm : JWriteResFpuPair<WriteAESDecEnc, [JVIMUL], 3>;
+defm : JWriteResFpuPair<WriteAESIMC,      [JFPU0, JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteAESKeyGen,   [JFPU0, JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU0, JVIMUL], 3>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.
@@ -332,7 +335,7 @@ def : InstRW<[JWriteFHAddYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUB
 // Carry-less multiplication instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteCLMul,     [JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteCLMul,       [JFPU0, JVIMUL], 2>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE4.1 instructions.

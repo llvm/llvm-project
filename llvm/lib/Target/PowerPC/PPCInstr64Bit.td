@@ -499,7 +499,49 @@ defm ADD8  : XOForm_1r<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
 def ADD8TLS  : XOForm_1<31, 266, 0, (outs g8rc:$rT), (ins g8rc_nox0:$rA, tlsreg:$rB),
                         "add $rT, $rA, $rB", IIC_IntSimple,
                         [(set i64:$rT, (add i64:$rA, tglobaltlsaddr:$rB))]>;
-                     
+let mayLoad = 1 in {
+def LBZXTLS : XForm_1<31,  87, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "lbzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LHZXTLS : XForm_1<31, 279, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "lhzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LWZXTLS : XForm_1<31,  23, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "lwzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LDXTLS  : XForm_1<31,  21, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "ldx $rD, $rA, $rB", IIC_LdStLD, []>, isPPC64;
+def LBZXTLS_32 : XForm_1<31,  87, (outs gprc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                         "lbzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LHZXTLS_32 : XForm_1<31, 279, (outs gprc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                         "lhzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LWZXTLS_32 : XForm_1<31,  23, (outs gprc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                         "lwzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+
+}
+
+let mayStore = 1 in {
+def STBXTLS : XForm_8<31, 215, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "stbx $rS, $rA, $rB", IIC_LdStStore, []>,
+                      PPC970_DGroup_Cracked;
+def STHXTLS : XForm_8<31, 407, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "sthx $rS, $rA, $rB", IIC_LdStStore, []>,
+                      PPC970_DGroup_Cracked;
+def STWXTLS : XForm_8<31, 151, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "stwx $rS, $rA, $rB", IIC_LdStStore, []>,
+                      PPC970_DGroup_Cracked;
+def STDXTLS  : XForm_8<31, 149, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                       "stdx $rS, $rA, $rB", IIC_LdStSTD, []>, isPPC64,
+                       PPC970_DGroup_Cracked;
+def STBXTLS_32 : XForm_8<31, 215, (outs), (ins gprc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                         "stbx $rS, $rA, $rB", IIC_LdStStore, []>,
+                         PPC970_DGroup_Cracked;
+def STHXTLS_32 : XForm_8<31, 407, (outs), (ins gprc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                         "sthx $rS, $rA, $rB", IIC_LdStStore, []>,
+                         PPC970_DGroup_Cracked;
+def STWXTLS_32 : XForm_8<31, 151, (outs), (ins gprc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                         "stwx $rS, $rA, $rB", IIC_LdStStore, []>,
+                         PPC970_DGroup_Cracked;
+
+}
+
 let isCommutable = 1 in
 defm ADDC8 : XOForm_1rc<31, 10, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "addc", "$rT, $rA, $rB", IIC_IntGeneral,

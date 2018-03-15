@@ -2027,8 +2027,16 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
 
   // If the first index is one and all the rest are zero, it's in bounds,
   // by the one-past-the-end rule.
-  if (!cast<ConstantInt>(Idxs[0])->isOne())
-    return false;
+  if (auto *CI = dyn_cast<ConstantInt>(Idxs[0])) {
+    if (!CI->isOne())
+      return false;
+  } else {
+    auto *CV = cast<ConstantDataVector>(Idxs[0]);
+    CI = dyn_cast_or_null<ConstantInt>(CV->getSplatValue());
+    if (!CI || !CI->isOne())
+      return false;
+  }
+
   for (unsigned i = 1, e = Idxs.size(); i != e; ++i)
     if (!cast<Constant>(Idxs[i])->isNullValue())
       return false;
@@ -2058,15 +2066,18 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
 
-  if (isa<UndefValue>(C)) {
-    Type *GEPTy = GetElementPtrInst::getGEPReturnType(
-        C, makeArrayRef((Value * const *)Idxs.data(), Idxs.size()));
+  Type *GEPTy = GetElementPtrInst::getGEPReturnType(
+      C, makeArrayRef((Value *const *)Idxs.data(), Idxs.size()));
+
+  if (isa<UndefValue>(C))
     return UndefValue::get(GEPTy);
-  }
 
   Constant *Idx0 = cast<Constant>(Idxs[0]);
   if (Idxs.size() == 1 && (Idx0->isNullValue() || isa<UndefValue>(Idx0)))
-    return C;
+    return GEPTy->isVectorTy() && !C->getType()->isVectorTy()
+               ? ConstantVector::getSplat(
+                     cast<VectorType>(GEPTy)->getNumElements(), C)
+               : C;
 
   if (C->isNullValue()) {
     bool isNull = true;

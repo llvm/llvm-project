@@ -7405,9 +7405,14 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   // Try to detect target regions in the function.
   scanForTargetRegionsFunctions(FD.getBody(), CGM.getMangledName(GD));
 
-  // We should not emit any function other that the ones created during the
-  // scanning. Therefore, we signal that this function is completely dealt
-  // with.
+  // Do not to emit function if it is not marked as declare target.
+  if (!GD.getDecl()->hasAttrs())
+    return true;
+
+  for (const auto *D = FD.getMostRecentDecl(); D; D = D->getPreviousDecl())
+    if (D->hasAttr<OMPDeclareTargetDeclAttr>())
+      return false;
+
   return true;
 }
 
@@ -7433,8 +7438,15 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
     }
   }
 
-  // If we are in target mode, we do not emit any global (declare target is not
-  // implemented yet). Therefore we signal that GD was processed in this case.
+  // Do not to emit variable if it is not marked as declare target.
+  if (!GD.getDecl()->hasAttrs())
+    return true;
+
+  for (const Decl *D = GD.getDecl()->getMostRecentDecl(); D;
+       D = D->getPreviousDecl())
+    if (D->hasAttr<OMPDeclareTargetDeclAttr>())
+      return false;
+
   return true;
 }
 
@@ -7444,6 +7456,38 @@ bool CGOpenMPRuntime::emitTargetGlobal(GlobalDecl GD) {
     return emitTargetFunctions(GD);
 
   return emitTargetGlobalVariable(GD);
+}
+
+CGOpenMPRuntime::DisableAutoDeclareTargetRAII::DisableAutoDeclareTargetRAII(
+    CodeGenModule &CGM)
+    : CGM(CGM) {
+  if (CGM.getLangOpts().OpenMPIsDevice) {
+    SavedShouldMarkAsGlobal = CGM.getOpenMPRuntime().ShouldMarkAsGlobal;
+    CGM.getOpenMPRuntime().ShouldMarkAsGlobal = false;
+  }
+}
+
+CGOpenMPRuntime::DisableAutoDeclareTargetRAII::~DisableAutoDeclareTargetRAII() {
+  if (CGM.getLangOpts().OpenMPIsDevice)
+    CGM.getOpenMPRuntime().ShouldMarkAsGlobal = SavedShouldMarkAsGlobal;
+}
+
+bool CGOpenMPRuntime::markAsGlobalTarget(const FunctionDecl *D) {
+  if (!CGM.getLangOpts().OpenMPIsDevice || !ShouldMarkAsGlobal)
+    return true;
+  // Do not to emit function if it is marked as declare target as it was already
+  // emitted.
+  for (const auto *FD = D->getMostRecentDecl(); FD; FD = FD->getPreviousDecl())
+    if (FD->hasAttr<OMPDeclareTargetDeclAttr>())
+      return true;
+
+  const FunctionDecl *FD = D->getCanonicalDecl();
+  // Do not mark member functions except for static.
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD))
+    if (!Method->isStatic())
+      return true;
+
+  return !AlreadyEmittedTargetFunctions.insert(FD).second;
 }
 
 llvm::Function *CGOpenMPRuntime::emitRegistrationFunction() {

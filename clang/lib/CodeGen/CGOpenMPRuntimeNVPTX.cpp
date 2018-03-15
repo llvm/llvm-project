@@ -171,16 +171,23 @@ class CheckVarsEscapingDeclContext final
     : public ConstStmtVisitor<CheckVarsEscapingDeclContext> {
   CodeGenFunction &CGF;
   llvm::SetVector<const ValueDecl *> EscapedDecls;
+  llvm::SmallPtrSet<const Decl *, 4> EscapedParameters;
   llvm::SmallPtrSet<const ValueDecl *, 4> IgnoredDecls;
   bool AllEscaped = false;
   RecordDecl *GlobalizedRD = nullptr;
   llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> MappedDeclsFields;
 
   void markAsEscaped(const ValueDecl *VD) {
-    if (IgnoredDecls.count(VD) ||
-        (CGF.CapturedStmtInfo &&
-         CGF.CapturedStmtInfo->lookup(cast<VarDecl>(VD))))
+    if (IgnoredDecls.count(VD))
       return;
+    // Variables captured by value must be globalized.
+    if (auto *CSI = CGF.CapturedStmtInfo) {
+      if (const FieldDecl *FD = CGF.CapturedStmtInfo->lookup(cast<VarDecl>(VD))) {
+        if (FD->getType()->isReferenceType())
+          return;
+        EscapedParameters.insert(VD);
+      }
+    }
     EscapedDecls.insert(VD);
   }
 
@@ -385,12 +392,15 @@ public:
         Visit(Child);
   }
 
+  /// Returns the record that handles all the escaped local variables and used
+  /// instead of their original storage.
   const RecordDecl *getGlobalizedRecord() {
     if (!GlobalizedRD)
       buildRecordForGlobalizedVars();
     return GlobalizedRD;
   }
 
+  /// Returns the field in the globalized record for the escaped variable.
   const FieldDecl *getFieldForGlobalizedVar(const ValueDecl *VD) const {
     assert(GlobalizedRD &&
            "Record for globalized variables must be generated already.");
@@ -400,8 +410,15 @@ public:
     return I->getSecond();
   }
 
+  /// Returns the list of the escaped local variables/parameters.
   ArrayRef<const ValueDecl *> getEscapedDecls() const {
     return EscapedDecls.getArrayRef();
+  }
+
+  /// Checks if the escaped local variable is actually a parameter passed by
+  /// value.
+  const llvm::SmallPtrSetImpl<const Decl *> &getEscapedParameters() const {
+    return EscapedParameters;
   }
 };
 } // anonymous namespace
@@ -614,58 +631,14 @@ void CGOpenMPRuntimeNVPTX::emitGenericEntryHeader(CodeGenFunction &CGF,
       createNVPTXRuntimeFunction(
           OMPRTL_NVPTX__kmpc_data_sharing_init_stack));
 
-  const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
-  if (I == FunctionGlobalizedDecls.end())
-    return;
-  const RecordDecl *GlobalizedVarsRecord = I->getSecond().first;
-  QualType RecTy = CGM.getContext().getRecordType(GlobalizedVarsRecord);
-
-  // Recover pointer to this function's global record. The runtime will
-  // handle the specifics of the allocation of the memory.
-  // Use actual memory size of the record including the padding
-  // for alignment purposes.
-  unsigned Alignment =
-      CGM.getContext().getTypeAlignInChars(RecTy).getQuantity();
-  unsigned GlobalRecordSize =
-      CGM.getContext().getTypeSizeInChars(RecTy).getQuantity();
-  GlobalRecordSize = llvm::alignTo(GlobalRecordSize, Alignment);
-  // TODO: allow the usage of shared memory to be controlled by
-  // the user, for now, default to global.
-  llvm::Value *GlobalRecordSizeArg[] = {
-      llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
-      CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
-  llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
-      createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
-      GlobalRecordSizeArg);
-  llvm::Value *GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-      GlobalRecValue, CGF.ConvertTypeForMem(RecTy)->getPointerTo());
-  FunctionToGlobalRecPtr.try_emplace(CGF.CurFn, GlobalRecValue);
-
-  // Emit the "global alloca" which is a GEP from the global declaration record
-  // using the pointer returned by the runtime.
-  LValue Base = CGF.MakeNaturalAlignPointeeAddrLValue(GlobalRecCastAddr, RecTy);
-  auto &Res = I->getSecond().second;
-  for (auto &Rec : Res) {
-    const FieldDecl *FD = Rec.second.first;
-    LValue VarAddr = CGF.EmitLValueForField(Base, FD);
-    Rec.second.second = VarAddr.getAddress();
-  }
+  emitGenericVarsProlog(CGF, WST.Loc);
 }
 
 void CGOpenMPRuntimeNVPTX::emitGenericEntryFooter(CodeGenFunction &CGF,
                                                   EntryFunctionState &EST) {
-  const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
-  if (I != FunctionGlobalizedDecls.end()) {
-    if (!CGF.HaveInsertPoint())
-      return;
-    auto I = FunctionToGlobalRecPtr.find(CGF.CurFn);
-    if (I != FunctionToGlobalRecPtr.end()) {
-      llvm::Value *Args[] = {I->getSecond()};
-      CGF.EmitRuntimeCall(
-          createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_data_sharing_pop_stack),
-          Args);
-    }
-  }
+  emitGenericVarsEpilog(CGF);
+  if (!CGF.HaveInsertPoint())
+    return;
 
   if (!EST.ExitBB)
     EST.ExitBB = CGF.createBasicBlock(".exit");
@@ -1207,6 +1180,24 @@ void CGOpenMPRuntimeNVPTX::emitNumTeamsClause(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+  SourceLocation Loc = D.getLocStart();
+
+  // Emit target region as a standalone region.
+  class NVPTXPrePostActionTy : public PrePostActionTy {
+    SourceLocation &Loc;
+
+  public:
+    NVPTXPrePostActionTy(SourceLocation &Loc) : Loc(Loc) {}
+    void Enter(CodeGenFunction &CGF) override {
+      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
+          .emitGenericVarsProlog(CGF, Loc);
+    }
+    void Exit(CodeGenFunction &CGF) override {
+      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
+          .emitGenericVarsEpilog(CGF);
+    }
+  } Action(Loc);
+  CodeGen.setAction(Action);
   auto *OutlinedFun =
       cast<llvm::Function>(CGOpenMPRuntime::emitParallelOutlinedFunction(
           D, ThreadIDVar, InnermostKind, CodeGen));
@@ -1222,7 +1213,24 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
 llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+  SourceLocation Loc = D.getLocStart();
 
+  // Emit target region as a standalone region.
+  class NVPTXPrePostActionTy : public PrePostActionTy {
+    SourceLocation &Loc;
+
+  public:
+    NVPTXPrePostActionTy(SourceLocation &Loc) : Loc(Loc) {}
+    void Enter(CodeGenFunction &CGF) override {
+      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
+          .emitGenericVarsProlog(CGF, Loc);
+    }
+    void Exit(CodeGenFunction &CGF) override {
+      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
+          .emitGenericVarsEpilog(CGF);
+    }
+  } Action(Loc);
+  CodeGen.setAction(Action);
   llvm::Value *OutlinedFunVal = CGOpenMPRuntime::emitTeamsOutlinedFunction(
       D, ThreadIDVar, InnermostKind, CodeGen);
   llvm::Function *OutlinedFun = cast<llvm::Function>(OutlinedFunVal);
@@ -1231,6 +1239,73 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
   OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
 
   return OutlinedFun;
+}
+
+void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
+                                                 SourceLocation Loc) {
+  CGBuilderTy &Bld = CGF.Builder;
+
+  const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
+  if (I == FunctionGlobalizedDecls.end())
+    return;
+  const RecordDecl *GlobalizedVarsRecord = I->getSecond().GlobalRecord;
+  QualType RecTy = CGM.getContext().getRecordType(GlobalizedVarsRecord);
+
+  // Recover pointer to this function's global record. The runtime will
+  // handle the specifics of the allocation of the memory.
+  // Use actual memory size of the record including the padding
+  // for alignment purposes.
+  unsigned Alignment =
+      CGM.getContext().getTypeAlignInChars(RecTy).getQuantity();
+  unsigned GlobalRecordSize =
+      CGM.getContext().getTypeSizeInChars(RecTy).getQuantity();
+  GlobalRecordSize = llvm::alignTo(GlobalRecordSize, Alignment);
+  // TODO: allow the usage of shared memory to be controlled by
+  // the user, for now, default to global.
+  llvm::Value *GlobalRecordSizeArg[] = {
+      llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
+      CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
+  llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
+      createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
+      GlobalRecordSizeArg);
+  llvm::Value *GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
+      GlobalRecValue, CGF.ConvertTypeForMem(RecTy)->getPointerTo());
+  LValue Base = CGF.MakeNaturalAlignPointeeAddrLValue(GlobalRecCastAddr, RecTy);
+  I->getSecond().GlobalRecordAddr = GlobalRecValue;
+
+  // Emit the "global alloca" which is a GEP from the global declaration record
+  // using the pointer returned by the runtime.
+  for (auto &Rec : I->getSecond().LocalVarData) {
+    bool EscapedParam = I->getSecond().EscapedParameters.count(Rec.first);
+    llvm::Value *ParValue;
+    if (EscapedParam) {
+      const auto *VD = cast<VarDecl>(Rec.first);
+      LValue ParLVal =
+          CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(VD), VD->getType());
+      ParValue = CGF.EmitLoadOfScalar(ParLVal, Loc);
+    }
+    const FieldDecl *FD = Rec.second.first;
+    LValue VarAddr = CGF.EmitLValueForField(Base, FD);
+    Rec.second.second = VarAddr.getAddress();
+    if (EscapedParam) {
+      const auto *VD = cast<VarDecl>(Rec.first);
+      CGF.EmitStoreOfScalar(ParValue, VarAddr);
+      I->getSecond().MappedParams->setVarAddr(CGF, VD, VarAddr.getAddress());
+    }
+  }
+  I->getSecond().MappedParams->apply(CGF);
+}
+
+void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF) {
+  const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
+  if (I != FunctionGlobalizedDecls.end() && I->getSecond().GlobalRecordAddr) {
+    I->getSecond().MappedParams->restore(CGF);
+    if (!CGF.HaveInsertPoint())
+      return;
+    CGF.EmitRuntimeCall(
+        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_data_sharing_pop_stack),
+        I->getSecond().GlobalRecordAddr);
+  }
 }
 
 void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
@@ -1317,7 +1392,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
         llvm::Value *PtrV = Bld.CreateBitCast(V, CGF.VoidPtrTy);
         CGF.EmitStoreOfScalar(PtrV, Dst, /*Volatile=*/false,
                               Ctx.getPointerType(Ctx.VoidPtrTy));
-        Idx++;
+        ++Idx;
       }
     }
 
@@ -2750,8 +2825,8 @@ void CGOpenMPRuntimeNVPTX::emitOutlinedFunctionCall(
       continue;
     }
     llvm::Value *TargetArg = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-        NativeArg, NativeArg->getType()->getPointerElementType()->getPointerTo(
-                       /*AddrSpace=*/0));
+        NativeArg,
+        NativeArg->getType()->getPointerElementType()->getPointerTo());
     TargetArgs.emplace_back(
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TargetArg, TargetType));
   }
@@ -2788,7 +2863,7 @@ llvm::Function *CGOpenMPRuntimeNVPTX::createParallelDataSharingWrapper(
   auto *Fn = llvm::Function::Create(
       CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
       OutlinedParallelFn->getName() + "_wrapper", &CGM.getModule());
-  CGM.SetInternalFunctionAttributes(/*D=*/GlobalDecl(), Fn, CGFI);
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 
   CodeGenFunction CGF(CGM, /*suppressNewContext=*/true);
@@ -2854,6 +2929,7 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
          "Function is registered already.");
   SmallVector<const ValueDecl *, 4> IgnoredDecls;
   const Stmt *Body = nullptr;
+  bool NeedToDelayGlobalization = false;
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     Body = FD->getBody();
   } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
@@ -2861,6 +2937,7 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
   } else if (const auto *CD = dyn_cast<CapturedDecl>(D)) {
     Body = CD->getBody();
     if (CGF.CapturedStmtInfo->getKind() == CR_OpenMP) {
+      NeedToDelayGlobalization = true;
       if (const auto *CS = dyn_cast<CapturedStmt>(Body)) {
         IgnoredDecls.reserve(CS->capture_size());
         for (const auto &Capture : CS->captures())
@@ -2876,14 +2953,29 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
   const RecordDecl *GlobalizedVarsRecord = VarChecker.getGlobalizedRecord();
   if (!GlobalizedVarsRecord)
     return;
-  auto &Res =
-      FunctionGlobalizedDecls
-          .try_emplace(CGF.CurFn, GlobalizedVarsRecord, DeclToAddrMapTy())
-          .first->getSecond()
-          .second;
+  auto I = FunctionGlobalizedDecls.try_emplace(CGF.CurFn).first;
+  I->getSecond().MappedParams =
+      llvm::make_unique<CodeGenFunction::OMPMapVars>();
+  I->getSecond().GlobalRecord = GlobalizedVarsRecord;
+  I->getSecond().EscapedParameters.insert(
+      VarChecker.getEscapedParameters().begin(),
+      VarChecker.getEscapedParameters().end());
+  DeclToAddrMapTy &Data = I->getSecond().LocalVarData;
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     const FieldDecl *FD = VarChecker.getFieldForGlobalizedVar(VD);
-    Res.insert(std::make_pair(VD, std::make_pair(FD, Address::invalid())));
+    Data.insert(std::make_pair(VD, std::make_pair(FD, Address::invalid())));
+  }
+  if (!NeedToDelayGlobalization) {
+    emitGenericVarsProlog(CGF, D->getLocStart());
+    struct GlobalizationScope final : EHScopeStack::Cleanup {
+      GlobalizationScope() = default;
+
+      void Emit(CodeGenFunction &CGF, Flags flags) override {
+        static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
+            .emitGenericVarsEpilog(CGF);
+      }
+    };
+    CGF.EHStack.pushCleanup<GlobalizationScope>(NormalAndEHCleanup);
   }
 }
 
@@ -2892,14 +2984,13 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
   auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
   if (I == FunctionGlobalizedDecls.end())
     return Address::invalid();
-  auto VDI = I->getSecond().second.find(VD);
-  if (VDI == I->getSecond().second.end())
+  auto VDI = I->getSecond().LocalVarData.find(VD);
+  if (VDI == I->getSecond().LocalVarData.end())
     return Address::invalid();
   return VDI->second.second;
 }
 
 void CGOpenMPRuntimeNVPTX::functionFinished(CodeGenFunction &CGF) {
-  FunctionToGlobalRecPtr.erase(CGF.CurFn);
   FunctionGlobalizedDecls.erase(CGF.CurFn);
   CGOpenMPRuntime::functionFinished(CGF);
 }

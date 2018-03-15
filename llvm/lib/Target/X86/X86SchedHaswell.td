@@ -125,6 +125,10 @@ def : WriteRes<WriteIDivLd, [HWPort23, HWPort0, HWDivider]> {
 }
 
 // Scalar and vector floating point.
+def  : WriteRes<WriteFStore,       [HWPort237, HWPort4]>;
+def  : WriteRes<WriteFLoad,        [HWPort23]> { let Latency = 5; }
+def  : WriteRes<WriteFMove,        [HWPort5]>;
+
 defm : HWWriteResPair<WriteFAdd,   HWPort1, 3>;
 defm : HWWriteResPair<WriteFMul,   HWPort0, 5>;
 defm : HWWriteResPair<WriteFDiv,   HWPort0, 12>; // 10-14 cycles.
@@ -149,6 +153,10 @@ def : WriteRes<WriteFVarBlendLd, [HWPort5, HWPort23]> {
 }
 
 // Vector integer operations.
+def  : WriteRes<WriteVecStore,       [HWPort237, HWPort4]>;
+def  : WriteRes<WriteVecLoad,        [HWPort23]> { let Latency = 5; }
+def  : WriteRes<WriteVecMove,        [HWPort015]>;
+
 defm : HWWriteResPair<WriteVecShift, HWPort0,  1>;
 defm : HWWriteResPair<WriteVecLogic, HWPort015, 1>;
 defm : HWWriteResPair<WriteVecALU,   HWPort15,  1>;
