@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -std=c++11 -verify %s
 class C {};
 
 // expected-no-diagnostics
