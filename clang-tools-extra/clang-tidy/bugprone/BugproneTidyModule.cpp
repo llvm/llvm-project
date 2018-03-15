@@ -28,6 +28,7 @@
 #include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
+#include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
@@ -87,6 +88,8 @@ public:
         "bugprone-move-forwarding-reference");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<SizeofContainerCheck>(
+        "bugprone-sizeof-container");
     CheckFactories.registerCheck<SizeofExpressionCheck>(
         "bugprone-sizeof-expression");
     CheckFactories.registerCheck<StringConstructorCheck>(

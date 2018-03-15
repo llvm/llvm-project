@@ -137,6 +137,9 @@ Improvements to clang-tidy
 - The 'misc-misplaced-widening-cast' check was renamed to `bugprone-misplaced-widening-cast
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-widening-cast.html>`_
 
+- The 'misc-sizeof-container' check was renamed to `bugprone-sizeof-container
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-container.html>`_
+
 - The 'misc-sizeof-expression' check was renamed to `bugprone-sizeof-expression
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-expression.html>`_
 

@@ -20,6 +20,7 @@ add_clang_library(clangTidyBugproneModule
   MisplacedWideningCastCheck.cpp
   MoveForwardingReferenceCheck.cpp
   MultipleStatementMacroCheck.cpp
+  SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp

@@ -15,7 +15,6 @@
 #include "NewDeleteOverloadsCheck.h"
 #include "NonCopyableObjects.h"
 #include "RedundantExpressionCheck.h"
-#include "SizeofContainerCheck.h"
 #include "StaticAssertCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UnconventionalAssignOperatorCheck.h"
@@ -43,7 +42,6 @@ public:
         "misc-non-copyable-objects");
     CheckFactories.registerCheck<RedundantExpressionCheck>(
         "misc-redundant-expression");
-    CheckFactories.registerCheck<SizeofContainerCheck>("misc-sizeof-container");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(
         "misc-throw-by-value-catch-by-reference");

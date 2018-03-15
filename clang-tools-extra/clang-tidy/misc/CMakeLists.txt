@@ -8,7 +8,6 @@ add_clang_library(clangTidyMiscModule
   NewDeleteOverloadsCheck.cpp
   NonCopyableObjects.cpp
   RedundantExpressionCheck.cpp
-  SizeofContainerCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
   UniqueptrResetReleaseCheck.cpp
