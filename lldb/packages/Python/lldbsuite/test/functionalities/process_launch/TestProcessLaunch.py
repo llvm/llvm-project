@@ -38,7 +38,7 @@ class ProcessLaunchTestCase(TestBase):
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out"])
 
-        in_file = "input-file.txt"
+        in_file = os.path.join(self.getSourceDir(), "input-file.txt")
         out_file = lldbutil.append_to_process_working_directory(self, "output-test.out")
         err_file = lldbutil.append_to_process_working_directory(self, "output-test.err")
 
