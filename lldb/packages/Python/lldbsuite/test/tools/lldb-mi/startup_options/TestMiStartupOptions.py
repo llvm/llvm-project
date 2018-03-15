@@ -94,7 +94,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via relative path."""
 
         # Prepare path to executable
-        path = os.path.relpath(self.myexe)
+        path = os.path.relpath(self.myexe, self.getBuildDir())
         self.spawnLldbMi(args="%s" % path)
 
         # Test that the executable is loaded when file was specified using
@@ -258,7 +258,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     def test_lldbmi_log_option(self):
         """Test that 'lldb-mi --log' creates a log file in the current directory."""
 
-        logDirectory = "."
+        logDirectory = self.getBuildDir()
         self.spawnLldbMi(args="%s --log" % self.myexe)
 
         # Test that the executable is loaded when file was specified
