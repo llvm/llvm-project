@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import os
 import lldb
+import six
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -58,13 +59,10 @@ class TestSTTYBeforeAndAfter(TestBase):
         child.expect(expect_prompt)
 
         # Turn on loggings for input/output to/from the child.
-        with open('child_send1.txt', 'w') as f_send1:
-            with open('child_read1.txt', 'w') as f_read1:
-                child.logfile_send = f_send1
-                child.logfile_read = f_read1
-
-                child.sendline('stty -a')
-                child.expect(expect_prompt)
+        child.logfile_send = child_send1 = six.StringIO()
+        child.logfile_read = child_read1 = six.StringIO()
+        child.sendline('stty -a')
+        child.expect(expect_prompt)
 
         # Now that the stage1 logging is done, restore logfile to None to
         # stop further logging.
@@ -79,43 +77,30 @@ class TestSTTYBeforeAndAfter(TestBase):
         child.sendline('quit')
         child.expect(expect_prompt)
 
-        with open('child_send2.txt', 'w') as f_send2:
-            with open('child_read2.txt', 'w') as f_read2:
-                child.logfile_send = f_send2
-                child.logfile_read = f_read2
+        child.logfile_send = child_send2 = six.StringIO()
+        child.logfile_read = child_read2 = six.StringIO()
+        child.sendline('stty -a')
+        child.expect(expect_prompt)
 
-                child.sendline('stty -a')
-                child.expect(expect_prompt)
-
-                child.sendline('exit')
+        child.sendline('exit')
 
         # Now that the stage2 logging is done, restore logfile to None to
         # stop further logging.
         child.logfile_send = None
         child.logfile_read = None
 
-        with open('child_send1.txt', 'r') as fs:
-            if self.TraceOn():
-                print("\n\nContents of child_send1.txt:")
-                print(fs.read())
-        with open('child_read1.txt', 'r') as fr:
-            from_child1 = fr.read()
-            if self.TraceOn():
-                print("\n\nContents of child_read1.txt:")
-                print(from_child1)
+        if self.TraceOn():
+            print("\n\nContents of child_send1:")
+            print(child_send1.getvalue())
+            print("\n\nContents of child_read1:")
+            print(child_read1.getvalue())
+            print("\n\nContents of child_send2:")
+            print(child_send2.getvalue())
+            print("\n\nContents of child_read2:")
+            print(child_read2.getvalue())
 
-        with open('child_send2.txt', 'r') as fs:
-            if self.TraceOn():
-                print("\n\nContents of child_send2.txt:")
-                print(fs.read())
-        with open('child_read2.txt', 'r') as fr:
-            from_child2 = fr.read()
-            if self.TraceOn():
-                print("\n\nContents of child_read2.txt:")
-                print(from_child2)
-
-        stty_output1_lines = from_child1.splitlines()
-        stty_output2_lines = from_child2.splitlines()
+        stty_output1_lines = child_read1.getvalue().splitlines()
+        stty_output2_lines = child_read2.getvalue().splitlines()
         zipped = list(zip(stty_output1_lines, stty_output2_lines))
         for tuple in zipped:
             if self.TraceOn():

@@ -47,11 +47,7 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter' handles complicated strings."""
 
         # Create an alias for myexe
-        complicated_myexe = "C--mpl-x file's`s @#$%^&*()_+-={}[]| name"
-        # Make sure to remove a file in case the test suite was cancelled or crashed
-        # when this link was created and before it was removed.
-        if os.path.exists(complicated_myexe):
-            os.unlink(complicated_myexe)
+        complicated_myexe = self.getBuildArtifact("C--mpl-x file's`s @#$%^&*()_+-={}[]| name")
         os.symlink(self.myexe, complicated_myexe)
         self.addTearDownHook(lambda: os.unlink(complicated_myexe))
 
