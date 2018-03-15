@@ -4,7 +4,6 @@ add_clang_library(clangTidyMiscModule
   MisplacedConstCheck.cpp
   UnconventionalAssignOperatorCheck.cpp
   DefinitionsInHeadersCheck.cpp
-  MacroParenthesesCheck.cpp
   MiscTidyModule.cpp
   NewDeleteOverloadsCheck.cpp
   NonCopyableObjects.cpp

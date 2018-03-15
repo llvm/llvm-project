@@ -30,6 +30,7 @@ Clang-Tidy Checks
    bugprone-incorrect-roundings
    bugprone-integer-division
    bugprone-lambda-function-name
+   bugprone-macro-parentheses
    bugprone-macro-repeated-side-effects
    bugprone-misplaced-operator-in-strlen-in-alloc
    bugprone-misplaced-widening-cast
@@ -140,7 +141,6 @@ Clang-Tidy Checks
    llvm-namespace-comment
    llvm-twine-local
    misc-definitions-in-headers
-   misc-macro-parentheses
    misc-misplaced-const
    misc-new-delete-overloads
    misc-non-copyable-objects

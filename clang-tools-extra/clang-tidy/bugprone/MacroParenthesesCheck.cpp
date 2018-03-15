@@ -14,7 +14,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 class MacroParenthesesPPCallbacks : public PPCallbacks {
@@ -255,6 +255,6 @@ void MacroParenthesesCheck::registerPPCallbacks(CompilerInstance &Compiler) {
           &Compiler.getPreprocessor(), this));
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
