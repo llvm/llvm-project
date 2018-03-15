@@ -1,3 +1,0 @@
-breakpoint set --file NSDict.m --line 8
-run
-frame var
