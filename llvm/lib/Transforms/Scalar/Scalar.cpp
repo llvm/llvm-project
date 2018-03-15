@@ -52,7 +52,7 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeGVNHoistLegacyPassPass(Registry);
   initializeGVNSinkLegacyPassPass(Registry);
   initializeFlattenCFGPassPass(Registry);
-  initializeInductiveRangeCheckEliminationPass(Registry);
+  initializeIRCELegacyPassPass(Registry);
   initializeIndVarSimplifyLegacyPassPass(Registry);
   initializeInferAddressSpacesPass(Registry);
   initializeJumpThreadingPass(Registry);

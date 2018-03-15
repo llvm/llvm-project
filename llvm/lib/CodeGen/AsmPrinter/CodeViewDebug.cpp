@@ -365,15 +365,15 @@ unsigned CodeViewDebug::getPointerSizeInBytes() {
 }
 
 void CodeViewDebug::recordLocalVariable(LocalVariable &&Var,
-                                        const DILocation *InlinedAt) {
-  if (InlinedAt) {
+                                        const LexicalScope *LS) {
+  if (const DILocation *InlinedAt = LS->getInlinedAt()) {
     // This variable was inlined. Associate it with the InlineSite.
     const DISubprogram *Inlinee = Var.DIVar->getScope()->getSubprogram();
     InlineSite &Site = getInlineSite(InlinedAt, Inlinee);
     Site.InlinedLocals.emplace_back(Var);
   } else {
-    // This variable goes in the main ProcSym.
-    CurFn->Locals.emplace_back(Var);
+    // This variable goes into the corresponding lexical scope.
+    ScopeVariables[LS].emplace_back(Var);
   }
 }
 
@@ -905,6 +905,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.EmitLabel(ProcRecordEnd);
 
     emitLocalVariableList(FI.Locals);
+    emitLexicalBlockList(FI.ChildBlocks, FI);
 
     // Emit inlined call site information. Only emit functions inlined directly
     // into the parent function. We'll emit the other sites recursively as part
@@ -1025,7 +1026,7 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
     LocalVariable Var;
     Var.DIVar = VI.Var;
     Var.DefRanges.emplace_back(std::move(DefRange));
-    recordLocalVariable(std::move(Var), VI.Loc->getInlinedAt());
+    recordLocalVariable(std::move(Var), Scope);
   }
 }
 
@@ -1156,7 +1157,7 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
     Var.DIVar = DIVar;
 
     calculateRanges(Var, Ranges);
-    recordLocalVariable(std::move(Var), InlinedAt);
+    recordLocalVariable(std::move(Var), Scope);
   }
 }
 
@@ -2362,12 +2363,143 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
   }
 }
 
+void CodeViewDebug::emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks, 
+                                         const FunctionInfo& FI) { 
+  for (LexicalBlock *Block : Blocks) 
+    emitLexicalBlock(*Block, FI); 
+} 
+ 
+/// Emit an S_BLOCK32 and S_END record pair delimiting the contents of a 
+/// lexical block scope. 
+void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block, 
+                                     const FunctionInfo& FI) { 
+  MCSymbol *RecordBegin = MMI->getContext().createTempSymbol(), 
+           *RecordEnd   = MMI->getContext().createTempSymbol(); 
+ 
+  // Lexical block symbol record. 
+  OS.AddComment("Record length"); 
+  OS.emitAbsoluteSymbolDiff(RecordEnd, RecordBegin, 2);   // Record Length 
+  OS.EmitLabel(RecordBegin); 
+  OS.AddComment("Record kind: S_BLOCK32"); 
+  OS.EmitIntValue(SymbolKind::S_BLOCK32, 2);              // Record Kind 
+  OS.AddComment("PtrParent"); 
+  OS.EmitIntValue(0, 4);                                  // PtrParent 
+  OS.AddComment("PtrEnd"); 
+  OS.EmitIntValue(0, 4);                                  // PtrEnd 
+  OS.AddComment("Code size"); 
+  OS.emitAbsoluteSymbolDiff(Block.End, Block.Begin, 4);   // Code Size 
+  OS.AddComment("Function section relative address"); 
+  OS.EmitCOFFSecRel32(Block.Begin, /*Offset=*/0);         // Func Offset 
+  OS.AddComment("Function section index"); 
+  OS.EmitCOFFSectionIndex(FI.Begin);                      // Func Symbol 
+  OS.AddComment("Lexical block name"); 
+  emitNullTerminatedSymbolName(OS, Block.Name);           // Name 
+  OS.EmitLabel(RecordEnd); 
+ 
+  // Emit variables local to this lexical block.
+  emitLocalVariableList(Block.Locals);
+
+  // Emit lexical blocks contained within this block.
+  emitLexicalBlockList(Block.Children, FI); 
+ 
+  // Close the lexical block scope. 
+  OS.AddComment("Record length"); 
+  OS.EmitIntValue(2, 2);                                  // Record Length 
+  OS.AddComment("Record kind: S_END"); 
+  OS.EmitIntValue(SymbolKind::S_END, 2);                  // Record Kind 
+} 
+ 
+/// Convenience routine for collecting lexical block information for a list 
+/// of lexical scopes. 
+void CodeViewDebug::collectLexicalBlockInfo( 
+        SmallVectorImpl<LexicalScope *> &Scopes, 
+        SmallVectorImpl<LexicalBlock *> &Blocks, 
+        SmallVectorImpl<LocalVariable> &Locals) { 
+  for (LexicalScope *Scope : Scopes) 
+    collectLexicalBlockInfo(*Scope, Blocks, Locals); 
+} 
+
+/// Populate the lexical blocks and local variable lists of the parent with
+/// information about the specified lexical scope.
+void CodeViewDebug::collectLexicalBlockInfo(
+    LexicalScope &Scope,
+    SmallVectorImpl<LexicalBlock *> &ParentBlocks,
+    SmallVectorImpl<LocalVariable> &ParentLocals) {
+  if (Scope.isAbstractScope())
+    return;
+
+  auto LocalsIter = ScopeVariables.find(&Scope);
+  if (LocalsIter == ScopeVariables.end()) {
+    // This scope does not contain variables and can be eliminated.
+    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
+    return;
+  }
+  SmallVectorImpl<LocalVariable> &Locals = LocalsIter->second;
+
+  const DILexicalBlock *DILB = dyn_cast<DILexicalBlock>(Scope.getScopeNode());
+  if (!DILB) {
+    // This scope is not a lexical block and can be eliminated, but keep any
+    // local variables it contains.
+    ParentLocals.append(Locals.begin(), Locals.end());
+    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
+    return;
+  }
+
+  const SmallVectorImpl<InsnRange> &Ranges = Scope.getRanges();
+  if (Ranges.size() != 1 || !getLabelAfterInsn(Ranges.front().second)) {
+    // This lexical block scope has too many address ranges to represent in the
+    // current CodeView format or does not have a valid address range.
+    // Eliminate this lexical scope and promote any locals it contains to the
+    // parent scope.
+    //
+    // For lexical scopes with multiple address ranges you may be tempted to
+    // construct a single range covering every instruction where the block is
+    // live and everything in between.  Unfortunately, Visual Studio only
+    // displays variables from the first matching lexical block scope.  If the
+    // first lexical block contains exception handling code or cold code which
+    // is moved to the bottom of the routine creating a single range covering
+    // nearly the entire routine, then it will hide all other lexical blocks
+    // and the variables they contain.
+    //
+    ParentLocals.append(Locals.begin(), Locals.end());
+    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
+    return;
+  }
+
+  // Create a new CodeView lexical block for this lexical scope.  If we've
+  // seen this DILexicalBlock before then the scope tree is malformed and
+  // we can handle this gracefully by not processing it a second time.
+  auto BlockInsertion = CurFn->LexicalBlocks.insert({DILB, LexicalBlock()});
+  if (!BlockInsertion.second)
+    return;
+
+  // Create a lexical block containing the local variables and collect the
+  // the lexical block information for the children.
+  const InsnRange &Range = Ranges.front();
+  LexicalBlock &Block = BlockInsertion.first->second;
+  Block.Begin = getLabelBeforeInsn(Range.first);
+  Block.End = getLabelAfterInsn(Range.second);
+  Block.Name = DILB->getName();
+  Block.Locals = std::move(Locals);
+  ParentBlocks.push_back(&Block);
+  collectLexicalBlockInfo(Scope.getChildren(), Block.Children, Block.Locals);
+}
+
 void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   const Function &GV = MF->getFunction();
   assert(FnDebugInfo.count(&GV));
   assert(CurFn == &FnDebugInfo[&GV]);
 
   collectVariableInfo(GV.getSubprogram());
+
+  // Build the lexical block structure to emit for this routine.
+  if (LexicalScope *CFS = LScopes.getCurrentFunctionScope())
+    collectLexicalBlockInfo(*CFS, CurFn->ChildBlocks, CurFn->Locals);
+
+  // Clear the scope and variable information from the map which will not be
+  // valid after we have finished processing this routine.  This also prepares
+  // the map for the subsequent routine.
+  ScopeVariables.clear();
 
   // Don't emit anything if we don't have any line tables.
   if (!CurFn->HaveLineInfo) {

@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-sizeof-container
+.. title:: clang-tidy - bugprone-sizeof-container
 
-misc-sizeof-container
-=====================
+bugprone-sizeof-container
+=========================
 
 The check finds usages of ``sizeof`` on expressions of STL container types. Most
 likely the user wanted to use ``.size()`` instead.

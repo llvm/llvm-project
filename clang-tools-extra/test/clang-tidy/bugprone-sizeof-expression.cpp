@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-sizeof-expression %t
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t
 
 class C {
   int size() { return sizeof(this); }

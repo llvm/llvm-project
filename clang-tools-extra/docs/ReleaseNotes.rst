@@ -94,12 +94,12 @@ Improvements to clang-tidy
   Warns if global, non-trivial objects with static storage are constructed,
   unless the object is statically initialized with a ``constexpr`` constructor
   or has no explicit constructor.
-  
+
 - New `fuchsia-trailing-return
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-trailing-return.html>`_ check
 
-  Functions that have trailing returns are disallowed, except for those 
-  using ``decltype`` specifiers and lambda with otherwise unutterable 
+  Functions that have trailing returns are disallowed, except for those
+  using ``decltype`` specifiers and lambda with otherwise unutterable
   return types.
 
 - New `modernize-use-uncaught-exceptions
@@ -113,6 +113,11 @@ Improvements to clang-tidy
 
   Warns or suggests alternatives if SIMD intrinsics are used which can be replaced by
   ``std::experimental::simd`` operations.
+
+- New `zircon-temporary-objects
+  <http://clang.llvm.org/extra/clang-tidy/checks/zircon-temporary-objects.html>`_ check
+
+  Warns on construction of specific temporary objects in the Zircon kernel.
 
 - New alias `hicpp-avoid-goto
   <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-avoid-goto.html>`_ to
@@ -128,11 +133,20 @@ Improvements to clang-tidy
 - The 'misc-lambda-function-name' check was renamed to `bugprone-lambda-function-name
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-lambda-function-name.html>`_
 
+- The 'misc-macro-parentheses' check was renamed to `bugprone-macro-parentheses
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-macro-parentheses.html>`_
+
 - The 'misc-macro-repeated-side-effects' check was renamed to `bugprone-macro-repeated-side-effects
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-macro-repeated-side-effects.html>`_
 
 - The 'misc-misplaced-widening-cast' check was renamed to `bugprone-misplaced-widening-cast
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-widening-cast.html>`_
+
+- The 'misc-sizeof-container' check was renamed to `bugprone-sizeof-container
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-container.html>`_
+
+- The 'misc-sizeof-expression' check was renamed to `bugprone-sizeof-expression
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-expression.html>`_
 
 - The 'misc-string-compare' check was renamed to `readability-string-compare
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-string-compare.html>`_
@@ -161,10 +175,8 @@ Improvements to clang-tidy
 - The 'misc-undelegated-constructor' check was renamed to `bugprone-undelegated-constructor
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-undelegated-constructor.html>`_
 
-- New `zircon-temporary-objects
-  <http://clang.llvm.org/extra/clang-tidy/checks/zircon-temporary-objects.html>`_ check
-
-  Warns on construction of specific temporary objects in the Zircon kernel.
+- The 'misc-unused-raii' check was renamed to `bugprone-unused-raii
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unused-raii.html>`_
 
 Improvements to include-fixer
 -----------------------------

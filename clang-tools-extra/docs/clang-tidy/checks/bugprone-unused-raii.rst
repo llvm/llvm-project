@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-unused-raii
+.. title:: clang-tidy - bugprone-unused-raii
 
-misc-unused-raii
-================
+bugprone-unused-raii
+====================
 
 Finds temporaries that look like RAII objects.
 
