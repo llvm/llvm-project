@@ -285,6 +285,22 @@ define <4 x half> @v_mad_mix_v4f32_clamp_precvt(<4 x half> %src0, <4 x half> %sr
   ret <4 x half> %cvt.result
 }
 
+; GCN-LABEL: mixlo_zext:
+; GCN: s_waitcnt
+; GFX9-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2{{$}}
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: s_setpc_b64
+
+; CIVI: v_mac_f32_e32
+; CIVI: v_cvt_f16_f32_e32
+define i32 @mixlo_zext(float %src0, float %src1, float %src2) #0 {
+  %result = call float @llvm.fmuladd.f32(float %src0, float %src1, float %src2)
+  %cvt.result = fptrunc float %result to half
+  %cvt.result.i16 = bitcast half %cvt.result to i16
+  %cvt.result.i32 = zext i16 %cvt.result.i16 to i32
+  ret i32 %cvt.result.i32
+}
+
 declare half @llvm.minnum.f16(half, half) #1
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
 declare <3 x half> @llvm.minnum.v3f16(<3 x half>, <3 x half>) #1
