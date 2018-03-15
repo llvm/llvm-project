@@ -34,6 +34,7 @@ add_clang_library(clangTidyBugproneModule
   ThrowKeywordMissingCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
   UndelegatedConstructorCheck.cpp
+  UnusedRaiiCheck.cpp
   UseAfterMoveCheck.cpp
   VirtualNearMissCheck.cpp
 

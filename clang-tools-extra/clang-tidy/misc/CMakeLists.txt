@@ -13,7 +13,6 @@ add_clang_library(clangTidyMiscModule
   UniqueptrResetReleaseCheck.cpp
   UnusedAliasDeclsCheck.cpp
   UnusedParametersCheck.cpp
-  UnusedRAIICheck.cpp
   UnusedUsingDeclsCheck.cpp
 
   LINK_LIBS

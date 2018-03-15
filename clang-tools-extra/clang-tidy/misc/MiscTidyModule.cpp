@@ -21,7 +21,6 @@
 #include "UniqueptrResetReleaseCheck.h"
 #include "UnusedAliasDeclsCheck.h"
 #include "UnusedParametersCheck.h"
-#include "UnusedRAIICheck.h"
 #include "UnusedUsingDeclsCheck.h"
 
 namespace clang {
@@ -51,7 +50,6 @@ public:
         "misc-unused-alias-decls");
     CheckFactories.registerCheck<UnusedParametersCheck>(
         "misc-unused-parameters");
-    CheckFactories.registerCheck<UnusedRAIICheck>("misc-unused-raii");
     CheckFactories.registerCheck<UnusedUsingDeclsCheck>(
         "misc-unused-using-decls");
   }

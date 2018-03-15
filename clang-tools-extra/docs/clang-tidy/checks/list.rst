@@ -50,6 +50,7 @@ Clang-Tidy Checks
    bugprone-throw-keyword-missing
    bugprone-undefined-memory-manipulation
    bugprone-undelegated-constructor
+   bugprone-unused-raii
    bugprone-use-after-move
    bugprone-virtual-near-miss
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
@@ -153,7 +154,6 @@ Clang-Tidy Checks
    misc-uniqueptr-reset-release
    misc-unused-alias-decls
    misc-unused-parameters
-   misc-unused-raii
    misc-unused-using-decls
    modernize-avoid-bind
    modernize-deprecated-headers

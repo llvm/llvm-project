@@ -114,6 +114,11 @@ Improvements to clang-tidy
   Warns or suggests alternatives if SIMD intrinsics are used which can be replaced by
   ``std::experimental::simd`` operations.
 
+- New `zircon-temporary-objects
+  <http://clang.llvm.org/extra/clang-tidy/checks/zircon-temporary-objects.html>`_ check
+
+  Warns on construction of specific temporary objects in the Zircon kernel.
+
 - New alias `hicpp-avoid-goto
   <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-avoid-goto.html>`_ to
   `cppcoreguidelines-avoid-goto <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-goto.html>`_
@@ -170,10 +175,8 @@ Improvements to clang-tidy
 - The 'misc-undelegated-constructor' check was renamed to `bugprone-undelegated-constructor
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-undelegated-constructor.html>`_
 
-- New `zircon-temporary-objects
-  <http://clang.llvm.org/extra/clang-tidy/checks/zircon-temporary-objects.html>`_ check
-
-  Warns on construction of specific temporary objects in the Zircon kernel.
+- The 'misc-unused-raii' check was renamed to `bugprone-unused-raii
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unused-raii.html>`_
 
 Improvements to include-fixer
 -----------------------------

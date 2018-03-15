@@ -1,4 +1,4 @@
-//===--- UnusedRAIICheck.cpp - clang-tidy ---------------------------------===//
+//===--- UnusedRaiiCheck.cpp - clang-tidy ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UnusedRAIICheck.h"
+#include "UnusedRaiiCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Lexer.h"
 
@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasNonTrivialDestructor) {
@@ -24,7 +24,7 @@ AST_MATCHER(CXXRecordDecl, hasNonTrivialDestructor) {
 }
 } // namespace
 
-void UnusedRAIICheck::registerMatchers(MatchFinder *Finder) {
+void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
   if (!getLangOpts().CPlusPlus)
@@ -47,7 +47,7 @@ void UnusedRAIICheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void UnusedRAIICheck::check(const MatchFinder::MatchResult &Result) {
+void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
 
   // We ignore code expanded from macros to reduce the number of false
@@ -89,6 +89,6 @@ void UnusedRAIICheck::check(const MatchFinder::MatchResult &Result) {
       Replacement);
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
