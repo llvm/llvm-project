@@ -86,8 +86,10 @@ struct BaseCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, Expr E, std::string Loc)
-      : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc) {}
+  SymbolAssignment(StringRef Name, Expr E, std::string Loc,
+                   std::string CommandString)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc),
+        CommandString(CommandString) {}
 
   static bool classof(const BaseCommand *C) {
     return C->Kind == AssignmentKind;
@@ -106,6 +108,16 @@ struct SymbolAssignment : BaseCommand {
 
   // Holds file name and line number for error reporting.
   std::string Location;
+
+  // A string representation of this command. We use this for -Map.
+  std::string CommandString;
+
+  // This is just an offset of this assignment command in the output section.
+  unsigned Offset;
+
+  // Size of this assignment command. This is usually 0, but if you move '.'
+  // or use a BYTE()-family command, this may be greater than 0."
+  unsigned Size;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -178,10 +190,14 @@ struct AssertCommand : BaseCommand {
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
 struct ByteCommand : BaseCommand {
-  ByteCommand(Expr E, unsigned Size)
-      : BaseCommand(ByteKind), Expression(E), Size(Size) {}
+  ByteCommand(Expr E, unsigned Size, std::string CommandString)
+      : BaseCommand(ByteKind), Expression(E), CommandString(CommandString),
+        Size(Size) {}
 
   static bool classof(const BaseCommand *C) { return C->Kind == ByteKind; }
+
+  // Keeps string representing the command. Used for -Map" is perhaps better.
+  std::string CommandString;
 
   Expr Expression;
   unsigned Offset;

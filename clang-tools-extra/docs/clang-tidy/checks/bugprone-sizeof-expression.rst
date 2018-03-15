@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-sizeof-expression
+.. title:: clang-tidy - bugprone-sizeof-expression
 
-misc-sizeof-expression
-======================
+bugprone-sizeof-expression
+==========================
 
 The check finds usages of ``sizeof`` expressions which are most likely errors.
 

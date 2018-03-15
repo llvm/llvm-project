@@ -1,15 +1,15 @@
-// RUN: %check_clang_tidy %s misc-macro-parentheses %t
+// RUN: %check_clang_tidy %s bugprone-macro-parentheses %t
 
 #define BAD1              -1
-// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: macro replacement list should be enclosed in parentheses [misc-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: macro replacement list should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD2              1+2
-// CHECK-MESSAGES: :[[@LINE-1]]:28: warning: macro replacement list should be enclosed in parentheses [misc-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-1]]:28: warning: macro replacement list should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD3(A)           (A+1)
-// CHECK-MESSAGES: :[[@LINE-1]]:28: warning: macro argument should be enclosed in parentheses [misc-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-1]]:28: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD4(x)           ((unsigned char)(x & 0xff))
-// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: macro argument should be enclosed in parentheses [misc-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD5(X)           A*B=(C*)X+2
-// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: macro argument should be enclosed in parentheses [misc-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 
 #define GOOD1             1
 #define GOOD2             (1+2)

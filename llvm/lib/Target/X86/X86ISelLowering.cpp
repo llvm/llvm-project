@@ -7504,13 +7504,15 @@ static SDValue ExpandHorizontalBinOp(const SDValue &V0, const SDValue &V1,
 }
 
 /// Returns true iff \p BV builds a vector with the result equivalent to
-/// the result of ADDSUB operation.
-/// If true is returned then the operands of ADDSUB = Opnd0 +- Opnd1 operation
-/// are written to the parameters \p Opnd0 and \p Opnd1.
-static bool isAddSub(const BuildVectorSDNode *BV,
-                     const X86Subtarget &Subtarget, SelectionDAG &DAG,
-                     SDValue &Opnd0, SDValue &Opnd1,
-                     unsigned &NumExtracts) {
+/// the result of ADDSUB/SUBADD operation.
+/// If true is returned then the operands of ADDSUB = Opnd0 +- Opnd1
+/// (SUBADD = Opnd0 -+ Opnd1) operation are written to the parameters
+/// \p Opnd0 and \p Opnd1.
+static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
+                             const X86Subtarget &Subtarget, SelectionDAG &DAG,
+                             SDValue &Opnd0, SDValue &Opnd1,
+                             unsigned &NumExtracts,
+                             bool matchSubAdd) {
 
   MVT VT = BV->getSimpleValueType(0);
   if ((!Subtarget.hasSSE3() || (VT != MVT::v4f32 && VT != MVT::v2f64)) &&
@@ -7528,8 +7530,8 @@ static bool isAddSub(const BuildVectorSDNode *BV,
   // adding two integer/float elements.
   // Even-numbered elements in the input build vector are obtained from
   // subtracting two integer/float elements.
-  unsigned ExpectedOpcode = ISD::FSUB;
-  unsigned NextExpectedOpcode = ISD::FADD;
+  unsigned ExpectedOpcode = matchSubAdd ? ISD::FADD : ISD::FSUB;
+  unsigned NextExpectedOpcode = matchSubAdd ? ISD::FSUB : ISD::FADD;
   bool AddFound = false;
   bool SubFound = false;
 
@@ -7672,7 +7674,8 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
                                        SelectionDAG &DAG) {
   SDValue Opnd0, Opnd1;
   unsigned NumExtracts;
-  if (!isAddSub(BV, Subtarget, DAG, Opnd0, Opnd1, NumExtracts))
+  if (!isAddSubOrSubAdd(BV, Subtarget, DAG, Opnd0, Opnd1, NumExtracts,
+                        /*matchSubAdd*/false))
     return SDValue();
 
   MVT VT = BV->getSimpleValueType(0);
@@ -7680,8 +7683,6 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
-  // TODO: According to coverage reports, the FMADDSUB transform is not
-  // triggered by any tests.
   if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, NumExtracts))
     return DAG.getNode(X86ISD::FMADDSUB, DL, VT, Opnd0, Opnd1, Opnd2);
 
@@ -7694,6 +7695,28 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
     return SDValue();
 
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
+}
+
+/// Try to fold a build_vector that performs an 'fmsubadd' operation
+/// accordingly to X86ISD::FMSUBADD node.
+static SDValue lowerToFMSubAdd(const BuildVectorSDNode *BV,
+                               const X86Subtarget &Subtarget,
+                               SelectionDAG &DAG) {
+  SDValue Opnd0, Opnd1;
+  unsigned NumExtracts;
+  if (!isAddSubOrSubAdd(BV, Subtarget, DAG, Opnd0, Opnd1, NumExtracts,
+                        /*matchSubAdd*/true))
+    return SDValue();
+
+  MVT VT = BV->getSimpleValueType(0);
+  SDLoc DL(BV);
+
+  // Try to generate X86ISD::FMSUBADD node here.
+  SDValue Opnd2;
+  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, NumExtracts))
+    return DAG.getNode(X86ISD::FMSUBADD, DL, VT, Opnd0, Opnd1, Opnd2);
+
+  return SDValue();
 }
 
 /// Lower BUILD_VECTOR to a horizontal add/sub operation if possible.
@@ -8230,10 +8253,10 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return VectorConstant;
 
   BuildVectorSDNode *BV = cast<BuildVectorSDNode>(Op.getNode());
-  // TODO: Support FMSUBADD here if we ever get tests for the FMADDSUB
-  // transform here.
   if (SDValue AddSub = lowerToAddSubOrFMAddSub(BV, Subtarget, DAG))
     return AddSub;
+  if (SDValue SubAdd = lowerToFMSubAdd(BV, Subtarget, DAG))
+    return SubAdd;
   if (SDValue HorizontalOp = LowerToHorizontalOp(BV, Subtarget, DAG))
     return HorizontalOp;
   if (SDValue Broadcast = lowerBuildVectorAsBroadcast(BV, Subtarget, DAG))
@@ -30434,7 +30457,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 /// the fact that they're unused.
 static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
                              SDValue &Opnd0, SDValue &Opnd1,
-                             bool matchSubAdd = false) {
+                             bool matchSubAdd) {
 
   EVT VT = N->getValueType(0);
   if ((!Subtarget.hasSSE3() || (VT != MVT::v4f32 && VT != MVT::v2f64)) &&
@@ -30496,10 +30519,10 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N,
                                                 const X86Subtarget &Subtarget,
                                                 SelectionDAG &DAG) {
   SDValue Opnd0, Opnd1;
-  if (!isAddSubOrSubAdd(N, Subtarget, Opnd0, Opnd1))
+  if (!isAddSubOrSubAdd(N, Subtarget, Opnd0, Opnd1, /*matchSubAdd*/false))
     return SDValue();
 
-  EVT VT = N->getValueType(0);
+  MVT VT = N->getSimpleValueType(0);
   SDLoc DL(N);
 
   // Try to generate X86ISD::FMADDSUB node here.
@@ -30522,10 +30545,10 @@ static SDValue combineShuffleToFMSubAdd(SDNode *N,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   SDValue Opnd0, Opnd1;
-  if (!isAddSubOrSubAdd(N, Subtarget, Opnd0, Opnd1, true))
+  if (!isAddSubOrSubAdd(N, Subtarget, Opnd0, Opnd1, /*matchSubAdd*/true))
     return SDValue();
 
-  EVT VT = N->getValueType(0);
+  MVT VT = N->getSimpleValueType(0);
   SDLoc DL(N);
 
   // Try to generate X86ISD::FMSUBADD node here.

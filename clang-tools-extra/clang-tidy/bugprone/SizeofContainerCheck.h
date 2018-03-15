@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SIZEOF_CONTAINER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SIZEOF_CONTAINER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIZEOFCONTAINERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIZEOFCONTAINERCHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Find usages of sizeof on expressions of STL container types. Most likely the
 /// user wanted to use `.size()` instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-sizeof-container.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-container.html
 class SizeofContainerCheck : public ClangTidyCheck {
 public:
   SizeofContainerCheck(StringRef Name, ClangTidyContext *Context)
@@ -29,8 +29,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SIZEOF_CONTAINER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIZEOFCONTAINERCHECK_H

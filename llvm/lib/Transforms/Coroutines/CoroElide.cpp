@@ -77,7 +77,6 @@ static bool operandReferences(CallInst *CI, AllocaInst *Frame, AAResults &AA) {
 // call implies that the function does not references anything on the stack.
 static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
   Function &F = *Frame->getFunction();
-  MemoryLocation Mem(Frame);
   for (Instruction &I : instructions(F))
     if (auto *Call = dyn_cast<CallInst>(&I))
       if (Call->isTailCall() && operandReferences(Call, Frame, AA)) {

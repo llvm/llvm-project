@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-unused-raii %t
+// RUN: %check_clang_tidy %s bugprone-unused-raii %t
 
 struct Foo {
   Foo();

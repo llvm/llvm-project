@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 
@@ -260,6 +260,6 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
@@ -54,6 +55,7 @@ class ObjectCache;
 namespace orc {
 
 class OrcMCJITReplacement : public ExecutionEngine {
+
   // OrcMCJITReplacement needs to do a little extra book-keeping to ensure that
   // Orc's automatic finalization doesn't kick in earlier than MCJIT clients are
   // expecting - see finalizeMemory.
@@ -235,7 +237,10 @@ public:
               return ObjectLayerT::Resources{this->MemMgr, this->Resolver};
             },
             NotifyObjectLoaded, NotifyFinalized),
-        CompileLayer(ObjectLayer, SimpleCompiler(*this->TM)),
+        CompileLayer(ObjectLayer, SimpleCompiler(*this->TM),
+                     [this](VModuleKey K, std::unique_ptr<Module> M) {
+                       Modules.push_back(std::move(M));
+                     }),
         LazyEmitLayer(CompileLayer) {}
 
   static void Register() {
@@ -250,16 +255,36 @@ public:
     } else {
       assert(M->getDataLayout() == getDataLayout() && "DataLayout Mismatch");
     }
-    auto *MPtr = M.release();
-    ShouldDelete[MPtr] = true;
-    auto Deleter = [this](Module *Mod) {
-      auto I = ShouldDelete.find(Mod);
-      if (I != ShouldDelete.end() && I->second)
-        delete Mod;
-    };
-    LocalModules.push_back(std::shared_ptr<Module>(MPtr, std::move(Deleter)));
-    cantFail(
-        LazyEmitLayer.addModule(ES.allocateVModule(), LocalModules.back()));
+
+    // Rename, bump linkage and record static constructors and destructors.
+    // We have to do this before we hand over ownership of the module to the
+    // JIT.
+    std::vector<std::string> CtorNames, DtorNames;
+    {
+      unsigned CtorId = 0, DtorId = 0;
+      for (auto Ctor : orc::getConstructors(*M)) {
+        std::string NewCtorName = ("$static_ctor." + Twine(CtorId++)).str();
+        Ctor.Func->setName(NewCtorName);
+        Ctor.Func->setLinkage(GlobalValue::ExternalLinkage);
+        Ctor.Func->setVisibility(GlobalValue::HiddenVisibility);
+        CtorNames.push_back(mangle(NewCtorName));
+      }
+      for (auto Dtor : orc::getDestructors(*M)) {
+        std::string NewDtorName = ("$static_dtor." + Twine(DtorId++)).str();
+        dbgs() << "Found dtor: " << NewDtorName << "\n";
+        Dtor.Func->setName(NewDtorName);
+        Dtor.Func->setLinkage(GlobalValue::ExternalLinkage);
+        Dtor.Func->setVisibility(GlobalValue::HiddenVisibility);
+        DtorNames.push_back(mangle(NewDtorName));
+      }
+    }
+
+    auto K = ES.allocateVModule();
+
+    UnexecutedConstructors[K] = std::move(CtorNames);
+    UnexecutedDestructors[K] = std::move(DtorNames);
+
+    cantFail(LazyEmitLayer.addModule(K, std::move(M)));
   }
 
   void addObjectFile(std::unique_ptr<object::ObjectFile> O) override {
@@ -277,16 +302,16 @@ public:
   void addArchive(object::OwningBinary<object::Archive> A) override {
     Archives.push_back(std::move(A));
   }
-  
+
   bool removeModule(Module *M) override {
-    for (auto I = LocalModules.begin(), E = LocalModules.end(); I != E; ++I) {
-      if (I->get() == M) {
-        ShouldDelete[M] = false;
-        LocalModules.erase(I);
-        return true;
-      }
-    }
-    return false;
+    auto I = Modules.begin();
+    for (auto E = Modules.end(); I != E; ++I)
+      if (I->get() == M)
+        break;
+    if (I == Modules.end())
+      return false;
+    Modules.erase(I);
+    return true;
   }
 
   uint64_t getSymbolAddress(StringRef Name) {
@@ -294,7 +319,7 @@ public:
   }
 
   JITSymbol findSymbol(StringRef Name) {
-    return findMangledSymbol(Mangle(Name));
+    return findMangledSymbol(mangle(Name));
   }
 
   void finalizeObject() override {
@@ -412,7 +437,7 @@ private:
     OrcMCJITReplacement &M;
   };
 
-  std::string Mangle(StringRef Name) {
+  std::string mangle(StringRef Name) {
     std::string MangledName;
     {
       raw_string_ostream MangledNameStream(MangledName);
@@ -438,7 +463,6 @@ private:
   // delete blocks in LocalModules refer to the ShouldDelete map, so
   // LocalModules needs to be destructed before ShouldDelete.
   std::map<Module*, bool> ShouldDelete;
-  std::vector<std::shared_ptr<Module>> LocalModules;
 
   NotifyObjectLoadedT NotifyObjectLoaded;
   NotifyFinalizedT NotifyFinalized;
@@ -446,6 +470,9 @@ private:
   ObjectLayerT ObjectLayer;
   CompileLayerT CompileLayer;
   LazyEmitLayerT LazyEmitLayer;
+
+  std::map<VModuleKey, std::vector<std::string>> UnexecutedConstructors;
+  std::map<VModuleKey, std::vector<std::string>> UnexecutedDestructors;
 
   // We need to store ObjLayerT::ObjSetHandles for each of the object sets
   // that have been emitted but not yet finalized so that we can forward the

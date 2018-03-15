@@ -43,7 +43,7 @@ template <typename BaseLayerT> class LazyEmittingLayer {
 private:
   class EmissionDeferredModule {
   public:
-    EmissionDeferredModule(VModuleKey K, std::shared_ptr<Module> M)
+    EmissionDeferredModule(VModuleKey K, std::unique_ptr<Module> M)
         : K(std::move(K)), M(std::move(M)) {}
 
     JITSymbol find(StringRef Name, bool ExportedSymbolsOnly, BaseLayerT &B) {
@@ -187,7 +187,7 @@ private:
 
     enum { NotEmitted, Emitting, Emitted } EmitState = NotEmitted;
     VModuleKey K;
-    std::shared_ptr<Module> M;
+    std::unique_ptr<Module> M;
     mutable std::unique_ptr<StringMap<const GlobalValue*>> MangledSymbols;
   };
 
@@ -200,7 +200,7 @@ public:
   LazyEmittingLayer(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
 
   /// @brief Add the given module to the lazy emitting layer.
-  Error addModule(VModuleKey K, std::shared_ptr<Module> M) {
+  Error addModule(VModuleKey K, std::unique_ptr<Module> M) {
     assert(!ModuleMap.count(K) && "VModuleKey K already in use");
     ModuleMap[K] =
         llvm::make_unique<EmissionDeferredModule>(std::move(K), std::move(M));

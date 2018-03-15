@@ -6942,9 +6942,12 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
   TerminatorInst *Term = ExitingBlock->getTerminator();
   if (BranchInst *BI = dyn_cast<BranchInst>(Term)) {
     assert(BI->isConditional() && "If unconditional, it can't be in loop!");
+    bool ExitIfTrue = !L->contains(BI->getSuccessor(0));
+    assert(ExitIfTrue == L->contains(BI->getSuccessor(1)) &&
+           "It should have one successor in loop and one exit block!");
     // Proceed to the next level to examine the exit condition expression.
     return computeExitLimitFromCond(
-        L, BI->getCondition(), BI->getSuccessor(0), BI->getSuccessor(1),
+        L, BI->getCondition(), ExitIfTrue,
         /*ControlsExit=*/IsOnlyExit, AllowPredicates);
   }
 
@@ -6956,23 +6959,21 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
 }
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCond(
-    const Loop *L, Value *ExitCond, BasicBlock *TBB, BasicBlock *FBB,
+    const Loop *L, Value *ExitCond, bool ExitIfTrue,
     bool ControlsExit, bool AllowPredicates) {
-  ScalarEvolution::ExitLimitCacheTy Cache(L, TBB, FBB, AllowPredicates);
-  return computeExitLimitFromCondCached(Cache, L, ExitCond, TBB, FBB,
+  ScalarEvolution::ExitLimitCacheTy Cache(L, ExitIfTrue, AllowPredicates);
+  return computeExitLimitFromCondCached(Cache, L, ExitCond, ExitIfTrue,
                                         ControlsExit, AllowPredicates);
 }
 
 Optional<ScalarEvolution::ExitLimit>
 ScalarEvolution::ExitLimitCache::find(const Loop *L, Value *ExitCond,
-                                      BasicBlock *TBB, BasicBlock *FBB,
-                                      bool ControlsExit, bool AllowPredicates) {
+                                      bool ExitIfTrue, bool ControlsExit,
+                                      bool AllowPredicates) {
   (void)this->L;
-  (void)this->TBB;
-  (void)this->FBB;
   (void)this->AllowPredicates;
 
-  assert(this->L == L && this->TBB == TBB && this->FBB == FBB &&
+  assert(this->L == L && this->ExitIfTrue == ExitIfTrue &&
          this->AllowPredicates == AllowPredicates &&
          "Variance in assumed invariant key components!");
   auto Itr = TripCountMap.find({ExitCond, ControlsExit});
@@ -6982,11 +6983,11 @@ ScalarEvolution::ExitLimitCache::find(const Loop *L, Value *ExitCond,
 }
 
 void ScalarEvolution::ExitLimitCache::insert(const Loop *L, Value *ExitCond,
-                                             BasicBlock *TBB, BasicBlock *FBB,
+                                             bool ExitIfTrue,
                                              bool ControlsExit,
                                              bool AllowPredicates,
                                              const ExitLimit &EL) {
-  assert(this->L == L && this->TBB == TBB && this->FBB == FBB &&
+  assert(this->L == L && this->ExitIfTrue == ExitIfTrue &&
          this->AllowPredicates == AllowPredicates &&
          "Variance in assumed invariant key components!");
 
@@ -6996,33 +6997,33 @@ void ScalarEvolution::ExitLimitCache::insert(const Loop *L, Value *ExitCond,
 }
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondCached(
-    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, BasicBlock *TBB,
-    BasicBlock *FBB, bool ControlsExit, bool AllowPredicates) {
+    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
+    bool ControlsExit, bool AllowPredicates) {
 
   if (auto MaybeEL =
-          Cache.find(L, ExitCond, TBB, FBB, ControlsExit, AllowPredicates))
+          Cache.find(L, ExitCond, ExitIfTrue, ControlsExit, AllowPredicates))
     return *MaybeEL;
 
-  ExitLimit EL = computeExitLimitFromCondImpl(Cache, L, ExitCond, TBB, FBB,
+  ExitLimit EL = computeExitLimitFromCondImpl(Cache, L, ExitCond, ExitIfTrue,
                                               ControlsExit, AllowPredicates);
-  Cache.insert(L, ExitCond, TBB, FBB, ControlsExit, AllowPredicates, EL);
+  Cache.insert(L, ExitCond, ExitIfTrue, ControlsExit, AllowPredicates, EL);
   return EL;
 }
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
-    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, BasicBlock *TBB,
-    BasicBlock *FBB, bool ControlsExit, bool AllowPredicates) {
+    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
+    bool ControlsExit, bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(ExitCond)) {
     if (BO->getOpcode() == Instruction::And) {
       // Recurse on the operands of the and.
-      bool EitherMayExit = L->contains(TBB);
+      bool EitherMayExit = !ExitIfTrue;
       ExitLimit EL0 = computeExitLimitFromCondCached(
-          Cache, L, BO->getOperand(0), TBB, FBB, ControlsExit && !EitherMayExit,
-          AllowPredicates);
+          Cache, L, BO->getOperand(0), ExitIfTrue,
+          ControlsExit && !EitherMayExit, AllowPredicates);
       ExitLimit EL1 = computeExitLimitFromCondCached(
-          Cache, L, BO->getOperand(1), TBB, FBB, ControlsExit && !EitherMayExit,
-          AllowPredicates);
+          Cache, L, BO->getOperand(1), ExitIfTrue,
+          ControlsExit && !EitherMayExit, AllowPredicates);
       const SCEV *BECount = getCouldNotCompute();
       const SCEV *MaxBECount = getCouldNotCompute();
       if (EitherMayExit) {
@@ -7044,7 +7045,6 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
       } else {
         // Both conditions must be true at the same time for the loop to exit.
         // For now, be conservative.
-        assert(L->contains(FBB) && "Loop block has no successor in loop!");
         if (EL0.MaxNotTaken == EL1.MaxNotTaken)
           MaxBECount = EL0.MaxNotTaken;
         if (EL0.ExactNotTaken == EL1.ExactNotTaken)
@@ -7065,13 +7065,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
     }
     if (BO->getOpcode() == Instruction::Or) {
       // Recurse on the operands of the or.
-      bool EitherMayExit = L->contains(FBB);
+      bool EitherMayExit = ExitIfTrue;
       ExitLimit EL0 = computeExitLimitFromCondCached(
-          Cache, L, BO->getOperand(0), TBB, FBB, ControlsExit && !EitherMayExit,
-          AllowPredicates);
+          Cache, L, BO->getOperand(0), ExitIfTrue,
+          ControlsExit && !EitherMayExit, AllowPredicates);
       ExitLimit EL1 = computeExitLimitFromCondCached(
-          Cache, L, BO->getOperand(1), TBB, FBB, ControlsExit && !EitherMayExit,
-          AllowPredicates);
+          Cache, L, BO->getOperand(1), ExitIfTrue,
+          ControlsExit && !EitherMayExit, AllowPredicates);
       const SCEV *BECount = getCouldNotCompute();
       const SCEV *MaxBECount = getCouldNotCompute();
       if (EitherMayExit) {
@@ -7093,7 +7093,6 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
       } else {
         // Both conditions must be false at the same time for the loop to exit.
         // For now, be conservative.
-        assert(L->contains(TBB) && "Loop block has no successor in loop!");
         if (EL0.MaxNotTaken == EL1.MaxNotTaken)
           MaxBECount = EL0.MaxNotTaken;
         if (EL0.ExactNotTaken == EL1.ExactNotTaken)
@@ -7109,12 +7108,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
   // Proceed to the next level to examine the icmp.
   if (ICmpInst *ExitCondICmp = dyn_cast<ICmpInst>(ExitCond)) {
     ExitLimit EL =
-        computeExitLimitFromICmp(L, ExitCondICmp, TBB, FBB, ControlsExit);
+        computeExitLimitFromICmp(L, ExitCondICmp, ExitIfTrue, ControlsExit);
     if (EL.hasFullInfo() || !AllowPredicates)
       return EL;
 
     // Try again, but use SCEV predicates this time.
-    return computeExitLimitFromICmp(L, ExitCondICmp, TBB, FBB, ControlsExit,
+    return computeExitLimitFromICmp(L, ExitCondICmp, ExitIfTrue, ControlsExit,
                                     /*AllowPredicates=*/true);
   }
 
@@ -7123,7 +7122,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
   // preserve the CFG and is temporarily leaving constant conditions
   // in place.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(ExitCond)) {
-    if (L->contains(FBB) == !CI->getZExtValue())
+    if (ExitIfTrue == !CI->getZExtValue())
       // The backedge is always taken.
       return getCouldNotCompute();
     else
@@ -7132,19 +7131,18 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
   }
 
   // If it's not an integer or pointer comparison then compute it the hard way.
-  return computeExitCountExhaustively(L, ExitCond, !L->contains(TBB));
+  return computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
 }
 
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
                                           ICmpInst *ExitCond,
-                                          BasicBlock *TBB,
-                                          BasicBlock *FBB,
+                                          bool ExitIfTrue,
                                           bool ControlsExit,
                                           bool AllowPredicates) {
   // If the condition was exit on true, convert the condition to exit on false
   ICmpInst::Predicate Pred;
-  if (!L->contains(FBB))
+  if (!ExitIfTrue)
     Pred = ExitCond->getPredicate();
   else
     Pred = ExitCond->getInversePredicate();
@@ -7226,7 +7224,7 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
   }
 
   auto *ExhaustiveCount =
-      computeExitCountExhaustively(L, ExitCond, !L->contains(TBB));
+      computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
 
   if (!isa<SCEVCouldNotCompute>(ExhaustiveCount))
     return ExhaustiveCount;

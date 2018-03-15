@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MACRO_PARENTHESES_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MACRO_PARENTHESES_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MACROPARENTHESESCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MACROPARENTHESESCHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Finds macros that can have unexpected behaviour due to missing parentheses.
 ///
@@ -36,8 +36,8 @@ public:
   void registerPPCallbacks(CompilerInstance &Compiler) override;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MACRO_PARENTHESES_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MACROPARENTHESESCHECK_H

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-macro-parentheses %t -- -- -DVAL=0+0
+// RUN: %check_clang_tidy %s bugprone-macro-parentheses %t -- -- -DVAL=0+0
 
 // The previous command-line is producing warnings and fixes with the source
 // locations from a virtual buffer. VAL is replaced by '0+0'.

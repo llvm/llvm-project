@@ -202,6 +202,12 @@ NativeSession::findLineNumbersByAddress(uint64_t Address,
   return nullptr;
 }
 
+std::unique_ptr<IPDBEnumLineNumbers>
+NativeSession::findLineNumbersBySectOffset(uint32_t Section, uint32_t Offset,
+                                           uint32_t Length) const {
+  return nullptr;
+}
+
 std::unique_ptr<IPDBEnumSourceFiles>
 NativeSession::findSourceFiles(const PDBSymbolCompiland *Compiland,
                                StringRef Pattern,

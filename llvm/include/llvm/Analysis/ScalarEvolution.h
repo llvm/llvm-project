@@ -1432,8 +1432,7 @@ private:
                              bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
-  /// execute if its exit condition were a conditional branch of ExitCond,
-  /// TBB, and FBB.
+  /// execute if its exit condition were a conditional branch of ExitCond.
   ///
   /// \p ControlsExit is true if ExitCond directly controls the exit
   /// branch. In this case, we can assume that the loop exits only if the
@@ -1443,15 +1442,14 @@ private:
   /// If \p AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
   ExitLimit computeExitLimitFromCond(const Loop *L, Value *ExitCond,
-                                     BasicBlock *TBB, BasicBlock *FBB,
-                                     bool ControlsExit,
+                                     bool ExitIfTrue, bool ControlsExit,
                                      bool AllowPredicates = false);
 
   // Helper functions for computeExitLimitFromCond to avoid exponential time
   // complexity.
 
   class ExitLimitCache {
-    // It may look like we need key on the whole (L, TBB, FBB, ControlsExit,
+    // It may look like we need key on the whole (L, ExitIfTrue, ControlsExit,
     // AllowPredicates) tuple, but recursive calls to
     // computeExitLimitFromCondCached from computeExitLimitFromCondImpl only
     // vary the in \c ExitCond and \c ControlsExit parameters.  We remember the
@@ -1459,43 +1457,39 @@ private:
     SmallDenseMap<PointerIntPair<Value *, 1>, ExitLimit> TripCountMap;
 
     const Loop *L;
-    BasicBlock *TBB;
-    BasicBlock *FBB;
+    bool ExitIfTrue;
     bool AllowPredicates;
 
   public:
-    ExitLimitCache(const Loop *L, BasicBlock *TBB, BasicBlock *FBB,
-                   bool AllowPredicates)
-        : L(L), TBB(TBB), FBB(FBB), AllowPredicates(AllowPredicates) {}
+    ExitLimitCache(const Loop *L, bool ExitIfTrue, bool AllowPredicates)
+        : L(L), ExitIfTrue(ExitIfTrue), AllowPredicates(AllowPredicates) {}
 
-    Optional<ExitLimit> find(const Loop *L, Value *ExitCond, BasicBlock *TBB,
-                             BasicBlock *FBB, bool ControlsExit,
-                             bool AllowPredicates);
+    Optional<ExitLimit> find(const Loop *L, Value *ExitCond, bool ExitIfTrue,
+                             bool ControlsExit, bool AllowPredicates);
 
-    void insert(const Loop *L, Value *ExitCond, BasicBlock *TBB,
-                BasicBlock *FBB, bool ControlsExit, bool AllowPredicates,
-                const ExitLimit &EL);
+    void insert(const Loop *L, Value *ExitCond, bool ExitIfTrue,
+                bool ControlsExit, bool AllowPredicates, const ExitLimit &EL);
   };
 
   using ExitLimitCacheTy = ExitLimitCache;
 
   ExitLimit computeExitLimitFromCondCached(ExitLimitCacheTy &Cache,
                                            const Loop *L, Value *ExitCond,
-                                           BasicBlock *TBB, BasicBlock *FBB,
+                                           bool ExitIfTrue,
                                            bool ControlsExit,
                                            bool AllowPredicates);
   ExitLimit computeExitLimitFromCondImpl(ExitLimitCacheTy &Cache, const Loop *L,
-                                         Value *ExitCond, BasicBlock *TBB,
-                                         BasicBlock *FBB, bool ControlsExit,
+                                         Value *ExitCond, bool ExitIfTrue,
+                                         bool ControlsExit,
                                          bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
-  /// ExitCond, TBB, and FBB. If AllowPredicates is set, this call will try
+  /// ExitCond and ExitIfTrue. If AllowPredicates is set, this call will try
   /// to use a minimal set of SCEV predicates in order to return an exact
   /// answer.
   ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst *ExitCond,
-                                     BasicBlock *TBB, BasicBlock *FBB,
+                                     bool ExitIfTrue,
                                      bool IsSubExpr,
                                      bool AllowPredicates = false);
 

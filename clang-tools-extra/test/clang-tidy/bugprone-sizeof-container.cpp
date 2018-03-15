@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-sizeof-container %t -- -- -std=c++11 -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy %s bugprone-sizeof-container %t -- -- -std=c++11 -target x86_64-unknown-unknown
 
 namespace std {
 
@@ -64,7 +64,7 @@ void f() {
   std::vector<int> v;
 
   int a = 42 + sizeof(s1);
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: sizeof() doesn't return the size of the container; did you mean .size()? [misc-sizeof-container]
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: sizeof() doesn't return the size of the container; did you mean .size()? [bugprone-sizeof-container]
   a = 123 * sizeof(s2);
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: sizeof() doesn't return the size
   a = 45 + sizeof(s2 + "asdf");
