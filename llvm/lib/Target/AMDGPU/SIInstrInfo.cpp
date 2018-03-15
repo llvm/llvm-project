@@ -2458,7 +2458,8 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // It might happen that UseMI was commuted
       // and we now have SGPR as SRC1. If so 2 inlined
       // constant and SGPR are illegal.
-      legalizeOperands(UseMI);
+      SmallSetVector<MachineInstr *, 32> Worklist;
+      legalizeOperands(UseMI, Worklist);
 
       bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
       if (DeleteDef)
@@ -3953,9 +3954,12 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
 }
 
 void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
-                                       MachineInstr &MI) const {
+                                       MachineInstr &MI,
+                                       SetVectorType &Worklist) const {
   unsigned Opc = MI.getOpcode();
   const MCInstrDesc &InstrDesc = get(Opc);
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
@@ -4005,15 +4009,125 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
     return;
 
   // Special case: V_READLANE_B32 accepts only immediate or SGPR operands for
-  // lane select. Fix up using V_READFIRSTLANE, since we assume that the lane
-  // select is uniform.
+  // lane select.
+  // Previous implementations assumed that a non SGPR operand meant
+  // that the value was uniform across all lanes - modified this behaviour to
+  // use a waterfall operation to process all indices. This will be a worst case
+  // of 64 iterations, but will only be a single iteration for a uniform across
+  // all lanes so the extra cost is low
   if (Opc == AMDGPU::V_READLANE_B32 && Src1.isReg() &&
       RI.isVGPR(MRI, Src1.getReg())) {
-    Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    // Waterfall to read all the values across all lanes
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    MachineOperand &Src0 = MI.getOperand(Src0Idx);
+
+    MachineBasicBlock::iterator I(&MI);
     const DebugLoc &DL = MI.getDebugLoc();
-    BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
-        .add(Src1);
-    Src1.ChangeToRegister(Reg, false);
+
+    unsigned PhiReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    unsigned InitReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    // Initialize the register we accumulate the result into
+    BuildMI(MBB, I, DL, get(AMDGPU::V_MOV_B32_e32), InitReg)
+      .addImm(0x0);
+
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SaveExec = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
+    unsigned TmpExec = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
+    unsigned NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    BuildMI(MBB, I, DL, get(TargetOpcode::IMPLICIT_DEF), TmpExec);
+
+    // Save the EXEC mask
+    BuildMI(MBB, I, DL, get(AMDGPU::S_MOV_B64), SaveExec)
+      .addReg(AMDGPU::EXEC);
+
+    MachineBasicBlock &LoopBB = *MF.CreateMachineBasicBlock();
+    MachineBasicBlock &RemainderBB = *MF.CreateMachineBasicBlock();
+    MachineFunction::iterator MBBI(MBB);
+    ++MBBI;
+
+    MF.insert(MBBI, &LoopBB);
+    MF.insert(MBBI, &RemainderBB);
+
+    LoopBB.addSuccessor(&LoopBB);
+    LoopBB.addSuccessor(&RemainderBB);
+
+    RemainderBB.transferSuccessorsAndUpdatePHIs(&MBB);
+    RemainderBB.splice(RemainderBB.begin(), &MBB, I, MBB.end());
+
+    MBB.addSuccessor(&LoopBB);
+
+    MachineBasicBlock::iterator J = LoopBB.begin();
+
+    unsigned PhiExec = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    unsigned NewExec = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    unsigned CurrentIdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    unsigned CondReg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    unsigned CurrentValue = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+
+    BuildMI(LoopBB, J, DL, get(TargetOpcode::PHI), PhiReg)
+      .addReg(InitReg)
+      .addMBB(&MBB)
+      .addReg(NewDst)
+      .addMBB(&LoopBB);
+
+    BuildMI(LoopBB, J, DL, get(TargetOpcode::PHI), PhiExec)
+      .addReg(TmpExec)
+      .addMBB(&MBB)
+      .addReg(NewExec)
+      .addMBB(&LoopBB);
+
+    // Read the next variant <- also loop target.
+    BuildMI(LoopBB, J, DL, get(AMDGPU::V_READFIRSTLANE_B32), CurrentIdxReg)
+      .addReg(Src1.getReg(), getUndefRegState(Src1.isUndef()));
+
+    // Compare the just read value to all possible Idx values.
+    BuildMI(LoopBB, J, DL, get(AMDGPU::V_CMP_EQ_U32_e64), CondReg)
+      .addReg(CurrentIdxReg)
+      .addReg(Src1.getReg(), 0, Src1.getSubReg());
+
+    // Update EXEC, save the original EXEC value to VCC.
+    BuildMI(LoopBB, J, DL, get(AMDGPU::S_AND_SAVEEXEC_B64), NewExec)
+      .addReg(CondReg, RegState::Kill);
+
+    // TODO: Conditional branch here to loop header as a potential optimization?
+
+    // Use readlane to get the value for all lanes with the current index
+    BuildMI(LoopBB, J, DL, get(AMDGPU::V_READLANE_B32), CurrentValue)
+      .addReg(Src0.getReg())
+      .addReg(CurrentIdxReg);
+
+    // Mov the just read value into the destination using or
+    // TODO: In theory a mov would do here - but this is tricky to get to work
+    // correctly as it seems to confuse the register allocator and other passes
+    BuildMI(LoopBB, J, DL, get(AMDGPU::V_OR_B32_e64), NewDst)
+      .addReg(PhiReg)
+      .addReg(CurrentValue);
+
+    MRI.setSimpleHint(NewExec, CondReg);
+
+    // Update EXEC, switch all done bits to 0 and all todo bits to 1.
+    BuildMI(LoopBB, J, DL, get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
+      .addReg(AMDGPU::EXEC)
+      .addReg(NewExec);
+
+    // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
+    // s_cbranch_scc0?
+
+    // Loop back to V_READFIRSTLANE_B32 if there are still variants to cover.
+    BuildMI(LoopBB, J, DL, get(AMDGPU::S_CBRANCH_EXECNZ))
+      .addMBB(&LoopBB);
+
+    MachineBasicBlock::iterator First = RemainderBB.begin();
+    BuildMI(RemainderBB, First, DL, get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
+      .addReg(SaveExec);
+
+    MRI.replaceRegWith(DstReg, NewDst);
+    addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
+
+    MI.eraseFromParent();
+
     return;
   }
 
@@ -4452,13 +4566,14 @@ extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
 }
 
 void SIInstrInfo::legalizeOperands(MachineInstr &MI,
+                                   SetVectorType &Worklist,
                                    MachineDominatorTree *MDT) const {
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Legalize VOP2
   if (isVOP2(MI) || isVOPC(MI)) {
-    legalizeOperandsVOP2(MRI, MI);
+    legalizeOperandsVOP2(MRI, MI, Worklist);
     return;
   }
 
@@ -4929,7 +5044,7 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
     if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END) {
       // We cannot move this instruction to the VALU, so we should try to
       // legalize its operands instead.
-      legalizeOperands(Inst, MDT);
+      legalizeOperands(Inst, Worklist, MDT);
       continue;
     }
 
@@ -5021,7 +5136,7 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
     }
 
     // Legalize the operands
-    legalizeOperands(Inst, MDT);
+    legalizeOperands(Inst, Worklist, MDT);
 
     if (HasDst)
      addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
@@ -5055,7 +5170,7 @@ bool SIInstrInfo::moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
     Inst.addOperand(MachineOperand::CreateImm(0)); // clamp bit
     Inst.addImplicitDefUseOperands(*MBB.getParent());
     MRI.replaceRegWith(OldDstReg, ResultReg);
-    legalizeOperands(Inst, MDT);
+    legalizeOperands(Inst, Worklist, MDT);
 
     addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
     return true;
@@ -5333,8 +5448,8 @@ void SIInstrInfo::splitScalar64BitAddSub(SetVectorType &Worklist,
 
   // Try to legalize the operands in case we need to swap the order to keep it
   // valid.
-  legalizeOperands(*LoHalf, MDT);
-  legalizeOperands(*HiHalf, MDT);
+  legalizeOperands(*LoHalf, Worklist, MDT);
+  legalizeOperands(*HiHalf, Worklist, MDT);
 
   // Move all users of this moved vlaue.
   addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);

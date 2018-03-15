@@ -3837,7 +3837,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     if (NeedClampOperand)
       I.addImm(0); // clamp bit for e64 encoding
 
-    TII->legalizeOperands(*I);
+    SmallSetVector<MachineInstr *, 32> Worklist;
+    TII->legalizeOperands(*I, Worklist);
 
     MI.eraseFromParent();
     return BB;

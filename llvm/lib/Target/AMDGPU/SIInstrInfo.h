@@ -844,7 +844,9 @@ public:
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
-  void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;
+  void legalizeOperandsVOP2(MachineRegisterInfo &MRI,
+                            MachineInstr &MI,
+                            SetVectorType &Worklist) const;
 
   /// Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -868,6 +870,7 @@ public:
   /// instructions and control-flow around \p MI.  If present, \p MDT is
   /// updated.
   void legalizeOperands(MachineInstr &MI,
+                        SetVectorType &Worklist,
                         MachineDominatorTree *MDT = nullptr) const;
 
   /// Replace this instruction's opcode with the equivalent VALU
