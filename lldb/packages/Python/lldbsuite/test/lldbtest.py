@@ -70,15 +70,6 @@ from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
 
-# dosep.py starts lots and lots of dotest instances
-# This option helps you find if two (or more) dotest instances are using the same
-# directory at the same time
-# Enable it to cause test failures and stderr messages if dotest instances try to run in
-# the same directory simultaneously
-# it is disabled by default because it litters the test directories with
-# ".dirlock" files
-debug_confirm_directory_exclusivity = False
-
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
 # LLDB_COMMAND_TRACE and LLDB_DO_CLEANUP are set from '-t' and '-r dir'
 # options.
@@ -585,10 +576,6 @@ class Base(unittest2.TestCase):
                 except:
                     exc_type, exc_value, exc_tb = sys.exc_info()
                     traceback.print_exception(exc_type, exc_value, exc_tb)
-
-        if debug_confirm_directory_exclusivity:
-            cls.dir_lock.release()
-            del cls.dir_lock
 
         # Restore old working directory.
         if traceAlways:

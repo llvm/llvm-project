@@ -1,0 +1,37 @@
+# REQUIRES: x86
+
+# RUN: echo '.section .foo.1, "a"; .quad 1' > %t.s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t.s -o %t.o
+
+# RUN: ld.lld -o %t %t.o -Map=%t.map --script %s
+# RUN: FileCheck -strict-whitespace %s < %t.map
+
+SECTIONS {
+  . = 0x1000;
+  .foo : {
+    BYTE(0x11)
+    SHORT(0x1122)
+    LONG(0x11223344)
+    QUAD(0x1122334455667788)
+    . += 0x1000;
+    *(.foo.1)
+    . += 0x123 *
+         (1 + 1);
+    foo = .;
+    bar = 0x42 - 0x26;
+  }
+}
+
+# CHECK:      Address          Size             Align Out     In      Symbol
+# CHECK-NEXT: 0000000000001000 000000000000125d     1 .foo
+# CHECK-NEXT: 0000000000001000 0000000000000001     1         BYTE ( 0x11 )
+# CHECK-NEXT: 0000000000001001 0000000000000002     1         SHORT ( 0x1122 )
+# CHECK-NEXT: 0000000000001003 0000000000000004     1         LONG ( 0x11223344 )
+# CHECK-NEXT: 0000000000001007 0000000000000008     1         QUAD ( 0x1122334455667788 )
+# CHECK-NEXT: 000000000000100f 0000000000001000     1         . += 0x1000
+# CHECK-NEXT: 000000000000200f 0000000000000008     1         {{.*}}{{/|\\}}map-file.test.tmp.o:(.foo.1)
+# CHECK-NEXT: 0000000000002017 0000000000000246     1         . += 0x123 * ( 1 + 1 )
+# CHECK-NEXT: 000000000000225d 0000000000000000     1         foo = .
+# CHECK-NEXT: 000000000000225d 0000000000000000     1         bar = 0x42 - 0x26
+# CHECK-NEXT: 0000000000002260 0000000000000000     4 .text
+# CHECK-NEXT: 0000000000002260 0000000000000000     4         {{.*}}{{/|\\}}map-file.test.tmp.o:(.text)

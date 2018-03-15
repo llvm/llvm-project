@@ -177,16 +177,34 @@ void elf::writeMapFile() {
     OS << OSec->Name << '\n';
 
     // Dump symbols for each input section.
-    for (InputSection *IS : getInputSections(OSec)) {
-      if (IS == InX::EhFrame) {
-        printEhFrame(OS, OSec);
+    for (BaseCommand *Base : OSec->SectionCommands) {
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
+        for (InputSection *IS : ISD->Sections) {
+          if (IS == InX::EhFrame) {
+            printEhFrame(OS, OSec);
+            continue;
+          }
+
+          writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(),
+                      IS->Alignment);
+          OS << Indent8 << toString(IS) << '\n';
+          for (Symbol *Sym : SectionSyms[IS])
+            OS << SymStr[Sym] << '\n';
+        }
         continue;
       }
 
-      writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(), IS->Alignment);
-      OS << Indent8 << toString(IS) << '\n';
-      for (Symbol *Sym : SectionSyms[IS])
-        OS << SymStr[Sym] << '\n';
+      if (auto *Cmd = dyn_cast<ByteCommand>(Base)) {
+        writeHeader(OS, OSec->Addr + Cmd->Offset, Cmd->Size, 1);
+        OS << Indent8 << Cmd->CommandString << '\n';
+        continue;
+      }
+
+      if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
+        writeHeader(OS, OSec->Addr + Cmd->Offset, Cmd->Size, 1);
+        OS << Indent8 << Cmd->CommandString << '\n';
+        continue;
+      }
     }
   }
 }
