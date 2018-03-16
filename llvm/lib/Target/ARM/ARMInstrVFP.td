@@ -451,9 +451,9 @@ multiclass vsel_inst<string op, bits<2> opc, int CC> {
   let DecoderNamespace = "VFPV8", PostEncoderMethod = "",
       Uses = [CPSR], AddedComplexity = 4 in {
     def H : AHbInp<0b11100, opc, 0,
-                   (outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm),
+                   (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                    NoItinerary, !strconcat("vsel", op, ".f16\t$Sd, $Sn, $Sm"),
-                   []>,
+                   [(set HPR:$Sd, (ARMcmov HPR:$Sm, HPR:$Sn, CC))]>,
                    Requires<[HasFullFP16]>;
 
     def S : ASbInp<0b11100, opc, 0,

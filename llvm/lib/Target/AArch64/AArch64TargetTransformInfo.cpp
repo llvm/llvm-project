@@ -884,3 +884,31 @@ bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   }
   return false;
 }
+
+int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
+                                               bool IsPairwiseForm) {
+
+  if (IsPairwiseForm)
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm);
+
+  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  MVT MTy = LT.second;
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  assert(ISD && "Invalid opcode");
+
+  // Horizontal adds can use the 'addv' instruction. We model the cost of these
+  // instructions as normal vector adds. This is the only arithmetic vector
+  // reduction operation for which we have an instruction.
+  static const CostTblEntry CostTblNoPairwise[]{
+      {ISD::ADD, MVT::v8i8,  1},
+      {ISD::ADD, MVT::v16i8, 1},
+      {ISD::ADD, MVT::v4i16, 1},
+      {ISD::ADD, MVT::v8i16, 1},
+      {ISD::ADD, MVT::v4i32, 1},
+  };
+
+  if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))
+    return LT.first * Entry->Cost;
+
+  return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm);
+}

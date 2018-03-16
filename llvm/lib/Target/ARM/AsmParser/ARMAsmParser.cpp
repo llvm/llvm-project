@@ -1880,6 +1880,17 @@ public:
   bool isNEONi16ByteReplicate() const { return isNEONByteReplicate(2); }
   bool isNEONi32ByteReplicate() const { return isNEONByteReplicate(4); }
 
+  static bool isValidNEONi32vmovImm(int64_t Value) {
+    // i32 value with set bits only in one byte X000, 0X00, 00X0, or 000X,
+    // for VMOV/VMVN only, 00Xf or 0Xff are also accepted.
+    return ((Value & 0xffffffffffffff00) == 0) ||
+           ((Value & 0xffffffffffff00ff) == 0) ||
+           ((Value & 0xffffffffff00ffff) == 0) ||
+           ((Value & 0xffffffff00ffffff) == 0) ||
+           ((Value & 0xffffffffffff00ff) == 0xff) ||
+           ((Value & 0xffffffffff00ffff) == 0xffff);
+  }
+
   bool isNEONi32vmov() const {
     if (isNEONByteReplicate(4))
       return false; // Let it to be classified as byte-replicate case.
@@ -1889,16 +1900,7 @@ public:
     // Must be a constant.
     if (!CE)
       return false;
-    int64_t Value = CE->getValue();
-    // i32 value with set bits only in one byte X000, 0X00, 00X0, or 000X,
-    // for VMOV/VMVN only, 00Xf or 0Xff are also accepted.
-    // FIXME: This is probably wrong and a copy and paste from previous example
-    return (Value >= 0 && Value < 256) ||
-      (Value >= 0x0100 && Value <= 0xff00) ||
-      (Value >= 0x010000 && Value <= 0xff0000) ||
-      (Value >= 0x01000000 && Value <= 0xff000000) ||
-      (Value >= 0x01ff && Value <= 0xffff && (Value & 0xff) == 0xff) ||
-      (Value >= 0x01ffff && Value <= 0xffffff && (Value & 0xffff) == 0xffff);
+    return isValidNEONi32vmovImm(CE->getValue());
   }
 
   bool isNEONi32vmovNeg() const {
@@ -1906,16 +1908,7 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     // Must be a constant.
     if (!CE) return false;
-    int64_t Value = ~CE->getValue();
-    // i32 value with set bits only in one byte X000, 0X00, 00X0, or 000X,
-    // for VMOV/VMVN only, 00Xf or 0Xff are also accepted.
-    // FIXME: This is probably wrong and a copy and paste from previous example
-    return (Value >= 0 && Value < 256) ||
-      (Value >= 0x0100 && Value <= 0xff00) ||
-      (Value >= 0x010000 && Value <= 0xff0000) ||
-      (Value >= 0x01000000 && Value <= 0xff000000) ||
-      (Value >= 0x01ff && Value <= 0xffff && (Value & 0xff) == 0xff) ||
-      (Value >= 0x01ffff && Value <= 0xffffff && (Value & 0xffff) == 0xffff);
+    return isValidNEONi32vmovImm(~CE->getValue());
   }
 
   bool isNEONi64splat() const {

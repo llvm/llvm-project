@@ -44,6 +44,7 @@ import inspect
 import io
 import os.path
 import re
+import shutil
 import signal
 from subprocess import *
 import sys
@@ -697,17 +698,18 @@ class Base(unittest2.TestCase):
 
     def getBuildDir(self):
         """Return the full path to the current test."""
-        variant = self.getDebugInfo()
-        if variant is None:
-            variant = 'default'
         return os.path.join(os.environ["LLDB_BUILD"], self.mydir,
                             self.getBuildDirBasename())
     
      
     def makeBuildDir(self):
-        """Create the test-specific working directory."""
+        """Create the test-specific working directory, deleting any previous
+        contents."""
         # See also dotest.py which sets up ${LLDB_BUILD}.
-        lldbutil.mkdir_p(self.getBuildDir())
+        bdir = self.getBuildDir()
+        if os.path.isdir(bdir):
+            shutil.rmtree(bdir)
+        lldbutil.mkdir_p(bdir)
  
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
@@ -1490,26 +1492,23 @@ class Base(unittest2.TestCase):
             self,
             architecture=None,
             compiler=None,
-            dictionary=None,
-            clean=True):
+            dictionary=None):
         """Platform specific way to build the default binaries."""
         testdir = self.mydir
         testname = self.getBuildDirBasename()
         if self.getDebugInfo():
             raise Exception("buildDefault tests must set NO_DEBUG_INFO_TESTCASE")
         module = builder_module()
-        self.makeBuildDir()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDefault(self, architecture, compiler,
-                                   dictionary, clean, testdir, testname):
+                                   dictionary, testdir, testname):
             raise Exception("Don't know how to build default binary")
 
     def buildDsym(
             self,
             architecture=None,
             compiler=None,
-            dictionary=None,
-            clean=True):
+            dictionary=None):
         """Platform specific way to build binaries with dsym info."""
         testdir = self.mydir
         testname = self.getBuildDirBasename()
@@ -1519,15 +1518,14 @@ class Base(unittest2.TestCase):
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDsym(self, architecture, compiler,
-                                dictionary, clean, testdir, testname):
+                                dictionary, testdir, testname):
             raise Exception("Don't know how to build binary with dsym")
 
     def buildDwarf(
             self,
             architecture=None,
             compiler=None,
-            dictionary=None,
-            clean=True):
+            dictionary=None):
         """Platform specific way to build binaries with dwarf maps."""
         testdir = self.mydir
         testname = self.getBuildDirBasename()
@@ -1537,15 +1535,14 @@ class Base(unittest2.TestCase):
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDwarf(self, architecture, compiler,
-                                   dictionary, clean, testdir, testname):
+                                   dictionary, testdir, testname):
             raise Exception("Don't know how to build binary with dwarf")
 
     def buildDwo(
             self,
             architecture=None,
             compiler=None,
-            dictionary=None,
-            clean=True):
+            dictionary=None):
         """Platform specific way to build binaries with dwarf maps."""
         testdir = self.mydir
         testname = self.getBuildDirBasename()
@@ -1555,15 +1552,14 @@ class Base(unittest2.TestCase):
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDwo(self, architecture, compiler,
-                                   dictionary, clean, testdir, testname):
+                                   dictionary, testdir, testname):
             raise Exception("Don't know how to build binary with dwo")
 
     def buildGModules(
             self,
             architecture=None,
             compiler=None,
-            dictionary=None,
-            clean=True):
+            dictionary=None):
         """Platform specific way to build binaries with gmodules info."""
         testdir = self.mydir
         testname = self.getBuildDirBasename()
@@ -1573,7 +1569,7 @@ class Base(unittest2.TestCase):
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildGModules(self, architecture, compiler,
-                                    dictionary, clean, testdir, testname):
+                                    dictionary, testdir, testname):
             raise Exception("Don't know how to build binary with gmodules")
 
     def buildGo(self):
@@ -1869,7 +1865,6 @@ class TestBase(Base):
     timeWaitNextLaunch = 1.0
 
     def generateSource(self, source):
-        self.makeBuildDir()
         template = source + '.template'
         temp = os.path.join(self.getSourceDir(), template)
         with open(temp, 'r') as f:
@@ -2297,26 +2292,21 @@ class TestBase(Base):
             self,
             architecture=None,
             compiler=None,
-            dictionary=None,
-            clean=True):
+            dictionary=None):
         """Platform specific way to build the default binaries."""
         module = builder_module()
-        self.makeBuildDir()
 
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if self.getDebugInfo() is None:
-            return self.buildDefault(architecture, compiler, dictionary,
-                                     clean)
+            return self.buildDefault(architecture, compiler, dictionary)
         elif self.getDebugInfo() == "dsym":
-            return self.buildDsym(architecture, compiler, dictionary, clean)
+            return self.buildDsym(architecture, compiler, dictionary)
         elif self.getDebugInfo() == "dwarf":
-            return self.buildDwarf(architecture, compiler, dictionary, clean)
+            return self.buildDwarf(architecture, compiler, dictionary)
         elif self.getDebugInfo() == "dwo":
-            return self.buildDwo(architecture, compiler, dictionary,
-                                 clean)
+            return self.buildDwo(architecture, compiler, dictionary)
         elif self.getDebugInfo() == "gmodules":
-            return self.buildGModules(architecture, compiler, dictionary,
-                                      clean)
+            return self.buildGModules(architecture, compiler, dictionary)
         else:
             self.fail("Can't build for debug info: %s" % self.getDebugInfo())
 
