@@ -270,3 +270,9 @@
 // LONG-CALLS-ON: "-target-feature" "+long-calls"
 // LONG-CALLS-OFF: "-target-feature" "-long-calls"
 // LONG-CALLS-DEF-NOT: "long-calls"
+
+// -mindirect-jump=hazard
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:        -mindirect-jump=hazard 2>&1 \
+// RUN:   | FileCheck --check-prefix=INDIRECT-BH %s
+// INDIRECT-BH: "-target-feature" "+use-indirect-jump-hazard"
