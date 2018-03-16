@@ -28,17 +28,17 @@ function:
  bx lr
 
 // CHECK: Dynamic Relocations {
-// CHECK-NEXT:  0x3048 R_ARM_GLOB_DAT function 0x0
+// CHECK-NEXT:  0x2048 R_ARM_GLOB_DAT function 0x0
 
 // CHECK: Name: _GLOBAL_OFFSET_TABLE_
-// CHECK-NEXT:    Value: 0x2000
+// CHECK-NEXT:    Value: 0x2048
 // CHECK-NEXT:    Size:
 // CHECK-NEXT:    Binding: Local
 // CHECK-NEXT:    Type: None
 // CHECK-NEXT:    Other [
 // CHECK-NEXT:      STV_HIDDEN
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: .got.plt
+// CHECK-NEXT:    Section: .got
 
 // CODE: Disassembly of section .text:
 // CODE-NEXT: _start:
@@ -47,7 +47,7 @@ function:
 // CODE-NEXT:    1008:        03 00 8f e0    add     r0, pc, r3
 // CODE-NEXT:    100c:        1e ff 2f e1    bx      lr
 // CODE:$d.1:
-// (_GLOBAL_OFFSET_TABLE_ = 0x2000) - (0x1008 + 8) = 0xff0
-// CODE-NEXT:    1010:        f0 0f 00 00
+// (_GLOBAL_OFFSET_TABLE_ = 0x2048) - (0x1008 + 8) 0x1038
+// CODE-NEXT:    1010:        38 10 00 00
 // (Got(function) - GotBase = 0x0
 // CODE-NEXT:    1014:        00 00 00 00

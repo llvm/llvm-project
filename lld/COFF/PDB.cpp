@@ -1024,7 +1024,7 @@ static void addLinkerModuleSectionSymbol(pdb::DbiModuleDescriptorBuilder &Mod,
   Sym.Alignment = 12; // 2^12 = 4KB
   Sym.Characteristics = OS.getCharacteristics();
   Sym.Length = OS.getVirtualSize();
-  Sym.Name = OS.getName();
+  Sym.Name = OS.Name;
   Sym.Rva = OS.getRVA();
   Sym.SectionNumber = OS.SectionIndex;
   Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(

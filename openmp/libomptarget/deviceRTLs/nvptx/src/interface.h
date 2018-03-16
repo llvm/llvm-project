@@ -497,6 +497,7 @@ EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs);
 struct __kmpc_data_sharing_slot {
   __kmpc_data_sharing_slot *Next;
   __kmpc_data_sharing_slot *Prev;
+  void *PrevSlotStackPtr;
   void *DataEnd;
   char Data[];
 };

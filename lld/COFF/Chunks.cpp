@@ -571,5 +571,47 @@ uint8_t Baserel::getDefaultType() {
   }
 }
 
+std::map<uint32_t, MergeChunk *> MergeChunk::Instances;
+
+MergeChunk::MergeChunk(uint32_t Alignment)
+    : Builder(StringTableBuilder::RAW, Alignment) {
+  this->Alignment = Alignment;
+}
+
+void MergeChunk::addSection(SectionChunk *C) {
+  auto *&MC = Instances[C->Alignment];
+  if (!MC)
+    MC = make<MergeChunk>(C->Alignment);
+  MC->Sections.push_back(C);
+}
+
+void MergeChunk::finalizeContents() {
+  for (SectionChunk *C : Sections)
+    if (C->isLive())
+      Builder.add(toStringRef(C->getContents()));
+  Builder.finalize();
+
+  for (SectionChunk *C : Sections) {
+    if (!C->isLive())
+      continue;
+    size_t Off = Builder.getOffset(toStringRef(C->getContents()));
+    C->setOutputSection(Out);
+    C->setRVA(RVA + Off);
+    C->OutputSectionOff = OutputSectionOff + Off;
+  }
+}
+
+uint32_t MergeChunk::getPermissions() const {
+  return IMAGE_SCN_MEM_READ | IMAGE_SCN_CNT_INITIALIZED_DATA;
+}
+
+size_t MergeChunk::getSize() const {
+  return Builder.getSize();
+}
+
+void MergeChunk::writeTo(uint8_t *Buf) const {
+  Builder.write(Buf + OutputSectionOff);
+}
+
 } // namespace coff
 } // namespace lld

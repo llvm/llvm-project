@@ -31,10 +31,7 @@ void writeResult();
 class OutputSection {
 public:
   OutputSection(llvm::StringRef N) : Name(N), Header({}) {}
-  void setRVA(uint64_t);
-  void setFileOffset(uint64_t);
   void addChunk(Chunk *C);
-  llvm::StringRef getName() { return Name; }
   ArrayRef<Chunk *> getChunks() { return Chunks; }
   void addPermissions(uint32_t C);
   void setPermissions(uint32_t C);
@@ -61,9 +58,10 @@ public:
   // N.B. The section index is one based.
   uint32_t SectionIndex = 0;
 
-private:
   llvm::StringRef Name;
   llvm::object::coff_section Header;
+
+private:
   uint32_t StringTableOff = 0;
   std::vector<Chunk *> Chunks;
 };
