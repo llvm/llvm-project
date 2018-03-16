@@ -133,15 +133,22 @@ static inline bool RangesOverlap(const char *offset1, uptr length1,
                                  const char *offset2, uptr length2) {
   return !((offset1 + length1 <= offset2) || (offset2 + length2 <= offset1));
 }
-#define CHECK_RANGES_OVERLAP(name, _offset1, length1, _offset2, length2) do { \
-  const char *offset1 = (const char*)_offset1; \
-  const char *offset2 = (const char*)_offset2; \
-  if (RangesOverlap(offset1, length1, offset2, length2)) { \
-    GET_STACK_TRACE_FATAL_HERE; \
-    ReportStringFunctionMemoryRangesOverlap(name, offset1, length1, \
-                                            offset2, length2, &stack); \
-  } \
-} while (0)
+#define CHECK_RANGES_OVERLAP(name, _offset1, length1, _offset2, length2)   \
+  do {                                                                     \
+    const char *offset1 = (const char *)_offset1;                          \
+    const char *offset2 = (const char *)_offset2;                          \
+    if (RangesOverlap(offset1, length1, offset2, length2)) {               \
+      GET_STACK_TRACE_FATAL_HERE;                                          \
+      bool suppressed = IsInterceptorSuppressed(name);                     \
+      if (!suppressed && HaveStackTraceBasedSuppressions()) {              \
+        suppressed = IsStackTraceSuppressed(&stack);                       \
+      }                                                                    \
+      if (!suppressed) {                                                   \
+        ReportStringFunctionMemoryRangesOverlap(name, offset1, length1,    \
+                                                offset2, length2, &stack); \
+      }                                                                    \
+    }                                                                      \
+  } while (0)
 
 }  // namespace __asan
 
