@@ -341,11 +341,16 @@ void MipsLongBranch::expandToLongBranch(MBBInfo &I) {
         BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::ADDiu), Mips::SP)
           .addReg(Mips::SP).addImm(8);
 
-      if (Subtarget.hasMips32r6())
+      if (Subtarget.hasMips32r6() && !Subtarget.useIndirectJumpsHazard())
         BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::JALR))
           .addReg(Mips::ZERO).addReg(Mips::AT);
-      else
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::JR)).addReg(Mips::AT);
+      else {
+        unsigned JROp =
+            Subtarget.useIndirectJumpsHazard()
+                ? (Subtarget.hasMips32r6() ? Mips::JR_HB_R6 : Mips::JR_HB)
+                : Mips::JR;
+        BuildMI(*BalTgtMBB, Pos, DL, TII->get(JROp)).addReg(Mips::AT);
+      }
 
       if (Subtarget.isTargetNaCl()) {
         BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::NOP));
@@ -414,14 +419,21 @@ void MipsLongBranch::expandToLongBranch(MBBInfo &I) {
       BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::LD), Mips::RA_64)
         .addReg(Mips::SP_64).addImm(0);
 
-      if (Subtarget.hasMips64r6())
+      if (Subtarget.hasMips64r6() && !Subtarget.useIndirectJumpsHazard())
         BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::JALR64))
-          .addReg(Mips::ZERO_64).addReg(Mips::AT_64);
-      else
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::JR64)).addReg(Mips::AT_64);
+            .addReg(Mips::ZERO_64)
+            .addReg(Mips::AT_64);
+      else {
+        unsigned JROp =
+            Subtarget.useIndirectJumpsHazard()
+                ? (Subtarget.hasMips32r6() ? Mips::JR_HB64_R6 : Mips::JR_HB64)
+                : Mips::JR64;
+        BuildMI(*BalTgtMBB, Pos, DL, TII->get(JROp)).addReg(Mips::AT_64);
+      }
 
       BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::DADDiu), Mips::SP_64)
-        .addReg(Mips::SP_64).addImm(16);
+          .addReg(Mips::SP_64)
+          .addImm(16);
       BalTgtMBB->rbegin()->bundleWithPred();
     }
 

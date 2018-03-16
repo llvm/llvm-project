@@ -212,6 +212,8 @@ def HasMicroMips64r6 : Predicate<"Subtarget->inMicroMips64r6Mode()">,
                        AssemblerPredicate<"FeatureMicroMips,FeatureMips64r6">;
 def InMips16Mode :    Predicate<"Subtarget->inMips16Mode()">,
                       AssemblerPredicate<"FeatureMips16">;
+def NotInMips16Mode : Predicate<"!Subtarget->inMips16Mode()">,
+                      AssemblerPredicate<"!FeatureMips16">;
 def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<"FeatureCnMips">;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
@@ -242,7 +244,10 @@ def HasMadd4 : Predicate<"!Subtarget->disableMadd4()">,
                AssemblerPredicate<"!FeatureMadd4">;
 def HasMT  : Predicate<"Subtarget->hasMT()">,
              AssemblerPredicate<"FeatureMT">;
-
+def UseIndirectJumpsHazard : Predicate<"Subtarget->useIndirectJumpsHazard()">,
+                            AssemblerPredicate<"FeatureUseIndirectJumpsHazard">;
+def NoIndirectJumpGuards : Predicate<"!Subtarget->useIndirectJumpsHazard()">,
+                           AssemblerPredicate<"!FeatureUseIndirectJumpsHazard">;
 //===----------------------------------------------------------------------===//
 // Mips GPR size adjectives.
 // They are mutually exclusive.
@@ -1480,8 +1485,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     PseudoSE<(outs), (ins calltarget:$target), [], II_J>,
     PseudoInstExpansion<(JumpInst Opnd:$target)>;
 
-  class TailCallReg<RegisterOperand RO> :
-    MipsPseudo<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>;
+  class TailCallReg<Instruction JumpInst, RegisterOperand RO> :
+    PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>,
+    PseudoInstExpansion<(JumpInst RO:$rs)>;
 }
 
 class BAL_BR_Pseudo<Instruction RealInst> :
@@ -2005,7 +2011,7 @@ def BLTZL   : MMRel, CBranchZero<"bltzl", brtarget, setlt, GPR32Opnd, 0>,
 def B       : UncondBranch<BEQ>;
 
 def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>;
-let AdditionalPredicates = [NotInMicroMips] in {
+let AdditionalPredicates = [NotInMicroMips, NoIndirectJumpGuards] in {
   def JALR : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM;
   def JALRPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR, RA>;
 }
@@ -2025,14 +2031,16 @@ def BAL_BR : BAL_BR_Pseudo<BGEZAL>;
 let Predicates = [NotInMicroMips] in { 
   def TAILCALL : TailCall<J, jmptarget>;
 }
-
-def TAILCALLREG : TailCallReg<GPR32Opnd>;
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
+                            NoIndirectJumpGuards] in
+  def TAILCALLREG : TailCallReg<JR, GPR32Opnd>, ISA_MIPS1_NOT_32R6_64R6;
 
 // Indirect branches are matched as PseudoIndirectBranch/PseudoIndirectBranch64
 // then are expanded to JR, JR64, JALR, or JALR64 depending on the ISA.
-class PseudoIndirectBranchBase<RegisterOperand RO> :
+class PseudoIndirectBranchBase<Instruction JumpInst, RegisterOperand RO> :
     MipsPseudo<(outs), (ins RO:$rs), [(brind RO:$rs)],
-               II_IndirectBranchPseudo> {
+               II_IndirectBranchPseudo>,
+    PseudoInstExpansion<(JumpInst RO:$rs)> {
   let isTerminator=1;
   let isBarrier=1;
   let hasDelaySlot = 1;
@@ -2041,7 +2049,10 @@ class PseudoIndirectBranchBase<RegisterOperand RO> :
   bit isCTI = 1;
 }
 
-def PseudoIndirectBranch : PseudoIndirectBranchBase<GPR32Opnd>;
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
+                            NoIndirectJumpGuards] in
+  def PseudoIndirectBranch : PseudoIndirectBranchBase<JR, GPR32Opnd>,
+                             ISA_MIPS1_NOT_32R6_64R6;
 
 // Return instructions are matched as a RetRA instruction, then are expanded
 // into PseudoReturn/PseudoReturn64 after register allocation. Finally,
@@ -2213,8 +2224,8 @@ class JALR_HB_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   list<dag> Pattern = [];
 }
 
-class JR_HB_DESC : InstSE<(outs), (ins), "", [], II_JR_HB, FrmJ>,
-                   JR_HB_DESC_BASE<"jr.hb", GPR32Opnd> {
+class JR_HB_DESC<RegisterOperand RO> :
+  InstSE<(outs), (ins), "", [], II_JR_HB, FrmJ>, JR_HB_DESC_BASE<"jr.hb", RO> {
   let isBranch=1;
   let isIndirectBranch=1;
   let hasDelaySlot=1;
@@ -2223,8 +2234,9 @@ class JR_HB_DESC : InstSE<(outs), (ins), "", [], II_JR_HB, FrmJ>,
   bit isCTI = 1;
 }
 
-class JALR_HB_DESC : InstSE<(outs), (ins), "", [], II_JALR_HB, FrmJ>,
-                     JALR_HB_DESC_BASE<"jalr.hb", GPR32Opnd> {
+class JALR_HB_DESC<RegisterOperand RO> :
+  InstSE<(outs), (ins), "", [], II_JALR_HB, FrmJ>, JALR_HB_DESC_BASE<"jalr.hb",
+                                                                     RO> {
   let isIndirectBranch=1;
   let hasDelaySlot=1;
   bit isCTI = 1;
@@ -2233,8 +2245,19 @@ class JALR_HB_DESC : InstSE<(outs), (ins), "", [], II_JALR_HB, FrmJ>,
 class JR_HB_ENC : JR_HB_FM<8>;
 class JALR_HB_ENC : JALR_HB_FM<9>;
 
-def JR_HB : JR_HB_DESC, JR_HB_ENC, ISA_MIPS32_NOT_32R6_64R6;
-def JALR_HB : JALR_HB_DESC, JALR_HB_ENC, ISA_MIPS32;
+def JR_HB : JR_HB_DESC<GPR32Opnd>, JR_HB_ENC, ISA_MIPS32R2_NOT_32R6_64R6;
+def JALR_HB : JALR_HB_DESC<GPR32Opnd>, JALR_HB_ENC, ISA_MIPS32;
+
+let AdditionalPredicates = [NotInMicroMips, UseIndirectJumpsHazard] in
+  def JALRHBPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR_HB, RA>;
+
+
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
+                            UseIndirectJumpsHazard] in {
+  def TAILCALLREGHB : TailCallReg<JR_HB, GPR32Opnd>, ISA_MIPS32_NOT_32R6_64R6;
+  def PseudoIndirectHazardBranch : PseudoIndirectBranchBase<JR_HB, GPR32Opnd>,
+                                   ISA_MIPS32R2_NOT_32R6_64R6;
+}
 
 class TLB<string asmstr, InstrItinClass itin = NoItinerary> :
   InstSE<(outs), (ins), asmstr, [], itin, FrmOther, asmstr>;
@@ -2368,7 +2391,8 @@ def : MipsInstAlias<"j $rs", (JR GPR32Opnd:$rs), 0>;
 let Predicates = [NotInMicroMips] in {
 def : MipsInstAlias<"jalr $rs", (JALR RA, GPR32Opnd:$rs), 0>;
 }
-def : MipsInstAlias<"jalr.hb $rs", (JALR_HB RA, GPR32Opnd:$rs), 1>, ISA_MIPS32;
+def : MipsInstAlias<"jalr.hb $rs", (JALR_HB RA, GPR32Opnd:$rs), 1>,
+      ISA_MIPS32;
 def : MipsInstAlias<"neg $rt, $rs",
                     (SUB GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>;
 def : MipsInstAlias<"neg $rt",

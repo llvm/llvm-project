@@ -286,7 +286,7 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::JR:
     case Mips::PseudoReturn:
     case Mips::PseudoIndirectBranch:
-    case Mips::TAILCALLREG:
+    case Mips::PseudoIndirectBranch_MM:
       canUseShortMicroMipsCTI = true;
       break;
     }
@@ -365,18 +365,19 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     // For MIPSR6, the instruction 'jic' can be used for these cases. Some
     // tools will accept 'jrc reg' as an alias for 'jic 0, $reg'.
     case Mips::JR:
+    case Mips::PseudoIndirectBranchR6:
+    case Mips::PseudoIndirectBranch_MM:
     case Mips::PseudoReturn:
-    case Mips::PseudoIndirectBranch:
-    case Mips::TAILCALLREG:
+    case Mips::TAILCALLR6REG:
       if (canUseShortMicroMipsCTI)
         return Mips::JRC16_MM;
       return Mips::JIC;
     case Mips::JALRPseudo:
       return Mips::JIALC;
     case Mips::JR64:
+    case Mips::PseudoIndirectBranch64R6:
     case Mips::PseudoReturn64:
-    case Mips::PseudoIndirectBranch64:
-    case Mips::TAILCALLREG64:
+    case Mips::TAILCALL64R6REG:
       return Mips::JIC64;
     case Mips::JALR64Pseudo:
       return Mips::JIALC64;
@@ -525,4 +526,27 @@ bool MipsInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   }
   }
   return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+}
+
+//  Perform target specific instruction verification.
+bool MipsInstrInfo::verifyInstruction(const MachineInstr &MI,
+                                      StringRef &ErrInfo) const {
+  switch (MI.getOpcode()) {
+    case Mips::TAILCALLREG:
+    case Mips::PseudoIndirectBranch:
+    case Mips::JR:
+    case Mips::JR64:
+    case Mips::JALR:
+    case Mips::JALR64:
+    case Mips::JALRPseudo:
+      if (!Subtarget.useIndirectJumpsHazard())
+        return true;
+
+      ErrInfo = "invalid instruction when using jump guards!";
+      return false;
+    default:
+      return true;
+  }
+
+  return true;
 }

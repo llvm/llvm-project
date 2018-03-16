@@ -163,7 +163,7 @@ entry:
 ; STATIC32: j
 ; PIC64: jr $25
 ; PIC64R6: jrc $25
-; PIC64R6MM: jr $25
+; PIC64R6MM: jrc16 $25
 ; STATIC64: j
 ; PIC16: jalrc
 

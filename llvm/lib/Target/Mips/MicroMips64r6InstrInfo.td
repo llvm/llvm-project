@@ -352,6 +352,8 @@ class LWUPC_MM64R6_DESC {
   bit IsPCRelativeLoad = 1;
 }
 
+class JRC16_64_MMR6_DESC : JRC16_MMR6_DESC_BASE<"jrc16", GPR64Opnd>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -465,6 +467,9 @@ let DecoderNamespace = "MicroMipsR6" in {
   def LWUPC_MM64R6 : R6MMR6Rel, LWUPC_MM64R6_ENC, LWUPC_MM64R6_DESC,
                      ISA_MICROMIPS64R6;
 }
+let DecoderNamespace = "MicroMips64r6" in
+  def JRC16_64_MMR6 : R6MMR6Rel, JRC16_64_MMR6_DESC, JRC16_MMR6_ENC,
+                      ISA_MICROMIPS64R6;
 
 let AdditionalPredicates = [InMicroMips] in
 defm : MaterializeImms<i64, ZERO_64, DADDIU_MM64R6, LUi64, ORi64>;
@@ -504,6 +509,9 @@ def : MipsPat<(subc GPR64:$lhs, GPR64:$rhs),
               (DSUBU_MM64R6 GPR64:$lhs, GPR64:$rhs)>, ISA_MICROMIPS64R6;
 
 def : MipsPat<(atomic_load_64 addr:$a), (LD_MM64R6 addr:$a)>, ISA_MICROMIPS64R6;
+
+def TAILCALLREG64_MMR6 : TailCallReg<JRC16_64_MMR6, GPR64Opnd>,
+                         ISA_MICROMIPS64R6;
 
 //===----------------------------------------------------------------------===//
 //

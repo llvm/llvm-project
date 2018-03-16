@@ -70,8 +70,8 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       InMips16HardFloat(Mips16HardFloat), InMicroMipsMode(false), HasDSP(false),
       HasDSPR2(false), HasDSPR3(false), AllowMixed16_32(Mixed16_32 | Mips_Os16),
       Os16(Mips_Os16), HasMSA(false), UseTCCInDIV(false), HasSym32(false),
-      HasEVA(false), DisableMadd4(false), HasMT(false), TM(TM),
-      TargetTriple(TT), TSInfo(),
+      HasEVA(false), DisableMadd4(false), HasMT(false),
+      UseIndirectJumpsHazard(false), TM(TM), TargetTriple(TT), TSInfo(),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),
@@ -102,6 +102,15 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   if (IsFPXX && (isABI_N32() || isABI_N64()))
     report_fatal_error("FPXX is not permitted for the N32/N64 ABI's.", false);
+
+  if (UseIndirectJumpsHazard) {
+    if (InMicroMipsMode)
+      report_fatal_error(
+          "cannot combine indirect jumps with hazard barriers and microMIPS");
+    if (!hasMips32r2())
+      report_fatal_error(
+          "indirect jumps with hazard barriers requires MIPS32R2 or later");
+  }
 
   if (hasMips32r6()) {
     StringRef ISA = hasMips64r6() ? "MIPS64r6" : "MIPS32r6";
