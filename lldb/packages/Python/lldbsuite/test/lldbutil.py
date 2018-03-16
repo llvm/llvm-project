@@ -1281,11 +1281,11 @@ def join_remote_paths(*paths):
     return os.path.join(*paths).replace(os.path.sep, '/')
 
 
-def append_to_process_working_directory(*paths):
+def append_to_process_working_directory(test, *paths):
     remote = lldb.remote_platform
     if remote:
         return join_remote_paths(remote.GetWorkingDirectory(), *paths)
-    return os.path.join(os.getcwd(), *paths)
+    return os.path.join(test.getBuildDir(), *paths)
 
 # ==================================================
 # Utility functions to get the correct signal number

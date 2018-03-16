@@ -61,12 +61,6 @@ class TargetAPITestCase(TestBase):
         self.get_description()
 
     @add_test_categories(['pyapi'])
-    def test_launch_new_process_and_redirect_stdout(self):
-        """Exercise SBTarget.Launch() API."""
-        self.build()
-        self.launch_new_process_and_redirect_stdout()
-
-    @add_test_categories(['pyapi'])
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()
@@ -268,8 +262,11 @@ class TargetAPITestCase(TestBase):
                     substrs=['a.out', 'Target', 'Module', 'Breakpoint'])
 
     @not_remote_testsuite_ready
-    def launch_new_process_and_redirect_stdout(self):
+    @add_test_categories(['pyapi'])
+    @no_debug_info_test
+    def test_launch_new_process_and_redirect_stdout(self):
         """Exercise SBTaget.Launch() API with redirected stdout."""
+        self.build()
         exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
@@ -285,9 +282,12 @@ class TargetAPITestCase(TestBase):
         # Now launch the process, do not stop at entry point, and redirect stdout to "stdout.txt" file.
         # The inferior should run to completion after "process.Continue()"
         # call.
-        local_path = "stdout.txt"
+        local_path = self.getBuildArtifact("stdout.txt")
+        if os.path.exists(local_path):
+            os.remove(local_path)
+
         if lldb.remote_platform:
-            stdout_path = lldbutil.append_to_process_working_directory(
+            stdout_path = lldbutil.append_to_process_working_directory(self,
                 "lldb-stdout-redirect.txt")
         else:
             stdout_path = local_path
@@ -313,19 +313,12 @@ class TargetAPITestCase(TestBase):
 
         # The 'stdout.txt' file should now exist.
         self.assertTrue(
-            os.path.isfile("stdout.txt"),
+            os.path.isfile(local_path),
             "'stdout.txt' exists due to redirected stdout via SBTarget.Launch() API.")
 
         # Read the output file produced by running the program.
-        with open('stdout.txt', 'r') as f:
+        with open(local_path, 'r') as f:
             output = f.read()
-
-        # Let's delete the 'stdout.txt' file as a cleanup step.
-        try:
-            os.remove("stdout.txt")
-            pass
-        except OSError:
-            pass
 
         self.expect(output, exe=False,
                     substrs=["a(1)", "b(2)", "a(3)"])
