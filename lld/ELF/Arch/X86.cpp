@@ -46,6 +46,7 @@ public:
 } // namespace
 
 X86::X86() {
+  GotBaseSymOff = -1;
   CopyRel = R_386_COPY;
   GotRel = R_386_GLOB_DAT;
   PltRel = R_386_JUMP_SLOT;

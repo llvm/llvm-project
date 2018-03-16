@@ -138,12 +138,13 @@ void ObjFile::initializeChunks() {
     if (Sec->Characteristics & IMAGE_SCN_LNK_COMDAT)
       SparseChunks[I] = PendingComdat;
     else
-      SparseChunks[I] = readSection(I, nullptr);
+      SparseChunks[I] = readSection(I, nullptr, "");
   }
 }
 
 SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
-                                   const coff_aux_section_definition *Def) {
+                                   const coff_aux_section_definition *Def,
+                                   StringRef LeaderName) {
   const coff_section *Sec;
   StringRef Name;
   if (auto EC = COFFObj->getSection(SectionNumber, Sec))
@@ -189,6 +190,12 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
     GuardLJmpChunks.push_back(C);
   else if (Name == ".sxdata")
     SXDataChunks.push_back(C);
+  else if (Config->DoICF && Sec->NumberOfRelocations == 0 && Name == ".rdata" &&
+           LeaderName.startswith("??_C@"))
+    // COFF sections that look like string literal sections (i.e. no
+    // relocations, in .rdata, leader symbol name matches the MSVC name mangling
+    // for string literals) are subject to string tail merging.
+    MergeChunk::addSection(C);
   else
     Chunks.push_back(C);
 
@@ -209,7 +216,7 @@ void ObjFile::readAssociativeDefinition(
   // the section; otherwise mark it as discarded.
   int32_t SectionNumber = Sym.getSectionNumber();
   if (Parent) {
-    SparseChunks[SectionNumber] = readSection(SectionNumber, Def);
+    SparseChunks[SectionNumber] = readSection(SectionNumber, Def, "");
     if (SparseChunks[SectionNumber])
       Parent->addAssociative(SparseChunks[SectionNumber]);
   } else {
@@ -343,7 +350,7 @@ Optional<Symbol *> ObjFile::createDefined(
       Prevailing = true;
     }
     if (Prevailing) {
-      SectionChunk *C = readSection(SectionNumber, Def);
+      SectionChunk *C = readSection(SectionNumber, Def, Name);
       SparseChunks[SectionNumber] = C;
       C->Sym = cast<DefinedRegular>(Leader);
       cast<DefinedRegular>(Leader)->Data = &C->Repl;

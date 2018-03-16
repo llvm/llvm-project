@@ -150,7 +150,8 @@ private:
 
   SectionChunk *
   readSection(uint32_t SectionNumber,
-              const llvm::object::coff_aux_section_definition *Def);
+              const llvm::object::coff_aux_section_definition *Def,
+              StringRef LeaderName);
 
   void readAssociativeDefinition(
       COFFSymbolRef COFFSym,
