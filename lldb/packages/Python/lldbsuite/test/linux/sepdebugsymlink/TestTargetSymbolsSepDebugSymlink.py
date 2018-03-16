@@ -16,8 +16,9 @@ class TestTargetSymbolsSepDebugSymlink(TestBase):
     @skipUnlessPlatform(['linux'])
     @skipIf(hostoslist=["windows"])
     @skipIfRemote # llvm.org/pr36237
+    @skipIf(bugnumber="rdar://38550275")
     def test_target_symbols_sepdebug_symlink_case(self):
-        self.build(clean=True)
+        self.build()
         exe = self.getBuildArtifact("dirsymlink/stripped.symlink")
 
         lldbutil.run_to_name_breakpoint(self, "main", exe_name = exe)
