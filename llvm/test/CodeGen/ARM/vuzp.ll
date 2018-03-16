@@ -465,44 +465,40 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK-NEXT:	add	r11, sp, #8
 ; CHECK-NEXT:	bic	sp, sp, #15
 ; CHECK-NEXT:	add	r12, r11, #32
-; CHECK-NEXT:	add	lr, r11, #60
+; CHECK-NEXT:	add	lr, r11, #44
 ; CHECK-NEXT:	vld1.32	{d17[0]}, [r12:32]
 ; CHECK-NEXT:	add	r12, r11, #24
-; CHECK-NEXT:	vld1.32	{d22[0]}, [lr:32]
-; CHECK-NEXT:	add	lr, r11, #36
 ; CHECK-NEXT:	vld1.32	{d16[0]}, [r12:32]
 ; CHECK-NEXT:	add	r12, r11, #52
 ; CHECK-NEXT:	vld1.32	{d19[0]}, [r12:32]
-; CHECK-NEXT:	add	r12, r11, #44
-; CHECK-NEXT:	vld1.32	{d17[1]}, [lr:32]
-; CHECK-NEXT:	vld1.32	{d18[0]}, [r12:32]
-; CHECK-NEXT:	add	r12, r11, #40
-; CHECK-NEXT:	vld1.32	{d20[0]}, [r12:32]
 ; CHECK-NEXT:	ldr	r12, [r11, #64]
-; CHECK-NEXT:	vcgt.u32	q10, q11, q10
+; CHECK-NEXT:	vld1.32	{d18[0]}, [lr:32]
+; CHECK-NEXT:	add	lr, r11, #40
+; CHECK-NEXT:	vld1.32	{d20[0]}, [lr:32]
 ; CHECK-NEXT:	ldr	r4, [r12]
-; CHECK-NEXT:	vmov.32	d25[0], r4
+; CHECK-NEXT:	vmov.32	d23[0], r4
+; CHECK-NEXT:	add	r4, r11, #60
+; CHECK-NEXT:	vld1.32	{d24[0]}, [r4:32]
+; CHECK-NEXT:	add	r4, r11, #36
+; CHECK-NEXT:	vld1.32	{d17[1]}, [r4:32]
 ; CHECK-NEXT:	add	r4, r11, #28
+; CHECK-NEXT:	vcgt.u32	q10, q12, q10
+; CHECK-NEXT:	vmov.u8	lr, d23[3]
 ; CHECK-NEXT:	vld1.32	{d16[1]}, [r4:32]
 ; CHECK-NEXT:	add	r4, r11, #56
 ; CHECK-NEXT:	vld1.32	{d19[1]}, [r4:32]
 ; CHECK-NEXT:	add	r4, r11, #48
-; CHECK-NEXT:	vmov.u8	lr, d25[3]
 ; CHECK-NEXT:	vld1.32	{d18[1]}, [r4:32]
 ; CHECK-NEXT:	add	r4, r12, #4
 ; CHECK-NEXT:	vcgt.u32	q8, q9, q8
 ; CHECK-NEXT:	vmovn.i32	d19, q10
 ; CHECK-NEXT:	vldr	d20, .LCPI23_0
-; CHECK-NEXT:	vmov.i8	d18, #0x7
-; CHECK-NEXT:	vmovn.i32	d16, q8
-; CHECK-NEXT:	vneg.s8	d17, d18
-; CHECK-NEXT:	vuzp.8	d16, d19
+; CHECK-NEXT:	vmovn.i32	d18, q8
+; CHECK-NEXT:	vmovn.i16	d22, q9
 ; CHECK-NEXT:	vmov.i8	q9, #0x7
-; CHECK-NEXT:	vshl.i8	d16, d16, #7
-; CHECK-NEXT:	vneg.s8	q9, q9
-; CHECK-NEXT:	vshl.s8	d24, d16, d17
 ; CHECK-NEXT:	vmov.8	d17[0], lr
-; CHECK-NEXT:	vtbl.8	d16, {d24, d25}, d20
+; CHECK-NEXT:	vneg.s8	q9, q9
+; CHECK-NEXT:	vtbl.8	d16, {d22, d23}, d20
 ; CHECK-NEXT:	vld1.8	{d17[1]}, [r4]
 ; CHECK-NEXT:	add	r4, r11, #8
 ; CHECK-NEXT:	vshl.i8	q8, q8, #7

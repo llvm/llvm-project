@@ -10,7 +10,7 @@
 ; not unrolled without such analysis:
 
 ; RUN: opt -S < %s -loop-unroll -unroll-threshold=42 -unroll-max-iteration-count-to-analyze=2 \
-; RUN:        | FileCheck %s --check-prefix=DONT-ANALYZE-FULL
+; RUN:   -unroll-peel-max-count=0  | FileCheck %s --check-prefix=DONT-ANALYZE-FULL
 
 ; Function Attrs: nounwind
 declare void @llvm.assume(i1) #1

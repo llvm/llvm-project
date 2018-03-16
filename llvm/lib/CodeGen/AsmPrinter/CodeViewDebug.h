@@ -107,6 +107,15 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     unsigned SiteFuncId = 0;
   };
 
+  // Combines information from DILexicalBlock and LexicalScope.
+  struct LexicalBlock {
+    SmallVector<LocalVariable, 1> Locals;
+    SmallVector<LexicalBlock *, 1> Children;
+    const MCSymbol *Begin;
+    const MCSymbol *End;
+    StringRef Name;
+  };
+
   // For each function, store a vector of labels to its instructions, as well as
   // to the end of the function.
   struct FunctionInfo {
@@ -124,6 +133,11 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
     SmallVector<LocalVariable, 1> Locals;
 
+    std::unordered_map<const DILexicalBlockBase*, LexicalBlock> LexicalBlocks;
+
+    // Lexical blocks containing local variables.
+    SmallVector<LexicalBlock *, 1> ChildBlocks;
+
     std::vector<std::pair<MCSymbol *, MDNode *>> Annotations;
 
     const MCSymbol *Begin = nullptr;
@@ -133,6 +147,12 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     bool HaveLineInfo = false;
   };
   FunctionInfo *CurFn = nullptr;
+
+  // Map used to seperate variables according to the lexical scope they belong
+  // in.  This is populated by recordLocalVariable() before
+  // collectLexicalBlocks() separates the variables between the FunctionInfo
+  // and LexicalBlocks.
+  DenseMap<const LexicalScope *, SmallVector<LocalVariable, 1>> ScopeVariables;
 
   /// The set of comdat .debug$S sections that we've seen so far. Each section
   /// must start with a magic version number that must only be emitted once.
@@ -258,15 +278,31 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void collectVariableInfoFromMFTable(DenseSet<InlinedVariable> &Processed);
 
+  // Construct the lexical block tree for a routine, pruning emptpy lexical
+  // scopes, and populate it with local variables.
+  void collectLexicalBlockInfo(SmallVectorImpl<LexicalScope *> &Scopes,
+                               SmallVectorImpl<LexicalBlock *> &Blocks,
+                               SmallVectorImpl<LocalVariable> &Locals);
+  void collectLexicalBlockInfo(LexicalScope &Scope,
+                               SmallVectorImpl<LexicalBlock *> &ParentBlocks,
+                               SmallVectorImpl<LocalVariable> &ParentLocals);
+
   /// Records information about a local variable in the appropriate scope. In
   /// particular, locals from inlined code live inside the inlining site.
-  void recordLocalVariable(LocalVariable &&Var, const DILocation *Loc);
+  void recordLocalVariable(LocalVariable &&Var, const LexicalScope *LS);
 
   /// Emits local variables in the appropriate order.
   void emitLocalVariableList(ArrayRef<LocalVariable> Locals);
 
   /// Emits an S_LOCAL record and its associated defined ranges.
   void emitLocalVariable(const LocalVariable &Var);
+
+  /// Emits a sequence of lexical block scopes and their children.
+  void emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,
+                            const FunctionInfo& FI);
+
+  /// Emit a lexical block scope and its children.
+  void emitLexicalBlock(const LexicalBlock &Block, const FunctionInfo& FI);
 
   /// Translates the DIType to codeview if necessary and returns a type index
   /// for it.

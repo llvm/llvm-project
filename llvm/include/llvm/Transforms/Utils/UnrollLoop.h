@@ -71,7 +71,7 @@ bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
 
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::UnrollingPreferences &UP,
-                      unsigned &TripCount);
+                      unsigned &TripCount, ScalarEvolution &SE);
 
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
               DominatorTree *DT, AssumptionCache *AC, bool PreserveLCSSA);

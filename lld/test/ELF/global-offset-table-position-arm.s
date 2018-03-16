@@ -3,8 +3,7 @@
 // RUN: llvm-readobj -t %t2 | FileCheck %s
 // REQUIRES: arm
 
-// The ARM _GLOBAL_OFFSET_TABLE_ should be defined at the start of the
-// .got.plt section.
+// The ARM _GLOBAL_OFFSET_TABLE_ should be defined at the start of the .got
 .globl  a
 .type   a,%object
 .comm   a,4,4
@@ -26,11 +25,11 @@ _start:
 .data
 
 // CHECK:     Name: _GLOBAL_OFFSET_TABLE_
-// CHECK-NEXT:     Value: 0x2000
+// CHECK-NEXT:     Value: 0x3068
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
 // CHECK-NEXT:     Other [ (0x2)
 // CHECK-NEXT:       STV_HIDDEN (0x2)
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .got.plt
+// CHECK-NEXT:     Section: .got

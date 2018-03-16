@@ -795,7 +795,7 @@ static bool computeUnrollCount(
   }
 
   // 4th priority is loop peeling
-  computePeelCount(L, LoopSize, UP, TripCount);
+  computePeelCount(L, LoopSize, UP, TripCount, SE);
   if (UP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;

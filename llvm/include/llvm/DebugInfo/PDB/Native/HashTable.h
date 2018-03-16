@@ -161,16 +161,23 @@ public:
   uint32_t calculateSerializedLength() const {
     uint32_t Size = sizeof(Header);
 
+    constexpr int BitsPerWord = 8 * sizeof(uint32_t);
+
     int NumBitsP = Present.find_last() + 1;
     int NumBitsD = Deleted.find_last() + 1;
 
-    // Present bit set number of words, followed by that many actual words.
-    Size += sizeof(uint32_t);
-    Size += alignTo(NumBitsP, sizeof(uint32_t));
+    uint32_t NumWordsP = alignTo(NumBitsP, BitsPerWord) / BitsPerWord;
+    uint32_t NumWordsD = alignTo(NumBitsD, BitsPerWord) / BitsPerWord;
 
-    // Deleted bit set number of words, followed by that many actual words.
+    // Present bit set number of words (4 bytes), followed by that many actual
+    // words (4 bytes each).
     Size += sizeof(uint32_t);
-    Size += alignTo(NumBitsD, sizeof(uint32_t));
+    Size += NumWordsP * sizeof(uint32_t);
+
+    // Deleted bit set number of words (4 bytes), followed by that many actual
+    // words (4 bytes each).
+    Size += sizeof(uint32_t);
+    Size += NumWordsD * sizeof(uint32_t);
 
     // One (Key, ValueT) pair for each entry Present.
     Size += (sizeof(uint32_t) + sizeof(ValueT)) * size();

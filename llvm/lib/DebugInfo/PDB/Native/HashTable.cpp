@@ -46,16 +46,18 @@ Error llvm::pdb::readSparseBitVector(BinaryStreamReader &Stream,
 
 Error llvm::pdb::writeSparseBitVector(BinaryStreamWriter &Writer,
                                       SparseBitVector<> &Vec) {
+  constexpr int BitsPerWord = 8 * sizeof(uint32_t);
+
   int ReqBits = Vec.find_last() + 1;
-  uint32_t NumWords = alignTo(ReqBits, sizeof(uint32_t)) / sizeof(uint32_t);
-  if (auto EC = Writer.writeInteger(NumWords))
+  uint32_t ReqWords = alignTo(ReqBits, BitsPerWord) / BitsPerWord;
+  if (auto EC = Writer.writeInteger(ReqWords))
     return joinErrors(
         std::move(EC),
         make_error<RawError>(raw_error_code::corrupt_file,
                              "Could not write linear map number of words"));
 
   uint32_t Idx = 0;
-  for (uint32_t I = 0; I != NumWords; ++I) {
+  for (uint32_t I = 0; I != ReqWords; ++I) {
     uint32_t Word = 0;
     for (uint32_t WordIdx = 0; WordIdx < 32; ++WordIdx, ++Idx) {
       if (Vec.test(Idx))

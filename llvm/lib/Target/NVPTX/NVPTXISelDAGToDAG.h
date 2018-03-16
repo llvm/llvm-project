@@ -89,13 +89,13 @@ private:
                     SDValue &Offset);
   bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
-
   bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
                         SDValue &Offset, MVT mvt);
   bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
   bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
+  bool SelectADDRvar(SDNode *OpNode, SDValue Addr, SDValue &Value);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

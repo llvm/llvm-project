@@ -75,10 +75,9 @@ public:
 
   uint64_t getImageBase();
 
-  // Offset of _GLOBAL_OFFSET_TABLE_ from base of .got or .got.plt section.
+  // Offset of _GLOBAL_OFFSET_TABLE_ from base of .got section. Use -1 for
+  // end of .got
   uint64_t GotBaseSymOff = 0;
-  // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
-  bool GotBaseSymInGotPlt = true;
 
   // On systems with range extensions we place collections of Thunks at
   // regular spacings that enable the majority of branches reach the Thunks.

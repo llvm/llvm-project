@@ -72,20 +72,20 @@ def : ReadAdvance<ReadAfterLd, 3>;
 // This multiclass defines the resource usage for variants with and without
 // folded loads.
 multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
-                            ProcResourceKind ExePort,
-                            int Lat, int Res = 1, int UOps = 1> {
+                            list<ProcResourceKind> ExePorts,
+                            int Lat, list<int> Res = [1], int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
-  def : WriteRes<SchedRW, [ExePort]> {
+  def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
-    let ResourceCycles = [Res];
+    let ResourceCycles = Res;
     let NumMicroOps = UOps;
   }
 
   // Memory variant also uses a cycle on JLAGU and adds 3 cycles to the
   // latency.
-  def : WriteRes<SchedRW.Folded, [JLAGU, ExePort]> {
+  def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 3);
-    let ResourceCycles = [1, Res];
+    let ResourceCycles = !listconcat([1], Res);
     let NumMicroOps = UOps;
   }
 }
@@ -116,24 +116,13 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 // Arithmetic.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteALU,   JALU01, 1>;
-defm : JWriteResIntPair<WriteIMul,  JALU1,  3>;
+defm : JWriteResIntPair<WriteALU,   [JALU01], 1>;
+defm : JWriteResIntPair<WriteIMul,  [JALU1], 3>;
+defm : JWriteResIntPair<WriteIDiv,  [JALU1, JDiv], 41, [1, 41], 2>; // Worst case (i64 division)
 
 def  : WriteRes<WriteIMulH, [JALU1]> {
   let Latency = 6;
   let ResourceCycles = [4];
-}
-
-// Worst case (i64 division)
-def : WriteRes<WriteIDiv, [JALU1, JDiv]> {
-  let Latency = 41;
-  let ResourceCycles = [1, 41];
-  let NumMicroOps = 2;
-}
-def : WriteRes<WriteIDivLd, [JLAGU, JALU1, JDiv]> {
-  let Latency = 44;
-  let ResourceCycles = [1, 1, 41];
-  let NumMicroOps = 2;
 }
 
 // This is for simple LEAs with one or two input operands.
@@ -181,7 +170,7 @@ def : InstRW<[JWriteIDiv32Ld], (instrs DIV32m, IDIV32m)>;
 // Integer shifts and rotates.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteShift, JALU01, 1>;
+defm : JWriteResIntPair<WriteShift, [JALU01], 1>;
 
 def JWriteSHLDrri : SchedWriteRes<[JALU01]> {
   let Latency = 3;
@@ -232,7 +221,7 @@ def : WriteRes<WriteZero,  []>;
 // consume resources. Indirect branches can fold loads.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteJump,  JALU01, 1>;
+defm : JWriteResIntPair<WriteJump,  [JALU01], 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Special case scheduling classes.
@@ -488,15 +477,15 @@ def : InstRW<[JWriteFAddYLd, ReadAfterLd], (instrs VADDPDYrm, VADDPSYrm,
                                                    VSUBPDYrm, VSUBPSYrm,
                                                    VADDSUBPDYrm, VADDSUBPSYrm)>;
 
-def JWriteFDivY: SchedWriteRes<[JFPU1]> {
+def JWriteFDivY: SchedWriteRes<[JFPU1, JFPM]> {
   let Latency = 38;
-  let ResourceCycles = [38];
+  let ResourceCycles = [1, 38];
 }
 def : InstRW<[JWriteFDivY], (instrs VDIVPDYrr, VDIVPSYrr)>;
 
-def JWriteFDivYLd: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteFDivYLd: SchedWriteRes<[JLAGU, JFPU1, JFPM]> {
   let Latency = 43;
-  let ResourceCycles = [1, 38];
+  let ResourceCycles = [1, 1, 38];
 }
 def : InstRW<[JWriteFDivYLd, ReadAfterLd], (instrs VDIVPDYrm, VDIVPSYrm)>;
 
@@ -752,27 +741,27 @@ def JWriteVTESTLd: SchedWriteRes<[JLAGU, JFPU0]> {
 }
 def : InstRW<[JWriteVTESTLd], (instrs PTESTrm, VPTESTrm, VTESTPDrm, VTESTPSrm)>;
 
-def JWriteVSQRTYPD: SchedWriteRes<[JFPU1]> {
+def JWriteVSQRTYPD: SchedWriteRes<[JFPU1, JFPM]> {
   let Latency = 54;
-  let ResourceCycles = [54];
+  let ResourceCycles = [1, 54];
 }
 def : InstRW<[JWriteVSQRTYPD], (instrs VSQRTPDYr)>;
 
-def JWriteVSQRTYPDLd: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteVSQRTYPDLd: SchedWriteRes<[JLAGU, JFPU1, JFPM]> {
   let Latency = 59;
-  let ResourceCycles = [1, 54];
+  let ResourceCycles = [1, 1, 54];
 }
 def : InstRW<[JWriteVSQRTYPDLd], (instrs VSQRTPDYm)>;
 
-def JWriteVSQRTYPS: SchedWriteRes<[JFPU1]> {
+def JWriteVSQRTYPS: SchedWriteRes<[JFPU1, JFPM]> {
   let Latency = 42;
-  let ResourceCycles = [42];
+  let ResourceCycles = [1, 42];
 }
 def : InstRW<[JWriteVSQRTYPS], (instrs VSQRTPSYr)>;
 
-def JWriteVSQRTYPSLd: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteVSQRTYPSLd: SchedWriteRes<[JLAGU, JFPU1, JFPM]> {
   let Latency = 47;
-  let ResourceCycles = [1, 42];
+  let ResourceCycles = [1, 1, 42];
 }
 def : InstRW<[JWriteVSQRTYPSLd], (instrs VSQRTPSYm)>;
 
