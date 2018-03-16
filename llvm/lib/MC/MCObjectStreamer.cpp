@@ -55,6 +55,7 @@ void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
 // tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment.
 static Optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
                                              const MCSymbol *Lo) {
+  assert(Hi && Lo);
   if (!Hi->getFragment() || Hi->getFragment() != Lo->getFragment() ||
       Hi->isVariable() || Lo->isVariable())
     return None;

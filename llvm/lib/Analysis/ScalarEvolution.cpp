@@ -6971,6 +6971,7 @@ ScalarEvolution::ExitLimitCache::find(const Loop *L, Value *ExitCond,
                                       bool ExitIfTrue, bool ControlsExit,
                                       bool AllowPredicates) {
   (void)this->L;
+  (void)this->ExitIfTrue;
   (void)this->AllowPredicates;
 
   assert(this->L == L && this->ExitIfTrue == ExitIfTrue &&
@@ -6994,6 +6995,7 @@ void ScalarEvolution::ExitLimitCache::insert(const Loop *L, Value *ExitCond,
   auto InsertResult = TripCountMap.insert({{ExitCond, ControlsExit}, EL});
   assert(InsertResult.second && "Expected successful insertion!");
   (void)InsertResult;
+  (void)ExitIfTrue;
 }
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondCached(

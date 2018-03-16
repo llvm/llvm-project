@@ -93,6 +93,18 @@ define i32 @test_before_clobber(i32* %p) {
   ret i32 %sub
 }
 
+define i32 @test_duplicate_scope(i32* %p) {
+; CHECK-LABEL: @test_duplicate_scope
+; CHECK: ret i32 0
+  %v1 = load i32, i32* %p
+  call {}* @llvm.invariant.start.p0i32(i64 4, i32* %p)
+  call void @clobber()
+  call {}* @llvm.invariant.start.p0i32(i64 4, i32* %p)
+  %v2 = load i32, i32* %p
+  %sub = sub i32 %v1, %v2
+  ret i32 %sub
+}
+
 define i32 @test_unanalzyable_load(i32* %p) {
 ; CHECK-LABEL: @test_unanalzyable_load
 ; CHECK: ret i32 0

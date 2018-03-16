@@ -7372,44 +7372,73 @@ def INT_PTX_SREG_WARPSIZE :
 //
 // wmma.load.[a|b|c].sync.[row|col].m16n16k16[|.global|.shared].[f16|f32]
 //
+
+class EmptyNVPTXInst : NVPTXInst<(outs), (ins), "?", []>;
+
 class WMMA_LOAD_ALSTOS<string Abc, string Layout, string Space,
                            string Type, NVPTXRegClass regclass,
-                           Operand SrcOp, int WithOffset, int WithStride>
-  : NVPTXInst<!if(!eq(Abc#Type,"cf16"),
-                  (outs regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3),
-                  (outs regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3,
-                         regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7)),
-              !if(WithStride,
-                  !if(WithOffset,
-                      (ins SrcOp:$src, i32imm:$offset, Int32Regs:$ldm),
-                      (ins SrcOp:$src, Int32Regs:$ldm)),
-                  !if(WithOffset,
-                      (ins SrcOp:$src, i32imm:$offset),
-                      (ins SrcOp:$src))),
-              "wmma.load."#Abc#".sync."#Layout#".m16n16k16"#Space#"." #Type# " \t"
+                           DAGOperand SrcOp, bit WithStride>
+  : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
+  // Intrinsic that matches this instruction.
+  Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_load_"
+                                    # Abc
+                                    # "_" # Type
+                                    # "_" # Layout
+                                    # !subst(".","_",Space)
+                                    # !if(WithStride,"_stride", ""));
+  dag OutsR03 = (outs regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3);
+  dag OutsR47 = (outs regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7);
+  dag Outs = !if(!eq(Abc#Type,"cf16"), OutsR03, !con(OutsR03, OutsR47));
+
+  dag StrideArg = !if(WithStride, (ins Int32Regs:$ldm), (ins));
+  dag Ins = !con((ins SrcOp:$src), StrideArg);
+
+  // Build a dag pattern that matches the intrinsic call.
+  // We want a dag that looks like this:
+  // (set <output args>, (intrinsic <input arguments>)) where input and
+  // output arguments are named patterns that would match corresponding
+  // input/output arguments of the instruction.
+  //
+  // First we construct (set <output arguments>) from instruction's outs dag by
+  // replacing dag operator 'outs' with 'set'.
+  dag PatOuts = !foreach(tmp, Outs, !subst(outs, set, tmp));
+  // Similarly, construct (intrinsic <input arguments>) sub-dag from
+  // instruction's input arguments, only now we also need to replace operands
+  // with patterns that would match them and the operator 'ins' with the
+  // intrinsic.
+  dag PatArgs = !foreach(tmp, Ins,
+                              !subst(imem, ADDRvar,
+                              !subst(MEMri64, ADDRri64,
+                              !subst(MEMri, ADDRri,
+                              !subst(ins, Intr, tmp)))));
+  // Finally, consatenate both parts together. !con() requires both dags to have
+  // the same operator, so we wrap PatArgs in a (set ...) dag.
+  let Pattern = [!con(PatOuts, (set PatArgs))];
+  let OutOperandList = Outs;
+  let InOperandList = Ins;
+  let AsmString = "wmma.load."#Abc#".sync."#Layout#".m16n16k16"#Space#"." #Type# " \t"
                  #!if(!eq(Abc#Type,"cf16"),
                       "{{$r0, $r1, $r2, $r3}}",
                       "{{$r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7}}")
-                 #", "
-                 #!if(WithOffset,"[$src+$offset]", "[$src]")
+                 #", [$src]"
                  #!if(WithStride, ", $ldm", "")
-                 #";",
-              []>,
-    Requires<[hasPTX60, hasSM70]>;
+                 #";";
+}
 
 multiclass WMMA_LOAD_ALSTO<string Abc, string Layout, string Space,
                            string Type, NVPTXRegClass regclass,
-                           Operand SrcOp, int WithOffset = 0> {
-  def _stride: WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, SrcOp,
-                                WithOffset, 1>;
-  def NAME:    WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, SrcOp,
-                                WithOffset, 0>;
+                           DAGOperand SrcOp> {
+  def _stride: WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, SrcOp, 1>;
+  def NAME:    WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, SrcOp, 0>;
 }
 
 multiclass WMMA_LOAD_ALST<string Abc, string Layout, string Space,
                           string Type, NVPTXRegClass regclass> {
-  defm _avar:  WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, imemAny, 0>;
-  defm _ari64: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, imemAny, 1>;
+  defm _avar:  WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, imem>;
+  defm _areg: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, Int32Regs>;
+  defm _areg64: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, Int64Regs>;
+  defm _ari: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, MEMri>;
+  defm _ari64: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, MEMri64>;
 }
 
 multiclass WMMA_LOAD_ALT<string Abc, string Layout,
@@ -7434,62 +7463,58 @@ defm INT_WMMA_LOAD_C_f32: WMMA_LOAD_AT<"c", "f32", Float32Regs>;
 //
 class WMMA_STORE_D_LSTOS<string Layout, string Space,
                          string Type, NVPTXRegClass regclass,
-                         Operand DstOp, int WithOffset, int WithStride>
-  : NVPTXInst<(outs),
-              !if(!eq(Type,"f16"),
-                !if(WithStride,
-                  !if(WithOffset,
-                      (ins DstOp:$src, i32imm:$offset,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3,
-                           Int32Regs:$ldm),
-                      (ins DstOp:$src,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3,
-                           Int32Regs:$ldm)),
-                  !if(WithOffset,
-                      (ins DstOp:$src, i32imm:$offset,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3),
-                      (ins DstOp:$src,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3))),
-                !if(WithStride,
-                  !if(WithOffset,
-                      (ins DstOp:$src, i32imm:$offset,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3,
-                           regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7,
-                           Int32Regs:$ldm),
-                      (ins DstOp:$src,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3,
-                           regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7,
-                           Int32Regs:$ldm)),
-                  !if(WithOffset,
-                      (ins DstOp:$src, i32imm:$offset,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3,
-                            regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7),
-                      (ins DstOp:$src,
-                           regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3,
-                           regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7)))),
-              "wmma.store.d.sync."#Layout#".m16n16k16"#Space#"." #Type# " \t"
-                 #!if(WithOffset,"[$src+$offset], ", "[$src], ")
-                 #!if(!eq(Type,"f16"),
-                      "{{$r0, $r1, $r2, $r3}}",
-                      "{{$r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7}}")
-                 #!if(WithStride, ", $ldm", "")
-                 #";",
-              []>,
-    Requires<[hasPTX60, hasSM70]>;
+                         DAGOperand DstOp, bit WithStride>
+  : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
+  Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_store_d_"
+                                    # Type
+                                    # "_" # Layout
+                                    # !subst(".","_",Space)
+                                    # !if(WithStride,"_stride", ""));
+
+  dag InsR03 = (ins DstOp:$src, regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3);
+  dag InsR47 = (ins regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7);
+  dag InsR = !if(!eq(Type,"f16"), InsR03, !con(InsR03, InsR47));
+  dag StrideArg = !if(WithStride, (ins Int32Regs:$ldm), (ins));
+  dag Ins = !con(InsR, StrideArg);
+
+  // Construct the pattern to match corresponding intrinsic call. See the
+  // details in the comments in WMMA_LOAD_ALSTOS.
+  dag PatArgs = !foreach(tmp, Ins,
+                              !subst(imem, ADDRvar,
+                              !subst(MEMri64, ADDRri64,
+                              !subst(MEMri, ADDRri,
+                              !subst(ins, Intr, tmp)))));
+  let Pattern = [PatArgs];
+  let OutOperandList = (outs);
+  let InOperandList = Ins;
+  let AsmString = "wmma.store.d.sync."
+                  # Layout
+                  # ".m16n16k16"
+                  # Space
+                  # "." # Type
+                  # " \t[$src],"
+                  # !if(!eq(Type,"f16"),
+                        "{{$r0, $r1, $r2, $r3}}",
+                        "{{$r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7}}")
+                  # !if(WithStride, ", $ldm", "")
+                  # ";";
+
+}
 
 multiclass WMMA_STORE_D_LSTO<string Layout, string Space,
                              string Type, NVPTXRegClass regclass,
-                             Operand DstOp, int WithOffset = 0> {
-  def _stride: WMMA_STORE_D_LSTOS<Layout, Space, Type, regclass, DstOp,
-                                  WithOffset, 1>;
-  def NAME:    WMMA_STORE_D_LSTOS<Layout, Space, Type, regclass, DstOp,
-                                  WithOffset, 0>;
+                             DAGOperand DstOp> {
+  def _stride:  WMMA_STORE_D_LSTOS<Layout, Space, Type, regclass, DstOp, 1>;
+  def NAME:     WMMA_STORE_D_LSTOS<Layout, Space, Type, regclass, DstOp, 0>;
 }
 
 multiclass WMMA_STORE_D_LST<string Layout, string Space,
                             string Type, NVPTXRegClass regclass> {
-  defm _avar:  WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, imemAny, 0>;
-  defm _ari64: WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, imemAny, 1>;
+  defm _avar:   WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, imem>;
+  defm _areg:   WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, Int32Regs>;
+  defm _areg64: WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, Int64Regs>;
+  defm _ari:    WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, MEMri>;
+  defm _ari64:  WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, MEMri64>;
 }
 
 multiclass WMMA_STORE_D_LT<string Layout,
@@ -7500,8 +7525,8 @@ multiclass WMMA_STORE_D_LT<string Layout,
 }
 
 multiclass WMMA_STORE_D_T<string Type, NVPTXRegClass regclass> {
-  defm _row: WMMA_STORE_D_LT<"row", Type, regclass>;
-  defm _col: WMMA_STORE_D_LT<"col", Type, regclass>;
+  defm _row:    WMMA_STORE_D_LT<"row", Type, regclass>;
+  defm _col:    WMMA_STORE_D_LT<"col", Type, regclass>;
 }
 
 defm INT_WMMA_STORE_D_f16: WMMA_STORE_D_T<"f16", Float16x2Regs>;
@@ -7513,35 +7538,50 @@ class WMMA_MMA_ABDCS<string ALayout, string BLayout,
                      string CType, NVPTXRegClass c_reg,
                      NVPTXRegClass ab_reg,
                      string Satfinite = "">
-  : NVPTXInst<!if(!eq(DType,"f16"),
-                  (outs d_reg:$d0, d_reg:$d1, d_reg:$d2, d_reg:$d3),
-                  (outs d_reg:$d0, d_reg:$d1, d_reg:$d2, d_reg:$d3,
-                        d_reg:$d4, d_reg:$d5, d_reg:$d6, d_reg:$d7)),
-              !if(!eq(CType,"f16"),
-                  (ins ab_reg:$a0, ab_reg:$a1, ab_reg:$a2, ab_reg:$a3,
-                       ab_reg:$a4, ab_reg:$a5, ab_reg:$a6, ab_reg:$a7,
-                       ab_reg:$b0, ab_reg:$b1, ab_reg:$b2, ab_reg:$b3,
-                       ab_reg:$b4, ab_reg:$b5, ab_reg:$b6, ab_reg:$b7,
-                        c_reg:$c0,  c_reg:$c1,  c_reg:$c2,  c_reg:$c3),
-                  (ins ab_reg:$a0, ab_reg:$a1, ab_reg:$a2, ab_reg:$a3,
-                       ab_reg:$a4, ab_reg:$a5, ab_reg:$a6, ab_reg:$a7,
-                       ab_reg:$b0, ab_reg:$b1, ab_reg:$b2, ab_reg:$b3,
-                       ab_reg:$b4, ab_reg:$b5, ab_reg:$b6, ab_reg:$b7,
-                        c_reg:$c0,  c_reg:$c1,  c_reg:$c2,  c_reg:$c3,
-                        c_reg:$c4,  c_reg:$c5,  c_reg:$c6,  c_reg:$c7)),
-              "wmma.mma.sync."#ALayout#"."#BLayout#".m16n16k16."#
-                 #DType#"."#CType#Satfinite
-                 #"\n\t\t"
-                 #!if(!eq(DType,"f16"),
-                      "{{$d0, $d1, $d2, $d3}}, \n\t\t",
-                      "{{$d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7}},\n\t\t")
-                 #"{{$a0, $a1, $a2, $a3, $a4, $a5, $a6, $a7}},\n\t\t"
-                 #"{{$b0, $b1, $b2, $b3, $b4, $b5, $b6, $b7}},\n\t\t"
-                 #!if(!eq(CType,"f16"),
-                      "{{$c0, $c1, $c2, $c3}};",
-                      "{{$c0, $c1, $c2, $c3, $c4, $c5, $c6, $c7}};"),
-              []>,
-    Requires<[hasPTX60, hasSM70]>;
+  : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
+  Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_mma_sync_"
+                                    # ALayout
+                                    # "_" # BLayout
+                                    # "_" # DType
+                                    # "_" # CType
+                                    # !subst(".","_",Satfinite));
+  dag Outs = !if(!eq(DType,"f16"),
+                 (outs d_reg:$d0, d_reg:$d1, d_reg:$d2, d_reg:$d3),
+                 (outs d_reg:$d0, d_reg:$d1, d_reg:$d2, d_reg:$d3,
+                       d_reg:$d4, d_reg:$d5, d_reg:$d6, d_reg:$d7));
+  dag InsExtraCArgs = !if(!eq(CType,"f16"),
+                          (ins),
+                          (ins c_reg:$c4,  c_reg:$c5,  c_reg:$c6,  c_reg:$c7));
+  dag Ins = !con((ins ab_reg:$a0, ab_reg:$a1, ab_reg:$a2, ab_reg:$a3,
+                      ab_reg:$a4, ab_reg:$a5, ab_reg:$a6, ab_reg:$a7,
+                      ab_reg:$b0, ab_reg:$b1, ab_reg:$b2, ab_reg:$b3,
+                      ab_reg:$b4, ab_reg:$b5, ab_reg:$b6, ab_reg:$b7,
+                      c_reg:$c0,  c_reg:$c1,  c_reg:$c2,  c_reg:$c3),
+                  InsExtraCArgs);
+
+  // Construct the pattern to match corresponding intrinsic call. See the
+  // details in the comments in WMMA_LOAD_ALSTOS.
+  dag PatOuts = !foreach(tmp, Outs, !subst(outs, set, tmp));
+  dag PatArgs = !foreach(tmp, Ins, !subst(ins, Intr, tmp));
+  let Pattern = [!con(PatOuts, (set PatArgs))];
+  let OutOperandList = Outs;
+  let InOperandList  = Ins;
+  let AsmString = "wmma.mma.sync."
+                  # ALayout
+                  # "." # BLayout
+                  # ".m16n16k16"
+                  # "." # DType
+                  # "." # CType
+                  # Satfinite # "\n\t\t"
+                  # !if(!eq(DType,"f16"),
+                        "{{$d0, $d1, $d2, $d3}}, \n\t\t",
+                        "{{$d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7}},\n\t\t")
+                  # "{{$a0, $a1, $a2, $a3, $a4, $a5, $a6, $a7}},\n\t\t"
+                  # "{{$b0, $b1, $b2, $b3, $b4, $b5, $b6, $b7}},\n\t\t"
+                  # !if(!eq(CType,"f16"),
+                        "{{$c0, $c1, $c2, $c3}};",
+                        "{{$c0, $c1, $c2, $c3, $c4, $c5, $c6, $c7}};");
+}
 
 multiclass WMMA_MMA_ABDC<string ALayout, string BLayout,
                          string DType, NVPTXRegClass d_reg,

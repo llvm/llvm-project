@@ -128,6 +128,10 @@ def : InstRW<[WriteMove], (instrs COPY)>;
 defm : BWWriteResPair<WriteJump,  BWPort06,   1>;
 
 // Floating point. This covers both scalar and vector operations.
+def  : WriteRes<WriteFLoad,        [BWPort23]> { let Latency = 5; }
+def  : WriteRes<WriteFStore,       [BWPort237, BWPort4]>;
+def  : WriteRes<WriteFMove,        [BWPort5]>;
+
 defm : BWWriteResPair<WriteFAdd,   BWPort1, 3>; // Floating point add/sub/compare.
 defm : BWWriteResPair<WriteFMul,   BWPort0, 5>; // Floating point multiplication.
 defm : BWWriteResPair<WriteFDiv,   BWPort0, 12>; // 10-14 cycles. // Floating point division.
@@ -150,6 +154,10 @@ def : WriteRes<WriteFVarBlendLd, [BWPort5, BWPort23]> {
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
 
 // Vector integer operations.
+def  : WriteRes<WriteVecLoad,        [BWPort23]> { let Latency = 5; }
+def  : WriteRes<WriteVecStore,       [BWPort237, BWPort4]>;
+def  : WriteRes<WriteVecMove,        [BWPort015]>;
+
 defm : BWWriteResPair<WriteVecALU,   BWPort15,  1>; // Vector integer ALU op, no logicals.
 defm : BWWriteResPair<WriteVecShift, BWPort0,  1>; // Vector integer shifts.
 defm : BWWriteResPair<WriteVecIMul,  BWPort0,   5>; // Vector integer multiply.

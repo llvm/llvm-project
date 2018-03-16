@@ -167,6 +167,10 @@ def : WriteRes<WriteIMulLd,[ZnALU1, ZnMultiplier]> {
 }
 
 // Floating point operations
+def : WriteRes<WriteFStore,             [ZnAGU]>;
+def : WriteRes<WriteFMove,              [ZnFPU]>;
+def : WriteRes<WriteFLoad,              [ZnAGU]> { let Latency = 8; }
+
 defm : ZnWriteResFpuPair<WriteFHAdd,     ZnFPU0,  3>;
 defm : ZnWriteResFpuPair<WriteFAdd,      ZnFPU0,  3>;
 defm : ZnWriteResFpuPair<WriteFBlend,    ZnFPU01, 1>;
@@ -184,6 +188,10 @@ defm : ZnWriteResFpuPair<WriteFRsqrt,    ZnFPU01, 5>;
 defm : ZnWriteResFpuPair<WriteFSqrt,     ZnFPU3, 20>;
 
 // Vector integer operations which uses FPU units
+def  : WriteRes<WriteVecStore,            [ZnAGU]>;
+def  : WriteRes<WriteVecMove,             [ZnFPU]>;
+def  : WriteRes<WriteVecLoad,             [ZnAGU]> { let Latency = 8; }
+
 defm : ZnWriteResFpuPair<WriteVecShift,   ZnFPU,   1>;
 defm : ZnWriteResFpuPair<WriteVecLogic,   ZnFPU,   1>;
 defm : ZnWriteResFpuPair<WritePHAdd,      ZnFPU,   1>;

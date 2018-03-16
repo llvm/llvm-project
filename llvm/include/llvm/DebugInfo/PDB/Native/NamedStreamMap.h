@@ -25,6 +25,17 @@ class BinaryStreamWriter;
 
 namespace pdb {
 
+class NamedStreamMap;
+
+struct NamedStreamMapTraits {
+  NamedStreamMap *NS;
+
+  explicit NamedStreamMapTraits(NamedStreamMap &NS);
+  uint16_t hashLookupKey(StringRef S) const;
+  StringRef storageKeyToLookupKey(uint32_t Offset) const;
+  uint32_t lookupKeyToStorageKey(StringRef S);
+};
+
 class NamedStreamMap {
   friend class NamedStreamMapBuilder;
 
@@ -46,9 +57,10 @@ public:
   StringMap<uint32_t> entries() const;
 
 private:
+  NamedStreamMapTraits HashTraits;
   /// Closed hash table from Offset -> StreamNumber, where Offset is the offset
   /// of the stream name in NamesBuffer.
-  HashTable OffsetIndexMap;
+  HashTable<support::ulittle32_t, NamedStreamMapTraits> OffsetIndexMap;
 
   /// Buffer of string data.
   std::vector<char> NamesBuffer;

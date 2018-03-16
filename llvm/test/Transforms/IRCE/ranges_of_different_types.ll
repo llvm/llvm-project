@@ -1,4 +1,5 @@
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,loop(irce)' -S < %s 2>&1 | FileCheck %s
 
 ; Make sure we can eliminate range check with signed latch, unsigned IRC and
 ; positive offset. The safe iteration space is:

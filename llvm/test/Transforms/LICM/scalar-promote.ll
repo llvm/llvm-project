@@ -405,6 +405,44 @@ Out:
 
 }
 
+; Early exit is known not to be taken on first iteration and thus doesn't
+; effect whether load is known to execute.
+define void @test11(i32 %i) {
+Entry:
+  br label %Loop
+; CHECK-LABEL: @test11(
+; CHECK: Entry:
+; CHECK-NEXT:   load i32, i32* @X
+; CHECK-NEXT:   br label %Loop
+
+
+Loop:   ; preds = %Loop, %0
+  %j = phi i32 [ 0, %Entry ], [ %Next, %body ]    ; <i32> [#uses=1]
+  %early.test = icmp ult i32 %j, 32
+  br i1 %early.test, label %body, label %Early
+body:
+  %x = load i32, i32* @X   ; <i32> [#uses=1]
+  %x2 = add i32 %x, 1   ; <i32> [#uses=1]
+  store i32 %x2, i32* @X
+  %Next = add i32 %j, 1   ; <i32> [#uses=2]
+  %cond = icmp eq i32 %Next, 0    ; <i1> [#uses=1]
+  br i1 %cond, label %Out, label %Loop
+
+Early:
+; CHECK: Early:
+; CHECK-NEXT:   %[[LCSSAPHI:.*]] = phi i32 [ %x2
+; CHECK-NEXT:   store i32 %[[LCSSAPHI]], i32* @X
+; CHECK-NEXT:   ret void
+  ret void
+Out:
+  ret void
+; CHECK: Out:
+; CHECK-NEXT:   %[[LCSSAPHI:.*]] = phi i32 [ %x2
+; CHECK-NEXT:   store i32 %[[LCSSAPHI]], i32* @X
+; CHECK-NEXT:   ret void
+
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

@@ -649,12 +649,12 @@ multiclass sse12_mov_packed<bits<8> opc, RegisterClass RC,
 let hasSideEffects = 0 in
   def rr : PI<opc, MRMSrcReg, (outs RC:$dst), (ins RC:$src),
               !strconcat(asm, "\t{$src, $dst|$dst, $src}"), [], itins.rr, d>,
-           Sched<[WriteFShuffle]>;
+           Sched<[WriteFMove]>;
 let canFoldAsLoad = 1, isReMaterializable = 1 in
   def rm : PI<opc, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
               !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
                    [(set RC:$dst, (ld_frag addr:$src))], itins.rm, d>,
-           Sched<[WriteLoad]>;
+           Sched<[WriteFLoad]>;
 }
 
 let Predicates = [HasAVX, NoVLX] in {
@@ -702,7 +702,7 @@ defm MOVUPD : sse12_mov_packed<0x10, VR128, f128mem, loadv2f64,
                               PD;
 }
 
-let SchedRW = [WriteStore], Predicates = [HasAVX, NoVLX]  in {
+let SchedRW = [WriteFStore], Predicates = [HasAVX, NoVLX]  in {
 def VMOVAPSmr : VPSI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movaps\t{$src, $dst|$dst, $src}",
                    [(alignedstore (v4f32 VR128:$src), addr:$dst)],
@@ -801,7 +801,7 @@ def : InstAlias<"vmovups\t{$src, $dst|$dst, $src}",
 def : InstAlias<"vmovupd\t{$src, $dst|$dst, $src}",
                 (VMOVUPDYrr_REV VR256L:$dst, VR256H:$src), 0>;
 
-let SchedRW = [WriteStore] in {
+let SchedRW = [WriteFStore] in {
 def MOVAPSmr : PSI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movaps\t{$src, $dst|$dst, $src}",
                    [(alignedstore (v4f32 VR128:$src), addr:$dst)],
@@ -3385,8 +3385,8 @@ defm : scalar_unary_math_patterns<int_x86_sse2_sqrt_sd, "SQRTSD", X86Movsd,
 //===----------------------------------------------------------------------===//
 
 let AddedComplexity = 400 in { // Prefer non-temporal versions
-let SchedRW = [WriteStore] in {
 let Predicates = [HasAVX, NoVLX] in {
+let SchedRW = [WriteFStore] in {
 def VMOVNTPSmr : VPSI<0x2B, MRMDestMem, (outs),
                      (ins f128mem:$dst, VR128:$src),
                      "movntps\t{$src, $dst|$dst, $src}",
@@ -3400,14 +3400,6 @@ def VMOVNTPDmr : VPDI<0x2B, MRMDestMem, (outs),
                                                addr:$dst)],
                                                IIC_SSE_MOVNT>, VEX, VEX_WIG;
 
-let ExeDomain = SSEPackedInt in
-def VMOVNTDQmr    : VPDI<0xE7, MRMDestMem, (outs),
-                         (ins i128mem:$dst, VR128:$src),
-                         "movntdq\t{$src, $dst|$dst, $src}",
-                         [(alignednontemporalstore (v2i64 VR128:$src),
-                                                   addr:$dst)],
-                                                   IIC_SSE_MOVNT>, VEX, VEX_WIG;
-
 def VMOVNTPSYmr : VPSI<0x2B, MRMDestMem, (outs),
                      (ins f256mem:$dst, VR256:$src),
                      "movntps\t{$src, $dst|$dst, $src}",
@@ -3420,15 +3412,25 @@ def VMOVNTPDYmr : VPDI<0x2B, MRMDestMem, (outs),
                      [(alignednontemporalstore (v4f64 VR256:$src),
                                                addr:$dst)],
                                                IIC_SSE_MOVNT>, VEX, VEX_L, VEX_WIG;
-let ExeDomain = SSEPackedInt in
+} // SchedRW
+
+let ExeDomain = SSEPackedInt, SchedRW = [WriteVecStore] in {
+def VMOVNTDQmr    : VPDI<0xE7, MRMDestMem, (outs),
+                         (ins i128mem:$dst, VR128:$src),
+                         "movntdq\t{$src, $dst|$dst, $src}",
+                         [(alignednontemporalstore (v2i64 VR128:$src),
+                                                   addr:$dst)],
+                                                   IIC_SSE_MOVNT>, VEX, VEX_WIG;
 def VMOVNTDQYmr : VPDI<0xE7, MRMDestMem, (outs),
                     (ins i256mem:$dst, VR256:$src),
                     "movntdq\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore (v4i64 VR256:$src),
                                               addr:$dst)],
                                               IIC_SSE_MOVNT>, VEX, VEX_L, VEX_WIG;
-}
+} // ExeDomain, SchedRW
+} // Predicates
 
+let SchedRW = [WriteVecStore] in {
 def MOVNTPSmr : PSI<0x2B, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                     "movntps\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore (v4f32 VR128:$src), addr:$dst)],
@@ -3437,13 +3439,15 @@ def MOVNTPDmr : PDI<0x2B, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                     "movntpd\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore(v2f64 VR128:$src), addr:$dst)],
                     IIC_SSE_MOVNT>;
+} // SchedRW
 
-let ExeDomain = SSEPackedInt in
+let ExeDomain = SSEPackedInt, SchedRW = [WriteVecStore] in
 def MOVNTDQmr : PDI<0xE7, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                     "movntdq\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore (v2i64 VR128:$src), addr:$dst)],
                     IIC_SSE_MOVNT>;
 
+let SchedRW = [WriteStore] in {
 // There is no AVX form for instructions below this point
 def MOVNTImr : I<0xC3, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                  "movnti{l}\t{$src, $dst|$dst, $src}",
@@ -3560,7 +3564,7 @@ def STMXCSR : I<0xAE, MRM3m, (outs), (ins i32mem:$dst),
 
 let ExeDomain = SSEPackedInt in { // SSE integer instructions
 
-let hasSideEffects = 0, SchedRW = [WriteMove] in {
+let hasSideEffects = 0, SchedRW = [WriteVecMove] in {
 def VMOVDQArr  : VPDI<0x6F, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                     "movdqa\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVA_P_RR>,
                     VEX, VEX_WIG;
@@ -3577,7 +3581,7 @@ def VMOVDQUYrr : VSSI<0x6F, MRMSrcReg, (outs VR256:$dst), (ins VR256:$src),
 
 // For Disassembler
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
-    SchedRW = [WriteMove] in {
+    SchedRW = [WriteVecMove] in {
 def VMOVDQArr_REV  : VPDI<0x7F, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
                         "movdqa\t{$src, $dst|$dst, $src}", [],
                         IIC_SSE_MOVA_P_RR>,
@@ -3597,7 +3601,7 @@ def VMOVDQUYrr_REV : VSSI<0x7F, MRMDestReg, (outs VR256:$dst), (ins VR256:$src),
 }
 
 let canFoldAsLoad = 1, mayLoad = 1, isReMaterializable = 1,
-    hasSideEffects = 0, SchedRW = [WriteLoad], Predicates = [HasAVX,NoVLX] in {
+    hasSideEffects = 0, SchedRW = [WriteVecLoad], Predicates = [HasAVX,NoVLX] in {
 def VMOVDQArm  : VPDI<0x6F, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                    "movdqa\t{$src, $dst|$dst, $src}",
                    [(set VR128:$dst, (alignedloadv2i64 addr:$src))],
@@ -3614,7 +3618,7 @@ def VMOVDQUYrm : I<0x6F, MRMSrcMem, (outs VR256:$dst), (ins i256mem:$src),
                   XS, VEX, VEX_L, VEX_WIG;
 }
 
-let mayStore = 1, hasSideEffects = 0, SchedRW = [WriteStore],
+let mayStore = 1, hasSideEffects = 0, SchedRW = [WriteVecStore],
     Predicates = [HasAVX,NoVLX] in {
 def VMOVDQAmr  : VPDI<0x7F, MRMDestMem, (outs),
                      (ins i128mem:$dst, VR128:$src),
@@ -3634,7 +3638,7 @@ def VMOVDQUYmr : I<0x7F, MRMDestMem, (outs), (ins i256mem:$dst, VR256:$src),
                   XS, VEX, VEX_L, VEX_WIG;
 }
 
-let SchedRW = [WriteMove] in {
+let SchedRW = [WriteVecMove] in {
 let hasSideEffects = 0 in {
 def MOVDQArr : PDI<0x6F, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                    "movdqa\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVA_P_RR>;
@@ -3658,7 +3662,7 @@ def MOVDQUrr_REV :   I<0x7F, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
 } // SchedRW
 
 let canFoldAsLoad = 1, mayLoad = 1, isReMaterializable = 1,
-    hasSideEffects = 0, SchedRW = [WriteLoad] in {
+    hasSideEffects = 0, SchedRW = [WriteVecLoad] in {
 def MOVDQArm : PDI<0x6F, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                    "movdqa\t{$src, $dst|$dst, $src}",
                    [/*(set VR128:$dst, (alignedloadv2i64 addr:$src))*/],
@@ -3670,7 +3674,7 @@ def MOVDQUrm :   I<0x6F, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                  XS, Requires<[UseSSE2]>;
 }
 
-let mayStore = 1, hasSideEffects = 0, SchedRW = [WriteStore] in {
+let mayStore = 1, hasSideEffects = 0, SchedRW = [WriteVecStore] in {
 def MOVDQAmr : PDI<0x7F, MRMDestMem, (outs), (ins i128mem:$dst, VR128:$src),
                    "movdqa\t{$src, $dst|$dst, $src}",
                    [/*(alignedstore (v2i64 VR128:$src), addr:$dst)*/],
@@ -4302,7 +4306,7 @@ def PMOVMSKBrr : PDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst), (ins VR128:$src),
 // SSE2 - Conditional Store
 //===---------------------------------------------------------------------===//
 
-let ExeDomain = SSEPackedInt, SchedRW = [WriteStore] in {
+let ExeDomain = SSEPackedInt, SchedRW = [WriteVecStore] in {
 
 let Uses = [EDI], Predicates = [HasAVX,Not64BitMode] in
 def VMASKMOVDQU : VPDI<0xF7, MRMSrcReg, (outs),
@@ -4826,7 +4830,7 @@ let Predicates = [UseSSE3] in {
 // SSE3 - Move Unaligned Integer
 //===---------------------------------------------------------------------===//
 
-let SchedRW = [WriteLoad] in {
+let SchedRW = [WriteVecLoad] in {
 let Predicates = [HasAVX] in {
   def VLDDQUrm : S3DI<0xF0, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                    "vlddqu\t{$src, $dst|$dst, $src}",
@@ -4835,12 +4839,12 @@ let Predicates = [HasAVX] in {
                    "vlddqu\t{$src, $dst|$dst, $src}",
                    [(set VR256:$dst, (int_x86_avx_ldu_dq_256 addr:$src))]>,
                    VEX, VEX_L, VEX_WIG;
-}
+} // Predicates
 def LDDQUrm : S3DI<0xF0, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                    "lddqu\t{$src, $dst|$dst, $src}",
                    [(set VR128:$dst, (int_x86_sse3_ldu_dq addr:$src))],
                    IIC_SSE_LDDQU>;
-}
+} // SchedRW
 
 //===---------------------------------------------------------------------===//
 // SSE3 - Arithmetic
@@ -6832,7 +6836,7 @@ let Predicates = [UseSSE41] in {
 }
 
 let AddedComplexity = 400 in { // Prefer non-temporal versions
-let SchedRW = [WriteLoad] in {
+let SchedRW = [WriteVecLoad] in {
 let Predicates = [HasAVX, NoVLX] in
 def VMOVNTDQArm : SS48I<0x2A, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                        "vmovntdqa\t{$src, $dst|$dst, $src}", []>,
@@ -7616,7 +7620,7 @@ let mayStore = 1 in
 def VEXTRACTF128mr : AVXAIi8<0x19, MRMDestMem, (outs),
           (ins f128mem:$dst, VR256:$src1, u8imm:$src2),
           "vextractf128\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-          []>, Sched<[WriteStore]>, VEX, VEX_L;
+          []>, Sched<[WriteFStore]>, VEX, VEX_L;
 }
 
 multiclass vextract_lowering<string InstrStr, ValueType From, ValueType To> {
@@ -7653,22 +7657,22 @@ multiclass avx_movmask_rm<bits<8> opc_rm, bits<8> opc_mr, string OpcodeStr,
              (ins VR128:$src1, f128mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR128:$dst, (IntLd addr:$src2, VR128:$src1))],
-             IIC_SSE_MASKMOV>, VEX_4V, Sched<[WriteLoad]>;
+             IIC_SSE_MASKMOV>, VEX_4V, Sched<[WriteFLoad]>;
   def Yrm : AVX8I<opc_rm, MRMSrcMem, (outs VR256:$dst),
              (ins VR256:$src1, f256mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR256:$dst, (IntLd256 addr:$src2, VR256:$src1))],
-             IIC_SSE_MASKMOV>, VEX_4V, VEX_L, Sched<[WriteLoad]>;
+             IIC_SSE_MASKMOV>, VEX_4V, VEX_L, Sched<[WriteFLoad]>;
   def mr  : AVX8I<opc_mr, MRMDestMem, (outs),
              (ins f128mem:$dst, VR128:$src1, VR128:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt addr:$dst, VR128:$src1, VR128:$src2)], IIC_SSE_MASKMOV>,
-             VEX_4V, Sched<[WriteStore]>;
+             VEX_4V, Sched<[WriteFStore]>;
   def Ymr : AVX8I<opc_mr, MRMDestMem, (outs),
              (ins f256mem:$dst, VR256:$src1, VR256:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt256 addr:$dst, VR256:$src1, VR256:$src2)], IIC_SSE_MASKMOV>,
-             VEX_4V, VEX_L, Sched<[WriteStore]>;
+             VEX_4V, VEX_L, Sched<[WriteFStore]>;
 }
 
 let ExeDomain = SSEPackedSingle in
@@ -8271,7 +8275,7 @@ let hasSideEffects = 0, mayStore = 1 in
 def VEXTRACTI128mr : AVX2AIi8<0x39, MRMDestMem, (outs),
           (ins i128mem:$dst, VR256:$src1, u8imm:$src2),
           "vextracti128\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-          Sched<[WriteStore]>, VEX, VEX_L;
+          Sched<[WriteVecStore]>, VEX, VEX_L;
 
 let Predicates = [HasAVX2, NoVLX] in {
   defm : vextract_lowering<"VEXTRACTI128", v4i64,  v2i64>;
@@ -8290,22 +8294,22 @@ multiclass avx2_pmovmask<string OpcodeStr,
              (ins VR128:$src1, i128mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR128:$dst, (IntLd128 addr:$src2, VR128:$src1))],
-             IIC_SSE_MASKMOV>, VEX_4V, Sched<[WriteLoad]>;
+             IIC_SSE_MASKMOV>, VEX_4V, Sched<[WriteVecLoad]>;
   def Yrm : AVX28I<0x8c, MRMSrcMem, (outs VR256:$dst),
              (ins VR256:$src1, i256mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR256:$dst, (IntLd256 addr:$src2, VR256:$src1))],
-             IIC_SSE_MASKMOV>, VEX_4V, VEX_L, Sched<[WriteLoad]>;
+             IIC_SSE_MASKMOV>, VEX_4V, VEX_L, Sched<[WriteVecLoad]>;
   def mr  : AVX28I<0x8e, MRMDestMem, (outs),
              (ins i128mem:$dst, VR128:$src1, VR128:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt128 addr:$dst, VR128:$src1, VR128:$src2)], IIC_SSE_MASKMOV>,
-             VEX_4V, Sched<[WriteStore]>;
+             VEX_4V, Sched<[WriteVecStore]>;
   def Ymr : AVX28I<0x8e, MRMDestMem, (outs),
              (ins i256mem:$dst, VR256:$src1, VR256:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt256 addr:$dst, VR256:$src1, VR256:$src2)], IIC_SSE_MASKMOV>,
-             VEX_4V, VEX_L, Sched<[WriteStore]>;
+             VEX_4V, VEX_L, Sched<[WriteVecStore]>;
 }
 
 defm VPMASKMOVD : avx2_pmovmask<"vpmaskmovd",

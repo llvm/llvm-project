@@ -61,11 +61,11 @@
 ; ASM:         .cv_def_range    .Lfunc_begin0 [[p_ecx_esi]], "A\021\022\000\000\000"
 ; ASM:         .cv_def_range    [[p_ecx_esi]] [[func_end]], "A\021\027\000\000\000"
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
-; ASM:         .asciz  "a"
-; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
-; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "c"
 ; ASM:         .cv_def_range    [[after_getint]] [[after_je]], "A\021\021\000\000\000"
+; ASM:         .short  4414                    # Record kind: S_LOCAL
+; ASM:         .asciz  "a"
+; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "b"
 ; ASM:         .cv_def_range    [[after_inc_eax]] [[after_if]], "A\021\021\000\000\000"
@@ -111,20 +111,6 @@
 ; OBJ:     Type: int (0x74)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
-; OBJ:     VarName: a
-; OBJ:   }
-; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: EAX (0x11)
-; OBJ:     LocalVariableAddrRange {
-; OBJ:       OffsetStart: .text+0xC
-; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0x7
-; OBJ:     }
-; OBJ:   }
-; OBJ:   LocalSym {
-; OBJ:     Type: int (0x74)
-; OBJ:     Flags [ (0x0)
-; OBJ:     ]
 ; OBJ:     VarName: c
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
@@ -133,6 +119,20 @@
 ; OBJ:       OffsetStart: .text+0xC
 ; OBJ:       ISectStart: 0x0
 ; OBJ:       Range: 0x4
+; OBJ:     }
+; OBJ:   }
+; OBJ:   LocalSym {
+; OBJ:     Type: int (0x74)
+; OBJ:     Flags [ (0x0)
+; OBJ:     ]
+; OBJ:     VarName: a
+; OBJ:   }
+; OBJ:   DefRangeRegisterSym {
+; OBJ:     Register: EAX (0x11)
+; OBJ:     LocalVariableAddrRange {
+; OBJ:       OffsetStart: .text+0xC
+; OBJ:       ISectStart: 0x0
+; OBJ:       Range: 0x7
 ; OBJ:     }
 ; OBJ:   }
 ; OBJ:   LocalSym {

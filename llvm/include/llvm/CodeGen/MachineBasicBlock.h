@@ -699,6 +699,13 @@ public:
     return findDebugLoc(MBBI.getInstrIterator());
   }
 
+  /// Find the previous valid DebugLoc preceding MBBI, skipping and DBG_VALUE
+  /// instructions.  Return UnknownLoc if there is none.
+  DebugLoc findPrevDebugLoc(instr_iterator MBBI);
+  DebugLoc findPrevDebugLoc(iterator MBBI) {
+    return findPrevDebugLoc(MBBI.getInstrIterator());
+  }
+
   /// Find and return the merged DebugLoc of the branch instructions of the
   /// block. Return UnknownLoc if there is none.
   DebugLoc findBranchDebugLoc();

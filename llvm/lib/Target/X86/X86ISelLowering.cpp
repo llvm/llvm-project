@@ -7515,9 +7515,7 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
                              bool matchSubAdd) {
 
   MVT VT = BV->getSimpleValueType(0);
-  if ((!Subtarget.hasSSE3() || (VT != MVT::v4f32 && VT != MVT::v2f64)) &&
-      (!Subtarget.hasAVX() || (VT != MVT::v8f32 && VT != MVT::v4f64)) &&
-      (!Subtarget.hasAVX512() || (VT != MVT::v16f32 && VT != MVT::v8f64)))
+  if (!Subtarget.hasSSE3() || !VT.isFloatingPoint())
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
@@ -18215,24 +18213,6 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   // for result type legalization for v2f32.
   if (VTOp0 == MVT::v2i32)
     return SDValue();
-
-  if (VT.is128BitVector() && VTOp0.is256BitVector()) {
-    // On non-AVX512 targets, a vector of MVT::i1 is promoted by the type
-    // legalizer to a wider vector type.  In the case of 'vsetcc' nodes, the
-    // legalizer firstly checks if the first operand in input to the setcc has
-    // a legal type. If so, then it promotes the return type to that same type.
-    // Otherwise, the return type is promoted to the 'next legal type' which,
-    // for a vector of MVT::i1 is always a 128-bit integer vector type.
-    //
-    // We reach this code only if the following two conditions are met:
-    // 1. Both return type and operand type have been promoted to wider types
-    //    by the type legalizer.
-    // 2. The original operand type has been promoted to a 256-bit vector.
-    //
-    // Note that condition 2. only applies for AVX targets.
-    SDValue NewOp = DAG.getSetCC(dl, VTOp0, Op0, Op1, Cond);
-    return DAG.getZExtOrTrunc(NewOp, dl, VT);
-  }
 
   // The non-AVX512 code below works under the assumption that source and
   // destination types are the same.
@@ -30456,13 +30436,13 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 /// by this operation to try to flow through the rest of the combiner
 /// the fact that they're unused.
 static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
-                             SDValue &Opnd0, SDValue &Opnd1,
+                             SelectionDAG &DAG, SDValue &Opnd0, SDValue &Opnd1,
                              bool matchSubAdd) {
 
   EVT VT = N->getValueType(0);
-  if ((!Subtarget.hasSSE3() || (VT != MVT::v4f32 && VT != MVT::v2f64)) &&
-      (!Subtarget.hasAVX() || (VT != MVT::v8f32 && VT != MVT::v4f64)) &&
-      (!Subtarget.useAVX512Regs() || (VT != MVT::v16f32 && VT != MVT::v8f64)))
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!Subtarget.hasSSE3() || !TLI.isTypeLegal(VT) ||
+      !VT.getSimpleVT().isFloatingPoint())
     return false;
 
   // We only handle target-independent shuffles.
@@ -30482,10 +30462,12 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
 
   // We require the first shuffle operand to be the ExpectedOpcode node,
   // and the second to be the NextExpectedOpcode node.
-  if (V1.getOpcode() == NextExpectedOpcode && V2.getOpcode() == ExpectedOpcode) {
+  if (V1.getOpcode() == NextExpectedOpcode &&
+      V2.getOpcode() == ExpectedOpcode) {
     ShuffleVectorSDNode::commuteMask(Mask);
     std::swap(V1, V2);
-  } else if (V1.getOpcode() != ExpectedOpcode || V2.getOpcode() != NextExpectedOpcode)
+  } else if (V1.getOpcode() != ExpectedOpcode ||
+             V2.getOpcode() != NextExpectedOpcode)
     return false;
 
   // If there are other uses of these operations we can't fold them.
@@ -30494,10 +30476,18 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
 
   // Ensure that both operations have the same operands. Note that we can
   // commute the FADD operands.
-  SDValue LHS = V1->getOperand(0), RHS = V1->getOperand(1);
-  if ((V2->getOperand(0) != LHS || V2->getOperand(1) != RHS) &&
-      (V2->getOperand(0) != RHS || V2->getOperand(1) != LHS))
-    return false;
+  SDValue LHS, RHS;
+  if (ExpectedOpcode == ISD::FSUB) {
+    LHS = V1->getOperand(0); RHS = V1->getOperand(1);
+    if ((V2->getOperand(0) != LHS || V2->getOperand(1) != RHS) &&
+        (V2->getOperand(0) != RHS || V2->getOperand(1) != LHS))
+      return false;
+  } else {
+    LHS = V2->getOperand(0); RHS = V2->getOperand(1);
+    if ((V1->getOperand(0) != LHS || V1->getOperand(1) != RHS) &&
+        (V1->getOperand(0) != RHS || V1->getOperand(1) != LHS))
+      return false;
+  }
 
   // We're looking for blends between FADD and FSUB nodes. We insist on these
   // nodes being lined up in a specific expected pattern.
@@ -30519,7 +30509,7 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N,
                                                 const X86Subtarget &Subtarget,
                                                 SelectionDAG &DAG) {
   SDValue Opnd0, Opnd1;
-  if (!isAddSubOrSubAdd(N, Subtarget, Opnd0, Opnd1, /*matchSubAdd*/false))
+  if (!isAddSubOrSubAdd(N, Subtarget, DAG, Opnd0, Opnd1, /*matchSubAdd*/false))
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
@@ -30545,7 +30535,7 @@ static SDValue combineShuffleToFMSubAdd(SDNode *N,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   SDValue Opnd0, Opnd1;
-  if (!isAddSubOrSubAdd(N, Subtarget, Opnd0, Opnd1, /*matchSubAdd*/true))
+  if (!isAddSubOrSubAdd(N, Subtarget, DAG, Opnd0, Opnd1, /*matchSubAdd*/true))
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);

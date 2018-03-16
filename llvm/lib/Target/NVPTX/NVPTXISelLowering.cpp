@@ -3410,7 +3410,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_store_d_f16_row_global:
   case Intrinsic::nvvm_wmma_store_d_f16_col_global_stride:
   case Intrinsic::nvvm_wmma_store_d_f16_row_global_stride: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::v4f16;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
@@ -3431,7 +3431,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_store_d_f32_row_global:
   case Intrinsic::nvvm_wmma_store_d_f32_col_global_stride:
   case Intrinsic::nvvm_wmma_store_d_f32_row_global_stride: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;

@@ -687,6 +687,7 @@ entry:
 ; CHECK-HARDFP-FULLFP16:       vnmul.f16  s0, s0, s1
 }
 
+; TODO:
 ; 28. VRINTA
 ; 29. VRINTM
 ; 30. VRINTN
@@ -694,11 +695,48 @@ entry:
 ; 32. VRINTR
 ; 33. VRINTX
 ; 34. VRINTZ
+
 ; 35. VSELEQ
+define half @select_cc1()  {
+  %1 = fcmp nsz oeq half undef, 0xH0001
+  %2 = select i1 %1, half 0xHC000, half 0xH0002
+  ret half %2
+
+; CHECK-LABEL:                 select_cc1:
+; CHECK-HARDFP-FULLFP16:       vseleq.f16  s0, s{{.}}, s{{.}}
+}
+
 ; 36. VSELGE
+define half @select_cc2()  {
+  %1 = fcmp nsz oge half undef, 0xH0001
+  %2 = select i1 %1, half 0xHC000, half 0xH0002
+  ret half %2
+
+; CHECK-LABEL:                 select_cc2:
+; CHECK-HARDFP-FULLFP16:       vselge.f16  s0, s{{.}}, s{{.}}
+}
+
 ; 37. VSELGT
+define half @select_cc3()  {
+  %1 = fcmp nsz ogt half undef, 0xH0001
+  %2 = select i1 %1, half 0xHC000, half 0xH0002
+  ret half %2
+
+; CHECK-LABEL:                 select_cc3:
+; CHECK-HARDFP-FULLFP16:       vselgt.f16  s0, s{{.}}, s{{.}}
+}
+
 ; 38. VSELVS
-; 39. VSQRT
+define half @select_cc4()  {
+  %1 = fcmp nsz ueq half undef, 0xH0001
+  %2 = select i1 %1, half 0xHC000, half 0xH0002
+  ret half %2
+
+; CHECK-LABEL:                 select_cc4:
+; CHECK-HARDFP-FULLFP16:       vselvs.f16  s0, s{{.}}, s{{.}}
+}
+
+; 39. VSQRT - TODO
 
 ; 40. VSUB
 define float @Sub(float %a.coerce, float %b.coerce) {

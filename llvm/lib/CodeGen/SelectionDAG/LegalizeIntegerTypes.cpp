@@ -587,14 +587,23 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SELECT_CC(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SETCC(SDNode *N) {
-  EVT SVT = getSetCCResultType(N->getOperand(0).getValueType());
-
+  EVT InVT = N->getOperand(0).getValueType();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
-  // Only use the result of getSetCCResultType if it is legal,
-  // otherwise just use the promoted result type (NVT).
-  if (!TLI.isTypeLegal(SVT))
-    SVT = NVT;
+  EVT SVT = getSetCCResultType(InVT);
+
+  // If we got back a type that needs to be promoted, this likely means the
+  // the input type also needs to be promoted. So get the promoted type for
+  // the input and try the query again.
+  if (getTypeAction(SVT) == TargetLowering::TypePromoteInteger) {
+    if (getTypeAction(InVT) == TargetLowering::TypePromoteInteger) {
+      InVT = TLI.getTypeToTransformTo(*DAG.getContext(), InVT);
+      SVT = getSetCCResultType(InVT);
+    } else {
+      // Input type isn't promoted, just use the default promoted type.
+      SVT = NVT;
+    }
+  }
 
   SDLoc dl(N);
   assert(SVT.isVector() == N->getOperand(0).getValueType().isVector() &&

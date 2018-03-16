@@ -38,9 +38,6 @@ def JSAGU : ProcResource<1>; // Integer Pipe3: SAGU (also handles 3-operand LEA)
 def JFPU0 : ProcResource<1>; // Vector/FPU Pipe0: VALU0/VIMUL/FPA
 def JFPU1 : ProcResource<1>; // Vector/FPU Pipe1: VALU1/STC/FPM
 
-// Any pipe - FIXME we need this until we can discriminate between int/fpu load/store/moves properly
-def JAny : ProcResGroup<[JALU0, JALU1, JLAGU, JSAGU, JFPU0, JFPU1]>;
-
 // Integer Pipe Scheduler
 def JALU01 : ProcResGroup<[JALU0, JALU1]> {
   let BufferSize=20;
@@ -75,20 +72,20 @@ def : ReadAdvance<ReadAfterLd, 3>;
 // This multiclass defines the resource usage for variants with and without
 // folded loads.
 multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
-                            ProcResourceKind ExePort,
-                            int Lat, int Res = 1, int UOps = 1> {
+                            list<ProcResourceKind> ExePorts,
+                            int Lat, list<int> Res = [1], int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
-  def : WriteRes<SchedRW, [ExePort]> {
+  def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
-    let ResourceCycles = [Res];
+    let ResourceCycles = Res;
     let NumMicroOps = UOps;
   }
 
   // Memory variant also uses a cycle on JLAGU and adds 3 cycles to the
   // latency.
-  def : WriteRes<SchedRW.Folded, [JLAGU, ExePort]> {
+  def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 3);
-    let ResourceCycles = [1, Res];
+    let ResourceCycles = !listconcat([1], Res);
     let NumMicroOps = UOps;
   }
 }
@@ -119,24 +116,13 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 // Arithmetic.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteALU,   JALU01, 1>;
-defm : JWriteResIntPair<WriteIMul,  JALU1,  3>;
+defm : JWriteResIntPair<WriteALU,   [JALU01], 1>;
+defm : JWriteResIntPair<WriteIMul,  [JALU1], 3>;
+defm : JWriteResIntPair<WriteIDiv,  [JALU1, JDiv], 41, [1, 41], 2>; // Worst case (i64 division)
 
 def  : WriteRes<WriteIMulH, [JALU1]> {
   let Latency = 6;
   let ResourceCycles = [4];
-}
-
-// Worst case (i64 division)
-def : WriteRes<WriteIDiv, [JALU1, JDiv]> {
-  let Latency = 41;
-  let ResourceCycles = [1, 41];
-  let NumMicroOps = 2;
-}
-def : WriteRes<WriteIDivLd, [JLAGU, JALU1, JDiv]> {
-  let Latency = 44;
-  let ResourceCycles = [1, 1, 41];
-  let NumMicroOps = 2;
 }
 
 // This is for simple LEAs with one or two input operands.
@@ -184,7 +170,7 @@ def : InstRW<[JWriteIDiv32Ld], (instrs DIV32m, IDIV32m)>;
 // Integer shifts and rotates.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteShift, JALU01, 1>;
+defm : JWriteResIntPair<WriteShift, [JALU01], 1>;
 
 def JWriteSHLDrri : SchedWriteRes<[JALU01]> {
   let Latency = 3;
@@ -214,7 +200,6 @@ def: InstRW<[JWriteSHLDm],(instrs SHLD16mri8, SHLD32mri8, SHLD64mri8,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loads, stores, and moves, not folded with other operations.
-// FIXME: Split x86 and SSE load/store/moves
 ////////////////////////////////////////////////////////////////////////////////
 
 def : WriteRes<WriteLoad,  [JLAGU]> { let Latency = 5; }
@@ -236,15 +221,14 @@ def : WriteRes<WriteZero,  []>;
 // consume resources. Indirect branches can fold loads.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteJump,  JALU01, 1>;
+defm : JWriteResIntPair<WriteJump,  [JALU01], 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Special case scheduling classes.
-// FIXME: pipe for system/microcode?
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WriteSystem,     [JAny]> { let Latency = 100; }
-def : WriteRes<WriteMicrocoded, [JAny]> { let Latency = 100; }
+def : WriteRes<WriteSystem,     [JALU01]> { let Latency = 100; }
+def : WriteRes<WriteMicrocoded, [JALU01]> { let Latency = 100; }
 def : WriteRes<WriteFence,  [JSAGU]>;
 def : WriteRes<WriteNop, []>;
 
@@ -254,6 +238,10 @@ def : WriteRes<WriteNop, []>;
 // FIXME: Double precision latencies
 // FIXME: SS vs PS latencies
 ////////////////////////////////////////////////////////////////////////////////
+
+def  : WriteRes<WriteFLoad,                [JLAGU]> { let Latency = 5; }
+def  : WriteRes<WriteFStore,               [JSAGU]>;
+def  : WriteRes<WriteFMove,               [JFPU01]>;
 
 defm : JWriteResFpuPair<WriteFAdd,         [JFPU0],  3>;
 defm : JWriteResFpuPair<WriteFMul,         [JFPU1],  2>;
@@ -280,6 +268,10 @@ defm : JWriteResFpuPair<WriteCvtF2F,       [JFPU1], 3>; // Float -> Float size c
 // Vector integer operations.
 ////////////////////////////////////////////////////////////////////////////////
 
+def  : WriteRes<WriteVecLoad,              [JLAGU]> { let Latency = 5; }
+def  : WriteRes<WriteVecStore,             [JSAGU]>;
+def  : WriteRes<WriteVecMove,             [JFPU01]>;
+
 defm : JWriteResFpuPair<WriteVecALU,      [JFPU01], 1>;
 defm : JWriteResFpuPair<WriteVecShift,    [JFPU01], 1>;
 defm : JWriteResFpuPair<WriteVecIMul,      [JFPU0], 2>;
@@ -305,9 +297,9 @@ defm : JWriteResFpuPair<WritePCmpEStrM, [JFPU1, JLAGU, JFPU01, JFPU1, JFPU0], 14
 // AES Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteAESIMC,    [JVIMUL], 2>;
-defm : JWriteResFpuPair<WriteAESKeyGen, [JVIMUL], 2>;
-defm : JWriteResFpuPair<WriteAESDecEnc, [JVIMUL], 3>;
+defm : JWriteResFpuPair<WriteAESIMC,      [JFPU0, JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteAESKeyGen,   [JFPU0, JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU0, JVIMUL], 3>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.
@@ -332,7 +324,7 @@ def : InstRW<[JWriteFHAddYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUB
 // Carry-less multiplication instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteCLMul,     [JVIMUL], 2>;
+defm : JWriteResFpuPair<WriteCLMul,       [JFPU0, JVIMUL], 2>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE4.1 instructions.
@@ -485,15 +477,15 @@ def : InstRW<[JWriteFAddYLd, ReadAfterLd], (instrs VADDPDYrm, VADDPSYrm,
                                                    VSUBPDYrm, VSUBPSYrm,
                                                    VADDSUBPDYrm, VADDSUBPSYrm)>;
 
-def JWriteFDivY: SchedWriteRes<[JFPU1]> {
+def JWriteFDivY: SchedWriteRes<[JFPU1, JFPM]> {
   let Latency = 38;
-  let ResourceCycles = [38];
+  let ResourceCycles = [1, 38];
 }
 def : InstRW<[JWriteFDivY], (instrs VDIVPDYrr, VDIVPSYrr)>;
 
-def JWriteFDivYLd: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteFDivYLd: SchedWriteRes<[JLAGU, JFPU1, JFPM]> {
   let Latency = 43;
-  let ResourceCycles = [1, 38];
+  let ResourceCycles = [1, 1, 38];
 }
 def : InstRW<[JWriteFDivYLd, ReadAfterLd], (instrs VDIVPDYrm, VDIVPSYrm)>;
 
@@ -749,27 +741,27 @@ def JWriteVTESTLd: SchedWriteRes<[JLAGU, JFPU0]> {
 }
 def : InstRW<[JWriteVTESTLd], (instrs PTESTrm, VPTESTrm, VTESTPDrm, VTESTPSrm)>;
 
-def JWriteVSQRTYPD: SchedWriteRes<[JFPU1]> {
+def JWriteVSQRTYPD: SchedWriteRes<[JFPU1, JFPM]> {
   let Latency = 54;
-  let ResourceCycles = [54];
+  let ResourceCycles = [1, 54];
 }
 def : InstRW<[JWriteVSQRTYPD], (instrs VSQRTPDYr)>;
 
-def JWriteVSQRTYPDLd: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteVSQRTYPDLd: SchedWriteRes<[JLAGU, JFPU1, JFPM]> {
   let Latency = 59;
-  let ResourceCycles = [1, 54];
+  let ResourceCycles = [1, 1, 54];
 }
 def : InstRW<[JWriteVSQRTYPDLd], (instrs VSQRTPDYm)>;
 
-def JWriteVSQRTYPS: SchedWriteRes<[JFPU1]> {
+def JWriteVSQRTYPS: SchedWriteRes<[JFPU1, JFPM]> {
   let Latency = 42;
-  let ResourceCycles = [42];
+  let ResourceCycles = [1, 42];
 }
 def : InstRW<[JWriteVSQRTYPS], (instrs VSQRTPSYr)>;
 
-def JWriteVSQRTYPSLd: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteVSQRTYPSLd: SchedWriteRes<[JLAGU, JFPU1, JFPM]> {
   let Latency = 47;
-  let ResourceCycles = [1, 42];
+  let ResourceCycles = [1, 1, 42];
 }
 def : InstRW<[JWriteVSQRTYPSLd], (instrs VSQRTPSYm)>;
 

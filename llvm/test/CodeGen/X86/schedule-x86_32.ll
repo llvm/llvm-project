@@ -80,7 +80,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aaa # sched: [100:0.17]
+; BTVER2-NEXT:    aaa # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -164,7 +164,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aad # sched: [100:0.17]
+; BTVER2-NEXT:    aad # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -248,7 +248,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aam # sched: [100:0.17]
+; BTVER2-NEXT:    aam # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -332,7 +332,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aas # sched: [100:0.17]
+; BTVER2-NEXT:    aas # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -425,7 +425,7 @@ define void @test_arpl(i16 %a0, i16 *%a1) optsize {
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    arpl %ax, (%ecx) # sched: [100:0.17]
+; BTVER2-NEXT:    arpl %ax, (%ecx) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -580,8 +580,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bound %ax, (%esi) # sched: [100:0.17]
-; BTVER2-NEXT:    bound %ecx, (%edx) # sched: [100:0.17]
+; BTVER2-NEXT:    bound %ax, (%esi) # sched: [100:0.50]
+; BTVER2-NEXT:    bound %ecx, (%edx) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    popl %esi # sched: [5:1.00]
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
@@ -674,7 +674,7 @@ define i8 @test_daa(i8 %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    daa # sched: [100:0.17]
+; BTVER2-NEXT:    daa # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -758,7 +758,7 @@ define i8 @test_das(i8 %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    das # sched: [100:0.17]
+; BTVER2-NEXT:    das # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1198,7 +1198,7 @@ define void @test_into() optsize {
 ; ATOM-LABEL: test_into:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    into
+; ATOM-NEXT:    into # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1247,7 +1247,7 @@ define void @test_into() optsize {
 ; BTVER2-LABEL: test_into:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    into # sched: [100:0.17]
+; BTVER2-NEXT:    into # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1569,17 +1569,17 @@ define void @test_pop_push() optsize {
 ; BTVER2-LABEL: test_pop_push:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    popl %ds # sched: [100:0.17]
-; BTVER2-NEXT:    popl %es # sched: [100:0.17]
-; BTVER2-NEXT:    popl %ss # sched: [100:0.17]
-; BTVER2-NEXT:    popl %fs # sched: [100:0.17]
-; BTVER2-NEXT:    popl %gs # sched: [100:0.17]
-; BTVER2-NEXT:    pushl %cs # sched: [100:0.17]
-; BTVER2-NEXT:    pushl %ds # sched: [100:0.17]
-; BTVER2-NEXT:    pushl %es # sched: [100:0.17]
-; BTVER2-NEXT:    pushl %ss # sched: [100:0.17]
-; BTVER2-NEXT:    pushl %fs # sched: [100:0.17]
-; BTVER2-NEXT:    pushl %gs # sched: [100:0.17]
+; BTVER2-NEXT:    popl %ds # sched: [100:0.50]
+; BTVER2-NEXT:    popl %es # sched: [100:0.50]
+; BTVER2-NEXT:    popl %ss # sched: [100:0.50]
+; BTVER2-NEXT:    popl %fs # sched: [100:0.50]
+; BTVER2-NEXT:    popl %gs # sched: [100:0.50]
+; BTVER2-NEXT:    pushl %cs # sched: [100:0.50]
+; BTVER2-NEXT:    pushl %ds # sched: [100:0.50]
+; BTVER2-NEXT:    pushl %es # sched: [100:0.50]
+; BTVER2-NEXT:    pushl %ss # sched: [100:0.50]
+; BTVER2-NEXT:    pushl %fs # sched: [100:0.50]
+; BTVER2-NEXT:    pushl %gs # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;

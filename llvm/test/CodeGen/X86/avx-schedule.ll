@@ -2103,7 +2103,7 @@ define <2 x double> @test_maskmovpd(i8* %a0, <2 x i64> %a1, <2 x double> %a2) {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [4:0.50]
-; ZNVER1-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.avx.maskload.pd(i8* %a0, <2 x i64> %a1)
   call void @llvm.x86.avx.maskstore.pd(i8* %a0, <2 x i64> %a1, <2 x double> %a2)
@@ -2166,7 +2166,7 @@ define <4 x double> @test_maskmovpd_ymm(i8* %a0, <4 x i64> %a1, <4 x double> %a2
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:1.00]
 ; ZNVER1-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; ZNVER1-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8* %a0, <4 x i64> %a1)
   call void @llvm.x86.avx.maskstore.pd.256(i8* %a0, <4 x i64> %a1, <4 x double> %a2)
@@ -2229,7 +2229,7 @@ define <4 x float> @test_maskmovps(i8* %a0, <4 x i32> %a1, <4 x float> %a2) {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [4:0.50]
-; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.avx.maskload.ps(i8* %a0, <4 x i32> %a1)
   call void @llvm.x86.avx.maskstore.ps(i8* %a0, <4 x i32> %a1, <4 x float> %a2)
@@ -2292,7 +2292,7 @@ define <8 x float> @test_maskmovps_ymm(i8* %a0, <8 x i32> %a1, <8 x float> %a2) 
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:1.00]
 ; ZNVER1-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; ZNVER1-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8* %a0, <8 x i32> %a1)
   call void @llvm.x86.avx.maskstore.ps.256(i8* %a0, <8 x i32> %a1, <8 x float> %a2)

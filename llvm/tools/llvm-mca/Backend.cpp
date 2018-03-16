@@ -36,7 +36,7 @@ void Backend::runCycle(unsigned Cycle) {
     std::unique_ptr<Instruction> NewIS(
         IB->createInstruction(STI, IR.first, *IR.second));
     const InstrDesc &Desc = NewIS->getDesc();
-    if (!DU->isAvailable(Desc.NumMicroOps) || !DU->canDispatch(Desc))
+    if (!DU->isAvailable(Desc.NumMicroOps) || !DU->canDispatch(*NewIS))
       break;
 
     Instruction *IS = NewIS.get();
