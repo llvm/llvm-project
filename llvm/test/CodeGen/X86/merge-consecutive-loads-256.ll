@@ -597,7 +597,6 @@ define <4 x double> @merge_4f64_f64_34uz_volatile(double* %ptr) nounwind uwtable
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovapd %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X32-AVX-LABEL: merge_4f64_f64_34uz_volatile:
@@ -605,7 +604,6 @@ define <4 x double> @merge_4f64_f64_34uz_volatile(double* %ptr) nounwind uwtable
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; X32-AVX-NEXT:    vmovapd %xmm0, %xmm0
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds double, double* %ptr, i64 3
   %ptr1 = getelementptr inbounds double, double* %ptr, i64 4

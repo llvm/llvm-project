@@ -658,7 +658,6 @@ define i64 @v16i8_widened_with_zeroes(<16 x i8> %a, <16 x i8> %b) {
 ; AVX2-LABEL: v16i8_widened_with_zeroes:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

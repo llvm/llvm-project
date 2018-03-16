@@ -17,8 +17,8 @@ struct __declspec(dllexport) Foo {
 
 // Demangles as:
 // void Foo::`default constructor closure'(void)
-// CHECK: define weak_odr dso_local dllexport void @"\01??_FFoo@@QEAAXXZ"(%struct.Foo*{{.*}})
-// CHECK:   call %struct.Foo* @"\01??0Foo@@QEAA@W4E@0@@Z"(%struct.Foo* {{.*}}, i32 0)
+// CHECK: define weak_odr dso_local dllexport void @"??_FFoo@@QEAAXXZ"(%struct.Foo*{{.*}})
+// CHECK:   call %struct.Foo* @"??0Foo@@QEAA@W4E@0@@Z"(%struct.Foo* {{.*}}, i32 0)
 
 #else
 

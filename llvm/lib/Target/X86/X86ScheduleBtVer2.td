@@ -117,7 +117,7 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : JWriteResIntPair<WriteALU,   [JALU01], 1>;
-defm : JWriteResIntPair<WriteIMul,  [JALU1], 3>;
+defm : JWriteResIntPair<WriteIMul,  [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 multiplication
 defm : JWriteResIntPair<WriteIDiv,  [JALU1, JDiv], 41, [1, 41], 2>; // Worst case (i64 division)
 
 def  : WriteRes<WriteIMulH, [JALU1]> {
@@ -128,6 +128,42 @@ def  : WriteRes<WriteIMulH, [JALU1]> {
 // This is for simple LEAs with one or two input operands.
 // FIXME: SAGU 3-operand LEA
 def : WriteRes<WriteLEA, [JALU01]>;
+
+// FIXME: Why do bitcounts use WriteIMul?
+def JWriteLZCNT : SchedWriteRes<[JALU01]> {
+  let Latency = 1;
+}
+def JWriteLZCNTLd : SchedWriteRes<[JLAGU, JALU01]> {
+  let Latency = 4;
+}
+def : InstRW<[JWriteLZCNT], (instrs LZCNT16rr, LZCNT32rr, LZCNT64rr,
+                                    POPCNT16rr, POPCNT32rr, POPCNT64rr)>;
+def : InstRW<[JWriteLZCNTLd], (instrs LZCNT16rm, LZCNT32rm, LZCNT64rm,
+                                    POPCNT16rm, POPCNT32rm, POPCNT64rm)>;
+
+def JWriteTZCNT : SchedWriteRes<[JALU01]> {
+  let Latency = 2;
+  let ResourceCycles = [2];
+}
+def JWriteTZCNTLd : SchedWriteRes<[JLAGU, JALU01]> {
+  let Latency = 5;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[JWriteTZCNT], (instrs TZCNT16rr, TZCNT32rr, TZCNT64rr)>;
+def : InstRW<[JWriteTZCNTLd], (instrs TZCNT16rm, TZCNT32rm, TZCNT64rm)>;
+
+def JWriteIMul64 : SchedWriteRes<[JALU1, JMul]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 4];
+  let NumMicroOps = 2;
+}
+def JWriteIMul64Ld : SchedWriteRes<[JLAGU, JALU1, JMul]> {
+  let Latency = 9;
+  let ResourceCycles = [1, 1, 4];
+  let NumMicroOps = 2;
+}
+def : InstRW<[JWriteIMul64], (instrs MUL64r, IMUL64r)>;
+def : InstRW<[JWriteIMul64Ld], (instrs MUL64m, IMUL64m)>;
 
 def JWriteIDiv8 : SchedWriteRes<[JALU1, JDiv]> {
   let Latency = 12;

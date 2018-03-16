@@ -15,8 +15,8 @@ class A {
   template<typename T> static CONST T right<T,int> = 5;
   template<typename T> CONST int right<int,T>;  // expected-error {{member 'right' declared as a template}}
   template<typename T> CONST float right<float,T> = 5;  // expected-error {{member 'right' declared as a template}}
-  template<> static CONST int right<int,int> = 7;       // expected-error {{explicit specialization of 'right' in class scope}}
-  template<> static CONST float right<float,int>;       // expected-error {{explicit specialization of 'right' in class scope}}
+  template<> static CONST int right<int,int> = 7;
+  template<> static CONST float right<float,int>;
   template static CONST int right<int,int>;     // expected-error {{expected '<' after 'template'}}
 };
 
@@ -163,8 +163,8 @@ namespace constexpred {
     template<typename T> constexpr int right<int,T>;  // expected-error {{member 'right' declared as a template}} \
                                                       // expected-error {{non-static data member cannot be constexpr; did you intend to make it const?}}
     template<typename T> constexpr float right<float,T> = 5;  // expected-error {{non-static data member cannot be constexpr; did you intend to make it static?}}
-    template<> static constexpr int right<int,int> = 7;       // expected-error {{explicit specialization of 'right' in class scope}}
-    template<> static constexpr float right<float,int>;       // expected-error {{explicit specialization of 'right' in class scope}}
+    template<> static constexpr int right<int,int> = 7;
+    template<> static constexpr float right<float,int>; // expected-error {{requires an initializer}}
     template static constexpr int right<int,int>;     // expected-error {{expected '<' after 'template'}}
   };
 }

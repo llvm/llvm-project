@@ -383,6 +383,9 @@ def store_align8_local : Aligned8Bytes <
   (ops node:$val, node:$ptr), (store_local node:$val, node:$ptr)
 >;
 
+def store_align16_local : Aligned16Bytes <
+  (ops node:$val, node:$ptr), (store_local node:$val, node:$ptr)
+>;
 
 def load_flat          : FlatLoad <load>;
 def az_extloadi8_flat  : FlatLoad <az_extloadi8>;

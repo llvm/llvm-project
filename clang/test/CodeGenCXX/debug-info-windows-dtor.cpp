@@ -14,8 +14,8 @@ struct AB: A, B {
 
 template struct AB<int>;
 
-// CHECK: define {{.*}}@"\01??_E?$AB@H@@W3AEPAXI@Z"({{.*}} !dbg [[THUNK_VEC_DEL_DTOR:![0-9]*]]
-// CHECK: call {{.*}}@"\01??_G?$AB@H@@UAEPAXI@Z"({{.*}}) #{{[0-9]*}}, !dbg [[THUNK_LOC:![0-9]*]]
+// CHECK: define {{.*}}@"??_E?$AB@H@@W3AEPAXI@Z"({{.*}} !dbg [[THUNK_VEC_DEL_DTOR:![0-9]*]]
+// CHECK: call {{.*}}@"??_G?$AB@H@@UAEPAXI@Z"({{.*}}) #{{[0-9]*}}, !dbg [[THUNK_LOC:![0-9]*]]
 // CHECK: define
 
 // CHECK: [[THUNK_VEC_DEL_DTOR]] = distinct !DISubprogram

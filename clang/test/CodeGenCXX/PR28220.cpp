@@ -14,6 +14,6 @@ template <typename T>
 S<T> U<T>::u;
 
 template S<int> U<int>::u;
-// CHECK-NOT: define internal void @"\01??__Eu@?$U@H@@2U?$S@H@@A@YAXXZ"(
+// CHECK-NOT: define internal void @"??__Eu@?$U@H@@2U?$S@H@@A@YAXXZ"(
 
 S<int> &i = U<int>::u;

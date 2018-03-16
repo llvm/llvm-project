@@ -33,6 +33,10 @@ extern int target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
 extern int CheckDeviceAndCtors(int64_t device_id);
 
+// Implemented in libomp, they are called from within __tgt_* functions.
+int omp_get_default_device(void) __attribute__((weak));
+int32_t __kmpc_omp_taskwait(void *loc_ref, int32_t gtid) __attribute__((weak));
+
 #ifdef OMPTARGET_DEBUG
 extern int DebugLevel;
 

@@ -794,6 +794,34 @@ TEST_F(FormatTestRawStrings, UpdatesToCanonicalDelimiters) {
             format(R"test(a = R"pb(key:")proto")pb";)test", Style));
 }
 
+TEST_F(FormatTestRawStrings, PenalizesPrefixExcessChars) {
+  FormatStyle Style = getRawStringPbStyleWithColumns(60);
+
+  // The '(' in R"pb is at column 60, no break.
+  expect_eq(R"test(
+xxxxxxxaaaaax wwwwwww = _Verxrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
+  Category: aaaaaaaaaaaaaaaaaaaaaaaaaa
+)pb"));
+)test",
+            format(R"test(
+xxxxxxxaaaaax wwwwwww = _Verxrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
+  Category: aaaaaaaaaaaaaaaaaaaaaaaaaa
+)pb"));
+)test", Style));
+  // The '(' in R"pb is at column 61, break.
+  expect_eq(R"test(
+xxxxxxxaaaaax wwwwwww =
+    _Verxrrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
+      Category: aaaaaaaaaaaaaaaaaaaaaaaaaa
+    )pb"));
+)test",
+            format(R"test(
+xxxxxxxaaaaax wwwwwww = _Verxrrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
+      Category: aaaaaaaaaaaaaaaaaaaaaaaaaa
+)pb"));
+)test", Style));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

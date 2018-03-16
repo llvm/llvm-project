@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
-; Testing for ds_read_128
+; Testing for ds_read/write_128
 ; RUN: llc -march=amdgcn -mcpu=tahiti -amdgpu-ds128 < %s | FileCheck -check-prefixes=SI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -amdgpu-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
@@ -180,17 +180,22 @@ define amdgpu_kernel void @local_sextload_v4i32_to_v4i64(<4 x i64> addrspace(3)*
   ret void
 }
 
-; Tests if ds_read_b128 gets generated for the 16 byte aligned load.
+; Tests if ds_read/write_b128 gets generated for the 16 byte aligned load.
 ; FUNC-LABEL: {{^}}local_v4i32_to_128:
+
 ; SI-NOT: ds_read_b128
+; SI-NOT: ds_write_b128
+
 ; CIVI: ds_read_b128
+; CIVI: ds_write_b128
+
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 define amdgpu_kernel void @local_v4i32_to_128(<4 x i32> addrspace(3)* %out, <4 x i32> addrspace(3)* %in) {
   %ld = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 16
-  store <4 x i32> %ld, <4 x i32> addrspace(3)* %out
+  store <4 x i32> %ld, <4 x i32> addrspace(3)* %out, align 16
   ret void
 }
 

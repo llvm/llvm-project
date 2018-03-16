@@ -120,7 +120,7 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents,
   if (SkipCache)
     CompileArgs.invalidate(File);
 
-  DocVersion Version = DraftMgr.updateDraft(File, Contents);
+  DocVersion Version = ++InternalVersion[File];
   ParseInputs Inputs = {CompileArgs.getCompileCommand(File),
                         FSProvider.getFileSystem(), Contents.str()};
 
@@ -132,7 +132,7 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents,
 }
 
 void ClangdServer::removeDocument(PathRef File) {
-  DraftMgr.removeDraft(File);
+  ++InternalVersion[File];
   CompileArgs.invalidate(File);
   WorkScheduler.remove(File);
 }
@@ -145,19 +145,15 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   if (!CodeCompleteOpts.Index) // Respect overridden index.
     CodeCompleteOpts.Index = Index;
 
-  VersionedDraft Latest = DraftMgr.getDraft(File);
-  if (!Latest.Draft)
-    return CB(llvm::make_error<llvm::StringError>(
-        "codeComplete called for non-added document",
-        llvm::errc::invalid_argument));
-
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
   auto Task = [PCHs, Pos, FS,
                CodeCompleteOpts](Path File, Callback<CompletionList> CB,
                                  llvm::Expected<InputsAndPreamble> IP) {
-    assert(IP && "error when trying to read preamble for codeComplete");
+    if (!IP)
+      return CB(IP.takeError());
+
     auto PreambleData = IP->Preamble;
 
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
@@ -174,11 +170,6 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 
 void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                  Callback<SignatureHelp> CB) {
-  VersionedDraft Latest = DraftMgr.getDraft(File);
-  if (!Latest.Draft)
-    return CB(llvm::make_error<llvm::StringError>(
-        "signatureHelp is called for non-added document",
-        llvm::errc::invalid_argument));
 
   auto PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
@@ -333,13 +324,6 @@ ClangdServer::insertInclude(PathRef File, StringRef Code,
   return formatReplacements(Code, *Replaces, *Style);
 }
 
-llvm::Optional<std::string> ClangdServer::getDocument(PathRef File) {
-  auto Latest = DraftMgr.getDraft(File);
-  if (!Latest.Draft)
-    return llvm::None;
-  return std::move(*Latest.Draft);
-}
-
 void ClangdServer::dumpAST(PathRef File,
                            UniqueFunction<void(std::string)> Callback) {
   auto Action = [](decltype(Callback) Callback,
@@ -455,11 +439,6 @@ ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
 
 void ClangdServer::findDocumentHighlights(
     PathRef File, Position Pos, Callback<std::vector<DocumentHighlight>> CB) {
-  auto FileContents = DraftMgr.getDraft(File);
-  if (!FileContents.Draft)
-    return CB(llvm::make_error<llvm::StringError>(
-        "findDocumentHighlights called on non-added file",
-        llvm::errc::invalid_argument));
 
   auto FS = FSProvider.getFileSystem();
   auto Action = [FS, Pos](Callback<std::vector<DocumentHighlight>> CB,
@@ -473,12 +452,6 @@ void ClangdServer::findDocumentHighlights(
 }
 
 void ClangdServer::findHover(PathRef File, Position Pos, Callback<Hover> CB) {
-  Hover FinalHover;
-  auto FileContents = DraftMgr.getDraft(File);
-  if (!FileContents.Draft)
-    return CB(llvm::make_error<llvm::StringError>(
-        "findHover called on non-added file", llvm::errc::invalid_argument));
-
   auto FS = FSProvider.getFileSystem();
   auto Action = [Pos, FS](Callback<Hover> CB,
                           llvm::Expected<InputsAndAST> InpAST) {
@@ -506,12 +479,6 @@ void ClangdServer::consumeDiagnostics(PathRef File, DocVersion Version,
   LastReportedDiagsVersion = Version;
 
   DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
-}
-
-void ClangdServer::reparseOpenedFiles() {
-  for (const Path &FilePath : DraftMgr.getActiveFiles())
-    addDocument(FilePath, *DraftMgr.getDraft(FilePath).Draft,
-                WantDiagnostics::Auto, /*SkipCache=*/true);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

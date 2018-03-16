@@ -20,7 +20,7 @@ struct B : virtual VBase {
 };
 
 B::B() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc %struct.B* @"\01??0B@@QAE@XZ"
+  // CHECK-LABEL: define dso_local x86_thiscallcc %struct.B* @"??0B@@QAE@XZ"
   // CHECK:   %[[THIS:.*]] = load %struct.B*, %struct.B**
   // CHECK:   br i1 %{{.*}}, label %[[INIT_VBASES:.*]], label %[[SKIP_VBASES:.*]]
 
@@ -33,7 +33,7 @@ B::B() {
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK:   %[[VFPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 %{{.*}}
   // CHECK:   %[[VFPTR:.*]] = bitcast i8* %[[VFPTR_i8]] to i32 (...)***
-  // CHECK:   store i32 (...)** bitcast ({ [3 x i8*] }* @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
+  // CHECK:   store i32 (...)** bitcast ({ [3 x i8*] }* @"??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
 
   // Initialize vtorDisp:
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
@@ -51,7 +51,7 @@ B::B() {
 }
 
 B::~B() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"\01??1B@@UAE@XZ"
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1B@@UAE@XZ"
   // Store initial this:
   // CHECK:   %[[THIS_ADDR:.*]] = alloca %struct.B*
   // CHECK:   store %struct.B* %{{.*}}, %struct.B** %[[THIS_ADDR]], align 4
@@ -68,7 +68,7 @@ B::~B() {
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK:   %[[VFPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 %{{.*}}
   // CHECK:   %[[VFPTR:.*]] = bitcast i8* %[[VFPTR_i8]] to i32 (...)***
-  // CHECK:   store i32 (...)** bitcast ({ [3 x i8*] }* @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
+  // CHECK:   store i32 (...)** bitcast ({ [3 x i8*] }* @"??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
 
   // Initialize vtorDisp:
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
@@ -86,31 +86,31 @@ B::~B() {
 
   // CHECK: ret
 
-  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B*
+  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B*
   // CHECK2: %[[THIS:.*]] = load %struct.B*, %struct.B** {{.*}}
   // CHECK2: %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2: %[[B_i8:.*]] = getelementptr i8, i8* %[[THIS_i8]], i32 8
   // CHECK2: %[[B:.*]] = bitcast i8* %[[B_i8]] to %struct.B*
-  // CHECK2: call x86_thiscallcc void @"\01??1B@@UAE@XZ"(%struct.B* %[[B]])
+  // CHECK2: call x86_thiscallcc void @"??1B@@UAE@XZ"(%struct.B* %[[B]])
   // CHECK2: %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2: %[[VBASE_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 8
   // CHECK2: %[[VBASE:.*]] = bitcast i8* %[[VBASE_i8]] to %struct.VBase*
-  // CHECK2: call x86_thiscallcc void @"\01??1VBase@@UAE@XZ"(%struct.VBase* %[[VBASE]])
+  // CHECK2: call x86_thiscallcc void @"??1VBase@@UAE@XZ"(%struct.VBase* %[[VBASE]])
   // CHECK2: ret
 
-  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"\01??_GB@@UAEPAXI@Z"
+  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_GB@@UAEPAXI@Z"
   // CHECK2:   store %struct.B* %{{.*}}, %struct.B** %[[THIS_ADDR:.*]], align 4
   // CHECK2:   %[[THIS:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
   // CHECK2:   %[[THIS_PARAM_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2:   %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_PARAM_i8:.*]], i32 -8
   // CHECK2:   %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.B*
-  // CHECK2:   call x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B* %[[THIS]])
+  // CHECK2:   call x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B* %[[THIS]])
   // ...
   // CHECK2: ret
 }
 
 void B::foo() {
-// CHECK-LABEL: define dso_local x86_thiscallcc void @"\01?foo@B@@UAEXXZ"(i8*
+// CHECK-LABEL: define dso_local x86_thiscallcc void @"?foo@B@@UAEXXZ"(i8*
 //
 // B::foo gets 'this' cast to VBase* in ECX (i.e. this+8) so we
 // need to adjust 'this' before use.
@@ -149,7 +149,7 @@ void B::foo() {
 }
 
 void call_vbase_bar(B *obj) {
-// CHECK-LABEL: define dso_local void @"\01?call_vbase_bar@@YAXPAUB@@@Z"(%struct.B* %obj)
+// CHECK-LABEL: define dso_local void @"?call_vbase_bar@@YAXPAUB@@@Z"(%struct.B* %obj)
 // CHECK: %[[OBJ:.*]] = load %struct.B
 
   obj->bar();
@@ -184,7 +184,7 @@ void call_vbase_bar(B *obj) {
 }
 
 void delete_B(B *obj) {
-// CHECK-LABEL: define dso_local void @"\01?delete_B@@YAXPAUB@@@Z"(%struct.B* %obj)
+// CHECK-LABEL: define dso_local void @"?delete_B@@YAXPAUB@@@Z"(%struct.B* %obj)
 // CHECK: %[[OBJ:.*]] = load %struct.B
 
   delete obj;
@@ -216,11 +216,11 @@ void delete_B(B *obj) {
 }
 
 void call_complete_dtor() {
-  // CHECK-LABEL: define dso_local void @"\01?call_complete_dtor@@YAXXZ"
+  // CHECK-LABEL: define dso_local void @"?call_complete_dtor@@YAXXZ"
   B b;
-  // CHECK: call x86_thiscallcc %struct.B* @"\01??0B@@QAE@XZ"(%struct.B* %[[B:.*]], i32 1)
+  // CHECK: call x86_thiscallcc %struct.B* @"??0B@@QAE@XZ"(%struct.B* %[[B:.*]], i32 1)
   // CHECK-NOT: getelementptr
-  // CHECK: call x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B* %[[B]])
+  // CHECK: call x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B* %[[B]])
   // CHECK: ret
 }
 
@@ -231,7 +231,7 @@ struct C : B {
 
 // Used to crash on an assertion.
 C::C() {
-// CHECK-LABEL: define dso_local x86_thiscallcc %struct.C* @"\01??0C@@QAE@XZ"
+// CHECK-LABEL: define dso_local x86_thiscallcc %struct.C* @"??0C@@QAE@XZ"
 }
 
 namespace multiple_vbases {
@@ -255,11 +255,11 @@ struct D : virtual A, virtual B, virtual C {
 };
 
 D::D() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc %"struct.multiple_vbases::D"* @"\01??0D@multiple_vbases@@QAE@XZ"
+  // CHECK-LABEL: define dso_local x86_thiscallcc %"struct.multiple_vbases::D"* @"??0D@multiple_vbases@@QAE@XZ"
   // Just make sure we emit 3 vtordisps after initializing vfptrs.
-  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7D@multiple_vbases@@6BA@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
-  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7D@multiple_vbases@@6BB@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
-  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7D@multiple_vbases@@6BC@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"??_7D@multiple_vbases@@6BA@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"??_7D@multiple_vbases@@6BB@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"??_7D@multiple_vbases@@6BC@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
   // ...
   // CHECK: store i32 %{{.*}}, i32* %{{.*}}
   // CHECK: store i32 %{{.*}}, i32* %{{.*}}
@@ -295,7 +295,7 @@ struct D : virtual Z, B, C {
 } d;
 
 D::~D() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"\01??1D@diamond@@UAE@XZ"(%"struct.diamond::D"*{{.*}})
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1D@diamond@@UAE@XZ"(%"struct.diamond::D"*{{.*}})
   // Store initial this:
   // CHECK: %[[THIS_ADDR:.*]] = alloca %"struct.diamond::D"*
   // CHECK: store %"struct.diamond::D"* %{{.*}}, %"struct.diamond::D"** %[[THIS_ADDR]], align 4
@@ -313,13 +313,13 @@ D::~D() {
   // CHECK: %[[ARG_i8:.*]] = getelementptr i8, i8* %{{.*}}, i32 16
   // FIXME: We might consider changing the dtor this parameter type to i8*.
   // CHECK: %[[ARG:.*]] = bitcast i8* %[[ARG_i8]] to %"struct.diamond::C"*
-  // CHECK: call x86_thiscallcc void @"\01??1C@diamond@@UAE@XZ"(%"struct.diamond::C"* %[[ARG]])
+  // CHECK: call x86_thiscallcc void @"??1C@diamond@@UAE@XZ"(%"struct.diamond::C"* %[[ARG]])
 
   // CHECK: %[[B:.*]] = bitcast %"struct.diamond::D"* %[[THIS]] to %"struct.diamond::B"*
   // CHECK: %[[B_i8:.*]] = bitcast %"struct.diamond::B"* %[[B]] to i8*
   // CHECK: %[[ARG_i8:.*]] = getelementptr i8, i8* %[[B_i8]], i32 4
   // CHECK: %[[ARG:.*]] = bitcast i8* %[[ARG_i8]] to %"struct.diamond::B"*
-  // CHECK: call x86_thiscallcc void @"\01??1B@diamond@@UAE@XZ"(%"struct.diamond::B"* %[[ARG]])
+  // CHECK: call x86_thiscallcc void @"??1B@diamond@@UAE@XZ"(%"struct.diamond::B"* %[[ARG]])
   // CHECK: ret void
 }
 
@@ -334,20 +334,20 @@ struct C : B, A { C() {} };
 // call to B() from C().
 void callC() { C x; }
 
-// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::C"* @"\01??0C@test2@@QAE@XZ"
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::C"* @"??0C@test2@@QAE@XZ"
 // CHECK:           (%"struct.test2::C"* returned %this, i32 %is_most_derived)
 // CHECK: br i1
 //   Virtual bases
-// CHECK: call x86_thiscallcc %"struct.test2::A"* @"\01??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
 // CHECK: br label
 //   Non-virtual bases
-// CHECK: call x86_thiscallcc %"struct.test2::B"* @"\01??0B@test2@@QAE@XZ"(%"struct.test2::B"* %{{.*}}, i32 0)
-// CHECK: call x86_thiscallcc %"struct.test2::A"* @"\01??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK: call x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"(%"struct.test2::B"* %{{.*}}, i32 0)
+// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
 // CHECK: ret
 
-// CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::B"* @"\01??0B@test2@@QAE@XZ"
+// CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"
 // CHECK2:           (%"struct.test2::B"* returned %this, i32 %is_most_derived)
-// CHECK2: call x86_thiscallcc %"struct.test2::A"* @"\01??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK2: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
 // CHECK2: ret
 
 }
@@ -374,7 +374,7 @@ struct D : B, C {
 };
 
 void D::bar() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"\01?bar@D@test3@@UAEXXZ"(%"struct.test3::D"* %this)
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"?bar@D@test3@@UAEXXZ"(%"struct.test3::D"* %this)
 
   C::foo();
   // Shouldn't need any vbtable lookups.  All we have to do is adjust to C*,
@@ -385,7 +385,7 @@ void D::bar() {
   // CHECK: %[[C:.*]] = bitcast i8* %[[C_i8]] to %"struct.test3::C"*
   // CHECK: %[[C_i8:.*]] = bitcast %"struct.test3::C"* %[[C]] to i8*
   // CHECK: %[[ARG:.*]] = getelementptr i8, i8* %[[C_i8]], i32 4
-  // CHECK: call x86_thiscallcc void @"\01?foo@C@test3@@UAEXXZ"(i8* %[[ARG]])
+  // CHECK: call x86_thiscallcc void @"?foo@C@test3@@UAEXXZ"(i8* %[[ARG]])
   // CHECK: ret
 }
 }
@@ -408,20 +408,20 @@ struct C : virtual A, B {
 void foo(void*);
 
 C::~C() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"\01??1C@test4@@UAE@XZ"(%"struct.test4::C"* %this)
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1C@test4@@UAE@XZ"(%"struct.test4::C"* %this)
 
   // In this case "this" points to the most derived class, so no GEPs needed.
   // CHECK-NOT: getelementptr
   // CHECK-NOT: bitcast
   // CHECK: %[[VFPTR_i8:.*]] = bitcast %"struct.test4::C"* %{{.*}} to i32 (...)***
-  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7C@test4@@6BB@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"??_7C@test4@@6BB@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
 
   foo(this);
   // CHECK: ret
 }
 
 void destroy(C *obj) {
-  // CHECK-LABEL: define dso_local void @"\01?destroy@test4@@YAXPAUC@1@@Z"(%"struct.test4::C"* %obj)
+  // CHECK-LABEL: define dso_local void @"?destroy@test4@@YAXPAUC@1@@Z"(%"struct.test4::C"* %obj)
 
   delete obj;
   // CHECK: %[[VPTR:.*]] = bitcast %"struct.test4::C"* %[[OBJ:.*]] to i8* (%"struct.test4::C"*, i32)***
@@ -443,18 +443,18 @@ struct E : D, B, virtual A {
 };
 
 E::~E() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"\01??1E@test4@@UAE@XZ"(%"struct.test4::E"* %this)
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1E@test4@@UAE@XZ"(%"struct.test4::E"* %this)
 
   // In this case "this" points to the most derived class, so no GEPs needed.
   // CHECK-NOT: getelementptr
   // CHECK-NOT: bitcast
   // CHECK: %[[VFPTR_i8:.*]] = bitcast %"struct.test4::E"* %{{.*}} to i32 (...)***
-  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7E@test4@@6BD@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"??_7E@test4@@6BD@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
   foo(this);
 }
 
 void destroy(E *obj) {
-  // CHECK-LABEL: define dso_local void @"\01?destroy@test4@@YAXPAUE@1@@Z"(%"struct.test4::E"* %obj)
+  // CHECK-LABEL: define dso_local void @"?destroy@test4@@YAXPAUE@1@@Z"(%"struct.test4::E"* %obj)
 
   // CHECK-NOT: getelementptr
   // CHECK: %[[OBJ_i8:.*]] = bitcast %"struct.test4::E"* %[[OBJ]] to i8*
@@ -488,7 +488,7 @@ struct C : B {
 };
 
 C::C() : B() {}
-// CHECK-LABEL: define dso_local x86_thiscallcc %"struct.test5::C"* @"\01??0C@test5@@QAE@XZ"(
+// CHECK-LABEL: define dso_local x86_thiscallcc %"struct.test5::C"* @"??0C@test5@@QAE@XZ"(
 // CHECK:   %[[THIS:.*]] = load %"struct.test5::C"*, %"struct.test5::C"**
 // CHECK:   br i1 %{{.*}}, label %[[INIT_VBASES:.*]], label %[[SKIP_VBASES:.*]]
 
@@ -512,9 +512,9 @@ struct C final : A, B {
 void callit(C *p) {
   static_cast<B*>(p)->g();
 }
-// CHECK-LABEL: define dso_local void @"\01?callit@pr27621@@YAXPAUC@1@@Z"(%"struct.pr27621::C"* %{{.*}})
+// CHECK-LABEL: define dso_local void @"?callit@pr27621@@YAXPAUC@1@@Z"(%"struct.pr27621::C"* %{{.*}})
 // CHECK: %[[B_i8:.*]] = getelementptr i8, i8* %{{.*}}, i32 4
-// CHECK: call x86_thiscallcc void @"\01?g@C@pr27621@@UAEXXZ"(i8* %[[B_i8]])
+// CHECK: call x86_thiscallcc void @"?g@C@pr27621@@UAEXXZ"(i8* %[[B_i8]])
 }
 
 namespace test6 {
@@ -528,7 +528,7 @@ class D : C {
   D();
 };
 D::D() : C() {}
-// CHECK-LABEL: define dso_local x86_thiscallcc %"class.test6::D"* @"\01??0D@test6@@AAE@XZ"(
+// CHECK-LABEL: define dso_local x86_thiscallcc %"class.test6::D"* @"??0D@test6@@AAE@XZ"(
 // CHECK:   %[[THIS:.*]] = load %"class.test6::D"*, %"class.test6::D"**
 // CHECK:   br i1 %{{.*}}, label %[[INIT_VBASES:.*]], label %[[SKIP_VBASES:.*]]
 

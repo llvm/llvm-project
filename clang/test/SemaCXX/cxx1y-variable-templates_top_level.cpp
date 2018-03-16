@@ -409,7 +409,7 @@ namespace nested {
 #endif
     float f1 = pi1a<float>;
     
-    template<> double pi1a<double> = 5.2;  // expected-error {{variable template specialization of 'pi1a' must originally be declared in namespace 'n1'}}
+    template<> double pi1a<double> = 5.2; // expected-error {{not in a namespace enclosing 'n1'}}
     double d1 = pi1a<double>;
   }
   
@@ -422,8 +422,7 @@ namespace nested {
 #endif
     float f1 = n1::pi1b<float>;
     
-    template<> double n1::pi1b<double> = 5.2;  // expected-error {{cannot define or redeclare 'pi1b' here because namespace 'use_n1b' does not enclose namespace 'n1'}} \
-                                               // expected-error {{variable template specialization of 'pi1b' must originally be declared in namespace 'n1'}}
+    template<> double n1::pi1b<double> = 5.2;  // expected-error {{not in a namespace enclosing 'n1'}}
     double d1 = n1::pi1b<double>;
   }
 }

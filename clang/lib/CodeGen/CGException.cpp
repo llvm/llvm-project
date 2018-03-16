@@ -65,7 +65,7 @@ llvm::Constant *CodeGenModule::getTerminateFn() {
     if (getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))
       name = "__std_terminate";
     else
-      name = "\01?terminate@@YAXXZ";
+      name = "?terminate@@YAXXZ";
   } else if (getLangOpts().ObjC1 &&
              getLangOpts().ObjCRuntime.hasTerminate())
     name = "objc_terminate";

@@ -51,7 +51,13 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ...
+- ``-Wc++98-compat-extra-semi`` is a new flag, which was previously inseparable
+  from ``-Wc++98-compat-pedantic``. The latter still controls the new flag.
+
+- ``-Wextra-semi`` now also controls ``-Wc++98-compat-extra-semi``.
+  Please do note that if you pass ``-Wno-c++98-compat-pedantic``, it implies
+  ``-Wno-c++98-compat-extra-semi``, so if you want that diagnostic, you need
+  to explicitly re-enable it (e.g. by appending ``-Wextra-semi``).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

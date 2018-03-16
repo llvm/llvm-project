@@ -8,5 +8,5 @@ struct ImplicitCtor {
 };
 template <class T> void foo(T t) { new ImplicitCtor; }
 void bar() { foo(0); }
-// CHECK: store {{.*}} @"\01??_7ImplicitCtor@vtable_referenced_from_template@@6B@"
+// CHECK: store {{.*}} @"??_7ImplicitCtor@vtable_referenced_from_template@@6B@"
 }
