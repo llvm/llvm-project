@@ -224,7 +224,7 @@ static void CompleteExternalTagDeclType(ClangASTImporter &ast_importer,
     die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
         "Unable to complete the Decl context for DIE '%s' at offset "
         "0x%8.8x.\nPlease file a bug report.",
-        type_name_cstr ?: "", die.GetOffset());
+        type_name_cstr ? type_name_cstr : "", die.GetOffset());
     // We need to make the type look complete otherwise, we
     // might crash in Clang when adding children.
     if (ClangASTContext::StartTagDeclarationDefinition(type))
