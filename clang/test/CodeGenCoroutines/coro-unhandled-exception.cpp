@@ -32,25 +32,25 @@ coro_t f() {
   co_return;
 }
 
-// CHECK: @"\01?f@@YA?AUcoro_t@@XZ"(
-// CHECK:   invoke void @"\01?may_throw@@YAXXZ"()
+// CHECK: @"?f@@YA?AUcoro_t@@XZ"(
+// CHECK:   invoke void @"?may_throw@@YAXXZ"()
 // CHECK:       to label %{{.+}} unwind label %[[EHCLEANUP:.+]]
 // CHECK: [[EHCLEANUP]]:
 // CHECK:   %[[INNERPAD:.+]] = cleanuppad within none []
-// CHECK:   call void @"\01??_DCleanup@@QEAAXXZ"(
+// CHECK:   call void @"??1Cleanup@@QEAA@XZ"(
 // CHECK:   cleanupret from %[[INNERPAD]] unwind label %[[CATCHSW:.+]]
 // CHECK: [[CATCHSW]]:
 // CHECK:   %[[CATCHSWTOK:.+]] = catchswitch within none [label %[[CATCH:.+]]] unwind label
 // CHECK: [[CATCH]]:
 // CHECK:   %[[CATCHTOK:.+]] = catchpad within [[CATCHSWTOK:.+]]
-// CHECK:   call void @"\01?unhandled_exception@promise_type@coro_t@@QEAAXXZ"
+// CHECK:   call void @"?unhandled_exception@promise_type@coro_t@@QEAAXXZ"
 // CHECK:   catchret from %[[CATCHTOK]] to label %[[CATCHRETDEST:.+]]
 // CHECK: [[CATCHRETDEST]]:
 // CHECK-NEXT: br label %[[TRYCONT:.+]]
 // CHECK: [[TRYCONT]]:
 // CHECK-NEXT: br label %[[COROFIN:.+]]
 // CHECK: [[COROFIN]]:
-// CHECK-NEXT: invoke void @"\01?final_suspend@promise_type@coro_t@@QEAA?AUsuspend_never@coroutines_v1@experimental@std@@XZ"(
+// CHECK-NEXT: invoke void @"?final_suspend@promise_type@coro_t@@QEAA?AUsuspend_never@coroutines_v1@experimental@std@@XZ"(
 
 // CHECK-LPAD: @_Z1fv(
 // CHECK-LPAD:   invoke void @_Z9may_throwv()

@@ -1602,7 +1602,7 @@ void ASTDumper::VisitClassTemplatePartialSpecializationDecl(
 
 void ASTDumper::VisitClassScopeFunctionSpecializationDecl(
     const ClassScopeFunctionSpecializationDecl *D) {
-  dumpDeclRef(D->getSpecialization());
+  dumpDecl(D->getSpecialization());
   if (D->hasExplicitTemplateArgs())
     dumpTemplateArgumentListInfo(D->templateArgs());
 }

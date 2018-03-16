@@ -12,16 +12,16 @@ void test_catch() {
   }
 }
 
-// CHECK-LABEL: define dso_local void @"\01?test_catch@@YAXXZ"(
-// CHECK:   invoke i32 @"\01?f@@YAHH@Z"(i32 1)
+// CHECK-LABEL: define dso_local void @"?test_catch@@YAXXZ"(
+// CHECK:   invoke i32 @"?f@@YAHH@Z"(i32 1)
 // CHECK:         to label %[[NORMAL:.*]] unwind label %[[CATCHSWITCH:.*]]
 
 // CHECK: [[CATCHSWITCH]]
 // CHECK:   %[[CATCHSWITCHPAD:.*]] = catchswitch within none [label %[[CATCH_INT:.*]], label %[[CATCH_DOUBLE:.*]]] unwind to caller
 
 // CHECK: [[CATCH_INT]]
-// CHECK:   %[[CATCHPAD_INT:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-// CHECK:   call i32 @"\01?f@@YAHH@Z"(i32 2)
+// CHECK:   %[[CATCHPAD_INT:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i8* null]
+// CHECK:   call i32 @"?f@@YAHH@Z"(i32 2)
 // CHECK:   catchret from %[[CATCHPAD_INT]] to label %[[LEAVE_INT_CATCH:.*]]
 
 // CHECK: [[LEAVE_INT_CATCH]]
@@ -31,8 +31,8 @@ void test_catch() {
 // CHECK:   ret void
 
 // CHECK: [[CATCH_DOUBLE]]
-// CHECK:   %[[CATCHPAD_DOUBLE:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"\01??_R0N@8", i32 0, i8* null]
-// CHECK:   call i32 @"\01?f@@YAHH@Z"(i32 3)
+// CHECK:   %[[CATCHPAD_DOUBLE:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"??_R0N@8", i32 0, i8* null]
+// CHECK:   call i32 @"?f@@YAHH@Z"(i32 3)
 // CHECK:   catchret from %[[CATCHPAD_DOUBLE]] to label %[[LEAVE_DOUBLE_CATCH:.*]]
 
 // CHECK: [[LEAVE_DOUBLE_CATCH]]
@@ -50,22 +50,22 @@ void test_cleanup() {
   f(1);
 }
 
-// CHECK-LABEL: define dso_local {{.*}} @"\01?test_cleanup@@YAXXZ"(
-// CHECK:   invoke i32 @"\01?f@@YAHH@Z"(i32 1)
+// CHECK-LABEL: define dso_local {{.*}} @"?test_cleanup@@YAXXZ"(
+// CHECK:   invoke i32 @"?f@@YAHH@Z"(i32 1)
 // CHECK:           to label %[[LEAVE_FUNC:.*]] unwind label %[[CLEANUP:.*]]
 
 // CHECK: [[LEAVE_FUNC]]
-// CHECK:   call x86_thiscallcc void @"\01??_DCleanup@@QAEXXZ"(
+// CHECK:   call x86_thiscallcc void @"??1Cleanup@@QAE@XZ"(
 // CHECK:   ret void
 
 // CHECK: [[CLEANUP]]
 // CHECK:   %[[CLEANUPPAD:.*]] = cleanuppad within none []
-// CHECK:   call x86_thiscallcc void @"\01??_DCleanup@@QAEXXZ"(
+// CHECK:   call x86_thiscallcc void @"??1Cleanup@@QAE@XZ"(
 // CHECK:   cleanupret from %[[CLEANUPPAD]] unwind to caller
 
 
-// CHECK-LABEL: define {{.*}} void @"\01??1Cleanup@@QAE@XZ"(
-// CHECK:   invoke i32 @"\01?f@@YAHH@Z"(i32 -1)
+// CHECK-LABEL: define {{.*}} void @"??1Cleanup@@QAE@XZ"(
+// CHECK:   invoke i32 @"?f@@YAHH@Z"(i32 -1)
 // CHECK:           to label %[[LEAVE_FUNC:.*]] unwind label %[[TERMINATE:.*]]
 
 // CHECK: [[LEAVE_FUNC]]
@@ -73,5 +73,5 @@ void test_cleanup() {
 
 // CHECK: [[TERMINATE]]
 // CHECK:   %[[CLEANUPPAD:.*]] = cleanuppad within none []
-// CHECK-NEXT:   call void @"\01?terminate@@YAXXZ"() {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
+// CHECK-NEXT:   call void @"?terminate@@YAXXZ"() {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
 

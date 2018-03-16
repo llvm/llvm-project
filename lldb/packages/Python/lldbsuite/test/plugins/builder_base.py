@@ -140,13 +140,10 @@ def buildDefault(
         architecture=None,
         compiler=None,
         dictionary=None,
-        clean=True,
         testdir=None,
         testname=None):
     """Build the binaries the default way."""
     commands = []
-    if clean:
-        commands.append(getMake(testdir, testname) + ["clean", getCmdLine(dictionary)])
     commands.append(getMake(testdir, testname) + ["all", getArchSpec(architecture),
                      getCCSpec(compiler), getCmdLine(dictionary)])
 
@@ -161,14 +158,10 @@ def buildDwarf(
         architecture=None,
         compiler=None,
         dictionary=None,
-        clean=True,
         testdir=None,
         testname=None):
     """Build the binaries with dwarf debug info."""
     commands = []
-    if clean:
-        commands.append(getMake(testdir, testname) +
-                        ["clean", getCmdLine(dictionary)])
     commands.append(getMake(testdir, testname) +
                     ["MAKE_DSYM=NO", getArchSpec(architecture),
                      getCCSpec(compiler), getCmdLine(dictionary)])
@@ -183,14 +176,10 @@ def buildDwo(
         architecture=None,
         compiler=None,
         dictionary=None,
-        clean=True,
         testdir=None,
         testname=None):
     """Build the binaries with dwarf debug info."""
     commands = []
-    if clean:
-        commands.append(getMake(testdir, testname) +
-                        ["clean", getCmdLine(dictionary)])
     commands.append(getMake(testdir, testname) +
                     ["MAKE_DSYM=NO", "MAKE_DWO=YES",
                      getArchSpec(architecture),
@@ -207,14 +196,10 @@ def buildGModules(
         architecture=None,
         compiler=None,
         dictionary=None,
-        clean=True,
         testdir=None,
         testname=None):
     """Build the binaries with dwarf debug info."""
     commands = []
-    if clean:
-        commands.append(getMake(testdir, testname) +
-                        ["clean", getCmdLine(dictionary)])
     commands.append(getMake(testdir, testname) +
                     ["MAKE_DSYM=NO",
                      "MAKE_GMODULES=YES",

@@ -29,10 +29,10 @@ struct OVERALIGNED A { A(); int n[128]; };
 // CHECK-LABEL: define {{.*}} @_Z2a0v()
 // CHECK: %[[ALLOC:.*]] = call i8* @_ZnwmSt11align_val_t(i64 512, i64 32)
 // CHECK: call void @_ZdlPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
-// CHECK-MS-LABEL: define {{.*}} @"\01?a0@@YAPEAXXZ"()
-// CHECK-MS: %[[ALLOC:.*]] = call i8* @"\01??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 512, i64 32)
+// CHECK-MS-LABEL: define {{.*}} @"?a0@@YAPEAXXZ"()
+// CHECK-MS: %[[ALLOC:.*]] = call i8* @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 512, i64 32)
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"\01??3@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
+// CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
 void *a0() { return new A; }
 
 // FIXME: Why don't we call the sized array deallocation overload in this case?
@@ -44,13 +44,13 @@ void *a0() { return new A; }
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1AC1Ev(
 // CHECK: call void @_ZdaPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
-// CHECK-MS-LABEL: define {{.*}} @"\01?a1@@YAPEAXJ@Z"(
-// CHECK-MS: %[[ALLOC:.*]] = call i8* @"\01??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 %{{.*}}, i64 32)
+// CHECK-MS-LABEL: define {{.*}} @"?a1@@YAPEAXJ@Z"(
+// CHECK-MS: %[[ALLOC:.*]] = call i8* @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 %{{.*}}, i64 32)
 // No array cookie.
 // CHECK-MS-NOT: store
-// CHECK-MS: invoke %struct.A* @"\01??0A@@QEAA@XZ"(
+// CHECK-MS: invoke %struct.A* @"??0A@@QEAA@XZ"(
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"\01??_V@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
+// CHECK-MS: call void @"??_V@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
 void *a1(long n) { return new A[n]; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a2P1A(

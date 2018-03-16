@@ -45,8 +45,8 @@ B::~B() { }
 // CHECKIOS5-LABEL: define %class.B* @_ZN1BD2Ev(%class.B* %this)
 // CHECKIOS5-LABEL: define %class.B* @_ZN1BD1Ev(%class.B* %this)
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc %class.B* @"\01??0B@@QAE@PAH@Z"(%class.B* returned %this, i32* %i)
-// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"\01??1B@@UAE@XZ"(%class.B* %this)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc %class.B* @"??0B@@QAE@PAH@Z"(%class.B* returned %this, i32* %i)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1B@@UAE@XZ"(%class.B* %this)
 
 class C : public A, public B {
 public:
@@ -83,8 +83,8 @@ C::~C() { }
 // CHECKIOS5-LABEL: define void @_ZN1CD0Ev(%class.C* %this)
 // CHECKIOS5-LABEL: define void @_ZThn8_N1CD0Ev(%class.C* %this)
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc %class.C* @"\01??0C@@QAE@PAHPAD@Z"(%class.C* returned %this, i32* %i, i8* %c)
-// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"\01??1C@@UAE@XZ"(%class.C* %this)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc %class.C* @"??0C@@QAE@PAHPAD@Z"(%class.C* returned %this, i32* %i, i8* %c)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1C@@UAE@XZ"(%class.C* %this)
 
 class D : public virtual A {
 public:
@@ -110,8 +110,8 @@ D::~D() { }
 // CHECKIOS5-LABEL: define %class.D* @_ZN1DD2Ev(%class.D* %this, i8** %vtt)
 // CHECKIOS5-LABEL: define %class.D* @_ZN1DD1Ev(%class.D* %this)
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc %class.D* @"\01??0D@@QAE@XZ"(%class.D* returned %this, i32 %is_most_derived)
-// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"\01??1D@@UAE@XZ"(%class.D* %this)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc %class.D* @"??0D@@QAE@XZ"(%class.D* returned %this, i32 %is_most_derived)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(%class.D* %this)
 
 class E {
 public:

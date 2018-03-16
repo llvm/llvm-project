@@ -40,19 +40,19 @@ auto mp_general_v = &General::virt;
 
 // All of the non-virtual globals need dynamic initializers.
 
-// CHECK: @"\01?mp_single_nv@@3P8Single@@AEXXZQ1@" = dso_local global i8* null, align 4
-// CHECK: @"\01?mp_multi_nv@@3P8Multi@@AEXXZQ1@" = dso_local global { i8*, i32 } zeroinitializer, align 4
-// CHECK: @"\01?mp_virtual_nv@@3P8Virtual@@AEXXZQ1@" = dso_local global { i8*, i32, i32 } zeroinitializer, align 4
-// CHECK: @"\01?mp_general_nv@@3P8General@@AEXXZQ1@" = dso_local global { i8*, i32, i32, i32 } zeroinitializer, align 4
+// CHECK: @"?mp_single_nv@@3P8Single@@AEXXZQ1@" = dso_local global i8* null, align 4
+// CHECK: @"?mp_multi_nv@@3P8Multi@@AEXXZQ1@" = dso_local global { i8*, i32 } zeroinitializer, align 4
+// CHECK: @"?mp_virtual_nv@@3P8Virtual@@AEXXZQ1@" = dso_local global { i8*, i32, i32 } zeroinitializer, align 4
+// CHECK: @"?mp_general_nv@@3P8General@@AEXXZQ1@" = dso_local global { i8*, i32, i32, i32 } zeroinitializer, align 4
 
-// CHECK: @"\01?mp_single_v@@3P8Single@@AEXXZQ1@" = dso_local global i8* bitcast (void (%struct.Single*, ...)* @"\01??_9Single@@$BA@AE" to i8*), align 4
-// CHECK: @"\01?mp_multi_v@@3P8Multi@@AEXXZQ1@" = dso_local global { i8*, i32 } { i8* bitcast (void (%struct.Multi*, ...)* @"\01??_9Multi@@$BA@AE" to i8*), i32 0 }, align 4
-// CHECK: @"\01?mp_virtual_v@@3P8Virtual@@AEXXZQ1@" = dso_local global { i8*, i32, i32 } { i8* bitcast (void (%struct.Virtual*, ...)* @"\01??_9Virtual@@$BA@AE" to i8*), i32 0, i32 0 }, align 4
-// CHECK: @"\01?mp_general_v@@3P8General@@AEXXZQ1@" = dso_local global { i8*, i32, i32, i32 } { i8* bitcast (void (%struct.General*, ...)* @"\01??_9General@@$BA@AE" to i8*), i32 0, i32 0, i32 0 }, align 4
+// CHECK: @"?mp_single_v@@3P8Single@@AEXXZQ1@" = dso_local global i8* bitcast (void (%struct.Single*, ...)* @"??_9Single@@$BA@AE" to i8*), align 4
+// CHECK: @"?mp_multi_v@@3P8Multi@@AEXXZQ1@" = dso_local global { i8*, i32 } { i8* bitcast (void (%struct.Multi*, ...)* @"??_9Multi@@$BA@AE" to i8*), i32 0 }, align 4
+// CHECK: @"?mp_virtual_v@@3P8Virtual@@AEXXZQ1@" = dso_local global { i8*, i32, i32 } { i8* bitcast (void (%struct.Virtual*, ...)* @"??_9Virtual@@$BA@AE" to i8*), i32 0, i32 0 }, align 4
+// CHECK: @"?mp_general_v@@3P8General@@AEXXZQ1@" = dso_local global { i8*, i32, i32, i32 } { i8* bitcast (void (%struct.General*, ...)* @"??_9General@@$BA@AE" to i8*), i32 0, i32 0, i32 0 }, align 4
 
 // CHECK: define internal void @_GLOBAL__sub_I{{.*}}() {{.*}} {
-// CHECK:   call void @"\01??__Emp_single_nv@@YAXXZ"()
-// CHECK:   call void @"\01??__Emp_multi_nv@@YAXXZ"()
-// CHECK:   call void @"\01??__Emp_virtual_nv@@YAXXZ"()
-// CHECK:   call void @"\01??__Emp_general_nv@@YAXXZ"()
+// CHECK:   call void @"??__Emp_single_nv@@YAXXZ"()
+// CHECK:   call void @"??__Emp_multi_nv@@YAXXZ"()
+// CHECK:   call void @"??__Emp_virtual_nv@@YAXXZ"()
+// CHECK:   call void @"??__Emp_general_nv@@YAXXZ"()
 // CHECK: }

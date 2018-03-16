@@ -119,14 +119,14 @@ namespace NestedClasses {
   // definition of Inner.
   template struct Outer<int>;
   // CHECK: define weak_odr void @_ZN13NestedClasses5OuterIiE5Inner1fEv
-  // CHECK-MS: define weak_odr dso_local x86_thiscallcc void @"\01?f@Inner@?$Outer@H@NestedClasses@@QAEXXZ"
+  // CHECK-MS: define weak_odr dso_local x86_thiscallcc void @"?f@Inner@?$Outer@H@NestedClasses@@QAEXXZ"
 
   // Explicit instantiation declaration of Outer causes explicit instantiation
   // declaration of Inner, but not in MSVC mode.
   extern template struct Outer<char>;
   auto use = &Outer<char>::Inner::f;
   // CHECK: {{declare|define available_externally}} void @_ZN13NestedClasses5OuterIcE5Inner1fEv
-  // CHECK-MS: define linkonce_odr dso_local x86_thiscallcc void @"\01?f@Inner@?$Outer@D@NestedClasses@@QAEXXZ"
+  // CHECK-MS: define linkonce_odr dso_local x86_thiscallcc void @"?f@Inner@?$Outer@D@NestedClasses@@QAEXXZ"
 }
 
 // Check that we emit definitions from explicit instantiations even when they

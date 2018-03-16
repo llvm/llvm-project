@@ -110,7 +110,7 @@ void l() {
 // CHECK-MS-DAG: declare i32 @atexit(void ()*)
 // CHECK-MS-DYNAMIC-DAG: declare dllimport {{.*}} void @_CxxThrowException
 // CHECK-MS-STATIC-DAG: declare {{.*}} void @_CxxThrowException
-// CHECK-MS-DAG: declare dso_local noalias i8* @"\01??2@YAPAXI@Z"
+// CHECK-MS-DAG: declare dso_local noalias i8* @"??2@YAPAXI@Z"
 // CHECK-MS-DAG: declare void @_Init_thread_header(i32*)
 // CHECK-MS-DAG: declare void @_Init_thread_footer(i32*)
 

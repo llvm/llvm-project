@@ -392,10 +392,12 @@ TEST_F(FormatTestTextProto, FormatsExtensions) {
                "     .long/longg.longlong] { key: value }");
   verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/\n"
                " bbbbbbbbbbbbbb] { key: value }");
-  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "] { key: value }");
-  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "] {\n"
+  // These go over the column limit intentionally, since the alternative
+  // [aa..a\n] is worse.
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] {\n"
+               "  key: value\n"
+               "}");
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] {\n"
                "  [type.type] {\n"
                "    keyyyyyyyyyyyyyy: valuuuuuuuuuuuuuuuuuuuuuuuuue\n"
                "  }\n"
@@ -473,6 +475,21 @@ TEST_F(FormatTestTextProto, AcceptsOperatorAsKey) {
 TEST_F(FormatTestTextProto, BreaksConsecutiveStringLiterals) {
   verifyFormat("ala: \"str1\"\n"
                "     \"str2\"\n");
+}
+
+TEST_F(FormatTestTextProto, PutsMultipleEntriesInExtensionsOnNewlines) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
+  verifyFormat("pppppppppp: {\n"
+               "  ssssss: \"http://example.com/blahblahblah\"\n"
+               "  ppppppp: \"sssss/MMMMMMMMMMMM\"\n"
+               "  [ns.sssss.eeeeeeeee.eeeeeeeeeeeeeee] { begin: 24 end: 252 }\n"
+               "  [ns.sssss.eeeeeeeee.eeeeeeeeeeeeeee] {\n"
+               "    begin: 24\n"
+               "    end: 252\n"
+               "    key: value\n"
+               "    key: value\n"
+               "  }\n"
+               "}", Style);
 }
 
 } // end namespace tooling

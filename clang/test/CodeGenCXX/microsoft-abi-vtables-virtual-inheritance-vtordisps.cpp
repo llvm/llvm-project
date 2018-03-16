@@ -67,10 +67,10 @@ struct A : virtual V1 {
   // CHECK-NEXT: 0 | [this adjustment: vtordisp at -4, 0 non-virtual]
 
   virtual void f();
-  // MANGLING-DAG: @"\01?f@A@simple@@$4PPPPPPPM@A@AEXXZ"
+  // MANGLING-DAG: @"?f@A@simple@@$4PPPPPPPM@A@AEXXZ"
 
   virtual ~A();
-  // MANGLING-DAG: @"\01??_EA@simple@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EA@simple@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 A a;
@@ -102,11 +102,11 @@ struct B : virtual V3 {
   B() { use_somewhere_else(this); }
 
   virtual void f();
-  // MANGLING-DAG: @"\01?f@B@simple@@$4PPPPPPPE@A@AEXXZ"
+  // MANGLING-DAG: @"?f@B@simple@@$4PPPPPPPE@A@AEXXZ"
 
   // Has an implicit destructor.
-  // MANGLING-DAG: @"\01??_EB@simple@@$4PPPPPPPE@7AEPAXI@Z"
-  // MANGLING-DAG: @"\01??_EB@simple@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EB@simple@@$4PPPPPPPE@7AEPAXI@Z"
+  // MANGLING-DAG: @"??_EB@simple@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 B b;
@@ -147,12 +147,12 @@ struct C : virtual V4 {
 
   int x;
   virtual void f();
-  // MANGLING-DAG: @"\01?f@C@simple@@$4PPPPPPPA@3AEXXZ"
-  // MANGLING-DAG: @"\01?f@C@simple@@$4PPPPPPPE@A@AEXXZ"
+  // MANGLING-DAG: @"?f@C@simple@@$4PPPPPPPA@3AEXXZ"
+  // MANGLING-DAG: @"?f@C@simple@@$4PPPPPPPE@A@AEXXZ"
   virtual ~C();
-  // MANGLING-DAG: @"\01??_EC@simple@@$4PPPPPPPA@M@AEPAXI@Z"
-  // MANGLING-DAG: @"\01??_EC@simple@@$4PPPPPPPE@7AEPAXI@Z"
-  // MANGLING-DAG: @"\01??_EC@simple@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EC@simple@@$4PPPPPPPA@M@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EC@simple@@$4PPPPPPPE@7AEPAXI@Z"
+  // MANGLING-DAG: @"??_EC@simple@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 C c;
@@ -167,7 +167,7 @@ class D : B {
   D();
   int z;
 
-  // MANGLING-DAG: @"\01?f@B@simple@@$4PPPPPPPE@3AEXXZ"
+  // MANGLING-DAG: @"?f@B@simple@@$4PPPPPPPE@3AEXXZ"
 };
 
 D::D() {}
@@ -192,7 +192,7 @@ struct F : virtual E {
   virtual void g();  // Force a vtordisp.
   int f;
 
-  // MANGLING-DAG: @"\01?g@F@simple@@$4PPPPPPPM@A@AEXXZ"{{.*}}??_EF@simple@@$4PPPPPPPM@A@AEPAXI@Z
+  // MANGLING-DAG: @"?g@F@simple@@$4PPPPPPPM@A@AEXXZ"{{.*}}??_EF@simple@@$4PPPPPPPM@A@AEPAXI@Z
   // MANGLING-DAG: ?f@E@simple@@UAEXXZ{{.*}}??_EF@simple@@$4PPPPPPPE@7AEPAXI@Z
 };
 
@@ -213,8 +213,8 @@ struct G : F {
   G();
   int g;
 
-  // MANGLING-DAG: @"\01?g@F@simple@@$4PPPPPPPM@3AEXXZ"{{.*}}@"\01??_EG@simple@@$4PPPPPPPM@A@AEPAXI@Z"
-  // MANGLING-DAG: @"\01?f@E@simple@@UAEXXZ"{{.*}}@"\01??_EG@simple@@$4PPPPPPPE@7AEPAXI@Z"
+  // MANGLING-DAG: @"?g@F@simple@@$4PPPPPPPM@3AEXXZ"{{.*}}@"??_EG@simple@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"?f@E@simple@@UAEXXZ"{{.*}}@"??_EG@simple@@$4PPPPPPPE@7AEPAXI@Z"
 };
 
 G::G() {}
@@ -248,11 +248,11 @@ struct A : virtual simple::A {
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 8 non-virtual]
 
   // `vtordispex{8,8,4294967292,8}'
-  // MANGLING-DAG: @"\01?f@A@simple@@$R477PPPPPPPM@7AEXXZ"
+  // MANGLING-DAG: @"?f@A@simple@@$R477PPPPPPPM@7AEXXZ"
 
   virtual ~A();
   // vtordisp{4294967292,0}
-  // MANGLING-DAG: @"\01??_EA@extended@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EA@extended@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 A a;
@@ -273,7 +273,7 @@ struct B : virtual simple::A {
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 8 non-virtual]
 
   // vtordisp{4294967292,0}
-  // MANGLING-DAG: @"\01??_EB@extended@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EB@extended@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 B b;
@@ -290,10 +290,10 @@ struct C : virtual simple::A {
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 8 non-virtual]
 
   // `vtordispex{12,8,4294967292,8}'
-  // MANGLING-DAG: @"\01?f@A@simple@@$R4M@7PPPPPPPM@7AEXXZ"
+  // MANGLING-DAG: @"?f@A@simple@@$R4M@7PPPPPPPM@7AEXXZ"
   int x;
   virtual ~C();
-  // MANGLING-DAG: @"\01??_EC@extended@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EC@extended@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 C c;
@@ -316,10 +316,10 @@ struct E : virtual D {
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 12 non-virtual]
 
   // `vtordispex{8,8,4294967292,12}'
-  // MANGLING-DAG: @"\01?f@D@extended@@$R477PPPPPPPM@M@AEXXZ"
+  // MANGLING-DAG: @"?f@D@extended@@$R477PPPPPPPM@M@AEXXZ"
 
   virtual ~E();
-  // MANGLING-DAG: @"\01??_EE@extended@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EE@extended@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 E e;
@@ -336,10 +336,10 @@ struct F : virtual Z, virtual D {
   // CHECK-NEXT:      vboffset at 12 in the vbtable, 12 non-virtual]
 
   // `vtordispex{20,12,4294967292,12}'
-  // MANGLING-DAG: @"\01?f@D@extended@@$R4BE@M@PPPPPPPM@M@AEXXZ"
+  // MANGLING-DAG: @"?f@D@extended@@$R4BE@M@PPPPPPPM@M@AEXXZ"
   int x;
   virtual ~F();
-  // MANGLING-DAG: @"\01??_EF@extended@@$4PPPPPPPM@M@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EF@extended@@$4PPPPPPPM@M@AEPAXI@Z"
 };
 
 F f;
@@ -365,7 +365,7 @@ struct G : virtual simple::A {
 
   virtual ~G();
   // vtordisp{4294967292,0}
-  // MANGLING-DAG: @"\01??_EG@extended@@$4PPPPPPPM@A@AEPAXI@Z"
+  // MANGLING-DAG: @"??_EG@extended@@$4PPPPPPPM@A@AEPAXI@Z"
 };
 
 G g;
@@ -385,8 +385,8 @@ struct H : Z, A {
   // CHECK-NEXT: 0 | [this adjustment: vtordisp at -4, vbptr at 8 to the left,
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 8 non-virtual]
 
-  // MANGLING-DAG: @"\01?f@A@simple@@$R477PPPPPPPM@7AEXXZ"
-  // MANGLING-DAG: @"\01??_EH@extended@@$4PPPPPPPM@BA@AEPAXI@Z"
+  // MANGLING-DAG: @"?f@A@simple@@$R477PPPPPPPM@7AEXXZ"
+  // MANGLING-DAG: @"??_EH@extended@@$4PPPPPPPM@BA@AEPAXI@Z"
 };
 
 H h;
@@ -407,7 +407,7 @@ struct A : virtual simple::B {
   // CHECK-NEXT: 0 | [this adjustment: vtordisp at -12, vbptr at 20 to the left,
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 16 non-virtual]
 
-  // MANGLING-DAG: @"\01?f@B@simple@@$R4BE@7PPPPPPPE@BA@AEXXZ"
+  // MANGLING-DAG: @"?f@B@simple@@$R4BE@7PPPPPPPE@BA@AEXXZ"
   int a;
   virtual ~A();
 };
@@ -442,7 +442,7 @@ struct D : C {
   // CHECK-NEXT:   0 | void pr19408::C::f()
   // CHECK-NEXT:       [this adjustment: vtordisp at -4, -4 non-virtual]
 
-  // MANGLING-DAG: @"\01?f@C@pr19408@@$4PPPPPPPM@3AEXXZ"
+  // MANGLING-DAG: @"?f@C@pr19408@@$4PPPPPPPM@3AEXXZ"
   D();
   int d;
 };
@@ -463,10 +463,10 @@ struct B : virtual A {
   virtual ~B();
 protected:
   virtual void prot();
-  // MANGLING-DAG: @"\01?prot@B@access@@$2PPPPPPPM@A@AEXXZ"
+  // MANGLING-DAG: @"?prot@B@access@@$2PPPPPPPM@A@AEXXZ"
 private:
   virtual void priv();
-  // MANGLING-DAG: @"\01?priv@B@access@@$0PPPPPPPM@A@AEXXZ"
+  // MANGLING-DAG: @"?priv@B@access@@$0PPPPPPPM@A@AEXXZ"
 };
 
 B b;
@@ -474,8 +474,8 @@ B b;
 struct C : virtual B {
   virtual ~C();
 
-  // MANGLING-DAG: @"\01?prot@B@access@@$R277PPPPPPPM@7AEXXZ"
-  // MANGLING-DAG: @"\01?priv@B@access@@$R077PPPPPPPM@7AEXXZ"
+  // MANGLING-DAG: @"?prot@B@access@@$R277PPPPPPPM@7AEXXZ"
+  // MANGLING-DAG: @"?priv@B@access@@$R077PPPPPPPM@7AEXXZ"
 };
 
 C c;
@@ -503,7 +503,7 @@ struct X : B, virtual C {
   // CHECK-NEXT:   0 | void pr19505::B::f()
   // CHECK-NEXT:   1 | void pr19505::A::z()
 
-  // MANGLING-DAG: @"\01??_7X@pr19505@@6BB@1@@" = {{.*}}@"\01?f@B@pr19505@@UAEXXZ"
+  // MANGLING-DAG: @"??_7X@pr19505@@6BB@1@@" = {{.*}}@"?f@B@pr19505@@UAEXXZ"
 } x;
 
 void build_vftable(X *obj) { obj->g(); }
@@ -530,7 +530,7 @@ struct X : C, virtual B {
   // CHECK-NEXT:   1 | void pr19506::X::g()
   // CHECK-NEXT:       [this adjustment: vtordisp at -4, -12 non-virtual]
 
-  // MANGLING-DAG: @"\01??_7X@pr19506@@6BB@1@@" = {{.*}}@"\01?f@B@pr19506@@UAEXXZ"
+  // MANGLING-DAG: @"??_7X@pr19506@@6BB@1@@" = {{.*}}@"?f@B@pr19506@@UAEXXZ"
 } x;
 
 void build_vftable(X *obj) { obj->g(); }
@@ -562,7 +562,7 @@ struct X : B, C {
   // CHECK-NEXT:   1 | void pr19519::C::g()
   // CHECK-NEXT:       [this adjustment: vtordisp at -4, -4 non-virtual]
 
-  // MANGLING-DAG: @"\01??_7X@pr19519@@6B@" = {{.*}}@"\01?g@C@pr19519@@$4PPPPPPPM@3AEXXZ"
+  // MANGLING-DAG: @"??_7X@pr19519@@6B@" = {{.*}}@"?g@C@pr19519@@$4PPPPPPPM@3AEXXZ"
 };
 
 X::X() {}

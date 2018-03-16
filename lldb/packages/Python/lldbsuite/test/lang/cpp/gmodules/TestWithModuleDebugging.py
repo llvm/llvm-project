@@ -69,3 +69,26 @@ class TestWithGmodulesDebugInfo(TestBase):
             42,
             memberValue.GetValueAsSigned(),
             "Member value incorrect")
+
+        testValue = frame.EvaluateExpression("bar")
+        self.assertTrue(
+            testValue.GetError().Success(),
+            "Test expression value invalid: %s" %
+            (testValue.GetError().GetCString()))
+        self.assertTrue(
+            testValue.GetTypeName() == "Foo::Bar",
+            "Test expression type incorrect")
+
+        memberValue = testValue.GetChildMemberWithName("i")
+        self.assertTrue(
+            memberValue.GetError().Success(),
+            "Member value missing or invalid: %s" %
+            (testValue.GetError().GetCString()))
+        self.assertTrue(
+            memberValue.GetTypeName() == "int",
+            "Member type incorrect")
+        self.assertEqual(
+            123,
+            memberValue.GetValueAsSigned(),
+            "Member value incorrect")
+

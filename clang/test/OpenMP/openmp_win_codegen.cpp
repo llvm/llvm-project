@@ -62,9 +62,9 @@ int main() {
 // CHECK-NEXT: call void @__kmpc_end_critical(%ident_t* {{.*}}@0, i32 [[GID]],
 // CHECK-NEXT: cleanupret from {{.*}} unwind label %[[CATCHTERM:[^ ]+]]
 // CHECK:      cleanuppad within none []
-// CHECK-NEXT: call void @"\01?terminate@@YAXXZ"() #5 [ "funclet"(token %{{.*}}) ]
+// CHECK-NEXT: call void @"?terminate@@YAXXZ"() #5 [ "funclet"(token %{{.*}}) ]
 // CHECK-NEXT: unreachable
 // CHECK:      [[CATCHTERM]]
 // CHECK-NEXT: cleanuppad within [[CATCHPAD]] []
-// CHECK-NEXT: call void @"\01?terminate@@YAXXZ"() #5 [ "funclet"(token %{{.*}}) ]
+// CHECK-NEXT: call void @"?terminate@@YAXXZ"() #5 [ "funclet"(token %{{.*}}) ]
 // CHECK-NEXT: unreachable

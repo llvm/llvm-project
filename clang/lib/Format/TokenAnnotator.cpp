@@ -2968,6 +2968,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     return true;
   }
+  if (Right.is(tok::r_square) && Right.MatchingParen &&
+      Right.MatchingParen->is(TT_ProtoExtensionLSquare))
+    return false;
   if (Right.is(TT_SelectorName) || (Right.is(tok::identifier) && Right.Next &&
                                     Right.Next->is(TT_ObjCMethodExpr)))
     return Left.isNot(tok::period); // FIXME: Properly parse ObjC calls.
