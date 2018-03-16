@@ -26,6 +26,8 @@
 // RUN: echo "interceptor_name:strncpy" > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t
 
+// UNSUPPORTED: android
+
 #include <string.h>
 
 
