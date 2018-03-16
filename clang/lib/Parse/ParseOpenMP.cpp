@@ -758,6 +758,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     if (!Actions.ActOnStartOpenMPDeclareTargetDirective(DTLoc))
       return DeclGroupPtrTy();
 
+    llvm::SmallVector<Decl *, 4>  Decls;
     DKind = ParseOpenMPDirectiveKind(*this);
     while (DKind != OMPD_end_declare_target && DKind != OMPD_declare_target &&
            Tok.isNot(tok::eof) && Tok.isNot(tok::r_brace)) {
@@ -771,6 +772,10 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       } else {
         Ptr =
             ParseCXXClassMemberDeclarationWithPragmas(AS, Attrs, TagType, Tag);
+      }
+      if (Ptr) {
+        DeclGroupRef Ref = Ptr.get();
+        Decls.append(Ref.begin(), Ref.end());
       }
       if (Tok.isAnnotation() && Tok.is(tok::annot_pragma_openmp)) {
         TentativeParsingAction TPA(*this);
@@ -797,7 +802,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       Diag(DTLoc, diag::note_matching) << "'#pragma omp declare target'";
     }
     Actions.ActOnFinishOpenMPDeclareTargetDirective();
-    return DeclGroupPtrTy();
+    return DeclGroupPtrTy::make(DeclGroupRef::Create(
+        Actions.getASTContext(), Decls.begin(), Decls.size()));
   }
   case OMPD_unknown:
     Diag(Tok, diag::err_omp_unknown_directive);

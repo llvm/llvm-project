@@ -469,11 +469,12 @@ void ScriptParser::readSections() {
 
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
-      .Cases("*", "/", "%", 5)
-      .Cases("+", "-", 4)
-      .Cases("<<", ">>", 3)
-      .Cases("<", "<=", ">", ">=", "==", "!=", 2)
-      .Cases("&", "|", 1)
+      .Cases("*", "/", "%", 6)
+      .Cases("+", "-", 5)
+      .Cases("<<", ">>", 4)
+      .Cases("<", "<=", ">", ">=", "==", "!=", 3)
+      .Case("&", 2)
+      .Case("|", 1)
       .Default(-1);
 }
 

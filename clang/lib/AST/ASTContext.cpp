@@ -9397,8 +9397,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       return false;
   } else if (isa<PragmaCommentDecl>(D))
     return true;
-  else if (isa<OMPThreadPrivateDecl>(D) ||
-           D->hasAttr<OMPDeclareTargetDeclAttr>())
+  else if (isa<OMPThreadPrivateDecl>(D))
     return true;
   else if (isa<PragmaDetectMismatchDecl>(D))
     return true;
@@ -9486,6 +9485,12 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       if (auto *BindingVD = BD->getHoldingVar())
         if (DeclMustBeEmitted(BindingVD))
           return true;
+
+  // If the decl is marked as `declare target`, it should be emitted.
+  for (const auto *Decl = D->getMostRecentDecl(); Decl;
+       Decl = Decl->getPreviousDecl())
+    if (Decl->hasAttr<OMPDeclareTargetDeclAttr>())
+      return true;
 
   return false;
 }

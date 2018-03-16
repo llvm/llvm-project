@@ -191,7 +191,7 @@ struct AssertCommand : BaseCommand {
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
 struct ByteCommand : BaseCommand {
   ByteCommand(Expr E, unsigned Size, std::string CommandString)
-      : BaseCommand(ByteKind), Expression(E), CommandString(CommandString),
+      : BaseCommand(ByteKind), CommandString(CommandString), Expression(E),
         Size(Size) {}
 
   static bool classof(const BaseCommand *C) { return C->Kind == ByteKind; }

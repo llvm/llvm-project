@@ -61,6 +61,12 @@ private:
   /// function.
   void emitGenericEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
+  /// Helper for generic variables globalization prolog.
+  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc);
+
+  /// Helper for generic variables globalization epilog.
+  void emitGenericVarsEpilog(CodeGenFunction &CGF);
+
   /// \brief Helper for Spmd mode target directive's entry function.
   void emitSpmdEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
                            const OMPExecutableDirective &D);
@@ -332,13 +338,18 @@ private:
   /// The map of local variables to their addresses in the global memory.
   using DeclToAddrMapTy = llvm::MapVector<const Decl *,
       std::pair<const FieldDecl *, Address>>;
+  /// Set of the parameters passed by value escaping OpenMP context.
+  using EscapedParamsTy = llvm::SmallPtrSet<const Decl *, 4>;
+  struct FunctionData {
+    DeclToAddrMapTy LocalVarData;
+    const RecordDecl *GlobalRecord = nullptr;
+    llvm::Value *GlobalRecordAddr = nullptr;
+    EscapedParamsTy EscapedParameters;
+    std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;
+  };
   /// Maps the function to the list of the globalized variables with their
   /// addresses.
-  llvm::DenseMap<llvm::Function *,
-                 std::pair<const RecordDecl *, DeclToAddrMapTy>>
-      FunctionGlobalizedDecls;
-  /// Map from function to global record pointer.
-  llvm::DenseMap<llvm::Function *, llvm::Value *> FunctionToGlobalRecPtr;
+  llvm::SmallDenseMap<llvm::Function *, FunctionData> FunctionGlobalizedDecls;
 };
 
 } // CodeGen namespace.
