@@ -218,37 +218,9 @@ static Timer DiskCommitTimer("Commit Output File", Timer::root());
 
 void writeResult() { Writer().run(); }
 
-void OutputSection::setRVA(uint64_t RVA) {
-  Header.VirtualAddress = RVA;
-  for (Chunk *C : Chunks)
-    C->setRVA(C->getRVA() + RVA);
-}
-
-void OutputSection::setFileOffset(uint64_t Off) {
-  // If a section has no actual data (i.e. BSS section), we want to
-  // set 0 to its PointerToRawData. Otherwise the output is rejected
-  // by the loader.
-  if (Header.SizeOfRawData == 0)
-    return;
-
-  // It is possible that this assignment could cause an overflow of the u32,
-  // but that should be caught by the FileSize check in OutputSection::run().
-  Header.PointerToRawData = Off;
-}
-
 void OutputSection::addChunk(Chunk *C) {
   Chunks.push_back(C);
   C->setOutputSection(this);
-  uint64_t Off = Header.VirtualSize;
-  Off = alignTo(Off, C->Alignment);
-  C->setRVA(Off);
-  C->OutputSectionOff = Off;
-  Off += C->getSize();
-  if (Off > UINT32_MAX)
-    error("section larger than 4 GiB: " + Name);
-  Header.VirtualSize = Off;
-  if (C->hasData())
-    Header.SizeOfRawData = alignTo(Off, SectorSize);
 }
 
 void OutputSection::addPermissions(uint32_t C) {
@@ -454,6 +426,9 @@ void Writer::createSections() {
 void Writer::createMiscChunks() {
   OutputSection *RData = createSection(".rdata");
 
+  for (auto &P : MergeChunk::Instances)
+    RData->addChunk(P.second);
+
   // Create thunks for locally-dllimported symbols.
   if (!Symtab->LocalImportChunks.empty()) {
     for (Chunk *C : Symtab->LocalImportChunks)
@@ -631,8 +606,7 @@ void Writer::createSymbolAndStringTable() {
   // Name field in the section table is 8 byte long. Longer names need
   // to be written to the string table. First, construct string table.
   for (OutputSection *Sec : OutputSections) {
-    StringRef Name = Sec->getName();
-    if (Name.size() <= COFF::NameSize)
+    if (Sec->Name.size() <= COFF::NameSize)
       continue;
     // If a section isn't discardable (i.e. will be mapped at runtime),
     // prefer a truncated section name over a long section name in
@@ -640,7 +614,7 @@ void Writer::createSymbolAndStringTable() {
     // always truncates, even for discardable sections.
     if ((Sec->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
-    Sec->setStringTableOff(addEntryToStringTable(Name));
+    Sec->setStringTableOff(addEntryToStringTable(Sec->Name));
   }
 
   if (Config->DebugDwarf) {
@@ -686,12 +660,27 @@ void Writer::assignAddresses() {
         return (S->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0;
       });
   for (OutputSection *Sec : OutputSections) {
-    if (Sec->getName() == ".reloc")
+    if (Sec->Name == ".reloc")
       addBaserels(Sec);
-    Sec->setRVA(RVA);
-    Sec->setFileOffset(FileSize);
-    RVA += alignTo(Sec->getVirtualSize(), PageSize);
-    FileSize += alignTo(Sec->getRawSize(), SectorSize);
+    uint64_t RawSize = 0, VirtualSize = 0;
+    Sec->Header.VirtualAddress = RVA;
+    for (Chunk *C : Sec->getChunks()) {
+      VirtualSize = alignTo(VirtualSize, C->Alignment);
+      C->setRVA(RVA + VirtualSize);
+      C->OutputSectionOff = VirtualSize;
+      C->finalizeContents();
+      VirtualSize += C->getSize();
+      if (C->hasData())
+        RawSize = alignTo(VirtualSize, SectorSize);
+    }
+    if (VirtualSize > UINT32_MAX)
+      error("section larger than 4 GiB: " + Sec->Name);
+    Sec->Header.VirtualSize = VirtualSize;
+    Sec->Header.SizeOfRawData = RawSize;
+    if (RawSize != 0)
+      Sec->Header.PointerToRawData = FileSize;
+    RVA += alignTo(VirtualSize, PageSize);
+    FileSize += alignTo(RawSize, SectorSize);
   }
   SizeOfImage = alignTo(RVA, PageSize);
 }
@@ -1149,7 +1138,7 @@ void Writer::sortExceptionTable() {
 
 OutputSection *Writer::findSection(StringRef Name) {
   for (OutputSection *Sec : OutputSections)
-    if (Sec->getName() == Name)
+    if (Sec->Name == Name)
       return Sec;
   return nullptr;
 }

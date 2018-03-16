@@ -12,6 +12,7 @@
 #include "JSONRPCDispatcher.h"
 #include "SourceCode.h"
 #include "URI.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
@@ -142,8 +143,12 @@ void ClangdLSPServer::onDocumentDidOpen(DidOpenTextDocumentParams &Params) {
   if (Params.metadata && !Params.metadata->extraFlags.empty())
     CDB.setExtraFlagsForFile(Params.textDocument.uri.file(),
                              std::move(Params.metadata->extraFlags));
-  Server.addDocument(Params.textDocument.uri.file(), Params.textDocument.text,
-                     WantDiagnostics::Yes);
+
+  PathRef File = Params.textDocument.uri.file();
+  std::string &Contents = Params.textDocument.text;
+
+  DraftMgr.updateDraft(File, Contents);
+  Server.addDocument(File, Contents, WantDiagnostics::Yes);
 }
 
 void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
@@ -154,9 +159,13 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
   if (Params.wantDiagnostics.hasValue())
     WantDiags = Params.wantDiagnostics.getValue() ? WantDiagnostics::Yes
                                                   : WantDiagnostics::No;
+
+  PathRef File = Params.textDocument.uri.file();
+  std::string &Contents = Params.contentChanges[0].text;
+
   // We only support full syncing right now.
-  Server.addDocument(Params.textDocument.uri.file(),
-                     Params.contentChanges[0].text, WantDiags);
+  DraftMgr.updateDraft(File, Contents);
+  Server.addDocument(File, Contents, WantDiags);
 }
 
 void ClangdLSPServer::onFileEvent(DidChangeWatchedFilesParams &Params) {
@@ -188,7 +197,7 @@ void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
   } else if (Params.command ==
              ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE) {
     auto &FileURI = Params.includeInsertion->textDocument.uri;
-    auto Code = Server.getDocument(FileURI.file());
+    auto Code = DraftMgr.getDraft(FileURI.file());
     if (!Code)
       return replyError(ErrorCode::InvalidParams,
                         ("command " +
@@ -233,7 +242,7 @@ void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
 
 void ClangdLSPServer::onRename(RenameParams &Params) {
   Path File = Params.textDocument.uri.file();
-  llvm::Optional<std::string> Code = Server.getDocument(File);
+  llvm::Optional<std::string> Code = DraftMgr.getDraft(File);
   if (!Code)
     return replyError(ErrorCode::InvalidParams,
                       "onRename called for non-added file");
@@ -254,13 +263,15 @@ void ClangdLSPServer::onRename(RenameParams &Params) {
 }
 
 void ClangdLSPServer::onDocumentDidClose(DidCloseTextDocumentParams &Params) {
-  Server.removeDocument(Params.textDocument.uri.file());
+  PathRef File = Params.textDocument.uri.file();
+  DraftMgr.removeDraft(File);
+  Server.removeDocument(File);
 }
 
 void ClangdLSPServer::onDocumentOnTypeFormatting(
     DocumentOnTypeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file();
-  auto Code = Server.getDocument(File);
+  auto Code = DraftMgr.getDraft(File);
   if (!Code)
     return replyError(ErrorCode::InvalidParams,
                       "onDocumentOnTypeFormatting called for non-added file");
@@ -276,7 +287,7 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
 void ClangdLSPServer::onDocumentRangeFormatting(
     DocumentRangeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file();
-  auto Code = Server.getDocument(File);
+  auto Code = DraftMgr.getDraft(File);
   if (!Code)
     return replyError(ErrorCode::InvalidParams,
                       "onDocumentRangeFormatting called for non-added file");
@@ -291,7 +302,7 @@ void ClangdLSPServer::onDocumentRangeFormatting(
 
 void ClangdLSPServer::onDocumentFormatting(DocumentFormattingParams &Params) {
   auto File = Params.textDocument.uri.file();
-  auto Code = Server.getDocument(File);
+  auto Code = DraftMgr.getDraft(File);
   if (!Code)
     return replyError(ErrorCode::InvalidParams,
                       "onDocumentFormatting called for non-added file");
@@ -307,7 +318,7 @@ void ClangdLSPServer::onDocumentFormatting(DocumentFormattingParams &Params) {
 void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
   // We provide a code action for each diagnostic at the requested location
   // which has FixIts available.
-  auto Code = Server.getDocument(Params.textDocument.uri.file());
+  auto Code = DraftMgr.getDraft(Params.textDocument.uri.file());
   if (!Code)
     return replyError(ErrorCode::InvalidParams,
                       "onCodeAction called for non-added file");
@@ -397,7 +408,7 @@ void ClangdLSPServer::onChangeConfiguration(
   // Compilation database change.
   if (Settings.compilationDatabasePath.hasValue()) {
     CDB.setCompileCommandsDir(Settings.compilationDatabasePath.getValue());
-    Server.reparseOpenedFiles();
+    reparseOpenedFiles();
   }
 }
 
@@ -478,4 +489,11 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
            {"diagnostics", std::move(DiagnosticsJSON)},
        }},
   });
+}
+
+void ClangdLSPServer::reparseOpenedFiles() {
+  for (const Path &FilePath : DraftMgr.getActiveFiles())
+    Server.addDocument(FilePath, *DraftMgr.getDraft(FilePath),
+                       WantDiagnostics::Auto,
+                       /*SkipCache=*/true);
 }
