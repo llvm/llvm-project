@@ -102,7 +102,6 @@ class InlineTest(TestBase):
             return "-N dsym " + self.mydir
 
     def BuildMakefile(self):
-        self.makeBuildDir()
         makefilePath = self.getBuildArtifact("Makefile")
         if os.path.exists(makefilePath):
             return
