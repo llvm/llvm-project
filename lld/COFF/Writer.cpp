@@ -603,15 +603,17 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
 }
 
 void Writer::createSymbolAndStringTable() {
-  // Name field in the section table is 8 byte long. Longer names need
-  // to be written to the string table. First, construct string table.
+  // PE/COFF images are limited to 8 byte section names. Longer names can be
+  // supported by writing a non-standard string table, but this string table is
+  // not mapped at runtime and the long names will therefore be inaccessible.
+  // link.exe always truncates section names to 8 bytes, whereas binutils always
+  // preserves long section names via the string table. LLD adopts a hybrid
+  // solution where discardable sections have long names preserved and
+  // non-discardable sections have their names truncated, to ensure that any
+  // section which is mapped at runtime also has its name mapped at runtime.
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Name.size() <= COFF::NameSize)
       continue;
-    // If a section isn't discardable (i.e. will be mapped at runtime),
-    // prefer a truncated section name over a long section name in
-    // the string table that is unavailable at runtime. Note that link.exe
-    // always truncates, even for discardable sections.
     if ((Sec->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
     Sec->setStringTableOff(addEntryToStringTable(Sec->Name));
