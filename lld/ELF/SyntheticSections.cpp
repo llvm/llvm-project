@@ -626,9 +626,8 @@ void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
 bool GotSection::empty() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
   // relative to GOT(such as GOTOFFREL) or there's a symbol that points to a GOT
-  // (i.e. _GLOBAL_OFFSET_TABLE_) that the target defines relative to the .got.
-  return NumEntries == 0 && !HasGotOffRel &&
-         !(ElfSym::GlobalOffsetTable && !Target->GotBaseSymInGotPlt);
+  // (i.e. _GLOBAL_OFFSET_TABLE_).
+  return NumEntries == 0 && !HasGotOffRel && !ElfSym::GlobalOffsetTable;
 }
 
 void GotSection::writeTo(uint8_t *Buf) {
@@ -897,14 +896,6 @@ void GotPltSection::writeTo(uint8_t *Buf) {
     Target->writeGotPlt(Buf, *B);
     Buf += Config->Wordsize;
   }
-}
-
-bool GotPltSection::empty() const {
-  // We need to emit a GOT.PLT even if it's empty if there's a symbol that
-  // references the _GLOBAL_OFFSET_TABLE_ and the Target defines the symbol
-  // relative to the .got.plt section.
-  return Entries.empty() &&
-         !(ElfSym::GlobalOffsetTable && Target->GotBaseSymInGotPlt);
 }
 
 // On ARM the IgotPltSection is part of the GotSection, on other Targets it is
@@ -1800,13 +1791,15 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
         return !S.Sym->isDefined();
       });
 
-  // Even if the hash table does not contain symbols, we still want to keep the
-  // section to indicate to a loader that the file exports no symbols. We can't
-  // have zero buckets because the android loader doesn't support that. We chose
-  // load factor 4 for the on-disk hash table. For each hash collision, the
-  // dynamic linker will compare a uint32_t hash value. Since the integer
-  // comparison is quite fast, we believe we can make the load factor even
-  // larger. 4 is just a conservative choice.
+  // We chose load factor 4 for the on-disk hash table. For each hash
+  // collision, the dynamic linker will compare a uint32_t hash value.
+  // Since the integer comparison is quite fast, we believe we can
+  // make the load factor even larger. 4 is just a conservative choice.
+  //
+  // Note that we don't want to create a zero-sized hash table because
+  // Android loader as of 2018 doesn't like a .gnu.hash containing such
+  // table. If that's the case, we create a hash table with one unused
+  // dummy slot.
   NBuckets = std::max<size_t>((V.end() - Mid) / 4, 1);
 
   if (Mid == V.end())

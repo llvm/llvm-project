@@ -16,7 +16,10 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; RUN: wasm-ld -no-gc-sections --check-signatures --allow-undefined -o %t.wasm %t.o %t.hello.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-; CHECK:        - Type:            GLOBAL
+; CHECK:        - Type:            MEMORY
+; CHECK-NEXT:     Memories:
+; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Type:            I32
@@ -52,6 +55,18 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK-NEXT:           Value:           1064
 ; CHECK-NEXT:         Content:         68656C6C6F0A00
 ; CHECK-NEXT:    - Type:            CUSTOM
+
+
+; RUN: wasm-ld -no-gc-sections --check-signatures --allow-undefined \
+; RUN:     --initial-memory=131072 --max-memory=131072 -o %t_max.wasm %t.o \
+; RUN:     %t.hello.o
+; RUN: obj2yaml %t_max.wasm | FileCheck %s -check-prefix=CHECK-MAX
+
+; CHECK-MAX:        - Type:            MEMORY
+; CHECK-MAX-NEXT:     Memories:
+; CHECK-MAX-NEXT:       - Flags:           [ HAS_MAX ]
+; CHECK-MAX-NEXT:         Initial:         0x00000002
+; CHECK-MAX-NEXT:         Maximum:         0x00000002
 
 
 ; RUN: wasm-ld --check-signatures --relocatable -o %t_reloc.wasm %t.o %t.hello.o

@@ -1,19 +1,14 @@
 // RUN: llvm-mc -filetype=obj -triple i686-pc-mingw32 %s | llvm-readobj -s -sr -sd | FileCheck %s
 
+// COFF resolves differences between labels in the same section, unless that
+// label is declared with function type.
+
 .section baz, "xr"
-	.def	X
-	.scl	2;
-	.type	32;
-	.endef
 	.globl	X
 X:
 	mov	Y-X+42,	%eax
 	retl
 
-	.def	Y
-	.scl	2;
-	.type	32;
-	.endef
 	.globl	Y
 Y:
 	retl
@@ -30,6 +25,11 @@ _foobar:                                # @foobar
 # %bb.0:
 	ret
 
+	.globl	_baz
+_baz:
+	calll	_foobar
+	retl
+
 	.data
 	.globl	_rust_crate             # @rust_crate
 	.align	4
@@ -38,6 +38,15 @@ _rust_crate:
 	.long   _foobar
 	.long	_foobar-_rust_crate
 	.long	_foobar-_rust_crate
+
+// Even though _baz and _foobar are in the same .text section, we keep the
+// relocation for compatibility with the VC linker's /guard:cf and /incremental
+// flags, even on mingw.
+
+// CHECK:        Name: .text
+// CHECK:        Relocations [
+// CHECK-NEXT:     0x12 IMAGE_REL_I386_REL32 _foobar
+// CHECK-NEXT:   ]
 
 // CHECK:        Name: .data
 // CHECK:        Relocations [

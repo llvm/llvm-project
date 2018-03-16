@@ -165,6 +165,24 @@ supported include:
     remaining elements in the list may be arbitrary other values, including
     nested ```dag``' values.
 
+``!con(a, b, ...)``
+    Concatenate two or more DAG nodes. Their operations must equal.
+
+    Example: !con((op a1:$name1, a2:$name2), (op b1:$name3)) results in
+    the DAG node (op a1:$name1, a2:$name2, b1:$name3).
+
+``!dag(op, children, names)``
+    Generate a DAG node programmatically. 'children' and 'names' must be lists
+    of equal length or unset ('?'). 'names' must be a 'list<string>'.
+
+    Due to limitations of the type system, 'children' must be a list of items
+    of a common type. In practice, this means that they should either have the
+    same type or be records with a common superclass. Mixing dag and non-dag
+    items is not possible. However, '?' can be used.
+
+    Example: !dag(op, [a1, a2, ?], ["name1", "name2", "name3"]) results in
+    (op a1:$name1, a2:$name2, ?:$name3).
+
 ``!listconcat(a, b, ...)``
     A list value that is the result of concatenating the 'a' and 'b' lists.
     The lists must have the same element type.
@@ -249,8 +267,19 @@ supported include:
     on string, int and bit objects.  Use !cast<string> to compare other types of
     objects.
 
-``!shl(a,b)`` ``!srl(a,b)`` ``!sra(a,b)`` ``!add(a,b)`` ``!and(a,b)``
-    The usual binary and arithmetic operators.
+``!ne(a,b)``
+    The negation of ``!eq(a,b)``.
+
+``!le(a,b), !lt(a,b), !ge(a,b), !gt(a,b)``
+    (Signed) comparison of integer values that returns bit 1 or 0 depending on
+    the result of the comparison.
+
+``!shl(a,b)`` ``!srl(a,b)`` ``!sra(a,b)``
+    The usual shift operators. Operations are on 64-bit integers, the result
+    is undefined for shift counts outside [0, 63].
+
+``!add(a,b,...)`` ``!and(a,b,...)`` ``!or(a,b,...)``
+    The usual arithmetic and binary operators.
 
 Note that all of the values have rules specifying how they convert to values
 for different types.  These rules allow you to assign a value like "``7``"

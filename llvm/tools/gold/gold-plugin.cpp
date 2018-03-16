@@ -44,8 +44,17 @@
 
 #define LDPT_GET_SYMBOLS_V3 28
 
+// FIXME: Remove when binutils 2.31 (containing gold 1.16) is the minimum
+// required version.
+#define LDPT_GET_WRAP_SYMBOLS 32
+
 using namespace llvm;
 using namespace lto;
+
+// FIXME: Remove when binutils 2.31 (containing gold 1.16) is the minimum
+// required version.
+typedef enum ld_plugin_status (*ld_plugin_get_wrap_symbols)(
+    uint64_t *num_symbols, const char ***wrap_symbol_list);
 
 static ld_plugin_status discard_message(int level, const char *format, ...) {
   // Die loudly. Recent versions of Gold pass ld_plugin_message as the first
@@ -56,6 +65,7 @@ static ld_plugin_status discard_message(int level, const char *format, ...) {
 static ld_plugin_release_input_file release_input_file = nullptr;
 static ld_plugin_get_input_file get_input_file = nullptr;
 static ld_plugin_message message = discard_message;
+static ld_plugin_get_wrap_symbols get_wrap_symbols = nullptr;
 
 namespace {
 struct claimed_file {
@@ -93,6 +103,8 @@ struct PluginInputFile {
 struct ResolutionInfo {
   bool CanOmitFromDynSym = true;
   bool DefaultVisibility = true;
+  bool CanInline = true;
+  bool IsUsedInRegularObj = false;
 };
 
 }
@@ -367,6 +379,13 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
     case LDPT_MESSAGE:
       message = tv->tv_u.tv_message;
       break;
+    case LDPT_GET_WRAP_SYMBOLS:
+      // FIXME: When binutils 2.31 (containing gold 1.16) is the minimum
+      // required version, this should be changed to:
+      // get_wrap_symbols = tv->tv_u.tv_get_wrap_symbols;
+      get_wrap_symbols =
+          (ld_plugin_get_wrap_symbols)tv->tv_u.tv_message;
+      break;
     default:
       break;
     }
@@ -563,6 +582,29 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
     }
   }
 
+  // Handle any --wrap options passed to gold, which are than passed
+  // along to the plugin.
+  if (get_wrap_symbols) {
+    const char **wrap_symbols;
+    uint64_t count = 0;
+    if (get_wrap_symbols(&count, &wrap_symbols) != LDPS_OK) {
+      message(LDPL_ERROR, "Unable to get wrap symbols!");
+      return LDPS_ERR;
+    }
+    for (uint64_t i = 0; i < count; i++) {
+      StringRef Name = wrap_symbols[i];
+      ResolutionInfo &Res = ResInfo[Name];
+      ResolutionInfo &WrapRes = ResInfo["__wrap_" + Name.str()];
+      ResolutionInfo &RealRes = ResInfo["__real_" + Name.str()];
+      // Tell LTO not to inline symbols that will be overwritten.
+      Res.CanInline = false;
+      RealRes.CanInline = false;
+      // Tell LTO not to eliminate symbols that will be used after renaming.
+      Res.IsUsedInRegularObj = true;
+      WrapRes.IsUsedInRegularObj = true;
+    }
+  }
+
   return LDPS_OK;
 }
 
@@ -685,6 +727,12 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
     if (Resolution != LDPR_RESOLVED_DYN && Resolution != LDPR_UNDEF &&
         (IsExecutable || !Res.DefaultVisibility))
       R.FinalDefinitionInLinkageUnit = true;
+
+    if (!Res.CanInline)
+      R.LinkerRedefined = true;
+
+    if (Res.IsUsedInRegularObj)
+      R.VisibleToRegularObj = true;
 
     freeSymName(Sym);
   }

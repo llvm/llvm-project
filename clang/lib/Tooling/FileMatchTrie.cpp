@@ -1,4 +1,4 @@
-//===--- FileMatchTrie.cpp - ----------------------------------------------===//
+//===- FileMatchTrie.cpp --------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,24 +13,30 @@
 
 #include "clang/Tooling/FileMatchTrie.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <sstream>
+#include <string>
+#include <vector>
+
 using namespace clang;
 using namespace tooling;
 
 namespace {
+
 /// \brief Default \c PathComparator using \c llvm::sys::fs::equivalent().
 struct DefaultPathComparator : public PathComparator {
   bool equivalent(StringRef FileA, StringRef FileB) const override {
     return FileA == FileB || llvm::sys::fs::equivalent(FileA, FileB);
   }
 };
-}
+
+} // namespace
 
 namespace clang {
 namespace tooling {
+
 /// \brief A node of the \c FileMatchTrie.
 ///
 /// Each node has storage for up to one path and a map mapping a path segment to
@@ -103,7 +109,7 @@ public:
     if (Children.empty()) {
       if (Comparator.equivalent(StringRef(Path), FileName))
         return StringRef(Path);
-      return StringRef();
+      return {};
     }
     StringRef Element(llvm::sys::path::filename(FileName.drop_back(
         ConsumedLength)));
@@ -119,13 +125,13 @@ public:
     std::vector<StringRef> AllChildren;
     getAll(AllChildren, MatchingChild);
     StringRef Result;
-    for (unsigned i = 0; i < AllChildren.size(); i++) {
-      if (Comparator.equivalent(AllChildren[i], FileName)) {
+    for (const auto &Child : AllChildren) {
+      if (Comparator.equivalent(Child, FileName)) {
         if (Result.empty()) {
-          Result = AllChildren[i];
+          Result = Child;
         } else {
           IsAmbiguous = true;
-          return StringRef();
+          return {};
         }
       }
     }
@@ -158,14 +164,15 @@ private:
   // The children of this node stored in a map based on the next path segment.
   llvm::StringMap<FileMatchTrieNode> Children;
 };
-} // end namespace tooling
-} // end namespace clang
+
+} // namespace tooling
+} // namespace clang
 
 FileMatchTrie::FileMatchTrie()
-  : Root(new FileMatchTrieNode), Comparator(new DefaultPathComparator()) {}
+    : Root(new FileMatchTrieNode), Comparator(new DefaultPathComparator()) {}
 
 FileMatchTrie::FileMatchTrie(PathComparator *Comparator)
-  : Root(new FileMatchTrieNode), Comparator(Comparator) {}
+    : Root(new FileMatchTrieNode), Comparator(Comparator) {}
 
 FileMatchTrie::~FileMatchTrie() {
   delete Root;
@@ -179,7 +186,7 @@ StringRef FileMatchTrie::findEquivalent(StringRef FileName,
                                         raw_ostream &Error) const {
   if (llvm::sys::path::is_relative(FileName)) {
     Error << "Cannot resolve relative paths";
-    return StringRef();
+    return {};
   }
   bool IsAmbiguous = false;
   StringRef Result = Root->findEquivalent(*Comparator, FileName, IsAmbiguous);

@@ -295,6 +295,9 @@ public:
   /// @{
   void print(raw_ostream &OS) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST) const;
+  void print(raw_ostream &OS, ModuleSlotTracker &MST,
+             SmallVectorImpl<StringRef> &SSNs, const LLVMContext &Context,
+             const MachineFrameInfo *MFI, const TargetInstrInfo *TII) const;
   /// @}
 
   friend bool operator==(const MachineMemOperand &LHS,

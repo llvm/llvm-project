@@ -193,7 +193,7 @@ class LValue {
 
   // The alignment to use when accessing this lvalue.  (For vector elements,
   // this is the alignment of the whole vector.)
-  int64_t Alignment;
+  unsigned Alignment;
 
   // objective-c's ivar
   bool Ivar:1;
@@ -215,12 +215,12 @@ class LValue {
   // to make the default bitfield pattern all-zeroes.
   bool ImpreciseLifetime : 1;
 
-  LValueBaseInfo BaseInfo;
-  TBAAAccessInfo TBAAInfo;
-
   // This flag shows if a nontemporal load/stores should be used when accessing
   // this lvalue.
   bool Nontemporal : 1;
+
+  LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
 
   Expr *BaseIvarExp;
 
@@ -231,7 +231,10 @@ private:
            "initializing l-value with zero alignment!");
     this->Type = Type;
     this->Quals = Quals;
-    this->Alignment = Alignment.getQuantity();
+    const unsigned MaxAlign = 1U << 31;
+    this->Alignment = Alignment.getQuantity() <= MaxAlign
+                          ? Alignment.getQuantity()
+                          : MaxAlign;
     assert(this->Alignment == Alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->BaseInfo = BaseInfo;

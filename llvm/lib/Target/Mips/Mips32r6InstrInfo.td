@@ -190,6 +190,13 @@ class CLZ_R6_ENC : SPECIAL_2R_FM<OPCODE6_CLZ>;
 
 class SDBBP_R6_ENC : SPECIAL_SDBBP_FM;
 
+class CRC32B_ENC  : SPECIAL3_2R_SZ_CRC<0,0>;
+class CRC32H_ENC  : SPECIAL3_2R_SZ_CRC<1,0>;
+class CRC32W_ENC  : SPECIAL3_2R_SZ_CRC<2,0>;
+class CRC32CB_ENC : SPECIAL3_2R_SZ_CRC<0,1>;
+class CRC32CH_ENC : SPECIAL3_2R_SZ_CRC<1,1>;
+class CRC32CW_ENC : SPECIAL3_2R_SZ_CRC<2,1>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Multiclasses
@@ -804,6 +811,22 @@ class SDBBP_R6_DESC {
   InstrItinClass Itinerary = II_SDBBP;
 }
 
+class CRC_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
+                    InstrItinClass itin> : MipsR6Arch<instr_asm> {
+  dag OutOperandList = (outs GPROpnd:$rd);
+  dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt);
+  string AsmString = !strconcat(instr_asm, "\t$rd, $rs, $rt");
+  list<dag> Pattern = [];
+  InstrItinClass Itinerary = itin;
+}
+
+class CRC32B_DESC : CRC_DESC_BASE<"crc32b", GPR32Opnd, II_CRC32B>;
+class CRC32H_DESC : CRC_DESC_BASE<"crc32h", GPR32Opnd, II_CRC32H>;
+class CRC32W_DESC : CRC_DESC_BASE<"crc32w", GPR32Opnd, II_CRC32W>;
+class CRC32CB_DESC : CRC_DESC_BASE<"crc32cb", GPR32Opnd, II_CRC32CB>;
+class CRC32CH_DESC : CRC_DESC_BASE<"crc32ch", GPR32Opnd, II_CRC32CH>;
+class CRC32CW_DESC : CRC_DESC_BASE<"crc32cw", GPR32Opnd, II_CRC32CW>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -921,6 +944,15 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def SEL_S : R6MMR6Rel, SEL_S_ENC, SEL_S_DESC, ISA_MIPS32R6, HARDFLOAT;
   def SDC2_R6 : SDC2_R6_ENC, SDC2_R6_DESC, ISA_MIPS32R6;
   def SWC2_R6 : SWC2_R6_ENC, SWC2_R6_DESC, ISA_MIPS32R6;
+}
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  def CRC32B : R6MMR6Rel, CRC32B_ENC, CRC32B_DESC, ISA_MIPS32R6, ASE_CRC;
+  def CRC32H : R6MMR6Rel, CRC32H_ENC, CRC32H_DESC, ISA_MIPS32R6, ASE_CRC;
+  def CRC32W : R6MMR6Rel, CRC32W_ENC, CRC32W_DESC, ISA_MIPS32R6, ASE_CRC;
+  def CRC32CB : R6MMR6Rel, CRC32CB_ENC, CRC32CB_DESC, ISA_MIPS32R6, ASE_CRC;
+  def CRC32CH : R6MMR6Rel, CRC32CH_ENC, CRC32CH_DESC, ISA_MIPS32R6, ASE_CRC;
+  def CRC32CW : R6MMR6Rel, CRC32CW_ENC, CRC32CW_DESC, ISA_MIPS32R6, ASE_CRC;
 }
 
 //===----------------------------------------------------------------------===//

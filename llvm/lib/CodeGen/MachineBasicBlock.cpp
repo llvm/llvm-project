@@ -1255,6 +1255,16 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
   return {};
 }
 
+/// Find the previous valid DebugLoc preceding MBBI, skipping and DBG_VALUE
+/// instructions.  Return UnknownLoc if there is none.
+DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
+  if (MBBI == instr_begin()) return {};
+  // Skip debug declarations, we don't want a DebugLoc from them.
+  MBBI = skipDebugInstructionsBackward(std::prev(MBBI), instr_begin());
+  if (!MBBI->isDebugValue()) return MBBI->getDebugLoc();
+  return {};
+}
+
 /// Find and return the merged DebugLoc of the branch instructions of the block.
 /// Return UnknownLoc if there is none.
 DebugLoc

@@ -43,6 +43,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -52,6 +53,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -235,17 +237,31 @@ public:
   /// checks, and hence don't end up in \p Checks.
   static void
   extractRangeChecksFromBranch(BranchInst *BI, Loop *L, ScalarEvolution &SE,
-                               BranchProbabilityInfo &BPI,
+                               BranchProbabilityInfo *BPI,
                                SmallVectorImpl<InductiveRangeCheck> &Checks);
 };
 
-class InductiveRangeCheckElimination : public LoopPass {
+class InductiveRangeCheckElimination {
+  ScalarEvolution &SE;
+  BranchProbabilityInfo *BPI;
+  DominatorTree &DT;
+  LoopInfo &LI;
+
+public:
+  InductiveRangeCheckElimination(ScalarEvolution &SE,
+                                 BranchProbabilityInfo *BPI, DominatorTree &DT,
+                                 LoopInfo &LI)
+      : SE(SE), BPI(BPI), DT(DT), LI(LI) {}
+
+  bool run(Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop);
+};
+
+class IRCELegacyPass : public LoopPass {
 public:
   static char ID;
 
-  InductiveRangeCheckElimination() : LoopPass(ID) {
-    initializeInductiveRangeCheckEliminationPass(
-        *PassRegistry::getPassRegistry());
+  IRCELegacyPass() : LoopPass(ID) {
+    initializeIRCELegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -258,14 +274,14 @@ public:
 
 } // end anonymous namespace
 
-char InductiveRangeCheckElimination::ID = 0;
+char IRCELegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(InductiveRangeCheckElimination, "irce",
+INITIALIZE_PASS_BEGIN(IRCELegacyPass, "irce",
                       "Inductive range check elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_END(InductiveRangeCheckElimination, "irce",
-                    "Inductive range check elimination", false, false)
+INITIALIZE_PASS_END(IRCELegacyPass, "irce", "Inductive range check elimination",
+                    false, false)
 
 StringRef InductiveRangeCheck::rangeCheckKindToStr(
     InductiveRangeCheck::RangeCheckKind RCK) {
@@ -417,15 +433,15 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
 }
 
 void InductiveRangeCheck::extractRangeChecksFromBranch(
-    BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo &BPI,
+    BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
     SmallVectorImpl<InductiveRangeCheck> &Checks) {
   if (BI->isUnconditional() || BI->getParent() == L->getLoopLatch())
     return;
 
   BranchProbability LikelyTaken(15, 16);
 
-  if (!SkipProfitabilityChecks &&
-      BPI.getEdgeProbability(BI->getParent(), (unsigned)0) < LikelyTaken)
+  if (!SkipProfitabilityChecks && BPI &&
+      BPI->getEdgeProbability(BI->getParent(), (unsigned)0) < LikelyTaken)
     return;
 
   SmallPtrSet<Value *, 8> Visited;
@@ -516,9 +532,8 @@ struct LoopStructure {
   }
 
   static Optional<LoopStructure> parseLoopStructure(ScalarEvolution &,
-                                                    BranchProbabilityInfo &BPI,
-                                                    Loop &,
-                                                    const char *&);
+                                                    BranchProbabilityInfo *BPI,
+                                                    Loop &, const char *&);
 };
 
 /// This class is used to constrain loops to run within a given iteration space.
@@ -585,7 +600,7 @@ class LoopConstrainer {
   // Create the appropriate loop structure needed to describe a cloned copy of
   // `Original`.  The clone is described by `VM`.
   Loop *createClonedLoopStructure(Loop *Original, Loop *Parent,
-                                  ValueToValueMapTy &VM);
+                                  ValueToValueMapTy &VM, bool IsSubloop);
 
   // Rewrite the iteration space of the loop denoted by (LS, Preheader). The
   // iteration space of the rewritten loop ends at ExitLoopAt.  The start of the
@@ -637,8 +652,8 @@ class LoopConstrainer {
   LLVMContext &Ctx;
   ScalarEvolution &SE;
   DominatorTree &DT;
-  LPPassManager &LPM;
   LoopInfo &LI;
+  function_ref<void(Loop *, bool)> LPMAddNewLoop;
 
   // Information about the original loop we started out with.
   Loop &OriginalLoop;
@@ -658,12 +673,13 @@ class LoopConstrainer {
   LoopStructure MainLoopStructure;
 
 public:
-  LoopConstrainer(Loop &L, LoopInfo &LI, LPPassManager &LPM,
+  LoopConstrainer(Loop &L, LoopInfo &LI,
+                  function_ref<void(Loop *, bool)> LPMAddNewLoop,
                   const LoopStructure &LS, ScalarEvolution &SE,
                   DominatorTree &DT, InductiveRangeCheck::Range R)
       : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()),
-        SE(SE), DT(DT), LPM(LPM), LI(LI), OriginalLoop(L), Range(R),
-        MainLoopStructure(LS) {}
+        SE(SE), DT(DT), LI(LI), LPMAddNewLoop(LPMAddNewLoop), OriginalLoop(L),
+        Range(R), MainLoopStructure(LS) {}
 
   // Entry point for the algorithm.  Returns true on success.
   bool run();
@@ -726,8 +742,8 @@ static bool SumCanReachMin(ScalarEvolution &SE, const SCEV *S1, const SCEV *S2,
 
 Optional<LoopStructure>
 LoopStructure::parseLoopStructure(ScalarEvolution &SE,
-                                  BranchProbabilityInfo &BPI,
-                                  Loop &L, const char *&FailureReason) {
+                                  BranchProbabilityInfo *BPI, Loop &L,
+                                  const char *&FailureReason) {
   if (!L.isLoopSimplifyForm()) {
     FailureReason = "loop not in LoopSimplify form";
     return None;
@@ -762,7 +778,8 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
   unsigned LatchBrExitIdx = LatchBr->getSuccessor(0) == Header ? 1 : 0;
 
   BranchProbability ExitProbability =
-    BPI.getEdgeProbability(LatchBr->getParent(), LatchBrExitIdx);
+      BPI ? BPI->getEdgeProbability(LatchBr->getParent(), LatchBrExitIdx)
+          : BranchProbability::getZero();
 
   if (!SkipProfitabilityChecks &&
       ExitProbability > BranchProbability(1, MaxExitProbReciprocal)) {
@@ -1396,13 +1413,14 @@ void LoopConstrainer::addToParentLoopIfNeeded(ArrayRef<BasicBlock *> BBs) {
 }
 
 Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
-                                                 ValueToValueMapTy &VM) {
+                                                 ValueToValueMapTy &VM,
+                                                 bool IsSubloop) {
   Loop &New = *LI.AllocateLoop();
   if (Parent)
     Parent->addChildLoop(&New);
   else
     LI.addTopLevelLoop(&New);
-  LPM.addLoop(New);
+  LPMAddNewLoop(&New, IsSubloop);
 
   // Add all of the blocks in Original to the new loop.
   for (auto *BB : Original->blocks())
@@ -1411,7 +1429,7 @@ Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
 
   // Add all of the subloops to the new loop.
   for (Loop *SubLoop : *Original)
-    createClonedLoopStructure(SubLoop, &New, VM);
+    createClonedLoopStructure(SubLoop, &New, VM, /* IsSubloop */ true);
 
   return &New;
 }
@@ -1561,13 +1579,15 @@ bool LoopConstrainer::run() {
   // LI when LoopSimplifyForm is generated.
   Loop *PreL = nullptr, *PostL = nullptr;
   if (!PreLoop.Blocks.empty()) {
-    PreL = createClonedLoopStructure(
-        &OriginalLoop, OriginalLoop.getParentLoop(), PreLoop.Map);
+    PreL = createClonedLoopStructure(&OriginalLoop,
+                                     OriginalLoop.getParentLoop(), PreLoop.Map,
+                                     /* IsSubLoop */ false);
   }
 
   if (!PostLoop.Blocks.empty()) {
-    PostL = createClonedLoopStructure(
-        &OriginalLoop, OriginalLoop.getParentLoop(), PostLoop.Map);
+    PostL =
+        createClonedLoopStructure(&OriginalLoop, OriginalLoop.getParentLoop(),
+                                  PostLoop.Map, /* IsSubLoop */ false);
   }
 
   // This function canonicalizes the loop into Loop-Simplify and LCSSA forms.
@@ -1738,12 +1758,45 @@ IntersectUnsignedRange(ScalarEvolution &SE,
   return Ret;
 }
 
-bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
+PreservedAnalyses IRCEPass::run(Loop &L, LoopAnalysisManager &AM,
+                                LoopStandardAnalysisResults &AR,
+                                LPMUpdater &U) {
+  Function *F = L.getHeader()->getParent();
+  const auto &FAM =
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
+  auto *BPI = FAM.getCachedResult<BranchProbabilityAnalysis>(*F);
+  InductiveRangeCheckElimination IRCE(AR.SE, BPI, AR.DT, AR.LI);
+  auto LPMAddNewLoop = [&U](Loop *NL, bool IsSubloop) {
+    if (!IsSubloop)
+      U.addSiblingLoops(NL);
+  };
+  bool Changed = IRCE.run(&L, LPMAddNewLoop);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return getLoopPassPreservedAnalyses();
+}
+
+bool IRCELegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (skipLoop(L))
     return false;
 
+  ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  BranchProbabilityInfo &BPI =
+      getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI);
+  auto LPMAddNewLoop = [&LPM](Loop *NL, bool /* IsSubLoop */) {
+    LPM.addLoop(*NL);
+  };
+  return IRCE.run(L, LPMAddNewLoop);
+}
+
+bool InductiveRangeCheckElimination::run(
+    Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop) {
   if (L->getBlocks().size() >= LoopSizeCutoff) {
-    DEBUG(dbgs() << "irce: giving up constraining loop, too large\n";);
+    DEBUG(dbgs() << "irce: giving up constraining loop, too large\n");
     return false;
   }
 
@@ -1755,9 +1808,6 @@ bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   LLVMContext &Context = Preheader->getContext();
   SmallVector<InductiveRangeCheck, 16> RangeChecks;
-  ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  BranchProbabilityInfo &BPI =
-      getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
 
   for (auto BBI : L->getBlocks())
     if (BranchInst *TBI = dyn_cast<BranchInst>(BBI->getTerminator()))
@@ -1823,9 +1873,8 @@ bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (!SafeIterRange.hasValue())
     return false;
 
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopConstrainer LC(*L, getAnalysis<LoopInfoWrapperPass>().getLoopInfo(), LPM,
-                     LS, SE, DT, SafeIterRange.getValue());
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
+                     SafeIterRange.getValue());
   bool Changed = LC.run();
 
   if (Changed) {
@@ -1855,5 +1904,5 @@ bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
 }
 
 Pass *llvm::createInductiveRangeCheckEliminationPass() {
-  return new InductiveRangeCheckElimination;
+  return new IRCELegacyPass();
 }

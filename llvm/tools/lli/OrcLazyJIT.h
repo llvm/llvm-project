@@ -51,7 +51,7 @@ public:
   using ObjLayerT = orc::RTDyldObjectLinkingLayer;
   using CompileLayerT = orc::IRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
   using TransformFtor =
-          std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
+      std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
   using IRDumpLayerT = orc::IRTransformLayer<CompileLayerT, TransformFtor>;
   using CODLayerT = orc::CompileOnDemandLayer<IRDumpLayerT, CompileCallbackMgr>;
   using IndirectStubsManagerBuilder = CODLayerT::IndirectStubsManagerBuilderT;
@@ -106,7 +106,7 @@ public:
       }
   }
 
-  Error addModule(std::shared_ptr<Module> M) {
+  Error addModule(std::unique_ptr<Module> M) {
     if (M->getDataLayout().isDefault())
       M->setDataLayout(DL);
 

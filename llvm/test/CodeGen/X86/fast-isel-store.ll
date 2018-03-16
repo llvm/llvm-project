@@ -58,11 +58,11 @@ define <4 x i32> @test_store_4xi32(<4 x i32>* nocapture %addr, <4 x i32> %value,
 ; SSE64-NEXT:    movdqu %xmm0, (%eax)
 ; SSE64-NEXT:    retl
 ;
-; AVXONLY32-LABEL: test_store_4xi32:
-; AVXONLY32:       # %bb.0:
-; AVXONLY32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVXONLY32-NEXT:    vmovdqu %xmm0, (%rdi)
-; AVXONLY32-NEXT:    retq
+; AVX32-LABEL: test_store_4xi32:
+; AVX32:       # %bb.0:
+; AVX32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX32-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX32-NEXT:    retq
 ;
 ; AVX64-LABEL: test_store_4xi32:
 ; AVX64:       # %bb.0:
@@ -70,18 +70,6 @@ define <4 x i32> @test_store_4xi32(<4 x i32>* nocapture %addr, <4 x i32> %value,
 ; AVX64-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX64-NEXT:    vmovdqu %xmm0, (%eax)
 ; AVX64-NEXT:    retl
-;
-; KNL32-LABEL: test_store_4xi32:
-; KNL32:       # %bb.0:
-; KNL32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; KNL32-NEXT:    vmovdqu %xmm0, (%rdi)
-; KNL32-NEXT:    retq
-;
-; SKX32-LABEL: test_store_4xi32:
-; SKX32:       # %bb.0:
-; SKX32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX32-NEXT:    vmovdqu %xmm0, (%rdi)
-; SKX32-NEXT:    retq
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
   store <4 x i32> %foo, <4 x i32>* %addr, align 1
   ret <4 x i32> %foo
@@ -101,11 +89,11 @@ define <4 x i32> @test_store_4xi32_aligned(<4 x i32>* nocapture %addr, <4 x i32>
 ; SSE64-NEXT:    movdqa %xmm0, (%eax)
 ; SSE64-NEXT:    retl
 ;
-; AVXONLY32-LABEL: test_store_4xi32_aligned:
-; AVXONLY32:       # %bb.0:
-; AVXONLY32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVXONLY32-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVXONLY32-NEXT:    retq
+; AVX32-LABEL: test_store_4xi32_aligned:
+; AVX32:       # %bb.0:
+; AVX32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX32-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX32-NEXT:    retq
 ;
 ; AVX64-LABEL: test_store_4xi32_aligned:
 ; AVX64:       # %bb.0:
@@ -113,18 +101,6 @@ define <4 x i32> @test_store_4xi32_aligned(<4 x i32>* nocapture %addr, <4 x i32>
 ; AVX64-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX64-NEXT:    vmovdqa %xmm0, (%eax)
 ; AVX64-NEXT:    retl
-;
-; KNL32-LABEL: test_store_4xi32_aligned:
-; KNL32:       # %bb.0:
-; KNL32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; KNL32-NEXT:    vmovdqa %xmm0, (%rdi)
-; KNL32-NEXT:    retq
-;
-; SKX32-LABEL: test_store_4xi32_aligned:
-; SKX32:       # %bb.0:
-; SKX32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX32-NEXT:    vmovdqa %xmm0, (%rdi)
-; SKX32-NEXT:    retq
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
   store <4 x i32> %foo, <4 x i32>* %addr, align 16
   ret <4 x i32> %foo

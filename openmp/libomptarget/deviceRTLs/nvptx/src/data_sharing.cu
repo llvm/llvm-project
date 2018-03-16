@@ -37,7 +37,8 @@ __device__ static bool IsWarpMasterActiveThread() {
   unsigned long long Mask = getActiveThreadsMask();
   unsigned long long ShNum = WARPSIZE - (getThreadId() % WARPSIZE);
   unsigned long long Sh = Mask << ShNum;
-  return Sh == 0;
+  // Truncate Sh to the 32 lower bits
+  return (unsigned)Sh == 0;
 }
 // Return true if this is the master thread.
 __device__ static bool IsMasterThread() {
@@ -340,6 +341,7 @@ EXTERN void __kmpc_data_sharing_init_stack() {
   __kmpc_data_sharing_slot *RootS = teamDescr->RootS(WID);
 
   DataSharingState.SlotPtr[WID] = RootS;
+  DataSharingState.TailPtr[WID] = RootS;
   DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
 
   // We initialize the list of references to arguments here.
@@ -354,18 +356,9 @@ EXTERN void __kmpc_data_sharing_init_stack() {
 // UseSharedMemory is set to true, the runtime will attempt to use shared memory
 // as long as the size requested fits the pre-allocated size.
 //
-// TODO: allow more than one push per slot to save on calls to malloc.
-// Currently there is only one slot for each push so the data size in the slot
-// is the same size as the size being requested.
-//
 // Called by: master, TODO: call by workers
-EXTERN void* __kmpc_data_sharing_push_stack(size_t size,
+EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
     int16_t UseSharedMemory) {
-  // TODO: Add shared memory support. For now, use global memory only for
-  // storing the data sharing slots so ignore the pre-allocated
-  // shared memory slot.
-
-  // Use global memory for storing the stack.
   if (IsMasterThread()) {
     unsigned WID = getWarpId();
 
@@ -373,39 +366,85 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t size,
     // global memory slot.
     __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
     __kmpc_data_sharing_slot *&TailSlotP = DataSharingState.TailPtr[WID];
+    void *&StackP = DataSharingState.StackPtr[WID];
+    void *FrameP = 0;
 
-    // The slot for holding the data we are pushing.
-    __kmpc_data_sharing_slot *NewSlot = 0;
-    size_t NewSize = size;
+    // Check if we have room for the data in the current slot.
+    const uintptr_t StartAddress = (uintptr_t)StackP;
+    const uintptr_t EndAddress = (uintptr_t)SlotP->DataEnd;
+    const uintptr_t RequestedEndAddress = StartAddress + (uintptr_t)DataSize;
 
-    // Check if there is a next slot.
-    if (__kmpc_data_sharing_slot *ExistingSlot = SlotP->Next) {
-      // Attempt to re-use an existing slot provided the data fits in the slot.
-      // The leftover data space will not be used.
-      ptrdiff_t ExistingSlotSize = (uintptr_t)ExistingSlot->DataEnd -
-                                   (uintptr_t)(&ExistingSlot->Data[0]);
-      if (ExistingSlotSize >= NewSize)
-        NewSlot = ExistingSlot;
-      else
-        free(ExistingSlot);
+    // If we requested more data than there is room for in the rest
+    // of the slot then we need to either re-use the next slot, if one exists,
+    // or create a new slot.
+    if (EndAddress < RequestedEndAddress) {
+      size_t NewSize = DataSize;
+
+      // The new or reused slot for holding the data being pushed.
+      __kmpc_data_sharing_slot *NewSlot = 0;
+
+      // Check if there is a next slot.
+      if (__kmpc_data_sharing_slot *ExistingSlot = SlotP->Next) {
+        // Attempt to reuse an existing slot provided the data fits in the slot.
+        // The leftover data space will not be used.
+        ptrdiff_t ExistingSlotSize = (uintptr_t)ExistingSlot->DataEnd -
+                                     (uintptr_t)(&ExistingSlot->Data[0]);
+
+        // Try to add the data in the next available slot. Search for a slot
+        // with enough space.
+        while (ExistingSlotSize < NewSize) {
+          SlotP->Next = ExistingSlot->Next;
+          SlotP->Next->Prev = ExistingSlot->Prev;
+          free(ExistingSlot);
+          ExistingSlot = SlotP->Next;
+          if (!ExistingSlot)
+            break;
+          ExistingSlotSize = (uintptr_t)ExistingSlot->DataEnd -
+                             (uintptr_t)(&ExistingSlot->Data[0]);
+        }
+
+        // Check if a slot has been found.
+        if (ExistingSlotSize >= NewSize) {
+          NewSlot = ExistingSlot;
+          NewSlot->PrevSlotStackPtr = StackP;
+        }
+      }
+
+      if (!NewSlot) {
+        // Allocate at least the default size.
+        // TODO: generalize this for workers which need a larger data slot
+        // i.e. using DS_Worker_Warp_Slot_Size.
+        if (DS_Slot_Size > DataSize)
+          NewSize = DS_Slot_Size;
+        NewSlot = (__kmpc_data_sharing_slot *)malloc(
+            sizeof(__kmpc_data_sharing_slot) + NewSize);
+        NewSlot->Next = 0;
+        NewSlot->Prev = SlotP;
+        NewSlot->PrevSlotStackPtr = StackP;
+        NewSlot->DataEnd = &NewSlot->Data[NewSize];
+
+        // Newly allocated slots are also tail slots.
+        TailSlotP = NewSlot;
+
+        // Make previous slot point to the newly allocated slot.
+        SlotP->Next = NewSlot;
+      }
+
+      // The current slot becomes the new slot.
+      SlotP = NewSlot;
+      // The stack pointer always points to the next free stack frame.
+      StackP = &NewSlot->Data[DataSize];
+      // The frame pointer always points to the beginning of the frame.
+      FrameP = &NewSlot->Data[0];
+    } else {
+      // Add the data chunk to the current slot. The frame pointer is set to
+      // point to the start of the new frame held in StackP.
+      FrameP = StackP;
+      // Reset stack pointer to the requested address.
+      StackP = (void *)RequestedEndAddress;
     }
 
-    if (!NewSlot) {
-      NewSlot = (__kmpc_data_sharing_slot *)malloc(
-          sizeof(__kmpc_data_sharing_slot) + NewSize);
-      NewSlot->Next = 0;
-      NewSlot->Prev = SlotP;
-
-      // This is the last slot, save it.
-      TailSlotP = NewSlot;
-    }
-
-    NewSlot->DataEnd = &NewSlot->Data[NewSize];
-
-    SlotP->Next = NewSlot;
-    SlotP = NewSlot;
-
-    return (void*)&SlotP->Data[0];
+    return FrameP;
   }
 
   // TODO: add memory fence here when this function can be called by
@@ -421,26 +460,43 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t size,
 // When the pop operation removes the last global memory slot,
 // reclaim all outstanding global memory slots since it is
 // likely we have reached the end of the kernel.
-EXTERN void __kmpc_data_sharing_pop_stack(void *a) {
+EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
   if (IsMasterThread()) {
     unsigned WID = getWarpId();
 
-    __kmpc_data_sharing_slot *S = DataSharingState.SlotPtr[WID];
+    __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
+    void *&StackP = DataSharingState.StackPtr[WID];
 
-    if (S->Prev)
-      S = S->Prev;
-
-    // If this will "pop" the last global memory node then it is likely
-    // that we are at the end of the data sharing region and we can
-    // de-allocate any existing global memory slots.
-    if (!S->Prev) {
-      __kmpc_data_sharing_slot *Tail = DataSharingState.TailPtr[WID];
-
-      while(Tail && Tail->Prev) {
-        Tail = Tail->Prev;
-        free(Tail->Next);
-        Tail->Next=0;
+    // If we try to pop the last frame of the current slot we need to
+    // move to the previous slot if there is one.
+    const uintptr_t StartAddress = (uintptr_t)FrameStart;
+    if (StartAddress == (uintptr_t)&SlotP->Data[0]) {
+      if (SlotP->Prev) {
+        // The new stack pointer is the end of the data field of the
+        // previous slot. This will allow the stack pointer to be
+        // used in the computation of the remaining data space in
+        // the current slot.
+        StackP = SlotP->PrevSlotStackPtr;
+        // Reset SlotP to previous slot.
+        SlotP = SlotP->Prev;
       }
+
+      // If this will "pop" the last global memory node then it is likely
+      // that we are at the end of the data sharing region and we can
+      // de-allocate any existing global memory slots.
+      if (!SlotP->Prev) {
+        __kmpc_data_sharing_slot *Tail = DataSharingState.TailPtr[WID];
+
+        while(Tail && Tail->Prev) {
+          Tail = Tail->Prev;
+          free(Tail->Next);
+          Tail->Next=0;
+        }
+      }
+    } else {
+      // This is not the last frame popped from this slot.
+      // Reset StackP
+      StackP = FrameStart;
     }
 
     return;

@@ -1,4 +1,5 @@
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,loop(irce)' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: irce: in function test_01: constrained Loop at depth 1 containing:
 ; CHECK-LABEL: irce: in function test_02: constrained Loop at depth 1 containing:

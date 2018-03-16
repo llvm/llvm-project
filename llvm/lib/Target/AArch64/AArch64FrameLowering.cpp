@@ -140,6 +140,11 @@ static cl::opt<bool> EnableRedZone("aarch64-redzone",
                                    cl::desc("enable use of redzone on AArch64"),
                                    cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    ReverseCSRRestoreSeq("reverse-csr-restore-seq",
+                         cl::desc("reverse the CSR restore sequence"),
+                         cl::init(false), cl::Hidden);
+
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
 /// This is the biggest offset to the stack pointer we can encode in aarch64
@@ -844,14 +849,32 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
 
+  uint64_t AfterCSRPopSize = ArgumentPopSize;
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
   bool CombineSPBump = shouldCombineCSRLocalStackBump(MF, NumBytes);
+  // Assume we can't combine the last pop with the sp restore.
 
-  if (!CombineSPBump && PrologueSaveSize != 0)
-    convertCalleeSaveRestoreToSPPrePostIncDec(
-        MBB, std::prev(MBB.getFirstTerminator()), DL, TII, PrologueSaveSize);
+  if (!CombineSPBump && PrologueSaveSize != 0) {
+    MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
+    // Converting the last ldp to a post-index ldp is valid only if the last
+    // ldp's offset is 0.
+    const MachineOperand &OffsetOp = Pop->getOperand(Pop->getNumOperands() - 1);
+    // If the offset is 0, convert it to a post-index ldp.
+    if (OffsetOp.getImm() == 0) {
+      convertCalleeSaveRestoreToSPPrePostIncDec(MBB, Pop, DL, TII,
+                                                PrologueSaveSize);
+    } else {
+      // If not, make sure to emit an add after the last ldp.
+      // We're doing this by transfering the size to be restored from the
+      // adjustment *before* the CSR pops to the adjustment *after* the CSR
+      // pops.
+      AfterCSRPopSize += PrologueSaveSize;
+    }
+  }
 
   // Move past the restores of the callee-saved registers.
+  // If we plan on combining the sp bump of the local stack size and the callee
+  // save stack size, we might need to adjust the CSR save and restore offsets.
   MachineBasicBlock::iterator LastPopI = MBB.getFirstTerminator();
   MachineBasicBlock::iterator Begin = MBB.begin();
   while (LastPopI != Begin) {
@@ -866,7 +889,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // If there is a single SP update, insert it before the ret and we're done.
   if (CombineSPBump) {
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
-                    NumBytes + ArgumentPopSize, TII,
+                    NumBytes + AfterCSRPopSize, TII,
                     MachineInstr::FrameDestroy);
     return;
   }
@@ -878,18 +901,18 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     bool RedZone = canUseRedZone(MF);
     // If this was a redzone leaf function, we don't need to restore the
     // stack pointer (but we may need to pop stack args for fastcc).
-    if (RedZone && ArgumentPopSize == 0)
+    if (RedZone && AfterCSRPopSize == 0)
       return;
 
     bool NoCalleeSaveRestore = PrologueSaveSize == 0;
     int StackRestoreBytes = RedZone ? 0 : NumBytes;
     if (NoCalleeSaveRestore)
-      StackRestoreBytes += ArgumentPopSize;
+      StackRestoreBytes += AfterCSRPopSize;
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
                     StackRestoreBytes, TII, MachineInstr::FrameDestroy);
     // If we were able to combine the local stack pop with the argument pop,
     // then we're done.
-    if (NoCalleeSaveRestore || ArgumentPopSize == 0)
+    if (NoCalleeSaveRestore || AfterCSRPopSize == 0)
       return;
     NumBytes = 0;
   }
@@ -909,9 +932,37 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // This must be placed after the callee-save restore code because that code
   // assumes the SP is at the same location as it was after the callee-save save
   // code in the prologue.
-  if (ArgumentPopSize)
+  if (AfterCSRPopSize) {
+    // Sometimes (when we restore in the same order as we save), we can end up
+    // with code like this:
+    //
+    // ldp      x26, x25, [sp]
+    // ldp      x24, x23, [sp, #16]
+    // ldp      x22, x21, [sp, #32]
+    // ldp      x20, x19, [sp, #48]
+    // add      sp, sp, #64
+    //
+    // In this case, it is always better to put the first ldp at the end, so
+    // that the load-store optimizer can run and merge the ldp and the add into
+    // a post-index ldp.
+    // If we managed to grab the first pop instruction, move it to the end.
+    if (LastPopI != Begin)
+      MBB.splice(MBB.getFirstTerminator(), &MBB, LastPopI);
+    // We should end up with something like this now:
+    //
+    // ldp      x24, x23, [sp, #16]
+    // ldp      x22, x21, [sp, #32]
+    // ldp      x20, x19, [sp, #48]
+    // ldp      x26, x25, [sp]
+    // add      sp, sp, #64
+    //
+    // and the load-store optimizer can merge the last two instructions into:
+    //
+    // ldp      x26, x25, [sp], #64
+    //
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
-                    ArgumentPopSize, TII, MachineInstr::FrameDestroy);
+                    AfterCSRPopSize, TII, MachineInstr::FrameDestroy);
+  }
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for
@@ -1180,9 +1231,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs);
 
-  for (auto RPII = RegPairs.begin(), RPIE = RegPairs.end(); RPII != RPIE;
-       ++RPII) {
-    RegPairInfo RPI = *RPII;
+  auto EmitMI = [&](const RegPairInfo &RPI) {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
 
@@ -1221,7 +1270,14 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
         MachineMemOperand::MOLoad, 8, 8));
-  }
+  };
+
+  if (ReverseCSRRestoreSeq)
+    for (const RegPairInfo &RPI : reverse(RegPairs))
+      EmitMI(RPI);
+  else
+    for (const RegPairInfo &RPI : RegPairs)
+      EmitMI(RPI);
   return true;
 }
 

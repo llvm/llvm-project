@@ -144,19 +144,6 @@ struct match_zero {
 /// zero_initializer for vectors and ConstantPointerNull for pointers.
 inline match_zero m_Zero() { return match_zero(); }
 
-struct match_any_zero {
-  template <typename ITy> bool match(ITy *V) {
-    if (const auto *C = dyn_cast<Constant>(V))
-      return C->isZeroValue();
-    return false;
-  }
-};
-
-/// Match an arbitrary zero/null constant. This includes
-/// zero_initializer for vectors and ConstantPointerNull for pointers. For
-/// floating point constants, this will match negative zero and positive zero
-inline match_any_zero m_AnyZero() { return match_any_zero(); }
-
 struct apint_match {
   const APInt *&Res;
 
@@ -417,6 +404,15 @@ struct is_nan {
 // Match an arbitrary NaN constant. This includes quiet and signalling nans.
 inline cstfp_pred_ty<is_nan> m_NaN() {
   return cstfp_pred_ty<is_nan>();
+}
+
+struct is_any_zero_fp {
+  bool isValue(const APFloat &C) { return C.isZero(); }
+};
+
+/// Match a floating-point negative zero or positive zero
+inline cstfp_pred_ty<is_any_zero_fp> m_AnyZeroFP() {
+  return cstfp_pred_ty<is_any_zero_fp>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

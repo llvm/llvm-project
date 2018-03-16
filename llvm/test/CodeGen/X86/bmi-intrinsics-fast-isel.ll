@@ -24,11 +24,11 @@ define i16 @test__tzcnt_u16(i16 %a0) {
 ;
 ; X64-LABEL: test__tzcnt_u16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw $16, %cx
-; X64-NEXT:    movzwl %di, %edx
-; X64-NEXT:    tzcntw %dx, %ax
-; X64-NEXT:    cmpl $0, %edx
-; X64-NEXT:    cmovew %cx, %ax
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    tzcntw %ax, %cx
+; X64-NEXT:    cmpl $0, %eax
+; X64-NEXT:    movw $16, %ax
+; X64-NEXT:    cmovnew %cx, %ax
 ; X64-NEXT:    retq
   %zext = zext i16 %a0 to i32
   %cmp = icmp ne i32 %zext, 0
@@ -146,9 +146,9 @@ define i32 @test__tzcnt_u32(i32 %a0) {
 ;
 ; X64-LABEL: test__tzcnt_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $32, %ecx
-; X64-NEXT:    tzcntl %edi, %eax
-; X64-NEXT:    cmovbl %ecx, %eax
+; X64-NEXT:    tzcntl %edi, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    retq
   %cmp = icmp ne i32 %a0, 0
   %cttz = call i32 @llvm.cttz.i32(i32 %a0, i1 true)
@@ -176,11 +176,11 @@ define i16 @test_tzcnt_u16(i16 %a0) {
 ;
 ; X64-LABEL: test_tzcnt_u16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw $16, %cx
-; X64-NEXT:    movzwl %di, %edx
-; X64-NEXT:    tzcntw %dx, %ax
-; X64-NEXT:    cmpl $0, %edx
-; X64-NEXT:    cmovew %cx, %ax
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    tzcntw %ax, %cx
+; X64-NEXT:    cmpl $0, %eax
+; X64-NEXT:    movw $16, %ax
+; X64-NEXT:    cmovnew %cx, %ax
 ; X64-NEXT:    retq
   %zext = zext i16 %a0 to i32
   %cmp = icmp ne i32 %zext, 0
@@ -311,9 +311,9 @@ define i32 @test_tzcnt_u32(i32 %a0) {
 ;
 ; X64-LABEL: test_tzcnt_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $32, %ecx
-; X64-NEXT:    tzcntl %edi, %eax
-; X64-NEXT:    cmovbl %ecx, %eax
+; X64-NEXT:    tzcntl %edi, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    retq
   %cmp = icmp ne i32 %a0, 0
   %cttz = call i32 @llvm.cttz.i32(i32 %a0, i1 true)

@@ -173,6 +173,10 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_MUL:
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR:
     return getSameOperandsMapping(MI, false);
     break;
   case TargetOpcode::G_FADD:

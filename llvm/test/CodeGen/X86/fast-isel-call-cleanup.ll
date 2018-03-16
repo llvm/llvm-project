@@ -6,10 +6,8 @@ entry:
   %call = call i32 @targetfn(i32 42)
   ret void
 ; CHECK-LABEL: fastiselcall:
-; Local value area is still there:
-; CHECK: movl $42, {{%[a-z]+}}
-; Fast-ISel's arg mov is not here:
-; CHECK-NOT: movl $42, (%esp)
+; FastISel's local value code was dead, so it's gone.
+; CHECK-NOT: movl $42,
 ; SDag-ISel's arg mov:
 ; CHECK: movabsq $_targetfn, %[[REG:[^ ]*]]
 ; CHECK: movl $42, %edi

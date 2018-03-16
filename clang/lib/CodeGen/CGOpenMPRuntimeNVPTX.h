@@ -61,6 +61,12 @@ private:
   /// function.
   void emitGenericEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
+  /// Helper for generic variables globalization prolog.
+  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc);
+
+  /// Helper for generic variables globalization epilog.
+  void emitGenericVarsEpilog(CodeGenFunction &CGF);
+
   /// \brief Helper for Spmd mode target directive's entry function.
   void emitSpmdEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
                            const OMPExecutableDirective &D);
@@ -289,6 +295,14 @@ public:
       CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
       ArrayRef<llvm::Value *> Args = llvm::None) const override;
 
+  /// Emits OpenMP-specific function prolog.
+  /// Required for device constructs.
+  void emitFunctionProlog(CodeGenFunction &CGF, const Decl *D) override;
+
+  /// Gets the OpenMP-specific address of the local variable.
+  Address getAddressOfLocalVariable(CodeGenFunction &CGF,
+                                    const VarDecl *VD) override;
+
   /// Target codegen is specialized based on two programming models: the
   /// 'generic' fork-join model of OpenMP, and a more GPU efficient 'spmd'
   /// model for constructs like 'target parallel' that support it.
@@ -300,12 +314,42 @@ public:
     Unknown,
   };
 
+  /// Cleans up references to the objects in finished function.
+  ///
+  void functionFinished(CodeGenFunction &CGF) override;
+
 private:
   // Track the execution mode when codegening directives within a target
   // region. The appropriate mode (generic/spmd) is set on entry to the
   // target region and used by containing directives such as 'parallel'
   // to emit optimized code.
   ExecutionMode CurrentExecutionMode;
+
+  /// Map between an outlined function and its wrapper.
+  llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;
+
+  /// Emit function which wraps the outline parallel region
+  /// and controls the parameters which are passed to this function.
+  /// The wrapper ensures that the outlined function is called
+  /// with the correct arguments when data is shared.
+  llvm::Function *createParallelDataSharingWrapper(
+      llvm::Function *OutlinedParallelFn, const OMPExecutableDirective &D);
+
+  /// The map of local variables to their addresses in the global memory.
+  using DeclToAddrMapTy = llvm::MapVector<const Decl *,
+      std::pair<const FieldDecl *, Address>>;
+  /// Set of the parameters passed by value escaping OpenMP context.
+  using EscapedParamsTy = llvm::SmallPtrSet<const Decl *, 4>;
+  struct FunctionData {
+    DeclToAddrMapTy LocalVarData;
+    const RecordDecl *GlobalRecord = nullptr;
+    llvm::Value *GlobalRecordAddr = nullptr;
+    EscapedParamsTy EscapedParameters;
+    std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;
+  };
+  /// Maps the function to the list of the globalized variables with their
+  /// addresses.
+  llvm::SmallDenseMap<llvm::Function *, FunctionData> FunctionGlobalizedDecls;
 };
 
 } // CodeGen namespace.

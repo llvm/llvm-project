@@ -35,19 +35,34 @@ namespace orc {
 template <typename BaseLayerT, typename CompileFtor>
 class IRCompileLayer {
 public:
+  /// @brief Callback type for notifications when modules are compiled.
+  using NotifyCompiledCallback =
+      std::function<void(VModuleKey K, std::unique_ptr<Module>)>;
 
   /// @brief Construct an IRCompileLayer with the given BaseLayer, which must
   ///        implement the ObjectLayer concept.
-  IRCompileLayer(BaseLayerT &BaseLayer, CompileFtor Compile)
-      : BaseLayer(BaseLayer), Compile(std::move(Compile)) {}
+  IRCompileLayer(
+      BaseLayerT &BaseLayer, CompileFtor Compile,
+      NotifyCompiledCallback NotifyCompiled = NotifyCompiledCallback())
+      : BaseLayer(BaseLayer), Compile(std::move(Compile)),
+        NotifyCompiled(std::move(NotifyCompiled)) {}
 
   /// @brief Get a reference to the compiler functor.
   CompileFtor& getCompiler() { return Compile; }
 
+  /// @brief (Re)set the NotifyCompiled callback.
+  void setNotifyCompiled(NotifyCompiledCallback NotifyCompiled) {
+    this->NotifyCompiled = std::move(NotifyCompiled);
+  }
+
   /// @brief Compile the module, and add the resulting object to the base layer
   ///        along with the given memory manager and symbol resolver.
-  Error addModule(VModuleKey K, std::shared_ptr<Module> M) {
-    return BaseLayer.addObject(std::move(K), Compile(*M));
+  Error addModule(VModuleKey K, std::unique_ptr<Module> M) {
+    if (auto Err = BaseLayer.addObject(std::move(K), Compile(*M)))
+      return Err;
+    if (NotifyCompiled)
+      NotifyCompiled(std::move(K), std::move(M));
+    return Error::success();
   }
 
   /// @brief Remove the module associated with the VModuleKey K.
@@ -82,6 +97,7 @@ public:
 private:
   BaseLayerT &BaseLayer;
   CompileFtor Compile;
+  NotifyCompiledCallback NotifyCompiled;
 };
 
 } // end namespace orc

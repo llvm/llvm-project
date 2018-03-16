@@ -5,11 +5,11 @@
 ; latency regardless of whether they are barriers or not.
 
 ; CHECK: ** List Scheduling
-; CHECK: SU(2){{.*}}STR{{.*}}Volatile
+; CHECK: SU(2){{.*}}STR{{.*}}(volatile
 ; CHECK-NOT: SU({{.*}}): Ord
 ; CHECK: SU(3): Ord Latency=1
 ; CHECK-NOT: SU({{.*}}): Ord
-; CHECK: SU(3){{.*}}LDR{{.*}}Volatile
+; CHECK: SU(3){{.*}}LDR{{.*}}(volatile
 ; CHECK-NOT: SU({{.*}}): Ord
 ; CHECK: SU(2): Ord Latency=1
 ; CHECK-NOT: SU({{.*}}): Ord

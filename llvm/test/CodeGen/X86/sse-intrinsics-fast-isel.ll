@@ -1485,8 +1485,8 @@ define void @test_mm_setcsr(i32 %a0) nounwind {
 ;
 ; X64-LABEL: test_mm_setcsr:
 ; X64:       # %bb.0:
-; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    ldmxcsr (%rax)
 ; X64-NEXT:    retq
   %st = alloca i32, align 4

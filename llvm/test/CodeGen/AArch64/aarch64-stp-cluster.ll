@@ -130,10 +130,10 @@ entry:
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: stp_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
-; CHECK:SU(2):   STRXui %1:gpr64, %0:gpr64common, 3; mem:Volatile
-; CHECK:SU(3):   STRXui %1:gpr64, %0:gpr64common, 2; mem:Volatile
-; CHECK:SU(4):   STRXui %1:gpr64, %0:gpr64common, 1; mem:Volatile
-; CHECK:SU(5):   STRXui %1:gpr64, %0:gpr64common, 4; mem:Volatile
+; CHECK:SU(2):   STRXui %1:gpr64, %0:gpr64common, 3 :: (volatile
+; CHECK:SU(3):   STRXui %1:gpr64, %0:gpr64common, 2 :: (volatile
+; CHECK:SU(4):   STRXui %1:gpr64, %0:gpr64common, 1 :: (volatile
+; CHECK:SU(5):   STRXui %1:gpr64, %0:gpr64common, 4 :: (volatile
 define i64 @stp_volatile(i64* nocapture %P, i64 %v) {
 entry:
   %arrayidx = getelementptr inbounds i64, i64* %P, i64 3

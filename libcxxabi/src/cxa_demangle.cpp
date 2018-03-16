@@ -2013,6 +2013,7 @@ struct Db {
   bool TagTemplates = true;
   bool FixForwardReferences = false;
   bool TryToParseTemplateArgs = true;
+  bool ParsingLambdaParams = false;
 
   BumpPointerAllocator ASTAllocator;
 
@@ -2270,6 +2271,7 @@ Node *Db::parseUnnamedTypeName(NameState *) {
   }
   if (consumeIf("Ul")) {
     NodeArray Params;
+    SwapAndRestore<bool> SwapParams(ParsingLambdaParams, true);
     if (!consumeIf("vE")) {
       size_t ParamsBegin = Names.size();
       do {
@@ -4658,20 +4660,20 @@ Node *Db::parseTemplateParam() {
   if (!consumeIf('T'))
     return nullptr;
 
-  if (consumeIf('_')) {
-    if (TemplateParams.empty()) {
-      FixForwardReferences = true;
-      return make<NameType>("FORWARD_REFERENCE");
-    }
-    return TemplateParams[0];
+  size_t Index = 0;
+  if (!consumeIf('_')) {
+    if (parsePositiveInteger(&Index))
+      return nullptr;
+    ++Index;
+    if (!consumeIf('_'))
+      return nullptr;
   }
 
-  size_t Index;
-  if (parsePositiveInteger(&Index))
-    return nullptr;
-  ++Index;
-  if (!consumeIf('_'))
-    return nullptr;
+  // Itanium ABI 5.1.8: In a generic lambda, uses of auto in the parameter list
+  // are mangled as the corresponding artificial template type parameter.
+  if (ParsingLambdaParams)
+    return make<NameType>("auto");
+
   if (Index >= TemplateParams.size()) {
     FixForwardReferences = true;
     return make<NameType>("FORWARD_REFERENCE");

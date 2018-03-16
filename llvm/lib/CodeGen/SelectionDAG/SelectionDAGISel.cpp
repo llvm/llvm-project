@@ -1658,6 +1658,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         FastIS->removeDeadCode(FuncInfo->InsertPt, FuncInfo->MBB->end());
     }
 
+    if (FastIS)
+      FastIS->finishBasicBlock();
     FinishBasicBlock();
     FuncInfo->PHINodesToUpdate.clear();
     ElidedArgCopyInstrs.clear();

@@ -15,7 +15,6 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_INSTRBUILDER_H
 #define LLVM_TOOLS_LLVM_MCA_INSTRBUILDER_H
 
-#include "Dispatch.h"
 #include "Instruction.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -53,7 +52,7 @@ public:
                                         const llvm::MCInst &MCI);
 
   Instruction *createInstruction(const llvm::MCSubtargetInfo &STI,
-                                 DispatchUnit &DU, unsigned Idx,
+                                 unsigned Idx,
                                  const llvm::MCInst &MCI);
 };
 

@@ -40,6 +40,10 @@ if(NOT LLDB_BUILT_STANDALONE)
   list(APPEND LLDB_TEST_DEPS yaml2obj)
 endif()
 
+if(TARGET liblldb)
+  list(APPEND LLDB_TEST_DEPS liblldb)
+endif()
+
 # The default architecture with which to compile test executables is the default LLVM target
 # architecture, which itself defaults to the host architecture.
 string(TOLOWER "${LLVM_TARGET_ARCH}" LLDB_DEFAULT_TEST_ARCH)
@@ -137,16 +141,19 @@ add_python_test_target(check-lldb
 string (REPLACE ";" " " LLDB_DOTEST_ARGS_STR  "${LLDB_DOTEST_ARGS}")
 # We need this to substitute variables.
 configure_file(
-  llvm-dotest.in
-  ${CMAKE_CURRENT_BINARY_DIR}/llvm-dotest.configured
+  lldb-dotest.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lldb-dotest.configured
   )
 # We need this to expand the generator expressions.
 file(GENERATE
   OUTPUT
-  $<TARGET_FILE_DIR:lldb>/llvm-dotest
+  $<TARGET_FILE_DIR:lldb>/lldb-dotest
   INPUT
-  ${CMAKE_CURRENT_BINARY_DIR}/llvm-dotest.configured
+  ${CMAKE_CURRENT_BINARY_DIR}/lldb-dotest.configured
   )
+# Make this a custom target.
+add_custom_target(lldb-dotest)
+add_dependencies(lldb-dotest ${LLDB_TEST_DEPS})
 
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.

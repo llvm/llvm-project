@@ -1616,6 +1616,7 @@ LLVMUnnamedAddr LLVMGetUnnamedAddress(LLVMValueRef Global) {
   case GlobalVariable::UnnamedAddr::Global:
     return LLVMGlobalUnnamedAddr;
   }
+  llvm_unreachable("Unknown UnnamedAddr kind!");
 }
 
 void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr) {

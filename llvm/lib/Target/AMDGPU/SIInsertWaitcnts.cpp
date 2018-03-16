@@ -115,11 +115,11 @@ enum RegisterMapping {
        (w) = (enum WaitEventType)((w) + 1))
 
 // This is a per-basic-block object that maintains current score brackets
-// of each wait-counter, and a per-register scoreboard for each wait-couner.
+// of each wait counter, and a per-register scoreboard for each wait counter.
 // We also maintain the latest score for every event type that can change the
 // waitcnt in order to know if there are multiple types of events within
 // the brackets. When multiple types of event happen in the bracket,
-// wait-count may get decreased out of order, therefore we need to put in
+// wait count may get decreased out of order, therefore we need to put in
 // "s_waitcnt 0" before use.
 class BlockWaitcntBrackets {
 public:
@@ -690,7 +690,7 @@ unsigned int BlockWaitcntBrackets::updateByWait(InstCounterType T,
       setScoreLB(T, getScoreUB(T));
     } else if (counterOutOfOrder(T)) {
       // Counter can get decremented out-of-order when there
-      // are multiple types event in the brack. Also emit an s_wait counter
+      // are multiple types event in the bracket. Also emit an s_wait counter
       // with a conservative value of 0 for the counter.
       NeedWait = CNT_MASK(T);
       setScoreLB(T, getScoreUB(T));
@@ -1301,27 +1301,37 @@ void SIInsertWaitcnts::updateEventWaitCntAfter(
   }
 }
 
+// Merge the score brackets of the Block's predecessors;
+// this merged score bracket is used when adding waitcnts to the Block
 void SIInsertWaitcnts::mergeInputScoreBrackets(MachineBasicBlock &Block) {
   BlockWaitcntBrackets *ScoreBrackets = BlockWaitcntBracketsMap[&Block].get();
   int32_t MaxPending[NUM_INST_CNTS] = {0};
   int32_t MaxFlat[NUM_INST_CNTS] = {0};
   bool MixedExpTypes = false;
 
-  // Clear the score bracket state.
+  // For single basic block loops, we need to retain the Block's
+  // score bracket to have accurate Pred info. So, make a copy of Block's
+  // score bracket, clear() it (which retains several important bits of info),
+  // populate, and then replace en masse. For non-single basic block loops,
+  // just clear Block's current score bracket and repopulate in-place.
+  bool IsSelfPred;
+  std::unique_ptr<BlockWaitcntBrackets> S;
+
+  IsSelfPred = (std::find(Block.pred_begin(), Block.pred_end(), &Block))
+    != Block.pred_end();
+  if (IsSelfPred) {
+    S = llvm::make_unique<BlockWaitcntBrackets>(*ScoreBrackets);
+    ScoreBrackets = S.get();
+  }
+
   ScoreBrackets->clear();
-
-  // Compute the number of pending elements on block entry.
-
-  // IMPORTANT NOTE: If iterative handling of loops is added, the code will
-  // need to handle single BBs with backedges to themselves. This means that
-  // they will need to retain and not clear their initial state.
 
   // See if there are any uninitialized predecessors. If so, emit an
   // s_waitcnt 0 at the beginning of the block.
-  for (MachineBasicBlock *pred : Block.predecessors()) {
+  for (MachineBasicBlock *Pred : Block.predecessors()) {
     BlockWaitcntBrackets *PredScoreBrackets =
-        BlockWaitcntBracketsMap[pred].get();
-    bool Visited = BlockVisitedSet.count(pred);
+        BlockWaitcntBracketsMap[Pred].get();
+    bool Visited = BlockVisitedSet.count(Pred);
     if (!Visited || PredScoreBrackets->getWaitAtBeginning()) {
       continue;
     }
@@ -1549,6 +1559,12 @@ void SIInsertWaitcnts::mergeInputScoreBrackets(MachineBasicBlock &Block) {
             std::max(ScoreBrackets->getEventUB(EXP_GPR_LOCK), new_exp_ub));
       }
     }
+  }
+
+  // if a single block loop, update the score brackets. Not needed for other
+  // blocks, as we did this in-place
+  if (IsSelfPred) {
+    BlockWaitcntBracketsMap[&Block] = llvm::make_unique<BlockWaitcntBrackets>(*ScoreBrackets);
   }
 }
 

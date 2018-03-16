@@ -11,8 +11,9 @@
 namespace clang {
 namespace clangd {
 
-void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents) {
-  Server.addDocument(File, Contents);
+void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents,
+                    WantDiagnostics WantDiags, bool SkipCache) {
+  Server.addDocument(File, Contents, WantDiags, SkipCache);
   if (!Server.blockUntilIdleForTest())
     llvm_unreachable("not idle after addDocument");
 }

@@ -125,8 +125,13 @@ OrcMCJITReplacement::runFunction(Function *F,
 }
 
 void OrcMCJITReplacement::runStaticConstructorsDestructors(bool isDtors) {
-  for (auto &M : LocalModules)
-    ExecutionEngine::runStaticConstructorsDestructors(*M, isDtors);
+  auto &CtorDtorsMap = isDtors ? UnexecutedDestructors : UnexecutedConstructors;
+
+  for (auto &KV : CtorDtorsMap)
+    cantFail(CtorDtorRunner<LazyEmitLayerT>(std::move(KV.second), KV.first)
+                 .runViaLayer(LazyEmitLayer));
+
+  CtorDtorsMap.clear();
 }
 
 } // End namespace orc.
