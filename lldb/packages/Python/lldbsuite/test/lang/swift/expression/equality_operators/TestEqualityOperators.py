@@ -57,6 +57,7 @@ class TestUnitTests(TestBase):
     @decorators.expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
+    @decorators.expectedFailureAll(bugnumber="rdar://38483465")
     def test_equality_operators_other_module(self):
         """Test that we resolve expression operators correctly"""
         self.build()

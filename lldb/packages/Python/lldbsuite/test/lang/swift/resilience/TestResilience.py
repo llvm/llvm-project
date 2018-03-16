@@ -39,6 +39,7 @@ class TestResilience(TestBase):
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
     @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    @decorators.expectedFailureAll(bugnumber="rdar://38483762")
     def test_cross_module_extension(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
