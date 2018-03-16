@@ -188,11 +188,10 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0: mov r{{.*}}, r8
 ; CHECK-O0: cmp r{{.*}}, #0
 ; CHECK-O0: beq
-; CHECK-O0-DAG: movw r{{.*}}, #1
-; CHECK-O0-DAG: mov r{{.*}}, #16
+; CHECK-O0: mov r0, #16
 ; CHECK-O0: malloc
 ; CHECK-O0-DAG: mov [[ID:r[0-9]+]], r0
-; CHECK-O0-DAG: ldr [[ID2:r[0-9]+]], [sp{{.*}}]
+; CHECK-O0-DAG: movw [[ID2:.*]], #1
 ; CHECK-O0: strb [[ID2]], [{{.*}}[[ID]], #8]
 ; spill r0
 ; CHECK-O0: str r0, [sp{{.*}}]

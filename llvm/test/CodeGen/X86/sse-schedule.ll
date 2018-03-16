@@ -2557,7 +2557,7 @@ define <4 x float> @test_rcpps(<4 x float> %a0, <4 x float> *%a1) {
 ; SLM-NEXT:    rcpps (%rdi), %xmm1 # sched: [8:1.00]
 ; SLM-NEXT:    rcpps %xmm0, %xmm0 # sched: [5:1.00]
 ; SLM-NEXT:    addps %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_rcpps:
@@ -2729,7 +2729,7 @@ define <4 x float> @test_rsqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ; SLM-NEXT:    rsqrtps (%rdi), %xmm1 # sched: [8:1.00]
 ; SLM-NEXT:    rsqrtps %xmm0, %xmm0 # sched: [5:1.00]
 ; SLM-NEXT:    addps %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_rsqrtps:
@@ -3038,7 +3038,7 @@ define <4 x float> @test_sqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ; SLM-NEXT:    sqrtps (%rdi), %xmm1 # sched: [18:1.00]
 ; SLM-NEXT:    sqrtps %xmm0, %xmm0 # sched: [15:1.00]
 ; SLM-NEXT:    addps %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_sqrtps:

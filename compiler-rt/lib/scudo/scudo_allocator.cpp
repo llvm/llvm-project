@@ -64,14 +64,6 @@ INLINE u32 computeCRC32(u32 Crc, uptr Value, uptr *Array, uptr ArraySize) {
 static ScudoBackendAllocator &getBackendAllocator();
 
 namespace Chunk {
-  // We can't use the offset member of the chunk itself, as we would double
-  // fetch it without any warranty that it wouldn't have been tampered. To
-  // prevent this, we work with a local copy of the header.
-  static INLINE void *getBackendPtr(const void *Ptr, UnpackedHeader *Header) {
-    return reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
-        getHeaderSize() - (Header->Offset << MinAlignmentLog));
-  }
-
   static INLINE AtomicPackedHeader *getAtomicHeader(void *Ptr) {
     return reinterpret_cast<AtomicPackedHeader *>(reinterpret_cast<uptr>(Ptr) -
         getHeaderSize());
@@ -86,13 +78,32 @@ namespace Chunk {
     return IsAligned(reinterpret_cast<uptr>(Ptr), MinAlignment);
   }
 
+  // We can't use the offset member of the chunk itself, as we would double
+  // fetch it without any warranty that it wouldn't have been tampered. To
+  // prevent this, we work with a local copy of the header.
+  static INLINE void *getBackendPtr(const void *Ptr, UnpackedHeader *Header) {
+    return reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
+        getHeaderSize() - (Header->Offset << MinAlignmentLog));
+  }
+
   // Returns the usable size for a chunk, meaning the amount of bytes from the
   // beginning of the user data to the end of the backend allocated chunk.
   static INLINE uptr getUsableSize(const void *Ptr, UnpackedHeader *Header) {
-    const uptr Size = getBackendAllocator().getActuallyAllocatedSize(
-        getBackendPtr(Ptr, Header), Header->ClassId);
-    DCHECK_NE(Size, 0);
-    return Size - getHeaderSize() - (Header->Offset << MinAlignmentLog);
+    const uptr ClassId = Header->ClassId;
+    if (ClassId)
+      return PrimaryAllocator::ClassIdToSize(ClassId) - getHeaderSize() -
+          (Header->Offset << MinAlignmentLog);
+    return SecondaryAllocator::GetActuallyAllocatedSize(
+        getBackendPtr(Ptr, Header)) - getHeaderSize();
+  }
+
+  // Returns the size the user requested when allocating the chunk.
+  static INLINE uptr getSize(const void *Ptr, UnpackedHeader *Header) {
+    const uptr SizeOrUnusedBytes = Header->SizeOrUnusedBytes;
+    if (Header->ClassId)
+      return SizeOrUnusedBytes;
+    return SecondaryAllocator::GetActuallyAllocatedSize(
+        getBackendPtr(Ptr, Header)) - getHeaderSize() - SizeOrUnusedBytes;
   }
 
   // Compute the checksum of the chunk pointer and its header.
@@ -386,8 +397,7 @@ struct ScudoAllocator {
 
     // If requested, we will zero out the entire contents of the returned chunk.
     if ((ForceZeroContents || ZeroContents) && ClassId)
-      memset(BackendPtr, 0,
-             BackendAllocator.getActuallyAllocatedSize(BackendPtr, ClassId));
+      memset(BackendPtr, 0, PrimaryAllocator::ClassIdToSize(ClassId));
 
     UnpackedHeader Header = {};
     uptr UserPtr = reinterpret_cast<uptr>(BackendPtr) + Chunk::getHeaderSize();
@@ -400,7 +410,7 @@ struct ScudoAllocator {
       Header.Offset = (AlignedUserPtr - UserPtr) >> MinAlignmentLog;
       UserPtr = AlignedUserPtr;
     }
-    CHECK_LE(UserPtr + Size, reinterpret_cast<uptr>(BackendPtr) + BackendSize);
+    DCHECK_LE(UserPtr + Size, reinterpret_cast<uptr>(BackendPtr) + BackendSize);
     Header.State = ChunkAllocated;
     Header.AllocType = Type;
     if (ClassId) {
@@ -446,7 +456,7 @@ struct ScudoAllocator {
       // with tiny chunks, taking a lot of VA memory. This is an approximation
       // of the usable size, that allows us to not call
       // GetActuallyAllocatedSize.
-      uptr EstimatedSize = Size + (Header->Offset << MinAlignmentLog);
+      const uptr EstimatedSize = Size + (Header->Offset << MinAlignmentLog);
       UnpackedHeader NewHeader = *Header;
       NewHeader.State = ChunkQuarantine;
       Chunk::compareExchangeHeader(Ptr, &NewHeader, Header);
@@ -487,8 +497,7 @@ struct ScudoAllocator {
                          "%p\n", Ptr);
       }
     }
-    const uptr Size = Header.ClassId ? Header.SizeOrUnusedBytes :
-        Chunk::getUsableSize(Ptr, &Header) - Header.SizeOrUnusedBytes;
+    const uptr Size = Chunk::getSize(Ptr, &Header);
     if (DeleteSizeMismatch) {
       if (DeleteSize && DeleteSize != Size)
         dieWithMessage("invalid sized delete when deallocating address %p\n",
@@ -529,7 +538,7 @@ struct ScudoAllocator {
     // old one.
     void *NewPtr = allocate(NewSize, MinAlignment, FromMalloc);
     if (NewPtr) {
-      uptr OldSize = OldHeader.ClassId ? OldHeader.SizeOrUnusedBytes :
+      const uptr OldSize = OldHeader.ClassId ? OldHeader.SizeOrUnusedBytes :
           UsableSize - OldHeader.SizeOrUnusedBytes;
       memcpy(NewPtr, OldPtr, Min(NewSize, UsableSize));
       quarantineOrDeallocateChunk(OldPtr, &OldHeader, OldSize);

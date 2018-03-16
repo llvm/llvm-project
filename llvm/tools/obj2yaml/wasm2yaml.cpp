@@ -62,15 +62,12 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
     CustomSec = std::move(NameSec);
   } else if (WasmSec.Name == "linking") {
     std::unique_ptr<WasmYAML::LinkingSection> LinkingSec = make_unique<WasmYAML::LinkingSection>();
-    std::map<StringRef,size_t> ComdatIndexes;
-    for (StringRef ComdatName : Obj.comdats()) {
-      ComdatIndexes[ComdatName] = LinkingSec->Comdats.size();
+    ArrayRef<StringRef> Comdats = Obj.linkingData().Comdats;
+    for (StringRef ComdatName : Comdats)
       LinkingSec->Comdats.emplace_back(WasmYAML::Comdat{ComdatName, {}});
-    }
     for (auto &Func : Obj.functions()) {
-      if (!Func.Comdat.empty()) {
-        auto &Comdat = LinkingSec->Comdats[ComdatIndexes[Func.Comdat]];
-        Comdat.Entries.emplace_back(
+      if (Func.Comdat != UINT32_MAX) {
+        LinkingSec->Comdats[Func.Comdat].Entries.emplace_back(
                 WasmYAML::ComdatEntry{wasm::WASM_COMDAT_FUNCTION, Func.Index});
       }
     }
@@ -84,9 +81,8 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
         SegmentInfo.Flags = Segment.Data.Flags;
         LinkingSec->SegmentInfos.push_back(SegmentInfo);
       }
-      if (!Segment.Data.Comdat.empty()) {
-        auto &Comdat = LinkingSec->Comdats[ComdatIndexes[Segment.Data.Comdat]];
-        Comdat.Entries.emplace_back(
+      if (Segment.Data.Comdat != UINT32_MAX) {
+        LinkingSec->Comdats[Segment.Data.Comdat].Entries.emplace_back(
             WasmYAML::ComdatEntry{wasm::WASM_COMDAT_DATA, SegmentIndex});
       }
       SegmentIndex++;

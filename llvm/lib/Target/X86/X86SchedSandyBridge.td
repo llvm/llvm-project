@@ -114,6 +114,10 @@ def : WriteRes<WriteIDivLd, [SBPort23, SBPort0, SBDivider]> {
 }
 
 // Scalar and vector floating point.
+def  : WriteRes<WriteFStore,       [SBPort23, SBPort4]>;
+def  : WriteRes<WriteFLoad,        [SBPort23]> { let Latency = 6; }
+def  : WriteRes<WriteFMove,        [SBPort5]>;
+
 defm : SBWriteResPair<WriteFAdd,   SBPort1, 3>;
 defm : SBWriteResPair<WriteFMul,   SBPort0, 5>;
 defm : SBWriteResPair<WriteFDiv,   SBPort0, 24>;
@@ -135,6 +139,10 @@ def : WriteRes<WriteFVarBlendLd, [SBPort0, SBPort5, SBPort23]> {
 }
 
 // Vector integer operations.
+def  : WriteRes<WriteVecStore,       [SBPort23, SBPort4]>;
+def  : WriteRes<WriteVecLoad,        [SBPort23]> { let Latency = 6; }
+def  : WriteRes<WriteVecMove,        [SBPort05]>;
+
 defm : SBWriteResPair<WriteVecShift, SBPort5,  1>;
 defm : SBWriteResPair<WriteVecLogic, SBPort5, 1>;
 defm : SBWriteResPair<WriteVecALU,   SBPort1,  3>;

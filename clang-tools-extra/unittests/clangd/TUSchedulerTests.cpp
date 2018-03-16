@@ -226,8 +226,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
 
                 ASSERT_TRUE((bool)Preamble);
-                EXPECT_EQ(Preamble->Inputs.FS, Inputs.FS);
-                EXPECT_EQ(Preamble->Inputs.Contents, Inputs.Contents);
+                EXPECT_EQ(Preamble->Contents, Inputs.Contents);
 
                 std::lock_guard<std::mutex> Lock(Mut);
                 ++TotalPreambleReads;

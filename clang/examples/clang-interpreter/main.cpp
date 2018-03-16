@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Invoke.h"
+#include "Manager.h"
+
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
@@ -26,60 +29,45 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
+
 using namespace clang;
 using namespace clang::driver;
+
+namespace interpreter {
+
+static llvm::ExecutionEngine *
+createExecutionEngine(std::unique_ptr<llvm::Module> M, std::string *ErrorStr) {
+  llvm::EngineBuilder EB(std::move(M));
+  EB.setErrorStr(ErrorStr);
+  EB.setMemoryManager(llvm::make_unique<SingleSectionMemoryManager>());
+  llvm::ExecutionEngine *EE = EB.create();
+  EE->finalizeObject();
+  return EE;
+}
+
+// Invoked from a try/catch block in invoke.cpp.
+//
+static int Invoke(llvm::ExecutionEngine *EE, llvm::Function *EntryFn,
+          const std::vector<std::string> &Args, char *const *EnvP) {
+  return EE->runFunctionAsMain(EntryFn, Args, EnvP);
+}
 
 // This function isn't referenced outside its translation unit, but it
 // can't use the "static" keyword because its address is used for
 // GetMainExecutable (since some platforms don't support taking the
 // address of main, and some platforms can't implement GetMainExecutable
 // without being given the address of a function in the main executable).
-std::string GetExecutablePath(const char *Argv0) {
-  // This just needs to be some symbol in the binary; C++ doesn't
-  // allow taking the address of ::main however.
-  void *MainAddr = (void*) (intptr_t) GetExecutablePath;
+std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-static llvm::ExecutionEngine *
-createExecutionEngine(std::unique_ptr<llvm::Module> M, std::string *ErrorStr) {
-  return llvm::EngineBuilder(std::move(M))
-      .setEngineKind(llvm::EngineKind::Either)
-      .setErrorStr(ErrorStr)
-      .create();
-}
-
-static int Execute(std::unique_ptr<llvm::Module> Mod, char *const *envp) {
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-
-  llvm::Module &M = *Mod;
-  std::string Error;
-  std::unique_ptr<llvm::ExecutionEngine> EE(
-      createExecutionEngine(std::move(Mod), &Error));
-  if (!EE) {
-    llvm::errs() << "unable to make execution engine: " << Error << "\n";
-    return 255;
-  }
-
-  llvm::Function *EntryFn = M.getFunction("main");
-  if (!EntryFn) {
-    llvm::errs() << "'main' function not found in module.\n";
-    return 255;
-  }
-
-  // FIXME: Support passing arguments.
-  std::vector<std::string> Args;
-  Args.push_back(M.getModuleIdentifier());
-
-  EE->finalizeObject();
-  return EE->runFunctionAsMain(EntryFn, Args, envp);
-}
+} // namespace interpreter
 
 int main(int argc, const char **argv, char * const *envp) {
-  void *MainAddr = (void*) (intptr_t) GetExecutablePath;
-  std::string Path = GetExecutablePath(argv[0]);
+  // This just needs to be some symbol in the binary; C++ doesn't
+  // allow taking the address of ::main however.
+  void *MainAddr = (void*) (intptr_t) interpreter::GetExecutablePath;
+  std::string Path = interpreter::GetExecutablePath(argv[0], MainAddr);
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticPrinter *DiagClient =
     new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
@@ -87,12 +75,15 @@ int main(int argc, const char **argv, char * const *envp) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
 
-  // Use ELF on windows for now.
-  std::string TripleStr = llvm::sys::getProcessTriple();
+  const std::string TripleStr = llvm::sys::getProcessTriple();
   llvm::Triple T(TripleStr);
+
+  // Use ELF on Windows-32 and MingW for now.
+#ifndef CLANG_INTERPRETER_COFF_FORMAT
   if (T.isOSBinFormatCOFF())
     T.setObjectFormat(llvm::Triple::ELF);
-
+#endif
+	
   Driver TheDriver(Path, T.str(), Diags);
   TheDriver.setTitle("clang interpreter");
   TheDriver.setCheckInputsExist(false);
@@ -163,12 +154,36 @@ int main(int argc, const char **argv, char * const *envp) {
   if (!Clang.ExecuteAction(*Act))
     return 1;
 
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+
   int Res = 255;
-  if (std::unique_ptr<llvm::Module> Module = Act->takeModule())
-    Res = Execute(std::move(Module), envp);
+  if (std::unique_ptr<llvm::Module> Module = Act->takeModule()) {
+    llvm::Function *EntryFn = Module->getFunction("main");
+    if (!EntryFn) {
+      llvm::errs() << "'main' function not found in module.\n";
+      return Res;
+    }
+
+    std::string Error;
+    std::unique_ptr<llvm::ExecutionEngine> EE(
+        interpreter::createExecutionEngine(std::move(Module), &Error));
+    if (!EE) {
+      llvm::errs() << "unable to make execution engine: " << Error << "\n";
+      return Res;
+    }
+
+    interpreter::InvokeArgs Args;
+    for (int I = 1; I < argc; ++I)
+      Args.push_back(argv[I]);
+
+    if (Clang.getLangOpts().CPlusPlus)
+      Res = interpreter::TryIt(EE.get(), EntryFn, Args, envp, interpreter::Invoke);
+    else
+      Res = interpreter::Invoke(EE.get(), EntryFn, Args, envp);
+  }
 
   // Shutdown.
-
   llvm::llvm_shutdown();
 
   return Res;

@@ -71,7 +71,7 @@ define void @test_f2xm1() optsize {
 ; BTVER2-LABEL: test_f2xm1:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    f2xm1 # sched: [100:0.17]
+; BTVER2-NEXT:    f2xm1 # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -177,10 +177,10 @@ define void @test_fadd(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fadd %st(0), %st(1)
-; ATOM-NEXT:    fadd %st(2)
-; ATOM-NEXT:    fadds (%ecx)
-; ATOM-NEXT:    faddl (%eax)
+; ATOM-NEXT:    fadd %st(0), %st(1) # sched: [0:?]
+; ATOM-NEXT:    fadd %st(2) # sched: [0:?]
+; ATOM-NEXT:    fadds (%ecx) # sched: [0:?]
+; ATOM-NEXT:    faddl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -301,10 +301,10 @@ define void @test_faddp_fiadd(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    faddp %st(1)
-; ATOM-NEXT:    faddp %st(2)
-; ATOM-NEXT:    fiadds (%ecx)
-; ATOM-NEXT:    fiaddl (%eax)
+; ATOM-NEXT:    faddp %st(1) # sched: [0:?]
+; ATOM-NEXT:    faddp %st(2) # sched: [0:?]
+; ATOM-NEXT:    fiadds (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fiaddl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -421,8 +421,8 @@ define void @test_fbld_fbstp(i8* %a0) optsize {
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fbld (%eax)
-; ATOM-NEXT:    fbstp (%eax)
+; ATOM-NEXT:    fbld (%eax) # sched: [0:?]
+; ATOM-NEXT:    fbstp (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -484,8 +484,8 @@ define void @test_fbld_fbstp(i8* %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fbld (%eax) # sched: [100:0.17]
-; BTVER2-NEXT:    fbstp (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    fbld (%eax) # sched: [100:0.50]
+; BTVER2-NEXT:    fbstp (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -643,8 +643,8 @@ define void @test_fclex() optsize {
 ; BTVER2-LABEL: test_fclex:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    wait # sched: [100:0.17]
-; BTVER2-NEXT:    fnclex # sched: [100:0.17]
+; BTVER2-NEXT:    wait # sched: [100:0.50]
+; BTVER2-NEXT:    fnclex # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -719,7 +719,7 @@ define void @test_fnclex() optsize {
 ; BTVER2-LABEL: test_fnclex:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fnclex # sched: [100:0.17]
+; BTVER2-NEXT:    fnclex # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -895,10 +895,10 @@ define void @test_fcom(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fcom %st(1)
-; ATOM-NEXT:    fcom %st(3)
-; ATOM-NEXT:    fcoms (%ecx)
-; ATOM-NEXT:    fcoml (%eax)
+; ATOM-NEXT:    fcom %st(1) # sched: [0:?]
+; ATOM-NEXT:    fcom %st(3) # sched: [0:?]
+; ATOM-NEXT:    fcoms (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fcoml (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1020,10 +1020,10 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fcomp %st(1)
-; ATOM-NEXT:    fcomp %st(3)
-; ATOM-NEXT:    fcomps (%ecx)
-; ATOM-NEXT:    fcompl (%eax)
+; ATOM-NEXT:    fcomp %st(1) # sched: [0:?]
+; ATOM-NEXT:    fcomp %st(3) # sched: [0:?]
+; ATOM-NEXT:    fcomps (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fcompl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    fcompp # sched: [1:1.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
@@ -1115,7 +1115,7 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ; BTVER2-NEXT:    fcomp %st(3) # sched: [3:1.00]
 ; BTVER2-NEXT:    fcomps (%ecx) # sched: [8:1.00]
 ; BTVER2-NEXT:    fcompl (%eax) # sched: [8:1.00]
-; BTVER2-NEXT:    fcompp # sched: [100:0.17]
+; BTVER2-NEXT:    fcompp # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1279,7 +1279,7 @@ define void @test_fcos() optsize {
 ; BTVER2-LABEL: test_fcos:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fcos # sched: [100:0.17]
+; BTVER2-NEXT:    fcos # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1353,7 +1353,7 @@ define void @test_fdecstp() optsize {
 ; BTVER2-LABEL: test_fdecstp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fdecstp # sched: [100:0.17]
+; BTVER2-NEXT:    fdecstp # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1385,10 +1385,10 @@ define void @test_fdiv(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdiv %st(0), %st(1)
-; ATOM-NEXT:    fdiv %st(2)
-; ATOM-NEXT:    fdivs (%ecx)
-; ATOM-NEXT:    fdivl (%eax)
+; ATOM-NEXT:    fdiv %st(0), %st(1) # sched: [0:?]
+; ATOM-NEXT:    fdiv %st(2) # sched: [0:?]
+; ATOM-NEXT:    fdivs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fdivl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1509,10 +1509,10 @@ define void @test_fdivp_fidiv(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdivp %st(1)
-; ATOM-NEXT:    fdivp %st(2)
-; ATOM-NEXT:    fidivs (%ecx)
-; ATOM-NEXT:    fidivl (%eax)
+; ATOM-NEXT:    fdivp %st(1) # sched: [0:?]
+; ATOM-NEXT:    fdivp %st(2) # sched: [0:?]
+; ATOM-NEXT:    fidivs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fidivl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1633,10 +1633,10 @@ define void @test_fdivr(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdivr %st(0), %st(1)
-; ATOM-NEXT:    fdivr %st(2)
-; ATOM-NEXT:    fdivrs (%ecx)
-; ATOM-NEXT:    fdivrl (%eax)
+; ATOM-NEXT:    fdivr %st(0), %st(1) # sched: [0:?]
+; ATOM-NEXT:    fdivr %st(2) # sched: [0:?]
+; ATOM-NEXT:    fdivrs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fdivrl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1757,10 +1757,10 @@ define void @test_fdivrp_fidivr(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdivrp %st(1)
-; ATOM-NEXT:    fdivrp %st(2)
-; ATOM-NEXT:    fidivrs (%ecx)
-; ATOM-NEXT:    fidivrl (%eax)
+; ATOM-NEXT:    fdivrp %st(1) # sched: [0:?]
+; ATOM-NEXT:    fdivrp %st(2) # sched: [0:?]
+; ATOM-NEXT:    fidivrs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fidivrl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1923,7 +1923,7 @@ define void @test_ffree() optsize {
 ; BTVER2-LABEL: test_ffree:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    ffree %st(0) # sched: [100:0.17]
+; BTVER2-NEXT:    ffree %st(0) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1955,10 +1955,10 @@ define void @test_ficom(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    ficoms (%ecx)
-; ATOM-NEXT:    ficoml (%eax)
-; ATOM-NEXT:    ficomps (%ecx)
-; ATOM-NEXT:    ficompl (%eax)
+; ATOM-NEXT:    ficoms (%ecx) # sched: [0:?]
+; ATOM-NEXT:    ficoml (%eax) # sched: [0:?]
+; ATOM-NEXT:    ficomps (%ecx) # sched: [0:?]
+; ATOM-NEXT:    ficompl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -2245,7 +2245,7 @@ define void @test_fincstp() optsize {
 ; BTVER2-LABEL: test_fincstp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fincstp # sched: [100:0.17]
+; BTVER2-NEXT:    fincstp # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -2327,8 +2327,8 @@ define void @test_finit() optsize {
 ; BTVER2-LABEL: test_finit:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    wait # sched: [100:0.17]
-; BTVER2-NEXT:    fninit # sched: [100:0.17]
+; BTVER2-NEXT:    wait # sched: [100:0.50]
+; BTVER2-NEXT:    fninit # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -2403,7 +2403,7 @@ define void @test_fninit() optsize {
 ; BTVER2-LABEL: test_fninit:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fninit # sched: [100:0.17]
+; BTVER2-NEXT:    fninit # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -2740,7 +2740,7 @@ define void @test_fldcw_fldenv(i8* %a0) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    fldcw (%eax) # sched: [5:2.50]
-; ATOM-NEXT:    fldenv (%eax)
+; ATOM-NEXT:    fldenv (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -2803,7 +2803,7 @@ define void @test_fldcw_fldenv(i8* %a0) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fldcw (%eax) # sched: [5:1.00]
-; BTVER2-NEXT:    fldenv (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    fldenv (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -2920,10 +2920,10 @@ define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fld1 # sched: [1:?]
-; BTVER2-NEXT:    fldl2e # sched: [100:0.17]
-; BTVER2-NEXT:    fldl2t # sched: [100:0.17]
-; BTVER2-NEXT:    fldln2 # sched: [100:0.17]
-; BTVER2-NEXT:    fldpi # sched: [100:0.17]
+; BTVER2-NEXT:    fldl2e # sched: [100:0.50]
+; BTVER2-NEXT:    fldl2t # sched: [100:0.50]
+; BTVER2-NEXT:    fldln2 # sched: [100:0.50]
+; BTVER2-NEXT:    fldpi # sched: [100:0.50]
 ; BTVER2-NEXT:    fldz # sched: [1:?]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
@@ -2961,10 +2961,10 @@ define void @test_fmul(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fmul %st(0), %st(1)
-; ATOM-NEXT:    fmul %st(2)
-; ATOM-NEXT:    fmuls (%ecx)
-; ATOM-NEXT:    fmull (%eax)
+; ATOM-NEXT:    fmul %st(0), %st(1) # sched: [0:?]
+; ATOM-NEXT:    fmul %st(2) # sched: [0:?]
+; ATOM-NEXT:    fmuls (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fmull (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3085,10 +3085,10 @@ define void @test_fmulp_fimul(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fmulp %st(1)
-; ATOM-NEXT:    fmulp %st(2)
-; ATOM-NEXT:    fimuls (%ecx)
-; ATOM-NEXT:    fimull (%eax)
+; ATOM-NEXT:    fmulp %st(1) # sched: [0:?]
+; ATOM-NEXT:    fmulp %st(2) # sched: [0:?]
+; ATOM-NEXT:    fimuls (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fimull (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3251,7 +3251,7 @@ define void @test_fnop() optsize {
 ; BTVER2-LABEL: test_fnop:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fnop # sched: [100:0.17]
+; BTVER2-NEXT:    fnop # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3325,7 +3325,7 @@ define void @test_fpatan() optsize {
 ; BTVER2-LABEL: test_fpatan:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fpatan # sched: [100:0.17]
+; BTVER2-NEXT:    fpatan # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3407,8 +3407,8 @@ define void @test_fprem_fprem1() optsize {
 ; BTVER2-LABEL: test_fprem_fprem1:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fprem # sched: [100:0.17]
-; BTVER2-NEXT:    fprem1 # sched: [100:0.17]
+; BTVER2-NEXT:    fprem # sched: [100:0.50]
+; BTVER2-NEXT:    fprem1 # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3483,7 +3483,7 @@ define void @test_fptan() optsize {
 ; BTVER2-LABEL: test_fptan:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fptan # sched: [100:0.17]
+; BTVER2-NEXT:    fptan # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3557,7 +3557,7 @@ define void @test_frndint() optsize {
 ; BTVER2-LABEL: test_frndint:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    frndint # sched: [100:0.17]
+; BTVER2-NEXT:    frndint # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3584,7 +3584,7 @@ define void @test_frstor(i8* %a0) optsize {
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    frstor (%eax)
+; ATOM-NEXT:    frstor (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3640,7 +3640,7 @@ define void @test_frstor(i8* %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    frstor (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    frstor (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3670,7 +3670,7 @@ define void @test_fsave(i8* %a0) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    wait # sched: [1:0.50]
-; ATOM-NEXT:    fnsave (%eax)
+; ATOM-NEXT:    fnsave (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3732,8 +3732,8 @@ define void @test_fsave(i8* %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    wait # sched: [100:0.17]
-; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    wait # sched: [100:0.50]
+; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3762,7 +3762,7 @@ define void @test_fnsave(i8* %a0) optsize {
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fnsave (%eax)
+; ATOM-NEXT:    fnsave (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3818,7 +3818,7 @@ define void @test_fnsave(i8* %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3893,7 +3893,7 @@ define void @test_fscale() optsize {
 ; BTVER2-LABEL: test_fscale:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fscale # sched: [100:0.17]
+; BTVER2-NEXT:    fscale # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3967,7 +3967,7 @@ define void @test_fsin() optsize {
 ; BTVER2-LABEL: test_fsin:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fsin # sched: [100:0.17]
+; BTVER2-NEXT:    fsin # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -4041,7 +4041,7 @@ define void @test_fsincos() optsize {
 ; BTVER2-LABEL: test_fsincos:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fsincos # sched: [100:0.17]
+; BTVER2-NEXT:    fsincos # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -4314,9 +4314,9 @@ define void @test_fstcw_fstenv_fstsw(i8* %a0) optsize {
 ; ATOM-NEXT:    wait # sched: [1:0.50]
 ; ATOM-NEXT:    fnstcw (%eax) # sched: [8:4.00]
 ; ATOM-NEXT:    wait # sched: [1:0.50]
-; ATOM-NEXT:    fnstenv (%eax)
+; ATOM-NEXT:    fnstenv (%eax) # sched: [0:?]
 ; ATOM-NEXT:    wait # sched: [1:0.50]
-; ATOM-NEXT:    fnstsw (%eax)
+; ATOM-NEXT:    fnstsw (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4402,12 +4402,12 @@ define void @test_fstcw_fstenv_fstsw(i8* %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    wait # sched: [100:0.17]
+; BTVER2-NEXT:    wait # sched: [100:0.50]
 ; BTVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
-; BTVER2-NEXT:    wait # sched: [100:0.17]
-; BTVER2-NEXT:    fnstenv (%eax) # sched: [100:0.17]
-; BTVER2-NEXT:    wait # sched: [100:0.17]
-; BTVER2-NEXT:    fnstsw (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    wait # sched: [100:0.50]
+; BTVER2-NEXT:    fnstenv (%eax) # sched: [100:0.50]
+; BTVER2-NEXT:    wait # sched: [100:0.50]
+; BTVER2-NEXT:    fnstsw (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -4443,8 +4443,8 @@ define void @test_fnstcw_fnstenv_fnstsw(i8* %a0) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    fnstcw (%eax) # sched: [8:4.00]
-; ATOM-NEXT:    fnstenv (%eax)
-; ATOM-NEXT:    fnstsw (%eax)
+; ATOM-NEXT:    fnstenv (%eax) # sched: [0:?]
+; ATOM-NEXT:    fnstsw (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4513,8 +4513,8 @@ define void @test_fnstcw_fnstenv_fnstsw(i8* %a0) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
-; BTVER2-NEXT:    fnstenv (%eax) # sched: [100:0.17]
-; BTVER2-NEXT:    fnstsw (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    fnstenv (%eax) # sched: [100:0.50]
+; BTVER2-NEXT:    fnstsw (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -4549,10 +4549,10 @@ define void @test_fsub(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsub %st(0), %st(1)
-; ATOM-NEXT:    fsub %st(2)
-; ATOM-NEXT:    fsubs (%ecx)
-; ATOM-NEXT:    fsubl (%eax)
+; ATOM-NEXT:    fsub %st(0), %st(1) # sched: [0:?]
+; ATOM-NEXT:    fsub %st(2) # sched: [0:?]
+; ATOM-NEXT:    fsubs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fsubl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4673,10 +4673,10 @@ define void @test_fsubp_fisub(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsubp %st(1)
-; ATOM-NEXT:    fsubp %st(2)
-; ATOM-NEXT:    fisubs (%ecx)
-; ATOM-NEXT:    fisubl (%eax)
+; ATOM-NEXT:    fsubp %st(1) # sched: [0:?]
+; ATOM-NEXT:    fsubp %st(2) # sched: [0:?]
+; ATOM-NEXT:    fisubs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fisubl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4797,10 +4797,10 @@ define void @test_fsubr(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsubr %st(0), %st(1)
-; ATOM-NEXT:    fsubr %st(2)
-; ATOM-NEXT:    fsubrs (%ecx)
-; ATOM-NEXT:    fsubrl (%eax)
+; ATOM-NEXT:    fsubr %st(0), %st(1) # sched: [0:?]
+; ATOM-NEXT:    fsubr %st(2) # sched: [0:?]
+; ATOM-NEXT:    fsubrs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fsubrl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4921,10 +4921,10 @@ define void @test_fsubrp_fisubr(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsubrp %st(1)
-; ATOM-NEXT:    fsubrp %st(2)
-; ATOM-NEXT:    fisubrs (%ecx)
-; ATOM-NEXT:    fisubrl (%eax)
+; ATOM-NEXT:    fsubrp %st(1) # sched: [0:?]
+; ATOM-NEXT:    fsubrp %st(2) # sched: [0:?]
+; ATOM-NEXT:    fisubrs (%ecx) # sched: [0:?]
+; ATOM-NEXT:    fisubrl (%eax) # sched: [0:?]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -5359,7 +5359,7 @@ define void @test_fwait() optsize {
 ; BTVER2-LABEL: test_fwait:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    wait # sched: [100:0.17]
+; BTVER2-NEXT:    wait # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -5433,7 +5433,7 @@ define void @test_fxam() optsize {
 ; BTVER2-LABEL: test_fxam:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fxam # sched: [100:0.17]
+; BTVER2-NEXT:    fxam # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -5608,8 +5608,8 @@ define void @test_fxrstor_fxsave(i8* %a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fxrstor (%eax) # sched: [100:0.17]
-; BTVER2-NEXT:    fxsave (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    fxrstor (%eax) # sched: [100:0.50]
+; BTVER2-NEXT:    fxsave (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -5685,7 +5685,7 @@ define void @test_fxtract() optsize {
 ; BTVER2-LABEL: test_fxtract:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fxtract # sched: [100:0.17]
+; BTVER2-NEXT:    fxtract # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -5759,7 +5759,7 @@ define void @test_fyl2x() optsize {
 ; BTVER2-LABEL: test_fyl2x:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fyl2x # sched: [100:0.17]
+; BTVER2-NEXT:    fyl2x # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -5833,7 +5833,7 @@ define void @test_fyl2xp1() optsize {
 ; BTVER2-LABEL: test_fyl2xp1:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fyl2xp1 # sched: [100:0.17]
+; BTVER2-NEXT:    fyl2xp1 # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;

@@ -94,3 +94,65 @@ merge:
   call void @clobber_and_use(i32 %val1)
   ret void
 }
+
+; By assumption, the call can't change contents of p
+; LangRef is a bit unclear about whether the store is reachable, so
+; for the moment we chose to be conservative and just assume it's valid
+; to restore the same unchanging value.
+define void @test_dse1(i32* %p) {
+; CHECK-LABEL: @test_dse1
+; CHECK-NOT: store
+  %v1 = load i32, i32* %p, !invariant.load !{}
+  call void @clobber_and_use(i32 %v1)
+  store i32 %v1, i32* %p
+  ret void
+}
+
+; By assumption, v1 must equal v2 (TODO)
+define void @test_false_negative_dse2(i32* %p, i32 %v2) {
+; CHECK-LABEL: @test_false_negative_dse2
+; CHECK: store
+  %v1 = load i32, i32* %p, !invariant.load !{}
+  call void @clobber_and_use(i32 %v1)
+  store i32 %v2, i32* %p
+  ret void
+}
+
+; If we remove the load, we still start an invariant scope since
+; it lets us remove later loads not explicitly marked invariant
+define void @test_scope_start_without_load(i32* %p) {
+; CHECK-LABEL: @test_scope_start_without_load
+; CHECK:   %v1 = load i32, i32* %p
+; CHECK:   %add = add i32 %v1, %v1
+; CHECK:   call void @clobber_and_use(i32 %add)
+; CHECK:   call void @clobber_and_use(i32 %v1)
+; CHECK:   ret void
+  %v1 = load i32, i32* %p
+  %v2 = load i32, i32* %p, !invariant.load !{}
+  %add = add i32 %v1, %v2
+  call void @clobber_and_use(i32 %add)
+  %v3 = load i32, i32* %p
+  call void @clobber_and_use(i32 %v3)
+  ret void
+}
+
+; If we already have an invariant scope, don't want to start a new one
+; with a potentially greater generation.  This hides the earlier invariant
+; load
+define void @test_scope_restart(i32* %p) {
+; CHECK-LABEL: @test_scope_restart
+; CHECK:   %v1 = load i32, i32* %p
+; CHECK:   call void @clobber_and_use(i32 %v1)
+; CHECK:   %add = add i32 %v1, %v1
+; CHECK:   call void @clobber_and_use(i32 %add)
+; CHECK:   call void @clobber_and_use(i32 %v1)
+; CHECK:   ret void
+  %v1 = load i32, i32* %p, !invariant.load !{}
+  call void @clobber_and_use(i32 %v1)
+  %v2 = load i32, i32* %p, !invariant.load !{}
+  %add = add i32 %v1, %v2
+  call void @clobber_and_use(i32 %add)
+  %v3 = load i32, i32* %p
+  call void @clobber_and_use(i32 %v3)
+  ret void
+}

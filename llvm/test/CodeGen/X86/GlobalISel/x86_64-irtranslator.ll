@@ -129,3 +129,59 @@ define i64 @zext_i32_to_i64(i32 %val) {
   %res = zext i32 %val to i64
   ret i64 %res
 }
+
+define i8 @test_sdiv_i8(i8 %arg1, i8 %arg2) {
+  ; CHECK-LABEL: name: test_sdiv_i8
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[SDIV:%[0-9]+]]:_(s8) = G_SDIV [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $al = COPY [[SDIV]](s8)
+  ; CHECK:   RET 0, implicit $al
+  %res = sdiv i8 %arg1, %arg2
+  ret i8 %res
+}
+
+define i16 @test_sdiv_i16(i16 %arg1, i16 %arg2) {
+  ; CHECK-LABEL: name: test_sdiv_i16
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[SDIV:%[0-9]+]]:_(s16) = G_SDIV [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $ax = COPY [[SDIV]](s16)
+  ; CHECK:   RET 0, implicit $ax
+  %res = sdiv i16 %arg1, %arg2
+  ret i16 %res
+}
+
+define i32 @test_sdiv_i32(i32 %arg1, i32 %arg2) {
+  ; CHECK-LABEL: name: test_sdiv_i32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[COPY]], [[COPY1]]
+  ; CHECK:   $eax = COPY [[SDIV]](s32)
+  ; CHECK:   RET 0, implicit $eax
+  %res = sdiv i32 %arg1, %arg2
+  ret i32 %res
+}
+
+define i64 @test_sdiv_i64(i64 %arg1, i64 %arg2) {
+  ; CHECK-LABEL: name: test_sdiv_i64
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $rdi, $rsi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
+  ; CHECK:   [[SDIV:%[0-9]+]]:_(s64) = G_SDIV [[COPY]], [[COPY1]]
+  ; CHECK:   $rax = COPY [[SDIV]](s64)
+  ; CHECK:   RET 0, implicit $rax
+  %res = sdiv i64 %arg1, %arg2
+  ret i64 %res
+}

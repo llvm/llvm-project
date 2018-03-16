@@ -436,10 +436,15 @@ float double2float_test1(double a) {
 }
 
 void double2float_test2(double a, float *b) {
-    *b += a;
+  *b += a; // expected-warning {{implicit conversion when assigning computation result loses floating-point precision: 'double' to 'float'}}
 }
 
 float sinf (float x);
 double double2float_test3(double a) {
     return sinf(a); // expected-warning {{implicit conversion loses floating-point precision: 'double' to 'float'}}
+}
+
+float double2float_test4(double a, float b) {
+  b -= a; // expected-warning {{implicit conversion when assigning computation result loses floating-point precision: 'double' to 'float'}}
+  return b;
 }

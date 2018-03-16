@@ -36,6 +36,13 @@ std::string lld::toString(const InputChunk *C) {
   return (toString(C->File) + ":(" + C->getName() + ")").str();
 }
 
+StringRef InputChunk::getComdatName() const {
+  uint32_t Index = getComdat();
+  if (Index == UINT32_MAX)
+    return StringRef();
+  return File->getWasmObj()->linkingData().Comdats[Index];
+}
+
 void InputChunk::copyRelocations(const WasmSection &Section) {
   if (Section.Relocations.empty())
     return;

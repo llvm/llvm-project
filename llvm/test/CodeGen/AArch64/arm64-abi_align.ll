@@ -290,13 +290,14 @@ entry:
 ; Space for s2 is allocated at sp
 
 ; FAST-LABEL: caller42
-; FAST: sub sp, sp, #112
-; Space for s1 is allocated at fp-24 = sp+72
-; Space for s2 is allocated at sp+48
+; FAST: sub sp, sp, #96
+; Space for s1 is allocated at fp-24 = sp+56
 ; FAST: sub x[[A:[0-9]+]], x29, #24
-; FAST: add x[[A:[0-9]+]], sp, #48
 ; Call memcpy with size = 24 (0x18)
 ; FAST: orr {{x[0-9]+}}, xzr, #0x18
+; Space for s2 is allocated at sp+32
+; FAST: add x[[A:[0-9]+]], sp, #32
+; FAST: bl _memcpy
   %tmp = alloca %struct.s42, align 4
   %tmp1 = alloca %struct.s42, align 4
   %0 = bitcast %struct.s42* %tmp to i8*
@@ -334,13 +335,16 @@ entry:
 
 ; FAST-LABEL: caller42_stack
 ; Space for s1 is allocated at fp-24
-; Space for s2 is allocated at fp-48
 ; FAST: sub x[[A:[0-9]+]], x29, #24
-; FAST: sub x[[B:[0-9]+]], x29, #48
 ; Call memcpy with size = 24 (0x18)
 ; FAST: orr {{x[0-9]+}}, xzr, #0x18
-; FAST: str {{w[0-9]+}}, [sp]
+; FAST: bl _memcpy
+; Space for s2 is allocated at fp-48
+; FAST: sub x[[B:[0-9]+]], x29, #48
+; Call memcpy again
+; FAST: bl _memcpy
 ; Address of s1 is passed on stack at sp+8
+; FAST: str {{w[0-9]+}}, [sp]
 ; FAST: str {{x[0-9]+}}, [sp, #8]
 ; FAST: str {{x[0-9]+}}, [sp, #16]
   %tmp = alloca %struct.s42, align 4
@@ -401,8 +405,6 @@ entry:
 ; FAST: add x29, sp, #64
 ; Space for s1 is allocated at sp+32
 ; Space for s2 is allocated at sp
-; FAST: add x1, sp, #32
-; FAST: mov x2, sp
 ; FAST: str {{x[0-9]+}}, [sp, #32]
 ; FAST: str {{x[0-9]+}}, [sp, #40]
 ; FAST: str {{x[0-9]+}}, [sp, #48]
@@ -411,6 +413,8 @@ entry:
 ; FAST: str {{x[0-9]+}}, [sp, #8]
 ; FAST: str {{x[0-9]+}}, [sp, #16]
 ; FAST: str {{x[0-9]+}}, [sp, #24]
+; FAST: add x1, sp, #32
+; FAST: mov x2, sp
   %tmp = alloca %struct.s43, align 16
   %tmp1 = alloca %struct.s43, align 16
   %0 = bitcast %struct.s43* %tmp to i8*
@@ -448,8 +452,6 @@ entry:
 ; FAST: sub sp, sp, #112
 ; Space for s1 is allocated at fp-32 = sp+64
 ; Space for s2 is allocated at sp+32
-; FAST: sub x[[A:[0-9]+]], x29, #32
-; FAST: add x[[B:[0-9]+]], sp, #32
 ; FAST: stur {{x[0-9]+}}, [x29, #-32]
 ; FAST: stur {{x[0-9]+}}, [x29, #-24]
 ; FAST: stur {{x[0-9]+}}, [x29, #-16]
@@ -460,8 +462,10 @@ entry:
 ; FAST: str {{x[0-9]+}}, [sp, #56]
 ; FAST: str {{w[0-9]+}}, [sp]
 ; Address of s1 is passed on stack at sp+8
-; FAST: str {{x[0-9]+}}, [sp, #8]
-; FAST: str {{x[0-9]+}}, [sp, #16]
+; FAST: sub x[[A:[0-9]+]], x29, #32
+; FAST: str x[[A]], [sp, #8]
+; FAST: add x[[B:[0-9]+]], sp, #32
+; FAST: str x[[B]], [sp, #16]
   %tmp = alloca %struct.s43, align 16
   %tmp1 = alloca %struct.s43, align 16
   %0 = bitcast %struct.s43* %tmp to i8*

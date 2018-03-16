@@ -28,6 +28,8 @@
 #include "SyntheticSections.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -110,6 +112,43 @@ getSymbolStrings(ArrayRef<Symbol *> Syms) {
   return Ret;
 }
 
+// Print .eh_frame contents. Since the section consists of EhSectionPieces,
+// we need a specialized printer for that section.
+//
+// .eh_frame tend to contain a lot of section pieces that are contiguous
+// both in input file and output file. Such pieces are squashed before
+// being displayed to make output compact.
+static void printEhFrame(raw_ostream &OS, OutputSection *OSec) {
+  std::vector<EhSectionPiece> Pieces;
+
+  auto Add = [&](const EhSectionPiece &P) {
+    // If P is adjacent to Last, squash the two.
+    if (!Pieces.empty()) {
+      EhSectionPiece &Last = Pieces.back();
+      if (Last.Sec == P.Sec && Last.InputOff + Last.Size == P.InputOff &&
+          Last.OutputOff + Last.Size == P.OutputOff) {
+        Last.Size += P.Size;
+        return;
+      }
+    }
+    Pieces.push_back(P);
+  };
+
+  // Gather section pieces.
+  for (const CieRecord *Rec : InX::EhFrame->getCieRecords()) {
+    Add(*Rec->Cie);
+    for (const EhSectionPiece *Fde : Rec->Fdes)
+      Add(*Fde);
+  }
+
+  // Print out section pieces.
+  for (EhSectionPiece &P : Pieces) {
+    writeHeader(OS, OSec->Addr + P.OutputOff, P.Size, 0);
+    OS << Indent8 << toString(P.Sec->File) << ":(" << P.Sec->Name << "+0x"
+       << Twine::utohexstr(P.InputOff) + ")\n";
+  }
+}
+
 void elf::writeMapFile() {
   if (Config->MapFile.empty())
     return;
@@ -138,11 +177,81 @@ void elf::writeMapFile() {
     OS << OSec->Name << '\n';
 
     // Dump symbols for each input section.
-    for (InputSection *IS : getInputSections(OSec)) {
-      writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(), IS->Alignment);
-      OS << Indent8 << toString(IS) << '\n';
-      for (Symbol *Sym : SectionSyms[IS])
-        OS << SymStr[Sym] << '\n';
+    for (BaseCommand *Base : OSec->SectionCommands) {
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
+        for (InputSection *IS : ISD->Sections) {
+          if (IS == InX::EhFrame) {
+            printEhFrame(OS, OSec);
+            continue;
+          }
+
+          writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(),
+                      IS->Alignment);
+          OS << Indent8 << toString(IS) << '\n';
+          for (Symbol *Sym : SectionSyms[IS])
+            OS << SymStr[Sym] << '\n';
+        }
+        continue;
+      }
+
+      if (auto *Cmd = dyn_cast<ByteCommand>(Base)) {
+        writeHeader(OS, OSec->Addr + Cmd->Offset, Cmd->Size, 1);
+        OS << Indent8 << Cmd->CommandString << '\n';
+        continue;
+      }
+
+      if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
+        writeHeader(OS, OSec->Addr + Cmd->Offset, Cmd->Size, 1);
+        OS << Indent8 << Cmd->CommandString << '\n';
+        continue;
+      }
     }
+  }
+}
+
+static void print(StringRef A, StringRef B) {
+  outs() << left_justify(A, 49) << " " << B << "\n";
+}
+
+// Output a cross reference table to stdout. This is for --cref.
+//
+// For each global symbol, we print out a file that defines the symbol
+// followed by files that uses that symbol. Here is an example.
+//
+//     strlen     /lib/x86_64-linux-gnu/libc.so.6
+//                tools/lld/tools/lld/CMakeFiles/lld.dir/lld.cpp.o
+//                lib/libLLVMSupport.a(PrettyStackTrace.cpp.o)
+//
+// In this case, strlen is defined by libc.so.6 and used by other two
+// files.
+void elf::writeCrossReferenceTable() {
+  if (!Config->Cref)
+    return;
+
+  // Collect symbols and files.
+  MapVector<Symbol *, SetVector<InputFile *>> Map;
+  for (InputFile *File : ObjectFiles) {
+    for (Symbol *Sym : File->getSymbols()) {
+      if (isa<SharedSymbol>(Sym))
+        Map[Sym].insert(File);
+      if (auto *D = dyn_cast<Defined>(Sym))
+        if (!D->isLocal() && (!D->Section || D->Section->Live))
+          Map[D].insert(File);
+    }
+  }
+
+  // Print out a header.
+  outs() << "Cross Reference Table\n\n";
+  print("Symbol", "File");
+
+  // Print out a table.
+  for (auto KV : Map) {
+    Symbol *Sym = KV.first;
+    SetVector<InputFile *> &Files = KV.second;
+
+    print(toString(*Sym), toString(Sym->File));
+    for (InputFile *File : Files)
+      if (File != Sym->File)
+        print("", toString(File));
   }
 }

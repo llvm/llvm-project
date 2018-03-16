@@ -163,11 +163,11 @@ define <2 x double> @test_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ;
 ; SLM-LABEL: test_blendvpd:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movapd %xmm0, %xmm3 # sched: [1:1.00]
-; SLM-NEXT:    movaps %xmm2, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm0, %xmm3 # sched: [1:0.50]
+; SLM-NEXT:    movaps %xmm2, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    blendvpd %xmm0, %xmm1, %xmm3 # sched: [1:1.00]
 ; SLM-NEXT:    blendvpd %xmm0, (%rdi), %xmm3 # sched: [4:1.00]
-; SLM-NEXT:    movapd %xmm3, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm3, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_blendvpd:
@@ -230,11 +230,11 @@ define <4 x float> @test_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ;
 ; SLM-LABEL: test_blendvps:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movaps %xmm0, %xmm3 # sched: [1:1.00]
-; SLM-NEXT:    movaps %xmm2, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm0, %xmm3 # sched: [1:0.50]
+; SLM-NEXT:    movaps %xmm2, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    blendvps %xmm0, %xmm1, %xmm3 # sched: [1:1.00]
 ; SLM-NEXT:    blendvps %xmm0, (%rdi), %xmm3 # sched: [4:1.00]
-; SLM-NEXT:    movaps %xmm3, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm3, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_blendvps:
@@ -717,7 +717,7 @@ define <16 x i8> @test_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16
 ; SLM-LABEL: test_pblendvb:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    movdqa %xmm0, %xmm3 # sched: [1:0.50]
-; SLM-NEXT:    movaps %xmm2, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm2, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    pblendvb %xmm0, %xmm1, %xmm3 # sched: [1:1.00]
 ; SLM-NEXT:    pblendvb %xmm0, (%rdi), %xmm3 # sched: [4:1.00]
 ; SLM-NEXT:    movdqa %xmm3, %xmm0 # sched: [1:0.50]
@@ -2991,7 +2991,7 @@ define <2 x double> @test_roundpd(<2 x double> %a0, <2 x double> *%a1) {
 ; SLM-NEXT:    roundpd $7, (%rdi), %xmm1 # sched: [6:1.00]
 ; SLM-NEXT:    roundpd $7, %xmm0, %xmm0 # sched: [3:1.00]
 ; SLM-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_roundpd:
@@ -3063,7 +3063,7 @@ define <4 x float> @test_roundps(<4 x float> %a0, <4 x float> *%a1) {
 ; SLM-NEXT:    roundps $7, (%rdi), %xmm1 # sched: [6:1.00]
 ; SLM-NEXT:    roundps $7, %xmm0, %xmm0 # sched: [3:1.00]
 ; SLM-NEXT:    addps %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_roundps:
@@ -3133,7 +3133,7 @@ define <2 x double> @test_roundsd(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ;
 ; SLM-LABEL: test_roundsd:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movapd %xmm0, %xmm2 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.50]
 ; SLM-NEXT:    roundsd $7, (%rdi), %xmm0 # sched: [6:1.00]
 ; SLM-NEXT:    roundsd $7, %xmm1, %xmm2 # sched: [3:1.00]
 ; SLM-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
@@ -3206,7 +3206,7 @@ define <4 x float> @test_roundss(<4 x float> %a0, <4 x float> %a1, <4 x float> *
 ;
 ; SLM-LABEL: test_roundss:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movaps %xmm0, %xmm2 # sched: [1:1.00]
+; SLM-NEXT:    movaps %xmm0, %xmm2 # sched: [1:0.50]
 ; SLM-NEXT:    roundss $7, (%rdi), %xmm0 # sched: [6:1.00]
 ; SLM-NEXT:    roundss $7, %xmm1, %xmm2 # sched: [3:1.00]
 ; SLM-NEXT:    addps %xmm2, %xmm0 # sched: [3:1.00]

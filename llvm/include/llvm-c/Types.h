@@ -135,6 +135,11 @@ typedef struct LLVMOpaqueAttributeRef *LLVMAttributeRef;
 typedef struct LLVMOpaqueDiagnosticInfo *LLVMDiagnosticInfoRef;
 
 /**
+ * @see llvm::Comdat
+ */
+typedef struct LLVMComdat *LLVMComdatRef;
+
+/**
  * @}
  */
 

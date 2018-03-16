@@ -866,6 +866,10 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
       continue;
     }
 
+    // ELF spec requires that all local symbols precede weak or global
+    // symbols in each symbol table, and the index of first non-local symbol
+    // is stored to sh_info. If a local symbol appears after some non-local
+    // symbol, that's a violation of the spec.
     if (Sym.getBinding() == STB_LOCAL) {
       warn("found local symbol '" + Name +
            "' in global part of symbol table in file " + toString(this));

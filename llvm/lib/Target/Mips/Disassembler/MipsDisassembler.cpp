@@ -517,6 +517,10 @@ template <typename InsnType>
 static DecodeStatus DecodeDEXT(MCInst &MI, InsnType Insn, uint64_t Address,
                                const void *Decoder);
 
+template <typename InsnType>
+static DecodeStatus DecodeCRC(MCInst &MI, InsnType Insn, uint64_t Address,
+                              const void *Decoder);
+
 static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Insn,
                                          uint64_t Address,
                                          const void *Decoder);
@@ -1129,6 +1133,22 @@ static DecodeStatus DecodeDINS(MCInst &MI, InsnType Insn, uint64_t Address,
 
   return MCDisassembler::Success;
 }
+
+// Auto-generated decoder wouldn't add the third operand for CRC32*.
+template <typename InsnType>
+static DecodeStatus DecodeCRC(MCInst &MI, InsnType Insn, uint64_t Address,
+                              const void *Decoder) {
+  InsnType Rs = fieldFromInstruction(Insn, 21, 5);
+  InsnType Rt = fieldFromInstruction(Insn, 16, 5);
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                     Rt)));
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                     Rs)));
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                     Rt)));
+  return MCDisassembler::Success;
+}
+
 /// Read two bytes from the ArrayRef and return 16 bit halfword sorted
 /// according to the given endianness.
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,

@@ -126,6 +126,10 @@ def : WriteRes<WriteZero,  []>;
 defm : SKXWriteResPair<WriteJump,  SKXPort06,   1>;
 
 // Floating point. This covers both scalar and vector operations.
+def  : WriteRes<WriteFLoad,         [SKXPort23]> { let Latency = 5; }
+def  : WriteRes<WriteFStore,        [SKXPort237, SKXPort4]>;
+def  : WriteRes<WriteFMove,         [SKXPort015]>;
+
 defm : SKXWriteResPair<WriteFAdd,   SKXPort1, 3>; // Floating point add/sub/compare.
 defm : SKXWriteResPair<WriteFMul,   SKXPort0, 5>; // Floating point multiplication.
 defm : SKXWriteResPair<WriteFDiv,   SKXPort0, 12>; // 10-14 cycles. // Floating point division.
@@ -148,6 +152,10 @@ def : WriteRes<WriteFVarBlendLd, [SKXPort5, SKXPort23]> {
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
 
 // Vector integer operations.
+def  : WriteRes<WriteVecLoad,         [SKXPort23]> { let Latency = 5; }
+def  : WriteRes<WriteVecStore,        [SKXPort237, SKXPort4]>;
+def  : WriteRes<WriteVecMove,         [SKXPort015]>;
+
 defm : SKXWriteResPair<WriteVecALU,   SKXPort15,  1>; // Vector integer ALU op, no logicals.
 defm : SKXWriteResPair<WriteVecShift, SKXPort0,  1>; // Vector integer shifts.
 defm : SKXWriteResPair<WriteVecIMul,  SKXPort0,   5>; // Vector integer multiply.

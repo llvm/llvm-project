@@ -285,8 +285,11 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
     // never defer them.
     assert(isa<ObjCMethodDecl>(DC) && "unexpected parent code decl");
   }
-  if (GD.getDecl())
+  if (GD.getDecl()) {
+    // Disable emission of the parent function for the OpenMP device codegen.
+    CGOpenMPRuntime::DisableAutoDeclareTargetRAII NoDeclTarget(*this);
     (void)GetAddrOfGlobal(GD);
+  }
 
   return Addr;
 }
@@ -1068,9 +1071,17 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     }
 
     // A normal fixed sized variable becomes an alloca in the entry block,
-    // unless it's an NRVO variable.
+    // unless:
+    // - it's an NRVO variable.
+    // - we are compiling OpenMP and it's an OpenMP local variable.
 
-    if (NRVO) {
+    Address OpenMPLocalAddr =
+        getLangOpts().OpenMP
+            ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
+            : Address::invalid();
+    if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
+      address = OpenMPLocalAddr;
+    } else if (NRVO) {
       // The named return value optimization: allocate this variable in the
       // return slot, so that we can elide the copy when returning this
       // variable (C++0x [class.copy]p34).
@@ -1882,6 +1893,22 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     llvm::Type *IRTy = ConvertTypeForMem(Ty)->getPointerTo(AS);
     if (DeclPtr.getType() != IRTy)
       DeclPtr = Builder.CreateBitCast(DeclPtr, IRTy, D.getName());
+    // Indirect argument is in alloca address space, which may be different
+    // from the default address space.
+    auto AllocaAS = CGM.getASTAllocaAddressSpace();
+    auto *V = DeclPtr.getPointer();
+    auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
+    auto DestLangAS =
+        getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
+    if (SrcLangAS != DestLangAS) {
+      assert(getContext().getTargetAddressSpace(SrcLangAS) ==
+             CGM.getDataLayout().getAllocaAddrSpace());
+      auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
+      auto *T = V->getType()->getPointerElementType()->getPointerTo(DestAS);
+      DeclPtr = Address(getTargetHooks().performAddrSpaceCast(
+                            *this, V, SrcLangAS, DestLangAS, T, true),
+                        DeclPtr.getAlignment());
+    }
 
     // Push a destructor cleanup for this parameter if the ABI requires it.
     // Don't push a cleanup in a thunk for a method that will also emit a
@@ -1896,9 +1923,18 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       }
     }
   } else {
-    // Otherwise, create a temporary to hold the value.
-    DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
-                            D.getName() + ".addr");
+    // Check if the parameter address is controlled by OpenMP runtime.
+    Address OpenMPLocalAddr =
+        getLangOpts().OpenMP
+            ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
+            : Address::invalid();
+    if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
+      DeclPtr = OpenMPLocalAddr;
+    } else {
+      // Otherwise, create a temporary to hold the value.
+      DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
+                              D.getName() + ".addr");
+    }
     DoStore = true;
   }
 

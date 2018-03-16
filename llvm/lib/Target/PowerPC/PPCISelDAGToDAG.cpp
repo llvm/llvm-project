@@ -101,6 +101,11 @@ static cl::opt<bool> EnableBranchHint(
     cl::desc("Enable static hinting of branches on ppc"),
     cl::Hidden);
 
+static cl::opt<bool> EnableTLSOpt(
+  "ppc-tls-opt", cl::init(true),
+    cl::desc("Enable tls optimization peephole"),
+    cl::Hidden);
+
 enum ICmpInGPRType { ICGPR_All, ICGPR_None, ICGPR_I32, ICGPR_I64,
   ICGPR_NonExtIn, ICGPR_Zext, ICGPR_Sext, ICGPR_ZextI32,
   ICGPR_SextI32, ICGPR_ZextI64, ICGPR_SextI64 };
@@ -199,6 +204,14 @@ namespace {
     bool tryBitPermutation(SDNode *N);
     bool tryIntCompareInGPR(SDNode *N);
 
+    // tryTLSXFormLoad - Convert an ISD::LOAD fed by a PPCISD::ADD_TLS into
+    // an X-Form load instruction with the offset being a relocation coming from
+    // the PPCISD::ADD_TLS.
+    bool tryTLSXFormLoad(LoadSDNode *N);
+    // tryTLSXFormStore - Convert an ISD::STORE fed by a PPCISD::ADD_TLS into
+    // an X-Form store instruction with the offset being a relocation coming from
+    // the PPCISD::ADD_TLS.
+    bool tryTLSXFormStore(StoreSDNode *N);
     /// SelectCC - Select a comparison of the specified values with the
     /// specified condition code, returning the CR# of the expression.
     SDValue SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -580,6 +593,90 @@ bool PPCDAGToDAGISel::isRotateAndMask(SDNode *N, unsigned Mask,
     return isRunOfOnes(Mask, MB, ME);
   }
   return false;
+}
+
+bool PPCDAGToDAGISel::tryTLSXFormStore(StoreSDNode *ST) {
+  SDValue Base = ST->getBasePtr();
+  if (Base.getOpcode() != PPCISD::ADD_TLS)
+    return false;
+  SDValue Offset = ST->getOffset();
+  if (!Offset.isUndef())
+    return false;
+
+  SDLoc dl(ST);
+  EVT MemVT = ST->getMemoryVT();
+  EVT RegVT = ST->getValue().getValueType();
+
+  unsigned Opcode;
+  switch (MemVT.getSimpleVT().SimpleTy) {
+    default:
+      return false;
+    case MVT::i8: {
+      Opcode = (RegVT == MVT::i32) ? PPC::STBXTLS_32 : PPC::STBXTLS;
+      break;
+    }
+    case MVT::i16: {
+      Opcode = (RegVT == MVT::i32) ? PPC::STHXTLS_32 : PPC::STHXTLS;
+      break;
+    }
+    case MVT::i32: {
+      Opcode = (RegVT == MVT::i32) ? PPC::STWXTLS_32 : PPC::STWXTLS;
+      break;
+    }
+    case MVT::i64: {
+      Opcode = PPC::STDXTLS;
+      break;
+    }
+  }
+  SDValue Chain = ST->getChain();
+  SDVTList VTs = ST->getVTList();
+  SDValue Ops[] = {ST->getValue(), Base.getOperand(0), Base.getOperand(1),
+                   Chain};
+  SDNode *MN = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
+  transferMemOperands(ST, MN);
+  ReplaceNode(ST, MN);
+  return true;
+}
+
+bool PPCDAGToDAGISel::tryTLSXFormLoad(LoadSDNode *LD) {
+  SDValue Base = LD->getBasePtr();
+  if (Base.getOpcode() != PPCISD::ADD_TLS)
+    return false;
+  SDValue Offset = LD->getOffset();
+  if (!Offset.isUndef())
+    return false;
+
+  SDLoc dl(LD);
+  EVT MemVT = LD->getMemoryVT();
+  EVT RegVT = LD->getValueType(0);
+  unsigned Opcode;
+  switch (MemVT.getSimpleVT().SimpleTy) {
+    default:
+      return false;
+    case MVT::i8: {
+      Opcode = (RegVT == MVT::i32) ? PPC::LBZXTLS_32 : PPC::LBZXTLS;
+      break;
+    }
+    case MVT::i16: {
+      Opcode = (RegVT == MVT::i32) ? PPC::LHZXTLS_32 : PPC::LHZXTLS;
+      break;
+    }
+    case MVT::i32: {
+      Opcode = (RegVT == MVT::i32) ? PPC::LWZXTLS_32 : PPC::LWZXTLS;
+      break;
+    }
+    case MVT::i64: {
+      Opcode = PPC::LDXTLS;
+      break;
+    }
+  }
+  SDValue Chain = LD->getChain();
+  SDVTList VTs = LD->getVTList();
+  SDValue Ops[] = {Base.getOperand(0), Base.getOperand(1), Chain};
+  SDNode *MN = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
+  transferMemOperands(LD, MN);
+  ReplaceNode(LD, MN);
+  return true;
 }
 
 /// Turn an or of two masked values into the rotate left word immediate then
@@ -3949,14 +4046,28 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     }
   }
 
+  case ISD::STORE: {
+    // Change TLS initial-exec D-form stores to X-form stores.
+    StoreSDNode *ST = cast<StoreSDNode>(N);
+    if (EnableTLSOpt && PPCSubTarget->isELFv2ABI() &&
+        ST->getAddressingMode() != ISD::PRE_INC)
+      if (tryTLSXFormStore(ST))
+        return;
+    break;
+  }
   case ISD::LOAD: {
     // Handle preincrement loads.
     LoadSDNode *LD = cast<LoadSDNode>(N);
     EVT LoadedVT = LD->getMemoryVT();
 
     // Normal loads are handled by code generated from the .td file.
-    if (LD->getAddressingMode() != ISD::PRE_INC)
+    if (LD->getAddressingMode() != ISD::PRE_INC) {
+      // Change TLS initial-exec D-form loads to X-form loads.
+      if (EnableTLSOpt && PPCSubTarget->isELFv2ABI())
+        if (tryTLSXFormLoad(LD))
+          return;
       break;
+    }
 
     SDValue Offset = LD->getOffset();
     if (Offset.getOpcode() == ISD::TargetConstant ||

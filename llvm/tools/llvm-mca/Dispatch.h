@@ -18,6 +18,7 @@
 
 #include "Instruction.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
 
 namespace mca {
@@ -232,10 +233,11 @@ class DispatchUnit {
   // stored into a vector `DispatchStall` which is always of size DS_LAST.
   std::vector<unsigned> DispatchStalls;
 
-  bool checkRAT(const InstrDesc &Desc);
+  bool checkRAT(const Instruction &Desc);
   bool checkRCU(const InstrDesc &Desc);
   bool checkScheduler(const InstrDesc &Desc);
 
+  void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
   void notifyInstructionDispatched(unsigned IID);
 
 public:
@@ -258,12 +260,14 @@ public:
 
   bool isRCUEmpty() const { return RCU->isEmpty(); }
 
-  bool canDispatch(const InstrDesc &Desc) {
+  bool canDispatch(const Instruction &Inst) {
+    const InstrDesc &Desc = Inst.getDesc();
     assert(isAvailable(Desc.NumMicroOps));
-    return checkRCU(Desc) && checkRAT(Desc) && checkScheduler(Desc);
+    return checkRCU(Desc) && checkRAT(Inst) && checkScheduler(Desc);
   }
 
-  unsigned dispatch(unsigned IID, Instruction *NewInst);
+  unsigned dispatch(unsigned IID, Instruction *NewInst,
+                    const llvm::MCSubtargetInfo &STI);
 
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
                      unsigned RegID) const {

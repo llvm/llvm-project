@@ -190,6 +190,7 @@ struct Configuration {
   bool WarnMissingOrderSymbol = true;
   bool WarnLocallyDefinedImported = true;
   bool Incremental = true;
+  bool KillAt = false;
 };
 
 extern Configuration *Config;

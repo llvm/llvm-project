@@ -702,7 +702,8 @@ AArch64LoadStoreOpt::mergeNarrowZeroStores(MachineBasicBlock::iterator I,
             .addReg(isNarrowStore(Opc) ? AArch64::WZR : AArch64::XZR)
             .add(BaseRegOp)
             .addImm(OffsetImm)
-            .setMemRefs(I->mergeMemRefsWith(*MergeMI));
+            .setMemRefs(I->mergeMemRefsWith(*MergeMI))
+            .setMIFlags(I->mergeFlagsWith(*MergeMI));
   (void)MIB;
 
   DEBUG(dbgs() << "Creating wider store. Replacing instructions:\n    ");
@@ -818,7 +819,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
             .add(RegOp1)
             .add(BaseRegOp)
             .addImm(OffsetImm)
-            .setMemRefs(I->mergeMemRefsWith(*Paired));
+            .setMemRefs(I->mergeMemRefsWith(*Paired))
+            .setMIFlags(I->mergeFlagsWith(*Paired));
 
   (void)MIB;
 
@@ -913,7 +915,8 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
                 TII->get(IsStoreXReg ? AArch64::ORRXrs : AArch64::ORRWrs), LdRt)
             .addReg(IsStoreXReg ? AArch64::XZR : AArch64::WZR)
             .add(StMO)
-            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
+            .setMIFlags(LoadI->getFlags());
   } else {
     // FIXME: Currently we disable this transformation in big-endian targets as
     // performance and correctness are verified only in little-endian.
@@ -954,7 +957,8 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
                   TII->get(IsStoreXReg ? AArch64::ANDXri : AArch64::ANDWri),
                   DestReg)
               .add(StMO)
-              .addImm(AndMaskEncoded);
+              .addImm(AndMaskEncoded)
+              .setMIFlags(LoadI->getFlags());
     } else {
       BitExtMI =
           BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),
@@ -962,7 +966,8 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
                   DestReg)
               .add(StMO)
               .addImm(Immr)
-              .addImm(Imms);
+              .addImm(Imms)
+              .setMIFlags(LoadI->getFlags());
     }
   }
 
@@ -1352,7 +1357,8 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
               .add(getLdStRegOp(*I))
               .add(getLdStBaseOp(*I))
               .addImm(Value)
-              .setMemRefs(I->memoperands_begin(), I->memoperands_end());
+              .setMemRefs(I->memoperands_begin(), I->memoperands_end())
+              .setMIFlags(I->mergeFlagsWith(*Update));
   } else {
     // Paired instruction.
     int Scale = getMemScale(*I);
@@ -1362,7 +1368,8 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
               .add(getLdStRegOp(*I, 1))
               .add(getLdStBaseOp(*I))
               .addImm(Value / Scale)
-              .setMemRefs(I->memoperands_begin(), I->memoperands_end());
+              .setMemRefs(I->memoperands_begin(), I->memoperands_end())
+              .setMIFlags(I->mergeFlagsWith(*Update));
   }
   (void)MIB;
 

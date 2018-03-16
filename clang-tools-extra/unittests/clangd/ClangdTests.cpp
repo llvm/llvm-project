@@ -245,13 +245,13 @@ int b = a;
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "";
-  Server.forceReparse(FooCpp);
+  Server.addDocument(FooCpp, SourceContents);
   auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "int a;";
-  Server.forceReparse(FooCpp);
+  Server.addDocument(FooCpp, SourceContents);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
@@ -368,15 +368,16 @@ struct bar { T x; };
 
   // Now switch to C++ mode.
   CDB.ExtraClangFlags = {"-xc++"};
-  // Currently, addDocument never checks if CompileCommand has changed, so we
+  // By default addDocument does not check if CompileCommand has changed, so we
   // expect to see the errors.
   runAddDocument(Server, FooCpp, SourceContents1);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
   runAddDocument(Server, FooCpp, SourceContents2);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  // But forceReparse should reparse the file with proper flags.
-  Server.forceReparse(FooCpp);
-  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  // Passing SkipCache=true will force addDocument to reparse the file with
+  // proper flags.
+  runAddDocument(Server, FooCpp, SourceContents2, WantDiagnostics::Auto,
+                 /*SkipCache=*/true);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument calls should finish without errors too.
   runAddDocument(Server, FooCpp, SourceContents1);
@@ -408,12 +409,14 @@ int main() { return 0; }
 
   // Parse without the define, no errors should be produced.
   CDB.ExtraClangFlags = {};
-  // Currently, addDocument never checks if CompileCommand has changed, so we
+  // By default addDocument does not check if CompileCommand has changed, so we
   // expect to see the errors.
   runAddDocument(Server, FooCpp, SourceContents);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  // But forceReparse should reparse the file with proper flags.
-  Server.forceReparse(FooCpp);
+  // Passing SkipCache=true will force addDocument to reparse the file with
+  // proper flags.
+  runAddDocument(Server, FooCpp, SourceContents, WantDiagnostics::Auto,
+                 /*SkipCache=*/true);
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument call should finish without errors too.
@@ -675,44 +678,31 @@ int d;
       Stats.FileIsRemoved = true;
     };
 
-    auto UpdateStatsOnForceReparse = [&](unsigned FileIndex) {
-      auto &Stats = ReqStats[FileIndex];
-
-      if (Stats.LastContentsHadErrors)
-        ++Stats.RequestsWithErrors;
-      else
-        ++Stats.RequestsWithoutErrors;
-    };
-
-    auto AddDocument = [&](unsigned FileIndex) {
+    auto AddDocument = [&](unsigned FileIndex, bool SkipCache) {
       bool ShouldHaveErrors = ShouldHaveErrorsDist(RandGen);
       Server.addDocument(FilePaths[FileIndex],
                          ShouldHaveErrors ? SourceContentsWithErrors
-                                          : SourceContentsWithoutErrors);
+                                          : SourceContentsWithoutErrors,
+                         WantDiagnostics::Auto, SkipCache);
       UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors);
     };
 
     // Various requests that we would randomly run.
     auto AddDocumentRequest = [&]() {
       unsigned FileIndex = FileIndexDist(RandGen);
-      AddDocument(FileIndex);
+      AddDocument(FileIndex, /*SkipCache=*/false);
     };
 
     auto ForceReparseRequest = [&]() {
       unsigned FileIndex = FileIndexDist(RandGen);
-      // Make sure we don't violate the ClangdServer's contract.
-      if (ReqStats[FileIndex].FileIsRemoved)
-        AddDocument(FileIndex);
-
-      Server.forceReparse(FilePaths[FileIndex]);
-      UpdateStatsOnForceReparse(FileIndex);
+      AddDocument(FileIndex, /*SkipCache=*/true);
     };
 
     auto RemoveDocumentRequest = [&]() {
       unsigned FileIndex = FileIndexDist(RandGen);
       // Make sure we don't violate the ClangdServer's contract.
       if (ReqStats[FileIndex].FileIsRemoved)
-        AddDocument(FileIndex);
+        AddDocument(FileIndex, /*SkipCache=*/false);
 
       Server.removeDocument(FilePaths[FileIndex]);
       UpdateStatsOnRemoveDocument(FileIndex);
@@ -722,7 +712,7 @@ int d;
       unsigned FileIndex = FileIndexDist(RandGen);
       // Make sure we don't violate the ClangdServer's contract.
       if (ReqStats[FileIndex].FileIsRemoved)
-        AddDocument(FileIndex);
+        AddDocument(FileIndex, /*SkipCache=*/false);
 
       Position Pos;
       Pos.line = LineDist(RandGen);
@@ -741,7 +731,7 @@ int d;
       unsigned FileIndex = FileIndexDist(RandGen);
       // Make sure we don't violate the ClangdServer's contract.
       if (ReqStats[FileIndex].FileIsRemoved)
-        AddDocument(FileIndex);
+        AddDocument(FileIndex, /*SkipCache=*/false);
 
       Position Pos;
       Pos.line = LineDist(RandGen);

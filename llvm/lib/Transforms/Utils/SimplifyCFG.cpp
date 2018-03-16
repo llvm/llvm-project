@@ -1290,31 +1290,44 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
     if (!TTI.isProfitableToHoist(I1) || !TTI.isProfitableToHoist(I2))
       return Changed;
 
-    // For a normal instruction, we just move one to right before the branch,
-    // then replace all uses of the other with the first.  Finally, we remove
-    // the now redundant second instruction.
-    BIParent->getInstList().splice(BI->getIterator(), BB1->getInstList(), I1);
-    if (!I2->use_empty())
-      I2->replaceAllUsesWith(I1);
-    I1->andIRFlags(I2);
-    unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
-                           LLVMContext::MD_range,
-                           LLVMContext::MD_fpmath,
-                           LLVMContext::MD_invariant_load,
-                           LLVMContext::MD_nonnull,
-                           LLVMContext::MD_invariant_group,
-                           LLVMContext::MD_align,
-                           LLVMContext::MD_dereferenceable,
-                           LLVMContext::MD_dereferenceable_or_null,
-                           LLVMContext::MD_mem_parallel_loop_access};
-    combineMetadata(I1, I2, KnownIDs);
+    if (isa<DbgInfoIntrinsic>(I1) || isa<DbgInfoIntrinsic>(I2)) {
+      assert (isa<DbgInfoIntrinsic>(I1) && isa<DbgInfoIntrinsic>(I2));
+      // The debug location is an integral part of a debug info intrinsic
+      // and can't be separated from it or replaced.  Instead of attempting
+      // to merge locations, simply hoist both copies of the intrinsic.
+      BIParent->getInstList().splice(BI->getIterator(),
+                                     BB1->getInstList(), I1);
+      BIParent->getInstList().splice(BI->getIterator(),
+                                     BB2->getInstList(), I2);
+      Changed = true;
+    } else {
+      // For a normal instruction, we just move one to right before the branch,
+      // then replace all uses of the other with the first.  Finally, we remove
+      // the now redundant second instruction.
+      BIParent->getInstList().splice(BI->getIterator(),
+                                     BB1->getInstList(), I1);
+      if (!I2->use_empty())
+        I2->replaceAllUsesWith(I1);
+      I1->andIRFlags(I2);
+      unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
+                             LLVMContext::MD_range,
+                             LLVMContext::MD_fpmath,
+                             LLVMContext::MD_invariant_load,
+                             LLVMContext::MD_nonnull,
+                             LLVMContext::MD_invariant_group,
+                             LLVMContext::MD_align,
+                             LLVMContext::MD_dereferenceable,
+                             LLVMContext::MD_dereferenceable_or_null,
+                             LLVMContext::MD_mem_parallel_loop_access};
+      combineMetadata(I1, I2, KnownIDs);
 
-    // I1 and I2 are being combined into a single instruction.  Its debug
-    // location is the merged locations of the original instructions.
-    I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
+      // I1 and I2 are being combined into a single instruction.  Its debug
+      // location is the merged locations of the original instructions.
+      I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
 
-    I2->eraseFromParent();
-    Changed = true;
+      I2->eraseFromParent();
+      Changed = true;
+    }
 
     I1 = &*BB1_Itr++;
     I2 = &*BB2_Itr++;

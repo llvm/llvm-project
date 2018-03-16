@@ -213,18 +213,52 @@ public:
   };
 
   struct CallArg {
-    RValue RV;
+  private:
+    union {
+      RValue RV;
+      LValue LV; /// The argument is semantically a load from this l-value.
+    };
+    bool HasLV;
+
+    /// A data-flow flag to make sure getRValue and/or copyInto are not
+    /// called twice for duplicated IR emission.
+    mutable bool IsUsed;
+
+  public:
     QualType Ty;
-    bool NeedsCopy;
-    CallArg(RValue rv, QualType ty, bool needscopy)
-    : RV(rv), Ty(ty), NeedsCopy(needscopy)
-    { }
+    CallArg(RValue rv, QualType ty)
+        : RV(rv), HasLV(false), IsUsed(false), Ty(ty) {}
+    CallArg(LValue lv, QualType ty)
+        : LV(lv), HasLV(true), IsUsed(false), Ty(ty) {}
+    bool hasLValue() const { return HasLV; }
+    QualType getType() const { return Ty; }
+
+    /// \returns an independent RValue. If the CallArg contains an LValue,
+    /// a temporary copy is returned.
+    RValue getRValue(CodeGenFunction &CGF) const;
+
+    LValue getKnownLValue() const {
+      assert(HasLV && !IsUsed);
+      return LV;
+    }
+    RValue getKnownRValue() const {
+      assert(!HasLV && !IsUsed);
+      return RV;
+    }
+    void setRValue(RValue _RV) {
+      assert(!HasLV);
+      RV = _RV;
+    }
+
+    bool isAggregate() const { return HasLV || RV.isAggregate(); }
+
+    void copyInto(CodeGenFunction &CGF, Address A) const;
   };
 
   /// CallArgList - Type for representing both the value and type of
   /// arguments in a call.
   class CallArgList :
-    public SmallVector<CallArg, 16> {
+    public SmallVector<CallArg, 8> {
   public:
     CallArgList() : StackBase(nullptr) {}
 
@@ -248,8 +282,10 @@ public:
       llvm::Instruction *IsActiveIP;
     };
 
-    void add(RValue rvalue, QualType type, bool needscopy = false) {
-      push_back(CallArg(rvalue, type, needscopy));
+    void add(RValue rvalue, QualType type) { push_back(CallArg(rvalue, type)); }
+
+    void addUncopiedAggregate(LValue LV, QualType type) {
+      push_back(CallArg(LV, type));
     }
 
     /// Add all the arguments from another CallArgList to this one. After doing

@@ -267,7 +267,8 @@ void ScriptParser::readDefsym(StringRef Name) {
   Expr E = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  SymbolAssignment *Cmd = make<SymbolAssignment>(Name, E, getCurrentLocation());
+  SymbolAssignment *Cmd = make<SymbolAssignment>(Name, E, getCurrentLocation(),
+                                                 "" /*CommandString*/);
   Script->SectionCommands.push_back(Cmd);
 }
 
@@ -468,11 +469,12 @@ void ScriptParser::readSections() {
 
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
-      .Cases("*", "/", "%", 5)
-      .Cases("+", "-", 4)
-      .Cases("<<", ">>", 3)
-      .Cases("<", "<=", ">", ">=", "==", "!=", 2)
-      .Cases("&", "|", 1)
+      .Cases("*", "/", "%", 6)
+      .Cases("+", "-", 5)
+      .Cases("<<", ">>", 4)
+      .Cases("<", "<=", ">", ">=", "==", "!=", 3)
+      .Case("&", 2)
+      .Case("|", 1)
       .Default(-1);
 }
 
@@ -791,6 +793,7 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
 }
 
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
+  size_t OldPos = Pos;
   StringRef Op = next();
   assert(Op == "=" || Op == "+=");
   Expr E = readExpr();
@@ -798,7 +801,11 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
     std::string Loc = getCurrentLocation();
     E = [=] { return add(Script->getSymbolValue(Name, Loc), E()); };
   }
-  return make<SymbolAssignment>(Name, E, getCurrentLocation());
+
+  std::string CommandString =
+      Name.str() + " " +
+      llvm::join(Tokens.begin() + OldPos, Tokens.begin() + Pos, " ");
+  return make<SymbolAssignment>(Name, E, getCurrentLocation(), CommandString);
 }
 
 // This is an operator-precedence parser to parse a linker
@@ -952,7 +959,13 @@ ByteCommand *ScriptParser::readByteCommand(StringRef Tok) {
                  .Default(-1);
   if (Size == -1)
     return nullptr;
-  return make<ByteCommand>(readParenExpr(), Size);
+
+  size_t OldPos = Pos;
+  Expr E = readParenExpr();
+  std::string CommandString =
+      Tok.str() + " " +
+      llvm::join(Tokens.begin() + OldPos, Tokens.begin() + Pos, " ");
+  return make<ByteCommand>(E, Size, CommandString);
 }
 
 StringRef ScriptParser::readParenLiteral() {

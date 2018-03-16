@@ -117,22 +117,20 @@ public:
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
+  /// When \p SkipCache is true, compile commands will always be requested from
+  /// compilation database even if they were cached in previous invocations.
   void addDocument(PathRef File, StringRef Contents,
-                   WantDiagnostics WD = WantDiagnostics::Auto);
+                   WantDiagnostics WD = WantDiagnostics::Auto,
+                   bool SkipCache = false);
 
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
   void removeDocument(PathRef File);
 
-  /// Force \p File to be reparsed using the latest contents.
-  /// Will also check if CompileCommand, provided by GlobalCompilationDatabase
-  /// for \p File has changed. If it has, will remove currently stored Preamble
-  /// and AST and rebuild them from scratch.
-  void forceReparse(PathRef File);
-
   /// Calls forceReparse() on all currently opened files.
   /// As a result, this method may be very expensive.
   /// This method is normally called when the compilation database is changed.
+  /// FIXME: this method must be moved to ClangdLSPServer along with DraftMgr.
   void reparseOpenedFiles();
 
   /// Run code completion for \p File at \p Pos.
@@ -240,9 +238,8 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  void scheduleReparseAndDiags(PathRef File, VersionedDraft Contents,
-                               WantDiagnostics WD,
-                               IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  void consumeDiagnostics(PathRef File, DocVersion Version,
+                          std::vector<Diag> Diags);
 
   CompileArgsCache CompileArgs;
   DiagnosticsConsumer &DiagConsumer;

@@ -141,7 +141,6 @@ public:
   ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
   ArrayRef<WasmSegment> dataSegments() const { return DataSegments; }
   ArrayRef<wasm::WasmFunction> functions() const { return Functions; }
-  ArrayRef<StringRef> comdats() const { return Comdats; }
   ArrayRef<wasm::WasmFunctionName> debugNames() const { return DebugNames; }
   uint32_t startFunction() const { return StartFunction; }
   uint32_t getNumImportedGlobals() const { return NumImportedGlobals; }
@@ -255,7 +254,6 @@ private:
   std::vector<WasmSegment> DataSegments;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
-  std::vector<StringRef> Comdats;
   std::vector<wasm::WasmFunctionName> DebugNames;
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;

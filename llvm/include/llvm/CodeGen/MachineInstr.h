@@ -1317,6 +1317,11 @@ public:
   /// modify the memrefs of the this MachineInstr.
   std::pair<mmo_iterator, unsigned> mergeMemRefsWith(const MachineInstr& Other);
 
+  /// Return the MIFlags which represent both MachineInstrs. This
+  /// should be used when merging two MachineInstrs into one. This routine does
+  /// not modify the MIFlags of this MachineInstr.
+  uint8_t mergeFlagsWith(const MachineInstr& Other) const;
+
   /// Clear this MachineInstr's memory reference descriptor list.  This resets
   /// the memrefs to their most conservative state.  This should be used only
   /// as a last resort since it greatly pessimizes our knowledge of the memory

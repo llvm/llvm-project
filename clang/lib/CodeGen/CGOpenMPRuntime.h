@@ -199,6 +199,18 @@ public:
 };
 
 class CGOpenMPRuntime {
+public:
+  /// Allows to disable automatic handling of functions used in target regions
+  /// as those marked as `omp declare target`.
+  class DisableAutoDeclareTargetRAII {
+    CodeGenModule &CGM;
+    bool SavedShouldMarkAsGlobal;
+
+  public:
+    DisableAutoDeclareTargetRAII(CodeGenModule &CGM);
+    ~DisableAutoDeclareTargetRAII();
+  };
+
 protected:
   CodeGenModule &CGM;
 
@@ -488,6 +500,9 @@ private:
   };
   OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
 
+  bool ShouldMarkAsGlobal = true;
+  llvm::SmallDenseSet<const FunctionDecl *> AlreadyEmittedTargetFunctions;
+
   /// \brief Creates and registers offloading binary descriptor for the current
   /// compilation unit. The function that does the registration is returned.
   llvm::Function *createOffloadingBinaryDescriptorRegistration();
@@ -676,7 +691,7 @@ public:
 
   /// \brief Cleans up references to the objects in finished function.
   ///
-  void functionFinished(CodeGenFunction &CGF);
+  virtual void functionFinished(CodeGenFunction &CGF);
 
   /// \brief Emits code for parallel or serial call of the \a OutlinedFn with
   /// variables captured in a record which address is stored in \a
@@ -1362,6 +1377,19 @@ public:
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::Value *OutlinedFn,
                            ArrayRef<llvm::Value *> Args = llvm::None) const;
+
+  /// Emits OpenMP-specific function prolog.
+  /// Required for device constructs.
+  virtual void emitFunctionProlog(CodeGenFunction &CGF, const Decl *D) {}
+
+  /// Gets the OpenMP-specific address of the local variable.
+  virtual Address getAddressOfLocalVariable(CodeGenFunction &CGF,
+                                            const VarDecl *VD);
+
+  /// Marks the declaration as alread emitted for the device code and returns
+  /// true, if it was marked already, and false, otherwise.
+  bool markAsGlobalTarget(const FunctionDecl *D);
+
 };
 
 /// Class supports emissionof SIMD-only code.

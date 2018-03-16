@@ -18,6 +18,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_executable_option_file(self):
         """Test that 'lldb-mi --interpreter %s' loads executable file."""
 
@@ -44,6 +45,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_executable_option_unknown_file(self):
         """Test that 'lldb-mi --interpreter %s' fails on unknown executable file."""
 
@@ -64,6 +66,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_executable_option_absolute_path(self):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via absolute path."""
 
@@ -86,11 +89,12 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_executable_option_relative_path(self):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via relative path."""
 
         # Prepare path to executable
-        path = os.path.relpath(self.myexe)
+        path = os.path.relpath(self.myexe, self.getBuildDir())
         self.spawnLldbMi(args="%s" % path)
 
         # Test that the executable is loaded when file was specified using
@@ -108,6 +112,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_executable_option_unknown_path(self):
         """Test that 'lldb-mi --interpreter %s' fails on executable file which is specified via unknown path."""
 
@@ -139,6 +144,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
+    @skipIfDarwin
     def test_lldbmi_source_option_start_script(self):
         """Test that 'lldb-mi --interpreter' can execute user's commands after initial commands were executed."""
 
@@ -182,6 +188,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
+    @skipIfDarwin
     def test_lldbmi_source_option_start_script_exit(self):
         """Test that 'lldb-mi --interpreter' can execute a prepared file which passed via --source option."""
 
@@ -224,6 +231,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_source_option_start_script_error(self):
         """Test that 'lldb-mi --interpreter' stops execution of initial commands in case of error."""
 
@@ -246,10 +254,11 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_log_option(self):
         """Test that 'lldb-mi --log' creates a log file in the current directory."""
 
-        logDirectory = "."
+        logDirectory = self.getBuildDir()
         self.spawnLldbMi(args="%s --log" % self.myexe)
 
         # Test that the executable is loaded when file was specified
@@ -279,6 +288,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfDarwin
     def test_lldbmi_log_directory_option(self):
         """Test that 'lldb-mi --log --log-dir' creates a log file in the directory specified by --log-dir."""
 

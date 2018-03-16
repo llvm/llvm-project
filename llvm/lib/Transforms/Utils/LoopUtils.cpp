@@ -16,6 +16,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -1515,6 +1516,46 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
         SafetyInfo->BlockColors = colorEHFunclets(*Fn);
 }
 
+/// Return true if we can prove that the given ExitBlock is not reached on the
+/// first iteration of the given loop.  That is, the backedge of the loop must
+/// be executed before the ExitBlock is executed in any dynamic execution trace.
+static bool CanProveNotTakenFirstIteration(BasicBlock *ExitBlock,
+                                           const DominatorTree *DT,
+                                           const Loop *CurLoop) {
+  auto *CondExitBlock = ExitBlock->getSinglePredecessor();
+  if (!CondExitBlock)
+    // expect unique exits
+    return false;
+  assert(CurLoop->contains(CondExitBlock) && "meaning of exit block");
+  auto *BI = dyn_cast<BranchInst>(CondExitBlock->getTerminator());
+  if (!BI || !BI->isConditional())
+    return false;
+  // todo: handle fcmp someday
+  // todo: this would be a lot more powerful if we used scev, but all the
+  // plumbing is currently missing to pass a pointer in from the pass
+  auto *ICI = dyn_cast<ICmpInst>(BI->getCondition());
+  if (!ICI)
+    return false;
+  // Check for cmp (phi [x, preheader] ...), y where (pred x, y is known
+  auto *LHS = dyn_cast<PHINode>(ICI->getOperand(0));
+  auto *RHS = ICI->getOperand(1);
+  if (!LHS || LHS->getParent() != CurLoop->getHeader())
+    return false;
+  auto DL = ExitBlock->getModule()->getDataLayout();
+  auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
+  auto *SimpleValOrNull = SimplifyICmpInst(ICI->getPredicate(),
+                                           IVStart, RHS,
+                                           {DL, /*TLI*/ nullptr,
+                                               DT, /*AC*/ nullptr, BI});
+  auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);
+  if (!SimpleCst)
+    return false;
+  if (ExitBlock == BI->getSuccessor(0))
+    return SimpleCst->isZeroValue();
+  assert(ExitBlock == BI->getSuccessor(1) && "implied by above");
+  return SimpleCst->isAllOnesValue();
+}
+
 /// Returns true if the instruction in a loop is guaranteed to execute at least
 /// once.
 bool llvm::isGuaranteedToExecute(const Instruction &Inst,
@@ -1537,6 +1578,22 @@ bool llvm::isGuaranteedToExecute(const Instruction &Inst,
   if (SafetyInfo->MayThrow)
     return false;
 
+  // Note: There are two styles of reasoning intermixed below for
+  // implementation efficiency reasons.  They are:
+  // 1) If we can prove that the instruction dominates all exit blocks, then we
+  // know the instruction must have executed on *some* iteration before we
+  // exit.  We do not prove *which* iteration the instruction must execute on.
+  // 2) If we can prove that the instruction dominates the latch and all exits
+  // which might be taken on the first iteration, we know the instruction must
+  // execute on the first iteration.  This second style allows a conditional
+  // exit before the instruction of interest which is provably not taken on the
+  // first iteration.  This is a quite common case for range check like
+  // patterns.  TODO: support loops with multiple latches.
+
+  const bool InstDominatesLatch =
+    CurLoop->getLoopLatch() != nullptr &&
+    DT->dominates(Inst.getParent(), CurLoop->getLoopLatch());
+
   // Get the exit blocks for the current loop.
   SmallVector<BasicBlock *, 8> ExitBlocks;
   CurLoop->getExitBlocks(ExitBlocks);
@@ -1544,7 +1601,9 @@ bool llvm::isGuaranteedToExecute(const Instruction &Inst,
   // Verify that the block dominates each of the exit blocks of the loop.
   for (BasicBlock *ExitBlock : ExitBlocks)
     if (!DT->dominates(Inst.getParent(), ExitBlock))
-      return false;
+      if (!InstDominatesLatch ||
+          !CanProveNotTakenFirstIteration(ExitBlock, DT, CurLoop))
+        return false;
 
   // As a degenerate case, if the loop is statically infinite then we haven't
   // proven anything since there are no exit blocks.

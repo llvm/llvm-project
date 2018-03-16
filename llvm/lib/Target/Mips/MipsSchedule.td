@@ -57,6 +57,14 @@ def II_CFC1             : InstrItinClass;
 def II_CFC2             : InstrItinClass;
 def II_CLO              : InstrItinClass;
 def II_CLZ              : InstrItinClass;
+def II_CRC32B           : InstrItinClass;
+def II_CRC32CB          : InstrItinClass;
+def II_CRC32CD          : InstrItinClass;
+def II_CRC32CH          : InstrItinClass;
+def II_CRC32CW          : InstrItinClass;
+def II_CRC32D           : InstrItinClass;
+def II_CRC32H           : InstrItinClass;
+def II_CRC32W           : InstrItinClass;
 def II_CTC1             : InstrItinClass;
 def II_CTC2             : InstrItinClass;
 def II_CVT              : InstrItinClass;
@@ -686,5 +694,13 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_RDPGPR          , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_DVP             , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_EVP             , [InstrStage<1,  [ALU]>]>,
-  InstrItinData<II_YIELD           , [InstrStage<5,  [ALU]>]>
+  InstrItinData<II_YIELD           , [InstrStage<5,  [ALU]>]>,
+  InstrItinData<II_CRC32B          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32H          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32W          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32D          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CB         , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CH         , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CW         , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CD         , [InstrStage<1,  [ALU]>]>
 ]>;

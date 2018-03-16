@@ -1527,6 +1527,7 @@ def ADDRri : ComplexPattern<i32, 2, "SelectADDRri", [frameindex],
                             [SDNPWantRoot]>;
 def ADDRri64 : ComplexPattern<i64, 2, "SelectADDRri64", [frameindex],
                               [SDNPWantRoot]>;
+def ADDRvar : ComplexPattern<iPTR, 1, "SelectDirectAddr", [], []>;
 
 def MEMri : Operand<i32> {
   let PrintMethod = "printMemOperand";

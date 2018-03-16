@@ -1,4 +1,4 @@
-//===--- ArgumentsAdjusters.h - Command line arguments adjuster -*- C++ -*-===//
+//===- ArgumentsAdjusters.h - Command line arguments adjuster ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares typedef ArgumentsAdjuster and functions to create several
+// This file declares type ArgumentsAdjuster and functions to create several
 // useful argument adjusters.
 // ArgumentsAdjusters modify command line arguments obtained from a compilation
 // database before they are used to run a frontend action.
@@ -27,14 +27,14 @@ namespace clang {
 namespace tooling {
 
 /// \brief A sequence of command line arguments.
-typedef std::vector<std::string> CommandLineArguments;
+using CommandLineArguments = std::vector<std::string>;
 
 /// \brief A prototype of a command line adjuster.
 ///
 /// Command line argument adjuster is responsible for command line arguments
 /// modification before the arguments are used to run a frontend action.
-typedef std::function<CommandLineArguments(
-    const CommandLineArguments &, StringRef Filename)> ArgumentsAdjuster;
+using ArgumentsAdjuster = std::function<CommandLineArguments(
+    const CommandLineArguments &, StringRef Filename)>;
 
 /// \brief Gets an argument adjuster that converts input command line arguments
 /// to the "syntax check only" variant.
@@ -70,4 +70,3 @@ ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLING_ARGUMENTSADJUSTERS_H
-

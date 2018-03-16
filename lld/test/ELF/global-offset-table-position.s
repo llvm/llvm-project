@@ -3,8 +3,7 @@
 // RUN: llvm-readobj -t %t2 | FileCheck %s
 // REQUIRES: x86
 
-// The X86_64 _GLOBAL_OFFSET_TABLE_ is defined at the start of the .got.plt
-// section.
+// The X86_64 _GLOBAL_OFFSET_TABLE_ is defined at the end of the .got section.
 .globl  a
 .type   a,@object
 .comm   a,4,4
@@ -22,11 +21,11 @@ callq	f@PLT
 .long _GLOBAL_OFFSET_TABLE_ - .
 
 // CHECK:     Name: _GLOBAL_OFFSET_TABLE_
-// CHECK-NEXT:     Value: 0x2008
+// CHECK-NEXT:     Value: 0x30D8
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None (0x0)
 // CHECK-NEXT:     Other [
 // CHECK-NEXT:       STV_HIDDEN
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .got.plt
+// CHECK-NEXT:     Section: .got
