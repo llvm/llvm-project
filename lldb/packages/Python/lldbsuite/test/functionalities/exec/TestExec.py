@@ -41,7 +41,6 @@ class ExecTestCase(TestBase):
         self.do_test(True)
 
     def do_test(self, skip_exec):
-        self.makeBuildDir()
         exe = self.getBuildArtifact("a.out")
         if self.getArchitecture() == 'x86_64':
             source = self.getSourcePath("main.cpp")

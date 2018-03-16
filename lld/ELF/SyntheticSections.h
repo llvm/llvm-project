@@ -83,6 +83,7 @@ public:
   };
 
   std::vector<FdeData> getFdeData() const;
+  ArrayRef<CieRecord *> getCieRecords() const { return CieRecords; }
 
 private:
   uint64_t Size = 0;
@@ -269,7 +270,7 @@ public:
   void addEntry(Symbol &Sym);
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override;
+  bool empty() const override { return Entries.empty(); }
 
 private:
   std::vector<const Symbol *> Entries;

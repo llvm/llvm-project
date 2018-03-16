@@ -531,7 +531,7 @@ define void @test_monitor(i8* %a0, i32 %a1, i32 %a2) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    movl %esi, %ecx # sched: [1:0.50]
-; BTVER2-NEXT:    monitor # sched: [100:0.17]
+; BTVER2-NEXT:    monitor # sched: [100:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_monitor:
@@ -563,9 +563,10 @@ define <2 x double> @test_movddup(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; SLM-LABEL: test_movddup:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movddup {{.*#+}} xmm1 = xmm0[0,0] sched: [1:1.00]
-; SLM-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0] sched: [3:1.00]
-; SLM-NEXT:    subpd %xmm1, %xmm0 # sched: [3:1.00]
+; SLM-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0] sched: [4:1.00]
+; SLM-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0] sched: [1:1.00]
+; SLM-NEXT:    subpd %xmm0, %xmm1 # sched: [3:1.00]
+; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_movddup:
@@ -605,7 +606,7 @@ define <2 x double> @test_movddup(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; BTVER2-LABEL: test_movddup:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0] sched: [5:1.00]
+; BTVER2-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0] sched: [6:1.00]
 ; BTVER2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0] sched: [1:0.50]
 ; BTVER2-NEXT:    vsubpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -641,9 +642,10 @@ define <4 x float> @test_movshdup(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; SLM-LABEL: test_movshdup:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3] sched: [1:1.00]
-; SLM-NEXT:    movshdup {{.*#+}} xmm0 = mem[1,1,3,3] sched: [3:1.00]
-; SLM-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
+; SLM-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [4:1.00]
+; SLM-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3] sched: [1:1.00]
+; SLM-NEXT:    addps %xmm0, %xmm1 # sched: [3:1.00]
+; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_movshdup:
@@ -683,7 +685,7 @@ define <4 x float> @test_movshdup(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_movshdup:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [5:1.00]
+; BTVER2-NEXT:    vmovshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [6:1.00]
 ; BTVER2-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -719,9 +721,10 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; SLM-LABEL: test_movsldup:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movsldup {{.*#+}} xmm1 = xmm0[0,0,2,2] sched: [1:1.00]
-; SLM-NEXT:    movsldup {{.*#+}} xmm0 = mem[0,0,2,2] sched: [3:1.00]
-; SLM-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
+; SLM-NEXT:    movsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [4:1.00]
+; SLM-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2] sched: [1:1.00]
+; SLM-NEXT:    addps %xmm0, %xmm1 # sched: [3:1.00]
+; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_movsldup:
@@ -761,7 +764,7 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_movsldup:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [5:1.00]
+; BTVER2-NEXT:    vmovsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [6:1.00]
 ; BTVER2-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -840,7 +843,7 @@ define void @test_mwait(i32 %a0, i32 %a1) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    movl %esi, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    mwait # sched: [100:0.17]
+; BTVER2-NEXT:    mwait # sched: [100:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_mwait:

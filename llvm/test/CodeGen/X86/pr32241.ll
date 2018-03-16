@@ -4,19 +4,16 @@
 define i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    .cfi_offset %esi, -8
-; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    .cfi_def_cfa_offset 20
 ; CHECK-NEXT:    movw $10959, {{[0-9]+}}(%esp) # imm = 0x2ACF
 ; CHECK-NEXT:    movw $-15498, {{[0-9]+}}(%esp) # imm = 0xC376
 ; CHECK-NEXT:    movw $19417, {{[0-9]+}}(%esp) # imm = 0x4BD9
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp) # 1-byte Spill
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %lor.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -25,17 +22,17 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_2: # %lor.end
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al # 1-byte Reload
-; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; CHECK-NEXT:    cmpl %edx, %esi
+; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    cmpl %ecx, %edx
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %edx
-; CHECK-NEXT:    xorl $-1, %edx
-; CHECK-NEXT:    cmpl $0, %edx
-; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
+; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    xorl $-1, %ecx
+; CHECK-NEXT:    cmpl $0, %ecx
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %lor.rhs4
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -50,7 +47,6 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    addl $16, %esp
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:
   %aa = alloca i16, align 2

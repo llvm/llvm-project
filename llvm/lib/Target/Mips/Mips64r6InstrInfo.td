@@ -39,6 +39,8 @@ class DMULU_ENC   : SPECIAL_3R_FM<0b00010, 0b011101>;
 class LDPC_ENC    : PCREL18_FM<OPCODE3_LDPC>;
 class LLD_R6_ENC : SPECIAL3_LL_SC_FM<OPCODE6_LLD>;
 class SCD_R6_ENC : SPECIAL3_LL_SC_FM<OPCODE6_SCD>;
+class CRC32D_ENC  : SPECIAL3_2R_SZ_CRC<3,0>;
+class CRC32CD_ENC : SPECIAL3_2R_SZ_CRC<3,1>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -114,6 +116,10 @@ class JR_HB64_R6_DESC : JR_HB_DESC_BASE<"jr.hb", GPR64Opnd> {
   bit isCTI = 1;
   InstrItinClass Itinerary = II_JR_HB;
 }
+
+class CRC32D_DESC  : CRC_DESC_BASE<"crc32d", GPR32Opnd, II_CRC32D>;
+class CRC32CD_DESC : CRC_DESC_BASE<"crc32cd", GPR32Opnd, II_CRC32CD>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -173,6 +179,10 @@ def BNEZC64 : BNEZC_ENC, BNEZC64_DESC, ISA_MIPS64R6, GPR_64;
 let DecoderNamespace = "Mips32r6_64r6_BranchZero" in {
 def BLTZC64 : BLTZC_ENC, BLTZC64_DESC, ISA_MIPS64R6, GPR_64;
 def BGEZC64 : BGEZC_ENC, BGEZC64_DESC, ISA_MIPS64R6, GPR_64;
+}
+let AdditionalPredicates = [NotInMicroMips] in {
+  def CRC32D : R6MMR6Rel, CRC32D_ENC, CRC32D_DESC, ISA_MIPS64R6, ASE_CRC;
+  def CRC32CD : R6MMR6Rel, CRC32CD_ENC, CRC32CD_DESC, ISA_MIPS64R6, ASE_CRC;
 }
 
 //===----------------------------------------------------------------------===//

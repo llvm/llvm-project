@@ -210,11 +210,11 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ;
 ; GOLDMONT-LABEL: test_sha256rnds2:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    movaps %xmm0, %xmm3 # sched: [1:1.00]
-; GOLDMONT-NEXT:    movaps %xmm2, %xmm0 # sched: [1:1.00]
+; GOLDMONT-NEXT:    movaps %xmm0, %xmm3 # sched: [1:0.50]
+; GOLDMONT-NEXT:    movaps %xmm2, %xmm0 # sched: [1:0.50]
 ; GOLDMONT-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [4:1.00]
 ; GOLDMONT-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [7:1.00]
-; GOLDMONT-NEXT:    movaps %xmm3, %xmm0 # sched: [1:1.00]
+; GOLDMONT-NEXT:    movaps %xmm3, %xmm0 # sched: [1:0.50]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; CANNONLAKE-LABEL: test_sha256rnds2:
@@ -228,11 +228,11 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ;
 ; ZNVER1-LABEL: test_sha256rnds2:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vmovaps %xmm0, %xmm3 # sched: [1:0.50]
-; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovaps %xmm0, %xmm3 # sched: [1:0.25]
+; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [4:1.00]
 ; ZNVER1-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [11:1.00]
-; ZNVER1-NEXT:    vmovaps %xmm3, %xmm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovaps %xmm3, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a3
   %2 = tail call <4 x i32> @llvm.x86.sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2)

@@ -1160,7 +1160,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     if (UseOptimizedLibcall && Res.getScalarVal()) {
       llvm::Value *ResVal = Res.getScalarVal();
       if (PostOp) {
-        llvm::Value *LoadVal1 = Args[1].RV.getScalarVal();
+        llvm::Value *LoadVal1 = Args[1].getRValue(*this).getScalarVal();
         ResVal = Builder.CreateBinOp(PostOp, ResVal, LoadVal1);
       }
       if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch)

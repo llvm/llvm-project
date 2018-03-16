@@ -43,8 +43,6 @@ namespace llvm {
 
 class OrcCBindingsStack;
 
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(std::shared_ptr<Module>,
-                                   LLVMSharedModuleRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OrcCBindingsStack, LLVMOrcJITStackRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 
@@ -284,7 +282,7 @@ public:
   }
   template <typename LayerT>
   LLVMOrcErrorCode
-  addIRModule(orc::VModuleKey &RetKey, LayerT &Layer, std::shared_ptr<Module> M,
+  addIRModule(orc::VModuleKey &RetKey, LayerT &Layer, std::unique_ptr<Module> M,
               std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
               LLVMOrcSymbolResolverFn ExternalResolver,
               void *ExternalResolverCtx) {
@@ -323,7 +321,7 @@ public:
   }
 
   LLVMOrcErrorCode addIRModuleEager(orc::VModuleKey &RetKey,
-                                    std::shared_ptr<Module> M,
+                                    std::unique_ptr<Module> M,
                                     LLVMOrcSymbolResolverFn ExternalResolver,
                                     void *ExternalResolverCtx) {
     return addIRModule(RetKey, CompileLayer, std::move(M),
@@ -332,7 +330,7 @@ public:
   }
 
   LLVMOrcErrorCode addIRModuleLazy(orc::VModuleKey &RetKey,
-                                   std::shared_ptr<Module> M,
+                                   std::unique_ptr<Module> M,
                                    LLVMOrcSymbolResolverFn ExternalResolver,
                                    void *ExternalResolverCtx) {
     return addIRModule(RetKey, CODLayer, std::move(M),

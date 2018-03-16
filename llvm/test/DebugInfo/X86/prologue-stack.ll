@@ -11,6 +11,8 @@ define i32 @isel_line_test2() nounwind uwtable !dbg !5 {
   ; CHECK: isel_line_test2:
   ; CHECK: {{subq|leaq}} {{.*}}, %rsp
   ; CHECK: .loc 1 5 3 prologue_end
+  ; CHECK: movl $400, %edi
+  ; CHECK: callq callme
 entry:
   %call = call i32 @callme(i32 400), !dbg !10
   ret i32 0, !dbg !12

@@ -1,4 +1,4 @@
-//===--- CompilationDatabase.h - --------------------------------*- C++ -*-===//
+//===- CompilationDatabase.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -34,6 +34,7 @@
 #include "llvm/ADT/Twine.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -41,13 +42,11 @@ namespace tooling {
 
 /// \brief Specifies the working directory and command of a compilation.
 struct CompileCommand {
-  CompileCommand() {}
+  CompileCommand() = default;
   CompileCommand(Twine Directory, Twine Filename,
                  std::vector<std::string> CommandLine, Twine Output)
-      : Directory(Directory.str()),
-        Filename(Filename.str()),
-        CommandLine(std::move(CommandLine)),
-        Output(Output.str()){}
+      : Directory(Directory.str()), Filename(Filename.str()),
+        CommandLine(std::move(CommandLine)), Output(Output.str()){}
 
   /// \brief The working directory the command was executed from.
   std::string Directory;
@@ -113,7 +112,7 @@ public:
   /// A compilation database representing the project would return both command
   /// lines for a.cc and b.cc and only the first command line for t.cc.
   virtual std::vector<CompileCommand> getCompileCommands(
-    StringRef FilePath) const = 0;
+      StringRef FilePath) const = 0;
 
   /// \brief Returns the list of all files available in the compilation database.
   ///
@@ -214,7 +213,7 @@ private:
   std::vector<CompileCommand> CompileCommands;
 };
 
-} // end namespace tooling
-} // end namespace clang
+} // namespace tooling
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLING_COMPILATIONDATABASE_H

@@ -707,7 +707,8 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
     GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
     return;
   }
-
+  if (!D)
+    return;
   // Set visibility for definitions.
   LinkageInfo LV = D->getLinkageAndVisibility();
   if (LV.isVisibilityExplicit() || !GV->isDeclarationForLinker())
@@ -797,7 +798,7 @@ void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
 
 void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
                                           const NamedDecl *D) const {
-  if (D->isExternallyVisible()) {
+  if (D && D->isExternallyVisible()) {
     if (D->hasAttr<DLLImportAttr>())
       GV->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
     else if (D->hasAttr<DLLExportAttr>() && !GV->isDeclarationForLinker())
@@ -2382,6 +2383,12 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   // Any attempts to use a MultiVersion function should result in retrieving
   // the iFunc instead. Name Mangling will handle the rest of the changes.
   if (const FunctionDecl *FD = cast_or_null<FunctionDecl>(D)) {
+    // For the device mark the function as one that should be emitted.
+    if (getLangOpts().OpenMPIsDevice && OpenMPRuntime &&
+        !OpenMPRuntime->markAsGlobalTarget(FD) && FD->isDefined() &&
+        !DontDefer && !IsForDefinition)
+      addDeferredDeclToEmit(GD);
+
     if (FD->isMultiVersion() && FD->getAttr<TargetAttr>()->isDefaultVersion()) {
       UpdateMultiVersionNames(GD, FD);
       if (!IsForDefinition)
@@ -3069,6 +3076,12 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   // therefore no need to be translated.
   QualType ASTTy = D->getType();
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
+    return;
+
+  // If this is OpenMP device, check if it is legal to emit this global
+  // normally.
+  if (LangOpts.OpenMPIsDevice && OpenMPRuntime &&
+      OpenMPRuntime->emitTargetGlobalVariable(D))
     return;
 
   llvm::Constant *Init = nullptr;

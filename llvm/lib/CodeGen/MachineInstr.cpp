@@ -381,6 +381,12 @@ MachineInstr::mergeMemRefsWith(const MachineInstr& Other) {
   return std::make_pair(MemBegin, CombinedNumMemRefs);
 }
 
+uint8_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
+  // For now, the just return the union of the flags. If the flags get more
+  // complicated over time, we might need more logic here.
+  return getFlags() | Other.getFlags();
+}
+
 bool MachineInstr::hasPropertyInBundle(unsigned Mask, QueryType Type) const {
   assert(!isBundledWithPred() && "Must be called on bundle header");
   for (MachineBasicBlock::const_instr_iterator MII = getIterator();; ++MII) {
@@ -1435,25 +1441,33 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
   }
 
-  bool HaveSemi = false;
   if (!memoperands_empty()) {
-    if (!HaveSemi) {
-      OS << ";";
-      HaveSemi = true;
+    SmallVector<StringRef, 0> SSNs;
+    const LLVMContext *Context = nullptr;
+    std::unique_ptr<LLVMContext> CtxPtr;
+    const MachineFrameInfo *MFI = nullptr;
+    if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+      MFI = &MF->getFrameInfo();
+      Context = &MF->getFunction().getContext();
+    } else {
+      CtxPtr = llvm::make_unique<LLVMContext>();
+      Context = CtxPtr.get();
     }
 
-    OS << " mem:";
-    for (mmo_iterator i = memoperands_begin(), e = memoperands_end();
-         i != e; ++i) {
-      (*i)->print(OS, MST);
-      if (std::next(i) != e)
-        OS << " ";
+    OS << " :: ";
+    bool NeedComma = false;
+    for (const MachineMemOperand *Op : memoperands()) {
+      if (NeedComma)
+        OS << ", ";
+      Op->print(OS, MST, SSNs, *Context, MFI, TII);
+      NeedComma = true;
     }
   }
 
   if (SkipDebugLoc)
     return;
 
+  bool HaveSemi = false;
   // Print debug location information.
   if (isDebugValue() && getOperand(e - 2).isMetadata()) {
     if (!HaveSemi)

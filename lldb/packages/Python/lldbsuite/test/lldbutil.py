@@ -1321,6 +1321,21 @@ def skip_if_library_missing(test, target, library):
          target))
 
 
+def read_file_on_target(test, remote):
+    if lldb.remote_platform:
+        local = test.getBuildArtifact("file_from_target")
+        error = lldb.remote_platform.Get(lldb.SBFileSpec(remote, False),
+                    lldb.SBFileSpec(local, True))
+        test.assertTrue(error.Success(), "Reading file {0} failed: {1}".format(remote, error))
+    else:
+        local = remote
+    with open(local, 'r') as f:
+        return f.read()
+
+def read_file_from_process_wd(test, name):
+    path = append_to_process_working_directory(test, name)
+    return read_file_on_target(test, path)
+
 def wait_for_file_on_target(testcase, file_path, max_attempts=6):
     for i in range(max_attempts):
         err, retcode, msg = testcase.run_platform_command("ls %s" % file_path)
@@ -1335,9 +1350,4 @@ def wait_for_file_on_target(testcase, file_path, max_attempts=6):
             "File %s not found even after %d attempts." %
             (file_path, max_attempts))
 
-    err, retcode, data = testcase.run_platform_command("cat %s" % (file_path))
-
-    testcase.assertTrue(
-        err.Success() and retcode == 0, "Failed to read file %s: %s, retcode: %d" %
-        (file_path, err.GetCString(), retcode))
-    return data
+    return read_file_on_target(testcase, file_path)

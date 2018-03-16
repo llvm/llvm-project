@@ -125,7 +125,7 @@ Error AnalysisStyle::dump() {
 
     const auto &Collisions = CollisionsIter->second;
     outs() << TypeName << "\n";
-    outs() << formatv("    [HEAD] {0:x} {1} {2}\n", A.second,
+    outs() << formatv("    [HEAD] {0:x} {1} {2}\n", uint32_t(A.second),
                       getLeafTypeName(HeadRecord.Type), TypeName);
     for (const auto &Chain : Collisions) {
       if (Chain.TI == TI)

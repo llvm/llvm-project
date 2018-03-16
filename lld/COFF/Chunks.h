@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/COFF.h"
 #include <utility>
 #include <vector>
@@ -59,6 +60,10 @@ public:
   // of other chunks for relocations, you need to set them properly
   // before calling this function.
   virtual void writeTo(uint8_t *Buf) const {}
+
+  // Called by the writer after an RVA is assigned, but before calling
+  // getSize().
+  virtual void finalizeContents() {}
 
   // The writer sets and uses the addresses.
   uint64_t getRVA() const { return RVA; }
@@ -220,6 +225,33 @@ private:
   // Used for ICF (Identical COMDAT Folding)
   void replace(SectionChunk *Other);
   uint32_t Class[2] = {0, 0};
+};
+
+// This class is used to implement an lld-specific feature (not implemented in
+// MSVC) that minimizes the output size by finding string literals sharing tail
+// parts and merging them.
+//
+// If string tail merging is enabled and a section is identified as containing a
+// string literal, it is added to a MergeChunk with an appropriate alignment.
+// The MergeChunk then tail merges the strings using the StringTableBuilder
+// class and assigns RVAs and section offsets to each of the member chunks based
+// on the offsets assigned by the StringTableBuilder.
+class MergeChunk : public Chunk {
+public:
+  MergeChunk(uint32_t Alignment);
+  static void addSection(SectionChunk *C);
+  void finalizeContents() override;
+
+  uint32_t getPermissions() const override;
+  StringRef getSectionName() const override { return ".rdata"; }
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) const override;
+
+  static std::map<uint32_t, MergeChunk *> Instances;
+  std::vector<SectionChunk *> Sections;
+
+private:
+  llvm::StringTableBuilder Builder;
 };
 
 // A chunk for common symbols. Common chunks don't have actual data.

@@ -210,7 +210,22 @@ DIASession::findLineNumbers(const PDBSymbolCompiland &Compiland,
 std::unique_ptr<IPDBEnumLineNumbers>
 DIASession::findLineNumbersByAddress(uint64_t Address, uint32_t Length) const {
   CComPtr<IDiaEnumLineNumbers> LineNumbers;
-  if (S_OK != Session->findLinesByVA(Address, Length, &LineNumbers))
+  if (S_OK != Session->findLinesByVA(Address, Length, &LineNumbers)) {
+    ULONGLONG LoadAddr = 0;
+    if (S_OK != Session->get_loadAddress(&LoadAddr))
+      return nullptr;
+    DWORD RVA = static_cast<DWORD>(Address - LoadAddr);
+    if (S_OK != Session->findLinesByRVA(RVA, Length, &LineNumbers))
+      return nullptr;
+  }
+  return llvm::make_unique<DIAEnumLineNumbers>(LineNumbers);
+}
+
+std::unique_ptr<IPDBEnumLineNumbers>
+DIASession::findLineNumbersBySectOffset(uint32_t Section, uint32_t Offset,
+                                        uint32_t Length) const {
+  CComPtr<IDiaEnumLineNumbers> LineNumbers;
+  if (S_OK != Session->findLinesByAddr(Section, Offset, Length, &LineNumbers))
     return nullptr;
 
   return llvm::make_unique<DIAEnumLineNumbers>(LineNumbers);

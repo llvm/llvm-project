@@ -2586,11 +2586,11 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
     }
   }
 
-  if (!CGM.getLangOpts().BlocksRuntimeOptional)
-    return;
-
-  if (GV->isDeclaration() && GV->hasExternalLinkage())
+  if (CGM.getLangOpts().BlocksRuntimeOptional && GV->isDeclaration() &&
+      GV->hasExternalLinkage())
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
+
+  CGM.setDSOLocal(GV);
 }
 
 llvm::Constant *CodeGenModule::getBlockObjectDispose() {

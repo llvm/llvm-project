@@ -308,10 +308,10 @@ struct EstimatedUnrollCost {
 /// \returns Optional value, holding the RolledDynamicCost and UnrolledCost. If
 /// the analysis failed (no benefits expected from the unrolling, or the loop is
 /// too big to analyze), the returned value is None.
-static Optional<EstimatedUnrollCost>
-analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
-                      ScalarEvolution &SE, const TargetTransformInfo &TTI,
-                      unsigned MaxUnrolledLoopSize) {
+static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
+    const Loop *L, unsigned TripCount, DominatorTree &DT, ScalarEvolution &SE,
+    const SmallPtrSetImpl<const Value *> &EphValues,
+    const TargetTransformInfo &TTI, unsigned MaxUnrolledLoopSize) {
   // We want to be able to scale offsets by the trip count and add more offsets
   // to them without checking for overflows, and we already don't want to
   // analyze *massive* trip counts, so we force the max to be reasonably small.
@@ -490,7 +490,9 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
       // it.  We don't change the actual IR, just count optimization
       // opportunities.
       for (Instruction &I : *BB) {
-        if (isa<DbgInfoIntrinsic>(I))
+        // These won't get into the final code - don't even try calculating the
+        // cost for them.
+        if (isa<DbgInfoIntrinsic>(I) || EphValues.count(&I))
           continue;
 
         // Track this instruction's expected baseline cost when executing the
@@ -607,13 +609,11 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
 }
 
 /// ApproximateLoopSize - Approximate the size of the loop.
-static unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
-                                    bool &NotDuplicatable, bool &Convergent,
-                                    const TargetTransformInfo &TTI,
-                                    AssumptionCache *AC, unsigned BEInsns) {
-  SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(L, AC, EphValues);
-
+static unsigned
+ApproximateLoopSize(const Loop *L, unsigned &NumCalls, bool &NotDuplicatable,
+                    bool &Convergent, const TargetTransformInfo &TTI,
+                    const SmallPtrSetImpl<const Value *> &EphValues,
+                    unsigned BEInsns) {
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
     Metrics.analyzeBasicBlock(BB, TTI, EphValues);
@@ -708,8 +708,9 @@ static uint64_t getUnrolledLoopSize(
 // Calculates unroll count and writes it to UP.Count.
 static bool computeUnrollCount(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
-    ScalarEvolution &SE, OptimizationRemarkEmitter *ORE, unsigned &TripCount,
-    unsigned MaxTripCount, unsigned &TripMultiple, unsigned LoopSize,
+    ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
+    OptimizationRemarkEmitter *ORE, unsigned &TripCount, unsigned MaxTripCount,
+    unsigned &TripMultiple, unsigned LoopSize,
     TargetTransformInfo::UnrollingPreferences &UP, bool &UseUpperBound) {
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
@@ -779,7 +780,7 @@ static bool computeUnrollCount(
       // helps to remove a significant number of instructions.
       // To check that, run additional analysis on the loop.
       if (Optional<EstimatedUnrollCost> Cost = analyzeLoopUnrollCost(
-              L, FullUnrollTripCount, DT, SE, TTI,
+              L, FullUnrollTripCount, DT, SE, EphValues, TTI,
               UP.Threshold * UP.MaxPercentThresholdBoost / 100)) {
         unsigned Boost =
             getFullUnrollBoostingFactor(*Cost, UP.MaxPercentThresholdBoost);
@@ -794,7 +795,7 @@ static bool computeUnrollCount(
   }
 
   // 4th priority is loop peeling
-  computePeelCount(L, LoopSize, UP, TripCount);
+  computePeelCount(L, LoopSize, UP, TripCount, SE);
   if (UP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;
@@ -975,8 +976,13 @@ static LoopUnrollResult tryToUnrollLoop(
   // Exit early if unrolling is disabled.
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
     return LoopUnrollResult::Unmodified;
-  unsigned LoopSize = ApproximateLoopSize(
-      L, NumInlineCandidates, NotDuplicatable, Convergent, TTI, &AC, UP.BEInsns);
+
+  SmallPtrSet<const Value *, 32> EphValues;
+  CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
+
+  unsigned LoopSize =
+      ApproximateLoopSize(L, NumInlineCandidates, NotDuplicatable, Convergent,
+                          TTI, EphValues, UP.BEInsns);
   DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
   if (NotDuplicatable) {
     DEBUG(dbgs() << "  Not unrolling loop which contains non-duplicatable"
@@ -1040,9 +1046,9 @@ static LoopUnrollResult tryToUnrollLoop(
   // computeUnrollCount() decides whether it is beneficial to use upper bound to
   // fully unroll the loop.
   bool UseUpperBound = false;
-  bool IsCountSetExplicitly =
-      computeUnrollCount(L, TTI, DT, LI, SE, &ORE, TripCount, MaxTripCount,
-                         TripMultiple, LoopSize, UP, UseUpperBound);
+  bool IsCountSetExplicitly = computeUnrollCount(
+      L, TTI, DT, LI, SE, EphValues, &ORE, TripCount, MaxTripCount,
+      TripMultiple, LoopSize, UP, UseUpperBound);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
   // Unroll factor (Count) must be less or equal to TripCount.

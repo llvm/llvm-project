@@ -478,13 +478,13 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                 hasAncestor(namespaceDecl(isAnonymous())),
                                 hasAncestor(cxxRecordDecl()))),
                    hasParent(namespaceDecl()));
-  Finder->addMatcher(decl(forEachDescendant(expr(anyOf(
-                              callExpr(callee(FuncMatcher)).bind("call"),
-                              declRefExpr(to(FuncMatcher.bind("func_decl")))
-                                  .bind("func_ref")))),
-                          IsInMovedNs, unless(isImplicit()))
-                         .bind("dc"),
-                     this);
+  Finder->addMatcher(
+      expr(allOf(hasAncestor(decl().bind("dc")), IsInMovedNs,
+                 unless(hasAncestor(isImplicit())),
+                 anyOf(callExpr(callee(FuncMatcher)).bind("call"),
+                       declRefExpr(to(FuncMatcher.bind("func_decl")))
+                           .bind("func_ref")))),
+      this);
 
   auto GlobalVarMatcher = varDecl(
       hasGlobalStorage(), hasParent(namespaceDecl()),

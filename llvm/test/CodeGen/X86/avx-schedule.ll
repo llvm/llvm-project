@@ -859,7 +859,7 @@ define <4 x float> @test_broadcastss(float *%a0) {
 ;
 ; BTVER2-LABEL: test_broadcastss:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [5:1.00]
+; BTVER2-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastss:
@@ -2103,7 +2103,7 @@ define <2 x double> @test_maskmovpd(i8* %a0, <2 x i64> %a1, <2 x double> %a2) {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [4:0.50]
-; ZNVER1-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.avx.maskload.pd(i8* %a0, <2 x i64> %a1)
   call void @llvm.x86.avx.maskstore.pd(i8* %a0, <2 x i64> %a1, <2 x double> %a2)
@@ -2166,7 +2166,7 @@ define <4 x double> @test_maskmovpd_ymm(i8* %a0, <4 x i64> %a1, <4 x double> %a2
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:1.00]
 ; ZNVER1-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; ZNVER1-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8* %a0, <4 x i64> %a1)
   call void @llvm.x86.avx.maskstore.pd.256(i8* %a0, <4 x i64> %a1, <4 x double> %a2)
@@ -2229,7 +2229,7 @@ define <4 x float> @test_maskmovps(i8* %a0, <4 x i32> %a1, <4 x float> %a2) {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [4:0.50]
-; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.avx.maskload.ps(i8* %a0, <4 x i32> %a1)
   call void @llvm.x86.avx.maskstore.ps(i8* %a0, <4 x i32> %a1, <4 x float> %a2)
@@ -2292,7 +2292,7 @@ define <8 x float> @test_maskmovps_ymm(i8* %a0, <8 x i32> %a1, <8 x float> %a2) 
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:1.00]
 ; ZNVER1-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; ZNVER1-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8* %a0, <8 x i32> %a1)
   call void @llvm.x86.avx.maskstore.ps.256(i8* %a0, <8 x i32> %a1, <8 x float> %a2)
@@ -2690,8 +2690,8 @@ define <4 x double> @test_movddup(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; BTVER2-LABEL: test_movddup:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [5:1.00]
-; BTVER2-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:0.50]
+; BTVER2-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [6:1.00]
+; BTVER2-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3030,8 +3030,8 @@ define <8 x float> @test_movshdup(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_movshdup:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [5:1.00]
-; BTVER2-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:0.50]
+; BTVER2-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [6:1.00]
+; BTVER2-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:1.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3093,8 +3093,8 @@ define <8 x float> @test_movsldup(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_movsldup:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [5:1.00]
-; BTVER2-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:0.50]
+; BTVER2-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [6:1.00]
+; BTVER2-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:1.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3653,7 +3653,7 @@ define <4 x double> @test_permilpd_ymm(<4 x double> %a0, <4 x double> *%a1) {
 ; BTVER2-LABEL: test_permilpd_ymm:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [6:1.00]
-; BTVER2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:0.50]
+; BTVER2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3779,7 +3779,7 @@ define <8 x float> @test_permilps_ymm(<8 x float> %a0, <8 x float> *%a1) {
 ; BTVER2-LABEL: test_permilps_ymm:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [6:1.00]
-; BTVER2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:0.50]
+; BTVER2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3835,8 +3835,8 @@ define <2 x double> @test_permilvarpd(<2 x double> %a0, <2 x i64> %a1, <2 x i64>
 ;
 ; BTVER2-LABEL: test_permilvarpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; BTVER2-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
+; BTVER2-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarpd:
@@ -3891,7 +3891,7 @@ define <4 x double> @test_permilvarpd_ymm(<4 x double> %a0, <4 x i64> %a1, <4 x 
 ; BTVER2-LABEL: test_permilvarpd_ymm:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [3:3.00]
-; BTVER2-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
+; BTVER2-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [8:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarpd_ymm:
@@ -3945,8 +3945,8 @@ define <4 x float> @test_permilvarps(<4 x float> %a0, <4 x i32> %a1, <4 x i32> *
 ;
 ; BTVER2-LABEL: test_permilvarps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; BTVER2-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
+; BTVER2-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarps:
@@ -4001,7 +4001,7 @@ define <8 x float> @test_permilvarps_ymm(<8 x float> %a0, <8 x i32> %a1, <8 x i3
 ; BTVER2-LABEL: test_permilvarps_ymm:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [3:3.00]
-; BTVER2-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
+; BTVER2-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [8:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarps_ymm:
@@ -4317,7 +4317,7 @@ define <4 x double> @test_shufpd(<4 x double> %a0, <4 x double> %a1, <4 x double
 ;
 ; BTVER2-LABEL: test_shufpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:0.50]
+; BTVER2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:1.00]
 ; BTVER2-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -4380,7 +4380,7 @@ define <8 x float> @test_shufps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%
 ;
 ; BTVER2-LABEL: test_shufps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:0.50]
+; BTVER2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
 ; BTVER2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]

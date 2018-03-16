@@ -49,18 +49,17 @@
 ; TEXT-01: Disassembly of section .text:
 ; TEXT-01-NEXT: .text:
 ; TEXT-01-NEXT: subq	$40, %rsp
-; TEXT-01-NEXT: callq	39
-; TEXT-01-NEXT: callq	50
+; TEXT-01-NEXT: callq	23
+; TEXT-01-NEXT: callq	18
 ; TEXT-01-NEXT: callq	13
 ; TEXT-01-NEXT: xorl	%eax, %eax
 ; TEXT-01-NEXT: addq	$40, %rsp
 ; TEXT-01: retq
 ; TEXT-01-NOT: callq
 ; TEXT-01: retq
-; TEXT-01-NOT: callq
-; TEXT-01: retq
-; TEXT-01-NOT: callq
-; TEXT-01: retq
+; TEXT-01: int3
+; TEXT-01: int3
+; TEXT-01: int3
 ; TEXT-01-NOT: {{.}}
 
 ; HEADERS-10: AddressOfEntryPoint: 0x2020

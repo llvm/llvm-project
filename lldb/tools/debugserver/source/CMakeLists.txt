@@ -106,8 +106,15 @@ else()
     COMMAND xcode-select -p
     OUTPUT_VARIABLE XCODE_DEV_DIR)
   string(STRIP ${XCODE_DEV_DIR} XCODE_DEV_DIR)
-  set(DEBUGSERVER_PATH
-    "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver" CACHE PATH "Path to debugserver.")
+  if(EXISTS "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/")
+    set(DEBUGSERVER_PATH
+      "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver" CACHE PATH "Path to debugserver.")
+  elseif(EXISTS "${XCODE_DEV_DIR}/Library/PrivateFrameworks/LLDB.framework/")
+    set(DEBUGSERVER_PATH
+      "${XCODE_DEV_DIR}/Library/PrivateFrameworks/LLDB.framework/Resources/debugserver" CACHE PATH "Path to debugserver.")
+  else()
+    message(SEND_ERROR "Cannot find debugserver on system.")
+  endif()
   set(SKIP_DEBUGSERVER ON CACHE BOOL "Skip building the in-tree debug server")
 endif()
 message(STATUS "Path to the lldb debugserver: ${DEBUGSERVER_PATH}")

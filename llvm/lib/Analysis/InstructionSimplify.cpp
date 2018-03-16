@@ -2488,6 +2488,20 @@ static void setLimitsForBinOp(BinaryOperator &BO, APInt &Lower, APInt &Upper) {
 
 static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
                                        Value *RHS) {
+  Type *ITy = GetCompareTy(RHS); // The return type.
+
+  Value *X;
+  // Sign-bit checks can be optimized to true/false after unsigned
+  // floating-point casts:
+  // icmp slt (bitcast (uitofp X)),  0 --> false
+  // icmp sgt (bitcast (uitofp X)), -1 --> true
+  if (match(LHS, m_BitCast(m_UIToFP(m_Value(X))))) {
+    if (Pred == ICmpInst::ICMP_SLT && match(RHS, m_Zero()))
+      return ConstantInt::getFalse(ITy);
+    if (Pred == ICmpInst::ICMP_SGT && match(RHS, m_AllOnes()))
+      return ConstantInt::getTrue(ITy);
+  }
+
   const APInt *C;
   if (!match(RHS, m_APInt(C)))
     return nullptr;
@@ -2495,9 +2509,9 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   // Rule out tautological comparisons (eg., ult 0 or uge 0).
   ConstantRange RHS_CR = ConstantRange::makeExactICmpRegion(Pred, *C);
   if (RHS_CR.isEmptySet())
-    return ConstantInt::getFalse(GetCompareTy(RHS));
+    return ConstantInt::getFalse(ITy);
   if (RHS_CR.isFullSet())
-    return ConstantInt::getTrue(GetCompareTy(RHS));
+    return ConstantInt::getTrue(ITy);
 
   // Find the range of possible values for binary operators.
   unsigned Width = C->getBitWidth();
@@ -2515,9 +2529,9 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
 
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))
-      return ConstantInt::getTrue(GetCompareTy(RHS));
+      return ConstantInt::getTrue(ITy);
     if (RHS_CR.inverse().contains(LHS_CR))
-      return ConstantInt::getFalse(GetCompareTy(RHS));
+      return ConstantInt::getFalse(ITy);
   }
 
   return nullptr;
@@ -3723,7 +3737,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
 
   if (Ops.size() == 2) {
     // getelementptr P, 0 -> P.
-    if (match(Ops[1], m_Zero()))
+    if (match(Ops[1], m_Zero()) && Ops[0]->getType() == GEPTy)
       return Ops[0];
 
     Type *Ty = SrcTy;
@@ -3732,7 +3746,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
       uint64_t C;
       uint64_t TyAllocSize = Q.DL.getTypeAllocSize(Ty);
       // getelementptr P, N -> P if P points to a type of zero size.
-      if (TyAllocSize == 0)
+      if (TyAllocSize == 0 && Ops[0]->getType() == GEPTy)
         return Ops[0];
 
       // The following transforms are only safe if the ptrtoint cast
@@ -4168,20 +4182,16 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
       (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
     return Op0;
 
-  // fadd [nnan ninf] X, (fsub [nnan ninf] 0, X) ==> 0
-  //   where nnan and ninf have to occur at least once somewhere in this
-  //   expression
-  Value *SubOp = nullptr;
-  if (match(Op1, m_FSub(m_AnyZero(), m_Specific(Op0))))
-    SubOp = Op1;
-  else if (match(Op0, m_FSub(m_AnyZero(), m_Specific(Op1))))
-    SubOp = Op0;
-  if (SubOp) {
-    Instruction *FSub = cast<Instruction>(SubOp);
-    if ((FMF.noNaNs() || FSub->hasNoNaNs()) &&
-        (FMF.noInfs() || FSub->hasNoInfs()))
-      return Constant::getNullValue(Op0->getType());
-  }
+  // With nnan: (+/-0.0 - X) + X --> 0.0 (and commuted variant)
+  // We don't have to explicitly exclude infinities (ninf): INF + -INF == NaN.
+  // Negative zeros are allowed because we always end up with positive zero:
+  // X = -0.0: (-0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
+  // X = -0.0: ( 0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
+  // X =  0.0: (-0.0 - ( 0.0)) + ( 0.0) == (-0.0) + ( 0.0) == 0.0
+  // X =  0.0: ( 0.0 - ( 0.0)) + ( 0.0) == ( 0.0) + ( 0.0) == 0.0
+  if (FMF.noNaNs() && (match(Op0, m_FSub(m_AnyZeroFP(), m_Specific(Op1))) ||
+                       match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0)))))
+    return ConstantFP::getNullValue(Op0->getType());
 
   return nullptr;
 }
@@ -4211,8 +4221,8 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
-  if (FMF.noSignedZeros() && match(Op0, m_AnyZero()) &&
-      match(Op1, m_FSub(m_AnyZero(), m_Value(X))))
+  if (FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()) &&
+      match(Op1, m_FSub(m_AnyZeroFP(), m_Value(X))))
     return X;
 
   // fsub nnan x, x ==> 0.0
@@ -4236,8 +4246,8 @@ static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     return Op0;
 
   // fmul nnan nsz X, 0 ==> 0
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZero()))
-    return Op1;
+  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZeroFP()))
+    return ConstantFP::getNullValue(Op0->getType());
 
   // sqrt(X) * sqrt(X) --> X
   Value *X;
@@ -4279,8 +4289,8 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // 0 / X -> 0
   // Requires that NaNs are off (X could be zero) and signed zeroes are
   // ignored (X could be positive or negative, so the output sign is unknown).
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZero()))
-    return Op0;
+  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()))
+    return ConstantFP::getNullValue(Op0->getType());
 
   if (FMF.noNaNs()) {
     // X / X -> 1.0 is legal when NaNs are ignored.
@@ -4319,11 +4329,17 @@ static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
     return ConstantFP::getNaN(Op0->getType());
 
-  // 0 % X -> 0
-  // Requires that NaNs are off (X could be zero) and signed zeroes are
-  // ignored (X could be positive or negative, so the output sign is unknown).
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZero()))
-    return Op0;
+  // Unlike fdiv, the result of frem always matches the sign of the dividend.
+  // The constant match may include undef elements in a vector, so return a full
+  // zero constant as the result.
+  if (FMF.noNaNs()) {
+    // 0 % X -> 0
+    if (match(Op0, m_Zero()))
+      return ConstantFP::getNullValue(Op0->getType());
+    // -0 % X -> -0
+    if (match(Op0, m_NegZero()))
+      return ConstantFP::getNegativeZero(Op0->getType());
+  }
 
   return nullptr;
 }

@@ -129,6 +129,7 @@ struct DataSharingStateTy {
 struct __kmpc_data_sharing_worker_slot_static {
   __kmpc_data_sharing_slot *Next;
   __kmpc_data_sharing_slot *Prev;
+  void *PrevSlotStackPtr;
   void *DataEnd;
   char Data[DS_Worker_Warp_Slot_Size];
 };
@@ -137,6 +138,7 @@ struct __kmpc_data_sharing_worker_slot_static {
 struct __kmpc_data_sharing_master_slot_static {
   __kmpc_data_sharing_slot *Next;
   __kmpc_data_sharing_slot *Prev;
+  void *PrevSlotStackPtr;
   void *DataEnd;
   char Data[DS_Slot_Size];
 };
@@ -267,6 +269,7 @@ public:
       // We currently do not have a next slot.
       master_rootS[0].Next = 0;
       master_rootS[0].Prev = 0;
+      master_rootS[0].PrevSlotStackPtr = 0;
       return (__kmpc_data_sharing_slot *)&master_rootS[0];
     }
     // Initialize the pointer to the end of the slot given the size of the data
@@ -276,6 +279,7 @@ public:
     // We currently do not have a next slot.
     worker_rootS[wid].Next = 0;
     worker_rootS[wid].Prev = 0;
+    worker_rootS[wid].PrevSlotStackPtr = 0;
     return (__kmpc_data_sharing_slot *)&worker_rootS[wid];
   }
 

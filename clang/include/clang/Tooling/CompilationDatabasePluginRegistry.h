@@ -1,4 +1,4 @@
-//===--- CompilationDatabasePluginRegistry.h - ------------------*- C++ -*-===//
+//===- CompilationDatabasePluginRegistry.h ----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,10 @@
 namespace clang {
 namespace tooling {
 
-class CompilationDatabasePlugin;
+using CompilationDatabasePluginRegistry =
+    llvm::Registry<CompilationDatabasePlugin>;
 
-typedef llvm::Registry<CompilationDatabasePlugin>
-    CompilationDatabasePluginRegistry;
+} // namespace tooling
+} // namespace clang
 
-} // end namespace tooling
-} // end namespace clang
-
-#endif
+#endif // LLVM_CLANG_TOOLING_COMPILATIONDATABASEPLUGINREGISTRY_H

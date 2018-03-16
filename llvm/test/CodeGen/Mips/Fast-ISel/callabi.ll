@@ -163,32 +163,26 @@ declare void @xcccc(i8, i8, i8, i8)
 define void @cxcccc() {
   ; ALL-LABEL:    cxcccc:
 
-  ; ALL-DAG:        addiu   $[[T0:[0-9]+]], $zero, 88
-  ; ALL-DAG:        addiu   $[[T1:[0-9]+]], $zero, 44
-  ; ALL-DAG:        addiu   $[[T2:[0-9]+]], $zero, 11
-  ; ALL-DAG:        addiu   $[[T3:[0-9]+]], $zero, 33
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 88
+  ; 32R1:       sll     $[[R:[0-9]+]], $[[R]], 24
+  ; 32R1:       sra     $4, $[[R]], 24
+  ; 32R2:       seb     $4, $[[R]]
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 44
+  ; 32R1:       sll     $[[R:[0-9]+]], $[[R]], 24
+  ; 32R1:       sra     $5, $[[R]], 24
+  ; 32R2:       seb     $5, $[[R]]
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 11
+  ; 32R1:       sll     $[[R:[0-9]+]], $[[R]], 24
+  ; 32R1:       sra     $6, $[[R]], 24
+  ; 32R2:       seb     $6, $[[R]]
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 33
+  ; 32R1:       sll     $[[R:[0-9]+]], $[[R]], 24
+  ; 32R1:       sra     $7, $[[R]], 24
+  ; 32R2:       seb     $7, $[[R]]
 
-  ; FIXME: We should avoid the unnecessary spill/reload here.
-
-  ; 32R1-DAG:       sll     $[[T4:[0-9]+]], $[[T0]], 24
-  ; 32R1-DAG:       sra     $[[T5:[0-9]+]], $[[T4]], 24
-  ; 32R1-DAG:       sw      $4, 16($sp)
-  ; 32R1-DAG:       move    $4, $[[T5]]
-  ; 32R1-DAG:       sll     $[[T6:[0-9]+]], $[[T1]], 24
-  ; 32R1-DAG:       sra     $5, $[[T6]], 24
-  ; 32R1-DAG:       sll     $[[T7:[0-9]+]], $[[T2]], 24
-  ; 32R1-DAG:       sra     $6, $[[T7]], 24
-  ; 32R1:           lw      $[[T8:[0-9]+]], 16($sp)
-  ; 32R1:           sll     $[[T9:[0-9]+]], $[[T8]], 24
-  ; 32R1:           sra     $7, $[[T9]], 24
-
-  ; 32R2-DAG:       seb     $[[T4:[0-9]+]], $[[T0]]
-  ; 32R2-DAG:       sw      $4, 16($sp)
-  ; 32R2-DAG:       move    $4, $[[T4]]
-  ; 32R2-DAG:       seb     $5, $[[T1]]
-  ; 32R2-DAG:       seb     $6, $[[T2]]
-  ; 32R2-DAG:       lw      $[[T5:[0-9]+]], 16($sp)
-  ; 32R2:           seb     $7, $[[T5]]
+  ; ALL:        lw      $25, %got(xcccc)($2)
+  ; ALL:        jalr    $25
+  ; ALL:        jr      $ra
   call void @xcccc(i8 88, i8 44, i8 11, i8 33)
   ret void
 }
@@ -198,32 +192,27 @@ declare void @xhhhh(i16, i16, i16, i16)
 define void @cxhhhh() {
   ; ALL-LABEL:    cxhhhh:
 
-  ; ALL-DAG:        addiu   $[[T0:[0-9]+]], $zero, 88
-  ; ALL-DAG:        addiu   $[[T1:[0-9]+]], $zero, 44
-  ; ALL-DAG:        addiu   $[[T2:[0-9]+]], $zero, 11
-  ; ALL-DAG:        addiu   $[[T3:[0-9]+]], $zero, 33
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 88
+  ; 32R1:       sll     $[[R]], $[[R]], 16
+  ; 32R1:       sra     $4, $[[R]], 16
+  ; 32R2:       seh     $4, $[[R]]
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 44
+  ; 32R1:       sll     $[[R]], $[[R]], 16
+  ; 32R1:       sra     $5, $[[R]], 16
+  ; 32R2:       seh     $5, $[[R]]
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 11
+  ; 32R1:       sll     $[[R]], $[[R]], 16
+  ; 32R1:       sra     $6, $[[R]], 16
+  ; 32R2:       seh     $6, $[[R]]
+  ; ALL:        addiu   $[[R:[0-9]+]], $zero, 33
+  ; 32R1:       sll     $[[R]], $[[R]], 16
+  ; 32R1:       sra     $7, $[[R]], 16
+  ; 32R2:       seh     $7, $[[R]]
 
-  ; FIXME: We should avoid the unnecessary spill/reload here.
+  ; ALL:        lw      $25, %got(xhhhh)($2)
+  ; ALL:        jalr    $25
+  ; ALL:        jr      $ra
 
-  ; 32R1-DAG:       sll     $[[T4:[0-9]+]], $[[T0]], 16
-  ; 32R1-DAG:       sra     $[[T5:[0-9]+]], $[[T4]], 16
-  ; 32R1-DAG:       sw      $4, 16($sp)
-  ; 32R1-DAG:       move    $4, $[[T5]]
-  ; 32R1-DAG:       sll     $[[T6:[0-9]+]], $[[T1]], 16
-  ; 32R1-DAG:       sra     $5, $[[T6]], 16
-  ; 32R1-DAG:       sll     $[[T7:[0-9]+]], $[[T2]], 16
-  ; 32R1-DAG:       sra     $6, $[[T7]], 16
-  ; 32R1:           lw      $[[T8:[0-9]+]], 16($sp)
-  ; 32R1:           sll     $[[T9:[0-9]+]], $[[T8]], 16
-  ; 32R1:           sra     $7, $[[T9]], 16
-
-  ; 32R2-DAG:       seh     $[[T4:[0-9]+]], $[[T0]]
-  ; 32R2-DAG:       sw      $4, 16($sp)
-  ; 32R2-DAG:       move    $4, $[[T4]]
-  ; 32R2-DAG:       seh     $5, $[[T1]]
-  ; 32R2-DAG:       seh     $6, $[[T2]]
-  ; 32R2-DAG:       lw      $[[T5:[0-9]+]], 16($sp)
-  ; 32R2:           seh     $7, $[[T5]]
   call void @xhhhh(i16 88, i16 44, i16 11, i16 33)
   ret void
 }
@@ -437,13 +426,13 @@ define void @cxiff() {
   ; ALL-LABEL:    cxiff:
 
   ; ALL:            addu    $[[REG_GP:[0-9]+]], ${{[0-9]+}}, ${{[0-9+]}}
-  ; ALL-DAG:        addiu   $4, $zero, 12239
   ; ALL-DAG:        lui     $[[REGF0_1:[0-9]+]], 17526
   ; ALL-DAG:        ori     $[[REGF0_2:[0-9]+]], $[[REGF0_1]], 55706
   ; ALL-DAG:        mtc1    $[[REGF0_2]], $f[[REGF0_3:[0-9]+]]
   ; ALL-DAG:        lui     $[[REGF1_1:[0-9]+]], 16543
   ; ALL-DAG:        ori     $[[REGF1_2:[0-9]+]], $[[REGF1_1]], 65326
   ; ALL:            mtc1    $[[REGF1_2]], $f[[REGF1_3:[0-9]+]]
+  ; ALL-DAG:        addiu   $4, $zero, 12239
   ; ALL-DAG:        mfc1    $5, $f[[REGF0_3]]
   ; ALL-DAG:        mfc1    $6, $f[[REGF1_3]]
   ; ALL-DAG:        lw      $25, %got(xiff)($[[REG_GP]])
@@ -481,11 +470,11 @@ define void @cxifif() {
   ; ALL-DAG:        lui     $[[REGF0_1:[0-9]+]], 17527
   ; ALL-DAG:        ori     $[[REGF0_2:[0-9]+]], $[[REGF0_1]], 2015
   ; ALL-DAG:        mtc1    $[[REGF0_2]], $f[[REGF0_3:[0-9]+]]
-  ; ALL-DAG:        addiu   $6, $zero, 9991
   ; ALL-DAG:        lui     $[[REGF1_1:[0-9]+]], 17802
   ; ALL-DAG:        ori     $[[REGF1_2:[0-9]+]], $[[REGF1_1]], 58470
   ; ALL:            mtc1    $[[REGF1_2]], $f[[REGF1_3:[0-9]+]]
   ; ALL-DAG:        mfc1    $5, $f[[REGF0_3]]
+  ; ALL-DAG:        addiu   $6, $zero, 9991
   ; ALL-DAG:        mfc1    $7, $f[[REGF1_3]]
   ; ALL-DAG:        lw      $25, %got(xifif)($[[REG_GP]])
   ; ALL:            jalr    $25
@@ -500,16 +489,16 @@ define void @cxiffi() {
   ; ALL-LABEL:    cxiffi:
 
   ; ALL:            addu    $[[REG_GP:[0-9]+]], ${{[0-9]+}}, ${{[0-9+]}}
-  ; ALL-DAG:        addiu   $4, $zero, 45
   ; ALL-DAG:        lui     $[[REGF0_1:[0-9]+]], 16307
   ; ALL-DAG:        ori     $[[REGF0_2:[0-9]+]], $[[REGF0_1]], 13107
   ; ALL-DAG:        mtc1    $[[REGF0_2]], $f[[REGF0_3:[0-9]+]]
   ; ALL-DAG:        lui     $[[REGF1_1:[0-9]+]], 17529
   ; ALL-DAG:        ori     $[[REGF1_2:[0-9]+]], $[[REGF1_1]], 39322
   ; ALL:            mtc1    $[[REGF1_2]], $f[[REGF1_3:[0-9]+]]
-  ; ALL-DAG:        addiu   $7, $zero, 234
+  ; ALL-DAG:        addiu   $4, $zero, 45
   ; ALL-DAG:        mfc1    $5, $f[[REGF0_3]]
   ; ALL-DAG:        mfc1    $6, $f[[REGF1_3]]
+  ; ALL-DAG:        addiu   $7, $zero, 234
   ; ALL-DAG:        lw      $25, %got(xiffi)($[[REG_GP]])
   ; ALL:            jalr    $25
   call void @xiffi(i32 45, float 0x3FF6666660000000,

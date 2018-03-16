@@ -88,6 +88,11 @@ class MockSession : public IPDBSession {
   findLineNumbersByAddress(uint64_t Address, uint32_t Length) const override {
     return nullptr;
   }
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findLineNumbersBySectOffset(uint32_t Section, uint32_t Offset,
+                              uint32_t Length) const override {
+    return nullptr;
+  }
   std::unique_ptr<IPDBEnumSourceFiles>
   findSourceFiles(const PDBSymbolCompiland *Compiland, llvm::StringRef Pattern,
                   PDB_NameSearchFlags Flags) const override {

@@ -17,28 +17,6 @@
 
 using llvm::raw_ostream;
 
-// Needed for WasmSignatureDenseMapInfo
-inline bool operator==(const llvm::wasm::WasmSignature &LHS,
-                       const llvm::wasm::WasmSignature &RHS) {
-  return LHS.ReturnType == RHS.ReturnType && LHS.ParamTypes == RHS.ParamTypes;
-}
-
-inline bool operator!=(const llvm::wasm::WasmSignature &LHS,
-                       const llvm::wasm::WasmSignature &RHS) {
-  return !(LHS == RHS);
-}
-
-// Used for general comparison
-inline bool operator==(const llvm::wasm::WasmGlobalType &LHS,
-                       const llvm::wasm::WasmGlobalType &RHS) {
-  return LHS.Type == RHS.Type && LHS.Mutable == RHS.Mutable;
-}
-
-inline bool operator!=(const llvm::wasm::WasmGlobalType &LHS,
-                       const llvm::wasm::WasmGlobalType &RHS) {
-  return !(LHS == RHS);
-}
-
 namespace lld {
 namespace wasm {
 
@@ -75,7 +53,7 @@ void writeExport(raw_ostream &OS, const llvm::wasm::WasmExport &Export);
 
 } // namespace wasm
 
-std::string toString(const llvm::wasm::ValType Type);
+std::string toString(llvm::wasm::ValType Type);
 std::string toString(const llvm::wasm::WasmSignature &Sig);
 std::string toString(const llvm::wasm::WasmGlobalType &Sig);
 

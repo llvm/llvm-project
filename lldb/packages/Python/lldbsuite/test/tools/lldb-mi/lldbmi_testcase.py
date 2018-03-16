@@ -27,7 +27,6 @@ class MiTestCaseBase(Base):
             raise("mydir is empty")
 
         Base.setUp(self)
-        self.makeBuildDir()
         self.buildDefault()
         self.child_prompt = "(gdb)"
         self.myexe = self.getBuildArtifact("a.out")
@@ -44,7 +43,7 @@ class MiTestCaseBase(Base):
     def spawnLldbMi(self, args=None):
         import pexpect
         self.child = pexpect.spawn("%s --interpreter %s" % (
-            self.lldbMiExec, args if args else ""))
+            self.lldbMiExec, args if args else ""), cwd=self.getBuildDir())
         self.child.setecho(True)
         self.mylog = self.getBuildArtifact("child.log")
         self.child.logfile_read = open(self.mylog, "w")

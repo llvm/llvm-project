@@ -51,7 +51,7 @@ private:
   IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
   using OptimizeFunction =
-      std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
+      std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
@@ -77,7 +77,7 @@ public:
                           std::make_shared<SectionMemoryManager>(), Resolver};
                     }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
-        OptimizeLayer(CompileLayer, [this](std::shared_ptr<Module> M) {
+        OptimizeLayer(CompileLayer, [this](std::unique_ptr<Module> M) {
           return optimizeModule(std::move(M));
         }) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
@@ -104,7 +104,7 @@ public:
   }
 
 private:
-  std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> M) {
+  std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> M) {
     // Create a function pass manager.
     auto FPM = llvm::make_unique<legacy::FunctionPassManager>(M.get());
 

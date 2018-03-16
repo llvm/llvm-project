@@ -86,3 +86,21 @@ define <4 x i8*> @laalaa() {
   %patatino = getelementptr i8, <4 x i8 *> undef, i64 undef
   ret <4 x i8*> %patatino
 }
+
+define <2 x i8*> @zero_index(i8* %p) {
+; CHECK-LABEL: @zero_index(
+; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, <2 x i64> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8*> %gep
+;
+  %gep = getelementptr i8, i8* %p, <2 x i64> zeroinitializer
+  ret <2 x i8*> %gep
+}
+
+define <2 x {}*> @unsized({}* %p) {
+; CHECK-LABEL: @unsized(
+; CHECK-NEXT:    %gep = getelementptr {}, {}* %p, <2 x i64> undef
+; CHECK-NEXT:    ret <2 x {}*> %gep
+;
+  %gep = getelementptr {}, {}* %p, <2 x i64> undef
+  ret <2 x {}*> %gep
+}

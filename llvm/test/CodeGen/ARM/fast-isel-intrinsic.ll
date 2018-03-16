@@ -16,10 +16,10 @@ define void @t1() nounwind ssp {
 ; ARM-LABEL: t1:
 ; ARM: {{(movw r0, :lower16:_?message1)|(ldr r0, .LCPI)}}
 ; ARM: {{(movt r0, :upper16:_?message1)|(ldr r0, \[r0\])}}
-; ARM: add r0, r0, #5
-; ARM: movw r1, #64
-; ARM: movw r2, #10
-; ARM: and r1, r1, #255
+; ARM-DAG: add r0, r0, #5
+; ARM-DAG: movw r1, #64
+; ARM-DAG: movw r2, #10
+; ARM-DAG: and r1, r1, #255
 ; ARM: bl {{_?}}memset
 ; ARM-LONG-LABEL: t1:
 
@@ -36,8 +36,8 @@ define void @t1() nounwind ssp {
 ; THUMB: {{(movt r0, :upper16:_?message1)|(ldr r0, \[r0\])}}
 ; THUMB: adds r0, #5
 ; THUMB: movs r1, #64
-; THUMB: movs r2, #10
 ; THUMB: and r1, r1, #255
+; THUMB: movs r2, #10
 ; THUMB: bl {{_?}}memset
 ; THUMB-LONG-LABEL: t1:
 ; THUMB-LONG: movw r3, :lower16:L_memset$non_lazy_ptr
@@ -62,10 +62,10 @@ define void @t2() nounwind ssp {
 
 ; ARM: add r1, r0, #4
 ; ARM: add r0, r0, #16
-; ARM: movw r2, #17
 ; ARM: str r0, [sp[[SLOT:[, #0-9]*]]] @ 4-byte Spill
 ; ARM: mov r0, r1
 ; ARM: ldr r1, [sp[[SLOT]]] @ 4-byte Reload
+; ARM: movw r2, #17
 ; ARM: bl {{_?}}memcpy
 ; ARM-LONG-LABEL: t2:
 
@@ -83,10 +83,10 @@ define void @t2() nounwind ssp {
 ; THUMB: ldr r0, [r0]
 ; THUMB: adds r1, r0, #4
 ; THUMB: adds r0, #16
-; THUMB: movs r2, #17
 ; THUMB: str r0, [sp[[SLOT:[, #0-9]*]]] @ 4-byte Spill
 ; THUMB: mov r0, r1
 ; THUMB: ldr r1,  [sp[[SLOT]]] @ 4-byte Reload
+; THUMB: movs r2, #17
 ; THUMB: bl {{_?}}memcpy
 ; THUMB-LONG-LABEL: t2:
 ; THUMB-LONG: movw r3, :lower16:L_memcpy$non_lazy_ptr
@@ -112,8 +112,8 @@ define void @t3() nounwind ssp {
 
 ; ARM: add r1, r0, #4
 ; ARM: add r0, r0, #16
-; ARM: movw r2, #10
 ; ARM: mov r0, r1
+; ARM: movw r2, #10
 ; ARM: bl {{_?}}memmove
 ; ARM-LONG-LABEL: t3:
 
@@ -131,10 +131,10 @@ define void @t3() nounwind ssp {
 ; THUMB: ldr r0, [r0]
 ; THUMB: adds r1, r0, #4
 ; THUMB: adds r0, #16
-; THUMB: movs r2, #10
 ; THUMB: str r0, [sp[[SLOT:[, #0-9]*]]] @ 4-byte Spill
 ; THUMB: mov r0, r1
 ; THUMB: ldr r1,  [sp[[SLOT]]] @ 4-byte Reload
+; THUMB: movs r2, #10
 ; THUMB: bl {{_?}}memmove
 ; THUMB-LONG-LABEL: t3:
 ; THUMB-LONG: movw r3, :lower16:L_memmove$non_lazy_ptr

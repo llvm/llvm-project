@@ -226,8 +226,7 @@ def main():
             if added:
               output_lines.append('//')
             added.add(mangled)
-            # This is also used for adding IR CHECK lines.
-            asm.add_asm_checks(output_lines, '//', run_list, func_dict, mangled)
+            common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled)
       output_lines.append(line.rstrip('\n'))
 
     # Update the test file.

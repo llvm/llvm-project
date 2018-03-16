@@ -95,6 +95,8 @@ declare void @llvm.trap() nounwind
 define void @ands(i32* %addr) {
 ; CHECK-LABEL: ands:
 ; CHECK: tst [[COND:w[0-9]+]], #0x1
+; CHECK-NEXT: orr w{{[0-9]+}}, wzr, #0x2
+; CHECK-NEXT: orr w{{[0-9]+}}, wzr, #0x1
 ; CHECK-NEXT: csel [[COND]],
 entry:
   %cond91 = select i1 undef, i32 1, i32 2

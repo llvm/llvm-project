@@ -576,3 +576,18 @@ class COP2LDST_FM<OPCODE5 Operation> : MipsR6Inst {
   let Inst{15-11} = base;
   let Inst{10-0}  = offset;
 }
+
+class SPECIAL3_2R_SZ_CRC<bits<2> sz, bits<3> direction> : MipsR6Inst {
+  bits<5> rs;
+  bits<5> rt;
+
+  let Inst{31-26} = OPGROUP_SPECIAL3.Value;
+  let Inst{25-21} = rs;
+  let Inst{20-16} = rt;
+  let Inst{15-11} = 0b00000;
+  let Inst{10-8} = direction;
+  let Inst{7-6} = sz;
+  let Inst{5-0} = 0b001111;
+
+  string DecoderMethod = "DecodeCRC";
+}

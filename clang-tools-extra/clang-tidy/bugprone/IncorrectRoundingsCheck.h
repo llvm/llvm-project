@@ -1,4 +1,4 @@
-//===--- IncorrectRoundingsCheckCheck.h - clang-tidy -----------------*- C++ -*-===//
+//===--- IncorrectRoundingsCheck.h - clang-tidy -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

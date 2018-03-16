@@ -741,31 +741,73 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 }
 
 bool AArch64InstrInfo::isExynosResetFast(const MachineInstr &MI) const {
+  unsigned Reg, Imm, Shift;
+
   switch (MI.getOpcode()) {
   default:
     return false;
 
+  // MOV Rd, SP
+  case AArch64::ADDWri:
+  case AArch64::ADDXri:
+    if (!MI.getOperand(1).isReg() || !MI.getOperand(2).isImm())
+      return false;
+
+    Reg = MI.getOperand(1).getReg();
+    Imm = MI.getOperand(2).getImm();
+    return ((Reg == AArch64::WSP || Reg == AArch64::SP) && Imm == 0);
+
+  // Literal
   case AArch64::ADR:
   case AArch64::ADRP:
+    return true;
 
+  // MOVI Vd, #0
+  case AArch64::MOVID:
+  case AArch64::MOVIv8b_ns:
+  case AArch64::MOVIv2d_ns:
+  case AArch64::MOVIv16b_ns:
+    Imm = MI.getOperand(1).getImm();
+    return (Imm == 0);
+
+  // MOVI Vd, #0
+  case AArch64::MOVIv2i32:
+  case AArch64::MOVIv4i16:
+  case AArch64::MOVIv4i32:
+  case AArch64::MOVIv8i16:
+    Imm = MI.getOperand(1).getImm();
+    Shift = MI.getOperand(2).getImm();
+    return (Imm == 0 && Shift == 0);
+
+  // MOV Rd, Imm
   case AArch64::MOVNWi:
   case AArch64::MOVNXi:
+
+  // MOV Rd, Imm
   case AArch64::MOVZWi:
   case AArch64::MOVZXi:
     return true;
 
-  case AArch64::MOVID:
-  case AArch64::MOVIv2d_ns:
-  case AArch64::MOVIv8b_ns:
-  case AArch64::MOVIv16b_ns:
-    return (MI.getOperand(1).getImm() == 0);
+  // MOV Rd, Imm
+  case AArch64::ORRWri:
+  case AArch64::ORRXri:
+    if (!MI.getOperand(1).isReg())
+      return false;
 
-  case AArch64::MOVIv2i32:
-  case AArch64::MOVIv4i32:
-  case AArch64::MOVIv4i16:
-  case AArch64::MOVIv8i16:
-    return (MI.getOperand(1).getImm() == 0 &&
-            MI.getOperand(2).getImm() == 0);
+    Reg = MI.getOperand(1).getReg();
+    Imm = MI.getOperand(2).getImm();
+    return ((Reg == AArch64::WZR || Reg == AArch64::XZR) && Imm == 0);
+
+  // MOV Rd, Rm
+  case AArch64::ORRWrs:
+  case AArch64::ORRXrs:
+    if (!MI.getOperand(1).isReg())
+      return false;
+
+    Reg = MI.getOperand(1).getReg();
+    Imm = MI.getOperand(3).getImm();
+    Shift = AArch64_AM::getShiftValue(Imm);
+    return ((Reg == AArch64::WZR || Reg == AArch64::XZR) && Shift == 0);
   }
 }
 

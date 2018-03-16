@@ -22,7 +22,7 @@ class TargetSymbolsAddCommand(TestBase):
         """Test that 'target symbols add' can load the symbols
         even if gnu.build-id and gnu_debuglink are not present in the module.
         Similar to test_add_dsym_mid_execution test for macos."""
-        self.build(clean=True)
+        self.build()
         exe = self.getBuildArtifact("stripped.out")
 
         self.target = self.dbg.CreateTarget(exe)

@@ -131,8 +131,8 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
         .widenScalarToNextPow2(0, /*Min*/ 8);
     getActionDefinitionsBuilder(G_INTTOPTR).legalFor({s32, p0});
 
-    // Shifts
-    getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
+    // Shifts and SDIV
+    getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR, G_SDIV})
         .legalFor({s8, s16, s32})
         .clampScalar(0, s8, s32);
   }
@@ -214,8 +214,8 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   // Comparison
   setAction({G_ICMP, 1, s64}, Legal);
 
-  // Shifts
-  getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
+  // Shifts and SDIV
+  getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR, G_SDIV})
     .legalFor({s8, s16, s32, s64})
     .clampScalar(0, s8, s64);
 

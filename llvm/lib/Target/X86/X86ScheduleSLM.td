@@ -101,6 +101,10 @@ def : WriteRes<WriteIDivLd, [MEC_RSV, IEC_RSV01, SMDivider]> {
 }
 
 // Scalar and vector floating point.
+def  : WriteRes<WriteFStore,       [FPC_RSV01, MEC_RSV]>;
+def  : WriteRes<WriteFLoad,        [MEC_RSV]> { let Latency = 3; }
+def  : WriteRes<WriteFMove,        [FPC_RSV01]>;
+
 defm : SMWriteResPair<WriteFAdd,   FPC_RSV1, 3>;
 defm : SMWriteResPair<WriteFRcp,   FPC_RSV0, 5>;
 defm : SMWriteResPair<WriteFRsqrt, FPC_RSV0, 5>;
@@ -131,6 +135,10 @@ def : WriteRes<WriteFDivLd, [MEC_RSV, FPC_RSV0, SMFPDivider]> {
 }
 
 // Vector integer operations.
+def  : WriteRes<WriteVecStore,       [FPC_RSV01, MEC_RSV]>;
+def  : WriteRes<WriteVecLoad,        [MEC_RSV]> { let Latency = 3; }
+def  : WriteRes<WriteVecMove,        [FPC_RSV01]>;
+
 defm : SMWriteResPair<WriteVecShift, FPC_RSV0,  1>;
 defm : SMWriteResPair<WriteVecLogic, FPC_RSV01, 1>;
 defm : SMWriteResPair<WriteVecALU,   FPC_RSV01,  1>;

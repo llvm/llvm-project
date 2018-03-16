@@ -330,7 +330,7 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
   ConstString remapped_path;
   if (GetSourcePathMap().ReverseRemapPath(ConstString(file.GetPath().c_str()),
                                           remapped_path))
-    remapped_file.SetFile(remapped_path.AsCString(), true);
+    remapped_file.SetFile(remapped_path.AsCString(), false);
   else
     remapped_file = file;
 
