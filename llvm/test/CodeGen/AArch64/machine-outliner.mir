@@ -100,12 +100,14 @@ body:             |
 ...
 ---
 # This test ensures that we can avoid saving LR when it's available.
+# It also makes sure that KILL instructions don't impact outlining.
 # CHECK-LABEL: bb.1:
 # CHECK-NOT: BL @baz, implicit-def dead $lr, implicit $sp
 # CHECK: BL @OUTLINED_FUNCTION_[[F1:[0-9]+]], implicit-def $lr, implicit $sp
 # CHECK-NEXT: $w17 = ORRWri $wzr, 2
 # CHECK-NEXT: BL @OUTLINED_FUNCTION_[[F1]], implicit-def $lr, implicit $sp
 # CHECK-NEXT: $w8 = ORRWri $wzr, 0
+# CHECK-NOT: $w17 = KILL renamable $w17, implicit killed $w17
 name:            bar
 tracksRegLiveness: true
 body:             |
@@ -118,6 +120,7 @@ body:             |
     BL @baz, implicit-def dead $lr, implicit $sp
     $w17 = ORRWri $wzr, 1
     $w17 = ORRWri $wzr, 1
+    $w17 = KILL renamable $w17, implicit killed $w17
     $w17 = ORRWri $wzr, 1
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp

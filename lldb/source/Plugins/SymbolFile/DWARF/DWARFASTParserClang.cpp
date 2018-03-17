@@ -205,6 +205,33 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   return type_sp;
 }
 
+static void CompleteExternalTagDeclType(ClangASTImporter &ast_importer,
+                                        clang::DeclContext *decl_ctx,
+                                        DWARFDIE die,
+                                        const char *type_name_cstr) {
+  auto *tag_decl_ctx = clang::dyn_cast<clang::TagDecl>(decl_ctx);
+  if (!tag_decl_ctx)
+    return;
+
+  // If this type was not imported from an external AST, there's
+  // nothing to do.
+  CompilerType type = ClangASTContext::GetTypeForDecl(tag_decl_ctx);
+  if (!type || !ast_importer.CanImport(type))
+    return;
+
+  auto qual_type = ClangUtil::GetQualType(type);
+  if (!ast_importer.RequireCompleteType(qual_type)) {
+    die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
+        "Unable to complete the Decl context for DIE '%s' at offset "
+        "0x%8.8x.\nPlease file a bug report.",
+        type_name_cstr ? type_name_cstr : "", die.GetOffset());
+    // We need to make the type look complete otherwise, we
+    // might crash in Clang when adding children.
+    if (ClangASTContext::StartTagDeclarationDefinition(type))
+      ClangASTContext::CompleteTagDeclarationDefinition(type);
+  }
+}
+
 TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                                                const DWARFDIE &die, Log *log,
                                                bool *type_is_new_ptr) {
@@ -795,6 +822,16 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         if (!clang_type) {
           clang::DeclContext *decl_ctx =
               GetClangDeclContextContainingDIE(die, nullptr);
+
+          // If your decl context is a record that was imported from
+          // another AST context (in the gmodules case), we need to
+          // make sure the type backing the Decl is complete before
+          // adding children to it. This is not an issue in the
+          // non-gmodules case because the debug info will always contain
+          // a full definition of parent types in that case.
+          CompleteExternalTagDeclType(GetClangASTImporter(), decl_ctx, die,
+                                      type_name_cstr);
+
           if (accessibility == eAccessNone && decl_ctx) {
             // Check the decl context that contains this class/struct/union.
             // If it is a class we must give it an accessibility.

@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
 
   if (PrintModeVerbose) {
     std::unique_ptr<mca::BackendStatistics> BS =
-        llvm::make_unique<mca::BackendStatistics>(*B);
+        llvm::make_unique<mca::BackendStatistics>(*B, *STI);
     Printer->addView(std::move(BS));
   }
 

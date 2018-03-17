@@ -10,3 +10,8 @@ class GenericContainer {
 };
 
 typedef GenericContainer<int> IntContainer;
+
+struct Foo {
+  class Bar;
+  Bar *bar;
+};
