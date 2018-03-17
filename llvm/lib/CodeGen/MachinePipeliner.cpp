@@ -3918,6 +3918,7 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
   std::sort(Indices.begin(), Indices.end(), CompareKey);
 
   bool Valid = true;
+  (void)Valid;
   // for each SUnit in the NodeOrder, check whether
   // it appears after both a successor and a predecessor
   // of the SUnit. If this is the case, and the SUnit
@@ -3932,6 +3933,8 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
 
     SUnit *Succ;
     SUnit *Pred;
+    (void)Succ;
+    (void)Pred;
 
     for (SDep &PredEdge : SU->Preds) {
       SUnit *PredSU = PredEdge.getSUnit();

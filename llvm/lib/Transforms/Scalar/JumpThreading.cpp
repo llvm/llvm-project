@@ -357,67 +357,57 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
     BFI = std::move(BFI_);
   }
 
-  // Remove unreachable blocks from function as they may result in infinite
-  // loop. We do threading if we found something profitable. Jump threading a
-  // branch can create other opportunities. If these opportunities form a cycle
-  // i.e. if any jump threading is undoing previous threading in the path, then
-  // we will loop forever. We take care of this issue by not jump threading for
-  // back edges. This works for normal cases but not for unreachable blocks as
-  // they may have cycle with no back edge.
-  bool EverChanged = false;
-  EverChanged |= removeUnreachableBlocks(F, LVI, DDT);
+  // JumpThreading must not processes blocks unreachable from entry. It's a
+  // waste of compute time and can potentially lead to hangs.
+  SmallPtrSet<BasicBlock *, 16> Unreachable;
+  DominatorTree &DT = DDT->flush();
+  for (auto &BB : F)
+    if (!DT.isReachableFromEntry(&BB))
+      Unreachable.insert(&BB);
 
   FindLoopHeaders(F);
 
+  bool EverChanged = false;
   bool Changed;
   do {
     Changed = false;
-    for (Function::iterator I = F.begin(), E = F.end(); I != E;) {
-      BasicBlock *BB = &*I;
-      // Thread all of the branches we can over this block.
-      while (ProcessBlock(BB))
+    for (auto &BB : F) {
+      if (Unreachable.count(&BB))
+        continue;
+      while (ProcessBlock(&BB)) // Thread all of the branches we can over BB.
         Changed = true;
-
-      ++I;
-
-      // Don't thread branches over a block that's slated for deletion.
-      if (DDT->pendingDeletedBB(BB))
+      // Stop processing BB if it's the entry or is now deleted. The following
+      // routines attempt to eliminate BB and locating a suitable replacement
+      // for the entry is non-trivial.
+      if (&BB == &F.getEntryBlock() || DDT->pendingDeletedBB(&BB))
         continue;
 
-      // If the block is trivially dead, zap it.  This eliminates the successor
-      // edges which simplifies the CFG.
-      if (pred_empty(BB) &&
-          BB != &BB->getParent()->getEntryBlock()) {
-        DEBUG(dbgs() << "  JT: Deleting dead block '" << BB->getName()
-              << "' with terminator: " << *BB->getTerminator() << '\n');
-        LoopHeaders.erase(BB);
-        LVI->eraseBlock(BB);
-        DeleteDeadBlock(BB, DDT);
+      if (pred_empty(&BB)) {
+        // When ProcessBlock makes BB unreachable it doesn't bother to fix up
+        // the instructions in it. We must remove BB to prevent invalid IR.
+        DEBUG(dbgs() << "  JT: Deleting dead block '" << BB.getName()
+                     << "' with terminator: " << *BB.getTerminator() << '\n');
+        LoopHeaders.erase(&BB);
+        LVI->eraseBlock(&BB);
+        DeleteDeadBlock(&BB, DDT);
         Changed = true;
         continue;
       }
 
-      BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-
-      // Can't thread an unconditional jump, but if the block is "almost
-      // empty", we can replace uses of it with uses of the successor and make
-      // this dead.
-      // We should not eliminate the loop header or latch either, because
-      // eliminating a loop header or latch might later prevent LoopSimplify
-      // from transforming nested loops into simplified form. We will rely on
-      // later passes in backend to clean up empty blocks.
+      // ProcessBlock doesn't thread BBs with unconditional TIs. However, if BB
+      // is "almost empty", we attempt to merge BB with its sole successor.
+      auto *BI = dyn_cast<BranchInst>(BB.getTerminator());
       if (BI && BI->isUnconditional() &&
-          BB != &BB->getParent()->getEntryBlock() &&
-          // If the terminator is the only non-phi instruction, try to nuke it.
-          BB->getFirstNonPHIOrDbg()->isTerminator() && !LoopHeaders.count(BB) &&
-          !LoopHeaders.count(BI->getSuccessor(0))) {
-        // FIXME: It is always conservatively correct to drop the info
-        // for a block even if it doesn't get erased.  This isn't totally
-        // awesome, but it allows us to use AssertingVH to prevent nasty
-        // dangling pointer issues within LazyValueInfo.
-        LVI->eraseBlock(BB);
-        if (TryToSimplifyUncondBranchFromEmptyBlock(BB, DDT))
-          Changed = true;
+          // The terminator must be the only non-phi instruction in BB.
+          BB.getFirstNonPHIOrDbg()->isTerminator() &&
+          // Don't alter Loop headers and latches to ensure another pass can
+          // detect and transform nested loops later.
+          !LoopHeaders.count(&BB) && !LoopHeaders.count(BI->getSuccessor(0)) &&
+          TryToSimplifyUncondBranchFromEmptyBlock(&BB, DDT)) {
+        // BB is valid for cleanup here because we passed in DDT. F remains
+        // BB's parent until a DDT->flush() event.
+        LVI->eraseBlock(&BB);
+        Changed = true;
       }
     }
     EverChanged |= Changed;

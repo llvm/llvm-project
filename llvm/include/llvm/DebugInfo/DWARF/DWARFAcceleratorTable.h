@@ -348,6 +348,7 @@ private:
     }
   };
 
+public:
   /// A single entry in the Name Table (Dwarf 5 sect. 6.1.1.4.6) of the Name
   /// Index.
   struct NameTableEntry {
@@ -355,7 +356,6 @@ private:
     uint32_t EntryOffset;  ///< Offset of the first Entry in the list.
   };
 
-public:
   /// Represents a single accelerator table within the Dwarf 5 .debug_names
   /// section.
   class NameIndex {
@@ -372,16 +372,6 @@ public:
     uint32_t StringOffsetsBase;
     uint32_t EntryOffsetsBase;
     uint32_t EntriesBase;
-
-    /// Reads an entry in the Hash Array for the given Index. The input Index
-    /// is 1-based.
-    uint32_t getHashArrayEntry(uint32_t Index) const;
-
-    /// Reads an entry in the Name Table for the given Index. The Name Table
-    /// consists of two arrays -- String Offsets and Entry Offsets. The returned
-    /// offsets are relative to the starts of respective sections. Input Index
-    /// is 1-based.
-    NameTableEntry getNameTableEntry(uint32_t Index) const;
 
     Expected<Entry> getEntry(uint32_t *Offset) const;
 
@@ -422,6 +412,16 @@ public:
     /// EntryOffsets arrays. The input Bucket index is 0-based.
     uint32_t getBucketArrayEntry(uint32_t Bucket) const;
     uint32_t getBucketCount() const { return Hdr.BucketCount; }
+
+    /// Reads an entry in the Hash Array for the given Index. The input Index
+    /// is 1-based.
+    uint32_t getHashArrayEntry(uint32_t Index) const;
+
+    /// Reads an entry in the Name Table for the given Index. The Name Table
+    /// consists of two arrays -- String Offsets and Entry Offsets. The returned
+    /// offsets are relative to the starts of respective sections. Input Index
+    /// is 1-based.
+    NameTableEntry getNameTableEntry(uint32_t Index) const;
 
     uint32_t getNameCount() const { return Hdr.NameCount; }
 

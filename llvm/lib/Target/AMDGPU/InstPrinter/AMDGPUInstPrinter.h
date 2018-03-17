@@ -96,6 +96,8 @@ private:
   void printRegOperand(unsigned RegNo, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
+  void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                      raw_ostream &O);
   void printImmediate16(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
   void printImmediateV216(uint32_t Imm, const MCSubtargetInfo &STI,

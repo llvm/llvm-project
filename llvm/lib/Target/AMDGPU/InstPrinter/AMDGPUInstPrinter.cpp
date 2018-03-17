@@ -380,6 +380,16 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo, STI, O);
 }
 
+void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI, raw_ostream &O) {
+  if (AMDGPU::isSI(STI) || AMDGPU::isCI(STI))
+    O << " ";
+  else
+    O << "_e32 ";
+
+  printOperand(MI, OpNo, STI, O);
+}
+
 void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {

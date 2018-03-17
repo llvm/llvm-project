@@ -40,15 +40,18 @@ defm EXP_DONE : EXP_m<1, AMDGPUexport_done>;
 // VINTRP Instructions
 //===----------------------------------------------------------------------===//
 
+// Used to inject printing of "_e32" suffix for VI (there are "_e64" variants for VI)
+def VINTRPDst : VINTRPDstOperand <VGPR_32>;
+
 let Uses = [M0, EXEC] in {
 
 // FIXME: Specify SchedRW for VINTRP insturctions.
 
 multiclass V_INTERP_P1_F32_m : VINTRP_m <
   0x00000000,
-  (outs VGPR_32:$vdst),
+  (outs VINTRPDst:$vdst),
   (ins VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
-  "v_interp_p1_f32 $vdst, $vsrc, $attr$attrchan",
+  "v_interp_p1_f32$vdst, $vsrc, $attr$attrchan",
   [(set f32:$vdst, (AMDGPUinterp_p1 f32:$vsrc, (i32 imm:$attrchan),
                                                (i32 imm:$attr)))]
 >;
@@ -69,9 +72,9 @@ let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
 
 defm V_INTERP_P2_F32 : VINTRP_m <
   0x00000001,
-  (outs VGPR_32:$vdst),
+  (outs VINTRPDst:$vdst),
   (ins VGPR_32:$src0, VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
-  "v_interp_p2_f32 $vdst, $vsrc, $attr$attrchan",
+  "v_interp_p2_f32$vdst, $vsrc, $attr$attrchan",
   [(set f32:$vdst, (AMDGPUinterp_p2 f32:$src0, f32:$vsrc, (i32 imm:$attrchan),
                                                           (i32 imm:$attr)))]>;
 
@@ -79,9 +82,9 @@ defm V_INTERP_P2_F32 : VINTRP_m <
 
 defm V_INTERP_MOV_F32 : VINTRP_m <
   0x00000002,
-  (outs VGPR_32:$vdst),
+  (outs VINTRPDst:$vdst),
   (ins InterpSlot:$vsrc, Attr:$attr, AttrChan:$attrchan),
-  "v_interp_mov_f32 $vdst, $vsrc, $attr$attrchan",
+  "v_interp_mov_f32$vdst, $vsrc, $attr$attrchan",
   [(set f32:$vdst, (AMDGPUinterp_mov (i32 imm:$vsrc), (i32 imm:$attrchan),
                                      (i32 imm:$attr)))]>;
 
