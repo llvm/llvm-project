@@ -1653,6 +1653,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
       NameInfo, T, TInfo, D->getSourceRange().getEnd());
     if (DGuide->isCopyDeductionCandidate())
       cast<CXXDeductionGuideDecl>(Function)->setIsCopyDeductionCandidate();
+    Function->setAccess(D->getAccess());
   } else {
     Function = FunctionDecl::Create(
         SemaRef.Context, DC, D->getInnerLocStart(), NameInfo, T, TInfo,
@@ -2710,6 +2711,8 @@ Decl *TemplateDeclInstantiator::VisitClassScopeFunctionSpecializationDecl(
   FunctionDecl *Specialization = cast<FunctionDecl>(Previous.getFoundDecl());
   assert(Specialization && "Class scope Specialization is null");
   SemaRef.Context.setClassScopeSpecializationPattern(Specialization, OldFD);
+
+  // FIXME: If this is a definition, check for redefinition errors!
 
   return NewFD;
 }

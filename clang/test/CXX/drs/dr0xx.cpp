@@ -499,10 +499,10 @@ namespace dr42 { // dr42: yes
 
 // dr43: na
 
-namespace dr44 { // dr44: yes
+namespace dr44 { // dr44: sup 727
   struct A {
     template<int> void f();
-    template<> void f<0>(); // expected-error {{explicit specialization of 'f' in class scope}}
+    template<> void f<0>();
   };
 }
 

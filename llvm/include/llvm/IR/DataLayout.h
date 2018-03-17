@@ -263,6 +263,12 @@ public:
     return ManglingMode == MM_WinCOFFX86;
   }
 
+  /// Returns true if symbols with leading question marks should not receive IR
+  /// mangling. True for Windows mangling modes.
+  bool doNotMangleLeadingQuestionMark() const {
+    return ManglingMode == MM_WinCOFF || ManglingMode == MM_WinCOFFX86;
+  }
+
   bool hasLinkerPrivateGlobalPrefix() const { return ManglingMode == MM_MachO; }
 
   StringRef getLinkerPrivateGlobalPrefix() const {

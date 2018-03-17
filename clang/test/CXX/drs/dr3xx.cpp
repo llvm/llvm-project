@@ -925,7 +925,7 @@ namespace dr373 { // dr373: 5
   using namespace A::B; // expected-error {{expected namespace name}}
 }
 
-namespace dr374 { // dr374: yes c++11
+namespace dr374 { // dr374: yes
   namespace N {
     template<typename T> void f();
     template<typename T> struct A { void f(); };
@@ -933,11 +933,6 @@ namespace dr374 { // dr374: yes c++11
   template<> void N::f<char>() {}
   template<> void N::A<char>::f() {}
   template<> struct N::A<int> {};
-#if __cplusplus < 201103L
-  // expected-error@-4 {{extension}} expected-note@-7 {{here}}
-  // expected-error@-4 {{extension}} expected-note@-7 {{here}}
-  // expected-error@-4 {{extension}} expected-note@-8 {{here}}
-#endif
 }
 
 // dr375: dup 345

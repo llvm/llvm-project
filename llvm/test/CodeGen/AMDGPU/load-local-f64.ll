@@ -176,7 +176,10 @@ entry:
 
 ; Tests if ds_read_b128 gets generated for the 16 byte aligned load.
 ; FUNC-LABEL: {{^}}local_load_v2f64_to_128:
+
 ; CIVI: ds_read_b128
+; CIVI: ds_write_b128
+
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -184,7 +187,7 @@ entry:
 define amdgpu_kernel void @local_load_v2f64_to_128(<2 x double> addrspace(3)* %out, <2 x double> addrspace(3)* %in) {
 entry:
   %ld = load <2 x double>, <2 x double> addrspace(3)* %in, align 16
-  store <2 x double> %ld, <2 x double> addrspace(3)* %out
+  store <2 x double> %ld, <2 x double> addrspace(3)* %out, align 16
   ret void
 }
 

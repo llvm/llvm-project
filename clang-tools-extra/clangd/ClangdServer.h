@@ -13,7 +13,6 @@
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "CompileArgsCache.h"
-#include "DraftStore.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
@@ -127,17 +126,8 @@ public:
   /// resources associated with it.
   void removeDocument(PathRef File);
 
-  /// Calls forceReparse() on all currently opened files.
-  /// As a result, this method may be very expensive.
-  /// This method is normally called when the compilation database is changed.
-  /// FIXME: this method must be moved to ClangdLSPServer along with DraftMgr.
-  void reparseOpenedFiles();
-
   /// Run code completion for \p File at \p Pos.
   /// Request is processed asynchronously.
-  ///
-  /// The current draft for \p File will be used. If \p UsedFS is non-null, it
-  /// will be overwritten by vfs::FileSystem used for completion.
   ///
   /// This method should only be called for currently tracked files. However, it
   /// is safe to call removeDocument for \p File after this method returns, even
@@ -148,11 +138,8 @@ public:
                     const clangd::CodeCompleteOptions &Opts,
                     Callback<CompletionList> CB);
 
-  /// Provide signature help for \p File at \p Pos. If \p OverridenContents is
-  /// not None, they will used only for signature help, i.e. no diagnostics
-  /// update will be scheduled and a draft for \p File will not be updated. If
-  /// If \p UsedFS is non-null, it will be overwritten by vfs::FileSystem used
-  /// for signature help. This method should only be called for tracked files.
+  /// Provide signature help for \p File at \p Pos.  This method should only be
+  /// called for tracked files.
   void signatureHelp(PathRef File, Position Pos, Callback<SignatureHelp> CB);
 
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
@@ -204,12 +191,6 @@ public:
                                                 StringRef DeclaringHeader,
                                                 StringRef InsertedHeader);
 
-  /// Gets current document contents for \p File. Returns None if \p File is not
-  /// currently tracked.
-  /// FIXME(ibiryukov): This function is here to allow offset-to-Position
-  /// conversions in outside code, maybe there's a way to get rid of it.
-  llvm::Optional<std::string> getDocument(PathRef File);
-
   /// Only for testing purposes.
   /// Waits until all requests to worker thread are finished and dumps AST for
   /// \p File. \p File must be in the list of added documents.
@@ -238,13 +219,18 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
+  typedef uint64_t DocVersion;
+
   void consumeDiagnostics(PathRef File, DocVersion Version,
                           std::vector<Diag> Diags);
 
   CompileArgsCache CompileArgs;
   DiagnosticsConsumer &DiagConsumer;
   FileSystemProvider &FSProvider;
-  DraftStore DraftMgr;
+
+  /// Used to synchronize diagnostic responses for added and removed files.
+  llvm::StringMap<DocVersion> InternalVersion;
+
   // The index used to look up symbols. This could be:
   //   - null (all index functionality is optional)
   //   - the dynamic index owned by ClangdServer (FileIdx)

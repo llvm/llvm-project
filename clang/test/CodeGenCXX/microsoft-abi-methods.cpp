@@ -75,14 +75,14 @@ void constructors() {
 // CHECK: %{{[.0-9A-Z_a-z]+}} = call x86_thiscallcc %class.Base* @"\01??0Base@@QAE@XZ"
 // CHECK: ret
 
-// Make sure that the Base constructor definition uses the right CC:
-// CHECK: define linkonce_odr dso_local x86_thiscallcc %class.Base* @"\01??0Base@@QAE@XZ"
-
 // Make sure that the Base destructor call in the Child denstructor uses
 // the right calling convention:
 // CHECK: define linkonce_odr dso_local x86_thiscallcc void @"\01??1Child@@QAE@XZ"
 // CHECK: call x86_thiscallcc void @"\01??1Base@@QAE@XZ"
 // CHECK: ret
+
+// Make sure that the Base constructor definition uses the right CC:
+// CHECK: define linkonce_odr dso_local x86_thiscallcc %class.Base* @"\01??0Base@@QAE@XZ"
 
 // Make sure that the Base destructor definition uses the right CC:
 // CHECK: define linkonce_odr dso_local x86_thiscallcc void @"\01??1Base@@QAE@XZ"

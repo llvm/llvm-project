@@ -478,7 +478,10 @@ int hello;
   CDB.ExtraClangFlags.clear();
   DiagConsumer.clear();
   Server.removeDocument(BazCpp);
-  Server.reparseOpenedFiles();
+  Server.addDocument(FooCpp, FooSource.code(), WantDiagnostics::Auto,
+                     /*SkipCache=*/true);
+  Server.addDocument(BarCpp, BarSource.code(), WantDiagnostics::Auto,
+                     /*SkipCache=*/true);
   ASSERT_TRUE(Server.blockUntilIdleForTest());
 
   EXPECT_THAT(DiagConsumer.filesWithDiags(),

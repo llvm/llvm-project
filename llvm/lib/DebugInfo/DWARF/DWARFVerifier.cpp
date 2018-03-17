@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
-#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
@@ -16,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -826,6 +826,119 @@ DWARFVerifier::verifyDebugNamesCULists(const DWARFDebugNames &AccelTable) {
   return NumErrors;
 }
 
+unsigned
+DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
+                                      const DataExtractor &StrData) {
+  struct BucketInfo {
+    uint32_t Bucket;
+    uint32_t Index;
+
+    constexpr BucketInfo(uint32_t Bucket, uint32_t Index)
+        : Bucket(Bucket), Index(Index) {}
+    bool operator<(const BucketInfo &RHS) const { return Index < RHS.Index; };
+  };
+
+  uint32_t NumErrors = 0;
+  if (NI.getBucketCount() == 0) {
+    warn() << formatv("Name Index @ {0:x} does not contain a hash table.\n",
+                      NI.getUnitOffset());
+    return NumErrors;
+  }
+
+  // Build up a list of (Bucket, Index) pairs. We use this later to verify that
+  // each Name is reachable from the appropriate bucket.
+  std::vector<BucketInfo> BucketStarts;
+  BucketStarts.reserve(NI.getBucketCount() + 1);
+  for (uint32_t Bucket = 0, End = NI.getBucketCount(); Bucket < End; ++Bucket) {
+    uint32_t Index = NI.getBucketArrayEntry(Bucket);
+    if (Index > NI.getNameCount()) {
+      error() << formatv("Bucket {0} of Name Index @ {1:x} contains invalid "
+                         "value {2}. Valid range is [0, {3}].\n",
+                         Bucket, NI.getUnitOffset(), Index, NI.getNameCount());
+      ++NumErrors;
+      continue;
+    }
+    if (Index > 0)
+      BucketStarts.emplace_back(Bucket, Index);
+  }
+
+  // If there were any buckets with invalid values, skip further checks as they
+  // will likely produce many errors which will only confuse the actual root
+  // problem.
+  if (NumErrors > 0)
+    return NumErrors;
+
+  // Sort the list in the order of increasing "Index" entries.
+  array_pod_sort(BucketStarts.begin(), BucketStarts.end());
+
+  // Insert a sentinel entry at the end, so we can check that the end of the
+  // table is covered in the loop below.
+  BucketStarts.emplace_back(NI.getBucketCount(), NI.getNameCount() + 1);
+
+  // Loop invariant: NextUncovered is the (1-based) index of the first Name
+  // which is not reachable by any of the buckets we processed so far (and
+  // hasn't been reported as uncovered).
+  uint32_t NextUncovered = 1;
+  for (const BucketInfo &B : BucketStarts) {
+    // Under normal circumstances B.Index be equal to NextUncovered, but it can
+    // be less if a bucket points to names which are already known to be in some
+    // bucket we processed earlier. In that case, we won't trigger this error,
+    // but report the mismatched hash value error instead. (We know the hash
+    // will not match because we have already verified that the name's hash
+    // puts it into the previous bucket.)
+    if (B.Index > NextUncovered) {
+      error() << formatv("Name Index @ {0:x}: Name table entries [{1}, {2}] "
+                         "are not covered by the hash table.\n",
+                         NI.getUnitOffset(), NextUncovered, B.Index - 1);
+      ++NumErrors;
+    }
+    uint32_t Idx = B.Index;
+
+    // The rest of the checks apply only to non-sentinel entries.
+    if (B.Bucket == NI.getBucketCount())
+      break;
+
+    // This triggers if a non-empty bucket points to a name with a mismatched
+    // hash. Clients are likely to interpret this as an empty bucket, because a
+    // mismatched hash signals the end of a bucket, but if this is indeed an
+    // empty bucket, the producer should have signalled this by marking the
+    // bucket as empty.
+    uint32_t FirstHash = NI.getHashArrayEntry(Idx);
+    if (FirstHash % NI.getBucketCount() != B.Bucket) {
+      error() << formatv(
+          "Name Index @ {0:x}: Bucket {1} is not empty but points to a "
+          "mismatched hash value {2:x} (belonging to bucket {3}).\n",
+          NI.getUnitOffset(), B.Bucket, FirstHash,
+          FirstHash % NI.getBucketCount());
+      ++NumErrors;
+    }
+
+    // This find the end of this bucket and also verifies that all the hashes in
+    // this bucket are correct by comparing the stored hashes to the ones we
+    // compute ourselves.
+    while (Idx <= NI.getNameCount()) {
+      uint32_t Hash = NI.getHashArrayEntry(Idx);
+      if (Hash % NI.getBucketCount() != B.Bucket)
+        break;
+
+      auto NTE = NI.getNameTableEntry(Idx);
+      const char *Str = StrData.getCStr(&NTE.StringOffset);
+      if (caseFoldingDjbHash(Str) != Hash) {
+        error() << formatv("Name Index @ {0:x}: String ({1}) at index {2} "
+                           "hashes to {3:x}, but "
+                           "the Name Index hash is {4:x}\n",
+                           NI.getUnitOffset(), Str, Idx,
+                           caseFoldingDjbHash(Str), Hash);
+        ++NumErrors;
+      }
+
+      ++Idx;
+    }
+    NextUncovered = std::max(NextUncovered, Idx);
+  }
+  return NumErrors;
+}
+
 unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
                                          const DataExtractor &StrData) {
   unsigned NumErrors = 0;
@@ -843,20 +956,8 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
   }
 
   NumErrors += verifyDebugNamesCULists(AccelTable);
-
-  for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
-    for (uint32_t Bucket = 0, End = NI.getBucketCount(); Bucket < End;
-         ++Bucket) {
-      uint32_t Index = NI.getBucketArrayEntry(Bucket);
-      if (Index > NI.getNameCount()) {
-        error() << formatv("Bucket {0} of Name Index @ {1:x} contains invalid "
-                           "value {2}. Valid range is [0, {3}].\n",
-                           Bucket, NI.getUnitOffset(), Index,
-                           NI.getNameCount());
-        ++NumErrors;
-      }
-    }
-  }
+  for (const auto &NI : AccelTable)
+    NumErrors += verifyNameIndexBuckets(NI, StrData);
 
   return NumErrors;
 }

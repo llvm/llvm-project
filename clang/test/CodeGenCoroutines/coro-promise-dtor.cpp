@@ -44,4 +44,4 @@ coro_t f() {
 // CHECK:  br i1 %[[NRVO]], label %{{.+}}, label %[[DTOR:.+]]
 
 // CHECK: [[DTOR]]:
-// CHECK:  call void @"\01??_Dcoro_t@@QEAAXXZ"(
+// CHECK:  call void @"\01??1coro_t@@QEAA@XZ"(

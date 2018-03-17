@@ -33,6 +33,34 @@ fail:
   ret i32 -1
 }
 
+; Same as test1, but with a floating point IR and fcmp
+define i32 @test_fcmp(i32* noalias nocapture readonly %a) nounwind uwtable {
+; CHECK-LABEL: @test_fcmp(
+entry:
+; CHECK: %i1 = load i32, i32* %a, align 4
+; CHECK-NEXT: br label %for.body
+  br label %for.body
+
+for.body:
+  %iv = phi float [ 0.0, %entry ], [ %inc, %continue ]
+  %acc = phi i32 [ 0, %entry ], [ %add, %continue ]
+  %r.chk = fcmp olt float %iv, 2000.0
+  br i1 %r.chk, label %continue, label %fail
+continue:
+  %i1 = load i32, i32* %a, align 4
+  %add = add nsw i32 %i1, %acc
+  %inc = fadd float %iv, 1.0
+  %exitcond = fcmp ogt float %inc, 1000.0
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret i32 %add
+
+fail:
+  call void @f()
+  ret i32 -1
+}
+
 ; Count down from a.length w/entry guard
 ; TODO: currently unable to prove the following:
 ; ule i32 (add nsw i32 %len, -1), %len where len is [0, 512]

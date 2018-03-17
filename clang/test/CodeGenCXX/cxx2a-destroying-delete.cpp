@@ -128,7 +128,7 @@ H::~H() { call_in_dtor(); }
 // CHECK-MSABI: call void @"\01??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 48, i64 16)
 // CHECK-MSABI: br label %[[RETURN:.*]]
 //
-// CHECK-MSABI: call void @"\01??_DH@@QEAAXXZ"(
+// CHECK-MSABI: call void @"\01??1H@@UEAA@XZ"(
 // CHECK-MSABI: br label %[[RETURN]]
 //
 // CHECK-MSABI: }
@@ -155,7 +155,7 @@ I::~I() { call_in_dtor(); }
 // CHECK-MSABI: call void @"\01??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 96, i64 32)
 // CHECK-MSABI: br label %[[RETURN:.*]]
 //
-// CHECK-MSABI: call void @"\01??_DI@@QEAAXXZ"(
+// CHECK-MSABI: call void @"\01??1I@@UEAA@XZ"(
 // CHECK-MSABI: br label %[[RETURN]]
 //
 // CHECK-MSABI: }

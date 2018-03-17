@@ -5833,14 +5833,14 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUASI.LOCAL_ADDRESS) {
+    // Use ds_write_b128 if possible.
+    if (Subtarget->useDS128(EnableDS128) && Store->getAlignment() >= 16 &&
+        VT.getStoreSize() == 16)
+      return SDValue();
+
     if (NumElements > 2)
       return SplitVectorStore(Op, DAG);
-
-    if (NumElements == 2)
-      return Op;
-
-    // If properly aligned, if we split we might be able to use ds_write_b64.
-    return SplitVectorStore(Op, DAG);
+    return SDValue();
   } else {
     llvm_unreachable("unhandled address space");
   }

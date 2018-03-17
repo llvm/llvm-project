@@ -719,6 +719,8 @@ def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32_gfx9, store_local>;
 let AddedComplexity = 100 in {
 
 defm : DSWritePat_mc <DS_WRITE_B64, v2i32, "store_align8_local">;
+defm : DSWritePat_mc <DS_WRITE_B128, v4i32, "store_align16_local">;
+
 } // End AddedComplexity = 100
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),

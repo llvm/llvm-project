@@ -1454,7 +1454,13 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   unsigned RawLastLineEndColumn = getLastLineEndColumn(
       *NewCode, FirstStartColumn, Style.TabWidth, Encoding);
   State.Column = RawLastLineEndColumn + NewSuffixSize;
-  return Fixes.second;
+  // Since we're updating the column to after the raw string literal here, we
+  // have to manually add the penalty for the prefix R"delim( over the column
+  // limit.
+  unsigned PrefixExcessCharacters =
+      StartColumn + NewPrefixSize > Style.ColumnLimit ?
+      StartColumn + NewPrefixSize - Style.ColumnLimit : 0;
+  return Fixes.second + PrefixExcessCharacters * Style.PenaltyExcessCharacter;
 }
 
 unsigned ContinuationIndenter::addMultilineToken(const FormatToken &Current,

@@ -182,7 +182,7 @@ class CheckVarsEscapingDeclContext final
       return;
     // Variables captured by value must be globalized.
     if (auto *CSI = CGF.CapturedStmtInfo) {
-      if (const FieldDecl *FD = CGF.CapturedStmtInfo->lookup(cast<VarDecl>(VD))) {
+      if (const FieldDecl *FD = CSI->lookup(cast<VarDecl>(VD))) {
         if (FD->getType()->isReferenceType())
           return;
         EscapedParameters.insert(VD);

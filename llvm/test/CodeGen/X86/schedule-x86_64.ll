@@ -6078,8 +6078,8 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; BTVER2-LABEL: test_imul_64:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    imulq %rdi # sched: [3:1.00]
-; BTVER2-NEXT:    imulq (%rsi) # sched: [6:1.00]
+; BTVER2-NEXT:    imulq %rdi # sched: [6:4.00]
+; BTVER2-NEXT:    imulq (%rsi) # sched: [9:4.00]
 ; BTVER2-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
 ; BTVER2-NEXT:    imulq (%rsi), %rdi # sched: [6:1.00]
 ; BTVER2-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
@@ -8093,8 +8093,8 @@ define void @test_mul(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; BTVER2-NEXT:    mulw (%r9) # sched: [6:1.00]
 ; BTVER2-NEXT:    mull %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    mull (%rax) # sched: [6:1.00]
-; BTVER2-NEXT:    mulq %rcx # sched: [3:1.00]
-; BTVER2-NEXT:    mulq (%r10) # sched: [6:1.00]
+; BTVER2-NEXT:    mulq %rcx # sched: [6:4.00]
+; BTVER2-NEXT:    mulq (%r10) # sched: [9:4.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
