@@ -430,11 +430,19 @@ let AddedComplexity = 20 in {
 def: Pat<(i32 (anyext I1:$Pu)), (C2_muxii I1:$Pu, 1, 0)>;
 def: Pat<(i64 (anyext I1:$Pu)), (ToZext64 (C2_muxii I1:$Pu, 1, 0))>;
 
-def: Pat<(v8i8  (zext   V8I1:$Pu)),  (C2_mask V8I1:$Pu)>;
-def: Pat<(v4i16 (zext   V4I1:$Pu)),  (C2_mask V4I1:$Pu)>;
-def: Pat<(v2i32 (zext   V2I1:$Pu)),  (C2_mask V2I1:$Pu)>;
-def: Pat<(v4i8  (zext   V4I1:$Pu)),  (LoReg (C2_mask V4I1:$Pu))>;
-def: Pat<(v2i16 (zext   V2I1:$Pu)),  (LoReg (C2_mask V2I1:$Pu))>;
+def Vsplatpi: OutPatFrag<(ops node:$V),
+                         (Combinew (A2_tfrsi $V), (A2_tfrsi $V))>;
+def: Pat<(v8i8 (zext V8I1:$Pu)),
+         (A2_andp (C2_mask V8I1:$Pu), (Vsplatpi (i32 0x01010101)))>;
+def: Pat<(v4i16 (zext V4I1:$Pu)),
+         (A2_andp (C2_mask V4I1:$Pu), (Vsplatpi (i32 0x00010001)))>;
+def: Pat<(v2i32 (zext V2I1:$Pu)),
+         (A2_andp (C2_mask V2I1:$Pu), (A2_combineii (i32 1), (i32 1)))>;
+
+def: Pat<(v4i8 (zext V4I1:$Pu)),
+         (A2_andir (LoReg (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
+def: Pat<(v2i16 (zext V2I1:$Pu)),
+         (A2_andir (LoReg (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
 
 def: Pat<(v4i16 (zext   V4I8:$Rs)),  (S2_vzxtbh V4I8:$Rs)>;
 def: Pat<(v2i32 (zext   V2I16:$Rs)), (S2_vzxthw V2I16:$Rs)>;
@@ -695,18 +703,18 @@ def: Pat<(i1 (setne I1:$Ps, (i1 -1))), (C2_not I1:$Ps)>;
 def: Pat<(i1 (seteq I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, (C2_not I1:$Pt))>;
 def: Pat<(i1 (setne I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, I1:$Pt)>;
 
-def: Pat<(i1 (seteq V4I8:$Rs, V4I8:$Rt)),
+def: Pat<(v4i1 (seteq V4I8:$Rs, V4I8:$Rt)),
          (A2_vcmpbeq (ToZext64 $Rs), (ToZext64 $Rt))>;
-def: Pat<(i1 (setgt V4I8:$Rs, V4I8:$Rt)),
+def: Pat<(v4i1 (setgt V4I8:$Rs, V4I8:$Rt)),
          (A4_vcmpbgt (ToZext64 $Rs), (ToZext64 $Rt))>;
-def: Pat<(i1 (setugt V4I8:$Rs, V4I8:$Rt)),
+def: Pat<(v4i1 (setugt V4I8:$Rs, V4I8:$Rt)),
          (A2_vcmpbgtu (ToZext64 $Rs), (ToZext64 $Rt))>;
 
-def: Pat<(i1 (seteq V2I16:$Rs, V2I16:$Rt)),
+def: Pat<(v2i1 (seteq V2I16:$Rs, V2I16:$Rt)),
          (A2_vcmpheq (ToZext64 $Rs), (ToZext64 $Rt))>;
-def: Pat<(i1 (setgt V2I16:$Rs, V2I16:$Rt)),
+def: Pat<(v2i1 (setgt V2I16:$Rs, V2I16:$Rt)),
          (A2_vcmphgt (ToZext64 $Rs), (ToZext64 $Rt))>;
-def: Pat<(i1 (setugt V2I16:$Rs, V2I16:$Rt)),
+def: Pat<(v2i1 (setugt V2I16:$Rs, V2I16:$Rt)),
          (A2_vcmphgtu (ToZext64 $Rs), (ToZext64 $Rt))>;
 
 def: Pat<(v2i1 (setne V2I32:$Rs, V2I32:$Rt)),

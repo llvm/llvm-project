@@ -22,7 +22,7 @@ struct C: virtual A {
   // CHECK-NEXT: vbtable index 1, vfptr at offset 0
   // CHECK-NEXT: 0 | void C::f()
 
-  // MANGLING-DAG: @"\01??_7C@@6B@"
+  // MANGLING-DAG: @"??_7C@@6B@"
 
   virtual void f() {}
 };
@@ -44,8 +44,8 @@ struct D: virtual A {
   // CHECK-NEXT: via vbtable index 1, vfptr at offset 0
   // CHECK-NEXT: 0 | void D::f()
 
-  // MANGLING-DAG: @"\01??_7D@@6B0@@"
-  // MANGLING-DAG: @"\01??_7D@@6BA@@@"
+  // MANGLING-DAG: @"??_7D@@6B0@@"
+  // MANGLING-DAG: @"??_7D@@6BA@@@"
 
   virtual void f();
   virtual void h();
@@ -60,7 +60,7 @@ struct X { int x; };
 
 // X and A get reordered in the layout since X doesn't have a vfptr while A has.
 struct Y : X, A { };
-// MANGLING-DAG: @"\01??_7Y@Test1@@6B@"
+// MANGLING-DAG: @"??_7Y@Test1@@6B@"
 
 struct Z : virtual Y {
   Z();
@@ -70,7 +70,7 @@ struct Z : virtual Y {
 
   // CHECK-NOT: VFTable indices for 'Test1::Z'
 
-  // MANGLING-DAG: @"\01??_7Z@Test1@@6B@"
+  // MANGLING-DAG: @"??_7Z@Test1@@6B@"
 };
 
 Z::Z() {}
@@ -92,9 +92,9 @@ struct X: virtual A, virtual B {
   // CHECK-LABEL: VFTable indices for 'Test2::X' (1 entry).
   // CHECK-NEXT: 0 | void Test2::X::h()
 
-  // MANGLING-DAG: @"\01??_7X@Test2@@6B01@@"
-  // MANGLING-DAG: @"\01??_7X@Test2@@6BA@@@"
-  // MANGLING-DAG: @"\01??_7X@Test2@@6BB@@@"
+  // MANGLING-DAG: @"??_7X@Test2@@6B01@@"
+  // MANGLING-DAG: @"??_7X@Test2@@6BA@@@"
+  // MANGLING-DAG: @"??_7X@Test2@@6BB@@@"
 
   virtual void h();
 };
@@ -106,7 +106,7 @@ void use(X *obj) { obj->h(); }
 namespace Test3 {
 
 struct X : virtual A {
-  // MANGLING-DAG: @"\01??_7X@Test3@@6B@"
+  // MANGLING-DAG: @"??_7X@Test3@@6B@"
 };
 
 struct Y: virtual X {
@@ -117,7 +117,7 @@ struct Y: virtual X {
 
   // CHECK-NOT: VFTable indices for 'Test3::Y'
 
-  // MANGLING-DAG: @"\01??_7Y@Test3@@6B@"
+  // MANGLING-DAG: @"??_7Y@Test3@@6B@"
 };
 
 Y::Y() {}
@@ -142,10 +142,10 @@ struct X: virtual C {
 
   // CHECK-NOT: VFTable indices for 'Test4::X'
 
-  // MANGLING-DAG: @"\01??_7X@Test4@@6B@"
+  // MANGLING-DAG: @"??_7X@Test4@@6B@"
 
   // Also check the mangling of the thunk.
-  // MANGLING-DAG: define linkonce_odr dso_local x86_thiscallcc void @"\01?f@C@@WPPPPPPPI@AEXXZ"
+  // MANGLING-DAG: define linkonce_odr dso_local x86_thiscallcc void @"?f@C@@WPPPPPPPI@AEXXZ"
 };
 
 X::X() {}
@@ -155,7 +155,7 @@ namespace Test5 {
 
 // New methods are added to the base's vftable.
 struct X : A {
-  // MANGLING-DAG: @"\01??_7X@Test5@@6B@"
+  // MANGLING-DAG: @"??_7X@Test5@@6B@"
   virtual void g();
 };
 
@@ -171,8 +171,8 @@ struct Y : virtual X {
   // CHECK-LABEL: VFTable indices for 'Test5::Y' (1 entry).
   // CHECK-NEXT: 0 | void Test5::Y::h()
 
-  // MANGLING-DAG: @"\01??_7Y@Test5@@6B01@@"
-  // MANGLING-DAG: @"\01??_7Y@Test5@@6BX@1@@"
+  // MANGLING-DAG: @"??_7Y@Test5@@6B01@@"
+  // MANGLING-DAG: @"??_7Y@Test5@@6BX@1@@"
 
   virtual void h();
 };
@@ -191,7 +191,7 @@ struct X : A, virtual Empty {
 
   // CHECK-NOT: VFTable indices for 'Test6::X'
 
-  // MANGLING-DAG: @"\01??_7X@Test6@@6B@"
+  // MANGLING-DAG: @"??_7X@Test6@@6B@"
 };
 
 X::X() {}
@@ -200,7 +200,7 @@ X::X() {}
 namespace Test7 {
 
 struct X : C {
-  // MANGLING-DAG: @"\01??_7X@Test7@@6B@"
+  // MANGLING-DAG: @"??_7X@Test7@@6B@"
 };
 
 struct Y : virtual X {
@@ -215,7 +215,7 @@ struct Y : virtual X {
 
   // CHECK-NOT: VFTable indices for 'Test7::Y'
 
-  // MANGLING-DAG: @"\01??_7Y@Test7@@6B@"
+  // MANGLING-DAG: @"??_7Y@Test7@@6B@"
 };
 
 Y::Y() {}
@@ -236,8 +236,8 @@ struct X : D, C {
   // CHECK-NEXT: via vbtable index 1, vfptr at offset 0
   // CHECK-NEXT: 0 | void Test8::X::f()
 
-  // MANGLING-DAG: @"\01??_7X@Test8@@6BA@@@"
-  // MANGLING-DAG: @"\01??_7X@Test8@@6BD@@@"
+  // MANGLING-DAG: @"??_7X@Test8@@6BA@@@"
+  // MANGLING-DAG: @"??_7X@Test8@@6BD@@@"
 
   virtual void f();
 };
@@ -299,8 +299,8 @@ struct Y : virtual X {
   // CHECK-LABEL: VFTable indices for 'Test9::Y' (1 entry).
   // CHECK-NEXT: 0 | void Test9::Y::h()
 
-  // MANGLING-DAG: @"\01??_7Y@Test9@@6B01@@"
-  // MANGLING-DAG: @"\01??_7Y@Test9@@6BX@1@@"
+  // MANGLING-DAG: @"??_7Y@Test9@@6B01@@"
+  // MANGLING-DAG: @"??_7Y@Test9@@6BX@1@@"
 
   virtual void h();
 };
@@ -322,10 +322,10 @@ struct Z : Y, virtual B {
 
   // CHECK-NOT: VFTable indices for 'Test9::Z'
 
-  // MANGLING-DAG: @"\01??_7Z@Test9@@6BX@1@@"
-  // MANGLING-DAG: @"\01??_7Z@Test9@@6BY@1@@"
+  // MANGLING-DAG: @"??_7Z@Test9@@6BX@1@@"
+  // MANGLING-DAG: @"??_7Z@Test9@@6BY@1@@"
 
-  // MANGLING-DAG: @"\01??_7Z@Test9@@6B@"
+  // MANGLING-DAG: @"??_7Z@Test9@@6B@"
 };
 
 Z::Z() {}
@@ -355,12 +355,12 @@ struct W : Z, D, virtual A, virtual B {
 
   // CHECK-NOT: VFTable indices for 'Test9::W'
 
-  // MANGLING-DAG: @"\01??_7W@Test9@@6BA@@@"
-  // MANGLING-DAG: @"\01??_7W@Test9@@6BD@@@"
-  // MANGLING-DAG: @"\01??_7W@Test9@@6BX@1@@"
+  // MANGLING-DAG: @"??_7W@Test9@@6BA@@@"
+  // MANGLING-DAG: @"??_7W@Test9@@6BD@@@"
+  // MANGLING-DAG: @"??_7W@Test9@@6BX@1@@"
 
-  // MANGLING-DAG: @"\01??_7W@Test9@@6B@"
-  // MANGLING-DAG: @"\01??_7W@Test9@@6BY@1@@"
+  // MANGLING-DAG: @"??_7W@Test9@@6B@"
+  // MANGLING-DAG: @"??_7W@Test9@@6BY@1@@"
 };
 
 W::W() {}
@@ -404,12 +404,12 @@ struct T : Z, D, virtual A, virtual B {
   // CHECK-NEXT: via vbtable index 2, vfptr at offset 0
   // CHECK-NEXT: 0 | void Test9::T::g()
 
-  // MANGLING-DAG: @"\01??_7T@Test9@@6BA@@@"
-  // MANGLING-DAG: @"\01??_7T@Test9@@6BD@@@"
-  // MANGLING-DAG: @"\01??_7T@Test9@@6BX@1@@"
+  // MANGLING-DAG: @"??_7T@Test9@@6BA@@@"
+  // MANGLING-DAG: @"??_7T@Test9@@6BD@@@"
+  // MANGLING-DAG: @"??_7T@Test9@@6BX@1@@"
 
-  // MANGLING-DAG: @"\01??_7T@Test9@@6B@"
-  // MANGLING-DAG: @"\01??_7T@Test9@@6BY@1@@"
+  // MANGLING-DAG: @"??_7T@Test9@@6B@"
+  // MANGLING-DAG: @"??_7T@Test9@@6BY@1@@"
 
   virtual void f();
   virtual void g();
@@ -443,8 +443,8 @@ struct X : virtual A {};
 struct Y { virtual void g(); };
 
 struct Z : virtual X, Y {
-  // MANGLING-DAG: @"\01??_7Z@Test11@@6BY@1@@"
-  // MANGLING-DAG: @"\01??_7Z@Test11@@6BX@1@@"
+  // MANGLING-DAG: @"??_7Z@Test11@@6BY@1@@"
+  // MANGLING-DAG: @"??_7Z@Test11@@6BX@1@@"
 };
 
 Z z;
@@ -468,7 +468,7 @@ struct Z : virtual Y {
   // CHECK-NEXT:   1 | void A::z()
 
   int z;
-  // MANGLING-DAG: @"\01??_7Z@Test12@@6BA@@@" = {{.*}}@"\01?f@Y@Test12@@UAEXXZ"
+  // MANGLING-DAG: @"??_7Z@Test12@@6BA@@@" = {{.*}}@"?f@Y@Test12@@UAEXXZ"
 };
 
 struct W : Z {
@@ -478,7 +478,7 @@ struct W : Z {
   W();
 
   int w;
-  // MANGLING-DAG: @"\01??_7W@Test12@@6BA@@@" = {{.*}}@"\01?f@Y@Test12@@UAEXXZ"
+  // MANGLING-DAG: @"??_7W@Test12@@6BA@@@" = {{.*}}@"?f@Y@Test12@@UAEXXZ"
 };
 
 W::W() {}
@@ -683,10 +683,10 @@ struct C : virtual B, A {
 };
 C c;
 
-// MANGLING-DAG: @"\01??_7A@pr17748@@6B@"
-// MANGLING-DAG: @"\01??_7B@pr17748@@6B@"
-// MANGLING-DAG: @"\01??_7C@pr17748@@6BA@1@@"
-// MANGLING-DAG: @"\01??_7C@pr17748@@6BB@1@@"
+// MANGLING-DAG: @"??_7A@pr17748@@6B@"
+// MANGLING-DAG: @"??_7B@pr17748@@6B@"
+// MANGLING-DAG: @"??_7C@pr17748@@6BA@1@@"
+// MANGLING-DAG: @"??_7C@pr17748@@6BB@1@@"
 }
 
 namespace pr19066 {
@@ -721,9 +721,9 @@ D obj;
 
 // Each MDC only has one vftable.
 
-// MANGLING-DAG: @"\01??_7D@pr19240@@6B@"
-// MANGLING-DAG: @"\01??_7A@pr19240@@6B@"
-// MANGLING-DAG: @"\01??_7B@pr19240@@6B@"
+// MANGLING-DAG: @"??_7D@pr19240@@6B@"
+// MANGLING-DAG: @"??_7A@pr19240@@6B@"
+// MANGLING-DAG: @"??_7B@pr19240@@6B@"
 
 }
 
@@ -746,7 +746,7 @@ struct Z : Y {
 
   Z();
   int z;
-  // MANGLING-DAG: @"\01??_7Z@pr19408@@6B@" = {{.*}}@"\01?f@Y@pr19408@@W3AEXXZ"
+  // MANGLING-DAG: @"??_7Z@pr19408@@6B@" = {{.*}}@"?f@Y@pr19408@@W3AEXXZ"
 };
 
 Z::Z() {}
@@ -759,7 +759,7 @@ struct W : B, Y {
 
   W();
   int w;
-  // MANGLING-DAG: @"\01??_7W@pr19408@@6BY@1@@" = {{.*}}@"\01?f@Y@pr19408@@W3AEXXZ"
+  // MANGLING-DAG: @"??_7W@pr19408@@6BY@1@@" = {{.*}}@"?f@Y@pr19408@@W3AEXXZ"
 };
 
 W::W() {}
@@ -771,7 +771,7 @@ struct A {
 };
 struct __declspec(dllexport) B : virtual A {
   virtual void f() = 0;
-  // MANGLING-DAG: @"\01??_7B@Test13@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)] }
+  // MANGLING-DAG: @"??_7B@Test13@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)] }
 };
 }
 
@@ -788,8 +788,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_1::B' in 'pr21031_1::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_1::B::g()
 
-// MANGLING-DAG: @"\01??_7C@pr21031_1@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
-// MANGLING-DAG: @"\01??_7C@pr21031_1@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6B@" = {{.*}} constant { [1 x i8*] }
 }
 
 namespace pr21031_2 {
@@ -804,8 +804,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_2::A' in 'pr21031_2::B' in 'pr21031_2::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_2::A::f()
 
-// MANGLING-DAG: @"\01??_7C@pr21031_2@@6BA@1@@" = {{.*}} constant { [1 x i8*] }
-// MANGLING-DAG: @"\01??_7C@pr21031_2@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BA@1@@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
 }
 
 namespace pr21062_1 {
@@ -818,7 +818,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_1::A' in 'pr21062_1::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_1::A::f()
 
-// MANGLING-DAG: @"\01??_7D@pr21062_1@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21062_1@@6B@" = {{.*}} constant { [1 x i8*] }
 }
 
 namespace pr21062_2 {
@@ -831,7 +831,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_2::A' in 'pr21062_2::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_2::A::f()
 
-// MANGLING-DAG: @"\01??_7D@pr21062_2@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21062_2@@6B@" = {{.*}} constant { [1 x i8*] }
 }
 
 namespace pr21064 {
@@ -843,5 +843,5 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21064::B' in 'pr21064::C' in 'pr21064::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21064::B::f()
 
-// MANGLING-DAG: @"\01??_7D@pr21064@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21064@@6B@" = {{.*}} constant { [1 x i8*] }
 }

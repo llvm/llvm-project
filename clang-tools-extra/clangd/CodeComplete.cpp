@@ -450,8 +450,15 @@ struct CompletionRecorder : public CodeCompleteConsumer {
   void ProcessCodeCompleteResults(class Sema &S, CodeCompletionContext Context,
                                   CodeCompletionResult *InResults,
                                   unsigned NumResults) override final {
+    if (CCSema) {
+      log(llvm::formatv(
+          "Multiple code complete callbacks (parser backtracked?). "
+          "Dropping results from context {0}, keeping results from {1}.",
+          getCompletionKindString(this->CCContext.getKind()),
+          getCompletionKindString(Context.getKind())));
+      return;
+    }
     // Record the completion context.
-    assert(!CCSema && "ProcessCodeCompleteResults called multiple times!");
     CCSema = &S;
     CCContext = Context;
 

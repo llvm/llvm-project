@@ -608,6 +608,43 @@ TEST(CodeCompleteTest, NoColonColonAtTheEnd) {
   EXPECT_THAT(Results.items, Not(Contains(Labeled("clang::"))));
 }
 
+TEST(CompletionTest, BacktrackCrashes) {
+  // Sema calls code completion callbacks twice in these cases.
+  auto Results = completions(R"cpp(
+      namespace ns {
+      struct FooBarBaz {};
+      } // namespace ns
+
+     int foo(ns::FooBar^
+  )cpp");
+
+  EXPECT_THAT(Results.items, ElementsAre(Labeled("FooBarBaz")));
+
+  // Check we don't crash in that case too.
+  completions(R"cpp(
+    struct FooBarBaz {};
+    void test() {
+      if (FooBarBaz * x^) {}
+    }
+)cpp");
+}
+
+TEST(CompletionTest, CompleteInExcludedPPBranch) {
+  auto Results = completions(R"cpp(
+    int bar(int param_in_bar) {
+    }
+
+    int foo(int param_in_foo) {
+#if 0
+  par^
+#endif
+    }
+)cpp");
+
+  EXPECT_THAT(Results.items, Contains(Labeled("param_in_foo")));
+  EXPECT_THAT(Results.items, Not(Contains(Labeled("param_in_bar"))));
+}
+
 SignatureHelp signatures(StringRef Text) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;

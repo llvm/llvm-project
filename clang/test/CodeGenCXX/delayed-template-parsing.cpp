@@ -11,8 +11,8 @@ namespace ClassScopeSpecialization {
 
   void call() {
     Type T;
-// CHECK: call {{.*}} @"\01??$Foo@$0A@@Type@ClassScopeSpecialization@@QAEXXZ"
-// X64: call {{.*}} @"\01??$Foo@$0A@@Type@ClassScopeSpecialization@@QEAAXXZ"
+// CHECK: call {{.*}} @"??$Foo@$0A@@Type@ClassScopeSpecialization@@QAEXXZ"
+// X64: call {{.*}} @"??$Foo@$0A@@Type@ClassScopeSpecialization@@QEAAXXZ"
     T.Foo<0>();
   }
 }

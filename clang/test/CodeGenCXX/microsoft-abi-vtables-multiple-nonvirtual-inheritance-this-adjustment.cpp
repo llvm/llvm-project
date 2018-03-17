@@ -29,8 +29,8 @@ struct X : A, B {
   // CHECK-LABEL: VFTable indices for 'test1::X' (1 entry).
   // CHECK-NEXT:   0 | void test1::X::g()
 
-  // BITCODE-DAG: @"\01??_7X@test1@@6BA@1@@"
-  // BITCODE-DAG: @"\01??_7X@test1@@6BB@1@@"
+  // BITCODE-DAG: @"??_7X@test1@@6BA@1@@"
+  // BITCODE-DAG: @"??_7X@test1@@6BB@1@@"
 
   virtual void g();
 } x;
@@ -71,9 +71,9 @@ struct X : A, B, C {
   // CHECK-NEXT:   via vfptr at offset 4
   // CHECK-NEXT:   0 | void test2::X::g()
 
-  // BITCODE-DAG: @"\01??_7X@test2@@6BA@1@@"
-  // BITCODE-DAG: @"\01??_7X@test2@@6BB@1@@"
-  // BITCODE-DAG: @"\01??_7X@test2@@6BC@1@@"
+  // BITCODE-DAG: @"??_7X@test2@@6BA@1@@"
+  // BITCODE-DAG: @"??_7X@test2@@6BB@1@@"
+  // BITCODE-DAG: @"??_7X@test2@@6BC@1@@"
 
   virtual void g();
 } x;
@@ -154,7 +154,7 @@ struct C : public A, public B {
   virtual int bar();
 };
 
-// BITCODE-LABEL: define {{.*}}\01?ffun@test4@@YAXAAUC@1@@Z
+// BITCODE-LABEL: define {{.*}}"?ffun@test4@@YAXAAUC@1@@Z
 void ffun(C &c) {
   // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
   // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
@@ -162,7 +162,7 @@ void ffun(C &c) {
   c.bar();
 }
 
-// BITCODE-LABEL: define {{.*}}\01?fop@test4@@YAXAAUC@1@@Z
+// BITCODE-LABEL: define {{.*}}"?fop@test4@@YAXAAUC@1@@Z
 void fop(C &c) {
   // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
   // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
@@ -189,12 +189,12 @@ void C::g(NonTrivial o) {
   whatsthis = this;
 }
 
-// BITCODE-LABEL: define dso_local void @"\01?g@C@pr30293@@UAAXUNonTrivial@2@@Z"(<{ i8*, %"struct.pr30293::NonTrivial" }>* inalloca)
+// BITCODE-LABEL: define dso_local void @"?g@C@pr30293@@UAAXUNonTrivial@2@@Z"(<{ i8*, %"struct.pr30293::NonTrivial" }>* inalloca)
 // BITCODE: %[[thisaddr:[^ ]*]] = getelementptr inbounds <{ i8*, %"struct.pr30293::NonTrivial" }>, <{ i8*, %"struct.pr30293::NonTrivial" }>* {{.*}}, i32 0, i32 0
 // BITCODE: %[[thisaddr1:[^ ]*]] = bitcast i8** %[[thisaddr]] to %"struct.pr30293::C"**
 // BITCODE: %[[this1:[^ ]*]] = load %"struct.pr30293::C"*, %"struct.pr30293::C"** %[[thisaddr1]], align 4
 // BITCODE: %[[this2:[^ ]*]] = bitcast %"struct.pr30293::C"* %[[this1]] to i8*
 // BITCODE: %[[this3:[^ ]*]] = getelementptr inbounds i8, i8* %[[this2]], i32 -4
 // BITCODE: %[[this4:[^ ]*]] = bitcast i8* %[[this3]] to %"struct.pr30293::C"*
-// BITCODE: store %"struct.pr30293::C"* %[[this4]], %"struct.pr30293::C"** @"\01?whatsthis@pr30293@@3PAUC@1@A", align 4
+// BITCODE: store %"struct.pr30293::C"* %[[this4]], %"struct.pr30293::C"** @"?whatsthis@pr30293@@3PAUC@1@A", align 4
 }

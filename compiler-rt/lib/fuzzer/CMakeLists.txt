@@ -13,6 +13,7 @@ set(LIBFUZZER_SOURCES
   FuzzerMerge.cpp
   FuzzerMutate.cpp
   FuzzerSHA1.cpp
+  FuzzerShmemFuchsia.cpp
   FuzzerShmemPosix.cpp
   FuzzerShmemWindows.cpp
   FuzzerTracePC.cpp

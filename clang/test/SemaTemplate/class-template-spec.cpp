@@ -78,9 +78,6 @@ template<> struct ::A<double>;
 
 namespace N {
   template<typename T> struct B; // expected-note {{explicitly specialized}}
-#if __cplusplus <= 199711L
-  // expected-note@-2 {{explicitly specialized}}
-#endif
 
   template<> struct ::N::B<char>; // okay
   template<> struct ::N::B<short>; // okay
@@ -92,9 +89,6 @@ namespace N {
 template<> struct N::B<int> { }; // okay
 
 template<> struct N::B<float> { };
-#if __cplusplus <= 199711L
-// expected-warning@-2 {{first declaration of class template specialization of 'B' outside namespace 'N' is a C++11 extension}}
-#endif
 
 
 namespace M {
@@ -121,9 +115,9 @@ class Wibble<int> { }; // expected-error{{cannot specialize a template template 
 
 namespace rdar9676205 {
   template<typename T>
-  struct X {
+  struct X { // expected-note {{here}}
     template<typename U>
-    struct X<U*> { // expected-error{{explicit specialization of 'X' in class scope}}
+    struct X<U*> { // expected-error{{partial specialization of 'X' not in a namespace enclosing}}
     };
   };
 

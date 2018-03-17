@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDLSPSERVER_H
 
 #include "ClangdServer.h"
+#include "DraftStore.h"
 #include "GlobalCompilationDatabase.h"
 #include "Path.h"
 #include "Protocol.h"
@@ -74,6 +75,11 @@ private:
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
+  /// Forces a reparse of all currently opened files.  As a result, this method
+  /// may be very expensive.  This method is normally called when the
+  /// compilation database is changed.
+  void reparseOpenedFiles();
+
   JSONOutput &Out;
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.
@@ -96,6 +102,10 @@ private:
   RealFileSystemProvider FSProvider;
   /// Options used for code completion
   clangd::CodeCompleteOptions CCOpts;
+
+  // Store of the current versions of the open documents.
+  DraftStore DraftMgr;
+
   // Server must be the last member of the class to allow its destructor to exit
   // the worker thread that may otherwise run an async callback on partially
   // destructed instance of ClangdLSPServer.

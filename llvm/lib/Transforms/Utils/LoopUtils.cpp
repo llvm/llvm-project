@@ -1530,23 +1530,22 @@ static bool CanProveNotTakenFirstIteration(BasicBlock *ExitBlock,
   auto *BI = dyn_cast<BranchInst>(CondExitBlock->getTerminator());
   if (!BI || !BI->isConditional())
     return false;
-  // todo: handle fcmp someday
+  auto *Cond = dyn_cast<CmpInst>(BI->getCondition());
+  if (!Cond)
+    return false;
   // todo: this would be a lot more powerful if we used scev, but all the
   // plumbing is currently missing to pass a pointer in from the pass
-  auto *ICI = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!ICI)
-    return false;
   // Check for cmp (phi [x, preheader] ...), y where (pred x, y is known
-  auto *LHS = dyn_cast<PHINode>(ICI->getOperand(0));
-  auto *RHS = ICI->getOperand(1);
+  auto *LHS = dyn_cast<PHINode>(Cond->getOperand(0));
+  auto *RHS = Cond->getOperand(1);
   if (!LHS || LHS->getParent() != CurLoop->getHeader())
     return false;
   auto DL = ExitBlock->getModule()->getDataLayout();
   auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
-  auto *SimpleValOrNull = SimplifyICmpInst(ICI->getPredicate(),
-                                           IVStart, RHS,
-                                           {DL, /*TLI*/ nullptr,
-                                               DT, /*AC*/ nullptr, BI});
+  auto *SimpleValOrNull = SimplifyCmpInst(Cond->getPredicate(),
+                                          IVStart, RHS,
+                                          {DL, /*TLI*/ nullptr,
+                                              DT, /*AC*/ nullptr, BI});
   auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);
   if (!SimpleCst)
     return false;
