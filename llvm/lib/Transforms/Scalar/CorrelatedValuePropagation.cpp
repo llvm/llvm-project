@@ -103,14 +103,14 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy()) return false;
   if (isa<Constant>(S->getOperand(0))) return false;
 
-  Constant *C = LVI->getConstant(S->getOperand(0), S->getParent(), S);
+  Constant *C = LVI->getConstant(S->getCondition(), S->getParent(), S);
   if (!C) return false;
 
   ConstantInt *CI = dyn_cast<ConstantInt>(C);
   if (!CI) return false;
 
-  Value *ReplaceWith = S->getOperand(1);
-  Value *Other = S->getOperand(2);
+  Value *ReplaceWith = S->getTrueValue();
+  Value *Other = S->getFalseValue();
   if (!CI->isOne()) std::swap(ReplaceWith, Other);
   if (ReplaceWith == S) ReplaceWith = UndefValue::get(S->getType());
 

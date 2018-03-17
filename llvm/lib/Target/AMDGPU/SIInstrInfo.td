@@ -457,11 +457,16 @@ def store_glue_align8 : Aligned8Bytes <
   (ops node:$value, node:$ptr), (store_glue node:$value, node:$ptr)
 >;
 
+def store_glue_align16 : Aligned16Bytes <
+  (ops node:$value, node:$ptr), (store_glue node:$value, node:$ptr)
+>;
+
 def store_local_m0 : StoreFrag<store_glue>, LocalAddress;
 def truncstorei8_local_m0 : StoreFrag<truncstorei8_glue>, LocalAddress;
 def truncstorei16_local_m0 : StoreFrag<truncstorei16_glue>, LocalAddress;
 
 def store_align8_local_m0 : StoreFrag<store_glue_align8>, LocalAddress;
+def store_align16_local_m0 : StoreFrag<store_glue_align16>, LocalAddress;
 
 def si_setcc_uniform : PatFrag <
   (ops node:$lhs, node:$rhs, node:$cond),
@@ -1936,6 +1941,8 @@ class AtomicNoRet <string noRetOp, bit isRet> {
 //===----------------------------------------------------------------------===//
 // Interpolation opcodes
 //===----------------------------------------------------------------------===//
+
+class VINTRPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVINTRPDst">;
 
 class VINTRP_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
   VINTRPCommon <outs, ins, "", pattern>,

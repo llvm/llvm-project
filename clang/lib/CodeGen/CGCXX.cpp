@@ -242,6 +242,11 @@ llvm::Constant *CodeGenModule::getAddrOfCXXStructor(
   if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
     GD = GlobalDecl(CD, toCXXCtorType(Type));
   } else {
+    // Always alias equivalent complete destructors to base destructors in the
+    // MS ABI.
+    if (getTarget().getCXXABI().isMicrosoft() &&
+        Type == StructorType::Complete && MD->getParent()->getNumVBases() == 0)
+      Type = StructorType::Base;
     GD = GlobalDecl(cast<CXXDestructorDecl>(MD), toCXXDtorType(Type));
   }
 

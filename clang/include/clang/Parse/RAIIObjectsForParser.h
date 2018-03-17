@@ -378,8 +378,6 @@ namespace clang {
       }
     }
     
-    enum { MaxDepth = 256 };
-    
     bool diagnoseOverflow();
     bool diagnoseMissingClose();
     

@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
@@ -26,7 +27,6 @@ class DWARFDie;
 class DWARFUnit;
 class DWARFDataExtractor;
 class DWARFDebugAbbrev;
-class DWARFDebugNames;
 class DataExtractor;
 struct DWARFSection;
 
@@ -234,6 +234,8 @@ private:
                                  const char *SectionName);
 
   unsigned verifyDebugNamesCULists(const DWARFDebugNames &AccelTable);
+  unsigned verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
+                                  const DataExtractor &StrData);
 
   /// Verify that the DWARF v5 accelerator table is valid.
   ///
@@ -242,6 +244,8 @@ private:
   ///   section and can be parsed.
   /// - The CU lists reference existing compile units.
   /// - The buckets have a valid index, or they are empty.
+  /// - All names are reachable via the hash table (they have the correct hash,
+  ///   and the hash is in the correct bucket).
   ///
   /// \param AccelSection section containing the acceleration table
   /// \param StrData string section

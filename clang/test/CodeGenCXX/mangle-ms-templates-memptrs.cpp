@@ -56,31 +56,31 @@ void ReadFields() {
 }
 
 // CHECK-LABEL: define {{.*}}ReadFields
-// CHECK: call {{.*}} @"\01??$ReadField@US@@$03@@YAHAAUS@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UM@@$0M@@@YAHAAUM@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UV@@$F7A@@@YAHAAUV@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UU@@$G3A@A@@@YAHAAUU@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@US@@$07@@YAHAAUS@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UM@@$0BA@@@YAHAAUM@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UV@@$FM@A@@@YAHAAUV@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UU@@$G7A@A@@@YAHAAUU@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@US@@$03@@YAHAAUS@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UM@@$0M@@@YAHAAUM@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UV@@$F7A@@@YAHAAUV@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UU@@$G3A@A@@@YAHAAUU@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@US@@$07@@YAHAAUS@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UM@@$0BA@@@YAHAAUM@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UV@@$FM@A@@@YAHAAUV@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UU@@$G7A@A@@@YAHAAUU@@@Z"
 
 // MSVC mangles null member pointers in function templates wrong, but it gets
 // them right in class templates.
-// CHECK: call {{.*}} @"\01??$ReadField@US@@$0A@@@YAHAAUS@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UM@@$0A@@@YAHAAUM@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UV@@$0A@@@YAHAAUV@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UU@@$0A@@@YAHAAUU@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@US@@$0A@@@YAHAAUS@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UM@@$0A@@@YAHAAUM@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UV@@$0A@@@YAHAAUV@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UU@@$0A@@@YAHAAUU@@@Z"
 
 // Non-polymorphic null data memptr vs first field memptr.  MSVC mangles these
 // the same.
-// CHECK: call {{.*}} @"\01??$ReadField@UA@@$0A@@@YAHAAUA@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UA@@$0?0@@YAHAAUA@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UA@@$0A@@@YAHAAUA@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UA@@$0?0@@YAHAAUA@@@Z"
 
 // Indirect fields are handled as-if they were simply members of their enclosing
 // record.
-// CHECK: call {{.*}} @"\01??$ReadField@UI@@$0A@@@YAHAAUI@@@Z"
-// CHECK: call {{.*}} @"\01??$ReadField@UI@@$03@@YAHAAUI@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UI@@$0A@@@YAHAAUI@@@Z"
+// CHECK: call {{.*}} @"??$ReadField@UI@@$03@@YAHAAUI@@@Z"
 
 // Test member function pointers.
 template <typename T, void (T::*MFP)()>
@@ -119,10 +119,10 @@ void CallMethods() {
 }
 
 // CHECK-LABEL: define {{.*}}CallMethods
-// CHECK: call {{.*}} @"\01??$CallMethod@US@@$1?f@1@QAEXXZ@@YAXAAUS@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UM@@$H?f@1@QAEXXZA@@@YAXAAUM@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UV@@$I?f@1@QAEXXZA@A@@@YAXAAUV@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UU@@$J?f@1@QAEXXZA@A@A@@@YAXAAUU@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@US@@$1?f@1@QAEXXZ@@YAXAAUS@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UM@@$H?f@1@QAEXXZA@@@YAXAAUM@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UV@@$I?f@1@QAEXXZA@A@@@YAXAAUV@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UU@@$J?f@1@QAEXXZA@A@A@@@YAXAAUU@@@Z"
 
 // PR17034: MSVC reuses the same thunk for every virtual g method because they
 // are all at vftable offset zero.  They then mangle the name of the first thunk
@@ -130,17 +130,17 @@ void CallMethods() {
 // bug.  We don't follow them here.  Instead of ?_91@ backref below, they would
 // get ?_9S@@ in every instantiation after the first.
 
-// CHECK: call {{.*}} @"\01??$CallMethod@US@@$1??_91@$BA@AE@@YAXAAUS@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UM@@$H??_91@$BA@AEA@@@YAXAAUM@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UV@@$I??_91@$BA@AEA@A@@@YAXAAUV@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UU@@$J??_91@$BA@AEA@A@A@@@YAXAAUU@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@US@@$1??_91@$BA@AE@@YAXAAUS@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UM@@$H??_91@$BA@AEA@@@YAXAAUM@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UV@@$I??_91@$BA@AEA@A@@@YAXAAUV@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UU@@$J??_91@$BA@AEA@A@A@@@YAXAAUU@@@Z"
 
-// CHECK: call {{.*}} @"\01??$CallMethod@UO@@$H??_91@$BA@AE3@@YAXAAUO@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UO@@$H??_91@$BA@AE3@@YAXAAUO@@@Z"
 
-// CHECK: call {{.*}} @"\01??$CallMethod@US@@$0A@@@YAXAAUS@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UM@@$0A@@@YAXAAUM@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UV@@$0A@@@YAXAAUV@@@Z"
-// CHECK: call {{.*}} @"\01??$CallMethod@UU@@$0A@@@YAXAAUU@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@US@@$0A@@@YAXAAUS@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UM@@$0A@@@YAXAAUM@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UV@@$0A@@@YAXAAUV@@@Z"
+// CHECK: call {{.*}} @"??$CallMethod@UU@@$0A@@@YAXAAUU@@@Z"
 
 namespace NegativeNVOffset {
 struct A {};
@@ -152,4 +152,4 @@ struct C : B {
 
 template void CallMethod<NegativeNVOffset::C, &NegativeNVOffset::C::f>(NegativeNVOffset::C &);
 
-// CHECK-LABEL: define {{.*}} @"\01??$CallMethod@UC@NegativeNVOffset@@$I??_912@$BA@AEPPPPPPPM@A@@@YAXAAUC@NegativeNVOffset@@@Z"
+// CHECK-LABEL: define {{.*}} @"??$CallMethod@UC@NegativeNVOffset@@$I??_912@$BA@AEPPPPPPPM@A@@@YAXAAUC@NegativeNVOffset@@@Z"

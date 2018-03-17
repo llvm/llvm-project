@@ -130,7 +130,7 @@ defm AnyReg : SystemZRegClass<"AnyReg",
                               [i64, f64, v8i8, v4i16, v2i32, v2f32], 64,
                               (add (sequence "R%uD", 0, 15),
                                    (sequence "F%uD", 0, 15),
-                                   (sequence "V%u", 0, 15))>;
+                                   (sequence "V%u", 0, 15)), 0/*allocatable*/>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point registers

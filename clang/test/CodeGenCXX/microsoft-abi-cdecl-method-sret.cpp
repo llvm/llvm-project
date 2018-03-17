@@ -19,9 +19,9 @@ S C::variadic_sret(const char *f, ...) { return S(); }
 S C::cdecl_sret() { return S(); }
 S C::byval_and_sret(S a) { return S(); }
 
-// CHECK: define dso_local void @"\01?variadic_sret@C@@QAA?AUS@@PBDZZ"(%struct.C* %this, %struct.S* noalias sret %agg.result, i8* %f, ...)
-// CHECK: define dso_local void @"\01?cdecl_sret@C@@QAA?AUS@@XZ"(%struct.C* %this, %struct.S* noalias sret %agg.result)
-// CHECK: define dso_local void @"\01?byval_and_sret@C@@QAA?AUS@@U2@@Z"(%struct.C* %this, %struct.S* noalias sret %agg.result, %struct.S* byval align 4 %a)
+// CHECK: define dso_local void @"?variadic_sret@C@@QAA?AUS@@PBDZZ"(%struct.C* %this, %struct.S* noalias sret %agg.result, i8* %f, ...)
+// CHECK: define dso_local void @"?cdecl_sret@C@@QAA?AUS@@XZ"(%struct.C* %this, %struct.S* noalias sret %agg.result)
+// CHECK: define dso_local void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"(%struct.C* %this, %struct.S* noalias sret %agg.result, %struct.S* byval align 4 %a)
 
 int main() {
   C c;
@@ -30,9 +30,9 @@ int main() {
   c.byval_and_sret(S());
 }
 // CHECK-LABEL: define dso_local i32 @main()
-// CHECK: call void {{.*}} @"\01?variadic_sret@C@@QAA?AUS@@PBDZZ"
-// CHECK: call void @"\01?cdecl_sret@C@@QAA?AUS@@XZ"
-// CHECK: call void @"\01?byval_and_sret@C@@QAA?AUS@@U2@@Z"
+// CHECK: call void {{.*}} @"?variadic_sret@C@@QAA?AUS@@PBDZZ"
+// CHECK: call void @"?cdecl_sret@C@@QAA?AUS@@XZ"
+// CHECK: call void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"
 
 // __fastcall has similar issues.
 struct A {
@@ -41,4 +41,4 @@ struct A {
 S A::f(int x) {
   return S();
 }
-// CHECK-LABEL: define dso_local x86_fastcallcc void @"\01?f@A@@QAI?AUS@@H@Z"(%struct.A* inreg %this, %struct.S* inreg noalias sret %agg.result, i32 %x)
+// CHECK-LABEL: define dso_local x86_fastcallcc void @"?f@A@@QAI?AUS@@H@Z"(%struct.A* inreg %this, %struct.S* inreg noalias sret %agg.result, i32 %x)

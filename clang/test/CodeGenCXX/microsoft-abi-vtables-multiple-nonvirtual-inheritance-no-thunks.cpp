@@ -24,8 +24,8 @@ struct X : A, B {
   // CHECK-LABEL: VFTable indices for 'test1::X' (1 entry)
   // CHECK-NEXT:   0 | void test1::X::f()
 
-  // MANGLING-DAG: @"\01??_7X@test1@@6BA@1@@"
-  // MANGLING-DAG: @"\01??_7X@test1@@6BB@1@@"
+  // MANGLING-DAG: @"??_7X@test1@@6BA@1@@"
+  // MANGLING-DAG: @"??_7X@test1@@6BB@1@@"
 
   // Overrides only the left child's method (A::f), needs no thunks.
   virtual void f();
@@ -108,7 +108,7 @@ struct X : Empty, A {
   // CHECK-LABEL: VFTable indices for 'test4::X' (1 entry).
   // CHECK-NEXT:   0 | void test4::X::f()
 
-  // MANGLING-DAG: @"\01??_7X@test4@@6B@"
+  // MANGLING-DAG: @"??_7X@test4@@6B@"
 
   virtual void f();
 } x;
@@ -141,8 +141,8 @@ struct X : C {
   // CHECK-LABEL: VFTable indices for 'test5::X' (1 entry).
   // CHECK-NEXT:   0 | void test5::X::f()
 
-  // MANGLING-DAG: @"\01??_7X@test5@@6BA@1@@"
-  // MANGLING-DAG: @"\01??_7X@test5@@6BB@1@@"
+  // MANGLING-DAG: @"??_7X@test5@@6BA@1@@"
+  // MANGLING-DAG: @"??_7X@test5@@6BB@1@@"
 
   // Overrides both C::f and A::f.
   virtual void f();
@@ -241,8 +241,8 @@ struct X : A, B {
   // CHECK-LABEL: VFTable indices for 'test8::X' (1 entry).
   // CHECK-NEXT:   1 | void test8::X::h()
 
-  // MANGLING-DAG: @"\01??_7X@test8@@6BA@1@@"
-  // MANGLING-DAG: @"\01??_7X@test8@@6BB@1@@"
+  // MANGLING-DAG: @"??_7X@test8@@6BA@1@@"
+  // MANGLING-DAG: @"??_7X@test8@@6BB@1@@"
 
   virtual void h();
 } x;
@@ -290,10 +290,10 @@ struct X : C, D {
   // CHECK-LABEL: VFTable indices for 'test9::X' (1 entry).
   // CHECK-NEXT:   1 | void test9::X::z()
 
-  // MANGLING-DAG: @"\01??_7X@test9@@6BA@1@C@1@@"
-  // MANGLING-DAG: @"\01??_7X@test9@@6BA@1@D@1@@"
-  // MANGLING-DAG: @"\01??_7X@test9@@6BB@1@C@1@@"
-  // MANGLING-DAG: @"\01??_7X@test9@@6BB@1@D@1@@"
+  // MANGLING-DAG: @"??_7X@test9@@6BA@1@C@1@@"
+  // MANGLING-DAG: @"??_7X@test9@@6BA@1@D@1@@"
+  // MANGLING-DAG: @"??_7X@test9@@6BB@1@C@1@@"
+  // MANGLING-DAG: @"??_7X@test9@@6BB@1@D@1@@"
 
   virtual void z();
 } x;

@@ -48,46 +48,28 @@ def nImmVMOVI32 : Operand<i32> {
   let ParserMatchClass = nImmVMOVI32AsmOperand;
 }
 
-def nImmVMOVI16AsmOperandByteReplicate :
-  AsmOperandClass {
-  let Name = "NEONi16vmovByteReplicate";
-  let PredicateMethod = "isNEONi16ByteReplicate";
-  let RenderMethod = "addNEONvmovByteReplicateOperands";
-}
-def nImmVMOVI32AsmOperandByteReplicate :
-  AsmOperandClass {
-  let Name = "NEONi32vmovByteReplicate";
-  let PredicateMethod = "isNEONi32ByteReplicate";
-  let RenderMethod = "addNEONvmovByteReplicateOperands";
-}
-def nImmVMVNI16AsmOperandByteReplicate :
-  AsmOperandClass {
-  let Name = "NEONi16invByteReplicate";
-  let PredicateMethod = "isNEONi16ByteReplicate";
-  let RenderMethod = "addNEONinvByteReplicateOperands";
-}
-def nImmVMVNI32AsmOperandByteReplicate :
-  AsmOperandClass {
-  let Name = "NEONi32invByteReplicate";
-  let PredicateMethod = "isNEONi32ByteReplicate";
-  let RenderMethod = "addNEONinvByteReplicateOperands";
+class nImmVMOVIAsmOperandReplicate<ValueType From, ValueType To>
+  : AsmOperandClass {
+  let Name = "NEONi" # To.Size # "vmovi" # From.Size # "Replicate";
+  let PredicateMethod = "isNEONmovReplicate<" # From.Size # ", " # To.Size # ">";
+  let RenderMethod = "addNEONvmovi" # From.Size # "ReplicateOperands";
 }
 
-def nImmVMOVI16ByteReplicate : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
-  let ParserMatchClass = nImmVMOVI16AsmOperandByteReplicate;
+class nImmVINVIAsmOperandReplicate<ValueType From, ValueType To>
+  : AsmOperandClass {
+  let Name = "NEONi" # To.Size # "invi" # From.Size # "Replicate";
+  let PredicateMethod = "isNEONinvReplicate<" # From.Size # ", " # To.Size # ">";
+  let RenderMethod = "addNEONinvi" # From.Size # "ReplicateOperands";
 }
-def nImmVMOVI32ByteReplicate : Operand<i32> {
+
+class nImmVMOVIReplicate<ValueType From, ValueType To> : Operand<i32> {
   let PrintMethod = "printNEONModImmOperand";
-  let ParserMatchClass = nImmVMOVI32AsmOperandByteReplicate;
+  let ParserMatchClass = nImmVMOVIAsmOperandReplicate<From, To>;
 }
-def nImmVMVNI16ByteReplicate : Operand<i32> {
+
+class nImmVINVIReplicate<ValueType From, ValueType To> : Operand<i32> {
   let PrintMethod = "printNEONModImmOperand";
-  let ParserMatchClass = nImmVMVNI16AsmOperandByteReplicate;
-}
-def nImmVMVNI32ByteReplicate : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
-  let ParserMatchClass = nImmVMVNI32AsmOperandByteReplicate;
+  let ParserMatchClass = nImmVINVIAsmOperandReplicate<From, To>;
 }
 
 def nImmVMOVI32NegAsmOperand : AsmOperandClass { let Name = "NEONi32vmovNeg"; }
@@ -5933,34 +5915,57 @@ def VMOVv4f32 : N1ModImm<1, 0b000, 0b1111, 0, 1, 0, 1, (outs QPR:$Vd),
 } // isReMaterializable, isAsCheapAsAMove
 
 // Add support for bytes replication feature, so it could be GAS compatible.
-// E.g. instructions below:
-// "vmov.i32 d0, 0xffffffff"
-// "vmov.i32 d0, 0xabababab"
-// "vmov.i16 d0, 0xabab"
-// are incorrect, but we could deal with such cases.
-// For last two instructions, for example, it should emit:
-// "vmov.i8 d0, 0xab"
-def : NEONInstAlias<"vmov${p}.i16 $Vd, $Vm",
-                    (VMOVv8i8 DPR:$Vd, nImmVMOVI16ByteReplicate:$Vm, pred:$p)>;
-def : NEONInstAlias<"vmov${p}.i32 $Vd, $Vm",
-                    (VMOVv8i8 DPR:$Vd, nImmVMOVI32ByteReplicate:$Vm, pred:$p)>;
-def : NEONInstAlias<"vmov${p}.i16 $Vd, $Vm",
-                    (VMOVv16i8 QPR:$Vd, nImmVMOVI16ByteReplicate:$Vm, pred:$p)>;
-def : NEONInstAlias<"vmov${p}.i32 $Vd, $Vm",
-                    (VMOVv16i8 QPR:$Vd, nImmVMOVI32ByteReplicate:$Vm, pred:$p)>;
+multiclass NEONImmReplicateI8InstAlias<ValueType To> {
+  // E.g. instructions below:
+  // "vmov.i32 d0, #0xffffffff"
+  // "vmov.i32 d0, #0xabababab"
+  // "vmov.i16 d0, #0xabab"
+  // are incorrect, but we could deal with such cases.
+  // For last two instructions, for example, it should emit:
+  // "vmov.i8 d0, #0xab"
+  def : NEONInstAlias<"vmov${p}.i" # To.Size # " $Vd, $Vm",
+                      (VMOVv8i8 DPR:$Vd, nImmVMOVIReplicate<i8, To>:$Vm, pred:$p)>;
+  def : NEONInstAlias<"vmov${p}.i" # To.Size # " $Vd, $Vm",
+                      (VMOVv16i8 QPR:$Vd, nImmVMOVIReplicate<i8, To>:$Vm, pred:$p)>;
+  // Also add same support for VMVN instructions. So instruction:
+  // "vmvn.i32 d0, #0xabababab"
+  // actually means:
+  // "vmov.i8 d0, #0x54"
+  def : NEONInstAlias<"vmvn${p}.i" # To.Size # " $Vd, $Vm",
+                      (VMOVv8i8 DPR:$Vd, nImmVINVIReplicate<i8, To>:$Vm, pred:$p)>;
+  def : NEONInstAlias<"vmvn${p}.i" # To.Size # " $Vd, $Vm",
+                      (VMOVv16i8 QPR:$Vd, nImmVINVIReplicate<i8, To>:$Vm, pred:$p)>;
+}
 
-// Also add same support for VMVN instructions. So instruction:
-// "vmvn.i32 d0, 0xabababab"
-// actually means:
-// "vmov.i8 d0, 0x54"
-def : NEONInstAlias<"vmvn${p}.i16 $Vd, $Vm",
-                    (VMOVv8i8 DPR:$Vd, nImmVMVNI16ByteReplicate:$Vm, pred:$p)>;
-def : NEONInstAlias<"vmvn${p}.i32 $Vd, $Vm",
-                    (VMOVv8i8 DPR:$Vd, nImmVMVNI32ByteReplicate:$Vm, pred:$p)>;
-def : NEONInstAlias<"vmvn${p}.i16 $Vd, $Vm",
-                    (VMOVv16i8 QPR:$Vd, nImmVMVNI16ByteReplicate:$Vm, pred:$p)>;
-def : NEONInstAlias<"vmvn${p}.i32 $Vd, $Vm",
-                    (VMOVv16i8 QPR:$Vd, nImmVMVNI32ByteReplicate:$Vm, pred:$p)>;
+defm : NEONImmReplicateI8InstAlias<i16>;
+defm : NEONImmReplicateI8InstAlias<i32>;
+defm : NEONImmReplicateI8InstAlias<i64>;
+
+// Similar to above for types other than i8, e.g.:
+// "vmov.i32 d0, #0xab00ab00" -> "vmov.i16 d0, #0xab00"
+// "vmvn.i64 q0, #0xab000000ab000000" -> "vmvn.i32 q0, #0xab000000"
+// In this case we do not canonicalize VMVN to VMOV
+multiclass NEONImmReplicateInstAlias<ValueType From, NeonI V8, NeonI V16,
+                                     NeonI NV8, NeonI NV16, ValueType To> {
+  def : NEONInstAlias<"vmov${p}.i" # To.Size # " $Vd, $Vm",
+                      (V8 DPR:$Vd, nImmVMOVIReplicate<From, To>:$Vm, pred:$p)>;
+  def : NEONInstAlias<"vmov${p}.i" # To.Size # " $Vd, $Vm",
+                      (V16 QPR:$Vd, nImmVMOVIReplicate<From, To>:$Vm, pred:$p)>;
+  def : NEONInstAlias<"vmvn${p}.i" # To.Size # " $Vd, $Vm",
+                      (NV8 DPR:$Vd, nImmVMOVIReplicate<From, To>:$Vm, pred:$p)>;
+  def : NEONInstAlias<"vmvn${p}.i" # To.Size # " $Vd, $Vm",
+                      (NV16 QPR:$Vd, nImmVMOVIReplicate<From, To>:$Vm, pred:$p)>;
+}
+
+defm : NEONImmReplicateInstAlias<i16, VMOVv4i16, VMOVv8i16,
+                                      VMVNv4i16, VMVNv8i16, i32>;
+defm : NEONImmReplicateInstAlias<i16, VMOVv4i16, VMOVv8i16,
+                                      VMVNv4i16, VMVNv8i16, i64>;
+defm : NEONImmReplicateInstAlias<i32, VMOVv2i32, VMOVv4i32,
+                                      VMVNv2i32, VMVNv4i32, i64>;
+// TODO: add "VMOV <-> VMVN" conversion for cases like
+// "vmov.i32 d0, #0xffaaffaa" -> "vmvn.i16 d0, #0x55"
+// "vmvn.i32 d0, #0xaaffaaff" -> "vmov.i16 d0, #0xff00"
 
 // On some CPUs the two instructions "vmov.i32 dD, #0" and "vmov.i32 qD, #0"
 // require zero cycles to execute so they should be used wherever possible for

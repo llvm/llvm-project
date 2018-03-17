@@ -1857,7 +1857,22 @@ public:
     return ARM_AM::isNEONi32splat(~Value);
   }
 
-  bool isNEONByteReplicate(unsigned NumBytes) const {
+  static bool isValidNEONi32vmovImm(int64_t Value) {
+    // i32 value with set bits only in one byte X000, 0X00, 00X0, or 000X,
+    // for VMOV/VMVN only, 00Xf or 0Xff are also accepted.
+    return ((Value & 0xffffffffffffff00) == 0) ||
+           ((Value & 0xffffffffffff00ff) == 0) ||
+           ((Value & 0xffffffffff00ffff) == 0) ||
+           ((Value & 0xffffffff00ffffff) == 0) ||
+           ((Value & 0xffffffffffff00ff) == 0xff) ||
+           ((Value & 0xffffffffff00ffff) == 0xffff);
+  }
+
+  bool isNEONReplicate(unsigned Width, unsigned NumElems, bool Inv,
+                       bool AllowMinusOne) const {
+    assert(Width == 8 || Width == 16 || Width == 32 && "Invalid element width");
+    assert(NumElems * Width <= 64 && "Invalid result width");
+
     if (!isImm())
       return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
@@ -1867,18 +1882,48 @@ public:
     int64_t Value = CE->getValue();
     if (!Value)
       return false; // Don't bother with zero.
+    if (Inv)
+      Value = ~Value;
 
-    unsigned char B = Value & 0xff;
-    for (unsigned i = 1; i < NumBytes; ++i) {
-      Value >>= 8;
-      if ((Value & 0xff) != B)
+    uint64_t Mask = (1ull << Width) - 1;
+    uint64_t Elem = Value & Mask;
+    if (!AllowMinusOne && Elem == Mask)
+      return false;
+    if (Width == 16 && (Elem & 0x00ff) != 0 && (Elem & 0xff00) != 0)
+      return false;
+    if (Width == 32 && !isValidNEONi32vmovImm(Elem))
+      return false;
+
+    for (unsigned i = 1; i < NumElems; ++i) {
+      Value >>= Width;
+      if ((Value & Mask) != Elem)
         return false;
     }
     return true;
   }
 
-  bool isNEONi16ByteReplicate() const { return isNEONByteReplicate(2); }
-  bool isNEONi32ByteReplicate() const { return isNEONByteReplicate(4); }
+  bool isNEONByteReplicate(unsigned NumBytes) const {
+    return isNEONReplicate(8, NumBytes, false, true);
+  }
+
+  static void checkNeonReplicateArgs(unsigned FromW, unsigned ToW) {
+    assert(FromW == 8 || FromW == 16 || FromW == 32 && "Invalid source width");
+    assert(ToW == 16 || ToW == 32 || ToW == 64 && "Invalid destination width");
+    assert(FromW < ToW && "ToW is not less than FromW");
+  }
+
+  template<unsigned FromW, unsigned ToW>
+  bool isNEONmovReplicate() const {
+    checkNeonReplicateArgs(FromW, ToW);
+    bool AllowMinusOne = ToW != 64;
+    return isNEONReplicate(FromW, ToW / FromW, false, AllowMinusOne);
+  }
+
+  template<unsigned FromW, unsigned ToW>
+  bool isNEONinvReplicate() const {
+    checkNeonReplicateArgs(FromW, ToW);
+    return isNEONReplicate(FromW, ToW / FromW, true, true);
+  }
 
   bool isNEONi32vmov() const {
     if (isNEONByteReplicate(4))
@@ -1889,16 +1934,7 @@ public:
     // Must be a constant.
     if (!CE)
       return false;
-    int64_t Value = CE->getValue();
-    // i32 value with set bits only in one byte X000, 0X00, 00X0, or 000X,
-    // for VMOV/VMVN only, 00Xf or 0Xff are also accepted.
-    // FIXME: This is probably wrong and a copy and paste from previous example
-    return (Value >= 0 && Value < 256) ||
-      (Value >= 0x0100 && Value <= 0xff00) ||
-      (Value >= 0x010000 && Value <= 0xff0000) ||
-      (Value >= 0x01000000 && Value <= 0xff000000) ||
-      (Value >= 0x01ff && Value <= 0xffff && (Value & 0xff) == 0xff) ||
-      (Value >= 0x01ffff && Value <= 0xffffff && (Value & 0xffff) == 0xffff);
+    return isValidNEONi32vmovImm(CE->getValue());
   }
 
   bool isNEONi32vmovNeg() const {
@@ -1906,16 +1942,7 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     // Must be a constant.
     if (!CE) return false;
-    int64_t Value = ~CE->getValue();
-    // i32 value with set bits only in one byte X000, 0X00, 00X0, or 000X,
-    // for VMOV/VMVN only, 00Xf or 0Xff are also accepted.
-    // FIXME: This is probably wrong and a copy and paste from previous example
-    return (Value >= 0 && Value < 256) ||
-      (Value >= 0x0100 && Value <= 0xff00) ||
-      (Value >= 0x010000 && Value <= 0xff0000) ||
-      (Value >= 0x01000000 && Value <= 0xff000000) ||
-      (Value >= 0x01ff && Value <= 0xffff && (Value & 0xff) == 0xff) ||
-      (Value >= 0x01ffff && Value <= 0xffffff && (Value & 0xffff) == 0xffff);
+    return isValidNEONi32vmovImm(~CE->getValue());
   }
 
   bool isNEONi64splat() const {
@@ -2733,60 +2760,85 @@ public:
     Inst.addOperand(MCOperand::createImm(Value));
   }
 
-  void addNEONinvByteReplicateOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
+  void addNEONi8ReplicateOperands(MCInst &Inst, bool Inv) const {
     // The immediate encodes the type of constant as well as the value.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    unsigned Value = CE->getValue();
     assert((Inst.getOpcode() == ARM::VMOVv8i8 ||
             Inst.getOpcode() == ARM::VMOVv16i8) &&
-           "All vmvn instructions that wants to replicate non-zero byte "
-           "always must be replaced with VMOVv8i8 or VMOVv16i8.");
-    unsigned B = ((~Value) & 0xff);
+          "All instructions that wants to replicate non-zero byte "
+          "always must be replaced with VMOVv8i8 or VMOVv16i8.");
+    unsigned Value = CE->getValue();
+    if (Inv)
+      Value = ~Value;
+    unsigned B = Value & 0xff;
     B |= 0xe00; // cmode = 0b1110
     Inst.addOperand(MCOperand::createImm(B));
+  }
+
+  void addNEONinvi8ReplicateOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    addNEONi8ReplicateOperands(Inst, true);
+  }
+
+  static unsigned encodeNeonVMOVImmediate(unsigned Value) {
+    if (Value >= 256 && Value <= 0xffff)
+      Value = (Value >> 8) | ((Value & 0xff) ? 0xc00 : 0x200);
+    else if (Value > 0xffff && Value <= 0xffffff)
+      Value = (Value >> 16) | ((Value & 0xff) ? 0xd00 : 0x400);
+    else if (Value > 0xffffff)
+      Value = (Value >> 24) | 0x600;
+    return Value;
   }
 
   void addNEONi32vmovOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    unsigned Value = CE->getValue();
-    if (Value >= 256 && Value <= 0xffff)
-      Value = (Value >> 8) | ((Value & 0xff) ? 0xc00 : 0x200);
-    else if (Value > 0xffff && Value <= 0xffffff)
-      Value = (Value >> 16) | ((Value & 0xff) ? 0xd00 : 0x400);
-    else if (Value > 0xffffff)
-      Value = (Value >> 24) | 0x600;
+    unsigned Value = encodeNeonVMOVImmediate(CE->getValue());
     Inst.addOperand(MCOperand::createImm(Value));
   }
 
-  void addNEONvmovByteReplicateOperands(MCInst &Inst, unsigned N) const {
+  void addNEONvmovi8ReplicateOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    // The immediate encodes the type of constant as well as the value.
+    addNEONi8ReplicateOperands(Inst, false);
+  }
+
+  void addNEONvmovi16ReplicateOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    unsigned Value = CE->getValue();
-    assert((Inst.getOpcode() == ARM::VMOVv8i8 ||
-            Inst.getOpcode() == ARM::VMOVv16i8) &&
-           "All instructions that wants to replicate non-zero byte "
-           "always must be replaced with VMOVv8i8 or VMOVv16i8.");
-    unsigned B = Value & 0xff;
-    B |= 0xe00; // cmode = 0b1110
-    Inst.addOperand(MCOperand::createImm(B));
+    assert((Inst.getOpcode() == ARM::VMOVv4i16 ||
+            Inst.getOpcode() == ARM::VMOVv8i16 ||
+            Inst.getOpcode() == ARM::VMVNv4i16 ||
+            Inst.getOpcode() == ARM::VMVNv8i16) &&
+          "All instructions that want to replicate non-zero half-word "
+          "always must be replaced with V{MOV,MVN}v{4,8}i16.");
+    uint64_t Value = CE->getValue();
+    unsigned Elem = Value & 0xffff;
+    if (Elem >= 256)
+      Elem = (Elem >> 8) | 0x200;
+    Inst.addOperand(MCOperand::createImm(Elem));
   }
 
   void addNEONi32vmovNegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    unsigned Value = ~CE->getValue();
-    if (Value >= 256 && Value <= 0xffff)
-      Value = (Value >> 8) | ((Value & 0xff) ? 0xc00 : 0x200);
-    else if (Value > 0xffff && Value <= 0xffffff)
-      Value = (Value >> 16) | ((Value & 0xff) ? 0xd00 : 0x400);
-    else if (Value > 0xffffff)
-      Value = (Value >> 24) | 0x600;
+    unsigned Value = encodeNeonVMOVImmediate(~CE->getValue());
     Inst.addOperand(MCOperand::createImm(Value));
+  }
+
+  void addNEONvmovi32ReplicateOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    assert((Inst.getOpcode() == ARM::VMOVv2i32 ||
+            Inst.getOpcode() == ARM::VMOVv4i32 ||
+            Inst.getOpcode() == ARM::VMVNv2i32 ||
+            Inst.getOpcode() == ARM::VMVNv4i32) &&
+          "All instructions that want to replicate non-zero word "
+          "always must be replaced with V{MOV,MVN}v{2,4}i32.");
+    uint64_t Value = CE->getValue();
+    unsigned Elem = encodeNeonVMOVImmediate(Value & 0xffffffff);
+    Inst.addOperand(MCOperand::createImm(Elem));
   }
 
   void addNEONi64splatOperands(MCInst &Inst, unsigned N) const {

@@ -1262,7 +1262,7 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
       if (RebuildTemplateParamsInCurrentInstantiation(TemplateParams))
         Invalid = true;
     } else if (TUK != TUK_Friend && TUK != TUK_Reference)
-      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc);
+      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc, false);
 
     LookupQualifiedName(Previous, SemanticContext);
   } else {
@@ -7124,120 +7124,43 @@ static bool CheckTemplateSpecializationScope(Sema &S,
   }
 
   // C++ [temp.expl.spec]p2:
-  //   An explicit specialization shall be declared in the namespace
-  //   of which the template is a member, or, for member templates, in
-  //   the namespace of which the enclosing class or enclosing class
-  //   template is a member. An explicit specialization of a member
-  //   function, member class or static data member of a class
-  //   template shall be declared in the namespace of which the class
-  //   template is a member. Such a declaration may also be a
-  //   definition. If the declaration is not a definition, the
-  //   specialization may be defined later in the name- space in which
-  //   the explicit specialization was declared, or in a namespace
-  //   that encloses the one in which the explicit specialization was
-  //   declared.
+  //   An explicit specialization may be declared in any scope in which
+  //   the corresponding primary template may be defined.
   if (S.CurContext->getRedeclContext()->isFunctionOrMethod()) {
     S.Diag(Loc, diag::err_template_spec_decl_function_scope)
       << Specialized;
     return true;
   }
 
-  if (S.CurContext->isRecord() && !IsPartialSpecialization) {
-    if (S.getLangOpts().MicrosoftExt) {
-      // Do not warn for class scope explicit specialization during
-      // instantiation, warning was already emitted during pattern
-      // semantic analysis.
-      if (!S.inTemplateInstantiation())
-        S.Diag(Loc, diag::ext_function_specialization_in_class)
-          << Specialized;
-    } else {
-      S.Diag(Loc, diag::err_template_spec_decl_class_scope)
-        << Specialized;
-      return true;
-    }
-  }
-
-  if (S.CurContext->isRecord() &&
-      !S.CurContext->Equals(Specialized->getDeclContext())) {
-    // Make sure that we're specializing in the right record context.
-    // Otherwise, things can go horribly wrong.
-    S.Diag(Loc, diag::err_template_spec_decl_class_scope)
-      << Specialized;
-    return true;
-  }
-
   // C++ [temp.class.spec]p6:
-  //   A class template partial specialization may be declared or redeclared
-  //   in any namespace scope in which its definition may be defined (14.5.1
-  //   and 14.5.2).
-  DeclContext *SpecializedContext
-    = Specialized->getDeclContext()->getEnclosingNamespaceContext();
-  DeclContext *DC = S.CurContext->getEnclosingNamespaceContext();
+  //   A class template partial specialization may be declared in any
+  //   scope in which the primary template may be defined.
+  DeclContext *SpecializedContext =
+      Specialized->getDeclContext()->getRedeclContext();
+  DeclContext *DC = S.CurContext->getRedeclContext();
 
-  // Make sure that this redeclaration (or definition) occurs in an enclosing
-  // namespace.
-  // Note that HandleDeclarator() performs this check for explicit
-  // specializations of function templates, static data members, and member
-  // functions, so we skip the check here for those kinds of entities.
-  // FIXME: HandleDeclarator's diagnostics aren't quite as good, though.
-  // Should we refactor that check, so that it occurs later?
-  if (!DC->Encloses(SpecializedContext) &&
-      !(isa<FunctionTemplateDecl>(Specialized) ||
-        isa<FunctionDecl>(Specialized) ||
-        isa<VarTemplateDecl>(Specialized) ||
-        isa<VarDecl>(Specialized))) {
+  // Make sure that this redeclaration (or definition) occurs in the same
+  // scope or an enclosing namespace.
+  if (!(DC->isFileContext() ? DC->Encloses(SpecializedContext)
+                            : DC->Equals(SpecializedContext))) {
     if (isa<TranslationUnitDecl>(SpecializedContext))
       S.Diag(Loc, diag::err_template_spec_redecl_global_scope)
         << EntityKind << Specialized;
-    else if (isa<NamespaceDecl>(SpecializedContext)) {
+    else {
+      auto *ND = cast<NamedDecl>(SpecializedContext);
       int Diag = diag::err_template_spec_redecl_out_of_scope;
-      if (S.getLangOpts().MicrosoftExt)
+      if (S.getLangOpts().MicrosoftExt && !DC->isRecord())
         Diag = diag::ext_ms_template_spec_redecl_out_of_scope;
       S.Diag(Loc, Diag) << EntityKind << Specialized
-                        << cast<NamedDecl>(SpecializedContext);
-    } else
-      llvm_unreachable("unexpected namespace context for specialization");
+                        << ND << isa<CXXRecordDecl>(ND);
+    }
 
     S.Diag(Specialized->getLocation(), diag::note_specialized_entity);
-  } else if ((!PrevDecl ||
-              getTemplateSpecializationKind(PrevDecl) == TSK_Undeclared ||
-              getTemplateSpecializationKind(PrevDecl) ==
-                  TSK_ImplicitInstantiation)) {
-    // C++ [temp.exp.spec]p2:
-    //   An explicit specialization shall be declared in the namespace of which
-    //   the template is a member, or, for member templates, in the namespace
-    //   of which the enclosing class or enclosing class template is a member.
-    //   An explicit specialization of a member function, member class or
-    //   static data member of a class template shall be declared in the
-    //   namespace of which the class template is a member.
-    //
-    // C++11 [temp.expl.spec]p2:
-    //   An explicit specialization shall be declared in a namespace enclosing
-    //   the specialized template.
-    // C++11 [temp.explicit]p3:
-    //   An explicit instantiation shall appear in an enclosing namespace of its
-    //   template.
-    if (!DC->InEnclosingNamespaceSetOf(SpecializedContext)) {
-      bool IsCPlusPlus11Extension = DC->Encloses(SpecializedContext);
-      if (isa<TranslationUnitDecl>(SpecializedContext)) {
-        assert(!IsCPlusPlus11Extension &&
-               "DC encloses TU but isn't in enclosing namespace set");
-        S.Diag(Loc, diag::err_template_spec_decl_out_of_scope_global)
-          << EntityKind << Specialized;
-      } else if (isa<NamespaceDecl>(SpecializedContext)) {
-        int Diag;
-        if (!IsCPlusPlus11Extension)
-          Diag = diag::err_template_spec_decl_out_of_scope;
-        else if (!S.getLangOpts().CPlusPlus11)
-          Diag = diag::ext_template_spec_decl_out_of_scope;
-        else
-          Diag = diag::warn_cxx98_compat_template_spec_decl_out_of_scope;
-        S.Diag(Loc, Diag)
-          << EntityKind << Specialized << cast<NamedDecl>(SpecializedContext);
-      }
 
-      S.Diag(Specialized->getLocation(), diag::note_specialized_entity);
-    }
+    // Don't allow specializing in the wrong class during error recovery.
+    // Otherwise, things can go horribly wrong.
+    if (DC->isRecord())
+      return true;
   }
 
   return false;

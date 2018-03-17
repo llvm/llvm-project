@@ -41,10 +41,10 @@ TEST(HashTableTest, TestSimple) {
   EXPECT_EQ(0u, Table.size());
   EXPECT_GT(Table.capacity(), 0u);
 
-  Table.set_as(3, 7);
+  Table.set_as(3u, 7);
   EXPECT_EQ(1u, Table.size());
-  ASSERT_NE(Table.end(), Table.find_as(3));
-  EXPECT_EQ(7u, Table.get(3));
+  ASSERT_NE(Table.end(), Table.find_as(3u));
+  EXPECT_EQ(7u, Table.get(3u));
 }
 
 TEST(HashTableTest, TestCollision) {
@@ -73,14 +73,14 @@ TEST(HashTableTest, TestRemove) {
   EXPECT_EQ(0u, Table.size());
   EXPECT_GT(Table.capacity(), 0u);
 
-  Table.set_as(1, 2);
-  Table.set_as(3, 4);
+  Table.set_as(1u, 2);
+  Table.set_as(3u, 4);
   EXPECT_EQ(2u, Table.size());
-  ASSERT_NE(Table.end(), Table.find_as(1));
-  ASSERT_NE(Table.end(), Table.find_as(3));
+  ASSERT_NE(Table.end(), Table.find_as(1u));
+  ASSERT_NE(Table.end(), Table.find_as(3u));
 
-  EXPECT_EQ(2u, Table.get(1));
-  EXPECT_EQ(4u, Table.get(3));
+  EXPECT_EQ(2u, Table.get(1u));
+  EXPECT_EQ(4u, Table.get(3u));
 }
 
 TEST(HashTableTest, TestCollisionAfterMultipleProbes) {

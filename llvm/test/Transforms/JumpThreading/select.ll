@@ -157,12 +157,13 @@ L4:
 ; CHECK: test_switch_default
 ; CHECK: entry:
 ; CHECK: load
-; CHECK: icmp
+; CHECK: switch
 ; CHECK: [[THREADED:[A-Za-z.0-9]+]]:
 ; CHECK: store
 ; CHECK: br
 ; CHECK: L2:
-; CHECK: icmp
+; CHECK-SAME: preds = %entry, %entry
+; CHECK-NEXT: phi i32
 define void @test_switch_default(i32* nocapture %status) nounwind {
 entry:
   %0 = load i32, i32* %status, align 4

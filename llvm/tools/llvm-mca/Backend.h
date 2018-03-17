@@ -80,8 +80,6 @@ public:
       runCycle(Cycles++);
   }
 
-  unsigned getNumIterations() const { return SM.getNumIterations(); }
-  unsigned getNumInstructions() const { return SM.size(); }
   const Instruction &getInstruction(unsigned Index) const {
     const auto It = Instructions.find(Index);
     assert(It != Instructions.end() && "no running instructions with index");
@@ -89,20 +87,15 @@ public:
     return *It->second;
   }
   void eraseInstruction(unsigned Index) { Instructions.erase(Index); }
-  unsigned getNumCycles() const { return Cycles; }
   unsigned getTotalRegisterMappingsCreated() const {
     return DU->getTotalRegisterMappingsCreated();
   }
   unsigned getMaxUsedRegisterMappings() const {
     return DU->getMaxUsedRegisterMappings();
   }
-  unsigned getDispatchWidth() const { return DU->getDispatchWidth(); }
-
-  const llvm::MCSubtargetInfo &getSTI() const { return STI; }
   const llvm::MCSchedModel &getSchedModel() const {
     return STI.getSchedModel();
   }
-
   void getBuffersUsage(std::vector<BufferUsageEntry> &Usage) const {
     return HWS->getBuffersUsage(Usage);
   }
@@ -115,16 +108,6 @@ public:
   unsigned getNumDispatchGroupStalls() const {
     return DU->getNumDispatchGroupStalls();
   }
-
-  const llvm::MCInst &getMCInstFromIndex(unsigned Index) const {
-    return SM.getMCInstFromIndex(Index);
-  }
-
-  const InstrDesc &getInstrDesc(const llvm::MCInst &Inst) const {
-    return IB->getOrCreateInstrDesc(STI, Inst);
-  }
-
-  const SourceMgr &getSourceMgr() const { return SM; }
 
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);

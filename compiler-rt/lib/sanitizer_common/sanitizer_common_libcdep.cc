@@ -81,6 +81,32 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
 #endif
 }
 
+void ReportMmapWriteExec() {
+#if !SANITIZER_GO
+  ScopedErrorReportLock l;
+  SanitizerCommonDecorator d;
+
+  InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
+  BufferedStackTrace *stack = stack_buffer.data();
+  stack->Reset();
+  uptr top = 0;
+  uptr bottom = 0;
+  GET_CALLER_PC_BP_SP;
+  (void)sp;
+  bool fast = common_flags()->fast_unwind_on_fatal;
+  if (fast)
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+  stack->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, fast);
+
+  Printf("%s", d.Warning());
+  Report("WARNING: %s: writable-executable page usage\n", SanitizerToolName);
+  Printf("%s", d.Default());
+
+  stack->Print();
+  ReportErrorSummary("w-and-x-usage", stack);
+#endif
+}
+
 static void (*SoftRssLimitExceededCallback)(bool exceeded);
 void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
   CHECK_EQ(SoftRssLimitExceededCallback, nullptr);

@@ -1506,6 +1506,13 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LOAD, VecVT, Custom);
   }
 
+  for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v2i32, MVT::v4i16, MVT::v2i32}) {
+    setCondCodeAction(ISD::SETLT,  VT, Expand);
+    setCondCodeAction(ISD::SETLE,  VT, Expand);
+    setCondCodeAction(ISD::SETULT, VT, Expand);
+    setCondCodeAction(ISD::SETULE, VT, Expand);
+  }
+
   // Custom-lower bitcasts from i8 to v8i1.
   setOperationAction(ISD::BITCAST,        MVT::i8,    Custom);
   setOperationAction(ISD::SETCC,          MVT::v2i16, Custom);
@@ -2231,7 +2238,7 @@ HexagonTargetLowering::extractVector(SDValue VecV, SDValue IdxV,
     // position 0.
     assert(ty(IdxV) == MVT::i32);
     SDValue S0 = DAG.getNode(ISD::MUL, dl, MVT::i32, IdxV,
-                             DAG.getConstant(8, dl, MVT::i32));
+                             DAG.getConstant(8*Scale, dl, MVT::i32));
     SDValue T0 = DAG.getNode(HexagonISD::P2D, dl, MVT::i64, VecV);
     SDValue T1 = DAG.getNode(ISD::SRL, dl, MVT::i64, T0, S0);
     while (Scale > 1) {
