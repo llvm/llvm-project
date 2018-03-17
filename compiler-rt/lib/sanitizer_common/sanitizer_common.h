@@ -378,8 +378,6 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
 void ReportErrorSummary(const char *error_type, const StackTrace *trace,
                         const char *alt_tool_name = nullptr);
 
-void ReportMmapWriteExec();
-
 // Math
 #if SANITIZER_WINDOWS && !defined(__clang__) && !defined(__GNUC__)
 extern "C" {
