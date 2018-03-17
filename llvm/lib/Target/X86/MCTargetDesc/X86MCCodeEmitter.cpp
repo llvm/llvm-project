@@ -1134,6 +1134,10 @@ bool X86MCCodeEmitter::emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
   if (TSFlags & X86II::LOCK || MI.getFlags() & X86::IP_HAS_LOCK)
     EmitByte(0xF0, CurByte, OS);
 
+  // Emit the NOTRACK opcode prefix.
+  if (TSFlags & X86II::NOTRACK || MI.getFlags() & X86::IP_HAS_NOTRACK)
+    EmitByte(0x3E, CurByte, OS);
+
   switch (TSFlags & X86II::OpPrefixMask) {
   case X86II::PD:   // 66
     EmitByte(0x66, CurByte, OS);

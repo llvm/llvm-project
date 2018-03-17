@@ -8241,6 +8241,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     return QualType();
   if (lbaseInfo.getNoCallerSavedRegs() != rbaseInfo.getNoCallerSavedRegs())
     return QualType();
+  if (lbaseInfo.getNoCfCheck() != rbaseInfo.getNoCfCheck())
+    return QualType();
 
   // FIXME: some uses, e.g. conditional exprs, really want this to be 'both'.
   bool NoReturn = lbaseInfo.getNoReturn() || rbaseInfo.getNoReturn();

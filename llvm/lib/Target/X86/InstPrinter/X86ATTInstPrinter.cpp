@@ -54,6 +54,9 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   if ((TSFlags & X86II::LOCK) || (Flags & X86::IP_HAS_LOCK))
     OS << "\tlock\t";
 
+  if ((TSFlags & X86II::NOTRACK) || (Flags & X86::IP_HAS_NOTRACK))
+    OS << "\tnotrack\t";
+
   if (Flags & X86::IP_HAS_REPEAT_NE)
     OS << "\trepne\t";
   else if (Flags & X86::IP_HAS_REPEAT)

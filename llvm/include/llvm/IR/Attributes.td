@@ -106,6 +106,9 @@ def NoRedZone : EnumAttr<"noredzone">;
 /// Mark the function as not returning.
 def NoReturn : EnumAttr<"noreturn">;
 
+/// Disable Indirect Branch Tracking.
+def NoCfCheck : EnumAttr<"nocf_check">;
+
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind">;
 

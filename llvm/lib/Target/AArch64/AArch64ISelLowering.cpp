@@ -7527,13 +7527,10 @@ AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue SP = DAG.getCopyFromReg(Chain, dl, AArch64::SP, MVT::i64);
   Chain = SP.getValue(1);
   SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
-  Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
-
-  if (Align) {
+  if (Align)
     SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
                      DAG.getConstant(-(uint64_t)Align, dl, VT));
-    Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
-  }
+  Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
 
   Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, dl, true),
                              DAG.getIntPtrConstant(0, dl, true), SDValue(), dl);

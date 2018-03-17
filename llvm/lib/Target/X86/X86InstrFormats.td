@@ -215,6 +215,7 @@ class EVEX_RC { bit hasEVEX_RC = 1; }
 class EVEX_V512 { bit hasEVEX_L2 = 1; bit hasVEX_L = 0; }
 class EVEX_V256 { bit hasEVEX_L2 = 0; bit hasVEX_L = 1; }
 class EVEX_V128 { bit hasEVEX_L2 = 0; bit hasVEX_L = 0; }
+class NOTRACK { bit hasNoTrackPrefix = 1; }
 
 // Specify AVX512 8-bit compressed displacement encoding based on the vector
 // element size in bits (8, 16, 32, 64) and the CDisp8 form.
@@ -296,6 +297,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   int CD8_EltSize = 0;      // Compressed disp8 form - element-size in bytes.
   bit has3DNow0F0FOpcode =0;// Wacky 3dNow! encoding?
   bit hasEVEX_RC = 0;       // Explicitly specified rounding control in FP instruction.
+  bit hasNoTrackPrefix = 0; // Does this inst has 0x3E (NoTrack) prefix?
 
   bits<2> EVEX_LL;
   let EVEX_LL{0} = hasVEX_L;
@@ -347,6 +349,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{52-46} = CD8_Scale;
   let TSFlags{53}    = has3DNow0F0FOpcode;
   let TSFlags{54}    = hasEVEX_RC;
+  let TSFlags{55}    = hasNoTrackPrefix;
 }
 
 class PseudoI<dag oops, dag iops, list<dag> pattern,

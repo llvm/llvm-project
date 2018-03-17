@@ -1908,9 +1908,6 @@ static void handleNakedAttr(Sema &S, Decl *D, const AttributeList &AL) {
 static void handleNoReturnAttr(Sema &S, Decl *D, const AttributeList &Attrs) {
   if (hasDeclarator(D)) return;
 
-  if (S.CheckNoReturnAttr(Attrs))
-    return;
-
   if (!isa<ObjCMethodDecl>(D)) {
     S.Diag(Attrs.getLoc(), diag::warn_attribute_wrong_decl_type)
         << Attrs.getName() << ExpectedFunctionOrMethod;
@@ -1921,16 +1918,14 @@ static void handleNoReturnAttr(Sema &S, Decl *D, const AttributeList &Attrs) {
       Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
 }
 
-static void handleNoCallerSavedRegsAttr(Sema &S, Decl *D,
-                                        const AttributeList &AL) {
-  if (S.CheckNoCallerSavedRegsAttr(AL))
-    return;
-
-  D->addAttr(::new (S.Context) AnyX86NoCallerSavedRegistersAttr(
-      AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
+static void handleNoCfCheckAttr(Sema &S, Decl *D, const AttributeList &Attrs) {
+  if (!S.getLangOpts().CFProtectionBranch)
+    S.Diag(Attrs.getLoc(), diag::warn_nocf_check_attribute_ignored);
+  else
+    handleSimpleAttribute<AnyX86NoCfCheckAttr>(S, D, Attrs);
 }
 
-bool Sema::CheckNoReturnAttr(const AttributeList &Attrs) {
+bool Sema::CheckAttrNoArgs(const AttributeList &Attrs) {
   if (!checkAttributeNumArgs(*this, Attrs, 0)) {
     Attrs.setInvalid();
     return true;
@@ -1939,15 +1934,10 @@ bool Sema::CheckNoReturnAttr(const AttributeList &Attrs) {
   return false;
 }
 
-bool Sema::CheckNoCallerSavedRegsAttr(const AttributeList &AL) {
+bool Sema::CheckAttrTarget(const AttributeList &AL) {
   // Check whether the attribute is valid on the current target.
   if (!AL.existsInTarget(Context.getTargetInfo())) {
     Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored) << AL.getName();
-    AL.setInvalid();
-    return true;
-  }
-
-  if (!checkAttributeNumArgs(*this, AL, 0)) {
     AL.setInvalid();
     return true;
   }
@@ -5756,6 +5746,9 @@ static bool handleCommonAttributeFeatures(Sema &S, Decl *D,
       return true;
   }
 
+  if (S.CheckAttrTarget(AL))
+    return true;
+
   return false;
 }
 
@@ -6051,6 +6044,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_NoReturn:
     handleNoReturnAttr(S, D, AL);
+    break;
+  case AttributeList::AT_AnyX86NoCfCheck:
+    handleNoCfCheckAttr(S, D, AL);
     break;
   case AttributeList::AT_NoThrow:
     handleSimpleAttribute<NoThrowAttr>(S, D, AL);
@@ -6427,7 +6423,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleTypeTagForDatatypeAttr(S, D, AL);
     break;
   case AttributeList::AT_AnyX86NoCallerSavedRegisters:
-    handleNoCallerSavedRegsAttr(S, D, AL);
+    handleSimpleAttribute<AnyX86NoCallerSavedRegistersAttr>(S, D, AL);
     break;
   case AttributeList::AT_RenderScriptKernel:
     handleSimpleAttribute<RenderScriptKernelAttr>(S, D, AL);
