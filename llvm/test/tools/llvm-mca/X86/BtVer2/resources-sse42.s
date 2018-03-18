@@ -41,5 +41,5 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     2.00   2.00   1.00    -      -      -      -      -      -     	pcmpistri	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     	pcmpistrm	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     2.00   2.00   1.00    -      -      -      -      -      -     	pcmpistrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     	pcmpgtq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     	pcmpgtq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -     	pcmpgtq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -     1.00    -      -     	pcmpgtq	(%rax), %xmm2

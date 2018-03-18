@@ -27,6 +27,6 @@ if(APPLE)
 endif(APPLE)
 
 if(LLVM_INSTALL_CCTOOLS_SYMLINKS)
-  add_llvm_tool_symlink(dsymutil dsymutil)
+  add_llvm_tool_symlink(llvm-dsymutil dsymutil)
 endif()
 
