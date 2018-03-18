@@ -1072,7 +1072,6 @@ def: InstRW<[SKXWriteResGroup9], (instregex "ANDPDrr")>;
 def: InstRW<[SKXWriteResGroup9], (instregex "ANDPSrr")>;
 def: InstRW<[SKXWriteResGroup9], (instregex "BLENDPDrri")>;
 def: InstRW<[SKXWriteResGroup9], (instregex "BLENDPSrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "MMX_MOVD64from64rr")>;
 def: InstRW<[SKXWriteResGroup9], (instregex "MOVAPDrr")>;
 def: InstRW<[SKXWriteResGroup9], (instregex "MOVAPSrr")>;
 def: InstRW<[SKXWriteResGroup9], (instregex "MOVDQArr")>;
@@ -1302,7 +1301,7 @@ def: InstRW<[SKXWriteResGroup10], (instregex "CMP(16|32|64)rr")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "CMP8i8")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "CMP8ri")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "CMP8rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "CWDE")>;
+def: InstRW<[SKXWriteResGroup10], (instrs CWDE)>;
 def: InstRW<[SKXWriteResGroup10], (instregex "DEC(16|32|64)r")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "DEC8r")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "INC(16|32|64)r")>;
@@ -1660,7 +1659,7 @@ def SKXWriteResGroup23 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
 }
 def: InstRW<[SKXWriteResGroup23], (instregex "ADC8i8")>;
 def: InstRW<[SKXWriteResGroup23], (instregex "ADC8ri")>;
-def: InstRW<[SKXWriteResGroup23], (instregex "CWD")>;
+def: InstRW<[SKXWriteResGroup23], (instrs CWD)>;
 def: InstRW<[SKXWriteResGroup23], (instregex "JRCXZ")>;
 def: InstRW<[SKXWriteResGroup23], (instregex "SBB8i8")>;
 def: InstRW<[SKXWriteResGroup23], (instregex "SBB8ri")>;
@@ -1714,7 +1713,8 @@ def SKXWriteResGroup28 : SchedWriteRes<[SKXPort4,SKXPort237,SKXPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup28], (instregex "PUSH(16|32|64)r(mr)?")>;
+def: InstRW<[SKXWriteResGroup28], (instrs PUSH16r, PUSH32r, PUSH64r)>;
+def: InstRW<[SKXWriteResGroup28], (instregex "PUSH(16|32|64)rmr")>;
 def: InstRW<[SKXWriteResGroup28], (instregex "PUSH64i8")>;
 def: InstRW<[SKXWriteResGroup28], (instregex "STOSB")>;
 def: InstRW<[SKXWriteResGroup28], (instregex "STOSL")>;
@@ -2734,7 +2734,6 @@ def SKXWriteResGroup58 : SchedWriteRes<[SKXPort23]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVD64from64rm")>;
 def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVD64rm")>;
 def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVD64to64rm")>;
 def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVQ64rm")>;
@@ -3215,7 +3214,8 @@ def: InstRW<[SKXWriteResGroup81], (instregex "CMP8mr")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "CMP8rm")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "OR(16|32|64)rm")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "OR8rm")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "POP(16|32|64)r(mr)?")>;
+def: InstRW<[SKXWriteResGroup81], (instrs POP16r, POP32r, POP64r)>;
+def: InstRW<[SKXWriteResGroup81], (instregex "POP(16|32|64)rmr")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "SUB(16|32|64)rm")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "SUB8rm")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "TEST(16|32|64)mr")>;
@@ -3945,7 +3945,7 @@ def SKXWriteResGroup111 : SchedWriteRes<[SKXPort6,SKXPort06,SKXPort15,SKXPort015
   let NumMicroOps = 7;
   let ResourceCycles = [1,3,1,2];
 }
-def: InstRW<[SKXWriteResGroup111], (instregex "LOOP")>;
+def: InstRW<[SKXWriteResGroup111], (instrs LOOP)>;
 
 def SKXWriteResGroup112 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort237,SKXPort0156]> {
   let Latency = 7;
@@ -4031,7 +4031,7 @@ def: InstRW<[SKXWriteResGroup118], (instrs IMUL64m)>;
 def: InstRW<[SKXWriteResGroup118], (instrs IMUL32rm, IMUL32rmi, IMUL32rmi8, IMUL64rm, IMUL64rmi32, IMUL64rmi8)>;
 def: InstRW<[SKXWriteResGroup118], (instrs IMUL8m)>;
 def: InstRW<[SKXWriteResGroup118], (instregex "LZCNT(16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup118], (instrs MUL16m, MUL32m, MUL64m)>;
+def: InstRW<[SKXWriteResGroup118], (instrs MUL64m)>;
 def: InstRW<[SKXWriteResGroup118], (instrs MUL8m)>;
 def: InstRW<[SKXWriteResGroup118], (instregex "PDEP(32|64)rm")>;
 def: InstRW<[SKXWriteResGroup118], (instregex "PEXT(32|64)rm")>;
@@ -5233,13 +5233,8 @@ def SKXWriteResGroup157 : SchedWriteRes<[SKXPort4,SKXPort6,SKXPort23,SKXPort237,
   let NumMicroOps = 8;
   let ResourceCycles = [1,1,1,1,1,3];
 }
-def: InstRW<[SKXWriteResGroup157], (instregex "ADD8mi")>;
-def: InstRW<[SKXWriteResGroup157], (instregex "AND8mi")>;
-def: InstRW<[SKXWriteResGroup157], (instregex "OR8mi")>;
-def: InstRW<[SKXWriteResGroup157], (instregex "SUB8mi")>;
 def: InstRW<[SKXWriteResGroup157], (instregex "XCHG(16|32|64)rm")>;
 def: InstRW<[SKXWriteResGroup157], (instregex "XCHG8rm")>;
-def: InstRW<[SKXWriteResGroup157], (instregex "XOR8mi")>;
 
 def SKXWriteResGroup158 : SchedWriteRes<[SKXPort05,SKXPort0156]> {
   let Latency = 10;
@@ -5315,7 +5310,6 @@ def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2UQQZ256rm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTQQ2PDZ256rm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTQQ2PDZrm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTQQ2PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTQQ2PSZrm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPD2QQZ256rm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPD2QQZrm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPD2UQQZ256rm(b?)(k?)(z?)")>;
@@ -5334,7 +5328,6 @@ def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUDQ2PSZrm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUQQ2PDZ256rm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUQQ2PDZrm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUQQ2PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUQQ2PSZrm(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VFIXUPIMMPDZ256rm(b?)i(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VFIXUPIMMPDZrm(b?)i(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161], (instregex "VFIXUPIMMPSZ256rm(b?)i(k?)(z?)")>;
@@ -5530,8 +5523,8 @@ def SKXWriteResGroup171 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let NumMicroOps = 11;
   let ResourceCycles = [2,9];
 }
-def: InstRW<[SKXWriteResGroup171], (instregex "LOOPE")>;
-def: InstRW<[SKXWriteResGroup171], (instregex "LOOPNE")>;
+def: InstRW<[SKXWriteResGroup171], (instrs LOOPE)>;
+def: InstRW<[SKXWriteResGroup171], (instrs LOOPNE)>;
 
 def SKXWriteResGroup172 : SchedWriteRes<[SKXPort0]> {
   let Latency = 12;
@@ -5890,7 +5883,7 @@ def SKXWriteResGroup207 : SchedWriteRes<[SKXPort5,SKXPort6,SKXPort06,SKXPort0156
   let ResourceCycles = [1,1,1,5];
 }
 def: InstRW<[SKXWriteResGroup207], (instregex "CPUID")>;
-def: InstRW<[SKXWriteResGroup207], (instregex "RDTSC")>;
+def: InstRW<[SKXWriteResGroup207], (instrs RDTSC)>;
 
 def SKXWriteResGroup208 : SchedWriteRes<[SKXPort1,SKXPort23,SKXPort237,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 18;
@@ -6315,14 +6308,14 @@ def SKXWriteResGroup254 : SchedWriteRes<[SKXPort5,SKXPort0156]> {
   let NumMicroOps = 22;
   let ResourceCycles = [2,20];
 }
-def: InstRW<[SKXWriteResGroup254], (instregex "RDTSCP")>;
+def: InstRW<[SKXWriteResGroup254], (instrs RDTSCP)>;
 
 def SKXWriteResGroup255 : SchedWriteRes<[SKXPort4,SKXPort6,SKXPort23,SKXPort237,SKXPort0156]> {
   let Latency = 42;
   let NumMicroOps = 40;
   let ResourceCycles = [1,11,1,1,26];
 }
-def: InstRW<[SKXWriteResGroup255], (instregex "XSAVE")>;
+def: InstRW<[SKXWriteResGroup255], (instregex "^XSAVE$", "XSAVEC", "XSAVES", "XSAVEOPT")>;
 
 def SKXWriteResGroup256 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort23,SKXPort015]> {
   let Latency = 44;
@@ -6344,14 +6337,14 @@ def SKXWriteResGroup259 : SchedWriteRes<[SKXPort0,SKXPort6,SKXPort23,SKXPort05,S
   let NumMicroOps = 88;
   let ResourceCycles = [4,4,31,1,2,1,45];
 }
-def: InstRW<[SKXWriteResGroup259], (instregex "FXRSTOR64")>;
+def: InstRW<[SKXWriteResGroup259], (instrs FXRSTOR64)>;
 
 def SKXWriteResGroup260 : SchedWriteRes<[SKXPort0,SKXPort6,SKXPort23,SKXPort05,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 63;
   let NumMicroOps = 90;
   let ResourceCycles = [4,2,33,1,2,1,47];
 }
-def: InstRW<[SKXWriteResGroup260], (instregex "FXRSTOR")>;
+def: InstRW<[SKXWriteResGroup260], (instrs FXRSTOR)>;
 
 def SKXWriteResGroup261 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort015]> {
   let Latency = 67;

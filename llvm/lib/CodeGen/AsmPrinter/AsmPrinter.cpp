@@ -214,7 +214,7 @@ const DataLayout &AsmPrinter::getDataLayout() const {
 }
 
 // Do not use the cached DataLayout because some client use it without a Module
-// (llvm-dsymutil, llvm-dwarfdump).
+// (dsymutil, llvm-dwarfdump).
 unsigned AsmPrinter::getPointerSize() const {
   return TM.getPointerSize(0); // FIXME: Default address space
 }

@@ -1,4 +1,4 @@
-// RUN: llvm-dsymutil -f -y %p/dummy-debug-map.map -oso-prepend-path %p/../Inputs/dead-stripped -o - | llvm-dwarfdump - --debug-info | FileCheck %s
+// RUN: dsymutil -f -y %p/dummy-debug-map.map -oso-prepend-path %p/../Inputs/dead-stripped -o - | llvm-dwarfdump - --debug-info | FileCheck %s
 
 // The test was compiled with:
 // clang++ -O2 -g -c dead-strip.cpp -o 1.o

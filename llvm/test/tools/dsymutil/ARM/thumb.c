@@ -1,5 +1,5 @@
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
-// RUN: llvm-dsymutil -arch armv7m -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
+// RUN: dsymutil -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
+// RUN: dsymutil -arch armv7m -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
 
 /* Compile with:
    clang -c thumb.c -arch armv7m -g

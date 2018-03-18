@@ -244,11 +244,10 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   if (auto EC = ErrOrObjectFiles.getError()) {
     warn_ostream() << "Unable to open " << Path << " " << EC.message() << '\n';
   } else if (auto ErrOrObjectFile = BinHolder.Get(Ctxt.BinaryTriple)) {
-    // Rewrite the object file symbol addresses in the debug map. The
-    // YAML input is mainly used to test llvm-dsymutil without
-    // requiring binaries checked-in. If we generate the object files
-    // during the test, we can't hard-code the symbols addresses, so
-    // look them up here and rewrite them.
+    // Rewrite the object file symbol addresses in the debug map. The YAML
+    // input is mainly used to test dsymutil without requiring binaries
+    // checked-in. If we generate the object files during the test, we can't
+    // hard-code the symbols addresses, so look them up here and rewrite them.
     for (const auto &Sym : ErrOrObjectFile->symbols()) {
       uint64_t Address = Sym.getValue();
       Expected<StringRef> Name = Sym.getName();

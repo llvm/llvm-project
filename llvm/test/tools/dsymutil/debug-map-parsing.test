@@ -1,8 +1,8 @@
-RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
-RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
-RUN: llvm-dsymutil -verbose -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
-RUN: llvm-dsymutil -dump-debug-map %p/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=NOT-FOUND
-RUN: not llvm-dsymutil -dump-debug-map %p/Inputs/inexistant 2>&1 | FileCheck %s --check-prefix=NO-EXECUTABLE
+RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
+RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
+RUN: dsymutil -verbose -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
+RUN: dsymutil -dump-debug-map %p/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=NOT-FOUND
+RUN: not dsymutil -dump-debug-map %p/Inputs/inexistant 2>&1 | FileCheck %s --check-prefix=NO-EXECUTABLE
 
 
 Check that We can parse the debug map of the basic executable.

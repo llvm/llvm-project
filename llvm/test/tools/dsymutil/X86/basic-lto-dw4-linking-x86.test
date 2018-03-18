@@ -1,4 +1,4 @@
-RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-lto-dw4.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-lto-dw4.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
 CHECK: file format Mach-O 64-bit x86-64
 
