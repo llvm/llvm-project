@@ -72,6 +72,15 @@
 	<tr><td><a href="https://wg21.link/P0767R1">P0767R1</a></td><td>CWG</td><td>Deprecate POD</td><td>Albuquerque</td><td>Complete</td><td>7.0</td></tr>
 	<tr><td><a href="https://wg21.link/P0768R1">P0768R1</a></td><td>CWG</td><td>Library Support for the Spaceship (Comparison) Operator</td><td>Albuquerque</td><td></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P0777R1">P0777R1</a></td><td>LWG</td><td>Treating Unnecessary <tt>decay</tt></td><td>Albuquerque</td><td>Complete</td><td>7.0</td></tr>
+	<tr><td><a href="https://wg21.link/P0122R7">P0122R7</a></td><td>LWG</td><td>&lt;span&gt;</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0355R7">P0355R7</a></td><td>LWG</td><td>Extending chrono to Calendars and Time Zones</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0551R3">P0551R3</a></td><td>LWG</td><td>Thou Shalt Not Specialize <tt>std</tt> Function Templates!</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0753R2">P0753R2</a></td><td>LWG</td><td>Manipulators for C++ Synchronized Buffered Ostream</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0754R2">P0754R2</a></td><td>LWG</td><td>&lt;version&gt;</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0809R0">P0809R0</a></td><td>LWG</td><td>Comparing Unordered Containers</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0858R0">P0858R0</a></td><td>LWG</td><td>Constexpr iterator requirements</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0905R1">P0905R1</a></td><td>CWG</td><td>Symmetry for spaceship</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0966R1">P0966R1</a></td><td>LWG</td><td><tt>string::reserve</tt> Should Not Shrink</td><td>Jacksonville</td><td></td><td></td></tr>
 
 <!--  	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr> -->
   </table>
@@ -132,10 +141,46 @@
 	<tr><td><a href="https://wg21.link/LWG3001">3001</a></td><td>weak_ptr::element_type needs remove_extent_t</td><td>Albuquerque</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3024">3024</a></td><td>variant's copies must be deleted instead of disabled via SFINAE</td><td>Albuquerque</td><td></td></tr>
 
+ 	<tr><td></td><td></td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2164">2164</a></td><td>What are the semantics of <tt>vector.emplace(vector.begin(), vector.back())</tt>?</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2243">2243</a></td><td><tt>istream::putback</tt> problem</td><td>Jacksonville</td><td>Complete</td></tr>
+	<tr><td><a href="https://wg21.link/LWG2816">2816</a></td><td><tt>resize_file</tt> has impossible postcondition</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2843">2843</a></td><td>Unclear behavior of <tt>std::pmr::memory_resource::do_allocate()</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2849">2849</a></td><td>Why does <tt>!is_regular_file(from)</tt> cause <tt>copy_file</tt> to report a "file already exists" error?</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2851">2851</a></td><td><tt>std::filesystem</tt> enum classes are now underspecified</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2946">2946</a></td><td>LWG 2758's resolution missed further corrections</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2969">2969</a></td><td><tt>polymorphic_allocator::construct()</tt> shouldn't pass <tt>resource()</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2975">2975</a></td><td>Missing case for <tt>pair</tt> construction in scoped and polymorphic allocators</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG2989">2989</a></td><td><tt>path</tt>'s stream insertion operator lets you insert everything under the sun</td><td>Jacksonville</td><td>Completed</td></tr>
+	<tr><td><a href="https://wg21.link/LWG3000">3000</a></td><td><tt>monotonic_memory_resource::do_is_equal</tt> uses <tt>dynamic_cast</tt> unnecessarily</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3002">3002</a></td><td>[networking.ts] <tt>basic_socket_acceptor::is_open()</tt> isn't <tt>noexcept</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3004">3004</a></td><td>&sect;[string.capacity] and &sect;[vector.capacity] should specify time complexity for <tt>capacity()</tt></td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3005">3005</a></td><td>Destruction order of arrays by <tt>make_shared/allocate_shared</tt> only recommended?</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3007">3007</a></td><td><tt>allocate_shared</tt> should rebind allocator to <i>cv</i>-unqualified <tt>value_type</tt> for construction</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3009">3009</a></td><td>Including <tt>&lt;string_view&gt;</tt> doesn't provide <tt>std::size/empty/data</tt></td><td>Jacksonville</td><td>Complete</td></tr>
+	<tr><td><a href="https://wg21.link/LWG3010">3010</a></td><td>[networking.ts] <tt>uses_executor</tt> says "if a type <tt>T::executor_type</tt> exists"</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3013">3013</a></td><td><tt>(recursive_)directory_iterator</tt> construction and traversal should not be <tt>noexcept</tt></td><td>Jacksonville</td><td>Complete</td></tr>
+	<tr><td><a href="https://wg21.link/LWG3014">3014</a></td><td>More <tt>noexcept</tt> issues with filesystem operations</td><td>Jacksonville</td><td>Complete</td></tr>
+	<tr><td><a href="https://wg21.link/LWG3015">3015</a></td><td><tt>copy_options::<i>unspecified</i></tt> underspecified</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3017">3017</a></td><td><tt>list splice</tt> functions should use <tt>addressof</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3020">3020</a></td><td>[networking.ts] Remove spurious nested <tt>value_type</tt> buffer sequence requirement</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3026">3026</a></td><td><tt>filesystem::weakly_canonical</tt> still defined in terms of <tt>canonical(p, base)</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3030">3030</a></td><td>Who shall meet the requirements of <tt>try_lock</tt>?</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3034">3034</a></td><td>P0767R1 breaks previously-standard-layout types</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3035">3035</a></td><td><tt>std::allocator</tt>'s constructors should be <tt>constexpr</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3039">3039</a></td><td>Unnecessary <tt>decay</tt> in <tt>thread</tt> and <tt>packaged_task</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3041">3041</a></td><td>Unnecessary <tt>decay</tt> in <tt>reference_wrapper</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3042">3042</a></td><td><tt>is_literal_type_v</tt> should be inline</td><td>Jacksonville</td><td>Complete</td></tr>
+	<tr><td><a href="https://wg21.link/LWG3043">3043</a></td><td>Bogus postcondition for <tt>filesystem_error</tt> constructor</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3045">3045</a></td><td><tt>atomic&lt;<i>floating-point</i>&gt;</tt> doesn't have <tt>value_type</tt> or <tt>difference_type</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3048">3048</a></td><td><tt>transform_reduce(exec, first1, last1, first2, init)</tt> discards execution policy</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3051">3051</a></td><td>Floating point classifications were inadvertently changed in P0175</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3075">3075</a></td><td><tt>basic_string</tt> needs deduction guides from <tt>basic_string_view</tt></td><td>Jacksonville</td><td></td></tr>
+
 <!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
   </table>
 
-  <p>Last Updated: 6-Mar-2018</p>
+  <p>Last Updated: 18-Mar-2018</p>
 </div>
 </body>
 </html>

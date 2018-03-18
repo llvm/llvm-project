@@ -44,6 +44,9 @@ def SwiftModel : SchedMachineModel {
   let LoadLatency = 3;
   let MispredictPenalty = 14; // A branch direction mispredict.
   let CompleteModel = 0;      // FIXME: Remove if all instructions are covered.
+
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 // Swift predicates.

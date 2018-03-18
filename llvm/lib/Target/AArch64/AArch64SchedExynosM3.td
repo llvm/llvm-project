@@ -26,6 +26,9 @@ def ExynosM3Model : SchedMachineModel {
   let CompleteModel         =   1; // Use the default model otherwise.
 
   list<Predicate> UnsupportedFeatures = [HasSVE];
+
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 //===----------------------------------------------------------------------===//
