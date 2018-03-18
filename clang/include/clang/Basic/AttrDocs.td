@@ -2913,6 +2913,24 @@ jumps from i386 arch code).
   }];
 }
 
+def AnyX86NoCfCheckDocs : Documentation{
+  let Category = DocCatFunction;
+  let Content = [{
+Jump Oriented Programming attacks rely on tampering with addresses used by
+indirect call / jmp, e.g. redirect control-flow to non-programmer
+intended bytes in the binary.
+X86 Supports Indirect Branch Tracking (IBT) as part of Control-Flow
+Enforcement Technology (CET). IBT instruments ENDBR instructions used to
+specify valid targets of indirect call / jmp.
+The ``nocf_check`` attribute has two roles:
+1. Appertains to a function - do not add ENDBR instruction at the
+    beginning of the function.
+2. Appertains to a function pointer - do not track the target
+    function of this pointer (by adding nocf_check prefix to the
+    indirect-call instruction).
+}];
+}
+
 def SwiftCallDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

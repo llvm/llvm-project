@@ -494,6 +494,9 @@ public:
     addFnAttr(Attribute::NoReturn);
   }
 
+  /// Determine if the function should not perform indirect branch tracking.
+  bool doesNoCfCheck() const { return hasFnAttribute(Attribute::NoCfCheck); }
+
   /// @brief Determine if the function cannot unwind.
   bool doesNotThrow() const {
     return hasFnAttribute(Attribute::NoUnwind);

@@ -385,11 +385,8 @@ def BWWriteResGroup2 : SchedWriteRes<[BWPort1]> {
 }
 def: InstRW<[BWWriteResGroup2], (instregex "COMP_FST0r")>;
 def: InstRW<[BWWriteResGroup2], (instregex "COM_FST0r")>;
-def: InstRW<[BWWriteResGroup2], (instregex "MMX_MASKMOVQ64")>;
-def: InstRW<[BWWriteResGroup2], (instregex "MMX_MASKMOVQ64")>;
 def: InstRW<[BWWriteResGroup2], (instregex "UCOM_FPr")>;
 def: InstRW<[BWWriteResGroup2], (instregex "UCOM_Fr")>;
-def: InstRW<[BWWriteResGroup2], (instregex "VMASKMOVDQU")>;
 
 def BWWriteResGroup3 : SchedWriteRes<[BWPort5]> {
   let Latency = 1;

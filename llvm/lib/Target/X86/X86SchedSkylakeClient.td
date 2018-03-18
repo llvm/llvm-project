@@ -357,13 +357,6 @@ def: InstRW<[SKLWriteResGroup1], (instregex "MMX_PSUBSWirr")>;
 def: InstRW<[SKLWriteResGroup1], (instregex "MMX_PSUBUSBirr")>;
 def: InstRW<[SKLWriteResGroup1], (instregex "MMX_PSUBUSWirr")>;
 
-def SKLWriteResGroup2 : SchedWriteRes<[SKLPort1]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SKLWriteResGroup2], (instregex "MMX_MASKMOVQ64")>;
-
 def SKLWriteResGroup3 : SchedWriteRes<[SKLPort5]> {
   let Latency = 1;
   let NumMicroOps = 1;
@@ -1097,8 +1090,6 @@ def SKLWriteResGroup18 : SchedWriteRes<[SKLPort0,SKLPort237]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKLWriteResGroup18], (instregex "MMX_MASKMOVQ64")>;
-def: InstRW<[SKLWriteResGroup18], (instregex "VMASKMOVDQU")>;
 def: InstRW<[SKLWriteResGroup18], (instregex "VMASKMOVPDYmr")>;
 def: InstRW<[SKLWriteResGroup18], (instregex "VMASKMOVPDmr")>;
 def: InstRW<[SKLWriteResGroup18], (instregex "VMASKMOVPSYmr")>;

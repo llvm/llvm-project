@@ -3174,6 +3174,13 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       CLI.CS ? dyn_cast<CallInst>(CLI.CS->getInstruction()) : nullptr;
   const Function *CalledFn = CI ? CI->getCalledFunction() : nullptr;
 
+  // Call / invoke instructions with NoCfCheck attribute require special
+  // handling.
+  const auto *II =
+      CLI.CS ? dyn_cast<InvokeInst>(CLI.CS->getInstruction()) : nullptr;
+  if ((CI && CI->doesNoCfCheck()) || (II && II->doesNoCfCheck()))
+    return false;
+
   // Functions with no_caller_saved_registers that need special handling.
   if ((CI && CI->hasFnAttr("no_caller_saved_registers")) ||
       (CalledFn && CalledFn->hasFnAttribute("no_caller_saved_registers")))

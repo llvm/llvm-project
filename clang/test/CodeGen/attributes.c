@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple i386-linux-gnu -o %t %s
+// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -target-feature +ibt -triple i386-linux-gnu -o %t %s
 // RUN: FileCheck --input-file=%t %s
 
 // CHECK: @t5 = weak global i32 2
@@ -97,8 +97,20 @@ void __attribute__((section(".bar"))) t22(void) {}
 
 // CHECK: define void @t22() [[NUW]] section ".bar"
 
+// CHECK: define void @t23() [[NOCF_CHECK_FUNC:#[0-9]+]]
+void __attribute__((nocf_check)) t23(void) {}
+
+// CHECK: call void %{{[a-z0-9]+}}() [[NOCF_CHECK_CALL:#[0-9]+]]
+typedef void (*f_t)(void);
+void t24(f_t f1) {
+  __attribute__((nocf_check)) f_t p = f1;
+  (*p)();
+}
+
 // CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
 // CHECK: attributes [[NR]] = { noinline noreturn nounwind{{.*}} }
 // CHECK: attributes [[COLDDEF]] = { cold {{.*}}}
 // CHECK: attributes [[COLDDECL]] = { cold {{.*}}}
+// CHECK: attributes [[NOCF_CHECK_FUNC]] = { nocf_check {{.*}}}
 // CHECK: attributes [[COLDSITE]] = { cold {{.*}}}
+// CHECK: attributes [[NOCF_CHECK_CALL]] = { nocf_check }

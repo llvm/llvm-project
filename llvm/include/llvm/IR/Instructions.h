@@ -1795,6 +1795,9 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
   }
 
+  /// Determine if the call should not perform indirect branch tracking.
+  bool doesNoCfCheck() const { return hasFnAttr(Attribute::NoCfCheck); }
+
   /// Determine if the call cannot unwind.
   bool doesNotThrow() const { return hasFnAttr(Attribute::NoUnwind); }
   void setDoesNotThrow() {
@@ -3830,8 +3833,15 @@ public:
   static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
                             Instruction *InsertPt = nullptr);
 
+  /// Determine if the call should not perform indirect branch tracking.
+  bool doesNoCfCheck() const { return hasFnAttr(Attribute::NoCfCheck); }
 
-
+  /// Determine if the call cannot unwind.
+  bool doesNotThrow() const { return hasFnAttr(Attribute::NoUnwind); }
+  void setDoesNotThrow() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
+  }
+  
   /// Return the function called, or null if this is an
   /// indirect function invocation.
   ///

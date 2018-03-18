@@ -350,6 +350,8 @@ public:
             MemRec->getValueAsBit("hasREX_WPrefix") ||
         RegRec->getValueAsBit("hasLockPrefix") !=
             MemRec->getValueAsBit("hasLockPrefix") ||
+        RegRec->getValueAsBit("hasNoTrackPrefix") !=
+            MemRec->getValueAsBit("hasNoTrackPrefix") ||
         !equalBitsInits(RegRec->getValueAsBitsInit("EVEX_LL"),
                         MemRec->getValueAsBitsInit("EVEX_LL")) ||
         !equalBitsInits(RegRec->getValueAsBitsInit("VEX_WPrefix"),

@@ -49,6 +49,9 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   else if (Flags & X86::IP_HAS_REPEAT)
     OS << "\trep\t";
 
+  if ((TSFlags & X86II::NOTRACK) || (Flags & X86::IP_HAS_NOTRACK))
+    OS << "\tnotrack\t";
+
   printInstruction(MI, OS);
 
   // Next always print the annotation.
