@@ -27,6 +27,9 @@ def MipsGenericModel : SchedMachineModel {
 
   let CompleteModel = 1;
   let PostRAScheduler = 1;
+
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 let SchedModel = MipsGenericModel in {

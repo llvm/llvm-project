@@ -323,7 +323,7 @@ define float @fdiv_neg_swapped2(float %f) {
 }
 
 ; PR21126: http://llvm.org/bugs/show_bug.cgi?id=21126
-; With unsafe/fast math, sqrt(X) * sqrt(X) is just X.
+; With loose math, sqrt(X) * sqrt(X) is just X.
 
 declare double @llvm.sqrt.f64(double)
 
@@ -332,7 +332,42 @@ define double @sqrt_squared(double %f) {
 ; CHECK-NEXT:    ret double [[F:%.*]]
 ;
   %sqrt = call double @llvm.sqrt.f64(double %f)
-  %mul = fmul fast double %sqrt, %sqrt
+  %mul = fmul reassoc nnan nsz double %sqrt, %sqrt
+  ret double %mul
+}
+
+; Negative tests for the above transform: we need all 3 of those flags.
+
+define double @sqrt_squared_not_fast_enough1(double %f) {
+; CHECK-LABEL: @sqrt_squared_not_fast_enough1(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[F:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan nsz double [[SQRT]], [[SQRT]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %f)
+  %mul = fmul nnan nsz double %sqrt, %sqrt
+  ret double %mul
+}
+
+define double @sqrt_squared_not_fast_enough2(double %f) {
+; CHECK-LABEL: @sqrt_squared_not_fast_enough2(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[F:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nnan double [[SQRT]], [[SQRT]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %f)
+  %mul = fmul reassoc nnan double %sqrt, %sqrt
+  ret double %mul
+}
+
+define double @sqrt_squared_not_fast_enough3(double %f) {
+; CHECK-LABEL: @sqrt_squared_not_fast_enough3(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[F:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz double [[SQRT]], [[SQRT]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %f)
+  %mul = fmul reassoc nsz double %sqrt, %sqrt
   ret double %mul
 }
 

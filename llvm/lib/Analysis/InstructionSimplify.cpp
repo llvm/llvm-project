@@ -4249,10 +4249,13 @@ static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZeroFP()))
     return ConstantFP::getNullValue(Op0->getType());
 
-  // sqrt(X) * sqrt(X) --> X
+  // sqrt(X) * sqrt(X) --> X, if we can:
+  // 1. Remove the intermediate rounding (reassociate).
+  // 2. Ignore non-zero negative numbers because sqrt would produce NAN.
+  // 3. Ignore -0.0 because sqrt(-0.0) == -0.0, but -0.0 * -0.0 == 0.0.
   Value *X;
-  if (FMF.isFast() && Op0 == Op1 &&
-      match(Op0, m_Intrinsic<Intrinsic::sqrt>(m_Value(X))))
+  if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::sqrt>(m_Value(X))) &&
+      FMF.allowReassoc() && FMF.noNaNs() && FMF.noSignedZeros())
     return X;
 
   return nullptr;

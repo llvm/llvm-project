@@ -136,7 +136,6 @@ def : WriteRes<WriteLEA, [JALU01]>;
 
 // FIXME: Why do bitcounts use WriteIMul?
 def JWriteLZCNT : SchedWriteRes<[JALU01]> {
-  let Latency = 1;
 }
 def JWriteLZCNTLd : SchedWriteRes<[JLAGU, JALU01]> {
   let Latency = 4;
@@ -206,6 +205,22 @@ def JWriteIDiv32Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
 }
 def : InstRW<[JWriteIDiv32], (instrs DIV32r, IDIV32r)>;
 def : InstRW<[JWriteIDiv32Ld], (instrs DIV32m, IDIV32m)>;
+
+def JWriteCRC32 : SchedWriteRes<[JALU01]> {
+  let Latency = 3;
+  let ResourceCycles = [4];
+  let NumMicroOps = 3;
+}
+def : InstRW<[JWriteCRC32], (instrs CRC32r32r8, CRC32r32r16, CRC32r32r32,
+                                    CRC32r64r8, CRC32r64r64)>;
+
+def JWriteCRC32Ld : SchedWriteRes<[JLAGU, JALU01]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 4];
+  let NumMicroOps = 3;
+}
+def : InstRW<[JWriteCRC32Ld], (instrs CRC32r32m8, CRC32r32m16, CRC32r32m32,
+                                      CRC32r64m8, CRC32r64m64)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer shifts and rotates.
@@ -349,15 +364,15 @@ defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU0, JVIMUL], 3>;
 defm : JWriteResFpuPair<WriteFHAdd,         [JFPU0, JFPA], 3>;
 defm : JWriteResFpuPair<WritePHAdd,       [JFPU01, JVALU], 1>;
 
-def JWriteFHAddY: SchedWriteRes<[JFPU0]> {
+def JWriteFHAddY: SchedWriteRes<[JFPU0, JFPA]> {
   let Latency = 3;
-  let ResourceCycles = [2];
+  let ResourceCycles = [2, 2];
 }
 def : InstRW<[JWriteFHAddY], (instrs VHADDPDYrr, VHADDPSYrr, VHSUBPDYrr, VHSUBPSYrr)>;
 
-def JWriteFHAddYLd: SchedWriteRes<[JLAGU, JFPU0]> {
+def JWriteFHAddYLd: SchedWriteRes<[JLAGU, JFPU0, JFPA]> {
   let Latency = 8;
-  let ResourceCycles = [1, 2];
+  let ResourceCycles = [1, 2, 2];
 }
 def : InstRW<[JWriteFHAddYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUBPSYrm)>;
 
@@ -373,28 +388,28 @@ defm : JWriteResFpuPair<WriteCLMul,       [JFPU0, JVIMUL], 2>;
 
 def JWriteDPPS: SchedWriteRes<[JFPU0, JFPU1]> {
   let Latency = 11;
-  let ResourceCycles = [3,3];
+  let ResourceCycles = [3, 3];
   let NumMicroOps = 5;
 }
 def : InstRW<[JWriteDPPS], (instrs DPPSrri, VDPPSrri)>;
 
 def JWriteDPPSLd: SchedWriteRes<[JLAGU, JFPU0, JFPU1]> {
   let Latency = 16;
-  let ResourceCycles = [1,3,3];
+  let ResourceCycles = [1, 3, 3];
   let NumMicroOps = 6;
 }
 def : InstRW<[JWriteDPPSLd], (instrs DPPSrmi, VDPPSrmi)>;
 
 def JWriteDPPD: SchedWriteRes<[JFPU0, JFPU1]> {
   let Latency = 9;
-  let ResourceCycles = [3,3];
+  let ResourceCycles = [3, 3];
   let NumMicroOps = 3;
 }
 def : InstRW<[JWriteDPPD], (instrs DPPDrri, VDPPDrri)>;
 
 def JWriteDPPDLd: SchedWriteRes<[JLAGU, JFPU0, JFPU1]> {
   let Latency = 14;
-  let ResourceCycles = [1,3,3];
+  let ResourceCycles = [1, 3, 3];
   let NumMicroOps = 3;
 }
 def : InstRW<[JWriteDPPDLd], (instrs DPPDrmi, VDPPDrmi)>;
@@ -417,47 +432,45 @@ def : InstRW<[JWriteINSERTQ], (instrs INSERTQ, INSERTQI)>;
 // F16C instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def JWriteCVT3: SchedWriteRes<[JFPU1]> {
+def JWriteCVT3: SchedWriteRes<[JFPU1, JSTC]> {
   let Latency = 3;
 }
 def : InstRW<[JWriteCVT3], (instrs VCVTPS2PHrr, VCVTPH2PSrr)>;
 
-def JWriteCVT3St: SchedWriteRes<[JFPU1, JSAGU]> {
+def JWriteCVT3St: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 3;
-  let ResourceCycles = [1, 1];
 }
 def : InstRW<[JWriteCVT3St], (instrs VCVTPS2PHmr)>;
 
-def JWriteCVT3Ld: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteCVT3Ld: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
   let Latency = 8;
-  let ResourceCycles = [1, 1];
 }
 def : InstRW<[JWriteCVT3Ld], (instrs VCVTPH2PSrm)>;
 
-def JWriteCVTPS2PHY: SchedWriteRes<[JFPU1, JFPU01]> {
+def JWriteCVTPS2PHY: SchedWriteRes<[JFPU1, JSTC, JFPX]> {
   let Latency = 6;
-  let ResourceCycles = [2,2];
+  let ResourceCycles = [2, 2, 2];
   let NumMicroOps = 3;
 }
 def : InstRW<[JWriteCVTPS2PHY], (instrs VCVTPS2PHYrr)>;
 
-def JWriteCVTPS2PHYSt: SchedWriteRes<[JFPU1, JFPU01, JSAGU]> {
+def JWriteCVTPS2PHYSt: SchedWriteRes<[JFPU1, JSTC, JFPX, JSAGU]> {
   let Latency = 11;
-  let ResourceCycles = [2,2,1];
+  let ResourceCycles = [2, 2, 2, 1];
   let NumMicroOps = 3;
 }
 def : InstRW<[JWriteCVTPS2PHYSt], (instrs VCVTPS2PHYmr)>;
 
-def JWriteCVTPH2PSY: SchedWriteRes<[JFPU1]> {
+def JWriteCVTPH2PSY: SchedWriteRes<[JFPU1, JSTC]> {
   let Latency = 3;
-  let ResourceCycles = [2];
+  let ResourceCycles = [2, 2];
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteCVTPH2PSY], (instrs VCVTPH2PSYrr)>;
 
-def JWriteCVTPH2PSYLd: SchedWriteRes<[JLAGU, JFPU1]> {
+def JWriteCVTPH2PSYLd: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
   let Latency = 8;
-  let ResourceCycles = [1,2];
+  let ResourceCycles = [1, 2, 2];
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteCVTPH2PSYLd], (instrs VCVTPH2PSYrm)>;
@@ -481,8 +494,8 @@ def : InstRW<[JWriteFLogicLd], (instrs ORPDrm, ORPSrm, VORPDrm, VORPSrm,
                                        ANDPDrm, ANDPSrm, VANDPDrm, VANDPSrm,
                                        ANDNPDrm, ANDNPSrm, VANDNPDrm, VANDNPSrm)>;
 
-def JWriteFLogicY: SchedWriteRes<[JFPU01]> {
-  let ResourceCycles = [2];
+def JWriteFLogicY: SchedWriteRes<[JFPU01, JFPX]> {
+  let ResourceCycles = [2, 2];
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteFLogicY], (instrs VORPDYrr, VORPSYrr,
@@ -490,9 +503,9 @@ def : InstRW<[JWriteFLogicY], (instrs VORPDYrr, VORPSYrr,
                                       VANDPDYrr, VANDPSYrr,
                                       VANDNPDYrr, VANDNPSYrr)>;
 
-def JWriteFLogicYLd: SchedWriteRes<[JLAGU, JFPU01]> {
+def JWriteFLogicYLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
   let Latency = 6;
-  let ResourceCycles = [1, 2];
+  let ResourceCycles = [1, 2, 2];
   let NumMicroOps = 3;
 }
 def : InstRW<[JWriteFLogicYLd], (instrs VORPDYrm, VORPSYrm,
@@ -514,17 +527,17 @@ def JWriteVDPPSYLd: SchedWriteRes<[JLAGU, JFPU1, JFPU0]> {
 }
 def : InstRW<[JWriteVDPPSYLd, ReadAfterLd], (instrs VDPPSYrmi)>;
 
-def JWriteFAddY: SchedWriteRes<[JFPU0]> {
+def JWriteFAddY: SchedWriteRes<[JFPU0, JFPA]> {
   let Latency = 3;
-  let ResourceCycles = [2];
+  let ResourceCycles = [2, 2];
 }
 def : InstRW<[JWriteFAddY], (instrs VADDPDYrr, VADDPSYrr,
                                     VSUBPDYrr, VSUBPSYrr,
                                     VADDSUBPDYrr, VADDSUBPSYrr)>;
 
-def JWriteFAddYLd: SchedWriteRes<[JLAGU, JFPU0]> {
+def JWriteFAddYLd: SchedWriteRes<[JLAGU, JFPU0, JFPA]> {
   let Latency = 8;
-  let ResourceCycles = [1, 2];
+  let ResourceCycles = [1, 2, 2];
 }
 def : InstRW<[JWriteFAddYLd, ReadAfterLd], (instrs VADDPDYrm, VADDPSYrm,
                                                    VSUBPDYrm, VSUBPSYrm,

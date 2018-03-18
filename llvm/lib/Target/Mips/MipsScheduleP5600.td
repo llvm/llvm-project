@@ -20,6 +20,8 @@ def MipsP5600Model : SchedMachineModel {
                                          InMicroMips, InMips16Mode,
                                          HasDSP, HasDSPR2, HasMT];
 
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 let SchedModel = MipsP5600Model in {

@@ -4506,6 +4506,15 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
         return New;
   }
 
+  Value *X;
+
+  // Zero-equality checks are preserved through unsigned floating-point casts:
+  // icmp eq (bitcast (uitofp X)), 0 --> icmp eq X, 0
+  // icmp ne (bitcast (uitofp X)), 0 --> icmp ne X, 0
+  if (match(Op0, m_BitCast(m_UIToFP(m_Value(X)))))
+    if (I.isEquality() && match(Op1, m_Zero()))
+      return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
+
   // Test to see if the operands of the icmp are casted versions of other
   // values.  If the ptr->ptr cast can be stripped off both arguments, we do so
   // now.
