@@ -1744,10 +1744,26 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   ParsedAttributesWithRange attrs(AttrFactory);
   MaybeParseCXX11Attributes(attrs);
 
+  const auto WarnOnInit = [this, &CK] {
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
+                                ? diag::warn_cxx14_compat_init_statement
+                                : diag::ext_init_statement)
+        << (CK == Sema::ConditionKind::Switch);
+  };
+
   // Determine what kind of thing we have.
   switch (isCXXConditionDeclarationOrInitStatement(InitStmt)) {
   case ConditionOrInitStatement::Expression: {
     ProhibitAttributes(attrs);
+
+    // We can have an empty expression here.
+    //   if (; true);
+    if (InitStmt && Tok.is(tok::semi)) {
+      WarnOnInit();
+      SourceLocation SemiLoc = ConsumeToken();
+      *InitStmt = Actions.ActOnNullStmt(SemiLoc);
+      return ParseCXXCondition(nullptr, Loc, CK);
+    }
 
     // Parse the expression.
     ExprResult Expr = ParseExpression(); // expression
@@ -1755,6 +1771,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       return Sema::ConditionError();
 
     if (InitStmt && Tok.is(tok::semi)) {
+      WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
       return ParseCXXCondition(nullptr, Loc, CK);
@@ -1764,10 +1781,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   }
 
   case ConditionOrInitStatement::InitStmtDecl: {
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                ? diag::warn_cxx14_compat_init_statement
-                                : diag::ext_init_statement)
-        << (CK == Sema::ConditionKind::Switch);
+    WarnOnInit();
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
     DeclGroupPtrTy DG =
         ParseSimpleDeclaration(DeclaratorContext::InitStmtContext, DeclEnd,

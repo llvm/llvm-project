@@ -953,11 +953,8 @@ def HWWriteResGroup3 : SchedWriteRes<[HWPort1]> {
 }
 def: InstRW<[HWWriteResGroup3], (instregex "COMP_FST0r")>;
 def: InstRW<[HWWriteResGroup3], (instregex "COM_FST0r")>;
-def: InstRW<[HWWriteResGroup3], (instregex "MMX_MASKMOVQ64")>;
-def: InstRW<[HWWriteResGroup3], (instregex "MMX_MASKMOVQ64")>;
 def: InstRW<[HWWriteResGroup3], (instregex "UCOM_FPr")>;
 def: InstRW<[HWWriteResGroup3], (instregex "UCOM_Fr")>;
-def: InstRW<[HWWriteResGroup3], (instregex "VMASKMOVDQU")>;
 
 def HWWriteResGroup4 : SchedWriteRes<[HWPort5]> {
   let Latency = 1;
