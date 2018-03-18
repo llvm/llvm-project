@@ -1668,9 +1668,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    popw %ax # sched: [6:0.50]
-; HASWELL-NEXT:    popw (%ecx) # sched: [1:1.00]
+; HASWELL-NEXT:    popw (%ecx) # sched: [7:1.00]
 ; HASWELL-NEXT:    pushw %ax # sched: [2:1.00]
-; HASWELL-NEXT:    pushw (%ecx) # sched: [1:1.00]
+; HASWELL-NEXT:    pushw (%ecx) # sched: [7:1.00]
 ; HASWELL-NEXT:    pushw $4095 # imm = 0xFFF
 ; HASWELL-NEXT:    # sched: [1:1.00]
 ; HASWELL-NEXT:    pushw $7 # sched: [1:1.00]
@@ -1683,9 +1683,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    popw %ax # sched: [6:0.50]
-; BROADWELL-NEXT:    popw (%ecx) # sched: [6:0.50]
+; BROADWELL-NEXT:    popw (%ecx) # sched: [6:1.00]
 ; BROADWELL-NEXT:    pushw %ax # sched: [2:1.00]
-; BROADWELL-NEXT:    pushw (%ecx) # sched: [2:1.00]
+; BROADWELL-NEXT:    pushw (%ecx) # sched: [6:1.00]
 ; BROADWELL-NEXT:    pushw $4095 # imm = 0xFFF
 ; BROADWELL-NEXT:    # sched: [1:1.00]
 ; BROADWELL-NEXT:    pushw $7 # sched: [1:1.00]
@@ -1698,9 +1698,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:    popw %ax # sched: [6:0.50]
-; SKYLAKE-NEXT:    popw (%ecx) # sched: [6:0.50]
+; SKYLAKE-NEXT:    popw (%ecx) # sched: [6:1.00]
 ; SKYLAKE-NEXT:    pushw %ax # sched: [2:1.00]
-; SKYLAKE-NEXT:    pushw (%ecx) # sched: [2:1.00]
+; SKYLAKE-NEXT:    pushw (%ecx) # sched: [6:1.00]
 ; SKYLAKE-NEXT:    pushw $4095 # imm = 0xFFF
 ; SKYLAKE-NEXT:    # sched: [1:1.00]
 ; SKYLAKE-NEXT:    pushw $7 # sched: [1:1.00]
@@ -1713,9 +1713,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    popw %ax # sched: [6:0.50]
-; SKX-NEXT:    popw (%ecx) # sched: [6:0.50]
+; SKX-NEXT:    popw (%ecx) # sched: [6:1.00]
 ; SKX-NEXT:    pushw %ax # sched: [2:1.00]
-; SKX-NEXT:    pushw (%ecx) # sched: [2:1.00]
+; SKX-NEXT:    pushw (%ecx) # sched: [6:1.00]
 ; SKX-NEXT:    pushw $4095 # imm = 0xFFF
 ; SKX-NEXT:    # sched: [1:1.00]
 ; SKX-NEXT:    pushw $7 # sched: [1:1.00]
@@ -1820,9 +1820,9 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    popl %eax # sched: [6:0.50]
-; HASWELL-NEXT:    popl (%ecx) # sched: [1:1.00]
+; HASWELL-NEXT:    popl (%ecx) # sched: [7:1.00]
 ; HASWELL-NEXT:    pushl %eax # sched: [2:1.00]
-; HASWELL-NEXT:    pushl (%ecx) # sched: [1:1.00]
+; HASWELL-NEXT:    pushl (%ecx) # sched: [7:1.00]
 ; HASWELL-NEXT:    pushl $4095 # imm = 0xFFF
 ; HASWELL-NEXT:    # sched: [1:1.00]
 ; HASWELL-NEXT:    pushl $7 # sched: [1:1.00]
@@ -1835,9 +1835,9 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    popl %eax # sched: [6:0.50]
-; BROADWELL-NEXT:    popl (%ecx) # sched: [6:0.50]
+; BROADWELL-NEXT:    popl (%ecx) # sched: [6:1.00]
 ; BROADWELL-NEXT:    pushl %eax # sched: [2:1.00]
-; BROADWELL-NEXT:    pushl (%ecx) # sched: [2:1.00]
+; BROADWELL-NEXT:    pushl (%ecx) # sched: [6:1.00]
 ; BROADWELL-NEXT:    pushl $4095 # imm = 0xFFF
 ; BROADWELL-NEXT:    # sched: [1:1.00]
 ; BROADWELL-NEXT:    pushl $7 # sched: [1:1.00]
@@ -1850,9 +1850,9 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:    popl %eax # sched: [6:0.50]
-; SKYLAKE-NEXT:    popl (%ecx) # sched: [6:0.50]
+; SKYLAKE-NEXT:    popl (%ecx) # sched: [6:1.00]
 ; SKYLAKE-NEXT:    pushl %eax # sched: [2:1.00]
-; SKYLAKE-NEXT:    pushl (%ecx) # sched: [2:1.00]
+; SKYLAKE-NEXT:    pushl (%ecx) # sched: [6:1.00]
 ; SKYLAKE-NEXT:    pushl $4095 # imm = 0xFFF
 ; SKYLAKE-NEXT:    # sched: [1:1.00]
 ; SKYLAKE-NEXT:    pushl $7 # sched: [1:1.00]
@@ -1865,9 +1865,9 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    popl %eax # sched: [6:0.50]
-; SKX-NEXT:    popl (%ecx) # sched: [6:0.50]
+; SKX-NEXT:    popl (%ecx) # sched: [6:1.00]
 ; SKX-NEXT:    pushl %eax # sched: [2:1.00]
-; SKX-NEXT:    pushl (%ecx) # sched: [2:1.00]
+; SKX-NEXT:    pushl (%ecx) # sched: [6:1.00]
 ; SKX-NEXT:    pushl $4095 # imm = 0xFFF
 ; SKX-NEXT:    # sched: [1:1.00]
 ; SKX-NEXT:    pushl $7 # sched: [1:1.00]

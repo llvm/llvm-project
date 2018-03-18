@@ -26,9 +26,9 @@ add  %rsi, %rsi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   
-# CHECK-NEXT:  -     1.00    -      -      -      -     1.00   1.00    -      -      -      -      -      -     
+# CHECK-NEXT:  -     1.00    -      -     1.00    -     1.00   1.00    -      -      -      -      -      -     
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   	Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -     	vmulps	(%rsi), %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -     1.00    -     1.00   1.00    -      -      -      -      -      -     	vmulps	(%rsi), %xmm0, %xmm0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     	addq	%rsi, %rsi
