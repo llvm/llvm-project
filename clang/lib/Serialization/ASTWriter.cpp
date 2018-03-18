@@ -276,6 +276,7 @@ void ASTTypeWriter::VisitFunctionType(const FunctionType *T) {
   Record.push_back(C.getCC());
   Record.push_back(C.getProducesResult());
   Record.push_back(C.getNoCallerSavedRegs());
+  Record.push_back(C.getNoCfCheck());
 
   if (C.getHasRegParm() || C.getRegParm() || C.getProducesResult())
     AbbrevToUse = 0;
@@ -884,6 +885,7 @@ void ASTWriter::WriteTypeAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // CC
   Abv->Add(BitCodeAbbrevOp(0));                         // ProducesResult
   Abv->Add(BitCodeAbbrevOp(0));                         // NoCallerSavedRegs
+  Abv->Add(BitCodeAbbrevOp(0));                         // NoCfCheck
   // FunctionProtoType
   Abv->Add(BitCodeAbbrevOp(0));                         // IsVariadic
   Abv->Add(BitCodeAbbrevOp(0));                         // HasTrailingReturn

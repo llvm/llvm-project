@@ -57,12 +57,12 @@ endforeach()
 # Setup toolchain.
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
 set(LLVM_TOOLCHAIN_TOOLS
+  dsymutil
   llc
   llvm-ar
   llvm-cov
   llvm-cxxfilt
   llvm-dwarfdump
-  llvm-dsymutil
   llvm-lib
   llvm-nm
   llvm-objcopy
