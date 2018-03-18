@@ -1931,7 +1931,7 @@ static bool isNumericLiteralExpression(const Expr *E) {
 
 static Optional<std::string> describeRegion(const MemRegion *MR) {
   if (const auto *VR = dyn_cast_or_null<VarRegion>(MR))
-    return std::string(cast<VarRegion>(MR)->getDecl()->getName());
+    return std::string(VR->getDecl()->getName());
   // Once we support more storage locations for bindings,
   // this would need to be improved.
   return None;
