@@ -13,7 +13,7 @@
 #include "DWARFDataExtractor.h"
 #include <stddef.h> // for NULL
 
-class DWARFCompileUnit;
+class DWARFUnit;
 
 class DWARFFormValue {
 public:
@@ -55,9 +55,9 @@ public:
   };
 
   DWARFFormValue();
-  DWARFFormValue(const DWARFCompileUnit *cu, dw_form_t form);
-  const DWARFCompileUnit *GetCompileUnit() const { return m_cu; }
-  void SetCompileUnit(const DWARFCompileUnit *cu) { m_cu = cu; }
+  DWARFFormValue(const DWARFUnit *cu, dw_form_t form);
+  const DWARFUnit *GetCompileUnit() const { return m_cu; }
+  void SetCompileUnit(const DWARFUnit *cu) { m_cu = cu; }
   dw_form_t Form() const { return m_form; }
   void SetForm(dw_form_t form) { m_form = form; }
   const ValueType &Value() const { return m_value; }
@@ -79,7 +79,7 @@ public:
                  lldb::offset_t *offset_ptr) const;
   static bool SkipValue(const dw_form_t form,
                         const lldb_private::DWARFDataExtractor &debug_info_data,
-                        lldb::offset_t *offset_ptr, const DWARFCompileUnit *cu);
+                        lldb::offset_t *offset_ptr, const DWARFUnit *cu);
   static bool IsBlockForm(const dw_form_t form);
   static bool IsDataForm(const dw_form_t form);
   static FixedFormSizes GetFixedFormSizesForAddressSize(uint8_t addr_size,
@@ -89,7 +89,7 @@ public:
   static bool FormIsSupported(dw_form_t form);
 
 protected:
-  const DWARFCompileUnit *m_cu; // Compile unit for this form
+  const DWARFUnit *m_cu;        // Compile unit for this form
   dw_form_t m_form;             // Form for this value
   ValueType m_value;            // Contains all data for the form
 };

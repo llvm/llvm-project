@@ -37,13 +37,13 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Thread.h"
 
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
+#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 static lldb::addr_t
-ReadAddressFromDebugAddrSection(const DWARFCompileUnit *dwarf_cu,
+ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
                                 uint32_t index) {
   uint32_t index_size = dwarf_cu->GetAddressByteSize();
   dw_offset_t addr_base = dwarf_cu->GetAddrBase();
@@ -55,7 +55,7 @@ ReadAddressFromDebugAddrSection(const DWARFCompileUnit *dwarf_cu,
 //----------------------------------------------------------------------
 // DWARFExpression constructor
 //----------------------------------------------------------------------
-DWARFExpression::DWARFExpression(DWARFCompileUnit *dwarf_cu)
+DWARFExpression::DWARFExpression(DWARFUnit *dwarf_cu)
     : m_module_wp(), m_data(), m_dwarf_cu(dwarf_cu),
       m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {}
 
@@ -66,7 +66,7 @@ DWARFExpression::DWARFExpression(const DWARFExpression &rhs)
 
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
-                                 DWARFCompileUnit *dwarf_cu,
+                                 DWARFUnit *dwarf_cu,
                                  lldb::offset_t data_offset,
                                  lldb::offset_t data_length)
     : m_module_wp(), m_data(data, data_offset, data_length),
@@ -1323,7 +1323,7 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
 bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    DWARFCompileUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
+    DWARFUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
     const lldb::offset_t opcodes_length, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr,
     Value &result, Status *error_ptr) {
@@ -2984,7 +2984,7 @@ bool DWARFExpression::Evaluate(
   return true; // Return true on success
 }
 
-size_t DWARFExpression::LocationListSize(const DWARFCompileUnit *dwarf_cu,
+size_t DWARFExpression::LocationListSize(const DWARFUnit *dwarf_cu,
                                          const DataExtractor &debug_loc_data,
                                          lldb::offset_t offset) {
   const lldb::offset_t debug_loc_offset = offset;
@@ -3008,7 +3008,7 @@ size_t DWARFExpression::LocationListSize(const DWARFCompileUnit *dwarf_cu,
 }
 
 bool DWARFExpression::AddressRangeForLocationListEntry(
-    const DWARFCompileUnit *dwarf_cu, const DataExtractor &debug_loc_data,
+    const DWARFUnit *dwarf_cu, const DataExtractor &debug_loc_data,
     lldb::offset_t *offset_ptr, lldb::addr_t &low_pc, lldb::addr_t &high_pc) {
   if (!debug_loc_data.ValidOffset(*offset_ptr))
     return false;
@@ -3242,11 +3242,11 @@ bool DWARFExpression::PrintDWARFExpression(Stream &s, const DataExtractor &data,
 }
 
 void DWARFExpression::PrintDWARFLocationList(
-    Stream &s, const DWARFCompileUnit *cu, const DataExtractor &debug_loc_data,
+    Stream &s, const DWARFUnit *cu, const DataExtractor &debug_loc_data,
     lldb::offset_t offset) {
   uint64_t start_addr, end_addr;
-  uint32_t addr_size = DWARFCompileUnit::GetAddressByteSize(cu);
-  s.SetAddressByteSize(DWARFCompileUnit::GetAddressByteSize(cu));
+  uint32_t addr_size = DWARFUnit::GetAddressByteSize(cu);
+  s.SetAddressByteSize(DWARFUnit::GetAddressByteSize(cu));
   dw_addr_t base_addr = cu ? cu->GetBaseAddress() : 0;
   while (debug_loc_data.ValidOffset(offset)) {
     start_addr = debug_loc_data.GetMaxU64(&offset, addr_size);

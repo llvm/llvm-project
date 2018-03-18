@@ -14,7 +14,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 
-#include "DWARFCompileUnit.h"
+#include "DWARFUnit.h"
 #include "DWARFDebugInfo.h"
 
 using namespace lldb;
@@ -22,7 +22,7 @@ using namespace lldb_private;
 
 SymbolFileDWARFDwoDwp::SymbolFileDWARFDwoDwp(SymbolFileDWARFDwp *dwp_symfile,
                                              ObjectFileSP objfile,
-                                             DWARFCompileUnit *dwarf_cu,
+                                             DWARFUnit *dwarf_cu,
                                              uint64_t dwo_id)
     : SymbolFileDWARFDwo(objfile, dwarf_cu), m_dwp_symfile(dwp_symfile),
       m_dwo_id(dwo_id) {}

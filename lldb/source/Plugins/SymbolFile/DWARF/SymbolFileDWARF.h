@@ -272,19 +272,19 @@ public:
   HasForwardDeclForClangType(const lldb_private::CompilerType &compiler_type);
 
   lldb_private::CompileUnit *
-  GetCompUnitForDWARFCompUnit(DWARFCompileUnit *dwarf_cu,
+  GetCompUnitForDWARFCompUnit(DWARFUnit *dwarf_cu,
                               uint32_t cu_idx = UINT32_MAX);
 
   virtual size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
                                          DIEArray &method_die_offsets);
 
-  bool Supports_DW_AT_APPLE_objc_complete_type(DWARFCompileUnit *cu);
+  bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
 
   lldb_private::DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
   static DWARFDIE GetParentSymbolContextDIE(const DWARFDIE &die);
 
-  virtual lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
+  virtual lldb::CompUnitSP ParseCompileUnit(DWARFUnit *dwarf_cu,
                                             uint32_t cu_idx);
 
   virtual lldb_private::DWARFExpression::LocationListFormat
@@ -303,13 +303,13 @@ public:
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
 
   virtual std::unique_ptr<SymbolFileDWARFDwo>
-  GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu,
+  GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die);
 
   // For regular SymbolFileDWARF instances the method returns nullptr,
   // for the instances of the subclass SymbolFileDWARFDwo
   // the method returns a pointer to the base compile unit.
-  virtual DWARFCompileUnit *GetBaseCompileUnit();
+  virtual DWARFUnit *GetBaseCompileUnit();
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
@@ -342,10 +342,10 @@ protected:
   DIEInDeclContext(const lldb_private::CompilerDeclContext *parent_decl_ctx,
                    const DWARFDIE &die);
 
-  virtual DWARFCompileUnit *
+  virtual DWARFUnit *
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
 
-  DWARFCompileUnit *GetNextUnparsedDWARFCompileUnit(DWARFCompileUnit *prev_cu);
+  DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
   bool GetFunction(const DWARFDIE &die, lldb_private::SymbolContext &sc);
 
