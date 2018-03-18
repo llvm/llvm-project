@@ -4261,7 +4261,7 @@ define <8 x float> @test_rsqrtps(<8 x float> %a0, <8 x float> *%a1) {
 ; ZNVER1-LABEL: test_rsqrtps:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [12:0.50]
-; ZNVER1-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [5:0.50]
+; ZNVER1-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %a0)

@@ -2236,12 +2236,12 @@ define void @test_maskmovdqu(<16 x i8> %a0, <16 x i8> %a1, i8* %a2) {
 ;
 ; SKYLAKE-LABEL: test_maskmovdqu:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vmaskmovdqu %xmm1, %xmm0 # sched: [2:1.00]
+; SKYLAKE-NEXT:    vmaskmovdqu %xmm1, %xmm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovdqu:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmaskmovdqu %xmm1, %xmm0 # sched: [2:1.00]
+; SKX-NEXT:    vmaskmovdqu %xmm1, %xmm0 # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovdqu:

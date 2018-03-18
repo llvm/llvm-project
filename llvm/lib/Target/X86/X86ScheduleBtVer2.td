@@ -704,18 +704,6 @@ def JWriteFPAY22Ld: SchedWriteRes<[JLAGU, JFPU0]> {
 }
 def : InstRW<[JWriteFPAY22Ld, ReadAfterLd], (instregex "VCMPP(S|D)Yrmi", "VM(AX|IN)P(D|S)Yrm")>;
 
-def JWriteVHAddSubY: SchedWriteRes<[JFPU0]> {
-  let Latency = 3;
-  let ResourceCycles = [2];
-}
-def : InstRW<[JWriteVHAddSubY], (instrs VHADDPDYrr, VHADDPSYrr, VHSUBPDYrr, VHSUBPSYrr)>;
-
-def JWriteVHAddSubYLd: SchedWriteRes<[JLAGU, JFPU0]> {
-  let Latency = 8;
-  let ResourceCycles = [1, 2];
-}
-def : InstRW<[JWriteVHAddSubYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUBPSYrm)>;
-
 def JWriteVMaskMovLd: SchedWriteRes<[JLAGU,JFPU01]> {
   let Latency = 6;
   let ResourceCycles = [1, 2];

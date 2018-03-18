@@ -3706,7 +3706,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Addr = DAG.getNode(ISD::ADD, dl, PTy, Addr,
                           TLI.getPICJumpTableRelocBase(Table, DAG));
     }
-    Tmp1 = DAG.getNode(ISD::BRIND, dl, MVT::Other, LD.getValue(1), Addr);
+
+    Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, DAG);
     Results.push_back(Tmp1);
     break;
   }

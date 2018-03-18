@@ -89,6 +89,7 @@ func TestAttributes(t *testing.T) {
 		"uwtable",
 		"zeroext",
 		"cold",
+		"nocf_check",
 	}
 
 	for _, name := range attrTests {
