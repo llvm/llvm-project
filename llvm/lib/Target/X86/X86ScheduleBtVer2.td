@@ -650,14 +650,14 @@ def JWriteVPERMY: SchedWriteRes<[JFPU01]> {
   let ResourceCycles = [6];
   let NumMicroOps = 6;
 }
-def : InstRW<[JWriteVPERMY], (instrs VPERMILPDYrr, VPERMILPSYrr)>;
+def : InstRW<[JWriteVPERMY], (instrs VBLENDVPDYrr, VBLENDVPSYrr, VPERMILPDYrr, VPERMILPSYrr)>;
 
 def JWriteVPERMYLd: SchedWriteRes<[JLAGU, JFPU01]> {
   let Latency = 8;
   let ResourceCycles = [1, 6];
   let NumMicroOps = 6;
 }
-def : InstRW<[JWriteVPERMYLd, ReadAfterLd], (instrs VPERMILPDYrm, VPERMILPSYrm)>;
+def : InstRW<[JWriteVPERMYLd, ReadAfterLd], (instrs VBLENDVPDYrm, VBLENDVPSYrm, VPERMILPDYrm, VPERMILPSYrm)>;
 
 def JWriteShuffleY: SchedWriteRes<[JFPU01]> {
   let ResourceCycles = [2];
@@ -673,18 +673,6 @@ def JWriteShuffleYLd: SchedWriteRes<[JLAGU, JFPU01]> {
 }
 def : InstRW<[JWriteShuffleYLd, ReadAfterLd], (instrs VMOVDDUPYrm, VMOVSHDUPYrm, VMOVSLDUPYrm,
                                                       VPERMILPDYmi, VPERMILPSYmi, VSHUFPDYrmi, VSHUFPSYrmi)>;
-
-def JWriteVBlendVPY: SchedWriteRes<[JFPU01]> {
-  let Latency = 3;
-  let ResourceCycles = [6];
-}
-def : InstRW<[JWriteVBlendVPY], (instrs VBLENDVPDYrr, VBLENDVPSYrr, VPERMILPDYrr, VPERMILPSYrr)>;
-
-def JWriteVBlendVPYLd: SchedWriteRes<[JLAGU, JFPU01]> {
-  let Latency = 8;
-  let ResourceCycles = [1, 6];
-}
-def : InstRW<[JWriteVBlendVPYLd, ReadAfterLd], (instrs VBLENDVPDYrm, VBLENDVPSYrm)>;
 
 def JWriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01]> {
   let Latency = 6;
@@ -703,18 +691,6 @@ def JWriteFPAY22Ld: SchedWriteRes<[JLAGU, JFPU0]> {
   let ResourceCycles = [1, 2];
 }
 def : InstRW<[JWriteFPAY22Ld, ReadAfterLd], (instregex "VCMPP(S|D)Yrmi", "VM(AX|IN)P(D|S)Yrm")>;
-
-def JWriteVHAddSubY: SchedWriteRes<[JFPU0]> {
-  let Latency = 3;
-  let ResourceCycles = [2];
-}
-def : InstRW<[JWriteVHAddSubY], (instrs VHADDPDYrr, VHADDPSYrr, VHSUBPDYrr, VHSUBPSYrr)>;
-
-def JWriteVHAddSubYLd: SchedWriteRes<[JLAGU, JFPU0]> {
-  let Latency = 8;
-  let ResourceCycles = [1, 2];
-}
-def : InstRW<[JWriteVHAddSubYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUBPSYrm)>;
 
 def JWriteVMaskMovLd: SchedWriteRes<[JLAGU,JFPU01]> {
   let Latency = 6;

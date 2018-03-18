@@ -14,7 +14,7 @@
 # Compiled with Apple-GCC 4.0.1 (build 5370):
 #   g++ -g -c sibling.cpp -o sibling.o
 
-# RUN: llvm-dsymutil -arch ppc -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+# RUN: dsymutil -arch ppc -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 # CHECK: DW_TAG_structure_type
 # CHECK-NEXT: DW_AT_name	("A")

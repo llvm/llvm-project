@@ -4,10 +4,10 @@
    done
  */
 
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-anon-namespace -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-anon-namespace -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 #ifdef FILE1
-// Currently llvm-dsymutil will unique the contents of anonymous
+// Currently dsymutil will unique the contents of anonymous
 // namespaces if they are from the same file/line. Force this
 // namespace to appear different eventhough it's the same (this
 // uniquing is actually a bug kept for backward compatibility, see the

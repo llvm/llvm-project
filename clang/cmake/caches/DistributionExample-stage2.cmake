@@ -10,7 +10,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -gline-tables-only -DNDEBUG" CACHE STRIN
 # setup toolchain
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
 set(LLVM_TOOLCHAIN_TOOLS
-  llvm-dsymutil
+  dsymutil
   llvm-cov
   llvm-dwarfdump
   llvm-profdata
