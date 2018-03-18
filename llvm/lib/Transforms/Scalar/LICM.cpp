@@ -393,6 +393,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // used in the loop, instead, just delete it.
       if (isInstructionTriviallyDead(&I, TLI)) {
         DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
+        salvageDebugInfo(I);
         ++II;
         CurAST->deleteValue(&I);
         I.eraseFromParent();
