@@ -4185,12 +4185,15 @@ static SDValue tryBuildVectorReplicate(SelectionDAG &DAG,
                                        const SDLoc &DL, EVT VT, uint64_t Value,
                                        unsigned BitsPerElement) {
   // Signed 16-bit values can be replicated using VREPI.
+  // Mark the constants as opaque or DAGCombiner will convert back to
+  // BUILD_VECTOR.
   int64_t SignedValue = SignExtend64(Value, BitsPerElement);
   if (isInt<16>(SignedValue)) {
     MVT VecVT = MVT::getVectorVT(MVT::getIntegerVT(BitsPerElement),
                                  SystemZ::VectorBits / BitsPerElement);
-    SDValue Op = DAG.getNode(SystemZISD::REPLICATE, DL, VecVT,
-                             DAG.getConstant(SignedValue, DL, MVT::i32));
+    SDValue Op = DAG.getNode(
+        SystemZISD::REPLICATE, DL, VecVT,
+        DAG.getConstant(SignedValue, DL, MVT::i32, false, true /*isOpaque*/));
     return DAG.getNode(ISD::BITCAST, DL, VT, Op);
   }
   // See whether rotating the constant left some N places gives a value that
@@ -4206,9 +4209,10 @@ static SDValue tryBuildVectorReplicate(SelectionDAG &DAG,
     End -= 64 - BitsPerElement;
     MVT VecVT = MVT::getVectorVT(MVT::getIntegerVT(BitsPerElement),
                                  SystemZ::VectorBits / BitsPerElement);
-    SDValue Op = DAG.getNode(SystemZISD::ROTATE_MASK, DL, VecVT,
-                             DAG.getConstant(Start, DL, MVT::i32),
-                             DAG.getConstant(End, DL, MVT::i32));
+    SDValue Op = DAG.getNode(
+        SystemZISD::ROTATE_MASK, DL, VecVT,
+        DAG.getConstant(Start, DL, MVT::i32, false, true /*isOpaque*/),
+        DAG.getConstant(End, DL, MVT::i32, false, true /*isOpaque*/));
     return DAG.getNode(ISD::BITCAST, DL, VT, Op);
   }
   return SDValue();
@@ -4421,8 +4425,9 @@ SDValue SystemZTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     // priority over other methods below.
     uint64_t Mask = 0;
     if (tryBuildVectorByteMask(BVN, Mask)) {
-      SDValue Op = DAG.getNode(SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-                               DAG.getConstant(Mask, DL, MVT::i32));
+      SDValue Op = DAG.getNode(
+          SystemZISD::BYTE_MASK, DL, MVT::v16i8,
+          DAG.getConstant(Mask, DL, MVT::i32, false, true /*isOpaque*/));
       return DAG.getNode(ISD::BITCAST, DL, VT, Op);
     }
 
@@ -5605,28 +5610,293 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+// Return the demanded elements for the OpNo source operand of Op. DemandedElts
+// are for Op.
+static APInt getDemandedSrcElements(SDValue Op, const APInt &DemandedElts,
+                                    unsigned OpNo) {
+  EVT VT = Op.getValueType();
+  unsigned NumElts = (VT.isVector() ? VT.getVectorNumElements() : 1);
+  APInt SrcDemE;
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::INTRINSIC_WO_CHAIN) {
+    unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    switch (Id) {
+    case Intrinsic::s390_vpksh:   // PACKS
+    case Intrinsic::s390_vpksf:
+    case Intrinsic::s390_vpksg:
+    case Intrinsic::s390_vpkshs:  // PACKS_CC
+    case Intrinsic::s390_vpksfs:
+    case Intrinsic::s390_vpksgs:
+    case Intrinsic::s390_vpklsh:  // PACKLS
+    case Intrinsic::s390_vpklsf:
+    case Intrinsic::s390_vpklsg:
+    case Intrinsic::s390_vpklshs: // PACKLS_CC
+    case Intrinsic::s390_vpklsfs:
+    case Intrinsic::s390_vpklsgs:
+      // VECTOR PACK truncates the elements of two source vectors into one.
+      SrcDemE = DemandedElts;
+      if (OpNo == 2)
+        SrcDemE.lshrInPlace(NumElts / 2);
+      SrcDemE = SrcDemE.trunc(NumElts / 2);
+      break;
+      // VECTOR UNPACK extends half the elements of the source vector.
+    case Intrinsic::s390_vuphb:  // VECTOR UNPACK HIGH
+    case Intrinsic::s390_vuphh:
+    case Intrinsic::s390_vuphf:
+    case Intrinsic::s390_vuplhb: // VECTOR UNPACK LOGICAL HIGH
+    case Intrinsic::s390_vuplhh:
+    case Intrinsic::s390_vuplhf:
+      SrcDemE = APInt(NumElts * 2, 0);
+      SrcDemE.insertBits(DemandedElts, 0);
+      break;
+    case Intrinsic::s390_vuplb:  // VECTOR UNPACK LOW
+    case Intrinsic::s390_vuplhw:
+    case Intrinsic::s390_vuplf:
+    case Intrinsic::s390_vupllb: // VECTOR UNPACK LOGICAL LOW
+    case Intrinsic::s390_vupllh:
+    case Intrinsic::s390_vupllf:
+      SrcDemE = APInt(NumElts * 2, 0);
+      SrcDemE.insertBits(DemandedElts, NumElts);
+      break;
+    case Intrinsic::s390_vpdi: {
+      // VECTOR PERMUTE DWORD IMMEDIATE selects one element from each source.
+      SrcDemE = APInt(NumElts, 0);
+      if (!DemandedElts[OpNo - 1])
+        break;
+      unsigned Mask = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
+      unsigned MaskBit = ((OpNo - 1) ? 1 : 4);
+      // Demand input element 0 or 1, given by the mask bit value.
+      SrcDemE.setBit((Mask & MaskBit)? 1 : 0);
+      break;
+    }
+    case Intrinsic::s390_vsldb: {
+      // VECTOR SHIFT LEFT DOUBLE BY BYTE
+      assert(VT == MVT::v16i8 && "Unexpected type.");
+      unsigned FirstIdx = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
+      assert (FirstIdx > 0 && FirstIdx < 16 && "Unused operand.");
+      unsigned NumSrc0Els = 16 - FirstIdx;
+      SrcDemE = APInt(NumElts, 0);
+      if (OpNo == 1) {
+        APInt DemEls = DemandedElts.trunc(NumSrc0Els);
+        SrcDemE.insertBits(DemEls, FirstIdx);
+      } else {
+        APInt DemEls = DemandedElts.lshr(NumSrc0Els);
+        SrcDemE.insertBits(DemEls, 0);
+      }
+      break;
+    }
+    case Intrinsic::s390_vperm:
+      SrcDemE = APInt(NumElts, 1);
+      break;
+    default:
+      llvm_unreachable("Unhandled intrinsic.");
+      break;
+    }
+  } else {
+    switch (Opcode) {
+    case SystemZISD::JOIN_DWORDS:
+      // Scalar operand.
+      SrcDemE = APInt(1, 1);
+      break;
+    case SystemZISD::SELECT_CCMASK:
+      SrcDemE = DemandedElts;
+      break;
+    default:
+      llvm_unreachable("Unhandled opcode.");
+      break;
+    }
+  }
+  return SrcDemE;
+}
+
+static void computeKnownBitsBinOp(const SDValue Op, KnownBits &Known,
+                                  const APInt &DemandedElts,
+                                  const SelectionDAG &DAG, unsigned Depth,
+                                  unsigned OpNo) {
+  APInt Src0DemE = getDemandedSrcElements(Op, DemandedElts, OpNo);
+  APInt Src1DemE = getDemandedSrcElements(Op, DemandedElts, OpNo + 1);
+  unsigned SrcBitWidth = Op.getOperand(OpNo).getScalarValueSizeInBits();
+  KnownBits LHSKnown(SrcBitWidth), RHSKnown(SrcBitWidth);
+  DAG.computeKnownBits(Op.getOperand(OpNo), LHSKnown, Src0DemE, Depth + 1);
+  DAG.computeKnownBits(Op.getOperand(OpNo + 1), RHSKnown, Src1DemE, Depth + 1);
+  Known.Zero = LHSKnown.Zero & RHSKnown.Zero;
+  Known.One = LHSKnown.One & RHSKnown.One;
+}
+
 void
 SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                      KnownBits &Known,
                                                      const APInt &DemandedElts,
                                                      const SelectionDAG &DAG,
                                                      unsigned Depth) const {
-  unsigned BitWidth = Known.getBitWidth();
-
   Known.resetAll();
-  switch (Op.getOpcode()) {
-  case SystemZISD::SELECT_CCMASK: {
-    KnownBits TrueKnown(BitWidth), FalseKnown(BitWidth);
-    DAG.computeKnownBits(Op.getOperand(0), TrueKnown, Depth + 1);
-    DAG.computeKnownBits(Op.getOperand(1), FalseKnown, Depth + 1);
-    Known.Zero = TrueKnown.Zero & FalseKnown.Zero;
-    Known.One = TrueKnown.One & FalseKnown.One;
-    break;
+
+  // Intrinsic CC result is returned in the two low bits.
+  unsigned tmp0, tmp1; // not used
+  if (Op.getResNo() == 1 && isIntrinsicWithCC(Op, tmp0, tmp1)) {
+    Known.Zero.setBitsFrom(2);
+    return;
+  }
+  EVT VT = Op.getValueType();
+  if (Op.getResNo() != 0 || VT == MVT::Untyped)
+    return;
+  assert (Known.getBitWidth() == VT.getScalarSizeInBits() &&
+          "KnownBits does not match VT in bitwidth");
+  assert ((!VT.isVector() ||
+           (DemandedElts.getBitWidth() == VT.getVectorNumElements())) &&
+          "DemandedElts does not match VT number of elements");
+  unsigned BitWidth = Known.getBitWidth();
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::INTRINSIC_WO_CHAIN) {
+    bool IsLogical = false;
+    unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    switch (Id) {
+    case Intrinsic::s390_vpksh:   // PACKS
+    case Intrinsic::s390_vpksf:
+    case Intrinsic::s390_vpksg:
+    case Intrinsic::s390_vpkshs:  // PACKS_CC
+    case Intrinsic::s390_vpksfs:
+    case Intrinsic::s390_vpksgs:
+    case Intrinsic::s390_vpklsh:  // PACKLS
+    case Intrinsic::s390_vpklsf:
+    case Intrinsic::s390_vpklsg:
+    case Intrinsic::s390_vpklshs: // PACKLS_CC
+    case Intrinsic::s390_vpklsfs:
+    case Intrinsic::s390_vpklsgs:
+    case Intrinsic::s390_vpdi:
+    case Intrinsic::s390_vsldb:
+    case Intrinsic::s390_vperm:
+      computeKnownBitsBinOp(Op, Known, DemandedElts, DAG, Depth, 1);
+      break;
+    case Intrinsic::s390_vuplhb: // VECTOR UNPACK LOGICAL HIGH
+    case Intrinsic::s390_vuplhh:
+    case Intrinsic::s390_vuplhf:
+    case Intrinsic::s390_vupllb: // VECTOR UNPACK LOGICAL LOW
+    case Intrinsic::s390_vupllh:
+    case Intrinsic::s390_vupllf:
+      IsLogical = true;
+      LLVM_FALLTHROUGH;
+    case Intrinsic::s390_vuphb:  // VECTOR UNPACK HIGH
+    case Intrinsic::s390_vuphh:
+    case Intrinsic::s390_vuphf:
+    case Intrinsic::s390_vuplb:  // VECTOR UNPACK LOW
+    case Intrinsic::s390_vuplhw:
+    case Intrinsic::s390_vuplf: {
+      SDValue SrcOp = Op.getOperand(1);
+      unsigned SrcBitWidth = SrcOp.getScalarValueSizeInBits();
+      Known = KnownBits(SrcBitWidth);
+      APInt SrcDemE = getDemandedSrcElements(Op, DemandedElts, 0);
+      DAG.computeKnownBits(SrcOp, Known, SrcDemE, Depth + 1);
+      if (IsLogical) {
+        Known = Known.zext(BitWidth);
+        Known.Zero.setBitsFrom(SrcBitWidth);
+      } else
+        Known = Known.sext(BitWidth);
+      break;
+    }
+    default:
+      break;
+    }
+  } else {
+    switch (Opcode) {
+    case SystemZISD::JOIN_DWORDS:
+    case SystemZISD::SELECT_CCMASK:
+      computeKnownBitsBinOp(Op, Known, DemandedElts, DAG, Depth, 0);
+      break;
+    case SystemZISD::REPLICATE: {
+      SDValue SrcOp = Op.getOperand(0);
+      DAG.computeKnownBits(SrcOp, Known, Depth + 1);
+      if (Known.getBitWidth() < BitWidth && isa<ConstantSDNode>(SrcOp))
+        Known = Known.sext(BitWidth); // VREPI sign extends the immedate.
+      break;
+    }
+    default:
+      break;
+    }
   }
 
-  default:
-    break;
+  // Known has the width of the source operand(s). Adjust if needed to match
+  // the passed bitwidth.
+  if (Known.getBitWidth() != BitWidth)
+    Known = Known.zextOrTrunc(BitWidth);
+}
+
+static unsigned computeNumSignBitsBinOp(SDValue Op, const APInt &DemandedElts,
+                                        const SelectionDAG &DAG, unsigned Depth,
+                                        unsigned OpNo) {
+  APInt Src0DemE = getDemandedSrcElements(Op, DemandedElts, OpNo);
+  unsigned LHS = DAG.ComputeNumSignBits(Op.getOperand(OpNo), Src0DemE, Depth + 1);
+  if (LHS == 1) return 1; // Early out.
+  APInt Src1DemE = getDemandedSrcElements(Op, DemandedElts, OpNo + 1);
+  unsigned RHS = DAG.ComputeNumSignBits(Op.getOperand(OpNo + 1), Src1DemE, Depth + 1);
+  if (RHS == 1) return 1; // Early out.
+  unsigned Common = std::min(LHS, RHS);
+  unsigned SrcBitWidth = Op.getOperand(OpNo).getScalarValueSizeInBits();
+  EVT VT = Op.getValueType();
+  unsigned VTBits = VT.getScalarSizeInBits();
+  if (SrcBitWidth > VTBits) { // PACK
+    unsigned SrcExtraBits = SrcBitWidth - VTBits;
+    if (Common > SrcExtraBits)
+      return (Common - SrcExtraBits);
+    return 1;
   }
+  assert (SrcBitWidth == VTBits && "Expected operands of same bitwidth.");
+  return Common;
+}
+
+unsigned
+SystemZTargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  if (Op.getResNo() != 0)
+    return 1;
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::INTRINSIC_WO_CHAIN) {
+    unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    switch (Id) {
+    case Intrinsic::s390_vpksh:   // PACKS
+    case Intrinsic::s390_vpksf:
+    case Intrinsic::s390_vpksg:
+    case Intrinsic::s390_vpkshs:  // PACKS_CC
+    case Intrinsic::s390_vpksfs:
+    case Intrinsic::s390_vpksgs:
+    case Intrinsic::s390_vpklsh:  // PACKLS
+    case Intrinsic::s390_vpklsf:
+    case Intrinsic::s390_vpklsg:
+    case Intrinsic::s390_vpklshs: // PACKLS_CC
+    case Intrinsic::s390_vpklsfs:
+    case Intrinsic::s390_vpklsgs:
+    case Intrinsic::s390_vpdi:
+    case Intrinsic::s390_vsldb:
+    case Intrinsic::s390_vperm:
+      return computeNumSignBitsBinOp(Op, DemandedElts, DAG, Depth, 1);
+    case Intrinsic::s390_vuphb:  // VECTOR UNPACK HIGH
+    case Intrinsic::s390_vuphh:
+    case Intrinsic::s390_vuphf:
+    case Intrinsic::s390_vuplb:  // VECTOR UNPACK LOW
+    case Intrinsic::s390_vuplhw:
+    case Intrinsic::s390_vuplf: {
+      SDValue PackedOp = Op.getOperand(1);
+      APInt SrcDemE = getDemandedSrcElements(Op, DemandedElts, 1);
+      unsigned Tmp = DAG.ComputeNumSignBits(PackedOp, SrcDemE, Depth + 1);
+      EVT VT = Op.getValueType();
+      unsigned VTBits = VT.getScalarSizeInBits();
+      Tmp += VTBits - PackedOp.getScalarValueSizeInBits();
+      return Tmp;
+    }
+    default:
+      break;
+    }
+  } else {
+    switch (Opcode) {
+    case SystemZISD::SELECT_CCMASK:
+      return computeNumSignBitsBinOp(Op, DemandedElts, DAG, Depth, 0);
+    default:
+      break;
+    }
+  }
+
+  return 1;
 }
 
 //===----------------------------------------------------------------------===//

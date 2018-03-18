@@ -75,6 +75,9 @@ namespace llvm {
       ///
       CALL,
 
+      /// Same as call except it adds the NoTrack prefix.
+      NT_CALL,
+
       /// This operation implements the lowering for readcyclecounter.
       RDTSC_DAG,
 
@@ -121,6 +124,10 @@ namespace llvm {
       /// condition code, and operand 3 is the flag operand produced by a CMP
       /// or TEST instruction.
       BRCOND,
+
+      /// BRIND node with NoTrack prefix. Operand 0 is the chain operand and
+      /// operand 1 is the target address.
+      NT_BRIND,
 
       /// Return with a flag operand. Operand 0 is the chain operand, operand
       /// 1 is the number of bytes of stack to pop.
@@ -1114,8 +1121,11 @@ namespace llvm {
     bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
-
     void finalizeLowering(MachineFunction &MF) const override;
+
+    SDValue expandIndirectJTBranch(const SDLoc& dl, SDValue Value, 
+                                   SDValue Addr, SelectionDAG &DAG) 
+                                   const override;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

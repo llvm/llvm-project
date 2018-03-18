@@ -372,7 +372,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
 
     std::vector<Record*> BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (!BPs.empty()) {
-      OS << "\n// Pipeline forwarding pathes for itineraries \"" << Name
+      OS << "\n// Pipeline forwarding paths for itineraries \"" << Name
          << "\"\n" << "namespace " << Name << "Bypass {\n";
 
       OS << "  const unsigned NoBypass = 0;\n";
@@ -865,7 +865,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     IdxVec Writes = SC.Writes;
     IdxVec Reads = SC.Reads;
     if (!SC.InstRWs.empty()) {
-      // This class has a default ReadWrite list which can be overriden by
+      // This class has a default ReadWrite list which can be overridden by
       // InstRW definitions.
       Record *RWDef = nullptr;
       for (Record *RW : SC.InstRWs) {

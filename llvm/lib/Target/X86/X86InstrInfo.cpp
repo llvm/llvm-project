@@ -11217,6 +11217,11 @@ X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags
   if (MI.isDebugValue() || MI.isIndirectDebugValue())
     return MachineOutlinerInstrType::Invisible;
 
+  // At this point, KILL instructions don't really tell us much so we can go
+  // ahead and skip over them.
+  if (MI.isKill())
+    return MachineOutlinerInstrType::Invisible;
+
   // Is this a tail call? If yes, we can outline as a tail call.
   if (isTailCall(MI))
     return MachineOutlinerInstrType::Legal;

@@ -1,10 +1,11 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+ibt -x86-indirect-branch-tracking < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86_64
-; RUN: llc -mtriple=i386-unknown-unknown -mattr=+ibt -x86-indirect-branch-tracking < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+ibt < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86_64
+; RUN: llc -mtriple=i386-unknown-unknown -mattr=+ibt < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86
+; RUN: llc -mtriple i386-windows-gnu -mattr=+ibt -exception-model sjlj < %s | FileCheck %s --check-prefix=SJLJ
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test1
 ;; -----
-;; Checks ENDBR insertion in case of indirect branch IR instruction.
+;; Checks ENDBR insertion in case of switch case statement.
 ;; Also since the function is not internal, make sure that endbr32/64 was 
 ;; added at the beginning of the function.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -34,7 +35,8 @@ bb6:                                              ; preds = %entry
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test2
 ;; -----
-;; Checks ENDBR insertion in case of switch case statement.
+;; Checks NOTRACK insertion in case of switch case statement.
+;; Check that there is no ENDBR insertion in the following case statements.
 ;; Also since the function is not internal, ENDBR instruction should be
 ;; added to its first basic block.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -43,25 +45,9 @@ define i32 @test2(i32 %a) {
 ; ALL-LABEL:   test2
 ; X86_64:      endbr64
 ; X86:         endbr32
-; ALL:         jmp{{q|l}} *
-; ALL:         .LBB1_2:
-; X86_64-NEXT: endbr64
-; X86-NEXT:    endbr32
-; ALL:         .LBB1_7:
+; ALL:         notrack jmp{{q|l}} *
 ; X86_64-NOT:      endbr64
 ; X86-NOT:         endbr32
-; ALL:         .LBB1_3:
-; X86_64-NEXT: endbr64
-; X86-NEXT:    endbr32
-; ALL:         .LBB1_4:
-; X86_64-NEXT: endbr64
-; X86-NEXT:    endbr32
-; ALL:         .LBB1_5:
-; X86_64-NEXT: endbr64
-; X86-NEXT:    endbr32
-; ALL:         .LBB1_6:
-; X86_64-NEXT: endbr64
-; X86-NEXT:    endbr32
 entry:
   %retval = alloca i32, align 4
   %a.addr = alloca i32, align 4
@@ -198,3 +184,38 @@ define i32 @test7() {
 ; X86:         endbr32
   ret i32 1
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Test8
+;; -----
+;; Checks that NO TRACK prefix is not added for indirect jumps to a jump-
+;; table that was created for SJLJ dispatch.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+declare void @_Z20function_that_throwsv()
+declare i32 @__gxx_personality_sj0(...)
+declare i8* @__cxa_begin_catch(i8*)
+declare void @__cxa_end_catch()
+
+define void @test8() personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+;SJLJ-LABEL:    test8
+;SJLJ-NOT:      ds
+entry:
+  invoke void @_Z20function_that_throwsv()
+          to label %try.cont unwind label %lpad
+
+lpad:
+  %0 = landingpad { i8*, i32 }
+          catch i8* null
+  %1 = extractvalue { i8*, i32 } %0, 0
+  %2 = tail call i8* @__cxa_begin_catch(i8* %1)
+  tail call void @__cxa_end_catch()
+  br label %try.cont
+
+try.cont:
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 4, !"cf-protection-branch", i32 1}

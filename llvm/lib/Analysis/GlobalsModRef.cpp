@@ -502,6 +502,8 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     }
 
     FunctionInfo &FI = FunctionInfos[F];
+    Handles.emplace_front(*this, F);
+    Handles.front().I = Handles.begin();
     bool KnowNothing = false;
 
     // Collect the mod/ref properties due to called functions.  We only compute

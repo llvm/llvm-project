@@ -1404,6 +1404,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
 static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   switch (Kind) {
   case Attribute::NoReturn:
+  case Attribute::NoCfCheck:
   case Attribute::NoUnwind:
   case Attribute::NoInline:
   case Attribute::AlwaysInline:

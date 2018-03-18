@@ -93,9 +93,6 @@ public:
   unsigned getMaxUsedRegisterMappings() const {
     return DU->getMaxUsedRegisterMappings();
   }
-  const llvm::MCSchedModel &getSchedModel() const {
-    return STI.getSchedModel();
-  }
   void getBuffersUsage(std::vector<BufferUsageEntry> &Usage) const {
     return HWS->getBuffersUsage(Usage);
   }

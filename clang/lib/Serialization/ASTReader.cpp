@@ -6005,13 +6005,14 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
   }
 
   case TYPE_FUNCTION_NO_PROTO: {
-    if (Record.size() != 7) {
+    if (Record.size() != 8) {
       Error("incorrect encoding of no-proto function type");
       return QualType();
     }
     QualType ResultType = readType(*Loc.F, Record, Idx);
     FunctionType::ExtInfo Info(Record[1], Record[2], Record[3],
-                               (CallingConv)Record[4], Record[5], Record[6]);
+                               (CallingConv)Record[4], Record[5], Record[6], 
+                               Record[7]);
     return Context.getFunctionNoProtoType(ResultType, Info);
   }
 
@@ -6024,9 +6025,10 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
                                         /*regparm*/ Record[3],
                                         static_cast<CallingConv>(Record[4]),
                                         /*produces*/ Record[5],
-                                        /*nocallersavedregs*/ Record[6]);
+                                        /*nocallersavedregs*/ Record[6],
+                                        /*nocfcheck*/ Record[7]);
 
-    unsigned Idx = 7;
+    unsigned Idx = 8;
 
     EPI.Variadic = Record[Idx++];
     EPI.HasTrailingReturn = Record[Idx++];

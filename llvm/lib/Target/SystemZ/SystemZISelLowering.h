@@ -499,6 +499,12 @@ public:
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
 
+  /// Determine the number of bits in the operation that are sign bits.
+  unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           unsigned Depth) const override;
+
   ISD::NodeType getExtendForAtomicOps() const override {
     return ISD::ANY_EXTEND;
   }

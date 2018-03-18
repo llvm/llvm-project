@@ -17,8 +17,7 @@ define void @pr32275(<4 x i8> %B15) {
 ; CHECK-NEXT:    vlvgf [[REG2]], [[REG3]], 2
 ; CHECK-NEXT:    vn [[REG2]], [[REG2]], [[REG0]]
 ; CHECK-NEXT:    vlgvf [[REG4:%r[0-9]]], [[REG2]], 3
-; CHECK-NEXT:    tmll [[REG4]], 1
-; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:    cijlh [[REG4]], 0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %CF36
 ; CHECK-NEXT:    br %r14
 BB:
