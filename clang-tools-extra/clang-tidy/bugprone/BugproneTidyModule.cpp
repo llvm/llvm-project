@@ -43,6 +43,7 @@
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
 #include "UnusedRaiiCheck.h"
+#include "UnusedReturnValueCheck.h"
 #include "UseAfterMoveCheck.h"
 #include "VirtualNearMissCheck.h"
 
@@ -119,6 +120,8 @@ public:
         "bugprone-undelegated-constructor");
     CheckFactories.registerCheck<UnusedRaiiCheck>(
         "bugprone-unused-raii");
+    CheckFactories.registerCheck<UnusedReturnValueCheck>(
+        "bugprone-unused-return-value");
     CheckFactories.registerCheck<UseAfterMoveCheck>(
         "bugprone-use-after-move");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
