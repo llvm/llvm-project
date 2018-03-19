@@ -82,9 +82,9 @@ declare i32 @puts(i8* nocapture) nounwind
 !20 = !DILocalVariable(name: "val", line: 4, arg: 2, scope: !9, file: !1, type: !7)
 !21 = !DILocalVariable(name: "c", line: 4, arg: 3, scope: !9, file: !1, type: !8)
 
-!49 = !DILocalVariable(name: "ptr", line: 4, arg: 1, scope: !9, file: !1, type: !6)
-!50 = !DILocalVariable(name: "val", line: 4, arg: 2, scope: !9, file: !1, type: !7)
-!51 = !DILocalVariable(name: "c", line: 4, arg: 2, scope: !9, file: !1, type: !8)
+!49 = !DILocalVariable(name: "ptr", line: 4, scope: !10, file: !1, type: !6)
+!50 = !DILocalVariable(name: "val", line: 4, scope: !10, file: !1, type: !7)
+!51 = !DILocalVariable(name: "c", line: 4, scope: !10, file: !1, type: !8)
 
 !22 = !DILocalVariable(name: "argc", line: 17, arg: 1, scope: !10, file: !1, type: !5)
 !23 = !DILocalVariable(name: "argv", line: 17, arg: 2, scope: !10, file: !1, type: !13)
@@ -102,7 +102,7 @@ declare i32 @puts(i8* nocapture) nounwind
 !35 = !DILocation(line: 19, scope: !25)
 !36 = !DILocation(line: 20, scope: !25)
 !37 = !DILocation(line: 21, scope: !25)
-!38 = !DILocation(line: 4, scope: !9, inlinedAt: !37)
+!38 = !DILocation(line: 4, scope: !10, inlinedAt: !37)
 !39 = !DILocation(line: 6, scope: !28, inlinedAt: !37)
 !40 = !DILocation(line: 22, scope: !25)
 !41 = !DILocation(line: 23, scope: !25)
