@@ -19,8 +19,10 @@
 #endif
 #include "sanitizer_procmaps.h"
 
-#include <sys/sysctl.h>
+// clang-format off
 #include <sys/types.h>
+#include <sys/sysctl.h>
+// clang-format on
 #include <unistd.h>
 #if SANITIZER_FREEBSD
 #include <sys/user.h>

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -basicaa -licm -S | FileCheck %s
+; RUN: opt < %s -debugify -basicaa -licm -S | FileCheck %s -check-prefix=DEBUGIFY
 
 declare i32 @strlen(i8*) readonly nounwind
 
@@ -249,6 +250,9 @@ Out:
 ; CHECK-LABEL: @test11(
 ; CHECK:     Out:
 ; CHECK-NEXT:  ret void
+
+; DEBUGIFY-LABEL: @test11(
+; DEBUGIFY: call void @llvm.dbg.value(metadata %Ty* @X2, metadata {{.*}}, metadata !DIExpression(DW_OP_stack_value))
 }
 
 @c = common global [1 x i32] zeroinitializer, align 4

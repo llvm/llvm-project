@@ -3,7 +3,7 @@ struct Base {};
 
 // __declspec(dllexport) causes us to export the implicit constructor.
 struct __declspec(dllexport) Derived : virtual Base {
-// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc %struct.Derived* @"\01??0Derived@@QAE@ABU0@@Z"
+// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc %struct.Derived* @"??0Derived@@QAE@ABU0@@Z"
 // CHECK:      %[[this:.*]] = load %struct.Derived*, %struct.Derived** {{.*}}
 // CHECK-NEXT: store %struct.Derived* %[[this]], %struct.Derived** %[[retval:.*]]
 // CHECK:      %[[dest_a_gep:.*]] = getelementptr inbounds %struct.Derived, %struct.Derived* %[[this]], i32 0, i32 1
@@ -18,7 +18,7 @@ struct __declspec(dllexport) Derived : virtual Base {
 
 // __declspec(dllexport) causes us to export the implicit copy constructor.
 struct __declspec(dllexport) Derived2 : virtual Base {
-// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc %struct.Derived2* @"\01??0Derived2@@QAE@ABU0@@Z"
+// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc %struct.Derived2* @"??0Derived2@@QAE@ABU0@@Z"
 // CHECK:      %[[this:.*]] = load %struct.Derived2*, %struct.Derived2** {{.*}}
 // CHECK-NEXT: store %struct.Derived2* %[[this]], %struct.Derived2** %[[retval:.*]]
 // CHECK:      %[[dest_a_gep:.*]] = getelementptr inbounds %struct.Derived2, %struct.Derived2* %[[this]], i32 0, i32 1

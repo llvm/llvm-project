@@ -72,7 +72,7 @@ DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
     bool printed = false;
     const size_t num_compile_units = GetNumCompileUnits();
     for (size_t idx = 0; idx < num_compile_units; ++idx) {
-      DWARFCompileUnit *cu = GetCompileUnitAtIndex(idx);
+      DWARFUnit *cu = GetCompileUnitAtIndex(idx);
 
       dw_offset_t offset = cu->GetOffset();
       if (cus_with_data.find(offset) == cus_with_data.end()) {
@@ -97,7 +97,7 @@ void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
   if (m_compile_units.empty()) {
     if (m_dwarf2Data != NULL) {
       lldb::offset_t offset = 0;
-      DWARFCompileUnitSP cu_sp;
+      DWARFUnitSP cu_sp;
       while ((cu_sp = DWARFCompileUnit::Extract(m_dwarf2Data, &offset))) {
         m_compile_units.push_back(cu_sp);
 
@@ -112,14 +112,14 @@ size_t DWARFDebugInfo::GetNumCompileUnits() {
   return m_compile_units.size();
 }
 
-DWARFCompileUnit *DWARFDebugInfo::GetCompileUnitAtIndex(uint32_t idx) {
-  DWARFCompileUnit *cu = NULL;
+DWARFUnit *DWARFDebugInfo::GetCompileUnitAtIndex(uint32_t idx) {
+  DWARFUnit *cu = NULL;
   if (idx < GetNumCompileUnits())
     cu = m_compile_units[idx].get();
   return cu;
 }
 
-bool DWARFDebugInfo::ContainsCompileUnit(const DWARFCompileUnit *cu) const {
+bool DWARFDebugInfo::ContainsCompileUnit(const DWARFUnit *cu) const {
   // Not a verify efficient function, but it is handy for use in assertions
   // to make sure that a compile unit comes from a debug information file.
   CompileUnitColl::const_iterator end_pos = m_compile_units.end();
@@ -133,13 +133,13 @@ bool DWARFDebugInfo::ContainsCompileUnit(const DWARFCompileUnit *cu) const {
 }
 
 bool DWARFDebugInfo::OffsetLessThanCompileUnitOffset(
-    dw_offset_t offset, const DWARFCompileUnitSP &cu_sp) {
+    dw_offset_t offset, const DWARFUnitSP &cu_sp) {
   return offset < cu_sp->GetOffset();
 }
 
-DWARFCompileUnit *DWARFDebugInfo::GetCompileUnit(dw_offset_t cu_offset,
+DWARFUnit *DWARFDebugInfo::GetCompileUnit(dw_offset_t cu_offset,
                                                  uint32_t *idx_ptr) {
-  DWARFCompileUnitSP cu_sp;
+  DWARFUnitSP cu_sp;
   uint32_t cu_idx = DW_INVALID_INDEX;
   if (cu_offset != DW_INVALID_OFFSET) {
     ParseCompileUnitHeadersIfNeeded();
@@ -170,18 +170,18 @@ DWARFCompileUnit *DWARFDebugInfo::GetCompileUnit(dw_offset_t cu_offset,
   return cu_sp.get();
 }
 
-DWARFCompileUnit *DWARFDebugInfo::GetCompileUnit(const DIERef &die_ref) {
+DWARFUnit *DWARFDebugInfo::GetCompileUnit(const DIERef &die_ref) {
   if (die_ref.cu_offset == DW_INVALID_OFFSET)
     return GetCompileUnitContainingDIEOffset(die_ref.die_offset);
   else
     return GetCompileUnit(die_ref.cu_offset);
 }
 
-DWARFCompileUnit *
+DWARFUnit *
 DWARFDebugInfo::GetCompileUnitContainingDIEOffset(dw_offset_t die_offset) {
   ParseCompileUnitHeadersIfNeeded();
 
-  DWARFCompileUnitSP cu_sp;
+  DWARFUnitSP cu_sp;
 
   // Watch out for single compile unit executable as they are pretty common
   const size_t num_cus = m_compile_units.size();
@@ -205,7 +205,7 @@ DWARFDebugInfo::GetCompileUnitContainingDIEOffset(dw_offset_t die_offset) {
 
 DWARFDIE
 DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset) {
-  DWARFCompileUnit *cu = GetCompileUnitContainingDIEOffset(die_offset);
+  DWARFUnit *cu = GetCompileUnitContainingDIEOffset(die_offset);
   if (cu)
     return cu->GetDIE(die_offset);
   return DWARFDIE();
@@ -218,7 +218,7 @@ DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset) {
 //----------------------------------------------------------------------
 DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
-  DWARFCompileUnit *cu = GetCompileUnit(die_ref);
+  DWARFUnit *cu = GetCompileUnit(die_ref);
   if (cu)
     return cu->GetDIE(die_ref.die_offset);
   return DWARFDIE(); // Not found
@@ -241,7 +241,7 @@ void DWARFDebugInfo::Parse(SymbolFileDWARF *dwarf2Data, Callback callback,
     uint32_t depth = 0;
     DWARFDebugInfoEntry die;
 
-    DWARFCompileUnitSP cu;
+    DWARFUnitSP cu;
     while ((cu = DWARFCompileUnit::Extract(dwarf2Data, &offset))) {
       const dw_offset_t next_cu_offset = cu->GetNextCompileUnitOffset();
 
@@ -308,7 +308,7 @@ typedef struct DumpInfo {
 // whether a single DIE is to be dumped (or all of the data).
 //----------------------------------------------------------------------
 static dw_offset_t DumpCallback(SymbolFileDWARF *dwarf2Data,
-                                DWARFCompileUnit *cu, DWARFDebugInfoEntry *die,
+                                DWARFUnit *cu, DWARFDebugInfoEntry *die,
                                 const dw_offset_t next_offset,
                                 const uint32_t curr_depth, void *userData) {
   DumpInfo *dumpInfo = (DumpInfo *)userData;
@@ -482,7 +482,7 @@ void DWARFDebugInfo::Dump(Stream *s, const uint32_t die_offset,
   uint32_t curr_depth = 0;
   ParseCompileUnitHeadersIfNeeded();
   for (pos = m_compile_units.begin(); pos != m_compile_units.end(); ++pos) {
-    DWARFCompileUnit *cu = pos->get();
+    DWARFUnit *cu = pos->get();
     DumpCallback(m_dwarf2Data, cu, NULL, 0, curr_depth, &dumpInfo);
 
     const DWARFDIE die = cu->DIE();

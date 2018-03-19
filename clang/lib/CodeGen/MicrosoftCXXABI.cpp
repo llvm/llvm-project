@@ -3429,7 +3429,7 @@ CGCXXABI *clang::CodeGen::CreateMicrosoftCXXABI(CodeGenModule &CGM) {
 //   mangled into them so they can be aggressively deduplicated by the linker.
 
 static llvm::GlobalVariable *getTypeInfoVTable(CodeGenModule &CGM) {
-  StringRef MangledName("\01??_7type_info@@6B@");
+  StringRef MangledName("??_7type_info@@6B@");
   if (auto VTable = CGM.getModule().getNamedGlobal(MangledName))
     return VTable;
   return new llvm::GlobalVariable(CGM.getModule(), CGM.Int8PtrTy,

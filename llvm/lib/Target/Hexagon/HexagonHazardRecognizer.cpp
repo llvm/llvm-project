@@ -31,6 +31,7 @@ void HexagonHazardRecognizer::Reset() {
   PacketNum = 0;
   UsesDotCur = nullptr;
   DotCurPNum = -1;
+  UsesLoad = false;
   RegDefs.clear();
 }
 
@@ -78,15 +79,20 @@ void HexagonHazardRecognizer::AdvanceCycle() {
     UsesDotCur = nullptr;
     DotCurPNum = -1;
   }
+  UsesLoad = false;
   PacketNum++;
   RegDefs.clear();
 }
 
-/// If a packet contains a dot cur instruction, then we may prefer the
-/// instruction that can use the dot cur result. Or, if the use
-/// isn't scheduled in the same packet, then prefer other instructions
-/// in the subsequent packet.
+/// Handle the cases when we prefer one instruction over another. Case 1 - we
+/// prefer not to generate multiple loads in the packet to avoid a potential
+/// bank conflict. Case 2 - if a packet contains a dot cur instruction, then we
+/// prefer the instruction that can use the dot cur result. However, if the use
+/// is not scheduled in the same packet, then prefer other instructions in the
+/// subsequent packet.
 bool HexagonHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+  if (UsesLoad && SU->isInstr() && SU->getInstr()->mayLoad())
+    return true;
   return UsesDotCur && ((SU == UsesDotCur) ^ (DotCurPNum == (int)PacketNum));
 }
 
@@ -137,4 +143,6 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
     UsesDotCur = nullptr;
     DotCurPNum = -1;
   }
+
+  UsesLoad = MI->mayLoad();
 }

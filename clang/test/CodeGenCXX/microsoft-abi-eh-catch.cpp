@@ -47,7 +47,7 @@ extern "C" void catch_int() {
 }
 
 // WIN64-LABEL: define dso_local void @catch_int()
-// WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %[[e_addr:[^\]]*]]]
+// WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i32* %[[e_addr:[^\]]*]]]
 //
 // The catchpad instruction starts the lifetime of 'e'. Unfortunately, that
 // leaves us with nowhere to put lifetime.start, so we don't emit lifetime
@@ -69,7 +69,7 @@ extern "C" void catch_int_unnamed() {
 }
 
 // WIN64-LABEL: define dso_local void @catch_int_unnamed()
-// WIN64: catchpad within %{{.*}} [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+// WIN64: catchpad within %{{.*}} [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i8* null]
 // WIN64: catchret
 
 struct A {
@@ -96,7 +96,7 @@ extern "C" void catch_a_byval() {
 
 // WIN64-LABEL: define dso_local void @catch_a_byval()
 // WIN64: %[[e_addr:[^ ]*]] = alloca %struct.A
-// WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor7* @"\01??_R0?AUA@@@8", i32 0, %struct.A* %[[e_addr]]]
+// WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor7* @"??_R0?AUA@@@8", i32 0, %struct.A* %[[e_addr]]]
 // WIN64: %[[e_i8:[^ ]*]] = bitcast %struct.A* %[[e_addr]] to i8*
 // WIN64: call void @handle_exception(i8* %[[e_i8]])
 // WIN64: catchret
@@ -111,7 +111,7 @@ extern "C" void catch_a_ref() {
 
 // WIN64-LABEL: define dso_local void @catch_a_ref()
 // WIN64: %[[e_addr:[^ ]*]] = alloca %struct.A*
-// WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor7* @"\01??_R0?AUA@@@8", i32 8, %struct.A** %[[e_addr]]]
+// WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor7* @"??_R0?AUA@@@8", i32 8, %struct.A** %[[e_addr]]]
 // WIN64: %[[eptr:[^ ]*]] = load %struct.A*, %struct.A** %[[e_addr]]
 // WIN64: %[[eptr_i8:[^ ]*]] = bitcast %struct.A* %[[eptr]] to i8*
 // WIN64: call void @handle_exception(i8* %[[eptr_i8]])
@@ -145,7 +145,7 @@ extern "C" void catch_nested() {
 // WIN64: %[[catchswitch_outer_scope:[^ ]*]] = catchswitch within none [label %[[catch_int_outer:[^ ]*]]] unwind to caller
 //
 // WIN64: [[catch_int_outer]]
-// WIN64: %[[catchpad:[^ ]*]] = catchpad within %[[catchswitch_outer_scope]] [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+// WIN64: %[[catchpad:[^ ]*]] = catchpad within %[[catchswitch_outer_scope]] [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i8* null]
 // WIN64: invoke void @might_throw()
 // WIN64-NEXT: to label %[[cont2:[^ ]*]] unwind label %[[catchswitch_inner:[^ ]*]]
 //
@@ -153,7 +153,7 @@ extern "C" void catch_nested() {
 // WIN64: %[[catchswitch_inner_scope:[^ ]*]] = catchswitch within %[[catchpad]] [label %[[catch_int_inner:[^ ]*]]] unwind to caller
 //
 // WIN64: [[catch_int_inner]]
-// WIN64: catchpad within %[[catchswitch_inner_scope]] [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+// WIN64: catchpad within %[[catchswitch_inner_scope]] [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i8* null]
 // WIN64-NEXT: call void @might_throw()
 // WIN64: catchret {{.*}} to label %[[catchret2:[^ ]*]]
 //

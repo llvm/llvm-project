@@ -100,11 +100,11 @@ namespace {
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    void dump() {
+    void dump(SelectionDAG *DAG = nullptr) {
       dbgs() << "X86ISelAddressMode " << this << '\n';
       dbgs() << "Base_Reg ";
       if (Base_Reg.getNode())
-        Base_Reg.getNode()->dump();
+        Base_Reg.getNode()->dump(DAG);
       else
         dbgs() << "nul\n";
       if (BaseType == FrameIndexBase)
@@ -112,7 +112,7 @@ namespace {
       dbgs() << " Scale " << Scale << '\n'
              << "IndexReg ";
       if (IndexReg.getNode())
-        IndexReg.getNode()->dump();
+        IndexReg.getNode()->dump(DAG);
       else
         dbgs() << "nul\n";
       dbgs() << " Disp " << Disp << '\n'
@@ -1280,7 +1280,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
   SDLoc dl(N);
   DEBUG({
       dbgs() << "MatchAddress: ";
-      AM.dump();
+      AM.dump(CurDAG);
     });
   // Limit recursion.
   if (Depth > 5)

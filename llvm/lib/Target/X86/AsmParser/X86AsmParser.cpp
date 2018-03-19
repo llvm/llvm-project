@@ -2353,21 +2353,22 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                       .Cases("acquire", "release", isParsingIntelSyntax())
                       .Default(false);
 
-  auto isLockRepeatPrefix = [](StringRef N) {
+  auto isLockRepeatNtPrefix = [](StringRef N) {
     return StringSwitch<bool>(N)
-        .Cases("lock", "rep", "repe", "repz", "repne", "repnz", true)
+        .Cases("lock", "rep", "repe", "repz", "repne", "repnz", "notrack", true)
         .Default(false);
   };
 
   bool CurlyAsEndOfStatement = false;
 
   unsigned Flags = X86::IP_NO_PREFIX;
-  while (isLockRepeatPrefix(Name.lower())) {
+  while (isLockRepeatNtPrefix(Name.lower())) {
     unsigned Prefix =
         StringSwitch<unsigned>(Name)
             .Cases("lock", "lock", X86::IP_HAS_LOCK)
             .Cases("rep", "repe", "repz", X86::IP_HAS_REPEAT)
             .Cases("repne", "repnz", X86::IP_HAS_REPEAT_NE)
+            .Cases("notrack", "notrack", X86::IP_HAS_NOTRACK)
             .Default(X86::IP_NO_PREFIX); // Invalid prefix (impossible)
     Flags |= Prefix;
     if (getLexer().is(AsmToken::EndOfStatement)) {

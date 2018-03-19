@@ -18,16 +18,16 @@
 
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
 public:
-  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit *dwarf_cu);
+  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFUnit *dwarf_cu);
 
   ~SymbolFileDWARFDwo() override = default;
 
-  lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
+  lldb::CompUnitSP ParseCompileUnit(DWARFUnit *dwarf_cu,
                                     uint32_t cu_idx) override;
 
-  DWARFCompileUnit *GetCompileUnit();
+  DWARFUnit *GetCompileUnit();
 
-  DWARFCompileUnit *
+  DWARFUnit *
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 
   lldb_private::DWARFExpression::LocationListFormat
@@ -43,12 +43,12 @@ public:
   GetDIE(const DIERef &die_ref) override;
 
   std::unique_ptr<SymbolFileDWARFDwo>
-  GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu,
+  GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die) override {
     return nullptr;
   }
 
-  DWARFCompileUnit *GetBaseCompileUnit() override;
+  DWARFUnit *GetBaseCompileUnit() override;
 
 protected:
   void LoadSectionData(lldb::SectionType sect_type,
@@ -74,7 +74,7 @@ protected:
   SymbolFileDWARF *GetBaseSymbolFile();
 
   lldb::ObjectFileSP m_obj_file_sp;
-  DWARFCompileUnit *m_base_dwarf_cu;
+  DWARFUnit *m_base_dwarf_cu;
 };
 
 #endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_

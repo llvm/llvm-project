@@ -3415,6 +3415,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const Function *Fn = CI ? CI->getCalledFunction() : nullptr;
   bool HasNCSR = (CI && CI->hasFnAttr("no_caller_saved_registers")) ||
                  (Fn && Fn->hasFnAttribute("no_caller_saved_registers"));
+  const auto *II = dyn_cast_or_null<InvokeInst>(CLI.CS.getInstruction());
+  bool HasNoCfCheck =
+      (CI && CI->doesNoCfCheck()) || (II && II->doesNoCfCheck());
+  const Module *M = MF.getMMI().getModule();
+  Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
 
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
@@ -3898,7 +3903,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
   }
 
-  Chain = DAG.getNode(X86ISD::CALL, dl, NodeTys, Ops);
+  if (HasNoCfCheck && IsCFProtectionSupported) {
+    Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
+  } else {
+    Chain = DAG.getNode(X86ISD::CALL, dl, NodeTys, Ops);
+  }
   InFlag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -25852,6 +25861,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::GF2P8MULB:          return "X86ISD::GF2P8MULB";
   case X86ISD::GF2P8AFFINEQB:      return "X86ISD::GF2P8AFFINEQB";
   case X86ISD::GF2P8AFFINEINVQB:   return "X86ISD::GF2P8AFFINEINVQB";
+  case X86ISD::NT_CALL:            return "X86ISD::NT_CALL";
+  case X86ISD::NT_BRIND:           return "X86ISD::NT_BRIND";
   }
   return nullptr;
 }
@@ -38707,6 +38718,22 @@ void X86TargetLowering::finalizeLowering(MachineFunction &MF) const {
   }
 
   TargetLoweringBase::finalizeLowering(MF);
+}
+
+SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl, 
+                                                  SDValue Value, SDValue Addr,
+                                                  SelectionDAG &DAG) const {
+  const Module *M = DAG.getMachineFunction().getMMI().getModule();
+  Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
+  if (IsCFProtectionSupported) {
+    // In case control-flow branch protection is enabled, we need to add
+    // notrack prefix to the indirect branch.
+    // In order to do that we create NT_BRIND SDNode.
+    // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
+    return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Value, Addr);
+  }
+
+  return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, DAG);
 }
 
 /// This method query the target whether it is beneficial for dag combiner to

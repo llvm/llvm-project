@@ -636,7 +636,9 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   }
 
   // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
-  if (I.hasAllowReassoc() &&
+  // nnan disallows the possibility of returning a number if both operands are
+  // negative (in that case, we should return NaN).
+  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
       match(Op0, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(X)))) &&
       match(Op1, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(Y))))) {
     Value *XY = Builder.CreateFMulFMF(X, Y, &I);

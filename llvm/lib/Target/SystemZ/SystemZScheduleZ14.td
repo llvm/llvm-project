@@ -24,6 +24,9 @@ def Z14Model : SchedMachineModel {
 
     // Extra cycles for a mispredicted branch.
     let MispredictPenalty = 20;
+
+    // FIXME: Remove when all errors have been fixed.
+    let FullInstRWOverlapCheck = 0;
 }
 
 let SchedModel = Z14Model in  {

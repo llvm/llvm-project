@@ -12,20 +12,20 @@ extern int b;
 A* fn();
 
 const std::type_info* test0_typeid() { return &typeid(int); }
-// CHECK-LABEL: define dso_local %struct.type_info* @"\01?test0_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor2* @"\01??_R0H@8" to %struct.type_info*)
+// CHECK-LABEL: define dso_local %struct.type_info* @"?test0_typeid@@YAPBUtype_info@@XZ"()
+// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor2* @"??_R0H@8" to %struct.type_info*)
 
 const std::type_info* test1_typeid() { return &typeid(A); }
-// CHECK-LABEL: define dso_local %struct.type_info* @"\01?test1_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AUA@@@8" to %struct.type_info*)
+// CHECK-LABEL: define dso_local %struct.type_info* @"?test1_typeid@@YAPBUtype_info@@XZ"()
+// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor7* @"??_R0?AUA@@@8" to %struct.type_info*)
 
 const std::type_info* test2_typeid() { return &typeid(&a); }
-// CHECK-LABEL: define dso_local %struct.type_info* @"\01?test2_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor7* @"\01??_R0PAUA@@@8" to %struct.type_info*)
+// CHECK-LABEL: define dso_local %struct.type_info* @"?test2_typeid@@YAPBUtype_info@@XZ"()
+// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor7* @"??_R0PAUA@@@8" to %struct.type_info*)
 
 const std::type_info* test3_typeid() { return &typeid(*fn()); }
-// CHECK-LABEL: define dso_local %struct.type_info* @"\01?test3_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:        [[CALL:%.*]] = tail call %struct.A* @"\01?fn@@YAPAUA@@XZ"()
+// CHECK-LABEL: define dso_local %struct.type_info* @"?test3_typeid@@YAPBUtype_info@@XZ"()
+// CHECK:        [[CALL:%.*]] = tail call %struct.A* @"?fn@@YAPAUA@@XZ"()
 // CHECK-NEXT:   [[CMP:%.*]] = icmp eq %struct.A* [[CALL]], null
 // CHECK-NEXT:   br i1 [[CMP]]
 // CHECK:        tail call i8* @__RTtypeid(i8* null)
@@ -41,12 +41,12 @@ const std::type_info* test3_typeid() { return &typeid(*fn()); }
 // CHECK-NEXT:   ret %struct.type_info* [[RET]]
 
 const std::type_info* test4_typeid() { return &typeid(b); }
-// CHECK: define dso_local %struct.type_info* @"\01?test4_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor2* @"\01??_R0H@8" to %struct.type_info*)
+// CHECK: define dso_local %struct.type_info* @"?test4_typeid@@YAPBUtype_info@@XZ"()
+// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor2* @"??_R0H@8" to %struct.type_info*)
 
 const std::type_info* test5_typeid() { return &typeid(v); }
-// CHECK: define dso_local %struct.type_info* @"\01?test5_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:        [[RT:%.*]] = tail call i8* @__RTtypeid(i8* bitcast (%struct.V* @"\01?v@@3UV@@A" to i8*))
+// CHECK: define dso_local %struct.type_info* @"?test5_typeid@@YAPBUtype_info@@XZ"()
+// CHECK:        [[RT:%.*]] = tail call i8* @__RTtypeid(i8* bitcast (%struct.V* @"?v@@3UV@@A" to i8*))
 // CHECK-NEXT:   [[RET:%.*]] = bitcast i8* [[RT]] to %struct.type_info*
 // CHECK-NEXT:   ret %struct.type_info* [[RET]]
 
@@ -63,7 +63,7 @@ void f(const Polymorphic &poly) {
     typeid(poly);
   }
 }
-// CHECK-LABEL: define dso_local void @"\01?f@PR26329@@YAXABUPolymorphic@1@@Z"(
+// CHECK-LABEL: define dso_local void @"?f@PR26329@@YAXABUPolymorphic@1@@Z"(
 // CHECK: %[[cs:.*]] = catchswitch within none [label %{{.*}}] unwind to caller
 // CHECK: %[[cp:.*]] = catchpad within %[[cs]] [i8* null, i32 64, i8* null]
 // CHECK: invoke i8* @__RTtypeid(i8* {{.*}}) [ "funclet"(token %[[cp]]) ]

@@ -2122,6 +2122,12 @@ def AnyX86NoCallerSavedRegisters : InheritableAttr,
   let Documentation = [AnyX86NoCallerSavedRegistersDocs];
 }
 
+def AnyX86NoCfCheck : InheritableAttr, TargetSpecificAttr<TargetAnyX86>{
+  let Spellings = [GCC<"nocf_check">];
+  let Subjects = SubjectList<[FunctionLike]>;
+  let Documentation = [AnyX86NoCfCheckDocs];
+}
+
 def X86ForceAlignArgPointer : InheritableAttr, TargetSpecificAttr<TargetAnyX86> {
   let Spellings = [GCC<"force_align_arg_pointer">];
   // Technically, this appertains to a FunctionDecl, but the target-specific

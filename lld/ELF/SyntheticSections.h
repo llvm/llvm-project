@@ -270,7 +270,7 @@ public:
   void addEntry(Symbol &Sym);
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override { return Entries.empty(); }
+  bool empty() const override;
 
 private:
   std::vector<const Symbol *> Entries;

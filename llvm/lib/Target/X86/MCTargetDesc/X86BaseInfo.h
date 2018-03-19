@@ -60,8 +60,9 @@ namespace X86 {
     IP_HAS_REPEAT_NE = 4,
     IP_HAS_REPEAT = 8,
     IP_HAS_LOCK = 16,
-    NO_SCHED_INFO = 32 // Don't add sched comment to the current instr because
-                       // it was already added
+    NO_SCHED_INFO = 32, // Don't add sched comment to the current instr because
+                        // it was already added
+    IP_HAS_NOTRACK = 64
   };
 } // end namespace X86;
 
@@ -572,7 +573,11 @@ namespace X86II {
 
     /// Explicitly specified rounding control
     EVEX_RCShift = Has3DNow0F0FOpcodeShift + 1,
-    EVEX_RC = 1ULL << EVEX_RCShift
+    EVEX_RC = 1ULL << EVEX_RCShift,
+
+    // NOTRACK prefix
+    NoTrackShift = EVEX_RCShift + 1,
+    NOTRACK = 1ULL << NoTrackShift
   };
 
   // getBaseOpcodeFor - This function returns the "base" X86 opcode for the

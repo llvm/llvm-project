@@ -3323,8 +3323,8 @@ public:
   bool CheckRegparmAttr(const AttributeList &attr, unsigned &value);
   bool CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
                             const FunctionDecl *FD = nullptr);
-  bool CheckNoReturnAttr(const AttributeList &attr);
-  bool CheckNoCallerSavedRegsAttr(const AttributeList &attr);
+  bool CheckAttrTarget(const AttributeList &CurrAttr);
+  bool CheckAttrNoArgs(const AttributeList &CurrAttr);
   bool checkStringLiteralArgumentAttr(const AttributeList &Attr,
                                       unsigned ArgNum, StringRef &Str,
                                       SourceLocation *ArgLocation = nullptr);

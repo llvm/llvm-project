@@ -587,6 +587,7 @@ enum AttributeKindCodes {
   ATTR_KIND_SPECULATABLE = 53,
   ATTR_KIND_STRICT_FP = 54,
   ATTR_KIND_SANITIZE_HWADDRESS = 55,
+  ATTR_KIND_NOCF_CHECK = 56,
 };
 
 enum ComdatSelectionKindCodes {

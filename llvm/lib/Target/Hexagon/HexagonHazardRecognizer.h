@@ -30,6 +30,8 @@ class HexagonHazardRecognizer : public ScheduleHazardRecognizer {
   // The packet number when a dor cur is emitted. If its use is not generated
   // in the same packet, then try to wait another cycle before emitting.
   int DotCurPNum;
+  // Does the packet contain a load. Used to restrict another load, if possible.
+  bool UsesLoad = false;
   // The set of registers defined by instructions in the current packet.
   SmallSet<unsigned, 8> RegDefs;
 

@@ -16,7 +16,7 @@ struct baz : public bar<baz> {
 };
 
 void f(baz *z) {
-  // CHECK: define{{.*}}@"\01?f@@YAXPEAUbaz@@@Z"
+  // CHECK: define{{.*}}@"?f@@YAXPEAUbaz@@@Z"
   // Load z, vbtable, vbase offset and vtable.
   // CHECK: load
   // CHECK: load

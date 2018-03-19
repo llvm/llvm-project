@@ -22,7 +22,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
 using namespace llvm;
@@ -58,7 +57,8 @@ private:
   /// Adds a new ENDBR instruction to the begining of the MBB.
   /// The function will not add it if already exists.
   /// It will add ENDBR32 or ENDBR64 opcode, depending on the target.
-  void addENDBR(MachineBasicBlock &MBB) const;
+  /// \returns true if the ENDBR was added and false otherwise.
+  bool addENDBR(MachineBasicBlock &MBB) const;
 };
 
 } // end anonymous namespace
@@ -69,7 +69,7 @@ FunctionPass *llvm::createX86IndirectBranchTrackingPass() {
   return new X86IndirectBranchTrackingPass();
 }
 
-void X86IndirectBranchTrackingPass::addENDBR(MachineBasicBlock &MBB) const {
+bool X86IndirectBranchTrackingPass::addENDBR(MachineBasicBlock &MBB) const {
   assert(TII && "Target instruction info was not initialized");
   assert((X86::ENDBR64 == EndbrOpcode || X86::ENDBR32 == EndbrOpcode) &&
          "Unexpected Endbr opcode");
@@ -80,13 +80,16 @@ void X86IndirectBranchTrackingPass::addENDBR(MachineBasicBlock &MBB) const {
   if (MI == MBB.end() || EndbrOpcode != MI->getOpcode()) {
     BuildMI(MBB, MI, MBB.findDebugLoc(MI), TII->get(EndbrOpcode));
     NumEndBranchAdded++;
+    return true;
   }
+
+  return false;
 }
 
 bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &SubTarget = MF.getSubtarget<X86Subtarget>();
 
-  // Make sure that the target supports ENDBR instruction.
+  // Make sure that the target supports IBT instruction.
   if (!SubTarget.hasIBT())
     return false;
 
@@ -103,50 +106,20 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   EndbrOpcode = SubTarget.is64Bit() ? X86::ENDBR64 : X86::ENDBR32;
 
   // Non-internal function or function whose address was taken, can be
-  // invoked through indirect calls. Mark the first BB with ENDBR instruction.
-  // TODO: Do not add ENDBR instruction in case notrack attribute is used.
-  if (MF.getFunction().hasAddressTaken() ||
-      !MF.getFunction().hasLocalLinkage()) {
+  // accessed through indirect calls. Mark the first BB with ENDBR instruction
+  // unless nocf_check attribute is used.
+  if ((MF.getFunction().hasAddressTaken() ||
+       !MF.getFunction().hasLocalLinkage()) &&
+      !MF.getFunction().doesNoCfCheck()) {
     auto MBB = MF.begin();
-    addENDBR(*MBB);
-    Changed = true;
+    Changed |= addENDBR(*MBB);
   }
 
-  for (auto &MBB : MF) {
-    // Find all basic blocks that thier address was taken (for example
+  for (auto &MBB : MF)
+    // Find all basic blocks that their address was taken (for example
     // in the case of indirect jump) and add ENDBR instruction.
-    if (MBB.hasAddressTaken()) {
-      addENDBR(MBB);
-      Changed = true;
-    }
-  }
-
-  // Adds ENDBR instructions to MBB destinations of the jump table.
-  // TODO: In case of more than 50 destinations, do not add ENDBR and
-  // instead add DS_PREFIX.
-  if (MachineJumpTableInfo *JTI = MF.getJumpTableInfo()) {
-    for (const auto &JT : JTI->getJumpTables()) {
-      for (auto *MBB : JT.MBBs) {
-	// This assert verifies the assumption that this MBB has an indirect
-	// jump terminator in one of its predecessor.
-	// Jump tables are generated when lowering switch-case statements or
-	// setjmp/longjump functions. As a result only indirect jumps use jump
-	// tables.
-        #ifndef NDEBUG
-        bool hasIndirectJumpTerm = false;
-        for (auto &PredMBB : MBB->predecessors())
-          for (auto &TermI : PredMBB->terminators())
-            if (TermI.isIndirectBranch())
-              hasIndirectJumpTerm = true;
-        assert(hasIndirectJumpTerm &&
-               "The MBB is not the destination of an indirect jump");
-	(void)hasIndirectJumpTerm;
-	#endif
-        addENDBR(*MBB);
-        Changed = true;
-      }
-    }
-  }
+    if (MBB.hasAddressTaken())
+      Changed |= addENDBR(MBB);
 
   return Changed;
 }

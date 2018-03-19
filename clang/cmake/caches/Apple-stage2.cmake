@@ -47,7 +47,7 @@ set(LLVM_CREATE_XCODE_TOOLCHAIN ON CACHE BOOL "")
 # setup toolchain
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
 set(LLVM_TOOLCHAIN_TOOLS
-  llvm-dsymutil
+  dsymutil
   llvm-cov
   llvm-dwarfdump
   llvm-profdata

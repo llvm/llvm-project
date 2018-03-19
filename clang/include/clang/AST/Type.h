@@ -1511,7 +1511,7 @@ protected:
 
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
-    unsigned ExtInfo : 11;
+    unsigned ExtInfo : 12;
 
     /// Used only by FunctionProtoType, put here to pack with the
     /// other bitfields.
@@ -3147,24 +3147,24 @@ public:
   class ExtInfo {
     friend class FunctionType;
 
-    // Feel free to rearrange or add bits, but if you go over 11,
+    // Feel free to rearrange or add bits, but if you go over 12,
     // you'll need to adjust both the Bits field below and
     // Type::FunctionTypeBitfields.
 
-    //   |  CC  |noreturn|produces|nocallersavedregs|regparm|
-    //   |0 .. 4|   5    |    6   |       7         |8 .. 10|
+    //   |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|
+    //   |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
     enum { CallConvMask = 0x1F };
     enum { NoReturnMask = 0x20 };
     enum { ProducesResultMask = 0x40 };
     enum { NoCallerSavedRegsMask = 0x80 };
+    enum { NoCfCheckMask = 0x800 };
     enum {
       RegParmMask = ~(CallConvMask | NoReturnMask | ProducesResultMask |
-                      NoCallerSavedRegsMask),
+                      NoCallerSavedRegsMask | NoCfCheckMask),
       RegParmOffset = 8
     }; // Assumed to be the last field
-
     uint16_t Bits = CC_C;
 
     ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
@@ -3173,12 +3173,13 @@ public:
      // Constructor with no defaults. Use this when you know that you
      // have all the elements (when reading an AST file for example).
      ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
-             bool producesResult, bool noCallerSavedRegs) {
+             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck) {
        assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
        Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
               (producesResult ? ProducesResultMask : 0) |
               (noCallerSavedRegs ? NoCallerSavedRegsMask : 0) |
-              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0);
+              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0) | 
+              (NoCfCheck ? NoCfCheckMask : 0);
     }
 
     // Constructor with all defaults. Use when for example creating a
@@ -3192,10 +3193,11 @@ public:
     bool getNoReturn() const { return Bits & NoReturnMask; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
+    bool getNoCfCheck() const { return Bits & NoCfCheckMask; }
     bool getHasRegParm() const { return (Bits >> RegParmOffset) != 0; }
 
     unsigned getRegParm() const {
-      unsigned RegParm = Bits >> RegParmOffset;
+      unsigned RegParm = (Bits & RegParmMask) >> RegParmOffset;
       if (RegParm > 0)
         --RegParm;
       return RegParm;
@@ -3232,6 +3234,13 @@ public:
         return ExtInfo(Bits | NoCallerSavedRegsMask);
       else
         return ExtInfo(Bits & ~NoCallerSavedRegsMask);
+    }
+
+    ExtInfo withNoCfCheck(bool noCfCheck) const {
+      if (noCfCheck)
+        return ExtInfo(Bits | NoCfCheckMask);
+      else
+        return ExtInfo(Bits & ~NoCfCheckMask);
     }
 
     ExtInfo withRegParm(unsigned RegParm) const {
@@ -4120,6 +4129,7 @@ public:
 
     // No operand.
     attr_noreturn,
+    attr_nocf_check,
     attr_cdecl,
     attr_fastcall,
     attr_stdcall,

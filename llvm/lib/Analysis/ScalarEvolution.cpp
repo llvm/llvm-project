@@ -8675,38 +8675,84 @@ bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
   return isKnownNegative(S) || isKnownPositive(S);
 }
 
+std::pair<const SCEV *, const SCEV *>
+ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
+  // Compute SCEV on entry of loop L.
+  const SCEV *Start = SCEVInitRewriter::rewrite(S, L, *this);
+  if (Start == getCouldNotCompute())
+    return { Start, Start };
+  // Compute post increment SCEV for loop L.
+  const SCEV *PostInc = SCEVPostIncRewriter::rewrite(S, L, *this);
+  assert(PostInc != getCouldNotCompute() && "Unexpected could not compute");
+  return { Start, PostInc };
+}
+
 bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
                                        const SCEV *LHS, const SCEV *RHS) {
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
-  // If LHS or RHS is an addrec, check to see if the condition is true in
-  // every iteration of the loop.
-  // If LHS and RHS are both addrec, both conditions must be true in
-  // every iteration of the loop.
-  const SCEVAddRecExpr *LAR = dyn_cast<SCEVAddRecExpr>(LHS);
-  const SCEVAddRecExpr *RAR = dyn_cast<SCEVAddRecExpr>(RHS);
-  bool LeftGuarded = false;
-  bool RightGuarded = false;
-  if (LAR) {
-    const Loop *L = LAR->getLoop();
-    if (isAvailableAtLoopEntry(RHS, L) &&
-        isKnownOnEveryIteration(Pred, LAR, RHS)) {
-      if (!RAR) return true;
-      LeftGuarded = true;
+  // We'd like to check the predicate on every iteration of the most dominated
+  // loop between loops used in LHS and RHS.
+  // To do this we use the following list of steps:
+  // 1. Collect set S all loops on which either LHS or RHS depend.
+  // 2. If S is non-empty
+  // a. Let PD be the element of S which is dominated by all other elements of S
+  // b. Let E(LHS) be value of LHS on entry of PD.
+  //    To get E(LHS), we should just take LHS and replace all AddRecs that are
+  //    attached to PD on with their entry values.
+  //    Define E(RHS) in the same way.
+  // c. Let B(LHS) be value of L on backedge of PD.
+  //    To get B(LHS), we should just take LHS and replace all AddRecs that are
+  //    attached to PD on with their backedge values.
+  //    Define B(RHS) in the same way.
+  // d. Note that E(LHS) and E(RHS) are automatically available on entry of PD,
+  //    so we can assert on that.
+  // e. Return true if isLoopEntryGuardedByCond(Pred, E(LHS), E(RHS)) &&
+  //                   isLoopBackedgeGuardedByCond(Pred, B(LHS), B(RHS))
+
+  // First collect all loops.
+  SmallPtrSet<const Loop *, 8> LoopsUsed;
+  getUsedLoops(LHS, LoopsUsed);
+  getUsedLoops(RHS, LoopsUsed);
+
+  // Domination relationship must be a linear order on collected loops.
+#ifndef NDEBUG
+  for (auto *L1 : LoopsUsed)
+    for (auto *L2 : LoopsUsed)
+      assert((DT.dominates(L1->getHeader(), L2->getHeader()) ||
+              DT.dominates(L2->getHeader(), L1->getHeader())) &&
+             "Domination relationship is not a linear order");
+#endif
+  if (!LoopsUsed.empty()) {
+    const Loop *MDL = *std::max_element(LoopsUsed.begin(), LoopsUsed.end(),
+                                        [&](const Loop *L1, const Loop *L2) {
+                         return DT.dominates(L1->getHeader(), L2->getHeader());
+                       });
+
+    // Get init and post increment value for LHS.
+    auto SplitLHS = SplitIntoInitAndPostInc(MDL, LHS);
+    if (SplitLHS.first != getCouldNotCompute()) {
+      // if LHS does not contain unknown non-invariant SCEV then
+      // get init and post increment value for RHS.
+      auto SplitRHS = SplitIntoInitAndPostInc(MDL, RHS);
+      if (SplitRHS.first != getCouldNotCompute()) {
+        // if RHS does not contain unknown non-invariant SCEV then
+        // check whether implication is possible.
+        // It is possible that init SCEV contains an invariant load but it does
+        // not dominate MDL and is not available at MDL loop entry, so we should
+        // check it here.
+        if (isAvailableAtLoopEntry(SplitLHS.first, MDL) &&
+            isAvailableAtLoopEntry(SplitRHS.first, MDL)) {
+          if (isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first,
+                                       SplitRHS.first) &&
+              isLoopBackedgeGuardedByCond(MDL, Pred, SplitLHS.second,
+                                          SplitRHS.second))
+            return true;
+        }
+      }
     }
   }
-  if (RAR) {
-    const Loop *L = RAR->getLoop();
-    auto SwappedPred = ICmpInst::getSwappedPredicate(Pred);
-    if (isAvailableAtLoopEntry(LHS, L) &&
-        isKnownOnEveryIteration(SwappedPred, RAR, LHS)) {
-      if (!LAR) return true;
-      RightGuarded = true;
-    }
-  }
-  if (LeftGuarded && RightGuarded)
-    return true;
 
   if (isKnownPredicateViaSplitting(Pred, LHS, RHS))
     return true;

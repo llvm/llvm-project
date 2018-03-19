@@ -35,7 +35,7 @@ int safe_div(int numerator, int denominator, int *res) {
 //
 // CHECK: [[catchpad]]
 // X64: %[[padtoken:[^ ]*]] = catchpad within %{{[^ ]*}} [i8* null]
-// X86: %[[padtoken:[^ ]*]] = catchpad within %{{[^ ]*}} [i8* bitcast (i32 ()* @"\01?filt$0@0@safe_div@@" to i8*)]
+// X86: %[[padtoken:[^ ]*]] = catchpad within %{{[^ ]*}} [i8* bitcast (i32 ()* @"?filt$0@0@safe_div@@" to i8*)]
 // CHECK-NEXT: catchret from %[[padtoken]] to label %[[except:[^ ]*]]
 //
 // CHECK: [[except]]
@@ -46,7 +46,7 @@ int safe_div(int numerator, int denominator, int *res) {
 
 // 32-bit SEH needs this filter to save the exception code.
 //
-// X86-LABEL: define internal i32 @"\01?filt$0@0@safe_div@@"()
+// X86-LABEL: define internal i32 @"?filt$0@0@safe_div@@"()
 // X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress(i32 1)
 // X86: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 (i32, i32, i32*)* @safe_div to i8*), i8* %[[ebp]])
 // X86: call i8* @llvm.localrecover(i8* bitcast (i32 (i32, i32, i32*)* @safe_div to i8*), i8* %[[fp]], i32 0)
@@ -82,17 +82,17 @@ int filter_expr_capture(void) {
 // CHECK: store i32 42, i32* %[[r]]
 // CHECK: invoke void @j() #[[NOINLINE]]
 //
-// CHECK: catchpad within %{{[^ ]*}} [i8* bitcast (i32 ({{.*}})* @"\01?filt$0@0@filter_expr_capture@@" to i8*)]
+// CHECK: catchpad within %{{[^ ]*}} [i8* bitcast (i32 ({{.*}})* @"?filt$0@0@filter_expr_capture@@" to i8*)]
 // CHECK: store i32 13, i32* %[[r]]
 //
 // CHECK: %[[rv:[^ ]*]] = load i32, i32* %[[r]]
 // CHECK: ret i32 %[[rv]]
 
-// X64-LABEL: define internal i32 @"\01?filt$0@0@filter_expr_capture@@"(i8* %exception_pointers, i8* %frame_pointer)
+// X64-LABEL: define internal i32 @"?filt$0@0@filter_expr_capture@@"(i8* %exception_pointers, i8* %frame_pointer)
 // X64: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %frame_pointer)
 // X64: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
 //
-// X86-LABEL: define internal i32 @"\01?filt$0@0@filter_expr_capture@@"()
+// X86-LABEL: define internal i32 @"?filt$0@0@filter_expr_capture@@"()
 // X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress(i32 1)
 // X86: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[ebp]])
 // X86: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
@@ -128,7 +128,7 @@ int nested_try(void) {
 // CHECK: %[[cs_outer:[^ ]*]] = catchswitch within none [label %[[cpad_outer:[^ ]*]]] unwind to caller
 //
 // CHECK: [[cpad_outer]]
-// CHECK: catchpad within %{{[^ ]*}} [i8* bitcast (i32 ({{.*}})* @"\01?filt$0@0@nested_try@@" to i8*)]
+// CHECK: catchpad within %{{[^ ]*}} [i8* bitcast (i32 ({{.*}})* @"?filt$0@0@nested_try@@" to i8*)]
 // CHECK-NEXT: catchret {{.*}} to label %[[except_outer:[^ ]*]]
 //
 // CHECK: [[except_outer]]
@@ -140,7 +140,7 @@ int nested_try(void) {
 // CHECK: ret i32 %[[r_load]]
 //
 // CHECK: [[cpad_inner]]
-// CHECK: catchpad within %[[cs_inner]] [i8* bitcast (i32 ({{.*}})* @"\01?filt$1@0@nested_try@@" to i8*)]
+// CHECK: catchpad within %[[cs_inner]] [i8* bitcast (i32 ({{.*}})* @"?filt$1@0@nested_try@@" to i8*)]
 // CHECK-NEXT: catchret {{.*}} to label %[[except_inner:[^ ]*]]
 //
 // CHECK: [[except_inner]]
@@ -154,13 +154,13 @@ int nested_try(void) {
 // CHECK: store i32 0, i32* %[[r]]
 // CHECK: br label %[[inner_try_cont]]
 //
-// CHECK-LABEL: define internal i32 @"\01?filt$0@0@nested_try@@"({{.*}})
+// CHECK-LABEL: define internal i32 @"?filt$0@0@nested_try@@"({{.*}})
 // X86: call i8* @llvm.x86.seh.recoverfp({{.*}})
 // CHECK: load i32*, i32**
 // CHECK: load i32, i32*
 // CHECK: icmp eq i32 %{{.*}}, 456
 //
-// CHECK-LABEL: define internal i32 @"\01?filt$1@0@nested_try@@"({{.*}})
+// CHECK-LABEL: define internal i32 @"?filt$1@0@nested_try@@"({{.*}})
 // X86: call i8* @llvm.x86.seh.recoverfp({{.*}})
 // CHECK: load i32*, i32**
 // CHECK: load i32, i32*
@@ -186,17 +186,17 @@ int basic_finally(int g) {
 //
 // CHECK: [[cont]]
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 0, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 0, i8* %[[fp]])
 // CHECK: load i32, i32* %[[g_addr]], align 4
 // CHECK: ret i32
 //
 // CHECK: [[cleanuppad]]
 // CHECK: %[[padtoken:[^ ]*]] = cleanuppad within none []
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
 // CHECK: cleanupret from %[[padtoken]] unwind to caller
 
-// CHECK: define internal void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} %abnormal_termination, i8* %frame_pointer)
+// CHECK: define internal void @"?fin$0@0@basic_finally@@"({{i8( zeroext)?}} %abnormal_termination, i8* %frame_pointer)
 // CHECK:   call i8* @llvm.localrecover(i8* bitcast (i32 (i32)* @basic_finally to i8*), i8* %frame_pointer, i32 0)
 // CHECK:   load i32, i32* %{{.*}}, align 4
 // CHECK:   add nsw i32 %{{.*}}, 1
