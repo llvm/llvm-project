@@ -139,8 +139,6 @@ def AtomItineraries : ProcessorItineraries<
   InstrItinData<IIC_MOVSX,[InstrStage<1, [Port0] >] >,
   InstrItinData<IIC_MOVSX_R16_R8, [InstrStage<2, [Port0, Port1]>] >,
   InstrItinData<IIC_MOVSX_R16_M8, [InstrStage<3, [Port0, Port1]>] >,
-  InstrItinData<IIC_MOVSX_R16_R16, [InstrStage<1, [Port0, Port1]>] >,
-  InstrItinData<IIC_MOVSX_R32_R32, [InstrStage<1, [Port0, Port1]>] >,
   //zero extension movs
   InstrItinData<IIC_MOVZX,[InstrStage<1, [Port0]>] >,
   InstrItinData<IIC_MOVZX_R16_R8, [InstrStage<2, [Port0, Port1]>] >,

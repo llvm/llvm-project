@@ -9,7 +9,6 @@
 
 #include "DWARFCompileUnit.h"
 
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
@@ -41,11 +40,10 @@ extern int g_verbose;
 DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
     : m_dwarf2Data(dwarf2Data) {}
 
-DWARFCompileUnit::~DWARFCompileUnit() {}
-
-DWARFCompileUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
+DWARFUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
     lldb::offset_t *offset_ptr) {
-  DWARFCompileUnitSP cu_sp(new DWARFCompileUnit(dwarf2Data));
+  // std::make_shared would require the ctor to be public.
+  std::shared_ptr<DWARFCompileUnit> cu_sp(new DWARFCompileUnit(dwarf2Data));
   // Out of memory?
   if (cu_sp.get() == NULL)
     return nullptr;
@@ -252,7 +250,7 @@ size_t DWARFCompileUnit::ExtractDIEsIfNeeded(bool cu_die_only) {
   if (!m_dwo_symbol_file)
     return m_die_array.size();
 
-  DWARFCompileUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
+  DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
   size_t dwo_die_count = dwo_cu->ExtractDIEsIfNeeded(cu_die_only);
   return m_die_array.size() + dwo_die_count -
          1; // We have 2 CU die, but we want to count it only as one
@@ -268,7 +266,7 @@ void DWARFCompileUnit::AddCompileUnitDIE(DWARFDebugInfoEntry &die) {
   if (!dwo_symbol_file)
     return;
 
-  DWARFCompileUnit *dwo_cu = dwo_symbol_file->GetCompileUnit();
+  DWARFUnit *dwo_cu = dwo_symbol_file->GetCompileUnit();
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
 
@@ -342,28 +340,6 @@ void DWARFCompileUnit::Dump(Stream *s) const {
             "{0x%8.8x})\n",
             m_offset, m_length, m_version, GetAbbrevOffset(), m_addr_size,
             GetNextCompileUnitOffset());
-}
-
-static uint8_t g_default_addr_size = 4;
-
-uint8_t DWARFCompileUnit::GetAddressByteSize(const DWARFCompileUnit *cu) {
-  if (cu)
-    return cu->GetAddressByteSize();
-  return DWARFCompileUnit::GetDefaultAddressSize();
-}
-
-bool DWARFCompileUnit::IsDWARF64(const DWARFCompileUnit *cu) {
-  if (cu)
-    return cu->IsDWARF64();
-  return false;
-}
-
-uint8_t DWARFCompileUnit::GetDefaultAddressSize() {
-  return g_default_addr_size;
-}
-
-void DWARFCompileUnit::SetDefaultAddressSize(uint8_t addr_size) {
-  g_default_addr_size = addr_size;
 }
 
 lldb::user_id_t DWARFCompileUnit::GetID() const {
@@ -491,7 +467,7 @@ const DWARFDebugAranges &DWARFCompileUnit::GetFunctionAranges() {
                                           m_func_aranges_ap.get());
 
     if (m_dwo_symbol_file) {
-      DWARFCompileUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
+      DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
       const DWARFDebugInfoEntry *dwo_die = dwo_cu->DIEPtr();
       if (dwo_die)
         dwo_die->BuildFunctionAddressRangeTable(m_dwo_symbol_file.get(), dwo_cu,
@@ -514,47 +490,6 @@ DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
       return GetDIE(func_aranges.FindAddress(address));
   }
   return DWARFDIE();
-}
-
-//----------------------------------------------------------------------
-// Compare function DWARFDebugAranges::Range structures
-//----------------------------------------------------------------------
-static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
-                             const dw_offset_t die_offset) {
-  return die.GetOffset() < die_offset;
-}
-
-//----------------------------------------------------------------------
-// GetDIE()
-//
-// Get the DIE (Debug Information Entry) with the specified offset by
-// first checking if the DIE is contained within this compile unit and
-// grabbing the DIE from this compile unit. Otherwise we grab the DIE
-// from the DWARF file.
-//----------------------------------------------------------------------
-DWARFDIE
-DWARFCompileUnit::GetDIE(dw_offset_t die_offset) {
-  if (die_offset != DW_INVALID_OFFSET) {
-    if (m_dwo_symbol_file)
-      return m_dwo_symbol_file->GetCompileUnit()->GetDIE(die_offset);
-
-    if (ContainsDIEOffset(die_offset)) {
-      ExtractDIEsIfNeeded(false);
-      DWARFDebugInfoEntry::iterator end = m_die_array.end();
-      DWARFDebugInfoEntry::iterator pos =
-          lower_bound(m_die_array.begin(), end, die_offset, CompareDIEOffset);
-      if (pos != end) {
-        if (die_offset == (*pos).GetOffset())
-          return DWARFDIE(this, &(*pos));
-      }
-    } else {
-      // Don't specify the compile unit offset as we don't know it because the
-      // DIE belongs to
-      // a different compile unit in the same symbol file.
-      return m_dwarf2Data->DebugInfo()->GetDIEForDIEOffset(die_offset);
-    }
-  }
-  return DWARFDIE(); // Not found
 }
 
 size_t DWARFCompileUnit::AppendDIEsWithTag(const dw_tag_t tag,
@@ -593,381 +528,6 @@ size_t DWARFCompileUnit::AppendDIEsWithTag(const dw_tag_t tag,
 //    if (first_die <= die && die < end)
 //        m_global_die_indexes.push_back (die - first_die);
 //}
-
-void DWARFCompileUnit::Index(NameToDIE &func_basenames,
-                             NameToDIE &func_fullnames, NameToDIE &func_methods,
-                             NameToDIE &func_selectors,
-                             NameToDIE &objc_class_selectors,
-                             NameToDIE &globals, NameToDIE &types,
-                             NameToDIE &namespaces) {
-  assert(!m_dwarf2Data->GetBaseCompileUnit() &&
-         "DWARFCompileUnit associated with .dwo or .dwp "
-         "should not be indexed directly");
-
-  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
-
-  if (log) {
-    m_dwarf2Data->GetObjectFile()->GetModule()->LogMessage(
-        log,
-        "DWARFCompileUnit::Index() for compile unit at .debug_info[0x%8.8x]",
-        GetOffset());
-  }
-
-  const LanguageType cu_language = GetLanguageType();
-  DWARFFormValue::FixedFormSizes fixed_form_sizes =
-      DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize(),
-                                                      m_is_dwarf64);
-
-  IndexPrivate(this, cu_language, fixed_form_sizes, GetOffset(), func_basenames,
-               func_fullnames, func_methods, func_selectors,
-               objc_class_selectors, globals, types, namespaces);
-
-  SymbolFileDWARFDwo *dwo_symbol_file = GetDwoSymbolFile();
-  if (dwo_symbol_file) {
-    IndexPrivate(dwo_symbol_file->GetCompileUnit(), cu_language,
-                 fixed_form_sizes, GetOffset(), func_basenames, func_fullnames,
-                 func_methods, func_selectors, objc_class_selectors, globals,
-                 types, namespaces);
-  }
-}
-
-void DWARFCompileUnit::IndexPrivate(
-    DWARFCompileUnit *dwarf_cu, const LanguageType cu_language,
-    const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
-    const dw_offset_t cu_offset, NameToDIE &func_basenames,
-    NameToDIE &func_fullnames, NameToDIE &func_methods,
-    NameToDIE &func_selectors, NameToDIE &objc_class_selectors,
-    NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces) {
-  DWARFDebugInfoEntry::const_iterator pos;
-  DWARFDebugInfoEntry::const_iterator begin = dwarf_cu->m_die_array.begin();
-  DWARFDebugInfoEntry::const_iterator end = dwarf_cu->m_die_array.end();
-  for (pos = begin; pos != end; ++pos) {
-    const DWARFDebugInfoEntry &die = *pos;
-
-    const dw_tag_t tag = die.Tag();
-
-    switch (tag) {
-    case DW_TAG_array_type:
-    case DW_TAG_base_type:
-    case DW_TAG_class_type:
-    case DW_TAG_constant:
-    case DW_TAG_enumeration_type:
-    case DW_TAG_inlined_subroutine:
-    case DW_TAG_namespace:
-    case DW_TAG_string_type:
-    case DW_TAG_structure_type:
-    case DW_TAG_subprogram:
-    case DW_TAG_subroutine_type:
-    case DW_TAG_typedef:
-    case DW_TAG_union_type:
-    case DW_TAG_unspecified_type:
-    case DW_TAG_variable:
-      break;
-
-    default:
-      continue;
-    }
-
-    DWARFAttributes attributes;
-    const char *name = NULL;
-    const char *mangled_cstr = NULL;
-    bool is_declaration = false;
-    // bool is_artificial = false;
-    bool has_address = false;
-    bool has_location_or_const_value = false;
-    bool is_global_or_static_variable = false;
-
-    DWARFFormValue specification_die_form;
-    const size_t num_attributes =
-        die.GetAttributes(dwarf_cu, fixed_form_sizes, attributes);
-    if (num_attributes > 0) {
-      for (uint32_t i = 0; i < num_attributes; ++i) {
-        dw_attr_t attr = attributes.AttributeAtIndex(i);
-        DWARFFormValue form_value;
-        switch (attr) {
-        case DW_AT_name:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            name = form_value.AsCString();
-          break;
-
-        case DW_AT_declaration:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            is_declaration = form_value.Unsigned() != 0;
-          break;
-
-        //                case DW_AT_artificial:
-        //                    if (attributes.ExtractFormValueAtIndex(i,
-        //                    form_value))
-        //                        is_artificial = form_value.Unsigned() != 0;
-        //                    break;
-
-        case DW_AT_MIPS_linkage_name:
-        case DW_AT_linkage_name:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            mangled_cstr = form_value.AsCString();
-          break;
-
-        case DW_AT_low_pc:
-        case DW_AT_high_pc:
-        case DW_AT_ranges:
-          has_address = true;
-          break;
-
-        case DW_AT_entry_pc:
-          has_address = true;
-          break;
-
-        case DW_AT_location:
-        case DW_AT_const_value:
-          has_location_or_const_value = true;
-          if (tag == DW_TAG_variable) {
-            const DWARFDebugInfoEntry *parent_die = die.GetParent();
-            while (parent_die != NULL) {
-              switch (parent_die->Tag()) {
-              case DW_TAG_subprogram:
-              case DW_TAG_lexical_block:
-              case DW_TAG_inlined_subroutine:
-                // Even if this is a function level static, we don't add it. We
-                // could theoretically
-                // add these if we wanted to by introspecting into the
-                // DW_AT_location and seeing
-                // if the location describes a hard coded address, but we dont
-                // want the performance
-                // penalty of that right now.
-                is_global_or_static_variable = false;
-                //                              if
-                //                              (attributes.ExtractFormValueAtIndex(dwarf2Data,
-                //                              i, form_value))
-                //                              {
-                //                                  // If we have valid block
-                //                                  data, then we have location
-                //                                  expression bytes
-                //                                  // that are fixed (not a
-                //                                  location list).
-                //                                  const uint8_t *block_data =
-                //                                  form_value.BlockData();
-                //                                  if (block_data)
-                //                                  {
-                //                                      uint32_t block_length =
-                //                                      form_value.Unsigned();
-                //                                      if (block_length == 1 +
-                //                                      attributes.CompileUnitAtIndex(i)->GetAddressByteSize())
-                //                                      {
-                //                                          if (block_data[0] ==
-                //                                          DW_OP_addr)
-                //                                              add_die = true;
-                //                                      }
-                //                                  }
-                //                              }
-                parent_die = NULL; // Terminate the while loop.
-                break;
-
-              case DW_TAG_compile_unit:
-                is_global_or_static_variable = true;
-                parent_die = NULL; // Terminate the while loop.
-                break;
-
-              default:
-                parent_die =
-                    parent_die->GetParent(); // Keep going in the while loop.
-                break;
-              }
-            }
-          }
-          break;
-
-        case DW_AT_specification:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            specification_die_form = form_value;
-          break;
-        }
-      }
-    }
-
-    switch (tag) {
-    case DW_TAG_subprogram:
-      if (has_address) {
-        if (name) {
-          ObjCLanguage::MethodName objc_method(name, true);
-          if (objc_method.IsValid(true)) {
-            ConstString objc_class_name_with_category(
-                objc_method.GetClassNameWithCategory());
-            ConstString objc_selector_name(objc_method.GetSelector());
-            ConstString objc_fullname_no_category_name(
-                objc_method.GetFullNameWithoutCategory(true));
-            ConstString objc_class_name_no_category(objc_method.GetClassName());
-            func_fullnames.Insert(ConstString(name),
-                                  DIERef(cu_offset, die.GetOffset()));
-            if (objc_class_name_with_category)
-              objc_class_selectors.Insert(objc_class_name_with_category,
-                                          DIERef(cu_offset, die.GetOffset()));
-            if (objc_class_name_no_category &&
-                objc_class_name_no_category != objc_class_name_with_category)
-              objc_class_selectors.Insert(objc_class_name_no_category,
-                                          DIERef(cu_offset, die.GetOffset()));
-            if (objc_selector_name)
-              func_selectors.Insert(objc_selector_name,
-                                    DIERef(cu_offset, die.GetOffset()));
-            if (objc_fullname_no_category_name)
-              func_fullnames.Insert(objc_fullname_no_category_name,
-                                    DIERef(cu_offset, die.GetOffset()));
-          }
-          // If we have a mangled name, then the DW_AT_name attribute
-          // is usually the method name without the class or any parameters
-          const DWARFDebugInfoEntry *parent = die.GetParent();
-          bool is_method = false;
-          if (parent) {
-            dw_tag_t parent_tag = parent->Tag();
-            if (parent_tag == DW_TAG_class_type ||
-                parent_tag == DW_TAG_structure_type) {
-              is_method = true;
-            } else {
-              if (specification_die_form.IsValid()) {
-                DWARFDIE specification_die =
-                    dwarf_cu->GetSymbolFileDWARF()->DebugInfo()->GetDIE(
-                        DIERef(specification_die_form));
-                if (specification_die.GetParent().IsStructOrClass())
-                  is_method = true;
-              }
-            }
-          }
-
-          if (is_method)
-            func_methods.Insert(ConstString(name),
-                                DIERef(cu_offset, die.GetOffset()));
-          else
-            func_basenames.Insert(ConstString(name),
-                                  DIERef(cu_offset, die.GetOffset()));
-
-          if (!is_method && !mangled_cstr && !objc_method.IsValid(true))
-            func_fullnames.Insert(ConstString(name),
-                                  DIERef(cu_offset, die.GetOffset()));
-        }
-        if (mangled_cstr) {
-          // Make sure our mangled name isn't the same string table entry
-          // as our name. If it starts with '_', then it is ok, else compare
-          // the string to make sure it isn't the same and we don't end up
-          // with duplicate entries
-          if (name && name != mangled_cstr &&
-              ((mangled_cstr[0] == '_') ||
-               (::strcmp(name, mangled_cstr) != 0))) {
-            Mangled mangled(ConstString(mangled_cstr), true);
-            func_fullnames.Insert(mangled.GetMangledName(),
-                                  DIERef(cu_offset, die.GetOffset()));
-            ConstString demangled = mangled.GetDemangledName(cu_language);
-            if (demangled)
-              func_fullnames.Insert(demangled,
-                                    DIERef(cu_offset, die.GetOffset()));
-          }
-        }
-      }
-      break;
-
-    case DW_TAG_inlined_subroutine:
-      if (has_address) {
-        if (name)
-          func_basenames.Insert(ConstString(name),
-                                DIERef(cu_offset, die.GetOffset()));
-        if (mangled_cstr) {
-          // Make sure our mangled name isn't the same string table entry
-          // as our name. If it starts with '_', then it is ok, else compare
-          // the string to make sure it isn't the same and we don't end up
-          // with duplicate entries
-          if (name && name != mangled_cstr &&
-              ((mangled_cstr[0] == '_') ||
-               (::strcmp(name, mangled_cstr) != 0))) {
-            Mangled mangled(ConstString(mangled_cstr), true);
-            func_fullnames.Insert(mangled.GetMangledName(),
-                                  DIERef(cu_offset, die.GetOffset()));
-            ConstString demangled = mangled.GetDemangledName(cu_language);
-            if (demangled)
-              func_fullnames.Insert(demangled,
-                                    DIERef(cu_offset, die.GetOffset()));
-          }
-        } else
-          func_fullnames.Insert(ConstString(name),
-                                DIERef(cu_offset, die.GetOffset()));
-      }
-      break;
-
-    case DW_TAG_array_type:
-    case DW_TAG_base_type:
-    case DW_TAG_class_type:
-    case DW_TAG_constant:
-    case DW_TAG_enumeration_type:
-    case DW_TAG_string_type:
-    case DW_TAG_structure_type:
-    case DW_TAG_subroutine_type:
-    case DW_TAG_typedef:
-    case DW_TAG_union_type:
-    case DW_TAG_unspecified_type:
-      if (name && !is_declaration)
-        types.Insert(ConstString(name), DIERef(cu_offset, die.GetOffset()));
-      if (mangled_cstr && !is_declaration)
-        types.Insert(ConstString(mangled_cstr),
-                     DIERef(cu_offset, die.GetOffset()));
-      break;
-
-    case DW_TAG_namespace:
-      if (name)
-        namespaces.Insert(ConstString(name),
-                          DIERef(cu_offset, die.GetOffset()));
-      break;
-
-    case DW_TAG_variable:
-      if (name && has_location_or_const_value && is_global_or_static_variable) {
-        globals.Insert(ConstString(name), DIERef(cu_offset, die.GetOffset()));
-        // Be sure to include variables by their mangled and demangled
-        // names if they have any since a variable can have a basename
-        // "i", a mangled named "_ZN12_GLOBAL__N_11iE" and a demangled
-        // mangled name "(anonymous namespace)::i"...
-
-        // Make sure our mangled name isn't the same string table entry
-        // as our name. If it starts with '_', then it is ok, else compare
-        // the string to make sure it isn't the same and we don't end up
-        // with duplicate entries
-        if (mangled_cstr && name != mangled_cstr &&
-            ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0))) {
-          Mangled mangled(ConstString(mangled_cstr), true);
-          globals.Insert(mangled.GetMangledName(),
-                         DIERef(cu_offset, die.GetOffset()));
-          ConstString demangled = mangled.GetDemangledName(cu_language);
-          if (demangled)
-            globals.Insert(demangled, DIERef(cu_offset, die.GetOffset()));
-        }
-      }
-      break;
-
-    default:
-      continue;
-    }
-  }
-}
-
-bool DWARFCompileUnit::Supports_unnamed_objc_bitfields() {
-  if (GetProducer() == eProducerClang) {
-    const uint32_t major_version = GetProducerVersionMajor();
-    if (major_version > 425 ||
-        (major_version == 425 && GetProducerVersionUpdate() >= 13))
-      return true;
-    else
-      return false;
-  }
-  return true; // Assume all other compilers didn't have incorrect ObjC bitfield
-               // info
-}
-
-bool DWARFCompileUnit::Supports_DW_AT_APPLE_objc_complete_type() {
-  if (GetProducer() == eProducerLLVMGCC)
-    return false;
-  return true;
-}
-
-bool DWARFCompileUnit::DW_AT_decl_file_attributes_are_invalid() {
-  // llvm-gcc makes completely invalid decl file attributes and won't ever
-  // be fixed, so we need to know to ignore these.
-  return GetProducer() == eProducerLLVMGCC;
-}
 
 void DWARFCompileUnit::ParseProducerInfo() {
   m_producer_version_major = UINT32_MAX;
@@ -1036,19 +596,6 @@ uint32_t DWARFCompileUnit::GetProducerVersionUpdate() {
   return m_producer_version_update;
 }
 
-LanguageType DWARFCompileUnit::LanguageTypeFromDWARF(uint64_t val) {
-  // Note: user languages between lo_user and hi_user
-  // must be handled explicitly here.
-  switch (val) {
-  case DW_LANG_Mips_Assembler:
-    return eLanguageTypeMipsAssembler;
-  case DW_LANG_GOOGLE_RenderScript:
-    return eLanguageTypeExtRenderScript;
-  default:
-    return static_cast<LanguageType>(val);
-  }
-}
-
 LanguageType DWARFCompileUnit::GetLanguageType() {
   if (m_language_type != eLanguageTypeUnknown)
     return m_language_type;
@@ -1059,8 +606,6 @@ LanguageType DWARFCompileUnit::GetLanguageType() {
         m_dwarf2Data, this, DW_AT_language, 0));
   return m_language_type;
 }
-
-bool DWARFCompileUnit::IsDWARF64() const { return m_is_dwarf64; }
 
 bool DWARFCompileUnit::GetIsOptimized() {
   if (m_is_optimized == eLazyBoolCalculate) {
@@ -1078,11 +623,6 @@ bool DWARFCompileUnit::GetIsOptimized() {
   } else {
     return false;
   }
-}
-
-DWARFFormValue::FixedFormSizes DWARFCompileUnit::GetFixedFormSizes() {
-  return DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize(),
-                                                         IsDWARF64());
 }
 
 TypeSystem *DWARFCompileUnit::GetTypeSystem() {
@@ -1104,8 +644,4 @@ void DWARFCompileUnit::SetAddrBase(dw_addr_t addr_base,
   m_addr_base = addr_base;
   m_ranges_base = ranges_base;
   m_base_obj_offset = base_obj_offset;
-}
-
-lldb::ByteOrder DWARFCompileUnit::GetByteOrder() const {
-  return m_dwarf2Data->GetObjectFile()->GetByteOrder();
 }
