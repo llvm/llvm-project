@@ -1898,6 +1898,9 @@ def CortexA9Model : SchedMachineModel {
   // FIXME: Many vector operations were never given an itinerary. We
   // haven't mapped these to the new model either.
   let CompleteModel = 0;
+
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 //===----------------------------------------------------------------------===//

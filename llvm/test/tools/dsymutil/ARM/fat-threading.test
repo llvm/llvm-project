@@ -1,4 +1,4 @@
 # REQUIRES: object-emission
 # By default, dsymutil spawns one thread per architecture and this test just
 # ensures that things don't break when processing multiple archs.
-# RUN: llvm-dsymutil -no-output %p/../Inputs/fat-test.arm.dylib -o %t.brief.dSYM 2>&1
+# RUN: dsymutil -no-output %p/../Inputs/fat-test.arm.dylib -o %t.brief.dSYM 2>&1

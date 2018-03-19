@@ -1,8 +1,8 @@
 UNSUPPORTED: system-windows
 Remove UNSUPPORTED once we figure out why this fails on Windows.
 
-RUN: llvm-dsymutil -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
-RUN: llvm-dsymutil -update %t.dSYM
+RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
+RUN: dsymutil -update %t.dSYM
 RUN: llvm-dwarfdump -apple-types -apple-objc %t.dSYM | FileCheck %s
 
 CHECK: .apple_types contents:

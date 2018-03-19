@@ -345,6 +345,9 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   case MVT::i64:
     LC = IsSigned ? RTLIB::SDIVREM_I64 : RTLIB::UDIVREM_I64;
     break;
+  case MVT::i128:
+    LC = IsSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
+    break;
   }
 
   SDValue InChain = DAG.getEntryNode();

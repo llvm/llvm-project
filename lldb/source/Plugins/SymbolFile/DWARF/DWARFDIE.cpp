@@ -10,7 +10,7 @@
 #include "DWARFDIE.h"
 
 #include "DWARFASTParser.h"
-#include "DWARFCompileUnit.h"
+#include "DWARFUnit.h"
 #include "DWARFDIECollection.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
@@ -121,7 +121,7 @@ int64_t DWARFDIE::GetAttributeValueAsSigned(const dw_attr_t attr,
 DWARFDIE
 DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
   if (IsValid()) {
-    DWARFCompileUnit *cu = GetCU();
+    DWARFUnit *cu = GetCU();
     SymbolFileDWARF *dwarf = cu->GetSymbolFileDWARF();
     const bool check_specification_or_abstract_origin = true;
     DWARFFormValue form_value;
@@ -154,7 +154,7 @@ DWARFDIE
 DWARFDIE::LookupDeepestBlock(lldb::addr_t file_addr) const {
   if (IsValid()) {
     SymbolFileDWARF *dwarf = GetDWARF();
-    DWARFCompileUnit *cu = GetCU();
+    DWARFUnit *cu = GetCU();
     DWARFDebugInfoEntry *function_die = nullptr;
     DWARFDebugInfoEntry *block_die = nullptr;
     if (m_die->LookupAddress(file_addr, dwarf, cu, &function_die, &block_die)) {

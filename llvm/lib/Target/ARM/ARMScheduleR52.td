@@ -25,6 +25,9 @@ def CortexR52Model : SchedMachineModel {
   let LoadLatency = 1;        // Optimistic, assuming no misses
   let MispredictPenalty = 8;  // A branch direction mispredict, including PFU
   let CompleteModel = 0;      // Covers instructions applicable to cortex-r52.
+
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 
