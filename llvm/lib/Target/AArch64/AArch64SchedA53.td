@@ -28,9 +28,6 @@ def CortexA53Model : SchedMachineModel {
   let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = [HasSVE];
-
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
 }
 
 
@@ -225,10 +222,10 @@ def : InstRW<[A53WriteVLD1], (instregex "LD2i(8|16|32|64)$")>;
 def : InstRW<[A53WriteVLD1], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
 def : InstRW<[A53WriteVLD2], (instregex "LD2Twov(8b|4h|2s)$")>;
 def : InstRW<[A53WriteVLD4], (instregex "LD2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD1, WriteAdr], (instregex "LD2i(8|16|32|64)(_POST)?$")>;
-def : InstRW<[A53WriteVLD1, WriteAdr], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)(_POST)?$")>;
-def : InstRW<[A53WriteVLD2, WriteAdr], (instregex "LD2Twov(8b|4h|2s)(_POST)?$")>;
-def : InstRW<[A53WriteVLD4, WriteAdr], (instregex "LD2Twov(16b|8h|4s|2d)(_POST)?$")>;
+def : InstRW<[A53WriteVLD1, WriteAdr], (instregex "LD2i(8|16|32|64)_POST$")>;
+def : InstRW<[A53WriteVLD1, WriteAdr], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[A53WriteVLD2, WriteAdr], (instregex "LD2Twov(8b|4h|2s)_POST$")>;
+def : InstRW<[A53WriteVLD4, WriteAdr], (instregex "LD2Twov(16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[A53WriteVLD2], (instregex "LD3i(8|16|32|64)$")>;
 def : InstRW<[A53WriteVLD2], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;

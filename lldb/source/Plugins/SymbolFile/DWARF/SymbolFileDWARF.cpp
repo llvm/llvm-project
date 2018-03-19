@@ -58,7 +58,7 @@
 
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
-#include "DWARFCompileUnit.h"
+#include "DWARFUnit.h"
 #include "DWARFDIECollection.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
@@ -208,7 +208,7 @@ static const char *resolveCompDir(const char *path_from_dwarf) {
   return nullptr;
 }
 
-DWARFCompileUnit *SymbolFileDWARF::GetBaseCompileUnit() {
+DWARFUnit *SymbolFileDWARF::GetBaseCompileUnit() {
   return nullptr;
 }
 
@@ -333,7 +333,7 @@ size_t SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
   TypeSet type_set;
 
   CompileUnit *comp_unit = NULL;
-  DWARFCompileUnit *dwarf_cu = NULL;
+  DWARFUnit *dwarf_cu = NULL;
   if (sc_scope)
     comp_unit = sc_scope->CalculateSymbolContextCompileUnit();
 
@@ -716,7 +716,7 @@ const DWARFDebugInfo *SymbolFileDWARF::DebugInfo() const {
   return m_info.get();
 }
 
-DWARFCompileUnit *
+DWARFUnit *
 SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
@@ -726,7 +726,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
     // Just a normal DWARF file whose user ID for the compile unit is
     // the DWARF offset itself
 
-    DWARFCompileUnit *dwarf_cu =
+    DWARFUnit *dwarf_cu =
         info->GetCompileUnit((dw_offset_t)comp_unit->GetID());
     if (dwarf_cu && dwarf_cu->GetUserData() == NULL)
       dwarf_cu->SetUserData(comp_unit);
@@ -753,7 +753,7 @@ const DWARFDebugRanges *SymbolFileDWARF::DebugRanges() const {
   return m_ranges.get();
 }
 
-lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
+lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
                                                    uint32_t cu_idx) {
   CompUnitSP cu_sp;
   if (dwarf_cu) {
@@ -792,7 +792,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
                 cu_file_spec.SetFile(remapped_file, false);
             }
 
-            LanguageType cu_language = DWARFCompileUnit::LanguageTypeFromDWARF(
+            LanguageType cu_language = DWARFUnit::LanguageTypeFromDWARF(
                 cu_die.GetAttributeValueAsUnsigned(DW_AT_language, 0));
 
             bool is_optimized = dwarf_cu->GetIsOptimized();
@@ -843,7 +843,7 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
   CompUnitSP cu_sp;
   DWARFDebugInfo *info = DebugInfo();
   if (info) {
-    DWARFCompileUnit *dwarf_cu = info->GetCompileUnitAtIndex(cu_idx);
+    DWARFUnit *dwarf_cu = info->GetCompileUnitAtIndex(cu_idx);
     if (dwarf_cu)
       cu_sp = ParseCompileUnit(dwarf_cu, cu_idx);
   }
@@ -876,7 +876,7 @@ bool SymbolFileDWARF::FixupAddress(Address &addr) {
 lldb::LanguageType
 SymbolFileDWARF::ParseCompileUnitLanguage(const SymbolContext &sc) {
   assert(sc.comp_unit);
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu)
     return dwarf_cu->GetLanguageType();
   else
@@ -886,7 +886,7 @@ SymbolFileDWARF::ParseCompileUnitLanguage(const SymbolContext &sc) {
 size_t SymbolFileDWARF::ParseCompileUnitFunctions(const SymbolContext &sc) {
   assert(sc.comp_unit);
   size_t functions_added = 0;
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
     DWARFDIECollection function_dies;
     const size_t num_functions =
@@ -907,7 +907,7 @@ size_t SymbolFileDWARF::ParseCompileUnitFunctions(const SymbolContext &sc) {
 bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
     const SymbolContext &sc, FileSpecList &support_files) {
   assert(sc.comp_unit);
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
     const DWARFDIE cu_die = dwarf_cu->GetCompileUnitDIEOnly();
 
@@ -931,7 +931,7 @@ bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
 
 bool SymbolFileDWARF::ParseCompileUnitIsOptimized(
     const lldb_private::SymbolContext &sc) {
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu)
     return dwarf_cu->GetIsOptimized();
   return false;
@@ -941,7 +941,7 @@ bool SymbolFileDWARF::ParseImportedModules(
     const lldb_private::SymbolContext &sc,
     std::vector<lldb_private::ConstString> &imported_modules) {
   assert(sc.comp_unit);
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
     if (ClangModulesDeclVendor::LanguageSupportsClangModules(
             sc.comp_unit->GetLanguage())) {
@@ -1022,7 +1022,7 @@ bool SymbolFileDWARF::ParseCompileUnitLineTable(const SymbolContext &sc) {
   if (sc.comp_unit->GetLineTable() != NULL)
     return true;
 
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
     const DWARFDIE dwarf_cu_die = dwarf_cu->GetCompileUnitDIEOnly();
     if (dwarf_cu_die) {
@@ -1105,7 +1105,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
 bool SymbolFileDWARF::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
   assert(sc.comp_unit);
 
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu == nullptr)
     return false;
 
@@ -1494,7 +1494,7 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
 }
 
 CompileUnit *
-SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit *dwarf_cu,
+SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFUnit *dwarf_cu,
                                              uint32_t cu_idx) {
   // Check if the symbol vendor already knows about this compile unit?
   if (dwarf_cu->GetUserData() == NULL) {
@@ -1561,7 +1561,7 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
 
 std::unique_ptr<SymbolFileDWARFDwo>
 SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
-    DWARFCompileUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die) {
+    DWARFUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die) {
   // If we are using a dSYM file, we never want the standard DWO files since
   // the -gmodules support uses the same DWO machanism to specify full debug
   // info files for modules.
@@ -1618,7 +1618,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
   const uint32_t num_compile_units = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-    DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+    DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
     const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
     if (die && die.HasChildren() == false) {
@@ -1775,7 +1775,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
         }
       } else {
         uint32_t cu_idx = DW_INVALID_INDEX;
-        DWARFCompileUnit *dwarf_cu =
+        DWARFUnit *dwarf_cu =
             debug_info->GetCompileUnit(cu_offset, &cu_idx);
         if (dwarf_cu) {
           sc.comp_unit = GetCompUnitForDWARFCompUnit(dwarf_cu, cu_idx);
@@ -1877,7 +1877,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
     DWARFDebugInfo *debug_info = DebugInfo();
     if (debug_info) {
       uint32_t cu_idx;
-      DWARFCompileUnit *dwarf_cu = NULL;
+      DWARFUnit *dwarf_cu = NULL;
 
       for (cu_idx = 0;
            (dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx)) != NULL;
@@ -2024,7 +2024,7 @@ void SymbolFileDWARF::Index() {
                       &function_selector_index, &objc_class_selectors_index,
                       &global_index, &type_index,
                       &namespace_index](size_t cu_idx) {
-      DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+      DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
       if (dwarf_cu) {
         dwarf_cu->Index(
             function_basename_index[cu_idx], function_fullname_index[cu_idx],
@@ -2035,7 +2035,7 @@ void SymbolFileDWARF::Index() {
     };
 
     auto extract_fn = [debug_info, &clear_cu_dies](size_t cu_idx) {
-      DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+      DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
       if (dwarf_cu) {
         // dwarf_cu->ExtractDIEsIfNeeded(false) will return zero if the
         // DIEs for a compile unit have already been parsed.
@@ -2787,7 +2787,7 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
     num_comp_units = info->GetNumCompileUnits();
 
   for (uint32_t i = 0; i < num_comp_units; i++) {
-    DWARFCompileUnit *cu = info->GetCompileUnitAtIndex(i);
+    DWARFUnit *cu = info->GetCompileUnitAtIndex(i);
     if (cu == nullptr)
       continue;
 
@@ -3167,7 +3167,7 @@ SymbolFileDWARF::GetObjCClassSymbol(const ConstString &objc_class_name) {
 // DWARF file
 // if we are doing darwin DWARF in .o file debugging.
 bool SymbolFileDWARF::Supports_DW_AT_APPLE_objc_complete_type(
-    DWARFCompileUnit *cu) {
+    DWARFUnit *cu) {
   if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolCalculate) {
     m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolNo;
     if (cu && cu->Supports_DW_AT_APPLE_objc_complete_type())
@@ -3176,7 +3176,7 @@ bool SymbolFileDWARF::Supports_DW_AT_APPLE_objc_complete_type(
       DWARFDebugInfo *debug_info = DebugInfo();
       const uint32_t num_compile_units = GetNumCompileUnits();
       for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
         if (dwarf_cu != cu &&
             dwarf_cu->Supports_DW_AT_APPLE_objc_complete_type()) {
           m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
@@ -3604,7 +3604,7 @@ size_t SymbolFileDWARF::ParseTypes(const SymbolContext &sc,
 size_t SymbolFileDWARF::ParseFunctionBlocks(const SymbolContext &sc) {
   assert(sc.comp_unit && sc.function);
   size_t functions_added = 0;
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
     const dw_offset_t function_die_offset = sc.function->GetID();
     DWARFDIE function_die = dwarf_cu->GetDIE(function_die_offset);
@@ -3621,7 +3621,7 @@ size_t SymbolFileDWARF::ParseTypes(const SymbolContext &sc) {
   // At least a compile unit must be valid
   assert(sc.comp_unit);
   size_t types_added = 0;
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
     if (sc.function) {
       dw_offset_t function_die_offset = sc.function->GetID();
@@ -3660,7 +3660,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         return num_variables;
       }
     } else if (sc.comp_unit) {
-      DWARFCompileUnit *dwarf_cu = info->GetCompileUnit(sc.comp_unit->GetID());
+      DWARFUnit *dwarf_cu = info->GetCompileUnit(sc.comp_unit->GetID());
 
       if (dwarf_cu == NULL)
         return 0;
