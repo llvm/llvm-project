@@ -31,7 +31,7 @@ void calleeWeak(Weak);
 // ARM64: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 8
 // ARM64: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
 // ARM64: %[[V4:.*]] = bitcast i8** %[[V3]] to i8*
-// ARM64: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V4]], i8 0, i64 8, i1 false)
+// ARM64: call void @llvm.memset.p0i8.i64(i8* %[[V4]], i8 0, i64 8, i32 8, i1 false)
 
 // ARM64: define linkonce_odr hidden void @__destructor_8_w8(i8** %[[DST:.*]])
 // ARM64: %[[DST_ADDR:.*]] = alloca i8**, align 8
