@@ -122,3 +122,13 @@ void testWithAttributes() {
   static_assert(alignof(decltype(a)) == 2, "");
   static_assert(alignof(decltype(b)) == 2, "");
 }
+
+// Check that returnNonTrivial doesn't return Class0<S0> directly in registers.
+
+// CHECK: declare void @_Z16returnNonTrivialv(%struct.Class0* sret)
+
+@import template_nontrivial0;
+@import template_nontrivial1;
+
+S1::S1() : a(returnNonTrivial()) {
+}

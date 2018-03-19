@@ -460,3 +460,13 @@ module innerstructredef {
    header "innerstructredef.h"
   }
 }
+
+module template_nontrivial0 {
+  header "template-nontrivial0.h"
+  export *
+}
+
+module template_nontrivial1 {
+  header "template-nontrivial1.h"
+  export *
+}
