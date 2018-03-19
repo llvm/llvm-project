@@ -56,16 +56,18 @@ public:
   }
 
 private:
+  static constexpr unsigned HashByteLength = 20;
+
   friend llvm::hash_code hash_value(const SymbolID &ID) {
     // We already have a good hash, just return the first bytes.
-    static_assert(sizeof(size_t) <= 20, "size_t longer than SHA1!");
+    static_assert(sizeof(size_t) <= HashByteLength, "size_t longer than SHA1!");
     return *reinterpret_cast<const size_t *>(ID.HashValue.data());
   }
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const SymbolID &ID);
   friend void operator>>(llvm::StringRef Str, SymbolID &ID);
 
-  std::array<uint8_t, 20> HashValue;
+  std::array<uint8_t, HashByteLength> HashValue;
 };
 
 // Write SymbolID into the given stream. SymbolID is encoded as a 40-bytes
