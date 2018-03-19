@@ -470,12 +470,18 @@ const Baton *BreakpointOptions::GetBaton() const {
 bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
                                        lldb::user_id_t break_id,
                                        lldb::user_id_t break_loc_id) {
-  if (m_callback && context->is_synchronous == IsCallbackSynchronous()) {
-    return m_callback(m_callback_baton_sp ? m_callback_baton_sp->data()
+  if (m_callback) {
+    if (context->is_synchronous == IsCallbackSynchronous()) {
+        return m_callback(m_callback_baton_sp ? m_callback_baton_sp->data()
                                           : nullptr,
                       context, break_id, break_loc_id);
-  } else
-    return true;
+    } else if (IsCallbackSynchronous()) {
+      // If a synchronous callback is called at async time, it should not say
+      // to stop.
+      return false;
+    }
+  }
+  return true;
 }
 
 bool BreakpointOptions::HasCallback() const {
@@ -526,7 +532,10 @@ const ThreadSpec *BreakpointOptions::GetThreadSpecNoCreate() const {
 
 ThreadSpec *BreakpointOptions::GetThreadSpec() {
   if (m_thread_spec_ap.get() == nullptr)
+  {
+    m_set_flags.Set(eThreadSpec);
     m_thread_spec_ap.reset(new ThreadSpec());
+  }
 
   return m_thread_spec_ap.get();
 }

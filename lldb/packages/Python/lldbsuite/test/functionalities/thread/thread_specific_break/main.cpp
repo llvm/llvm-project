@@ -12,6 +12,11 @@ int
 main ()
 {
     // Set main breakpoint here.
+
+    #ifdef __APPLE__
+    pthread_setname_np("main-thread");
+    #endif
+
     std::thread t(thread_function);
     t.join();
 
