@@ -97,10 +97,9 @@
 		456F67691AD46CE9002850C2 /* DNBArchImplARM64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */; };
 		456F676B1AD46CE9002850C2 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26ACA3340D3E956300A2120B /* CoreFoundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		49D404621E39260F00570CDC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
-		AF3467C220606B9400824E84 /* SocketAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF3467C120606B9400824E84 /* SocketAddress.cpp */; };
-		AF3467C320606B9400824E84 /* SocketAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF3467C120606B9400824E84 /* SocketAddress.cpp */; };
 		AF48558C1D75126800D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
 		AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
+		AF588449206077BD00A0CB5A /* SocketAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D6631CA81E848FE9006A7B11 /* SocketAddress.cpp */; };
 		AFA3FCA11E39984900218D5E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
 		AFEC3364194A8B0B00FF05C6 /* Genealogy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */; };
 		D6631CA91E848FE9006A7B11 /* SocketAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D6631CA81E848FE9006A7B11 /* SocketAddress.cpp */; };
@@ -217,7 +216,6 @@
 		9457ECF61419864100DFE7D8 /* stack_logging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stack_logging.h; sourceTree = "<group>"; };
 		AF0934BA18E12B92005A11FD /* Genealogy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Genealogy.h; sourceTree = "<group>"; };
 		AF0934BB18E12B92005A11FD /* GenealogySPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenealogySPI.h; sourceTree = "<group>"; };
-		AF3467C120606B9400824E84 /* SocketAddress.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SocketAddress.cpp; path = ../../../source/Host/common/SocketAddress.cpp; sourceTree = "<group>"; };
 		AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StdStringExtractor.cpp; sourceTree = "<group>"; };
 		AF61C60418F75ABC00B48D9D /* debugserver-macosx-entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "debugserver-macosx-entitlements.plist"; sourceTree = "<group>"; };
 		AF67ABFF0D34604D0022D128 /* PseudoTerminal.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PseudoTerminal.cpp; sourceTree = "<group>"; };
@@ -338,7 +336,6 @@
 		26A028FF114AB6BB0029C479 /* libdebugnub */ = {
 			isa = PBXGroup;
 			children = (
-				AF3467C120606B9400824E84 /* SocketAddress.cpp */,
 				26C637E60C71334A0024798E /* MacOSX */,
 				260828DE0CBAF7F400F95054 /* DNBRuntimeAction.h */,
 				26A8FE1E0D11A77B00203048 /* DNBTimer.h */,
@@ -615,7 +612,6 @@
 				26CE05BB115C363F0022F371 /* DNBRegisterInfo.cpp in Sources */,
 				26CE05BC115C36420022F371 /* PThreadEvent.cpp in Sources */,
 				26CE05BD115C36430022F371 /* PThreadMutex.cpp in Sources */,
-				AF3467C220606B9400824E84 /* SocketAddress.cpp in Sources */,
 				26CE05BE115C36440022F371 /* SysSignal.cpp in Sources */,
 				23AE72E41D25DECF00945BCE /* DarwinLogCollector.cpp in Sources */,
 				26CE05BF115C364D0022F371 /* DNBArchImplX86_64.cpp in Sources */,
@@ -655,7 +651,6 @@
 				456F67531AD46CE9002850C2 /* MachVMRegion.cpp in Sources */,
 				23562ED71D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */,
 				456F67541AD46CE9002850C2 /* MachTask.mm in Sources */,
-				AF3467C320606B9400824E84 /* SocketAddress.cpp in Sources */,
 				456F67551AD46CE9002850C2 /* DNB.cpp in Sources */,
 				456F67561AD46CE9002850C2 /* Genealogy.cpp in Sources */,
 				456F67571AD46CE9002850C2 /* DNBBreakpoint.cpp in Sources */,
@@ -674,6 +669,7 @@
 				23AC04C71D2F41A00072351D /* LogFilter.cpp in Sources */,
 				23043C9E1D35DBFA00FC25CA /* StringConvert.cpp in Sources */,
 				456F67611AD46CE9002850C2 /* DNBArchImpl.cpp in Sources */,
+				AF588449206077BD00A0CB5A /* SocketAddress.cpp in Sources */,
 				456F67621AD46CE9002850C2 /* CFString.cpp in Sources */,
 				23AC04CB1D2F42250072351D /* LogFilterChain.cpp in Sources */,
 				AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */,
