@@ -1870,7 +1870,8 @@ public:
 
   bool isNEONReplicate(unsigned Width, unsigned NumElems, bool Inv,
                        bool AllowMinusOne) const {
-    assert(Width == 8 || Width == 16 || Width == 32 && "Invalid element width");
+    assert((Width == 8 || Width == 16 || Width == 32) &&
+           "Invalid element width");
     assert(NumElems * Width <= 64 && "Invalid result width");
 
     if (!isImm())
@@ -1907,8 +1908,10 @@ public:
   }
 
   static void checkNeonReplicateArgs(unsigned FromW, unsigned ToW) {
-    assert(FromW == 8 || FromW == 16 || FromW == 32 && "Invalid source width");
-    assert(ToW == 16 || ToW == 32 || ToW == 64 && "Invalid destination width");
+    assert((FromW == 8 || FromW == 16 || FromW == 32) &&
+           "Invalid source width");
+    assert((ToW == 16 || ToW == 32 || ToW == 64) &&
+           "Invalid destination width");
     assert(FromW < ToW && "ToW is not less than FromW");
   }
 

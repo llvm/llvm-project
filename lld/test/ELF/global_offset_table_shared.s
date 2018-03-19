@@ -4,11 +4,11 @@
 .long _GLOBAL_OFFSET_TABLE_ - .
 
 // CHECK:      Name: _GLOBAL_OFFSET_TABLE_
-// CHECK-NEXT: Value: 0x2060
+// CHECK-NEXT: Value: 0x2000
 // CHECK-NEXT: Size: 0
 // CHECK-NEXT: Binding: Local
 // CHECK-NEXT: Type: None
 // CHECK-NEXT: Other [ (0x2)
 // CHECK-NEXT: STV_HIDDEN (0x2)
 // CHECK-NEXT:    ]
-// CHECK-NEXT: Section: .got
+// CHECK-NEXT: Section: .got.plt

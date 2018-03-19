@@ -869,11 +869,12 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
 // defining these symbols explicitly in the linker script.
 template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   if (ElfSym::GlobalOffsetTable) {
-    // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
-    // be at some offset from the base of the .got section, usually 0 or the end
-    // of the .got
-    InputSection *GotSection = InX::MipsGot ? cast<InputSection>(InX::MipsGot)
-                                            : cast<InputSection>(InX::Got);
+    // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention usually
+    // to the start of the .got or .got.plt section.
+    InputSection *GotSection = InX::GotPlt;
+    if (!Target->GotBaseSymInGotPlt)
+      GotSection = InX::MipsGot ? cast<InputSection>(InX::MipsGot)
+                                : cast<InputSection>(InX::Got);
     ElfSym::GlobalOffsetTable->Section = GotSection;
   }
 
