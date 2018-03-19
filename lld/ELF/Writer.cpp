@@ -190,8 +190,14 @@ void elf::addReservedSymbols() {
           Symtab->addAbsolute("__gnu_local_gp", STV_HIDDEN, STB_GLOBAL);
   }
 
+  // The 64-bit PowerOpen ABI defines a TableOfContents (TOC) which combines the
+  // typical ELF GOT with the small data sections. It commonly includes .got
+  // .toc .sdata .sbss. The .TOC. symbol replaces both _GLOBAL_OFFSET_TABLE_ and
+  // _SDA_BASE_ from the 32-bit ABI. It is used to represent the TOC base which
+  // is offset by 0x8000 bytes from the start of the .got section.
   ElfSym::GlobalOffsetTable = addOptionalRegular(
-      "_GLOBAL_OFFSET_TABLE_", Out::ElfHeader, Target->GotBaseSymOff);
+      (Config->EMachine == EM_PPC64) ? ".TOC." : "_GLOBAL_OFFSET_TABLE_",
+      Out::ElfHeader, Target->GotBaseSymOff);
 
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which

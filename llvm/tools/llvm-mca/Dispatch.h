@@ -255,41 +255,9 @@ class DispatchUnit {
   std::unique_ptr<RetireControlUnit> RCU;
   Backend *Owner;
 
-  /// Dispatch stall event identifiers.
-  ///
-  /// The naming convention is:
-  /// * Event names starts with the "DS_" prefix
-  /// * For dynamic dispatch stalls, the "DS_" prefix is followed by the
-  ///   the unavailable resource/functional unit acronym (example: RAT)
-  /// * The last substring is the event reason (example: REG_UNAVAILABLE means
-  ///   that register renaming couldn't find enough spare registers in the
-  ///   register file).
-  ///
-  /// List of acronyms used for processor resoures:
-  /// RAT - Register Alias Table (used by the register renaming logic)
-  /// RCU - Retire Control Unit
-  /// SQ  - Scheduler's Queue
-  /// LDQ - Load Queue
-  /// STQ - Store Queue
-  enum {
-    DS_RAT_REG_UNAVAILABLE,
-    DS_RCU_TOKEN_UNAVAILABLE,
-    DS_SQ_TOKEN_UNAVAILABLE,
-    DS_LDQ_TOKEN_UNAVAILABLE,
-    DS_STQ_TOKEN_UNAVAILABLE,
-    DS_DISPATCH_GROUP_RESTRICTION,
-    DS_LAST
-  };
-
-  // The DispatchUnit track dispatch stall events caused by unavailable
-  // of hardware resources. Events are classified based on the stall kind;
-  // so we have a counter for every source of dispatch stall. Counters are
-  // stored into a vector `DispatchStall` which is always of size DS_LAST.
-  std::vector<unsigned> DispatchStalls;
-
-  bool checkRAT(const Instruction &Desc);
-  bool checkRCU(const InstrDesc &Desc);
-  bool checkScheduler(const InstrDesc &Desc);
+  bool checkRAT(unsigned Index, const Instruction &Desc);
+  bool checkRCU(unsigned Index, const InstrDesc &Desc);
+  bool checkScheduler(unsigned Index, const InstrDesc &Desc);
 
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
   void notifyInstructionDispatched(unsigned IID);
@@ -304,7 +272,7 @@ public:
         RAT(llvm::make_unique<RegisterFile>(MRI, RegisterFileSize)),
         RCU(llvm::make_unique<RetireControlUnit>(MicroOpBufferSize,
                                                  MaxRetirePerCycle, this)),
-        Owner(B), DispatchStalls(DS_LAST, 0) {}
+        Owner(B) {}
 
   unsigned getDispatchWidth() const { return DispatchWidth; }
 
@@ -314,10 +282,11 @@ public:
 
   bool isRCUEmpty() const { return RCU->isEmpty(); }
 
-  bool canDispatch(const Instruction &Inst) {
+  bool canDispatch(unsigned Index, const Instruction &Inst) {
     const InstrDesc &Desc = Inst.getDesc();
     assert(isAvailable(Desc.NumMicroOps));
-    return checkRCU(Desc) && checkRAT(Inst) && checkScheduler(Desc);
+    return checkRCU(Index, Desc) && checkRAT(Index, Inst) &&
+           checkScheduler(Index, Desc);
   }
 
   unsigned dispatch(unsigned IID, Instruction *NewInst,
@@ -326,24 +295,6 @@ public:
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
                      unsigned RegID) const {
     return RAT->collectWrites(Vec, RegID);
-  }
-  unsigned getNumRATStalls() const {
-    return DispatchStalls[DS_RAT_REG_UNAVAILABLE];
-  }
-  unsigned getNumRCUStalls() const {
-    return DispatchStalls[DS_RCU_TOKEN_UNAVAILABLE];
-  }
-  unsigned getNumSQStalls() const {
-    return DispatchStalls[DS_SQ_TOKEN_UNAVAILABLE];
-  }
-  unsigned getNumLDQStalls() const {
-    return DispatchStalls[DS_LDQ_TOKEN_UNAVAILABLE];
-  }
-  unsigned getNumSTQStalls() const {
-    return DispatchStalls[DS_STQ_TOKEN_UNAVAILABLE];
-  }
-  unsigned getNumDispatchGroupStalls() const {
-    return DispatchStalls[DS_DISPATCH_GROUP_RESTRICTION];
   }
   unsigned getMaxUsedRegisterMappings(unsigned RegFileIndex = 0) const {
     return RAT->getMaxUsedRegisterMappings(RegFileIndex);
@@ -361,6 +312,8 @@ public:
   }
 
   void notifyInstructionRetired(unsigned Index);
+
+  void notifyDispatchStall(unsigned Index, unsigned EventType);
 
   void onInstructionExecuted(unsigned TokenID) {
     RCU->onInstructionExecuted(TokenID);

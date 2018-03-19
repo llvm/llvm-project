@@ -77,15 +77,21 @@ def : ReadAdvance<ReadAfterLd, 5>;
 // This multiclass defines the resource usage for variants with and without
 // folded loads.
 multiclass SKXWriteResPair<X86FoldableSchedWrite SchedRW,
-                          ProcResourceKind ExePort,
-                          int Lat> {
+                          list<ProcResourceKind> ExePorts,
+                          int Lat, list<int> Res = [1], int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
-  def : WriteRes<SchedRW, [ExePort]> { let Latency = Lat; }
+  def : WriteRes<SchedRW, ExePorts> {
+    let Latency = Lat;
+    let ResourceCycles = Res;
+    let NumMicroOps = UOps;
+  }
 
   // Memory variant also uses a cycle on port 2/3 and adds 5 cycles to the
   // latency.
-  def : WriteRes<SchedRW.Folded, [SKXPort23, ExePort]> {
-     let Latency = !add(Lat, 5);
+  def : WriteRes<SchedRW.Folded, !listconcat([SKXPort23], ExePorts)> {
+    let Latency = !add(Lat, 5);
+    let ResourceCycles = !listconcat([1], Res);
+    let NumMicroOps = UOps;
   }
 }
 
@@ -94,8 +100,8 @@ multiclass SKXWriteResPair<X86FoldableSchedWrite SchedRW,
 def : WriteRes<WriteRMW, [SKXPort4]>;
 
 // Arithmetic.
-defm : SKXWriteResPair<WriteALU,   SKXPort0156, 1>; // Simple integer ALU op.
-defm : SKXWriteResPair<WriteIMul,  SKXPort1,   3>; // Integer multiplication.
+defm : SKXWriteResPair<WriteALU,   [SKXPort0156], 1>; // Simple integer ALU op.
+defm : SKXWriteResPair<WriteIMul,  [SKXPort1],   3>; // Integer multiplication.
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 def SKXDivider : ProcResource<1>; // Integer division issued on port 0.     
 def : WriteRes<WriteIDiv, [SKXPort0, SKXDivider]> { // Integer division.
@@ -110,7 +116,7 @@ def : WriteRes<WriteIDivLd, [SKXPort23, SKXPort0, SKXDivider]> {
 def : WriteRes<WriteLEA, [SKXPort15]>; // LEA instructions can't fold loads.
 
 // Integer shifts and rotates.
-defm : SKXWriteResPair<WriteShift, SKXPort06,  1>;
+defm : SKXWriteResPair<WriteShift, [SKXPort06],  1>;
 
 // Loads, stores, and moves, not folded with other operations.
 def : WriteRes<WriteLoad,  [SKXPort23]> { let Latency = 5; }
@@ -123,30 +129,23 @@ def : WriteRes<WriteZero,  []>;
 
 // Branches don't produce values, so they have no latency, but they still
 // consume resources. Indirect branches can fold loads.
-defm : SKXWriteResPair<WriteJump,  SKXPort06,   1>;
+defm : SKXWriteResPair<WriteJump,  [SKXPort06],   1>;
 
 // Floating point. This covers both scalar and vector operations.
 def  : WriteRes<WriteFLoad,         [SKXPort23]> { let Latency = 5; }
 def  : WriteRes<WriteFStore,        [SKXPort237, SKXPort4]>;
 def  : WriteRes<WriteFMove,         [SKXPort015]>;
 
-defm : SKXWriteResPair<WriteFAdd,   SKXPort1, 3>; // Floating point add/sub/compare.
-defm : SKXWriteResPair<WriteFMul,   SKXPort0, 5>; // Floating point multiplication.
-defm : SKXWriteResPair<WriteFDiv,   SKXPort0, 12>; // 10-14 cycles. // Floating point division.
-defm : SKXWriteResPair<WriteFSqrt,  SKXPort0, 15>; // Floating point square root.
-defm : SKXWriteResPair<WriteFRcp,   SKXPort0, 5>; // Floating point reciprocal estimate.
-defm : SKXWriteResPair<WriteFRsqrt, SKXPort0, 5>; // Floating point reciprocal square root estimate.
-defm : SKXWriteResPair<WriteFMA,  SKXPort015, 4>; // Fused Multiply Add.
-defm : SKXWriteResPair<WriteFShuffle,  SKXPort5,  1>; // Floating point vector shuffles.
-defm : SKXWriteResPair<WriteFBlend,  SKXPort015,  1>; // Floating point vector blends.
-def : WriteRes<WriteFVarBlend, [SKXPort5]> { // Fp vector variable blends.	       
-  let Latency = 2;
-  let ResourceCycles = [2];
-} 
-def : WriteRes<WriteFVarBlendLd, [SKXPort5, SKXPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [2, 1];
-}
+defm : SKXWriteResPair<WriteFAdd,   [SKXPort1], 3>; // Floating point add/sub/compare.
+defm : SKXWriteResPair<WriteFMul,   [SKXPort0], 5>; // Floating point multiplication.
+defm : SKXWriteResPair<WriteFDiv,   [SKXPort0], 12>; // 10-14 cycles. // Floating point division.
+defm : SKXWriteResPair<WriteFSqrt,  [SKXPort0], 15>; // Floating point square root.
+defm : SKXWriteResPair<WriteFRcp,   [SKXPort0], 5>; // Floating point reciprocal estimate.
+defm : SKXWriteResPair<WriteFRsqrt, [SKXPort0], 5>; // Floating point reciprocal square root estimate.
+defm : SKXWriteResPair<WriteFMA,  [SKXPort015], 4>; // Fused Multiply Add.
+defm : SKXWriteResPair<WriteFShuffle,  [SKXPort5],  1>; // Floating point vector shuffles.
+defm : SKXWriteResPair<WriteFBlend,  [SKXPort015],  1>; // Floating point vector blends.
+defm : SKXWriteResPair<WriteFVarBlend,  [SKXPort5], 2, [2]>; // Fp vector variable blends.
 
 // FMA Scheduling helper class.
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
@@ -156,38 +155,22 @@ def  : WriteRes<WriteVecLoad,         [SKXPort23]> { let Latency = 5; }
 def  : WriteRes<WriteVecStore,        [SKXPort237, SKXPort4]>;
 def  : WriteRes<WriteVecMove,         [SKXPort015]>;
 
-defm : SKXWriteResPair<WriteVecALU,   SKXPort15,  1>; // Vector integer ALU op, no logicals.
-defm : SKXWriteResPair<WriteVecShift, SKXPort0,  1>; // Vector integer shifts.
-defm : SKXWriteResPair<WriteVecIMul,  SKXPort0,   5>; // Vector integer multiply.
-defm : SKXWriteResPair<WriteShuffle,  SKXPort5,  1>; // Vector shuffles.
-defm : SKXWriteResPair<WriteBlend,  SKXPort15,  1>; // Vector blends.
-
-def : WriteRes<WriteVarBlend, [SKXPort5]> { // Vector variable blends.
-  let Latency = 2;
-  let ResourceCycles = [2];
-}
-def : WriteRes<WriteVarBlendLd, [SKXPort5, SKXPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [2, 1];
-}
-
-def : WriteRes<WriteMPSAD, [SKXPort0, SKXPort5]> { // Vector MPSAD.     
-  let Latency = 6;
-  let ResourceCycles = [1, 2];
-}
-def : WriteRes<WriteMPSADLd, [SKXPort23, SKXPort0, SKXPort5]> {
-  let Latency = 6;
-  let ResourceCycles = [1, 1, 2];
-}
+defm : SKXWriteResPair<WriteVecALU,   [SKXPort15],  1>; // Vector integer ALU op, no logicals.
+defm : SKXWriteResPair<WriteVecShift, [SKXPort0],  1>; // Vector integer shifts.
+defm : SKXWriteResPair<WriteVecIMul,  [SKXPort0],   5>; // Vector integer multiply.
+defm : SKXWriteResPair<WriteShuffle,  [SKXPort5],  1>; // Vector shuffles.
+defm : SKXWriteResPair<WriteBlend,  [SKXPort15],  1>; // Vector blends.
+defm : SKXWriteResPair<WriteVarBlend,  [SKXPort5], 2, [2]>; // Vector variable blends.
+defm : SKXWriteResPair<WriteMPSAD,  [SKXPort0, SKXPort5], 6, [1, 2]>; // Vector MPSAD.
 
 // Vector bitwise operations.
 // These are often used on both floating point and integer vectors.
-defm : SKXWriteResPair<WriteVecLogic, SKXPort015, 1>; // Vector and/or/xor.
+defm : SKXWriteResPair<WriteVecLogic, [SKXPort015], 1>; // Vector and/or/xor.
 
 // Conversion between integer and float.
-defm : SKXWriteResPair<WriteCvtF2I, SKXPort1, 3>; // Float -> Integer.
-defm : SKXWriteResPair<WriteCvtI2F, SKXPort1, 4>; // Integer -> Float.
-defm : SKXWriteResPair<WriteCvtF2F, SKXPort1, 3>; // Float -> Float size conversion.
+defm : SKXWriteResPair<WriteCvtF2I, [SKXPort1], 3>; // Float -> Integer.
+defm : SKXWriteResPair<WriteCvtI2F, [SKXPort1], 4>; // Integer -> Float.
+defm : SKXWriteResPair<WriteCvtF2F, [SKXPort1], 3>; // Float -> Float size conversion.
 
 // Strings instructions.
 // Packed Compare Implicit Length Strings, Return Mask
@@ -268,16 +251,9 @@ def : WriteRes<WriteCLMulLd, [SKXPort0, SKXPort5, SKXPort23]> {
 def : WriteRes<WriteSystem,     [SKXPort0156]> { let Latency = 100; } // def WriteSystem : SchedWrite;
 
 // AVX2.
-defm : SKXWriteResPair<WriteFShuffle256,  SKXPort5,  3>; // Fp 256-bit width vector shuffles.
-defm : SKXWriteResPair<WriteShuffle256,  SKXPort5,  3>;  // 256-bit width vector shuffles.
-def : WriteRes<WriteVarVecShift, [SKXPort0, SKXPort5]> { // Variable vector shifts.
-  let Latency = 2;
-  let ResourceCycles = [2, 1];
-}
-def : WriteRes<WriteVarVecShiftLd, [SKXPort0, SKXPort5, SKXPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [2, 1, 1];
-}
+defm : SKXWriteResPair<WriteFShuffle256,  [SKXPort5],  3>; // Fp 256-bit width vector shuffles.
+defm : SKXWriteResPair<WriteShuffle256,  [SKXPort5],  3>;  // 256-bit width vector shuffles.
+defm : SKXWriteResPair<WriteVarVecShift,  [SKXPort0, SKXPort5], 2, [2, 1]>; // Variable vector shifts.
 
 // Old microcoded instructions that nobody use.
 def : WriteRes<WriteMicrocoded, [SKXPort0156]> { let Latency = 100; } // def WriteMicrocoded : SchedWrite;
@@ -291,27 +267,9 @@ def : WriteRes<WriteNop, []>;
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
-// HADD, HSUB PS/PD
-// x,x / v,v,v.
-def : WriteRes<WriteFHAdd, [SKXPort1]> {
-  let Latency = 3;
-}
 
-// x,m / v,v,m.
-def : WriteRes<WriteFHAddLd, [SKXPort1, SKXPort23]> {
-  let Latency = 7;
-  let ResourceCycles = [1, 1];
-}
-
-// PHADD|PHSUB (S) W/D.
-// v <- v,v.
-def : WriteRes<WritePHAdd, [SKXPort15]>;
-
-// v <- v,m.
-def : WriteRes<WritePHAddLd, [SKXPort15, SKXPort23]> {
-  let Latency = 5;
-  let ResourceCycles = [1, 1];
-}
+defm : SKXWriteResPair<WriteFHAdd,   [SKXPort1], 3>;
+defm : SKXWriteResPair<WritePHAdd,  [SKXPort15], 1>;
 
 // Remaining instrs.
 
@@ -1294,7 +1252,7 @@ def: InstRW<[SKXWriteResGroup10], (instregex "DEC(8|16|32|64)r")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "INC(8|16|32|64)r")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "LAHF")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "MOV(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOV8ri")>;
+def: InstRW<[SKXWriteResGroup10], (instregex "MOV(8|16|32|64)ri")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "MOVSX(16|32|64)rr16")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "MOVSX(16|32|64)rr32")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "MOVSX(16|32|64)rr8")>;
@@ -1318,8 +1276,8 @@ def: InstRW<[SKXWriteResGroup10], (instregex "SUB(8|16|32|64)rr")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "SUB(8|16|32|64)i")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "SYSCALL")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "TEST(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "TEST8i8")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "TEST8ri")>;
+def: InstRW<[SKXWriteResGroup10], (instregex "TEST(8|16|32|64)i")>;
+def: InstRW<[SKXWriteResGroup10], (instregex "TEST(8|16|32|64)ri")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "XCHG(16|32|64)rr")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "XOR(8|16|32|64)ri")>;
 def: InstRW<[SKXWriteResGroup10], (instregex "XOR(8|16|32|64)rr")>;
@@ -1632,7 +1590,7 @@ def SKXWriteResGroup23 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
 def: InstRW<[SKXWriteResGroup23], (instregex "ADC8i8")>;
 def: InstRW<[SKXWriteResGroup23], (instregex "ADC8ri")>;
 def: InstRW<[SKXWriteResGroup23], (instrs CWD)>;
-def: InstRW<[SKXWriteResGroup23], (instregex "JRCXZ")>;
+def: InstRW<[SKXWriteResGroup23], (instrs JCXZ, JECXZ, JRCXZ)>;
 def: InstRW<[SKXWriteResGroup23], (instregex "SBB8i8")>;
 def: InstRW<[SKXWriteResGroup23], (instregex "SBB8ri")>;
 

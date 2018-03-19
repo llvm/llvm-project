@@ -5640,7 +5640,7 @@ define void @test_imul_16(i16 %a0, i16* %a1) optsize {
 ; ATOM-LABEL: test_imul_16:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    imulw %di # sched: [6:3.00]
+; ATOM-NEXT:    imulw %di # sched: [7:3.50]
 ; ATOM-NEXT:    imulw (%rsi) # sched: [8:4.00]
 ; ATOM-NEXT:    imulw %di, %di # sched: [6:3.00]
 ; ATOM-NEXT:    imulw (%rsi), %di # sched: [7:3.50]
@@ -5803,7 +5803,7 @@ define void @test_imul_32(i32 %a0, i32* %a1) optsize {
 ; ATOM-LABEL: test_imul_32:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    imull %edi # sched: [5:5.00]
+; ATOM-NEXT:    imull %edi # sched: [6:3.00]
 ; ATOM-NEXT:    imull (%rsi) # sched: [7:3.50]
 ; ATOM-NEXT:    imull %edi, %edi # sched: [5:5.00]
 ; ATOM-NEXT:    imull (%rsi), %edi # sched: [5:5.00]
@@ -7198,7 +7198,7 @@ define void @test_jecxz_jrcxz() optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:  JXTGT:
-; GENERIC-NEXT:    jecxz JXTGT # sched: [1:1.00]
+; GENERIC-NEXT:    jecxz JXTGT # sched: [2:1.00]
 ; GENERIC-NEXT:    jrcxz JXTGT # sched: [2:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -7225,7 +7225,7 @@ define void @test_jecxz_jrcxz() optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:  JXTGT:
-; SANDY-NEXT:    jecxz JXTGT # sched: [1:1.00]
+; SANDY-NEXT:    jecxz JXTGT # sched: [2:1.00]
 ; SANDY-NEXT:    jrcxz JXTGT # sched: [2:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -7234,7 +7234,7 @@ define void @test_jecxz_jrcxz() optsize {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:  JXTGT:
-; HASWELL-NEXT:    jecxz JXTGT # sched: [1:0.50]
+; HASWELL-NEXT:    jecxz JXTGT # sched: [2:0.50]
 ; HASWELL-NEXT:    jrcxz JXTGT # sched: [2:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
@@ -7243,7 +7243,7 @@ define void @test_jecxz_jrcxz() optsize {
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:  JXTGT:
-; BROADWELL-NEXT:    jecxz JXTGT # sched: [1:0.50]
+; BROADWELL-NEXT:    jecxz JXTGT # sched: [2:0.50]
 ; BROADWELL-NEXT:    jrcxz JXTGT # sched: [2:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -7252,7 +7252,7 @@ define void @test_jecxz_jrcxz() optsize {
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:  JXTGT:
-; SKYLAKE-NEXT:    jecxz JXTGT # sched: [1:0.50]
+; SKYLAKE-NEXT:    jecxz JXTGT # sched: [2:0.50]
 ; SKYLAKE-NEXT:    jrcxz JXTGT # sched: [2:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -7261,7 +7261,7 @@ define void @test_jecxz_jrcxz() optsize {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:  JXTGT:
-; SKX-NEXT:    jecxz JXTGT # sched: [1:0.50]
+; SKX-NEXT:    jecxz JXTGT # sched: [2:0.50]
 ; SKX-NEXT:    jrcxz JXTGT # sched: [2:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -7279,7 +7279,7 @@ define void @test_jecxz_jrcxz() optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:  JXTGT:
-; ZNVER1-NEXT:    jecxz JXTGT # sched: [1:0.25]
+; ZNVER1-NEXT:    jecxz JXTGT # sched: [1:0.50]
 ; ZNVER1-NEXT:    jrcxz JXTGT # sched: [1:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -8389,13 +8389,13 @@ define void @test_nop(i16 %a0, i32 %a1, i64 %a2, i16 *%p0, i32 *%p1, i64 *%p2) o
 ; BTVER2-LABEL: test_nop:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    nop # sched: [1:?]
-; BTVER2-NEXT:    nopw %di # sched: [1:?]
-; BTVER2-NEXT:    nopw (%rcx) # sched: [1:?]
-; BTVER2-NEXT:    nopl %esi # sched: [1:?]
-; BTVER2-NEXT:    nopl (%r8) # sched: [1:?]
-; BTVER2-NEXT:    nopq %rdx # sched: [1:?]
-; BTVER2-NEXT:    nopq (%r9) # sched: [1:?]
+; BTVER2-NEXT:    nop # sched: [1:0.50]
+; BTVER2-NEXT:    nopw %di # sched: [1:0.50]
+; BTVER2-NEXT:    nopw (%rcx) # sched: [1:0.50]
+; BTVER2-NEXT:    nopl %esi # sched: [1:0.50]
+; BTVER2-NEXT:    nopl (%r8) # sched: [1:0.50]
+; BTVER2-NEXT:    nopq %rdx # sched: [1:0.50]
+; BTVER2-NEXT:    nopq (%r9) # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -9226,12 +9226,12 @@ define void @test_out() optsize {
 ; GENERIC-LABEL: test_out:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    outb %al, $7 # sched: [4:1.33]
+; GENERIC-NEXT:    outb %al, $7 # sched: [100:0.33]
 ; GENERIC-NEXT:    outw %ax, $7 # sched: [100:0.33]
-; GENERIC-NEXT:    outl %eax, $7 # sched: [4:1.33]
-; GENERIC-NEXT:    outb %al, %dx # sched: [3:1.00]
+; GENERIC-NEXT:    outl %eax, $7 # sched: [100:0.33]
+; GENERIC-NEXT:    outb %al, %dx # sched: [100:0.33]
 ; GENERIC-NEXT:    outw %ax, %dx # sched: [100:0.33]
-; GENERIC-NEXT:    outl %eax, %dx # sched: [3:1.00]
+; GENERIC-NEXT:    outl %eax, %dx # sched: [100:0.33]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -9262,12 +9262,12 @@ define void @test_out() optsize {
 ; SANDY-LABEL: test_out:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    outb %al, $7 # sched: [4:1.33]
+; SANDY-NEXT:    outb %al, $7 # sched: [100:0.33]
 ; SANDY-NEXT:    outw %ax, $7 # sched: [100:0.33]
-; SANDY-NEXT:    outl %eax, $7 # sched: [4:1.33]
-; SANDY-NEXT:    outb %al, %dx # sched: [3:1.00]
+; SANDY-NEXT:    outl %eax, $7 # sched: [100:0.33]
+; SANDY-NEXT:    outb %al, %dx # sched: [100:0.33]
 ; SANDY-NEXT:    outw %ax, %dx # sched: [100:0.33]
-; SANDY-NEXT:    outl %eax, %dx # sched: [3:1.00]
+; SANDY-NEXT:    outl %eax, %dx # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -9500,7 +9500,7 @@ define void @test_pause() optsize {
 ; BTVER2-LABEL: test_pause:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    pause # sched: [1:?]
+; BTVER2-NEXT:    pause # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

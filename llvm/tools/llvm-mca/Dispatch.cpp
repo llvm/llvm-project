@@ -280,56 +280,50 @@ void RetireControlUnit::dump() const {
 }
 #endif
 
-bool DispatchUnit::checkRAT(const Instruction &Instr) {
-  // Collect register definitions from the WriteStates.
-  SmallVector<unsigned, 8> RegDefs;
-
-  for (const std::unique_ptr<WriteState> &Def : Instr.getDefs())
-    RegDefs.push_back(Def->getRegisterID());
-
-  unsigned RegisterMask = RAT->isAvailable(RegDefs);
+bool DispatchUnit::checkRAT(unsigned Index, const Instruction &Instr) {
+  const InstrDesc &Desc = Instr.getDesc();
+  unsigned NumWrites = Desc.Writes.size();
+  unsigned RegisterMask = RAT->isAvailable(NumWrites);
   // A mask with all zeroes means: register files are available.
   if (RegisterMask) {
-    // TODO: We currently implement a single hardware counter for all the
-    // dispatch stalls caused by the unavailability of registers in one of the
-    // register files.  In future, we want to let register files directly notify
-    // hardware listeners in the event of a dispatch stall.  This would simplify
-    // the logic in Dispatch.[h/cpp], and move all the "hardware counting logic"
-    // into a View (for example: BackendStatistics).
-    DispatchStalls[DS_RAT_REG_UNAVAILABLE]++;
+    Owner->notifyStallEvent(
+        HWStallEvent(HWStallEvent::RegisterFileStall, Index));
     return false;
   }
 
   return true;
 }
 
-bool DispatchUnit::checkRCU(const InstrDesc &Desc) {
+bool DispatchUnit::checkRCU(unsigned Index, const InstrDesc &Desc) {
   unsigned NumMicroOps = Desc.NumMicroOps;
   if (RCU->isAvailable(NumMicroOps))
     return true;
-  DispatchStalls[DS_RCU_TOKEN_UNAVAILABLE]++;
+  Owner->notifyStallEvent(
+      HWStallEvent(HWStallEvent::RetireControlUnitStall, Index));
   return false;
 }
 
-bool DispatchUnit::checkScheduler(const InstrDesc &Desc) {
+bool DispatchUnit::checkScheduler(unsigned Index, const InstrDesc &Desc) {
   // If this is a zero-latency instruction, then it bypasses
   // the scheduler.
+  HWStallEvent::GenericEventType Type = HWStallEvent::Invalid;
   switch (SC->canBeDispatched(Desc)) {
   case Scheduler::HWS_AVAILABLE:
     return true;
   case Scheduler::HWS_QUEUE_UNAVAILABLE:
-    DispatchStalls[DS_SQ_TOKEN_UNAVAILABLE]++;
+    Type = HWStallEvent::SchedulerQueueFull;
     break;
   case Scheduler::HWS_LD_QUEUE_UNAVAILABLE:
-    DispatchStalls[DS_LDQ_TOKEN_UNAVAILABLE]++;
+    Type = HWStallEvent::LoadQueueFull;
     break;
   case Scheduler::HWS_ST_QUEUE_UNAVAILABLE:
-    DispatchStalls[DS_STQ_TOKEN_UNAVAILABLE]++;
+    Type = HWStallEvent::StoreQueueFull;
     break;
   case Scheduler::HWS_DISPATCH_GROUP_RESTRICTION:
-    DispatchStalls[DS_DISPATCH_GROUP_RESTRICTION]++;
+    Type = HWStallEvent::DispatchGroupStall;
   }
 
+  Owner->notifyStallEvent(HWStallEvent(Type, Index));
   return false;
 }
 
@@ -391,7 +385,7 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
   NewInst->setRCUTokenID(RCUTokenID);
   notifyInstructionDispatched(IID);
 
-  SC->scheduleInstruction(IID, NewInst);
+  SC->scheduleInstruction(IID, *NewInst);
   return RCUTokenID;
 }
 
@@ -399,16 +393,6 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
 void DispatchUnit::dump() const {
   RAT->dump();
   RCU->dump();
-
-  unsigned DSRAT = DispatchStalls[DS_RAT_REG_UNAVAILABLE];
-  unsigned DSRCU = DispatchStalls[DS_RCU_TOKEN_UNAVAILABLE];
-  unsigned DSSCHEDQ = DispatchStalls[DS_SQ_TOKEN_UNAVAILABLE];
-  unsigned DSLQ = DispatchStalls[DS_LDQ_TOKEN_UNAVAILABLE];
-  unsigned DSSQ = DispatchStalls[DS_STQ_TOKEN_UNAVAILABLE];
-
-  dbgs() << "STALLS --- RAT: " << DSRAT << ", RCU: " << DSRCU
-         << ", SCHED_QUEUE: " << DSSCHEDQ << ", LOAD_QUEUE: " << DSLQ
-         << ", STORE_QUEUE: " << DSSQ << '\n';
 }
 #endif
 

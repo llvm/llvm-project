@@ -212,20 +212,21 @@ static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
   // Put target and mode arguments at the start of argument list so that
   // arguments specified in command line could override them. Avoid putting
   // them at index 0, as an option like '-cc1' must remain the first.
-  auto InsertionPoint = ArgVector.begin();
-  if (InsertionPoint != ArgVector.end())
+  int InsertionPoint = 0;
+  if (ArgVector.size() > 0)
     ++InsertionPoint;
 
   if (NameParts.DriverMode) {
     // Add the mode flag to the arguments.
-    ArgVector.insert(InsertionPoint,
+    ArgVector.insert(ArgVector.begin() + InsertionPoint,
                      GetStableCStr(SavedStrings, NameParts.DriverMode));
   }
 
   if (NameParts.TargetIsValid) {
     const char *arr[] = {"-target", GetStableCStr(SavedStrings,
                                                   NameParts.TargetPrefix)};
-    ArgVector.insert(InsertionPoint, std::begin(arr), std::end(arr));
+    ArgVector.insert(ArgVector.begin() + InsertionPoint,
+                     std::begin(arr), std::end(arr));
   }
 }
 

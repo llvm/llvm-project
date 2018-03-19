@@ -1525,6 +1525,9 @@ computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
   case QualType::PCK_Struct:
     return std::make_pair(BlockCaptureEntityKind::NonTrivialCStruct,
                           BlockFieldFlags());
+  case QualType::PCK_ARCWeak:
+    // We need to register __weak direct captures with the runtime.
+    return std::make_pair(BlockCaptureEntityKind::ARCWeak, Flags);
   case QualType::PCK_ARCStrong:
     // We need to retain the copied value for __strong direct captures.
     // If it's a block pointer, we have to copy the block and assign that to
@@ -1541,10 +1544,6 @@ computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
 
     // Special rules for ARC captures:
     Qualifiers QS = T.getQualifiers();
-
-    // We need to register __weak direct captures with the runtime.
-    if (QS.getObjCLifetime() == Qualifiers::OCL_Weak)
-      return std::make_pair(BlockCaptureEntityKind::ARCWeak, Flags);
 
     // Non-ARC captures of retainable pointers are strong and
     // therefore require a call to _Block_object_assign.

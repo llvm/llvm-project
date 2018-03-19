@@ -85,13 +85,11 @@ extern "C" {
 #include <sys/umtx.h>
 }
 #include <sys/thr.h>
-extern char **environ;  // provided by crt1
 #endif  // SANITIZER_FREEBSD
 
 #if SANITIZER_NETBSD
 #include <limits.h>  // For NAME_MAX
 #include <sys/sysctl.h>
-extern char **environ;  // provided by crt1
 #include <sys/exec.h>
 extern struct ps_strings *__ps_strings;
 #endif  // SANITIZER_NETBSD
@@ -99,14 +97,16 @@ extern struct ps_strings *__ps_strings;
 #if SANITIZER_SOLARIS
 #include <stdlib.h>
 #include <thread.h>
-
-extern char **_environ;
-#define environ _environ
 #endif
 
 #if !SANITIZER_ANDROID
 #include <sys/signal.h>
 #endif
+
+#if SANITIZER_SOLARIS
+#define environ _environ
+#endif
+extern char **_environ;
 
 #if SANITIZER_LINUX
 // <linux/time.h>

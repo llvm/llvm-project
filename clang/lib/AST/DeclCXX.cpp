@@ -93,7 +93,6 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       DeclaredNonTrivialSpecialMembersForCall(0), HasIrrelevantDestructor(true),
       HasConstexprNonCopyMoveConstructor(false),
       HasDefaultedDefaultConstructor(false),
-      CanPassInRegisters(true),
       DefaultedDefaultConstructorIsConstexpr(true),
       HasConstexprDefaultConstructor(false),
       HasNonLiteralTypeFieldsOrBases(false), ComputedVisibleConversions(false),

@@ -590,7 +590,7 @@ GotSection::GotSection()
                        Target->GotEntrySize, ".got") {}
 
 void GotSection::addEntry(Symbol &Sym) {
-  Sym.GotIndex = NumEntries;
+  Sym.GotIndex = Target->GotHeaderEntriesNum + NumEntries;
   ++NumEntries;
 }
 
@@ -621,7 +621,9 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &B) const {
   return B.GlobalDynIndex * Config->Wordsize;
 }
 
-void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
+void GotSection::finalizeContents() {
+  Size = (NumEntries + Target->GotHeaderEntriesNum) * Config->Wordsize;
+}
 
 bool GotSection::empty() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
@@ -635,6 +637,8 @@ void GotSection::writeTo(uint8_t *Buf) {
   // Buf points to the start of this section's buffer,
   // whereas InputSectionBase::relocateAlloc() expects its argument
   // to point to the start of the output section.
+  Target->writeGotHeader(Buf);
+  Buf += Target->GotHeaderEntriesNum * Target->GotEntrySize;
   relocateAlloc(Buf - OutSecOff, Buf - OutSecOff + Size);
 }
 

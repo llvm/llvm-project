@@ -7520,6 +7520,19 @@ AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   unsigned Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
   EVT VT = Node->getValueType(0);
 
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          "no-stack-arg-probe")) {
+    SDValue SP = DAG.getCopyFromReg(Chain, dl, AArch64::SP, MVT::i64);
+    Chain = SP.getValue(1);
+    SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
+    if (Align)
+      SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                       DAG.getConstant(-(uint64_t)Align, dl, VT));
+    Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
+    SDValue Ops[2] = {SP, Chain};
+    return DAG.getMergeValues(Ops, dl);
+  }
+
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
   Chain = LowerWindowsDYNAMIC_STACKALLOC(Op, Chain, Size, DAG);

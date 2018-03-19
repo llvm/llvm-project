@@ -90,12 +90,12 @@ define void @avg_v16i8(<16 x i8>* %a, <16 x i8>* %b) nounwind {
 define void @avg_v32i8(<32 x i8>* %a, <32 x i8>* %b) nounwind {
 ; SSE2-LABEL: avg_v32i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa 16(%rdi), %xmm0
-; SSE2-NEXT:    movdqa (%rsi), %xmm1
-; SSE2-NEXT:    pavgb (%rdi), %xmm1
-; SSE2-NEXT:    pavgb 16(%rsi), %xmm0
-; SSE2-NEXT:    movdqu %xmm0, (%rax)
+; SSE2-NEXT:    movdqa (%rsi), %xmm0
+; SSE2-NEXT:    movdqa 16(%rsi), %xmm1
+; SSE2-NEXT:    pavgb (%rdi), %xmm0
+; SSE2-NEXT:    pavgb 16(%rdi), %xmm1
 ; SSE2-NEXT:    movdqu %xmm1, (%rax)
+; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: avg_v32i8:
@@ -528,18 +528,18 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) nounwind {
 ; SSE2-LABEL: avg_v64i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa 32(%rdi), %xmm0
-; SSE2-NEXT:    movdqa (%rsi), %xmm1
-; SSE2-NEXT:    movdqa 16(%rsi), %xmm2
+; SSE2-NEXT:    movdqa (%rsi), %xmm0
+; SSE2-NEXT:    movdqa 16(%rsi), %xmm1
+; SSE2-NEXT:    movdqa 32(%rsi), %xmm2
 ; SSE2-NEXT:    movdqa 48(%rsi), %xmm3
-; SSE2-NEXT:    pavgb (%rdi), %xmm1
-; SSE2-NEXT:    pavgb 16(%rdi), %xmm2
-; SSE2-NEXT:    pavgb 32(%rsi), %xmm0
+; SSE2-NEXT:    pavgb (%rdi), %xmm0
+; SSE2-NEXT:    pavgb 16(%rdi), %xmm1
+; SSE2-NEXT:    pavgb 32(%rdi), %xmm2
 ; SSE2-NEXT:    pavgb 48(%rdi), %xmm3
 ; SSE2-NEXT:    movdqu %xmm3, (%rax)
-; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    movdqu %xmm2, (%rax)
 ; SSE2-NEXT:    movdqu %xmm1, (%rax)
+; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: avg_v64i8:
@@ -565,23 +565,23 @@ define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) nounwind {
 ;
 ; AVX2-LABEL: avg_v64i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm0
-; AVX2-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX2-NEXT:    vpavgb (%rdi), %ymm1, %ymm1
-; AVX2-NEXT:    vpavgb 32(%rsi), %ymm0, %ymm0
-; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
+; AVX2-NEXT:    vmovdqa (%rsi), %ymm0
+; AVX2-NEXT:    vmovdqa 32(%rsi), %ymm1
+; AVX2-NEXT:    vpavgb (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpavgb 32(%rdi), %ymm1, %ymm1
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: avg_v64i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm0
-; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX512F-NEXT:    vpavgb (%rdi), %ymm1, %ymm1
-; AVX512F-NEXT:    vpavgb 32(%rsi), %ymm0, %ymm0
-; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
+; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
+; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
+; AVX512F-NEXT:    vpavgb (%rdi), %ymm0, %ymm0
+; AVX512F-NEXT:    vpavgb 32(%rdi), %ymm1, %ymm1
 ; AVX512F-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -661,12 +661,12 @@ define void @avg_v8i16(<8 x i16>* %a, <8 x i16>* %b) nounwind {
 define void @avg_v16i16(<16 x i16>* %a, <16 x i16>* %b) nounwind {
 ; SSE2-LABEL: avg_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa 16(%rdi), %xmm0
-; SSE2-NEXT:    movdqa (%rsi), %xmm1
-; SSE2-NEXT:    pavgw (%rdi), %xmm1
-; SSE2-NEXT:    pavgw 16(%rsi), %xmm0
-; SSE2-NEXT:    movdqu %xmm0, (%rax)
+; SSE2-NEXT:    movdqa (%rsi), %xmm0
+; SSE2-NEXT:    movdqa 16(%rsi), %xmm1
+; SSE2-NEXT:    pavgw (%rdi), %xmm0
+; SSE2-NEXT:    pavgw 16(%rdi), %xmm1
 ; SSE2-NEXT:    movdqu %xmm1, (%rax)
+; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: avg_v16i16:
@@ -712,18 +712,18 @@ define void @avg_v16i16(<16 x i16>* %a, <16 x i16>* %b) nounwind {
 define void @avg_v32i16(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ; SSE2-LABEL: avg_v32i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa 32(%rdi), %xmm0
-; SSE2-NEXT:    movdqa (%rsi), %xmm1
-; SSE2-NEXT:    movdqa 16(%rsi), %xmm2
+; SSE2-NEXT:    movdqa (%rsi), %xmm0
+; SSE2-NEXT:    movdqa 16(%rsi), %xmm1
+; SSE2-NEXT:    movdqa 32(%rsi), %xmm2
 ; SSE2-NEXT:    movdqa 48(%rsi), %xmm3
-; SSE2-NEXT:    pavgw (%rdi), %xmm1
-; SSE2-NEXT:    pavgw 16(%rdi), %xmm2
-; SSE2-NEXT:    pavgw 32(%rsi), %xmm0
+; SSE2-NEXT:    pavgw (%rdi), %xmm0
+; SSE2-NEXT:    pavgw 16(%rdi), %xmm1
+; SSE2-NEXT:    pavgw 32(%rdi), %xmm2
 ; SSE2-NEXT:    pavgw 48(%rdi), %xmm3
 ; SSE2-NEXT:    movdqu %xmm3, (%rax)
-; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    movdqu %xmm2, (%rax)
 ; SSE2-NEXT:    movdqu %xmm1, (%rax)
+; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: avg_v32i16:
@@ -749,23 +749,23 @@ define void @avg_v32i16(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ;
 ; AVX2-LABEL: avg_v32i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm0
-; AVX2-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX2-NEXT:    vpavgw (%rdi), %ymm1, %ymm1
-; AVX2-NEXT:    vpavgw 32(%rsi), %ymm0, %ymm0
-; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
+; AVX2-NEXT:    vmovdqa (%rsi), %ymm0
+; AVX2-NEXT:    vmovdqa 32(%rsi), %ymm1
+; AVX2-NEXT:    vpavgw (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpavgw 32(%rdi), %ymm1, %ymm1
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: avg_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm0
-; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX512F-NEXT:    vpavgw (%rdi), %ymm1, %ymm1
-; AVX512F-NEXT:    vpavgw 32(%rsi), %ymm0, %ymm0
-; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
+; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
+; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
+; AVX512F-NEXT:    vpavgw (%rdi), %ymm0, %ymm0
+; AVX512F-NEXT:    vpavgw 32(%rdi), %ymm1, %ymm1
 ; AVX512F-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -874,9 +874,9 @@ define void @avg_v32i8_2(<32 x i8>* %a, <32 x i8>* %b) nounwind {
 ; SSE2-LABEL: avg_v32i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    movdqa 16(%rsi), %xmm1
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
 ; SSE2-NEXT:    pavgb (%rsi), %xmm0
-; SSE2-NEXT:    pavgb 16(%rdi), %xmm1
+; SSE2-NEXT:    pavgb 16(%rsi), %xmm1
 ; SSE2-NEXT:    movdqu %xmm1, (%rax)
 ; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq
@@ -1055,9 +1055,9 @@ define void @avg_v16i16_2(<16 x i16>* %a, <16 x i16>* %b) nounwind {
 ; SSE2-LABEL: avg_v16i16_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    movdqa 16(%rsi), %xmm1
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
 ; SSE2-NEXT:    pavgw (%rsi), %xmm0
-; SSE2-NEXT:    pavgw 16(%rdi), %xmm1
+; SSE2-NEXT:    pavgw 16(%rsi), %xmm1
 ; SSE2-NEXT:    movdqu %xmm1, (%rax)
 ; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq
@@ -1107,14 +1107,14 @@ define void @avg_v32i16_2(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE2-NEXT:    movdqa 48(%rdi), %xmm2
-; SSE2-NEXT:    movdqa 32(%rsi), %xmm3
+; SSE2-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE2-NEXT:    movdqa 48(%rdi), %xmm3
 ; SSE2-NEXT:    pavgw (%rsi), %xmm0
 ; SSE2-NEXT:    pavgw 16(%rsi), %xmm1
-; SSE2-NEXT:    pavgw 32(%rdi), %xmm3
-; SSE2-NEXT:    pavgw 48(%rsi), %xmm2
-; SSE2-NEXT:    movdqu %xmm2, (%rax)
+; SSE2-NEXT:    pavgw 32(%rsi), %xmm2
+; SSE2-NEXT:    pavgw 48(%rsi), %xmm3
 ; SSE2-NEXT:    movdqu %xmm3, (%rax)
+; SSE2-NEXT:    movdqu %xmm2, (%rax)
 ; SSE2-NEXT:    movdqu %xmm1, (%rax)
 ; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq
@@ -1143,9 +1143,9 @@ define void @avg_v32i16_2(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ; AVX2-LABEL: avg_v32i16_2:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX2-NEXT:    vmovdqa 32(%rsi), %ymm1
+; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    vpavgw (%rsi), %ymm0, %ymm0
-; AVX2-NEXT:    vpavgw 32(%rdi), %ymm1, %ymm1
+; AVX2-NEXT:    vpavgw 32(%rsi), %ymm1, %ymm1
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
@@ -1154,9 +1154,9 @@ define void @avg_v32i16_2(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ; AVX512F-LABEL: avg_v32i16_2:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
+; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX512F-NEXT:    vpavgw (%rsi), %ymm0, %ymm0
-; AVX512F-NEXT:    vpavgw 32(%rdi), %ymm1, %ymm1
+; AVX512F-NEXT:    vpavgw 32(%rsi), %ymm1, %ymm1
 ; AVX512F-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512F-NEXT:    vzeroupper

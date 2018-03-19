@@ -1133,8 +1133,12 @@ void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
       std::min(RootToken.NewlinesBefore, Style.MaxEmptyLinesToKeep + 1);
   // Remove empty lines before "}" where applicable.
   if (RootToken.is(tok::r_brace) &&
+      // Look for "}", "} // comment", "};" or "}; // comment".
       (!RootToken.Next ||
-       (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)))
+       (RootToken.Next->is(tok::comment) && !RootToken.Next->Next) ||
+       (RootToken.Next->is(tok::semi) &&
+        (!RootToken.Next->Next || (RootToken.Next->Next->is(tok::comment) &&
+                                   !RootToken.Next->Next->Next)))))
     Newlines = std::min(Newlines, 1u);
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)
   if (PreviousLine == nullptr && Line.Level > 0)
