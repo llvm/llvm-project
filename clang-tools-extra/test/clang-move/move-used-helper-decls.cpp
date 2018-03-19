@@ -335,7 +335,6 @@
 // CHECK-NEW-H-NEXT: void Fun1();
 // CHECK-NEW-H-SAME: {{[[:space:]]}}
 // CHECK-NEW-H-NEXT: inline void Fun2() {}
-// CHECK-NEW-H-SAME: {{[[:space:]]}}
 // CHECK-NEW-H-NEXT: } // namespace a
 
 
