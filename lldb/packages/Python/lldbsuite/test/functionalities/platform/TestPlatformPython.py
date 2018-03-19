@@ -51,6 +51,14 @@ class PlatformPythonTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    def test_host_is_connected(self):
+        # We've already tested that this one IS the host platform.
+        host_platform = self.dbg.GetPlatformAtIndex(0)
+        self.assertTrue(host_platform.IsConnected(), "The host platform is always connected")
+
+
+    @add_test_categories(['pyapi'])
+    @no_debug_info_test
     def test_available_platform_list(self):
         """Test SBDebugger::GetNumAvailablePlatforms() and GetAvailablePlatformInfoAtIndex() API"""
         num_platforms = self.dbg.GetNumAvailablePlatforms()
