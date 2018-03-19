@@ -169,7 +169,7 @@ func main () -> Void
     else
     {
         print ("I should get here.") // Step over the if should get here
-    }
+    } // Step over the print should get here.
 
     var b_object = ClassB(20)  // Stop here to step into B constructor.
     var do_something_result = call_overridden (b_object, 30) // Stop here to step into call_overridden.
