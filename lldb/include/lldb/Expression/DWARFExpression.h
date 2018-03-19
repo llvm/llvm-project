@@ -18,7 +18,7 @@
 #include "lldb/lldb-private.h"
 #include <functional>
 
-class DWARFCompileUnit;
+class DWARFUnit;
 
 namespace lldb_private {
 
@@ -46,7 +46,7 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   //------------------------------------------------------------------
-  explicit DWARFExpression(DWARFCompileUnit *dwarf_cu);
+  explicit DWARFExpression(DWARFUnit *dwarf_cu);
 
   //------------------------------------------------------------------
   /// Constructor
@@ -62,7 +62,7 @@ public:
   ///     The byte length of the location expression.
   //------------------------------------------------------------------
   DWARFExpression(lldb::ModuleSP module, const DataExtractor &data,
-                  DWARFCompileUnit *dwarf_cu, lldb::offset_t data_offset,
+                  DWARFUnit *dwarf_cu, lldb::offset_t data_offset,
                   lldb::offset_t data_length);
 
   //------------------------------------------------------------------
@@ -332,7 +332,7 @@ public:
   //------------------------------------------------------------------
   static bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                        lldb::ModuleSP opcode_ctx, const DataExtractor &opcodes,
-                       DWARFCompileUnit *dwarf_cu, const lldb::offset_t offset,
+                       DWARFUnit *dwarf_cu, const lldb::offset_t offset,
                        const lldb::offset_t length,
                        const lldb::RegisterKind reg_set,
                        const Value *initial_value_ptr,
@@ -348,7 +348,7 @@ public:
                               lldb::addr_t loclist_base_load_addr,
                               lldb::addr_t address, ABI *abi);
 
-  static size_t LocationListSize(const DWARFCompileUnit *dwarf_cu,
+  static size_t LocationListSize(const DWARFUnit *dwarf_cu,
                                  const DataExtractor &debug_loc_data,
                                  lldb::offset_t offset);
 
@@ -356,7 +356,7 @@ public:
                                    int address_size, int dwarf_ref_size,
                                    bool location_expression);
 
-  static void PrintDWARFLocationList(Stream &s, const DWARFCompileUnit *cu,
+  static void PrintDWARFLocationList(Stream &s, const DWARFUnit *cu,
                                      const DataExtractor &debug_loc_data,
                                      lldb::offset_t offset);
 
@@ -389,7 +389,7 @@ protected:
                    lldb::offset_t &offset, lldb::offset_t &len);
 
   static bool AddressRangeForLocationListEntry(
-      const DWARFCompileUnit *dwarf_cu, const DataExtractor &debug_loc_data,
+      const DWARFUnit *dwarf_cu, const DataExtractor &debug_loc_data,
       lldb::offset_t *offset_ptr, lldb::addr_t &low_pc, lldb::addr_t &high_pc);
 
   bool GetOpAndEndOffsets(StackFrame &frame, lldb::offset_t &op_offset,
@@ -401,7 +401,7 @@ protected:
 
   lldb::ModuleWP m_module_wp; ///< Module which defined this expression.
   DataExtractor m_data; ///< A data extractor capable of reading opcode bytes
-  DWARFCompileUnit *m_dwarf_cu; ///< The DWARF compile unit this expression
+  DWARFUnit *m_dwarf_cu; ///< The DWARF compile unit this expression
                                 ///belongs to. It is used
   ///< to evaluate values indexing into the .debug_addr section (e.g.
   ///< DW_OP_GNU_addr_index, DW_OP_GNU_const_index)

@@ -28,6 +28,7 @@ public:
   virtual bool isPicRel(RelType Type) const { return true; }
   virtual RelType getDynRel(RelType Type) const { return Type; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
+  virtual void writeGotHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, const Symbol &S) const {};
   virtual void writeIgotPlt(uint8_t *Buf, const Symbol &S) const;
   virtual int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const;
@@ -75,9 +76,10 @@ public:
 
   uint64_t getImageBase();
 
-  // Offset of _GLOBAL_OFFSET_TABLE_ from base of .got section. Use -1 for
-  // end of .got
+  // Offset of _GLOBAL_OFFSET_TABLE_ from base of .got or .got.plt section.
   uint64_t GotBaseSymOff = 0;
+  // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
+  bool GotBaseSymInGotPlt = true;
 
   // On systems with range extensions we place collections of Thunks at
   // regular spacings that enable the majority of branches reach the Thunks.
@@ -100,6 +102,9 @@ public:
   // At least on x86_64 positions 1 and 2 are used by the first plt entry
   // to support lazy loading.
   unsigned GotPltHeaderEntriesNum = 3;
+
+  // On PPC ELF V2 abi, the first entry in the .got is the .TOC.
+  unsigned GotHeaderEntriesNum = 0;
 
   // Set to 0 for variant 2
   unsigned TcbSize = 0;

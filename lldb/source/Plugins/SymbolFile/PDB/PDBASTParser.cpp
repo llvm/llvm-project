@@ -94,24 +94,20 @@ lldb::Encoding TranslateEnumEncoding(PDB_VariantType type) {
 }
 
 CompilerType GetBuiltinTypeForPDBEncodingAndBitSize(
-    ClangASTContext *clang_ast, const PDBSymbolTypeBuiltin *pdb_type,
+    ClangASTContext &clang_ast, const PDBSymbolTypeBuiltin &pdb_type,
     Encoding encoding, uint32_t width) {
-  if (!pdb_type)
-    return CompilerType();
-  if (!clang_ast)
-    return CompilerType();
-  auto *ast = clang_ast->getASTContext();
+  auto *ast = clang_ast.getASTContext();
   if (!ast)
     return CompilerType();
 
-  switch (pdb_type->getBuiltinType()) {
+  switch (pdb_type.getBuiltinType()) {
   default: break;
   case PDB_BuiltinType::None:
     return CompilerType();
   case PDB_BuiltinType::Void:
-    return clang_ast->GetBasicType(eBasicTypeVoid);
+    return clang_ast.GetBasicType(eBasicTypeVoid);
   case PDB_BuiltinType::Bool:
-    return clang_ast->GetBasicType(eBasicTypeBool);
+    return clang_ast.GetBasicType(eBasicTypeBool);
   case PDB_BuiltinType::Long:
     if (width == ast->getTypeSize(ast->LongTy))
       return CompilerType(ast, ast->LongTy);
@@ -141,15 +137,12 @@ CompilerType GetBuiltinTypeForPDBEncodingAndBitSize(
   }
   // If there is no match on PDB_BuiltinType, fall back to default search
   // by encoding and width only
-  return clang_ast->GetBuiltinTypeForEncodingAndBitSize(encoding, width);
+  return clang_ast.GetBuiltinTypeForEncodingAndBitSize(encoding, width);
 }
 
-ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin *pdb_type,
+ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin &pdb_type,
                                   CompilerType &compiler_type) {
-  if (!pdb_type)
-    return compiler_type.GetTypeName();
-
-  PDB_BuiltinType kind = pdb_type->getBuiltinType();
+  PDB_BuiltinType kind = pdb_type.getBuiltinType();
   switch (kind) {
   default: break;
   case PDB_BuiltinType::Currency:
@@ -262,7 +255,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     CompilerType builtin_type;
     if (bytes > 0)
       builtin_type = GetBuiltinTypeForPDBEncodingAndBitSize(
-           &m_ast, underlying_type_up.get(), encoding, bytes * 8);
+           m_ast, *underlying_type_up, encoding, bytes * 8);
     else
       builtin_type = m_ast.GetBasicType(eBasicTypeInt);
     // FIXME: PDB does not have information about scoped enumeration (Enum Class).
@@ -418,7 +411,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     uint64_t bytes = builtin_type->getLength();
     Encoding encoding = TranslateBuiltinEncoding(builtin_kind);
     CompilerType builtin_ast_type = GetBuiltinTypeForPDBEncodingAndBitSize(
-        &m_ast, builtin_type, encoding, bytes * 8);
+        m_ast, *builtin_type, encoding, bytes * 8);
 
     if (builtin_type->isConstType())
       builtin_ast_type = builtin_ast_type.AddConstModifier();
@@ -426,7 +419,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (builtin_type->isVolatileType())
       builtin_ast_type = builtin_ast_type.AddVolatileModifier();
 
-    auto type_name = GetPDBBuiltinTypeName(builtin_type, builtin_ast_type);
+    auto type_name = GetPDBBuiltinTypeName(*builtin_type, builtin_ast_type);
 
     return std::make_shared<lldb_private::Type>(
         builtin_type->getSymIndexId(), m_ast.GetSymbolFile(), type_name,

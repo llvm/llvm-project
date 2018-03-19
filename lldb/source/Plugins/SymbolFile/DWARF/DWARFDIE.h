@@ -16,7 +16,7 @@
 struct DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
-class DWARFCompileUnit;
+class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class DWARFDIECollection;
@@ -26,17 +26,17 @@ class DWARFDIE {
 public:
   DWARFDIE() : m_cu(nullptr), m_die(nullptr) {}
 
-  DWARFDIE(DWARFCompileUnit *cu, DWARFDebugInfoEntry *die)
+  DWARFDIE(DWARFUnit *cu, DWARFDebugInfoEntry *die)
       : m_cu(cu), m_die(die) {}
 
-  DWARFDIE(const DWARFCompileUnit *cu, DWARFDebugInfoEntry *die)
-      : m_cu(const_cast<DWARFCompileUnit *>(cu)), m_die(die) {}
+  DWARFDIE(const DWARFUnit *cu, DWARFDebugInfoEntry *die)
+      : m_cu(const_cast<DWARFUnit *>(cu)), m_die(die) {}
 
-  DWARFDIE(DWARFCompileUnit *cu, const DWARFDebugInfoEntry *die)
+  DWARFDIE(DWARFUnit *cu, const DWARFDebugInfoEntry *die)
       : m_cu(cu), m_die(const_cast<DWARFDebugInfoEntry *>(die)) {}
 
-  DWARFDIE(const DWARFCompileUnit *cu, const DWARFDebugInfoEntry *die)
-      : m_cu(const_cast<DWARFCompileUnit *>(cu)),
+  DWARFDIE(const DWARFUnit *cu, const DWARFDebugInfoEntry *die)
+      : m_cu(const_cast<DWARFUnit *>(cu)),
         m_die(const_cast<DWARFDebugInfoEntry *>(die)) {}
 
   //----------------------------------------------------------------------
@@ -57,7 +57,7 @@ public:
   //----------------------------------------------------------------------
   SymbolFileDWARF *GetDWARF() const;
 
-  DWARFCompileUnit *GetCU() const { return m_cu; }
+  DWARFUnit *GetCU() const { return m_cu; }
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
@@ -67,7 +67,7 @@ public:
 
   DWARFASTParser *GetDWARFParser() const;
 
-  void Set(DWARFCompileUnit *cu, DWARFDebugInfoEntry *die) {
+  void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
       m_cu = cu;
       m_die = die;
@@ -211,7 +211,7 @@ public:
   lldb_private::CompilerDeclContext GetContainingDeclContext() const;
 
 protected:
-  DWARFCompileUnit *m_cu;
+  DWARFUnit *m_cu;
   DWARFDebugInfoEntry *m_die;
 };
 
