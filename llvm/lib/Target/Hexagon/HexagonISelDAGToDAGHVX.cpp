@@ -1953,7 +1953,6 @@ void HvxSelector::selectShuffle(SDNode *N) {
   // If the mask is all -1's, generate "undef".
   if (!UseLeft && !UseRight) {
     ISel.ReplaceNode(N, ISel.selectUndef(SDLoc(SN), ResTy).getNode());
-    DAG.RemoveDeadNode(N);
     return;
   }
 
@@ -2009,7 +2008,6 @@ void HvxSelector::selectRor(SDNode *N) {
     NewN = DAG.getMachineNode(Hexagon::V6_vror, dl, Ty, {VecV, RotV});
 
   ISel.ReplaceNode(N, NewN);
-  DAG.RemoveDeadNode(N);
 }
 
 void HvxSelector::selectVAlign(SDNode *N) {
@@ -2074,8 +2072,7 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
   cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
 
-  ReplaceUses(N, Result);
-  CurDAG->RemoveDeadNode(N);
+  ReplaceNode(N, Result);
 }
 
 void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
@@ -2117,8 +2114,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
   cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
 
-  ReplaceUses(N, Result);
-  CurDAG->RemoveDeadNode(N);
+  ReplaceNode(N, Result);
 }
 
 void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
@@ -2161,5 +2157,3 @@ void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
   ReplaceUses(SDValue(N, 1), SDValue(Result, 1));
   CurDAG->RemoveDeadNode(N);
 }
-
-

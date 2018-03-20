@@ -407,6 +407,20 @@ public:
   static IntegerType *getInt32Ty(LLVMContext &C);
   static IntegerType *getInt64Ty(LLVMContext &C);
   static IntegerType *getInt128Ty(LLVMContext &C);
+  template <typename ScalarTy> static Type *getScalarTy(LLVMContext &C) {
+    int noOfBits = sizeof(ScalarTy) * CHAR_BIT;
+    if (std::is_integral<ScalarTy>::value) {
+      return (Type*) Type::getIntNTy(C, noOfBits);
+    } else if (std::is_floating_point<ScalarTy>::value) {
+      switch (noOfBits) {
+      case 32:
+        return Type::getFloatTy(C);
+      case 64:
+        return Type::getDoubleTy(C);
+      }
+    }
+    llvm_unreachable("Unsupported type in Type::getScalarTy");
+  }
 
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types with one of the above builtin

@@ -39,7 +39,8 @@ _start:
 # CHECK-NEXT:   Entry: 0x10020040
 # CHECK-NEXT:   ProgramHeaderOffset: 0x40
 # CHECK-NEXT:   SectionHeaderOffset: 0x30080
-# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   Flags [ (0x1)
+# CHECK-NEXT:    0x1
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 64
 # CHECK-NEXT:   ProgramHeaderEntrySize: 56

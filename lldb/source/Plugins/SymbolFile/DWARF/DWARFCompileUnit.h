@@ -10,29 +10,14 @@
 #ifndef SymbolFileDWARF_DWARFCompileUnit_h_
 #define SymbolFileDWARF_DWARFCompileUnit_h_
 
-#include "DWARFDIE.h"
-#include "DWARFDebugInfoEntry.h"
-#include "lldb/lldb-enumerations.h"
+#include "DWARFUnit.h"
 
-class NameToDIE;
-class SymbolFileDWARF;
-class SymbolFileDWARFDwo;
+class DWARFCompileUnit : public DWARFUnit {
+  friend class DWARFUnit;
 
-typedef std::shared_ptr<DWARFCompileUnit> DWARFCompileUnitSP;
-
-enum DWARFProducer {
-  eProducerInvalid = 0,
-  eProducerClang,
-  eProducerGCC,
-  eProducerLLVMGCC,
-  eProcucerOther
-};
-
-class DWARFCompileUnit {
 public:
-  static DWARFCompileUnitSP Extract(SymbolFileDWARF *dwarf2Data,
+  static DWARFUnitSP Extract(SymbolFileDWARF *dwarf2Data,
       lldb::offset_t *offset_ptr);
-  ~DWARFCompileUnit();
 
   size_t ExtractDIEsIfNeeded(bool cu_die_only);
   DWARFDIE LookupAddress(const dw_addr_t address);
@@ -41,46 +26,14 @@ public:
                            uint32_t depth = UINT32_MAX) const;
   bool Verify(lldb_private::Stream *s) const;
   void Dump(lldb_private::Stream *s) const;
-  // Offset of the initial length field.
-  dw_offset_t GetOffset() const { return m_offset; }
   lldb::user_id_t GetID() const;
-  // Size in bytes of the initial length + compile unit header.
-  uint32_t Size() const { return m_is_dwarf64 ? 23 : 11; }
-  bool ContainsDIEOffset(dw_offset_t die_offset) const {
-    return die_offset >= GetFirstDIEOffset() &&
-           die_offset < GetNextCompileUnitOffset();
-  }
-  dw_offset_t GetFirstDIEOffset() const { return m_offset + Size(); }
-  dw_offset_t GetNextCompileUnitOffset() const {
-    return m_offset + (m_is_dwarf64 ? 12 : 4) + m_length;
-  }
-  // Size of the CU data (without initial length and without header).
-  size_t GetDebugInfoSize() const {
-    return (m_is_dwarf64 ? 12 : 4) + m_length - Size();
-  }
-  // Size of the CU data incl. header but without initial length.
-  uint32_t GetLength() const { return m_length; }
-  uint16_t GetVersion() const { return m_version; }
-  const DWARFAbbreviationDeclarationSet *GetAbbreviations() const {
-    return m_abbrevs;
-  }
   dw_offset_t GetAbbrevOffset() const;
-  uint8_t GetAddressByteSize() const { return m_addr_size; }
-  dw_addr_t GetBaseAddress() const { return m_base_addr; }
-  dw_addr_t GetAddrBase() const { return m_addr_base; }
-  dw_addr_t GetRangesBase() const { return m_ranges_base; }
   void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base, dw_offset_t base_obj_offset);
   void ClearDIEs(bool keep_compile_unit_die);
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf2Data,
                               DWARFDebugAranges *debug_aranges);
 
-  lldb::ByteOrder GetByteOrder() const;
-
   lldb_private::TypeSystem *GetTypeSystem();
-
-  DWARFFormValue::FixedFormSizes GetFixedFormSizes();
-
-  void SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
 
   DWARFDIE
   GetCompileUnitDIEOnly() { return DWARFDIE(this, GetCompileUnitDIEPtrOnly()); }
@@ -105,37 +58,9 @@ public:
 
   void AddCompileUnitDIE(DWARFDebugInfoEntry &die);
 
-  bool HasDIEsParsed() const { return m_die_array.size() > 1; }
-
-  DWARFDIE
-  GetDIE(dw_offset_t die_offset);
-
-  static uint8_t GetAddressByteSize(const DWARFCompileUnit *cu);
-
-  static bool IsDWARF64(const DWARFCompileUnit *cu);
-
-  static uint8_t GetDefaultAddressSize();
-
-  static void SetDefaultAddressSize(uint8_t addr_size);
-
-  void *GetUserData() const { return m_user_data; }
-
   void SetUserData(void *d);
 
-  bool Supports_DW_AT_APPLE_objc_complete_type();
-
-  bool DW_AT_decl_file_attributes_are_invalid();
-
-  bool Supports_unnamed_objc_bitfields();
-
-  void Index(NameToDIE &func_basenames, NameToDIE &func_fullnames,
-             NameToDIE &func_methods, NameToDIE &func_selectors,
-             NameToDIE &objc_class_selectors, NameToDIE &globals,
-             NameToDIE &types, NameToDIE &namespaces);
-
   const DWARFDebugAranges &GetFunctionAranges();
-
-  SymbolFileDWARF *GetSymbolFileDWARF() const { return m_dwarf2Data; }
 
   DWARFProducer GetProducer();
 
@@ -145,21 +70,14 @@ public:
 
   uint32_t GetProducerVersionUpdate();
 
-  static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
-
   lldb::LanguageType GetLanguageType();
-
-  bool IsDWARF64() const;
 
   bool GetIsOptimized();
 
-  SymbolFileDWARFDwo *GetDwoSymbolFile() const {
-    return m_dwo_symbol_file.get();
-  }
-
-  dw_offset_t GetBaseObjOffset() const { return m_base_obj_offset; }
-
 protected:
+  virtual DWARFCompileUnit &Data() override { return *this; }
+  virtual const DWARFCompileUnit &Data() const override { return *this; }
+
   SymbolFileDWARF *m_dwarf2Data;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
   const DWARFAbbreviationDeclarationSet *m_abbrevs;
@@ -173,8 +91,6 @@ protected:
                                                         // DW_TAG_subprogram
                                                         // DIEs
   dw_addr_t m_base_addr = 0;
-  // Offset of the initial length field.
-  dw_offset_t m_offset;
   dw_offset_t m_length;
   uint16_t m_version;
   uint8_t m_addr_size;
@@ -192,14 +108,6 @@ protected:
   dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
 
   void ParseProducerInfo();
-
-  static void
-  IndexPrivate(DWARFCompileUnit *dwarf_cu, const lldb::LanguageType cu_language,
-               const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
-               const dw_offset_t cu_offset, NameToDIE &func_basenames,
-               NameToDIE &func_fullnames, NameToDIE &func_methods,
-               NameToDIE &func_selectors, NameToDIE &objc_class_selectors,
-               NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces);
 
 private:
   DWARFCompileUnit(SymbolFileDWARF *dwarf2Data);

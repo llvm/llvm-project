@@ -16976,10 +16976,9 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
       // Make sure we're allowed to promote 512-bits.
       if (Subtarget.canExtendTo512DQ())
         return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                           getExtendInVec(X86ISD::VSEXT, DL, MVT::v16i32, In,
-                                          DAG));
+                           DAG.getNode(X86ISD::VSEXT, DL, MVT::v16i32, In));
     } else {
-      return DAG.getNode(ISD::TRUNCATE, DL, VT, In);
+      return Op;
     }
   }
 
@@ -22449,42 +22448,26 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
     MVT ExVT = MVT::v8i16;
 
     // Extract the lo parts and sign extend to i16
-    SDValue ALo, BLo;
-    if (Subtarget.hasSSE41()) {
-      ALo = DAG.getSignExtendVectorInReg(A, dl, ExVT);
-      BLo = DAG.getSignExtendVectorInReg(B, dl, ExVT);
-    } else {
-      // We're going to mask off the low byte of each result element of the
-      // pmullw, so it doesn't matter what's in the high byte of each 16-bit
-      // element.
-      const int ShufMask[] = {0, -1, 1, -1, 2, -1, 3, -1,
+    // We're going to mask off the low byte of each result element of the
+    // pmullw, so it doesn't matter what's in the high byte of each 16-bit
+    // element.
+    const int LoShufMask[] = {0, -1, 1, -1, 2, -1, 3, -1,
                               4, -1, 5, -1, 6, -1, 7, -1};
-      ALo = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
-      BLo = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
-      ALo = DAG.getBitcast(ExVT, ALo);
-      BLo = DAG.getBitcast(ExVT, BLo);
-    }
+    SDValue ALo = DAG.getVectorShuffle(VT, dl, A, A, LoShufMask);
+    SDValue BLo = DAG.getVectorShuffle(VT, dl, B, B, LoShufMask);
+    ALo = DAG.getBitcast(ExVT, ALo);
+    BLo = DAG.getBitcast(ExVT, BLo);
 
     // Extract the hi parts and sign extend to i16
-    SDValue AHi, BHi;
-    if (Subtarget.hasSSE41()) {
-      const int ShufMask[] = {8,  9,  10, 11, 12, 13, 14, 15,
-                              -1, -1, -1, -1, -1, -1, -1, -1};
-      AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
-      BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
-      AHi = DAG.getSignExtendVectorInReg(AHi, dl, ExVT);
-      BHi = DAG.getSignExtendVectorInReg(BHi, dl, ExVT);
-    } else {
-      // We're going to mask off the low byte of each result element of the
-      // pmullw, so it doesn't matter what's in the high byte of each 16-bit
-      // element.
-      const int ShufMask[] = {8,  -1, 9,  -1, 10, -1, 11, -1,
+    // We're going to mask off the low byte of each result element of the
+    // pmullw, so it doesn't matter what's in the high byte of each 16-bit
+    // element.
+    const int HiShufMask[] = {8,  -1, 9,  -1, 10, -1, 11, -1,
                               12, -1, 13, -1, 14, -1, 15, -1};
-      AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
-      BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
-      AHi = DAG.getBitcast(ExVT, AHi);
-      BHi = DAG.getBitcast(ExVT, BHi);
-    }
+    SDValue AHi = DAG.getVectorShuffle(VT, dl, A, A, HiShufMask);
+    SDValue BHi = DAG.getVectorShuffle(VT, dl, B, B, HiShufMask);
+    AHi = DAG.getBitcast(ExVT, AHi);
+    BHi = DAG.getBitcast(ExVT, BHi);
 
     // Multiply, mask the lower 8bits of the lo/hi results and pack
     SDValue RLo = DAG.getNode(ISD::MUL, dl, ExVT, ALo, BLo);
@@ -22671,13 +22654,14 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   assert(VT == MVT::v16i8 &&
          "Pre-AVX2 support only supports v16i8 multiplication");
   MVT ExVT = MVT::v8i16;
-  unsigned ExSSE41 = (ISD::MULHU == Opcode ? X86ISD::VZEXT : X86ISD::VSEXT);
+  unsigned ExSSE41 = ISD::MULHU == Opcode ? ISD::ZERO_EXTEND_VECTOR_INREG
+                                          : ISD::SIGN_EXTEND_VECTOR_INREG;
 
   // Extract the lo parts and zero/sign extend to i16.
   SDValue ALo, BLo;
   if (Subtarget.hasSSE41()) {
-    ALo = getExtendInVec(ExSSE41, dl, ExVT, A, DAG);
-    BLo = getExtendInVec(ExSSE41, dl, ExVT, B, DAG);
+    ALo = DAG.getNode(ExSSE41, dl, ExVT, A);
+    BLo = DAG.getNode(ExSSE41, dl, ExVT, B);
   } else {
     const int ShufMask[] = {-1, 0, -1, 1, -1, 2, -1, 3,
                             -1, 4, -1, 5, -1, 6, -1, 7};
@@ -22696,8 +22680,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
                             -1, -1, -1, -1, -1, -1, -1, -1};
     AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
     BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
-    AHi = getExtendInVec(ExSSE41, dl, ExVT, AHi, DAG);
-    BHi = getExtendInVec(ExSSE41, dl, ExVT, BHi, DAG);
+    AHi = DAG.getNode(ExSSE41, dl, ExVT, AHi);
+    BHi = DAG.getNode(ExSSE41, dl, ExVT, BHi);
   } else {
     const int ShufMask[] = {-1, 8,  -1, 9,  -1, 10, -1, 11,
                             -1, 12, -1, 13, -1, 14, -1, 15};

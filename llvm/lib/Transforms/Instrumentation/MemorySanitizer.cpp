@@ -866,6 +866,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  /// \brief Helper function to insert a warning at IRB's current insert point.
+  void insertWarningFn(IRBuilder<> &IRB, Value *Origin) {
+    if (!Origin)
+      Origin = (Value *)IRB.getInt32(0);
+    if (MS.TrackOrigins) {
+      IRB.CreateStore(Origin, MS.OriginTLS);
+    }
+    IRB.CreateCall(MS.WarningFn, {});
+    IRB.CreateCall(MS.EmptyAsm, {});
+    // FIXME: Insert UnreachableInst if !MS.Recover?
+    // This may invalidate some of the following checks and needs to be done
+    // at the very end.
+  }
+
   void materializeOneCheck(Instruction *OrigIns, Value *Shadow, Value *Origin,
                            bool AsCall) {
     IRBuilder<> IRB(OrigIns);
@@ -876,15 +890,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Constant *ConstantShadow = dyn_cast_or_null<Constant>(ConvertedShadow);
     if (ConstantShadow) {
       if (ClCheckConstantShadow && !ConstantShadow->isZeroValue()) {
-        if (MS.TrackOrigins) {
-          IRB.CreateStore(Origin ? (Value *)Origin : (Value *)IRB.getInt32(0),
-                          MS.OriginTLS);
-        }
-        IRB.CreateCall(MS.WarningFn, {});
-        IRB.CreateCall(MS.EmptyAsm, {});
-        // FIXME: Insert UnreachableInst if !MS.Recover?
-        // This may invalidate some of the following checks and needs to be done
-        // at the very end.
+        insertWarningFn(IRB, Origin);
       }
       return;
     }
@@ -908,12 +914,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           /* Unreachable */ !MS.Recover, MS.ColdCallWeights);
 
       IRB.SetInsertPoint(CheckTerm);
-      if (MS.TrackOrigins) {
-        IRB.CreateStore(Origin ? (Value *)Origin : (Value *)IRB.getInt32(0),
-                        MS.OriginTLS);
-      }
-      IRB.CreateCall(MS.WarningFn, {});
-      IRB.CreateCall(MS.EmptyAsm, {});
+      insertWarningFn(IRB, Origin);
       DEBUG(dbgs() << "  CHECK: " << *Cmp << "\n");
     }
   }
@@ -1093,7 +1094,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *getShadowPtrForArgument(Value *A, IRBuilder<> &IRB,
                                  int ArgOffset) {
     Value *Base = IRB.CreatePointerCast(MS.ParamTLS, MS.IntptrTy);
-    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
+    if (ArgOffset)
+      Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
     return IRB.CreateIntToPtr(Base, PointerType::get(getShadowTy(A), 0),
                               "_msarg");
   }
@@ -1103,7 +1105,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                  int ArgOffset) {
     if (!MS.TrackOrigins) return nullptr;
     Value *Base = IRB.CreatePointerCast(MS.ParamOriginTLS, MS.IntptrTy);
-    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
+    if (ArgOffset)
+      Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
     return IRB.CreateIntToPtr(Base, PointerType::get(MS.OriginTy, 0),
                               "_msarg_o");
   }
@@ -3221,7 +3224,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
       Value *RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
           IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                         ConstantInt::get(MS.IntptrTy, 16)),
-          Type::getInt64PtrTy(*MS.C));
+          PointerType::get(Type::getInt64PtrTy(*MS.C), 0));
       Value *RegSaveAreaPtr = IRB.CreateLoad(RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
       unsigned Alignment = 16;
@@ -3233,7 +3236,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
       Value *OverflowArgAreaPtrPtr = IRB.CreateIntToPtr(
           IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                         ConstantInt::get(MS.IntptrTy, 8)),
-          Type::getInt64PtrTy(*MS.C));
+          PointerType::get(Type::getInt64PtrTy(*MS.C), 0));
       Value *OverflowArgAreaPtr = IRB.CreateLoad(OverflowArgAreaPtrPtr);
       Value *OverflowArgAreaShadowPtr, *OverflowArgAreaOriginPtr;
       std::tie(OverflowArgAreaShadowPtr, OverflowArgAreaOriginPtr) =
@@ -3343,8 +3346,8 @@ struct VarArgMIPS64Helper : public VarArgHelper {
       IRBuilder<> IRB(OrigInst->getNextNode());
       Value *VAListTag = OrigInst->getArgOperand(0);
       Value *RegSaveAreaPtrPtr =
-        IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                        Type::getInt64PtrTy(*MS.C));
+          IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
+                             PointerType::get(Type::getInt64PtrTy(*MS.C), 0));
       Value *RegSaveAreaPtr = IRB.CreateLoad(RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
       unsigned Alignment = 8;
@@ -3764,8 +3767,8 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
       IRBuilder<> IRB(OrigInst->getNextNode());
       Value *VAListTag = OrigInst->getArgOperand(0);
       Value *RegSaveAreaPtrPtr =
-        IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                        Type::getInt64PtrTy(*MS.C));
+          IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
+                             PointerType::get(Type::getInt64PtrTy(*MS.C), 0));
       Value *RegSaveAreaPtr = IRB.CreateLoad(RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
       unsigned Alignment = 8;

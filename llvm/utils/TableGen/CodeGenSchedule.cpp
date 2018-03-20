@@ -781,9 +781,22 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
         if (OrigNumInstrs == InstDefs.size()) {
           assert(SchedClasses[OldSCIdx].ProcIndices[0] == 0 &&
                  "expected a generic SchedClass");
+          Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
+          // Make sure we didn't already have a InstRW containing this
+          // instruction on this model.
+          for (Record *RWD : RWDefs) {
+            if (RWD->getValueAsDef("SchedModel") == RWModelDef &&
+                RWModelDef->getValueAsBit("FullInstRWOverlapCheck")) {
+              for (Record *Inst : InstDefs) {
+                PrintFatalError(InstRWDef->getLoc(), "Overlapping InstRW def " +
+                            Inst->getName() + " also matches " +
+                            RWD->getValue("Instrs")->getValue()->getAsString());
+              }
+            }
+          }
           DEBUG(dbgs() << "InstRW: Reuse SC " << OldSCIdx << ":"
                 << SchedClasses[OldSCIdx].Name << " on "
-                << InstRWDef->getValueAsDef("SchedModel")->getName() << "\n");
+                << RWModelDef->getName() << "\n");
           SchedClasses[OldSCIdx].InstRWs.push_back(InstRWDef);
           continue;
         }

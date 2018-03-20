@@ -103,6 +103,7 @@
 #include <clc/math/pow.h>
 #include <clc/math/pown.h>
 #include <clc/math/powr.h>
+#include <clc/math/remainder.h>
 #include <clc/math/rint.h>
 #include <clc/math/rootn.h>
 #include <clc/math/round.h>

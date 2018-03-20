@@ -67,6 +67,11 @@ Improvements to clang-tidy
   Diagnoses when a temporary object that appears to be an exception is
   constructed but not thrown.
 
+- New `bugprone-unused-return-value
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unused-return-value.html>`_ check
+
+  Warns on unused function return values.
+
 - New `cppcoreguidelines-avoid-goto
   <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-goto.html>`_ check
 

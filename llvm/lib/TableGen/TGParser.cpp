@@ -936,7 +936,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       return nullptr;
     }
     Lex.Lex();  // eat the ')'
-    return (UnOpInit::get(Code, LHS, Type))->Fold(CurRec, CurMultiClass);
+    return (UnOpInit::get(Code, LHS, Type))->Fold(CurRec);
   }
 
   case tgtok::XIsA: {
@@ -1124,15 +1124,14 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         Code == BinOpInit::AND || Code == BinOpInit::OR) {
       while (InitList.size() > 2) {
         Init *RHS = InitList.pop_back_val();
-        RHS = (BinOpInit::get(Code, InitList.back(), RHS, Type))
-                           ->Fold(CurRec, CurMultiClass);
+        RHS = (BinOpInit::get(Code, InitList.back(), RHS, Type))->Fold(CurRec);
         InitList.back() = RHS;
       }
     }
 
     if (InitList.size() == 2)
       return (BinOpInit::get(Code, InitList[0], InitList[1], Type))
-        ->Fold(CurRec, CurMultiClass);
+          ->Fold(CurRec);
 
     Error(OpLoc, "expected two operands to operator");
     return nullptr;
@@ -1237,7 +1236,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     }
 
     return (TernOpInit::get(TernOpInit::FOREACH, LHS, MHS, RHS, OutType))
-               ->Fold(CurRec, CurMultiClass);
+        ->Fold(CurRec);
   }
 
   case tgtok::XDag:
@@ -1378,8 +1377,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       break;
     }
     }
-    return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec,
-                                                             CurMultiClass);
+    return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
   }
 
   case tgtok::XFoldl: {
@@ -1945,7 +1943,7 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
                  Result->getAsString() + "'");
         return nullptr;
       }
-      Result = FieldInit::get(Result, FieldName)->Fold();
+      Result = FieldInit::get(Result, FieldName)->Fold(CurRec);
       Lex.Lex();  // eat field name
       break;
     }
@@ -1963,7 +1961,14 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       }
 
       if (LHS->getType() != StringRecTy::get()) {
-        LHS = UnOpInit::get(UnOpInit::CAST, LHS, StringRecTy::get());
+        LHS = dyn_cast<TypedInit>(
+            UnOpInit::get(UnOpInit::CAST, LHS, StringRecTy::get())
+                ->Fold(CurRec));
+        if (!LHS) {
+          Error(PasteLoc, Twine("can't cast '") + LHS->getAsString() +
+                              "' to string");
+          return nullptr;
+        }
       }
 
       TypedInit *RHS = nullptr;
@@ -1990,14 +1995,20 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
         }
 
         if (RHS->getType() != StringRecTy::get()) {
-          RHS = UnOpInit::get(UnOpInit::CAST, RHS, StringRecTy::get());
+          RHS = dyn_cast<TypedInit>(
+              UnOpInit::get(UnOpInit::CAST, RHS, StringRecTy::get())
+                  ->Fold(CurRec));
+          if (!RHS) {
+            Error(PasteLoc, Twine("can't cast '") + RHS->getAsString() +
+                                "' to string");
+            return nullptr;
+          }
         }
 
         break;
       }
 
-      Result = BinOpInit::get(BinOpInit::STRCONCAT, LHS, RHS,
-                              StringRecTy::get())->Fold(CurRec, CurMultiClass);
+      Result = BinOpInit::getStrConcat(LHS, RHS);
       break;
     }
   }
@@ -2832,11 +2843,10 @@ Record *TGParser::InstantiateMulticlassDef(MultiClass &MC, Record *DefProto,
   if (DefNameString) {
     // We have a fully expanded string so there are no operators to
     // resolve.  We should concatenate the given prefix and name.
-    DefName =
-      BinOpInit::get(BinOpInit::STRCONCAT,
-                     UnOpInit::get(UnOpInit::CAST, DefmPrefix,
-                                   StringRecTy::get())->Fold(DefProto, &MC),
-                     DefName, StringRecTy::get())->Fold(DefProto, &MC);
+    DefName = BinOpInit::getStrConcat(
+        UnOpInit::get(UnOpInit::CAST, DefmPrefix, StringRecTy::get())
+            ->Fold(DefProto),
+        DefName);
   }
 
   // Make a trail of SMLocs from the multiclass instantiations.

@@ -105,27 +105,22 @@ void BackendStatistics::printRATStatistics(raw_ostream &OS,
   OS << Buffer;
 }
 
-void BackendStatistics::printDispatchStalls(raw_ostream &OS, unsigned RATStalls,
-                                            unsigned RCUStalls,
-                                            unsigned SCHEDQStalls,
-                                            unsigned LDQStalls,
-                                            unsigned STQStalls,
-                                            unsigned DGStalls) const {
+void BackendStatistics::printDispatchStalls(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nDynamic Dispatch Stall Cycles:\n";
   TempStream << "RAT     - Register unavailable:                      "
-             << RATStalls;
+             << HWStalls[HWStallEvent::RegisterFileStall];
   TempStream << "\nRCU     - Retire tokens unavailable:                 "
-             << RCUStalls;
+             << HWStalls[HWStallEvent::RetireControlUnitStall];
   TempStream << "\nSCHEDQ  - Scheduler full:                            "
-             << SCHEDQStalls;
+             << HWStalls[HWStallEvent::SchedulerQueueFull];
   TempStream << "\nLQ      - Load queue full:                           "
-             << LDQStalls;
+             << HWStalls[HWStallEvent::LoadQueueFull];
   TempStream << "\nSQ      - Store queue full:                          "
-             << STQStalls;
+             << HWStalls[HWStallEvent::StoreQueueFull];
   TempStream << "\nGROUP   - Static restrictions on the dispatch group: "
-             << DGStalls;
+             << HWStalls[HWStallEvent::DispatchGroupStall];
   TempStream << '\n';
   TempStream.flush();
   OS << Buffer;

@@ -371,56 +371,56 @@ define amdgpu_kernel void @add_inline_imm_16_v2f16(<2 x half> addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1_v2f16:
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -1{{$}}
+; GFX9: s_add_i32 [[VAL:s[0-9]+]], s4, -1
+; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -1, [[VAL0]]
-; VI-DAG: v_mov_b32_e32 [[CONSTM1:v[0-9]+]], 0xffff
-; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[VAL1]], [[CONSTM1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_or_b32
-; VI: buffer_store_dword
+; VI: v_or_b32_e32 [[REG:v[0-9]+]]
+; VI: v_add_u32_e32 [[REG]], vcc, -1, [[REG]]
+; VI: buffer_store_dword [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
-  %y = fadd <2 x half> %x, <half 0xHFFFF, half 0xHFFFF>
-  store <2 x half> %y, <2 x half> addrspace(1)* %out
+  %xbc = bitcast <2 x half> %x to i32
+  %y = add i32 %xbc, -1
+  %ybc = bitcast i32 %y to <2 x half>
+  store <2 x half> %ybc, <2 x half> addrspace(1)* %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2_v2f16:
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -2{{$}}
+; GFX9: s_add_i32 [[VAL:s[0-9]+]], s4, 0xfffefffe
+; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -2, [[VAL0]]
-; VI-DAG: v_mov_b32_e32 [[CONSTM2:v[0-9]+]], 0xfffe
-; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[VAL1]], [[CONSTM2]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_or_b32
-; VI: buffer_store_dword
+; VI: v_or_b32_e32 [[REG:v[0-9]+]]
+; VI: v_add_u32_e32 [[REG]], vcc, 0xfffefffe, [[REG]]
+; VI: buffer_store_dword [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
-  %y = fadd <2 x half> %x, <half 0xHFFFE, half 0xHFFFE>
-  store <2 x half> %y, <2 x half> addrspace(1)* %out
+  %xbc = bitcast <2 x half> %x to i32
+  %y = add i32 %xbc, 4294901758 ; 0xfffefffe
+  %ybc = bitcast i32 %y to <2 x half>
+  store <2 x half> %ybc, <2 x half> addrspace(1)* %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_16_v2f16:
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -16{{$}}
+; GFX9: s_add_i32 [[VAL:s[0-9]+]], s4, 0xfff0fff0
+; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -16, [[VAL0]]
-; VI-DAG: v_mov_b32_e32 [[CONSTM16:v[0-9]+]], 0xfff0
-; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[VAL1]], [[CONSTM16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_or_b32
-; VI: buffer_store_dword
+; VI: v_or_b32_e32 [[REG:v[0-9]+]]
+; VI: v_add_u32_e32 [[REG]], vcc, 0xfff0fff0, [[REG]]
+; VI: buffer_store_dword [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
-  %y = fadd <2 x half> %x, <half 0xHFFF0, half 0xHFFF0>
-  store <2 x half> %y, <2 x half> addrspace(1)* %out
+  %xbc = bitcast <2 x half> %x to i32
+  %y = add i32 %xbc, 4293984240 ; 0xfff0fff0
+  %ybc = bitcast i32 %y to <2 x half>
+  store <2 x half> %ybc, <2 x half> addrspace(1)* %out
   ret void
 }
 

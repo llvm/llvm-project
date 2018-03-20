@@ -188,26 +188,23 @@ private:
   typedef std::vector<lldb_private::Type*> TypeCollection;
 
   void
-  GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol *pdb_symbol,
+  GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
                        uint32_t type_mask, TypeCollection &type_collection);
 
   lldb_private::Function* ParseCompileUnitFunctionForPDBFunc(
-      const llvm::pdb::PDBSymbolFunc *pdb_func,
+      const llvm::pdb::PDBSymbolFunc &pdb_func,
       const lldb_private::SymbolContext &sc);
 
-  void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland *pdb_compiland,
+  void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
                            uint32_t &index);
-
-  std::string GetSourceFileNameForPDBCompiland(
-      const llvm::pdb::PDBSymbolCompiland *pdb_compiland);
 
   std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
   GetPDBCompilandByUID(uint32_t uid);
 
   lldb_private::Mangled
-  GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc *pdb_func);
+  GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func);
 
-  bool ResolveFunction(llvm::pdb::PDBSymbolFunc *pdb_func,
+  bool ResolveFunction(const llvm::pdb::PDBSymbolFunc &pdb_func,
                        bool include_inlines,
                        lldb_private::SymbolContextList &sc_list);
 

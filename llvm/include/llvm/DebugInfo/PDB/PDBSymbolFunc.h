@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNC_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNC_H
 
+#include "IPDBLineNumber.h"
 #include "PDBSymbol.h"
 #include "PDBSymbolTypeFunctionSig.h"
 #include "PDBTypes.h"
@@ -76,6 +77,9 @@ public:
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
   FORWARD_SYMBOL_METHOD(getVirtualBaseOffset)
   FORWARD_SYMBOL_METHOD(isVolatileType)
+
+  std::unique_ptr<IPDBEnumLineNumbers> getLineNumbers() const;
+  uint32_t getCompilandId() const;
 };
 
 } // namespace llvm

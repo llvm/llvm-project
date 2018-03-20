@@ -36,7 +36,8 @@ void Backend::runCycle(unsigned Cycle) {
     std::unique_ptr<Instruction> NewIS(
         IB->createInstruction(STI, IR.first, *IR.second));
     const InstrDesc &Desc = NewIS->getDesc();
-    if (!DU->isAvailable(Desc.NumMicroOps) || !DU->canDispatch(*NewIS))
+    if (!DU->isAvailable(Desc.NumMicroOps) ||
+        !DU->canDispatch(IR.first, *NewIS))
       break;
 
     Instruction *IS = NewIS.get();
@@ -60,6 +61,11 @@ void Backend::notifyCycleBegin(unsigned Cycle) {
 void Backend::notifyInstructionEvent(const HWInstructionEvent &Event) {
   for (HWEventListener *Listener : Listeners)
     Listener->onInstructionEvent(Event);
+}
+
+void Backend::notifyStallEvent(const HWStallEvent &Event) {
+  for (HWEventListener *Listener : Listeners)
+    Listener->onStallEvent(Event);
 }
 
 void Backend::notifyResourceAvailable(const ResourceRef &RR) {

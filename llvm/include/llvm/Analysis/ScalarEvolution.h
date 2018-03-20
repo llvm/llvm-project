@@ -829,6 +829,46 @@ public:
   /// Test if the given expression is known to be non-zero.
   bool isKnownNonZero(const SCEV *S);
 
+  /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
+  /// \p S by substitution of all AddRec sub-expression related to loop \p L
+  /// with initial value of that SCEV. The second is obtained from \p S by
+  /// substitution of all AddRec sub-expressions related to loop \p L with post
+  /// increment of this AddRec in the loop \p L. In both cases all other AddRec
+  /// sub-expressions (not related to \p L) remain the same.
+  /// If the \p S contains non-invariant unknown SCEV the function returns
+  /// CouldNotCompute SCEV in both values of std::pair.
+  /// For example, for SCEV S={0, +, 1}<L1> + {0, +, 1}<L2> and loop L=L1
+  /// the function returns pair:
+  /// first = {0, +, 1}<L2>
+  /// second = {1, +, 1}<L1> + {0, +, 1}<L2>
+  /// We can see that for the first AddRec sub-expression it was replaced with
+  /// 0 (initial value) for the first element and to {1, +, 1}<L1> (post
+  /// increment value) for the second one. In both cases AddRec expression
+  /// related to L2 remains the same.
+  std::pair<const SCEV *, const SCEV *> SplitIntoInitAndPostInc(const Loop *L,
+                                                                const SCEV *S);
+
+  /// We'd like to check the predicate on every iteration of the most dominated
+  /// loop between loops used in LHS and RHS.
+  /// To do this we use the following list of steps:
+  /// 1. Collect set S all loops on which either LHS or RHS depend.
+  /// 2. If S is non-empty
+  /// a. Let PD be the element of S which is dominated by all other elements.
+  /// b. Let E(LHS) be value of LHS on entry of PD.
+  ///    To get E(LHS), we should just take LHS and replace all AddRecs that are
+  ///    attached to PD on with their entry values.
+  ///    Define E(RHS) in the same way.
+  /// c. Let B(LHS) be value of L on backedge of PD.
+  ///    To get B(LHS), we should just take LHS and replace all AddRecs that are
+  ///    attached to PD on with their backedge values.
+  ///    Define B(RHS) in the same way.
+  /// d. Note that E(LHS) and E(RHS) are automatically available on entry of PD,
+  ///    so we can assert on that.
+  /// e. Return true if isLoopEntryGuardedByCond(Pred, E(LHS), E(RHS)) &&
+  ///                   isLoopBackedgeGuardedByCond(Pred, B(LHS), B(RHS))
+  bool isKnownViaInduction(ICmpInst::Predicate Pred, const SCEV *LHS,
+                           const SCEV *RHS);
+
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred, LHS, and RHS.
   bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,

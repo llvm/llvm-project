@@ -379,7 +379,6 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Unaligned = 1;
   SoftFloat = SoftFloatABI = false;
   HWDiv = 0;
-  HasFullFP16 = 0;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "+fp-only-sp".
@@ -421,7 +420,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
-      HasFullFP16 = 1;
+      HasLegalHalfType = true;
     }
   }
   HW_FP &= ~HW_FP_remove;
@@ -714,11 +713,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
   // Armv8.2-A FP16 vector intrinsic
-  if ((FPU & NeonFPU) && HasFullFP16)
+  if ((FPU & NeonFPU) && HasLegalHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
 
   // Armv8.2-A FP16 scalar intrinsics
-  if (HasFullFP16)
+  if (HasLegalHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
 

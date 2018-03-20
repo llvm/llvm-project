@@ -13,15 +13,15 @@
 ; STOP-BEFORE-NOT: Loop Strength Reduction
 
 ; RUN: llc < %s -debug-pass=Structure -start-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-AFTER
-; START-AFTER: -machine-branch-prob -expandmemcmp
+; START-AFTER: -machine-branch-prob -mergeicmps
 ; START-AFTER: FunctionPass Manager
-; START-AFTER-NEXT: Expand memcmp() to load/stores
+; START-AFTER-NEXT: Merge contiguous icmps into a memcmp
 
 ; RUN: llc < %s -debug-pass=Structure -start-before=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-BEFORE
 ; START-BEFORE: -machine-branch-prob -domtree
 ; START-BEFORE: FunctionPass Manager
 ; START-BEFORE: Loop Strength Reduction
-; START-BEFORE-NEXT: Expand memcmp() to load/stores
+; START-BEFORE-NEXT: Merge contiguous icmps into a memcmp
 
 ; RUN: not llc < %s -start-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-BEFORE
 ; RUN: not llc < %s -stop-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-BEFORE

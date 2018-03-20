@@ -20,17 +20,24 @@
 
 namespace llvm {
 
+class GlobalValue;
+class Module;
+
 class RecordStreamer : public MCStreamer {
 public:
   enum State { NeverSeen, Global, Defined, DefinedGlobal, DefinedWeak, Used,
                UndefinedWeak};
 
 private:
+  const Module &M;
   StringMap<State> Symbols;
   // Map of aliases created by .symver directives, saved so we can update
   // their symbol binding after parsing complete. This maps from each
   // aliasee to its list of aliases.
-  DenseMap<const MCSymbol *, std::vector<MCSymbol *>> SymverAliasMap;
+  DenseMap<const MCSymbol *, std::vector<StringRef>> SymverAliasMap;
+
+  /// Get the state recorded for the given symbol.
+  State getSymbolState(const MCSymbol *Sym);
 
   void markDefined(const MCSymbol &Symbol);
   void markGlobal(const MCSymbol &Symbol, MCSymbolAttr Attribute);
@@ -38,7 +45,7 @@ private:
   void visitUsedSymbol(const MCSymbol &Sym) override;
 
 public:
-  RecordStreamer(MCContext &Context);
+  RecordStreamer(MCContext &Context, const Module &M);
 
   using const_iterator = StringMap<State>::const_iterator;
 
@@ -56,18 +63,9 @@ public:
   /// Record .symver aliases for later processing.
   void emitELFSymverDirective(StringRef AliasName,
                               const MCSymbol *Aliasee) override;
-  /// Return the map of .symver aliasee to associated aliases.
-  DenseMap<const MCSymbol *, std::vector<MCSymbol *>> &symverAliases() {
-    return SymverAliasMap;
-  }
-
-  /// Get the state recorded for the given symbol.
-  State getSymbolState(const MCSymbol *Sym) {
-    auto SI = Symbols.find(Sym->getName());
-    if (SI == Symbols.end())
-      return NeverSeen;
-    return SI->second;
-  }
+  // Emit ELF .symver aliases and ensure they have the same binding as the
+  // defined symbol they alias with.
+  void flushSymverDirectives();
 };
 
 } // end namespace llvm

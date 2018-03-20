@@ -55,6 +55,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
   };
 
   setAction({G_ADD, S32}, Legal);
+  setAction({G_SUB, S32}, Legal);
   setAction({G_MUL, S32}, Legal);
   setAction({G_AND, S32}, Legal);
   setAction({G_OR, S32}, Legal);

@@ -69,7 +69,7 @@ def v4i32  : ValueType<128, 43>;   //  4 x i32 vector value
 def v8i32  : ValueType<256, 44>;   //  8 x i32 vector value
 def v16i32 : ValueType<512, 45>;   // 16 x i32 vector value
 def v32i32 : ValueType<1024,46>;   // 32 x i32 vector value
-def v64i32 : ValueType<2048,47>;   // 32 x i32 vector value
+def v64i32 : ValueType<2048,47>;   // 64 x i32 vector value
 
 def v1i64  : ValueType<64 , 48>;   //  1 x i64 vector value
 def v2i64  : ValueType<128, 49>;   //  2 x i64 vector value

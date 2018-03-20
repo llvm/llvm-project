@@ -98,7 +98,12 @@ enum PDB_NameSearchFlags {
   NS_CaseInsensitive = 0x2,
   NS_FileNameExtMatch = 0x4,
   NS_Regex = 0x8,
-  NS_UndecoratedName = 0x10
+  NS_UndecoratedName = 0x10,
+
+  // For backward compatibility.
+  NS_CaseInFileNameExt = NS_CaseInsensitive | NS_FileNameExtMatch,
+  NS_CaseRegex = NS_Regex | NS_CaseSensitive,
+  NS_CaseInRex = NS_Regex | NS_CaseInsensitive
 };
 
 /// Specifies the hash algorithm that a source file from a PDB was hashed with.

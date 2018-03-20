@@ -146,19 +146,23 @@ def IIC_ALU_MEM     : InstrItinClass;
 def IIC_ALU_NONMEM  : InstrItinClass;
 def IIC_LEA         : InstrItinClass;
 def IIC_LEA_16      : InstrItinClass;
-def IIC_MUL8        : InstrItinClass;
+def IIC_MUL8_MEM    : InstrItinClass;
+def IIC_MUL8_REG    : InstrItinClass;
 def IIC_MUL16_MEM   : InstrItinClass;
 def IIC_MUL16_REG   : InstrItinClass;
 def IIC_MUL32_MEM   : InstrItinClass;
 def IIC_MUL32_REG   : InstrItinClass;
-def IIC_MUL64       : InstrItinClass;
+def IIC_MUL64_MEM   : InstrItinClass;
+def IIC_MUL64_REG   : InstrItinClass;
 // imul by al, ax, eax, tax
-def IIC_IMUL8       : InstrItinClass;
+def IIC_IMUL8_MEM   : InstrItinClass;
+def IIC_IMUL8_REG   : InstrItinClass;
 def IIC_IMUL16_MEM  : InstrItinClass;
 def IIC_IMUL16_REG  : InstrItinClass;
 def IIC_IMUL32_MEM  : InstrItinClass;
 def IIC_IMUL32_REG  : InstrItinClass;
-def IIC_IMUL64      : InstrItinClass;
+def IIC_IMUL64_MEM  : InstrItinClass;
+def IIC_IMUL64_REG  : InstrItinClass;
 // imul reg by reg|mem
 def IIC_IMUL16_RM   : InstrItinClass;
 def IIC_IMUL16_RR   : InstrItinClass;
@@ -176,14 +180,21 @@ def IIC_IMUL64_RRI  : InstrItinClass;
 // div
 def IIC_DIV8_MEM    : InstrItinClass;
 def IIC_DIV8_REG    : InstrItinClass;
-def IIC_DIV16       : InstrItinClass;
-def IIC_DIV32       : InstrItinClass;
-def IIC_DIV64       : InstrItinClass;
+def IIC_DIV16_MEM   : InstrItinClass;
+def IIC_DIV16_REG   : InstrItinClass;
+def IIC_DIV32_MEM   : InstrItinClass;
+def IIC_DIV32_REG   : InstrItinClass;
+def IIC_DIV64_MEM   : InstrItinClass;
+def IIC_DIV64_REG   : InstrItinClass;
 // idiv
-def IIC_IDIV8       : InstrItinClass;
-def IIC_IDIV16      : InstrItinClass;
-def IIC_IDIV32      : InstrItinClass;
-def IIC_IDIV64      : InstrItinClass;
+def IIC_IDIV8_MEM   : InstrItinClass;
+def IIC_IDIV8_REG   : InstrItinClass;
+def IIC_IDIV16_MEM  : InstrItinClass;
+def IIC_IDIV16_REG  : InstrItinClass;
+def IIC_IDIV32_MEM  : InstrItinClass;
+def IIC_IDIV32_REG  : InstrItinClass;
+def IIC_IDIV64_MEM  : InstrItinClass;
+def IIC_IDIV64_REG  : InstrItinClass;
 // neg/not/inc/dec
 def IIC_UNARY_REG   : InstrItinClass;
 def IIC_UNARY_MEM   : InstrItinClass;
@@ -242,8 +253,6 @@ def IIC_RET_IMM : InstrItinClass;
 def IIC_MOVSX : InstrItinClass;
 def IIC_MOVSX_R16_R8 : InstrItinClass;
 def IIC_MOVSX_R16_M8 : InstrItinClass;
-def IIC_MOVSX_R16_R16 : InstrItinClass;
-def IIC_MOVSX_R32_R32 : InstrItinClass;
 //zero extension movs
 def IIC_MOVZX : InstrItinClass;
 def IIC_MOVZX_R16_R8 : InstrItinClass;
