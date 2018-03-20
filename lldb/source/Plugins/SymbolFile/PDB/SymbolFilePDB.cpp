@@ -205,15 +205,12 @@ uint32_t SymbolFilePDB::GetNumCompileUnits() {
 }
 
 void SymbolFilePDB::GetCompileUnitIndex(
-    const llvm::pdb::PDBSymbolCompiland *pdb_compiland,
+    const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
     uint32_t &index) {
-  if (!pdb_compiland)
-    return;
-
   auto results_up = m_global_scope_up->findAllChildren<PDBSymbolCompiland>();
   if (!results_up)
     return;
-  auto uid = pdb_compiland->getSymIndexId();
+  auto uid = pdb_compiland.getSymIndexId();
   for (uint32_t cu_idx = 0; cu_idx < GetNumCompileUnits(); ++cu_idx) {
     auto compiland_up = results_up->getChildAtIndex(cu_idx);
     if (!compiland_up)
@@ -266,32 +263,31 @@ SymbolFilePDB::ParseCompileUnitLanguage(const lldb_private::SymbolContext &sc) {
 
 lldb_private::Function *
 SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(
-    const PDBSymbolFunc *pdb_func,
+    const PDBSymbolFunc &pdb_func,
     const lldb_private::SymbolContext &sc) {
-  assert(pdb_func != nullptr);
   lldbassert(sc.comp_unit && sc.module_sp.get());
 
-  auto file_vm_addr = pdb_func->getVirtualAddress();
+  auto file_vm_addr = pdb_func.getVirtualAddress();
   if (file_vm_addr == LLDB_INVALID_ADDRESS)
     return nullptr;
 
-  auto func_length = pdb_func->getLength();
+  auto func_length = pdb_func.getLength();
   AddressRange func_range = AddressRange(file_vm_addr,
                                          func_length,
                                          sc.module_sp->GetSectionList());
   if (!func_range.GetBaseAddress().IsValid())
     return nullptr;
 
-  lldb_private::Type* func_type = ResolveTypeUID(pdb_func->getSymIndexId());
+  lldb_private::Type* func_type = ResolveTypeUID(pdb_func.getSymIndexId());
   if (!func_type)
     return nullptr;
 
-  user_id_t func_type_uid = pdb_func->getSignatureId();
+  user_id_t func_type_uid = pdb_func.getSignatureId();
 
   Mangled mangled = GetMangledForPDBFunc(pdb_func);
 
   FunctionSP func_sp = std::make_shared<Function>(sc.comp_unit,
-                                                  pdb_func->getSymIndexId(),
+                                                  pdb_func.getSymIndexId(),
                                                   func_type_uid,
                                                   mangled,
                                                   func_type,
@@ -315,7 +311,7 @@ size_t SymbolFilePDB::ParseCompileUnitFunctions(
     auto func_sp =
         sc.comp_unit->FindFunctionByUID(pdb_func_up->getSymIndexId());
     if (!func_sp) {
-      if (ParseCompileUnitFunctionForPDBFunc(pdb_func_up.get(), sc))
+      if (ParseCompileUnitFunctionForPDBFunc(*pdb_func_up, sc))
         ++func_added;
     }
   }
@@ -591,7 +587,7 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
         auto func_uid = pdb_func->getSymIndexId();
         sc.function = sc.comp_unit->FindFunctionByUID(func_uid).get();
         if (sc.function == nullptr)
-          sc.function = ParseCompileUnitFunctionForPDBFunc(pdb_func, sc);
+          sc.function = ParseCompileUnitFunctionForPDBFunc(*pdb_func, sc);
         if (sc.function) {
           resolved_flags |= eSymbolContextFunction;
           if (resolve_scope & eSymbolContextBlock) {
@@ -618,59 +614,6 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
   return resolved_flags;
 }
 
-std::string SymbolFilePDB::GetSourceFileNameForPDBCompiland(
-    const PDBSymbolCompiland *pdb_compiland) {
-  if (!pdb_compiland)
-    return std::string();
-
-  std::string source_file_name;
-  // `getSourceFileName` returns the basename of the original source file
-  // used to generate this compiland.  It does not return the full path.
-  // Currently the only way to get that is to do a basename lookup to get the
-  // IPDBSourceFile, but this is ambiguous in the case of two source files
-  // with the same name contributing to the same compiland. This is an edge
-  // case that we ignore for now, although we need to a long-term solution.
-  std::string file_name = pdb_compiland->getSourceFileName();
-  if (!file_name.empty()) {
-    auto one_src_file_up =
-        m_session_up->findOneSourceFile(pdb_compiland, file_name,
-                                        PDB_NameSearchFlags::NS_CaseInsensitive);
-    if (one_src_file_up)
-      source_file_name = one_src_file_up->getFileName();
-  }
-  // For some reason, source file name could be empty, so we will walk through
-  // all source files of this compiland, and determine the right source file
-  // if any that is used to generate this compiland based on language
-  // indicated in compilanddetails language field.
-  if (!source_file_name.empty())
-    return source_file_name;
-
-  auto details_up = pdb_compiland->findOneChild<PDBSymbolCompilandDetails>();
-  PDB_Lang pdb_lang = details_up ? details_up->getLanguage() : PDB_Lang::Cpp;
-  auto src_files_up =
-      m_session_up->getSourceFilesForCompiland(*pdb_compiland);
-  if (src_files_up) {
-    while (auto file_up = src_files_up->getNext()) {
-      FileSpec file_spec(file_up->getFileName(), false,
-                         FileSpec::ePathSyntaxWindows);
-      auto file_extension = file_spec.GetFileNameExtension();
-      if (pdb_lang == PDB_Lang::Cpp || pdb_lang == PDB_Lang::C) {
-        static const char* exts[] = { "cpp", "c", "cc", "cxx" };
-        if (llvm::is_contained(exts, file_extension.GetStringRef().lower())) {
-          source_file_name = file_up->getFileName();
-          break;
-        }
-      } else if (pdb_lang == PDB_Lang::Masm &&
-                 ConstString::Compare(file_extension, ConstString("ASM"),
-                                      false) == 0) {
-        source_file_name = file_up->getFileName();
-        break;
-      }
-    }
-  }
-  return source_file_name;
-}
-
 uint32_t SymbolFilePDB::ResolveSymbolContext(
     const lldb_private::FileSpec &file_spec, uint32_t line, bool check_inlines,
     uint32_t resolve_scope, lldb_private::SymbolContextList &sc_list) {
@@ -694,15 +637,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
       // For inline functions, we don't have to match the FileSpec since they
       // could be defined in headers other than file specified in FileSpec.
       if (!check_inlines) {
-        // `getSourceFileName` returns the basename of the original source file
-        // used to generate this compiland.  It does not return the full path.
-        // Currently the only way to get that is to do a basename lookup to get
-        // the IPDBSourceFile, but this is ambiguous in the case of two source
-        // files with the same name contributing to the same compiland.  This is
-        // a moderately extreme edge case, so we consider this OK for now,
-        // although we need to find a long-term solution.
-        std::string source_file =
-            GetSourceFileNameForPDBCompiland(compiland.get());
+        std::string source_file = compiland->getSourceFileFullPath();
         if (source_file.empty())
           continue;
         FileSpec this_spec(source_file, false, FileSpec::ePathSyntaxWindows);
@@ -765,7 +700,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
               if (sc.function == nullptr) {
                 auto pdb_func = llvm::dyn_cast<PDBSymbolFunc>(symbol_up.get());
                 assert(pdb_func);
-                sc.function = ParseCompileUnitFunctionForPDBFunc(pdb_func, sc);
+                sc.function = ParseCompileUnitFunctionForPDBFunc(*pdb_func, sc);
               }
               if (sc.function && (resolve_scope & eSymbolContextBlock)) {
                 Block &block = sc.function->GetBlock(true);
@@ -803,29 +738,15 @@ SymbolFilePDB::FindGlobalVariables(const lldb_private::RegularExpression &regex,
   return uint32_t();
 }
 
-bool SymbolFilePDB::ResolveFunction(llvm::pdb::PDBSymbolFunc *pdb_func,
+bool SymbolFilePDB::ResolveFunction(const llvm::pdb::PDBSymbolFunc &pdb_func,
                                     bool include_inlines,
                                     lldb_private::SymbolContextList &sc_list) {
-  if (!pdb_func)
-    return false;
   lldb_private::SymbolContext sc;
-  auto file_vm_addr = pdb_func->getVirtualAddress();
-  if (file_vm_addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  Address so_addr(file_vm_addr);
-  sc.comp_unit = GetCompileUnitContainsAddress(so_addr).get();
+  sc.comp_unit = ParseCompileUnitForUID(pdb_func.getCompilandId()).get();
   if (!sc.comp_unit)
     return false;
   sc.module_sp = sc.comp_unit->GetModule();
-  auto symbol_up =
-      m_session_up->findSymbolByAddress(file_vm_addr, PDB_SymType::Function);
-  if (!symbol_up)
-    return false;
-
-  auto *func = llvm::dyn_cast<PDBSymbolFunc>(symbol_up.get());
-  assert(func);
-  sc.function = ParseCompileUnitFunctionForPDBFunc(func, sc);
+  sc.function = ParseCompileUnitFunctionForPDBFunc(pdb_func, sc);
   if (!sc.function)
     return false;
 
@@ -839,7 +760,7 @@ bool SymbolFilePDB::ResolveFunction(uint32_t uid, bool include_inlines,
       m_session_up->getConcreteSymbolById<PDBSymbolFunc>(uid);
   if (!pdb_func_up && !(include_inlines && pdb_func_up->hasInlineAttribute()))
     return false;
-  return ResolveFunction(pdb_func_up.get(), include_inlines, sc_list);
+  return ResolveFunction(*pdb_func_up, include_inlines, sc_list);
 }
 
 void SymbolFilePDB::CacheFunctionNames() {
@@ -1163,14 +1084,11 @@ lldb_private::TypeList *SymbolFilePDB::GetTypeList() {
 }
 
 void
-SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol *pdb_symbol,
+SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
                                     uint32_t type_mask,
                                     TypeCollection &type_collection) {
-  if (!pdb_symbol)
-    return;
-
   bool can_parse = false;
-  switch (pdb_symbol->getSymTag()) {
+  switch (pdb_symbol.getSymTag()) {
   case PDB_SymType::ArrayType:
     can_parse = ((type_mask & eTypeClassArray) != 0);
     break;
@@ -1192,7 +1110,7 @@ SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol *pdb_symbol,
     can_parse = ((type_mask & eTypeClassTypedef) != 0);
     break;
   case PDB_SymType::UDT: {
-    auto *udt = llvm::dyn_cast<PDBSymbolTypeUDT>(pdb_symbol);
+    auto *udt = llvm::dyn_cast<PDBSymbolTypeUDT>(&pdb_symbol);
     assert(udt);
     can_parse = (udt->getUdtKind() != PDB_UdtType::Interface &&
         ((type_mask & (eTypeClassClass | eTypeClassStruct |
@@ -1202,7 +1120,7 @@ SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol *pdb_symbol,
   }
 
   if (can_parse) {
-    if (auto *type = ResolveTypeUID(pdb_symbol->getSymIndexId())) {
+    if (auto *type = ResolveTypeUID(pdb_symbol.getSymIndexId())) {
       auto result =
           std::find(type_collection.begin(), type_collection.end(), type);
       if (result == type_collection.end())
@@ -1210,9 +1128,9 @@ SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol *pdb_symbol,
     }
   }
 
-  auto results_up = pdb_symbol->findAllChildren();
+  auto results_up = pdb_symbol.findAllChildren();
   while (auto symbol_up = results_up->getNext())
-    GetTypesForPDBSymbol(symbol_up.get(), type_mask, type_collection);
+    GetTypesForPDBSymbol(*symbol_up, type_mask, type_collection);
 }
 
 size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
@@ -1224,13 +1142,15 @@ size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
       sc_scope->CalculateSymbolContextCompileUnit() : nullptr;
   if (cu) {
     auto compiland_up = GetPDBCompilandByUID(cu->GetID());
-    GetTypesForPDBSymbol(compiland_up.get(), type_mask, type_collection);
+    if (!compiland_up)
+      return 0;
+    GetTypesForPDBSymbol(*compiland_up, type_mask, type_collection);
   } else {
     for (uint32_t cu_idx = 0; cu_idx < GetNumCompileUnits(); ++cu_idx) {
       auto cu_sp = ParseCompileUnitAtIndex(cu_idx);
       if (cu_sp.get()) {
-        auto compiland_up = GetPDBCompilandByUID(cu_sp->GetID());
-        GetTypesForPDBSymbol(compiland_up.get(), type_mask, type_collection);
+        if (auto compiland_up = GetPDBCompilandByUID(cu_sp->GetID()))
+          GetTypesForPDBSymbol(*compiland_up, type_mask, type_collection);
       }
     }
   }
@@ -1291,7 +1211,7 @@ SymbolFilePDB::ParseCompileUnitForUID(uint32_t id, uint32_t index) {
   if (lang == lldb::LanguageType::eLanguageTypeUnknown)
     return CompUnitSP();
 
-  std::string path = GetSourceFileNameForPDBCompiland(compiland_up.get());
+  std::string path = compiland_up->getSourceFileFullPath();
   if (path.empty())
     return CompUnitSP();
 
@@ -1306,7 +1226,7 @@ SymbolFilePDB::ParseCompileUnitForUID(uint32_t id, uint32_t index) {
 
   m_comp_units.insert(std::make_pair(id, cu_sp));
   if (index == UINT32_MAX)
-    GetCompileUnitIndex(compiland_up.get(), index);
+    GetCompileUnitIndex(*compiland_up, index);
   lldbassert(index != UINT32_MAX);
   m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
       index, cu_sp);
@@ -1459,13 +1379,10 @@ lldb::CompUnitSP SymbolFilePDB::GetCompileUnitContainsAddress(
 }
 
 Mangled
-SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc *pdb_func) {
+SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
   Mangled mangled;
-  if (!pdb_func)
-    return mangled;
-
-  auto func_name = pdb_func->getName();
-  auto func_undecorated_name = pdb_func->getUndecoratedName();
+  auto func_name = pdb_func.getName();
+  auto func_undecorated_name = pdb_func.getUndecoratedName();
   std::string func_decorated_name;
 
   // Seek from public symbols for non-static function's decorated name if any.
