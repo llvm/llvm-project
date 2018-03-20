@@ -1698,6 +1698,7 @@ void ASTStmtWriter::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getSourceExpr());
   Record.AddSourceLocation(E->getLocation());
+  Record.push_back(E->isUnique());
   Code = serialization::EXPR_OPAQUE_VALUE;
 }
 
