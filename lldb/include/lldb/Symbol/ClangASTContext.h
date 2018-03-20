@@ -261,6 +261,9 @@ public:
           &type_fields,
       bool packed = false);
 
+  static bool IsOperator(const char *name,
+                         clang::OverloadedOperatorKind &op_kind);
+
   //------------------------------------------------------------------
   // Structure, Unions, Classes
   //------------------------------------------------------------------
