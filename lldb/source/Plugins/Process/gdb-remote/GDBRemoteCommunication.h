@@ -27,7 +27,7 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/lldb-public.h"
 
-#include "Utility/StringExtractorGDBRemote.h"
+#include "lldb/Utility/StringExtractorGDBRemote.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {

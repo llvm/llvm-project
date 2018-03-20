@@ -701,7 +701,8 @@ private:
         else
           Tok->Type = TT_InheritanceColon;
       } else if (Tok->Previous->is(tok::identifier) && Tok->Next &&
-                 Tok->Next->isOneOf(tok::r_paren, tok::comma)) {
+                 (Tok->Next->isOneOf(tok::r_paren, tok::comma) ||
+                  Tok->Next->startsSequence(tok::identifier, tok::colon))) {
         // This handles a special macro in ObjC code where selectors including
         // the colon are passed as macro arguments.
         Tok->Type = TT_ObjCMethodExpr;

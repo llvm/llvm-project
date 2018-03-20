@@ -2295,6 +2295,32 @@ or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
 seq\_cst total orderings of other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
+.. _floatenv:
+
+Floating-Point Environment
+--------------------------
+
+The default LLVM floating-point environment assumes that floating-point
+instructions do not have side effects. Results assume the round-to-nearest
+rounding mode. No floating-point exception state is maintained in this
+environment. Therefore, there is no attempt to create or preserve invalid
+operation (SNaN) or division-by-zero exceptions in these examples:
+
+.. code-block:: llvm
+
+      %A = fdiv 0x7ff0000000000001, %X  ; 64-bit SNaN hex value 
+      %B = fdiv %X, 0.0
+    Safe:
+      %A = NaN
+      %B = NaN
+
+The benefit of this exception-free assumption is that floating-point
+operations may be speculated freely without any other fast-math relaxations
+to the floating-point model.
+
+Code that requires different behavior than this should use the
+:ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
+
 .. _fastmath:
 
 Fast-Math Flags
@@ -6415,9 +6441,8 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point sum of the two operands.
-This instruction is assumed to execute in the default floating-point
-environment. It has no side effects. Users can not assume that any 
-floating-point exception state is updated by this instruction.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6513,9 +6538,8 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point difference of the two operands.
-This instruction is assumed to execute in the default floating-point
-environment. It has no side effects. Users can not assume that any 
-floating-point exception state is updated by this instruction.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6609,9 +6633,8 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point product of the two operands.
-This instruction is assumed to execute in the default floating-point
-environment. It has no side effects. Users can not assume that any 
-floating-point exception state is updated by this instruction.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6744,9 +6767,8 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point quotient of the two operands.
-This instruction is assumed to execute in the default floating-point
-environment. It has no side effects. Users can not assume that any 
-floating-point exception state is updated by this instruction.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -6891,9 +6913,8 @@ The value produced is the floating-point remainder of the two operands.
 This is the same output as a libm '``fmod``' function, but without any
 possibility of setting ``errno``. The remainder has the same sign as the 
 dividend.
-This instruction is assumed to execute in the default floating-point
-environment. It has no side effects. Users can not assume that any 
-floating-point exception state is updated by this instruction.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -12905,6 +12926,8 @@ Semantics:
 
 Returns another pointer that aliases its argument but which is considered different
 for the purposes of ``load``/``store`` ``invariant.group`` metadata.
+
+.. _constrainedfp:
 
 Constrained Floating Point Intrinsics
 -------------------------------------

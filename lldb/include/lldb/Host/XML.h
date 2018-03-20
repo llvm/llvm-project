@@ -82,6 +82,9 @@ public:
   llvm::StringRef GetAttributeValue(const char *name,
                                     const char *fail_value = nullptr) const;
 
+  bool GetAttributeValueAsUnsigned(const char *name, uint64_t &value,
+                                   uint64_t fail_value = 0, int base = 0) const;
+
   XMLNode FindFirstChildElementWithName(const char *name) const;
 
   XMLNode GetElementForPath(const NamePath &path);

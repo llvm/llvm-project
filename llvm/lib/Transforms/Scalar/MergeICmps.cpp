@@ -403,6 +403,18 @@ bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI) {
     Phi_.removeIncomingValue(Comparison.BB, false);
   }
 
+  // If entry block is part of the chain, we need to make the first block
+  // of the chain the new entry block of the function.
+  BasicBlock *Entry = &Comparisons_[0].BB->getParent()->getEntryBlock();
+  for (size_t I = 1; I < Comparisons_.size(); ++I) {
+    if (Entry == Comparisons_[I].BB) {
+      BasicBlock *NEntryBB = BasicBlock::Create(Entry->getContext(), "",
+                                                Entry->getParent(), Entry);
+      BranchInst::Create(Entry, NEntryBB);
+      break;
+    }
+  }
+
   // Point the predecessors of the chain to the first comparison block (which is
   // the new entry point).
   if (EntryBlock_ != Comparisons_[0].BB)

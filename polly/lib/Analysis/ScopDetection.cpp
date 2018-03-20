@@ -304,7 +304,6 @@ public:
     return DI->getKind() == PluginDiagnosticKind;
   }
 };
-
 } // namespace
 
 int DiagnosticScopFound::PluginDiagnosticKind =
@@ -854,7 +853,6 @@ public:
 private:
   std::vector<const SCEV *> *Terms;
 };
-
 } // namespace
 
 SmallVector<const SCEV *, 4>

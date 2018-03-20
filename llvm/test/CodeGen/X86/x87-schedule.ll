@@ -2872,9 +2872,9 @@ define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fld1 # sched: [1:?]
-; HASWELL-NEXT:    fldl2e # sched: [100:0.25]
-; HASWELL-NEXT:    fldl2t # sched: [100:0.25]
-; HASWELL-NEXT:    fldln2 # sched: [100:0.25]
+; HASWELL-NEXT:    fldl2e # sched: [1:0.50]
+; HASWELL-NEXT:    fldl2t # sched: [1:0.50]
+; HASWELL-NEXT:    fldln2 # sched: [1:0.50]
 ; HASWELL-NEXT:    fldpi # sched: [1:0.50]
 ; HASWELL-NEXT:    fldz # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
@@ -2932,9 +2932,9 @@ define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    fld1 # sched: [11:1.00]
-; ZNVER1-NEXT:    fldl2e # sched: [100:?]
-; ZNVER1-NEXT:    fldl2t # sched: [100:?]
-; ZNVER1-NEXT:    fldln2 # sched: [100:?]
+; ZNVER1-NEXT:    fldl2e # sched: [11:1.00]
+; ZNVER1-NEXT:    fldl2t # sched: [11:1.00]
+; ZNVER1-NEXT:    fldln2 # sched: [11:1.00]
 ; ZNVER1-NEXT:    fldpi # sched: [11:1.00]
 ; ZNVER1-NEXT:    fldz # sched: [8:0.50]
 ; ZNVER1-NEXT:    #NO_APP

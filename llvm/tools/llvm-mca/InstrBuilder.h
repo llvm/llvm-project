@@ -16,6 +16,7 @@
 #define LLVM_TOOLS_LLVM_MCA_INSTRBUILDER_H
 
 #include "Instruction.h"
+#include "Support.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -34,28 +35,27 @@ class DispatchUnit;
 /// Information from the machine scheduling model is used to identify processor
 /// resources that are consumed by an instruction.
 class InstrBuilder {
+  const llvm::MCSubtargetInfo &STI;
   const llvm::MCInstrInfo &MCII;
-  const llvm::ArrayRef<uint64_t> ProcResourceMasks;
+  llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
 
   llvm::DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
   llvm::DenseMap<unsigned, std::unique_ptr<Instruction>> Instructions;
 
-  void createInstrDescImpl(const llvm::MCSubtargetInfo &STI,
-                           const llvm::MCInst &MCI);
+  void createInstrDescImpl(const llvm::MCInst &MCI);
 
 public:
-  InstrBuilder(const llvm::MCInstrInfo &mcii,
-               const llvm::ArrayRef<uint64_t> Masks)
-      : MCII(mcii), ProcResourceMasks(Masks) {}
+  InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii)
+      : STI(sti), MCII(mcii),
+        ProcResourceMasks(STI.getSchedModel().getNumProcResourceKinds()) {
+    computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
+  }
 
-  const InstrDesc &getOrCreateInstrDesc(const llvm::MCSubtargetInfo &STI,
-                                        const llvm::MCInst &MCI);
+  const InstrDesc &getOrCreateInstrDesc(const llvm::MCInst &MCI);
 
-  Instruction *createInstruction(const llvm::MCSubtargetInfo &STI,
-                                 unsigned Idx,
-                                 const llvm::MCInst &MCI);
+  std::unique_ptr<Instruction> createInstruction(unsigned Idx,
+                                                 const llvm::MCInst &MCI);
 };
-
 } // namespace mca
 
 #endif

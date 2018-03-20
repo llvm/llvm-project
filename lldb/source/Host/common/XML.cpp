@@ -151,6 +151,18 @@ llvm::StringRef XMLNode::GetAttributeValue(const char *name,
     return llvm::StringRef();
 }
 
+bool XMLNode::GetAttributeValueAsUnsigned(const char *name, uint64_t &value,
+                                          uint64_t fail_value, int base) const {
+#if defined(LIBXML2_DEFINED)
+  llvm::StringRef str_value = GetAttributeValue(name, "");
+#else
+  llvm::StringRef str_value;
+#endif
+  bool success = false;
+  value = StringConvert::ToUInt64(str_value.data(), fail_value, base, &success);
+  return success;
+}
+
 void XMLNode::ForEachChildNode(NodeCallback const &callback) const {
 #if defined(LIBXML2_DEFINED)
   if (IsValid())

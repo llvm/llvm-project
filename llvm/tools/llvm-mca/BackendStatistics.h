@@ -85,6 +85,17 @@ class BackendStatistics : public View {
   // is one counter for every generic stall kind (see class HWStallEvent).
   llvm::SmallVector<unsigned, 8> HWStalls;
 
+  // Tracks the usage of a scheduler's queue.
+  struct BufferUsage {
+    unsigned SlotsInUse;
+    unsigned MaxUsedSlots;
+  };
+
+  // There is a map entry for each buffered resource in the scheduling model.
+  // Every time a buffer is consumed/freed, this view updates the corresponding
+  // entry.
+  llvm::DenseMap<unsigned, BufferUsage> BufferedResources;
+
   void updateHistograms() {
     DispatchGroupSizePerCycle[NumDispatched]++;
     IssuedPerCycle[NumIssued]++;
@@ -107,8 +118,8 @@ class BackendStatistics : public View {
                               unsigned Cycles) const;
   void printIssuePerCycle(const Histogram &IssuePerCycle,
                           unsigned TotalCycles) const;
-  void printSchedulerUsage(llvm::raw_ostream &OS, const llvm::MCSchedModel &SM,
-                           const llvm::ArrayRef<BufferUsageEntry> &Usage) const;
+  void printSchedulerUsage(llvm::raw_ostream &OS,
+                           const llvm::MCSchedModel &SM) const;
 
 public:
   BackendStatistics(const Backend &backend, const llvm::MCSubtargetInfo &sti)
@@ -126,6 +137,14 @@ public:
       HWStalls[Event.Type]++;
   }
 
+  // Increases the number of used scheduler queue slots of every buffered
+  // resource in the Buffers set.
+  void onReservedBuffers(llvm::ArrayRef<unsigned> Buffers);
+
+  // Decreases by one the number of used scheduler queue slots of every
+  // buffered resource in the Buffers set.
+  void onReleasedBuffers(llvm::ArrayRef<unsigned> Buffers);
+
   void printView(llvm::raw_ostream &OS) const override {
     printDispatchStalls(OS);
     printRATStatistics(OS, B.getTotalRegisterMappingsCreated(),
@@ -134,12 +153,9 @@ public:
     printSchedulerStatistics(OS);
     printRetireUnitStatistics(OS);
 
-    std::vector<BufferUsageEntry> Usage;
-    B.getBuffersUsage(Usage);
-    printSchedulerUsage(OS, STI.getSchedModel(), Usage);
+    printSchedulerUsage(OS, STI.getSchedModel());
   }
 };
-
 } // namespace mca
 
 #endif

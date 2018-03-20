@@ -123,6 +123,11 @@ DwarfInlinedStrings("dwarf-inlined-strings", cl::Hidden,
                             clEnumVal(Disable, "Disabled")),
                  cl::init(Default));
 
+static cl::opt<bool>
+    NoDwarfPubSections("no-dwarf-pub-sections", cl::Hidden,
+                       cl::desc("Disable emission of DWARF pub sections."),
+                       cl::init(false));
+
 enum LinkageNameOption {
   DefaultLinkageNames,
   AllLinkageNames,
@@ -309,6 +314,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
                                     : MMI->getModule()->getDwarfVersion();
   // Use dwarf 4 by default if nothing is requested.
   DwarfVersion = DwarfVersion ? DwarfVersion : dwarf::DWARF_VERSION;
+
+  UsePubSections = !NoDwarfPubSections;
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
