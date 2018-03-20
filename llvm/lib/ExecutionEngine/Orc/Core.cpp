@@ -104,8 +104,7 @@ operator=(JITEvaluatedSymbol Sym) {
 
 void VSO::SymbolTableEntry::destroy() {
   if (!Flags.isMaterialized())
-    MaterializationInfoItr
-        .MaterializationInfoIterator::~MaterializationInfoIterator();
+    MaterializationInfoItr.~MaterializationInfoIterator();
 }
 
 JITSymbolFlags VSO::SymbolTableEntry::getFlags() const { return Flags; }
@@ -224,8 +223,7 @@ void VSO::SymbolTableEntry::finalize(VSO &V, SymbolStringPtr Name) {
 
     // Destruct the iterator and re-define this entry using the final symbol
     // value.
-    MaterializationInfoItr
-        .MaterializationInfoIterator::~MaterializationInfoIterator();
+    destroy();
     Flags = Sym.getFlags();
     Address = Sym.getAddress();
   }

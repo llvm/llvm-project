@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Scheduler.h"
 #include "Backend.h"
 #include "HWEventListener.h"
+#include "Scheduler.h"
+#include "Support.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -43,6 +44,12 @@ void ResourceState::dump() const {
 }
 #endif
 
+void ResourceManager::initialize(const llvm::MCSchedModel &SM) {
+  computeProcResourceMasks(SM, ProcResID2Mask);
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I)
+    addResource(*SM.getProcResource(I), I, ProcResID2Mask[I]);
+}
+
 // Adds a new resource state in Resources, as well as a new descriptor in
 // ResourceDescriptor. Map 'Resources' allows to quickly obtain ResourceState
 // objects from resource mask identifiers.
@@ -50,36 +57,6 @@ void ResourceManager::addResource(const MCProcResourceDesc &Desc,
                                   unsigned Index, uint64_t Mask) {
   assert(Resources.find(Mask) == Resources.end() && "Resource already added!");
   Resources[Mask] = llvm::make_unique<ResourceState>(Desc, Index, Mask);
-}
-
-// Populate vector ProcResID2Mask with resource masks. One per each processor
-// resource declared by the scheduling model.
-void ResourceManager::computeProcResourceMasks(const MCSchedModel &SM) {
-  unsigned ProcResourceID = 0;
-
-  // Create a unique bitmask for every processor resource unit.
-  // Skip resource at index 0, since it always references 'InvalidUnit'.
-  ProcResID2Mask.resize(SM.getNumProcResourceKinds());
-  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    const MCProcResourceDesc &Desc = *SM.getProcResource(I);
-    if (Desc.SubUnitsIdxBegin)
-      continue;
-    ProcResID2Mask[I] = 1ULL << ProcResourceID;
-    ProcResourceID++;
-  }
-
-  // Create a unique bitmask for every processor resource group.
-  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    const MCProcResourceDesc &Desc = *SM.getProcResource(I);
-    if (!Desc.SubUnitsIdxBegin)
-      continue;
-    ProcResID2Mask[I] |= 1ULL << ProcResourceID;
-    for (unsigned U = 0; U < Desc.NumUnits; ++U) {
-      uint64_t OtherMask = ProcResID2Mask[Desc.SubUnitsIdxBegin[U]];
-      ProcResID2Mask[I] |= OtherMask;
-    }
-    ProcResourceID++;
-  }
 }
 
 // Returns the actual resource consumed by this Use.

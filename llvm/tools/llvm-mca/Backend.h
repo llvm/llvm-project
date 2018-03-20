@@ -72,7 +72,7 @@ public:
             this, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
             RegisterFileSize, MaxRetirePerCycle, DispatchWidth, HWS.get())),
         SM(Source), Cycles(0) {
-    IB = llvm::make_unique<InstrBuilder>(MCII, HWS->getProcResourceMasks());
+    IB = llvm::make_unique<InstrBuilder>(Subtarget, MCII);
     HWS->setDispatchUnit(DU.get());
   }
 

@@ -1685,7 +1685,3 @@ bool Module::GetIsDynamicLinkEditor() {
 
   return false;
 }
-
-Status Module::LoadInMemory(Target &target, bool set_pc) {
-  return m_objfile_sp->LoadInMemory(target, set_pc);
-}

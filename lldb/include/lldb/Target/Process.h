@@ -38,6 +38,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
@@ -1949,6 +1950,8 @@ public:
         GetPluginName().GetCString());
     return LLDB_INVALID_ADDRESS;
   }
+
+  virtual Status WriteObjectFile(std::vector<ObjectFile::LoadableData> entries);
 
   //------------------------------------------------------------------
   /// The public interface to allocating memory in the process.

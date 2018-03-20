@@ -3,6 +3,7 @@
 ; if DoneMBB does not have CC in its live-in list.
 
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -misched=shuffle | FileCheck %s
+; REQUIRES: asserts
 
 declare i32 @memcmp(i8* nocapture, i8* nocapture, i64)
 
