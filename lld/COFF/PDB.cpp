@@ -85,10 +85,17 @@ class PDBLinker {
 public:
   PDBLinker(SymbolTable *Symtab)
       : Alloc(), Symtab(Symtab), Builder(Alloc), TypeTable(Alloc),
-        IDTable(Alloc), GlobalTypeTable(Alloc), GlobalIDTable(Alloc) {}
+        IDTable(Alloc), GlobalTypeTable(Alloc), GlobalIDTable(Alloc) {
+    // It's not clear why this is needed, but injected sources (e.g. natvis files)
+    // can file to be located if this is not present.
+    PDBStrTab.insert("");
+  }
 
   /// Emit the basic PDB structure: initial streams, headers, etc.
   void initialize(const llvm::codeview::DebugInfo &BuildId);
+
+  /// Add natvis files specified on the command line.
+  void addNatvisFiles();
 
   /// Link CodeView from each object file in the symbol table into the PDB.
   void addObjectsToPDB();
@@ -961,6 +968,18 @@ void PDBLinker::addObjectsToPDB() {
   }
 }
 
+void PDBLinker::addNatvisFiles() {
+  for (StringRef File : Config->NatvisFiles) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> DataOrErr =
+        MemoryBuffer::getFile(File);
+    if (!DataOrErr) {
+      warn("Cannot open input file: " + File);
+      continue;
+    }
+    Builder.addInjectedSource(File, std::move(*DataOrErr));
+  }
+}
+
 static void addCommonLinkerModuleSymbols(StringRef Path,
                                          pdb::DbiModuleDescriptorBuilder &Mod,
                                          BumpPtrAllocator &Allocator) {
@@ -1038,9 +1057,11 @@ void coff::createPDB(SymbolTable *Symtab,
                      const llvm::codeview::DebugInfo &BuildId) {
   ScopedTimer T1(TotalPdbLinkTimer);
   PDBLinker PDB(Symtab);
+
   PDB.initialize(BuildId);
   PDB.addObjectsToPDB();
   PDB.addSections(OutputSections, SectionTable);
+  PDB.addNatvisFiles();
 
   ScopedTimer T2(DiskCommitTimer);
   PDB.commit();

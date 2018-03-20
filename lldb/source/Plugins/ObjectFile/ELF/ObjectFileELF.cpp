@@ -3442,3 +3442,38 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
   section_data.SetData(buffer_sp);
   return buffer_sp->GetByteSize();
 }
+
+bool ObjectFileELF::AnySegmentHasPhysicalAddress() {
+  size_t header_count = ParseProgramHeaders();
+  for (size_t i = 1; i <= header_count; ++i) {
+    auto header = GetProgramHeaderByIndex(i);
+    if (header->p_paddr != 0)
+      return true;
+  }
+  return false;
+}
+
+std::vector<ObjectFile::LoadableData>
+ObjectFileELF::GetLoadableData(Target &target) {
+  // Create a list of loadable data from loadable segments,
+  // using physical addresses if they aren't all null
+  std::vector<LoadableData> loadables;
+  size_t header_count = ParseProgramHeaders();
+  bool should_use_paddr = AnySegmentHasPhysicalAddress();
+  for (size_t i = 1; i <= header_count; ++i) {
+    LoadableData loadable;
+    auto header = GetProgramHeaderByIndex(i);
+    if (header->p_type != llvm::ELF::PT_LOAD)
+      continue;
+    loadable.Dest = should_use_paddr ? header->p_paddr : header->p_vaddr;
+    if (loadable.Dest == LLDB_INVALID_ADDRESS)
+      continue;
+    if (header->p_filesz == 0)
+      continue;
+    auto segment_data = GetSegmentDataByIndex(i);
+    loadable.Contents = llvm::ArrayRef<uint8_t>(segment_data.GetDataStart(),
+                                                segment_data.GetByteSize());
+    loadables.push_back(loadable);
+  }
+  return loadables;
+}

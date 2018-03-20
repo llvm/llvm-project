@@ -115,5 +115,4 @@ inline isl::pw_aff operator%(isl::pw_aff A, int i) {
   isl::ctx ctx = A.get_ctx();
   return A % isl::val(ctx, i);
 }
-
 } // namespace polly

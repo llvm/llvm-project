@@ -161,6 +161,11 @@ public:
 
   void RelocateSection(lldb_private::Section *section) override;
 
+protected:
+
+  std::vector<LoadableData>
+  GetLoadableData(lldb_private::Target &target) override;
+
 private:
   ObjectFileELF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
@@ -383,6 +388,8 @@ private:
   RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
                               lldb_private::ArchSpec &arch_spec,
                               lldb_private::UUID &uuid);
+
+  bool AnySegmentHasPhysicalAddress();
 };
 
 #endif // liblldb_ObjectFileELF_h_

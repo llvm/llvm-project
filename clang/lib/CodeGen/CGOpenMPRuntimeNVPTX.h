@@ -342,9 +342,11 @@ private:
   using EscapedParamsTy = llvm::SmallPtrSet<const Decl *, 4>;
   struct FunctionData {
     DeclToAddrMapTy LocalVarData;
+    EscapedParamsTy EscapedParameters;
+    llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
+    llvm::SmallVector<llvm::Value *, 4> EscapedVariableLengthDeclsAddrs;
     const RecordDecl *GlobalRecord = nullptr;
     llvm::Value *GlobalRecordAddr = nullptr;
-    EscapedParamsTy EscapedParameters;
     std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;
   };
   /// Maps the function to the list of the globalized variables with their

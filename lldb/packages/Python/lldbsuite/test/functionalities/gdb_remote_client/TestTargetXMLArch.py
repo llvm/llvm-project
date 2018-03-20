@@ -121,4 +121,4 @@ class TestTargetXMLArch(GDBRemoteTestBase):
         if self.TraceOn():
             interp.HandleCommand("target list", result)
             print(result.GetOutput())
-        self.assertEqual('x86_64--', target.GetTriple())
+        self.assertTrue(target.GetTriple().startswith('x86_64--'))

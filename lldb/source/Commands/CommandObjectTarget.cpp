@@ -45,6 +45,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
@@ -2746,10 +2747,33 @@ protected:
                     process->Flush();
                 }
                 if (load) {
-                  Status error = module->LoadInMemory(*target, set_pc);
+                  ProcessSP process = target->CalculateProcess();
+                  Address file_entry = objfile->GetEntryPointAddress();
+                  if (!process) {
+                    result.AppendError("No process");
+                    return false;
+                  }
+                  if (set_pc && !file_entry.IsValid()) {
+                    result.AppendError("No entry address in object file");
+                    return false;
+                  }
+                  std::vector<ObjectFile::LoadableData> loadables(
+                      objfile->GetLoadableData(*target));
+                  if (loadables.size() == 0) {
+                    result.AppendError("No loadable sections");
+                    return false;
+                  }
+                  Status error = process->WriteObjectFile(std::move(loadables));
                   if (error.Fail()) {
                     result.AppendError(error.AsCString());
                     return false;
+                  }
+                  if (set_pc) {
+                    ThreadList &thread_list = process->GetThreadList();
+                    ThreadSP curr_thread(thread_list.GetSelectedThread());
+                    RegisterContextSP reg_context(
+                        curr_thread->GetRegisterContext());
+                    reg_context->SetPC(file_entry.GetLoadAddress(target));
                   }
                 }
               } else {
