@@ -4202,7 +4202,9 @@ void Sema::InstantiateVariableInitializer(
       Var->setInvalidDecl();
     }
   } else {
-    if (Var->isStaticDataMember()) {
+    // `inline` variables are a definition and declaration all in one; we won't
+    // pick up an initializer from anywhere else.
+    if (Var->isStaticDataMember() && !Var->isInline()) {
       if (!Var->isOutOfLine())
         return;
 

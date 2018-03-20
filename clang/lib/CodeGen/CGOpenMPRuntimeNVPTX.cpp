@@ -608,7 +608,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericEntryHeader(CodeGenFunction &CGF,
   Bld.CreateCondBr(IsWorker, WorkerBB, MasterCheckBB);
 
   CGF.EmitBlock(WorkerBB);
-  emitOutlinedFunctionCall(CGF, WST.Loc, WST.WorkerFn);
+  emitCall(CGF, WST.Loc, WST.WorkerFn);
   CGF.EmitBranch(EST.ExitBB);
 
   CGF.EmitBlock(MasterCheckBB);
@@ -831,10 +831,9 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
     // Insert call to work function via shared wrapper. The shared
     // wrapper takes two arguments:
     //   - the parallelism level;
-    //   - the master thread ID;
-    emitOutlinedFunctionCall(CGF, WST.Loc, W,
-                             {Bld.getInt16(/*ParallelLevel=*/0),
-                              getMasterThreadID(CGF)});
+    //   - the thread ID;
+    emitCall(CGF, WST.Loc, W,
+             {Bld.getInt16(/*ParallelLevel=*/0), getThreadID(CGF, WST.Loc)});
 
     // Go to end of parallel region.
     CGF.EmitBranch(TerminateBB);
@@ -1316,12 +1315,12 @@ void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
   if (!CGF.HaveInsertPoint())
     return;
 
-  Address ZeroAddr =
-      CGF.CreateTempAlloca(CGF.Int32Ty, CharUnits::fromQuantity(4),
-                           /*Name*/ ".zero.addr");
+  Address ZeroAddr = CGF.CreateMemTemp(
+      CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1),
+      /*Name*/ ".zero.addr");
   CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
   llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
-  OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+  OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).getPointer());
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
@@ -1350,7 +1349,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
   // Force inline this outlined function at its call site.
   Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 
-  auto &&L0ParallelGen = [this, WFn, &CapturedVars](CodeGenFunction &CGF,
+  auto &&L0ParallelGen = [this, WFn, CapturedVars](CodeGenFunction &CGF,
                                                     PrePostActionTy &) {
     CGBuilderTy &Bld = CGF.Builder;
 
@@ -1420,17 +1419,20 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
   auto *ThreadID = getThreadID(CGF, Loc);
   llvm::Value *Args[] = {RTLoc, ThreadID};
 
-  auto &&SeqGen = [this, Fn, &CapturedVars, &Args, Loc](CodeGenFunction &CGF,
-                                                        PrePostActionTy &) {
-    auto &&CodeGen = [this, Fn, &CapturedVars, Loc](CodeGenFunction &CGF,
-                                                    PrePostActionTy &Action) {
+  auto &&SeqGen = [this, Fn, CapturedVars, &Args, Loc](CodeGenFunction &CGF,
+                                                       PrePostActionTy &) {
+    auto &&CodeGen = [this, Fn, CapturedVars, Loc](CodeGenFunction &CGF,
+                                                   PrePostActionTy &Action) {
       Action.Enter(CGF);
 
       llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
-      OutlinedFnArgs.push_back(
-          llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
-      OutlinedFnArgs.push_back(
-          llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
+      Address ZeroAddr =
+          CGF.CreateMemTemp(CGF.getContext().getIntTypeForBitwidth(
+                                /*DestWidth=*/32, /*Signed=*/1),
+                            ".zero.addr");
+      CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
+      OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).getPointer());
+      OutlinedFnArgs.push_back(ZeroAddr.getPointer());
       OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
       emitOutlinedFunctionCall(CGF, Loc, Fn, OutlinedFnArgs);
     };
@@ -1468,56 +1470,60 @@ void CGOpenMPRuntimeNVPTX::emitSpmdParallelCall(
       CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1),
       ".zero.addr");
   CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
-  OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+  OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).getPointer());
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }
 
 /// Cast value to the specified type.
-static llvm::Value *
-castValueToType(CodeGenFunction &CGF, llvm::Value *Val, llvm::Type *CastTy,
-                llvm::Optional<bool> IsSigned = llvm::None) {
-  if (Val->getType() == CastTy)
+static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
+                                    QualType ValTy, QualType CastTy,
+                                    SourceLocation Loc) {
+  assert(!CGF.getContext().getTypeSizeInChars(CastTy).isZero() &&
+         "Cast type must sized.");
+  assert(!CGF.getContext().getTypeSizeInChars(ValTy).isZero() &&
+         "Val type must sized.");
+  llvm::Type *LLVMCastTy = CGF.ConvertTypeForMem(CastTy);
+  if (ValTy == CastTy)
     return Val;
-  if (Val->getType()->getPrimitiveSizeInBits() > 0 &&
-      CastTy->getPrimitiveSizeInBits() > 0 &&
-      Val->getType()->getPrimitiveSizeInBits() ==
-          CastTy->getPrimitiveSizeInBits())
-    return CGF.Builder.CreateBitCast(Val, CastTy);
-  if (IsSigned.hasValue() && CastTy->isIntegerTy() &&
-      Val->getType()->isIntegerTy())
-    return CGF.Builder.CreateIntCast(Val, CastTy, *IsSigned);
-  Address CastItem = CGF.CreateTempAlloca(
-      CastTy,
-      CharUnits::fromQuantity(
-          CGF.CGM.getDataLayout().getPrefTypeAlignment(Val->getType())));
+  if (CGF.getContext().getTypeSizeInChars(ValTy) ==
+      CGF.getContext().getTypeSizeInChars(CastTy))
+    return CGF.Builder.CreateBitCast(Val, LLVMCastTy);
+  if (CastTy->isIntegerType() && ValTy->isIntegerType())
+    return CGF.Builder.CreateIntCast(Val, LLVMCastTy,
+                                     CastTy->hasSignedIntegerRepresentation());
+  Address CastItem = CGF.CreateMemTemp(CastTy);
   Address ValCastItem = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       CastItem, Val->getType()->getPointerTo(CastItem.getAddressSpace()));
-  CGF.Builder.CreateStore(Val, ValCastItem);
-  return CGF.Builder.CreateLoad(CastItem);
+  CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy);
+  return CGF.EmitLoadOfScalar(CastItem, /*Volatile=*/false, CastTy, Loc);
 }
 
 /// This function creates calls to one of two shuffle functions to copy
 /// variables between lanes in a warp.
 static llvm::Value *createRuntimeShuffleFunction(CodeGenFunction &CGF,
                                                  llvm::Value *Elem,
-                                                 llvm::Value *Offset) {
+                                                 QualType ElemType,
+                                                 llvm::Value *Offset,
+                                                 SourceLocation Loc) {
   auto &CGM = CGF.CGM;
   auto &Bld = CGF.Builder;
   CGOpenMPRuntimeNVPTX &RT =
       *(static_cast<CGOpenMPRuntimeNVPTX *>(&CGM.getOpenMPRuntime()));
 
-  unsigned Size = CGM.getDataLayout().getTypeStoreSize(Elem->getType());
-  assert(Size <= 8 && "Unsupported bitwidth in shuffle instruction.");
+  CharUnits Size = CGF.getContext().getTypeSizeInChars(ElemType);
+  assert(Size.getQuantity() <= 8 &&
+         "Unsupported bitwidth in shuffle instruction.");
 
-  OpenMPRTLFunctionNVPTX ShuffleFn = Size <= 4
+  OpenMPRTLFunctionNVPTX ShuffleFn = Size.getQuantity() <= 4
                                          ? OMPRTL_NVPTX__kmpc_shuffle_int32
                                          : OMPRTL_NVPTX__kmpc_shuffle_int64;
 
   // Cast all types to 32- or 64-bit values before calling shuffle routines.
-  llvm::Type *CastTy = Size <= 4 ? CGM.Int32Ty : CGM.Int64Ty;
-  llvm::Value *ElemCast = castValueToType(CGF, Elem, CastTy, /*isSigned=*/true);
+  QualType CastTy = CGF.getContext().getIntTypeForBitwidth(
+      Size.getQuantity() <= 4 ? 32 : 64, /*Signed=*/1);
+  llvm::Value *ElemCast = castValueToType(CGF, Elem, ElemType, CastTy, Loc);
   auto *WarpSize =
       Bld.CreateIntCast(getNVPTXWarpSize(CGF), CGM.Int16Ty, /*isSigned=*/true);
 
@@ -1525,7 +1531,7 @@ static llvm::Value *createRuntimeShuffleFunction(CodeGenFunction &CGF,
       CGF.EmitRuntimeCall(RT.createNVPTXRuntimeFunction(ShuffleFn),
                           {ElemCast, Offset, WarpSize});
 
-  return castValueToType(CGF, ShuffledVal, Elem->getType(), /*isSigned=*/true);
+  return castValueToType(CGF, ShuffledVal, CastTy, ElemType, Loc);
 }
 
 namespace {
@@ -1679,8 +1685,11 @@ static void emitReductionListCopy(
 
     // Now that all active lanes have read the element in the
     // Reduce list, shuffle over the value from the remote lane.
-    if (ShuffleInElement)
-      Elem = createRuntimeShuffleFunction(CGF, Elem, RemoteLaneOffset);
+    if (ShuffleInElement) {
+      Elem =
+          createRuntimeShuffleFunction(CGF, Elem, Private->getType(),
+                                       RemoteLaneOffset, Private->getExprLoc());
+    }
 
     DestElementAddr = Bld.CreateElementBitCast(DestElementAddr,
                                                SrcElementAddr.getElementType());
@@ -2873,14 +2882,15 @@ llvm::Function *CGOpenMPRuntimeNVPTX::createParallelDataSharingWrapper(
   const auto *RD = CS.getCapturedRecordDecl();
   auto CurField = RD->field_begin();
 
+  Address ZeroAddr = CGF.CreateMemTemp(
+      CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1),
+      /*Name*/ ".zero.addr");
+  CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
   // Get the array of arguments.
   SmallVector<llvm::Value *, 8> Args;
 
-  // TODO: suppport SIMD and pass actual values
-  Args.emplace_back(
-      llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
-  Args.emplace_back(
-      llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
+  Args.emplace_back(CGF.GetAddrOfLocalVar(&WrapperArg).getPointer());
+  Args.emplace_back(ZeroAddr.getPointer());
 
   CGBuilderTy &Bld = CGF.Builder;
   auto CI = CS.capture_begin();

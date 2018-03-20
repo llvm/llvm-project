@@ -190,3 +190,11 @@ void g() {}
 #pragma intrinsic(asdf) // no-warning
 #pragma clang diagnostic pop
 #pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+
+#pragma optimize          // expected-warning{{missing '(' after '#pragma optimize'}}
+#pragma optimize(         // expected-warning{{expected string literal in '#pragma optimize'}}
+#pragma optimize(a        // expected-warning{{expected string literal in '#pragma optimize'}}
+#pragma optimize("g"      // expected-warning{{expected ',' in '#pragma optimize'}}
+#pragma optimize("g",     // expected-warning{{missing argument to '#pragma optimize'; expected 'on' or 'off'}}
+#pragma optimize("g",xyz  // expected-warning{{unexpected argument 'xyz' to '#pragma optimize'; expected 'on' or 'off'}}
+#pragma optimize("g",on)  // expected-warning{{#pragma optimize' is not supported}}
