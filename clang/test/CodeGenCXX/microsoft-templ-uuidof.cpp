@@ -15,6 +15,8 @@ struct __declspec(uuid("{BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB}")) X<B> {};
 
 struct __declspec(uuid("{CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC}")) C {};
 
+// CHECK-DAG: @_GUID_aaaaaaaa_aaaa_aaaa_aaaa_aaaaaaaaaaaa = linkonce_odr dso_local
+
 const _GUID &xa = __uuidof(X<A>);
 // CHECK-DAG:  @"?xa@@3ABU_GUID@@B" = {{.*}} @_GUID_aaaaaaaa_aaaa_aaaa_aaaa_aaaaaaaaaaaa
 

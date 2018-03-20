@@ -12,7 +12,6 @@
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: = add(r{{[0-9]+}},r[[REG0]])
 ; CHECK: = and
-; CHECK: = and
 ; CHECK: r[[REG0]] = and
 ; CHECK: endloop
 

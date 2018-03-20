@@ -16,12 +16,13 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
 name = WebAssembly
 parent = Target
+has_asmparser = 1
 has_asmprinter = 1
 has_disassembler = 1
 

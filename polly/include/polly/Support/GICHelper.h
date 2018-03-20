@@ -430,7 +430,6 @@ public:
     return isl_ctx_last_error(IslCtx) == isl_error_quota;
   }
 };
-
 } // end namespace polly
 
 #endif

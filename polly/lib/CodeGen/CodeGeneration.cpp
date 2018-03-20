@@ -94,7 +94,6 @@ void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
   Builder.CreateUnreachable();
   OrigTerminator->eraseFromParent();
 }
-
 } // namespace polly
 
 static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
@@ -369,7 +368,6 @@ public:
     //        region tree.
   }
 };
-
 } // namespace
 
 PreservedAnalyses CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,

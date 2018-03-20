@@ -15,6 +15,22 @@ def make_wmma_slice_ty(abcd, itype):
 def make_wmma_ld_ret_ty(abc, itype):
   return "{%s}" % ", ".join(make_wmma_slice_ty(abc, itype))
 
+# returns address space
+def get_aspace(space):
+  space_map = {
+      ".global" : 1,
+      ".shared" : 3,
+      ".const"  : 4,
+      ".local"  : 5,
+      ".param"  : 101,
+      ""        : 0,
+      ".generic": 0
+  }
+  return space_map[space];
+
+def get_pspace(space):
+  return "p%di8" % get_aspace(space);
+
 # Convenient test patterns.
 check_f16_8 = "{{%s}}" % ", *".join(["%hh[0-9]+"] * 8)
 check_f16_4 = "{{%s}}" % ", *".join(["%hh[0-9]+"] * 4)
@@ -22,28 +38,28 @@ check_f32_8 = "{{%s}}" % ", *".join(["%f[0-9]+"] * 8)
 
 def gen_wmma_load_tests():
   load_template = """
-declare ${ret_ty} @llvm.nvvm.wmma.load.$intrinsic_suffix(i8* %src ${extra_args});
+declare ${ret_ty} @llvm.nvvm.wmma.load.${intrinsic_suffix}(i8 ${as}* %src ${extra_args});
 
 ; CHECK-LABEL: .func {{.*}}test_wmma_load_${function_suffix}(
-define ${ret_ty} @test_wmma_load_${function_suffix}(i8* %src ${extra_args}) {
+define ${ret_ty} @test_wmma_load_${function_suffix}(i8 ${as}* %src ${extra_args}) {
 ; CHECK wmma.load.${intrinsic_suffix}
 ; CHECK: {${check_result}}
 ; CHECK: [%rd{{[0-9]+}}]${stride_pattern}
-  %v0 = call ${ret_ty} @llvm.nvvm.wmma.load.${intrinsic_suffix}(i8* %src ${extra_args});
+  %v0 = call ${ret_ty} @llvm.nvvm.wmma.load.${intrinsic_suffix}(i8 ${as}* %src ${extra_args});
   ret ${ret_ty} %v0;
 }
 
 ; CHECK-LABEL: .func{{.*}}test_wmma_load_${function_suffix}_o(
-define ${ret_ty} @test_wmma_load_${function_suffix}_o(i8* %src ${extra_args}) {
+define ${ret_ty} @test_wmma_load_${function_suffix}_o(i8 ${as}* %src ${extra_args}) {
 ; CHECK wmma.load.${intrinsic_suffix}
 ; CHECK: {${check_result}}
 ; CHECK: [%rd{{[0-9]+}}+128]${stride_pattern}
-  %src1 = getelementptr i8, i8* %src, i32 128;
-  %v0 = call ${ret_ty} @llvm.nvvm.wmma.load.${intrinsic_suffix}(i8* %src1 ${extra_args});
+  %src1 = getelementptr i8, i8 ${as}* %src, i32 128;
+  %v0 = call ${ret_ty} @llvm.nvvm.wmma.load.${intrinsic_suffix}(i8 ${as}* %src1 ${extra_args});
   ret ${ret_ty} %v0;
 }
 """
-  suffix_template = "${abc}.sync.${layout}.m16n16k16${space}${stride}.${itype}"
+  suffix_template = "${abc}.sync.${layout}.m16n16k16${stride}.${itype}.${pspace}"
   instruction_template = "${abc}.sync.${layout}.m16n16k16${space}.${itype}"
 
   for abc, layout, space, stride, itype in product(
@@ -58,7 +74,9 @@ define ${ret_ty} @test_wmma_load_${function_suffix}_o(i8* %src ${extra_args}) {
         "layout" : layout,
         "space" : space,
         "stride" : stride,
-        "itype" : itype
+        "itype" : itype,
+        "pspace" : get_pspace(space),
+        "as"     : "addrspace(%d)" % get_aspace(space)
     }
 
     if itype == "f32" and abc != "c":
@@ -89,28 +107,28 @@ def make_wmma_slice_args(itype, abcd, prefix="v"):
 
 def gen_wmma_store_tests():
   store_template = """
-declare void @llvm.nvvm.wmma.store.$intrinsic_suffix(i8* %src, ${args}${extra_args});
+declare void @llvm.nvvm.wmma.store.${intrinsic_suffix}(i8 ${as}* %src, ${args}${extra_args});
 
 ; CHECK-LABEL: .func {{.*}}test_wmma_store_${function_suffix}(
-define void @test_wmma_store_${function_suffix}(i8* %src, ${args}${extra_args}) {
+define void @test_wmma_store_${function_suffix}(i8 ${as}* %src, ${args}${extra_args}) {
 ; CHECK wmma.store.${intrinsic_suffix} {{.*}}[%rd{{[0-9+]}}
 ; CHECK: {${check_args}}
 ; CHECK: ${stride_pattern}
-  call void @llvm.nvvm.wmma.store.${intrinsic_suffix}(i8* %src, ${args} ${extra_args});
+  call void @llvm.nvvm.wmma.store.${intrinsic_suffix}(i8 ${as}* %src, ${args} ${extra_args});
   ret void
 }
 
 ; CHECK-LABEL: .func{{.*}}test_wmma_store_${function_suffix}_o(
-define void @test_wmma_store_${function_suffix}_o(i8* %src, ${args}${extra_args}) {
+define void @test_wmma_store_${function_suffix}_o(i8 ${as}* %src, ${args}${extra_args}) {
 ; CHECK wmma.store.${intrinsic_suffix} {{.*}}[%rd{{[0-9+]}}+128]
 ; CHECK: ${check_args}
 ; CHECK: ${stride_pattern}
-  %src1 = getelementptr i8, i8* %src, i32 128;
-  call void @llvm.nvvm.wmma.store.${intrinsic_suffix}(i8* %src1, ${args}${extra_args});
+  %src1 = getelementptr i8, i8 ${as}* %src, i32 128;
+  call void @llvm.nvvm.wmma.store.${intrinsic_suffix}(i8 ${as}* %src1, ${args}${extra_args});
   ret void
 }
 """
-  suffix_template = "${abc}.sync.${layout}.m16n16k16${space}${stride}.${itype}"
+  suffix_template = "${abc}.sync.${layout}.m16n16k16${stride}.${itype}.${pspace}"
   instruction_template = "${abc}.sync.${layout}.m16n16k16${space}.${itype}"
 
   for abc, layout, space, stride, itype in product(
@@ -125,7 +143,9 @@ define void @test_wmma_store_${function_suffix}_o(i8* %src, ${args}${extra_args}
         "layout" : layout,
         "space" : space,
         "stride" : stride,
-        "itype" : itype
+        "itype" : itype,
+        "pspace" : get_pspace(space),
+        "as"     : "addrspace(%d)" % get_aspace(space)
     }
 
     test_params = params

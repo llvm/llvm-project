@@ -11,7 +11,7 @@ define void @bar() #0 {
 }
 
 ; Verifies that inline assembly is correctly handled by giving a list of clobbered registers
-; CHECK: foo Clobbered Registers: $ah $al $ax $ch $cl $cx $di $dil $eax $ecx $edi $rax $rcx $rdi
+; CHECK: foo Clobbered Registers: $ah $al $ax $ch $cl $cx $di $dil $eax $ecx $edi $hax $hcx $hdi $rax $rcx $rdi
 define void @foo() #0 {
   call void asm sideeffect "", "~{eax},~{ecx},~{edi}"() #0
   ret void

@@ -78,8 +78,8 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "ThreadGDBRemote.h"
-#include "Utility/StringExtractorGDBRemote.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Threading.h"

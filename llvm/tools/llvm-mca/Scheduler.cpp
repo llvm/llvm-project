@@ -124,7 +124,7 @@ void ResourceManager::release(ResourceRef RR) {
 }
 
 ResourceStateEvent
-ResourceManager::canBeDispatched(const ArrayRef<uint64_t> Buffers) const {
+ResourceManager::canBeDispatched(ArrayRef<uint64_t> Buffers) const {
   ResourceStateEvent Result = ResourceStateEvent::RS_BUFFER_AVAILABLE;
   for (uint64_t Buffer : Buffers) {
     Result = isBufferAvailable(Buffer);
@@ -134,7 +134,7 @@ ResourceManager::canBeDispatched(const ArrayRef<uint64_t> Buffers) const {
   return Result;
 }
 
-void ResourceManager::reserveBuffers(const ArrayRef<uint64_t> Buffers) {
+void ResourceManager::reserveBuffers(ArrayRef<uint64_t> Buffers) {
   for (const uint64_t R : Buffers) {
     reserveBuffer(R);
     ResourceState &Resource = *Resources[R];
@@ -145,7 +145,7 @@ void ResourceManager::reserveBuffers(const ArrayRef<uint64_t> Buffers) {
   }
 }
 
-void ResourceManager::releaseBuffers(const ArrayRef<uint64_t> Buffers) {
+void ResourceManager::releaseBuffers(ArrayRef<uint64_t> Buffers) {
   for (const uint64_t R : Buffers)
     releaseBuffer(R);
 }
@@ -181,7 +181,6 @@ bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) {
 void ResourceManager::issueInstruction(
     unsigned Index, const InstrDesc &Desc,
     SmallVectorImpl<std::pair<ResourceRef, unsigned>> &Pipes) {
-  releaseBuffers(Desc.Buffers);
   for (const std::pair<uint64_t, ResourceUsage> &R : Desc.Resources) {
     const CycleSegment &CS = R.second.CS;
     if (!CS.size()) {
@@ -252,11 +251,14 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
   // Consume entries in the reservation stations.
   const InstrDesc &Desc = MCIS.getDesc();
 
-  // Reserve a slot in each buffered resource. Also, mark units with
-  // BufferSize=0 as reserved. Resources with a buffer size of zero will only be
-  // released after MCIS is issued, and all the ResourceCycles for those units
-  // have been consumed.
-  Resources->reserveBuffers(Desc.Buffers);
+  if (!Desc.Buffers.empty()) {
+    // Reserve a slot in each buffered resource. Also, mark units with
+    // BufferSize=0 as reserved. Resources with a buffer size of zero will only
+    // be released after MCIS is issued, and all the ResourceCycles for those
+    // units have been consumed.
+    Resources->reserveBuffers(Desc.Buffers);
+    notifyReservedBuffers(Desc.Buffers);
+  }
 
   bool MayLoad = Desc.MayLoad;
   bool MayStore = Desc.MayStore;
@@ -331,6 +333,13 @@ Scheduler::Event Scheduler::canBeDispatched(const InstrDesc &Desc) const {
 }
 
 void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {
+  const InstrDesc &D = IS.getDesc();
+
+  if (!D.Buffers.empty()) {
+    Resources->releaseBuffers(D.Buffers);
+    notifyReleasedBuffers(D.Buffers);
+  }
+
   // Issue the instruction and collect all the consumed resources
   // into a vector. That vector is then used to notify the listener.
   // Most instructions consume very few resurces (typically one or
@@ -338,8 +347,6 @@ void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {
   // initialize its capacity to 4. This should address the majority of
   // the cases.
   SmallVector<std::pair<ResourceRef, unsigned>, 4> UsedResources;
-
-  const InstrDesc &D = IS.getDesc();
   Resources->issueInstruction(InstrIndex, D, UsedResources);
   // Notify the instruction that it started executing.
   // This updates the internal state of each write.
@@ -416,14 +423,15 @@ void Scheduler::updateIssuedQueue() {
 }
 
 void Scheduler::notifyInstructionIssued(
-    unsigned Index, const ArrayRef<std::pair<ResourceRef, unsigned>> &Used) {
-  DEBUG(dbgs() << "[E] Instruction Issued: " << Index << '\n';
-        for (const std::pair<ResourceRef, unsigned> &Resource
-             : Used) {
-          dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
-                 << Resource.first.second << "]\n";
-          dbgs() << "           cycles: " << Resource.second << '\n';
-        });
+    unsigned Index, ArrayRef<std::pair<ResourceRef, unsigned>> Used) {
+  DEBUG({
+    dbgs() << "[E] Instruction Issued: " << Index << '\n';
+    for (const std::pair<ResourceRef, unsigned> &Resource : Used) {
+      dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
+             << Resource.first.second << "]\n";
+      dbgs() << "           cycles: " << Resource.second << '\n';
+    }
+  });
   Owner->notifyInstructionEvent(HWInstructionIssuedEvent(Index, Used));
 }
 
@@ -445,5 +453,21 @@ void Scheduler::notifyInstructionReady(unsigned Index) {
 
 void Scheduler::notifyResourceAvailable(const ResourceRef &RR) {
   Owner->notifyResourceAvailable(RR);
+}
+
+void Scheduler::notifyReservedBuffers(ArrayRef<uint64_t> Buffers) {
+  SmallVector<unsigned, 4> BufferIDs(Buffers.begin(), Buffers.end());
+  std::transform(
+      Buffers.begin(), Buffers.end(), BufferIDs.begin(),
+      [&](uint64_t Op) { return Resources->resolveResourceMask(Op); });
+  Owner->notifyReservedBuffers(BufferIDs);
+}
+
+void Scheduler::notifyReleasedBuffers(ArrayRef<uint64_t> Buffers) {
+  SmallVector<unsigned, 4> BufferIDs(Buffers.begin(), Buffers.end());
+  std::transform(
+      Buffers.begin(), Buffers.end(), BufferIDs.begin(),
+      [&](uint64_t Op) { return Resources->resolveResourceMask(Op); });
+  Owner->notifyReleasedBuffers(BufferIDs);
 }
 } // namespace mca

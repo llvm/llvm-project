@@ -1223,27 +1223,25 @@ float16x8_t test_vmulxq_n_f16(float16x8_t a, float16_t b) {
   return vmulxq_n_f16(a, b);
 }
 
-/* TODO: Not implemented yet (needs scalar intrinsic from arm_fp16.h)
-// CCHECK-LABEL: test_vmulxh_lane_f16
-// CCHECK: [[CONV0:%.*]] = fpext half %a to float
-// CCHECK: [[CONV1:%.*]] = fpext half %{{.*}} to float
-// CCHECK: [[MUL:%.*]]   = fmul float [[CONV0:%.*]], [[CONV0:%.*]]
-// CCHECK: [[CONV3:%.*]] = fptrunc float %mul to half
-// CCHECK: ret half [[CONV3:%.*]]
+// CHECK-LABEL: test_vmulxh_lane_f16
+// CHECK: [[TMP0:%.*]] = bitcast <4 x half> %b to <8 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK: [[EXTR:%.*]] = extractelement <4 x half> [[TMP1]], i32 3
+// CHECK: [[MULX:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half %a, half [[EXTR]]
+// CHECK: ret half [[MULX]]
 float16_t test_vmulxh_lane_f16(float16_t a, float16x4_t b) {
   return vmulxh_lane_f16(a, b, 3);
 }
 
-// CCHECK-LABEL: test_vmulxh_laneq_f16
-// CCHECK: [[CONV0:%.*]] = fpext half %a to float
-// CCHECK: [[CONV1:%.*]] = fpext half %{{.*}} to float
-// CCHECK: [[MUL:%.*]]   = fmul float [[CONV0:%.*]], [[CONV0:%.*]]
-// CCHECK: [[CONV3:%.*]] = fptrunc float %mul to half
-// CCHECK: ret half [[CONV3:%.*]]
+// CHECK-LABEL: test_vmulxh_laneq_f16
+// CHECK: [[TMP0:%.*]] = bitcast <8 x half> %b to <16 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK: [[EXTR:%.*]] = extractelement <8 x half> [[TMP1]], i32 7
+// CHECK: [[MULX:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half %a, half [[EXTR]])
+// CHECK: ret half [[MULX]]
 float16_t test_vmulxh_laneq_f16(float16_t a, float16x8_t b) {
   return vmulxh_laneq_f16(a, b, 7);
 }
-*/
 
 // CHECK-LABEL: test_vmaxv_f16
 // CHECK: [[TMP0:%.*]] = bitcast <4 x half> %a to <8 x i8>

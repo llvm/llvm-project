@@ -1,4 +1,4 @@
-//===--- Multilib.h ---------------------------------------------*- C++ -*-===//
+//===- Multilib.h -----------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,10 +11,14 @@
 #define LLVM_CLANG_DRIVER_MULTILIB_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Option/Option.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include <cassert>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -24,7 +28,7 @@ namespace driver {
 /// by a command line flag
 class Multilib {
 public:
-  typedef std::vector<std::string> flags_list;
+  using flags_list = std::vector<std::string>;
 
 private:
   std::string GCCSuffix;
@@ -33,8 +37,8 @@ private:
   flags_list Flags;
 
 public:
-  Multilib(StringRef GCCSuffix = "", StringRef OSSuffix = "",
-           StringRef IncludeSuffix = "");
+  Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
+           StringRef IncludeSuffix = {});
 
   /// \brief Get the detected GCC installation path suffix for the multi-arch
   /// target variant. Always starts with a '/', unless empty
@@ -43,6 +47,7 @@ public:
            (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
     return GCCSuffix;
   }
+
   /// Set the GCC installation path suffix.
   Multilib &gccSuffix(StringRef S);
 
@@ -53,6 +58,7 @@ public:
            (StringRef(OSSuffix).front() == '/' && OSSuffix.size() > 1));
     return OSSuffix;
   }
+
   /// Set the os path suffix.
   Multilib &osSuffix(StringRef S);
 
@@ -63,6 +69,7 @@ public:
            (StringRef(IncludeSuffix).front() == '/' && IncludeSuffix.size() > 1));
     return IncludeSuffix;
   }
+
   /// Set the include directory suffix
   Multilib &includeSuffix(StringRef S);
 
@@ -102,14 +109,12 @@ raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
 
 class MultilibSet {
 public:
-  typedef std::vector<Multilib> multilib_list;
-  typedef multilib_list::iterator iterator;
-  typedef multilib_list::const_iterator const_iterator;
-
-  typedef std::function<std::vector<std::string>(const Multilib &M)>
-      IncludeDirsFunc;
-
-  typedef llvm::function_ref<bool(const Multilib &)> FilterCallback;
+  using multilib_list = std::vector<Multilib>;
+  using iterator = multilib_list::iterator;
+  using const_iterator = multilib_list::const_iterator;
+  using IncludeDirsFunc =
+      std::function<std::vector<std::string>(const Multilib &M)>;
+  using FilterCallback = llvm::function_ref<bool(const Multilib &)>;
 
 private:
   multilib_list Multilibs;
@@ -117,7 +122,7 @@ private:
   IncludeDirsFunc FilePathsCallback;
 
 public:
-  MultilibSet() {}
+  MultilibSet() = default;
 
   /// Add an optional Multilib segment
   MultilibSet &Maybe(const Multilib &M);
@@ -135,6 +140,7 @@ public:
 
   /// Filter out some subset of the Multilibs using a user defined callback
   MultilibSet &FilterOut(FilterCallback F);
+
   /// Filter out those Multilibs whose gccSuffix matches the given expression
   MultilibSet &FilterOut(const char *Regex);
 
@@ -165,12 +171,14 @@ public:
     IncludeCallback = std::move(F);
     return *this;
   }
+
   const IncludeDirsFunc &includeDirsCallback() const { return IncludeCallback; }
 
   MultilibSet &setFilePathsCallback(IncludeDirsFunc F) {
     FilePathsCallback = std::move(F);
     return *this;
   }
+
   const IncludeDirsFunc &filePathsCallback() const { return FilePathsCallback; }
 
 private:
@@ -182,8 +190,8 @@ private:
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const MultilibSet &MS);
-}
-}
 
-#endif
+} // namespace driver
+} // namespace clang
 
+#endif // LLVM_CLANG_DRIVER_MULTILIB_H

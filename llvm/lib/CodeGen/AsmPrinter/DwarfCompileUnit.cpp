@@ -410,9 +410,10 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
 
 void DwarfCompileUnit::attachRangesOrLowHighPC(
     DIE &Die, SmallVector<RangeSpan, 2> Ranges) {
-  if (Ranges.size() == 1) {
-    const auto &single = Ranges.front();
-    attachLowHighPC(Die, single.getStart(), single.getEnd());
+  if (Ranges.size() == 1 || !DD->useRangesSection()) {
+    const RangeSpan &Front = Ranges.front();
+    const RangeSpan &Back = Ranges.back();
+    attachLowHighPC(Die, Front.getStart(), Back.getEnd());
   } else
     addScopeRangeList(Die, std::move(Ranges));
 }
@@ -851,7 +852,8 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
   if (CUNode->getGnuPubnames())
     return true;
 
-  return DD->tuneForGDB() && !includeMinimalInlineScopes();
+  return DD->tuneForGDB() && DD->usePubSections() &&
+         !includeMinimalInlineScopes();
 }
 
 /// addGlobalName - Add a new global name to the compile unit.

@@ -80,3 +80,8 @@ def : ProcessorModel<"bleeding-edge", NoSchedModel,
 def WebAssembly : Target {
   let InstructionSet = WebAssemblyInstrInfo;
 }
+
+def WebAssemblyAsmParser : AsmParser {
+  // The physical register names are not in the binary format or asm text
+  let ShouldEmitMatchRegisterName = 0;
+}

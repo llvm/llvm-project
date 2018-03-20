@@ -122,7 +122,6 @@ struct AstBuildUserInfo {
   /// The last iterator id created for the current SCoP.
   isl_id *LastForNodeId = nullptr;
 };
-
 } // namespace polly
 
 /// Free an IslAstUserPayload object pointed to by @p Ptr.

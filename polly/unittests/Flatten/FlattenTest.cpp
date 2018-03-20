@@ -66,5 +66,4 @@ TEST(Flatten, FlattenLoop) {
       "{ A[i] -> [i, 0] : 0 <= i < 10; B[i] -> [i, 1] : 0 <= i < 10 }",
       "{ A[i] -> [2i] : 0 <= i < 10; B[i] -> [2i + 1] : 0 <= i < 10 }"));
 }
-
 } // anonymous namespace
