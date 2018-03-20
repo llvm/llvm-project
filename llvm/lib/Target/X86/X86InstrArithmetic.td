@@ -828,30 +828,31 @@ class BinOpMR<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
               list<dag> pattern, InstrItinClass itin = IIC_BIN_MEM>
   : ITy<opcode, MRMDestMem, typeinfo,
         (outs), (ins typeinfo.MemOperand:$dst, typeinfo.RegClass:$src),
-        mnemonic, "{$src, $dst|$dst, $src}", pattern, itin>,
-    Sched<[WriteALULd, WriteRMW]>;
+        mnemonic, "{$src, $dst|$dst, $src}", pattern, itin>;
 
 // BinOpMR_RMW - Instructions like "add [mem], reg".
 class BinOpMR_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                   SDNode opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
           [(store (opnode (load addr:$dst), typeinfo.RegClass:$src), addr:$dst),
-           (implicit EFLAGS)]>;
+           (implicit EFLAGS)]>, Sched<[WriteALULd, WriteRMW]>;
 
 // BinOpMR_RMW_FF - Instructions like "adc [mem], reg".
 class BinOpMR_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                     SDNode opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
-          [(store (opnode (load addr:$dst), typeinfo.RegClass:$src, EFLAGS),
-                  addr:$dst),
-           (implicit EFLAGS)], IIC_BIN_CARRY_MEM>;
+            [(store (opnode (load addr:$dst), typeinfo.RegClass:$src, EFLAGS),
+                    addr:$dst),
+             (implicit EFLAGS)], IIC_BIN_CARRY_MEM>,
+            Sched<[WriteALULd, WriteRMW]>;
 
 // BinOpMR_F - Instructions like "cmp [mem], reg".
 class BinOpMR_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                 SDPatternOperator opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
-                                   typeinfo.RegClass:$src))]>;
+                                   typeinfo.RegClass:$src))]>,
+            Sched<[WriteALULd, ReadAfterLd]>;
 
 // BinOpMI - Instructions like "add [mem], imm".
 class BinOpMI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -859,8 +860,7 @@ class BinOpMI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
               InstrItinClass itin = IIC_BIN_MEM>
   : ITy<opcode, f, typeinfo,
         (outs), (ins typeinfo.MemOperand:$dst, typeinfo.ImmOperand:$src),
-        mnemonic, "{$src, $dst|$dst, $src}", pattern, itin>,
-    Sched<[WriteALULd, WriteRMW]> {
+        mnemonic, "{$src, $dst|$dst, $src}", pattern, itin> {
   let ImmT = typeinfo.ImmEncoding;
 }
 
@@ -870,21 +870,23 @@ class BinOpMI_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(store (opnode (typeinfo.VT (load addr:$dst)),
                             typeinfo.ImmOperator:$src), addr:$dst),
-             (implicit EFLAGS)]>;
+             (implicit EFLAGS)]>, Sched<[WriteALULd, WriteRMW]>;
 // BinOpMI_RMW_FF - Instructions like "adc [mem], imm".
 class BinOpMI_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                      SDNode opnode, Format f>
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(store (opnode (typeinfo.VT (load addr:$dst)),
-                            typeinfo.ImmOperator:$src, EFLAGS), addr:$dst),
-             (implicit EFLAGS)], IIC_BIN_CARRY_MEM>;
+                             typeinfo.ImmOperator:$src, EFLAGS), addr:$dst),
+             (implicit EFLAGS)], IIC_BIN_CARRY_MEM>,
+            Sched<[WriteALULd, WriteRMW]>;
 
 // BinOpMI_F - Instructions like "cmp [mem], imm".
 class BinOpMI_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                 SDPatternOperator opnode, Format f>
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
-                                  typeinfo.ImmOperator:$src))]>;
+                                  typeinfo.ImmOperator:$src))]>,
+            Sched<[WriteALULd, ReadAfterLd]>;
 
 // BinOpMI8 - Instructions like "add [mem], imm8".
 class BinOpMI8<string mnemonic, X86TypeInfo typeinfo,
@@ -892,8 +894,7 @@ class BinOpMI8<string mnemonic, X86TypeInfo typeinfo,
                InstrItinClass itin = IIC_BIN_MEM>
   : ITy<0x82, f, typeinfo,
         (outs), (ins typeinfo.MemOperand:$dst, typeinfo.Imm8Operand:$src),
-        mnemonic, "{$src, $dst|$dst, $src}", pattern, itin>,
-    Sched<[WriteALULd, WriteRMW]> {
+        mnemonic, "{$src, $dst|$dst, $src}", pattern, itin> {
   let ImmT = Imm8; // Always 8-bit immediate.
 }
 
@@ -903,7 +904,7 @@ class BinOpMI8_RMW<string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI8<mnemonic, typeinfo, f,
              [(store (opnode (load addr:$dst),
                              typeinfo.Imm8Operator:$src), addr:$dst),
-              (implicit EFLAGS)]>;
+              (implicit EFLAGS)]>, Sched<[WriteALULd, WriteRMW]>;
 
 // BinOpMI8_RMW_FF - Instructions like "adc [mem], imm8".
 class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
@@ -911,14 +912,16 @@ class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI8<mnemonic, typeinfo, f,
              [(store (opnode (load addr:$dst),
                              typeinfo.Imm8Operator:$src, EFLAGS), addr:$dst),
-              (implicit EFLAGS)], IIC_BIN_CARRY_MEM>;
+              (implicit EFLAGS)], IIC_BIN_CARRY_MEM>,
+             Sched<[WriteALULd, WriteRMW]>;
 
 // BinOpMI8_F - Instructions like "cmp [mem], imm8".
 class BinOpMI8_F<string mnemonic, X86TypeInfo typeinfo,
                  SDPatternOperator opnode, Format f>
   : BinOpMI8<mnemonic, typeinfo, f,
              [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
-                                   typeinfo.Imm8Operator:$src))]>;
+                                    typeinfo.Imm8Operator:$src))]>,
+             Sched<[WriteALULd, ReadAfterLd]>;
 
 // BinOpAI - Instructions like "add %eax, %eax, imm", that imp-def EFLAGS.
 class BinOpAI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,

@@ -3585,9 +3585,9 @@ define void @test_cmp_8(i8 %a0, i8* %a1) optsize {
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    cmpb $7, %al # sched: [1:0.50]
 ; SLM-NEXT:    cmpb $7, %dil # sched: [1:0.50]
-; SLM-NEXT:    cmpb $7, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpb $7, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpb %dil, %dil # sched: [1:0.50]
-; SLM-NEXT:    cmpb %dil, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpb %dil, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpb (%rsi), %dil # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -3669,9 +3669,9 @@ define void @test_cmp_8(i8 %a0, i8* %a1) optsize {
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    cmpb $7, %al # sched: [1:0.25]
 ; ZNVER1-NEXT:    cmpb $7, %dil # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpb $7, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpb $7, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpb %dil, %dil # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpb %dil, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpb %dil, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpb (%rsi), %dil # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -3721,11 +3721,11 @@ define void @test_cmp_16(i16 %a0, i16* %a1) optsize {
 ; SLM-NEXT:    cmpw $511, %di # imm = 0x1FF
 ; SLM-NEXT:    # sched: [1:0.50]
 ; SLM-NEXT:    cmpw $511, (%rsi) # imm = 0x1FF
-; SLM-NEXT:    # sched: [4:2.00]
+; SLM-NEXT:    # sched: [4:1.00]
 ; SLM-NEXT:    cmpw $7, %di # sched: [1:0.50]
-; SLM-NEXT:    cmpw $7, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpw $7, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpw %di, %di # sched: [1:0.50]
-; SLM-NEXT:    cmpw %di, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpw %di, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpw (%rsi), %di # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -3840,11 +3840,11 @@ define void @test_cmp_16(i16 %a0, i16* %a1) optsize {
 ; ZNVER1-NEXT:    cmpw $511, %di # imm = 0x1FF
 ; ZNVER1-NEXT:    # sched: [1:0.25]
 ; ZNVER1-NEXT:    cmpw $511, (%rsi) # imm = 0x1FF
-; ZNVER1-NEXT:    # sched: [5:1.00]
+; ZNVER1-NEXT:    # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpw $7, %di # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpw $7, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpw $7, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpw %di, %di # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpw %di, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpw %di, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpw (%rsi), %di # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -3894,11 +3894,11 @@ define void @test_cmp_32(i32 %a0, i32* %a1) optsize {
 ; SLM-NEXT:    cmpl $665536, %edi # imm = 0xA27C0
 ; SLM-NEXT:    # sched: [1:0.50]
 ; SLM-NEXT:    cmpl $665536, (%rsi) # imm = 0xA27C0
-; SLM-NEXT:    # sched: [4:2.00]
+; SLM-NEXT:    # sched: [4:1.00]
 ; SLM-NEXT:    cmpl $7, %edi # sched: [1:0.50]
-; SLM-NEXT:    cmpl $7, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpl $7, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpl %edi, %edi # sched: [1:0.50]
-; SLM-NEXT:    cmpl %edi, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpl %edi, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpl (%rsi), %edi # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -4013,11 +4013,11 @@ define void @test_cmp_32(i32 %a0, i32* %a1) optsize {
 ; ZNVER1-NEXT:    cmpl $665536, %edi # imm = 0xA27C0
 ; ZNVER1-NEXT:    # sched: [1:0.25]
 ; ZNVER1-NEXT:    cmpl $665536, (%rsi) # imm = 0xA27C0
-; ZNVER1-NEXT:    # sched: [5:1.00]
+; ZNVER1-NEXT:    # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpl $7, %edi # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpl $7, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpl $7, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpl %edi, %edi # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpl %edi, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpl %edi, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpl (%rsi), %edi # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -4067,11 +4067,11 @@ define void @test_cmp_64(i64 %a0, i64* %a1) optsize {
 ; SLM-NEXT:    cmpq $665536, %rdi # imm = 0xA27C0
 ; SLM-NEXT:    # sched: [1:0.50]
 ; SLM-NEXT:    cmpq $665536, (%rsi) # imm = 0xA27C0
-; SLM-NEXT:    # sched: [4:2.00]
+; SLM-NEXT:    # sched: [4:1.00]
 ; SLM-NEXT:    cmpq $7, %rdi # sched: [1:0.50]
-; SLM-NEXT:    cmpq $7, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpq $7, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpq %rdi, %rdi # sched: [1:0.50]
-; SLM-NEXT:    cmpq %rdi, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    cmpq %rdi, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    cmpq (%rsi), %rdi # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -4186,11 +4186,11 @@ define void @test_cmp_64(i64 %a0, i64* %a1) optsize {
 ; ZNVER1-NEXT:    cmpq $665536, %rdi # imm = 0xA27C0
 ; ZNVER1-NEXT:    # sched: [1:0.25]
 ; ZNVER1-NEXT:    cmpq $665536, (%rsi) # imm = 0xA27C0
-; ZNVER1-NEXT:    # sched: [5:1.00]
+; ZNVER1-NEXT:    # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpq $7, %rdi # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpq $7, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpq $7, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpq %rdi, %rdi # sched: [1:0.25]
-; ZNVER1-NEXT:    cmpq %rdi, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    cmpq %rdi, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    cmpq (%rsi), %rdi # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -15193,9 +15193,9 @@ define void @test_test_8(i8 %a0, i8* %a1) optsize {
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    testb $7, %al # sched: [1:0.50]
 ; SLM-NEXT:    testb $7, %dil # sched: [1:0.50]
-; SLM-NEXT:    testb $7, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    testb $7, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    testb %dil, %dil # sched: [1:0.50]
-; SLM-NEXT:    testb %dil, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    testb %dil, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -15270,9 +15270,9 @@ define void @test_test_8(i8 %a0, i8* %a1) optsize {
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    testb $7, %al # sched: [1:0.25]
 ; ZNVER1-NEXT:    testb $7, %dil # sched: [1:0.25]
-; ZNVER1-NEXT:    testb $7, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    testb $7, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    testb %dil, %dil # sched: [1:0.25]
-; ZNVER1-NEXT:    testb %dil, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    testb %dil, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "testb $2, %AL \0A\09 testb $2, $0 \0A\09 testb $2, $1 \0A\09 testb $0, $0 \0A\09 testb $0, $1", "r,*m,i"(i8 %a0, i8* %a1, i8 7) nounwind
@@ -15315,9 +15315,9 @@ define void @test_test_16(i16 %a0, i16* %a1) optsize {
 ; SLM-NEXT:    testw $511, %di # imm = 0x1FF
 ; SLM-NEXT:    # sched: [1:0.50]
 ; SLM-NEXT:    testw $511, (%rsi) # imm = 0x1FF
-; SLM-NEXT:    # sched: [4:2.00]
+; SLM-NEXT:    # sched: [4:1.00]
 ; SLM-NEXT:    testw %di, %di # sched: [1:0.50]
-; SLM-NEXT:    testw %di, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    testw %di, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -15413,9 +15413,9 @@ define void @test_test_16(i16 %a0, i16* %a1) optsize {
 ; ZNVER1-NEXT:    testw $511, %di # imm = 0x1FF
 ; ZNVER1-NEXT:    # sched: [1:0.25]
 ; ZNVER1-NEXT:    testw $511, (%rsi) # imm = 0x1FF
-; ZNVER1-NEXT:    # sched: [5:1.00]
+; ZNVER1-NEXT:    # sched: [5:0.50]
 ; ZNVER1-NEXT:    testw %di, %di # sched: [1:0.25]
-; ZNVER1-NEXT:    testw %di, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    testw %di, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "testw $2, %AX \0A\09 testw $2, $0 \0A\09 testw $2, $1 \0A\09 testw $0, $0 \0A\09 testw $0, $1", "r,*m,i"(i16 %a0, i16* %a1, i16 511) nounwind
@@ -15458,9 +15458,9 @@ define void @test_test_32(i32 %a0, i32* %a1) optsize {
 ; SLM-NEXT:    testl $665536, %edi # imm = 0xA27C0
 ; SLM-NEXT:    # sched: [1:0.50]
 ; SLM-NEXT:    testl $665536, (%rsi) # imm = 0xA27C0
-; SLM-NEXT:    # sched: [4:2.00]
+; SLM-NEXT:    # sched: [4:1.00]
 ; SLM-NEXT:    testl %edi, %edi # sched: [1:0.50]
-; SLM-NEXT:    testl %edi, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    testl %edi, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -15556,9 +15556,9 @@ define void @test_test_32(i32 %a0, i32* %a1) optsize {
 ; ZNVER1-NEXT:    testl $665536, %edi # imm = 0xA27C0
 ; ZNVER1-NEXT:    # sched: [1:0.25]
 ; ZNVER1-NEXT:    testl $665536, (%rsi) # imm = 0xA27C0
-; ZNVER1-NEXT:    # sched: [5:1.00]
+; ZNVER1-NEXT:    # sched: [5:0.50]
 ; ZNVER1-NEXT:    testl %edi, %edi # sched: [1:0.25]
-; ZNVER1-NEXT:    testl %edi, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    testl %edi, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "testl $2, %EAX \0A\09 testl $2, $0 \0A\09 testl $2, $1 \0A\09 testl $0, $0 \0A\09 testl $0, $1", "r,*m,i"(i32 %a0, i32* %a1, i32 665536) nounwind
@@ -15601,9 +15601,9 @@ define void @test_test_64(i64 %a0, i64* %a1) optsize {
 ; SLM-NEXT:    testq $665536, %rdi # imm = 0xA27C0
 ; SLM-NEXT:    # sched: [1:0.50]
 ; SLM-NEXT:    testq $665536, (%rsi) # imm = 0xA27C0
-; SLM-NEXT:    # sched: [4:2.00]
+; SLM-NEXT:    # sched: [4:1.00]
 ; SLM-NEXT:    testq %rdi, %rdi # sched: [1:0.50]
-; SLM-NEXT:    testq %rdi, (%rsi) # sched: [4:2.00]
+; SLM-NEXT:    testq %rdi, (%rsi) # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -15699,9 +15699,9 @@ define void @test_test_64(i64 %a0, i64* %a1) optsize {
 ; ZNVER1-NEXT:    testq $665536, %rdi # imm = 0xA27C0
 ; ZNVER1-NEXT:    # sched: [1:0.25]
 ; ZNVER1-NEXT:    testq $665536, (%rsi) # imm = 0xA27C0
-; ZNVER1-NEXT:    # sched: [5:1.00]
+; ZNVER1-NEXT:    # sched: [5:0.50]
 ; ZNVER1-NEXT:    testq %rdi, %rdi # sched: [1:0.25]
-; ZNVER1-NEXT:    testq %rdi, (%rsi) # sched: [5:1.00]
+; ZNVER1-NEXT:    testq %rdi, (%rsi) # sched: [5:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "testq $2, %RAX \0A\09 testq $2, $0 \0A\09 testq $2, $1 \0A\09 testq $0, $0 \0A\09 testq $0, $1", "r,*m,i"(i64 %a0, i64* %a1, i32 665536) nounwind

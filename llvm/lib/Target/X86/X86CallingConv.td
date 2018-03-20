@@ -18,6 +18,12 @@ class CCIfSubtarget<string F, CCAction A>
                        "(State.getMachineFunction().getSubtarget()).", F),
            A>;
 
+/// CCIfNotSubtarget - Match if the current subtarget doesn't has a feature F.
+class CCIfNotSubtarget<string F, CCAction A>
+    : CCIf<!strconcat("!static_cast<const X86Subtarget&>"
+                       "(State.getMachineFunction().getSubtarget()).", F),
+           A>;
+
 // Register classes for RegCall
 class RC_X86_RegCall {
   list<Register> GPR_8 = [];
@@ -246,8 +252,9 @@ def RetCC_X86Common : CallingConv<[
   // MM0, it doesn't support these vector types.
   CCIfType<[x86mmx], CCAssignToReg<[MM0]>>,
 
-  // Long double types are always returned in FP0 (even with SSE).
-  CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>
+  // Long double types are always returned in FP0 (even with SSE),
+  // except on Win64.
+  CCIfNotSubtarget<"isTargetWin64()", CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>
 ]>;
 
 // X86-32 C return-value convention.
@@ -605,6 +612,9 @@ def CC_X86_Win64_C : CallingConv<[
   // 512 bit vectors are passed by pointer
   CCIfType<[v16i32, v16f32, v8f64, v8i64], CCPassIndirect<i64>>,
 
+  // Long doubles are passed by pointer
+  CCIfType<[f80], CCPassIndirect<i64>>,
+
   // The first 4 MMX vector arguments are passed in GPRs.
   CCIfType<[x86mmx], CCBitConvertToType<i64>>,
 
@@ -628,11 +638,7 @@ def CC_X86_Win64_C : CallingConv<[
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
-  CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>,
-
-  // Long doubles get stack slots whose size and alignment depends on the
-  // subtarget.
-  CCIfType<[f80], CCAssignToStack<0, 0>>
+  CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>
 ]>;
 
 def CC_X86_Win64_VectorCall : CallingConv<[
