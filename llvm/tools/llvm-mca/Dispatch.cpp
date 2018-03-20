@@ -150,7 +150,7 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
   }
 }
 
-unsigned RegisterFile::isAvailable(const ArrayRef<unsigned> Regs) const {
+unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
   SmallVector<unsigned, 4> NumTemporaries(getNumRegisterFiles());
 
   // Find how many new mappings must be created for each register file.

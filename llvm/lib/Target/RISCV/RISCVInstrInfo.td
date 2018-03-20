@@ -616,20 +616,20 @@ defm : LdPat<zextloadi16, LHU>;
 
 /// Stores
 
-multiclass StPat<PatFrag StoreOp, RVInst Inst> {
-  def : Pat<(StoreOp GPR:$rs2, GPR:$rs1), (Inst GPR:$rs2, GPR:$rs1, 0)>;
-  def : Pat<(StoreOp GPR:$rs2, AddrFI:$rs1), (Inst GPR:$rs2, AddrFI:$rs1, 0)>;
-  def : Pat<(StoreOp GPR:$rs2, (add GPR:$rs1, simm12:$imm12)),
-            (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp GPR:$rs2, (add AddrFI:$rs1, simm12:$imm12)),
-            (Inst GPR:$rs2, AddrFI:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp GPR:$rs2, (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
-            (Inst GPR:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy> {
+  def : Pat<(StoreOp StTy:$rs2, GPR:$rs1), (Inst StTy:$rs2, GPR:$rs1, 0)>;
+  def : Pat<(StoreOp StTy:$rs2, AddrFI:$rs1), (Inst StTy:$rs2, AddrFI:$rs1, 0)>;
+  def : Pat<(StoreOp StTy:$rs2, (add GPR:$rs1, simm12:$imm12)),
+            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp StTy:$rs2, (add AddrFI:$rs1, simm12:$imm12)),
+            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp StTy:$rs2, (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
+            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
 }
 
-defm : StPat<truncstorei8, SB>;
-defm : StPat<truncstorei16, SH>;
-defm : StPat<store, SW>;
+defm : StPat<truncstorei8, SB, GPR>;
+defm : StPat<truncstorei16, SH, GPR>;
+defm : StPat<store, SW, GPR>;
 
 /// Other pseudo-instructions
 

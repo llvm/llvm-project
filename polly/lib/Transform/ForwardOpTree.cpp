@@ -1007,7 +1007,6 @@ public:
 }; // class ForwardOpTree
 
 char ForwardOpTree::ID;
-
 } // namespace
 
 ScopPass *polly::createForwardOpTreePass() { return new ForwardOpTree(); }

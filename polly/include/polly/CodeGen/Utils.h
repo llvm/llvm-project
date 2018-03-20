@@ -69,6 +69,5 @@ using BBPair = std::pair<llvm::BasicBlock *, llvm::BasicBlock *>;
 std::pair<BBPair, llvm::BranchInst *>
 executeScopConditionally(Scop &S, llvm::Value *RTC, llvm::DominatorTree &DT,
                          llvm::RegionInfo &RI, llvm::LoopInfo &LI);
-
 } // namespace polly
 #endif

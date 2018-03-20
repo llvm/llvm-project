@@ -175,6 +175,8 @@ class Register<string n, list<string> altNames = []> {
 
   // HWEncoding - The target specific hardware encoding for this register.
   bits<16> HWEncoding = 0;
+
+  bit isArtificial = 0;
 }
 
 // RegisterWithSubRegs - This can be used to define instances of Register which

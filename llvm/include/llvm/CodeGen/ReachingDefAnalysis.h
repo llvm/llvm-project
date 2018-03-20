@@ -68,7 +68,7 @@ private:
   MBBReachingDefsInfo MBBReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.
-  const int ReachingDedDefaultVal = -(1 << 20);
+  const int ReachingDefDefaultVal = -(1 << 20);
 
 public:
   static char ID; // Pass identification, replacement for typeid

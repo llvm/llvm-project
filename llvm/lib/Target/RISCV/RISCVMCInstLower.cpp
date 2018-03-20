@@ -89,6 +89,9 @@ bool llvm::LowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
     MCOp = lowerSymbolOperand(
         MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()), AP);
     break;
+  case MachineOperand::MO_ConstantPoolIndex:
+    MCOp = lowerSymbolOperand(MO, AP.GetCPISymbol(MO.getIndex()), AP);
+    break;
   }
   return true;
 }

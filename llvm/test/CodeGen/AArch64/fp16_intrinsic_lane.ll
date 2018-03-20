@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+v8.2a,+fullfp16  | FileCheck %s
 
+declare half @llvm.aarch64.neon.fmulx.f16(half, half)
 declare <4 x half> @llvm.aarch64.neon.fmulx.v4f16(<4 x half>, <4 x half>)
 declare <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half>, <8 x half>)
 declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>)
@@ -236,6 +237,25 @@ entry:
   ret half %1
 }
 
+define dso_local half @t_vmulx_f16(half %a, half %b) {
+; CHECK-LABEL: t_vmulx_f16:
+; CHECK:         fmulx h0, h0, h1
+; CHECK-NEXT:    ret
+entry:
+  %fmulx.i = tail call half @llvm.aarch64.neon.fmulx.f16(half %a, half %b)
+  ret half %fmulx.i
+}
+
+define dso_local half @t_vmulxh_lane_f16(half %a, <4 x half> %b, i32 %lane) {
+; CHECK-LABEL: t_vmulxh_lane_f16:
+; CHECK:         fmulx h0, h0, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <4 x half> %b, i32 3
+  %fmulx.i = tail call half @llvm.aarch64.neon.fmulx.f16(half %a, half %extract)
+  ret half %fmulx.i
+}
+
 define dso_local <4 x half> @t_vmulx_lane_f16(<4 x half> %a, <4 x half> %b, i32 %lane) {
 ; CHECK-LABEL: t_vmulx_lane_f16:
 ; CHECK:         fmulx v0.4h, v0.4h, v1.h[0]
@@ -274,6 +294,16 @@ entry:
   %shuffle = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
   %vmulx2.i = tail call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> %a, <8 x half> %shuffle) #4
   ret <8 x half> %vmulx2.i
+}
+
+define dso_local half @t_vmulxh_laneq_f16(half %a, <8 x half> %b, i32 %lane) {
+; CHECK-LABEL: t_vmulxh_laneq_f16:
+; CHECK:         fmulx h0, h0, v1.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <8 x half> %b, i32 7
+  %fmulx.i = tail call half @llvm.aarch64.neon.fmulx.f16(half %a, half %extract)
+  ret half %fmulx.i
 }
 
 define dso_local <4 x half> @t_vmulx_n_f16(<4 x half> %a, half %c) {

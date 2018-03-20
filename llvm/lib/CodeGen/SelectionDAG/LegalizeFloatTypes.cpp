@@ -1658,18 +1658,6 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_SINT(SDNode *N) {
   EVT RVT = N->getValueType(0);
   SDLoc dl(N);
 
-  // Expand ppcf128 to i32 by hand for the benefit of llvm-gcc bootstrap on
-  // PPC (the libcall is not available).  FIXME: Do this in a less hacky way.
-  if (RVT == MVT::i32) {
-    assert(N->getOperand(0).getValueType() == MVT::ppcf128 &&
-           "Logic only correct for ppcf128!");
-    SDValue Res = DAG.getNode(ISD::FP_ROUND_INREG, dl, MVT::ppcf128,
-                              N->getOperand(0), DAG.getValueType(MVT::f64));
-    Res = DAG.getNode(ISD::FP_ROUND, dl, MVT::f64, Res,
-                      DAG.getIntPtrConstant(1, dl));
-    return DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, Res);
-  }
-
   RTLIB::Libcall LC = RTLIB::getFPTOSINT(N->getOperand(0).getValueType(), RVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_SINT!");
   return TLI.makeLibCall(DAG, LC, RVT, N->getOperand(0), false, dl).first;
@@ -1678,31 +1666,6 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_SINT(SDNode *N) {
 SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_UINT(SDNode *N) {
   EVT RVT = N->getValueType(0);
   SDLoc dl(N);
-
-  // Expand ppcf128 to i32 by hand for the benefit of llvm-gcc bootstrap on
-  // PPC (the libcall is not available).  FIXME: Do this in a less hacky way.
-  if (RVT == MVT::i32) {
-    assert(N->getOperand(0).getValueType() == MVT::ppcf128 &&
-           "Logic only correct for ppcf128!");
-    const uint64_t TwoE31[] = {0x41e0000000000000LL, 0};
-    APFloat APF = APFloat(APFloat::PPCDoubleDouble(), APInt(128, TwoE31));
-    SDValue Tmp = DAG.getConstantFP(APF, dl, MVT::ppcf128);
-    //  X>=2^31 ? (int)(X-2^31)+0x80000000 : (int)X
-    // FIXME: generated code sucks.
-    // TODO: Are there fast-math-flags to propagate to this FSUB?
-    return DAG.getSelectCC(dl, N->getOperand(0), Tmp,
-                           DAG.getNode(ISD::ADD, dl, MVT::i32,
-                                       DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32,
-                                                   DAG.getNode(ISD::FSUB, dl,
-                                                               MVT::ppcf128,
-                                                               N->getOperand(0),
-                                                               Tmp)),
-                                       DAG.getConstant(0x80000000, dl,
-                                                       MVT::i32)),
-                           DAG.getNode(ISD::FP_TO_SINT, dl,
-                                       MVT::i32, N->getOperand(0)),
-                           ISD::SETGE);
-  }
 
   RTLIB::Libcall LC = RTLIB::getFPTOUINT(N->getOperand(0).getValueType(), RVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_UINT!");

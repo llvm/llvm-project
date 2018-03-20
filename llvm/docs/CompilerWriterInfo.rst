@@ -99,6 +99,8 @@ X86
 * `X86 and X86-64 SysV psABI <https://github.com/hjl-tools/x86-psABI/wiki/X86-psABI>`_
 * `Calling conventions for different C++ compilers and operating systems  <http://www.agner.org/optimize/calling_conventions.pdf>`_
 
+Refer to :doc:`X86Usage` for additional documentation.
+
 XCore
 -----
 

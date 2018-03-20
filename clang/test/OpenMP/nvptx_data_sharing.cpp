@@ -18,8 +18,10 @@ void test_ds(){
       a = 1000;
     }
     int b = 100;
-    #pragma omp parallel
+    int c = 1000;
+    #pragma omp parallel private(c)
     {
+      int *c1 = &c;
       b = a + 10000;
     }
   }
@@ -72,6 +74,15 @@ void test_ds(){
 // CK1: [[SHARGSTMP15:%.+]] = bitcast i8** [[SHARGSTMP14]] to i32**
 // CK1: [[SHARGSTMP16:%.+]] = load i32*, i32** [[SHARGSTMP15]]
 // CK1: call void @__omp_outlined__{{.*}}({{.*}}, i32* [[SHARGSTMP16]])
+
+/// outlined function for the second parallel region ///
+
+// CK1: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.+}}, i32* dereferenceable{{.+}})
+// CK1: [[RES:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i64 4, i16 0)
+// CK1: [[GLOBALS:%.+]] = bitcast i8* [[RES]] to [[GLOBAL_TY:%.+]]*
+// CK1: [[C_ADDR:%.+]] = getelementptr inbounds [[GLOBAL_TY]], [[GLOBAL_TY]]* [[GLOBALS]], i32 0, i32 0
+// CK1: store i32* [[C_ADDR]], i32** %
+// CK1: call void @__kmpc_data_sharing_pop_stack(i8* [[RES]])
 
 /// ========= In the data sharing wrapper function ========= ///
 

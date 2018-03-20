@@ -437,7 +437,7 @@ def : InstRW<[WriteP01], (instregex "ST_(F|FP)rr")>;
 def : InstRW<[WriteP01], (instregex "LD_F0")>;
 
 // FLDPI FLDL2E etc.
-def : InstRW<[Write2P01], (instregex "FLDPI", "FLDL2(T|E)" "FLDL(G|N)2")>;
+def : InstRW<[Write2P01], (instregex "FLDPI", "FLDL2(T|E)", "FLDL(G|N)2")>;
 
 // FFREE.
 def : InstRW<[WriteP01], (instregex "FFREE")>;

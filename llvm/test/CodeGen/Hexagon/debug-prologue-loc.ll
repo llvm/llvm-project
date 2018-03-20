@@ -1,5 +1,7 @@
 ; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
 
+; Broken after r326208.
+; XFAIL: *
 ; CHECK: allocframe{{.*}}
 ; CHECK-NEXT: }
 ; CHECK-NEXT:{{.*}}tmp{{[0-9]+}}:

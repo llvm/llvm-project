@@ -1263,6 +1263,7 @@ static void emitEmptyBoundParameters(CodeGenFunction &,
 void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
   // Emit parallel region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
     OMPPrivateScope PrivateScope(CGF);
     bool Copyins = CGF.EmitOMPCopyinClause(S);
     (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
@@ -1277,7 +1278,6 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     CGF.EmitOMPPrivateClause(S, PrivateScope);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.EmitStmt(S.getCapturedStmt(OMPD_parallel)->getCapturedStmt());
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);
   };
@@ -3981,12 +3981,12 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
 
 static void emitTargetRegion(CodeGenFunction &CGF, const OMPTargetDirective &S,
                              PrePostActionTy &Action) {
+  Action.Enter(CGF);
   CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
   (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
   CGF.EmitOMPPrivateClause(S, PrivateScope);
   (void)PrivateScope.Privatize();
 
-  Action.Enter(CGF);
   CGF.EmitStmt(S.getCapturedStmt(OMPD_target)->getCapturedStmt());
 }
 
@@ -4039,12 +4039,12 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
 void CodeGenFunction::EmitOMPTeamsDirective(const OMPTeamsDirective &S) {
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
     OMPPrivateScope PrivateScope(CGF);
     (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
     CGF.EmitOMPPrivateClause(S, PrivateScope);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.EmitStmt(S.getCapturedStmt(OMPD_teams)->getCapturedStmt());
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
@@ -4059,12 +4059,12 @@ static void emitTargetTeamsRegion(CodeGenFunction &CGF, PrePostActionTy &Action,
   Action.Enter(CGF);
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S, CS](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
     (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
     CGF.EmitOMPPrivateClause(S, PrivateScope);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.EmitStmt(CS->getCapturedStmt());
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
@@ -4106,10 +4106,10 @@ emitTargetTeamsDistributeRegion(CodeGenFunction &CGF, PrePostActionTy &Action,
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                             PrePostActionTy &Action) {
+    Action.Enter(CGF);
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_distribute,
                                                     CodeGenDistribute);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4152,10 +4152,10 @@ static void emitTargetTeamsDistributeSimdRegion(
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                             PrePostActionTy &Action) {
+    Action.Enter(CGF);
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_distribute,
                                                     CodeGenDistribute);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4197,10 +4197,10 @@ void CodeGenFunction::EmitOMPTeamsDistributeDirective(
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                             PrePostActionTy &Action) {
+    Action.Enter(CGF);
     OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_distribute,
                                                     CodeGenDistribute);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4219,10 +4219,10 @@ void CodeGenFunction::EmitOMPTeamsDistributeSimdDirective(
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                             PrePostActionTy &Action) {
+    Action.Enter(CGF);
     OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_simd,
                                                     CodeGenDistribute);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4242,10 +4242,10 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForDirective(
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                             PrePostActionTy &Action) {
+    Action.Enter(CGF);
     OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_distribute,
                                                     CodeGenDistribute);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4265,10 +4265,10 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForSimdDirective(
   // Emit teams region as a standalone region.
   auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                             PrePostActionTy &Action) {
+    Action.Enter(CGF);
     OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(
         CGF, OMPD_distribute, CodeGenDistribute, /*HasCancel=*/false);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4290,10 +4290,10 @@ static void emitTargetTeamsDistributeParallelForRegion(
   // Emit teams region as a standalone region.
   auto &&CodeGenTeams = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                                  PrePostActionTy &Action) {
+    Action.Enter(CGF);
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(
         CGF, OMPD_distribute, CodeGenDistribute, /*HasCancel=*/false);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4342,10 +4342,10 @@ static void emitTargetTeamsDistributeParallelForSimdRegion(
   // Emit teams region as a standalone region.
   auto &&CodeGenTeams = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
                                                  PrePostActionTy &Action) {
+    Action.Enter(CGF);
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(
         CGF, OMPD_distribute, CodeGenDistribute, /*HasCancel=*/false);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
@@ -4614,12 +4614,12 @@ static void emitTargetParallelRegion(CodeGenFunction &CGF,
   auto *CS = S.getCapturedStmt(OMPD_parallel);
   Action.Enter(CGF);
   auto &&CodeGen = [&S, CS](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
     (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
     CGF.EmitOMPPrivateClause(S, PrivateScope);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    Action.Enter(CGF);
     // TODO: Add support for clauses.
     CGF.EmitStmt(CS->getCapturedStmt());
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);

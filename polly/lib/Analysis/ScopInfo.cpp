@@ -1926,7 +1926,6 @@ public:
 
   bool isDone() { return FoundInside; }
 };
-
 } // end anonymous namespace
 
 const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *E) const {

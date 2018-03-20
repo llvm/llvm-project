@@ -7379,13 +7379,16 @@ class WMMA_LOAD_ALSTOS<string Abc, string Layout, string Space,
                            string Type, NVPTXRegClass regclass,
                            DAGOperand SrcOp, bit WithStride>
   : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
-  // Intrinsic that matches this instruction.
-  Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_load_"
-                                    # Abc
-                                    # "_" # Type
-                                    # "_" # Layout
-                                    # !subst(".","_",Space)
-                                    # !if(WithStride,"_stride", ""));
+  // Pattern (created by WMMA_LOAD_INTR_HELPER below) that matches the intrinsic
+  // for this function.
+  PatFrag IntrMatcher = !cast<PatFrag>("INT_WMMA_LOAD_"
+                                       # !subst("a", "A",
+                                         !subst("b", "B",
+                                         !subst("c", "C_" # Type, Abc)))
+                                       # "_" # Layout
+                                       # !subst(".", "_", Space)
+                                       # !if(WithStride,"_stride", "")
+                                       # "_Intr");
   dag OutsR03 = (outs regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3);
   dag OutsR47 = (outs regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7);
   dag Outs = !if(!eq(Abc#Type,"cf16"), OutsR03, !con(OutsR03, OutsR47));
@@ -7410,7 +7413,7 @@ class WMMA_LOAD_ALSTOS<string Abc, string Layout, string Space,
                               !subst(imem, ADDRvar,
                               !subst(MEMri64, ADDRri64,
                               !subst(MEMri, ADDRri,
-                              !subst(ins, Intr, tmp)))));
+                              !subst(ins, IntrMatcher, tmp)))));
   // Finally, consatenate both parts together. !con() requires both dags to have
   // the same operator, so we wrap PatArgs in a (set ...) dag.
   let Pattern = [!con(PatOuts, (set PatArgs))];
@@ -7425,20 +7428,52 @@ class WMMA_LOAD_ALSTOS<string Abc, string Layout, string Space,
                  #";";
 }
 
-multiclass WMMA_LOAD_ALSTO<string Abc, string Layout, string Space,
-                           string Type, NVPTXRegClass regclass,
-                           DAGOperand SrcOp> {
-  def _stride: WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, SrcOp, 1>;
-  def NAME:    WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, SrcOp, 0>;
+class WMMA_LOAD_INTR_HELPER<string Abc, string Layout, string Space,
+                           string Type, bit WithStride>
+                           : PatFrag <(ops),(ops)> {
+  // Intrinsic that matches this instruction.
+  Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_load_"
+                                    # Abc
+                                    # "_" # Type
+                                    # "_" # Layout
+                                    # !if(WithStride,"_stride", ""));
+  code match_generic = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GENERIC);
+  }];
+  code match_shared = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED);
+  }];
+  code match_global = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
+  }];
+
+  let Operands = !if(WithStride, (ops node:$src, node:$ldm), (ops node:$src));
+  let Fragment = !foreach(tmp, Operands, !subst(ops, Intr, tmp));
+  let PredicateCode = !if(!eq(Space, ".shared"), match_shared,
+                      !if(!eq(Space, ".global"), match_global, match_generic));
+}
+
+multiclass WMMA_LOAD_ALSTS<string Abc, string Layout, string Space,
+                          string Type, NVPTXRegClass regclass, bit WithStride> {
+  def _avar:  WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, imem, WithStride>;
+  def _areg: WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, Int32Regs, WithStride>;
+  def _areg64: WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, Int64Regs, WithStride>;
+  def _ari: WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, MEMri, WithStride>;
+  def _ari64: WMMA_LOAD_ALSTOS<Abc, Layout, Space, Type, regclass, MEMri64, WithStride>;
+}
+
+multiclass WMMA_LOAD_ALSTSh<string Abc, string Layout, string Space,
+                            string Type, NVPTXRegClass regclass, bit WithStride> {
+  // Define a PatFrag that matches appropriate intrinsic that loads from the
+  // given address space.
+  def _Intr : WMMA_LOAD_INTR_HELPER<Abc, Layout, Space, Type, WithStride>;
+  defm NAME:  WMMA_LOAD_ALSTS<Abc, Layout, Space, Type, regclass, WithStride>;
 }
 
 multiclass WMMA_LOAD_ALST<string Abc, string Layout, string Space,
-                          string Type, NVPTXRegClass regclass> {
-  defm _avar:  WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, imem>;
-  defm _areg: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, Int32Regs>;
-  defm _areg64: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, Int64Regs>;
-  defm _ari: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, MEMri>;
-  defm _ari64: WMMA_LOAD_ALSTO<Abc, Layout, Space, Type, regclass, MEMri64>;
+                           string Type, NVPTXRegClass regclass> {
+  defm _stride: WMMA_LOAD_ALSTSh<Abc, Layout, Space, Type, regclass, 1>;
+  defm NAME:    WMMA_LOAD_ALSTSh<Abc, Layout, Space, Type, regclass, 0>;
 }
 
 multiclass WMMA_LOAD_ALT<string Abc, string Layout,
@@ -7461,15 +7496,16 @@ defm INT_WMMA_LOAD_C_f32: WMMA_LOAD_AT<"c", "f32", Float32Regs>;
 //
 // wmma.store.d.sync.[row|col].m16n16k16[|.global|.shared].[f16|f32]
 //
-class WMMA_STORE_D_LSTOS<string Layout, string Space,
+class WMMA_STORE_D_LSTSO<string Layout, string Space,
                          string Type, NVPTXRegClass regclass,
-                         DAGOperand DstOp, bit WithStride>
+                         bit WithStride, DAGOperand DstOp>
   : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
-  Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_store_d_"
-                                    # Type
-                                    # "_" # Layout
-                                    # !subst(".","_",Space)
-                                    # !if(WithStride,"_stride", ""));
+  PatFrag IntrMatcher = !cast<PatFrag>("INT_WMMA_STORE_D"
+                                       # "_" # Type
+                                       # "_" # Layout
+                                       # !subst(".", "_", Space)
+                                       # !if(WithStride,"_stride", "")
+                                       # "_Intr");
 
   dag InsR03 = (ins DstOp:$src, regclass:$r0, regclass:$r1, regclass:$r2, regclass:$r3);
   dag InsR47 = (ins regclass:$r4, regclass:$r5, regclass:$r6, regclass:$r7);
@@ -7483,7 +7519,7 @@ class WMMA_STORE_D_LSTOS<string Layout, string Space,
                               !subst(imem, ADDRvar,
                               !subst(MEMri64, ADDRri64,
                               !subst(MEMri, ADDRri,
-                              !subst(ins, Intr, tmp)))));
+                              !subst(ins, IntrMatcher, tmp)))));
   let Pattern = [PatArgs];
   let OutOperandList = (outs);
   let InOperandList = Ins;
@@ -7501,20 +7537,56 @@ class WMMA_STORE_D_LSTOS<string Layout, string Space,
 
 }
 
-multiclass WMMA_STORE_D_LSTO<string Layout, string Space,
-                             string Type, NVPTXRegClass regclass,
-                             DAGOperand DstOp> {
-  def _stride:  WMMA_STORE_D_LSTOS<Layout, Space, Type, regclass, DstOp, 1>;
-  def NAME:     WMMA_STORE_D_LSTOS<Layout, Space, Type, regclass, DstOp, 0>;
+class WMMA_STORE_INTR_HELPER<string Layout, string Space,
+                             string Type, bit WithStride>
+                            : PatFrag <(ops),(ops)> {
+  // Intrinsic that matches this instruction.
+  Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_store_d"
+                                    # "_" # Type
+                                    # "_" # Layout
+                                    # !if(WithStride, "_stride", ""));
+  code match_generic = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GENERIC);
+  }];
+  code match_shared = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED);
+  }];
+  code match_global = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
+  }];
+
+  dag Args = !if(!eq(Type,"f16"),
+                 (ops node:$dst, node:$r0, node:$r1, node:$r2, node:$r3),
+                 (ops node:$dst, node:$r0, node:$r1, node:$r2, node:$r3,
+                                 node:$r4, node:$r5, node:$r6, node:$r7));
+  dag StrideArg = !if(WithStride, (ops node:$ldm), (ops));
+  let Operands = !con(Args, StrideArg);
+  let Fragment = !foreach(tmp, Operands, !subst(ops, Intr, tmp));
+  let PredicateCode = !if(!eq(Space, ".shared"), match_shared,
+                      !if(!eq(Space, ".global"), match_global, match_generic));
+}
+
+multiclass WMMA_STORE_D_LSTS<string Layout, string Space,
+                            string Type, NVPTXRegClass regclass, bit WithStride> {
+  def _avar:   WMMA_STORE_D_LSTSO<Layout, Space, Type, regclass, WithStride, imem>;
+  def _areg:   WMMA_STORE_D_LSTSO<Layout, Space, Type, regclass, WithStride, Int32Regs>;
+  def _areg64: WMMA_STORE_D_LSTSO<Layout, Space, Type, regclass, WithStride, Int64Regs>;
+  def _ari:    WMMA_STORE_D_LSTSO<Layout, Space, Type, regclass, WithStride, MEMri>;
+  def _ari64:  WMMA_STORE_D_LSTSO<Layout, Space, Type, regclass, WithStride, MEMri64>;
+}
+
+multiclass WMMA_STORE_D_LSTSh<string Layout, string Space,
+                              string Type, NVPTXRegClass regclass, bit WithStride> {
+  // Define a PatFrag that matches appropriate intrinsic that loads from the
+  // given address space.
+  def _Intr:    WMMA_STORE_INTR_HELPER<Layout, Space, Type, WithStride>;
+  defm NAME:    WMMA_STORE_D_LSTS<Layout, Space, Type, regclass, WithStride>;
 }
 
 multiclass WMMA_STORE_D_LST<string Layout, string Space,
-                            string Type, NVPTXRegClass regclass> {
-  defm _avar:   WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, imem>;
-  defm _areg:   WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, Int32Regs>;
-  defm _areg64: WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, Int64Regs>;
-  defm _ari:    WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, MEMri>;
-  defm _ari64:  WMMA_STORE_D_LSTO<Layout, Space, Type, regclass, MEMri64>;
+                             string Type, NVPTXRegClass regclass > {
+  defm _stride: WMMA_STORE_D_LSTSh<Layout, Space, Type, regclass, 1>;
+  defm NAME:    WMMA_STORE_D_LSTSh<Layout, Space, Type, regclass, 0>;
 }
 
 multiclass WMMA_STORE_D_LT<string Layout,

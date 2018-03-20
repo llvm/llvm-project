@@ -42,7 +42,6 @@ class raw_ostream;
 class Region;
 class SCEV;
 class Value;
-
 } // namespace llvm
 
 namespace polly {
@@ -830,7 +829,6 @@ public:
   std::string getEndUserMessage() const override;
   //@}
 };
-
 } // namespace polly
 
 #endif // POLLY_SCOPDETECTIONDIAGNOSTIC_H

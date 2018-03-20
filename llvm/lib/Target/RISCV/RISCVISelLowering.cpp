@@ -45,6 +45,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // Set up the register classes.
   addRegisterClass(XLenVT, &RISCV::GPRRegClass);
 
+  if (Subtarget.hasStdExtF())
+    addRegisterClass(MVT::f32, &RISCV::FPR32RegClass);
+
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
 
@@ -103,8 +106,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ, XLenVT, Expand);
   setOperationAction(ISD::CTPOP, XLenVT, Expand);
 
+  if (Subtarget.hasStdExtF()) {
+    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+  }
+
   setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
   setOperationAction(ISD::BlockAddress, XLenVT, Custom);
+  setOperationAction(ISD::ConstantPool, XLenVT, Custom);
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
@@ -171,6 +180,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:
     return lowerBlockAddress(Op, DAG);
+  case ISD::ConstantPool:
+    return lowerConstantPool(Op, DAG);
   case ISD::SELECT:
     return lowerSELECT(Op, DAG);
   case ISD::VASTART:
@@ -220,6 +231,29 @@ SDValue RISCVTargetLowering::lowerBlockAddress(SDValue Op,
   SDValue MNLo =
     SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNHi, BALo), 0);
   return MNLo;
+}
+
+SDValue RISCVTargetLowering::lowerConstantPool(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = Op.getValueType();
+  ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
+  const Constant *CPA = N->getConstVal();
+  int64_t Offset = N->getOffset();
+  unsigned Alignment = N->getAlignment();
+
+  if (!isPositionIndependent()) {
+    SDValue CPAHi =
+        DAG.getTargetConstantPool(CPA, Ty, Alignment, Offset, RISCVII::MO_HI);
+    SDValue CPALo =
+        DAG.getTargetConstantPool(CPA, Ty, Alignment, Offset, RISCVII::MO_LO);
+    SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, Ty, CPAHi), 0);
+    SDValue MNLo =
+        SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNHi, CPALo), 0);
+    return MNLo;
+  } else {
+    report_fatal_error("Unable to lowerConstantPool");
+  }
 }
 
 SDValue RISCVTargetLowering::lowerExternalSymbol(SDValue Op,
@@ -491,7 +525,10 @@ static bool CC_RISCV(const DataLayout &DL, unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
-  assert(ValVT == XLenVT && "Unexpected ValVT");
+  if (ValVT == MVT::f32) {
+    LocVT = MVT::i32;
+    LocInfo = CCValAssign::BCvt;
+  }
   assert(LocVT == XLenVT && "Unexpected LocVT");
 
   // Any return value split in to more than two values can't be returned
@@ -634,6 +671,7 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   EVT LocVT = VA.getLocVT();
+  EVT ValVT = VA.getValVT();
   SDValue Val;
 
   unsigned VReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
@@ -645,8 +683,12 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
   case CCValAssign::Indirect:
-    return Val;
+    break;
+  case CCValAssign::BCvt:
+    Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
+    break;
   }
+  return Val;
 }
 
 // The caller is responsible for loading the full value if the argument is
@@ -867,6 +909,9 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     switch (VA.getLocInfo()) {
     case CCValAssign::Full:
       break;
+    case CCValAssign::BCvt:
+      ArgValue = DAG.getNode(ISD::BITCAST, DL, VA.getLocVT(), ArgValue);
+      break;
     case CCValAssign::Indirect: {
       // Store the argument in a stack slot and pass its address.
       SDValue SpillSlot = DAG.CreateStackTemporary(Outs[i].ArgVT);
@@ -981,7 +1026,16 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = RetValue.getValue(1);
     Glue = RetValue.getValue(2);
 
-    assert(VA.getLocInfo() == CCValAssign::Full && "Unknown loc info!");
+    switch (VA.getLocInfo()) {
+    default:
+      llvm_unreachable("Unknown loc info!");
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::BCvt:
+      RetValue = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), RetValue);
+      break;
+    }
+
     InVals.push_back(RetValue);
   }
 
@@ -1001,6 +1055,22 @@ bool RISCVTargetLowering::CanLowerReturn(
       return false;
   }
   return true;
+}
+
+static SDValue packIntoRegLoc(SelectionDAG &DAG, SDValue Val,
+                              const CCValAssign &VA, const SDLoc &DL) {
+  EVT LocVT = VA.getLocVT();
+
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unexpected CCValAssign::LocInfo");
+  case CCValAssign::Full:
+    break;
+  case CCValAssign::BCvt:
+    Val = DAG.getNode(ISD::BITCAST, DL, LocVT, Val);
+    break;
+  }
+  return Val;
 }
 
 SDValue
@@ -1027,8 +1097,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     SDValue Val = OutVals[i];
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
-    assert(VA.getLocInfo() == CCValAssign::Full &&
-           "Unexpected CCValAssign::LocInfo");
+    Val = packIntoRegLoc(DAG, Val, VA, DL);
 
     Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Val, Flag);
 

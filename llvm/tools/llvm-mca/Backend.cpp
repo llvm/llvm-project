@@ -33,8 +33,8 @@ void Backend::runCycle(unsigned Cycle) {
 
   while (SM.hasNext()) {
     InstRef IR = SM.peekNext();
-    std::unique_ptr<Instruction> NewIS(
-        IB->createInstruction(STI, IR.first, *IR.second));
+    std::unique_ptr<Instruction> NewIS =
+        IB->createInstruction(IR.first, *IR.second);
     const InstrDesc &Desc = NewIS->getDesc();
     if (!DU->isAvailable(Desc.NumMicroOps) ||
         !DU->canDispatch(IR.first, *NewIS))
@@ -75,10 +75,19 @@ void Backend::notifyResourceAvailable(const ResourceRef &RR) {
     Listener->onResourceAvailable(RR);
 }
 
+void Backend::notifyReservedBuffers(ArrayRef<unsigned> Buffers) {
+  for (HWEventListener *Listener : Listeners)
+    Listener->onReservedBuffers(Buffers);
+}
+
+void Backend::notifyReleasedBuffers(ArrayRef<unsigned> Buffers) {
+  for (HWEventListener *Listener : Listeners)
+    Listener->onReleasedBuffers(Buffers);
+}
+
 void Backend::notifyCycleEnd(unsigned Cycle) {
   DEBUG(dbgs() << "[E] Cycle end: " << Cycle << "\n\n");
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleEnd(Cycle);
 }
-
 } // namespace mca.

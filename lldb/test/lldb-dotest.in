@@ -6,9 +6,13 @@ dotest_path = '@LLDB_SOURCE_DIR@/test/dotest.py'
 dotest_args = '@LLDB_DOTEST_ARGS_STR@'
 
 if __name__ == '__main__':
+    # Wrap arguments in single quotes. This is necessary because we want to
+    # forward the arguments and otherwise we might split up arguments that were
+    # originally wrapped in single quotes.
+    wrapper_args = list("'" + i + "'" for i in sys.argv[1:])
     # FIXME: It would be nice if we can mimic the approach taken by llvm-lit
     # and pass a python configuration straight to dotest, rather than going
     # through the operating system.
-    command = '{} -q {} {}'.format(dotest_path, dotest_args, ' '.join(
-        sys.argv[1:]))
+    command = '{} -q {} {}'.format(dotest_path, dotest_args,
+                                   ' '.join(wrapper_args))
     os.system(command)

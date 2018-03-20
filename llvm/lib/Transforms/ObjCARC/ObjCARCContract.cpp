@@ -31,6 +31,7 @@
 #include "ObjCARC.h"
 #include "ProvenanceAnalysis.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Operator.h"
@@ -74,11 +75,13 @@ namespace {
     SmallPtrSet<CallInst *, 8> StoreStrongCalls;
 
     /// Returns true if we eliminated Inst.
-    bool tryToPeepholeInstruction(Function &F, Instruction *Inst,
-                                  inst_iterator &Iter,
-                                  SmallPtrSetImpl<Instruction *> &DepInsts,
-                                  SmallPtrSetImpl<const BasicBlock *> &Visited,
-                                  bool &TailOkForStoreStrong);
+    bool
+    tryToPeepholeInstruction(Function &F, Instruction *Inst,
+                             inst_iterator &Iter,
+                             SmallPtrSetImpl<Instruction *> &DepInsts,
+                             SmallPtrSetImpl<const BasicBlock *> &Visited,
+                             bool &TailOkForStoreStrong,
+                             DenseMap<BasicBlock *, ColorVector> &BlockColors);
 
     bool optimizeRetainCall(Function &F, Instruction *Retain);
 
@@ -407,7 +410,8 @@ bool ObjCARCContract::tryToPeepholeInstruction(
   Function &F, Instruction *Inst, inst_iterator &Iter,
   SmallPtrSetImpl<Instruction *> &DependingInsts,
   SmallPtrSetImpl<const BasicBlock *> &Visited,
-  bool &TailOkForStoreStrongs) {
+  bool &TailOkForStoreStrongs,
+  DenseMap<BasicBlock *, ColorVector> &BlockColors) {
     // Only these library routines return their argument. In particular,
     // objc_retainBlock does not necessarily return its argument.
   ARCInstKind Class = GetBasicARCInstKind(Inst);
@@ -457,7 +461,17 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                               /*isVarArg=*/false),
             RVInstMarker->getString(),
             /*Constraints=*/"", /*hasSideEffects=*/true);
-        CallInst::Create(IA, "", Inst);
+
+        SmallVector<OperandBundleDef, 1> OpBundles;
+        if (!BlockColors.empty()) {
+          const ColorVector &CV = BlockColors.find(Inst->getParent())->second;
+          assert(CV.size() == 1 && "non-unique color for block!");
+          Instruction *EHPad = CV.front()->getFirstNonPHI();
+          if (EHPad->isEHPad())
+            OpBundles.emplace_back("funclet", EHPad);
+        }
+
+        CallInst::Create(IA, None, OpBundles, "", Inst);
       }
     decline_rv_optimization:
       return false;
@@ -518,6 +532,11 @@ bool ObjCARCContract::runOnFunction(Function &F) {
 
   PA.setAA(&getAnalysis<AAResultsWrapperPass>().getAAResults());
 
+  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  if (F.hasPersonalityFn() &&
+      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+    BlockColors = colorEHFunclets(F);
+
   DEBUG(llvm::dbgs() << "**** ObjCARC Contract ****\n");
 
   // Track whether it's ok to mark objc_storeStrong calls with the "tail"
@@ -541,7 +560,7 @@ bool ObjCARCContract::runOnFunction(Function &F) {
     // First try to peephole Inst. If there is nothing further we can do in
     // terms of undoing objc-arc-expand, process the next inst.
     if (tryToPeepholeInstruction(F, Inst, I, DependingInstructions, Visited,
-                                 TailOkForStoreStrongs))
+                                 TailOkForStoreStrongs, BlockColors))
       continue;
 
     // Otherwise, try to undo objc-arc-expand.

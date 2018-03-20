@@ -47,7 +47,8 @@ opeq1.exit:
 ; Same as above, but the two blocks are in inverse order.
 define zeroext i1 @opeq1_inverse(
 ; X86-LABEL: @opeq1_inverse(
-; X86-NEXT:  land.rhs.i:
+; X86-NEXT:    br label [[LAND_RHS_I:%.*]]
+; X86:       land.rhs.i:
 ; X86-NEXT:    [[SECOND_I:%.*]] = getelementptr inbounds %"struct.std::pair", %"struct.std::pair"* [[A:%.*]], i64 0, i32 0
 ; X86-NEXT:    [[SECOND2_I:%.*]] = getelementptr inbounds %"struct.std::pair", %"struct.std::pair"* [[B:%.*]], i64 0, i32 0
 ; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[SECOND_I]] to i8*
