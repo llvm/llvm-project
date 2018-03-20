@@ -209,7 +209,7 @@ TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
       data[j] = create_item(i, j);
     }
 
-    std::sort(data.begin(), data.end());
+    llvm::sort(data.begin(), data.end());
 
     for (size_t j = 0; j < i; ++j) {
       int val = create_item(i, j);

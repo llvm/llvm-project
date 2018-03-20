@@ -140,8 +140,11 @@ bool SwiftABIInfo::isLegalVectorTypeForSwift(CharUnits vectorSize,
 static CGCXXABI::RecordArgABI getRecordArgABI(const RecordType *RT,
                                               CGCXXABI &CXXABI) {
   const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-  if (!RD)
+  if (!RD) {
+    if (!RT->getDecl()->canPassInRegisters())
+      return CGCXXABI::RAA_Indirect;
     return CGCXXABI::RAA_Default;
+  }
   return CXXABI.getRecordArgABI(RD);
 }
 
@@ -151,6 +154,20 @@ static CGCXXABI::RecordArgABI getRecordArgABI(QualType T,
   if (!RT)
     return CGCXXABI::RAA_Default;
   return getRecordArgABI(RT, CXXABI);
+}
+
+static bool classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
+                               const ABIInfo &Info) {
+  QualType Ty = FI.getReturnType();
+
+  if (const auto *RT = Ty->getAs<RecordType>())
+    if (!isa<CXXRecordDecl>(RT->getDecl()) &&
+        !RT->getDecl()->canPassInRegisters()) {
+      FI.getReturnInfo() = Info.getNaturalAlignIndirect(Ty);
+      return true;
+    }
+
+  return CXXABI.classifyReturnType(FI);
 }
 
 /// Pass transparent unions as if they were the type of the first element. Sema
@@ -1749,7 +1766,7 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   } else
     State.FreeRegs = DefaultNumRegisterParameters;
 
-  if (!getCXXABI().classifyReturnType(FI)) {
+  if (!::classifyReturnType(getCXXABI(), FI, *this)) {
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType(), State);
   } else if (FI.getReturnInfo().isIndirect()) {
     // The C++ ABI is not aware of register usage, so we have to check if the
@@ -3545,7 +3562,7 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   unsigned FreeSSERegs = IsRegCall ? 16 : 8;
   unsigned NeededInt, NeededSSE;
 
-  if (!getCXXABI().classifyReturnType(FI)) {
+  if (!::classifyReturnType(getCXXABI(), FI, *this)) {
     if (IsRegCall && FI.getReturnType()->getTypePtr()->isRecordType() &&
         !FI.getReturnType()->getTypePtr()->isUnionType()) {
       FI.getReturnInfo() =
@@ -4895,7 +4912,7 @@ private:
   bool isIllegalVectorType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    if (!getCXXABI().classifyReturnType(FI))
+    if (!::classifyReturnType(getCXXABI(), FI, *this))
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
     for (auto &it : FI.arguments())
@@ -5626,7 +5643,7 @@ void WindowsARMTargetCodeGenInfo::setTargetAttributes(
 }
 
 void ARMABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  if (!getCXXABI().classifyReturnType(FI))
+  if (!::classifyReturnType(getCXXABI(), FI, *this))
     FI.getReturnInfo() =
         classifyReturnType(FI.getReturnType(), FI.isVariadic());
 

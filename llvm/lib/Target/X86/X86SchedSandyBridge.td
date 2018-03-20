@@ -71,15 +71,21 @@ def : ReadAdvance<ReadAfterLd, 4>;
 // This multiclass defines the resource usage for variants with and without
 // folded loads.
 multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
-                          ProcResourceKind ExePort,
-                          int Lat> {
+                          list<ProcResourceKind> ExePorts,
+                          int Lat, list<int> Res = [1], int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
-  def : WriteRes<SchedRW, [ExePort]> { let Latency = Lat; }
+  def : WriteRes<SchedRW, ExePorts> {
+    let Latency = Lat;
+    let ResourceCycles = Res;
+    let NumMicroOps = UOps;
+  }
 
   // Memory variant also uses a cycle on port 2/3 and adds 4 cycles to the
   // latency.
-  def : WriteRes<SchedRW.Folded, [SBPort23, ExePort]> {
-     let Latency = !add(Lat, 4);
+  def : WriteRes<SchedRW.Folded, !listconcat([SBPort23], ExePorts)> {
+    let Latency = !add(Lat, 4);
+    let ResourceCycles = !listconcat([1], Res);
+    let NumMicroOps = UOps;
   }
 }
 
@@ -92,106 +98,57 @@ def : WriteRes<WriteLoad,  [SBPort23]> { let Latency = 4; }
 def : WriteRes<WriteMove,  [SBPort015]>;
 def : WriteRes<WriteZero,  []>;
 
-defm : SBWriteResPair<WriteALU,   SBPort015, 1>;
-defm : SBWriteResPair<WriteIMul,  SBPort1,   3>;
+defm : SBWriteResPair<WriteALU,   [SBPort015], 1>;
+defm : SBWriteResPair<WriteIMul,  [SBPort1],   3>;
+defm : SBWriteResPair<WriteIDiv, [SBPort0, SBDivider], 25, [1, 10]>;
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
-defm : SBWriteResPair<WriteShift, SBPort05,  1>;
-defm : SBWriteResPair<WriteJump,  SBPort5,   1>;
+
+defm : SBWriteResPair<WriteShift, [SBPort05],  1>;
+defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
 // the port to read all inputs. We don't model that.
 def : WriteRes<WriteLEA, [SBPort15]>;
 
-// This is quite rough, latency depends on the dividend.
-def : WriteRes<WriteIDiv, [SBPort0, SBDivider]> {
-  let Latency = 25;
-  let ResourceCycles = [1, 10];
-}
-def : WriteRes<WriteIDivLd, [SBPort23, SBPort0, SBDivider]> {
-  let Latency = 29;
-  let ResourceCycles = [1, 1, 10];
-}
-
 // Scalar and vector floating point.
 def  : WriteRes<WriteFStore,       [SBPort23, SBPort4]>;
 def  : WriteRes<WriteFLoad,        [SBPort23]> { let Latency = 6; }
 def  : WriteRes<WriteFMove,        [SBPort5]>;
 
-defm : SBWriteResPair<WriteFAdd,   SBPort1, 3>;
-defm : SBWriteResPair<WriteFMul,   SBPort0, 5>;
-defm : SBWriteResPair<WriteFDiv,   SBPort0, 24>;
-defm : SBWriteResPair<WriteFRcp,   SBPort0, 5>;
-defm : SBWriteResPair<WriteFRsqrt, SBPort0, 5>;
-defm : SBWriteResPair<WriteFSqrt,  SBPort0, 14>;
-defm : SBWriteResPair<WriteCvtF2I, SBPort1, 3>;
-defm : SBWriteResPair<WriteCvtI2F, SBPort1, 4>;
-defm : SBWriteResPair<WriteCvtF2F, SBPort1, 3>;
-defm : SBWriteResPair<WriteFShuffle,  SBPort5,  1>;
-defm : SBWriteResPair<WriteFBlend,  SBPort05,  1>;
-def : WriteRes<WriteFVarBlend, [SBPort0, SBPort5]> {
-  let Latency = 2;
-  let ResourceCycles = [1, 1];
-}
-def : WriteRes<WriteFVarBlendLd, [SBPort0, SBPort5, SBPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [1, 1, 1];
-}
+defm : SBWriteResPair<WriteFAdd,   [SBPort1], 3>;
+defm : SBWriteResPair<WriteFMul,   [SBPort0], 5>;
+defm : SBWriteResPair<WriteFDiv,   [SBPort0], 24>;
+defm : SBWriteResPair<WriteFRcp,   [SBPort0], 5>;
+defm : SBWriteResPair<WriteFRsqrt, [SBPort0], 5>;
+defm : SBWriteResPair<WriteFSqrt,  [SBPort0], 14>;
+defm : SBWriteResPair<WriteCvtF2I, [SBPort1], 3>;
+defm : SBWriteResPair<WriteCvtI2F, [SBPort1], 4>;
+defm : SBWriteResPair<WriteCvtF2F, [SBPort1], 3>;
+defm : SBWriteResPair<WriteFShuffle, [SBPort5],  1>;
+defm : SBWriteResPair<WriteFBlend,  [SBPort05],  1>;
+defm : SBWriteResPair<WriteFVarBlend,  [SBPort0, SBPort5], 2>;
 
 // Vector integer operations.
 def  : WriteRes<WriteVecStore,       [SBPort23, SBPort4]>;
 def  : WriteRes<WriteVecLoad,        [SBPort23]> { let Latency = 6; }
 def  : WriteRes<WriteVecMove,        [SBPort05]>;
 
-defm : SBWriteResPair<WriteVecShift, SBPort5,  1>;
-defm : SBWriteResPair<WriteVecLogic, SBPort5, 1>;
-defm : SBWriteResPair<WriteVecALU,   SBPort1,  3>;
-defm : SBWriteResPair<WriteVecIMul,  SBPort0,   5>;
-defm : SBWriteResPair<WriteShuffle,  SBPort5,  1>;
-defm : SBWriteResPair<WriteBlend,  SBPort15,  1>;
-def : WriteRes<WriteVarBlend, [SBPort1, SBPort5]> {
-  let Latency = 2;
-  let ResourceCycles = [1, 1];
-}
-def : WriteRes<WriteVarBlendLd, [SBPort1, SBPort5, SBPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [1, 1, 1];
-}
-def : WriteRes<WriteMPSAD, [SBPort0,SBPort15]> {
-  let Latency = 5;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,2];
-}
-def : WriteRes<WriteMPSADLd, [SBPort0,SBPort23,SBPort15]> {
-  let Latency = 11;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,1,2];
-}
+defm : SBWriteResPair<WriteVecShift, [SBPort5], 1>;
+defm : SBWriteResPair<WriteVecLogic, [SBPort5], 1>;
+defm : SBWriteResPair<WriteVecALU,   [SBPort1], 3>;
+defm : SBWriteResPair<WriteVecIMul,  [SBPort0], 5>;
+defm : SBWriteResPair<WriteShuffle,  [SBPort5], 1>;
+defm : SBWriteResPair<WriteBlend,   [SBPort15], 1>;
+defm : SBWriteResPair<WriteVarBlend, [SBPort1, SBPort5], 2>;
+defm : SBWriteResPair<WriteMPSAD, [SBPort0, SBPort15], 5, [1,2], 3>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
-// HADD, HSUB PS/PD
-// x,x / v,v,v.
-def : WriteRes<WriteFHAdd, [SBPort1]> {
-  let Latency = 3;
-}
 
-// x,m / v,v,m.
-def : WriteRes<WriteFHAddLd, [SBPort1, SBPort23]> {
-  let Latency = 7;
-  let ResourceCycles = [1, 1];
-}
-
-// PHADD|PHSUB (S) W/D.
-// v <- v,v.
-def : WriteRes<WritePHAdd, [SBPort15]>;
-
-// v <- v,m.
-def : WriteRes<WritePHAddLd, [SBPort15, SBPort23]> {
-  let Latency = 5;
-  let ResourceCycles = [1, 1];
-}
+defm : SBWriteResPair<WriteFHAdd,   [SBPort1], 3>;
+defm : SBWriteResPair<WritePHAdd,   [SBPort15], 1>;
 
 // String instructions.
 // Packed Compare Implicit Length Strings, Return Mask
@@ -286,10 +243,10 @@ def : WriteRes<WriteNop, []>;
 
 // AVX2/FMA is not supported on that architecture, but we should define the basic
 // scheduling resources anyway.
-defm : SBWriteResPair<WriteFShuffle256, SBPort0,  1>;
-defm : SBWriteResPair<WriteShuffle256, SBPort0,  1>;
-defm : SBWriteResPair<WriteVarVecShift, SBPort0,  1>;
-defm : SBWriteResPair<WriteFMA, SBPort01,  5>;
+defm : SBWriteResPair<WriteFShuffle256, [SBPort0],  1>;
+defm : SBWriteResPair<WriteShuffle256, [SBPort0],  1>;
+defm : SBWriteResPair<WriteVarVecShift, [SBPort0],  1>;
+defm : SBWriteResPair<WriteFMA, [SBPort01],  5>;
 
 // Remaining SNB instrs.
 
@@ -348,7 +305,7 @@ def: InstRW<[SBWriteResGroup2], (instregex "FNOP")>;
 def: InstRW<[SBWriteResGroup2], (instregex "INSERTPSrr")>;
 def: InstRW<[SBWriteResGroup2], (instregex "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1")>;
 def: InstRW<[SBWriteResGroup2], (instregex "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4")>;
-def: InstRW<[SBWriteResGroup2], (instregex "JMP64r")>;
+def: InstRW<[SBWriteResGroup2], (instregex "JMP(16|32|64)r")>;
 def: InstRW<[SBWriteResGroup2], (instregex "JMP_1")>;
 def: InstRW<[SBWriteResGroup2], (instregex "JMP_4")>;
 def: InstRW<[SBWriteResGroup2], (instregex "LD_Frr")>;
@@ -669,7 +626,7 @@ def: InstRW<[SBWriteResGroup6], (instregex "INC(8|16|32|64)r")>;
 def: InstRW<[SBWriteResGroup6], (instregex "MMX_MOVD64from64rr")>;
 def: InstRW<[SBWriteResGroup6], (instregex "MMX_MOVQ2DQrr")>;
 def: InstRW<[SBWriteResGroup6], (instregex "MOV(8|16|32|64)rr")>;
-def: InstRW<[SBWriteResGroup6], (instregex "MOV8ri")>;
+def: InstRW<[SBWriteResGroup6], (instregex "MOV(8|16|32|64)ri")>;
 def: InstRW<[SBWriteResGroup6], (instregex "MOVDQArr")>;
 def: InstRW<[SBWriteResGroup6], (instregex "MOVDQUrr")>;
 def: InstRW<[SBWriteResGroup6], (instregex "MOVPQI2QIrr")>;
@@ -692,8 +649,8 @@ def: InstRW<[SBWriteResGroup6], (instregex "SUB(8|16|32|64)ri")>;
 def: InstRW<[SBWriteResGroup6], (instregex "SUB(8|16|32|64)rr")>;
 def: InstRW<[SBWriteResGroup6], (instregex "SUB(8|16|32|64)i")>;
 def: InstRW<[SBWriteResGroup6], (instregex "TEST(8|16|32|64)rr")>;
-def: InstRW<[SBWriteResGroup6], (instregex "TEST8i8")>;
-def: InstRW<[SBWriteResGroup6], (instregex "TEST8ri")>;
+def: InstRW<[SBWriteResGroup6], (instregex "TEST(8|16|32|64)i")>;
+def: InstRW<[SBWriteResGroup6], (instregex "TEST(8|16|32|64)ri")>;
 def: InstRW<[SBWriteResGroup6], (instregex "VMOVPQI2QIrr")>;
 def: InstRW<[SBWriteResGroup6], (instregex "VMOVZPQILo2PQIrr")>;
 def: InstRW<[SBWriteResGroup6], (instregex "VPANDNrr")>;
@@ -835,7 +792,7 @@ def SBWriteResGroup18 : SchedWriteRes<[SBPort5,SBPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup18], (instregex "JRCXZ")>;
+def: InstRW<[SBWriteResGroup18], (instrs JCXZ, JECXZ, JRCXZ)>;
 def: InstRW<[SBWriteResGroup18], (instregex "MMX_MOVDQ2Qrr")>;
 
 def SBWriteResGroup19 : SchedWriteRes<[SBPort05,SBPort015]> {
@@ -1053,8 +1010,6 @@ def SBWriteResGroup25 : SchedWriteRes<[SBPort015]> {
   let ResourceCycles = [3];
 }
 def: InstRW<[SBWriteResGroup25], (instregex "LEAVE64")>;
-def: InstRW<[SBWriteResGroup25], (instregex "OUT32rr")>;
-def: InstRW<[SBWriteResGroup25], (instregex "OUT8rr")>;
 def: InstRW<[SBWriteResGroup25], (instregex "XADD(8|16|32|64)rr")>;
 
 def SBWriteResGroup25_2 : SchedWriteRes<[SBPort5,SBPort05]> {
@@ -1134,8 +1089,6 @@ def SBWriteResGroup29_2 : SchedWriteRes<[SBPort5,SBPort015]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SBWriteResGroup29_2], (instregex "OUT32ir")>;
-def: InstRW<[SBWriteResGroup29_2], (instregex "OUT8ir")>;
 def: InstRW<[SBWriteResGroup29_2], (instregex "PAUSE")>;
 
 def SBWriteResGroup29_3 : SchedWriteRes<[SBPort05,SBPort015]> {

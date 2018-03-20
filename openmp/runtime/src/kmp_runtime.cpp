@@ -5476,6 +5476,7 @@ void __kmp_free_thread(kmp_info_t *this_th) {
     balign[b].bb.leaf_kids = 0;
   }
   this_th->th.th_task_state = 0;
+  this_th->th.th_reap_state = KMP_SAFE_TO_REAP;
 
   /* put thread back on the free pool */
   TCW_PTR(this_th->th.th_team, NULL);

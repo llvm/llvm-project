@@ -500,7 +500,7 @@ let AddedComplexity = SM_LOAD_PATTERN.AddedComplexity in {
 
 class SMRD_Pattern_ci <string Instr, ValueType vt> : GCNPat <
   (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
-  (vt (!cast<SM_Pseudo>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
+  (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
   let OtherPredicates = [isCIOnly];
 }
 

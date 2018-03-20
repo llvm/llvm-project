@@ -8687,34 +8687,15 @@ ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   return { Start, PostInc };
 }
 
-bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
-                                       const SCEV *LHS, const SCEV *RHS) {
-  // Canonicalize the inputs first.
-  (void)SimplifyICmpOperands(Pred, LHS, RHS);
-
-  // We'd like to check the predicate on every iteration of the most dominated
-  // loop between loops used in LHS and RHS.
-  // To do this we use the following list of steps:
-  // 1. Collect set S all loops on which either LHS or RHS depend.
-  // 2. If S is non-empty
-  // a. Let PD be the element of S which is dominated by all other elements of S
-  // b. Let E(LHS) be value of LHS on entry of PD.
-  //    To get E(LHS), we should just take LHS and replace all AddRecs that are
-  //    attached to PD on with their entry values.
-  //    Define E(RHS) in the same way.
-  // c. Let B(LHS) be value of L on backedge of PD.
-  //    To get B(LHS), we should just take LHS and replace all AddRecs that are
-  //    attached to PD on with their backedge values.
-  //    Define B(RHS) in the same way.
-  // d. Note that E(LHS) and E(RHS) are automatically available on entry of PD,
-  //    so we can assert on that.
-  // e. Return true if isLoopEntryGuardedByCond(Pred, E(LHS), E(RHS)) &&
-  //                   isLoopBackedgeGuardedByCond(Pred, B(LHS), B(RHS))
-
+bool ScalarEvolution::isKnownViaInduction(ICmpInst::Predicate Pred,
+                                          const SCEV *LHS, const SCEV *RHS) {
   // First collect all loops.
   SmallPtrSet<const Loop *, 8> LoopsUsed;
   getUsedLoops(LHS, LoopsUsed);
   getUsedLoops(RHS, LoopsUsed);
+
+  if (LoopsUsed.empty())
+    return false;
 
   // Domination relationship must be a linear order on collected loops.
 #ifndef NDEBUG
@@ -8724,35 +8705,43 @@ bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
               DT.dominates(L2->getHeader(), L1->getHeader())) &&
              "Domination relationship is not a linear order");
 #endif
-  if (!LoopsUsed.empty()) {
-    const Loop *MDL = *std::max_element(LoopsUsed.begin(), LoopsUsed.end(),
+  
+  const Loop *MDL = *std::max_element(LoopsUsed.begin(), LoopsUsed.end(),
                                         [&](const Loop *L1, const Loop *L2) {
                          return DT.dominates(L1->getHeader(), L2->getHeader());
                        });
 
-    // Get init and post increment value for LHS.
-    auto SplitLHS = SplitIntoInitAndPostInc(MDL, LHS);
-    if (SplitLHS.first != getCouldNotCompute()) {
-      // if LHS does not contain unknown non-invariant SCEV then
-      // get init and post increment value for RHS.
-      auto SplitRHS = SplitIntoInitAndPostInc(MDL, RHS);
-      if (SplitRHS.first != getCouldNotCompute()) {
-        // if RHS does not contain unknown non-invariant SCEV then
-        // check whether implication is possible.
-        // It is possible that init SCEV contains an invariant load but it does
-        // not dominate MDL and is not available at MDL loop entry, so we should
-        // check it here.
-        if (isAvailableAtLoopEntry(SplitLHS.first, MDL) &&
-            isAvailableAtLoopEntry(SplitRHS.first, MDL)) {
-          if (isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first,
-                                       SplitRHS.first) &&
-              isLoopBackedgeGuardedByCond(MDL, Pred, SplitLHS.second,
-                                          SplitRHS.second))
-            return true;
-        }
-      }
-    }
-  }
+  // Get init and post increment value for LHS.
+  auto SplitLHS = SplitIntoInitAndPostInc(MDL, LHS);
+  // if LHS contains unknown non-invariant SCEV then bail out.
+  if (SplitLHS.first == getCouldNotCompute())
+    return false;
+  assert (SplitLHS.first != getCouldNotCompute() && "Unexpected CNC");
+  // Get init and post increment value for RHS.
+  auto SplitRHS = SplitIntoInitAndPostInc(MDL, RHS);
+  // if RHS contains unknown non-invariant SCEV then bail out.
+  if (SplitRHS.first == getCouldNotCompute())
+    return false;
+  assert (SplitRHS.first != getCouldNotCompute() && "Unexpected CNC");
+  // It is possible that init SCEV contains an invariant load but it does
+  // not dominate MDL and is not available at MDL loop entry, so we should
+  // check it here.
+  if (!isAvailableAtLoopEntry(SplitLHS.first, MDL) ||
+      !isAvailableAtLoopEntry(SplitRHS.first, MDL))
+    return false;
+
+  return isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first) &&
+         isLoopBackedgeGuardedByCond(MDL, Pred, SplitLHS.second,
+                                     SplitRHS.second);
+}
+
+bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
+                                       const SCEV *LHS, const SCEV *RHS) {
+  // Canonicalize the inputs first.
+  (void)SimplifyICmpOperands(Pred, LHS, RHS);
+
+  if (isKnownViaInduction(Pred, LHS, RHS))
+    return true;
 
   if (isKnownPredicateViaSplitting(Pred, LHS, RHS))
     return true;

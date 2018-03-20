@@ -12,7 +12,7 @@ class B<A a> {
 multiclass M0<string s> {
   // This should work fine.
   def _m00 : B<!cast<A>(s)>;
-  // CHECK: error: Undefined reference:'d1_r1_no_such_record'
+  // CHECK: error: Undefined reference to record: 'd1_r1_no_such_record'
   def _m01: B<!cast<A>(s#"_no_such_record")>;
 }
 

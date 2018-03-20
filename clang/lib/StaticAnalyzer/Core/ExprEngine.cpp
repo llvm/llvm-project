@@ -2462,8 +2462,8 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     const Decl *D = LocCtxt->getDecl();
     const auto *MD = D ? dyn_cast<CXXMethodDecl>(D) : nullptr;
     const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
-    SVal V;
-    bool IsReference;
+    Optional<std::pair<SVal, QualType>> VInfo;
+
     if (AMgr.options.shouldInlineLambdas() && DeclRefEx &&
         DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
         MD->getParent()->isLambda()) {
@@ -2472,24 +2472,22 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
       llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
       FieldDecl *LambdaThisCaptureField;
       CXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
-      const FieldDecl *FD = LambdaCaptureFields[VD];
-      if (!FD) {
-        // When a constant is captured, sometimes no corresponding field is
-        // created in the lambda object.
-        assert(VD->getType().isConstQualified());
-        V = state->getLValue(VD, LocCtxt);
-        IsReference = false;
-      } else {
+
+      // Sema follows a sequence of complex rules to determine whether the
+      // variable should be captured.
+      if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
         Loc CXXThis =
             svalBuilder.getCXXThis(MD, LocCtxt->getCurrentStackFrame());
         SVal CXXThisVal = state->getSVal(CXXThis);
-        V = state->getLValue(FD, CXXThisVal);
-        IsReference = FD->getType()->isReferenceType();
+        VInfo = std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
       }
-    } else {
-      V = state->getLValue(VD, LocCtxt);
-      IsReference = VD->getType()->isReferenceType();
     }
+
+    if (!VInfo)
+      VInfo = std::make_pair(state->getLValue(VD, LocCtxt), VD->getType());
+
+    SVal V = VInfo->first;
+    bool IsReference = VInfo->second->isReferenceType();
 
     // For references, the 'lvalue' is the pointer address stored in the
     // reference region.

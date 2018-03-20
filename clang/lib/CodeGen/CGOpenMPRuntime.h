@@ -268,6 +268,10 @@ protected:
   void emitCall(CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *Callee,
                 ArrayRef<llvm::Value *> Args = llvm::None) const;
 
+  /// \brief Emits address of the word in a memory where current thread id is
+  /// stored.
+  virtual Address emitThreadIDAddress(CodeGenFunction &CGF, SourceLocation Loc);
+
 private:
   /// \brief Default const ident_t object used for initialization of all other
   /// ident_t objects.
@@ -563,10 +567,6 @@ private:
   /// \param VD Threadprivate variable.
   /// \return Cache variable for the specified threadprivate.
   llvm::Constant *getOrCreateThreadPrivateCache(const VarDecl *VD);
-
-  /// \brief Emits address of the word in a memory where current thread id is
-  /// stored.
-  virtual Address emitThreadIDAddress(CodeGenFunction &CGF, SourceLocation Loc);
 
   /// \brief Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has

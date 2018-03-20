@@ -692,15 +692,23 @@ class ConstantDataArray final : public ConstantDataSequential {
 public:
   ConstantDataArray(const ConstantDataArray &) = delete;
 
-  /// get() constructors - Return a constant with array type with an element
+  /// get() constructor - Return a constant with array type with an element
   /// count and element type matching the ArrayRef passed in.  Note that this
   /// can return a ConstantAggregateZero object.
-  static Constant *get(LLVMContext &Context, ArrayRef<uint8_t> Elts);
-  static Constant *get(LLVMContext &Context, ArrayRef<uint16_t> Elts);
-  static Constant *get(LLVMContext &Context, ArrayRef<uint32_t> Elts);
-  static Constant *get(LLVMContext &Context, ArrayRef<uint64_t> Elts);
-  static Constant *get(LLVMContext &Context, ArrayRef<float> Elts);
-  static Constant *get(LLVMContext &Context, ArrayRef<double> Elts);
+  template <typename ElementTy>
+  static Constant *get(LLVMContext &Context, ArrayRef<ElementTy> Elts) {
+    const char *Data = reinterpret_cast<const char *>(Elts.data());
+    Type *Ty =
+        ArrayType::get(Type::getScalarTy<ElementTy>(Context), Elts.size());
+    return getImpl(StringRef(Data, Elts.size() * sizeof(ElementTy)), Ty);
+  }
+
+  /// get() constructor - ArrayTy needs to be compatible with
+  /// ArrayRef<ElementTy>. Calls get(LLVMContext, ArrayRef<ElementTy>).
+  template <typename ArrayTy>
+  static Constant *get(LLVMContext &Context, ArrayTy &Elts) {
+    return ConstantDataArray::get(Context, makeArrayRef(Elts));
+  }
 
   /// getFP() constructors - Return a constant with array type with an element
   /// count and element type of float with precision matching the number of

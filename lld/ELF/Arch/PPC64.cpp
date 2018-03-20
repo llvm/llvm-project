@@ -14,6 +14,8 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::object;
+using namespace llvm::support::endian;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
@@ -38,11 +40,13 @@ namespace {
 class PPC64 final : public TargetInfo {
 public:
   PPC64();
+  uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void writeGotHeader(uint8_t *Buf) const override;
 };
 } // namespace
 
@@ -65,6 +69,10 @@ PPC64::PPC64() {
   GotPltEntrySize = 8;
   PltEntrySize = 32;
   PltHeaderSize = 0;
+  GotBaseSymInGotPlt = false;
+  GotBaseSymOff = 0x8000;
+  if (Config->EKind == ELF64LEKind)
+    GotHeaderEntriesNum = 1;
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
@@ -79,6 +87,42 @@ PPC64::PPC64() {
   // And because the lowest non-zero 256M boundary is 0x10000000, PPC64 linkers
   // use 0x10000000 as the starting address.
   DefaultImageBase = 0x10000000;
+}
+
+static uint32_t getEFlags(InputFile *File) {
+  // Get the e_flag from the input file and if it is unspecified, then set it to
+  // the e_flag appropriate for the ABI.
+
+  // We are currently handling both ELF64LE and ELF64BE but eventually will
+  // remove BE support once v2 ABI support is complete.
+  switch (Config->EKind) {
+  case ELF64BEKind:
+    if (uint32_t EFlags =
+        cast<ObjFile<ELF64BE>>(File)->getObj().getHeader()->e_flags)
+      return EFlags;
+    return 1;
+  case ELF64LEKind:
+    if (uint32_t EFlags =
+        cast<ObjFile<ELF64LE>>(File)->getObj().getHeader()->e_flags)
+      return EFlags;
+    return 2;
+  default:
+    llvm_unreachable("unknown Config->EKind");
+  }
+}
+
+uint32_t PPC64::calcEFlags() const {
+  assert(!ObjectFiles.empty());
+  uint32_t Ret = getEFlags(ObjectFiles[0]);
+
+  // Verify that all input files have the same e_flags.
+  for (InputFile *F : makeArrayRef(ObjectFiles).slice(1)) {
+    if (Ret == getEFlags(F))
+      continue;
+    error("incompatible e_flags: " + toString(F));
+    return 0;
+  }
+  return Ret;
 }
 
 RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
@@ -98,6 +142,11 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   default:
     return R_ABS;
   }
+}
+
+void PPC64::writeGotHeader(uint8_t *Buf) const {
+  if (Config->EKind == ELF64LEKind)
+    write64(Buf, getPPC64TocBase());
 }
 
 void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,

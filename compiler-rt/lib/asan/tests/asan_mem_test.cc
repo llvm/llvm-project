@@ -82,7 +82,7 @@ static bool AllocateTwoAdjacentArrays(char **x1, char **x2, size_t size) {
   for (size_t i = 0; i < 1000U && !res; i++) {
     v.push_back(reinterpret_cast<uintptr_t>(new char[size]));
     if (i == 0) continue;
-    sort(v.begin(), v.end());
+    llvm::sort(v.begin(), v.end());
     for (size_t j = 1; j < v.size(); j++) {
       assert(v[j] > v[j-1]);
       if ((size_t)(v[j] - v[j-1]) < size * 2) {

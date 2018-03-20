@@ -110,6 +110,8 @@ public:
                             CodeGenOpt::Level OptLevel,
                             bool IgnoreChains = false);
 
+  static void EnforceNodeIdInvariant(SDNode *N);
+
   // Opcodes used by the DAG state machine:
   enum BuiltinOpcodes {
     OPC_Scope,
@@ -199,23 +201,28 @@ protected:
   /// of the new node T.
   void ReplaceUses(SDValue F, SDValue T) {
     CurDAG->ReplaceAllUsesOfValueWith(F, T);
+    EnforceNodeIdInvariant(T.getNode());
   }
 
   /// ReplaceUses - replace all uses of the old nodes F with the use
   /// of the new nodes T.
   void ReplaceUses(const SDValue *F, const SDValue *T, unsigned Num) {
     CurDAG->ReplaceAllUsesOfValuesWith(F, T, Num);
+    for (unsigned i = 0; i < Num; ++i)
+      EnforceNodeIdInvariant(T[i].getNode());
   }
 
   /// ReplaceUses - replace all uses of the old node F with the use
   /// of the new node T.
   void ReplaceUses(SDNode *F, SDNode *T) {
     CurDAG->ReplaceAllUsesWith(F, T);
+    EnforceNodeIdInvariant(T);
   }
 
   /// Replace all uses of \c F with \c T, then remove \c F from the DAG.
   void ReplaceNode(SDNode *F, SDNode *T) {
     CurDAG->ReplaceAllUsesWith(F, T);
+    EnforceNodeIdInvariant(T);
     CurDAG->RemoveDeadNode(F);
   }
 

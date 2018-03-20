@@ -590,7 +590,7 @@ GotSection::GotSection()
                        Target->GotEntrySize, ".got") {}
 
 void GotSection::addEntry(Symbol &Sym) {
-  Sym.GotIndex = NumEntries;
+  Sym.GotIndex = Target->GotHeaderEntriesNum + NumEntries;
   ++NumEntries;
 }
 
@@ -621,7 +621,9 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &B) const {
   return B.GlobalDynIndex * Config->Wordsize;
 }
 
-void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
+void GotSection::finalizeContents() {
+  Size = (NumEntries + Target->GotHeaderEntriesNum) * Config->Wordsize;
+}
 
 bool GotSection::empty() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
@@ -635,6 +637,8 @@ void GotSection::writeTo(uint8_t *Buf) {
   // Buf points to the start of this section's buffer,
   // whereas InputSectionBase::relocateAlloc() expects its argument
   // to point to the start of the output section.
+  Target->writeGotHeader(Buf);
+  Buf += Target->GotHeaderEntriesNum * Target->GotEntrySize;
   relocateAlloc(Buf - OutSecOff, Buf - OutSecOff + Size);
 }
 
@@ -1729,7 +1733,7 @@ void GnuHashTableSection::writeTo(uint8_t *Buf) {
   write32(Buf, NBuckets);
   write32(Buf + 4, InX::DynSymTab->getNumSymbols() - Symbols.size());
   write32(Buf + 8, MaskWords);
-  write32(Buf + 12, getShift2());
+  write32(Buf + 12, Shift2);
   Buf += 16;
 
   // Write a bloom filter and a hash table.
@@ -1751,7 +1755,7 @@ void GnuHashTableSection::writeBloomFilter(uint8_t *Buf) {
     size_t I = (Sym.Hash / C) & (MaskWords - 1);
     uint64_t Val = readUint(Buf + I * Config->Wordsize);
     Val |= uint64_t(1) << (Sym.Hash % C);
-    Val |= uint64_t(1) << ((Sym.Hash >> getShift2()) % C);
+    Val |= uint64_t(1) << ((Sym.Hash >> Shift2) % C);
     writeUint(Buf + I * Config->Wordsize, Val);
   }
 }

@@ -6626,6 +6626,10 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     DestBase = MachineOperand::CreateReg(NextDestReg, false);
     SrcBase = MachineOperand::CreateReg(NextSrcReg, false);
     Length &= 255;
+    if (EndMBB && !Length)
+      // If the loop handled the whole CLC range, DoneMBB will be empty with
+      // CC live-through into EndMBB, so add it as live-in.
+      DoneMBB->addLiveIn(SystemZ::CC);
     MBB = DoneMBB;
   }
   // Handle any remaining bytes with straight-line code.

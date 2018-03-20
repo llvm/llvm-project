@@ -8459,7 +8459,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
       return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, N00, N1);
   }
 
-  // fold (sext_in_reg (*_extend_vector_inreg x)) -> (sext_vector_in_reg x)
+  // fold (sext_in_reg (*_extend_vector_inreg x)) -> (sext_vector_inreg x)
   if ((N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
        N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ||
        N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) &&

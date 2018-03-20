@@ -216,10 +216,6 @@ supported include:
 
     If the type of 'a' does not match *type*, TableGen aborts with an error.
 
-    For historical reasons, 'a' can also be the name of a variable or a
-    template argument in some cases, but this use is unreliable and is
-    discouraged.
-
     Otherwise, perform a normal type cast e.g. between an int and a bit, or
     between record types. This allows casting a record to a subclass, though if
     the types do not match, constant folding will be inhibited. !cast<string>

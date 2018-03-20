@@ -66,6 +66,9 @@ def BWPortAny : ProcResGroup<[BWPort0, BWPort1, BWPort2, BWPort3, BWPort4,
   let BufferSize=60;
 }
 
+// Integer division issued on port 0.
+def BWDivider : ProcResource<1>; // Integer division issued on port 0.
+
 // Loads are 5 cycles, so ReadAfterLd registers needn't be available until 5
 // cycles after the memory operand.
 def : ReadAdvance<ReadAfterLd, 5>;
@@ -76,15 +79,21 @@ def : ReadAdvance<ReadAfterLd, 5>;
 // This multiclass defines the resource usage for variants with and without
 // folded loads.
 multiclass BWWriteResPair<X86FoldableSchedWrite SchedRW,
-                          ProcResourceKind ExePort,
-                          int Lat> {
+                          list<ProcResourceKind> ExePorts,
+                          int Lat, list<int> Res = [1], int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
-  def : WriteRes<SchedRW, [ExePort]> { let Latency = Lat; }
+  def : WriteRes<SchedRW, ExePorts> {
+    let Latency = Lat;
+    let ResourceCycles = Res;
+    let NumMicroOps = UOps;
+  }
 
   // Memory variant also uses a cycle on port 2/3 and adds 5 cycles to the
   // latency.
-  def : WriteRes<SchedRW.Folded, [BWPort23, ExePort]> {
-     let Latency = !add(Lat, 5);
+  def : WriteRes<SchedRW.Folded, !listconcat([BWPort23], ExePorts)> {
+    let Latency = !add(Lat, 5);
+    let ResourceCycles = !listconcat([1], Res);
+    let NumMicroOps = UOps;
   }
 }
 
@@ -93,23 +102,15 @@ multiclass BWWriteResPair<X86FoldableSchedWrite SchedRW,
 def : WriteRes<WriteRMW, [BWPort4]>;
 
 // Arithmetic.
-defm : BWWriteResPair<WriteALU,   BWPort0156, 1>; // Simple integer ALU op.
-defm : BWWriteResPair<WriteIMul,  BWPort1,   3>; // Integer multiplication.
+defm : BWWriteResPair<WriteALU,   [BWPort0156], 1>; // Simple integer ALU op.
+defm : BWWriteResPair<WriteIMul,  [BWPort1],   3>; // Integer multiplication.
+defm : BWWriteResPair<WriteIDiv, [BWPort0, BWDivider], 25, [1, 10]>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
-def BWDivider : ProcResource<1>; // Integer division issued on port 0.     
-def : WriteRes<WriteIDiv, [BWPort0, BWDivider]> { // Integer division.
-  let Latency = 25;
-  let ResourceCycles = [1, 10];
-}
-def : WriteRes<WriteIDivLd, [BWPort23, BWPort0, BWDivider]> {
-  let Latency = 29;
-  let ResourceCycles = [1, 1, 10];
-}
 
 def : WriteRes<WriteLEA, [BWPort15]>; // LEA instructions can't fold loads.
 
 // Integer shifts and rotates.
-defm : BWWriteResPair<WriteShift, BWPort06,  1>;
+defm : BWWriteResPair<WriteShift, [BWPort06],  1>;
 
 // Loads, stores, and moves, not folded with other operations.
 def : WriteRes<WriteLoad,  [BWPort23]> { let Latency = 5; }
@@ -125,30 +126,23 @@ def : InstRW<[WriteMove], (instrs COPY)>;
 
 // Branches don't produce values, so they have no latency, but they still
 // consume resources. Indirect branches can fold loads.
-defm : BWWriteResPair<WriteJump,  BWPort06,   1>;
+defm : BWWriteResPair<WriteJump,  [BWPort06],   1>;
 
 // Floating point. This covers both scalar and vector operations.
 def  : WriteRes<WriteFLoad,        [BWPort23]> { let Latency = 5; }
 def  : WriteRes<WriteFStore,       [BWPort237, BWPort4]>;
 def  : WriteRes<WriteFMove,        [BWPort5]>;
 
-defm : BWWriteResPair<WriteFAdd,   BWPort1, 3>; // Floating point add/sub/compare.
-defm : BWWriteResPair<WriteFMul,   BWPort0, 5>; // Floating point multiplication.
-defm : BWWriteResPair<WriteFDiv,   BWPort0, 12>; // 10-14 cycles. // Floating point division.
-defm : BWWriteResPair<WriteFSqrt,  BWPort0, 15>; // Floating point square root.
-defm : BWWriteResPair<WriteFRcp,   BWPort0, 5>; // Floating point reciprocal estimate.
-defm : BWWriteResPair<WriteFRsqrt, BWPort0, 5>; // Floating point reciprocal square root estimate.
-defm : BWWriteResPair<WriteFMA,    BWPort01, 5>; // Fused Multiply Add.
-defm : BWWriteResPair<WriteFShuffle,  BWPort5,  1>; // Floating point vector shuffles.
-defm : BWWriteResPair<WriteFBlend,  BWPort015,  1>; // Floating point vector blends.
-def : WriteRes<WriteFVarBlend, [BWPort5]> { // Fp vector variable blends.	       
-  let Latency = 2;
-  let ResourceCycles = [2];
-} 
-def : WriteRes<WriteFVarBlendLd, [BWPort5, BWPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [2, 1];
-}
+defm : BWWriteResPair<WriteFAdd,   [BWPort1], 3>; // Floating point add/sub/compare.
+defm : BWWriteResPair<WriteFMul,   [BWPort0], 5>; // Floating point multiplication.
+defm : BWWriteResPair<WriteFDiv,   [BWPort0], 12>; // 10-14 cycles. // Floating point division.
+defm : BWWriteResPair<WriteFSqrt,  [BWPort0], 15>; // Floating point square root.
+defm : BWWriteResPair<WriteFRcp,   [BWPort0], 5>; // Floating point reciprocal estimate.
+defm : BWWriteResPair<WriteFRsqrt, [BWPort0], 5>; // Floating point reciprocal square root estimate.
+defm : BWWriteResPair<WriteFMA,    [BWPort01], 5>; // Fused Multiply Add.
+defm : BWWriteResPair<WriteFShuffle,  [BWPort5],  1>; // Floating point vector shuffles.
+defm : BWWriteResPair<WriteFBlend,  [BWPort015],  1>; // Floating point vector blends.
+defm : BWWriteResPair<WriteFVarBlend,  [HWPort5], 2, [2]>; // Fp vector variable blends.
 
 // FMA Scheduling helper class.
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
@@ -158,38 +152,22 @@ def  : WriteRes<WriteVecLoad,        [BWPort23]> { let Latency = 5; }
 def  : WriteRes<WriteVecStore,       [BWPort237, BWPort4]>;
 def  : WriteRes<WriteVecMove,        [BWPort015]>;
 
-defm : BWWriteResPair<WriteVecALU,   BWPort15,  1>; // Vector integer ALU op, no logicals.
-defm : BWWriteResPair<WriteVecShift, BWPort0,  1>; // Vector integer shifts.
-defm : BWWriteResPair<WriteVecIMul,  BWPort0,   5>; // Vector integer multiply.
-defm : BWWriteResPair<WriteShuffle,  BWPort5,  1>; // Vector shuffles.
-defm : BWWriteResPair<WriteBlend,  BWPort15,  1>; // Vector blends.
-
-def : WriteRes<WriteVarBlend, [BWPort5]> { // Vector variable blends.
-  let Latency = 2;
-  let ResourceCycles = [2];
-}
-def : WriteRes<WriteVarBlendLd, [BWPort5, BWPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [2, 1];
-}
-
-def : WriteRes<WriteMPSAD, [BWPort0, BWPort5]> { // Vector MPSAD.     
-  let Latency = 6;
-  let ResourceCycles = [1, 2];
-}
-def : WriteRes<WriteMPSADLd, [BWPort23, BWPort0, BWPort5]> {
-  let Latency = 6;
-  let ResourceCycles = [1, 1, 2];
-}
+defm : BWWriteResPair<WriteVecALU,   [BWPort15],  1>; // Vector integer ALU op, no logicals.
+defm : BWWriteResPair<WriteVecShift, [BWPort0],  1>; // Vector integer shifts.
+defm : BWWriteResPair<WriteVecIMul,  [BWPort0],   5>; // Vector integer multiply.
+defm : BWWriteResPair<WriteShuffle,  [BWPort5],  1>; // Vector shuffles.
+defm : BWWriteResPair<WriteBlend,  [BWPort15],  1>; // Vector blends.
+defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2]>; // Vector variable blends.
+defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 6, [1, 2]>; // Vector MPSAD.
 
 // Vector bitwise operations.
 // These are often used on both floating point and integer vectors.
-defm : BWWriteResPair<WriteVecLogic, BWPort015, 1>; // Vector and/or/xor.
+defm : BWWriteResPair<WriteVecLogic, [BWPort015], 1>; // Vector and/or/xor.
 
 // Conversion between integer and float.
-defm : BWWriteResPair<WriteCvtF2I, BWPort1, 3>; // Float -> Integer.
-defm : BWWriteResPair<WriteCvtI2F, BWPort1, 4>; // Integer -> Float.
-defm : BWWriteResPair<WriteCvtF2F, BWPort1, 3>; // Float -> Float size conversion.
+defm : BWWriteResPair<WriteCvtF2I, [BWPort1], 3>; // Float -> Integer.
+defm : BWWriteResPair<WriteCvtI2F, [BWPort1], 4>; // Integer -> Float.
+defm : BWWriteResPair<WriteCvtF2F, [BWPort1], 3>; // Float -> Float size conversion.
 
 // Strings instructions.
 // Packed Compare Implicit Length Strings, Return Mask
@@ -257,29 +235,15 @@ def : WriteRes<WriteAESKeyGenLd, [BWPort0, BWPort5, BWPort23]> {
 }
 
 // Carry-less multiplication instructions.
-def : WriteRes<WriteCLMul, [BWPort0, BWPort5]> {
-  let Latency = 7;
-  let ResourceCycles = [2, 1];
-}
-def : WriteRes<WriteCLMulLd, [BWPort0, BWPort5, BWPort23]> {
-  let Latency = 7;
-  let ResourceCycles = [2, 1, 1];
-}
+defm : BWWriteResPair<WriteCLMul,  [BWPort0, BWPort5], 7, [2, 1]>;
 
 // Catch-all for expensive system instructions.
 def : WriteRes<WriteSystem,     [BWPort0156]> { let Latency = 100; } // def WriteSystem : SchedWrite;
 
 // AVX2.
-defm : BWWriteResPair<WriteFShuffle256,  BWPort5,  3>; // Fp 256-bit width vector shuffles.
-defm : BWWriteResPair<WriteShuffle256,  BWPort5,  3>;  // 256-bit width vector shuffles.
-def : WriteRes<WriteVarVecShift, [BWPort0, BWPort5]> { // Variable vector shifts.
-  let Latency = 2;
-  let ResourceCycles = [2, 1];
-}
-def : WriteRes<WriteVarVecShiftLd, [BWPort0, BWPort5, BWPort23]> {
-  let Latency = 6;
-  let ResourceCycles = [2, 1, 1];
-}
+defm : BWWriteResPair<WriteFShuffle256,  [BWPort5],  3>; // Fp 256-bit width vector shuffles.
+defm : BWWriteResPair<WriteShuffle256,  [BWPort5],  3>;  // 256-bit width vector shuffles.
+defm : BWWriteResPair<WriteVarVecShift,  [BWPort0, BWPort5], 2, [2, 1]>; // Variable vector shifts.
 
 // Old microcoded instructions that nobody use.
 def : WriteRes<WriteMicrocoded, [BWPort0156]> { let Latency = 100; } // def WriteMicrocoded : SchedWrite;
@@ -293,27 +257,9 @@ def : WriteRes<WriteNop, []>;
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
-// HADD, HSUB PS/PD
-// x,x / v,v,v.
-def : WriteRes<WriteFHAdd, [BWPort1]> {
-  let Latency = 3;
-}
 
-// x,m / v,v,m.
-def : WriteRes<WriteFHAddLd, [BWPort1, BWPort23]> {
-  let Latency = 7;
-  let ResourceCycles = [1, 1];
-}
-
-// PHADD|PHSUB (S) W/D.
-// v <- v,v.
-def : WriteRes<WritePHAdd, [BWPort15]>;
-
-// v <- v,m.
-def : WriteRes<WritePHAddLd, [BWPort15, BWPort23]> {
-  let Latency = 5;
-  let ResourceCycles = [1, 1];
-}
+defm : BWWriteResPair<WriteFHAdd,   [BWPort1], 3>;
+defm : BWWriteResPair<WritePHAdd,  [BWPort15], 1>;
 
 // Remaining instrs.
 
@@ -870,7 +816,7 @@ def: InstRW<[BWWriteResGroup9], (instregex "DEC(8|16|32|64)r")>;
 def: InstRW<[BWWriteResGroup9], (instregex "INC(8|16|32|64)r")>;
 def: InstRW<[BWWriteResGroup9], (instregex "LAHF")>;
 def: InstRW<[BWWriteResGroup9], (instregex "MOV(8|16|32|64)rr")>;
-def: InstRW<[BWWriteResGroup9], (instregex "MOV8ri")>;
+def: InstRW<[BWWriteResGroup9], (instregex "MOV(8|16|32|64)ri")>;
 def: InstRW<[BWWriteResGroup9], (instregex "MOVSX(16|32|64)rr16")>;
 def: InstRW<[BWWriteResGroup9], (instregex "MOVSX(16|32|64)rr32")>;
 def: InstRW<[BWWriteResGroup9], (instregex "MOVSX(16|32|64)rr8")>;
@@ -894,8 +840,8 @@ def: InstRW<[BWWriteResGroup9], (instregex "SUB(8|16|32|64)rr")>;
 def: InstRW<[BWWriteResGroup9], (instregex "SUB(8|16|32|64)i")>;
 def: InstRW<[BWWriteResGroup9], (instregex "SYSCALL")>;
 def: InstRW<[BWWriteResGroup9], (instregex "TEST(8|16|32|64)rr")>;
-def: InstRW<[BWWriteResGroup9], (instregex "TEST8i8")>;
-def: InstRW<[BWWriteResGroup9], (instregex "TEST8ri")>;
+def: InstRW<[BWWriteResGroup9], (instregex "TEST(8|16|32|64)i")>;
+def: InstRW<[BWWriteResGroup9], (instregex "TEST(8|16|32|64)ri")>;
 def: InstRW<[BWWriteResGroup9], (instregex "XCHG(16|32|64)rr")>;
 def: InstRW<[BWWriteResGroup9], (instregex "XOR(8|16|32|64)ri")>;
 def: InstRW<[BWWriteResGroup9], (instregex "XOR(8|16|32|64)rr")>;
@@ -1097,7 +1043,7 @@ def: InstRW<[BWWriteResGroup20], (instregex "ADC8i8")>;
 def: InstRW<[BWWriteResGroup20], (instregex "ADC8ri")>;
 def: InstRW<[BWWriteResGroup20], (instregex "CMOV(A|BE)(16|32|64)rr")>;
 def: InstRW<[BWWriteResGroup20], (instrs CWD)>;
-def: InstRW<[BWWriteResGroup20], (instregex "JRCXZ")>;
+def: InstRW<[BWWriteResGroup20], (instrs JCXZ, JECXZ, JRCXZ)>;
 def: InstRW<[BWWriteResGroup20], (instregex "SBB8i8")>;
 def: InstRW<[BWWriteResGroup20], (instregex "SBB8ri")>;
 def: InstRW<[BWWriteResGroup20], (instregex "SET(A|BE)r")>;

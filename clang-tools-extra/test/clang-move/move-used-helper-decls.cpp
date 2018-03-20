@@ -335,7 +335,6 @@
 // CHECK-NEW-H-NEXT: void Fun1();
 // CHECK-NEW-H-SAME: {{[[:space:]]}}
 // CHECK-NEW-H-NEXT: inline void Fun2() {}
-// CHECK-NEW-H-SAME: {{[[:space:]]}}
 // CHECK-NEW-H-NEXT: } // namespace a
 
 
@@ -413,7 +412,6 @@
 // CHECK-NEW-CPP-NEXT: }
 // CHECK-NEW-CPP-SAME: {{[[:space:]]}}
 // CHECK-NEW-CPP-NEXT: void Fun1() { HelperFun5(); }
-// CHECK-NEW-CPP-SAME: {{[[:space:]]}}
 // CHECK-NEW-CPP-NEXT: } // namespace a
 // CHECK-NEW-CPP-SAME: {{[[:space:]]}}
 // CHECK-NEW-CPP-NEXT: namespace b {

@@ -848,6 +848,27 @@ public:
   std::pair<const SCEV *, const SCEV *> SplitIntoInitAndPostInc(const Loop *L,
                                                                 const SCEV *S);
 
+  /// We'd like to check the predicate on every iteration of the most dominated
+  /// loop between loops used in LHS and RHS.
+  /// To do this we use the following list of steps:
+  /// 1. Collect set S all loops on which either LHS or RHS depend.
+  /// 2. If S is non-empty
+  /// a. Let PD be the element of S which is dominated by all other elements.
+  /// b. Let E(LHS) be value of LHS on entry of PD.
+  ///    To get E(LHS), we should just take LHS and replace all AddRecs that are
+  ///    attached to PD on with their entry values.
+  ///    Define E(RHS) in the same way.
+  /// c. Let B(LHS) be value of L on backedge of PD.
+  ///    To get B(LHS), we should just take LHS and replace all AddRecs that are
+  ///    attached to PD on with their backedge values.
+  ///    Define B(RHS) in the same way.
+  /// d. Note that E(LHS) and E(RHS) are automatically available on entry of PD,
+  ///    so we can assert on that.
+  /// e. Return true if isLoopEntryGuardedByCond(Pred, E(LHS), E(RHS)) &&
+  ///                   isLoopBackedgeGuardedByCond(Pred, B(LHS), B(RHS))
+  bool isKnownViaInduction(ICmpInst::Predicate Pred, const SCEV *LHS,
+                           const SCEV *RHS);
+
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred, LHS, and RHS.
   bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,

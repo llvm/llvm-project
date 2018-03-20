@@ -500,7 +500,7 @@ bool ARMDAGToDAGISel::canExtractShiftFromMul(const SDValue &N,
 
 void ARMDAGToDAGISel::replaceDAGValue(const SDValue &N, SDValue M) {
   CurDAG->RepositionNode(N.getNode()->getIterator(), M.getNode());
-  CurDAG->ReplaceAllUsesWith(N, M);
+  ReplaceUses(N, M);
 }
 
 bool ARMDAGToDAGISel::SelectImmShifterOperand(SDValue N,
@@ -1893,12 +1893,14 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   default: llvm_unreachable("unhandled vst type");
     // Double-register operations:
   case MVT::v8i8:  OpcodeIndex = 0; break;
+  case MVT::v4f16:
   case MVT::v4i16: OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32: OpcodeIndex = 2; break;
   case MVT::v1i64: OpcodeIndex = 3; break;
     // Quad-register operations:
   case MVT::v16i8: OpcodeIndex = 0; break;
+  case MVT::v8f16:
   case MVT::v8i16: OpcodeIndex = 1; break;
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 2; break;
