@@ -39,7 +39,7 @@ let SchedModel = ExynosM3Model in {
 
 def M3UnitA  : ProcResource<2>; // Simple integer
 def M3UnitC  : ProcResource<2>; // Simple and complex integer
-def M3UnitD  : ProcResource<2>; // Integer division (inside C, serialized)
+def M3UnitD  : ProcResource<1>; // Integer division (inside C0, serialized)
 def M3UnitB  : ProcResource<2>; // Branch
 def M3UnitL  : ProcResource<2>; // Load
 def M3UnitS  : ProcResource<1>; // Store

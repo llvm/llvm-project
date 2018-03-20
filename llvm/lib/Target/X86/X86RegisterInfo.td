@@ -21,12 +21,13 @@ class X86Reg<string n, bits<16> Enc, list<Register> subregs = []> : Register<n> 
 
 // Subregister indices.
 let Namespace = "X86" in {
-  def sub_8bit    : SubRegIndex<8>;
-  def sub_8bit_hi : SubRegIndex<8, 8>;
-  def sub_16bit   : SubRegIndex<16>;
-  def sub_32bit   : SubRegIndex<32>;
-  def sub_xmm     : SubRegIndex<128>;
-  def sub_ymm     : SubRegIndex<256>;
+  def sub_8bit     : SubRegIndex<8>;
+  def sub_8bit_hi  : SubRegIndex<8, 8>;
+  def sub_16bit    : SubRegIndex<16>;
+  def sub_16bit_hi : SubRegIndex<16, 16>;
+  def sub_32bit    : SubRegIndex<32>;
+  def sub_xmm      : SubRegIndex<128>;
+  def sub_ymm      : SubRegIndex<256>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -88,6 +89,18 @@ def SP : X86Reg<"sp", 4, [SPL]>;
 }
 def IP : X86Reg<"ip", 0>;
 
+let isArtificial = 1 in {
+  def HAX : X86Reg<"hax", -1>;
+  def HDX : X86Reg<"hdx", -3>;
+  def HCX : X86Reg<"hcx", -2>;
+  def HBX : X86Reg<"hbx", -4>;
+  def HSI : X86Reg<"hsi", -7>;
+  def HDI : X86Reg<"hdi", -8>;
+  def HBP : X86Reg<"hbp", -6>;
+  def HSP : X86Reg<"hsp", -5>;
+  def HIP : X86Reg<"hip", -1>;
+}
+
 // X86-64 only, requires REX.
 let SubRegIndices = [sub_8bit], CostPerUse = 1 in {
 def R8W  : X86Reg<"r8w",   8, [R8B]>;
@@ -101,19 +114,20 @@ def R15W : X86Reg<"r15w", 15, [R15B]>;
 }
 
 // 32-bit registers
-let SubRegIndices = [sub_16bit] in {
-def EAX : X86Reg<"eax", 0, [AX]>, DwarfRegNum<[-2, 0, 0]>;
-def EDX : X86Reg<"edx", 2, [DX]>, DwarfRegNum<[-2, 2, 2]>;
-def ECX : X86Reg<"ecx", 1, [CX]>, DwarfRegNum<[-2, 1, 1]>;
-def EBX : X86Reg<"ebx", 3, [BX]>, DwarfRegNum<[-2, 3, 3]>;
-def ESI : X86Reg<"esi", 6, [SI]>, DwarfRegNum<[-2, 6, 6]>;
-def EDI : X86Reg<"edi", 7, [DI]>, DwarfRegNum<[-2, 7, 7]>;
-def EBP : X86Reg<"ebp", 5, [BP]>, DwarfRegNum<[-2, 4, 5]>;
-def ESP : X86Reg<"esp", 4, [SP]>, DwarfRegNum<[-2, 5, 4]>;
-def EIP : X86Reg<"eip", 0, [IP]>, DwarfRegNum<[-2, 8, 8]>;
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CoveredBySubRegs = 1 in {
+def EAX : X86Reg<"eax", 0, [AX, HAX]>, DwarfRegNum<[-2, 0, 0]>;
+def EDX : X86Reg<"edx", 2, [DX, HDX]>, DwarfRegNum<[-2, 2, 2]>;
+def ECX : X86Reg<"ecx", 1, [CX, HCX]>, DwarfRegNum<[-2, 1, 1]>;
+def EBX : X86Reg<"ebx", 3, [BX, HBX]>, DwarfRegNum<[-2, 3, 3]>;
+def ESI : X86Reg<"esi", 6, [SI, HSI]>, DwarfRegNum<[-2, 6, 6]>;
+def EDI : X86Reg<"edi", 7, [DI, HDI]>, DwarfRegNum<[-2, 7, 7]>;
+def EBP : X86Reg<"ebp", 5, [BP, HBP]>, DwarfRegNum<[-2, 4, 5]>;
+def ESP : X86Reg<"esp", 4, [SP, HSP]>, DwarfRegNum<[-2, 5, 4]>;
+def EIP : X86Reg<"eip", 0, [IP, HIP]>, DwarfRegNum<[-2, 8, 8]>;
+}
 
 // X86-64 only, requires REX
-let CostPerUse = 1 in {
+let SubRegIndices = [sub_16bit], CostPerUse = 1 in {
 def R8D  : X86Reg<"r8d",   8, [R8W]>;
 def R9D  : X86Reg<"r9d",   9, [R9W]>;
 def R10D : X86Reg<"r10d", 10, [R10W]>;
@@ -122,7 +136,7 @@ def R12D : X86Reg<"r12d", 12, [R12W]>;
 def R13D : X86Reg<"r13d", 13, [R13W]>;
 def R14D : X86Reg<"r14d", 14, [R14W]>;
 def R15D : X86Reg<"r15d", 15, [R15W]>;
-}}
+}
 
 // 64-bit registers, X86-64 only
 let SubRegIndices = [sub_32bit] in {
@@ -340,6 +354,10 @@ def GR8 : RegisterClass<"X86", [i8],  8,
 def GR16 : RegisterClass<"X86", [i16], 16,
                          (add AX, CX, DX, SI, DI, BX, BP, SP,
                               R8W, R9W, R10W, R11W, R14W, R15W, R12W, R13W)>;
+
+let isAllocatable = 0 in
+def GRH16 : RegisterClass<"X86", [i16], 16,
+                          (add HAX, HCX, HDX, HSI, HSI, HBX, HBP, HSP, HIP)>;
 
 def GR32 : RegisterClass<"X86", [i32], 32,
                          (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP,

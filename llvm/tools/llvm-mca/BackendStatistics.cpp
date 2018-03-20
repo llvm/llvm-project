@@ -36,6 +36,29 @@ void BackendStatistics::onInstructionEvent(const HWInstructionEvent &Event) {
   }
 }
 
+void BackendStatistics::onReservedBuffers(ArrayRef<unsigned> Buffers) {
+  for (const unsigned Buffer : Buffers) {
+    if (BufferedResources.find(Buffer) != BufferedResources.end()) {
+      BufferUsage &BU = BufferedResources[Buffer];
+      BU.SlotsInUse++;
+      BU.MaxUsedSlots = std::max(BU.MaxUsedSlots, BU.SlotsInUse);
+      continue;
+    }
+
+    BufferedResources.insert(
+        std::pair<unsigned, BufferUsage>(Buffer, {1U, 1U}));
+  }
+}
+
+void BackendStatistics::onReleasedBuffers(ArrayRef<unsigned> Buffers) {
+  for (const unsigned Buffer : Buffers) {
+    assert(BufferedResources.find(Buffer) != BufferedResources.end() &&
+           "Buffered resource not in map?");
+    BufferUsage &BU = BufferedResources[Buffer];
+    BU.SlotsInUse--;
+  }
+}
+
 void BackendStatistics::printRetireUnitStatistics(llvm::raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
@@ -126,15 +149,13 @@ void BackendStatistics::printDispatchStalls(raw_ostream &OS) const {
   OS << Buffer;
 }
 
-void BackendStatistics::printSchedulerUsage(
-    raw_ostream &OS, const MCSchedModel &SM,
-    const ArrayRef<BufferUsageEntry> &Usage) const {
- 
+void BackendStatistics::printSchedulerUsage(raw_ostream &OS,
+                                            const MCSchedModel &SM) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nScheduler's queue usage:\n";
   // Early exit if no buffered resources were consumed.
-  if (Usage.empty()) {
+  if (BufferedResources.empty()) {
     TempStream << "No scheduler resources used.\n";
     TempStream.flush();
     OS << Buffer;
@@ -143,17 +164,15 @@ void BackendStatistics::printSchedulerUsage(
 
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
-    if (!ProcResource.BufferSize)
+    if (ProcResource.BufferSize <= 0)
       continue;
 
-    for (const BufferUsageEntry &Entry : Usage)
-      if (I == Entry.first)
-        TempStream << ProcResource.Name << ",  " << Entry.second << '/'
-                   << ProcResource.BufferSize << '\n';
+    const BufferUsage &BU = BufferedResources.lookup(I);
+    TempStream << ProcResource.Name << ",  " << BU.MaxUsedSlots << '/'
+               << ProcResource.BufferSize << '\n';
   }
 
   TempStream.flush();
   OS << Buffer;
 }
-
 } // namespace mca

@@ -1499,11 +1499,9 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarc
   def VMULX_LANEH   : IOpInst<"vmulx_lane", "ddgi", "hQh", OP_MULX_LN>;
   def VMULX_LANEQH  : IOpInst<"vmulx_laneq", "ddji", "hQh", OP_MULX_LN>;
   def VMULX_NH      : IOpInst<"vmulx_n", "dds", "hQh", OP_MULX_N>;
-  // TODO: Scalar floating point multiply extended (scalar, by element)
-  // Below ones are commented out because they need vmulx_f16(float16_t, float16_t)
-  // which will be implemented later with fp16 scalar intrinsic (arm_fp16.h)
-  //def SCALAR_FMULX_LANEH : IOpInst<"vmulx_lane", "ssdi", "Sh", OP_SCALAR_MUL_LN>;
-  //def SCALAR_FMULX_LANEQH : IOpInst<"vmulx_laneq", "ssji", "Sh", OP_SCALAR_MUL_LN>;
+  // Scalar floating point  mulx (scalar, by element)
+  def SCALAR_FMULX_LANEH : IInst<"vmulx_lane", "ssdi", "Sh">;
+  def SCALAR_FMULX_LANEQH : IInst<"vmulx_laneq", "ssji", "Sh">;
 
   // ARMv8.2-A FP16 reduction vector intrinsics.
   def VMAXVH   : SInst<"vmaxv", "sd", "hQh">;

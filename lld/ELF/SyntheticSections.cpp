@@ -65,7 +65,7 @@ uint64_t SyntheticSection::getVA() const {
 // Returns an LLD version string.
 static ArrayRef<uint8_t> getVersion() {
   // Check LLD_VERSION first for ease of testing.
-  // You can get consitent output by using the environment variable.
+  // You can get consistent output by using the environment variable.
   // This is only for testing.
   StringRef S = getenv("LLD_VERSION");
   if (S.empty())

@@ -138,8 +138,8 @@ static ClangASTMap &GetASTMap() {
   return *g_map_ptr;
 }
 
-static bool IsOperator(const char *name,
-                       clang::OverloadedOperatorKind &op_kind) {
+bool ClangASTContext::IsOperator(const char *name,
+                                 clang::OverloadedOperatorKind &op_kind) {
   if (name == nullptr || name[0] == '\0')
     return false;
 

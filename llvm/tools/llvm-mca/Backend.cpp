@@ -75,6 +75,16 @@ void Backend::notifyResourceAvailable(const ResourceRef &RR) {
     Listener->onResourceAvailable(RR);
 }
 
+void Backend::notifyReservedBuffers(ArrayRef<unsigned> Buffers) {
+  for (HWEventListener *Listener : Listeners)
+    Listener->onReservedBuffers(Buffers);
+}
+
+void Backend::notifyReleasedBuffers(ArrayRef<unsigned> Buffers) {
+  for (HWEventListener *Listener : Listeners)
+    Listener->onReleasedBuffers(Buffers);
+}
+
 void Backend::notifyCycleEnd(unsigned Cycle) {
   DEBUG(dbgs() << "[E] Cycle end: " << Cycle << "\n\n");
   for (HWEventListener *Listener : Listeners)

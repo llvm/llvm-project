@@ -44,7 +44,6 @@ class Value;
 
 void initializeScopInfoRegionPassPass(PassRegistry &);
 void initializeScopInfoWrapperPassPass(PassRegistry &);
-
 } // end namespace llvm
 
 namespace polly {
@@ -404,7 +403,6 @@ public:
   ///         for the region
   std::unique_ptr<Scop> getScop() { return std::move(scop); }
 };
-
 } // end namespace polly
 
 #endif // POLLY_SCOPBUILDER_H

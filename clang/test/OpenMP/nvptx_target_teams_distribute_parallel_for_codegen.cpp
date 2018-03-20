@@ -22,7 +22,7 @@ tx ftemplate(int n) {
   tx a[N];
   short aa[N];
   tx b[10];
-  tx c[M][M];  
+  tx c[M][M];
   tx f = n;
   tx l;
   int k;
@@ -47,7 +47,7 @@ tx ftemplate(int n) {
   for(int i = 0; i < M; i++) {
     for(int j = 0; j < M; j++) {
       k = M;
-      c[i][j] = i+j*f+k;      
+      c[i][j] = i + j * f + k;
     }
   }
 

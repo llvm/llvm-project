@@ -1,8 +1,12 @@
 // RUN: llvm-objdump -m -section __DATA,__mod_init_func %p/Inputs/dylibModInit.macho-x86_64 | FileCheck %s -check-prefix=MODINIT
 // RUN: llvm-objdump -m -section __DATA,__mod_init_func -non-verbose %p/Inputs/dylibModInit.macho-x86_64 | FileCheck %s -check-prefix=NON_VERBOSE
+// RUN: llvm-objdump -m -section __DATA,__mod_init_func %p/Inputs/objModInit.macho-x86_64 | FileCheck %s -check-prefix=OBJ_MODINIT
 
 MODINIT: Contents of (__DATA,__mod_init_func) section
 MODINIT: 0x0000000000001000 0x0000000000000f30 _libinit
 
 NON_VERBOSE: Contents of (__DATA,__mod_init_func) section
 NON_VERBOSE: 0000000000001000	30 0f 00 00 00 00 00 00 
+
+OBJ_MODINIT: Contents of (__DATA,__mod_init_func) section
+OBJ_MODINIT: 0x0000000000000018 0x0000000000000000 _constructor_func

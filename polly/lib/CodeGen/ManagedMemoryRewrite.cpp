@@ -413,7 +413,6 @@ public:
     return true;
   }
 };
-
 } // namespace
 char ManagedMemoryRewritePass::ID = 42;
 

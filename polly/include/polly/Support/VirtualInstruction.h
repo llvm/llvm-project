@@ -307,7 +307,6 @@ void markReachable(Scop *S, LoopInfo *LI,
                    DenseSet<VirtualInstruction> &UsedInsts,
                    DenseSet<MemoryAccess *> &UsedAccs,
                    ScopStmt *OnlyLocal = nullptr);
-
 } // namespace polly
 
 namespace llvm {

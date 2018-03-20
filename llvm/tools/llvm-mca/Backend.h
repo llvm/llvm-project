@@ -94,15 +94,14 @@ public:
   unsigned getMaxUsedRegisterMappings() const {
     return DU->getMaxUsedRegisterMappings();
   }
-  void getBuffersUsage(std::vector<BufferUsageEntry> &Usage) const {
-    return HWS->getBuffersUsage(Usage);
-  }
 
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);
   void notifyInstructionEvent(const HWInstructionEvent &Event);
   void notifyStallEvent(const HWStallEvent &Event);
   void notifyResourceAvailable(const ResourceRef &RR);
+  void notifyReservedBuffers(llvm::ArrayRef<unsigned> Buffers);
+  void notifyReleasedBuffers(llvm::ArrayRef<unsigned> Buffers);
   void notifyCycleEnd(unsigned Cycle);
 };
 

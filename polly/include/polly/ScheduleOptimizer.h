@@ -16,7 +16,6 @@
 namespace llvm {
 
 class TargetTransformInfo;
-
 } // namespace llvm
 
 struct isl_schedule_node;
@@ -70,7 +69,6 @@ struct MatMulInfoTy {
 };
 
 extern bool DisablePollyTiling;
-
 } // namespace polly
 
 class ScheduleTreeOptimizer {

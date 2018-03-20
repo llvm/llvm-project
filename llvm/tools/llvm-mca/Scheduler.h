@@ -138,11 +138,6 @@ class ResourceState {
   // Available slots in the buffer (zero, if this is not a buffered resource).
   unsigned AvailableSlots;
 
-  // Maximum number of buffer slots seen used during one cycle.
-  // This helps tracking dynamic dispatch stalls caused by the lack of
-  // entries in the scheduler's queue.
-  unsigned MaxUsedSlots;
-
   // True if this is resource is currently unavailable.
   // An instruction may "reserve" a resource for a number of cycles.
   // During those cycles, the reserved resource cannot be used for other
@@ -182,14 +177,12 @@ public:
     ReadyMask = ResourceSizeMask;
     BufferSize = Desc.BufferSize;
     AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
-    MaxUsedSlots = 0;
     Unavailable = false;
   }
 
   unsigned getProcResourceID() const { return ProcResourceDescIndex; }
   uint64_t getResourceMask() const { return ResourceMask; }
   int getBufferSize() const { return BufferSize; }
-  unsigned getMaxUsedSlots() const { return MaxUsedSlots; }
 
   bool isBuffered() const { return BufferSize > 0; }
   bool isInOrder() const { return BufferSize == 1; }
@@ -244,8 +237,6 @@ public:
   void reserveBuffer() {
     if (AvailableSlots)
       AvailableSlots--;
-    unsigned UsedSlots = static_cast<unsigned>(BufferSize) - AvailableSlots;
-    MaxUsedSlots = std::max(MaxUsedSlots, UsedSlots);
   }
 
   void releaseBuffer() {
@@ -339,15 +330,19 @@ public:
 
   // Returns RS_BUFFER_AVAILABLE if buffered resources are not reserved, and if
   // there are enough available slots in the buffers.
-  ResourceStateEvent
-  canBeDispatched(const llvm::ArrayRef<uint64_t> Buffers) const;
+  ResourceStateEvent canBeDispatched(llvm::ArrayRef<uint64_t> Buffers) const;
+
+  // Return the processor resource identifier associated to this Mask.
+  unsigned resolveResourceMask(uint64_t Mask) const {
+    return Resources.find(Mask)->second->getProcResourceID();
+  }
 
   // Consume a slot in every buffered resource from array 'Buffers'. Resource
   // units that are dispatch hazards (i.e. BufferSize=0) are marked as reserved.
-  void reserveBuffers(const llvm::ArrayRef<uint64_t> Buffers);
+  void reserveBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
   // Release buffer entries previously allocated by method reserveBuffers.
-  void releaseBuffers(const llvm::ArrayRef<uint64_t> Buffers);
+  void releaseBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
   void reserveResource(uint64_t ResourceID) {
     ResourceState &Resource = *Resources[ResourceID];
@@ -371,15 +366,6 @@ public:
       llvm::SmallVectorImpl<std::pair<ResourceRef, unsigned>> &Pipes);
 
   void cycleEvent(llvm::SmallVectorImpl<ResourceRef> &ResourcesFreed);
-
-  void getBuffersUsage(std::vector<BufferUsageEntry> &Usage) const {
-    for (const std::pair<uint64_t, UniqueResourceState> &Resource : Resources) {
-      const ResourceState &RS = *Resource.second;
-      if (RS.isBuffered())
-        Usage.emplace_back(std::pair<unsigned, unsigned>(RS.getProcResourceID(),
-                                                         RS.getMaxUsedSlots()));
-    }
-  }
 
 #ifndef NDEBUG
   void dump() const {
@@ -434,10 +420,15 @@ class Scheduler {
 
   void notifyInstructionIssued(
       unsigned Index,
-      const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> &Used);
+      llvm::ArrayRef<std::pair<ResourceRef, unsigned>> Used);
   void notifyInstructionExecuted(unsigned Index);
   void notifyInstructionReady(unsigned Index);
   void notifyResourceAvailable(const ResourceRef &RR);
+
+  // Notify the Backend that buffered resources were consumed.
+  void notifyReservedBuffers(llvm::ArrayRef<uint64_t> Buffers);
+  // Notify the Backend that buffered resources were freed.
+  void notifyReleasedBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
   /// Issue instructions from the ready queue by giving priority to older
   /// instructions.
@@ -497,10 +488,6 @@ public:
   void scheduleInstruction(unsigned Idx, Instruction &MCIS);
 
   void cycleEvent(unsigned Cycle);
-
-  void getBuffersUsage(std::vector<BufferUsageEntry> &Usage) const {
-    Resources->getBuffersUsage(Usage);
-  }
 
 #ifndef NDEBUG
   void dump() const;
