@@ -28,7 +28,7 @@
 // CHECK-NEXT:  Version: 1
 // CHECK-NEXT:  Entry: 0x10000
 // CHECK-NEXT:  ProgramHeaderOffset: 0x40
-// CHECK-NEXT:  SectionHeaderOffset: 0x200F0
+// CHECK-NEXT:  SectionHeaderOffset:
 // CHECK-NEXT:  Flags [ (0x2)
 // CHECK-NEXT:    0x2
 // CHECK-NEXT:  ]

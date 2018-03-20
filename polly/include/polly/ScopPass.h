@@ -268,7 +268,6 @@ FunctionToScopPassAdaptor<ScopPassT>
 createFunctionToScopPassAdaptor(ScopPassT Pass) {
   return FunctionToScopPassAdaptor<ScopPassT>(std::move(Pass));
 }
-
 } // namespace polly
 
 #endif

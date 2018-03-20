@@ -1071,5 +1071,4 @@ TEST(DeLICM, apply) {
                 UMAP("{ DomainRangeA[] -> NewDomainRangeA[];"
                      "DomainRangeB[] -> NewDomainRangeB[] }")));
 }
-
 } // anonymous namespace
