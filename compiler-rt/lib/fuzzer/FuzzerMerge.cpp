@@ -100,7 +100,7 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
         TmpFeatures.clear();  // use a vector from outer scope to avoid resizes.
         while (ISS1 >> std::hex >> N)
           TmpFeatures.push_back(N);
-        llvm::sort(TmpFeatures.begin(), TmpFeatures.end());
+        std::sort(TmpFeatures.begin(), TmpFeatures.end());
         Files[CurrentFileIdx].Features = TmpFeatures;
       }
     } else {
@@ -148,12 +148,12 @@ size_t Merger::Merge(const Set<uint32_t> &InitialFeatures,
   // Sort. Give preference to
   //   * smaller files
   //   * files with more features.
-  llvm::sort(Files.begin() + NumFilesInFirstCorpus, Files.end(),
-             [&](const MergeFileInfo &a, const MergeFileInfo &b) -> bool {
-               if (a.Size != b.Size)
-                 return a.Size < b.Size;
-               return a.Features.size() > b.Features.size();
-             });
+  std::sort(Files.begin() + NumFilesInFirstCorpus, Files.end(),
+            [&](const MergeFileInfo &a, const MergeFileInfo &b) -> bool {
+              if (a.Size != b.Size)
+                return a.Size < b.Size;
+              return a.Features.size() > b.Features.size();
+            });
 
   // One greedy pass: add the file's features to AllFeatures.
   // If new features were added, add this file to NewFiles.
@@ -321,10 +321,10 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
     Vector<SizedFile> AllFiles;
     GetSizedFilesFromDir(Corpora[0], &AllFiles);
     size_t NumFilesInFirstCorpus = AllFiles.size();
-    llvm::sort(AllFiles.begin(), AllFiles.end());
+    std::sort(AllFiles.begin(), AllFiles.end());
     for (size_t i = 1; i < Corpora.size(); i++)
       GetSizedFilesFromDir(Corpora[i], &AllFiles);
-    llvm::sort(AllFiles.begin() + NumFilesInFirstCorpus, AllFiles.end());
+    std::sort(AllFiles.begin() + NumFilesInFirstCorpus, AllFiles.end());
     Printf("MERGE-OUTER: %zd files, %zd in the initial corpus\n",
            AllFiles.size(), NumFilesInFirstCorpus);
     WriteNewControlFile(CFPath, AllFiles, NumFilesInFirstCorpus);

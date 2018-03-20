@@ -514,7 +514,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-CROSS-DSO-ANDROID %s
 // CHECK-CFI-CROSS-DSO-ANDROID: "{{.*}}ld{{(.exe)?}}"
-// CHECK-CFI-CROSS-DSO-ANDROID-NOT: libclang_rt.
+// CHECK-CFI-CROSS-DSO-ANDROID-NOT: libclang_rt.cfi
 
 // Cross-DSO CFI with diagnostics on Android links just the UBSAN runtime.
 // RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso %s -### -o %t.o 2>&1 \

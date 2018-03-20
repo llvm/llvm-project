@@ -2148,27 +2148,13 @@ public:
     return it->second;
   }
 
-  /// getOpaqueLValueMapping - Given an opaque value expression (which
-  /// must be mapped to an l-value), return its mapping.
-  const LValue &getOpaqueLValueMapping(const OpaqueValueExpr *e) {
-    assert(OpaqueValueMapping::shouldBindAsLValue(e));
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
 
-    llvm::DenseMap<const OpaqueValueExpr*,LValue>::iterator
-      it = OpaqueLValues.find(e);
-    assert(it != OpaqueLValues.end() && "no mapping for opaque value!");
-    return it->second;
-  }
-
-  /// getOpaqueRValueMapping - Given an opaque value expression (which
-  /// must be mapped to an r-value), return its mapping.
-  const RValue &getOpaqueRValueMapping(const OpaqueValueExpr *e) {
-    assert(!OpaqueValueMapping::shouldBindAsLValue(e));
-
-    llvm::DenseMap<const OpaqueValueExpr*,RValue>::iterator
-      it = OpaqueRValues.find(e);
-    assert(it != OpaqueRValues.end() && "no mapping for opaque value!");
-    return it->second;
-  }
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
 
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }

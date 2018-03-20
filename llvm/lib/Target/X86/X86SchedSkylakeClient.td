@@ -1934,7 +1934,7 @@ def: InstRW<[SKLWriteResGroup76], (instrs POP16r, POP32r, POP64r)>;
 def: InstRW<[SKLWriteResGroup76], (instregex "POP(16|32|64)rmr")>;
 def: InstRW<[SKLWriteResGroup76], (instregex "SUB(8|16|32|64)rm")>;
 def: InstRW<[SKLWriteResGroup76], (instregex "TEST(8|16|32|64)mr")>;
-def: InstRW<[SKLWriteResGroup76], (instregex "TEST8mi")>;
+def: InstRW<[SKLWriteResGroup76], (instregex "TEST(8|16|32|64)mi")>;
 def: InstRW<[SKLWriteResGroup76], (instregex "XOR(8|16|32|64)rm")>;
 
 def SKLWriteResGroup77 : SchedWriteRes<[SKLPort5,SKLPort01]> {

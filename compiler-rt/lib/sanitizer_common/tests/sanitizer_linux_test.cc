@@ -131,8 +131,8 @@ static std::vector<pid_t> ReadTidsToVector(ThreadLister *thread_lister) {
 }
 
 static bool Includes(std::vector<pid_t> first, std::vector<pid_t> second) {
-  llvm::sort(first.begin(), first.end());
-  llvm::sort(second.begin(), second.end());
+  std::sort(first.begin(), first.end());
+  std::sort(second.begin(), second.end());
   return std::includes(first.begin(), first.end(),
                        second.begin(), second.end());
 }

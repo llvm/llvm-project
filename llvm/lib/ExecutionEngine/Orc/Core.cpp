@@ -1,4 +1,4 @@
-//===--------- Core.cpp - Core ORC APIs (SymbolSource, VSO, etc.) ---------===//
+//===----- Core.cpp - Core ORC APIs (MaterializationUnit, VSO, etc.) ------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,8 +17,8 @@
 namespace llvm {
 namespace orc {
 
+void MaterializationUnit::anchor() {}
 void SymbolResolver::anchor() {}
-void SymbolSource::anchor() {}
 
 AsynchronousSymbolQuery::AsynchronousSymbolQuery(
     const SymbolNameSet &Symbols, SymbolsResolvedCallback NotifySymbolsResolved,
@@ -69,68 +69,13 @@ void AsynchronousSymbolQuery::notifySymbolFinalized() {
 }
 
 VSO::MaterializationInfo::MaterializationInfo(
-    JITSymbolFlags Flags, std::shared_ptr<SymbolSource> Source)
-    : Flags(std::move(Flags)), Source(std::move(Source)) {}
+    size_t SymbolsRemaining, std::unique_ptr<MaterializationUnit> MU)
+    : SymbolsRemaining(SymbolsRemaining), MU(std::move(MU)) {}
 
-JITSymbolFlags VSO::MaterializationInfo::getFlags() const { return Flags; }
-
-JITTargetAddress VSO::MaterializationInfo::getAddress() const {
-  return Address;
-}
-
-void VSO::MaterializationInfo::replaceWithSource(
-    VSO &V, SymbolStringPtr Name, JITSymbolFlags NewFlags,
-    std::shared_ptr<SymbolSource> NewSource) {
-  assert(Address == 0 && PendingResolution.empty() &&
-         PendingFinalization.empty() &&
-         "Cannot replace source during or after materialization");
-  Source->discard(V, Name);
-  Flags = std::move(NewFlags);
-  Source = std::move(NewSource);
-}
-
-std::shared_ptr<SymbolSource> VSO::MaterializationInfo::query(
-    SymbolStringPtr Name, std::shared_ptr<AsynchronousSymbolQuery> Query) {
-  if (Address == 0) {
-    PendingResolution.push_back(std::move(Query));
-    auto S = std::move(Source);
-    Source = nullptr;
-    return S;
-  }
-
-  Query->setDefinition(Name, JITEvaluatedSymbol(Address, Flags));
-  PendingFinalization.push_back(std::move(Query));
-  return nullptr;
-}
-
-void VSO::MaterializationInfo::resolve(VSO &V, SymbolStringPtr Name,
-                                       JITEvaluatedSymbol Sym) {
-  if (Source) {
-    Source->discard(V, Name);
-    Source = nullptr;
-  }
-
-  // FIXME: Sanity check flags?
-  Flags = Sym.getFlags();
-  Address = Sym.getAddress();
-  for (auto &Query : PendingResolution) {
-    Query->setDefinition(Name, std::move(Sym));
-    PendingFinalization.push_back(std::move(Query));
-  }
-  PendingResolution = {};
-}
-
-void VSO::MaterializationInfo::finalize() {
-  for (auto &Query : PendingFinalization)
-    Query->notifySymbolFinalized();
-  PendingFinalization = {};
-}
-
-VSO::SymbolTableEntry::SymbolTableEntry(JITSymbolFlags Flags,
-                                        std::shared_ptr<SymbolSource> Source)
+VSO::SymbolTableEntry::SymbolTableEntry(
+    JITSymbolFlags Flags, MaterializationInfoIterator MaterializationInfoItr)
     : Flags(JITSymbolFlags::FlagNames(Flags | JITSymbolFlags::NotMaterialized)),
-      MatInfo(
-          llvm::make_unique<MaterializationInfo>(Flags, std::move(Source))) {
+      MaterializationInfoItr(std::move(MaterializationInfoItr)) {
   // FIXME: Assert flag sanity.
 }
 
@@ -144,37 +89,82 @@ VSO::SymbolTableEntry::SymbolTableEntry(SymbolTableEntry &&Other)
   if (Flags.isMaterialized())
     Address = Other.Address;
   else
-    MatInfo = std::move(Other.MatInfo);
+    MaterializationInfoItr = std::move(Other.MaterializationInfoItr);
 }
 
-VSO::SymbolTableEntry::~SymbolTableEntry() {
+VSO::SymbolTableEntry::~SymbolTableEntry() { destroy(); }
+
+VSO::SymbolTableEntry &VSO::SymbolTableEntry::
+operator=(JITEvaluatedSymbol Sym) {
+  destroy();
+  Flags = Sym.getFlags();
+  Address = Sym.getAddress();
+  return *this;
+}
+
+void VSO::SymbolTableEntry::destroy() {
   if (!Flags.isMaterialized())
-    MatInfo.std::unique_ptr<MaterializationInfo>::~unique_ptr();
+    MaterializationInfoItr.~MaterializationInfoIterator();
 }
 
 JITSymbolFlags VSO::SymbolTableEntry::getFlags() const { return Flags; }
 
-void VSO::SymbolTableEntry::replaceWithSource(
+void VSO::SymbolTableEntry::replaceWith(
     VSO &V, SymbolStringPtr Name, JITSymbolFlags NewFlags,
-    std::shared_ptr<SymbolSource> NewSource) {
-  bool ReplaceExisting = !Flags.isMaterialized();
+    MaterializationInfoIterator NewMaterializationInfoItr) {
+  bool ReplaceExistingLazyDefinition = !Flags.isMaterialized();
   Flags = NewFlags;
-  if (ReplaceExisting)
-    MatInfo->replaceWithSource(V, Name, Flags, std::move(NewSource));
-  else
-    new (&MatInfo) std::unique_ptr<MaterializationInfo>(
-        llvm::make_unique<MaterializationInfo>(Flags, std::move(NewSource)));
+  if (ReplaceExistingLazyDefinition) {
+    // If we are replacing an existing lazy definition with a stronger one,
+    // we need to notify the old lazy definition to discard its definition.
+    assert((*MaterializationInfoItr)->MU != nullptr &&
+           (*MaterializationInfoItr)->Symbols.count(Name) == 0 &&
+           (*MaterializationInfoItr)->PendingResolution.count(Name) == 0 &&
+           (*MaterializationInfoItr)->PendingFinalization.count(Name) == 0 &&
+           "Attempt to replace materializer during materialization");
+
+    if (--(*MaterializationInfoItr)->SymbolsRemaining == 0)
+      V.MaterializationInfos.erase(MaterializationInfoItr);
+  }
+  MaterializationInfoItr = std::move(NewMaterializationInfoItr);
 }
 
-std::shared_ptr<SymbolSource>
+std::unique_ptr<MaterializationUnit>
 VSO::SymbolTableEntry::query(SymbolStringPtr Name,
                              std::shared_ptr<AsynchronousSymbolQuery> Query) {
   if (Flags.isMaterialized()) {
     Query->setDefinition(std::move(Name), JITEvaluatedSymbol(Address, Flags));
     Query->notifySymbolFinalized();
     return nullptr;
-  } else
-    return MatInfo->query(std::move(Name), std::move(Query));
+  } else {
+    if ((*MaterializationInfoItr)->MU) {
+      assert((*MaterializationInfoItr)->PendingResolution.count(Name) == 0 &&
+             (*MaterializationInfoItr)->PendingFinalization.count(Name) == 0 &&
+             "Materializer should have been activated on first query");
+      (*MaterializationInfoItr)
+          ->PendingResolution[Name]
+          .push_back(std::move(Query));
+      return std::move((*MaterializationInfoItr)->MU);
+    } else {
+      assert((*MaterializationInfoItr)->MU == nullptr &&
+             "Materializer should have been activated on first query");
+      auto SymValueItr = (*MaterializationInfoItr)->Symbols.find(Name);
+      if (SymValueItr == (*MaterializationInfoItr)->Symbols.end()) {
+        // Symbol has not been resolved yet.
+        (*MaterializationInfoItr)
+            ->PendingResolution[Name]
+            .push_back(std::move(Query));
+        return nullptr;
+      } else {
+        // Symbol has already resolved, is just waiting on finalization.
+        Query->setDefinition(Name, SymValueItr->second);
+        (*MaterializationInfoItr)
+            ->PendingFinalization[Name]
+            .push_back(std::move(Query));
+        return nullptr;
+      }
+    }
+  }
 }
 
 void VSO::SymbolTableEntry::resolve(VSO &V, SymbolStringPtr Name,
@@ -185,20 +175,66 @@ void VSO::SymbolTableEntry::resolve(VSO &V, SymbolStringPtr Name,
     //        in VSO?
     Flags = Sym.getFlags();
     Address = Sym.getAddress();
-  } else
-    MatInfo->resolve(V, std::move(Name), std::move(Sym));
+  } else {
+    assert((*MaterializationInfoItr)->MU == nullptr &&
+           "Can not resolve a symbol that has not been materialized");
+    assert((*MaterializationInfoItr)->Symbols.count(Name) == 0 &&
+           "Symbol resolved more than once");
+
+    // Add the symbol to the MaterializationInfo Symbols table.
+    (*MaterializationInfoItr)->Symbols[Name] = Sym;
+
+    // If there are any queries waiting on this symbol then notify them that it
+    // has been resolved, then move them to the PendingFinalization list.
+    auto I = (*MaterializationInfoItr)->PendingResolution.find(Name);
+    if (I != (*MaterializationInfoItr)->PendingResolution.end()) {
+      assert((*MaterializationInfoItr)->PendingFinalization.count(Name) == 0 &&
+             "Queries already pending finalization on newly resolved symbol");
+      auto &PendingFinalization =
+          (*MaterializationInfoItr)->PendingFinalization[Name];
+
+      for (auto &Query : I->second) {
+        Query->setDefinition(Name, Sym);
+        PendingFinalization.push_back(Query);
+      }
+
+      // Clear the PendingResolution list for this symbol.
+      (*MaterializationInfoItr)->PendingResolution.erase(I);
+    }
+  }
 }
 
-void VSO::SymbolTableEntry::finalize() {
+void VSO::SymbolTableEntry::finalize(VSO &V, SymbolStringPtr Name) {
   if (!Flags.isMaterialized()) {
-    auto TmpMatInfo = std::move(MatInfo);
-    MatInfo.std::unique_ptr<MaterializationInfo>::~unique_ptr();
-    // FIXME: Assert flag sanity?
-    Flags = TmpMatInfo->getFlags();
-    Address = TmpMatInfo->getAddress();
-    TmpMatInfo->finalize();
+    auto SymI = (*MaterializationInfoItr)->Symbols.find(Name);
+    assert(SymI != (*MaterializationInfoItr)->Symbols.end() &&
+           "Finalizing an unresolved symbol");
+    auto Sym = SymI->second;
+    (*MaterializationInfoItr)->Symbols.erase(SymI);
+    auto I = (*MaterializationInfoItr)->PendingFinalization.find(Name);
+    if (I != (*MaterializationInfoItr)->PendingFinalization.end()) {
+      for (auto &Query : I->second)
+        Query->notifySymbolFinalized();
+      (*MaterializationInfoItr)->PendingFinalization.erase(I);
+    }
+
+    if (--(*MaterializationInfoItr)->SymbolsRemaining == 0)
+      V.MaterializationInfos.erase(MaterializationInfoItr);
+
+    // Destruct the iterator and re-define this entry using the final symbol
+    // value.
+    destroy();
+    Flags = Sym.getFlags();
+    Address = Sym.getAddress();
   }
   assert(Flags.isMaterialized() && "Trying to finalize not-emitted symbol");
+}
+
+void VSO::SymbolTableEntry::discard(VSO &V, SymbolStringPtr Name) {
+  assert((*MaterializationInfoItr)->MU != nullptr &&
+         "Can not override a symbol after it has been materialized");
+  (*MaterializationInfoItr)->MU->discard(V, Name);
+  --(*MaterializationInfoItr)->SymbolsRemaining;
 }
 
 VSO::RelativeLinkageStrength VSO::compareLinkage(Optional<JITSymbolFlags> Old,
@@ -249,16 +285,25 @@ Error VSO::define(SymbolMap NewSymbols) {
     }
 
     if (I != Symbols.end()) {
-      I->second.resolve(*this, KV.first, std::move(KV.second));
-      I->second.finalize();
+      // This is an override -- discard the overridden definition and overwrite.
+      I->second.discard(*this, KV.first);
+      I->second = std::move(KV.second);
     } else
       Symbols.insert(std::make_pair(KV.first, std::move(KV.second)));
   }
   return Err;
 }
 
-Error VSO::defineLazy(const SymbolFlagsMap &NewSymbols,
-                      std::shared_ptr<SymbolSource> Source) {
+Error VSO::defineLazy(std::unique_ptr<MaterializationUnit> MU) {
+
+  auto NewSymbols = MU->getSymbols();
+
+  auto MaterializationInfoItr =
+      MaterializationInfos
+          .insert(llvm::make_unique<MaterializationInfo>(NewSymbols.size(),
+                                                         std::move(MU)))
+          .first;
+
   Error Err = Error::success();
   for (auto &KV : NewSymbols) {
     auto I = Symbols.find(KV.first);
@@ -269,22 +314,38 @@ Error VSO::defineLazy(const SymbolFlagsMap &NewSymbols,
         KV.second);
 
     // Discard weaker definitions.
-    if (LinkageResult == ExistingDefinitionIsStronger)
-      Source->discard(*this, KV.first);
+    if (LinkageResult == ExistingDefinitionIsStronger) {
+      (*MaterializationInfoItr)->MU->discard(*this, KV.first);
+      assert((*MaterializationInfoItr)->SymbolsRemaining > 0 &&
+             "Discarding non-existant symbols?");
+      --(*MaterializationInfoItr)->SymbolsRemaining;
+      continue;
+    }
 
     // Report duplicate definition errors.
     if (LinkageResult == DuplicateDefinition) {
       Err = joinErrors(std::move(Err),
                        make_error<orc::DuplicateDefinition>(*KV.first));
+      // Duplicate definitions are discarded, so remove the duplicates from
+      // materializer.
+      assert((*MaterializationInfoItr)->SymbolsRemaining > 0 &&
+             "Discarding non-existant symbols?");
+      --(*MaterializationInfoItr)->SymbolsRemaining;
       continue;
     }
 
     if (I != Symbols.end())
-      I->second.replaceWithSource(*this, KV.first, KV.second, Source);
+      I->second.replaceWith(*this, KV.first, KV.second, MaterializationInfoItr);
     else
-      Symbols.emplace(
-          std::make_pair(KV.first, SymbolTableEntry(KV.second, Source)));
+      Symbols.emplace(std::make_pair(
+          KV.first, SymbolTableEntry(KV.second, MaterializationInfoItr)));
   }
+
+  // If we ended up overriding all definitions in this materializer then delete
+  // it.
+  if ((*MaterializationInfoItr)->SymbolsRemaining == 0)
+    MaterializationInfos.erase(MaterializationInfoItr);
+
   return Err;
 }
 
@@ -300,7 +361,7 @@ void VSO::finalize(SymbolNameSet SymbolsToFinalize) {
   for (auto &S : SymbolsToFinalize) {
     auto I = Symbols.find(S);
     assert(I != Symbols.end() && "Finalizing symbol not present in this dylib");
-    I->second.finalize();
+    I->second.finalize(*this, S);
   }
 }
 
@@ -325,7 +386,7 @@ SymbolNameSet VSO::lookupFlags(SymbolFlagsMap &Flags, SymbolNameSet Names) {
 
 VSO::LookupResult VSO::lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
                               SymbolNameSet Names) {
-  SourceWorkMap MaterializationWork;
+  MaterializationUnitList MaterializationUnits;
 
   for (SymbolNameSet::iterator I = Names.begin(), E = Names.end(); I != E;) {
     auto Tmp = I++;
@@ -341,11 +402,11 @@ VSO::LookupResult VSO::lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
     // Forward the query to the given SymbolTableEntry, and if it return a
     // layer to perform materialization with, add that to the
     // MaterializationWork map.
-    if (auto Source = SymI->second.query(SymI->first, Query))
-      MaterializationWork[Source].insert(SymI->first);
+    if (auto MU = SymI->second.query(SymI->first, Query))
+      MaterializationUnits.push_back(std::move(MU));
   }
 
-  return {std::move(MaterializationWork), std::move(Names)};
+  return {std::move(MaterializationUnits), std::move(Names)};
 }
 
 Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
@@ -400,24 +461,17 @@ Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
       Names, std::move(OnResolve), std::move(OnReady));
   SymbolNameSet UnresolvedSymbols(std::move(Names));
 
-  for (auto *VSO : VSOs) {
+  for (auto *V : VSOs) {
 
     if (UnresolvedSymbols.empty())
       break;
 
-    assert(VSO && "VSO pointers in VSOs list should be non-null");
-    auto LR = VSO->lookup(Query, UnresolvedSymbols);
+    assert(V && "VSO pointers in VSOs list should be non-null");
+    auto LR = V->lookup(Query, UnresolvedSymbols);
     UnresolvedSymbols = std::move(LR.UnresolvedSymbols);
 
-    for (auto I = LR.MaterializationWork.begin(),
-              E = LR.MaterializationWork.end();
-         I != E;) {
-      auto Tmp = I++;
-      std::shared_ptr<SymbolSource> Source = Tmp->first;
-      SymbolNameSet Names = std::move(Tmp->second);
-      LR.MaterializationWork.erase(Tmp);
-      DispatchMaterialization(*VSO, std::move(Source), std::move(Names));
-    }
+    for (auto &MU : LR.MaterializationUnits)
+      DispatchMaterialization(*V, std::move(MU));
   }
 
 #if LLVM_ENABLE_THREADS

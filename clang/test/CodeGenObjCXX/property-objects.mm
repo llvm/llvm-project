@@ -119,11 +119,11 @@ void testB1(B *b) {
 // CHECK:    define void @_Z6testB0P1B([[B:%.*]]*
 // CHECK:      [[BVAR:%.*]] = alloca [[B]]*, align 8
 // CHECK:      [[TEMP:%.*]] = alloca [[B0:%.*]], align 8
-// CHECK:      load [[B]]*, [[B]]** [[BVAR]]
-// CHECK-NEXT: [[X:%.*]] = getelementptr inbounds [[B0]], [[B0]]* [[TEMP]], i32 0, i32 0
+// CHECK:      [[X:%.*]] = getelementptr inbounds [[B0]], [[B0]]* [[TEMP]], i32 0, i32 0
 // CHECK-NEXT: [[T0:%.*]] = call i32 @_Z9b_makeIntv()
 // CHECK-NEXT: [[T1:%.*]] = sext i32 [[T0]] to i64
 // CHECK-NEXT: store i64 [[T1]], i64* [[X]], align 8
+// CHECK:      load [[B]]*, [[B]]** [[BVAR]]
 // CHECK-NOT:  call
 // CHECK:      call void @llvm.memcpy
 // CHECK-NOT:  call
@@ -161,12 +161,12 @@ void testB2(B *b) {
 
 // CHECK:    define void @_Z6testB2P1B([[B]]*
 // CHECK:      [[BVAR:%.*]] = alloca [[B]]*, align 8
-// CHECK:      load [[B]]*, [[B]]** [[BVAR]]
-// CHECK-NOT:  call
+// CHECK:      call void @llvm.dbg.declare(
 // CHECK:      call void @_ZN2B3C1Ev(
 // CHECK-NEXT: [[T0:%.*]] = call i64 @_ZN2B3cv2B1Ev(
 // CHECK-NOT:  call
 // CHECK:      store i64 [[T0]],
+// CHECK:      load [[B]]*, [[B]]** [[BVAR]]
 // CHECK-NOT:  call
 // CHECK:      call void @llvm.memcpy
 // CHECK-NOT:  call

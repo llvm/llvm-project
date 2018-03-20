@@ -2091,7 +2091,7 @@ def: InstRW<[BWWriteResGroup66], (instrs POP16r, POP32r, POP64r)>;
 def: InstRW<[BWWriteResGroup66], (instregex "POP(16|32|64)rmr")>;
 def: InstRW<[BWWriteResGroup66], (instregex "SUB(8|16|32|64)rm")>;
 def: InstRW<[BWWriteResGroup66], (instregex "TEST(8|16|32|64)mr")>;
-def: InstRW<[BWWriteResGroup66], (instregex "TEST8mi")>;
+def: InstRW<[BWWriteResGroup66], (instregex "TEST(8|16|32|64)mi")>;
 def: InstRW<[BWWriteResGroup66], (instregex "XOR(8|16|32|64)rm")>;
 
 def BWWriteResGroup67 : SchedWriteRes<[BWPort1,BWPort06,BWPort0156]> {

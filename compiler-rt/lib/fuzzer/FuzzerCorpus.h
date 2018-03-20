@@ -83,7 +83,7 @@ class InputCorpus {
     II.NumFeatures = NumFeatures;
     II.MayDeleteFile = MayDeleteFile;
     II.UniqFeatureSet = FeatureSet;
-    llvm::sort(II.UniqFeatureSet.begin(), II.UniqFeatureSet.end());
+    std::sort(II.UniqFeatureSet.begin(), II.UniqFeatureSet.end());
     ComputeSHA1(U.data(), U.size(), II.Sha1);
     Hashes.insert(Sha1ToString(II.Sha1));
     UpdateCorpusDistribution();

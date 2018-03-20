@@ -426,10 +426,12 @@ def: InstRW<[SBWriteResGroup4], (instregex "CQO")>;
 def: InstRW<[SBWriteResGroup4], (instregex "LAHF")>;
 def: InstRW<[SBWriteResGroup4], (instregex "SAHF")>;
 def: InstRW<[SBWriteResGroup4], (instregex "SAR(8|16|32|64)ri")>;
+def: InstRW<[SBWriteResGroup4], (instregex "SAR(8|16|32|64)r1")>;
 def: InstRW<[SBWriteResGroup4], (instregex "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)r")>;
 def: InstRW<[SBWriteResGroup4], (instregex "SHL(8|16|32|64)ri")>;
 def: InstRW<[SBWriteResGroup4], (instregex "SHL(8|16|32|64)r1")>;
 def: InstRW<[SBWriteResGroup4], (instregex "SHR(8|16|32|64)ri")>;
+def: InstRW<[SBWriteResGroup4], (instregex "SHR(8|16|32|64)r1")>;
 def: InstRW<[SBWriteResGroup4], (instregex "VBLENDPDYrri")>;
 def: InstRW<[SBWriteResGroup4], (instregex "VBLENDPDrri")>;
 def: InstRW<[SBWriteResGroup4], (instregex "VBLENDPSYrri")>;
@@ -685,7 +687,9 @@ def SBWriteResGroup9 : SchedWriteRes<[SBPort05]> {
 }
 def: InstRW<[SBWriteResGroup9], (instregex "BLENDVPDrr0")>;
 def: InstRW<[SBWriteResGroup9], (instregex "BLENDVPSrr0")>;
+def: InstRW<[SBWriteResGroup9], (instregex "ROL(8|16|32|64)r1")>;
 def: InstRW<[SBWriteResGroup9], (instregex "ROL(8|16|32|64)ri")>;
+def: InstRW<[SBWriteResGroup9], (instregex "ROR(8|16|32|64)r1")>;
 def: InstRW<[SBWriteResGroup9], (instregex "ROR(8|16|32|64)ri")>;
 def: InstRW<[SBWriteResGroup9], (instregex "SET(A|BE)r")>;
 def: InstRW<[SBWriteResGroup9], (instregex "VBLENDVPDYrr")>;
@@ -698,6 +702,7 @@ def SBWriteResGroup10 : SchedWriteRes<[SBPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
+def: InstRW<[SBWriteResGroup10], (instregex "PBLENDVBrr0")>;
 def: InstRW<[SBWriteResGroup10], (instregex "VPBLENDVBrr")>;
 
 def SBWriteResGroup11 : SchedWriteRes<[SBPort015]> {
@@ -1452,6 +1457,8 @@ def: InstRW<[SBWriteResGroup52], (instregex "LODSL")>;
 def: InstRW<[SBWriteResGroup52], (instregex "LODSQ")>;
 def: InstRW<[SBWriteResGroup52], (instregex "OR(8|16|32|64)rm")>;
 def: InstRW<[SBWriteResGroup52], (instregex "SUB(8|16|32|64)rm")>;
+def: InstRW<[SBWriteResGroup52], (instregex "TEST(8|16|32|64)mr")>;
+def: InstRW<[SBWriteResGroup52], (instregex "TEST(8|16|32|64)mi")>;
 def: InstRW<[SBWriteResGroup52], (instregex "XOR(8|16|32|64)rm")>;
 
 def SBWriteResGroup53 : SchedWriteRes<[SBPort4,SBPort23]> {
@@ -1815,9 +1822,11 @@ def SBWriteResGroup69 : SchedWriteRes<[SBPort4,SBPort23,SBPort05]> {
 def: InstRW<[SBWriteResGroup69], (instregex "BTC(16|32|64)mi8")>;
 def: InstRW<[SBWriteResGroup69], (instregex "BTR(16|32|64)mi8")>;
 def: InstRW<[SBWriteResGroup69], (instregex "BTS(16|32|64)mi8")>;
+def: InstRW<[SBWriteResGroup69], (instregex "SAR(8|16|32|64)m1")>;
 def: InstRW<[SBWriteResGroup69], (instregex "SAR(8|16|32|64)mi")>;
 def: InstRW<[SBWriteResGroup69], (instregex "SHL(8|16|32|64)m1")>;
 def: InstRW<[SBWriteResGroup69], (instregex "SHL(8|16|32|64)mi")>;
+def: InstRW<[SBWriteResGroup69], (instregex "SHR(8|16|32|64)m1")>;
 def: InstRW<[SBWriteResGroup69], (instregex "SHR(8|16|32|64)mi")>;
 
 def SBWriteResGroup70 : SchedWriteRes<[SBPort4,SBPort23,SBPort015]> {
@@ -1837,8 +1846,6 @@ def: InstRW<[SBWriteResGroup70], (instregex "OR(8|16|32|64)mi")>;
 def: InstRW<[SBWriteResGroup70], (instregex "OR(8|16|32|64)mr")>;
 def: InstRW<[SBWriteResGroup70], (instregex "SUB(8|16|32|64)mi")>;
 def: InstRW<[SBWriteResGroup70], (instregex "SUB(8|16|32|64)mr")>;
-def: InstRW<[SBWriteResGroup70], (instregex "TEST(8|16|32|64)mr")>;
-def: InstRW<[SBWriteResGroup70], (instregex "TEST8mi")>;
 def: InstRW<[SBWriteResGroup70], (instregex "XOR(8|16|32|64)mi")>;
 def: InstRW<[SBWriteResGroup70], (instregex "XOR(8|16|32|64)mr")>;
 
@@ -1917,7 +1924,7 @@ def SBWriteResGroup76 : SchedWriteRes<[SBPort23,SBPort15]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SBWriteResGroup76], (instregex "PBLENDVBrr0")>;
+def: InstRW<[SBWriteResGroup76], (instregex "PBLENDVBrm0")>;
 def: InstRW<[SBWriteResGroup76], (instregex "VPBLENDVBrm")>;
 
 def SBWriteResGroup77 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
@@ -2012,7 +2019,9 @@ def SBWriteResGroup85 : SchedWriteRes<[SBPort4,SBPort23,SBPort05]> {
   let NumMicroOps = 5;
   let ResourceCycles = [1,2,2];
 }
+def: InstRW<[SBWriteResGroup85], (instregex "ROL(8|16|32|64)m1")>;
 def: InstRW<[SBWriteResGroup85], (instregex "ROL(8|16|32|64)mi")>;
+def: InstRW<[SBWriteResGroup85], (instregex "ROR(8|16|32|64)m1")>;
 def: InstRW<[SBWriteResGroup85], (instregex "ROR(8|16|32|64)mi")>;
 
 def SBWriteResGroup86 : SchedWriteRes<[SBPort4,SBPort23,SBPort015]> {
