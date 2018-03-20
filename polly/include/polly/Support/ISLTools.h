@@ -522,7 +522,6 @@ void dumpExpanded(__isl_keep isl_map *Map);
 void dumpExpanded(__isl_keep isl_union_set *USet);
 void dumpExpanded(__isl_keep isl_union_map *UMap);
 /// @}
-
 } // namespace polly
 
 #endif /* POLLY_ISLTOOLS_H */

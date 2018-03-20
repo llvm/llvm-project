@@ -2533,6 +2533,17 @@ size_t Process::ReadScalarIntegerFromMemory(addr_t addr, uint32_t byte_size,
   return 0;
 }
 
+Status Process::WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) {
+  Status error;
+  for (const auto &Entry : entries) {
+    WriteMemory(Entry.Dest, Entry.Contents.data(), Entry.Contents.size(),
+                error);
+    if (!error.Success())
+      break;
+  }
+  return error;
+}
+
 #define USE_ALLOCATE_MEMORY_CACHE 1
 addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
                                Status &error) {

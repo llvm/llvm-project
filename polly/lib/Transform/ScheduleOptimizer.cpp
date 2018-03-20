@@ -1411,7 +1411,6 @@ public:
 private:
   isl_schedule *LastSchedule = nullptr;
 };
-
 } // namespace
 
 char IslScheduleOptimizer::ID = 0;

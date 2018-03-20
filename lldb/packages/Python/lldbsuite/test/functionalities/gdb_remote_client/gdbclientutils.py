@@ -453,5 +453,5 @@ class GDBRemoteTestBase(TestBase):
                 i += 1
             j += 1
         if i < len(packets):
-            self.fail("Did not receive: %s\nLast 10 packets:\n\t%s" %
-                    (packets[i], '\n\t'.join(log[-10:])))
+            self.fail(u"Did not receive: %s\nLast 10 packets:\n\t%s" %
+                    (packets[i], u'\n\t'.join(log[-10:])))

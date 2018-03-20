@@ -21,6 +21,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/XML.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -35,8 +36,8 @@
 // Project includes
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
-#include "Utility/StringExtractorGDBRemote.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include "llvm/ADT/StringSwitch.h"
 
@@ -81,6 +82,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_qXfer_libraries_read(eLazyBoolCalculate),
       m_supports_qXfer_libraries_svr4_read(eLazyBoolCalculate),
       m_supports_qXfer_features_read(eLazyBoolCalculate),
+      m_supports_qXfer_memory_map_read(eLazyBoolCalculate),
       m_supports_augmented_libraries_svr4_read(eLazyBoolCalculate),
       m_supports_jThreadExtendedInfo(eLazyBoolCalculate),
       m_supports_jLoadedDynamicLibrariesInfos(eLazyBoolCalculate),
@@ -103,7 +105,8 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_hostname(), m_gdb_server_name(), m_gdb_server_version(UINT32_MAX),
       m_default_packet_timeout(0), m_max_packet_size(0),
       m_qSupported_response(), m_supported_async_json_packets_is_valid(false),
-      m_supported_async_json_packets_sp() {}
+      m_supported_async_json_packets_sp(), m_qXfer_memory_map(),
+      m_qXfer_memory_map_loaded(false) {}
 
 //----------------------------------------------------------------------
 // Destructor
@@ -190,6 +193,13 @@ bool GDBRemoteCommunicationClient::GetQXferFeaturesReadSupported() {
     GetRemoteQSupported();
   }
   return m_supports_qXfer_features_read == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetQXferMemoryMapReadSupported() {
+  if (m_supports_qXfer_memory_map_read == eLazyBoolCalculate) {
+    GetRemoteQSupported();
+  }
+  return m_supports_qXfer_memory_map_read == eLazyBoolYes;
 }
 
 uint64_t GDBRemoteCommunicationClient::GetRemoteMaxPacketSize() {
@@ -296,6 +306,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_qXfer_libraries_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_svr4_read = eLazyBoolCalculate;
     m_supports_qXfer_features_read = eLazyBoolCalculate;
+    m_supports_qXfer_memory_map_read = eLazyBoolCalculate;
     m_supports_augmented_libraries_svr4_read = eLazyBoolCalculate;
     m_supports_qProcessInfoPID = true;
     m_supports_qfProcessInfo = true;
@@ -342,6 +353,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_qXfer_libraries_svr4_read = eLazyBoolNo;
   m_supports_augmented_libraries_svr4_read = eLazyBoolNo;
   m_supports_qXfer_features_read = eLazyBoolNo;
+  m_supports_qXfer_memory_map_read = eLazyBoolNo;
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
 
@@ -377,6 +389,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
       m_supports_qXfer_libraries_read = eLazyBoolYes;
     if (::strstr(response_cstr, "qXfer:features:read+"))
       m_supports_qXfer_features_read = eLazyBoolYes;
+    if (::strstr(response_cstr, "qXfer:memory-map:read+"))
+      m_supports_qXfer_memory_map_read = eLazyBoolYes;
 
     // Look for a list of compressions in the features list e.g.
     // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-deflate,lzma
@@ -1460,7 +1474,8 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
     UNUSED_IF_ASSERT_DISABLED(packet_len);
     StringExtractorGDBRemote response;
     if (SendPacketAndWaitForResponse(packet, response, false) ==
-        PacketResult::Success) {
+            PacketResult::Success &&
+        response.GetResponseType() == StringExtractorGDBRemote::eResponse) {
       llvm::StringRef name;
       llvm::StringRef value;
       addr_t addr_value = LLDB_INVALID_ADDRESS;
@@ -1536,8 +1551,134 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
   if (m_supports_memory_region_info == eLazyBoolNo) {
     error.SetErrorString("qMemoryRegionInfo is not supported");
   }
-  if (error.Fail())
-    region_info.Clear();
+
+  // Try qXfer:memory-map:read to get region information not included in
+  // qMemoryRegionInfo
+  MemoryRegionInfo qXfer_region_info;
+  Status qXfer_error = GetQXferMemoryMapRegionInfo(addr, qXfer_region_info);
+
+  if (error.Fail()) {
+    // If qMemoryRegionInfo failed, but qXfer:memory-map:read succeeded,
+    // use the qXfer result as a fallback
+    if (qXfer_error.Success()) {
+      region_info = qXfer_region_info;
+      error.Clear();
+    } else {
+      region_info.Clear();
+    }
+  } else if (qXfer_error.Success()) {
+    // If both qMemoryRegionInfo and qXfer:memory-map:read succeeded, and if
+    // both regions are the same range, update the result to include the
+    // flash-memory information that is specific to the qXfer result.
+    if (region_info.GetRange() == qXfer_region_info.GetRange()) {
+      region_info.SetFlash(qXfer_region_info.GetFlash());
+      region_info.SetBlocksize(qXfer_region_info.GetBlocksize());
+    }
+  }
+  return error;
+}
+
+Status GDBRemoteCommunicationClient::GetQXferMemoryMapRegionInfo(
+    lldb::addr_t addr, MemoryRegionInfo &region) {
+  Status error = LoadQXferMemoryMap();
+  if (!error.Success())
+    return error;
+  for (const auto &map_region : m_qXfer_memory_map) {
+    if (map_region.GetRange().Contains(addr)) {
+      region = map_region;
+      return error;
+    }
+  }
+  error.SetErrorString("Region not found");
+  return error;
+}
+
+Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
+
+  Status error;
+
+  if (m_qXfer_memory_map_loaded)
+    // Already loaded, return success
+    return error;
+
+  if (!XMLDocument::XMLEnabled()) {
+    error.SetErrorString("XML is not supported");
+    return error;
+  }
+
+  if (!GetQXferMemoryMapReadSupported()) {
+    error.SetErrorString("Memory map is not supported");
+    return error;
+  }
+
+  std::string xml;
+  lldb_private::Status lldberr;
+  if (!ReadExtFeature(ConstString("memory-map"), ConstString(""), xml,
+                      lldberr)) {
+    error.SetErrorString("Failed to read memory map");
+    return error;
+  }
+
+  XMLDocument xml_document;
+
+  if (!xml_document.ParseMemory(xml.c_str(), xml.size())) {
+    error.SetErrorString("Failed to parse memory map xml");
+    return error;
+  }
+
+  XMLNode map_node = xml_document.GetRootElement("memory-map");
+  if (!map_node) {
+    error.SetErrorString("Invalid root node in memory map xml");
+    return error;
+  }
+
+  m_qXfer_memory_map.clear();
+
+  map_node.ForEachChildElement([this](const XMLNode &memory_node) -> bool {
+    if (!memory_node.IsElement())
+      return true;
+    if (memory_node.GetName() != "memory")
+      return true;
+    auto type = memory_node.GetAttributeValue("type", "");
+    uint64_t start;
+    uint64_t length;
+    if (!memory_node.GetAttributeValueAsUnsigned("start", start))
+      return true;
+    if (!memory_node.GetAttributeValueAsUnsigned("length", length))
+      return true;
+    MemoryRegionInfo region;
+    region.GetRange().SetRangeBase(start);
+    region.GetRange().SetByteSize(length);
+    if (type == "rom") {
+      region.SetReadable(MemoryRegionInfo::eYes);
+      this->m_qXfer_memory_map.push_back(region);
+    } else if (type == "ram") {
+      region.SetReadable(MemoryRegionInfo::eYes);
+      region.SetWritable(MemoryRegionInfo::eYes);
+      this->m_qXfer_memory_map.push_back(region);
+    } else if (type == "flash") {
+      region.SetFlash(MemoryRegionInfo::eYes);
+      memory_node.ForEachChildElement(
+          [&region](const XMLNode &prop_node) -> bool {
+            if (!prop_node.IsElement())
+              return true;
+            if (prop_node.GetName() != "property")
+              return true;
+            auto propname = prop_node.GetAttributeValue("name", "");
+            if (propname == "blocksize") {
+              uint64_t blocksize;
+              if (prop_node.GetElementTextAsUnsigned(blocksize))
+                region.SetBlocksize(blocksize);
+            }
+            return true;
+          });
+      this->m_qXfer_memory_map.push_back(region);
+    }
+    return true;
+  });
+
+  m_qXfer_memory_map_loaded = true;
+
   return error;
 }
 

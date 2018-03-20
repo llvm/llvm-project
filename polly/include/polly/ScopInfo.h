@@ -75,7 +75,6 @@ class Value;
 
 void initializeScopInfoRegionPassPass(PassRegistry &);
 void initializeScopInfoWrapperPassPass(PassRegistry &);
-
 } // end namespace llvm
 
 struct isl_map;
@@ -3203,7 +3202,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
-
 } // end namespace polly
 
 #endif // POLLY_SCOPINFO_H

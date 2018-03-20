@@ -71,7 +71,7 @@ llvm_config.feature_config(
                           'X86': 'x86'})
      ])
 
-# Set a fake constant version so that we get consitent output.
+# Set a fake constant version so that we get consistent output.
 config.environment['LLD_VERSION'] = 'LLD 1.0'
 config.environment['LLD_IN_TEST'] = '1'
 
