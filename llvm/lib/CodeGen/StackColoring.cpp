@@ -600,12 +600,12 @@ bool StackColoring::isLifetimeStartOrEnd(const MachineInstr &MI,
       isStart = false;
       return true;
     }
-    if (! applyFirstUse(Slot)) {
+    if (!applyFirstUse(Slot)) {
       isStart = true;
       return true;
     }
   } else if (LifetimeStartOnFirstUse && !ProtectFromEscapedAllocas) {
-    if (! MI.isDebugValue()) {
+    if (!MI.isDebugValue()) {
       bool found = false;
       for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isFI())

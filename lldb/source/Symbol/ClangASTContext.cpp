@@ -2121,51 +2121,6 @@ ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
   return CompilerType();
 }
 
-// Disable this for now since I can't seem to get a nicely formatted float
-// out of the APFloat class without just getting the float, double or quad
-// and then using a formatted print on it which defeats the purpose. We ideally
-// would like to get perfect string values for any kind of float semantics
-// so we can support remote targets. The code below also requires a patch to
-// llvm::APInt.
-// bool
-// ClangASTContext::ConvertFloatValueToString (ASTContext *ast,
-// lldb::opaque_compiler_type_t clang_type, const uint8_t* bytes, size_t
-// byte_size, int apint_byte_order, std::string &float_str)
-//{
-//  uint32_t count = 0;
-//  bool is_complex = false;
-//  if (ClangASTContext::IsFloatingPointType (clang_type, count, is_complex))
-//  {
-//      unsigned num_bytes_per_float = byte_size / count;
-//      unsigned num_bits_per_float = num_bytes_per_float * 8;
-//
-//      float_str.clear();
-//      uint32_t i;
-//      for (i=0; i<count; i++)
-//      {
-//          APInt ap_int(num_bits_per_float, bytes + i * num_bytes_per_float,
-//          (APInt::ByteOrder)apint_byte_order);
-//          bool is_ieee = false;
-//          APFloat ap_float(ap_int, is_ieee);
-//          char s[1024];
-//          unsigned int hex_digits = 0;
-//          bool upper_case = false;
-//
-//          if (ap_float.convertToHexString(s, hex_digits, upper_case,
-//          APFloat::rmNearestTiesToEven) > 0)
-//          {
-//              if (i > 0)
-//                  float_str.append(", ");
-//              float_str.append(s);
-//              if (i == 1 && is_complex)
-//                  float_str.append(1, 'i');
-//          }
-//      }
-//      return !float_str.empty();
-//  }
-//  return false;
-//}
-
 CompilerType ClangASTContext::GetIntTypeFromBitSize(clang::ASTContext *ast,
                                                     size_t bit_size,
                                                     bool is_signed) {

@@ -1569,7 +1569,37 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
       // NOTE: if we wanted to, this is where to detect MIN/MAX
     }
-    // NOTE: if we wanted to, this is where to detect ABS
+
+    // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
+    // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work. We
+    // also require nnan because we do not want to unintentionally change the
+    // sign of a NaN value.
+    Value *X = FCI->getOperand(0);
+    FCmpInst::Predicate Pred = FCI->getPredicate();
+    if (match(FCI->getOperand(1), m_AnyZeroFP()) && FCI->hasNoNaNs()) {
+      // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
+      // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
+      if ((X == FalseVal && match(TrueVal, m_FSub(m_Zero(), m_Specific(X))) &&
+          Pred == FCmpInst::FCMP_OLE) ||
+          (X == TrueVal && match(FalseVal, m_FSub(m_Zero(), m_Specific(X))) &&
+          Pred == FCmpInst::FCMP_OGT)) {
+        Value *Fabs = Builder.CreateIntrinsic(Intrinsic::fabs, { X }, FCI);
+        return replaceInstUsesWith(SI, Fabs);
+      }
+      // With nsz:
+      // (X <  +/-0.0) ? -X : X --> fabs(X)
+      // (X <= +/-0.0) ? -X : X --> fabs(X)
+      // (X >  +/-0.0) ? X : -X --> fabs(X)
+      // (X >= +/-0.0) ? X : -X --> fabs(X)
+      if (FCI->hasNoSignedZeros() &&
+          ((X == FalseVal && match(TrueVal, m_FNeg(m_Specific(X))) &&
+            (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE)) ||
+           (X == TrueVal && match(FalseVal, m_FNeg(m_Specific(X))) &&
+            (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE)))) {
+        Value *Fabs = Builder.CreateIntrinsic(Intrinsic::fabs, { X }, FCI);
+        return replaceInstUsesWith(SI, Fabs);
+      }
+    }
   }
 
   // See if we are selecting two values based on a comparison of the two values.

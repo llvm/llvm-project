@@ -667,10 +667,10 @@ def FNCLEX : I<0xDB, MRM_E2, (outs), (ins), "fnclex", [], IIC_FNCLEX>;
 } // Defs = [FPSW]
 } // SchedRW
 
-// Operandless floating-point instructions for the disassembler.
-let SchedRW = [WriteMicrocoded] in {
-def FNOP : I<0xD9, MRM_D0, (outs), (ins), "fnop", [], IIC_FNOP>;
+// Operand-less floating-point instructions for the disassembler.
+def FNOP : I<0xD9, MRM_D0, (outs), (ins), "fnop", [], IIC_FNOP>, Sched<[WriteNop]>;
 
+let SchedRW = [WriteMicrocoded] in {
 let Defs = [FPSW] in {
 def WAIT : I<0x9B, RawFrm, (outs), (ins), "wait", [], IIC_WAIT>;
 def FXAM : I<0xD9, MRM_E5, (outs), (ins), "fxam", [], IIC_FXAM>;

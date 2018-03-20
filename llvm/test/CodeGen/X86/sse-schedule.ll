@@ -3763,7 +3763,7 @@ define <4 x float> @test_xorps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
   ret <4 x float> %7
 }
 
-; 'WriteZero' class instructions.
+; 'WriteZero' and 'WriteNop' class instructions.
 
 define <4 x float> @test_fnop() nounwind {
 ; GENERIC-LABEL: test_fnop:
@@ -3840,7 +3840,7 @@ define <4 x float> @test_fnop() nounwind {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    nop # sched: [1:?]
+; BTVER2-NEXT:    nop # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

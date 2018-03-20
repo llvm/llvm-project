@@ -75,11 +75,11 @@ int main(int argc, char **argv) {
   // CHECK: call void @"??$foo@H@@YAXHH@Z"(i32 %{{.+}}, i32 %{{.+}})
   foo(argc, (int)argv[0][0]);
   // CHECK: [[P2:%.+]] = load %class.St*, %class.St** %
-  // CHECK: [[T_X:%.+]] = call i32 @"?get_x@Test1@@QEBAHXZ"(%class.Test1* %{{.+}})
   // CHECK: [[P1:%.+]] = load %class.S*, %class.S** %
   // CHECK: [[P1_X_22_33:%.+]] = call i32 @"?GetX@S@@QEAAHHH@Z"(%class.S* [[P1]], i32 22, i32 33)
   // CHECK: [[CAST:%.+]] = sitofp i32 [[P1_X_22_33]] to double
   // CHECK: [[ARGC:%.+]] = load i32, i32* %
+  // CHECK: [[T_X:%.+]] = call i32 @"?get_x@Test1@@QEBAHXZ"(%class.Test1* %{{.+}})
   // CHECK: [[CAST2:%.+]] = trunc i32 [[T_X]] to i8
   // CHECK: call void @"?PutY@?$St@M@@QEAAXDHN@Z"(%class.St* [[P2]], i8 [[CAST2]], i32 [[ARGC]], double [[CAST]])
   p2->y[t.X][argc] =  p1->x[22][33];

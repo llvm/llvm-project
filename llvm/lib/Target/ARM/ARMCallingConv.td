@@ -160,8 +160,8 @@ def CC_ARM_AAPCS : CallingConv<[
   CCIfNest<CCAssignToReg<[R12]>>,
 
   // Handle all vector types as either f64 or v2f64.
-  CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
+  CCIfType<[v1i64, v2i32, v4i16, v4f16, v8i8, v2f32], CCBitConvertToType<f64>>,
+  CCIfType<[v2i64, v4i32, v8i16, v8f16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
   // Pass SwiftSelf in a callee saved register.
   CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R10]>>>,
@@ -176,8 +176,8 @@ def CC_ARM_AAPCS : CallingConv<[
 
 def RetCC_ARM_AAPCS : CallingConv<[
   // Handle all vector types as either f64 or v2f64.
-  CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
+  CCIfType<[v1i64, v2i32, v4i16, v4f16, v8i8, v2f32], CCBitConvertToType<f64>>,
+  CCIfType<[v2i64, v4i32, v8i16, v8f16,v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
   // Pass SwiftSelf in a callee saved register.
   CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R10]>>>,
@@ -201,8 +201,8 @@ def CC_ARM_AAPCS_VFP : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
 
   // Handle all vector types as either f64 or v2f64.
-  CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
+  CCIfType<[v1i64, v2i32, v4i16, v4f16, v8i8, v2f32], CCBitConvertToType<f64>>,
+  CCIfType<[v2i64, v4i32, v8i16, v8f16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
   // Pass SwiftSelf in a callee saved register.
   CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R10]>>>,
@@ -222,8 +222,8 @@ def CC_ARM_AAPCS_VFP : CallingConv<[
 
 def RetCC_ARM_AAPCS_VFP : CallingConv<[
   // Handle all vector types as either f64 or v2f64.
-  CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
+  CCIfType<[v1i64, v2i32, v4i16, v4f16, v8i8, v2f32], CCBitConvertToType<f64>>,
+  CCIfType<[v2i64, v4i32, v8i16, v8f16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
   // Pass SwiftSelf in a callee saved register.
   CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R10]>>>,

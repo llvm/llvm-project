@@ -4695,10 +4695,10 @@ def DWMaskValues {
 def DWSwapInByte {
   dag Swap1 = (OR8 (AND8 (RLDICL $A, 63, 1), DWMaskValues.Lo1),
                    (AND8 (RLDICR $A, 1, 62), DWMaskValues.Hi1));
-  dag Swap2 = (OR8 (AND8 (RLDICL DWSwapInByte.Swap1, 62, 2), DWMaskValues.Lo2),
-                   (AND8 (RLDICR DWSwapInByte.Swap1, 2, 61), DWMaskValues.Hi2));
-  dag Swap4 = (OR8 (AND8 (RLDICL DWSwapInByte.Swap2, 60, 4), DWMaskValues.Lo4),
-                   (AND8 (RLDICR DWSwapInByte.Swap2, 4, 59), DWMaskValues.Hi4));
+  dag Swap2 = (OR8 (AND8 (RLDICL Swap1, 62, 2), DWMaskValues.Lo2),
+                   (AND8 (RLDICR Swap1, 2, 61), DWMaskValues.Hi2));
+  dag Swap4 = (OR8 (AND8 (RLDICL Swap2, 60, 4), DWMaskValues.Lo4),
+                   (AND8 (RLDICR Swap2, 4, 59), DWMaskValues.Hi4));
 }
 
 // Intra-byte swap is done, now start inter-byte swap.
@@ -4718,7 +4718,7 @@ def DWBytes7656 {
 def DWBytes7654 {
   dag Word = (RLWIMI DWBytes7656.Word, DWBytes4567.Word, 8, 24, 31);
   dag DWord =
-    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), DWBytes7654.Word, sub_32));
+    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), Word, sub_32));
 }
 
 def DWBytes0123 {
@@ -4737,7 +4737,7 @@ def DWBytes3212 {
 def DWBytes3210 {
   dag Word = (RLWIMI DWBytes3212.Word, DWBytes0123.Word, 8, 24, 31);
   dag DWord =
-    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), DWBytes3210.Word, sub_32));
+    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), Word, sub_32));
 }
 
 // Now both high word and low word are reversed, next

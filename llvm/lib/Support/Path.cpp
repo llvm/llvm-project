@@ -757,9 +757,15 @@ std::error_code createUniqueFile(const Twine &Model, int &ResultFd,
 }
 
 std::error_code createUniqueFile(const Twine &Model,
-                                 SmallVectorImpl<char> &ResultPath) {
-  int Dummy;
-  return createUniqueEntity(Model, Dummy, ResultPath, false, 0, FS_Name);
+                                 SmallVectorImpl<char> &ResultPath,
+                                 unsigned Mode) {
+  int FD;
+  auto EC = createUniqueFile(Model, FD, ResultPath, Mode);
+  if (EC)
+    return EC;
+  // FD is only needed to avoid race conditions. Close it right away.
+  close(FD);
+  return EC;
 }
 
 static std::error_code
@@ -794,8 +800,13 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
 
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     SmallVectorImpl<char> &ResultPath) {
-  int Dummy;
-  return createTemporaryFile(Prefix, Suffix, Dummy, ResultPath, FS_Name);
+  int FD;
+  auto EC = createTemporaryFile(Prefix, Suffix, FD, ResultPath);
+  if (EC)
+    return EC;
+  // FD is only needed to avoid race conditions. Close it right away.
+  close(FD);
+  return EC;
 }
 
 
@@ -804,8 +815,22 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath) {
   int Dummy;
-  return createUniqueEntity(Prefix + "-%%%%%%", Dummy, ResultPath,
-                            true, 0, FS_Dir);
+  return createUniqueEntity(Prefix + "-%%%%%%", Dummy, ResultPath, true, 0,
+                            FS_Dir);
+}
+
+std::error_code
+getPotentiallyUniqueFileName(const Twine &Model,
+                             SmallVectorImpl<char> &ResultPath) {
+  int Dummy;
+  return createUniqueEntity(Model, Dummy, ResultPath, false, 0, FS_Name);
+}
+
+std::error_code
+getPotentiallyUniqueTempFileName(const Twine &Prefix, StringRef Suffix,
+                                 SmallVectorImpl<char> &ResultPath) {
+  int Dummy;
+  return createTemporaryFile(Prefix, Suffix, Dummy, ResultPath, FS_Name);
 }
 
 static std::error_code make_absolute(const Twine &current_directory,

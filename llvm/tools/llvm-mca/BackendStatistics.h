@@ -59,6 +59,7 @@
 
 #include "Backend.h"
 #include "View.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
@@ -80,6 +81,10 @@ class BackendStatistics : public View {
   unsigned NumRetired;
   unsigned NumCycles;
 
+  // Counts dispatch stall events caused by unavailability of resources.  There
+  // is one counter for every generic stall kind (see class HWStallEvent).
+  llvm::SmallVector<unsigned, 8> HWStalls;
+
   void updateHistograms() {
     DispatchGroupSizePerCycle[NumDispatched]++;
     IssuedPerCycle[NumIssued]++;
@@ -93,10 +98,7 @@ class BackendStatistics : public View {
   void printDispatchUnitStatistics(llvm::raw_ostream &OS) const;
   void printSchedulerStatistics(llvm::raw_ostream &OS) const;
 
-  void printDispatchStalls(llvm::raw_ostream &OS, unsigned RATStalls,
-                           unsigned RCUStalls, unsigned SQStalls,
-                           unsigned LDQStalls, unsigned STQStalls,
-                           unsigned DGStalls) const;
+  void printDispatchStalls(llvm::raw_ostream &OS) const;
   void printRATStatistics(llvm::raw_ostream &OS, unsigned Mappings,
                           unsigned MaxUsedMappings) const;
   void printRCUStatistics(llvm::raw_ostream &OS, const Histogram &Histogram,
@@ -111,7 +113,7 @@ class BackendStatistics : public View {
 public:
   BackendStatistics(const Backend &backend, const llvm::MCSubtargetInfo &sti)
       : B(backend), STI(sti), NumDispatched(0), NumIssued(0), NumRetired(0),
-        NumCycles(0) {}
+        NumCycles(0), HWStalls(HWStallEvent::LastGenericEvent) {}
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;
 
@@ -119,10 +121,13 @@ public:
 
   void onCycleEnd(unsigned Cycle) override { updateHistograms(); }
 
+  void onStallEvent(const HWStallEvent &Event) override {
+    if (Event.Type < HWStallEvent::LastGenericEvent)
+      HWStalls[Event.Type]++;
+  }
+
   void printView(llvm::raw_ostream &OS) const override {
-    printDispatchStalls(OS, B.getNumRATStalls(), B.getNumRCUStalls(),
-                        B.getNumSQStalls(), B.getNumLDQStalls(),
-                        B.getNumSTQStalls(), B.getNumDispatchGroupStalls());
+    printDispatchStalls(OS);
     printRATStatistics(OS, B.getTotalRegisterMappingsCreated(),
                        B.getMaxUsedRegisterMappings());
     printDispatchUnitStatistics(OS);
