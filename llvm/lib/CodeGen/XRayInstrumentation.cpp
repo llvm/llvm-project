@@ -52,7 +52,6 @@ struct XRayInstrumentation : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfo>();
     AU.addPreserved<MachineLoopInfo>();
     AU.addPreserved<MachineDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -160,11 +159,26 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     for (const auto &MBB : MF)
       MICount += MBB.size();
 
+    // Get MachineDominatorTree or compute it on the fly if it's unavailable
+    auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+    MachineDominatorTree ComputedMDT;
+    if (!MDT) {
+      ComputedMDT.getBase().recalculate(MF);
+      MDT = &ComputedMDT;
+    }
+
+    // Get MachineLoopInfo or compute it on the fly if it's unavailable
+    auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+    MachineLoopInfo ComputedMLI;
+    if (!MLI) {
+      ComputedMLI.getBase().analyze(MDT->getBase());
+      MLI = &ComputedMLI;
+    }
+
     // Check if we have a loop.
     // FIXME: Maybe make this smarter, and see whether the loops are dependent
     // on inputs or side-effects?
-    MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
-    if (MLI.empty() && MICount < XRayThreshold)
+    if (MLI->empty() && MICount < XRayThreshold)
       return false; // Function is too small and has no loops.
   }
 
