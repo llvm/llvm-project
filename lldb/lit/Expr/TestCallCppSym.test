@@ -1,6 +1,0 @@
-# RUN: %cxx %p/Inputs/basic.cpp -g -o %t && %lldb -b -s %s -- %t 2>&1 | FileCheck %s
-
-breakpoint set --file basic.cpp --line 12
-run
-call (int)_Znwm(23)
-# CHECK: error: use of undeclared identifier '_Znwm'
