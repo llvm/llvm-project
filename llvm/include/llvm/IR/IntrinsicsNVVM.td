@@ -3884,30 +3884,22 @@ def int_nvvm_match_all_sync_i64p :
 //
 
 // WMMA.LOAD
-class NVVM_WMMA_LD_ALSTS<string Abc, string Layout, string Space,
-                         string Type, LLVMType regty, int WithStride>
+class NVVM_WMMA_LD_ALSTS<string Abc, string Layout, string Type,
+                         LLVMType regty, int WithStride>
   : Intrinsic<!if(!eq(Abc#Type,"cf16"),
                   [regty, regty, regty, regty],
                   [regty, regty, regty, regty,
                    regty, regty, regty, regty]),
-              !if(WithStride, [llvm_ptr_ty, llvm_i32_ty], [llvm_ptr_ty]),
-              [], // Properties must be set during instantiation.
+              !if(WithStride, [llvm_anyptr_ty, llvm_i32_ty], [llvm_anyptr_ty]),
+              [IntrReadMem, IntrArgMemOnly, ReadOnly<0>, NoCapture<0>],
               "llvm.nvvm.wmma.load."#Abc#".sync."#Layout#".m16n16k16"
-                #Space
                 #!if(WithStride,".stride","")
                 #"."#Type>;
 
-multiclass NVVM_WMMA_LD_ALST<string Abc, string Layout, string Space,
-                           string Type, LLVMType regty> {
-  def _stride: NVVM_WMMA_LD_ALSTS<Abc, Layout, Space, Type, regty, 1>;
-  def NAME   : NVVM_WMMA_LD_ALSTS<Abc, Layout, Space, Type, regty, 0>;
-}
-
-multiclass NVVM_WMMA_LD_ALT<string Abc, string Layout,
-                        string Type, LLVMType regty> {
-  defm _global: NVVM_WMMA_LD_ALST<Abc, Layout, ".global", Type, regty>;
-  defm _shared: NVVM_WMMA_LD_ALST<Abc, Layout, ".shared", Type, regty>;
-  defm NAME:    NVVM_WMMA_LD_ALST<Abc, Layout,        "", Type, regty>;
+multiclass NVVM_WMMA_LD_ALT<string Abc, string Layout, string Type,
+                            LLVMType regty> {
+  def _stride: NVVM_WMMA_LD_ALSTS<Abc, Layout, Type, regty, 1>;
+  def NAME   : NVVM_WMMA_LD_ALSTS<Abc, Layout, Type, regty, 0>;
 }
 
 multiclass NVVM_WMMA_LD_AT<string Abc, string Type, LLVMType regty> {
@@ -3915,47 +3907,33 @@ multiclass NVVM_WMMA_LD_AT<string Abc, string Type, LLVMType regty> {
   defm _col: NVVM_WMMA_LD_ALT<Abc, "col", Type, regty>;
 }
 
-// For some reason ReadOnly<N> and NoCapture<N> confuses tblgen if they are
-// passed to Intrinsic<> form inside of a multiclass. Setting them globally
-// outside of the multiclass works.
-let IntrProperties = [IntrReadMem, IntrArgMemOnly,
-                      ReadOnly<0>, NoCapture<0>] in {
-  defm int_nvvm_wmma_load_a_f16: NVVM_WMMA_LD_AT<"a", "f16", llvm_v2f16_ty>;
-  defm int_nvvm_wmma_load_b_f16: NVVM_WMMA_LD_AT<"b", "f16", llvm_v2f16_ty>;
-  defm int_nvvm_wmma_load_c_f16: NVVM_WMMA_LD_AT<"c", "f16", llvm_v2f16_ty>;
-  defm int_nvvm_wmma_load_c_f32: NVVM_WMMA_LD_AT<"c", "f32", llvm_float_ty>;
-}
+defm int_nvvm_wmma_load_a_f16: NVVM_WMMA_LD_AT<"a", "f16", llvm_v2f16_ty>;
+defm int_nvvm_wmma_load_b_f16: NVVM_WMMA_LD_AT<"b", "f16", llvm_v2f16_ty>;
+defm int_nvvm_wmma_load_c_f16: NVVM_WMMA_LD_AT<"c", "f16", llvm_v2f16_ty>;
+defm int_nvvm_wmma_load_c_f32: NVVM_WMMA_LD_AT<"c", "f32", llvm_float_ty>;
 
 // WMMA.STORE.D
-class NVVM_WMMA_STD_LSTS<string Layout, string Space,
-                         string Type, LLVMType regty, int WithStride,
+class NVVM_WMMA_STD_LSTS<string Layout, string Type, LLVMType regty, int WithStride,
                          // This is only used to create a typed empty array we
                          // need to pass to !if below.
                          list<LLVMType>Empty=[]>
   : Intrinsic<[],
               !listconcat(
-                [llvm_ptr_ty],
+                [llvm_anyptr_ty],
                 !if(!eq(Type,"f16"),
                     [regty, regty, regty, regty],
                     [regty, regty, regty, regty,
                      regty, regty, regty, regty]),
                 !if(WithStride, [llvm_i32_ty], Empty)),
-              [], // Properties must be set during instantiation.
+              [IntrWriteMem, IntrArgMemOnly, WriteOnly<0>, NoCapture<0>],
               "llvm.nvvm.wmma.store.d.sync."#Layout
-                   #".m16n16k16"#Space
+                   #".m16n16k16"
                    #!if(WithStride,".stride","")
                    #"."#Type>;
 
-multiclass NVVM_WMMA_STD_LST<string Layout, string Space,
-                            string Type, LLVMType regty> {
-  def _stride: NVVM_WMMA_STD_LSTS<Layout, Space, Type, regty, 1>;
-  def NAME:    NVVM_WMMA_STD_LSTS<Layout, Space, Type, regty, 0>;
-}
-
 multiclass NVVM_WMMA_STD_LT<string Layout, string Type, LLVMType regty> {
-  defm _global: NVVM_WMMA_STD_LST<Layout, ".global", Type, regty>;
-  defm _shared: NVVM_WMMA_STD_LST<Layout, ".shared", Type, regty>;
-  defm    NAME: NVVM_WMMA_STD_LST<Layout,        "", Type, regty>;
+  def _stride: NVVM_WMMA_STD_LSTS<Layout, Type, regty, 1>;
+  def NAME:    NVVM_WMMA_STD_LSTS<Layout, Type, regty, 0>;
 }
 
 multiclass NVVM_WMMA_STD_T<string Type, LLVMType regty> {
@@ -3963,11 +3941,8 @@ multiclass NVVM_WMMA_STD_T<string Type, LLVMType regty> {
   defm _col: NVVM_WMMA_STD_LT<"col", Type, regty>;
 }
 
-let IntrProperties = [IntrWriteMem, IntrArgMemOnly,
-                      WriteOnly<0>, NoCapture<0>] in {
-  defm int_nvvm_wmma_store_d_f16: NVVM_WMMA_STD_T<"f16", llvm_v2f16_ty>;
-  defm int_nvvm_wmma_store_d_f32: NVVM_WMMA_STD_T<"f32", llvm_float_ty>;
-}
+defm int_nvvm_wmma_store_d_f16: NVVM_WMMA_STD_T<"f16", llvm_v2f16_ty>;
+defm int_nvvm_wmma_store_d_f32: NVVM_WMMA_STD_T<"f32", llvm_float_ty>;
 
 // WMMA.MMA
 class NVVM_WMMA_MMA_ABDCS<string ALayout, string BLayout,

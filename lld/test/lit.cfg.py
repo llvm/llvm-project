@@ -71,7 +71,7 @@ llvm_config.feature_config(
                           'X86': 'x86'})
      ])
 
-# Set a fake constant version so that we get consitent output.
+# Set a fake constant version so that we get consistent output.
 config.environment['LLD_VERSION'] = 'LLD 1.0'
 config.environment['LLD_IN_TEST'] = '1'
 
@@ -84,9 +84,6 @@ if (lit.util.which('cvtres', config.environment['PATH'])) or \
 
 if (config.llvm_libxml2_enabled == '1'):
     config.available_features.add('libxml2')
-
-if config.have_dia_sdk:
-    config.available_features.add("diasdk")
 
 tar_executable = lit.util.which('tar', config.environment['PATH'])
 if tar_executable:

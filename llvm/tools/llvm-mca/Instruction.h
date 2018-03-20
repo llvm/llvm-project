@@ -102,8 +102,8 @@ class WriteState {
   std::set<std::pair<ReadState *, int>> Users;
 
 public:
-  WriteState(const WriteDescriptor &Desc)
-      : WD(Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(Desc.RegisterID) {}
+  WriteState(const WriteDescriptor &Desc, unsigned RegID)
+      : WD(Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID) {}
   WriteState(const WriteState &Other) = delete;
   WriteState &operator=(const WriteState &Other) = delete;
 

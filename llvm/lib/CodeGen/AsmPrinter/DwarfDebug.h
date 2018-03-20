@@ -258,6 +258,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Use inlined strings.
   bool UseInlineStrings = false;
 
+  /// Whether to emit DWARF pub sections or not.
+  bool UsePubSections = true;
+
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
@@ -500,6 +503,9 @@ public:
 
   /// Returns whether to use inline strings.
   bool useInlineStrings() const { return UseInlineStrings; }
+
+  /// Returns whether GNU oub sections should be emitted.
+  bool usePubSections() const { return UsePubSections; }
 
   // Experimental DWARF5 features.
 

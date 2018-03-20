@@ -11,7 +11,7 @@ define i32 @caller(i32 %a0) nounwind {
   ret i32 %b2
 }
 ; CHECK:    name: caller
-; CHECK:    CALL64pcrel32 @callee, CustomRegMask($bh,$bl,$bp,$bpl,$bx,$ebp,$ebx,$esp,$rbp,$rbx,$rsp,$sp,$spl,$r10,$r11,$r12,$r13,$r14,$r15,$xmm8,$xmm9,$xmm10,$xmm11,$xmm12,$xmm13,$xmm14,$xmm15,$r10b,$r11b,$r12b,$r13b,$r14b,$r15b,$r10d,$r11d,$r12d,$r13d,$r14d,$r15d,$r10w,$r11w,$r12w,$r13w,$r14w,$r15w)
+; CHECK:    CALL64pcrel32 @callee, CustomRegMask($bh,$bl,$bp,$bpl,$bx,$ebp,$ebx,$esp,$hbp,$hbx,$hsp,$rbp,$rbx,$rsp,$sp,$spl,$r10,$r11,$r12,$r13,$r14,$r15,$xmm8,$xmm9,$xmm10,$xmm11,$xmm12,$xmm13,$xmm14,$xmm15,$r10b,$r11b,$r12b,$r13b,$r14b,$r15b,$r10d,$r11d,$r12d,$r13d,$r14d,$r15d,$r10w,$r11w,$r12w,$r13w,$r14w,$r15w), implicit $rsp, implicit $ssp, implicit $eax, implicit $ecx, implicit $edx, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
 ; CHECK:    RET 0, $eax
 
 define x86_regcallcc {i32, i32, i32} @test_callee(i32 %a0, i32 %b0, i32 %c0, i32 %d0, i32 %e0) nounwind {

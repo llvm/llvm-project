@@ -52,7 +52,7 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 CodeGenSubRegIndex::CodeGenSubRegIndex(Record *R, unsigned Enum)
-  : TheDef(R), EnumValue(Enum), AllSuperRegsCovered(true) {
+  : TheDef(R), EnumValue(Enum), AllSuperRegsCovered(true), Artificial(true) {
   Name = R->getName();
   if (R->getValue("Namespace"))
     Namespace = R->getValueAsString("Namespace");
@@ -63,7 +63,7 @@ CodeGenSubRegIndex::CodeGenSubRegIndex(Record *R, unsigned Enum)
 CodeGenSubRegIndex::CodeGenSubRegIndex(StringRef N, StringRef Nspace,
                                        unsigned Enum)
   : TheDef(nullptr), Name(N), Namespace(Nspace), Size(-1), Offset(-1),
-    EnumValue(Enum), AllSuperRegsCovered(true) {
+    EnumValue(Enum), AllSuperRegsCovered(true), Artificial(true) {
 }
 
 std::string CodeGenSubRegIndex::getQualifiedName() const {
@@ -162,8 +162,9 @@ CodeGenRegister::CodeGenRegister(Record *R, unsigned Enum)
     HasDisjunctSubRegs(false),
     SubRegsComplete(false),
     SuperRegsComplete(false),
-    TopoSig(~0u)
-{}
+    TopoSig(~0u) {
+  Artificial = R->getValueAsBit("isArtificial");
+}
 
 void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
   std::vector<Record*> SRIs = TheDef->getValueAsListOfDefs("SubRegIndices");
@@ -276,6 +277,8 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
   for (unsigned i = 0, e = ExplicitSubRegs.size(); i != e; ++i) {
     CodeGenRegister *SR = ExplicitSubRegs[i];
     CodeGenSubRegIndex *Idx = ExplicitSubRegIndices[i];
+    if (!SR->Artificial)
+      Idx->Artificial = false;
     if (!SubRegs.insert(std::make_pair(Idx, SR)).second)
       PrintFatalError(TheDef->getLoc(), "SubRegIndex " + Idx->getName() +
                       " appears twice in Register " + getName());
@@ -736,10 +739,12 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   Orders.resize(1 + AltOrders->size());
 
   // Default allocation order always contains all registers.
+  Artificial = true;
   for (unsigned i = 0, e = Elements->size(); i != e; ++i) {
     Orders[0].push_back((*Elements)[i]);
     const CodeGenRegister *Reg = RegBank.getReg((*Elements)[i]);
     Members.push_back(Reg);
+    Artificial &= Reg->Artificial;
     TopoSigs.set(Reg->getTopoSig());
   }
   sortAndUniqueRegisters(Members);
@@ -798,8 +803,11 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     CopyCost(0),
     Allocatable(true),
     AllocationPriority(0) {
-  for (const auto R : Members)
+  Artificial = true;
+  for (const auto R : Members) {
     TopoSigs.set(R->getTopoSig());
+    Artificial &= R->Artificial;
+  }
 }
 
 // Compute inherited propertied for a synthesized register class.
@@ -915,6 +923,8 @@ void CodeGenRegisterClass::computeSubClasses(CodeGenRegBank &RegBank) {
     CodeGenRegisterClass &RC = *I;
     RC.SubClasses.resize(RegClasses.size());
     RC.SubClasses.set(RC.EnumValue);
+    if (RC.Artificial)
+      continue;
 
     // Normally, all subclasses have IDs >= rci, unless RC is part of a clique.
     for (auto I2 = I.base(), E2 = RegClasses.end(); I2 != E2; ++I2) {
@@ -1043,11 +1053,14 @@ void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
 }
 
 // Populate a unique sorted list of units from a register set.
-void CodeGenRegisterClass::buildRegUnitSet(
+void CodeGenRegisterClass::buildRegUnitSet(const CodeGenRegBank &RegBank,
   std::vector<unsigned> &RegUnits) const {
   std::vector<unsigned> TmpUnits;
-  for (RegUnitIterator UnitI(Members); UnitI.isValid(); ++UnitI)
-    TmpUnits.push_back(*UnitI);
+  for (RegUnitIterator UnitI(Members); UnitI.isValid(); ++UnitI) {
+    const RegUnit &RU = RegBank.getRegUnit(*UnitI);
+    if (!RU.Artificial)
+      TmpUnits.push_back(*UnitI);
+  }
   std::sort(TmpUnits.begin(), TmpUnits.end());
   std::unique_copy(TmpUnits.begin(), TmpUnits.end(),
                    std::back_inserter(RegUnits));
@@ -1131,6 +1144,18 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   for (auto &Reg : Registers)
     Reg.computeSuperRegs(*this);
 
+  // For each pair of Reg:SR, if both are non-artificial, mark the
+  // corresponding sub-register index as non-artificial.
+  for (auto &Reg : Registers) {
+    if (Reg.Artificial)
+      continue;
+    for (auto P : Reg.getSubRegs()) {
+      const CodeGenRegister *SR = P.second;
+      if (!SR->Artificial)
+        P.first->Artificial = false;
+    }
+  }
+
   // Native register units are associated with a leaf register. They've all been
   // discovered now.
   NumNativeRegUnits = RegUnits.size();
@@ -1141,9 +1166,11 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
     PrintFatalError("No 'RegisterClass' subclasses defined!");
 
   // Allocate user-defined register classes.
-  for (auto *RC : RCs) {
-    RegClasses.emplace_back(*this, RC);
-    addToMaps(&RegClasses.back());
+  for (auto *R : RCs) {
+    RegClasses.emplace_back(*this, R);
+    CodeGenRegisterClass &RC = RegClasses.back();
+    if (!RC.Artificial)
+      addToMaps(&RC);
   }
 
   // Infer missing classes to create a full algebra.
@@ -1554,12 +1581,14 @@ static void computeUberWeights(std::vector<UberRegSet> &UberSets,
         Reg = UnitI.getReg();
         Weight = 0;
       }
-      unsigned UWeight = RegBank.getRegUnit(*UnitI).Weight;
-      if (!UWeight) {
-        UWeight = 1;
-        RegBank.increaseRegUnitWeight(*UnitI, UWeight);
+      if (!RegBank.getRegUnit(*UnitI).Artificial) {
+        unsigned UWeight = RegBank.getRegUnit(*UnitI).Weight;
+        if (!UWeight) {
+          UWeight = 1;
+          RegBank.increaseRegUnitWeight(*UnitI, UWeight);
+        }
+        Weight += UWeight;
       }
-      Weight += UWeight;
     }
     if (Weight > MaxWeight)
       MaxWeight = Weight;
@@ -1637,7 +1666,8 @@ static bool normalizeWeight(CodeGenRegister *Reg,
     }
     else {
       // Adjust the existing single unit.
-      RegBank.increaseRegUnitWeight(AdjustUnit, UberSet->Weight - RegWeight);
+      if (!RegBank.getRegUnit(AdjustUnit).Artificial)
+        RegBank.increaseRegUnitWeight(AdjustUnit, UberSet->Weight - RegWeight);
       // The unit may be shared among sets and registers within this set.
       computeUberWeights(UberSets, RegBank);
     }
@@ -1771,7 +1801,7 @@ void CodeGenRegBank::computeRegUnitSets() {
   // Compute a unique RegUnitSet for each RegClass.
   auto &RegClasses = getRegClasses();
   for (auto &RC : RegClasses) {
-    if (!RC.Allocatable)
+    if (!RC.Allocatable || RC.Artificial)
       continue;
 
     // Speculatively grow the RegUnitSets to hold the new set.
@@ -1779,7 +1809,7 @@ void CodeGenRegBank::computeRegUnitSets() {
     RegUnitSets.back().Name = RC.getName();
 
     // Compute a sorted list of units in this class.
-    RC.buildRegUnitSet(RegUnitSets.back().Units);
+    RC.buildRegUnitSet(*this, RegUnitSets.back().Units);
 
     // Find an existing RegUnitSet.
     std::vector<RegUnitSet>::const_iterator SetI =
@@ -1882,7 +1912,7 @@ void CodeGenRegBank::computeRegUnitSets() {
 
     // Recompute the sorted list of units in this class.
     std::vector<unsigned> RCRegUnits;
-    RC.buildRegUnitSet(RCRegUnits);
+    RC.buildRegUnitSet(*this, RCRegUnits);
 
     // Don't increase pressure for unallocatable regclasses.
     if (RCRegUnits.empty())
@@ -2069,10 +2099,14 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Compute the set of registers supporting each SubRegIndex.
   SubReg2SetMap SRSets;
   for (const auto R : RC->getMembers()) {
+    if (R->Artificial)
+      continue;
     const CodeGenRegister::SubRegMap &SRM = R->getSubRegs();
     for (CodeGenRegister::SubRegMap::const_iterator I = SRM.begin(),
-         E = SRM.end(); I != E; ++I)
-      SRSets[I->first].push_back(R);
+         E = SRM.end(); I != E; ++I) {
+      if (!I->first->Artificial)
+        SRSets[I->first].push_back(R);
+    }
   }
 
   for (auto I : SRSets)
@@ -2081,6 +2115,8 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Find matching classes for all SRSets entries.  Iterate in SubRegIndex
   // numerical order to visit synthetic indices last.
   for (const auto &SubIdx : SubRegIndices) {
+    if (SubIdx.Artificial)
+      continue;
     SubReg2SetMap::const_iterator I = SRSets.find(&SubIdx);
     // Unsupported SubRegIndex. Skip it.
     if (I == SRSets.end())
@@ -2182,6 +2218,8 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
   // Watch out for iterator invalidation here.
   for (auto I = RegClasses.begin(), E = RegClasses.end(); I != E; ++I) {
     CodeGenRegisterClass *RC = &*I;
+    if (RC->Artificial)
+      continue;
 
     // Synthesize answers for getSubClassWithSubReg().
     inferSubClassWithSubReg(RC);

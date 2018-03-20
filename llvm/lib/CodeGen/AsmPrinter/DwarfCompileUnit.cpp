@@ -851,7 +851,8 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
   if (CUNode->getGnuPubnames())
     return true;
 
-  return DD->tuneForGDB() && !includeMinimalInlineScopes();
+  return DD->tuneForGDB() && DD->usePubSections() &&
+         !includeMinimalInlineScopes();
 }
 
 /// addGlobalName - Add a new global name to the compile unit.
