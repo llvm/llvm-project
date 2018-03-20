@@ -226,7 +226,6 @@ class NoStoreFuncVisitor final
   const SubRegion *RegionOfInterest;
   static constexpr const char *DiagnosticsMsg =
       "Returning without writing to '";
-  bool Initialized = false;
 
   /// Frames writing into \c RegionOfInterest.
   /// This visitor generates a note only if a function does not write into
@@ -234,10 +233,10 @@ class NoStoreFuncVisitor final
   /// by looking at the node associated with the exit from the function
   /// (usually the return statement). To avoid recomputing the same information
   /// many times (going up the path for each node and checking whether the
-  /// region was written into) we instead pre-compute and store all
-  /// stack frames along the path which write into the region of interest
-  /// on the first \c VisitNode invocation.
+  /// region was written into) we instead lazily compute the
+  /// stack frames along the path which write into the region of interest.
   llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifyingRegion;
+  llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifyingCalculated;
 
 public:
   NoStoreFuncVisitor(const SubRegion *R) : RegionOfInterest(R) {}
@@ -251,10 +250,6 @@ public:
                                                  const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override {
-    if (!Initialized) {
-      findModifyingFrames(N);
-      Initialized = true;
-    }
 
     const LocationContext *Ctx = N->getLocationContext();
     const StackFrameContext *SCtx = Ctx->getCurrentStackFrame();
@@ -262,7 +257,7 @@ public:
     auto CallExitLoc = N->getLocationAs<CallExitBegin>();
 
     // No diagnostic if region was modified inside the frame.
-    if (!CallExitLoc || FramesModifyingRegion.count(SCtx))
+    if (!CallExitLoc)
       return nullptr;
 
     CallEventRef<> Call =
@@ -272,8 +267,9 @@ public:
     const SourceManager &SM = BRC.getSourceManager();
     if (const auto *CCall = dyn_cast<CXXConstructorCall>(Call)) {
       const MemRegion *ThisRegion = CCall->getCXXThisVal().getAsRegion();
-      if (RegionOfInterest->isSubRegionOf(ThisRegion) &&
-          !CCall->getDecl()->isImplicit())
+      if (RegionOfInterest->isSubRegionOf(ThisRegion)
+          && !CCall->getDecl()->isImplicit()
+          && !isRegionOfInterestModifiedInFrame(N))
         return notModifiedInConstructorDiagnostics(Ctx, SM, PP, *CallExitLoc,
                                                    CCall, ThisRegion);
     }
@@ -285,10 +281,15 @@ public:
       unsigned IndirectionLevel = 1;
       QualType T = PVD->getType();
       while (const MemRegion *R = S.getAsRegion()) {
-        if (RegionOfInterest->isSubRegionOf(R) &&
-            !isPointerToConst(PVD->getType()))
+        if (RegionOfInterest->isSubRegionOf(R)
+            && !isPointerToConst(PVD->getType())) {
+
+          if (isRegionOfInterestModifiedInFrame(N))
+            return nullptr;
+
           return notModifiedDiagnostics(
               Ctx, SM, PP, *CallExitLoc, Call, PVD, R, IndirectionLevel);
+        }
         QualType PT = T->getPointeeType();
         if (PT.isNull() || PT->isVoidType()) break;
         S = State->getSVal(R, PT);
@@ -301,18 +302,39 @@ public:
   }
 
 private:
+  /// Check and lazily calculate whether the region of interest is
+  /// modified in the stack frame to which \p N belongs.
+  /// The calculation is cached in FramesModifyingRegion.
+  bool isRegionOfInterestModifiedInFrame(const ExplodedNode *N) {
+    const LocationContext *Ctx = N->getLocationContext();
+    const StackFrameContext *SCtx = Ctx->getCurrentStackFrame();
+    if (!FramesModifyingCalculated.count(SCtx))
+      findModifyingFrames(N);
+    return FramesModifyingRegion.count(SCtx);
+  }
+
+
   /// Write to \c FramesModifyingRegion all stack frames along
-  /// the path which modify \c RegionOfInterest.
+  /// the path in the current stack frame which modify \c RegionOfInterest.
   void findModifyingFrames(const ExplodedNode *N) {
-    ProgramStateRef LastReturnState;
+    assert(N->getLocationAs<CallExitBegin>());
+    ProgramStateRef LastReturnState = N->getState();
+    SVal ValueAtReturn = LastReturnState->getSVal(RegionOfInterest);
+    const LocationContext *Ctx = N->getLocationContext();
+    const StackFrameContext *OriginalSCtx = Ctx->getCurrentStackFrame();
+
     do {
       ProgramStateRef State = N->getState();
       auto CallExitLoc = N->getLocationAs<CallExitBegin>();
       if (CallExitLoc) {
         LastReturnState = State;
+        ValueAtReturn = LastReturnState->getSVal(RegionOfInterest);
       }
-      if (LastReturnState &&
-          wasRegionOfInterestModifiedAt(N, LastReturnState)) {
+
+      FramesModifyingCalculated.insert(
+        N->getLocationContext()->getCurrentStackFrame());
+
+      if (wasRegionOfInterestModifiedAt(N, LastReturnState, ValueAtReturn)) {
         const StackFrameContext *SCtx =
             N->getLocationContext()->getCurrentStackFrame();
         while (!SCtx->inTopFrame()) {
@@ -323,6 +345,11 @@ private:
         }
       }
 
+      // Stop calculation at the call to the current function.
+      if (auto CE = N->getLocationAs<CallEnter>())
+        if (CE->getCalleeContext() == OriginalSCtx)
+          break;
+
       N = N->getFirstPred();
     } while (N);
   }
@@ -331,8 +358,12 @@ private:
   /// where \p ReturnState is a state associated with the return
   /// from the current frame.
   bool wasRegionOfInterestModifiedAt(const ExplodedNode *N,
-                                     ProgramStateRef ReturnState) {
-    SVal ValueAtReturn = ReturnState->getSVal(RegionOfInterest);
+                                     ProgramStateRef ReturnState,
+                                     SVal ValueAtReturn) {
+    if (!N->getLocationAs<PostStore>()
+        && !N->getLocationAs<PostInitializer>()
+        && !N->getLocationAs<PostStmt>())
+      return false;
 
     // Writing into region of interest.
     if (auto PS = N->getLocationAs<PostStmt>())
