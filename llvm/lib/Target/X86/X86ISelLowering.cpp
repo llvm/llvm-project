@@ -16976,10 +16976,9 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
       // Make sure we're allowed to promote 512-bits.
       if (Subtarget.canExtendTo512DQ())
         return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                           getExtendInVec(X86ISD::VSEXT, DL, MVT::v16i32, In,
-                                          DAG));
+                           DAG.getNode(X86ISD::VSEXT, DL, MVT::v16i32, In));
     } else {
-      return DAG.getNode(ISD::TRUNCATE, DL, VT, In);
+      return Op;
     }
   }
 

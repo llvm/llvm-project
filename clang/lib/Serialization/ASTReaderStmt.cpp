@@ -1667,6 +1667,7 @@ void ASTStmtReader::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   VisitExpr(E);
   E->SourceExpr = Record.readSubExpr();
   E->Loc = ReadSourceLocation();
+  E->setIsUnique(Record.readInt());
 }
 
 void ASTStmtReader::VisitTypoExpr(TypoExpr *E) {

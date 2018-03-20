@@ -237,6 +237,16 @@ protected:
     unsigned ResultIndex : 32 - 8 - NumExprBits;
   };
 
+  class OpaqueValueExprBitfields {
+    friend class OpaqueValueExpr;
+
+    unsigned : NumExprBits;
+
+    /// The OVE is a unique semantic reference to its source expressio if this
+    /// bit is set to true.
+    unsigned IsUnique : 1;
+  };
+
   class ObjCIndirectCopyRestoreExprBitfields {
     friend class ObjCIndirectCopyRestoreExpr;
 
@@ -294,6 +304,7 @@ protected:
     CallExprBitfields CallExprBits;
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
+    OpaqueValueExprBitfields OpaqueValueExprBits;
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
     InitListExprBitfields InitListExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;

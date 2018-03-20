@@ -3128,7 +3128,7 @@ def: InstRW<[SKXWriteResGroup81], (instrs POP16r, POP32r, POP64r)>;
 def: InstRW<[SKXWriteResGroup81], (instregex "POP(16|32|64)rmr")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "SUB(8|16|32|64)rm")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "TEST(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "TEST8mi")>;
+def: InstRW<[SKXWriteResGroup81], (instregex "TEST(8|16|32|64)mi")>;
 def: InstRW<[SKXWriteResGroup81], (instregex "XOR(8|16|32|64)rm")>;
 
 def SKXWriteResGroup82 : SchedWriteRes<[SKXPort5,SKXPort015]> {

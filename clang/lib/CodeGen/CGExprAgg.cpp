@@ -630,7 +630,11 @@ void AggExprEmitter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E){
 }
 
 void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
-  EmitFinalDestCopy(e->getType(), CGF.getOpaqueLValueMapping(e));
+  // If this is a unique OVE, just visit its source expression.
+  if (e->isUnique())
+    Visit(e->getSourceExpr());
+  else
+    EmitFinalDestCopy(e->getType(), CGF.getOrCreateOpaqueLValueMapping(e));
 }
 
 void

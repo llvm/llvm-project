@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-unused-return-value %t
+// RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- -- -fexceptions
 
 namespace std {
 

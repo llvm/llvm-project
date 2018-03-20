@@ -1733,7 +1733,7 @@ void GnuHashTableSection::writeTo(uint8_t *Buf) {
   write32(Buf, NBuckets);
   write32(Buf + 4, InX::DynSymTab->getNumSymbols() - Symbols.size());
   write32(Buf + 8, MaskWords);
-  write32(Buf + 12, getShift2());
+  write32(Buf + 12, Shift2);
   Buf += 16;
 
   // Write a bloom filter and a hash table.
@@ -1755,7 +1755,7 @@ void GnuHashTableSection::writeBloomFilter(uint8_t *Buf) {
     size_t I = (Sym.Hash / C) & (MaskWords - 1);
     uint64_t Val = readUint(Buf + I * Config->Wordsize);
     Val |= uint64_t(1) << (Sym.Hash % C);
-    Val |= uint64_t(1) << ((Sym.Hash >> getShift2()) % C);
+    Val |= uint64_t(1) << ((Sym.Hash >> Shift2) % C);
     writeUint(Buf + I * Config->Wordsize, Val);
   }
 }

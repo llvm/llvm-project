@@ -25,8 +25,8 @@ int main() {
 // CHECK-NEXT: store i8* [[CALL]], i8** [[OLDOBJ:%.*]], align 8
 
   val = (array[10] = oldObject);
-// CHECK: [[THREE:%.*]] = load {{%.*}} [[array:%.*]], align 8
-// CHECK-NEXT: [[FOUR:%.*]] = load i8*, i8** [[oldObject:%.*]], align 8
+// CHECK:      [[FOUR:%.*]] = load i8*, i8** [[oldObject:%.*]], align 8
+// CHECK-NEXT: [[THREE:%.*]] = load {{%.*}} [[array:%.*]], align 8
 // CHECK-NEXT: [[FIVE:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.2
 // CHECK-NEXT: [[SIX:%.*]] = bitcast {{%.*}} [[THREE]] to i8*
 // CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i32)*)(i8* [[SIX]], i8* [[FIVE]], i8* [[FOUR]], i32 10)
@@ -45,9 +45,9 @@ int main() {
 
 
   val = (dictionary[key] = newObject);
-// CHECK: [[TWELVE:%.*]] = load {{%.*}} [[DICTIONARY]], align 8
+// CHECK:       [[FOURTEEN:%.*]] = load i8*, i8** [[NEWOBJECT:%.*]], align 8
+// CHECK-NEXT:  [[TWELVE:%.*]] = load {{%.*}} [[DICTIONARY]], align 8
 // CHECK-NEXT:  [[THIRTEEN:%.*]] = load i8*, i8** [[KEY]], align 8
-// CHECK-NEXT:  [[FOURTEEN:%.*]] = load i8*, i8** [[NEWOBJECT:%.*]], align 8
 // CHECK-NEXT:  [[SIXTEEN:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.6
 // CHECK-NEXT:  [[SEVENTEEN:%.*]] = bitcast {{%.*}} [[TWELVE]] to i8*
 // CHECK-NEXT:  call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* [[SEVENTEEN]], i8* [[SIXTEEN]], i8* [[FOURTEEN]], i8* [[THIRTEEN]])

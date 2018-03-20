@@ -3095,7 +3095,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (HiReg == X86::AH && !SDValue(Node, 1).use_empty()) {
       SDValue AHCopy = CurDAG->getRegister(X86::AH, MVT::i8);
       unsigned AHExtOpcode =
-          isSigned ? X86::MOVSX32_NOREXrr8 : X86::MOVZX32_NOREXrr8;
+          isSigned ? X86::MOVSX32rr8_NOREX : X86::MOVZX32rr8_NOREX;
 
       SDNode *RNode = CurDAG->getMachineNode(AHExtOpcode, dl, MVT::i32,
                                              MVT::Glue, AHCopy, InFlag);
