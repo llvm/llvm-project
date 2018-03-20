@@ -3209,7 +3209,7 @@ define void @test_fnop() optsize {
 ; SLM-LABEL: test_fnop:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fnop # sched: [100:1.00]
+; SLM-NEXT:    fnop # sched: [1:?]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3251,7 +3251,7 @@ define void @test_fnop() optsize {
 ; BTVER2-LABEL: test_fnop:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fnop # sched: [100:0.50]
+; BTVER2-NEXT:    fnop # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;

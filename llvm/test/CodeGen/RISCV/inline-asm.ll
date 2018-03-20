@@ -8,8 +8,7 @@ define i32 @constraint_r(i32 %a) {
 ; RV32I-LABEL: constraint_r:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, %hi(gi)
-; RV32I-NEXT:    addi a1, a1, %lo(gi)
-; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    lw a1, %lo(gi)(a1)
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    #NO_APP

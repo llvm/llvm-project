@@ -7,22 +7,12 @@
 
 define zeroext i1 @opeq1(
 ; PPC64LE-LABEL: opeq1:
-; PPC64LE:       # %bb.0: # %entry
-; PPC64LE-NEXT:    lwz 5, 0(3)
-; PPC64LE-NEXT:    lwz 6, 0(4)
-; PPC64LE-NEXT:    cmplw 5, 6
-; PPC64LE-NEXT:    bne 0, .LBB0_2
-; PPC64LE-NEXT:  # %bb.1: # %land.rhs.i
-; PPC64LE-NEXT:    lwz 3, 4(3)
-; PPC64LE-NEXT:    lwz 4, 4(4)
-; PPC64LE-NEXT:    cmpw 3, 4
-; PPC64LE-NEXT:    b .LBB0_3
-; PPC64LE-NEXT:  .LBB0_2:
-; PPC64LE-NEXT:    crxor 2, 2, 2
-; PPC64LE-NEXT:  .LBB0_3: # %opeq1.exit
-; PPC64LE-NEXT:    li 3, 0
-; PPC64LE-NEXT:    li 4, 1
-; PPC64LE-NEXT:    isel 3, 4, 3, 2
+; PPC64LE:       # %bb.0: # %opeq1.exit
+; PPC64LE-NEXT:    ld 3, 0(3)
+; PPC64LE-NEXT:    ld 4, 0(4)
+; PPC64LE-NEXT:    xor 3, 3, 4
+; PPC64LE-NEXT:    cntlzd 3, 3
+; PPC64LE-NEXT:    rldicl 3, 3, 58, 63
 ; PPC64LE-NEXT:    blr
   %"struct.std::pair"* nocapture readonly dereferenceable(8) %a,
   %"struct.std::pair"* nocapture readonly dereferenceable(8) %b) local_unnamed_addr #0 {

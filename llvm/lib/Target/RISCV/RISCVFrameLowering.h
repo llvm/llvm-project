@@ -41,11 +41,10 @@ public:
 
   bool hasFP(const MachineFunction &MF) const override;
 
+  bool hasReservedCallFrame(const MachineFunction &MF) const override;
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MI) const override {
-    return MBB.erase(MI);
-  }
+                                MachineBasicBlock::iterator MI) const override;
 
 protected:
   const RISCVSubtarget &STI;

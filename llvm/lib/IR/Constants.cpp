@@ -2452,40 +2452,6 @@ void ConstantDataSequential::destroyConstantImpl() {
   Next = nullptr;
 }
 
-/// get() constructors - Return a constant with array type with an element
-/// count and element type matching the ArrayRef passed in.  Note that this
-/// can return a ConstantAggregateZero object.
-Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint8_t> Elts) {
-  Type *Ty = ArrayType::get(Type::getInt8Ty(Context), Elts.size());
-  const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
-}
-Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint16_t> Elts){
-  Type *Ty = ArrayType::get(Type::getInt16Ty(Context), Elts.size());
-  const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
-}
-Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint32_t> Elts){
-  Type *Ty = ArrayType::get(Type::getInt32Ty(Context), Elts.size());
-  const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
-}
-Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint64_t> Elts){
-  Type *Ty = ArrayType::get(Type::getInt64Ty(Context), Elts.size());
-  const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
-}
-Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<float> Elts) {
-  Type *Ty = ArrayType::get(Type::getFloatTy(Context), Elts.size());
-  const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
-}
-Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<double> Elts) {
-  Type *Ty = ArrayType::get(Type::getDoubleTy(Context), Elts.size());
-  const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
-}
-
 /// getFP() constructors - Return a constant with array type with an element
 /// count and element type of float with precision matching the number of
 /// bits in the ArrayRef passed in. (i.e. half for 16bits, float for 32bits,

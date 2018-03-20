@@ -50,11 +50,19 @@ define x86_fp80 @exp_f80(x86_fp80 %x) #0 {
 ;
 ; WIN-LABEL: exp_f80:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    fldt (%rdx)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq expl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    fstpt (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; MAC-LABEL: exp_f80:
@@ -113,11 +121,19 @@ define x86_fp80 @exp2_f80(x86_fp80 %x) #0 {
 ;
 ; WIN-LABEL: exp2_f80:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    fldt (%rdx)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq exp2l
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    fstpt (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; MAC-LABEL: exp2_f80:
@@ -176,11 +192,19 @@ define x86_fp80 @log_f80(x86_fp80 %x) #0 {
 ;
 ; WIN-LABEL: log_f80:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    fldt (%rdx)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq logl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    fstpt (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; MAC-LABEL: log_f80:
@@ -239,11 +263,19 @@ define x86_fp80 @log2_f80(x86_fp80 %x) #0 {
 ;
 ; WIN-LABEL: log2_f80:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    fldt (%rdx)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq log2l
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    fstpt (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; MAC-LABEL: log2_f80:
@@ -302,11 +334,19 @@ define x86_fp80 @log10_f80(x86_fp80 %x) #0 {
 ;
 ; WIN-LABEL: log10_f80:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    fldt (%rdx)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq log10l
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    fstpt (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; MAC-LABEL: log10_f80:
@@ -373,13 +413,22 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ;
 ; WIN-LABEL: pow_f80:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    fldt (%rdx)
 ; WIN-NEXT:    fld %st(0)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq powl
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    fldt {{[0-9]+}}(%rsp)
+; WIN-NEXT:    fstpt (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; MAC-LABEL: pow_f80:

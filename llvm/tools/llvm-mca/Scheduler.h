@@ -356,27 +356,17 @@ class ResourceManager {
 public:
   ResourceManager(const llvm::MCSchedModel &SM) { initialize(SM); }
 
+  // Returns RS_BUFFER_AVAILABLE if buffered resources are not reserved, and if
+  // there are enough available slots in the buffers.
   ResourceStateEvent
-  canBeDispatched(const llvm::ArrayRef<uint64_t> Buffers) const {
-    ResourceStateEvent Result = ResourceStateEvent::RS_BUFFER_AVAILABLE;
-    for (uint64_t Buffer : Buffers) {
-      Result = isBufferAvailable(Buffer);
-      if (Result != ResourceStateEvent::RS_BUFFER_AVAILABLE)
-        break;
-    }
+  canBeDispatched(const llvm::ArrayRef<uint64_t> Buffers) const;
 
-    return Result;
-  }
+  // Consume a slot in every buffered resource from array 'Buffers'. Resource
+  // units that are dispatch hazards (i.e. BufferSize=0) are marked as reserved.
+  void reserveBuffers(const llvm::ArrayRef<uint64_t> Buffers);
 
-  void reserveBuffers(const llvm::ArrayRef<uint64_t> Buffers) {
-    for (const uint64_t R : Buffers)
-      reserveBuffer(R);
-  }
-
-  void releaseBuffers(const llvm::ArrayRef<uint64_t> Buffers) {
-    for (const uint64_t R : Buffers)
-      releaseBuffer(R);
-  }
+  // Release buffer entries previously allocated by method reserveBuffers.
+  void releaseBuffers(const llvm::ArrayRef<uint64_t> Buffers);
 
   void reserveResource(uint64_t ResourceID) {
     ResourceState &Resource = *Resources[ResourceID];
@@ -388,8 +378,6 @@ public:
     ResourceState &Resource = *Resources[ResourceID];
     Resource.clearReserved();
   }
-
-  void reserveDispatchHazardResources(const llvm::ArrayRef<uint64_t> Buffers);
 
   // Returns true if all resources are in-order, and there is at least one
   // resource which is a dispatch hazard (BufferSize = 0).
@@ -479,7 +467,7 @@ class Scheduler {
   void issue();
 
   /// Issue an instruction without updating the ready queue.
-  void issueInstruction(Instruction *IS, unsigned InstrIndex);
+  void issueInstruction(Instruction &IS, unsigned InstrIndex);
   void updatePendingQueue();
   void updateIssuedQueue();
 
@@ -529,7 +517,7 @@ public:
   };
 
   Event canBeDispatched(const InstrDesc &Desc) const;
-  Instruction *scheduleInstruction(unsigned Idx, Instruction *MCIS);
+  void scheduleInstruction(unsigned Idx, Instruction &MCIS);
 
   void cycleEvent(unsigned Cycle);
 
@@ -545,7 +533,6 @@ public:
   void dump() const;
 #endif
 };
-
 } // Namespace mca
 
 #endif

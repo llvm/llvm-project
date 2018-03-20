@@ -31,7 +31,7 @@ b0:
   ret i32 %v5
 }
 
-attributes #0 = { norecurse nounwind }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv55" }
 
 !llvm.module.flags = !{!0, !2}
 

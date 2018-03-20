@@ -504,10 +504,10 @@ define i32 @caller_many_scalars() nounwind {
 ;
 ; RV32I-WITHFP-LABEL: caller_many_scalars:
 ; RV32I-WITHFP:       # %bb.0:
-; RV32I-WITHFP-NEXT:    addi sp, sp, -32
-; RV32I-WITHFP-NEXT:    sw ra, 28(sp)
-; RV32I-WITHFP-NEXT:    sw s0, 24(sp)
-; RV32I-WITHFP-NEXT:    addi s0, sp, 32
+; RV32I-WITHFP-NEXT:    addi sp, sp, -16
+; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
+; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
+; RV32I-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 8
 ; RV32I-WITHFP-NEXT:    sw a0, 4(sp)
 ; RV32I-WITHFP-NEXT:    sw zero, 0(sp)
@@ -522,9 +522,9 @@ define i32 @caller_many_scalars() nounwind {
 ; RV32I-WITHFP-NEXT:    addi a7, zero, 7
 ; RV32I-WITHFP-NEXT:    mv a4, zero
 ; RV32I-WITHFP-NEXT:    jalr t0
-; RV32I-WITHFP-NEXT:    lw s0, 24(sp)
-; RV32I-WITHFP-NEXT:    lw ra, 28(sp)
-; RV32I-WITHFP-NEXT:    addi sp, sp, 32
+; RV32I-WITHFP-NEXT:    lw s0, 8(sp)
+; RV32I-WITHFP-NEXT:    lw ra, 12(sp)
+; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
   %1 = call i32 @callee_many_scalars(i8 1, i16 2, i32 3, i64 4, i32 5, i32 6, i64 7, i32 8)
   ret i32 %1

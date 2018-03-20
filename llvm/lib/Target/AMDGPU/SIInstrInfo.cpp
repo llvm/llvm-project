@@ -3923,6 +3923,13 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
         MRI.replaceRegWith(DstReg, Inst.getOperand(1).getReg());
         MRI.clearKillFlags(Inst.getOperand(1).getReg());
         Inst.getOperand(0).setReg(DstReg);
+
+        // Make sure we don't leave around a dead VGPR->SGPR copy. Normally
+        // these are deleted later, but at -O0 it would leave a suspicious
+        // looking illegal copy of an undef register.
+        for (unsigned I = Inst.getNumOperands() - 1; I != 0; --I)
+          Inst.RemoveOperand(I);
+        Inst.setDesc(get(AMDGPU::IMPLICIT_DEF));
         continue;
       }
 

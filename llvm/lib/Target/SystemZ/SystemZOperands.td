@@ -115,13 +115,13 @@ class AddressingMode<string seltype, string bitsize, string dispsize,
 class BDMode<string type, string bitsize, string dispsize, string suffix>
   : AddressingMode<type, bitsize, dispsize, suffix, "", 2, "BDAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize))>;
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize))>;
 
 // An addressing mode with a base, displacement and index.
 class BDXMode<string type, string bitsize, string dispsize, string suffix>
   : AddressingMode<type, bitsize, dispsize, suffix, "", 3, "BDXAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
                         !cast<RegisterOperand>("ADDR"##bitsize))>;
 
 // A BDMode paired with an immediate length operand of LENSIZE bits.
@@ -130,21 +130,21 @@ class BDLMode<string type, string bitsize, string dispsize, string suffix,
   : AddressingMode<type, bitsize, dispsize, suffix, "Len"##lensize, 3,
                    "BDLAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
-                        !cast<Immediate>("imm"##bitsize))>;
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("imm"##bitsize))>;
 
 // A BDMode paired with a register length operand.
 class BDRMode<string type, string bitsize, string dispsize, string suffix>
   : AddressingMode<type, bitsize, dispsize, suffix, "", 3, "BDRAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
                         !cast<RegisterOperand>("GR"##bitsize))>;
 
 // An addressing mode with a base, displacement and a vector index.
 class BDVMode<string bitsize, string dispsize>
   : AddressOperand<bitsize, dispsize, "", "BDVAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
                         !cast<RegisterOperand>("VR128"))>;
 
 //===----------------------------------------------------------------------===//

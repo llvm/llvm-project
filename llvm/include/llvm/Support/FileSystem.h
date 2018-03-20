@@ -720,9 +720,11 @@ std::error_code createUniqueFile(const Twine &Model, int &ResultFD,
                                  unsigned Mode = all_read | all_write,
                                  sys::fs::OpenFlags Flags = sys::fs::F_RW);
 
-/// @brief Simpler version for clients that don't want an open file.
+/// @brief Simpler version for clients that don't want an open file. An empty
+/// file will still be created.
 std::error_code createUniqueFile(const Twine &Model,
-                                 SmallVectorImpl<char> &ResultPath);
+                                 SmallVectorImpl<char> &ResultPath,
+                                 unsigned Mode = all_read | all_write);
 
 /// Represents a temporary file.
 ///
@@ -775,12 +777,35 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     SmallVectorImpl<char> &ResultPath,
                                     sys::fs::OpenFlags Flags = sys::fs::F_RW);
 
-/// @brief Simpler version for clients that don't want an open file.
+/// @brief Simpler version for clients that don't want an open file. An empty
+/// file will still be created.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     SmallVectorImpl<char> &ResultPath);
 
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath);
+
+/// @brief Get a unique name, not currently exisiting in the filesystem. Subject
+/// to race conditions, prefer to use createUniqueFile instead.
+///
+/// Similar to createUniqueFile, but instead of creating a file only
+/// checks if it exists. This function is subject to race conditions, if you
+/// want to use the returned name to actually create a file, use
+/// createUniqueFile instead.
+std::error_code getPotentiallyUniqueFileName(const Twine &Model,
+                                             SmallVectorImpl<char> &ResultPath);
+
+/// @brief Get a unique temporary file name, not currently exisiting in the
+/// filesystem. Subject to race conditions, prefer to use createTemporaryFile
+/// instead.
+///
+/// Similar to createTemporaryFile, but instead of creating a file only
+/// checks if it exists. This function is subject to race conditions, if you
+/// want to use the returned name to actually create a file, use
+/// createTemporaryFile instead.
+std::error_code
+getPotentiallyUniqueTempFileName(const Twine &Prefix, StringRef Suffix,
+                                 SmallVectorImpl<char> &ResultPath);
 
 inline OpenFlags operator|(OpenFlags A, OpenFlags B) {
   return OpenFlags(unsigned(A) | unsigned(B));
