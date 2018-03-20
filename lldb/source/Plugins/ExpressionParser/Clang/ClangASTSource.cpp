@@ -2156,6 +2156,18 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
       log->Printf("Function type wasn't a FunctionProtoType");
   }
 
+  // If this is an operator (e.g. operator new or operator==), only insert
+  // the declaration we inferred from the symbol if we can provide the correct
+  // number of arguments. We shouldn't really inject random decl(s) for
+  // functions that are analyzed semantically in a special way, otherwise we
+  // will crash in clang.
+  clang::OverloadedOperatorKind op_kind = clang::NUM_OVERLOADED_OPERATORS;
+  if (func_proto_type &&
+      ClangASTContext::IsOperator(decl_name.getAsString().c_str(), op_kind)) {
+    if (!ClangASTContext::CheckOverloadedOperatorKindParameterCount(
+            false, op_kind, func_proto_type->getNumParams()))
+      return NULL;
+  }
   m_decls.push_back(func_decl);
 
   return func_decl;
