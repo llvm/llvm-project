@@ -49,9 +49,6 @@ class VLIWResourceModel {
   unsigned TotalPackets = 0;
 
 public:
-  /// Save the last formed packet.
-  std::vector<SUnit *> OldPacket;
-
   VLIWResourceModel(const TargetSubtargetInfo &STI, const TargetSchedModel *SM)
       : SchedModel(SM) {
     ResourcesModel = STI.getInstrInfo()->CreateTargetScheduleState(STI);
@@ -62,8 +59,6 @@ public:
 
     Packet.resize(SchedModel->getIssueWidth());
     Packet.clear();
-    OldPacket.resize(SchedModel->getIssueWidth());
-    OldPacket.clear();
     ResourcesModel->clearResources();
   }
 
@@ -84,9 +79,8 @@ public:
     ResourcesModel->clearResources();
   }
 
-  bool isResourceAvailable(SUnit *SU);
-  bool reserveResources(SUnit *SU);
-  void savePacket();
+  bool isResourceAvailable(SUnit *SU, bool IsTop);
+  bool reserveResources(SUnit *SU, bool IsTop);
   unsigned getTotalPackets() const { return TotalPackets; }
   bool isInPacket(SUnit *SU) const { return is_contained(Packet, SU); }
 };
@@ -102,6 +96,8 @@ public:
   /// Schedule - This is called back from ScheduleDAGInstrs::Run() when it's
   /// time to do some work.
   void schedule() override;
+
+  RegisterClassInfo *getRegClassInfo() { return RegClassInfo; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -168,6 +164,7 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
     void init(VLIWMachineScheduler *dag, const TargetSchedModel *smodel) {
       DAG = dag;
       SchedModel = smodel;
+      CurrCycle = 0;
       IssueCount = 0;
     }
 
@@ -197,6 +194,9 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
   VLIWSchedBoundary Top;
   VLIWSchedBoundary Bot;
 
+  /// List of pressure sets that have a high pressure level in the region.
+  std::vector<bool> HighPressureSets;
+
 public:
   /// SUnit::NodeQueueId: 0 (none), 1 (top), 2 (bot), 3 (both)
   enum {
@@ -224,6 +224,8 @@ public:
 
 protected:
   SUnit *pickNodeBidrectional(bool &IsTopNode);
+
+  int pressureChange(const SUnit *SU, bool isBotUp);
 
   int SchedulingCost(ReadyQueue &Q,
                      SUnit *SU, SchedCandidate &Candidate,

@@ -128,13 +128,12 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
 
   // When scheduling a dot cur instruction, check if there is an instruction
   // that can use the dot cur in the same packet. If so, we'll attempt to
-  // schedule it before other instructions. We only do this if the use has
-  // the same height as the dot cur. Otherwise, we may miss scheduling an
-  // instruction with a greater height, which is more important.
+  // schedule it before other instructions. We only do this if the load has a
+  // single zero-latency use.
   if (TII->mayBeCurLoad(*MI))
     for (auto &S : SU->Succs)
       if (S.isAssignedRegDep() && S.getLatency() == 0 &&
-          SU->getHeight() == S.getSUnit()->getHeight()) {
+          S.getSUnit()->NumPredsLeft == 1) {
         UsesDotCur = S.getSUnit();
         DotCurPNum = PacketNum;
         break;

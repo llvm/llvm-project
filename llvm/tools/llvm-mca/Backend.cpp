@@ -33,8 +33,8 @@ void Backend::runCycle(unsigned Cycle) {
 
   while (SM.hasNext()) {
     InstRef IR = SM.peekNext();
-    std::unique_ptr<Instruction> NewIS(
-        IB->createInstruction(STI, IR.first, *IR.second));
+    std::unique_ptr<Instruction> NewIS =
+        IB->createInstruction(IR.first, *IR.second);
     const InstrDesc &Desc = NewIS->getDesc();
     if (!DU->isAvailable(Desc.NumMicroOps) ||
         !DU->canDispatch(IR.first, *NewIS))
@@ -80,5 +80,4 @@ void Backend::notifyCycleEnd(unsigned Cycle) {
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleEnd(Cycle);
 }
-
 } // namespace mca.

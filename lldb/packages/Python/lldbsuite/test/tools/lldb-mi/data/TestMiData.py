@@ -80,8 +80,8 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
         # To match the escaped characters in the ouptut, we must use four backslashes per matches backslash
         # See https://docs.python.org/2/howto/regex.html#the-backslash-plague
 
-        # The MIPS disassembler never prints stub name 
-        if self.isMIPS():
+        # The MIPS and PPC64le disassemblers never print stub name
+        if self.isMIPS() or self.isPPC64le():
             self.expect(["{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?; \\\\\"Hello, World!\\\\\\\\n\\\\\"\"}",
                      "{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?\"}"])
         else:

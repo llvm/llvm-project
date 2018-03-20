@@ -895,6 +895,12 @@ def warn_pragma_expected_rparen : Warning<
   "missing ')' after '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_identifier : Warning<
   "expected identifier in '#pragma %0' - ignored">, InGroup<IgnoredPragmas>;
+def warn_pragma_expected_string : Warning<
+  "expected string literal in '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
+def warn_pragma_missing_argument : Warning<
+  "missing argument to '#pragma %0'%select{|; expected %2}1">, InGroup<IgnoredPragmas>;
+def warn_pragma_invalid_argument : Warning<
+  "unexpected argument '%0' to '#pragma %1'%select{|; expected %3}2">, InGroup<IgnoredPragmas>;
 
 // '#pragma clang section' related errors
 def err_pragma_expected_clang_section_name : Error<
@@ -923,6 +929,8 @@ def warn_pragma_ms_struct : Warning<
 def warn_pragma_extra_tokens_at_eol : Warning<
   "extra tokens at end of '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
+def warn_pragma_expected_comma : Warning<
+  "expected ',' in '#pragma %0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_punc : Warning<
   "expected ')' or ',' in '#pragma %0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_non_wide_string : Warning<
@@ -960,6 +968,10 @@ def warn_pragma_pack_malformed : Warning<
 def warn_pragma_intrinsic_builtin : Warning<
   "%0 is not a recognized builtin%select{|; consider including <intrin.h> to access non-builtin intrinsics}1">,
   InGroup<IgnoredPragmaIntrinsic>;
+// - #pragma optimize
+def warn_pragma_optimize : Warning<
+  "'#pragma optimize' is not supported">,
+  InGroup<IgnoredPragmaOptimize>;
 // - #pragma unused
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,

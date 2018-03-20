@@ -13,9 +13,10 @@ define void @test_00(<64 x i8>* %p, <64 x i8>* %q) #0 {
 ; CHECK-LABEL: test_01:
 ; CHECK-DAG: v[[V10:[0-9]+]] = vmem(r[[B01:[0-9]+]]+#0)
 ; CHECK-DAG: v[[V11:[0-9]+]] = vmem(r[[B01]]+#1)
-; CHECK-DAG: v[[V12:[0-9]+]] = vmem(r[[B01]]+#2)
 ; CHECK: }
 ; CHECK-DAG: valign(v[[V11]],v[[V10]],r[[B01]])
+; CHECK-DAG: v[[V12:[0-9]+]] = vmem(r[[B01]]+#2)
+; CHECK: }
 ; CHECK-DAG: valign(v[[V12]],v[[V11]],r[[B01]])
 define void @test_01(<128 x i8>* %p, <128 x i8>* %q) #0 {
   %v0 = load <128 x i8>, <128 x i8>* %p, align 1

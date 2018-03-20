@@ -15,13 +15,14 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
@@ -204,7 +205,8 @@ bool HexagonSubtarget::CallMutation::shouldTFRICallBind(
          Type == HexagonII::TypeALU64 || Type == HexagonII::TypeM;
 }
 
-void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
+void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
+  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
   SUnit* LastSequentialCall = nullptr;
   unsigned VRegHoldingRet = 0;
   unsigned RetRegister;
@@ -220,11 +222,11 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
       LastSequentialCall = &DAG->SUnits[su];
     // Look for a compare that defines a predicate.
     else if (DAG->SUnits[su].getInstr()->isCompare() && LastSequentialCall)
-      DAG->SUnits[su].addPred(SDep(LastSequentialCall, SDep::Barrier));
+      DAG->addEdge(&DAG->SUnits[su], SDep(LastSequentialCall, SDep::Barrier));
     // Look for call and tfri* instructions.
     else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
              shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
-      DAG->SUnits[su].addPred(SDep(&DAG->SUnits[su-1], SDep::Barrier));
+      DAG->addEdge(&DAG->SUnits[su], SDep(&DAG->SUnits[su-1], SDep::Barrier));
     // Prevent redundant register copies between two calls, which are caused by
     // both the return value and the argument for the next call being in %r0.
     // Example:
@@ -249,7 +251,7 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
         LastUseOfRet = &DAG->SUnits[su];
       else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
         // %r0 = ...
-        DAG->SUnits[su].addPred(SDep(LastUseOfRet, SDep::Barrier));
+        DAG->addEdge(&DAG->SUnits[su], SDep(LastUseOfRet, SDep::Barrier));
     }
   }
 }

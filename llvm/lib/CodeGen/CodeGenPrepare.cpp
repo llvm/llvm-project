@@ -2591,14 +2591,15 @@ private:
 class SimplificationTracker {
   DenseMap<Value *, Value *> Storage;
   const SimplifyQuery &SQ;
-  SmallPtrSetImpl<PHINode *> &AllPhiNodes;
-  SmallPtrSetImpl<SelectInst *> &AllSelectNodes;
+  // Tracks newly created Phi nodes. We use a SetVector to get deterministic
+  // order when iterating over the set in MatchPhiSet.
+  SmallSetVector<PHINode *, 32> AllPhiNodes;
+  // Tracks newly created Select nodes.
+  SmallPtrSet<SelectInst *, 32> AllSelectNodes;
 
 public:
-  SimplificationTracker(const SimplifyQuery &sq,
-                        SmallPtrSetImpl<PHINode *> &APN,
-                        SmallPtrSetImpl<SelectInst *> &ASN)
-      : SQ(sq), AllPhiNodes(APN), AllSelectNodes(ASN) {}
+  SimplificationTracker(const SimplifyQuery &sq)
+      : SQ(sq) {}
 
   Value *Get(Value *V) {
     do {
@@ -2624,7 +2625,7 @@ public:
           Put(PI, V);
           PI->replaceAllUsesWith(V);
           if (auto *PHI = dyn_cast<PHINode>(PI))
-            AllPhiNodes.erase(PHI);
+            AllPhiNodes.remove(PHI);
           if (auto *Select = dyn_cast<SelectInst>(PI))
             AllSelectNodes.erase(Select);
           PI->eraseFromParent();
@@ -2635,6 +2636,45 @@ public:
 
   void Put(Value *From, Value *To) {
     Storage.insert({ From, To });
+  }
+
+  void ReplacePhi(PHINode *From, PHINode *To) {
+    Value* OldReplacement = Get(From);
+    while (OldReplacement != From) {
+      From = To;
+      To = dyn_cast<PHINode>(OldReplacement);
+      OldReplacement = Get(From);
+    }
+    assert(Get(To) == To && "Replacement PHI node is already replaced.");
+    Put(From, To);
+    From->replaceAllUsesWith(To);
+    AllPhiNodes.remove(From);
+    From->eraseFromParent();
+  }
+
+  SmallSetVector<PHINode *, 32>& newPhiNodes() { return AllPhiNodes; }
+
+  void insertNewPhi(PHINode *PN) { AllPhiNodes.insert(PN); }
+
+  void insertNewSelect(SelectInst *SI) { AllSelectNodes.insert(SI); }
+
+  unsigned countNewPhiNodes() const { return AllPhiNodes.size(); }
+
+  unsigned countNewSelectNodes() const { return AllSelectNodes.size(); }
+
+  void destroyNewNodes(Type *CommonType) {
+    // For safe erasing, replace the uses with dummy value first.
+    auto Dummy = UndefValue::get(CommonType);
+    for (auto I : AllPhiNodes) {
+      I->replaceAllUsesWith(Dummy);
+      I->eraseFromParent();
+    }
+    AllPhiNodes.clear();
+    for (auto I : AllSelectNodes) {
+      I->replaceAllUsesWith(Dummy);
+      I->eraseFromParent();
+    }
+    AllSelectNodes.clear();
   }
 };
 
@@ -2818,62 +2858,46 @@ private:
   //   <p, BB3> -> ?
   // The function tries to find or build phi [b1, BB1], [b2, BB2] in BB3
   Value *findCommon(FoldAddrToValueMapping &Map) {
-    // Tracks newly created Phi nodes.
-    SmallPtrSet<PHINode *, 32> NewPhiNodes;
-    // Tracks newly created Select nodes.
-    SmallPtrSet<SelectInst *, 32> NewSelectNodes;
     // Tracks the simplification of newly created phi nodes. The reason we use
     // this mapping is because we will add new created Phi nodes in AddrToBase.
     // Simplification of Phi nodes is recursive, so some Phi node may
     // be simplified after we added it to AddrToBase.
     // Using this mapping we can find the current value in AddrToBase.
-    SimplificationTracker ST(SQ, NewPhiNodes, NewSelectNodes);
+    SimplificationTracker ST(SQ);
 
     // First step, DFS to create PHI nodes for all intermediate blocks.
     // Also fill traverse order for the second step.
     SmallVector<ValueInBB, 32> TraverseOrder;
-    InsertPlaceholders(Map, TraverseOrder, NewPhiNodes, NewSelectNodes);
+    InsertPlaceholders(Map, TraverseOrder, ST);
 
     // Second Step, fill new nodes by merged values and simplify if possible.
     FillPlaceholders(Map, TraverseOrder, ST);
 
-    if (!AddrSinkNewSelects && NewSelectNodes.size() > 0) {
-      DestroyNodes(NewPhiNodes);
-      DestroyNodes(NewSelectNodes);
+    if (!AddrSinkNewSelects && ST.countNewSelectNodes() > 0) {
+      ST.destroyNewNodes(CommonType);
       return nullptr;
     }
 
     // Now we'd like to match New Phi nodes to existed ones.
     unsigned PhiNotMatchedCount = 0;
-    if (!MatchPhiSet(NewPhiNodes, ST, AddrSinkNewPhis, PhiNotMatchedCount)) {
-      DestroyNodes(NewPhiNodes);
-      DestroyNodes(NewSelectNodes);
+    if (!MatchPhiSet(ST, AddrSinkNewPhis, PhiNotMatchedCount)) {
+      ST.destroyNewNodes(CommonType);
       return nullptr;
     }
 
     auto *Result = ST.Get(Map.find(Original)->second);
     if (Result) {
-      NumMemoryInstsPhiCreated += NewPhiNodes.size() + PhiNotMatchedCount;
-      NumMemoryInstsSelectCreated += NewSelectNodes.size();
+      NumMemoryInstsPhiCreated += ST.countNewPhiNodes() + PhiNotMatchedCount;
+      NumMemoryInstsSelectCreated += ST.countNewSelectNodes();
     }
     return Result;
-  }
-
-  /// \brief Destroy nodes from a set.
-  template <typename T> void DestroyNodes(SmallPtrSetImpl<T *> &Instructions) {
-    // For safe erasing, replace the Phi with dummy value first.
-    auto Dummy = UndefValue::get(CommonType);
-    for (auto I : Instructions) {
-      I->replaceAllUsesWith(Dummy);
-      I->eraseFromParent();
-    }
   }
 
   /// \brief Try to match PHI node to Candidate.
   /// Matcher tracks the matched Phi nodes.
   bool MatchPhiNode(PHINode *PHI, PHINode *Candidate,
-                    DenseSet<PHIPair> &Matcher,
-                    SmallPtrSetImpl<PHINode *> &PhiNodesToMatch) {
+                    SmallSetVector<PHIPair, 8> &Matcher,
+                    SmallSetVector<PHINode *, 32> &PhiNodesToMatch) {
     SmallVector<PHIPair, 8> WorkList;
     Matcher.insert({ PHI, Candidate });
     WorkList.push_back({ PHI, Candidate });
@@ -2917,13 +2941,16 @@ private:
     return true;
   }
 
-  /// \brief For the given set of PHI nodes try to find their equivalents.
+  /// \brief For the given set of PHI nodes (in the SimplificationTracker) try
+  /// to find their equivalents.
   /// Returns false if this matching fails and creation of new Phi is disabled.
-  bool MatchPhiSet(SmallPtrSetImpl<PHINode *> &PhiNodesToMatch,
-                   SimplificationTracker &ST, bool AllowNewPhiNodes,
+  bool MatchPhiSet(SimplificationTracker &ST, bool AllowNewPhiNodes,
                    unsigned &PhiNotMatchedCount) {
-    DenseSet<PHIPair> Matched;
+    // Use a SetVector for Matched to make sure we do replacements (ReplacePhi)
+    // in a deterministic order below.
+    SmallSetVector<PHIPair, 8> Matched;
     SmallPtrSet<PHINode *, 8> WillNotMatch;
+    SmallSetVector<PHINode *, 32> &PhiNodesToMatch = ST.newPhiNodes();
     while (PhiNodesToMatch.size()) {
       PHINode *PHI = *PhiNodesToMatch.begin();
 
@@ -2946,25 +2973,9 @@ private:
         Matched.clear();
       }
       if (IsMatched) {
-        // If we matched phi node to different but identical phis then
-        // make a simplification here.
-        DenseMap<PHINode *, PHINode *> MatchedPHINodeMapping;
-        for (auto MV : Matched) {
-          auto AlreadyMatched = MatchedPHINodeMapping.find(MV.first);
-          if (AlreadyMatched != MatchedPHINodeMapping.end()) {
-            MV.second->replaceAllUsesWith(AlreadyMatched->second);
-            ST.Put(MV.second, AlreadyMatched->second);
-            MV.second->eraseFromParent();
-          } else
-            MatchedPHINodeMapping.insert({ MV.first, MV.second });
-        }
         // Replace all matched values and erase them.
-        for (auto MV : MatchedPHINodeMapping) {
-          MV.first->replaceAllUsesWith(MV.second);
-          PhiNodesToMatch.erase(MV.first);
-          ST.Put(MV.first, MV.second);
-          MV.first->eraseFromParent();
-        }
+        for (auto MV : Matched)
+          ST.ReplacePhi(MV.first, MV.second);
         Matched.clear();
         continue;
       }
@@ -2974,7 +2985,7 @@ private:
       // Just remove all seen values in matcher. They will not match anything.
       PhiNotMatchedCount += WillNotMatch.size();
       for (auto *P : WillNotMatch)
-        PhiNodesToMatch.erase(P);
+        PhiNodesToMatch.remove(P);
     }
     return true;
   }
@@ -3032,8 +3043,7 @@ private:
   /// Also reports and order in what basic blocks have been traversed.
   void InsertPlaceholders(FoldAddrToValueMapping &Map,
                           SmallVectorImpl<ValueInBB> &TraverseOrder,
-                          SmallPtrSetImpl<PHINode *> &NewPhiNodes,
-                          SmallPtrSetImpl<SelectInst *> &NewSelectNodes) {
+                          SimplificationTracker &ST) {
     SmallVector<ValueInBB, 32> Worklist;
     assert((isa<PHINode>(Original.first) || isa<SelectInst>(Original.first)) &&
            "Address must be a Phi or Select node");
@@ -3068,7 +3078,7 @@ private:
         PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
                                        &CurrentBlock->front());
         Map[Current] = PHI;
-        NewPhiNodes.insert(PHI);
+        ST.insertNewPhi(PHI);
         // Add all predecessors in work list.
         for (auto B : predecessors(CurrentBlock))
           Worklist.push_back({ CurrentValue, B });
@@ -3082,7 +3092,7 @@ private:
             SelectInst::Create(OrigSelect->getCondition(), Dummy, Dummy,
                                OrigSelect->getName(), OrigSelect, OrigSelect);
         Map[Current] = Select;
-        NewSelectNodes.insert(Select);
+        ST.insertNewSelect(Select);
         // We are interested in True and False value in this basic block.
         Worklist.push_back({ OrigSelect->getTrueValue(), CurrentBlock });
         Worklist.push_back({ OrigSelect->getFalseValue(), CurrentBlock });
@@ -3094,7 +3104,7 @@ private:
         PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
                                        &CurrentBlock->front());
         Map[Current] = PHI;
-        NewPhiNodes.insert(PHI);
+        ST.insertNewPhi(PHI);
 
         // Add all predecessors in work list.
         for (auto B : predecessors(CurrentBlock))

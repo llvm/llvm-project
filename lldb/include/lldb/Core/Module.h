@@ -1021,20 +1021,6 @@ public:
   bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
-  //------------------------------------------------------------------
-  /// Loads this module to memory.
-  ///
-  /// Loads the bits needed to create an executable image to the memory.
-  /// It is useful with bare-metal targets where target does not have the
-  /// ability to start a process itself.
-  ///
-  /// @param[in] target
-  ///     Target where to load the module.
-  ///
-  /// @return
-  //------------------------------------------------------------------
-  Status LoadInMemory(Target &target, bool set_pc);
-
   //----------------------------------------------------------------------
   /// @class LookupInfo Module.h "lldb/Core/Module.h"
   /// @brief A class that encapsulates name lookup information.

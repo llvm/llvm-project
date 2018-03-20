@@ -604,7 +604,7 @@ BinaryOperator::Opcode getOpcode(const SymExpr *SE) {
   if (const auto *BSE = dyn_cast<BinarySymExpr>(SE)) {
     return BSE->getOpcode();
   } else if (const auto *SC = dyn_cast<SymbolConjured>(SE)) {
-    const auto *COE = dyn_cast<CXXOperatorCallExpr>(SC->getStmt());
+    const auto *COE = dyn_cast_or_null<CXXOperatorCallExpr>(SC->getStmt());
     if (!COE)
       return BO_Comma; // Extremal value, neither EQ nor NE
     if (COE->getOperator() == OO_EqualEqual) {
