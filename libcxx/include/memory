@@ -126,9 +126,10 @@ public:
 
     template <class U> struct rebind {typedef allocator<U> other;};
 
-    allocator() noexcept;
-    allocator(const allocator&) noexcept;
-    template <class U> allocator(const allocator<U>&) noexcept;
+    constexpr allocator() noexcept;                      // constexpr in C++20
+    constexpr allocator(const allocator&) noexcept;      // constexpr in C++20
+    template <class U>
+      constexpr allocator(const allocator<U>&) noexcept; // constexpr in C++20
     ~allocator();
     pointer address(reference x) const noexcept;
     const_pointer address(const_reference x) const noexcept;
@@ -1778,8 +1779,13 @@ public:
 
     template <class _Up> struct rebind {typedef allocator<_Up> other;};
 
-    _LIBCPP_INLINE_VISIBILITY allocator() _NOEXCEPT {}
-    template <class _Up> _LIBCPP_INLINE_VISIBILITY allocator(const allocator<_Up>&) _NOEXCEPT {}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    allocator() _NOEXCEPT {}
+
+    template <class _Up> 
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    allocator(const allocator<_Up>&) _NOEXCEPT {}
+
     _LIBCPP_INLINE_VISIBILITY pointer address(reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
@@ -1877,8 +1883,13 @@ public:
 
     template <class _Up> struct rebind {typedef allocator<_Up> other;};
 
-    _LIBCPP_INLINE_VISIBILITY allocator() _NOEXCEPT {}
-    template <class _Up> _LIBCPP_INLINE_VISIBILITY allocator(const allocator<_Up>&) _NOEXCEPT {}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    allocator() _NOEXCEPT {}
+
+    template <class _Up>
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 
+    allocator(const allocator<_Up>&) _NOEXCEPT {}
+
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
