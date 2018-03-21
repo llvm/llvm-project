@@ -15,6 +15,7 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -404,11 +405,9 @@ std::string CodeGenSchedModels::genRWName(ArrayRef<unsigned> Seq, bool IsRead) {
   return Name;
 }
 
-unsigned CodeGenSchedModels::getSchedRWIdx(Record *Def, bool IsRead,
-                                           unsigned After) const {
+unsigned CodeGenSchedModels::getSchedRWIdx(Record *Def, bool IsRead) const {
   const std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
-  assert(After < RWVec.size() && "start position out of bounds");
-  for (std::vector<CodeGenSchedRW>::const_iterator I = RWVec.begin() + After,
+  for (std::vector<CodeGenSchedRW>::const_iterator I = RWVec.begin(),
          E = RWVec.end(); I != E; ++I) {
     if (I->TheDef == Def)
       return I - RWVec.begin();
@@ -430,10 +429,8 @@ bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
   return false;
 }
 
-namespace llvm {
-
-void splitSchedReadWrites(const RecVec &RWDefs,
-                          RecVec &WriteDefs, RecVec &ReadDefs) {
+static void splitSchedReadWrites(const RecVec &RWDefs,
+                                 RecVec &WriteDefs, RecVec &ReadDefs) {
   for (Record *RWDef : RWDefs) {
     if (RWDef->isSubClassOf("SchedWrite"))
       WriteDefs.push_back(RWDef);
@@ -443,8 +440,6 @@ void splitSchedReadWrites(const RecVec &RWDefs,
     }
   }
 }
-
-} // end namespace llvm
 
 // Split the SchedReadWrites defs and call findRWs for each list.
 void CodeGenSchedModels::findRWs(const RecVec &RWDefs,
@@ -743,7 +738,7 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
   // intersects with an existing class via a previous InstRWDef. Instrs that do
   // not intersect with an existing class refer back to their former class as
   // determined from ItinDef or SchedRW.
-  SmallVector<std::pair<unsigned, SmallVector<Record *, 8>>, 4> ClassInstrs;
+  SmallMapVector<unsigned, SmallVector<Record *, 8>, 4> ClassInstrs;
   // Sort Instrs into sets.
   const RecVec *InstDefs = Sets.expand(InstRWDef);
   if (InstDefs->empty())
@@ -754,22 +749,13 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
     if (Pos == InstrClassMap.end())
       PrintFatalError(InstDef->getLoc(), "No sched class for instruction.");
     unsigned SCIdx = Pos->second;
-    unsigned CIdx = 0, CEnd = ClassInstrs.size();
-    for (; CIdx != CEnd; ++CIdx) {
-      if (ClassInstrs[CIdx].first == SCIdx)
-        break;
-    }
-    if (CIdx == CEnd) {
-      ClassInstrs.resize(CEnd + 1);
-      ClassInstrs[CIdx].first = SCIdx;
-    }
-    ClassInstrs[CIdx].second.push_back(InstDef);
+    ClassInstrs[SCIdx].push_back(InstDef);
   }
   // For each set of Instrs, create a new class if necessary, and map or remap
   // the Instrs to it.
-  for (unsigned CIdx = 0, CEnd = ClassInstrs.size(); CIdx != CEnd; ++CIdx) {
-    unsigned OldSCIdx = ClassInstrs[CIdx].first;
-    ArrayRef<Record*> InstDefs = ClassInstrs[CIdx].second;
+  for (auto &Entry : ClassInstrs) {
+    unsigned OldSCIdx = Entry.first;
+    ArrayRef<Record*> InstDefs = Entry.second;
     // If the all instrs in the current class are accounted for, then leave
     // them mapped to their old class.
     if (OldSCIdx) {

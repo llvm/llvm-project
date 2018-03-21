@@ -675,3 +675,8 @@ bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
   }
   return ExtensionsOk;
 }
+
+const char llvm::dwarf::EnumTraits<Attribute>::Type[];
+const char llvm::dwarf::EnumTraits<Form>::Type[];
+const char llvm::dwarf::EnumTraits<Index>::Type[];
+const char llvm::dwarf::EnumTraits<Tag>::Type[];

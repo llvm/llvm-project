@@ -7,6 +7,7 @@
    and https://github.com/google/sanitizers/issues/547
 
    XFAIL: freebsd
+   UNSUPPORTED: powerpc
 */
 
 #ifndef BUILD_SO
