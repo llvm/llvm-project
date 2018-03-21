@@ -23,5 +23,7 @@ except KeyError:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
+@LIT_SITE_CFG_IN_FOOTER@
+
 # Let the main config do the real work.
 lit_config.load_config(config, "@CLANG_TOOLS_SOURCE_DIR@/test/lit.cfg")
