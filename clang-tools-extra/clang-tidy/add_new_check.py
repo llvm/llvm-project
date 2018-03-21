@@ -211,8 +211,8 @@ def add_release_notes(module_path, module, check_name):
         elif header_found:
           if not line.startswith('----'):
             f.write("""
-- New `%s
-  <http://clang.llvm.org/extra/clang-tidy/checks/%s.html>`_ check
+- New :doc:`%s
+  <clang-tidy/checks/%s>` check
 
   FIXME: add release notes.
 """ % (check_name_dashes, check_name_dashes))
