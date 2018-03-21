@@ -34,7 +34,7 @@ if (MSVC)
   # Is this a CMake bug that even with export_executable_symbols, Windows
   # needs to explictly export the type_info vtable
   set_property(TARGET clang-interpreter
-               APPEND_STRING PROPERTY LINK_FLAGS /EXPORT:??_7type_info@@6B@)
+               APPEND_STRING PROPERTY LINK_FLAGS " /EXPORT:??_7type_info@@6B@")
 endif()
 
 function(clang_enable_exceptions TARGET)

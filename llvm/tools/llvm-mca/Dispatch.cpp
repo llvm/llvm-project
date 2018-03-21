@@ -119,17 +119,6 @@ void RegisterFile::invalidateRegisterMapping(const WriteState &WS) {
       RegisterMappings[*I].first = nullptr;
 }
 
-// Update the number of used mappings in the event of instruction retired.
-// This mehod delegates to the register file the task of invalidating
-// register mappings that were created for instruction IS.
-void DispatchUnit::invalidateRegisterMappings(const Instruction &IS) {
-  for (const std::unique_ptr<WriteState> &WS : IS.getDefs()) {
-    DEBUG(dbgs() << "[RAT] Invalidating mapping for: ");
-    DEBUG(WS->dump());
-    RAT->invalidateRegisterMapping(*WS.get());
-  }
-}
-
 void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
                                  unsigned RegID) const {
   assert(RegID && RegID < RegisterMappings.size());
@@ -243,7 +232,9 @@ void DispatchUnit::notifyInstructionRetired(unsigned Index) {
       HWInstructionEvent(HWInstructionEvent::Retired, Index));
 
   const Instruction &IS = Owner->getInstruction(Index);
-  invalidateRegisterMappings(IS);
+  for (const std::unique_ptr<WriteState> &WS : IS.getDefs())
+    RAT->invalidateRegisterMapping(*WS.get());
+
   Owner->eraseInstruction(Index);
 }
 
@@ -374,7 +365,7 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
 
   // Allocate new mappings.
   for (std::unique_ptr<WriteState> &WS : NewInst->getDefs())
-    addNewRegisterMapping(*WS);
+    RAT->addRegisterMapping(*WS);
 
   // Set the cycles left before the write-back stage.
   const InstrDesc &D = NewInst->getDesc();
