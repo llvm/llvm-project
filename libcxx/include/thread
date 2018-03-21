@@ -298,7 +298,7 @@ public:
     template <class _Fp, class ..._Args,
               class = typename enable_if
               <
-                   !is_same<typename decay<_Fp>::type, thread>::value
+                   !is_same<typename __uncvref<_Fp>::type, thread>::value
               >::type
              >
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS

@@ -1,4 +1,4 @@
-/*===-- include/Support/DataTypes.h - Define fixed size types -----*- C -*-===*\
+/*===-- include/llvm-c/DataTypes.h - Define fixed size types ------*- C -*-===*\
 |*                                                                            *|
 |*                     The LLVM Compiler Infrastructure                       *|
 |*                                                                            *|
@@ -21,8 +21,8 @@
 
 /* Please leave this file C-compatible. */
 
-#ifndef SUPPORT_DATATYPES_H
-#define SUPPORT_DATATYPES_H
+#ifndef LLVM_C_DATATYPES_H
+#define LLVM_C_DATATYPES_H
 
 #cmakedefine HAVE_INTTYPES_H ${HAVE_INTTYPES_H}
 #cmakedefine HAVE_STDINT_H ${HAVE_STDINT_H}
@@ -57,12 +57,12 @@
 
 #if !defined(UINT32_MAX)
 # error "The standard header <cstdint> is not C++11 compliant. Must #define "\
-        "__STDC_LIMIT_MACROS before #including Support/DataTypes.h"
+        "__STDC_LIMIT_MACROS before #including llvm-c/DataTypes.h"
 #endif
 
 #if !defined(UINT32_C)
 # error "The standard header <cstdint> is not C++11 compliant. Must #define "\
-        "__STDC_CONSTANT_MACROS before #including Support/DataTypes.h"
+        "__STDC_CONSTANT_MACROS before #including llvm-c/DataTypes.h"
 #endif
 
 /* Note that <inttypes.h> includes <stdint.h>, if this is a C99 system. */
@@ -132,4 +132,4 @@ typedef signed int ssize_t;
 #define HUGE_VALF (float)HUGE_VAL
 #endif
 
-#endif /* SUPPORT_DATATYPES_H */
+#endif /* LLVM_C_DATATYPES_H */

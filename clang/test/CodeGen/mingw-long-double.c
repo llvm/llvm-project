@@ -41,3 +41,7 @@ long double _Complex TestLDC(long double _Complex x) {
 // GNU32: define dso_local void @TestLDC({ x86_fp80, x86_fp80 }* noalias sret %agg.result, { x86_fp80, x86_fp80 }* byval align 4 %x)
 // GNU64: define dso_local void @TestLDC({ x86_fp80, x86_fp80 }* noalias sret %agg.result, { x86_fp80, x86_fp80 }* %x)
 // MSC64: define dso_local void @TestLDC({ double, double }* noalias sret %agg.result, { double, double }* %x)
+
+// GNU32: declare void @__mulxc3
+// GNU64: declare void @__mulxc3
+// MSC64: declare void @__muldc3

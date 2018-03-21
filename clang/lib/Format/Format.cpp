@@ -511,7 +511,7 @@ namespace clang {
 namespace format {
 
 const std::error_category &getParseCategory() {
-  static ParseErrorCategory C;
+  static const ParseErrorCategory C{};
   return C;
 }
 std::error_code make_error_code(ParseError e) {

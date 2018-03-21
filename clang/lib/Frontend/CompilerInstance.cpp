@@ -1090,6 +1090,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
       }),
       PPOpts.Macros.end());
 
+  // If the original compiler invocation had -fmodule-name, pass it through.
+  Invocation->getLangOpts()->ModuleName =
+      ImportingInstance.getInvocation().getLangOpts()->ModuleName;
+
   // Note the name of the module we're building.
   Invocation->getLangOpts()->CurrentModule = ModuleName;
 

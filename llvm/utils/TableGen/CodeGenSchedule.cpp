@@ -77,39 +77,42 @@ struct InstRegexOp : public SetTheory::Operator {
 
   void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
-    SmallVector<std::pair<StringRef, Optional<Regex>>, 4> RegexList;
     for (Init *Arg : make_range(Expr->arg_begin(), Expr->arg_end())) {
       StringInit *SI = dyn_cast<StringInit>(Arg);
       if (!SI)
         PrintFatalError(Loc, "instregex requires pattern string: " +
                                  Expr->getAsString());
+      StringRef Original = SI->getValue();
+
       // Extract a prefix that we can binary search on.
       static const char RegexMetachars[] = "()^$|*+?.[]\\{}";
-      auto FirstMeta = SI->getValue().find_first_of(RegexMetachars);
+      auto FirstMeta = Original.find_first_of(RegexMetachars);
+
       // Look for top-level | or ?. We cannot optimize them to binary search.
-      if (removeParens(SI->getValue()).find_first_of("|?") != std::string::npos)
+      if (removeParens(Original).find_first_of("|?") != std::string::npos)
         FirstMeta = 0;
-      StringRef Prefix = SI->getValue().substr(0, FirstMeta);
-      std::string pat = SI->getValue().substr(FirstMeta);
-      if (pat.empty()) {
-        RegexList.push_back(std::make_pair(Prefix, None));
-        continue;
+
+      Optional<Regex> Regexpr = None;
+      StringRef Prefix = Original.substr(0, FirstMeta);
+      std::string pat = Original.substr(FirstMeta);
+      if (!pat.empty()) {
+        // For the rest use a python-style prefix match.
+        if (pat[0] != '^') {
+          pat.insert(0, "^(");
+          pat.insert(pat.end(), ')');
+        }
+        Regexpr = Regex(pat);
       }
-      // For the rest use a python-style prefix match.
-      if (pat[0] != '^') {
-        pat.insert(0, "^(");
-        pat.insert(pat.end(), ')');
-      }
-      RegexList.push_back(std::make_pair(Prefix, Regex(pat)));
-    }
-    for (auto &R : RegexList) {
+
       unsigned NumGeneric = Target.getNumFixedInstructions();
+      ArrayRef<const CodeGenInstruction *> Generics =
+          Target.getInstructionsByEnumValue().slice(0, NumGeneric + 1);
+
       // The generic opcodes are unsorted, handle them manually.
-      for (auto *Inst :
-           Target.getInstructionsByEnumValue().slice(0, NumGeneric + 1)) {
-        if (Inst->TheDef->getName().startswith(R.first) &&
-            (!R.second ||
-             R.second->match(Inst->TheDef->getName().substr(R.first.size()))))
+      for (auto *Inst : Generics) {
+        StringRef InstName = Inst->TheDef->getName();
+        if (InstName.startswith(Prefix) &&
+            (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))))
           Elts.insert(Inst->TheDef);
       }
 
@@ -128,13 +131,13 @@ struct InstRegexOp : public SetTheory::Operator {
         }
       };
       auto Range = std::equal_range(Instructions.begin(), Instructions.end(),
-                                    R.first, Comp());
+                                    Prefix, Comp());
 
       // For this range we know that it starts with the prefix. Check if there's
       // a regex that needs to be checked.
       for (auto *Inst : make_range(Range)) {
-        if (!R.second ||
-            R.second->match(Inst->TheDef->getName().substr(R.first.size())))
+        StringRef InstName = Inst->TheDef->getName();
+        if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))
           Elts.insert(Inst->TheDef);
       }
     }

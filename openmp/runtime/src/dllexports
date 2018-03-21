@@ -403,6 +403,7 @@ kmpc_set_disp_num_buffers                   267
     %ifdef OMP_45
         __kmpc_task_reduction_init          268
         __kmpc_task_reduction_get_th_data   269
+        __kmpc_get_target_offload           271
     %endif
 %endif
 
