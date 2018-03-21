@@ -1,10 +1,14 @@
 #!/usr/bin/env python
+import os
 import subprocess
 import sys
 
 dotest_path = '@LLDB_SOURCE_DIR@/test/dotest.py'
 dotest_args_str = '@LLDB_DOTEST_ARGS@'
-swiftc = '@LLDB_SWIFTC@'
+
+swift_build_dir = '@LLDB_PATH_TO_SWIFT_BUILD'
+swift_compiler = os.path.join(swift_build_dir, 'bin', 'swiftc')
+swift_library = os.path.join(swift_build_dir, 'lib', 'swift')
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
@@ -12,7 +16,8 @@ if __name__ == '__main__':
     # Build dotest.py command.
     cmd = [dotest_path, '-q']
     cmd.extend(dotest_args)
-    cmd.extend(['--swift-compiler', swifc])
+    cmd.extend(['--swift-compiler', swift_compiler])
+    cmd.extend(['--swift-library', swift_library])
     cmd.extend(wrapper_args)
     # Invoke dotest.py
     subprocess.call(cmd)
