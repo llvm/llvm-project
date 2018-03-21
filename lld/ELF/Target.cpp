@@ -87,7 +87,7 @@ TargetInfo *elf::getTarget() {
   fatal("unknown target machine");
 }
 
-template <class ELFT> static std::string getErrorLoc(const uint8_t *Loc) {
+template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *Loc) {
   for (InputSectionBase *D : InputSections) {
     auto *IS = dyn_cast<InputSection>(D);
     if (!IS || !IS->getParent())
@@ -95,21 +95,21 @@ template <class ELFT> static std::string getErrorLoc(const uint8_t *Loc) {
 
     uint8_t *ISLoc = IS->getParent()->Loc + IS->OutSecOff;
     if (ISLoc <= Loc && Loc < ISLoc + IS->getSize())
-      return IS->template getLocation<ELFT>(Loc - ISLoc) + ": ";
+      return {IS, IS->template getLocation<ELFT>(Loc - ISLoc) + ": "};
   }
-  return "";
+  return {};
 }
 
-std::string elf::getErrorLocation(const uint8_t *Loc) {
+ErrorPlace elf::getErrorPlace(const uint8_t *Loc) {
   switch (Config->EKind) {
   case ELF32LEKind:
-    return getErrorLoc<ELF32LE>(Loc);
+    return getErrPlace<ELF32LE>(Loc);
   case ELF32BEKind:
-    return getErrorLoc<ELF32BE>(Loc);
+    return getErrPlace<ELF32BE>(Loc);
   case ELF64LEKind:
-    return getErrorLoc<ELF64LE>(Loc);
+    return getErrPlace<ELF64LE>(Loc);
   case ELF64BEKind:
-    return getErrorLoc<ELF64BE>(Loc);
+    return getErrPlace<ELF64BE>(Loc);
   default:
     llvm_unreachable("unknown ELF type");
   }
