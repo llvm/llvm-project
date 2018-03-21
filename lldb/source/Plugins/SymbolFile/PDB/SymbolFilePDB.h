@@ -198,9 +198,6 @@ private:
   void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
                            uint32_t &index);
 
-  std::string GetSourceFileNameForPDBCompiland(
-      const llvm::pdb::PDBSymbolCompiland *pdb_compiland);
-
   std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
   GetPDBCompilandByUID(uint32_t uid);
 

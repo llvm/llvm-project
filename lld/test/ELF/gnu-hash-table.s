@@ -54,7 +54,7 @@
 # EMPTY-NEXT:   Num Buckets: 1
 # EMPTY-NEXT:   First Hashed Symbol Index: 2
 # EMPTY-NEXT:   Num Mask Words: 1
-# EMPTY-NEXT:   Shift Count: 5
+# EMPTY-NEXT:   Shift Count: 6
 # EMPTY-NEXT:   Bloom Filter: [0x0]
 # EMPTY-NEXT:   Buckets: [0]
 # EMPTY-NEXT:   Values: []
@@ -113,8 +113,8 @@
 # I386-NEXT:   Num Buckets: 1
 # I386-NEXT:   First Hashed Symbol Index: 4
 # I386-NEXT:   Num Mask Words: 1
-# I386-NEXT:   Shift Count: 5
-# I386-NEXT:   Bloom Filter: [0x14000220]
+# I386-NEXT:   Shift Count: 6
+# I386-NEXT:   Bloom Filter: [0x4004204]
 # I386-NEXT:   Buckets: [4]
 # I386-NEXT:   Values: [0xB8860BA, 0xB887389]
 # I386-NEXT: }

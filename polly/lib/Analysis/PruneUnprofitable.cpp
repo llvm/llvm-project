@@ -92,7 +92,6 @@ public:
     return false;
   }
 };
-
 } // namespace
 
 char PruneUnprofitable::ID;

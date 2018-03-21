@@ -410,20 +410,17 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
   return S;
 }
 
-static void warnOrError(const Twine &Msg) {
-  if (Config->AllowMultipleDefinition)
-    warn(Msg);
-  else
-    error(Msg);
-}
-
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
-  warnOrError("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
-              toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
+  if (!Config->AllowMultipleDefinition)
+    error("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
+          toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
 }
 
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
                             InputSectionBase *ErrSec, uint64_t ErrOffset) {
+  if (Config->AllowMultipleDefinition)
+    return;
+
   Defined *D = cast<Defined>(Sym);
   if (!D->Section || !ErrSec) {
     reportDuplicate(Sym, NewFile);
@@ -450,7 +447,7 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
   if (!Src2.empty())
     Msg += Src2 + "\n>>>            ";
   Msg += Obj2;
-  warnOrError(Msg);
+  error(Msg);
 }
 
 Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,

@@ -59,6 +59,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -77,8 +78,8 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "ThreadGDBRemote.h"
-#include "Utility/StringExtractorGDBRemote.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Threading.h"
@@ -256,7 +257,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_addr_to_mmap_size(), m_thread_create_bp_sp(),
       m_waiting_for_attach(false), m_destroy_tried_resuming(false),
       m_command_sp(), m_breakpoint_pc_offset(0),
-      m_initial_tid(LLDB_INVALID_THREAD_ID) {
+      m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
+      m_erased_flash_ranges() {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -2798,6 +2800,145 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   return 0;
 }
 
+Status ProcessGDBRemote::WriteObjectFile(
+    std::vector<ObjectFile::LoadableData> entries) {
+  Status error;
+  // Sort the entries by address because some writes, like those to flash
+  // memory, must happen in order of increasing address.
+  std::stable_sort(
+      std::begin(entries), std::end(entries),
+      [](const ObjectFile::LoadableData a, const ObjectFile::LoadableData b) {
+        return a.Dest < b.Dest;
+      });
+  m_allow_flash_writes = true;
+  error = Process::WriteObjectFile(entries);
+  if (error.Success())
+    error = FlashDone();
+  else
+    // Even though some of the writing failed, try to send a flash done if
+    // some of the writing succeeded so the flash state is reset to normal,
+    // but don't stomp on the error status that was set in the write failure
+    // since that's the one we want to report back.
+    FlashDone();
+  m_allow_flash_writes = false;
+  return error;
+}
+
+bool ProcessGDBRemote::HasErased(FlashRange range) {
+  auto size = m_erased_flash_ranges.GetSize();
+  for (size_t i = 0; i < size; ++i)
+    if (m_erased_flash_ranges.GetEntryAtIndex(i)->Contains(range))
+      return true;
+  return false;
+}
+
+Status ProcessGDBRemote::FlashErase(lldb::addr_t addr, size_t size) {
+  Status status;
+
+  MemoryRegionInfo region;
+  status = GetMemoryRegionInfo(addr, region);
+  if (!status.Success())
+    return status;
+
+  // The gdb spec doesn't say if erasures are allowed across multiple regions,
+  // but we'll disallow it to be safe and to keep the logic simple by worring
+  // about only one region's block size.  DoMemoryWrite is this function's
+  // primary user, and it can easily keep writes within a single memory region
+  if (addr + size > region.GetRange().GetRangeEnd()) {
+    status.SetErrorString("Unable to erase flash in multiple regions");
+    return status;
+  }
+
+  uint64_t blocksize = region.GetBlocksize();
+  if (blocksize == 0) {
+    status.SetErrorString("Unable to erase flash because blocksize is 0");
+    return status;
+  }
+
+  // Erasures can only be done on block boundary adresses, so round down addr
+  // and round up size
+  lldb::addr_t block_start_addr = addr - (addr % blocksize);
+  size += (addr - block_start_addr);
+  if ((size % blocksize) != 0)
+    size += (blocksize - size % blocksize);
+
+  FlashRange range(block_start_addr, size);
+
+  if (HasErased(range))
+    return status;
+
+  // We haven't erased the entire range, but we may have erased part of it.
+  // (e.g., block A is already erased and range starts in A and ends in B).
+  // So, adjust range if necessary to exclude already erased blocks.
+  if (!m_erased_flash_ranges.IsEmpty()) {
+    // Assuming that writes and erasures are done in increasing addr order,
+    // because that is a requirement of the vFlashWrite command.  Therefore,
+    // we only need to look at the last range in the list for overlap.
+    const auto &last_range = *m_erased_flash_ranges.Back();
+    if (range.GetRangeBase() < last_range.GetRangeEnd()) {
+      auto overlap = last_range.GetRangeEnd() - range.GetRangeBase();
+      // overlap will be less than range.GetByteSize() or else HasErased() would
+      // have been true
+      range.SetByteSize(range.GetByteSize() - overlap);
+      range.SetRangeBase(range.GetRangeBase() + overlap);
+    }
+  }
+
+  StreamString packet;
+  packet.Printf("vFlashErase:%" PRIx64 ",%" PRIx64, range.GetRangeBase(),
+                (uint64_t)range.GetByteSize());
+
+  StringExtractorGDBRemote response;
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
+                                              true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (response.IsOKResponse()) {
+      m_erased_flash_ranges.Insert(range, true);
+    } else {
+      if (response.IsErrorResponse())
+        status.SetErrorStringWithFormat("flash erase failed for 0x%" PRIx64,
+                                        addr);
+      else if (response.IsUnsupportedResponse())
+        status.SetErrorStringWithFormat("GDB server does not support flashing");
+      else
+        status.SetErrorStringWithFormat(
+            "unexpected response to GDB server flash erase packet '%s': '%s'",
+            packet.GetData(), response.GetStringRef().c_str());
+    }
+  } else {
+    status.SetErrorStringWithFormat("failed to send packet: '%s'",
+                                    packet.GetData());
+  }
+  return status;
+}
+
+Status ProcessGDBRemote::FlashDone() {
+  Status status;
+  // If we haven't erased any blocks, then we must not have written anything
+  // either, so there is no need to actually send a vFlashDone command
+  if (m_erased_flash_ranges.IsEmpty())
+    return status;
+  StringExtractorGDBRemote response;
+  if (m_gdb_comm.SendPacketAndWaitForResponse("vFlashDone", response, true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (response.IsOKResponse()) {
+      m_erased_flash_ranges.Clear();
+    } else {
+      if (response.IsErrorResponse())
+        status.SetErrorStringWithFormat("flash done failed");
+      else if (response.IsUnsupportedResponse())
+        status.SetErrorStringWithFormat("GDB server does not support flashing");
+      else
+        status.SetErrorStringWithFormat(
+            "unexpected response to GDB server flash done packet: '%s'",
+            response.GetStringRef().c_str());
+    }
+  } else {
+    status.SetErrorStringWithFormat("failed to send flash done packet");
+  }
+  return status;
+}
+
 size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                        size_t size, Status &error) {
   GetMaxMemorySize();
@@ -2810,10 +2951,33 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
     size = max_memory_size;
   }
 
-  StreamString packet;
-  packet.Printf("M%" PRIx64 ",%" PRIx64 ":", addr, (uint64_t)size);
-  packet.PutBytesAsRawHex8(buf, size, endian::InlHostByteOrder(),
-                           endian::InlHostByteOrder());
+  StreamGDBRemote packet;
+
+  MemoryRegionInfo region;
+  Status region_status = GetMemoryRegionInfo(addr, region);
+
+  bool is_flash =
+      region_status.Success() && region.GetFlash() == MemoryRegionInfo::eYes;
+
+  if (is_flash) {
+    if (!m_allow_flash_writes) {
+      error.SetErrorString("Writing to flash memory is not allowed");
+      return 0;
+    }
+    // Keep the write within a flash memory region
+    if (addr + size > region.GetRange().GetRangeEnd())
+      size = region.GetRange().GetRangeEnd() - addr;
+    // Flash memory must be erased before it can be written
+    error = FlashErase(addr, size);
+    if (!error.Success())
+      return 0;
+    packet.Printf("vFlashWrite:%" PRIx64 ":", addr);
+    packet.PutEscapedBytes(buf, size);
+  } else {
+    packet.Printf("M%" PRIx64 ",%" PRIx64 ":", addr, (uint64_t)size);
+    packet.PutBytesAsRawHex8(buf, size, endian::InlHostByteOrder(),
+                             endian::InlHostByteOrder());
+  }
   StringExtractorGDBRemote response;
   if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
                                               true) ==

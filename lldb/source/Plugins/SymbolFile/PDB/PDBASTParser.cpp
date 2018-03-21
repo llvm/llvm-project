@@ -438,7 +438,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     pointer_ast_type = pointee_type->GetFullCompilerType();
     if (pointer_type->isReference())
       pointer_ast_type = pointer_ast_type.GetLValueReferenceType();
-    else if (pointer_type->getRawSymbol().isRValueReference())
+    else if (pointer_type->isRValueReference())
       pointer_ast_type = pointer_ast_type.GetRValueReferenceType();
     else
       pointer_ast_type = pointer_ast_type.GetPointerType();
@@ -449,7 +449,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (pointer_type->isVolatileType())
       pointer_ast_type = pointer_ast_type.AddVolatileModifier();
 
-    if (pointer_type->getRawSymbol().isRestrictedType())
+    if (pointer_type->isRestrictedType())
       pointer_ast_type = pointer_ast_type.AddRestrictModifier();
 
     return std::make_shared<lldb_private::Type>(

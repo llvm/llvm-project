@@ -614,59 +614,6 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
   return resolved_flags;
 }
 
-std::string SymbolFilePDB::GetSourceFileNameForPDBCompiland(
-    const PDBSymbolCompiland *pdb_compiland) {
-  if (!pdb_compiland)
-    return std::string();
-
-  std::string source_file_name;
-  // `getSourceFileName` returns the basename of the original source file
-  // used to generate this compiland.  It does not return the full path.
-  // Currently the only way to get that is to do a basename lookup to get the
-  // IPDBSourceFile, but this is ambiguous in the case of two source files
-  // with the same name contributing to the same compiland. This is an edge
-  // case that we ignore for now, although we need to a long-term solution.
-  std::string file_name = pdb_compiland->getSourceFileName();
-  if (!file_name.empty()) {
-    auto one_src_file_up =
-        m_session_up->findOneSourceFile(pdb_compiland, file_name,
-                                        PDB_NameSearchFlags::NS_CaseInsensitive);
-    if (one_src_file_up)
-      source_file_name = one_src_file_up->getFileName();
-  }
-  // For some reason, source file name could be empty, so we will walk through
-  // all source files of this compiland, and determine the right source file
-  // if any that is used to generate this compiland based on language
-  // indicated in compilanddetails language field.
-  if (!source_file_name.empty())
-    return source_file_name;
-
-  auto details_up = pdb_compiland->findOneChild<PDBSymbolCompilandDetails>();
-  PDB_Lang pdb_lang = details_up ? details_up->getLanguage() : PDB_Lang::Cpp;
-  auto src_files_up =
-      m_session_up->getSourceFilesForCompiland(*pdb_compiland);
-  if (src_files_up) {
-    while (auto file_up = src_files_up->getNext()) {
-      FileSpec file_spec(file_up->getFileName(), false,
-                         FileSpec::ePathSyntaxWindows);
-      auto file_extension = file_spec.GetFileNameExtension();
-      if (pdb_lang == PDB_Lang::Cpp || pdb_lang == PDB_Lang::C) {
-        static const char* exts[] = { "cpp", "c", "cc", "cxx" };
-        if (llvm::is_contained(exts, file_extension.GetStringRef().lower())) {
-          source_file_name = file_up->getFileName();
-          break;
-        }
-      } else if (pdb_lang == PDB_Lang::Masm &&
-                 ConstString::Compare(file_extension, ConstString("ASM"),
-                                      false) == 0) {
-        source_file_name = file_up->getFileName();
-        break;
-      }
-    }
-  }
-  return source_file_name;
-}
-
 uint32_t SymbolFilePDB::ResolveSymbolContext(
     const lldb_private::FileSpec &file_spec, uint32_t line, bool check_inlines,
     uint32_t resolve_scope, lldb_private::SymbolContextList &sc_list) {
@@ -690,15 +637,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
       // For inline functions, we don't have to match the FileSpec since they
       // could be defined in headers other than file specified in FileSpec.
       if (!check_inlines) {
-        // `getSourceFileName` returns the basename of the original source file
-        // used to generate this compiland.  It does not return the full path.
-        // Currently the only way to get that is to do a basename lookup to get
-        // the IPDBSourceFile, but this is ambiguous in the case of two source
-        // files with the same name contributing to the same compiland.  This is
-        // a moderately extreme edge case, so we consider this OK for now,
-        // although we need to find a long-term solution.
-        std::string source_file =
-            GetSourceFileNameForPDBCompiland(compiland.get());
+        std::string source_file = compiland->getSourceFileFullPath();
         if (source_file.empty())
           continue;
         FileSpec this_spec(source_file, false, FileSpec::ePathSyntaxWindows);
@@ -803,23 +742,11 @@ bool SymbolFilePDB::ResolveFunction(const llvm::pdb::PDBSymbolFunc &pdb_func,
                                     bool include_inlines,
                                     lldb_private::SymbolContextList &sc_list) {
   lldb_private::SymbolContext sc;
-  auto file_vm_addr = pdb_func.getVirtualAddress();
-  if (file_vm_addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  Address so_addr(file_vm_addr);
-  sc.comp_unit = GetCompileUnitContainsAddress(so_addr).get();
+  sc.comp_unit = ParseCompileUnitForUID(pdb_func.getCompilandId()).get();
   if (!sc.comp_unit)
     return false;
   sc.module_sp = sc.comp_unit->GetModule();
-  auto symbol_up =
-      m_session_up->findSymbolByAddress(file_vm_addr, PDB_SymType::Function);
-  if (!symbol_up)
-    return false;
-
-  auto *func = llvm::dyn_cast<PDBSymbolFunc>(symbol_up.get());
-  assert(func);
-  sc.function = ParseCompileUnitFunctionForPDBFunc(*func, sc);
+  sc.function = ParseCompileUnitFunctionForPDBFunc(pdb_func, sc);
   if (!sc.function)
     return false;
 
@@ -1284,7 +1211,7 @@ SymbolFilePDB::ParseCompileUnitForUID(uint32_t id, uint32_t index) {
   if (lang == lldb::LanguageType::eLanguageTypeUnknown)
     return CompUnitSP();
 
-  std::string path = GetSourceFileNameForPDBCompiland(compiland_up.get());
+  std::string path = compiland_up->getSourceFileFullPath();
   if (path.empty())
     return CompUnitSP();
 

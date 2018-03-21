@@ -88,6 +88,11 @@ public:
     eStrataJIT
   } Strata;
 
+  struct LoadableData {
+    lldb::addr_t Dest;
+    llvm::ArrayRef<uint8_t> Contents;
+  };
+
   //------------------------------------------------------------------
   /// Construct with a parent module, offset, and header data.
   ///
@@ -838,7 +843,7 @@ public:
   ///
   /// @return
   //------------------------------------------------------------------
-  virtual Status LoadInMemory(Target &target, bool set_pc);
+  virtual std::vector<LoadableData> GetLoadableData(Target &target);
 
 protected:
   //------------------------------------------------------------------

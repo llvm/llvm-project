@@ -115,7 +115,6 @@
 		233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */; };
 		236124A41986B4E2004EFC37 /* IOObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A21986B4E2004EFC37 /* IOObject.cpp */; };
 		236124A51986B4E2004EFC37 /* Socket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A31986B4E2004EFC37 /* Socket.cpp */; };
-		237211D41D3FD10D008D2754 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
 		2374D7531D4BB2FF005C9575 /* GDBRemoteClientBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2374D74E1D4BB299005C9575 /* GDBRemoteClientBase.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
 		237A8BAF1DEC9C7800CEBAFF /* RegisterInfoPOSIX_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237A8BAB1DEC9BBC00CEBAFF /* RegisterInfoPOSIX_arm64.cpp */; };
@@ -1055,9 +1054,11 @@
 		AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF41B78F1EA5D52C009E2985 /* PlatformRemoteDarwinDevice.cpp */; };
 		AF3A4AD31EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
-		AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */; };
-		AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */; };
-		AF62AAE61BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */; };
+		9455630F1BEAD0600073F75F /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */; };
+		94CD7D0919A3FBA300908B7C /* AppleObjCClassDescriptorV2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94CD7D0819A3FBA300908B7C /* AppleObjCClassDescriptorV2.cpp */; };
+		AF8AD62E1BEC28A400150209 /* PlatformAppleTVSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF8AD62A1BEC28A400150209 /* PlatformAppleTVSimulator.cpp */; };
+		AF5CEC88206079A500384F20 /* com.apple.internal.xpc.remote.debugserver.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = AF5CEC87206079A500384F20 /* com.apple.internal.xpc.remote.debugserver.plist */; };
+		AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
 		AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */ = {isa = PBXBuildFile; fileRef = AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */; };
 		AF6CA6661FBBAF28005A0DC3 /* ArchSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6CA6651FBBAF27005A0DC3 /* ArchSpec.cpp */; };
 		AF6CA6681FBBAF37005A0DC3 /* ArchSpec.h in Headers */ = {isa = PBXBuildFile; fileRef = AF6CA6671FBBAF37005A0DC3 /* ArchSpec.h */; };
@@ -1076,7 +1077,6 @@
 		AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */; };
 		AF9FF1F51FAA79A400474976 /* LibCxxTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */; };
 		AF9FF1F71FAA79FE00474976 /* LibCxxQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */; };
-		AFA9B72820606A5F008E86C6 /* remotectl_com.apple.internal.xpc.remote.debugserver.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = AFA9B72720606A5F008E86C6 /* remotectl_com.apple.internal.xpc.remote.debugserver.plist */; };
 		AFAFD80A1E57E1B90017A14F /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */; };
 		AFB3D2801AC262AB003B4B30 /* MICmdCmdGdbShow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */; };
 		AFC1A8991BEAF27000681CFD /* ValueObjectConstResultImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */; };
@@ -1388,7 +1388,7 @@
 			dstPath = /AppleInternal/Library/LaunchDaemons;
 			dstSubfolderSpec = 0;
 			files = (
-				AFA9B72820606A5F008E86C6 /* remotectl_com.apple.internal.xpc.remote.debugserver.plist in CopyFiles */,
+				AF5CEC88206079A500384F20 /* com.apple.internal.xpc.remote.debugserver.plist in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -3194,8 +3194,8 @@
 		AF061F8A182C980000B6A19C /* HistoryUnwind.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HistoryUnwind.h; path = Utility/HistoryUnwind.h; sourceTree = "<group>"; };
 		AF06398A1BEC2D2500EA1B29 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		AF06398B1BEC2D2500EA1B29 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		AF06398D1BEC2D2500EA1B29 /* PlatformAppleSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleSimulator.h; sourceTree = "<group>"; };
-		AF06398F1BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleTVSimulator.h; sourceTree = "<group>"; };
+		9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
+		AF8AD62B1BEC28A400150209 /* PlatformAppleTVSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleTVSimulator.h; sourceTree = "<group>"; };
 		AF0639911BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleWatchSimulator.h; sourceTree = "<group>"; };
 		AF0639921BEC2D2500EA1B29 /* PlatformDarwin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDarwin.cpp; sourceTree = "<group>"; };
 		AF0639931BEC2D2500EA1B29 /* PlatformDarwin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformDarwin.h; sourceTree = "<group>"; };
@@ -3272,10 +3272,11 @@
 		AF45E1FD1BF57C8D000563EB /* PythonTestSuite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PythonTestSuite.h; sourceTree = "<group>"; };
 		AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleGetThreadItemInfoHandler.cpp; sourceTree = "<group>"; };
 		AF45FDE418A1F3AC0007051C /* AppleGetThreadItemInfoHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleGetThreadItemInfoHandler.h; sourceTree = "<group>"; };
-		AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
-		AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCClassDescriptorV2.cpp; sourceTree = "<group>"; };
-		AF46AE6919A708EC008BD829 /* AppleObjCClassDescriptorV2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCClassDescriptorV2.h; sourceTree = "<group>"; };
-		AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleTVSimulator.cpp; sourceTree = "<group>"; };
+		9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
+		94CD7D0819A3FBA300908B7C /* AppleObjCClassDescriptorV2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCClassDescriptorV2.cpp; sourceTree = "<group>"; };
+		94CD7D0719A3FB8600908B7C /* AppleObjCClassDescriptorV2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppleObjCClassDescriptorV2.h; sourceTree = "<group>"; };
+		AF8AD62A1BEC28A400150209 /* PlatformAppleTVSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleTVSimulator.cpp; sourceTree = "<group>"; };
+		AF5CEC87206079A500384F20 /* com.apple.internal.xpc.remote.debugserver.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = com.apple.internal.xpc.remote.debugserver.plist; path = tools/debugserver/source/com.apple.internal.xpc.remote.debugserver.plist; sourceTree = "<group>"; };
 		AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFilePDB.cpp; path = PDB/SymbolFilePDB.cpp; sourceTree = "<group>"; };
 		AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SymbolFilePDB.h; path = PDB/SymbolFilePDB.h; sourceTree = "<group>"; };
 		AF68D2541255416E002FF25B /* RegisterContextLLDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextLLDB.cpp; path = Utility/RegisterContextLLDB.cpp; sourceTree = "<group>"; };
@@ -3311,7 +3312,6 @@
 		AF9B8F32182DB52900DA866F /* SystemRuntimeMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemRuntimeMacOSX.h; sourceTree = "<group>"; };
 		AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxTuple.cpp; path = Language/CPlusPlus/LibCxxTuple.cpp; sourceTree = "<group>"; };
 		AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxQueue.cpp; path = Language/CPlusPlus/LibCxxQueue.cpp; sourceTree = "<group>"; };
-		AFA9B72720606A5F008E86C6 /* remotectl_com.apple.internal.xpc.remote.debugserver.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = remotectl_com.apple.internal.xpc.remote.debugserver.plist; path = tools/debugserver/source/remotectl_com.apple.internal.xpc.remote.debugserver.plist; sourceTree = "<group>"; };
 		AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ModuleCacheTest.cpp; path = Target/ModuleCacheTest.cpp; sourceTree = "<group>"; };
 		AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MICmdCmdGdbShow.cpp; path = "tools/lldb-mi/MICmdCmdGdbShow.cpp"; sourceTree = SOURCE_ROOT; };
 		AFB3D27F1AC262AB003B4B30 /* MICmdCmdGdbShow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MICmdCmdGdbShow.h; path = "tools/lldb-mi/MICmdCmdGdbShow.h"; sourceTree = SOURCE_ROOT; };
@@ -3479,7 +3479,7 @@
 		08FB7794FE84155DC02AAC07 /* lldb */ = {
 			isa = PBXGroup;
 			children = (
-				AFA9B72720606A5F008E86C6 /* remotectl_com.apple.internal.xpc.remote.debugserver.plist */,
+				AF5CEC87206079A500384F20 /* com.apple.internal.xpc.remote.debugserver.plist */,
 				239481851C59EBDD00DF7168 /* libncurses.dylib */,
 				2326CF4E1BDD687800A5CEAC /* libpanel.dylib */,
 				2326CF4C1BDD684B00A5CEAC /* libedit.dylib */,
@@ -5773,10 +5773,10 @@
 			children = (
 				AF06398A1BEC2D2500EA1B29 /* CMakeLists.txt */,
 				AF06398B1BEC2D2500EA1B29 /* Makefile */,
-				AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */,
-				AF06398D1BEC2D2500EA1B29 /* PlatformAppleSimulator.h */,
-				AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */,
-				AF06398F1BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h */,
+				9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */,
+				9455630B1BEAD0570073F75F /* PlatformAppleSimulator.h */,
+				AF8AD62A1BEC28A400150209 /* PlatformAppleTVSimulator.cpp */,
+				AF8AD62B1BEC28A400150209 /* PlatformAppleTVSimulator.h */,
 				AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */,
 				AF0639911BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h */,
 				AF0639921BEC2D2500EA1B29 /* PlatformDarwin.cpp */,
@@ -6256,8 +6256,8 @@
 		4CCA644113B40B82003BDF98 /* AppleObjCRuntime */ = {
 			isa = PBXGroup;
 			children = (
-				AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */,
-				AF46AE6919A708EC008BD829 /* AppleObjCClassDescriptorV2.h */,
+				94CD7D0819A3FBA300908B7C /* AppleObjCClassDescriptorV2.cpp */,
+				94CD7D0719A3FB8600908B7C /* AppleObjCClassDescriptorV2.h */,
 				4997E6831A3B74D100733D2F /* AppleObjCDeclVendor.cpp */,
 				4997E6841A3B74D100733D2F /* AppleObjCDeclVendor.h */,
 				4CCA644213B40B82003BDF98 /* AppleObjCRuntime.cpp */,
@@ -8082,7 +8082,7 @@
 				6D95DC021B9DC057000E318A /* SymbolFileDWARFDwo.cpp in Sources */,
 				942612F71B95000000EF842E /* LanguageCategory.cpp in Sources */,
 				2689005E13353E0E00698AC0 /* ClangASTSource.cpp in Sources */,
-				AF62AAE61BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp in Sources */,
+				AF8AD62E1BEC28A400150209 /* PlatformAppleTVSimulator.cpp in Sources */,
 				2689005F13353E0E00698AC0 /* ClangFunctionCaller.cpp in Sources */,
 				8CF5C8931EF195AE00C6D04F /* SwiftRuntimeReporting.cpp in Sources */,
 				2689006013353E0E00698AC0 /* ClangExpressionDeclMap.cpp in Sources */,
@@ -8119,7 +8119,7 @@
 				26474CBC18D0CB2D0073DEBA /* RegisterContextMach_arm.cpp in Sources */,
 				948C86D51B97764D00F3CAC3 /* SwiftHashedContainer.cpp in Sources */,
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
-				237211D41D3FD10D008D2754 /* SymbolFilePDB.cpp in Sources */,
+				AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */,
 				942612F01B94D33200EF842E /* SwiftLanguage.cpp in Sources */,
 				6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */,
 				2689007613353E1A00698AC0 /* CFCBundle.cpp in Sources */,
@@ -8227,7 +8227,7 @@
 				26BC17B118C7F4CB00D2196D /* ThreadElfCore.cpp in Sources */,
 				947CF7771DC7B20D00EF980B /* ThreadMinidump.cpp in Sources */,
 				268900C913353E5F00698AC0 /* NameToDIE.cpp in Sources */,
-				AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */,
+				94CD7D0919A3FBA300908B7C /* AppleObjCClassDescriptorV2.cpp in Sources */,
 				268900CA13353E5F00698AC0 /* SymbolFileDWARF.cpp in Sources */,
 				4CAA19E61F5A40040099E692 /* BreakpointName.cpp in Sources */,
 				268900CB13353E5F00698AC0 /* LogChannelDWARF.cpp in Sources */,
@@ -8300,7 +8300,7 @@
 				26BC17AD18C7F4CB00D2196D /* RegisterContextPOSIXCore_mips64.cpp in Sources */,
 				268900F113353E6F00698AC0 /* RegisterContext.cpp in Sources */,
 				6D55BAED1A8CD0A800A70529 /* PlatformAndroid.cpp in Sources */,
-				AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */,
+				9455630F1BEAD0600073F75F /* PlatformAppleSimulator.cpp in Sources */,
 				268900F213353E6F00698AC0 /* SectionLoadList.cpp in Sources */,
 				268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */,
 				268900F413353E6F00698AC0 /* StackFrameList.cpp in Sources */,

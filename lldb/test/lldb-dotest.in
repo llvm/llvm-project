@@ -1,15 +1,23 @@
 #!/usr/bin/env python
-import sys
 import os
+import subprocess
+import sys
 
 dotest_path = '@LLDB_SOURCE_DIR@/test/dotest.py'
-dotest_args = '@LLDB_DOTEST_ARGS_STR@'
-swiftc = '@LLDB_SWIFTC@'
+dotest_args_str = '@LLDB_DOTEST_ARGS@'
+swift_compiler = '@LLDB_SWIFTC'
+swift_library = '@LLDB_SWIFT_LIBS'
 
 if __name__ == '__main__':
-    # FIXME: It would be nice if we can mimic the approach taken by llvm-lit
-    # and pass a python configuration straight to dotest, rather than going
-    # through the operating system.
-    command = '{} -q {} --swift-compiler {} {}'.format(
-        dotest_path, dotest_args, swiftc, ' '.join(sys.argv[1:]))
-    os.system(command)
+    wrapper_args = sys.argv[1:]
+    dotest_args = dotest_args_str.split(';')
+    # Build dotest.py command.
+    cmd = [dotest_path, '-q']
+    cmd.extend(dotest_args)
+    if os.path.exists(swift_compiler):
+        cmd.extend(['--swift-compiler', swift_compiler])
+    if os.path.exists(swift_library):
+        cmd.extend(['--swift-library', swift_library])
+    cmd.extend(wrapper_args)
+    # Invoke dotest.py
+    subprocess.call(cmd)

@@ -18,7 +18,6 @@
 namespace llvm {
 
 class BasicBlock;
-
 } // namespace llvm
 
 namespace polly {
@@ -44,7 +43,6 @@ struct CodeGenerationPass : public PassInfoMixin<CodeGenerationPass> {
 };
 
 extern bool PerfMonitoring;
-
 } // namespace polly
 
 #endif // POLLY_CODEGENERATION_H
