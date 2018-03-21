@@ -48,7 +48,7 @@ const uptr kMaxThreadStackSize = 1 << 30;  // 1Gb
 static const uptr kErrorMessageBufferSize = 1 << 16;
 
 // Denotes fake PC values that come from JIT/JAVA/etc.
-// For such PC values __tsan_symbolize_external() will be called.
+// For such PC values __tsan_symbolize_external_ex() will be called.
 const u64 kExternalPCBit = 1ULL << 60;
 
 extern const char *SanitizerToolName;  // Can be changed by the tool.
