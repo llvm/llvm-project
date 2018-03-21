@@ -10,6 +10,9 @@
 // type_traits
 
 // aligned_storage
+//
+//  Issue 3034 added:
+//  The member typedef type shall be a trivial standard-layout type.
 
 #include <type_traits>
 #include <cstddef>       // for std::max_align_t
@@ -28,6 +31,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 1, "");
     static_assert(sizeof(T1) == 10, "");
     }
@@ -42,6 +47,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 2, "");
     static_assert(sizeof(T1) == 10, "");
     }
@@ -56,6 +63,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 12, "");
     }
@@ -70,6 +79,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
     }
@@ -84,6 +95,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 16, "");
     static_assert(sizeof(T1) == 16, "");
     }
@@ -98,6 +111,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 32, "");
     static_assert(sizeof(T1) == 32, "");
     }
@@ -112,6 +127,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 32, "");
     static_assert(sizeof(T1) == 32, "");
     }
@@ -126,6 +143,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 32, "");
     static_assert(sizeof(T1) == 64, "");
     }
@@ -140,6 +159,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 16, "");
     static_assert(sizeof(T1) == 16, "");
     }
@@ -154,6 +175,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 1, "");
     static_assert(sizeof(T1) == 1, "");
     }
@@ -168,6 +191,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 2, "");
     static_assert(sizeof(T1) == 2, "");
     }
@@ -182,6 +207,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 2, "");
     static_assert(sizeof(T1) == 4, "");
     }
@@ -196,6 +223,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 4, "");
     }
@@ -210,6 +239,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 8, "");
     }
@@ -218,6 +249,8 @@ int main()
 #if TEST_STD_VER > 11
     static_assert(std::is_same<std::aligned_storage_t<7>, T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 8, "");
     }
@@ -232,6 +265,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 8, "");
     }
@@ -246,6 +281,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
     }
@@ -260,6 +297,8 @@ int main()
 #else
     static_assert(std::is_pod<T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
     }
@@ -274,6 +313,8 @@ int main()
 #if TEST_STD_VER > 11
     static_assert(std::is_same<std::aligned_storage_t<16>, T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == alignof(std::max_align_t),
                   "");
     static_assert(sizeof(T1) == 16, "");
@@ -283,6 +324,8 @@ int main()
 #if TEST_STD_VER > 11
     static_assert(std::is_same<std::aligned_storage_t<17>, T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == alignof(std::max_align_t),
                   "");
     static_assert(sizeof(T1) == 16 + alignof(std::max_align_t), "");
@@ -292,6 +335,8 @@ int main()
 #if TEST_STD_VER > 11
     static_assert(std::is_same<std::aligned_storage_t<10>, T1>::value, "" );
 #endif
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
     }
