@@ -1077,6 +1077,10 @@ bool CSIImpl::shouldNotInstrumentFunction(Function &F) {
   if (F.hasName() && F.getName() == CsiRtUnitCtorName)
     return true;
 
+  // Don't instrument functions in the startup section.
+  if (F.getSection() == ".text.startup")
+    return true;
+
   // Don't instrument functions that will run before or
   // simultaneously with CSI ctors.
   GlobalVariable *GV = M.getGlobalVariable("llvm.global_ctors");
