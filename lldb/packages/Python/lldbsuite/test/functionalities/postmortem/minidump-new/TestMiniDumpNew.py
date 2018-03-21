@@ -162,32 +162,25 @@ class MiniDumpNewTestCase(TestBase):
     def test_deeper_stack_in_minidump_with_same_pid_running(self):
         """Test that we read the information from the core correctly even if we
         have a running process with the same PID"""
-        try:
-            self.do_change_pid_in_minidump("linux-x86_64_not_crashed.dmp",
-                                           "linux-x86_64_not_crashed-pid.dmp",
-                                           self._linux_x86_64_not_crashed_pid_offset,
-                                           str(self._linux_x86_64_not_crashed_pid),
-                                           str(os.getpid()))
-            self.do_test_deeper_stack("linux-x86_64_not_crashed",
-                                      "linux-x86_64_not_crashed-pid.dmp",
-                                      os.getpid())
-        finally:
-            self.RemoveTempFile("linux-x86_64_not_crashed-pid.dmp")
+        new_core = self.getBuildArtifact("linux-x86_64_not_crashed-pid.dmp")
+        self.do_change_pid_in_minidump("linux-x86_64_not_crashed.dmp",
+                                       new_core,
+                                       self._linux_x86_64_not_crashed_pid_offset,
+                                       str(self._linux_x86_64_not_crashed_pid),
+                                       str(os.getpid()))
+        self.do_test_deeper_stack("linux-x86_64_not_crashed", new_core, os.getpid())
 
     def test_two_cores_same_pid(self):
         """Test that we handle the situation if we have two core files with the same PID """
-        try:
-            self.do_change_pid_in_minidump("linux-x86_64_not_crashed.dmp",
-                                           "linux-x86_64_not_crashed-pid.dmp",
-                                           self._linux_x86_64_not_crashed_pid_offset,
-                                           str(self._linux_x86_64_not_crashed_pid),
-                                           str(self._linux_x86_64_pid))
-            self.do_test_deeper_stack("linux-x86_64_not_crashed",
-                                      "linux-x86_64_not_crashed-pid.dmp",
-                                      self._linux_x86_64_pid)
-            self.test_stack_info_in_minidump()
-        finally:
-            self.RemoveTempFile("linux-x86_64_not_crashed-pid.dmp")
+        new_core = self.getBuildArtifact("linux-x86_64_not_crashed-pid.dmp")
+        self.do_change_pid_in_minidump("linux-x86_64_not_crashed.dmp",
+                                       new_core,
+                                       self._linux_x86_64_not_crashed_pid_offset,
+                                       str(self._linux_x86_64_not_crashed_pid),
+                                       str(self._linux_x86_64_pid))
+        self.do_test_deeper_stack("linux-x86_64_not_crashed",
+                                  new_core, self._linux_x86_64_pid)
+        self.test_stack_info_in_minidump()
 
     def test_local_variables_in_minidump(self):
         """Test that we can examine local variables in a Minidump."""
