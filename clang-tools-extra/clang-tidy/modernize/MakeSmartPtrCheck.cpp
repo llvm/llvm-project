@@ -61,8 +61,13 @@ void MakeSmartPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
+bool MakeSmartPtrCheck::isLanguageVersionSupported(
+    const LangOptions &LangOpts) const {
+  return LangOpts.CPlusPlus11;
+}
+
 void MakeSmartPtrCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  if (getLangOpts().CPlusPlus11) {
+  if (isLanguageVersionSupported(getLangOpts())) {
     Inserter.reset(new utils::IncludeInserter(
         Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
     Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
@@ -70,7 +75,7 @@ void MakeSmartPtrCheck::registerPPCallbacks(CompilerInstance &Compiler) {
 }
 
 void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
+  if (!isLanguageVersionSupported(getLangOpts()))
     return;
 
   // Calling make_smart_ptr from within a member function of a type with a

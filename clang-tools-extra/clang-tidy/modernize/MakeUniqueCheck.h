@@ -31,6 +31,11 @@ public:
 
 protected:
   SmartPtrTypeMatcher getSmartPointerTypeMatcher() const override;
+
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
+
+private:
+  const bool RequireCPlusPlus14;
 };
 
 } // namespace modernize
