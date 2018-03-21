@@ -26,7 +26,7 @@ using namespace llvm;
 static void
 initializeUsedResources(InstrDesc &ID, const MCSchedClassDesc &SCDesc,
                         const MCSubtargetInfo &STI,
-                        const ArrayRef<uint64_t> ProcResourceMasks) {
+                        ArrayRef<uint64_t> ProcResourceMasks) {
   const MCSchedModel &SM = STI.getSchedModel();
 
   // Populate resources consumed.

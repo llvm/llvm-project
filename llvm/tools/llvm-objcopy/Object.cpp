@@ -77,11 +77,7 @@ void BinarySectionWriter::visit(const RelocationSection &Sec) {
 }
 
 void BinarySectionWriter::visit(const GnuDebugLinkSection &Sec) {
-  error("Cannot write '" + Sec.Name + "' out to binary");
-}
-
-void BinarySectionWriter::visit(const GroupSection &Sec) {
-  error("Cannot write '" + Sec.Name + "' out to binary");
+  error("Cannot write '.gnu_debuglink' out to binary");
 }
 
 void SectionWriter::visit(const Section &Sec) {
@@ -159,12 +155,6 @@ uint16_t Symbol::getShndx() const {
   llvm_unreachable("Symbol with invalid ShndxType encountered");
 }
 
-void SymbolTableSection::assignIndices() {
-  uint32_t Index = 0;
-  for (auto &Sym : Symbols)
-    Sym->Index = Index++;
-}
-
 void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
                                    SectionBase *DefinedIn, uint64_t Value,
                                    uint8_t Visibility, uint16_t Shndx,
@@ -199,7 +189,6 @@ void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
                      [=](const SymPtr &Sym) { return Sym->DefinedIn == Sec; });
   Size -= (std::end(Symbols) - Iter) * this->EntrySize;
   Symbols.erase(Iter, std::end(Symbols));
-  assignIndices();
 }
 
 void SymbolTableSection::localize(
@@ -214,7 +203,11 @@ void SymbolTableSection::localize(
   std::stable_partition(
       std::begin(Symbols), std::end(Symbols),
       [](const SymPtr &Sym) { return Sym->Binding == STB_LOCAL; });
-  assignIndices();
+
+  // Lastly we fix the symbol indexes.
+  uint32_t Index = 0;
+  for (auto &Sym : Symbols)
+    Sym->Index = Index++;
 }
 
 void SymbolTableSection::initialize(SectionTableRef SecTable) {
@@ -281,10 +274,9 @@ template <class SymTabType>
 void RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
     const SectionBase *Sec) {
   if (Symbols == Sec) {
-    error("Symbol table " + Symbols->Name +
-          " cannot be removed because it is "
-          "referenced by the relocation "
-          "section " +
+    error("Symbol table " + Symbols->Name + " cannot be removed because it is "
+                                            "referenced by the relocation "
+                                            "section " +
           this->Name);
   }
 }
@@ -299,9 +291,9 @@ void RelocSectionWithSymtabBase<SymTabType>::initialize(
           " is not a symbol table"));
 
   if (Info != SHN_UNDEF)
-    setSection(SecTable.getSection(Info, "Info field value " + Twine(Info) +
-                                             " in section " + Name +
-                                             " is invalid"));
+    setSection(SecTable.getSection(Info,
+                                   "Info field value " + Twine(Info) +
+                                       " in section " + Name + " is invalid"));
   else
     setSection(nullptr);
 }
@@ -355,39 +347,10 @@ void DynamicRelocationSection::accept(SectionVisitor &Visitor) const {
 
 void SectionWithStrTab::removeSectionReferences(const SectionBase *Sec) {
   if (StrTab == Sec) {
-    error("String table " + StrTab->Name +
-          " cannot be removed because it is "
-          "referenced by the section " +
+    error("String table " + StrTab->Name + " cannot be removed because it is "
+                                           "referenced by the section " +
           this->Name);
   }
-}
-
-void GroupSection::initialize(SectionTableRef SecTable) {
-  SymTab = SecTable.getSectionOfType<SymbolTableSection>(
-      Link,
-      "Link field value " + Twine(Link) + " in section " + Name + " is invalid",
-      "Link field value " + Twine(Link) + " in section " + Name +
-          " is not a symbol table");
-  Sym = SymTab->getSymbolByIndex(Info);
-  if (!Sym)
-    error("Info field value " + Twine(Info) + " in section " + Name +
-          " is not a valid symbol index");
-  if (Contents.size() % sizeof(ELF::Elf32_Word) || Contents.empty())
-    error("The content of the section " + Name + " is malformed");
-  const ELF::Elf32_Word *Word =
-      reinterpret_cast<const ELF::Elf32_Word *>(Contents.data());
-  const ELF::Elf32_Word *End = Word + Contents.size() / sizeof(ELF::Elf32_Word);
-  FlagWord = *Word++;
-  for (; Word != End; ++Word) {
-    GroupMembers.push_back(
-        SecTable.getSection(*Word, "Group member index " + Twine(*Word) +
-                                       " in section " + Name + " is invalid"));
-  }
-}
-
-void GroupSection::finalize() {
-  this->Info = Sym->Index;
-  this->Link = SymTab->Index;
 }
 
 bool SectionWithStrTab::classof(const SectionBase *S) {
@@ -395,9 +358,9 @@ bool SectionWithStrTab::classof(const SectionBase *S) {
 }
 
 void SectionWithStrTab::initialize(SectionTableRef SecTable) {
-  auto StrTab =
-      SecTable.getSection(Link, "Link field value " + Twine(Link) +
-                                    " in section " + Name + " is invalid");
+  auto StrTab = SecTable.getSection(Link,
+                                    "Link field value " + Twine(Link) +
+                                        " in section " + Name + " is invalid");
   if (StrTab->Type != SHT_STRTAB) {
     error("Link field value " + Twine(Link) + " in section " + Name +
           " is not a string table");
@@ -453,19 +416,6 @@ void GnuDebugLinkSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
-template <class ELFT>
-void ELFSectionWriter<ELFT>::visit(const GroupSection &Sec) {
-  ELF::Elf32_Word *Buf =
-      reinterpret_cast<ELF::Elf32_Word *>(Out.getBufferStart() + Sec.Offset);
-  *Buf++ = Sec.FlagWord;
-  for (const auto *S : Sec.GroupMembers)
-    *Buf++ = S->Index;
-}
-
-void GroupSection::accept(SectionVisitor &Visitor) const {
-  Visitor.visit(*this);
-}
-
 // Returns true IFF a section is wholly inside the range of a segment
 static bool sectionWithinSegment(const SectionBase &Section,
                                  const Segment &Segment) {
@@ -505,7 +455,8 @@ static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
   return A->Index < B->Index;
 }
 
-template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
+template <class ELFT>
+void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
   for (auto &Parent : Obj.segments()) {
     // Every segment will overlap with itself but we don't want a segment to
     // be it's own parent so we avoid that situation.
@@ -571,7 +522,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   PrHdr.OriginalOffset = PrHdr.Offset = PrHdr.VAddr = Ehdr.e_phoff;
   PrHdr.PAddr = 0;
   PrHdr.FileSize = PrHdr.MemSize = Ehdr.e_phentsize * Ehdr.e_phnum;
-  // The spec requires us to naturally align all the fields.
+  // The spec requires us to naturally align all the fields. 
   PrHdr.Align = sizeof(Elf_Addr);
   PrHdr.Index = Index++;
 
@@ -601,9 +552,9 @@ void ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
       }
     } else if (Sym.st_shndx != SHN_UNDEF) {
       DefSection = Obj.sections().getSection(
-          Sym.st_shndx, "Symbol '" + Name +
-                            "' is defined in invalid section with index " +
-                            Twine(Sym.st_shndx));
+          Sym.st_shndx,
+          "Symbol '" + Name + "' is defined in invalid section with index " +
+              Twine(Sym.st_shndx));
     }
 
     SymTab->addSymbol(Name, Sym.getBinding(), Sym.getType(), DefSection,
@@ -672,9 +623,6 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     // Because of this we don't need to mess with the hash tables either.
     Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
     return Obj.addSection<Section>(Data);
-  case SHT_GROUP:
-    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
-    return Obj.addSection<GroupSection>(Data);
   case SHT_DYNSYM:
     Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
     return Obj.addSection<DynamicSymbolTableSection>(Data);

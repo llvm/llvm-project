@@ -88,7 +88,7 @@ public:
   SimpleArray(T *Dat, size_t Cp, size_t Sz = 0)
       : Data(Dat), Size(Sz), Capacity(Cp) {}
   SimpleArray(MemRegionRef A, size_t Cp)
-      : Data(Cp == 0 ? nullptr : A.allocateT<T>(Cp)), Size(0), Capacity(Cp) {}
+      : Data(Cp == 0 ? nullptr : A.allocateT<T>(Cp)), Capacity(Cp) {}
   SimpleArray(const SimpleArray<T> &A) = delete;
 
   SimpleArray(SimpleArray<T> &&A)

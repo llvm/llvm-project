@@ -124,7 +124,7 @@ void ResourceManager::release(ResourceRef RR) {
 }
 
 ResourceStateEvent
-ResourceManager::canBeDispatched(const ArrayRef<uint64_t> Buffers) const {
+ResourceManager::canBeDispatched(ArrayRef<uint64_t> Buffers) const {
   ResourceStateEvent Result = ResourceStateEvent::RS_BUFFER_AVAILABLE;
   for (uint64_t Buffer : Buffers) {
     Result = isBufferAvailable(Buffer);
@@ -134,7 +134,7 @@ ResourceManager::canBeDispatched(const ArrayRef<uint64_t> Buffers) const {
   return Result;
 }
 
-void ResourceManager::reserveBuffers(const ArrayRef<uint64_t> Buffers) {
+void ResourceManager::reserveBuffers(ArrayRef<uint64_t> Buffers) {
   for (const uint64_t R : Buffers) {
     reserveBuffer(R);
     ResourceState &Resource = *Resources[R];
@@ -145,7 +145,7 @@ void ResourceManager::reserveBuffers(const ArrayRef<uint64_t> Buffers) {
   }
 }
 
-void ResourceManager::releaseBuffers(const ArrayRef<uint64_t> Buffers) {
+void ResourceManager::releaseBuffers(ArrayRef<uint64_t> Buffers) {
   for (const uint64_t R : Buffers)
     releaseBuffer(R);
 }
@@ -423,7 +423,7 @@ void Scheduler::updateIssuedQueue() {
 }
 
 void Scheduler::notifyInstructionIssued(
-    unsigned Index, const ArrayRef<std::pair<ResourceRef, unsigned>> &Used) {
+    unsigned Index, ArrayRef<std::pair<ResourceRef, unsigned>> Used) {
   DEBUG({
     dbgs() << "[E] Instruction Issued: " << Index << '\n';
     for (const std::pair<ResourceRef, unsigned> &Resource : Used) {

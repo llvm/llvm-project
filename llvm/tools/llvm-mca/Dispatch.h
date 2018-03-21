@@ -134,7 +134,7 @@ public:
   // For example: if all register files are available, then the response mask
   // is a bitmask of all zeroes. If Instead register file #1 is not available,
   // then the response mask is 0b10.
-  unsigned isAvailable(const llvm::ArrayRef<unsigned> Regs) const;
+  unsigned isAvailable(llvm::ArrayRef<unsigned> Regs) const;
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Writes,
                      unsigned RegID) const;
   void updateOnRead(ReadState &RS, unsigned RegID);

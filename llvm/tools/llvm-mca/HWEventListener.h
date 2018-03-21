@@ -48,8 +48,8 @@ public:
     LastGenericEventType,
   };
 
-  HWInstructionEvent(unsigned Type, unsigned Index)
-      : Type(Type), Index(Index) {}
+  HWInstructionEvent(unsigned type, unsigned index)
+      : Type(type), Index(index) {}
 
   // The event type. The exact meaning depends on the subtarget.
   const unsigned Type;
@@ -61,11 +61,11 @@ class HWInstructionIssuedEvent : public HWInstructionEvent {
 public:
   using ResourceRef = std::pair<uint64_t, uint64_t>;
   HWInstructionIssuedEvent(
-      unsigned Index, const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> UR)
+      unsigned Index, llvm::ArrayRef<std::pair<ResourceRef, unsigned>> UR)
       : HWInstructionEvent(HWInstructionEvent::Issued, Index),
         UsedResources(UR) {}
 
-  const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> UsedResources;
+  llvm::ArrayRef<std::pair<ResourceRef, unsigned>> UsedResources;
 };
 
 // A HWStallEvent represents a pipeline stall caused by the lack of hardware

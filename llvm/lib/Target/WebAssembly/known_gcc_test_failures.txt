@@ -115,12 +115,6 @@ pr46149.C
 pr59470.C
 rtti2.C
 self1.C
-thread_local3.C
-thread_local3g.C
-thread_local4.C
-thread_local4g.C
-thread_local5.C
-thread_local5g.C
 type-generic-1.C
 vbase8-10.C
 vbase8-21.C

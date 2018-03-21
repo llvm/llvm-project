@@ -74,55 +74,55 @@ class Sema;
 
   /// ImplicitConversionKind - The kind of implicit conversion used to
   /// convert an argument to a parameter's type. The enumerator values
-  /// match with Table 9 of (C++ 13.3.3.1.1) and are listed such that
-  /// better conversion kinds have smaller values.
+  /// match with the table titled 'Conversions' in [over.ics.scs] and are listed
+  /// such that better conversion kinds have smaller values.
   enum ImplicitConversionKind {
     /// Identity conversion (no conversion)
     ICK_Identity = 0,
 
-    /// Lvalue-to-rvalue conversion (C++ 4.1)
+    /// Lvalue-to-rvalue conversion (C++ [conv.lval])
     ICK_Lvalue_To_Rvalue,
 
-    /// Array-to-pointer conversion (C++ 4.2)
+    /// Array-to-pointer conversion (C++ [conv.array])
     ICK_Array_To_Pointer,
 
-    /// Function-to-pointer (C++ 4.3)
+    /// Function-to-pointer (C++ [conv.array])
     ICK_Function_To_Pointer,
 
-    /// Function pointer conversion (C++17 4.13)
+    /// Function pointer conversion (C++17 [conv.fctptr])
     ICK_Function_Conversion,
 
-    /// Qualification conversions (C++ 4.4)
+    /// Qualification conversions (C++ [conv.qual])
     ICK_Qualification,
 
-    /// Integral promotions (C++ 4.5)
+    /// Integral promotions (C++ [conv.prom])
     ICK_Integral_Promotion,
 
-    /// Floating point promotions (C++ 4.6)
+    /// Floating point promotions (C++ [conv.fpprom])
     ICK_Floating_Promotion,
 
     /// Complex promotions (Clang extension)
     ICK_Complex_Promotion,
 
-    /// Integral conversions (C++ 4.7)
+    /// Integral conversions (C++ [conv.integral])
     ICK_Integral_Conversion,
 
-    /// Floating point conversions (C++ 4.8)
+    /// Floating point conversions (C++ [conv.double] 
     ICK_Floating_Conversion,
 
     /// Complex conversions (C99 6.3.1.6)
     ICK_Complex_Conversion,
 
-    /// Floating-integral conversions (C++ 4.9)
+    /// Floating-integral conversions (C++ [conv.fpint])
     ICK_Floating_Integral,
 
-    /// Pointer conversions (C++ 4.10)
+    /// Pointer conversions (C++ [conv.ptr])
     ICK_Pointer_Conversion,
 
-    /// Pointer-to-member conversions (C++ 4.11)
+    /// Pointer-to-member conversions (C++ [conv.mem])
     ICK_Pointer_Member,
 
-    /// Boolean conversions (C++ 4.12)
+    /// Boolean conversions (C++ [conv.bool])
     ICK_Boolean_Conversion,
 
     /// Conversions between compatible types in C99

@@ -1440,6 +1440,13 @@ enum {
   NT_GNU_HWCAP = 2,
   NT_GNU_BUILD_ID = 3,
   NT_GNU_GOLD_VERSION = 4,
+  NT_GNU_PROPERTY_TYPE_0 = 5,
+};
+
+// Property types used in GNU_PROPERTY_TYPE_0 notes.
+enum {
+  GNU_PROPERTY_STACK_SIZE = 1,
+  GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
 };
 
 // AMDGPU specific notes.

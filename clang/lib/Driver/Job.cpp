@@ -1,4 +1,4 @@
-//===--- Job.cpp - Command to Execute -------------------------------------===//
+//===- Job.cpp - Command to Execute ---------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,14 +9,14 @@
 
 #include "clang/Driver/Job.h"
 #include "InputInfo.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -24,17 +24,21 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
-using namespace clang::driver;
-using llvm::raw_ostream;
-using llvm::StringRef;
-using llvm::ArrayRef;
+#include <cstddef>
+#include <string>
+#include <system_error>
+#include <utility>
+
+using namespace clang;
+using namespace driver;
 
 Command::Command(const Action &Source, const Tool &Creator,
                  const char *Executable, const ArgStringList &Arguments,
                  ArrayRef<InputInfo> Inputs)
     : Source(Source), Creator(Creator), Executable(Executable),
-      Arguments(Arguments), ResponseFile(nullptr) {
+      Arguments(Arguments) {
   for (const auto &II : Inputs)
     if (II.isFilename())
       InputFilenames.push_back(II.getFilename());
@@ -67,7 +71,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     .Cases("-iframework", "-include-pch", true)
     .Default(false);
   if (IsInclude)
-    return HaveCrashVFS ? false : true;
+    return !HaveCrashVFS;
 
   // The remaining flags are treated as a single argument.
 
@@ -86,7 +90,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
   StringRef FlagRef(Flag);
   IsInclude = FlagRef.startswith("-F") || FlagRef.startswith("-I");
   if (IsInclude)
-    return HaveCrashVFS ? false : true;
+    return !HaveCrashVFS;
   if (FlagRef.startswith("-fmodules-cache-path="))
     return true;
 
@@ -104,7 +108,7 @@ void Command::printArg(raw_ostream &OS, StringRef Arg, bool Quote) {
 
   // Quote and escape. This isn't really complete, but good enough.
   OS << '"';
-  for (const char c : Arg) {
+  for (const auto c : Arg) {
     if (c == '"' || c == '\\' || c == '$')
       OS << '\\';
     OS << c;
@@ -115,7 +119,7 @@ void Command::printArg(raw_ostream &OS, StringRef Arg, bool Quote) {
 void Command::writeResponseFile(raw_ostream &OS) const {
   // In a file list, we only write the set of inputs to the response file
   if (Creator.getResponseFilesSupport() == Tool::RF_FileList) {
-    for (const char *Arg : InputFileList) {
+    for (const auto *Arg : InputFileList) {
       OS << Arg << '\n';
     }
     return;
@@ -124,7 +128,7 @@ void Command::writeResponseFile(raw_ostream &OS) const {
   // In regular response files, we send all arguments to the response file.
   // Wrapping all arguments in double quotes ensures that both Unix tools and
   // Windows tools understand the response file.
-  for (const char *Arg : Arguments) {
+  for (const auto *Arg : Arguments) {
     OS << '"';
 
     for (; *Arg != '\0'; Arg++) {
@@ -150,13 +154,13 @@ void Command::buildArgvForResponseFile(
   }
 
   llvm::StringSet<> Inputs;
-  for (const char *InputName : InputFileList)
+  for (const auto *InputName : InputFileList)
     Inputs.insert(InputName);
   Out.push_back(Executable);
   // In a file list, build args vector ignoring parameters that will go in the
   // response file (elements of the InputFileList vector)
   bool FirstInput = true;
-  for (const char *Arg : Arguments) {
+  for (const auto *Arg : Arguments) {
     if (Inputs.count(Arg) == 0) {
       Out.push_back(Arg);
     } else if (FirstInput) {
@@ -174,6 +178,7 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
                 llvm::SmallVectorImpl<llvm::SmallString<128>> &IncFlags) {
   using namespace llvm;
   using namespace sys;
+
   auto getAbsPath = [](StringRef InInc, SmallVectorImpl<char> &OutInc) -> bool {
     if (path::is_absolute(InInc)) // Nothing to do here...
       return false;
@@ -212,8 +217,8 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
   OS << ' ';
   printArg(OS, Executable, /*Quote=*/true);
 
-  llvm::ArrayRef<const char *> Args = Arguments;
-  llvm::SmallVector<const char *, 128> ArgsRespFile;
+  ArrayRef<const char *> Args = Arguments;
+  SmallVector<const char *, 128> ArgsRespFile;
   if (ResponseFile != nullptr) {
     buildArgvForResponseFile(ArgsRespFile);
     Args = ArrayRef<const char *>(ArgsRespFile).slice(1); // no executable name

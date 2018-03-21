@@ -139,11 +139,11 @@ public:
 
   // Increases the number of used scheduler queue slots of every buffered
   // resource in the Buffers set.
-  void onReservedBuffers(llvm::ArrayRef<unsigned> Buffers);
+  void onReservedBuffers(llvm::ArrayRef<unsigned> Buffers) override;
 
   // Decreases by one the number of used scheduler queue slots of every
   // buffered resource in the Buffers set.
-  void onReleasedBuffers(llvm::ArrayRef<unsigned> Buffers);
+  void onReleasedBuffers(llvm::ArrayRef<unsigned> Buffers) override;
 
   void printView(llvm::raw_ostream &OS) const override {
     printDispatchStalls(OS);

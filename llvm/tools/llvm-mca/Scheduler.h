@@ -339,10 +339,10 @@ public:
 
   // Consume a slot in every buffered resource from array 'Buffers'. Resource
   // units that are dispatch hazards (i.e. BufferSize=0) are marked as reserved.
-  void reserveBuffers(const llvm::ArrayRef<uint64_t> Buffers);
+  void reserveBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
   // Release buffer entries previously allocated by method reserveBuffers.
-  void releaseBuffers(const llvm::ArrayRef<uint64_t> Buffers);
+  void releaseBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
   void reserveResource(uint64_t ResourceID) {
     ResourceState &Resource = *Resources[ResourceID];
@@ -420,7 +420,7 @@ class Scheduler {
 
   void notifyInstructionIssued(
       unsigned Index,
-      const llvm::ArrayRef<std::pair<ResourceRef, unsigned>> &Used);
+      llvm::ArrayRef<std::pair<ResourceRef, unsigned>> Used);
   void notifyInstructionExecuted(unsigned Index);
   void notifyInstructionReady(unsigned Index);
   void notifyResourceAvailable(const ResourceRef &RR);

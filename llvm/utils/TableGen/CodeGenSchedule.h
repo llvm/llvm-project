@@ -33,9 +33,6 @@ using RecIter = std::vector<Record*>::const_iterator;
 using IdxVec = std::vector<unsigned>;
 using IdxIter = std::vector<unsigned>::const_iterator;
 
-void splitSchedReadWrites(const RecVec &RWDefs,
-                          RecVec &WriteDefs, RecVec &ReadDefs);
-
 /// We have two kinds of SchedReadWrites. Explicitly defined and inferred
 /// sequences.  TheDef is nonnull for explicit SchedWrites, but Sequence may or
 /// may not be empty. TheDef is null for inferred sequences, and Sequence must
@@ -339,7 +336,7 @@ public:
     return const_cast<CodeGenSchedModels&>(*this).getSchedRW(Def);
   }
 
-  unsigned getSchedRWIdx(Record *Def, bool IsRead, unsigned After = 0) const;
+  unsigned getSchedRWIdx(Record *Def, bool IsRead) const;
 
   // Return true if the given write record is referenced by a ReadAdvance.
   bool hasReadOfWrite(Record *WriteDef) const;

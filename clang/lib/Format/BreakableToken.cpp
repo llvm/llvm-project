@@ -89,9 +89,9 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
 
   // Do not split before a number followed by a dot: this would be interpreted
   // as a numbered list, which would prevent re-flowing in subsequent passes.
-  static llvm::Regex kNumberedListRegexp = llvm::Regex("^[1-9][0-9]?\\.");
+  static auto *const kNumberedListRegexp = new llvm::Regex("^[1-9][0-9]?\\.");
   if (SpaceOffset != StringRef::npos &&
-      kNumberedListRegexp.match(Text.substr(SpaceOffset).ltrim(Blanks)))
+      kNumberedListRegexp->match(Text.substr(SpaceOffset).ltrim(Blanks)))
     SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
 
   if (SpaceOffset == StringRef::npos ||
@@ -284,10 +284,9 @@ static bool mayReflowContent(StringRef Content) {
   Content = Content.trim(Blanks);
   // Lines starting with '@' commonly have special meaning.
   // Lines starting with '-', '-#', '+' or '*' are bulleted/numbered lists.
-  static const SmallVector<StringRef, 8> kSpecialMeaningPrefixes = {
-      "@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "};
   bool hasSpecialMeaningPrefix = false;
-  for (StringRef Prefix : kSpecialMeaningPrefixes) {
+  for (StringRef Prefix :
+       {"@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
     if (Content.startswith(Prefix)) {
       hasSpecialMeaningPrefix = true;
       break;
@@ -297,9 +296,9 @@ static bool mayReflowContent(StringRef Content) {
   // Numbered lists may also start with a number followed by '.'
   // To avoid issues if a line starts with a number which is actually the end
   // of a previous line, we only consider numbers with up to 2 digits.
-  static llvm::Regex kNumberedListRegexp = llvm::Regex("^[1-9][0-9]?\\. ");
+  static auto *const kNumberedListRegexp = new llvm::Regex("^[1-9][0-9]?\\. ");
   hasSpecialMeaningPrefix =
-      hasSpecialMeaningPrefix || kNumberedListRegexp.match(Content);
+      hasSpecialMeaningPrefix || kNumberedListRegexp->match(Content);
 
   // Simple heuristic for what to reflow: content should contain at least two
   // characters and either the first or second character must be

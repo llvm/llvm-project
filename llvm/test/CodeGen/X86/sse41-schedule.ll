@@ -2853,14 +2853,14 @@ define <4 x i32> @test_pmulld(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_pmulld:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vpmulld %xmm1, %xmm0, %xmm0 # sched: [8:0.67]
-; SKYLAKE-NEXT:    vpmulld (%rdi), %xmm0, %xmm0 # sched: [14:0.67]
+; SKYLAKE-NEXT:    vpmulld %xmm1, %xmm0, %xmm0 # sched: [10:1.00]
+; SKYLAKE-NEXT:    vpmulld (%rdi), %xmm0, %xmm0 # sched: [16:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmulld:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0 # sched: [8:0.67]
-; SKX-NEXT:    vpmulld (%rdi), %xmm0, %xmm0 # sched: [14:0.67]
+; SKX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0 # sched: [10:0.67]
+; SKX-NEXT:    vpmulld (%rdi), %xmm0, %xmm0 # sched: [16:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pmulld:

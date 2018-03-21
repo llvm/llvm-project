@@ -126,7 +126,7 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
   /// Represent the type of SchedCandidate found within a single queue.
   enum CandResult {
     NoCand, NodeOrder, SingleExcess, SingleCritical, SingleMax, MultiPressure,
-    BestCost};
+    BestCost, Weak};
 
   /// Each Scheduling boundary is associated with ready queues. It tracks the
   /// current cycle in whichever direction at has moved, and maintains the state
@@ -206,7 +206,7 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
     void removeReady(SUnit *SU);
 
     SUnit *pickOnlyChoice();
- 
+
     bool isLatencyBound(SUnit *SU) {
       if (CurrCycle >= CriticalPathLength)
         return true;
@@ -245,7 +245,7 @@ public:
 
   void releaseBottomNode(SUnit *SU) override;
 
-  unsigned ReportPackets() {
+  unsigned reportPackets() {
     return Top.ResourceModel->getTotalPackets() +
            Bot.ResourceModel->getTotalPackets();
   }
@@ -259,7 +259,7 @@ protected:
                      SUnit *SU, SchedCandidate &Candidate,
                      RegPressureDelta &Delta, bool verbose);
 
-  CandResult pickNodeFromQueue(ReadyQueue &Q,
+  CandResult pickNodeFromQueue(VLIWSchedBoundary &Zone,
                                const RegPressureTracker &RPTracker,
                                SchedCandidate &Candidate);
 #ifndef NDEBUG

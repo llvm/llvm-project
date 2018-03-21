@@ -128,6 +128,11 @@ static cl::opt<bool>
                        cl::desc("Disable emission of DWARF pub sections."),
                        cl::init(false));
 
+static cl::opt<bool>
+    NoDwarfRangesSection("no-dwarf-ranges-section", cl::Hidden,
+                         cl::desc("Disable emission .debug_ranges section."),
+                         cl::init(false));
+
 enum LinkageNameOption {
   DefaultLinkageNames,
   AllLinkageNames,
@@ -316,6 +321,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   DwarfVersion = DwarfVersion ? DwarfVersion : dwarf::DWARF_VERSION;
 
   UsePubSections = !NoDwarfPubSections;
+  UseRangesSection = !NoDwarfRangesSection;
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -744,7 +750,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // ranges for all subprogram DIEs for mach-o.
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
     if (unsigned NumRanges = TheCU.getRanges().size()) {
-      if (NumRanges > 1)
+      if (NumRanges > 1 && useRangesSection())
         // A DW_AT_low_pc attribute may also be specified in combination with
         // DW_AT_ranges to specify the default base address for use in
         // location lists (see Section 2.6.2) and range lists (see Section
@@ -1905,6 +1911,16 @@ void DwarfDebug::emitDebugARanges() {
 void DwarfDebug::emitDebugRanges() {
   if (CUMap.empty())
     return;
+
+  if (!useRangesSection()) {
+    assert(llvm::all_of(
+               CUMap,
+               [](const decltype(CUMap)::const_iterator::value_type &Pair) {
+                 return Pair.second->getRangeLists().empty();
+               }) &&
+           "No debug ranges expected.");
+    return;
+  }
 
   // Start the dwarf ranges section.
   Asm->OutStreamer->SwitchSection(
