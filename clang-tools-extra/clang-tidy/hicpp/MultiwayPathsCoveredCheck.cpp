@@ -167,7 +167,7 @@ void MultiwayPathsCoveredCheck::handleSwitchWithoutDefault(
       return twoPow(BitfieldDecl->getBitWidthValue(*Result.Context));
     }
 
-    return 0ul;
+    return static_cast<std::size_t>(0);
   }();
 
   // FIXME: Transform the 'switch' into an 'if' for CaseCount == 1.
