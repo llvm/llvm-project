@@ -57,13 +57,6 @@ STATISTIC(NumInstrumentedDetaches, "Number of instrumented detaches");
 STATISTIC(NumInstrumentedDetachExits, "Number of instrumented detach exits");
 STATISTIC(NumInstrumentedSyncs, "Number of instrumented syncs");
 
-static const char *const CsanDetachBaseIdName = "__csan_unit_detach_base_id";
-static const char *const CsanTaskBaseIdName = "__csan_unit_task_base_id";
-static const char *const CsanTaskExitBaseIdName =
-  "__csan_unit_task_exit_base_id";
-static const char *const CsanDetachContinueBaseIdName =
-  "__csan_unit_detach_continue_base_id";
-static const char *const CsanSyncBaseIdName = "__csan_unit_sync_base_id";
 static const char *const CsiUnitObjTableName = "__csi_unit_obj_table";
 static const char *const CsiUnitObjTableArrayName = "__csi_unit_obj_tables";
 
