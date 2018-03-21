@@ -107,6 +107,11 @@ Improvements to clang-tidy
   using ``decltype`` specifiers and lambda with otherwise unutterable
   return types.
 
+- New `hicpp-multiway-paths-covered
+  <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-multiway-paths-covered.html>`_ check
+
+  Checks on ``switch`` and ``if`` - ``else if`` constructs that do not cover all possible code paths.
+
 - New `modernize-use-uncaught-exceptions
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-uncaught-exceptions.html>`_ check
 
