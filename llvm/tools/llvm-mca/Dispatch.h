@@ -302,7 +302,6 @@ public:
   unsigned getTotalRegisterMappingsCreated(unsigned RegFileIndex = 0) const {
     return RAT->getTotalRegisterMappingsCreated(RegFileIndex);
   }
-  void addNewRegisterMapping(WriteState &WS) { RAT->addRegisterMapping(WS); }
 
   void cycleEvent(unsigned Cycle) {
     RCU->cycleEvent();
@@ -319,7 +318,6 @@ public:
     RCU->onInstructionExecuted(TokenID);
   }
 
-  void invalidateRegisterMappings(const Instruction &Inst);
 #ifndef NDEBUG
   void dump() const;
 #endif

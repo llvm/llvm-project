@@ -3412,6 +3412,7 @@ static std::string getGNUNoteTypeName(const uint32_t NT) {
       {ELF::NT_GNU_HWCAP, "NT_GNU_HWCAP (DSO-supplied software HWCAP info)"},
       {ELF::NT_GNU_BUILD_ID, "NT_GNU_BUILD_ID (unique build ID bitstring)"},
       {ELF::NT_GNU_GOLD_VERSION, "NT_GNU_GOLD_VERSION (gold version)"},
+      {ELF::NT_GNU_PROPERTY_TYPE_0, "NT_GNU_PROPERTY_TYPE_0 (property note)"},
   };
 
   for (const auto &Note : Notes)
@@ -3476,8 +3477,35 @@ static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
 }
 
 template <typename ELFT>
+static void printGNUProperty(raw_ostream &OS, uint32_t Type, uint32_t DataSize,
+                             ArrayRef<uint8_t> Data) {
+  switch (Type) {
+  default:
+    OS << format("    <application-specific type 0x%x>\n", Type);
+    return;
+  case GNU_PROPERTY_STACK_SIZE: {
+    OS << "    stack size: ";
+    if (DataSize == sizeof(typename ELFT::uint))
+      OS << format("0x%x\n",
+                   (uint64_t)(*(const typename ELFT::Addr *)Data.data()));
+    else
+      OS << format("<corrupt length: 0x%x>\n", DataSize);
+    break;
+  }
+  case GNU_PROPERTY_NO_COPY_ON_PROTECTED:
+    OS << "    no copy on protected";
+    if (DataSize)
+      OS << format(" <corrupt length: 0x%x>", DataSize);
+    OS << "\n";
+    break;
+  }
+}
+
+template <typename ELFT>
 static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
                          ArrayRef<typename ELFT::Word> Words, size_t Size) {
+  using Elf_Word = typename ELFT::Word;
+
   switch (NoteType) {
   default:
     return;
@@ -3509,8 +3537,31 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
     OS << "    Version: "
        << StringRef(reinterpret_cast<const char *>(Words.data()), Size);
     break;
-  }
+  case ELF::NT_GNU_PROPERTY_TYPE_0:
+    OS << "    Properties:";
 
+    ArrayRef<uint8_t> Arr(reinterpret_cast<const uint8_t *>(Words.data()),
+                          Size);
+    while (Arr.size() >= 8) {
+      uint32_t Type = *reinterpret_cast<const Elf_Word *>(Arr.data());
+      uint32_t DataSize = *reinterpret_cast<const Elf_Word *>(Arr.data() + 4);
+      Arr = Arr.drop_front(8);
+
+      // Take padding size into account if present.
+      uint64_t PaddedSize = alignTo(DataSize, sizeof(typename ELFT::uint));
+      if (Arr.size() < PaddedSize) {
+        OS << format("    <corrupt type (0x%x) datasz: 0x%x>\n", Type,
+                     DataSize);
+        break;
+      }
+      printGNUProperty<ELFT>(OS, Type, DataSize, Arr.take_front(PaddedSize));
+      Arr = Arr.drop_front(PaddedSize);
+    }
+
+    if (!Arr.empty())
+      OS << "    <corrupted GNU_PROPERTY_TYPE_0>";
+    break;
+  }
   OS << '\n';
 }
 

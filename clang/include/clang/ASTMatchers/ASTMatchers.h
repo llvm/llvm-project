@@ -693,7 +693,7 @@ AST_POLYMORPHIC_MATCHER_P(
 ///    varDecl(hasInitializer(cxxConstructExpr()))
 /// \endcode
 /// only match the declarations for b and c.
-AST_MATCHER_P(Expr, ignoringImplicit, ast_matchers::internal::Matcher<Expr>,
+AST_MATCHER_P(Expr, ignoringImplicit, internal::Matcher<Expr>,
               InnerMatcher) {
   return InnerMatcher.matches(*Node.IgnoreImplicit(), Finder, Builder);
 }

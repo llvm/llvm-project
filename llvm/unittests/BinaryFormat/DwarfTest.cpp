@@ -9,6 +9,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -192,4 +193,14 @@ TEST(DwarfTest, FixedFormSizes) {
   EXPECT_EQ(*RefSize, 8);
 }
 
+TEST(DwarfTest, format_provider) {
+  EXPECT_EQ("DW_AT_name", formatv("{0}", DW_AT_name).str());
+  EXPECT_EQ("DW_AT_unknown_3fff", formatv("{0}", DW_AT_hi_user).str());
+  EXPECT_EQ("DW_FORM_addr", formatv("{0}", DW_FORM_addr).str());
+  EXPECT_EQ("DW_FORM_unknown_1f00", formatv("{0}", DW_FORM_lo_user).str());
+  EXPECT_EQ("DW_IDX_compile_unit", formatv("{0}", DW_IDX_compile_unit).str());
+  EXPECT_EQ("DW_IDX_unknown_3fff", formatv("{0}", DW_IDX_hi_user).str());
+  EXPECT_EQ("DW_TAG_compile_unit", formatv("{0}", DW_TAG_compile_unit).str());
+  EXPECT_EQ("DW_TAG_unknown_ffff", formatv("{0}", DW_TAG_hi_user).str());
+}
 } // end namespace

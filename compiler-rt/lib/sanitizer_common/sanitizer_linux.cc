@@ -102,16 +102,14 @@ extern struct ps_strings *__ps_strings;
 #if SANITIZER_SOLARIS
 #include <stdlib.h>
 #include <thread.h>
+#define environ _environ
 #endif
 
 #if !SANITIZER_ANDROID
 #include <sys/signal.h>
 #endif
 
-#if SANITIZER_SOLARIS
-#define environ _environ
-#endif
-extern char **_environ;
+extern char **environ;
 
 #if SANITIZER_LINUX
 // <linux/time.h>

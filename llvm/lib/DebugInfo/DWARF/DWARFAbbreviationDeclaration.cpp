@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <cstdint>
@@ -126,26 +127,11 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data,
 }
 
 void DWARFAbbreviationDeclaration::dump(raw_ostream &OS) const {
-  auto tagString = TagString(getTag());
   OS << '[' << getCode() << "] ";
-  if (!tagString.empty())
-    OS << tagString;
-  else
-    OS << format("DW_TAG_Unknown_%x", getTag());
+  OS << formatv("{0}", getTag());
   OS << "\tDW_CHILDREN_" << (hasChildren() ? "yes" : "no") << '\n';
   for (const AttributeSpec &Spec : AttributeSpecs) {
-    OS << '\t';
-    auto attrString = AttributeString(Spec.Attr);
-    if (!attrString.empty())
-      OS << attrString;
-    else
-      OS << format("DW_AT_Unknown_%x", Spec.Attr);
-    OS << '\t';
-    auto formString = FormEncodingString(Spec.Form);
-    if (!formString.empty())
-      OS << formString;
-    else
-      OS << format("DW_FORM_Unknown_%x", Spec.Form);
+    OS << formatv("\t{0}\t{1}", Spec.Attr, Spec.Form);
     if (Spec.isImplicitConst())
       OS << '\t' << Spec.getImplicitConstValue();
     OS << '\n';

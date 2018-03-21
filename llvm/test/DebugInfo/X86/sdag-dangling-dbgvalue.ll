@@ -50,8 +50,8 @@
 ; CHECK:  ![[BAR3:.*]] = !DILocalVariable(name: "foo3"
 ; CHECK:  ![[FOO4:.*]] = !DILocalVariable(name: "foo4"
 ; CHECK:  ![[BAR4:.*]] = !DILocalVariable(name: "bar4"
-; CHECK:  ![[FOO5:.*]] = !DILocalVariable(name: "bar5"
-; CHECK:  ![[BAR5:.*]] = !DILocalVariable(name: "foo5"
+; CHECK:  ![[BAR5:.*]] = !DILocalVariable(name: "bar5"
+; CHECK:  ![[FOO5:.*]] = !DILocalVariable(name: "foo5"
 
 
 source_filename = "sdag-dangling-dbgvalue.c"
@@ -74,13 +74,11 @@ entry1:
   ret i32 ptrtoint (%struct.SS* @S to i32), !dbg !25
 }
 
-; Verify that the def comes before the debug-use for bar2.
-; TODO: Currently dbg.value for foo2 is dropped. Seems to be a bug. The
-;       SelectionDAGBuilder should support several dangling dbg.value for the
-;       same value.
+; Verify that the def comes before the debug-use for foo2 and bar2.
 define i32 @test2() local_unnamed_addr #0 !dbg !26 {
 ; CHECK-LABEL: bb.0.entry2
 ; CHECK-NEXT:    [[REG2:%[0-9]+]]:gr64 =
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG2]], debug-use $noreg, ![[FOO2]], !DIExpression()
 ; CHECK-NEXT:    DBG_VALUE debug-use [[REG2]], debug-use $noreg, ![[BAR2]], !DIExpression()
 entry2:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !28, metadata !DIExpression()), !dbg !30
@@ -88,13 +86,11 @@ entry2:
   ret i32 add (i32 ptrtoint (%struct.SS* @S to i32), i32 ptrtoint (%struct.SS* @S to i32)), !dbg !32
 }
 
-; Verify that the def comes before the debug-use for foo3.
-; TODO: Currently dbg.value for bar3 is dropped. Seems to be a bug. The
-;       SelectionDAGBuilder should support several dangling dbg.value for the
-;       same value.
+; Verify that the def comes before the debug-use for foo3 and bar3.
 define i32 @test3() local_unnamed_addr #0 !dbg !33 {
 ; CHECK-LABEL: bb.0.entry3
 ; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr64 =
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG3]], debug-use $noreg, ![[BAR3]], !DIExpression()
 ; CHECK-NEXT:    DBG_VALUE debug-use [[REG3]], debug-use $noreg, ![[FOO3]], !DIExpression()
 entry3:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !36, metadata !DIExpression()), !dbg !38
@@ -118,15 +114,13 @@ entry4:
 }
 
 ; Verify that we do not get a DBG_VALUE that maps foo5 to @S here.
-; TODO: At the moment we do not get any DBG_VALUE at all here. If
-;       SelectionDAGBuilder should support several dangling dbg.value for the
-;       same value it would be possible to at least get a DBG_VALUE for
-;       bar5.
 ; TODO: foo5 is set to null, and it is not really used. Just like in test1 it
 ;       can be discussed if there should be a DBG_VALUE for foo5 here.
 define i32 @test5() local_unnamed_addr #0 !dbg !47 {
 ; CHECK-LABEL: bb.0.entry5:
-; CHECK-NOT:     DBG_VALUE
+; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 =
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG5]], debug-use $noreg, ![[BAR5]], !DIExpression()
+; CHECK-NOT:     DBG_VALUE debug-use [[REG5]], debug-use $noreg, ![[FOO5]], !DIExpression()
 ; CHECK:         RET
 entry5:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !49, metadata !DIExpression()), !dbg !51
