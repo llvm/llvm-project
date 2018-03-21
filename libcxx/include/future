@@ -2021,7 +2021,7 @@ public:
               class = typename enable_if
               <
                   !is_same<
-                      typename decay<_Fp>::type, 
+                      typename __uncvref<_Fp>::type, 
                       packaged_task
                       >::value
                   >::type
@@ -2032,7 +2032,7 @@ public:
               class = typename enable_if
               <
                   !is_same<
-                      typename decay<_Fp>::type, 
+                      typename __uncvref<_Fp>::type, 
                       packaged_task
                       >::value
                   >::type
@@ -2150,7 +2150,7 @@ public:
               class = typename enable_if
               <
                   !is_same<
-                      typename decay<_Fp>::type, 
+                      typename __uncvref<_Fp>::type, 
                       packaged_task
                       >::value
                   >::type
@@ -2161,7 +2161,7 @@ public:
               class = typename enable_if
               <
                   !is_same<
-                      typename decay<_Fp>::type, 
+                      typename __uncvref<_Fp>::type, 
                       packaged_task
                       >::value
                   >::type

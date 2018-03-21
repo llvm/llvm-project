@@ -141,10 +141,14 @@ public:
   /// If none is specified, abort (GCC-compatible behaviour).
   std::string OverflowHandler;
 
+  /// The module currently being compiled as speficied by -fmodule-name.
+  std::string ModuleName;
+
   /// \brief The name of the current module, of which the main source file
   /// is a part. If CompilingModule is set, we are compiling the interface
   /// of this module, otherwise we are compiling an implementation file of
-  /// it.
+  /// it. This starts as ModuleName in case -fmodule-name is provided and
+  /// changes during compilation to reflect the current module.
   std::string CurrentModule;
 
   /// \brief The names of any features to enable in module 'requires' decls

@@ -126,6 +126,22 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 namespace {
+class StripThreadLocal final : public ModulePass {
+  // The default thread model for wasm is single, where thread-local variables
+  // are identical to regular globals and should be treated the same. So this
+  // pass just converts all GlobalVariables to NotThreadLocal
+  static char ID;
+
+ public:
+  StripThreadLocal() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    for (auto &GV : M.globals())
+      GV.setThreadLocalMode(GlobalValue::ThreadLocalMode::NotThreadLocal);
+    return true;
+  }
+};
+char StripThreadLocal::ID = 0;
+
 /// WebAssembly Code Generator Pass Configuration Options.
 class WebAssemblyPassConfig final : public TargetPassConfig {
 public:
@@ -166,13 +182,15 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single)
+  if (TM->Options.ThreadModel == ThreadModel::Single) {
     // In "single" mode, atomics get lowered to non-atomics.
     addPass(createLowerAtomicPass());
-  else
+    addPass(new StripThreadLocal());
+  } else {
     // Expand some atomic operations. WebAssemblyTargetLowering has hooks which
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass());
+  }
 
   // Lower .llvm.global_dtors into .llvm_global_ctors with __cxa_atexit calls.
   addPass(createWebAssemblyLowerGlobalDtors());

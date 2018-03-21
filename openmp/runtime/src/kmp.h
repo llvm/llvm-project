@@ -3813,6 +3813,18 @@ KMP_EXPORT void KMPC_CONVENTION kmpc_set_library(int);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_defaults(char const *);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_disp_num_buffers(int);
 
+#if OMP_50_ENABLED
+enum kmp_target_offload_kind {
+  tgt_disabled = 0,
+  tgt_default = 1,
+  tgt_mandatory = 2
+};
+typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
+// Set via OMP_TARGET_OFFLOAD if specified, defaults to tgt_default otherwise
+extern kmp_target_offload_kind_t __kmp_target_offload;
+extern int __kmpc_get_target_offload();
+#endif
+
 #ifdef __cplusplus
 }
 #endif

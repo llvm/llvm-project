@@ -15,6 +15,7 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -77,39 +78,42 @@ struct InstRegexOp : public SetTheory::Operator {
 
   void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
-    SmallVector<std::pair<StringRef, Optional<Regex>>, 4> RegexList;
     for (Init *Arg : make_range(Expr->arg_begin(), Expr->arg_end())) {
       StringInit *SI = dyn_cast<StringInit>(Arg);
       if (!SI)
         PrintFatalError(Loc, "instregex requires pattern string: " +
                                  Expr->getAsString());
+      StringRef Original = SI->getValue();
+
       // Extract a prefix that we can binary search on.
       static const char RegexMetachars[] = "()^$|*+?.[]\\{}";
-      auto FirstMeta = SI->getValue().find_first_of(RegexMetachars);
+      auto FirstMeta = Original.find_first_of(RegexMetachars);
+
       // Look for top-level | or ?. We cannot optimize them to binary search.
-      if (removeParens(SI->getValue()).find_first_of("|?") != std::string::npos)
+      if (removeParens(Original).find_first_of("|?") != std::string::npos)
         FirstMeta = 0;
-      StringRef Prefix = SI->getValue().substr(0, FirstMeta);
-      std::string pat = SI->getValue().substr(FirstMeta);
-      if (pat.empty()) {
-        RegexList.push_back(std::make_pair(Prefix, None));
-        continue;
+
+      Optional<Regex> Regexpr = None;
+      StringRef Prefix = Original.substr(0, FirstMeta);
+      std::string pat = Original.substr(FirstMeta);
+      if (!pat.empty()) {
+        // For the rest use a python-style prefix match.
+        if (pat[0] != '^') {
+          pat.insert(0, "^(");
+          pat.insert(pat.end(), ')');
+        }
+        Regexpr = Regex(pat);
       }
-      // For the rest use a python-style prefix match.
-      if (pat[0] != '^') {
-        pat.insert(0, "^(");
-        pat.insert(pat.end(), ')');
-      }
-      RegexList.push_back(std::make_pair(Prefix, Regex(pat)));
-    }
-    for (auto &R : RegexList) {
+
       unsigned NumGeneric = Target.getNumFixedInstructions();
+      ArrayRef<const CodeGenInstruction *> Generics =
+          Target.getInstructionsByEnumValue().slice(0, NumGeneric + 1);
+
       // The generic opcodes are unsorted, handle them manually.
-      for (auto *Inst :
-           Target.getInstructionsByEnumValue().slice(0, NumGeneric + 1)) {
-        if (Inst->TheDef->getName().startswith(R.first) &&
-            (!R.second ||
-             R.second->match(Inst->TheDef->getName().substr(R.first.size()))))
+      for (auto *Inst : Generics) {
+        StringRef InstName = Inst->TheDef->getName();
+        if (InstName.startswith(Prefix) &&
+            (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))))
           Elts.insert(Inst->TheDef);
       }
 
@@ -128,13 +132,13 @@ struct InstRegexOp : public SetTheory::Operator {
         }
       };
       auto Range = std::equal_range(Instructions.begin(), Instructions.end(),
-                                    R.first, Comp());
+                                    Prefix, Comp());
 
       // For this range we know that it starts with the prefix. Check if there's
       // a regex that needs to be checked.
       for (auto *Inst : make_range(Range)) {
-        if (!R.second ||
-            R.second->match(Inst->TheDef->getName().substr(R.first.size())))
+        StringRef InstName = Inst->TheDef->getName();
+        if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))
           Elts.insert(Inst->TheDef);
       }
     }
@@ -401,11 +405,9 @@ std::string CodeGenSchedModels::genRWName(ArrayRef<unsigned> Seq, bool IsRead) {
   return Name;
 }
 
-unsigned CodeGenSchedModels::getSchedRWIdx(Record *Def, bool IsRead,
-                                           unsigned After) const {
+unsigned CodeGenSchedModels::getSchedRWIdx(Record *Def, bool IsRead) const {
   const std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
-  assert(After < RWVec.size() && "start position out of bounds");
-  for (std::vector<CodeGenSchedRW>::const_iterator I = RWVec.begin() + After,
+  for (std::vector<CodeGenSchedRW>::const_iterator I = RWVec.begin(),
          E = RWVec.end(); I != E; ++I) {
     if (I->TheDef == Def)
       return I - RWVec.begin();
@@ -427,10 +429,8 @@ bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
   return false;
 }
 
-namespace llvm {
-
-void splitSchedReadWrites(const RecVec &RWDefs,
-                          RecVec &WriteDefs, RecVec &ReadDefs) {
+static void splitSchedReadWrites(const RecVec &RWDefs,
+                                 RecVec &WriteDefs, RecVec &ReadDefs) {
   for (Record *RWDef : RWDefs) {
     if (RWDef->isSubClassOf("SchedWrite"))
       WriteDefs.push_back(RWDef);
@@ -440,8 +440,6 @@ void splitSchedReadWrites(const RecVec &RWDefs,
     }
   }
 }
-
-} // end namespace llvm
 
 // Split the SchedReadWrites defs and call findRWs for each list.
 void CodeGenSchedModels::findRWs(const RecVec &RWDefs,
@@ -740,7 +738,7 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
   // intersects with an existing class via a previous InstRWDef. Instrs that do
   // not intersect with an existing class refer back to their former class as
   // determined from ItinDef or SchedRW.
-  SmallVector<std::pair<unsigned, SmallVector<Record *, 8>>, 4> ClassInstrs;
+  SmallMapVector<unsigned, SmallVector<Record *, 8>, 4> ClassInstrs;
   // Sort Instrs into sets.
   const RecVec *InstDefs = Sets.expand(InstRWDef);
   if (InstDefs->empty())
@@ -751,22 +749,13 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
     if (Pos == InstrClassMap.end())
       PrintFatalError(InstDef->getLoc(), "No sched class for instruction.");
     unsigned SCIdx = Pos->second;
-    unsigned CIdx = 0, CEnd = ClassInstrs.size();
-    for (; CIdx != CEnd; ++CIdx) {
-      if (ClassInstrs[CIdx].first == SCIdx)
-        break;
-    }
-    if (CIdx == CEnd) {
-      ClassInstrs.resize(CEnd + 1);
-      ClassInstrs[CIdx].first = SCIdx;
-    }
-    ClassInstrs[CIdx].second.push_back(InstDef);
+    ClassInstrs[SCIdx].push_back(InstDef);
   }
   // For each set of Instrs, create a new class if necessary, and map or remap
   // the Instrs to it.
-  for (unsigned CIdx = 0, CEnd = ClassInstrs.size(); CIdx != CEnd; ++CIdx) {
-    unsigned OldSCIdx = ClassInstrs[CIdx].first;
-    ArrayRef<Record*> InstDefs = ClassInstrs[CIdx].second;
+  for (auto &Entry : ClassInstrs) {
+    unsigned OldSCIdx = Entry.first;
+    ArrayRef<Record*> InstDefs = Entry.second;
     // If the all instrs in the current class are accounted for, then leave
     // them mapped to their old class.
     if (OldSCIdx) {

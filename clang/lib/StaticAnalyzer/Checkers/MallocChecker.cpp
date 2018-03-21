@@ -2829,6 +2829,19 @@ static SymbolRef findFailedReallocSymbol(ProgramStateRef currState,
   return nullptr;
 }
 
+static bool isReferenceCountingPointerDestructor(const CXXDestructorDecl *DD) {
+  if (const IdentifierInfo *II = DD->getParent()->getIdentifier()) {
+    StringRef N = II->getName();
+    if (N.contains_lower("ptr") || N.contains_lower("pointer")) {
+      if (N.contains_lower("ref") || N.contains_lower("cnt") ||
+          N.contains_lower("intrusive") || N.contains_lower("shared")) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
     const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
     BugReport &BR) {
@@ -2882,21 +2895,33 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
       StackHint = new StackHintGeneratorForSymbol(Sym,
                                              "Returning; memory was released");
 
-      // See if we're releasing memory while inlining a destructor (or one of
-      // its callees). If so, enable the atomic-related suppression within that
-      // destructor (and all of its callees), which would kick in while visiting
-      // other nodes (the visit order is from the bug to the graph root).
+      // See if we're releasing memory while inlining a destructor
+      // (or one of its callees). This turns on various common
+      // false positive suppressions.
+      bool FoundAnyDestructor = false;
       for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
-        if (isa<CXXDestructorDecl>(LC->getDecl())) {
-          assert(!ReleaseDestructorLC &&
-                 "There can be only one release point!");
-          ReleaseDestructorLC = LC->getCurrentStackFrame();
-          // It is unlikely that releasing memory is delegated to a destructor
-          // inside a destructor of a shared pointer, because it's fairly hard
-          // to pass the information that the pointer indeed needs to be
-          // released into it. So we're only interested in the innermost
-          // destructor.
-          break;
+        if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
+          if (isReferenceCountingPointerDestructor(DD)) {
+            // This immediately looks like a reference-counting destructor.
+            // We're bad at guessing the original reference count of the object,
+            // so suppress the report for now.
+            BR.markInvalid(getTag(), DD);
+          } else if (!FoundAnyDestructor) {
+            assert(!ReleaseDestructorLC &&
+                   "There can be only one release point!");
+            // Suspect that it's a reference counting pointer destructor.
+            // On one of the next nodes might find out that it has atomic
+            // reference counting operations within it (see the code above),
+            // and if so, we'd conclude that it likely is a reference counting
+            // pointer destructor.
+            ReleaseDestructorLC = LC->getCurrentStackFrame();
+            // It is unlikely that releasing memory is delegated to a destructor
+            // inside a destructor of a shared pointer, because it's fairly hard
+            // to pass the information that the pointer indeed needs to be
+            // released into it. So we're only interested in the innermost
+            // destructor.
+            FoundAnyDestructor = true;
+          }
         }
       }
     } else if (isRelinquished(RS, RSPrev, S)) {

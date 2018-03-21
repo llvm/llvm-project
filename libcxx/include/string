@@ -658,10 +658,12 @@ public:
     typedef typename __alloc_traits::pointer             pointer;
     typedef typename __alloc_traits::const_pointer       const_pointer;
 
-    static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
-    static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+    static_assert((!is_array<value_type>::value), "Character type of basic_string must not be an array");
+    static_assert(( is_standard_layout<value_type>::value), "Character type of basic_string must be standard-layout");
+    static_assert(( is_trivial<value_type>::value), "Character type of basic_string must be trivial");
+    static_assert(( is_same<_CharT, typename traits_type::char_type>::value),
                   "traits_type::char_type must be the same type as CharT");
-    static_assert((is_same<typename allocator_type::value_type, value_type>::value),
+    static_assert(( is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 #if defined(_LIBCPP_RAW_ITERATORS)
     typedef pointer                                      iterator;
