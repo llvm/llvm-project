@@ -361,7 +361,7 @@ public:
         : Prev(P), AttrDecl(D) {}
   };
 
-  SExprBuilder(til::MemRegionRef A) : Arena(A), CurrentBB() {
+  SExprBuilder(til::MemRegionRef A) : Arena(A) {
     // FIXME: we don't always have a self-variable.
     SelfVar = new (Arena) til::Variable(nullptr);
     SelfVar->setKind(til::Variable::VK_SFun);

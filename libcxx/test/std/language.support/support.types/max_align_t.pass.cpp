@@ -10,18 +10,21 @@
 #include <cstddef>
 #include <type_traits>
 
-// max_align_t is a POD type whose alignment requirement is at least as
-//   great as that of every scalar type
+// max_align_t is a trivial standard-layout type whose alignment requirement 
+//   is at least as great as that of every scalar type
 
 #include <stdio.h>
 #include "test_macros.h"
 
 int main()
 {
+
 #if TEST_STD_VER > 17
 //  P0767
     static_assert(std::is_trivial<std::max_align_t>::value,
                   "std::is_trivial<std::max_align_t>::value");
+    static_assert(std::is_standard_layout<std::max_align_t>::value,
+                  "std::is_standard_layout<std::max_align_t>::value");
 #else
     static_assert(std::is_pod<std::max_align_t>::value,
                   "std::is_pod<std::max_align_t>::value");

@@ -5690,18 +5690,6 @@ void ARMABIInfo::setCCs() {
   llvm::CallingConv::ID abiCC = getABIDefaultCC();
   if (abiCC != getLLVMDefaultCC())
     RuntimeCC = abiCC;
-
-  // AAPCS apparently requires runtime support functions to be soft-float, but
-  // that's almost certainly for historic reasons (Thumb1 not supporting VFP
-  // most likely). It's more convenient for AAPCS16_VFP to be hard-float.
-
-  // The Run-time ABI for the ARM Architecture section 4.1.2 requires
-  // AEABI-complying FP helper functions to use the base AAPCS.
-  // These AEABI functions are expanded in the ARM llvm backend, all the builtin
-  // support functions emitted by clang such as the _Complex helpers follow the
-  // abiCC.
-  if (abiCC != getLLVMDefaultCC())
-      BuiltinCC = abiCC;
 }
 
 ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,

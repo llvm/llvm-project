@@ -48,6 +48,8 @@ int main()
 //   P0767
     static_assert(std::is_trivial<max_align_t>::value,
                   "std::is_trivial<max_align_t>::value");
+    static_assert(std::is_standard_layout<max_align_t>::value,
+                  "std::is_standard_layout<max_align_t>::value");
 #else
     static_assert(std::is_pod<max_align_t>::value,
                   "std::is_pod<max_align_t>::value");
