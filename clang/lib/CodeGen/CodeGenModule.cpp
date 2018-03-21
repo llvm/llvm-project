@@ -123,7 +123,6 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
   ASTAllocaAddressSpace = getTargetCodeGenInfo().getASTAllocaAddressSpace();
 
   RuntimeCC = getTargetCodeGenInfo().getABIInfo().getRuntimeCC();
-  BuiltinCC = getTargetCodeGenInfo().getABIInfo().getBuiltinCC();
 
   if (LangOpts.ObjC1)
     createObjCRuntime();
@@ -2629,6 +2628,7 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
           F->setLinkage(llvm::GlobalValue::ExternalLinkage);
         }
       }
+      setDSOLocal(F);
     }
   }
 
@@ -2645,7 +2645,7 @@ CodeGenModule::CreateBuiltinFunction(llvm::FunctionType *FTy, StringRef Name,
                               /*DontDefer=*/false, /*IsThunk=*/false, ExtraAttrs);
   if (auto *F = dyn_cast<llvm::Function>(C))
     if (F->empty())
-      F->setCallingConv(getBuiltinCC());
+      F->setCallingConv(getRuntimeCC());
   return C;
 }
 
@@ -2953,7 +2953,10 @@ llvm::Constant *CodeGenModule::GetAddrOfGlobalVar(const VarDecl *D,
 llvm::Constant *
 CodeGenModule::CreateRuntimeVariable(llvm::Type *Ty,
                                      StringRef Name) {
-  return GetOrCreateLLVMGlobal(Name, llvm::PointerType::getUnqual(Ty), nullptr);
+  auto *Ret =
+      GetOrCreateLLVMGlobal(Name, llvm::PointerType::getUnqual(Ty), nullptr);
+  setDSOLocal(cast<llvm::GlobalValue>(Ret->stripPointerCasts()));
+  return Ret;
 }
 
 void CodeGenModule::EmitTentativeDefinition(const VarDecl *D) {
@@ -4015,6 +4018,7 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
     assert(CGM.supportsCOMDAT() && "Only COFF uses weak string literals");
     GV->setComdat(M.getOrInsertComdat(GV->getName()));
   }
+  CGM.setDSOLocal(GV);
 
   return GV;
 }

@@ -1,4 +1,4 @@
-//===--- ToolChain.cpp - Collections of tools for one platform ------------===//
+//===- ToolChain.cpp - Collections of tools for one platform --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,33 +8,45 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
-#include "ToolChains/CommonArgs.h"
+#include "InputInfo.h"
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Clang.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/VersionTuple.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <cassert>
+#include <cstddef>
+#include <cstring>
+#include <string>
 
-using namespace clang::driver;
-using namespace clang::driver::tools;
 using namespace clang;
+using namespace driver;
+using namespace tools;
 using namespace llvm;
 using namespace llvm::opt;
 
@@ -74,8 +86,7 @@ static ToolChain::RTTIMode CalculateRTTIMode(const ArgList &Args,
 ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
-      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
-      EffectiveTriple() {
+      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
   std::string CandidateLibPath = getArchSpecificLibPath();
   if (getVFS().exists(CandidateLibPath))
     getFilePaths().push_back(CandidateLibPath);
@@ -87,8 +98,7 @@ void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {
     EffectiveTriple.setEnvironment(Env);
 }
 
-ToolChain::~ToolChain() {
-}
+ToolChain::~ToolChain() = default;
 
 vfs::FileSystem &ToolChain::getVFS() const { return getDriver().getVFS(); }
 
@@ -115,12 +125,15 @@ const XRayArgs& ToolChain::getXRayArgs() const {
 }
 
 namespace {
+
 struct DriverSuffix {
   const char *Suffix;
   const char *ModeFlag;
 };
 
-const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
+} // namespace
+
+static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
   // A list of known driver suffixes. Suffixes are compared against the
   // program name in order. If there is a match, the frontend type is updated as
   // necessary by applying the ModeFlag.
@@ -151,7 +164,7 @@ const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
 
 /// Normalize the program name from argv[0] by stripping the file extension if
 /// present and lower-casing the string on Windows.
-std::string normalizeProgramName(llvm::StringRef Argv0) {
+static std::string normalizeProgramName(llvm::StringRef Argv0) {
   std::string ProgName = llvm::sys::path::stem(Argv0);
 #ifdef LLVM_ON_WIN32
   // Transform to lowercase for case insensitive file systems.
@@ -160,7 +173,7 @@ std::string normalizeProgramName(llvm::StringRef Argv0) {
   return ProgName;
 }
 
-const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
+static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
   // Try to infer frontend type and default target from the program name by
   // comparing it against DriverSuffixes in order.
 
@@ -185,7 +198,6 @@ const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
   }
   return DS;
 }
-} // anonymous namespace
 
 ParsedClangName
 ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
@@ -193,7 +205,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   size_t SuffixPos;
   const DriverSuffix *DS = parseDriverSuffix(ProgName, SuffixPos);
   if (!DS)
-    return ParsedClangName();
+    return {};
   size_t SuffixEnd = SuffixPos + strlen(DS->Suffix);
 
   size_t LastComponent = ProgName.rfind('-', SuffixPos);
@@ -589,7 +601,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
       // CollectArgsForIntegratedAssembler but we can't change the ArchName at
       // that point. There is no assembler equivalent of -mno-thumb, -marm, or
       // -mno-arm.
-      for (const Arg *A :
+      for (const auto *A :
            Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
         for (StringRef Value : A->getValues()) {
           if (Value == "-mthumb")
@@ -707,7 +719,7 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
 /*static*/ void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
                                              ArrayRef<StringRef> Paths) {
-  for (StringRef Path : Paths) {
+  for (const auto Path : Paths) {
     CC1Args.push_back("-internal-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(Path));
   }
@@ -789,7 +801,9 @@ bool ToolChain::AddFastMathRuntimeIfAvailable(const ArgList &Args,
 SanitizerMask ToolChain::getSupportedSanitizers() const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
+
   using namespace SanitizerKind;
+
   SanitizerMask Res = (Undefined & ~Vptr & ~Function) | (CFI & ~CFIICall) |
                       CFICastStrict | UnsignedIntegerOverflow | Nullability |
                       LocalBounds;
@@ -871,7 +885,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
   bool Modified = false;
 
   // Handle -Xopenmp-target flags
-  for (Arg *A : Args) {
+  for (auto *A : Args) {
     // Exclude flags which may only apply to the host toolchain.
     // Do not exclude flags when the host triple (AuxTriple)
     // matches the current toolchain triple. If it is not present

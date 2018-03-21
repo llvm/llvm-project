@@ -1,4 +1,4 @@
-//== AnalysisDeclContext.cpp - Analysis context for Path Sens analysis -*- C++ -*-//
+//===- AnalysisDeclContext.cpp - Analysis context for Path Sens analysis --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,59 +7,62 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines AnalysisDeclContext, a class that manages the analysis context
-// data for path sensitive analysis.
+// This file defines AnalysisDeclContext, a class that manages the analysis
+// context data for path sensitive analysis.
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/LambdaCapture.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
-#include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/Analyses/PseudoConstantAnalysis.h"
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/Support/BumpVector.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <memory>
 
 using namespace clang;
 
-typedef llvm::DenseMap<const void *, ManagedAnalysis *> ManagedAnalysisMap;
+using ManagedAnalysisMap = llvm::DenseMap<const void *, ManagedAnalysis *>;
 
 AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
                                          const Decl *d,
                                          const CFG::BuildOptions &buildOptions)
-  : Manager(Mgr),
-    D(d),
-    cfgBuildOptions(buildOptions),
-    forcedBlkExprs(nullptr),
-    builtCFG(false),
-    builtCompleteCFG(false),
-    ReferencedBlockVars(nullptr),
-    ManagedAnalyses(nullptr)
-{  
+    : Manager(Mgr), D(d), cfgBuildOptions(buildOptions) {  
   cfgBuildOptions.forcedBlkExprs = &forcedBlkExprs;
 }
 
 AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
                                          const Decl *d)
-: Manager(Mgr),
-  D(d),
-  forcedBlkExprs(nullptr),
-  builtCFG(false),
-  builtCompleteCFG(false),
-  ReferencedBlockVars(nullptr),
-  ManagedAnalyses(nullptr)
-{  
+    : Manager(Mgr), D(d) {  
   cfgBuildOptions.forcedBlkExprs = &forcedBlkExprs;
 }
 
@@ -87,7 +90,7 @@ void AnalysisDeclContextManager::clear() { Contexts.clear(); }
 
 Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   IsAutosynthesized = false;
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     Stmt *Body = FD->getBody();
     if (auto *CoroBody = dyn_cast_or_null<CoroutineBodyStmt>(Body))
       Body = CoroBody->getBody();
@@ -100,7 +103,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     }
     return Body;
   }
-  else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     Stmt *Body = MD->getBody();
     if (Manager && Manager->synthesizeBodies()) {
       Stmt *SynthesizedBody = Manager->getBodyFarm().getBody(MD);
@@ -110,10 +113,9 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
       }
     }
     return Body;
-  } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(D))
+  } else if (const auto *BD = dyn_cast<BlockDecl>(D))
     return BD->getBody();
-  else if (const FunctionTemplateDecl *FunTmpl
-           = dyn_cast_or_null<FunctionTemplateDecl>(D))
+  else if (const auto *FunTmpl = dyn_cast_or_null<FunctionTemplateDecl>(D))
     return FunTmpl->getTemplatedDecl()->getBody();
 
   llvm_unreachable("unknown code decl");
@@ -142,9 +144,9 @@ static bool isSelfDecl(const VarDecl *VD) {
 }
 
 const ImplicitParamDecl *AnalysisDeclContext::getSelfDecl() const {
-  if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D))
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
     return MD->getSelfDecl();
-  if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
+  if (const auto *BD = dyn_cast<BlockDecl>(D)) {
     // See if 'self' was captured by the block.
     for (const auto &I : BD->captures()) {
       const VarDecl *VD = I.getVariable();
@@ -161,7 +163,7 @@ const ImplicitParamDecl *AnalysisDeclContext::getSelfDecl() const {
   if (!parent->isLambda())
     return nullptr;
 
-  for (const LambdaCapture &LC : parent->captures()) {
+  for (const auto &LC : parent->captures()) {
     if (!LC.capturesVariable())
       continue;
 
@@ -177,7 +179,7 @@ void AnalysisDeclContext::registerForcedBlockExpression(const Stmt *stmt) {
   if (!forcedBlkExprs)
     forcedBlkExprs = new CFG::BuildOptions::ForcedBlkExprs();
   // Default construct an entry for 'stmt'.
-  if (const Expr *e = dyn_cast<Expr>(stmt))
+  if (const auto *e = dyn_cast<Expr>(stmt))
     stmt = e->IgnoreParens();
   (void) (*forcedBlkExprs)[stmt];
 }
@@ -185,7 +187,7 @@ void AnalysisDeclContext::registerForcedBlockExpression(const Stmt *stmt) {
 const CFGBlock *
 AnalysisDeclContext::getBlockForRegisteredExpression(const Stmt *stmt) {
   assert(forcedBlkExprs);
-  if (const Expr *e = dyn_cast<Expr>(stmt))
+  if (const auto *e = dyn_cast<Expr>(stmt))
     stmt = e->IgnoreParens();
   CFG::BuildOptions::ForcedBlkExprs::const_iterator itr = 
     forcedBlkExprs->find(stmt);
@@ -269,13 +271,13 @@ CFGReverseBlockReachabilityAnalysis *AnalysisDeclContext::getCFGReachablityAnaly
 }
 
 void AnalysisDeclContext::dumpCFG(bool ShowColors) {
-    getCFG()->dump(getASTContext().getLangOpts(), ShowColors);
+  getCFG()->dump(getASTContext().getLangOpts(), ShowColors);
 }
 
 ParentMap &AnalysisDeclContext::getParentMap() {
   if (!PM) {
     PM.reset(new ParentMap(getBody()));
-    if (const CXXConstructorDecl *C = dyn_cast<CXXConstructorDecl>(getDecl())) {
+    if (const auto *C = dyn_cast<CXXConstructorDecl>(getDecl())) {
       for (const auto *I : C->inits()) {
         PM->addStmt(I->getInit());
       }
@@ -295,7 +297,7 @@ PseudoConstantAnalysis *AnalysisDeclContext::getPseudoConstantAnalysis() {
 }
 
 AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // Calling 'hasBody' replaces 'FD' in place with the FunctionDecl
     // that has the body.
     FD->hasBody(FD);
@@ -318,7 +320,7 @@ AnalysisDeclContext::getStackFrame(LocationContext const *Parent, const Stmt *S,
 
 const BlockInvocationContext *
 AnalysisDeclContext::getBlockInvocationContext(const LocationContext *parent,
-                                               const clang::BlockDecl *BD,
+                                               const BlockDecl *BD,
                                                const void *ContextData) {
   return getLocationContextManager().getBlockInvocationContext(this, parent,
                                                                BD, ContextData);
@@ -326,7 +328,7 @@ AnalysisDeclContext::getBlockInvocationContext(const LocationContext *parent,
 
 bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
   const DeclContext *DC = D->getDeclContext()->getEnclosingNamespaceContext();
-  const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
+  const auto *ND = dyn_cast<NamespaceDecl>(DC);
   if (!ND)
     return false;
 
@@ -339,7 +341,7 @@ bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
   return ND->isStdNamespace();
 }
 
-LocationContextManager & AnalysisDeclContext::getLocationContextManager() {
+LocationContextManager &AnalysisDeclContext::getLocationContextManager() {
   assert(Manager &&
          "Cannot create LocationContexts without an AnalysisDeclContextManager!");
   return Manager->getLocationContextManager();  
@@ -402,7 +404,7 @@ LocationContextManager::getStackFrame(AnalysisDeclContext *ctx,
   llvm::FoldingSetNodeID ID;
   StackFrameContext::Profile(ID, ctx, parent, s, blk, idx);
   void *InsertPos;
-  StackFrameContext *L =
+  auto *L =
    cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
     L = new StackFrameContext(ctx, parent, s, blk, idx);
@@ -426,7 +428,7 @@ LocationContextManager::getBlockInvocationContext(AnalysisDeclContext *ctx,
   llvm::FoldingSetNodeID ID;
   BlockInvocationContext::Profile(ID, ctx, parent, BD, ContextData);
   void *InsertPos;
-  BlockInvocationContext *L =
+  auto *L =
     cast_or_null<BlockInvocationContext>(Contexts.FindNodeOrInsertPos(ID,
                                                                     InsertPos));
   if (!L) {
@@ -443,7 +445,7 @@ LocationContextManager::getBlockInvocationContext(AnalysisDeclContext *ctx,
 const StackFrameContext *LocationContext::getCurrentStackFrame() const {
   const LocationContext *LC = this;
   while (LC) {
-    if (const StackFrameContext *SFC = dyn_cast<StackFrameContext>(LC))
+    if (const auto *SFC = dyn_cast<StackFrameContext>(LC))
       return SFC;
     LC = LC->getParent();
   }
@@ -486,12 +488,11 @@ void LocationContext::dumpStack(
 
   unsigned Frame = 0;
   for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
-
     switch (LCtx->getKind()) {
     case StackFrame:
       OS << Indent << '#' << Frame << ' ';
       ++Frame;
-      if (const NamedDecl *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
+      if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
         OS << "Calling " << D->getQualifiedNameAsString();
       else
         OS << "Calling anonymous code";
@@ -526,25 +527,27 @@ LLVM_DUMP_METHOD void LocationContext::dumpStack() const {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 class FindBlockDeclRefExprsVals : public StmtVisitor<FindBlockDeclRefExprsVals>{
-  BumpVector<const VarDecl*> &BEVals;
+  BumpVector<const VarDecl *> &BEVals;
   BumpVectorContext &BC;
-  llvm::SmallPtrSet<const VarDecl*, 4> Visited;
-  llvm::SmallPtrSet<const DeclContext*, 4> IgnoredContexts;
+  llvm::SmallPtrSet<const VarDecl *, 4> Visited;
+  llvm::SmallPtrSet<const DeclContext *, 4> IgnoredContexts;
+
 public:
   FindBlockDeclRefExprsVals(BumpVector<const VarDecl*> &bevals,
                             BumpVectorContext &bc)
-  : BEVals(bevals), BC(bc) {}
+      : BEVals(bevals), BC(bc) {}
 
   void VisitStmt(Stmt *S) {
-    for (Stmt *Child : S->children())
+    for (auto *Child : S->children())
       if (Child)
         Visit(Child);
   }
 
   void VisitDeclRefExpr(DeclRefExpr *DR) {
     // Non-local variables are also directly modified.
-    if (const VarDecl *VD = dyn_cast<VarDecl>(DR->getDecl())) {
+    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
       if (!VD->hasLocalStorage()) {
         if (Visited.insert(VD).second)
           BEVals.push_back(VD, BC);
@@ -562,15 +565,16 @@ public:
     for (PseudoObjectExpr::semantics_iterator it = PE->semantics_begin(), 
          et = PE->semantics_end(); it != et; ++it) {
       Expr *Semantic = *it;
-      if (OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(Semantic))
+      if (auto *OVE = dyn_cast<OpaqueValueExpr>(Semantic))
         Semantic = OVE->getSourceExpr();
       Visit(Semantic);
     }
   }
 };
-} // end anonymous namespace
 
-typedef BumpVector<const VarDecl*> DeclVec;
+} // namespace
+
+using DeclVec = BumpVector<const VarDecl *>;
 
 static DeclVec* LazyInitializeReferencedDecls(const BlockDecl *BD,
                                               void *&Vec,
@@ -616,7 +620,7 @@ ManagedAnalysis *&AnalysisDeclContext::getAnalysisImpl(const void *tag) {
 // Cleanup.
 //===----------------------------------------------------------------------===//
 
-ManagedAnalysis::~ManagedAnalysis() {}
+ManagedAnalysis::~ManagedAnalysis() = default;
 
 AnalysisDeclContext::~AnalysisDeclContext() {
   delete forcedBlkExprs;
@@ -629,7 +633,7 @@ AnalysisDeclContext::~AnalysisDeclContext() {
   }
 }
 
-LocationContext::~LocationContext() {}
+LocationContext::~LocationContext() = default;
 
 LocationContextManager::~LocationContextManager() {
   clear();
@@ -642,7 +646,5 @@ void LocationContextManager::clear() {
     ++I;
     delete LC;
   }
-
   Contexts.clear();
 }
-
