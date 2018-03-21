@@ -82,10 +82,12 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
       ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
       break;
     case WebAssembly::END_LOOP:
-      ControlFlowStack.pop_back();
+      // Have to guard against an empty stack, in case of mismatched pairs
+      // in assembly parsing.
+      if (!ControlFlowStack.empty()) ControlFlowStack.pop_back();
       break;
     case WebAssembly::END_BLOCK:
-      printAnnotation(
+      if (!ControlFlowStack.empty()) printAnnotation(
           OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
       break;
     }

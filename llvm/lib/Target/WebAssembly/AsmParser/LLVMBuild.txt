@@ -1,4 +1,4 @@
-;===- ./lib/Target/WebAssembly/LLVMBuild.txt -------------------*- Conf -*--===;
+;===-- ./lib/Target/WebAssembly/Disassembler/LLVMBuild.txt -----*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,20 +15,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
-
 [component_0]
-type = TargetGroup
-name = WebAssembly
-parent = Target
-has_asmparser = 1
-has_asmprinter = 1
-has_disassembler = 1
-
-[component_1]
 type = Library
-name = WebAssemblyCodeGen
+name = WebAssemblyAsmParser
 parent = WebAssembly
-required_libraries = Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target TransformUtils WebAssemblyAsmPrinter WebAssemblyDesc WebAssemblyInfo
+required_libraries = MC MCParser WebAssemblyInfo Support
 add_to_library_groups = WebAssembly

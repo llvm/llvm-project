@@ -1616,30 +1616,6 @@ def ZnWriteROUNDr : SchedWriteRes<[ZnFPU3]> {
 }
 def : InstRW<[ZnWriteROUNDr], (instregex "(V?)ROUND(Y?)(S|P)(S|D)r")>;
 
-// VFMADD.
-// v,v,v.
-def ZnWriteFMADDr : SchedWriteRes<[ZnFPU03]> {
-  let Latency = 5;
-}
-def : InstRW<[ZnWriteFMADDr],
-    (instregex
-    "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)P(S|D)(213|132|231)(Y?)r",
-    "VF(N?)M(ADD|SUB)(132|231|213)S(S|D)r",
-    "VF(N?)M(ADD|SUB)S(S|D)4rr",
-    "VF(N?)M(ADD|SUB)P(S|D)4(Y?)rr")>;
-
-// v,v,m.
-def ZnWriteFMADDm : SchedWriteRes<[ZnAGU, ZnFPU03]> {
-  let Latency = 12;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ZnWriteFMADDm],
-    (instregex
-    "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)(213|132|231)P(S|D)(Y?)m",
-    "VF(N?)M(ADD|SUB)(132|231|213)S(S|D)m",
-    "VF(N?)M(ADD|SUB)S(S|D)4(rm|mr)",
-    "VF(N?)M(ADD|SUB)P(S|D)4(Y?)(rm|mr)")>;
-
 // v,m,i.
 def ZnWriteROUNDm : SchedWriteRes<[ZnAGU, ZnFPU3]> {
   let Latency = 11;

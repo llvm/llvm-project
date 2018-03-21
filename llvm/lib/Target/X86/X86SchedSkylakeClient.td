@@ -2416,19 +2416,25 @@ def SKLWriteResGroup105 : SchedWriteRes<[SKLPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKLWriteResGroup105], (instregex "PMULLDrr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "ROUNDPDr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "ROUNDPSr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "ROUNDSDr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "ROUNDSSr")>;
-def: InstRW<[SKLWriteResGroup105], (instregex "VPMULLDYrr")>;
-def: InstRW<[SKLWriteResGroup105], (instregex "VPMULLDrr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "VROUNDPDr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "VROUNDPSr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "VROUNDSDr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "VROUNDSSr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "VROUNDYPDr")>;
 def: InstRW<[SKLWriteResGroup105], (instregex "VROUNDYPSr")>;
+
+def SKLWriteResGroup105_2 : SchedWriteRes<[SKLPort01]> {
+  let Latency = 10;
+  let NumMicroOps = 2;
+  let ResourceCycles = [2];
+}
+def: InstRW<[SKLWriteResGroup105_2], (instregex "PMULLDrr")>;
+def: InstRW<[SKLWriteResGroup105_2], (instregex "VPMULLDYrr")>;
+def: InstRW<[SKLWriteResGroup105_2], (instregex "VPMULLDrr")>;
 
 def SKLWriteResGroup106 : SchedWriteRes<[SKLPort0,SKLPort23]> {
   let Latency = 8;
@@ -3278,16 +3284,22 @@ def SKLWriteResGroup168 : SchedWriteRes<[SKLPort23,SKLPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKLWriteResGroup168], (instregex "PMULLDrm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "ROUNDPDm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "ROUNDPSm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "ROUNDSDm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "ROUNDSSm")>;
-def: InstRW<[SKLWriteResGroup168], (instregex "VPMULLDrm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "VROUNDPDm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "VROUNDPSm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "VROUNDSDm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "VROUNDSSm")>;
+
+def SKLWriteResGroup168_2 : SchedWriteRes<[SKLPort23,SKLPort01]> {
+  let Latency = 16;
+  let NumMicroOps = 3;
+  let ResourceCycles = [1,2];
+}
+def: InstRW<[SKLWriteResGroup168_2], (instregex "PMULLDrm")>;
+def: InstRW<[SKLWriteResGroup168_2], (instregex "VPMULLDrm")>;
 
 def SKLWriteResGroup169 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23]> {
   let Latency = 14;
@@ -3318,9 +3330,15 @@ def SKLWriteResGroup172 : SchedWriteRes<[SKLPort23,SKLPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKLWriteResGroup172], (instregex "VPMULLDYrm")>;
 def: InstRW<[SKLWriteResGroup172], (instregex "VROUNDYPDm")>;
 def: InstRW<[SKLWriteResGroup172], (instregex "VROUNDYPSm")>;
+
+def SKLWriteResGroup172_2 : SchedWriteRes<[SKLPort23,SKLPort01]> {
+  let Latency = 17;
+  let NumMicroOps = 3;
+  let ResourceCycles = [1,2];
+}
+def: InstRW<[SKLWriteResGroup172_2], (instregex "VPMULLDYrm")>;
 
 def SKLWriteResGroup173 : SchedWriteRes<[SKLPort5,SKLPort23,SKLPort015]> {
   let Latency = 15;
