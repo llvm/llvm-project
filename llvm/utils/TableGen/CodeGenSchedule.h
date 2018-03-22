@@ -141,7 +141,8 @@ struct CodeGenSchedClass {
 
   CodeGenSchedClass(): Index(0), ItinClassDef(nullptr) {}
 
-  bool isKeyEqual(Record *IC, ArrayRef<unsigned> W, ArrayRef<unsigned> R) {
+  bool isKeyEqual(Record *IC, ArrayRef<unsigned> W,
+                  ArrayRef<unsigned> R) const {
     return ItinClassDef == IC && makeArrayRef(Writes) == W &&
            makeArrayRef(Reads) == R;
   }

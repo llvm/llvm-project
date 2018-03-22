@@ -1080,62 +1080,59 @@ void SelectionDAGBuilder::visit(unsigned Opcode, const User &I) {
 
 void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,
                                                 const DIExpression *Expr) {
-  SmallVector<const Value *, 4> ToRemove;
-  for (auto &DMI : DanglingDebugInfoMap) {
-    DanglingDebugInfo &DDI = DMI.second;
-    if (DDI.getDI()) {
-      const DbgValueInst *DI = DDI.getDI();
-      DIVariable *DanglingVariable = DI->getVariable();
-      DIExpression *DanglingExpr = DI->getExpression();
-      if (DanglingVariable == Variable &&
-          Expr->fragmentsOverlap(DanglingExpr)) {
-        DEBUG(dbgs() << "Dropping dangling debug info for " << *DI << "\n");
-        ToRemove.push_back(DMI.first);
+  for (auto &DDIMI : DanglingDebugInfoMap)
+    for (auto &DDI : DDIMI.second)
+      if (DDI.getDI()) {
+        const DbgValueInst *DI = DDI.getDI();
+        DIVariable *DanglingVariable = DI->getVariable();
+        DIExpression *DanglingExpr = DI->getExpression();
+        if (DanglingVariable == Variable &&
+            Expr->fragmentsOverlap(DanglingExpr)) {
+          DEBUG(dbgs() << "Dropping dangling debug info for " << *DI << "\n");
+          DDI = DanglingDebugInfo();
+        }
       }
-    }
-  }
-
-  for (auto V : ToRemove)
-    DanglingDebugInfoMap[V] = DanglingDebugInfo();
 }
 
 // resolveDanglingDebugInfo - if we saw an earlier dbg_value referring to V,
 // generate the debug data structures now that we've seen its definition.
 void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
                                                    SDValue Val) {
-  DanglingDebugInfo &DDI = DanglingDebugInfoMap[V];
-  if (!DDI.getDI())
-    return;
-  const DbgValueInst *DI = DDI.getDI();
-  DebugLoc dl = DDI.getdl();
-  unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
-  unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
-  DILocalVariable *Variable = DI->getVariable();
-  DIExpression *Expr = DI->getExpression();
-  assert(Variable->isValidLocationForIntrinsic(dl) &&
-         "Expected inlined-at fields to agree");
-  SDDbgValue *SDV;
-  if (Val.getNode()) {
-    if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, false, Val)) {
-      DEBUG(dbgs() << "Resolve dangling debug info [order=" << DbgSDNodeOrder
-            << "] for:\n  " << *DI << "\n");
-      DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
-      // Increase the SDNodeOrder for the DbgValue here to make sure it is
-      // inserted after the definition of Val when emitting the instructions
-      // after ISel. An alternative could be to teach
-      // ScheduleDAGSDNodes::EmitSchedule to delay the insertion properly.
-      DEBUG(if (ValSDNodeOrder > DbgSDNodeOrder)
-              dbgs() << "changing SDNodeOrder from " << DbgSDNodeOrder
-                     << " to " << ValSDNodeOrder << "\n");
-      SDV = getDbgValue(Val, Variable, Expr, dl,
-                        std::max(DbgSDNodeOrder, ValSDNodeOrder));
-      DAG.AddDbgValue(SDV, Val.getNode(), false);
+  DanglingDebugInfoVector &DDIV = DanglingDebugInfoMap[V];
+  for (auto &DDI : DDIV) {
+    if (!DDI.getDI())
+      continue;
+    const DbgValueInst *DI = DDI.getDI();
+    DebugLoc dl = DDI.getdl();
+    unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
+    unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
+    DILocalVariable *Variable = DI->getVariable();
+    DIExpression *Expr = DI->getExpression();
+    assert(Variable->isValidLocationForIntrinsic(dl) &&
+           "Expected inlined-at fields to agree");
+    SDDbgValue *SDV;
+    if (Val.getNode()) {
+      if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, false, Val)) {
+        DEBUG(dbgs() << "Resolve dangling debug info [order=" << DbgSDNodeOrder
+              << "] for:\n  " << *DI << "\n");
+        DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
+        // Increase the SDNodeOrder for the DbgValue here to make sure it is
+        // inserted after the definition of Val when emitting the instructions
+        // after ISel. An alternative could be to teach
+        // ScheduleDAGSDNodes::EmitSchedule to delay the insertion properly.
+        DEBUG(if (ValSDNodeOrder > DbgSDNodeOrder)
+                dbgs() << "changing SDNodeOrder from " << DbgSDNodeOrder
+                       << " to " << ValSDNodeOrder << "\n");
+        SDV = getDbgValue(Val, Variable, Expr, dl,
+                          std::max(DbgSDNodeOrder, ValSDNodeOrder));
+        DAG.AddDbgValue(SDV, Val.getNode(), false);
+      } else
+        DEBUG(dbgs() << "Resolved dangling debug info for " << *DI
+              << "in EmitFuncArgumentDbgValue\n");
     } else
-      DEBUG(dbgs() << "Resolved dangling debug info for " << *DI
-            << "in EmitFuncArgumentDbgValue\n");
-  } else
-    DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
-  DanglingDebugInfoMap[V] = DanglingDebugInfo();
+      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+  }
+  DanglingDebugInfoMap[V].clear();
 }
 
 /// getCopyFromRegs - If there was virtual register allocated for the value V
@@ -5330,7 +5327,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       // Do not call getValue(V) yet, as we don't want to generate code.
       // Remember it for later.
       DanglingDebugInfo DDI(&DI, dl, SDNodeOrder);
-      DanglingDebugInfoMap[V] = DDI;
+      DanglingDebugInfoMap[V].push_back(DDI);
       return nullptr;
     }
 

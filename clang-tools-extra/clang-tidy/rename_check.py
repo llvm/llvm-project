@@ -171,8 +171,8 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
         elif header_found:
           if not line.startswith('----'):
             f.write("""
-- The '%s' check was renamed to `%s
-  <http://clang.llvm.org/extra/clang-tidy/checks/%s.html>`_
+- The '%s' check was renamed to :doc:`%s
+  <clang-tidy/checks/%s>`
 """ % (old_check_name, new_check_name, new_check_name))
             note_added = True
 

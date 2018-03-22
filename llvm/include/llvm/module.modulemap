@@ -43,6 +43,7 @@ module LLVM_BinaryFormat {
     requires cplusplus
     umbrella "BinaryFormat" module * { export * }
     textual header "BinaryFormat/Dwarf.def"
+    textual header "BinaryFormat/DynamicTags.def"
     textual header "BinaryFormat/MachO.def"
     textual header "BinaryFormat/ELFRelocs/AArch64.def"
     textual header "BinaryFormat/ELFRelocs/AMDGPU.def"

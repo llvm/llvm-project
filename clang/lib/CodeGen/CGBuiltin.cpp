@@ -2611,11 +2611,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_addressof:
     return RValue::get(EmitLValue(E->getArg(0)).getPointer());
   case Builtin::BI__builtin_operator_new:
-    return EmitBuiltinNewDeleteCall(FD->getType()->castAs<FunctionProtoType>(),
-                                    E->getArg(0), false);
+    return EmitBuiltinNewDeleteCall(
+        E->getCallee()->getType()->castAs<FunctionProtoType>(), E, false);
   case Builtin::BI__builtin_operator_delete:
-    return EmitBuiltinNewDeleteCall(FD->getType()->castAs<FunctionProtoType>(),
-                                    E->getArg(0), true);
+    return EmitBuiltinNewDeleteCall(
+        E->getCallee()->getType()->castAs<FunctionProtoType>(), E, true);
+
   case Builtin::BI__noop:
     // __noop always evaluates to an integer literal zero.
     return RValue::get(ConstantInt::get(IntTy, 0));
@@ -10514,23 +10515,23 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     unsigned NumResults;
     switch (BuiltinID) {
     case NVPTX::BI__hmma_m16n16k16_ld_a:
-      IID = isColMajor ? Intrinsic::nvvm_wmma_load_a_f16_col_stride
-                       : Intrinsic::nvvm_wmma_load_a_f16_row_stride;
+      IID = isColMajor ? Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_col_stride
+                       : Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_row_stride;
       NumResults = 8;
       break;
     case NVPTX::BI__hmma_m16n16k16_ld_b:
-      IID = isColMajor ? Intrinsic::nvvm_wmma_load_b_f16_col_stride
-                       : Intrinsic::nvvm_wmma_load_b_f16_row_stride;
+      IID = isColMajor ? Intrinsic::nvvm_wmma_m16n16k16_load_b_f16_col_stride
+                       : Intrinsic::nvvm_wmma_m16n16k16_load_b_f16_row_stride;
       NumResults = 8;
       break;
     case NVPTX::BI__hmma_m16n16k16_ld_c_f16:
-      IID = isColMajor ? Intrinsic::nvvm_wmma_load_c_f16_col_stride
-                       : Intrinsic::nvvm_wmma_load_c_f16_row_stride;
+      IID = isColMajor ? Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_col_stride
+                       : Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_row_stride;
       NumResults = 4;
       break;
     case NVPTX::BI__hmma_m16n16k16_ld_c_f32:
-      IID = isColMajor ? Intrinsic::nvvm_wmma_load_c_f32_col_stride
-                       : Intrinsic::nvvm_wmma_load_c_f32_row_stride;
+      IID = isColMajor ? Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_col_stride
+                       : Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_row_stride;
       NumResults = 8;
       break;
     default:
@@ -10565,13 +10566,13 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     // for some reason nvcc builtins use _c_.
     switch (BuiltinID) {
     case NVPTX::BI__hmma_m16n16k16_st_c_f16:
-      IID = isColMajor ? Intrinsic::nvvm_wmma_store_d_f16_col_stride
-                       : Intrinsic::nvvm_wmma_store_d_f16_row_stride;
+      IID = isColMajor ? Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_col_stride
+                       : Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_row_stride;
       NumResults = 4;
       break;
     case NVPTX::BI__hmma_m16n16k16_st_c_f32:
-      IID = isColMajor ? Intrinsic::nvvm_wmma_store_d_f32_col_stride
-                       : Intrinsic::nvvm_wmma_store_d_f32_row_stride;
+      IID = isColMajor ? Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_col_stride
+                       : Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_row_stride;
       break;
     default:
       llvm_unreachable("Unexpected builtin ID.");
@@ -10590,8 +10591,8 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Result;
   }
 
-  // BI__hmma_m16n16k16_mma_<Dtype><CType>(d, a, b, c, layout, satf)
-  //  --> Intrinsic::nvvm_wmma_mma_sync<layout A,B><DType><CType><Satf>
+  // BI__hmma_m16n16k16_mma_<Dtype><CType>(d, a, b, c, layout, satf) -->
+  // Intrinsic::nvvm_wmma_m16n16k16_mma_sync<layout A,B><DType><CType><Satf>
   case NVPTX::BI__hmma_m16n16k16_mma_f16f16:
   case NVPTX::BI__hmma_m16n16k16_mma_f32f16:
   case NVPTX::BI__hmma_m16n16k16_mma_f32f32:
@@ -10612,15 +10613,15 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     bool Satf = SatfArg.getSExtValue();
 
     // clang-format off
-#define MMA_VARIANTS(type) {{                                   \
-      Intrinsic::nvvm_wmma_mma_sync_row_row_##type,             \
-      Intrinsic::nvvm_wmma_mma_sync_row_row_##type##_satfinite, \
-      Intrinsic::nvvm_wmma_mma_sync_row_col_##type,             \
-      Intrinsic::nvvm_wmma_mma_sync_row_col_##type##_satfinite, \
-      Intrinsic::nvvm_wmma_mma_sync_col_row_##type,             \
-      Intrinsic::nvvm_wmma_mma_sync_col_row_##type##_satfinite, \
-      Intrinsic::nvvm_wmma_mma_sync_col_col_##type,             \
-      Intrinsic::nvvm_wmma_mma_sync_col_col_##type##_satfinite  \
+#define MMA_VARIANTS(type) {{                                        \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_row_row_##type,             \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_row_row_##type##_satfinite, \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_row_col_##type,             \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_row_col_##type##_satfinite, \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_col_row_##type,             \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_col_row_##type##_satfinite, \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_col_col_##type,             \
+      Intrinsic::nvvm_wmma_m16n16k16_mma_col_col_##type##_satfinite  \
     }}
     // clang-format on
 

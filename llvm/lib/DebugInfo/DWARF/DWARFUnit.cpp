@@ -31,7 +31,7 @@ using namespace dwarf;
 
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
   const DWARFObject &D = C.getDWARFObj();
-  parseImpl(C, Section, C.getDebugAbbrev(), &D.getRangeSection(),
+  parseImpl(C, D, Section, C.getDebugAbbrev(), &D.getRangeSection(),
             D.getStringSection(), D.getStringOffsetSection(),
             &D.getAddrSection(), D.getLineSection(), D.isLittleEndian(), false,
             false);
@@ -40,7 +40,7 @@ void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
 void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
                                     const DWARFSection &DWOSection, bool Lazy) {
   const DWARFObject &D = C.getDWARFObj();
-  parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
+  parseImpl(C, D, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
             D.getStringDWOSection(), D.getStringOffsetDWOSection(),
             &D.getAddrSection(), D.getLineDWOSection(), C.isLittleEndian(),
             true, Lazy);
@@ -91,7 +91,8 @@ bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
   return true;
 }
 
-bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
+bool DWARFUnit::extractImpl(const DWARFDataExtractor &debug_info,
+                            uint32_t *offset_ptr) {
   Length = debug_info.getU32(offset_ptr);
   // FIXME: Support DWARF64.
   FormParams.Format = DWARF32;
@@ -101,7 +102,7 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
     AbbrOffset = debug_info.getU32(offset_ptr);
   } else {
-    AbbrOffset = debug_info.getU32(offset_ptr);
+    AbbrOffset = debug_info.getRelocatedValue(4, offset_ptr);
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
   }
   if (IndexEntry) {
@@ -128,7 +129,8 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
   return true;
 }
 
-bool DWARFUnit::extract(DataExtractor debug_info, uint32_t *offset_ptr) {
+bool DWARFUnit::extract(const DWARFDataExtractor &debug_info,
+                        uint32_t *offset_ptr) {
   clear();
 
   Offset = *offset_ptr;

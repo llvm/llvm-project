@@ -14,7 +14,6 @@
 
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/ObjectUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -444,7 +443,7 @@ void LTOModule::addDefinedSymbol(StringRef Name, const GlobalValue *def,
     attr |= LTO_SYMBOL_SCOPE_HIDDEN;
   else if (def->hasProtectedVisibility())
     attr |= LTO_SYMBOL_SCOPE_PROTECTED;
-  else if (canBeOmittedFromSymbolTable(def))
+  else if (def->canBeOmittedFromSymbolTable())
     attr |= LTO_SYMBOL_SCOPE_DEFAULT_CAN_BE_HIDDEN;
   else
     attr |= LTO_SYMBOL_SCOPE_DEFAULT;

@@ -1801,12 +1801,21 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                            diag::err_feature_check_malformed);
+        const LangOptions &LangOpts = getLangOpts();
         if (!II)
           return false;
-        else if (II->getBuiltinID() != 0)
+        else if (II->getBuiltinID() != 0) {
+          switch (II->getBuiltinID()) {
+          case Builtin::BI__builtin_operator_new:
+          case Builtin::BI__builtin_operator_delete:
+            // denotes date of behavior change to support calling arbitrary
+            // usual allocation and deallocation functions. Required by libc++
+            return 201802;
+          default:
+            return true;
+          }
           return true;
-        else {
-          const LangOptions &LangOpts = getLangOpts();
+        } else {
           return llvm::StringSwitch<bool>(II->getName())
                       .Case("__make_integer_seq", LangOpts.CPlusPlus)
                       .Case("__type_pack_element", LangOpts.CPlusPlus)

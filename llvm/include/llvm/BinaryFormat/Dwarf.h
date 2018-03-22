@@ -24,6 +24,8 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadicDetails.h"
 
 namespace llvm {
 class StringRef;
@@ -405,8 +407,8 @@ enum GDBIndexEntryLinkage { GIEL_EXTERNAL, GIEL_STATIC };
 /// \defgroup DwarfConstantsDumping Dwarf constants dumping functions
 ///
 /// All these functions map their argument's value back to the
-/// corresponding enumerator name or return nullptr if the value isn't
-/// known.
+/// corresponding enumerator name or return an empty StringRef if the value
+/// isn't known.
 ///
 /// @{
 StringRef TagString(unsigned Tag);
@@ -573,8 +575,46 @@ private:
   };
 };
 
+template <typename Enum> struct EnumTraits : public std::false_type {};
+
+template <> struct EnumTraits<Attribute> : public std::true_type {
+  static constexpr char Type[3] = "AT";
+  static constexpr StringRef (*StringFn)(unsigned) = &AttributeString;
+};
+
+template <> struct EnumTraits<Form> : public std::true_type {
+  static constexpr char Type[5] = "FORM";
+  static constexpr StringRef (*StringFn)(unsigned) = &FormEncodingString;
+};
+
+template <> struct EnumTraits<Index> : public std::true_type {
+  static constexpr char Type[4] = "IDX";
+  static constexpr StringRef (*StringFn)(unsigned) = &IndexString;
+};
+
+template <> struct EnumTraits<Tag> : public std::true_type {
+  static constexpr char Type[4] = "TAG";
+  static constexpr StringRef (*StringFn)(unsigned) = &TagString;
+};
 } // End of namespace dwarf
 
+/// Dwarf constants format_provider
+///
+/// Specialization of the format_provider template for dwarf enums. Unlike the
+/// dumping functions above, these format unknown enumerator values as
+/// DW_TYPE_unknown_1234 (e.g. DW_TAG_unknown_ffff).
+template <typename Enum>
+struct format_provider<
+    Enum, typename std::enable_if<dwarf::EnumTraits<Enum>::value>::type> {
+  static void format(const Enum &E, raw_ostream &OS, StringRef Style) {
+    StringRef Str = dwarf::EnumTraits<Enum>::StringFn(E);
+    if (Str.empty()) {
+      OS << "DW_" << dwarf::EnumTraits<Enum>::Type << "_unknown_"
+         << llvm::format("%x", E);
+    } else
+      OS << Str;
+  }
+};
 } // End of namespace llvm
 
 #endif

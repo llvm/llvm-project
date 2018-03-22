@@ -1610,7 +1610,7 @@ private:
                         unsigned Indent = 0);
 
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
-  enum TravesalFlags {
+  enum TraversalFlags {
     TF_Keep = 1 << 0,            ///< Mark the traversed DIEs as kept.
     TF_InFunctionScope = 1 << 1, ///< Current scope is a function scope.
     TF_DependencyWalk = 1 << 2,  ///< Walking the dependencies of a kept DIE.

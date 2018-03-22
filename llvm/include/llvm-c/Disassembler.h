@@ -15,7 +15,7 @@
 #ifndef LLVM_C_DISASSEMBLER_H
 #define LLVM_C_DISASSEMBLER_H
 
-#include "llvm/Support/DataTypes.h"
+#include "llvm-c/DataTypes.h"
 #ifdef __cplusplus
 #include <cstddef>
 #else

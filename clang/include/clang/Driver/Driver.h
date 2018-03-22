@@ -456,8 +456,10 @@ public:
   /// ConstructAction - Construct the appropriate action to do for
   /// \p Phase on the \p Input, taking in to account arguments
   /// like -fsyntax-only or --analyze.
-  Action *ConstructPhaseAction(Compilation &C, const llvm::opt::ArgList &Args,
-                               phases::ID Phase, Action *Input) const;
+  Action *ConstructPhaseAction(
+      Compilation &C, const llvm::opt::ArgList &Args, phases::ID Phase,
+      Action *Input,
+      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None) const;
 
   /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
   /// return an InputInfo for the result of running \p A.  Will only construct

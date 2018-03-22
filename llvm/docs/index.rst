@@ -276,7 +276,6 @@ For API clients and LLVM developers.
    HowToUseAttributes
    NVPTXUsage
    AMDGPUUsage
-   X86Usage
    StackMaps
    InAlloca
    BigEndianNEON
@@ -380,9 +379,6 @@ For API clients and LLVM developers.
 
 :doc:`AMDGPUUsage`
    This document describes using the AMDGPU backend to compile GPU kernels.
-
-:doc:`X86Usage`
-   This document describes using the X86 backend.
 
 :doc:`StackMaps`
   LLVM support for mapping instruction addresses to the location of

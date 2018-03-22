@@ -337,40 +337,32 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
   return false;
 }
 
-/// ProcessForeachDefs - Given a record, apply all of the variable
-/// values in all surrounding foreach loops, creating new records for
-/// each combination of values.
-bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc) {
-  if (Loops.empty())
-    return false;
-
-  // We want to instantiate a new copy of CurRec for each combination
-  // of nested loop iterator values.  We don't want top instantiate
-  // any copies until we have values for each loop iterator.
+/// Add a record that results from 'def' or 'defm', after template arguments
+/// and the external let stack have been resolved.
+///
+/// Apply foreach loops, resolve internal variable references, and add to the
+/// current multi class or the global record keeper as appropriate.
+bool TGParser::addDef(std::unique_ptr<Record> Rec, Init *DefmName) {
   IterSet IterVals;
-  return ProcessForeachDefs(CurRec, Loc, IterVals);
+
+  if (Loops.empty())
+    return addDefOne(std::move(Rec), DefmName, IterVals);
+
+  return addDefForeach(Rec.get(), DefmName, IterVals);
 }
 
-/// ProcessForeachDefs - Given a record, a loop and a loop iterator,
-/// apply each of the variable values in this loop and then process
-/// subloops.
-bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
-  // Recursively build a tuple of iterator values.
+/// Recursive helper function for addDef/addDefOne to resolve references to
+/// foreach variables.
+bool TGParser::addDefForeach(Record *Rec, Init *DefmName, IterSet &IterVals) {
   if (IterVals.size() != Loops.size()) {
     assert(IterVals.size() < Loops.size());
     ForeachLoop &CurLoop = Loops[IterVals.size()];
-    ListInit *List = dyn_cast<ListInit>(CurLoop.ListValue);
-    if (!List) {
-      Error(Loc, "Loop list is not a list");
-      return true;
-    }
+    ListInit *List = CurLoop.ListValue;
 
     // Process each value.
     for (unsigned i = 0; i < List->size(); ++i) {
-      RecordResolver R(*CurRec);
-      Init *ItemVal = List->getElement(i)->resolveReferences(R);
-      IterVals.push_back(IterRecord(CurLoop.IterVar, ItemVal));
-      if (ProcessForeachDefs(CurRec, Loc, IterVals))
+      IterVals.push_back(IterRecord(CurLoop.IterVar, List->getElement(i)));
+      if (addDefForeach(Rec, DefmName, IterVals))
         return true;
       IterVals.pop_back();
     }
@@ -380,41 +372,77 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
   // This is the bottom of the recursion. We have all of the iterator values
   // for this point in the iteration space.  Instantiate a new record to
   // reflect this combination of values.
-  auto IterRec = make_unique<Record>(*CurRec);
+  auto IterRec = make_unique<Record>(*Rec);
+  return addDefOne(std::move(IterRec), DefmName, IterVals);
+}
 
-  // Set the iterator values now.
-  for (IterRecord &IR : IterVals) {
-    VarInit *IterVar = IR.IterVar;
-    TypedInit *IVal = dyn_cast<TypedInit>(IR.IterValue);
-    if (!IVal)
-      return Error(Loc, "foreach iterator value is untyped");
+/// After resolving foreach loops, add the record as a prototype to the
+/// current multiclass, or resolve fully and add to the record keeper.
+bool TGParser::addDefOne(std::unique_ptr<Record> Rec, Init *DefmName,
+                         IterSet &IterVals) {
+  MapResolver R(Rec.get());
 
-    IterRec->addValue(RecordVal(IterVar->getNameInit(), IVal->getType(), false));
+  for (IterRecord &IR : IterVals)
+    R.set(IR.IterVar->getNameInit(), IR.IterValue);
 
-    if (SetValue(IterRec.get(), Loc, IterVar->getNameInit(), None, IVal))
-      return Error(Loc, "when instantiating this def");
+  Rec->resolveReferences(R);
 
-    // Resolve it next.
-    IterRec->resolveReferencesTo(IterRec->getValue(IterVar->getNameInit()));
-
-    // Remove it.
-    IterRec->removeValue(IterVar->getNameInit());
+  if (CurMultiClass) {
+    for (const auto &Proto : CurMultiClass->DefPrototypes) {
+      if (Proto->getNameInit() == Rec->getNameInit()) {
+        if (!Rec->isAnonymous()) {
+          PrintError(Rec->getLoc(),
+                    Twine("def '") + Rec->getNameInitAsString() +
+                        "' already defined in this multiclass!");
+          PrintNote(Proto->getLoc(), "location of previous definition");
+          return true;
+        }
+        Rec->setName(Records.getNewAnonymousName());
+        break;
+      }
+    }
+    CurMultiClass->DefPrototypes.emplace_back(std::move(Rec));
+    return false;
   }
 
-  if (Records.getDef(IterRec->getNameInitAsString())) {
-    // If this record is anonymous, it's no problem, just generate a new name
-    if (!IterRec->isAnonymous())
-      return Error(Loc, "def already exists: " +IterRec->getNameInitAsString());
-
-    IterRec->setName(Records.getNewAnonymousName());
+  // Name construction is an incoherent mess. Unfortunately, existing .td
+  // files rely on pretty much all the quirks and implementation details of
+  // this.
+  if (DefmName) {
+    MapResolver R(Rec.get());
+    R.set(StringInit::get("NAME"), DefmName);
+    Rec->resolveReferences(R);
   }
 
-  Record *IterRecSave = IterRec.get(); // Keep a copy before release.
-  Records.addDef(std::move(IterRec));
-  IterRecSave->resolveReferences();
-  checkConcrete(*IterRecSave);
-  if (addToDefsets(*IterRecSave))
-    return true;
+  if (Record *Prev = Records.getDef(Rec->getNameInitAsString())) {
+    if (!Rec->isAnonymous()) {
+      PrintError(Rec->getLoc(),
+                 "def already exists: " + Rec->getNameInitAsString());
+      PrintNote(Prev->getLoc(), "location of previous definition");
+      return true;
+    }
+    Rec->setName(Records.getNewAnonymousName());
+  }
+
+  Rec->resolveReferences();
+  checkConcrete(*Rec);
+
+  // If ObjectBody has template arguments, it's an error.
+  assert(Rec->getTemplateArgs().empty() && "How'd this get template args?");
+
+  for (DefsetRecord *Defset : Defsets) {
+    DefInit *I = Rec->getDefInit();
+    if (!I->getType()->typeIsA(Defset->EltTy)) {
+      PrintError(Rec->getLoc(), Twine("adding record of incompatible type '") +
+                                    I->getType()->getAsString() +
+                                     "' to defset");
+      PrintNote(Defset->Loc, "location of defset declaration");
+      return true;
+    }
+    Defset->Elements.push_back(I);
+  }
+
+  Records.addDef(std::move(Rec));
   return false;
 }
 
@@ -429,8 +457,9 @@ static bool isObjectStart(tgtok::TokKind K) {
          K == tgtok::Defset;
 }
 
-/// ParseObjectName - If an object name is specified, return it.  Otherwise,
-/// return 0.
+/// ParseObjectName - If a valid object name is specified, return it. If no
+/// name is specified, return the unset initializer. Return nullptr on parse
+/// error.
 ///   ObjectName ::= Value [ '#' Value ]*
 ///   ObjectName ::= /*empty*/
 ///
@@ -442,7 +471,7 @@ Init *TGParser::ParseObjectName(MultiClass *CurMultiClass) {
     // These are all of the tokens that can begin an object body.
     // Some of these can also begin values but we disallow those cases
     // because they are unlikely to be useful.
-    return nullptr;
+    return UnsetInit::get();
   default:
     break;
   }
@@ -451,17 +480,7 @@ Init *TGParser::ParseObjectName(MultiClass *CurMultiClass) {
   if (CurMultiClass)
     CurRec = &CurMultiClass->Rec;
 
-  RecTy *Type = nullptr;
-  if (CurRec) {
-    const TypedInit *CurRecName = dyn_cast<TypedInit>(CurRec->getNameInit());
-    if (!CurRecName) {
-      TokError("Record name is not typed!");
-      return nullptr;
-    }
-    Type = CurRecName->getType();
-  }
-
-  return ParseValue(CurRec, Type, ParseNameMode);
+  return ParseValue(CurRec, StringRecTy::get(), ParseNameMode);
 }
 
 /// ParseClassID - Parse and resolve a reference to a class name.  This returns
@@ -810,6 +829,11 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
 
   if (Init *I = Records.getGlobal(Name->getValue()))
     return I;
+
+  // Allow self-references of concrete defs, but delay the lookup so that we
+  // get the correct type.
+  if (CurRec && !CurMultiClass && CurRec->getNameInit() == Name)
+    return UnOpInit::get(UnOpInit::CAST, Name, CurRec->getType());
 
   if (Mode == ParseValueMode) {
     Error(NameLoc, "Variable not defined: '" + Name->getValue() + "'");
@@ -2224,6 +2248,9 @@ VarInit *TGParser::ParseForeachDeclaration(ListInit *&ForeachListValue) {
       if (TypedInit *TI = dyn_cast<TypedInit>(I))
         Type = (Twine("' of type '") + TI->getType()->getAsString()).str();
       Error(ValueLoc, "expected a list, got '" + I->getAsString() + Type + "'");
+      if (CurMultiClass)
+        PrintNote({}, "references to multiclass template arguments cannot be "
+                      "resolved at this time");
       return nullptr;
     }
     ForeachListValue = dyn_cast<ListInit>(I);
@@ -2416,89 +2443,21 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
   Lex.Lex();  // Eat the 'def' token.
 
   // Parse ObjectName and make a record for it.
-  std::unique_ptr<Record> CurRecOwner;
+  std::unique_ptr<Record> CurRec;
   Init *Name = ParseObjectName(CurMultiClass);
-  if (Name)
-    CurRecOwner = make_unique<Record>(Name, DefLoc, Records);
-  else
-    CurRecOwner = make_unique<Record>(Records.getNewAnonymousName(), DefLoc,
-                                      Records, /*IsAnonymous=*/true);
-  Record *CurRec = CurRecOwner.get(); // Keep a copy since we may release.
-
-  if (!CurMultiClass && Loops.empty()) {
-    // Top-level def definition.
-
-    // Ensure redefinition doesn't happen.
-    if (Records.getDef(CurRec->getNameInitAsString()))
-      return Error(DefLoc, "def '" + CurRec->getNameInitAsString()+
-                   "' already defined");
-    Records.addDef(std::move(CurRecOwner));
-
-    if (ParseObjectBody(CurRec))
-      return true;
-  } else if (CurMultiClass) {
-    // Parse the body before adding this prototype to the DefPrototypes vector.
-    // That way implicit definitions will be added to the DefPrototypes vector
-    // before this object, instantiated prior to defs derived from this object,
-    // and this available for indirect name resolution when defs derived from
-    // this object are instantiated.
-    if (ParseObjectBody(CurRec))
-      return true;
-
-    // Otherwise, a def inside a multiclass, add it to the multiclass.
-    for (const auto &Proto : CurMultiClass->DefPrototypes)
-      if (Proto->getNameInit() == CurRec->getNameInit())
-        return Error(DefLoc, "def '" + CurRec->getNameInitAsString() +
-                     "' already defined in this multiclass!");
-    CurMultiClass->DefPrototypes.push_back(std::move(CurRecOwner));
-  } else if (ParseObjectBody(CurRec)) {
+  if (!Name)
     return true;
-  }
 
-  if (!CurMultiClass) { // Def's in multiclasses aren't really defs.
-    // See Record::setName().  This resolve step will see any new name
-    // for the def that might have been created when resolving
-    // inheritance, values and arguments above.
-    CurRec->resolveReferences();
-    if (Loops.empty()) {
-      checkConcrete(*CurRec);
-      if (addToDefsets(*CurRec))
-        return true;
-    }
-  }
+  if (isa<UnsetInit>(Name))
+    CurRec = make_unique<Record>(Records.getNewAnonymousName(), DefLoc, Records,
+                                 /*Anonymous=*/true);
+  else
+    CurRec = make_unique<Record>(Name, DefLoc, Records);
 
-  // If ObjectBody has template arguments, it's an error.
-  assert(CurRec->getTemplateArgs().empty() && "How'd this get template args?");
+  if (ParseObjectBody(CurRec.get()))
+    return true;
 
-  if (CurMultiClass) {
-    // Copy the template arguments for the multiclass into the def.
-    for (Init *TArg : CurMultiClass->Rec.getTemplateArgs()) {
-      const RecordVal *RV = CurMultiClass->Rec.getValue(TArg);
-      assert(RV && "Template arg doesn't exist?");
-      CurRec->addValue(*RV);
-    }
-  }
-
-  if (ProcessForeachDefs(CurRec, DefLoc))
-    return Error(DefLoc, "Could not process loops for def" +
-                 CurRec->getNameInitAsString());
-
-  return false;
-}
-
-bool TGParser::addToDefsets(Record &R) {
-  for (DefsetRecord *Defset : Defsets) {
-    DefInit *I = R.getDefInit();
-    if (!I->getType()->typeIsA(Defset->EltTy)) {
-      PrintError(R.getLoc(),
-                 Twine("adding record of incompatible type '") +
-                 I->getType()->getAsString() + "' to defset");
-      PrintNote(Defset->Loc, "to this defset");
-      return true;
-    }
-    Defset->Elements.push_back(I);
-  }
-  return false;
+  return addDef(std::move(CurRec), nullptr);
 }
 
 /// ParseDefset - Parse a defset statement.
@@ -2818,207 +2777,25 @@ bool TGParser::ParseMultiClass() {
   return false;
 }
 
-Record *TGParser::InstantiateMulticlassDef(MultiClass &MC, Record *DefProto,
-                                           Init *&DefmPrefix,
-                                           SMRange DefmPrefixRange,
-                                           ArrayRef<Init *> TArgs,
-                                           ArrayRef<Init *> TemplateVals) {
-  // We need to preserve DefProto so it can be reused for later
-  // instantiations, so create a new Record to inherit from it.
-
-  // Add in the defm name.  If the defm prefix is empty, give each
-  // instantiated def a unique name.  Otherwise, if "#NAME#" exists in the
-  // name, substitute the prefix for #NAME#.  Otherwise, use the defm name
-  // as a prefix.
-
-  bool IsAnonymous = false;
-  if (!DefmPrefix) {
-    DefmPrefix = Records.getNewAnonymousName();
-    IsAnonymous = true;
-  }
-
-  Init *DefName = DefProto->getNameInit();
-  StringInit *DefNameString = dyn_cast<StringInit>(DefName);
-
-  if (DefNameString) {
-    // We have a fully expanded string so there are no operators to
-    // resolve.  We should concatenate the given prefix and name.
-    DefName = BinOpInit::getStrConcat(
-        UnOpInit::get(UnOpInit::CAST, DefmPrefix, StringRecTy::get())
-            ->Fold(DefProto),
-        DefName);
-  }
-
-  // Make a trail of SMLocs from the multiclass instantiations.
-  SmallVector<SMLoc, 4> Locs(1, DefmPrefixRange.Start);
-  Locs.append(DefProto->getLoc().begin(), DefProto->getLoc().end());
-  auto CurRec = make_unique<Record>(DefName, Locs, Records, IsAnonymous);
-
-  SubClassReference Ref;
-  Ref.RefRange = DefmPrefixRange;
-  Ref.Rec = DefProto;
-  AddSubClass(CurRec.get(), Ref);
-
-  // Set the value for NAME. We don't resolve references to it 'til later,
-  // though, so that uses in nested multiclass names don't get
-  // confused.
-  if (SetValue(CurRec.get(), Ref.RefRange.Start, StringInit::get("NAME"), None,
-               DefmPrefix, /*AllowSelfAssignment*/true)) {
-    Error(DefmPrefixRange.Start, "Could not resolve " +
-          CurRec->getNameInitAsString() + ":NAME to '" +
-          DefmPrefix->getAsUnquotedString() + "'");
-    return nullptr;
-  }
-
-  // If the DefNameString didn't resolve, we probably have a reference to
-  // NAME and need to replace it. We need to do at least this much greedily,
-  // otherwise nested multiclasses will end up with incorrect NAME expansions.
-  if (!DefNameString) {
-    RecordVal *DefNameRV = CurRec->getValue("NAME");
-    CurRec->resolveReferencesTo(DefNameRV);
-  }
-
-  if (!CurMultiClass) {
-    // Now that we're at the top level, resolve all NAME references
-    // in the resultant defs that weren't in the def names themselves.
-    RecordVal *DefNameRV = CurRec->getValue("NAME");
-    CurRec->resolveReferencesTo(DefNameRV);
-
-    // Check if the name is a complex pattern.
-    // If so, resolve it.
-    DefName = CurRec->getNameInit();
-    DefNameString = dyn_cast<StringInit>(DefName);
-
-    // OK the pattern is more complex than simply using NAME.
-    // Let's use the heavy weaponery.
-    if (!DefNameString) {
-      ResolveMulticlassDefArgs(MC, CurRec.get(), DefmPrefixRange.Start,
-                               Lex.getLoc(), TArgs, TemplateVals,
-                               false/*Delete args*/);
-      DefName = CurRec->getNameInit();
-      DefNameString = dyn_cast<StringInit>(DefName);
-
-      if (!DefNameString) {
-        DefName = DefName->convertInitializerTo(StringRecTy::get());
-        DefNameString = dyn_cast<StringInit>(DefName);
-      }
-
-      if (!DefNameString) {
-        PrintFatalError(CurRec->getLoc()[CurRec->getLoc().size() - 1],
-                        DefName->getAsUnquotedString() + " is not a string.");
-        return nullptr;
-      }
-
-      CurRec->setName(DefName);
-    }
-
-    // Now that NAME references are resolved and we're at the top level of
-    // any multiclass expansions, add the record to the RecordKeeper. If we are
-    // currently in a multiclass, it means this defm appears inside a
-    // multiclass and its name won't be fully resolvable until we see
-    // the top-level defm. Therefore, we don't add this to the
-    // RecordKeeper at this point. If we did we could get duplicate
-    // defs as more than one probably refers to NAME or some other
-    // common internal placeholder.
-
-    // Ensure redefinition doesn't happen.
-    if (Records.getDef(CurRec->getNameInitAsString())) {
-      Error(DefmPrefixRange.Start, "def '" + CurRec->getNameInitAsString() +
-            "' already defined, instantiating defm with subdef '" +
-            DefProto->getNameInitAsString() + "'");
-      return nullptr;
-    }
-
-    Record *CurRecSave = CurRec.get(); // Keep a copy before we release.
-    Records.addDef(std::move(CurRec));
-    return CurRecSave;
-  }
-
-  // FIXME This is bad but the ownership transfer to caller is pretty messy.
-  // The unique_ptr in this function at least protects the exits above.
-  return CurRec.release();
-}
-
-bool TGParser::ResolveMulticlassDefArgs(MultiClass &MC, Record *CurRec,
-                                        SMLoc DefmPrefixLoc, SMLoc SubClassLoc,
-                                        ArrayRef<Init *> TArgs,
-                                        ArrayRef<Init *> TemplateVals,
-                                        bool DeleteArgs) {
-  // Set all template arguments to the specified value or leave them as the
-  // default if necessary, then resolve them all simultaneously.
-  MapResolver R(CurRec);
-
-  for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-    // Check if a value is specified for this temp-arg.
-    if (i < TemplateVals.size()) {
-      if (SetValue(CurRec, DefmPrefixLoc, TArgs[i], None, TemplateVals[i]))
-        return true;
-    } else if (!CurRec->getValue(TArgs[i])->getValue()->isComplete()) {
-      return Error(SubClassLoc, "value not specified for template argument #" +
-                   Twine(i) + " (" + TArgs[i]->getAsUnquotedString() +
-                   ") of multiclassclass '" + MC.Rec.getNameInitAsString() +
-                   "'");
-    }
-
-    R.set(TArgs[i], CurRec->getValue(TArgs[i])->getValue());
-
-    if (DeleteArgs)
-      CurRec->removeValue(TArgs[i]);
-  }
-
-  CurRec->resolveReferences(R);
-
-  return false;
-}
-
-bool TGParser::ResolveMulticlassDef(MultiClass &MC,
-                                    Record *CurRec,
-                                    Record *DefProto,
-                                    SMLoc DefmPrefixLoc) {
-  // If the mdef is inside a 'let' expression, add to each def.
-  if (ApplyLetStack(CurRec))
-    return Error(DefmPrefixLoc, "when instantiating this defm");
-
-  // Don't create a top level definition for defm inside multiclasses,
-  // instead, only update the prototypes and bind the template args
-  // with the new created definition.
-  if (!CurMultiClass)
-    return false;
-  for (const auto &Proto : CurMultiClass->DefPrototypes)
-    if (Proto->getNameInit() == CurRec->getNameInit())
-      return Error(DefmPrefixLoc, "defm '" + CurRec->getNameInitAsString() +
-                   "' already defined in this multiclass!");
-  CurMultiClass->DefPrototypes.push_back(std::unique_ptr<Record>(CurRec));
-
-  // Copy the template arguments for the multiclass into the new def.
-  for (Init * TA : CurMultiClass->Rec.getTemplateArgs()) {
-    const RecordVal *RV = CurMultiClass->Rec.getValue(TA);
-    assert(RV && "Template arg doesn't exist?");
-    CurRec->addValue(*RV);
-  }
-
-  return false;
-}
-
 /// ParseDefm - Parse the instantiation of a multiclass.
 ///
 ///   DefMInst ::= DEFM ID ':' DefmSubClassRef ';'
 ///
 bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
   assert(Lex.getCode() == tgtok::Defm && "Unexpected token!");
-  SMLoc DefmLoc = Lex.getLoc();
-  Init *DefmPrefix = nullptr;
+  Lex.Lex(); // eat the defm
 
-  if (Lex.Lex() == tgtok::Id) {  // eat the defm.
-    DefmPrefix = ParseObjectName(CurMultiClass);
-  }
+  Init *DefmName = ParseObjectName(CurMultiClass);
+  if (!DefmName)
+    return true;
+  if (isa<UnsetInit>(DefmName))
+    DefmName = Records.getNewAnonymousName();
 
-  SMLoc DefmPrefixEndLoc = Lex.getLoc();
   if (Lex.getCode() != tgtok::colon)
     return TokError("expected ':' after defm identifier");
 
   // Keep track of the new generated record definitions.
-  std::vector<Record*> NewRecDefs;
+  SmallVector<std::unique_ptr<Record>, 8> NewRecDefs;
 
   // This record also inherits from a regular class (non-multiclass)?
   bool InheritFromClass = false;
@@ -3045,31 +2822,62 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
       return Error(SubClassLoc,
                    "more template args specified than multiclass expects");
 
-    // Loop over all the def's in the multiclass, instantiating each one.
-    for (const std::unique_ptr<Record> &DefProto : MC->DefPrototypes) {
-      // The record name construction goes as follow:
-      //  - If the def name is a string, prepend the prefix.
-      //  - If the def name is a more complex pattern, use that pattern.
-      // As a result, the record is instantiated before resolving
-      // arguments, as it would make its name a string.
-      Record *CurRec = InstantiateMulticlassDef(*MC, DefProto.get(), DefmPrefix,
-                                                SMRange(DefmLoc,
-                                                        DefmPrefixEndLoc),
-                                                TArgs, TemplateVals);
-      if (!CurRec)
-        return true;
-
-      // Now that the record is instantiated, we can resolve arguments.
-      if (ResolveMulticlassDefArgs(*MC, CurRec, DefmLoc, SubClassLoc,
-                                   TArgs, TemplateVals, true/*Delete args*/))
-        return Error(SubClassLoc, "could not instantiate def");
-
-      if (ResolveMulticlassDef(*MC, CurRec, DefProto.get(), DefmLoc))
-        return Error(SubClassLoc, "could not instantiate def");
-
-      NewRecDefs.push_back(CurRec);
+    DenseMap<Init *, Init *> TemplateArgs;
+    for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
+      if (i < TemplateVals.size()) {
+        TemplateArgs.insert({TArgs[i], TemplateVals[i]});
+      } else {
+        Init *Default = MC->Rec.getValue(TArgs[i])->getValue();
+        if (!Default->isComplete()) {
+          return Error(SubClassLoc,
+                       "value not specified for template argument #" +
+                           Twine(i) + " (" + TArgs[i]->getAsUnquotedString() +
+                           ") of multiclass '" + MC->Rec.getNameInitAsString() +
+                           "'");
+        }
+        TemplateArgs.insert({TArgs[i], Default});
+      }
     }
 
+    // Loop over all the def's in the multiclass, instantiating each one.
+    for (const std::unique_ptr<Record> &DefProto : MC->DefPrototypes) {
+      bool ResolveName = true;
+      auto CurRec = make_unique<Record>(*DefProto);
+      CurRec->appendLoc(SubClassLoc);
+
+      if (StringInit *NameString =
+              dyn_cast<StringInit>(CurRec->getNameInit())) {
+        // We have a fully expanded string so there are no operators to
+        // resolve.  We should concatenate the given prefix and name.
+        //
+        // TODO: This MUST happen before template argument resolution. This
+        //       does not make sense and should be changed, but at the time of
+        //       writing, there are existing .td files which rely on this
+        //       implementation detail. It's a bad idea and should be fixed.
+        //       See test/TableGen/name-resolution-consistency.td for some
+        //       examples.
+        CurRec->setName(BinOpInit::getStrConcat(DefmName, NameString));
+        ResolveName = false;
+      }
+
+      MapResolver R(CurRec.get());
+
+      if (ResolveName) {
+        // If the proto's name wasn't resolved, we probably have a reference to
+        // NAME and need to replace it.
+        //
+        // TODO: Whether the name is resolved is basically determined by magic.
+        //       Unfortunately, existing .td files depend on it.
+        R.set(StringInit::get("NAME"), DefmName);
+      }
+
+      for (const auto &TArg : TemplateArgs)
+        R.set(TArg.first, TArg.second);
+
+      CurRec->resolveReferences(R);
+
+      NewRecDefs.emplace_back(std::move(CurRec));
+    }
 
     if (Lex.getCode() != tgtok::comma) break;
     Lex.Lex(); // eat ','.
@@ -3099,12 +2907,9 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 
       // Get the expanded definition prototypes and teach them about
       // the record values the current class to inherit has
-      for (Record *CurRec : NewRecDefs) {
+      for (const auto &CurRec : NewRecDefs) {
         // Add it.
-        if (AddSubClass(CurRec, SubClass))
-          return true;
-
-        if (ApplyLetStack(CurRec))
+        if (AddSubClass(CurRec.get(), SubClass))
           return true;
       }
 
@@ -3114,16 +2919,11 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     }
   }
 
-  if (!CurMultiClass) {
-    for (Record *CurRec : NewRecDefs) {
-      // See Record::setName().  This resolve step will see any new
-      // name for the def that might have been created when resolving
-      // inheritance, values and arguments above.
-      CurRec->resolveReferences();
-      checkConcrete(*CurRec);
-      if (addToDefsets(*CurRec))
-        return true;
-    }
+  for (auto &CurRec : NewRecDefs) {
+    if (ApplyLetStack(CurRec.get()))
+      return true;
+
+    addDef(std::move(CurRec), DefmName);
   }
 
   if (Lex.getCode() != tgtok::semi)

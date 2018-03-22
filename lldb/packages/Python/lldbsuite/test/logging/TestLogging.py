@@ -17,15 +17,11 @@ from lldbsuite.test import lldbutil
 class LogTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    append_log_file = "lldb-commands-log-append.txt"
-    truncate_log_file = "lldb-commands-log-truncate.txt"
     NO_DEBUG_INFO_TESTCASE = True
 
-    @classmethod
-    def classCleanup(cls):
-        """Cleanup the test byproducts."""
-        cls.RemoveTempFile(cls.truncate_log_file)
-        cls.RemoveTempFile(cls.append_log_file)
+    def setUp(self):
+        super(LogTestCase, self).setUp()
+        self.log_file = self.getBuildArtifact("log-file.txt")
 
     def test(self):
         self.build()
@@ -65,22 +61,17 @@ class LogTestCase(TestBase):
 
     # Check that lldb truncates its log files
     def test_log_truncate(self):
-        if (os.path.exists(self.truncate_log_file)):
-            os.remove(self.truncate_log_file)
-
         # put something in our log file
-        with open(self.truncate_log_file, "w") as f:
+        with open(self.log_file, "w") as f:
             for i in range(1, 1000):
                 f.write("bacon\n")
 
-        self.runCmd(
-            "log enable -t -f '%s' lldb commands" %
-            (self.truncate_log_file))
+        self.runCmd("log enable -t -f '%s' lldb commands" % self.log_file)
         self.runCmd("help log")
         self.runCmd("log disable lldb")
 
-        self.assertTrue(os.path.isfile(self.truncate_log_file))
-        with open(self.truncate_log_file, "r") as f:
+        self.assertTrue(os.path.isfile(self.log_file))
+        with open(self.log_file, "r") as f:
             contents = f.read()
 
         # check that it got removed
@@ -88,21 +79,16 @@ class LogTestCase(TestBase):
 
     # Check that lldb can append to a log file
     def test_log_append(self):
-        if (os.path.exists(self.append_log_file)):
-            os.remove(self.append_log_file)
-
         # put something in our log file
-        with open(self.append_log_file, "w") as f:
+        with open(self.log_file, "w") as f:
             f.write("bacon\n")
 
-        self.runCmd(
-            "log enable -t -a -f '%s' lldb commands" %
-            (self.append_log_file))
+        self.runCmd( "log enable -t -a -f '%s' lldb commands" % self.log_file)
         self.runCmd("help log")
         self.runCmd("log disable lldb")
 
-        self.assertTrue(os.path.isfile(self.append_log_file))
-        with open(self.append_log_file, "r") as f:
+        self.assertTrue(os.path.isfile(self.log_file))
+        with open(self.log_file, "r") as f:
             contents = f.read()
 
         # check that it is still there

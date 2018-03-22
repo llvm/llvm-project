@@ -4163,6 +4163,28 @@ Value *llvm::SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   return ::SimplifyShuffleVectorInst(Op0, Op1, Mask, RetTy, Q, RecursionLimit);
 }
 
+static Constant *propagateNaN(Constant *In) {
+  // If the input is a vector with undef elements, just return a default NaN.
+  if (!In->isNaN())
+    return ConstantFP::getNaN(In->getType());
+
+  // Propagate the existing NaN constant when possible.
+  // TODO: Should we quiet a signaling NaN?
+  return In;
+}
+
+static Constant *simplifyFPBinop(Value *Op0, Value *Op1) {
+  if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
+    return ConstantFP::getNaN(Op0->getType());
+
+  if (match(Op0, m_NaN()))
+    return propagateNaN(cast<Constant>(Op0));
+  if (match(Op1, m_NaN()))
+    return propagateNaN(cast<Constant>(Op1));
+
+  return nullptr;
+}
+
 /// Given operands for an FAdd, see if we can fold the result.  If not, this
 /// returns null.
 static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
@@ -4170,8 +4192,8 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
     return C;
 
-  if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
-    return ConstantFP::getNaN(Op0->getType());
+  if (Constant *C = simplifyFPBinop(Op0, Op1))
+    return C;
 
   // fadd X, -0 ==> X
   if (match(Op1, m_NegZero()))
@@ -4203,8 +4225,8 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
     return C;
 
-  if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
-    return ConstantFP::getNaN(Op0->getType());
+  if (Constant *C = simplifyFPBinop(Op0, Op1))
+    return C;
 
   // fsub X, 0 ==> X
   if (match(Op1, m_Zero()))
@@ -4238,8 +4260,8 @@ static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FMul, Op0, Op1, Q))
     return C;
 
-  if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
-    return ConstantFP::getNaN(Op0->getType());
+  if (Constant *C = simplifyFPBinop(Op0, Op1))
+    return C;
 
   // fmul X, 1.0 ==> X
   if (match(Op1, m_FPOne()))
@@ -4282,8 +4304,8 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
     return C;
 
-  if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
-    return ConstantFP::getNaN(Op0->getType());
+  if (Constant *C = simplifyFPBinop(Op0, Op1))
+    return C;
 
   // X / 1.0 -> X
   if (match(Op1, m_FPOne()))
@@ -4329,8 +4351,8 @@ static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
     return C;
 
-  if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
-    return ConstantFP::getNaN(Op0->getType());
+  if (Constant *C = simplifyFPBinop(Op0, Op1))
+    return C;
 
   // Unlike fdiv, the result of frem always matches the sign of the dividend.
   // The constant match may include undef elements in a vector, so return a full

@@ -36,12 +36,21 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  const DebugLoc &DL, unsigned DstReg,
                                  unsigned SrcReg, bool KillSrc) const {
-  assert(RISCV::GPRRegClass.contains(DstReg, SrcReg) &&
-         "Impossible reg-to-reg copy");
+  if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+    return;
+  }
 
-  BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-      .addReg(SrcReg, getKillRegState(KillSrc))
-      .addImm(0);
+  if (RISCV::FPR32RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_S), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  llvm_unreachable("Impossible reg-to-reg copy");
 }
 
 void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
@@ -53,13 +62,19 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   if (I != MBB.end())
     DL = I->getDebugLoc();
 
+  unsigned Opcode;
+
   if (RISCV::GPRRegClass.hasSubClassEq(RC))
-    BuildMI(MBB, I, DL, get(RISCV::SW))
-        .addReg(SrcReg, getKillRegState(IsKill))
-        .addFrameIndex(FI)
-        .addImm(0);
+    Opcode = RISCV::SW;
+  else if (RISCV::FPR32RegClass.hasSubClassEq(RC))
+    Opcode = RISCV::FSW;
   else
     llvm_unreachable("Can't store this register to stack slot");
+
+  BuildMI(MBB, I, DL, get(Opcode))
+      .addReg(SrcReg, getKillRegState(IsKill))
+      .addFrameIndex(FI)
+      .addImm(0);
 }
 
 void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
@@ -71,10 +86,16 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (I != MBB.end())
     DL = I->getDebugLoc();
 
+  unsigned Opcode;
+
   if (RISCV::GPRRegClass.hasSubClassEq(RC))
-    BuildMI(MBB, I, DL, get(RISCV::LW), DstReg).addFrameIndex(FI).addImm(0);
+    Opcode = RISCV::LW;
+  else if (RISCV::FPR32RegClass.hasSubClassEq(RC))
+    Opcode = RISCV::FLW;
   else
     llvm_unreachable("Can't load this register from stack slot");
+
+  BuildMI(MBB, I, DL, get(Opcode), DstReg).addFrameIndex(FI).addImm(0);
 }
 
 void RISCVInstrInfo::movImm32(MachineBasicBlock &MBB,
