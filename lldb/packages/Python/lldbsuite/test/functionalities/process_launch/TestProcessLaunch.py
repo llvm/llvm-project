@@ -85,7 +85,6 @@ class ProcessLaunchTestCase(TestBase):
     # not working?
     @not_remote_testsuite_ready
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20265")
-    @expectedFailureAll(bugnumber="rdar://38484341")
     def test_set_working_dir(self):
         """Test that '-w dir' sets the working dir when running the inferior."""
         d = {'CXX_SOURCES': 'print_cwd.cpp'}
