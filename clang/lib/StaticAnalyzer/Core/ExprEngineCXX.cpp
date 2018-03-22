@@ -134,7 +134,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           makeZeroElementRegion(State, LValue, Ty, CallOpts.IsArrayCtorOrDtor);
       return LValue.getAsRegion();
     }
-    case ConstructionContext::ConstructorInitializerKind: {
+    case ConstructionContext::SimpleConstructorInitializerKind: {
       const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
       const auto *Init = ICC->getCXXCtorInitializer();
       assert(Init->isAnyMemberInitializer());
@@ -217,6 +217,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
     }
     case ConstructionContext::CXX17ElidedCopyVariableKind:
     case ConstructionContext::CXX17ElidedCopyReturnedValueKind:
+    case ConstructionContext::CXX17ElidedCopyConstructorInitializerKind:
       // Not implemented yet.
       break;
     }
