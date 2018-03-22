@@ -292,7 +292,7 @@ Function *llvm::extractDetachBodyToFunction(
     Unwind = Detach.getUnwindDest();
   Value *SyncRegion = Detach.getSyncRegion();
 
-  SmallPtrSet<BasicBlock *, 32> FunctionPieces;
+  SmallPtrSet<BasicBlock *, 8> FunctionPieces;
   SmallPtrSet<BasicBlock *, 4> ExitBlocks;
 
   assert(Detached->getUniquePredecessor() &&
@@ -474,9 +474,7 @@ Function *llvm::extractDetachBodyToFunction(
   {
     // Collect reattach instructions.
     SmallVector<Instruction *, 4> ReattachPoints;
-    for (pred_iterator PI = pred_begin(Continue), PE = pred_end(Continue);
-         PI != PE; ++PI) {
-      BasicBlock *Pred = *PI;
+    for (BasicBlock *Pred : predecessors(Continue)) {
       if (!isa<ReattachInst>(Pred->getTerminator())) continue;
       if (FunctionPieces.count(Pred))
         ReattachPoints.push_back(cast<BasicBlock>(VMap[Pred])->getTerminator());
