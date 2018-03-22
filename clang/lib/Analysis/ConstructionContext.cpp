@@ -48,15 +48,13 @@ const ConstructionContext *ConstructionContext::createFromLayers(
   if (const Stmt *S = TopLayer->getTriggerStmt()) {
     if (const auto *DS = dyn_cast<DeclStmt>(S)) {
       assert(TopLayer->isLast());
-      auto *CC =
-          C.getAllocator().Allocate<SimpleVariableConstructionContext>();
-      return new (CC) SimpleVariableConstructionContext(DS);
-    } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
+      return create<SimpleVariableConstructionContext>(C, DS);
+    }
+    if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
       assert(TopLayer->isLast());
-      auto *CC =
-          C.getAllocator().Allocate<NewAllocatedObjectConstructionContext>();
-      return new (CC) NewAllocatedObjectConstructionContext(NE);
-    } else if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(S)) {
+      return create<NewAllocatedObjectConstructionContext>(C, NE);
+    }
+    if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(S)) {
       const MaterializeTemporaryExpr *MTE = nullptr;
       assert(BTE->getType().getCanonicalType()
                 ->getAsCXXRecordDecl()->hasNonTrivialDestructor());
@@ -68,9 +66,7 @@ const ConstructionContext *ConstructionContext::createFromLayers(
                  ParentLayer->getTriggerStmt()))) {
           // A temporary object which has both destruction and
           // materialization info.
-          auto *CC =
-              C.getAllocator().Allocate<TemporaryObjectConstructionContext>();
-          return new (CC) TemporaryObjectConstructionContext(BTE, MTE);
+          return create<TemporaryObjectConstructionContext>(C, BTE, MTE);
         }
         // C++17 *requires* elision of the constructor at the return site
         // and at variable initialization site, while previous standards
@@ -78,50 +74,37 @@ const ConstructionContext *ConstructionContext::createFromLayers(
         if (auto *RS = dyn_cast<ReturnStmt>(ParentLayer->getTriggerStmt())) {
           assert(!RS->getRetValue()->getType().getCanonicalType()
                     ->getAsCXXRecordDecl()->hasTrivialDestructor());
-          auto *CC =
-              C.getAllocator()
-                  .Allocate<
-                      CXX17ElidedCopyReturnedValueConstructionContext>();
-          return new (CC)
-              CXX17ElidedCopyReturnedValueConstructionContext(RS, BTE);
+          return create<CXX17ElidedCopyReturnedValueConstructionContext>(C,
+                                                                       RS, BTE);
         }
         if (auto *DS = dyn_cast<DeclStmt>(ParentLayer->getTriggerStmt())) {
           assert(!cast<VarDecl>(DS->getSingleDecl())->getType()
                       .getCanonicalType()->getAsCXXRecordDecl()
                       ->hasTrivialDestructor());
-          auto *CC =
-              C.getAllocator()
-                  .Allocate<CXX17ElidedCopyVariableConstructionContext>();
-          return new (CC) CXX17ElidedCopyVariableConstructionContext(DS, BTE);
+          return create<CXX17ElidedCopyVariableConstructionContext>(C, DS, BTE);
         }
         llvm_unreachable("Unexpected construction context with destructor!");
       }
       // A temporary object that doesn't require materialization.
-      auto *CC =
-          C.getAllocator().Allocate<TemporaryObjectConstructionContext>();
-      return new (CC)
-          TemporaryObjectConstructionContext(BTE, /*MTE=*/nullptr);
-    } else if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(S)) {
+      return create<TemporaryObjectConstructionContext>(C, BTE, /*MTE=*/nullptr);
+    }
+    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(S)) {
       // If the object requires destruction and is not lifetime-extended,
       // then it must have a BTE within its MTE.
       assert(MTE->getType().getCanonicalType()
                 ->getAsCXXRecordDecl()->hasTrivialDestructor() ||
              MTE->getStorageDuration() != SD_FullExpression);
       assert(TopLayer->isLast());
-      auto *CC =
-          C.getAllocator().Allocate<TemporaryObjectConstructionContext>();
-      return new (CC) TemporaryObjectConstructionContext(nullptr, MTE);
-    } else if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
-      assert(TopLayer->isLast());
-      auto *CC =
-          C.getAllocator().Allocate<SimpleReturnedValueConstructionContext>();
-      return new (CC) SimpleReturnedValueConstructionContext(RS);
+      return create<TemporaryObjectConstructionContext>(C, nullptr, MTE);
     }
+    if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
+      assert(TopLayer->isLast());
+      return create<SimpleReturnedValueConstructionContext>(C, RS);
+    }
+    llvm_unreachable("Unexpected construction context with statement!");
   } else if (const CXXCtorInitializer *I = TopLayer->getTriggerInit()) {
     assert(TopLayer->isLast());
-    auto *CC =
-        C.getAllocator().Allocate<ConstructorInitializerConstructionContext>();
-    return new (CC) ConstructorInitializerConstructionContext(I);
+    return create<ConstructorInitializerConstructionContext>(C, I);
   }
   llvm_unreachable("Unexpected construction context!");
 }

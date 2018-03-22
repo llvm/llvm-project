@@ -118,6 +118,14 @@ protected:
   // via createFromLayers().
   explicit ConstructionContext(Kind K) : K(K) {}
 
+private:
+  // A helper function for constructing an instance into a bump vector context.
+  template <typename T, typename... ArgTypes>
+  static T *create(BumpVectorContext &C, ArgTypes... Args) {
+    auto *CC = C.getAllocator().Allocate<T>();
+    return new (CC) T(Args...);
+  }
+
 public:
   /// Consume the construction context layer, together with its parent layers,
   /// and wrap it up into a complete construction context.
@@ -153,11 +161,13 @@ public:
 /// elidable copy-constructor from makeT() into var would also be a simple
 /// variable constructor handled by this class.
 class SimpleVariableConstructionContext : public VariableConstructionContext {
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit SimpleVariableConstructionContext(const DeclStmt *DS)
       : VariableConstructionContext(ConstructionContext::SimpleVariableKind,
                                     DS) {}
 
+public:
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() == SimpleVariableKind;
   }
@@ -176,13 +186,15 @@ class CXX17ElidedCopyVariableConstructionContext
     : public VariableConstructionContext {
   const CXXBindTemporaryExpr *BTE;
 
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit CXX17ElidedCopyVariableConstructionContext(
       const DeclStmt *DS, const CXXBindTemporaryExpr *BTE)
       : VariableConstructionContext(CXX17ElidedCopyVariableKind, DS), BTE(BTE) {
     assert(BTE);
   }
 
+public:
   const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
 
   static bool classof(const ConstructionContext *CC) {
@@ -195,7 +207,8 @@ public:
 class ConstructorInitializerConstructionContext : public ConstructionContext {
   const CXXCtorInitializer *I;
 
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit ConstructorInitializerConstructionContext(
       const CXXCtorInitializer *I)
       : ConstructionContext(ConstructionContext::ConstructorInitializerKind),
@@ -203,6 +216,7 @@ public:
     assert(I);
   }
 
+public:
   const CXXCtorInitializer *getCXXCtorInitializer() const { return I; }
 
   static bool classof(const ConstructionContext *CC) {
@@ -215,13 +229,15 @@ public:
 class NewAllocatedObjectConstructionContext : public ConstructionContext {
   const CXXNewExpr *NE;
 
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit NewAllocatedObjectConstructionContext(const CXXNewExpr *NE)
       : ConstructionContext(ConstructionContext::NewAllocatedObjectKind),
         NE(NE) {
     assert(NE);
   }
 
+public:
   const CXXNewExpr *getCXXNewExpr() const { return NE; }
 
   static bool classof(const ConstructionContext *CC) {
@@ -237,7 +253,8 @@ class TemporaryObjectConstructionContext : public ConstructionContext {
   const CXXBindTemporaryExpr *BTE;
   const MaterializeTemporaryExpr *MTE;
 
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit TemporaryObjectConstructionContext(
       const CXXBindTemporaryExpr *BTE, const MaterializeTemporaryExpr *MTE)
       : ConstructionContext(ConstructionContext::TemporaryObjectKind),
@@ -248,6 +265,7 @@ public:
     // nowhere that doesn't have a non-trivial destructor).
   }
 
+public:
   /// CXXBindTemporaryExpr here is non-null as long as the temporary has
   /// a non-trivial destructor.
   const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const {
@@ -295,11 +313,13 @@ public:
 /// MaterializeTemporaryExpr) is normally located in the caller function's AST.
 class SimpleReturnedValueConstructionContext
     : public ReturnedValueConstructionContext {
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit SimpleReturnedValueConstructionContext(const ReturnStmt *RS)
       : ReturnedValueConstructionContext(
             ConstructionContext::SimpleReturnedValueKind, RS) {}
 
+public:
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() == SimpleReturnedValueKind;
   }
@@ -317,7 +337,8 @@ class CXX17ElidedCopyReturnedValueConstructionContext
     : public ReturnedValueConstructionContext {
   const CXXBindTemporaryExpr *BTE;
 
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit CXX17ElidedCopyReturnedValueConstructionContext(
       const ReturnStmt *RS, const CXXBindTemporaryExpr *BTE)
       : ReturnedValueConstructionContext(
@@ -326,6 +347,7 @@ public:
     assert(BTE);
   }
 
+public:
   const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
 
   static bool classof(const ConstructionContext *CC) {
