@@ -760,9 +760,7 @@ private:
           const ConstructionContext *CC =
               ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
                                                     Layer);
-          B->appendCXXRecordTypedCall(
-              CE, cast<TemporaryObjectConstructionContext>(CC),
-              cfg->getBumpVectorContext());
+          B->appendCXXRecordTypedCall(CE, CC, cfg->getBumpVectorContext());
           cleanupConstructionContext(CE);
           return;
         }
@@ -1284,7 +1282,7 @@ void CFGBuilder::findConstructionContexts(
   }
   case Stmt::ImplicitCastExprClass: {
     auto *Cast = cast<ImplicitCastExpr>(Child);
-    // TODO: We need to support CK_ConstructorConversion, maybe other kinds?
+    // Should we support other implicit cast kinds?
     switch (Cast->getCastKind()) {
     case CK_NoOp:
     case CK_ConstructorConversion:
@@ -4920,8 +4918,14 @@ static void print_construction_context(raw_ostream &OS,
     break;
   }
   case ConstructionContext::SimpleVariableKind: {
-    const auto *DSCC = cast<SimpleVariableConstructionContext>(CC);
-    S1 = DSCC->getDeclStmt();
+    const auto *SDSCC = cast<SimpleVariableConstructionContext>(CC);
+    S1 = SDSCC->getDeclStmt();
+    break;
+  }
+  case ConstructionContext::CXX17ElidedCopyVariableKind: {
+    const auto *CDSCC = cast<CXX17ElidedCopyVariableConstructionContext>(CC);
+    S1 = CDSCC->getDeclStmt();
+    S2 = CDSCC->getCXXBindTemporaryExpr();
     break;
   }
   case ConstructionContext::NewAllocatedObjectKind: {
@@ -4929,9 +4933,16 @@ static void print_construction_context(raw_ostream &OS,
     S1 = NECC->getCXXNewExpr();
     break;
   }
-  case ConstructionContext::ReturnedValueKind: {
-    const auto *RSCC = cast<ReturnedValueConstructionContext>(CC);
+  case ConstructionContext::SimpleReturnedValueKind: {
+    const auto *RSCC = cast<SimpleReturnedValueConstructionContext>(CC);
     S1 = RSCC->getReturnStmt();
+    break;
+  }
+  case ConstructionContext::CXX17ElidedCopyReturnedValueKind: {
+    const auto *RSCC =
+        cast<CXX17ElidedCopyReturnedValueConstructionContext>(CC);
+    S1 = RSCC->getReturnStmt();
+    S2 = RSCC->getCXXBindTemporaryExpr();
     break;
   }
   case ConstructionContext::TemporaryObjectKind: {
