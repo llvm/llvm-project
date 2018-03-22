@@ -801,6 +801,11 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
   // Wait for parallel work
   syncCTAThreads(CGF);
 
+  // For data sharing, we need to initialize the stack for workers.
+  CGF.EmitRuntimeCall(
+      createNVPTXRuntimeFunction(
+          OMPRTL_NVPTX__kmpc_data_sharing_init_stack));
+
   Address WorkFn =
       CGF.CreateDefaultAlignTempAlloca(CGF.Int8PtrTy, /*Name=*/"work_fn");
   Address ExecStatus =

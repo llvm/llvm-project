@@ -424,13 +424,13 @@ static int clangTidyMain(int argc, const char **argv) {
   if (EnabledChecks.empty()) {
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
-    return 0;
+    return 1;
   }
 
   if (PathList.empty()) {
     llvm::errs() << "Error: no input files specified.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
-    return 0;
+    return 1;
   }
   llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS(
       VfsOverlay.empty() ? vfs::getRealFileSystem()

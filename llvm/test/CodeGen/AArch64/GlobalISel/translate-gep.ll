@@ -6,7 +6,8 @@
 define i8*  @translate_element_size1(i64 %arg) {
 ; CHECK-LABEL: name: translate_element_size1
 ; CHECK: [[OFFSET:%[0-9]+]]:_(s64) = COPY $x0
-; CHECK: [[BASE:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+; CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+; CHECK: [[BASE:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZERO]]
 ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[BASE]], [[OFFSET]]
   %tmp = getelementptr i8, i8* null, i64 %arg
   ret i8* %tmp

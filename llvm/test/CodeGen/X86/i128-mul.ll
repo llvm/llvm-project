@@ -305,11 +305,11 @@ define i64 @mul1(i64 %n, i64* nocapture %z, i64* nocapture %x, i64 %y) nounwind 
 ;
 ; X64-NOBMI-LABEL: mul1:
 ; X64-NOBMI:       # %bb.0: # %entry
-; X64-NOBMI-NEXT:    movq %rcx, %r8
-; X64-NOBMI-NEXT:    movq %rdx, %r9
 ; X64-NOBMI-NEXT:    testq %rdi, %rdi
 ; X64-NOBMI-NEXT:    je .LBB1_3
 ; X64-NOBMI-NEXT:  # %bb.1: # %for.body.preheader
+; X64-NOBMI-NEXT:    movq %rcx, %r8
+; X64-NOBMI-NEXT:    movq %rdx, %r9
 ; X64-NOBMI-NEXT:    xorl %r10d, %r10d
 ; X64-NOBMI-NEXT:    xorl %ecx, %ecx
 ; X64-NOBMI-NEXT:    .p2align 4, 0x90
@@ -330,11 +330,11 @@ define i64 @mul1(i64 %n, i64* nocapture %z, i64* nocapture %x, i64 %y) nounwind 
 ;
 ; X64-BMI-LABEL: mul1:
 ; X64-BMI:       # %bb.0: # %entry
-; X64-BMI-NEXT:    movq %rcx, %r8
-; X64-BMI-NEXT:    movq %rdx, %r9
 ; X64-BMI-NEXT:    testq %rdi, %rdi
 ; X64-BMI-NEXT:    je .LBB1_3
 ; X64-BMI-NEXT:  # %bb.1: # %for.body.preheader
+; X64-BMI-NEXT:    movq %rcx, %r8
+; X64-BMI-NEXT:    movq %rdx, %r9
 ; X64-BMI-NEXT:    xorl %r10d, %r10d
 ; X64-BMI-NEXT:    xorl %eax, %eax
 ; X64-BMI-NEXT:    .p2align 4, 0x90

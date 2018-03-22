@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
@@ -939,6 +940,89 @@ DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
   return NumErrors;
 }
 
+unsigned DWARFVerifier::verifyNameIndexAttribute(
+    const DWARFDebugNames::NameIndex &NI, const DWARFDebugNames::Abbrev &Abbr,
+    DWARFDebugNames::AttributeEncoding AttrEnc) {
+  StringRef FormName = dwarf::FormEncodingString(AttrEnc.Form);
+  if (FormName.empty()) {
+    error() << formatv("NameIndex @ {0:x}: Abbreviation {1:x}: {2} uses an "
+                       "unknown form: {3}.\n",
+                       NI.getUnitOffset(), Abbr.Code, AttrEnc.Index,
+                       AttrEnc.Form);
+    return 1;
+  }
+
+  if (AttrEnc.Index == DW_IDX_type_hash) {
+    if (AttrEnc.Form != dwarf::DW_FORM_data8) {
+      error() << formatv(
+          "NameIndex @ {0:x}: Abbreviation {1:x}: DW_IDX_type_hash "
+          "uses an unexpected form {2} (should be {3}).\n",
+          NI.getUnitOffset(), Abbr.Code, AttrEnc.Form, dwarf::DW_FORM_data8);
+      return 1;
+    }
+  }
+
+  // A list of known index attributes and their expected form classes.
+  // DW_IDX_type_hash is handled specially in the check above, as it has a
+  // specific form (not just a form class) we should expect.
+  struct FormClassTable {
+    dwarf::Index Index;
+    DWARFFormValue::FormClass Class;
+    StringLiteral ClassName;
+  };
+  static constexpr FormClassTable Table[] = {
+      {dwarf::DW_IDX_compile_unit, DWARFFormValue::FC_Constant, {"constant"}},
+      {dwarf::DW_IDX_type_unit, DWARFFormValue::FC_Constant, {"constant"}},
+      {dwarf::DW_IDX_die_offset, DWARFFormValue::FC_Reference, {"reference"}},
+      {dwarf::DW_IDX_parent, DWARFFormValue::FC_Constant, {"constant"}},
+  };
+
+  ArrayRef<FormClassTable> TableRef(Table);
+  auto Iter = find_if(TableRef, [AttrEnc](const FormClassTable &T) {
+    return T.Index == AttrEnc.Index;
+  });
+  if (Iter == TableRef.end()) {
+    warn() << formatv("NameIndex @ {0:x}: Abbreviation {1:x} contains an "
+                      "unknown index attribute: {2}.\n",
+                      NI.getUnitOffset(), Abbr.Code, AttrEnc.Index);
+    return 0;
+  }
+
+  if (!DWARFFormValue(AttrEnc.Form).isFormClass(Iter->Class)) {
+    error() << formatv("NameIndex @ {0:x}: Abbreviation {1:x}: {2} uses an "
+                       "unexpected form {3} (expected form class {4}).\n",
+                       NI.getUnitOffset(), Abbr.Code, AttrEnc.Index,
+                       AttrEnc.Form, Iter->ClassName);
+    return 1;
+  }
+  return 0;
+}
+
+unsigned
+DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
+  unsigned NumErrors = 0;
+  for (const auto &Abbrev : NI.getAbbrevs()) {
+    StringRef TagName = dwarf::TagString(Abbrev.Tag);
+    if (TagName.empty()) {
+      warn() << formatv("NameIndex @ {0:x}: Abbreviation {1:x} references an "
+                        "unknown tag: {2}.\n",
+                        NI.getUnitOffset(), Abbrev.Code, Abbrev.Tag);
+    }
+    SmallSet<unsigned, 5> Attributes;
+    for (const auto &AttrEnc : Abbrev.Attributes) {
+      if (!Attributes.insert(AttrEnc.Index).second) {
+        error() << formatv("NameIndex @ {0:x}: Abbreviation {1:x} contains "
+                           "multiple {2} attributes.\n",
+                           NI.getUnitOffset(), Abbrev.Code, AttrEnc.Index);
+        ++NumErrors;
+        continue;
+      }
+      NumErrors += verifyNameIndexAttribute(NI, Abbrev, AttrEnc);
+    }
+  }
+  return NumErrors;
+}
+
 unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
                                          const DataExtractor &StrData) {
   unsigned NumErrors = 0;
@@ -958,6 +1042,8 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
   NumErrors += verifyDebugNamesCULists(AccelTable);
   for (const auto &NI : AccelTable)
     NumErrors += verifyNameIndexBuckets(NI, StrData);
+  for (const auto &NI : AccelTable)
+    NumErrors += verifyNameIndexAbbrevs(NI);
 
   return NumErrors;
 }

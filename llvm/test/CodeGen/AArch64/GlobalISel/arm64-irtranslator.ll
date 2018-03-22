@@ -700,7 +700,8 @@ define i32 @test_urem(i32 %arg1, i32 %arg2) {
 }
 
 ; CHECK-LABEL: name: test_constant_null
-; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+; CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZERO]]
 ; CHECK: $x0 = COPY [[NULL]]
 define i8* @test_constant_null() {
   ret i8* null

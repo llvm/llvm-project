@@ -179,6 +179,10 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
   EmitInt32(S.Offset);
 }
 
+void AsmPrinter::EmitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const {
+  EmitLabelPlusOffset(Label, Offset, MAI->getCodePointerSize());
+}
+
 //===----------------------------------------------------------------------===//
 // Dwarf Lowering Routines
 //===----------------------------------------------------------------------===//

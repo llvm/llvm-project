@@ -24,11 +24,12 @@
 #include <sstream>
 #include <cassert>
 
-class A {};
+#include "min_allocator.h"
+#include "deleter_types.h"
 
 int main()
 {
-    std::unique_ptr<A> p(new A);
+    std::unique_ptr<int, PointerDeleter<int>> p;
     std::ostringstream os;
-    os << p;
+    os << p; // expected-error {{invalid operands to binary expression}}
 }

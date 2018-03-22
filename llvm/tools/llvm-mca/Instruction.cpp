@@ -92,24 +92,30 @@ void WriteState::dump() const {
 }
 #endif
 
-bool Instruction::isReady() {
-  if (Stage == IS_READY)
-    return true;
+void Instruction::dispatch(unsigned RCUToken) {
+  assert(Stage == IS_INVALID);
+  Stage = IS_AVAILABLE;
+  RCUTokenID = RCUToken;
 
-  assert(Stage == IS_AVAILABLE);
-  for (const UniqueUse &Use : Uses)
-    if (!Use.get()->isReady())
-      return false;
-
-  setReady();
-  return true;
+  // Check if input operands are already available.
+  if (std::all_of(Uses.begin(), Uses.end(),
+                  [](const UniqueUse &Use) { return Use->isReady(); }))
+    Stage = IS_READY;
 }
 
 void Instruction::execute() {
   assert(Stage == IS_READY);
   Stage = IS_EXECUTING;
+
+  // Set the cycles left before the write-back stage.
+  CyclesLeft = Desc.MaxLatency;
+
   for (UniqueDef &Def : Defs)
     Def->onInstructionIssued();
+
+  // Transition to the "executed" stage if this is a zero-latency instruction.
+  if (!CyclesLeft)
+    Stage = IS_EXECUTED;
 }
 
 bool Instruction::isZeroLatency() const {
@@ -117,18 +123,27 @@ bool Instruction::isZeroLatency() const {
 }
 
 void Instruction::cycleEvent() {
+  if (isReady())
+    return;
+
   if (isDispatched()) {
-    for (UniqueUse &Use : Uses)
+    bool IsReady = true;
+    for (UniqueUse &Use : Uses) {
       Use->cycleEvent();
+      IsReady &= Use->isReady();
+    }
+
+    if (IsReady)
+      Stage = IS_READY;
     return;
   }
-  if (isExecuting()) {
-    for (UniqueDef &Def : Defs)
-      Def->cycleEvent();
-    CyclesLeft--;
-  }
+
+  assert(isExecuting() && "Instruction not in-flight?");
+  assert(CyclesLeft && "Instruction already executed?");
+  for (UniqueDef &Def : Defs)
+    Def->cycleEvent();
+  CyclesLeft--;
   if (!CyclesLeft)
     Stage = IS_EXECUTED;
 }
-
 } // namespace mca

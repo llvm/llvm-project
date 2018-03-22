@@ -51,6 +51,7 @@ if(COMPILER_RT_HAS_SCUDO)
     SOURCES ${SCUDO_SOURCES}
     OBJECT_LIBS RTSanitizerCommonNoTermination
                 RTSanitizerCommonLibc
+                RTSanitizerCommonCoverage
                 RTInterception
                 RTUbsan
     CFLAGS ${SCUDO_CFLAGS}
@@ -70,6 +71,7 @@ if(COMPILER_RT_HAS_SCUDO)
     SOURCES ${SCUDO_SOURCES} ${SCUDO_CXX_SOURCES}
     OBJECT_LIBS RTSanitizerCommonNoTermination
                 RTSanitizerCommonLibc
+                RTSanitizerCommonCoverage
                 RTInterception
                 RTUbsan
                 RTUbsan_cxx

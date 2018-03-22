@@ -250,7 +250,8 @@ class DispatchUnit {
   bool checkScheduler(unsigned Index, const InstrDesc &Desc);
 
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
-  void notifyInstructionDispatched(unsigned IID, llvm::ArrayRef<unsigned> UsedPhysRegs);
+  void notifyInstructionDispatched(unsigned IID,
+                                   llvm::ArrayRef<unsigned> UsedPhysRegs);
 
 public:
   DispatchUnit(Backend *B, const llvm::MCRegisterInfo &MRI,
@@ -279,8 +280,7 @@ public:
            checkScheduler(Index, Desc);
   }
 
-  unsigned dispatch(unsigned IID, Instruction *NewInst,
-                    const llvm::MCSubtargetInfo &STI);
+  void dispatch(unsigned IID, Instruction *I, const llvm::MCSubtargetInfo &STI);
 
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
                      unsigned RegID) const {
@@ -306,7 +306,6 @@ public:
   void dump() const;
 #endif
 };
-
 } // namespace mca
 
 #endif

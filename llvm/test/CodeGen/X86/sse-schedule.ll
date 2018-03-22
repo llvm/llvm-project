@@ -338,7 +338,7 @@ define <4 x float> @test_cmpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKYLAKE-LABEL: test_cmpps:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm1 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm1 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vcmpeqps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKYLAKE-NEXT:    vorps %xmm0, %xmm1, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -412,7 +412,7 @@ define float @test_cmpss(float %a0, float %a1, float *%a2) {
 ;
 ; SKYLAKE-LABEL: test_cmpss:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vcmpeqss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1299,7 +1299,7 @@ define <4 x float> @test_maxps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKYLAKE-LABEL: test_maxps:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmaxps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1366,7 +1366,7 @@ define <4 x float> @test_maxss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKYLAKE-LABEL: test_maxss:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmaxss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1433,7 +1433,7 @@ define <4 x float> @test_minps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKYLAKE-LABEL: test_minps:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vminps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vminps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vminps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1500,7 +1500,7 @@ define <4 x float> @test_minss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKYLAKE-LABEL: test_minss:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vminss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vminss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vminss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2630,8 +2630,8 @@ define <4 x float> @test_rcpss(float %a0, float *%a1) {
 ; ATOM-LABEL: test_rcpss:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [1:1.00]
-; ATOM-NEXT:    rcpss %xmm0, %xmm0
-; ATOM-NEXT:    rcpss %xmm1, %xmm1
+; ATOM-NEXT:    rcpss %xmm0, %xmm0 # sched: [0:?]
+; ATOM-NEXT:    rcpss %xmm1, %xmm1 # sched: [0:?]
 ; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -2802,8 +2802,8 @@ define <4 x float> @test_rsqrtss(float %a0, float *%a1) {
 ; ATOM-LABEL: test_rsqrtss:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [1:1.00]
-; ATOM-NEXT:    rsqrtss %xmm0, %xmm0
-; ATOM-NEXT:    rsqrtss %xmm1, %xmm1
+; ATOM-NEXT:    rsqrtss %xmm0, %xmm0 # sched: [0:?]
+; ATOM-NEXT:    rsqrtss %xmm1, %xmm1 # sched: [0:?]
 ; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -3111,8 +3111,8 @@ define <4 x float> @test_sqrtss(<4 x float> %a0, <4 x float> *%a1) {
 ; ATOM-LABEL: test_sqrtss:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movaps (%rdi), %xmm1 # sched: [1:1.00]
-; ATOM-NEXT:    sqrtss %xmm0, %xmm0
-; ATOM-NEXT:    sqrtss %xmm1, %xmm1
+; ATOM-NEXT:    sqrtss %xmm0, %xmm0 # sched: [0:?]
+; ATOM-NEXT:    sqrtss %xmm1, %xmm1 # sched: [0:?]
 ; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;

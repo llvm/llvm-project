@@ -348,8 +348,8 @@ void DispatchUnit::updateRAWDependencies(ReadState &RS,
   DependentWrites.clear();
 }
 
-unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
-                                const MCSubtargetInfo &STI) {
+void DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
+                            const MCSubtargetInfo &STI) {
   assert(!CarryOver && "Cannot dispatch another instruction!");
   unsigned NumMicroOps = NewInst->getDesc().NumMicroOps;
   if (NumMicroOps > DispatchWidth) {
@@ -370,17 +370,17 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
   for (std::unique_ptr<WriteState> &WS : NewInst->getDefs())
     RAT->addRegisterMapping(*WS, RegisterFiles);
 
-  // Set the cycles left before the write-back stage.
-  const InstrDesc &D = NewInst->getDesc();
-  NewInst->setCyclesLeft(D.MaxLatency);
+  // Reserve slots in the RCU, and notify the instruction that it has been
+  // dispatched to the schedulers for execution.
+  NewInst->dispatch(RCU->reserveSlot(IID, NumMicroOps));
 
-  // Reserve slots in the RCU.
-  unsigned RCUTokenID = RCU->reserveSlot(IID, NumMicroOps);
-  NewInst->setRCUTokenID(RCUTokenID);
+  // Notify listeners of the "instruction dispatched" event.
   notifyInstructionDispatched(IID, RegisterFiles);
 
+  // Now move the instruction into the scheduler's queue.
+  // The scheduler is responsible for checking if this is a zero-latency
+  // instruction that doesn't consume pipeline/scheduler resources.
   SC->scheduleInstruction(IID, *NewInst);
-  return RCUTokenID;
 }
 
 #ifndef NDEBUG

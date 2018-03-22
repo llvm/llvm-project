@@ -139,7 +139,8 @@ struct CodeGenSchedClass {
   // off to join another inferred class.
   RecVec InstRWs;
 
-  CodeGenSchedClass(): Index(0), ItinClassDef(nullptr) {}
+  CodeGenSchedClass(unsigned Index, std::string Name, Record *ItinClassDef)
+    : Index(Index), Name(std::move(Name)), ItinClassDef(ItinClassDef) {}
 
   bool isKeyEqual(Record *IC, ArrayRef<unsigned> W,
                   ArrayRef<unsigned> R) const {
@@ -198,9 +199,9 @@ struct CodeGenProcModel {
   // Per-operand machine model resources associated with this processor.
   RecVec ProcResourceDefs;
 
-  CodeGenProcModel(unsigned Idx, const std::string &Name, Record *MDef,
+  CodeGenProcModel(unsigned Idx, std::string Name, Record *MDef,
                    Record *IDef) :
-    Index(Idx), ModelName(Name), ModelDef(MDef), ItinsDef(IDef) {}
+    Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef) {}
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();

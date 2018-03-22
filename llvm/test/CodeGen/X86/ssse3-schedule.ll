@@ -760,7 +760,7 @@ define <8 x i16> @test_pmaddubsw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_pmaddubsw:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -828,7 +828,7 @@ define <8 x i16> @test_pmulhrsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_pmulhrsw:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vpmulhrsw (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;

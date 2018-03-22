@@ -557,10 +557,9 @@ unsigned CodeGenSchedModels::findOrInsertRW(ArrayRef<unsigned> Seq,
 void CodeGenSchedModels::collectSchedClasses() {
 
   // NoItinerary is always the first class at Idx=0
-  SchedClasses.resize(1);
-  SchedClasses.back().Index = 0;
-  SchedClasses.back().Name = "NoInstrModel";
-  SchedClasses.back().ItinClassDef = Records.getDef("NoItinerary");
+  assert(SchedClasses.empty() && "Expected empty sched class");
+  SchedClasses.emplace_back(0, "NoInstrModel",
+                            Records.getDef("NoItinerary"));
   SchedClasses.back().ProcIndices.push_back(0);
 
   // Create a SchedClass for each unique combination of itinerary class and
@@ -572,9 +571,7 @@ void CodeGenSchedModels::collectSchedClasses() {
       findRWs(Inst->TheDef->getValueAsListOfDefs("SchedRW"), Writes, Reads);
 
     // ProcIdx == 0 indicates the class applies to all processors.
-    IdxVec ProcIndices(1, 0);
-
-    unsigned SCIdx = addSchedClass(ItinDef, Writes, Reads, ProcIndices);
+    unsigned SCIdx = addSchedClass(ItinDef, Writes, Reads, /*ProcIndices*/{0});
     InstrClassMap[Inst->TheDef] = SCIdx;
   }
   // Create classes for InstRW defs.
@@ -716,11 +713,11 @@ unsigned CodeGenSchedModels::addSchedClass(Record *ItinClassDef,
     return Idx;
   }
   Idx = SchedClasses.size();
-  SchedClasses.resize(Idx+1);
+  SchedClasses.emplace_back(Idx,
+                            createSchedClassName(ItinClassDef, OperWrites,
+                                                 OperReads),
+                            ItinClassDef);
   CodeGenSchedClass &SC = SchedClasses.back();
-  SC.Index = Idx;
-  SC.Name = createSchedClassName(ItinClassDef, OperWrites, OperReads);
-  SC.ItinClassDef = ItinClassDef;
   SC.Writes = OperWrites;
   SC.Reads = OperReads;
   SC.ProcIndices = ProcIndices;
@@ -788,10 +785,8 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
       }
     }
     unsigned SCIdx = SchedClasses.size();
-    SchedClasses.resize(SCIdx+1);
+    SchedClasses.emplace_back(SCIdx, createSchedClassName(InstDefs), nullptr);
     CodeGenSchedClass &SC = SchedClasses.back();
-    SC.Index = SCIdx;
-    SC.Name = createSchedClassName(InstDefs);
     DEBUG(dbgs() << "InstRW: New SC " << SCIdx << ":" << SC.Name << " on "
           << InstRWDef->getValueAsDef("SchedModel")->getName() << "\n");
 
@@ -1317,7 +1312,7 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
   // Build up a set of partial results starting at the back of
   // PredTransitions. Remember the first new transition.
   unsigned StartIdx = TransVec.size();
-  TransVec.resize(TransVec.size() + 1);
+  TransVec.emplace_back();
   TransVec.back().PredTerm = Trans.PredTerm;
   TransVec.back().ProcIndices = Trans.ProcIndices;
 
@@ -1328,7 +1323,7 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
     // Push a new (empty) write sequence onto all partial Transitions.
     for (std::vector<PredTransition>::iterator I =
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
-      I->WriteSequences.resize(I->WriteSequences.size() + 1);
+      I->WriteSequences.emplace_back();
     }
     substituteVariantOperand(*WSI, /*IsRead=*/false, StartIdx);
   }
@@ -1339,7 +1334,7 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
     // Push a new (empty) read sequence onto all partial Transitions.
     for (std::vector<PredTransition>::iterator I =
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
-      I->ReadSequences.resize(I->ReadSequences.size() + 1);
+      I->ReadSequences.emplace_back();
     }
     substituteVariantOperand(*RSI, /*IsRead=*/true, StartIdx);
   }
@@ -1393,16 +1388,15 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
   // Create a seed transition with an empty PredTerm and the expanded sequences
   // of SchedWrites for the current SchedClass.
   std::vector<PredTransition> LastTransitions;
-  LastTransitions.resize(1);
+  LastTransitions.emplace_back();
   LastTransitions.back().ProcIndices.append(ProcIndices.begin(),
                                             ProcIndices.end());
 
   for (unsigned WriteIdx : OperWrites) {
     IdxVec WriteSeq;
     expandRWSequence(WriteIdx, WriteSeq, /*IsRead=*/false);
-    unsigned Idx = LastTransitions[0].WriteSequences.size();
-    LastTransitions[0].WriteSequences.resize(Idx + 1);
-    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].WriteSequences[Idx];
+    LastTransitions[0].WriteSequences.emplace_back();
+    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].WriteSequences.back();
     Seq.append(WriteSeq.begin(), WriteSeq.end());
     DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
   }
@@ -1410,9 +1404,8 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
   for (unsigned ReadIdx : OperReads) {
     IdxVec ReadSeq;
     expandRWSequence(ReadIdx, ReadSeq, /*IsRead=*/true);
-    unsigned Idx = LastTransitions[0].ReadSequences.size();
-    LastTransitions[0].ReadSequences.resize(Idx + 1);
-    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].ReadSequences[Idx];
+    LastTransitions[0].ReadSequences.emplace_back();
+    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].ReadSequences.back();
     Seq.append(ReadSeq.begin(), ReadSeq.end());
     DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
   }
