@@ -41,6 +41,8 @@ struct External { int v; };
 // GNU-NOT: @ExternGlobalDecl
 __declspec(dllexport) extern int ExternGlobalDecl;
 
+// M64-DAG: @__ImageBase = external dso_local constant i8
+
 // dllexport implies a definition.
 // MSC-DAG: @"?GlobalDef@@3HA" = dso_local dllexport global i32 0, align 4
 // GNU-DAG: @GlobalDef            = dso_local dllexport global i32 0, align 4

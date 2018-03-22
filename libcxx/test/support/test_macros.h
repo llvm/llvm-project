@@ -157,8 +157,9 @@
 #define TEST_NORETURN [[noreturn]]
 #endif
 
-#if !defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L || \
-    defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+#if defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
+  (!(TEST_STD_VER > 14 || \
+    (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L)))
 #define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
@@ -220,8 +221,18 @@ struct is_same<T, T> { enum {value = 1}; };
 
 #if defined(__GNUC__) || defined(__clang__)
 template <class Tp>
-inline void DoNotOptimize(Tp const& value) {
-  asm volatile("" : : "g"(value) : "memory");
+inline
+void DoNotOptimize(Tp const& value) {
+    asm volatile("" : : "r,m"(value) : "memory");
+}
+
+template <class Tp>
+inline void DoNotOptimize(Tp& value) {
+#if defined(__clang__)
+  asm volatile("" : "+r,m"(value) : : "memory");
+#else
+  asm volatile("" : "+m,r"(value) : : "memory");
+#endif
 }
 #else
 #include <intrin.h>
