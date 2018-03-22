@@ -31,10 +31,10 @@ public:
 
 protected:
     virtual void* do_allocate(size_t __size, size_t __align)
-        { return __allocate(__size); }
+        { return _VSTD::__libcpp_allocate(__size, __align); /* FIXME */}
 
-    virtual void do_deallocate(void * __p, size_t, size_t)
-        { _VSTD::__libcpp_deallocate(__p); }
+    virtual void do_deallocate(void * __p, size_t, size_t __align)
+        { _VSTD::__libcpp_deallocate(__p, __align); /* FIXME */ }
 
     virtual bool do_is_equal(memory_resource const & __other) const _NOEXCEPT
         { return &__other == this; }
