@@ -9,7 +9,7 @@
 
 // UNSUPPORTED: c++98, c++03, c++11
 
-// XFAIL: gcc-7, gcc-8
+// XFAIL: gcc-7
 
 // <functional>
 
