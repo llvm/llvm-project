@@ -119,7 +119,7 @@ public:
   }
 
   /// Access the currently owned ObjectFile with architecture \p T. As
-  /// successfull call to GetObjectFiles() or GetFilesAs() must have
+  /// successful call to GetObjectFiles() or GetFilesAs() must have
   /// been performed before calling this.
   ErrorOr<const object::ObjectFile &> Get(const Triple &T) {
     return getObjfileForArch(T);
@@ -135,6 +135,6 @@ public:
     return cast<ObjectFileType>(*ErrOrObj);
   }
 };
-}
-}
+} // namespace dsymutil
+} // namespace llvm
 #endif

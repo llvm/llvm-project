@@ -9,8 +9,8 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 #define LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 
-#include <string>
 #include "llvm/ADT/StringRef.h"
+#include <string>
 
 namespace llvm {
 class MCStreamer;
@@ -33,7 +33,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
                            raw_fd_ostream &OutFile);
 
 std::string getArchName(StringRef Arch);
-}
-}
-}
+} // namespace MachOUtils
+} // namespace dsymutil
+} // namespace llvm
 #endif // LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H

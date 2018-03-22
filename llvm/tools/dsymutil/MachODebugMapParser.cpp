@@ -56,7 +56,7 @@ private:
   BinaryHolder CurrentObjectHolder;
   /// Map of the currently processed object file symbol addresses.
   StringMap<Optional<uint64_t>> CurrentObjectAddresses;
-  /// Element of the debug map corresponfing to the current object file.
+  /// Element of the debug map corresponding to the current object file.
   DebugMapObject *CurrentDebugMapObject;
 
   /// Holds function info while function scope processing.
@@ -108,7 +108,7 @@ private:
 
 } // anonymous namespace
 
-/// Reset the parser state coresponding to the current object
+/// Reset the parser state corresponding to the current object
 /// file. This is to be called after an object file is finished
 /// processing.
 void MachODebugMapParser::resetParserState() {
@@ -218,9 +218,11 @@ void MachODebugMapParser::dumpSymTabEntry(raw_ostream &OS, uint64_t Index,
                                           uint8_t SectionIndex, uint16_t Flags,
                                           uint64_t Value) {
   // Index
-  OS << '[' << format_decimal(Index, 6) << "] "
+  OS << '[' << format_decimal(Index, 6)
+     << "] "
      // n_strx
-     << format_hex_no_prefix(StringIndex, 8) << ' '
+     << format_hex_no_prefix(StringIndex, 8)
+     << ' '
      // n_type...
      << format_hex_no_prefix(Type, 2) << " (";
 
@@ -259,9 +261,11 @@ void MachODebugMapParser::dumpSymTabEntry(raw_ostream &OS, uint64_t Index,
 
   OS << ") "
      // n_sect
-     << format_hex_no_prefix(SectionIndex, 2) << "     "
+     << format_hex_no_prefix(SectionIndex, 2)
+     << "     "
      // n_desc
-     << format_hex_no_prefix(Flags, 4) << "   "
+     << format_hex_no_prefix(Flags, 4)
+     << "   "
      // n_value
      << format_hex_no_prefix(Value, 16);
 
@@ -362,9 +366,8 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
     return;
   }
 
-  // If the last N_OSO object file wasn't found,
-  // CurrentDebugMapObject will be null. Do not update anything
-  // until we find the next valid N_OSO entry.
+  // If the last N_OSO object file wasn't found, CurrentDebugMapObject will be
+  // null. Do not update anything until we find the next valid N_OSO entry.
   if (!CurrentDebugMapObject)
     return;
 

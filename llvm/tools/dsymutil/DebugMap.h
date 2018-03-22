@@ -103,6 +103,8 @@ public:
 
   const_iterator end() const { return Objects.end(); }
 
+  unsigned getNumberOfObjects() const { return Objects.size(); }
+
   /// This function adds an DebugMapObject to the list owned by this
   /// debug map.
   DebugMapObject &
@@ -208,7 +210,6 @@ public:
 };
 
 } // end namespace dsymutil
-
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::dsymutil::DebugMapObject::YAMLSymbolMapping)
