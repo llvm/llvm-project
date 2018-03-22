@@ -157,8 +157,9 @@
 #define TEST_NORETURN [[noreturn]]
 #endif
 
-#if !defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L || \
-    defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+#if defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
+  (!(TEST_STD_VER > 14 || \
+    (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L)))
 #define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
