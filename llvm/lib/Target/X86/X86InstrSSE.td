@@ -7330,7 +7330,7 @@ let Predicates = [NoAVX, HasPCLMUL] in {
               [(set VR128:$dst,
                  (int_x86_pclmulqdq VR128:$src1, (memopv2i64 addr:$src2),
                   imm:$src3))],
-              IIC_SSE_PCLMULQDQ_RR>, Sched<[WriteCLMulLd, ReadAfterLd]>;
+              IIC_SSE_PCLMULQDQ_RM>, Sched<[WriteCLMulLd, ReadAfterLd]>;
   } // Constraints = "$src1 = $dst"
 
   def : Pat<(int_x86_pclmulqdq (memopv2i64 addr:$src2), VR128:$src1,
@@ -7358,15 +7358,15 @@ multiclass vpclmulqdq<RegisterClass RC, X86MemOperand MemOp,
             (ins RC:$src1, RC:$src2, u8imm:$src3),
             "vpclmulqdq\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
             [(set RC:$dst,
-              (IntId RC:$src1, RC:$src2, imm:$src3))]>,
+              (IntId RC:$src1, RC:$src2, imm:$src3))], IIC_SSE_PCLMULQDQ_RR>,
             Sched<[WriteCLMul]>;
 
   def rm : PCLMULIi8<0x44, MRMSrcMem, (outs RC:$dst),
             (ins RC:$src1, MemOp:$src2, u8imm:$src3),
             "vpclmulqdq\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
             [(set RC:$dst,
-               (IntId RC:$src1, (LdFrag addr:$src2), imm:$src3))]>,
-            Sched<[WriteCLMulLd, ReadAfterLd]>;
+               (IntId RC:$src1, (LdFrag addr:$src2), imm:$src3))],
+               IIC_SSE_PCLMULQDQ_RM>, Sched<[WriteCLMulLd, ReadAfterLd]>;
 
   // We can commute a load in the first operand by swapping the sources and
   // rotating the immediate.

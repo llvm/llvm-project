@@ -882,6 +882,33 @@ void TargetInstrInfo::genAlternativeCodeSequence(
   reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, InstIdxForVirtReg);
 }
 
+void TargetInstrInfo::trackRegDefsUses(const MachineInstr &MI,
+                                       BitVector &ModifiedRegs,
+                                       BitVector &UsedRegs,
+                                       const TargetRegisterInfo *TRI) const {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isRegMask())
+      ModifiedRegs.setBitsNotInMask(MO.getRegMask());
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    if (MO.isDef()) {
+      // Some architectures (e.g. AArch64 XZR/WZR) have registers that are
+      // constant and may be used as destinations to indicate the generated
+      // value is discarded. No need to track such case as a def.
+      if (!TRI->isConstantPhysReg(Reg))
+        for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+          ModifiedRegs.set(*AI);
+    } else {
+      assert(MO.isUse() && "Reg operand not a def and not a use");
+      for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+        UsedRegs.set(*AI);
+    }
+  }
+}
+
 bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
     const MachineInstr &MI, AliasAnalysis *AA) const {
   const MachineFunction &MF = *MI.getMF();

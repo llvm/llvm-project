@@ -1461,6 +1461,9 @@ example:
     trap or generate asynchronous exceptions. Exception handling schemes
     that are recognized by LLVM to handle asynchronous exceptions, such
     as SEH, will still provide their implementation defined semantics.
+``optforfuzzing``
+    This attribute indicates that this function should be optimized
+    for maximum fuzzing signal.
 ``optnone``
     This function attribute indicates that most optimization passes will skip
     this function, with the exception of interprocedural optimization passes.

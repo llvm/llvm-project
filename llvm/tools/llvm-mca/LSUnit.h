@@ -24,6 +24,8 @@
 
 namespace mca {
 
+struct InstrDesc;
+
 /// \brief A Load/Store Unit implementing a load and store queues.
 ///
 /// This class implements a load queue and a store queue to emulate the
@@ -129,20 +131,8 @@ public:
   bool isSQFull() const { return SQ_Size != 0 && StoreQueue.size() == SQ_Size; }
   bool isLQFull() const { return LQ_Size != 0 && LoadQueue.size() == LQ_Size; }
 
-  void reserve(unsigned Index, bool MayLoad, bool MayStore, bool IsMemBarrier) {
-    if (!MayLoad && !MayStore)
-      return;
-    if (MayLoad) {
-      if (IsMemBarrier)
-        LoadBarriers.insert(Index);
-      assignLQSlot(Index);
-    }
-    if (MayStore) {
-      if (IsMemBarrier)
-        StoreBarriers.insert(Index);
-      assignSQSlot(Index);
-    }
-  }
+  // Returns true if this instruction has been successfully enqueued.
+  bool reserve(unsigned Index, const InstrDesc &Desc);
 
   // The rules are:
   // 1. A store may not pass a previous store.

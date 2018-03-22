@@ -32,10 +32,10 @@ class MCInst;
 
 //===----------------------------------------------------------------------===//
 ///
-/// MCSubtargetInfo - Generic base class for all target subtargets.
+/// Generic base class for all target subtargets.
 ///
 class MCSubtargetInfo {
-  Triple TargetTriple;                        // Target triple
+  Triple TargetTriple;
   std::string CPU; // CPU being targeted.
   ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
   ArrayRef<SubtargetFeatureKV> ProcDesc;  // Processor descriptions
@@ -49,7 +49,7 @@ class MCSubtargetInfo {
 
   const InstrStage *Stages;            // Instruction itinerary stages
   const unsigned *OperandCycles;       // Itinerary operand cycles
-  const unsigned *ForwardingPaths;     // Forwarding paths
+  const unsigned *ForwardingPaths;
   FeatureBitset FeatureBits;           // Feature bits for current CPU + FS
 
 public:
@@ -66,22 +66,10 @@ public:
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
   virtual ~MCSubtargetInfo() = default;
 
-  /// getTargetTriple - Return the target triple string.
   const Triple &getTargetTriple() const { return TargetTriple; }
+  StringRef getCPU() const { return CPU; }
 
-  /// getCPU - Return the CPU string.
-  StringRef getCPU() const {
-    return CPU;
-  }
-
-  /// getFeatureBits - Return the feature bits.
-  ///
-  const FeatureBitset& getFeatureBits() const {
-    return FeatureBits;
-  }
-
-  /// setFeatureBits - Set the feature bits.
-  ///
+  const FeatureBitset& getFeatureBits() const { return FeatureBits; }
   void setFeatureBits(const FeatureBitset &FeatureBits_) {
     FeatureBits = FeatureBits_;
   }
@@ -102,16 +90,16 @@ public:
   /// string.
   void setDefaultFeatures(StringRef CPU, StringRef FS);
 
-  /// ToggleFeature - Toggle a feature and returns the re-computed feature
-  /// bits. This version does not change the implied bits.
+  /// Toggle a feature and return the re-computed feature bits.
+  /// This version does not change the implied bits.
   FeatureBitset ToggleFeature(uint64_t FB);
 
-  /// ToggleFeature - Toggle a feature and returns the re-computed feature
-  /// bits. This version does not change the implied bits.
+  /// Toggle a feature and return the re-computed feature bits.
+  /// This version does not change the implied bits.
   FeatureBitset ToggleFeature(const FeatureBitset& FB);
 
-  /// ToggleFeature - Toggle a set of features and returns the re-computed
-  /// feature bits. This version will also change all implied bits.
+  /// Toggle a set of features and return the re-computed feature bits.
+  /// This version will also change all implied bits.
   FeatureBitset ToggleFeature(StringRef FS);
 
   /// Apply a feature flag and return the re-computed feature bits, including
@@ -122,8 +110,7 @@ public:
   /// the provided string, ignoring all other features.
   bool checkFeatures(StringRef FS) const;
 
-  /// getSchedModelForCPU - Get the machine model of a CPU.
-  ///
+  /// Get the machine model of a CPU.
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;
 
   /// Get the machine model for this subtarget's CPU.
@@ -167,8 +154,7 @@ public:
     return 0;
   }
 
-  /// getInstrItineraryForCPU - Get scheduling itinerary of a CPU.
-  ///
+  /// Get scheduling itinerary of a CPU.
   InstrItineraryData getInstrItineraryForCPU(StringRef CPU) const;
 
   /// Initialize an InstrItineraryData instance.

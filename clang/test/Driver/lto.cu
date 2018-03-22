@@ -1,3 +1,7 @@
+// REQUIRES: clang-driver
+// REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+
 // -flto causes a switch to llvm-bc object files.
 // RUN: %clangxx -nocudainc -nocudalib -ccc-print-phases -c %s -flto 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILE-ACTIONS < %t %s
@@ -17,8 +21,8 @@
 // CHECK-COMPILELINK-ACTIONS: 5: compiler, {4}, ir, (device-cuda, sm_20)
 // CHECK-COMPILELINK-ACTIONS: 6: backend, {5}, assembler, (device-cuda, sm_20)
 // CHECK-COMPILELINK-ACTIONS: 7: assembler, {6}, object, (device-cuda, sm_20)
-// CHECK-COMPILELINK-ACTIONS: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_20)" {7}, object
-// CHECK-COMPILELINK-ACTIONS: 9: offload, "device-cuda (nvptx64-nvidia-cuda:sm_20)" {6}, assembler
+// CHECK-COMPILELINK-ACTIONS: 8: offload, "device-cuda (nvptx{{.*}}-nvidia-cuda:sm_20)" {7}, object
+// CHECK-COMPILELINK-ACTIONS: 9: offload, "device-cuda (nvptx{{.*}}-nvidia-cuda:sm_20)" {6}, assembler
 // CHECK-COMPILELINK-ACTIONS: 10: linker, {8, 9}, cuda-fatbin, (device-cuda)
 // CHECK-COMPILELINK-ACTIONS: 11: offload, "host-cuda {{.*}}" {2}, "device-cuda{{.*}}" {10}, ir
 // CHECK-COMPILELINK-ACTIONS: 12: backend, {11}, lto-bc, (host-cuda)

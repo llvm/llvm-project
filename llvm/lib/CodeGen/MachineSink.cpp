@@ -77,6 +77,7 @@ static cl::opt<unsigned> SplitEdgeProbabilityThreshold(
 STATISTIC(NumSunk,      "Number of machine instructions sunk");
 STATISTIC(NumSplit,     "Number of critical edges split");
 STATISTIC(NumCoalesces, "Number of copies coalesced");
+STATISTIC(NumPostRACopySink, "Number of copies sunk after RA");
 
 namespace {
 
@@ -901,4 +902,191 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   }
 
   return true;
+}
+
+//===----------------------------------------------------------------------===//
+// This pass is not intended to be a replacement or a complete alternative
+// for the pre-ra machine sink pass. It is only designed to sink COPY
+// instructions which should be handled after RA.
+//
+// This pass sinks COPY instructions into a successor block, if the COPY is not
+// used in the current block and the COPY is live-in to a single successor
+// (i.e., doesn't require the COPY to be duplicated).  This avoids executing the
+// copy on paths where their results aren't needed.  This also exposes
+// additional opportunites for dead copy elimination and shrink wrapping.
+//
+// These copies were either not handled by or are inserted after the MachineSink
+// pass. As an example of the former case, the MachineSink pass cannot sink
+// COPY instructions with allocatable source registers; for AArch64 these type
+// of copy instructions are frequently used to move function parameters (PhyReg)
+// into virtual registers in the entry block.
+//
+// For the machine IR below, this pass will sink %w19 in the entry into its
+// successor (%bb.1) because %w19 is only live-in in %bb.1.
+// %bb.0:
+//   %wzr = SUBSWri %w1, 1
+//   %w19 = COPY %w0
+//   Bcc 11, %bb.2
+// %bb.1:
+//   Live Ins: %w19
+//   BL @fun
+//   %w0 = ADDWrr %w0, %w19
+//   RET %w0
+// %bb.2:
+//   %w0 = COPY %wzr
+//   RET %w0
+// As we sink %w19 (CSR in AArch64) into %bb.1, the shrink-wrapping pass will be
+// able to see %bb.0 as a candidate.
+//===----------------------------------------------------------------------===//
+namespace {
+
+class PostRAMachineSinking : public MachineFunctionPass {
+public:
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  static char ID;
+  PostRAMachineSinking() : MachineFunctionPass(ID) {}
+  StringRef getPassName() const override { return "PostRA Machine Sink"; }
+
+private:
+  /// Track which registers have been modified and used.
+  BitVector ModifiedRegs, UsedRegs;
+
+  /// Sink Copy instructions unused in the same block close to their uses in
+  /// successors.
+  bool tryToSinkCopy(MachineBasicBlock &BB, MachineFunction &MF,
+                     const TargetRegisterInfo *TRI, const TargetInstrInfo *TII);
+};
+} // namespace
+
+char PostRAMachineSinking::ID = 0;
+char &llvm::PostRAMachineSinkingID = PostRAMachineSinking::ID;
+
+INITIALIZE_PASS(PostRAMachineSinking, "postra-machine-sink",
+                "PostRA Machine Sink", false, false)
+
+static MachineBasicBlock *
+getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
+                      ArrayRef<MachineBasicBlock *> SinkableBBs, unsigned Reg,
+                      const TargetRegisterInfo *TRI) {
+  SmallSet<unsigned, 8> AliasedRegs;
+  for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+    AliasedRegs.insert(*AI);
+
+  // Try to find a single sinkable successor in which Reg is live-in.
+  MachineBasicBlock *BB = nullptr;
+  for (auto *SI : SinkableBBs) {
+    if (SI->isLiveIn(Reg)) {
+      // If BB is set here, Reg is live-in to at least two sinkable successors,
+      // so quit.
+      if (BB)
+        return nullptr;
+      BB = SI;
+    }
+  }
+  // Reg is not live-in to any sinkable successors.
+  if (!BB)
+    return nullptr;
+
+  // Check if any register aliased with Reg is live-in in other successors.
+  for (auto *SI : CurBB.successors()) {
+    if (SI == BB)
+      continue;
+    for (const auto LI : SI->liveins())
+      if (AliasedRegs.count(LI.PhysReg))
+        return nullptr;
+  }
+  return BB;
+}
+
+bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
+                                         MachineFunction &MF,
+                                         const TargetRegisterInfo *TRI,
+                                         const TargetInstrInfo *TII) {
+  SmallVector<MachineBasicBlock *, 2> SinkableBBs;
+  // FIXME: For now, we sink only to a successor which has a single predecessor
+  // so that we can directly sink COPY instructions to the successor without
+  // adding any new block or branch instruction.
+  for (MachineBasicBlock *SI : CurBB.successors())
+    if (!SI->livein_empty() && SI->pred_size() == 1)
+      SinkableBBs.push_back(SI);
+
+  if (SinkableBBs.empty())
+    return false;
+
+  bool Changed = false;
+
+  // Track which registers have been modified and used between the end of the
+  // block and the current instruction.
+  ModifiedRegs.reset();
+  UsedRegs.reset();
+
+  for (auto I = CurBB.rbegin(), E = CurBB.rend(); I != E;) {
+    MachineInstr *MI = &*I;
+    ++I;
+
+    // Do not move any instruction across function call.
+    if (MI->isCall())
+      return false;
+
+    if (!MI->isCopy() || !MI->getOperand(0).isRenamable()) {
+      TII->trackRegDefsUses(*MI, ModifiedRegs, UsedRegs, TRI);
+      continue;
+    }
+
+    unsigned DefReg = MI->getOperand(0).getReg();
+    unsigned SrcReg = MI->getOperand(1).getReg();
+    // Don't sink the COPY if it would violate a register dependency.
+    if (ModifiedRegs[DefReg] || ModifiedRegs[SrcReg] || UsedRegs[DefReg]) {
+      TII->trackRegDefsUses(*MI, ModifiedRegs, UsedRegs, TRI);
+      continue;
+    }
+
+    MachineBasicBlock *SuccBB =
+        getSingleLiveInSuccBB(CurBB, SinkableBBs, DefReg, TRI);
+    // Don't sink if we cannot find a single sinkable successor in which Reg
+    // is live-in.
+    if (!SuccBB) {
+      TII->trackRegDefsUses(*MI, ModifiedRegs, UsedRegs, TRI);
+      continue;
+    }
+    assert((SuccBB->pred_size() == 1 && *SuccBB->pred_begin() == &CurBB) &&
+           "Unexpected predecessor");
+
+    // Clear the kill flag if SrcReg is killed between MI and the end of the
+    // block.
+    if (UsedRegs[SrcReg]) {
+      MachineBasicBlock::iterator NI = std::next(MI->getIterator());
+      for (MachineInstr &UI : make_range(NI, CurBB.end())) {
+        if (UI.killsRegister(SrcReg, TRI)) {
+          UI.clearRegisterKills(SrcReg, TRI);
+          MI->getOperand(1).setIsKill(true);
+          break;
+        }
+      }
+    }
+
+    MachineBasicBlock::iterator InsertPos = SuccBB->getFirstNonPHI();
+    SuccBB->splice(InsertPos, &CurBB, MI);
+    SuccBB->removeLiveIn(DefReg);
+    if (!SuccBB->isLiveIn(SrcReg))
+      SuccBB->addLiveIn(SrcReg);
+
+    Changed = true;
+    ++NumPostRACopySink;
+  }
+  return Changed;
+}
+
+bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
+  bool Changed = false;
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  ModifiedRegs.resize(TRI->getNumRegs());
+  UsedRegs.resize(TRI->getNumRegs());
+
+  for (auto &BB : MF)
+    Changed |= tryToSinkCopy(BB, MF, TRI, TII);
+
+  return Changed;
 }

@@ -78,7 +78,8 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
                 RTInterception
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
-		RTUbsan
+                RTSanitizerCommonCoverage
+                RTUbsan
     CFLAGS ${HWASAN_RTL_CFLAGS}
     PARENT_TARGET hwasan)
   add_compiler_rt_runtime(clang_rt.hwasan_cxx
@@ -112,7 +113,8 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
             RTInterception
             RTSanitizerCommon
             RTSanitizerCommonLibc
-	    RTUbsan
+            RTSanitizerCommonCoverage
+            RTUbsan
             # The only purpose of RTHWAsan_dynamic_version_script_dummy is to
             # carry a dependency of the shared runtime on the version script.
             # Replacing it with a straightforward

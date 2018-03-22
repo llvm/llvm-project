@@ -1,0 +1,365 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=postra-machine-sink -verify-machineinstrs  -o - %s | FileCheck %s
+
+---
+# Sink w19 to %bb.1.
+# CHECK-LABEL: name: sinkcopy1
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: $w19 = COPY killed $w0
+# CHECK-LABEL: bb.1:
+# CHECK: liveins: $w1, $w0
+# CHECK: renamable $w19 = COPY killed $w0
+
+name: sinkcopy1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable  $w19 = COPY killed $w0
+    Bcc 11, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.1:
+    liveins: $w1, $w19
+    $w0 = ADDWrr $w1, $w19
+    RET $x0
+
+  bb.2:
+    $w0 = COPY $wzr
+    RET   $x0
+...
+
+---
+# Sink w19 to %bb.2.
+# CHECK-LABEL: name: sinkcopy2
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: renamable $w19 = COPY killed $w0
+# CHECK-LABEL: bb.2:
+# CHECK: liveins: $w1, $w0
+# CHECK: renamable $w19 = COPY killed $w0
+name: sinkcopy2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY killed $w0
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    $w0 = COPY $wzr
+    RET $x0
+
+  bb.2:
+    liveins: $w1, $w19
+    $w0 = ADDWrr $w1, $w19
+    RET $x0
+...
+
+---
+# Sink w19 and w20 to %bb.1.
+# CHECK-LABEL: name: sinkcopy3
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: renamable $w19 = COPY killed $w0
+# CHECK-LABEL: bb.1:
+# CHECK: liveins: $w1, $w0
+# CHECK: renamable $w19 = COPY killed $w0
+# CHECK: renamable $w20 = COPY killed $w1
+name: sinkcopy3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY killed $w0
+    renamable $w20 = COPY killed $w1
+
+  bb.1:
+    liveins: $w19, $w20
+    $w0 = COPY $w19
+    $w1 = COPY $w20
+    RET $x0
+...
+
+
+# Sink w19 to %bb.1 and w20 to %bb.2.
+# CHECK-LABEL: name: sinkcopy4
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: renamable $w19 = COPY killed $w0
+# CHECK-NOT: renamable $w20 = COPY killed $w1
+# CHECK-LABEL: bb.1:
+# CHECK: liveins: $w1, $w0
+# CHECK: renamable $w19 = COPY killed $w0
+# CHECK-LABEL: bb.2:
+# CHECK: liveins: $w0, $w1
+# CHECK: renamable $w20 = COPY killed $w1
+name: sinkcopy4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY killed $w0
+    renamable $w20 = COPY killed $w1
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: $w1, $w19
+    $w0 = ADDWrr $w1, $w19
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $w20
+    $w0 = ADDWrr $w0, $w20
+    RET $x0
+...
+
+# Sink w19 to %bb.3 through %bb.2.
+# CHECK-LABEL: name: sinkcopy5
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: renamable $w19 = COPY $w0
+# CHECK-LABEL: bb.2:
+# CHECK: $w1 = ADDWrr $w1, $w0
+# CHECK-LABEL: bb.3:
+# CHECK: liveins: $w1, $w0
+# CHECK: renamable $w19 = COPY killed $w0
+name: sinkcopy5
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0
+    Bcc 11, %bb.2, implicit $nzcv
+
+  bb.1:
+    liveins: $x0
+    $w19 = COPY $wzr
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $w1, $w19
+    $w1 = ADDWrr $w1, killed $w0
+
+  bb.3:
+    liveins: $w1, $w19
+    $w0 = ADDWrr $w1, $w19
+    RET $x0
+...
+
+# Sink w19 to %bb.3, but  through %bb.2.
+# CHECK-LABEL: name: sinkcopy6
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: renamable $w19 = COPY $w0
+# CHECK-NOT: renamable $w20 = COPY $w0
+# CHECK-LABEL: bb.2:
+# CHECK: liveins: $w1, $w0
+# CHECK: renamable $w19 = COPY $w0
+# CHECK: renamable $w20 = COPY $w19
+name: sinkcopy6
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0
+    renamable $w20 = COPY $w19
+    Bcc 11, %bb.2, implicit $nzcv
+
+  bb.1:
+    $w0 = COPY $wzr
+    RET $x0
+
+  bb.2:
+    liveins: $w1, $w20
+    $w0 = ADDWrr killed $w1, $w20
+    RET $x0
+...
+
+---
+# Sink w19 regardless of the def of wzr in bb.0.
+# CHECK-LABEL: name: sinkcopy7
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: renamable $w19 = COPY $w0
+# CHECK-LABEL: bb.2:
+# CHECK: renamable $w19 = COPY $wzr
+name: sinkcopy7
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    renamable $w19 = COPY $wzr
+    $wzr = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    $x0 = COPY $xzr
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $w19
+    $w0 = ADDWrr $w0, $w19
+    RET $x0
+---
+
+# Don't sink w19 as w0 is defined in bb.0.
+# CHECK-LABEL: name: donotsinkcopy1
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $w19 = COPY $w0
+# CHECK: $w0 = LDRWui $sp, 0
+name: donotsinkcopy1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0
+    $w0 = LDRWui $sp, 0 :: (load 4)
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    $x0 = COPY $xzr
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $w19
+    $w0 = ADDWrr $w0, $w19
+    RET $x0
+...
+
+---
+# Don't sink w19 as w19 is used in bb.0.
+# CHECK-LABEL: name: donotsinkcopy2
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $w19 = COPY $w0
+# CHECK: STRWui $w1, $x19, 0
+name: donotsinkcopy2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0
+    STRWui $w1, $x19, 0 :: (store 4)
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    $x0 = COPY $xzr
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $w19
+    $w0 = ADDWrr $w0, $w19
+    RET $x0
+...
+
+---
+# Don't sink w19 as w19 is used in both %bb.1 and %bb.2.
+# CHECK-LABEL: name: donotsinkcopy3
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $w19 = COPY $w0
+name: donotsinkcopy3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: $w19
+    $w0 = COPY $w19
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $w19
+    $w0 = ADDWrr $w0, $w19
+    RET $x0
+...
+
+---
+# Don't sink w19 as %bb.2 has multiple predecessors.
+# CHECK-LABEL: name: donotsinkcopy4
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $w19 = COPY $w0
+name: donotsinkcopy4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: $w0
+    $w19 = COPY $w0
+    B %bb.2
+
+  bb.2:
+    liveins: $w0, $w19
+    $w0 = ADDWrr $w0, $w19
+    RET $x0
+...
+
+
+# Don't sink w19 after sinking w20.
+# CHECK-LABEL: name: donotsinkcopy5
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $w19 = COPY $w0
+# CHECK-LABEL: bb.2:
+# CHECK: liveins: $w0, $w19
+# CHECK: renamable $w20 = COPY $w19
+name: donotsinkcopy5
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0
+    renamable $w20 = COPY $w19
+    Bcc 11, %bb.2, implicit $nzcv
+
+  bb.1:
+    liveins: $w19
+    $w0 = COPY $w19
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $w20
+    $w0 = ADDWrr killed $w0, $w20
+    RET $x0
+...
+
+---
+# Don't sink w19 as x19 is live-in in %bb.2.
+# CHECK-LABEL: name: donotsinkcopy6
+# CHECK-LABEL: bb.0:
+name: donotsinkcopy6
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $x19 = COPY $x0
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: $w19
+    $w0 = COPY $w19
+    RET $x0
+
+  bb.2:
+    liveins: $x0, $x19
+    $x0 = ADDXrr $x0, $x19
+    RET $x0
+...

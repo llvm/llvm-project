@@ -285,10 +285,7 @@ public:
   VecUses &getUses() { return Uses; }
   const VecUses &getUses() const { return Uses; }
   const InstrDesc &getDesc() const { return Desc; }
-
   unsigned getRCUTokenID() const { return RCUTokenID; }
-  int getCyclesLeft() const { return CyclesLeft; }
-  void setCyclesLeft(int Cycles) { CyclesLeft = Cycles; }
 
   // Transition to the dispatch stage, and assign a RCUToken to this
   // instruction. The RCUToken is used to track the completion of every

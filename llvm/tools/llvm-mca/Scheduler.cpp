@@ -260,16 +260,9 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
     notifyReservedBuffers(Desc.Buffers);
   }
 
-  bool MayLoad = Desc.MayLoad;
-  bool MayStore = Desc.MayStore;
-  if (MayLoad || MayStore)
-    LSU->reserve(Idx, MayLoad, MayStore, Desc.HasSideEffects);
-
-  bool IsReady = MCIS.isReady();
-  if (IsReady && (MayLoad || MayStore))
-    IsReady &= LSU->isReady(Idx);
-
-  if (!IsReady) {
+  // If necessary, reserve queue entries in the load-store unit (LSU).
+  bool Reserved = LSU->reserve(Idx, Desc);
+  if (!MCIS.isReady() || (Reserved && !LSU->isReady(Idx))) {
     DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx << " to the Wait Queue\n");
     WaitQueue[Idx] = &MCIS;
     return;

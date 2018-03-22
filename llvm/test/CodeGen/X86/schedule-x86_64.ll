@@ -5852,7 +5852,7 @@ define void @test_imul_32(i32 %a0, i32* %a1) optsize {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    imull %edi # sched: [4:1.00]
-; HASWELL-NEXT:    imull (%rsi) # sched: [8:1.00]
+; HASWELL-NEXT:    imull (%rsi) # sched: [9:1.00]
 ; HASWELL-NEXT:    imull %edi, %edi # sched: [3:1.00]
 ; HASWELL-NEXT:    imull (%rsi), %edi # sched: [8:1.00]
 ; HASWELL-NEXT:    imull $665536, %edi, %edi # imm = 0xA27C0
@@ -5868,7 +5868,7 @@ define void @test_imul_32(i32 %a0, i32* %a1) optsize {
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    imull %edi # sched: [4:1.00]
-; BROADWELL-NEXT:    imull (%rsi) # sched: [8:1.00]
+; BROADWELL-NEXT:    imull (%rsi) # sched: [9:1.00]
 ; BROADWELL-NEXT:    imull %edi, %edi # sched: [3:1.00]
 ; BROADWELL-NEXT:    imull (%rsi), %edi # sched: [8:1.00]
 ; BROADWELL-NEXT:    imull $665536, %edi, %edi # imm = 0xA27C0
@@ -5883,10 +5883,10 @@ define void @test_imul_32(i32 %a0, i32* %a1) optsize {
 ; SKYLAKE-LABEL: test_imul_32:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    imull %edi # sched: [5:1.00]
+; SKYLAKE-NEXT:    imull %edi # sched: [4:1.00]
 ; SKYLAKE-NEXT:    imull (%rsi) # sched: [8:1.00]
 ; SKYLAKE-NEXT:    imull %edi, %edi # sched: [3:1.00]
-; SKYLAKE-NEXT:    imull (%rsi), %edi # sched: [8:1.00]
+; SKYLAKE-NEXT:    imull (%rsi), %edi # sched: [9:1.00]
 ; SKYLAKE-NEXT:    imull $665536, %edi, %edi # imm = 0xA27C0
 ; SKYLAKE-NEXT:    # sched: [3:1.00]
 ; SKYLAKE-NEXT:    imull $665536, (%rsi), %edi # imm = 0xA27C0
@@ -5900,7 +5900,7 @@ define void @test_imul_32(i32 %a0, i32* %a1) optsize {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    imull %edi # sched: [4:1.00]
-; SKX-NEXT:    imull (%rsi) # sched: [8:1.00]
+; SKX-NEXT:    imull (%rsi) # sched: [9:1.00]
 ; SKX-NEXT:    imull %edi, %edi # sched: [3:1.00]
 ; SKX-NEXT:    imull (%rsi), %edi # sched: [8:1.00]
 ; SKX-NEXT:    imull $665536, %edi, %edi # imm = 0xA27C0
@@ -6015,7 +6015,7 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    imulq %rdi # sched: [4:1.00]
-; HASWELL-NEXT:    imulq (%rsi) # sched: [8:1.00]
+; HASWELL-NEXT:    imulq (%rsi) # sched: [9:1.00]
 ; HASWELL-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
 ; HASWELL-NEXT:    imulq (%rsi), %rdi # sched: [8:1.00]
 ; HASWELL-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
@@ -6031,7 +6031,7 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    imulq %rdi # sched: [4:1.00]
-; BROADWELL-NEXT:    imulq (%rsi) # sched: [8:1.00]
+; BROADWELL-NEXT:    imulq (%rsi) # sched: [9:1.00]
 ; BROADWELL-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
 ; BROADWELL-NEXT:    imulq (%rsi), %rdi # sched: [8:1.00]
 ; BROADWELL-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
@@ -6047,7 +6047,7 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:    imulq %rdi # sched: [4:1.00]
-; SKYLAKE-NEXT:    imulq (%rsi) # sched: [8:1.00]
+; SKYLAKE-NEXT:    imulq (%rsi) # sched: [9:1.00]
 ; SKYLAKE-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
 ; SKYLAKE-NEXT:    imulq (%rsi), %rdi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
@@ -6063,7 +6063,7 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    imulq %rdi # sched: [4:1.00]
-; SKX-NEXT:    imulq (%rsi) # sched: [8:1.00]
+; SKX-NEXT:    imulq (%rsi) # sched: [9:1.00]
 ; SKX-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
 ; SKX-NEXT:    imulq (%rsi), %rdi # sched: [8:1.00]
 ; SKX-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
@@ -8028,9 +8028,9 @@ define void @test_mul(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; HASWELL-NEXT:    mulw %si # sched: [4:1.00]
 ; HASWELL-NEXT:    mulw (%r9) # sched: [8:1.00]
 ; HASWELL-NEXT:    mull %edx # sched: [4:1.00]
-; HASWELL-NEXT:    mull (%rax) # sched: [8:1.00]
+; HASWELL-NEXT:    mull (%rax) # sched: [9:1.00]
 ; HASWELL-NEXT:    mulq %rcx # sched: [4:1.00]
-; HASWELL-NEXT:    mulq (%r10) # sched: [8:1.00]
+; HASWELL-NEXT:    mulq (%r10) # sched: [9:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -8044,9 +8044,9 @@ define void @test_mul(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; BROADWELL-NEXT:    mulw %si # sched: [4:1.00]
 ; BROADWELL-NEXT:    mulw (%r9) # sched: [8:1.00]
 ; BROADWELL-NEXT:    mull %edx # sched: [4:1.00]
-; BROADWELL-NEXT:    mull (%rax) # sched: [8:1.00]
+; BROADWELL-NEXT:    mull (%rax) # sched: [9:1.00]
 ; BROADWELL-NEXT:    mulq %rcx # sched: [4:1.00]
-; BROADWELL-NEXT:    mulq (%r10) # sched: [8:1.00]
+; BROADWELL-NEXT:    mulq (%r10) # sched: [9:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -8059,10 +8059,10 @@ define void @test_mul(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; SKYLAKE-NEXT:    mulb (%r8) # sched: [8:1.00]
 ; SKYLAKE-NEXT:    mulw %si # sched: [4:1.00]
 ; SKYLAKE-NEXT:    mulw (%r9) # sched: [8:1.00]
-; SKYLAKE-NEXT:    mull %edx # sched: [5:1.00]
-; SKYLAKE-NEXT:    mull (%rax) # sched: [8:1.00]
+; SKYLAKE-NEXT:    mull %edx # sched: [4:1.00]
+; SKYLAKE-NEXT:    mull (%rax) # sched: [9:1.00]
 ; SKYLAKE-NEXT:    mulq %rcx # sched: [4:1.00]
-; SKYLAKE-NEXT:    mulq (%r10) # sched: [8:1.00]
+; SKYLAKE-NEXT:    mulq (%r10) # sched: [9:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -8076,9 +8076,9 @@ define void @test_mul(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; SKX-NEXT:    mulw %si # sched: [4:1.00]
 ; SKX-NEXT:    mulw (%r9) # sched: [8:1.00]
 ; SKX-NEXT:    mull %edx # sched: [4:1.00]
-; SKX-NEXT:    mull (%rax) # sched: [8:1.00]
+; SKX-NEXT:    mull (%rax) # sched: [9:1.00]
 ; SKX-NEXT:    mulq %rcx # sched: [4:1.00]
-; SKX-NEXT:    mulq (%r10) # sched: [8:1.00]
+; SKX-NEXT:    mulq (%r10) # sched: [9:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

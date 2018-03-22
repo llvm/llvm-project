@@ -108,7 +108,7 @@ void Instruction::execute() {
   Stage = IS_EXECUTING;
 
   // Set the cycles left before the write-back stage.
-  setCyclesLeft(Desc.MaxLatency);
+  CyclesLeft = Desc.MaxLatency;
 
   for (UniqueDef &Def : Defs)
     Def->onInstructionIssued();

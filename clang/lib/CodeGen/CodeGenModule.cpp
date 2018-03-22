@@ -2640,13 +2640,7 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
 llvm::Constant *
 CodeGenModule::CreateBuiltinFunction(llvm::FunctionType *FTy, StringRef Name,
                                      llvm::AttributeList ExtraAttrs) {
-  llvm::Constant *C =
-      GetOrCreateLLVMFunction(Name, FTy, GlobalDecl(), /*ForVTable=*/false,
-                              /*DontDefer=*/false, /*IsThunk=*/false, ExtraAttrs);
-  if (auto *F = dyn_cast<llvm::Function>(C))
-    if (F->empty())
-      F->setCallingConv(getRuntimeCC());
-  return C;
+  return CreateRuntimeFunction(FTy, Name, ExtraAttrs, true);
 }
 
 /// isTypeConstant - Determine whether an object of this type can be emitted
