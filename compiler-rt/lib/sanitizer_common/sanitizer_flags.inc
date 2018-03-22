@@ -240,3 +240,6 @@ COMMON_FLAG(bool, dump_instruction_bytes, false,
 COMMON_FLAG(bool, dump_registers, true,
           "If true, dump values of CPU registers when SEGV happens. Only "
           "available on OS X for now.")
+COMMON_FLAG(bool, detect_write_exec, false,
+          "If true, triggers warning when writable-executable pages requests "
+          "are being made")

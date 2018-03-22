@@ -526,13 +526,6 @@ ModulePass *createRewriteStatepointsForGCLegacyPass();
 
 //===----------------------------------------------------------------------===//
 //
-// StripGCRelocates - Remove GC relocates that have been inserted by
-// RewriteStatepointsForGC. The resulting IR is incorrect, but this is useful
-// for manual inspection.
-FunctionPass *createStripGCRelocatesPass();
-
-//===----------------------------------------------------------------------===//
-//
 // Float2Int - Demote floats to ints where possible.
 //
 FunctionPass *createFloat2IntPass();

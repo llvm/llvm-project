@@ -315,7 +315,7 @@ typedef struct ValueProfRecord {
    * \brief Read data from this record and save it to Record.
    */
   void deserializeTo(InstrProfRecord &Record,
-                     InstrProfRecord::ValueMapType *VMap);
+                     InstrProfSymtab *SymTab);
   /*
    * In-place byte swap:
    * Do byte swap for this instance. \c Old is the original order before
@@ -393,7 +393,7 @@ typedef struct ValueProfData {
    * Read data from this data and save it to \c Record.
    */
   void deserializeTo(InstrProfRecord &Record,
-                     InstrProfRecord::ValueMapType *VMap);
+                     InstrProfSymtab *SymTab);
   void operator delete(void *ptr) { ::operator delete(ptr); }
 #endif
 } ValueProfData;

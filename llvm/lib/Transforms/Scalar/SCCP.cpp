@@ -18,7 +18,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SCCP.h"
-#include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -30,6 +29,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -56,7 +56,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Scalar/SCCP.h"
 #include <cassert>
 #include <utility>
 #include <vector>

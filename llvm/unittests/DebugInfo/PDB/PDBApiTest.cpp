@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBInjectedSource.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/DebugInfo/PDB/IPDBSectionContrib.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/IPDBTable.h"
@@ -132,6 +133,10 @@ class MockSession : public IPDBSession {
   }
 
   std::unique_ptr<IPDBEnumInjectedSources> getInjectedSources() const override {
+    return nullptr;
+  }
+
+  std::unique_ptr<IPDBEnumSectionContribs> getSectionContribs() const override {
     return nullptr;
   }
 };

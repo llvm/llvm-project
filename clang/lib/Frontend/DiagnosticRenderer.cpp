@@ -1,4 +1,4 @@
-//===--- DiagnosticRenderer.cpp - Diagnostic Pretty-Printing --------------===//
+//===- DiagnosticRenderer.cpp - Diagnostic Pretty-Printing ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,24 +8,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/DiagnosticRenderer.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditedSource.h"
 #include "clang/Edit/EditsReceiver.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <utility>
+
 using namespace clang;
 
 DiagnosticRenderer::DiagnosticRenderer(const LangOptions &LangOpts,
                                        DiagnosticOptions *DiagOpts)
-  : LangOpts(LangOpts), DiagOpts(DiagOpts), LastLevel() {}
+    : LangOpts(LangOpts), DiagOpts(DiagOpts), LastLevel() {}
 
-DiagnosticRenderer::~DiagnosticRenderer() {}
+DiagnosticRenderer::~DiagnosticRenderer() = default;
 
 namespace {
 
@@ -34,24 +44,24 @@ class FixitReceiver : public edit::EditsReceiver {
 
 public:
   FixitReceiver(SmallVectorImpl<FixItHint> &MergedFixits)
-    : MergedFixits(MergedFixits) { }
+      : MergedFixits(MergedFixits) {}
+
   void insert(SourceLocation loc, StringRef text) override {
     MergedFixits.push_back(FixItHint::CreateInsertion(loc, text));
   }
+
   void replace(CharSourceRange range, StringRef text) override {
     MergedFixits.push_back(FixItHint::CreateReplacement(range, text));
   }
 };
 
-}
+} // namespace
 
 static void mergeFixits(ArrayRef<FixItHint> FixItHints,
                         const SourceManager &SM, const LangOptions &LangOpts,
                         SmallVectorImpl<FixItHint> &MergedFixits) {
   edit::Commit commit(SM, LangOpts);
-  for (ArrayRef<FixItHint>::const_iterator
-         I = FixItHints.begin(), E = FixItHints.end(); I != E; ++I) {
-    const FixItHint &Hint = *I;
+  for (const auto &Hint : FixItHints)
     if (Hint.CodeToInsert.empty()) {
       if (Hint.InsertFromRange.isValid())
         commit.insertFromRange(Hint.RemoveRange.getBegin(),
@@ -67,7 +77,6 @@ static void mergeFixits(ArrayRef<FixItHint> FixItHints,
         commit.insert(Hint.RemoveRange.getBegin(), Hint.CodeToInsert,
                     /*afterToken=*/false, Hint.BeforePreviousInsertions);
     }
-  }
 
   edit::EditedSource Editor(SM, LangOpts);
   if (Editor.commit(commit)) {
@@ -100,11 +109,9 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
       FixItHints = MergedFixits;
     }
 
-    for (ArrayRef<FixItHint>::const_iterator I = FixItHints.begin(),
-         E = FixItHints.end();
-         I != E; ++I)
-      if (I->RemoveRange.isValid())
-        MutableRanges.push_back(I->RemoveRange);
+    for (const auto &Hint : FixItHints)
+      if (Hint.RemoveRange.isValid())
+        MutableRanges.push_back(Hint.RemoveRange);
 
     FullSourceLoc UnexpandedLoc = Loc;
 
@@ -133,7 +140,6 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
 
   endDiagnostic(D, Level);
 }
-
 
 void DiagnosticRenderer::emitStoredDiagnostic(StoredDiagnostic &Diag) {
   emitDiagnostic(Diag.getLocation(), Diag.getLevel(), Diag.getMessage(),
@@ -243,10 +249,10 @@ void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
 /// on demand.
 void DiagnosticRenderer::emitModuleBuildStack(const SourceManager &SM) {
   ModuleBuildStack Stack = SM.getModuleBuildStack();
-  for (unsigned I = 0, N = Stack.size(); I != N; ++I) {
-    emitBuildingModuleLocation(Stack[I].second, Stack[I].second.getPresumedLoc(
-                                                    DiagOpts->ShowPresumedLoc),
-                               Stack[I].first);
+  for (const auto &I : Stack) {
+    emitBuildingModuleLocation(I.second, I.second.getPresumedLoc(
+                                              DiagOpts->ShowPresumedLoc),
+                               I.first);
   }
 }
 
@@ -261,7 +267,7 @@ retrieveMacroLocation(SourceLocation Loc, FileID MacroFileID,
   if (MacroFileID == CaretFileID)
     return Loc;
   if (!Loc.isMacroID())
-    return SourceLocation();
+    return {};
 
   SourceLocation MacroLocation, MacroArgLocation;
 
@@ -342,11 +348,12 @@ mapDiagnosticRanges(FullSourceLoc CaretLoc, ArrayRef<CharSourceRange> Ranges,
 
   const SourceManager *SM = &CaretLoc.getManager();
 
-  for (auto I = Ranges.begin(), E = Ranges.end(); I != E; ++I) {
-    if (I->isInvalid()) continue;
+  for (const auto &Range : Ranges) {
+    if (Range.isInvalid())
+      continue;
 
-    SourceLocation Begin = I->getBegin(), End = I->getEnd();
-    bool IsTokenRange = I->isTokenRange();
+    SourceLocation Begin = Range.getBegin(), End = Range.getEnd();
+    bool IsTokenRange = Range.isTokenRange();
 
     FileID BeginFileID = SM->getFileID(Begin);
     FileID EndFileID = SM->getFileID(End);
@@ -466,8 +473,9 @@ static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
 
   /// Count all valid ranges.
   unsigned ValidCount = 0;
-  for (auto I : Ranges)
-    if (I.isValid()) ValidCount++;
+  for (const auto &Range : Ranges)
+    if (Range.isValid())
+      ValidCount++;
 
   if (ValidCount > SpellingRanges.size())
     return false;
@@ -480,10 +488,9 @@ static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
   if (!Loc.isMacroArgExpansion(&ArgumentLoc))
     return false;
 
-  for (auto I = SpellingRanges.begin(), E = SpellingRanges.end(); I != E; ++I) {
-    if (!checkRangeForMacroArgExpansion(*I, Loc.getManager(), ArgumentLoc))
+  for (const auto &Range : SpellingRanges)
+    if (!checkRangeForMacroArgExpansion(Range, Loc.getManager(), ArgumentLoc))
       return false;
-  }
 
   return true;
 }
@@ -562,7 +569,7 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
     emitSingleMacroExpansion(*I, Level, Ranges);
 }
 
-DiagnosticNoteRenderer::~DiagnosticNoteRenderer() {}
+DiagnosticNoteRenderer::~DiagnosticNoteRenderer() = default;
 
 void DiagnosticNoteRenderer::emitIncludeLocation(FullSourceLoc Loc,
                                                  PresumedLoc PLoc) {

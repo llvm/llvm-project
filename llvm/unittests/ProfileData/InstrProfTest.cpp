@@ -769,9 +769,8 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
   Symtab.mapAddress(uint64_t(callee3), 0x3000ULL);
   Symtab.mapAddress(uint64_t(callee4), 0x4000ULL);
   // Missing mapping for callee5
-  Symtab.finalizeSymtab();
 
-  VPData->deserializeTo(Record, &Symtab.getAddrHashMap());
+  VPData->deserializeTo(Record, &Symtab);
 
   // Now read data from Record and sanity check the data
   ASSERT_EQ(5U, Record.getNumValueSites(IPVK_IndirectCallTarget));
@@ -858,8 +857,6 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   EXPECT_THAT_ERROR(Symtab.addFuncName("blah_1"), Succeeded());
   EXPECT_THAT_ERROR(Symtab.addFuncName("blah_2"), Succeeded());
   EXPECT_THAT_ERROR(Symtab.addFuncName("blah_3"), Succeeded());
-  // Finalize it
-  Symtab.finalizeSymtab();
 
   // Check again
   R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("blah_1"));

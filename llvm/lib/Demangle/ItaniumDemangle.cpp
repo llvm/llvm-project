@@ -14,15 +14,17 @@
 //   - All C++14 and C++17 features
 
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Compiler.h"
-#include <vector>
+
+#include "llvm/Demangle/Compiler.h"
+
 #include <algorithm>
-#include <numeric>
 #include <cassert>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cctype>
+#include <numeric>
+#include <vector>
 
 #ifdef _MSC_VER
 // snprintf is implemented in VS 2015

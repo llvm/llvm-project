@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -23,7 +24,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 using namespace PatternMatch;
 

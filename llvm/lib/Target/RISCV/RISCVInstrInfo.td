@@ -536,11 +536,14 @@ def : Pat<(setge GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(setle GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 
 let usesCustomInserter = 1 in
-def Select_GPR_Using_CC_GPR
-    : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, ixlenimm:$imm, GPR:$src, GPR:$src2),
-             [(set XLenVT:$dst, (SelectCC GPR:$lhs, GPR:$rhs,
-              (XLenVT imm:$imm), GPR:$src, GPR:$src2))]>;
+class SelectCC_rrirr<RegisterClass valty, RegisterClass cmpty>
+    : Pseudo<(outs valty:$dst),
+             (ins cmpty:$lhs, cmpty:$rhs, ixlenimm:$imm,
+              valty:$truev, valty:$falsev),
+             [(set valty:$dst, (SelectCC cmpty:$lhs, cmpty:$rhs,
+              (XLenVT imm:$imm), valty:$truev, valty:$falsev))]>;
+
+def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
 
 /// Branches and jumps
 

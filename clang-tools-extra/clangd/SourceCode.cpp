@@ -9,23 +9,43 @@
 #include "SourceCode.h"
 
 #include "clang/Basic/SourceManager.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace clangd {
 using namespace llvm;
 
-size_t positionToOffset(StringRef Code, Position P) {
+llvm::Expected<size_t> positionToOffset(StringRef Code, Position P,
+                                        bool AllowColumnsBeyondLineLength) {
   if (P.line < 0)
-    return 0;
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Line value can't be negative ({0})", P.line),
+        llvm::errc::invalid_argument);
+  if (P.character < 0)
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Character value can't be negative ({0})", P.character),
+        llvm::errc::invalid_argument);
   size_t StartOfLine = 0;
   for (int I = 0; I != P.line; ++I) {
     size_t NextNL = Code.find('\n', StartOfLine);
     if (NextNL == StringRef::npos)
-      return Code.size();
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("Line value is out of range ({0})", P.line),
+          llvm::errc::invalid_argument);
     StartOfLine = NextNL + 1;
   }
+
+  size_t NextNL = Code.find('\n', StartOfLine);
+  if (NextNL == StringRef::npos)
+    NextNL = Code.size();
+
+  if (StartOfLine + P.character > NextNL && !AllowColumnsBeyondLineLength)
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Character value is out of range ({0})", P.character),
+        llvm::errc::invalid_argument);
   // FIXME: officially P.character counts UTF-16 code units, not UTF-8 bytes!
-  return std::min(Code.size(), StartOfLine + std::max(0, P.character));
+  return std::min(NextNL, StartOfLine + P.character);
 }
 
 Position offsetToPosition(StringRef Code, size_t Offset) {

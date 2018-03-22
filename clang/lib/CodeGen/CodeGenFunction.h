@@ -2356,7 +2356,7 @@ public:
                       CharUnits CookieSize = CharUnits());
 
   RValue EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
-                                  const Expr *Arg, bool IsDelete);
+                                  const CallExpr *TheCallExpr, bool IsDelete);
 
   llvm::Value *EmitCXXTypeidExpr(const CXXTypeidExpr *E);
   llvm::Value *EmitDynamicCast(Address V, const CXXDynamicCastExpr *DCE);

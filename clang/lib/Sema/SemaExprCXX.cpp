@@ -1443,7 +1443,7 @@ namespace {
           CUDAPref = S.IdentifyCUDAPreference(Caller, FD);
     }
 
-    operator bool() const { return FD; }
+    explicit operator bool() const { return FD; }
 
     bool isBetterThan(const UsualDeallocFnInfo &Other, bool WantSize,
                       bool WantAlign) const {
@@ -2270,7 +2270,6 @@ static bool resolveAllocationOverload(
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
-
 
 /// FindAllocationFunctions - Finds the overloads of operator new and delete
 /// that are appropriate for the allocation.
@@ -3341,6 +3340,128 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       UsualArrayDeleteWantsSize, OperatorDelete, Ex.get(), StartLoc);
   AnalyzeDeleteExprMismatch(Result);
   return Result;
+}
+
+static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
+                                            bool IsDelete,
+                                            FunctionDecl *&Operator) {
+
+  DeclarationName NewName = S.Context.DeclarationNames.getCXXOperatorName(
+      IsDelete ? OO_Delete : OO_New);
+
+  LookupResult R(S, NewName, TheCall->getLocStart(), Sema::LookupOrdinaryName);
+  S.LookupQualifiedName(R, S.Context.getTranslationUnitDecl());
+  assert(!R.empty() && "implicitly declared allocation functions not found");
+  assert(!R.isAmbiguous() && "global allocation functions are ambiguous");
+
+  // We do our own custom access checks below.
+  R.suppressDiagnostics();
+
+  SmallVector<Expr *, 8> Args(TheCall->arg_begin(), TheCall->arg_end());
+  OverloadCandidateSet Candidates(R.getNameLoc(),
+                                  OverloadCandidateSet::CSK_Normal);
+  for (LookupResult::iterator FnOvl = R.begin(), FnOvlEnd = R.end();
+       FnOvl != FnOvlEnd; ++FnOvl) {
+    // Even member operator new/delete are implicitly treated as
+    // static, so don't use AddMemberCandidate.
+    NamedDecl *D = (*FnOvl)->getUnderlyingDecl();
+
+    if (FunctionTemplateDecl *FnTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
+      S.AddTemplateOverloadCandidate(FnTemplate, FnOvl.getPair(),
+                                     /*ExplicitTemplateArgs=*/nullptr, Args,
+                                     Candidates,
+                                     /*SuppressUserConversions=*/false);
+      continue;
+    }
+
+    FunctionDecl *Fn = cast<FunctionDecl>(D);
+    S.AddOverloadCandidate(Fn, FnOvl.getPair(), Args, Candidates,
+                           /*SuppressUserConversions=*/false);
+  }
+
+  SourceRange Range = TheCall->getSourceRange();
+
+  // Do the resolution.
+  OverloadCandidateSet::iterator Best;
+  switch (Candidates.BestViableFunction(S, R.getNameLoc(), Best)) {
+  case OR_Success: {
+    // Got one!
+    FunctionDecl *FnDecl = Best->Function;
+    assert(R.getNamingClass() == nullptr &&
+           "class members should not be considered");
+
+    if (!FnDecl->isReplaceableGlobalAllocationFunction()) {
+      S.Diag(R.getNameLoc(), diag::err_builtin_operator_new_delete_not_usual)
+          << (IsDelete ? 1 : 0) << Range;
+      S.Diag(FnDecl->getLocation(), diag::note_non_usual_function_declared_here)
+          << R.getLookupName() << FnDecl->getSourceRange();
+      return true;
+    }
+
+    Operator = FnDecl;
+    return false;
+  }
+
+  case OR_No_Viable_Function:
+    S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
+        << R.getLookupName() << Range;
+    Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
+    return true;
+
+  case OR_Ambiguous:
+    S.Diag(R.getNameLoc(), diag::err_ovl_ambiguous_call)
+        << R.getLookupName() << Range;
+    Candidates.NoteCandidates(S, OCD_ViableCandidates, Args);
+    return true;
+
+  case OR_Deleted: {
+    S.Diag(R.getNameLoc(), diag::err_ovl_deleted_call)
+        << Best->Function->isDeleted() << R.getLookupName()
+        << S.getDeletedOrUnavailableSuffix(Best->Function) << Range;
+    Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
+    return true;
+  }
+  }
+  llvm_unreachable("Unreachable, bad result from BestViableFunction");
+}
+
+ExprResult
+Sema::SemaBuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
+                                             bool IsDelete) {
+  CallExpr *TheCall = cast<CallExpr>(TheCallResult.get());
+  if (!getLangOpts().CPlusPlus) {
+    Diag(TheCall->getExprLoc(), diag::err_builtin_requires_language)
+        << (IsDelete ? "__builtin_operator_delete" : "__builtin_operator_new")
+        << "C++";
+    return ExprError();
+  }
+  // CodeGen assumes it can find the global new and delete to call,
+  // so ensure that they are declared.
+  DeclareGlobalNewDelete();
+
+  FunctionDecl *OperatorNewOrDelete = nullptr;
+  if (resolveBuiltinNewDeleteOverload(*this, TheCall, IsDelete,
+                                      OperatorNewOrDelete))
+    return ExprError();
+  assert(OperatorNewOrDelete && "should be found");
+
+  TheCall->setType(OperatorNewOrDelete->getReturnType());
+  for (unsigned i = 0; i != TheCall->getNumArgs(); ++i) {
+    QualType ParamTy = OperatorNewOrDelete->getParamDecl(i)->getType();
+    InitializedEntity Entity =
+        InitializedEntity::InitializeParameter(Context, ParamTy, false);
+    ExprResult Arg = PerformCopyInitialization(
+        Entity, TheCall->getArg(i)->getLocStart(), TheCall->getArg(i));
+    if (Arg.isInvalid())
+      return ExprError();
+    TheCall->setArg(i, Arg.get());
+  }
+  auto Callee = dyn_cast<ImplicitCastExpr>(TheCall->getCallee());
+  assert(Callee && Callee->getCastKind() == CK_BuiltinFnToFnPtr &&
+         "Callee expected to be implicit cast to a builtin function pointer");
+  Callee->setType(OperatorNewOrDelete->getType());
+
+  return TheCallResult;
 }
 
 void Sema::CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,

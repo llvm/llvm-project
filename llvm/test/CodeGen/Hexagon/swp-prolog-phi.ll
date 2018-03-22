@@ -9,16 +9,16 @@
 ; CHECK-NOT: vcmp.gt([[VREG]].uh,v{{[0-9]+}}.uh)
 ; CHECK: loop0
 
-define void @f0() #0 {
+define void @f0(<64 x i32> %a0, <32 x i32> %a1) #0 {
 b0:
   br i1 undef, label %b1, label %b5
 
 b1:                                               ; preds = %b0
-  %v0 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> undef)
+  %v0 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %a0)
   br label %b2
 
 b2:                                               ; preds = %b4, %b1
-  %v1 = phi <32 x i32> [ undef, %b1 ], [ %v7, %b4 ]
+  %v1 = phi <32 x i32> [ %a1, %b1 ], [ %v7, %b4 ]
   br label %b3
 
 b3:                                               ; preds = %b3, %b2

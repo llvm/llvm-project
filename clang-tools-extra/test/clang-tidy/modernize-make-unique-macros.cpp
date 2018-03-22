@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-make-unique %t -- \
 // RUN:   -config="{CheckOptions: [{key: modernize-make-unique.IgnoreMacros, value: 0}]}" \
-// RUN:   -- -std=c++11  -I%S/Inputs/modernize-smart-ptr
+// RUN:   -- -std=c++14  -I%S/Inputs/modernize-smart-ptr
 
 #include "unique_ptr.h"
 

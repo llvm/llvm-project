@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_LOCAL_H
-#define LLVM_TRANSFORMS_UTILS_LOCAL_H
+#ifndef LLVM_ANALYSIS_UTILS_LOCAL_H
+#define LLVM_ANALYSIS_UTILS_LOCAL_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"

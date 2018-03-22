@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -44,7 +45,6 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;

@@ -355,9 +355,24 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       }
     }
   }
-
+  Sorted = false;
   finalizeSymtab();
   return Error::success();
+}
+
+uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
+  finalizeSymtab();
+  auto Result =
+      std::lower_bound(AddrToMD5Map.begin(), AddrToMD5Map.end(), Address,
+                       [](const std::pair<uint64_t, uint64_t> &LHS,
+                          uint64_t RHS) { return LHS.first < RHS; });
+  // Raw function pointer collected by value profiler may be from
+  // external functions that are not instrumented. They won't have
+  // mapping data to be used by the deserializer. Force the value to
+  // be 0 in this case.
+  if (Result != AddrToMD5Map.end() && Result->first == Address)
+    return (uint64_t)Result->second;
+  return 0;
 }
 
 Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
@@ -461,7 +476,6 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
     while (P < EndP && *P == 0)
       P++;
   }
-  Symtab.finalizeSymtab();
   return Error::success();
 }
 
@@ -561,32 +575,19 @@ void InstrProfRecord::scale(uint64_t Weight,
 
 // Map indirect call target name hash to name string.
 uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
-                                     ValueMapType *ValueMap) {
-  if (!ValueMap)
+                                     InstrProfSymtab *SymTab) {
+  if (!SymTab)
     return Value;
-  switch (ValueKind) {
-  case IPVK_IndirectCallTarget: {
-    auto Result =
-        std::lower_bound(ValueMap->begin(), ValueMap->end(), Value,
-                         [](const std::pair<uint64_t, uint64_t> &LHS,
-                            uint64_t RHS) { return LHS.first < RHS; });
-   // Raw function pointer collected by value profiler may be from 
-   // external functions that are not instrumented. They won't have
-   // mapping data to be used by the deserializer. Force the value to
-   // be 0 in this case.
-    if (Result != ValueMap->end() && Result->first == Value)
-      Value = (uint64_t)Result->second;
-    else
-      Value = 0;
-    break;
-  }
-  }
+
+  if (ValueKind == IPVK_IndirectCallTarget)
+    return SymTab->getFunctionHashFromAddress(Value);
+
   return Value;
 }
 
 void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
                                    InstrProfValueData *VData, uint32_t N,
-                                   ValueMapType *ValueMap) {
+                                   InstrProfSymtab *ValueMap) {
   for (uint32_t I = 0; I < N; I++) {
     VData[I].Value = remapValue(VData[I].Value, ValueKind, ValueMap);
   }
@@ -666,13 +667,13 @@ ValueProfData::serializeFrom(const InstrProfRecord &Record) {
 }
 
 void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
-                                    InstrProfRecord::ValueMapType *VMap) {
+                                    InstrProfSymtab *SymTab) {
   Record.reserveSites(Kind, NumValueSites);
 
   InstrProfValueData *ValueData = getValueProfRecordValueData(this);
   for (uint64_t VSite = 0; VSite < NumValueSites; ++VSite) {
     uint8_t ValueDataCount = this->SiteCountArray[VSite];
-    Record.addValueData(Kind, VSite, ValueData, ValueDataCount, VMap);
+    Record.addValueData(Kind, VSite, ValueData, ValueDataCount, SymTab);
     ValueData += ValueDataCount;
   }
 }
@@ -706,13 +707,13 @@ void ValueProfRecord::swapBytes(support::endianness Old,
 }
 
 void ValueProfData::deserializeTo(InstrProfRecord &Record,
-                                  InstrProfRecord::ValueMapType *VMap) {
+                                  InstrProfSymtab *SymTab) {
   if (NumValueKinds == 0)
     return;
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < NumValueKinds; K++) {
-    VR->deserializeTo(Record, VMap);
+    VR->deserializeTo(Record, SymTab);
     VR = getValueProfRecordNext(VR);
   }
 }

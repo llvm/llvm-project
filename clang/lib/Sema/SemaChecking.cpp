@@ -1097,20 +1097,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_operator_new:
-  case Builtin::BI__builtin_operator_delete:
-    if (!getLangOpts().CPlusPlus) {
-      Diag(TheCall->getExprLoc(), diag::err_builtin_requires_language)
-        << (BuiltinID == Builtin::BI__builtin_operator_new
-                ? "__builtin_operator_new"
-                : "__builtin_operator_delete")
-        << "C++";
-      return ExprError();
-    }
-    // CodeGen assumes it can find the global new and delete to call,
-    // so ensure that they are declared.
-    DeclareGlobalNewDelete();
-    break;
-
+  case Builtin::BI__builtin_operator_delete: {
+    bool IsDelete = BuiltinID == Builtin::BI__builtin_operator_delete;
+    ExprResult Res =
+        SemaBuiltinOperatorNewDeleteOverloaded(TheCallResult, IsDelete);
+    if (Res.isInvalid())
+      CorrectDelayedTyposInExpr(TheCallResult.get());
+    return Res;
+  }
   // check secure string manipulation functions where overflows
   // are detectable at compile time
   case Builtin::BI__builtin___memcpy_chk:

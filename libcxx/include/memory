@@ -1796,10 +1796,10 @@ public:
         if (__n > max_size())
             __throw_length_error("allocator<T>::allocate(size_t n)"
                                  " 'n' exceeds maximum supported size");
-        return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
+        return static_cast<pointer>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), __alignof(_Tp)));
         }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
-        {_VSTD::__libcpp_deallocate((void*)__p);}
+        {_VSTD::__libcpp_deallocate((void*)__p, __alignof(_Tp));}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
         {return size_type(~0) / sizeof(_Tp);}
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
@@ -1897,10 +1897,10 @@ public:
         if (__n > max_size())
             __throw_length_error("allocator<const T>::allocate(size_t n)"
                                  " 'n' exceeds maximum supported size");
-        return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
+        return static_cast<pointer>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), __alignof(_Tp)));
     }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
-        {_VSTD::__libcpp_deallocate((void*) const_cast<_Tp *>(__p));}
+        {_VSTD::__libcpp_deallocate((void*) const_cast<_Tp *>(__p), __alignof(_Tp));}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
         {return size_type(~0) / sizeof(_Tp);}
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
@@ -2016,12 +2016,7 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT
     while (__n > 0)
     {
 #if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
-#if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__)
-        if (std::alignment_of<_Tp>::value > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-#else
-        if (std::alignment_of<_Tp>::value >
-            std::alignment_of<std::max_align_t>::value)
-#endif
+    if (__is_overaligned_for_new(__alignof(_Tp)))
         {
             std::align_val_t __al =
                 std::align_val_t(std::alignment_of<_Tp>::value);
@@ -2032,12 +2027,7 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT
                 __n * sizeof(_Tp), nothrow));
         }
 #else
-#if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__)
-        if (std::alignment_of<_Tp>::value > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-#else
-        if (std::alignment_of<_Tp>::value >
-            std::alignment_of<std::max_align_t>::value)
-#endif
+    if (__is_overaligned_for_new(__alignof(_Tp)))
         {
             // Since aligned operator new is unavailable, return an empty
             // buffer rather than one with invalid alignment.
@@ -2061,20 +2051,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 void return_temporary_buffer(_Tp* __p) _NOEXCEPT
 {
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
-#if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    if (std::alignment_of<_Tp>::value > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-#else
-    if (std::alignment_of<_Tp>::value >
-        std::alignment_of<std::max_align_t>::value)
-#endif
-    {
-        std::align_val_t __al = std::align_val_t(std::alignment_of<_Tp>::value);
-        ::operator delete(__p, __al);
-        return;
-    }
-#endif
-    ::operator delete(__p);
+  _VSTD::__libcpp_deallocate((void*)__p, __alignof(_Tp));
 }
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)

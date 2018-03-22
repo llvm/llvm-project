@@ -101,7 +101,7 @@ protected:
     return make_error<InstrProfError>(Err);
   }
 
-  Error error(Error E) { return error(InstrProfError::take(std::move(E))); }
+  Error error(Error &&E) { return error(InstrProfError::take(std::move(E))); }
 
   /// Clear the current error and return a successful one.
   Error success() { return error(instrprof_error::success); }
@@ -198,8 +198,6 @@ private:
   const uint8_t *ValueDataStart;
   uint32_t ValueKindLast;
   uint32_t CurValueDataSize;
-
-  InstrProfRecord::ValueMapType FunctionPtrToNameMap;
 
 public:
   RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)

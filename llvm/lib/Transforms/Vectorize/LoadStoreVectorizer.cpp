@@ -53,6 +53,7 @@
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
@@ -77,7 +78,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
 #include <cassert>

@@ -24,9 +24,9 @@ multiclass M1<string s> {
   defm _m1: M0<s # "_r1">;
 }
 
-// CHECK: defm d1: M1
+// CHECK: def _m01: B
 // CHECK: note: instantiated from multiclass
 // CHECK: defm _m1: M0
 // CHECK: note: instantiated from multiclass
-// CHECK: def _m01: B
+// CHECK: defm d1: M1
 defm d1: M1<"d1">;
