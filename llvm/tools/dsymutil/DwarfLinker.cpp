@@ -1542,7 +1542,7 @@ private:
   /// Keeps track of data associated with one object during linking.
   struct LinkContext {
     DebugMapObject &DMO;
-    BinaryHolder BinaryHolder;
+    BinaryHolder BinHolder;
     const object::ObjectFile *ObjectFile;
     RelocationManager RelocMgr;
     std::unique_ptr<DWARFContext> DwarfContext;
@@ -1551,8 +1551,8 @@ private:
 
     LinkContext(const DebugMap &Map, DwarfLinker &Linker, DebugMapObject &DMO,
                 bool Verbose = false)
-        : DMO(DMO), BinaryHolder(Verbose), RelocMgr(Linker) {
-      auto ErrOrObj = Linker.loadObject(BinaryHolder, DMO, Map);
+        : DMO(DMO), BinHolder(Verbose), RelocMgr(Linker) {
+      auto ErrOrObj = Linker.loadObject(BinHolder, DMO, Map);
       ObjectFile = ErrOrObj ? &*ErrOrObj : nullptr;
       DwarfContext = ObjectFile ? DWARFContext::create(*ObjectFile) : nullptr;
     }
