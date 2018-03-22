@@ -87,30 +87,28 @@ class LinuxCoreTestCase(TestBase):
     def test_same_pid_running(self):
         """Test that we read the information from the core correctly even if we have a running
         process with the same PID around"""
-        try:
-            shutil.copyfile("linux-x86_64.out", "linux-x86_64-pid.out")
-            shutil.copyfile("linux-x86_64.core", "linux-x86_64-pid.core")
-            with open("linux-x86_64-pid.core", "r+b") as f:
-                # These are offsets into the NT_PRSTATUS and NT_PRPSINFO structures in the note
-                # segment of the core file. If you update the file, these offsets may need updating
-                # as well. (Notes can be viewed with readelf --notes.)
-                for pid_offset in [0x1c4, 0x320]:
-                    f.seek(pid_offset)
-                    self.assertEqual(
-                        struct.unpack(
-                            "<I",
-                            f.read(4))[0],
-                        self._x86_64_pid)
+        exe_file = self.getBuildArtifact("linux-x86_64-pid.out")
+        core_file = self.getBuildArtifact("linux-x86_64-pid.core")
+        shutil.copyfile("linux-x86_64.out", exe_file)
+        shutil.copyfile("linux-x86_64.core", core_file)
+        with open(core_file, "r+b") as f:
+            # These are offsets into the NT_PRSTATUS and NT_PRPSINFO structures in the note
+            # segment of the core file. If you update the file, these offsets may need updating
+            # as well. (Notes can be viewed with readelf --notes.)
+            for pid_offset in [0x1c4, 0x320]:
+                f.seek(pid_offset)
+                self.assertEqual(
+                    struct.unpack(
+                        "<I",
+                        f.read(4))[0],
+                    self._x86_64_pid)
 
-                    # We insert our own pid, and make sure the test still
-                    # works.
-                    f.seek(pid_offset)
-                    f.write(struct.pack("<I", os.getpid()))
-            self.do_test("linux-x86_64-pid", os.getpid(), self._x86_64_regions,
-                    "a.out")
-        finally:
-            self.RemoveTempFile("linux-x86_64-pid.out")
-            self.RemoveTempFile("linux-x86_64-pid.core")
+                # We insert our own pid, and make sure the test still
+                # works.
+                f.seek(pid_offset)
+                f.write(struct.pack("<I", os.getpid()))
+        self.do_test(self.getBuildArtifact("linux-x86_64-pid"), os.getpid(),
+                self._x86_64_regions, "a.out")
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')

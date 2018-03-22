@@ -136,8 +136,7 @@ add_python_test_target(check-lldb
   )
 
 # Generate a wrapper for dotest.py in the bin directory.
-string (REPLACE ";" " " LLDB_DOTEST_ARGS_STR  "${LLDB_DOTEST_ARGS}")
-# We need this to substitute variables.
+# We need configure_file to substitute variables.
 configure_file(
   lldb-dotest.in
   ${CMAKE_CURRENT_BINARY_DIR}/lldb-dotest.configured

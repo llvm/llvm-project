@@ -93,15 +93,17 @@ lldb::Encoding TranslateEnumEncoding(PDB_VariantType type) {
   return lldb::eEncodingSint;
 }
 
-CompilerType GetBuiltinTypeForPDBEncodingAndBitSize(
-    ClangASTContext &clang_ast, const PDBSymbolTypeBuiltin &pdb_type,
-    Encoding encoding, uint32_t width) {
+CompilerType
+GetBuiltinTypeForPDBEncodingAndBitSize(ClangASTContext &clang_ast,
+                                       const PDBSymbolTypeBuiltin &pdb_type,
+                                       Encoding encoding, uint32_t width) {
   auto *ast = clang_ast.getASTContext();
   if (!ast)
     return CompilerType();
 
   switch (pdb_type.getBuiltinType()) {
-  default: break;
+  default:
+    break;
   case PDB_BuiltinType::None:
     return CompilerType();
   case PDB_BuiltinType::Void:
@@ -129,10 +131,10 @@ CompilerType GetBuiltinTypeForPDBEncodingAndBitSize(
   case PDB_BuiltinType::Char32:
     return CompilerType(ast, ast->Char32Ty);
   case PDB_BuiltinType::Float:
-    // Note: types `long double` and `double` have same bit size in MSVC and there
-    // is no information in the PDB to distinguish them. So when falling back
-    // to default search, the compiler type of `long double` will be represented by
-    // the one generated for `double`.
+    // Note: types `long double` and `double` have same bit size in MSVC and
+    // there is no information in the PDB to distinguish them. So when falling
+    // back to default search, the compiler type of `long double` will be
+    // represented by the one generated for `double`.
     break;
   }
   // If there is no match on PDB_BuiltinType, fall back to default search
@@ -144,7 +146,8 @@ ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin &pdb_type,
                                   CompilerType &compiler_type) {
   PDB_BuiltinType kind = pdb_type.getBuiltinType();
   switch (kind) {
-  default: break;
+  default:
+    break;
   case PDB_BuiltinType::Currency:
     return ConstString("CURRENCY");
   case PDB_BuiltinType::Date:
@@ -189,13 +192,13 @@ bool GetDeclarationForSymbol(const PDBSymbol &symbol, Declaration &decl) {
   if (!src_file_up)
     return false;
 
-  FileSpec spec(src_file_up->getFileName(), /*resolve_path*/false);
+  FileSpec spec(src_file_up->getFileName(), /*resolve_path*/ false);
   decl.SetFile(spec);
   decl.SetColumn(first_line_up->getColumnNumber());
   decl.SetLine(first_line_up->getLineNumber());
   return true;
 }
-}
+} // namespace
 
 PDBASTParser::PDBASTParser(lldb_private::ClangASTContext &ast) : m_ast(ast) {}
 
@@ -255,11 +258,11 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     CompilerType builtin_type;
     if (bytes > 0)
       builtin_type = GetBuiltinTypeForPDBEncodingAndBitSize(
-           m_ast, *underlying_type_up, encoding, bytes * 8);
+          m_ast, *underlying_type_up, encoding, bytes * 8);
     else
       builtin_type = m_ast.GetBasicType(eBasicTypeInt);
-    // FIXME: PDB does not have information about scoped enumeration (Enum Class).
-    // Set it false for now.
+    // FIXME: PDB does not have information about scoped enumeration (Enum
+    // Class). Set it false for now.
     bool isScoped = false;
 
     CompilerType ast_enum = m_ast.CreateEnumerationType(
@@ -316,8 +319,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       // Function type is named.
       name = pdb_func->getName();
     } else if (auto pdb_func_sig =
-              llvm::dyn_cast<PDBSymbolTypeFunctionSig>(&type)) {
-      func_sig = const_cast<PDBSymbolTypeFunctionSig*>(pdb_func_sig);
+                   llvm::dyn_cast<PDBSymbolTypeFunctionSig>(&type)) {
+      func_sig = const_cast<PDBSymbolTypeFunctionSig *>(pdb_func_sig);
     } else
       llvm_unreachable("Unexpected PDB symbol!");
 
@@ -357,9 +360,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       type_quals |= clang::Qualifiers::Const;
     if (func_sig->isVolatileType())
       type_quals |= clang::Qualifiers::Volatile;
-    CompilerType func_sig_ast_type = m_ast.CreateFunctionType(
-        return_ast_type, arg_list.data(), arg_list.size(), is_variadic,
-        type_quals);
+    CompilerType func_sig_ast_type =
+        m_ast.CreateFunctionType(return_ast_type, arg_list.data(),
+                                 arg_list.size(), is_variadic, type_quals);
 
     GetDeclarationForSymbol(type, decl);
     return std::make_shared<lldb_private::Type>(
@@ -392,8 +395,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         return nullptr;
       }
     }
-    CompilerType array_ast_type =
-        m_ast.CreateArrayType(element_ast_type, num_elements, /*is_gnu_vector*/false);
+    CompilerType array_ast_type = m_ast.CreateArrayType(
+        element_ast_type, num_elements, /*is_gnu_vector*/ false);
     TypeSP type_sp = std::make_shared<lldb_private::Type>(
         array_type->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(),
         bytes, nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID,
@@ -422,9 +425,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     auto type_name = GetPDBBuiltinTypeName(*builtin_type, builtin_ast_type);
 
     return std::make_shared<lldb_private::Type>(
-        builtin_type->getSymIndexId(), m_ast.GetSymbolFile(), type_name,
-        bytes, nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID,
-        decl, builtin_ast_type, lldb_private::Type::eResolveStateFull);
+        builtin_type->getSymIndexId(), m_ast.GetSymbolFile(), type_name, bytes,
+        nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
+        builtin_ast_type, lldb_private::Type::eResolveStateFull);
   } break;
   case PDB_SymType::PointerType: {
     auto *pointer_type = llvm::dyn_cast<PDBSymbolTypePointer>(&type);
@@ -458,7 +461,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         lldb_private::Type::eEncodingIsUID, decl, pointer_ast_type,
         lldb_private::Type::eResolveStateFull);
   } break;
-  default: break;
+  default:
+    break;
   }
   return nullptr;
 }

@@ -139,6 +139,9 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
     return R_PPC_TOC;
   case R_PPC64_REL24:
     return R_PPC_PLT_OPD;
+  case R_PPC64_REL16_LO:
+  case R_PPC64_REL16_HA:
+    return R_PC;
   default:
     return R_ABS;
   }
@@ -232,10 +235,10 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write16(Loc, applyPPCHighesta(Val));
     break;
   case R_PPC64_ADDR16_LO:
+  case R_PPC64_REL16_LO:
     write16(Loc, applyPPCLo(Val));
     break;
   case R_PPC64_ADDR16_LO_DS:
-  case R_PPC64_REL16_LO:
     write16(Loc, (read16(Loc) & 3) | (applyPPCLo(Val) & ~3));
     break;
   case R_PPC64_ADDR32:

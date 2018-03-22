@@ -5,11 +5,11 @@
 
 # OBJ:      Sections [
 # OBJ:        Section {
-# OBJ:          Index: 3
-# OBJ-NEXT:     Name: .debug_line (16)
-# OBJ-NEXT:     Type: SHT_PROGBITS (0x1)
-# OBJ-NEXT:     Flags [ (0x800)
-# OBJ-NEXT:       SHF_COMPRESSED (0x800)
+# OBJ:          Index:
+# OBJ:          Name: .debug_line
+# OBJ-NEXT:     Type: SHT_PROGBITS
+# OBJ-NEXT:     Flags [
+# OBJ-NEXT:       SHF_COMPRESSED
 # OBJ-NEXT:     ]
 
 # ERROR:      error: duplicate symbol: main
