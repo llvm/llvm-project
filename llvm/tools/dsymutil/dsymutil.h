@@ -65,7 +65,7 @@ parseDebugMap(StringRef InputFile, ArrayRef<std::string> Archs,
 bool dumpStab(StringRef InputFile, ArrayRef<std::string> Archs,
               StringRef PrependPath = "");
 
-/// \brief Link the Dwarf debuginfo as directed by the passed DebugMap
+/// \brief Link the Dwarf debug info as directed by the passed DebugMap
 /// \p DM into a DwarfFile named \p OutputFilename.
 /// \returns false if the link failed.
 bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
