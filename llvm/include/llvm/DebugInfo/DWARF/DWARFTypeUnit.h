@@ -46,7 +46,8 @@ public:
   static const DWARFSectionKind Section = DW_SECT_TYPES;
 
 protected:
-  bool extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) override;
+  bool extractImpl(const DWARFDataExtractor &debug_info,
+                   uint32_t *offset_ptr) override;
 };
 
 } // end namespace llvm

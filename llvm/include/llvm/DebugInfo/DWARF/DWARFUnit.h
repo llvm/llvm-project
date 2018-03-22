@@ -56,7 +56,8 @@ public:
 protected:
   ~DWARFUnitSectionBase() = default;
 
-  virtual void parseImpl(DWARFContext &Context, const DWARFSection &Section,
+  virtual void parseImpl(DWARFContext &Context, const DWARFObject &Obj,
+                         const DWARFSection &Section,
                          const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                          StringRef SS, const DWARFSection &SOS,
                          const DWARFSection *AOS, const DWARFSection &LS,
@@ -116,14 +117,14 @@ public:
   }
 
 private:
-  void parseImpl(DWARFContext &Context, const DWARFSection &Section,
-                 const DWARFDebugAbbrev *DA, const DWARFSection *RS,
-                 StringRef SS, const DWARFSection &SOS, const DWARFSection *AOS,
-                 const DWARFSection &LS, bool LE, bool IsDWO,
-                 bool Lazy) override {
+  void parseImpl(DWARFContext &Context, const DWARFObject &Obj,
+                 const DWARFSection &Section, const DWARFDebugAbbrev *DA,
+                 const DWARFSection *RS, StringRef SS, const DWARFSection &SOS,
+                 const DWARFSection *AOS, const DWARFSection &LS, bool LE,
+                 bool IsDWO, bool Lazy) override {
     if (Parsed)
       return;
-    DataExtractor Data(Section.Data, LE, 0);
+    DWARFDataExtractor Data(Obj, Section, LE, 0);
     if (!Parser) {
       const DWARFUnitIndex *Index = nullptr;
       if (IsDWO)
@@ -239,7 +240,8 @@ class DWARFUnit {
   }
 
 protected:
-  virtual bool extractImpl(DataExtractor debug_info, uint32_t *offset_ptr);
+  virtual bool extractImpl(const DWARFDataExtractor &debug_info,
+                           uint32_t *offset_ptr);
 
   /// Size in bytes of the unit header.
   virtual uint32_t getHeaderSize() const { return getVersion() <= 4 ? 11 : 12; }
@@ -299,7 +301,7 @@ public:
     return DataExtractor(StringSection, false, 0);
   }
 
-  bool extract(DataExtractor debug_info, uint32_t* offset_ptr);
+  bool extract(const DWARFDataExtractor &debug_info, uint32_t *offset_ptr);
 
   /// extractRangeList - extracts the range list referenced by this compile
   /// unit from .debug_ranges section. Returns true on success.

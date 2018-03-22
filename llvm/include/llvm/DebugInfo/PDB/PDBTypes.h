@@ -25,6 +25,7 @@ namespace pdb {
 class IPDBDataStream;
 class IPDBInjectedSource;
 class IPDBLineNumber;
+class IPDBSectionContrib;
 class IPDBSourceFile;
 class IPDBTable;
 class PDBSymDumper;
@@ -67,6 +68,7 @@ using IPDBEnumDataStreams = IPDBEnumChildren<IPDBDataStream>;
 using IPDBEnumLineNumbers = IPDBEnumChildren<IPDBLineNumber>;
 using IPDBEnumTables = IPDBEnumChildren<IPDBTable>;
 using IPDBEnumInjectedSources = IPDBEnumChildren<IPDBInjectedSource>;
+using IPDBEnumSectionContribs = IPDBEnumChildren<IPDBSectionContrib>;
 
 /// Specifies which PDB reader implementation is to be used.  Only a value
 /// of PDB_ReaderType::DIA is currently supported, but Native is in the works.

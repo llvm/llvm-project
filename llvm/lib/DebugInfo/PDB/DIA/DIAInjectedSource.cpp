@@ -16,9 +16,8 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-DIAInjectedSource::DIAInjectedSource(const DIASession &Session,
-                                     CComPtr<IDiaInjectedSource> DiaSourceFile)
-    : Session(Session), SourceFile(DiaSourceFile) {}
+DIAInjectedSource::DIAInjectedSource(CComPtr<IDiaInjectedSource> DiaSourceFile)
+    : SourceFile(DiaSourceFile) {}
 
 uint32_t DIAInjectedSource::getCrc32() const {
   DWORD Crc;

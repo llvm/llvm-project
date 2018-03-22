@@ -183,11 +183,11 @@ ObjFile<ELFT>::getVariableLoc(StringRef Name) {
   // Take file name string from line table.
   std::string FileName;
   if (!LT->getFileNameByIndex(
-          It->second.first /* File */, nullptr,
+          It->second.File, nullptr,
           DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FileName))
     return None;
 
-  return std::make_pair(FileName, It->second.second /*Line*/);
+  return std::make_pair(FileName, It->second.Line);
 }
 
 // Returns source line information for a given offset

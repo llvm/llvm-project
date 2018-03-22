@@ -190,9 +190,13 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
 llvm::Expected<tooling::Replacements>
 ClangdServer::formatRange(StringRef Code, PathRef File, Range Rng) {
-  size_t Begin = positionToOffset(Code, Rng.start);
-  size_t Len = positionToOffset(Code, Rng.end) - Begin;
-  return formatCode(Code, File, {tooling::Range(Begin, Len)});
+  llvm::Expected<size_t> Begin = positionToOffset(Code, Rng.start);
+  if (!Begin)
+    return Begin.takeError();
+  llvm::Expected<size_t> End = positionToOffset(Code, Rng.end);
+  if (!End)
+    return End.takeError();
+  return formatCode(Code, File, {tooling::Range(*Begin, *End - *Begin)});
 }
 
 llvm::Expected<tooling::Replacements> ClangdServer::formatFile(StringRef Code,
@@ -205,11 +209,13 @@ llvm::Expected<tooling::Replacements>
 ClangdServer::formatOnType(StringRef Code, PathRef File, Position Pos) {
   // Look for the previous opening brace from the character position and
   // format starting from there.
-  size_t CursorPos = positionToOffset(Code, Pos);
-  size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
+  llvm::Expected<size_t> CursorPos = positionToOffset(Code, Pos);
+  if (!CursorPos)
+    return CursorPos.takeError();
+  size_t PreviousLBracePos = StringRef(Code).find_last_of('{', *CursorPos);
   if (PreviousLBracePos == StringRef::npos)
-    PreviousLBracePos = CursorPos;
-  size_t Len = CursorPos - PreviousLBracePos;
+    PreviousLBracePos = *CursorPos;
+  size_t Len = *CursorPos - PreviousLBracePos;
 
   return formatCode(Code, File, {tooling::Range(PreviousLBracePos, Len)});
 }

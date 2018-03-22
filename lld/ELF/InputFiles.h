@@ -216,7 +216,11 @@ private:
   // single object file, so we cache debugging information in order to
   // parse it only once for each object file we link.
   std::unique_ptr<llvm::DWARFDebugLine> DwarfLine;
-  llvm::DenseMap<StringRef, std::pair<unsigned, unsigned>> VariableLoc;
+  struct VarLoc {
+    unsigned File;
+    unsigned Line;
+  };
+  llvm::DenseMap<StringRef, VarLoc> VariableLoc;
   llvm::once_flag InitDwarfLine;
 };
 

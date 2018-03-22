@@ -89,8 +89,6 @@ Error PDBStringTableBuilder::writeHashTable(BinaryStreamWriter &Writer) const {
 
     for (uint32_t I = 0; I != BucketCount; ++I) {
       uint32_t Slot = (Hash + I) % BucketCount;
-      if (Slot == 0)
-        continue; // Skip reserved slot
       if (Buckets[Slot] != 0)
         continue;
       Buckets[Slot] = Offset;

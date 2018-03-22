@@ -278,351 +278,351 @@ def SKXWriteResGroup1 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDBrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDNBrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDNDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDNQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDNWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KANDWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KMOVBkk")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KMOVDkk")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KMOVQkk")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KMOVWkk")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KNOTBrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KNOTDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KNOTQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KNOTWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KORBrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KORDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KORQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KORWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXNORBrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXNORDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXNORQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXNORWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXORBrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXORDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXORQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "KXORWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PADDSBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PADDSWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PADDUSBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PADDUSWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PAVGBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PAVGWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PCMPEQBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PCMPEQDirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PCMPEQWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PCMPGTBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PCMPGTDirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PCMPGTWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PMAXSWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PMAXUBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PMINSWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PMINUBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSLLDri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSLLDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSLLQri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSLLQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSLLWri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSLLWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRADri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRADrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRAWri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRAWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRLDri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRLDrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRLQri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRLQrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRLWri")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSRLWrr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSUBSBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSUBSWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSUBUSBirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "MMX_PSUBUSWirr")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVB2MZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVB2MZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVB2MZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVD2MZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVD2MZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVD2MZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVQ2MZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVQ2MZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVQ2MZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVW2MZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVW2MZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup1], (instregex "VPMOVW2MZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup1], (instregex "KANDBrr",
+                                            "KANDDrr",
+                                            "KANDNBrr",
+                                            "KANDNDrr",
+                                            "KANDNQrr",
+                                            "KANDNWrr",
+                                            "KANDQrr",
+                                            "KANDWrr",
+                                            "KMOVBkk",
+                                            "KMOVDkk",
+                                            "KMOVQkk",
+                                            "KMOVWkk",
+                                            "KNOTBrr",
+                                            "KNOTDrr",
+                                            "KNOTQrr",
+                                            "KNOTWrr",
+                                            "KORBrr",
+                                            "KORDrr",
+                                            "KORQrr",
+                                            "KORWrr",
+                                            "KXNORBrr",
+                                            "KXNORDrr",
+                                            "KXNORQrr",
+                                            "KXNORWrr",
+                                            "KXORBrr",
+                                            "KXORDrr",
+                                            "KXORQrr",
+                                            "KXORWrr",
+                                            "MMX_PADDSBirr",
+                                            "MMX_PADDSWirr",
+                                            "MMX_PADDUSBirr",
+                                            "MMX_PADDUSWirr",
+                                            "MMX_PAVGBirr",
+                                            "MMX_PAVGWirr",
+                                            "MMX_PCMPEQBirr",
+                                            "MMX_PCMPEQDirr",
+                                            "MMX_PCMPEQWirr",
+                                            "MMX_PCMPGTBirr",
+                                            "MMX_PCMPGTDirr",
+                                            "MMX_PCMPGTWirr",
+                                            "MMX_PMAXSWirr",
+                                            "MMX_PMAXUBirr",
+                                            "MMX_PMINSWirr",
+                                            "MMX_PMINUBirr",
+                                            "MMX_PSLLDri",
+                                            "MMX_PSLLDrr",
+                                            "MMX_PSLLQri",
+                                            "MMX_PSLLQrr",
+                                            "MMX_PSLLWri",
+                                            "MMX_PSLLWrr",
+                                            "MMX_PSRADri",
+                                            "MMX_PSRADrr",
+                                            "MMX_PSRAWri",
+                                            "MMX_PSRAWrr",
+                                            "MMX_PSRLDri",
+                                            "MMX_PSRLDrr",
+                                            "MMX_PSRLQri",
+                                            "MMX_PSRLQrr",
+                                            "MMX_PSRLWri",
+                                            "MMX_PSRLWrr",
+                                            "MMX_PSUBSBirr",
+                                            "MMX_PSUBSWirr",
+                                            "MMX_PSUBUSBirr",
+                                            "MMX_PSUBUSWirr",
+                                            "VPMOVB2MZ128rr(b?)(k?)(z?)",
+                                            "VPMOVB2MZ256rr(b?)(k?)(z?)",
+                                            "VPMOVB2MZrr(b?)(k?)(z?)",
+                                            "VPMOVD2MZ128rr(b?)(k?)(z?)",
+                                            "VPMOVD2MZ256rr(b?)(k?)(z?)",
+                                            "VPMOVD2MZrr(b?)(k?)(z?)",
+                                            "VPMOVQ2MZ128rr(b?)(k?)(z?)",
+                                            "VPMOVQ2MZ256rr(b?)(k?)(z?)",
+                                            "VPMOVQ2MZrr(b?)(k?)(z?)",
+                                            "VPMOVW2MZ128rr(b?)(k?)(z?)",
+                                            "VPMOVW2MZ256rr(b?)(k?)(z?)",
+                                            "VPMOVW2MZrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup3 : SchedWriteRes<[SKXPort5]> {
   let Latency = 1;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup3], (instregex "COMP_FST0r")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "COM_FST0r")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "INSERTPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "KMOVBkr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "KMOVDkr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "KMOVQkr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "KMOVWkr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_MOVD64rr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_MOVD64to64rr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PALIGNRrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PSHUFBrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PSHUFWri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PUNPCKHBWirr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PUNPCKHDQirr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PUNPCKHWDirr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PUNPCKLBWirr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PUNPCKLDQirr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MMX_PUNPCKLWDirr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOV64toPQIrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVDDUPrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVDI2PDIrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVHLPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVLHPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVSDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVSHDUPrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVSLDUPrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVUPDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "MOVUPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PACKSSDWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PACKSSWBrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PACKUSDWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PACKUSWBrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PALIGNRrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PBLENDWrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVSXBDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVSXBQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVSXBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVSXDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVSXWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVSXWQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVZXBDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVZXBQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVZXBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVZXDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVZXWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PMOVZXWQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PSHUFBrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PSHUFDri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PSHUFHWri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PSHUFLWri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PSLLDQri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PSRLDQri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKHBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKHDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKHQDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKHWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKLBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKLDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKLQDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "PUNPCKLWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "SHUFPDrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "SHUFPSrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "UCOM_FPr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "UCOM_Fr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "UNPCKHPDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "UNPCKHPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "UNPCKLPDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "UNPCKLPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VBROADCASTI32X2Z128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VBROADCASTSSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VINSERTPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VINSERTPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOV64toPQIZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOV64toPQIrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVDDUPYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVDDUPZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVDDUPZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVDDUPZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVDDUPrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVDI2PDIZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVDI2PDIrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVHLPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVHLPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVLHPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVLHPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSHDUPYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSHDUPZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSHDUPZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSHDUPZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSHDUPrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSLDUPYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSLDUPZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSLDUPZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSLDUPZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSLDUPrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVSSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVUPDYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVUPDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVUPSYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VMOVUPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSDWYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSDWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSDWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSDWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSDWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSWBYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSWBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSWBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSWBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKSSWBrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSDWYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSDWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSDWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSDWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSDWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSWBYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSWBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSWBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSWBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPACKUSWBrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPALIGNRYrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPALIGNRZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPALIGNRZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPALIGNRZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPALIGNRrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPBLENDWYrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPBLENDWrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPBROADCASTDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPBROADCASTQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDYri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSYri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPERMILPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVSXBDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVSXBQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVSXBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVSXDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVSXWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVSXWQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVZXBDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVZXBQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVZXBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVZXDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVZXWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPMOVZXWQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFBYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFBrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFDYri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFDZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFDZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFDZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFDri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFHWYri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFHWZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFHWZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFHWZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFHWri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFLWYri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFLWZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFLWZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFLWZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSHUFLWri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSLLDQYri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSLLDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSLLDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSLLDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSLLDQri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSRLDQYri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSRLDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSRLDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSRLDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPSRLDQri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHBWYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHBWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHBWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHBWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHDQYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHQDQYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHQDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHQDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHQDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHQDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHWDYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHWDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHWDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHWDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKHWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLBWYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLBWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLBWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLBWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLBWrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLDQYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLQDQYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLQDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLQDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLQDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLQDQrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLWDYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLWDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLWDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLWDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VPUNPCKLWDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPDYrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPDrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPSYrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPSZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPSZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VSHUFPSrri")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPDYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPSYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKHPSrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPDYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPDrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPSYrr")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup3], (instregex "VUNPCKLPSrr")>;
+def: InstRW<[SKXWriteResGroup3], (instregex "COMP_FST0r",
+                                            "COM_FST0r",
+                                            "INSERTPSrr",
+                                            "KMOVBkr",
+                                            "KMOVDkr",
+                                            "KMOVQkr",
+                                            "KMOVWkr",
+                                            "MMX_MOVD64rr",
+                                            "MMX_MOVD64to64rr",
+                                            "MMX_PALIGNRrri",
+                                            "MMX_PSHUFBrr",
+                                            "MMX_PSHUFWri",
+                                            "MMX_PUNPCKHBWirr",
+                                            "MMX_PUNPCKHDQirr",
+                                            "MMX_PUNPCKHWDirr",
+                                            "MMX_PUNPCKLBWirr",
+                                            "MMX_PUNPCKLDQirr",
+                                            "MMX_PUNPCKLWDirr",
+                                            "MOV64toPQIrr",
+                                            "MOVDDUPrr",
+                                            "MOVDI2PDIrr",
+                                            "MOVHLPSrr",
+                                            "MOVLHPSrr",
+                                            "MOVSDrr",
+                                            "MOVSHDUPrr",
+                                            "MOVSLDUPrr",
+                                            "MOVUPDrr",
+                                            "MOVUPSrr",
+                                            "PACKSSDWrr",
+                                            "PACKSSWBrr",
+                                            "PACKUSDWrr",
+                                            "PACKUSWBrr",
+                                            "PALIGNRrri",
+                                            "PBLENDWrri",
+                                            "PMOVSXBDrr",
+                                            "PMOVSXBQrr",
+                                            "PMOVSXBWrr",
+                                            "PMOVSXDQrr",
+                                            "PMOVSXWDrr",
+                                            "PMOVSXWQrr",
+                                            "PMOVZXBDrr",
+                                            "PMOVZXBQrr",
+                                            "PMOVZXBWrr",
+                                            "PMOVZXDQrr",
+                                            "PMOVZXWDrr",
+                                            "PMOVZXWQrr",
+                                            "PSHUFBrr",
+                                            "PSHUFDri",
+                                            "PSHUFHWri",
+                                            "PSHUFLWri",
+                                            "PSLLDQri",
+                                            "PSRLDQri",
+                                            "PUNPCKHBWrr",
+                                            "PUNPCKHDQrr",
+                                            "PUNPCKHQDQrr",
+                                            "PUNPCKHWDrr",
+                                            "PUNPCKLBWrr",
+                                            "PUNPCKLDQrr",
+                                            "PUNPCKLQDQrr",
+                                            "PUNPCKLWDrr",
+                                            "SHUFPDrri",
+                                            "SHUFPSrri",
+                                            "UCOM_FPr",
+                                            "UCOM_Fr",
+                                            "UNPCKHPDrr",
+                                            "UNPCKHPSrr",
+                                            "UNPCKLPDrr",
+                                            "UNPCKLPSrr",
+                                            "VBROADCASTI32X2Z128r(b?)(k?)(z?)",
+                                            "VBROADCASTSSrr",
+                                            "VINSERTPSZrr(b?)(k?)(z?)",
+                                            "VINSERTPSrr",
+                                            "VMOV64toPQIZrr(b?)(k?)(z?)",
+                                            "VMOV64toPQIrr",
+                                            "VMOVDDUPYrr",
+                                            "VMOVDDUPZ128rr(b?)(k?)(z?)",
+                                            "VMOVDDUPZ256rr(b?)(k?)(z?)",
+                                            "VMOVDDUPZrr(b?)(k?)(z?)",
+                                            "VMOVDDUPrr",
+                                            "VMOVDI2PDIZrr(b?)(k?)(z?)",
+                                            "VMOVDI2PDIrr",
+                                            "VMOVHLPSZrr(b?)(k?)(z?)",
+                                            "VMOVHLPSrr",
+                                            "VMOVLHPSZrr(b?)(k?)(z?)",
+                                            "VMOVLHPSrr",
+                                            "VMOVSDZrr(b?)(k?)(z?)",
+                                            "VMOVSDrr",
+                                            "VMOVSHDUPYrr",
+                                            "VMOVSHDUPZ128rr(b?)(k?)(z?)",
+                                            "VMOVSHDUPZ256rr(b?)(k?)(z?)",
+                                            "VMOVSHDUPZrr(b?)(k?)(z?)",
+                                            "VMOVSHDUPrr",
+                                            "VMOVSLDUPYrr",
+                                            "VMOVSLDUPZ128rr(b?)(k?)(z?)",
+                                            "VMOVSLDUPZ256rr(b?)(k?)(z?)",
+                                            "VMOVSLDUPZrr(b?)(k?)(z?)",
+                                            "VMOVSLDUPrr",
+                                            "VMOVSSZrr(b?)(k?)(z?)",
+                                            "VMOVUPDYrr",
+                                            "VMOVUPDrr",
+                                            "VMOVUPSYrr",
+                                            "VMOVUPSrr",
+                                            "VPACKSSDWYrr",
+                                            "VPACKSSDWZ128rr(b?)(k?)(z?)",
+                                            "VPACKSSDWZ256rr(b?)(k?)(z?)",
+                                            "VPACKSSDWZrr(b?)(k?)(z?)",
+                                            "VPACKSSDWrr",
+                                            "VPACKSSWBYrr",
+                                            "VPACKSSWBZ128rr(b?)(k?)(z?)",
+                                            "VPACKSSWBZ256rr(b?)(k?)(z?)",
+                                            "VPACKSSWBZrr(b?)(k?)(z?)",
+                                            "VPACKSSWBrr",
+                                            "VPACKUSDWYrr",
+                                            "VPACKUSDWZ128rr(b?)(k?)(z?)",
+                                            "VPACKUSDWZ256rr(b?)(k?)(z?)",
+                                            "VPACKUSDWZrr(b?)(k?)(z?)",
+                                            "VPACKUSDWrr",
+                                            "VPACKUSWBYrr",
+                                            "VPACKUSWBZ128rr(b?)(k?)(z?)",
+                                            "VPACKUSWBZ256rr(b?)(k?)(z?)",
+                                            "VPACKUSWBZrr(b?)(k?)(z?)",
+                                            "VPACKUSWBrr",
+                                            "VPALIGNRYrri",
+                                            "VPALIGNRZ128rri(b?)(k?)(z?)",
+                                            "VPALIGNRZ256rri(b?)(k?)(z?)",
+                                            "VPALIGNRZrri(b?)(k?)(z?)",
+                                            "VPALIGNRrri",
+                                            "VPBLENDWYrri",
+                                            "VPBLENDWrri",
+                                            "VPBROADCASTDrr",
+                                            "VPBROADCASTQrr",
+                                            "VPERMILPDYri",
+                                            "VPERMILPDYrr",
+                                            "VPERMILPDZ128r(b?)i(k?)(z?)",
+                                            "VPERMILPDZ128rr(b?)(k?)(z?)",
+                                            "VPERMILPDZ256r(b?)i(k?)(z?)",
+                                            "VPERMILPDZ256rr(b?)(k?)(z?)",
+                                            "VPERMILPDZri(b?)(k?)(z?)",
+                                            "VPERMILPDZrr(b?)(k?)(z?)",
+                                            "VPERMILPDri",
+                                            "VPERMILPDrr",
+                                            "VPERMILPSYri",
+                                            "VPERMILPSYrr",
+                                            "VPERMILPSZ128r(b?)i(k?)(z?)",
+                                            "VPERMILPSZ128rr(b?)(k?)(z?)",
+                                            "VPERMILPSZ256r(b?)i(k?)(z?)",
+                                            "VPERMILPSZ256rr(b?)(k?)(z?)",
+                                            "VPERMILPSZri(b?)(k?)(z?)",
+                                            "VPERMILPSZrr(b?)(k?)(z?)",
+                                            "VPERMILPSri",
+                                            "VPERMILPSrr",
+                                            "VPMOVSXBDrr",
+                                            "VPMOVSXBQrr",
+                                            "VPMOVSXBWrr",
+                                            "VPMOVSXDQrr",
+                                            "VPMOVSXWDrr",
+                                            "VPMOVSXWQrr",
+                                            "VPMOVZXBDrr",
+                                            "VPMOVZXBQrr",
+                                            "VPMOVZXBWrr",
+                                            "VPMOVZXDQrr",
+                                            "VPMOVZXWDrr",
+                                            "VPMOVZXWQrr",
+                                            "VPSHUFBYrr",
+                                            "VPSHUFBZ128rr(b?)(k?)(z?)",
+                                            "VPSHUFBZ256rr(b?)(k?)(z?)",
+                                            "VPSHUFBZrr(b?)(k?)(z?)",
+                                            "VPSHUFBrr",
+                                            "VPSHUFDYri",
+                                            "VPSHUFDZ128r(b?)i(k?)(z?)",
+                                            "VPSHUFDZ256r(b?)i(k?)(z?)",
+                                            "VPSHUFDZri(b?)(k?)(z?)",
+                                            "VPSHUFDri",
+                                            "VPSHUFHWYri",
+                                            "VPSHUFHWZ128r(b?)i(k?)(z?)",
+                                            "VPSHUFHWZ256r(b?)i(k?)(z?)",
+                                            "VPSHUFHWZri(b?)(k?)(z?)",
+                                            "VPSHUFHWri",
+                                            "VPSHUFLWYri",
+                                            "VPSHUFLWZ128r(b?)i(k?)(z?)",
+                                            "VPSHUFLWZ256r(b?)i(k?)(z?)",
+                                            "VPSHUFLWZri(b?)(k?)(z?)",
+                                            "VPSHUFLWri",
+                                            "VPSLLDQYri",
+                                            "VPSLLDQZ128rr(b?)(k?)(z?)",
+                                            "VPSLLDQZ256rr(b?)(k?)(z?)",
+                                            "VPSLLDQZrr(b?)(k?)(z?)",
+                                            "VPSLLDQri",
+                                            "VPSRLDQYri",
+                                            "VPSRLDQZ128rr(b?)(k?)(z?)",
+                                            "VPSRLDQZ256rr(b?)(k?)(z?)",
+                                            "VPSRLDQZrr(b?)(k?)(z?)",
+                                            "VPSRLDQri",
+                                            "VPUNPCKHBWYrr",
+                                            "VPUNPCKHBWZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKHBWZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKHBWZrr(b?)(k?)(z?)",
+                                            "VPUNPCKHBWrr",
+                                            "VPUNPCKHDQYrr",
+                                            "VPUNPCKHDQZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKHDQZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKHDQZrr(b?)(k?)(z?)",
+                                            "VPUNPCKHDQrr",
+                                            "VPUNPCKHQDQYrr",
+                                            "VPUNPCKHQDQZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKHQDQZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKHQDQZrr(b?)(k?)(z?)",
+                                            "VPUNPCKHQDQrr",
+                                            "VPUNPCKHWDYrr",
+                                            "VPUNPCKHWDZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKHWDZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKHWDZrr(b?)(k?)(z?)",
+                                            "VPUNPCKHWDrr",
+                                            "VPUNPCKLBWYrr",
+                                            "VPUNPCKLBWZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKLBWZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKLBWZrr(b?)(k?)(z?)",
+                                            "VPUNPCKLBWrr",
+                                            "VPUNPCKLDQYrr",
+                                            "VPUNPCKLDQZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKLDQZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKLDQZrr(b?)(k?)(z?)",
+                                            "VPUNPCKLDQrr",
+                                            "VPUNPCKLQDQYrr",
+                                            "VPUNPCKLQDQZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKLQDQZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKLQDQZrr(b?)(k?)(z?)",
+                                            "VPUNPCKLQDQrr",
+                                            "VPUNPCKLWDYrr",
+                                            "VPUNPCKLWDZ128rr(b?)(k?)(z?)",
+                                            "VPUNPCKLWDZ256rr(b?)(k?)(z?)",
+                                            "VPUNPCKLWDZrr(b?)(k?)(z?)",
+                                            "VPUNPCKLWDrr",
+                                            "VSHUFPDYrri",
+                                            "VSHUFPDZ128rri(b?)(k?)(z?)",
+                                            "VSHUFPDZ256rri(b?)(k?)(z?)",
+                                            "VSHUFPDZrri(b?)(k?)(z?)",
+                                            "VSHUFPDrri",
+                                            "VSHUFPSYrri",
+                                            "VSHUFPSZ128rri(b?)(k?)(z?)",
+                                            "VSHUFPSZ256rri(b?)(k?)(z?)",
+                                            "VSHUFPSZrri(b?)(k?)(z?)",
+                                            "VSHUFPSrri",
+                                            "VUNPCKHPDYrr",
+                                            "VUNPCKHPDZ128rr(b?)(k?)(z?)",
+                                            "VUNPCKHPDZ256rr(b?)(k?)(z?)",
+                                            "VUNPCKHPDZrr(b?)(k?)(z?)",
+                                            "VUNPCKHPDrr",
+                                            "VUNPCKHPSYrr",
+                                            "VUNPCKHPSZ128rr(b?)(k?)(z?)",
+                                            "VUNPCKHPSZ256rr(b?)(k?)(z?)",
+                                            "VUNPCKHPSZrr(b?)(k?)(z?)",
+                                            "VUNPCKHPSrr",
+                                            "VUNPCKLPDYrr",
+                                            "VUNPCKLPDZ128rr(b?)(k?)(z?)",
+                                            "VUNPCKLPDZ256rr(b?)(k?)(z?)",
+                                            "VUNPCKLPDZrr(b?)(k?)(z?)",
+                                            "VUNPCKLPDrr",
+                                            "VUNPCKLPSYrr",
+                                            "VUNPCKLPSZ128rr(b?)(k?)(z?)",
+                                            "VUNPCKLPSZ256rr(b?)(k?)(z?)",
+                                            "VUNPCKLPSZrr(b?)(k?)(z?)",
+                                            "VUNPCKLPSrr")>;
 
 def SKXWriteResGroup4 : SchedWriteRes<[SKXPort6]> {
   let Latency = 1;
@@ -636,929 +636,929 @@ def SKXWriteResGroup5 : SchedWriteRes<[SKXPort01]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup5], (instregex "PABSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PABSDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PABSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PADDSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PADDSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PADDUSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PADDUSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PAVGBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PAVGWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PCMPEQBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PCMPEQDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PCMPEQQrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PCMPEQWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PCMPGTBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PCMPGTDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PCMPGTWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMAXSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMAX(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMAXSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMAXUBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMAXUDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMAXUWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMINSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMIN(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMINSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMINUBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMINUDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PMINUWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSIGNBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSIGNDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSIGNWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSLLDri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSLLQri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSLLWri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSRADri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSRAWri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSRLDri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSRLQri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSRLWri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSUBSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSUBSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSUBUSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "PSUBUSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPABSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPADDUSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPAVGWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQQYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQQrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPEQWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPGTBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPGTBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPGTDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPGTDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPGTWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPCMPGTWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAX(C?)SDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAX(C?)SDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAX(C?)SDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAX(C?)SDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAX(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMAXUWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMIN(C?)SDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMIN(C?)SDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMIN(C?)SDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMIN(C?)SDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMIN(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPMINUWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLDZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLDZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLDZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLQZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLQZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLQZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLVDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLVDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLVDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLVQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLVQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPROLVQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORDZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORDZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORDZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORQZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORQZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORQZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORVDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORVDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORVDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORVQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORVQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPRORVQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSIGNBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSIGNBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSIGNDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSIGNDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSIGNWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSIGNWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLDYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLDZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLDZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLDZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLDri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLQYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLQZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLQZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLQZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLQri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVQYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVQrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLVWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLWYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLWZ128ri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLWZ256ri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLWZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSLLWri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRADYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRADZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRADZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRADZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRADri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAQZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAQZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAQZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAVWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAWYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAWZ128ri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAWZ256ri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAWZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRAWri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLDYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLDZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLDZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLDZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLDri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLQYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLQZ128r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLQZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLQZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLQri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVDYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVDrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVQYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVQrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLVWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLWYri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLWZ128ri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLWZ256ri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLWZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSRLWri")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBSWrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSBYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSBrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSWYrr")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup5], (instregex "VPSUBUSWrr")>;
+def: InstRW<[SKXWriteResGroup5], (instregex "PABSBrr",
+                                            "PABSDrr",
+                                            "PABSWrr",
+                                            "PADDSBrr",
+                                            "PADDSWrr",
+                                            "PADDUSBrr",
+                                            "PADDUSWrr",
+                                            "PAVGBrr",
+                                            "PAVGWrr",
+                                            "PCMPEQBrr",
+                                            "PCMPEQDrr",
+                                            "PCMPEQQrr",
+                                            "PCMPEQWrr",
+                                            "PCMPGTBrr",
+                                            "PCMPGTDrr",
+                                            "PCMPGTWrr",
+                                            "PMAXSBrr",
+                                            "PMAX(C?)SDrr",
+                                            "PMAXSWrr",
+                                            "PMAXUBrr",
+                                            "PMAXUDrr",
+                                            "PMAXUWrr",
+                                            "PMINSBrr",
+                                            "PMIN(C?)SDrr",
+                                            "PMINSWrr",
+                                            "PMINUBrr",
+                                            "PMINUDrr",
+                                            "PMINUWrr",
+                                            "PSIGNBrr",
+                                            "PSIGNDrr",
+                                            "PSIGNWrr",
+                                            "PSLLDri",
+                                            "PSLLQri",
+                                            "PSLLWri",
+                                            "PSRADri",
+                                            "PSRAWri",
+                                            "PSRLDri",
+                                            "PSRLQri",
+                                            "PSRLWri",
+                                            "PSUBSBrr",
+                                            "PSUBSWrr",
+                                            "PSUBUSBrr",
+                                            "PSUBUSWrr",
+                                            "VPABSBYrr",
+                                            "VPABSBZ128rr(b?)(k?)(z?)",
+                                            "VPABSBZ256rr(b?)(k?)(z?)",
+                                            "VPABSBZrr(b?)(k?)(z?)",
+                                            "VPABSBrr",
+                                            "VPABSDYrr",
+                                            "VPABSDZ128rr(b?)(k?)(z?)",
+                                            "VPABSDZ256rr(b?)(k?)(z?)",
+                                            "VPABSDZrr(b?)(k?)(z?)",
+                                            "VPABSDrr",
+                                            "VPABSQZ128rr(b?)(k?)(z?)",
+                                            "VPABSQZ256rr(b?)(k?)(z?)",
+                                            "VPABSQZrr(b?)(k?)(z?)",
+                                            "VPABSWYrr",
+                                            "VPABSWZ128rr(b?)(k?)(z?)",
+                                            "VPABSWZ256rr(b?)(k?)(z?)",
+                                            "VPABSWZrr(b?)(k?)(z?)",
+                                            "VPABSWrr",
+                                            "VPADDSBYrr",
+                                            "VPADDSBZ128rr(b?)(k?)(z?)",
+                                            "VPADDSBZ256rr(b?)(k?)(z?)",
+                                            "VPADDSBZrr(b?)(k?)(z?)",
+                                            "VPADDSBrr",
+                                            "VPADDSWYrr",
+                                            "VPADDSWZ128rr(b?)(k?)(z?)",
+                                            "VPADDSWZ256rr(b?)(k?)(z?)",
+                                            "VPADDSWZrr(b?)(k?)(z?)",
+                                            "VPADDSWrr",
+                                            "VPADDUSBYrr",
+                                            "VPADDUSBZ128rr(b?)(k?)(z?)",
+                                            "VPADDUSBZ256rr(b?)(k?)(z?)",
+                                            "VPADDUSBZrr(b?)(k?)(z?)",
+                                            "VPADDUSBrr",
+                                            "VPADDUSWYrr",
+                                            "VPADDUSWZ128rr(b?)(k?)(z?)",
+                                            "VPADDUSWZ256rr(b?)(k?)(z?)",
+                                            "VPADDUSWZrr(b?)(k?)(z?)",
+                                            "VPADDUSWrr",
+                                            "VPAVGBYrr",
+                                            "VPAVGBZ128rr(b?)(k?)(z?)",
+                                            "VPAVGBZ256rr(b?)(k?)(z?)",
+                                            "VPAVGBZrr(b?)(k?)(z?)",
+                                            "VPAVGBrr",
+                                            "VPAVGWYrr",
+                                            "VPAVGWZ128rr(b?)(k?)(z?)",
+                                            "VPAVGWZ256rr(b?)(k?)(z?)",
+                                            "VPAVGWZrr(b?)(k?)(z?)",
+                                            "VPAVGWrr",
+                                            "VPCMPEQBYrr",
+                                            "VPCMPEQBrr",
+                                            "VPCMPEQDYrr",
+                                            "VPCMPEQDrr",
+                                            "VPCMPEQQYrr",
+                                            "VPCMPEQQrr",
+                                            "VPCMPEQWYrr",
+                                            "VPCMPEQWrr",
+                                            "VPCMPGTBYrr",
+                                            "VPCMPGTBrr",
+                                            "VPCMPGTDYrr",
+                                            "VPCMPGTDrr",
+                                            "VPCMPGTWYrr",
+                                            "VPCMPGTWrr",
+                                            "VPMAXSBYrr",
+                                            "VPMAXSBZ128rr(b?)(k?)(z?)",
+                                            "VPMAXSBZ256rr(b?)(k?)(z?)",
+                                            "VPMAXSBZrr(b?)(k?)(z?)",
+                                            "VPMAXSBrr",
+                                            "VPMAX(C?)SDYrr",
+                                            "VPMAX(C?)SDZ128rr(b?)(k?)(z?)",
+                                            "VPMAX(C?)SDZ256rr(b?)(k?)(z?)",
+                                            "VPMAX(C?)SDZrr(b?)(k?)(z?)",
+                                            "VPMAX(C?)SDrr",
+                                            "VPMAXSWYrr",
+                                            "VPMAXSWZ128rr(b?)(k?)(z?)",
+                                            "VPMAXSWZ256rr(b?)(k?)(z?)",
+                                            "VPMAXSWZrr(b?)(k?)(z?)",
+                                            "VPMAXSWrr",
+                                            "VPMAXUBYrr",
+                                            "VPMAXUBZ128rr(b?)(k?)(z?)",
+                                            "VPMAXUBZ256rr(b?)(k?)(z?)",
+                                            "VPMAXUBZrr(b?)(k?)(z?)",
+                                            "VPMAXUBrr",
+                                            "VPMAXUDYrr",
+                                            "VPMAXUDZ128rr(b?)(k?)(z?)",
+                                            "VPMAXUDZ256rr(b?)(k?)(z?)",
+                                            "VPMAXUDZrr(b?)(k?)(z?)",
+                                            "VPMAXUDrr",
+                                            "VPMAXUWYrr",
+                                            "VPMAXUWZ128rr(b?)(k?)(z?)",
+                                            "VPMAXUWZ256rr(b?)(k?)(z?)",
+                                            "VPMAXUWZrr(b?)(k?)(z?)",
+                                            "VPMAXUWrr",
+                                            "VPMINSBYrr",
+                                            "VPMINSBZ128rr(b?)(k?)(z?)",
+                                            "VPMINSBZ256rr(b?)(k?)(z?)",
+                                            "VPMINSBZrr(b?)(k?)(z?)",
+                                            "VPMINSBrr",
+                                            "VPMIN(C?)SDYrr",
+                                            "VPMIN(C?)SDZ128rr(b?)(k?)(z?)",
+                                            "VPMIN(C?)SDZ256rr(b?)(k?)(z?)",
+                                            "VPMIN(C?)SDZrr(b?)(k?)(z?)",
+                                            "VPMIN(C?)SDrr",
+                                            "VPMINSWYrr",
+                                            "VPMINSWZ128rr(b?)(k?)(z?)",
+                                            "VPMINSWZ256rr(b?)(k?)(z?)",
+                                            "VPMINSWZrr(b?)(k?)(z?)",
+                                            "VPMINSWrr",
+                                            "VPMINUBYrr",
+                                            "VPMINUBZ128rr(b?)(k?)(z?)",
+                                            "VPMINUBZ256rr(b?)(k?)(z?)",
+                                            "VPMINUBZrr(b?)(k?)(z?)",
+                                            "VPMINUBrr",
+                                            "VPMINUDYrr",
+                                            "VPMINUDZ128rr(b?)(k?)(z?)",
+                                            "VPMINUDZ256rr(b?)(k?)(z?)",
+                                            "VPMINUDZrr(b?)(k?)(z?)",
+                                            "VPMINUDrr",
+                                            "VPMINUWYrr",
+                                            "VPMINUWZ128rr(b?)(k?)(z?)",
+                                            "VPMINUWZ256rr(b?)(k?)(z?)",
+                                            "VPMINUWZrr(b?)(k?)(z?)",
+                                            "VPMINUWrr",
+                                            "VPROLDZ128r(b?)i(k?)(z?)",
+                                            "VPROLDZ256r(b?)i(k?)(z?)",
+                                            "VPROLDZri(b?)(k?)(z?)",
+                                            "VPROLQZ128r(b?)i(k?)(z?)",
+                                            "VPROLQZ256r(b?)i(k?)(z?)",
+                                            "VPROLQZri(b?)(k?)(z?)",
+                                            "VPROLVDZ128rr(b?)(k?)(z?)",
+                                            "VPROLVDZ256rr(b?)(k?)(z?)",
+                                            "VPROLVDZrr(b?)(k?)(z?)",
+                                            "VPROLVQZ128rr(b?)(k?)(z?)",
+                                            "VPROLVQZ256rr(b?)(k?)(z?)",
+                                            "VPROLVQZrr(b?)(k?)(z?)",
+                                            "VPRORDZ128r(b?)i(k?)(z?)",
+                                            "VPRORDZ256r(b?)i(k?)(z?)",
+                                            "VPRORDZri(b?)(k?)(z?)",
+                                            "VPRORQZ128r(b?)i(k?)(z?)",
+                                            "VPRORQZ256r(b?)i(k?)(z?)",
+                                            "VPRORQZri(b?)(k?)(z?)",
+                                            "VPRORVDZ128rr(b?)(k?)(z?)",
+                                            "VPRORVDZ256rr(b?)(k?)(z?)",
+                                            "VPRORVDZrr(b?)(k?)(z?)",
+                                            "VPRORVQZ128rr(b?)(k?)(z?)",
+                                            "VPRORVQZ256rr(b?)(k?)(z?)",
+                                            "VPRORVQZrr(b?)(k?)(z?)",
+                                            "VPSIGNBYrr",
+                                            "VPSIGNBrr",
+                                            "VPSIGNDYrr",
+                                            "VPSIGNDrr",
+                                            "VPSIGNWYrr",
+                                            "VPSIGNWrr",
+                                            "VPSLLDYri",
+                                            "VPSLLDZ128r(b?)i(k?)(z?)",
+                                            "VPSLLDZ256r(b?)i(k?)(z?)",
+                                            "VPSLLDZri(b?)(k?)(z?)",
+                                            "VPSLLDri",
+                                            "VPSLLQYri",
+                                            "VPSLLQZ128r(b?)i(k?)(z?)",
+                                            "VPSLLQZ256r(b?)i(k?)(z?)",
+                                            "VPSLLQZri(b?)(k?)(z?)",
+                                            "VPSLLQri",
+                                            "VPSLLVDYrr",
+                                            "VPSLLVDZ128rr(b?)(k?)(z?)",
+                                            "VPSLLVDZ256rr(b?)(k?)(z?)",
+                                            "VPSLLVDZrr(b?)(k?)(z?)",
+                                            "VPSLLVDrr",
+                                            "VPSLLVQYrr",
+                                            "VPSLLVQZ128rr(b?)(k?)(z?)",
+                                            "VPSLLVQZ256rr(b?)(k?)(z?)",
+                                            "VPSLLVQZrr(b?)(k?)(z?)",
+                                            "VPSLLVQrr",
+                                            "VPSLLVWZ128rr(b?)(k?)(z?)",
+                                            "VPSLLVWZ256rr(b?)(k?)(z?)",
+                                            "VPSLLVWZrr(b?)(k?)(z?)",
+                                            "VPSLLWYri",
+                                            "VPSLLWZ128ri(b?)(k?)(z?)",
+                                            "VPSLLWZ256ri(b?)(k?)(z?)",
+                                            "VPSLLWZri(b?)(k?)(z?)",
+                                            "VPSLLWri",
+                                            "VPSRADYri",
+                                            "VPSRADZ128r(b?)i(k?)(z?)",
+                                            "VPSRADZ256r(b?)i(k?)(z?)",
+                                            "VPSRADZri(b?)(k?)(z?)",
+                                            "VPSRADri",
+                                            "VPSRAQZ128r(b?)i(k?)(z?)",
+                                            "VPSRAQZ256r(b?)i(k?)(z?)",
+                                            "VPSRAQZri(b?)(k?)(z?)",
+                                            "VPSRAVDYrr",
+                                            "VPSRAVDZ128rr(b?)(k?)(z?)",
+                                            "VPSRAVDZ256rr(b?)(k?)(z?)",
+                                            "VPSRAVDZrr(b?)(k?)(z?)",
+                                            "VPSRAVDrr",
+                                            "VPSRAVQZ128rr(b?)(k?)(z?)",
+                                            "VPSRAVQZ256rr(b?)(k?)(z?)",
+                                            "VPSRAVQZrr(b?)(k?)(z?)",
+                                            "VPSRAVWZ128rr(b?)(k?)(z?)",
+                                            "VPSRAVWZ256rr(b?)(k?)(z?)",
+                                            "VPSRAVWZrr(b?)(k?)(z?)",
+                                            "VPSRAWYri",
+                                            "VPSRAWZ128ri(b?)(k?)(z?)",
+                                            "VPSRAWZ256ri(b?)(k?)(z?)",
+                                            "VPSRAWZri(b?)(k?)(z?)",
+                                            "VPSRAWri",
+                                            "VPSRLDYri",
+                                            "VPSRLDZ128r(b?)i(k?)(z?)",
+                                            "VPSRLDZ256r(b?)i(k?)(z?)",
+                                            "VPSRLDZri(b?)(k?)(z?)",
+                                            "VPSRLDri",
+                                            "VPSRLQYri",
+                                            "VPSRLQZ128r(b?)i(k?)(z?)",
+                                            "VPSRLQZ256r(b?)i(k?)(z?)",
+                                            "VPSRLQZri(b?)(k?)(z?)",
+                                            "VPSRLQri",
+                                            "VPSRLVDYrr",
+                                            "VPSRLVDZ128rr(b?)(k?)(z?)",
+                                            "VPSRLVDZ256rr(b?)(k?)(z?)",
+                                            "VPSRLVDZrr(b?)(k?)(z?)",
+                                            "VPSRLVDrr",
+                                            "VPSRLVQYrr",
+                                            "VPSRLVQZ128rr(b?)(k?)(z?)",
+                                            "VPSRLVQZ256rr(b?)(k?)(z?)",
+                                            "VPSRLVQZrr(b?)(k?)(z?)",
+                                            "VPSRLVQrr",
+                                            "VPSRLVWZ128rr(b?)(k?)(z?)",
+                                            "VPSRLVWZ256rr(b?)(k?)(z?)",
+                                            "VPSRLVWZrr(b?)(k?)(z?)",
+                                            "VPSRLWYri",
+                                            "VPSRLWZ128ri(b?)(k?)(z?)",
+                                            "VPSRLWZ256ri(b?)(k?)(z?)",
+                                            "VPSRLWZri(b?)(k?)(z?)",
+                                            "VPSRLWri",
+                                            "VPSUBSBYrr",
+                                            "VPSUBSBZ128rr(b?)(k?)(z?)",
+                                            "VPSUBSBZ256rr(b?)(k?)(z?)",
+                                            "VPSUBSBZrr(b?)(k?)(z?)",
+                                            "VPSUBSBrr",
+                                            "VPSUBSWYrr",
+                                            "VPSUBSWZ128rr(b?)(k?)(z?)",
+                                            "VPSUBSWZ256rr(b?)(k?)(z?)",
+                                            "VPSUBSWZrr(b?)(k?)(z?)",
+                                            "VPSUBSWrr",
+                                            "VPSUBUSBYrr",
+                                            "VPSUBUSBZ128rr(b?)(k?)(z?)",
+                                            "VPSUBUSBZ256rr(b?)(k?)(z?)",
+                                            "VPSUBUSBZrr(b?)(k?)(z?)",
+                                            "VPSUBUSBrr",
+                                            "VPSUBUSWYrr",
+                                            "VPSUBUSWZ128rr(b?)(k?)(z?)",
+                                            "VPSUBUSWZ256rr(b?)(k?)(z?)",
+                                            "VPSUBUSWZrr(b?)(k?)(z?)",
+                                            "VPSUBUSWrr")>;
 
 def SKXWriteResGroup6 : SchedWriteRes<[SKXPort05]> {
   let Latency = 1;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup6], (instregex "FINCSTP")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "FNOP")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_MOVQ64rr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PABSBrr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PABSDrr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PABSWrr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PADDBirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PADDDirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PADDQirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PADDWirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PANDNirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PANDirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PORirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PSIGNBrr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PSIGNDrr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PSIGNWrr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PSUBBirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PSUBDirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PSUBQirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PSUBWirr")>;
-def: InstRW<[SKXWriteResGroup6], (instregex "MMX_PXORirr")>;
+def: InstRW<[SKXWriteResGroup6], (instregex "FINCSTP",
+                                            "FNOP",
+                                            "MMX_MOVQ64rr",
+                                            "MMX_PABSBrr",
+                                            "MMX_PABSDrr",
+                                            "MMX_PABSWrr",
+                                            "MMX_PADDBirr",
+                                            "MMX_PADDDirr",
+                                            "MMX_PADDQirr",
+                                            "MMX_PADDWirr",
+                                            "MMX_PANDNirr",
+                                            "MMX_PANDirr",
+                                            "MMX_PORirr",
+                                            "MMX_PSIGNBrr",
+                                            "MMX_PSIGNDrr",
+                                            "MMX_PSIGNWrr",
+                                            "MMX_PSUBBirr",
+                                            "MMX_PSUBDirr",
+                                            "MMX_PSUBQirr",
+                                            "MMX_PSUBWirr",
+                                            "MMX_PXORirr")>;
 
 def SKXWriteResGroup7 : SchedWriteRes<[SKXPort06]> {
   let Latency = 1;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup7], (instregex "ADC(16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "ADC(16|32|64)i")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "ADC(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "ADCX(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "ADOX(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BT(16|32|64)ri8")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BT(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BTC(16|32|64)ri8")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BTC(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BTR(16|32|64)ri8")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BTR(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BTS(16|32|64)ri8")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BTS(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "CDQ")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "CLAC")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "CQO")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "JMP_1")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "JMP_4")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "RORX(32|64)ri")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SAR(8|16|32|64)r1")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SAR(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SARX(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SBB(16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SBB(16|32|64)i")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SBB(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)r")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SHL(8|16|32|64)r1")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SHL(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SHLX(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SHR(8|16|32|64)r1")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SHR(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "SHRX(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup7], (instregex "STAC")>;
+def: InstRW<[SKXWriteResGroup7], (instregex "ADC(16|32|64)ri",
+                                            "ADC(16|32|64)i",
+                                            "ADC(8|16|32|64)rr",
+                                            "ADCX(32|64)rr",
+                                            "ADOX(32|64)rr",
+                                            "BT(16|32|64)ri8",
+                                            "BT(16|32|64)rr",
+                                            "BTC(16|32|64)ri8",
+                                            "BTC(16|32|64)rr",
+                                            "BTR(16|32|64)ri8",
+                                            "BTR(16|32|64)rr",
+                                            "BTS(16|32|64)ri8",
+                                            "BTS(16|32|64)rr",
+                                            "CDQ",
+                                            "CLAC",
+                                            "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rr",
+                                            "CQO",
+                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
+                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
+                                            "JMP_1",
+                                            "JMP_4",
+                                            "RORX(32|64)ri",
+                                            "SAR(8|16|32|64)r1",
+                                            "SAR(8|16|32|64)ri",
+                                            "SARX(32|64)rr",
+                                            "SBB(16|32|64)ri",
+                                            "SBB(16|32|64)i",
+                                            "SBB(8|16|32|64)rr",
+                                            "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)r",
+                                            "SHL(8|16|32|64)r1",
+                                            "SHL(8|16|32|64)ri",
+                                            "SHLX(32|64)rr",
+                                            "SHR(8|16|32|64)r1",
+                                            "SHR(8|16|32|64)ri",
+                                            "SHRX(32|64)rr",
+                                            "STAC")>;
 
 def SKXWriteResGroup8 : SchedWriteRes<[SKXPort15]> {
   let Latency = 1;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup8], (instregex "ANDN(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup8], (instregex "BLSI(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup8], (instregex "BLSMSK(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup8], (instregex "BLSR(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup8], (instregex "BZHI(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup8], (instregex "LEA(16|32|64)(_32)?r")>;
+def: InstRW<[SKXWriteResGroup8], (instregex "ANDN(32|64)rr",
+                                            "BLSI(32|64)rr",
+                                            "BLSMSK(32|64)rr",
+                                            "BLSR(32|64)rr",
+                                            "BZHI(32|64)rr",
+                                            "LEA(16|32|64)(_32)?r")>;
 
 def SKXWriteResGroup9 : SchedWriteRes<[SKXPort015]> {
   let Latency = 1;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup9], (instregex "ANDNPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "ANDNPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "ANDPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "ANDPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "BLENDPDrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "BLENDPSrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "MOVAPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "MOVAPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "MOVDQArr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "MOVDQUrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "MOVPQI2QIrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "MOVSSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "ORPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "ORPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PADDBrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PADDDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PADDQrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PADDWrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PANDNrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PANDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PORrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PSUBBrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PSUBDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PSUBQrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PSUBWrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "PXORrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPSYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDNPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPSYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VANDPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDPDYrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDPDrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDPSYrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDPSrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPSYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVAPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQA32Z128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQA32Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQA32Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQA64Z128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQA64Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQA64Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQAYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQArr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU16Z128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU16Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU16Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU32Z128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU32Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU32Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU64Z128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU64Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU64Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU8Z128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU8Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQU8Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQUYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVDQUrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVPQI(2Q|Lo2PQ)IZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVPQI2QIrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVSSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVUPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVUPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVUPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVUPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVUPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVUPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VMOVZPQILo2PQIrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPSYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VORPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDBYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDBrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDQYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDQrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDWYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPADDWrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDNrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPANDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDDYrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDDrri")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPBLENDMWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPORrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBBYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBBrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBQYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBQrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBWYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPSUBWrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPTERNLOGDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPTERNLOGDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPTERNLOGDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPTERNLOGQZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPTERNLOGQZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPTERNLOGQZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VPXORrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPDYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPSYrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "VXORPSrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "XORPDrr")>;
-def: InstRW<[SKXWriteResGroup9], (instregex "XORPSrr")>;
+def: InstRW<[SKXWriteResGroup9], (instregex "ANDNPDrr",
+                                            "ANDNPSrr",
+                                            "ANDPDrr",
+                                            "ANDPSrr",
+                                            "BLENDPDrri",
+                                            "BLENDPSrri",
+                                            "MOVAPDrr",
+                                            "MOVAPSrr",
+                                            "MOVDQArr",
+                                            "MOVDQUrr",
+                                            "MOVPQI2QIrr",
+                                            "MOVSSrr",
+                                            "ORPDrr",
+                                            "ORPSrr",
+                                            "PADDBrr",
+                                            "PADDDrr",
+                                            "PADDQrr",
+                                            "PADDWrr",
+                                            "PANDNrr",
+                                            "PANDrr",
+                                            "PORrr",
+                                            "PSUBBrr",
+                                            "PSUBDrr",
+                                            "PSUBQrr",
+                                            "PSUBWrr",
+                                            "PXORrr",
+                                            "VANDNPDYrr",
+                                            "VANDNPDZ128rr(b?)(k?)(z?)",
+                                            "VANDNPDZ256rr(b?)(k?)(z?)",
+                                            "VANDNPDZrr(b?)(k?)(z?)",
+                                            "VANDNPDrr",
+                                            "VANDNPSYrr",
+                                            "VANDNPSZ128rr(b?)(k?)(z?)",
+                                            "VANDNPSZ256rr(b?)(k?)(z?)",
+                                            "VANDNPSZrr(b?)(k?)(z?)",
+                                            "VANDNPSrr",
+                                            "VANDPDYrr",
+                                            "VANDPDZ128rr(b?)(k?)(z?)",
+                                            "VANDPDZ256rr(b?)(k?)(z?)",
+                                            "VANDPDZrr(b?)(k?)(z?)",
+                                            "VANDPDrr",
+                                            "VANDPSYrr",
+                                            "VANDPSZ128rr(b?)(k?)(z?)",
+                                            "VANDPSZ256rr(b?)(k?)(z?)",
+                                            "VANDPSZrr(b?)(k?)(z?)",
+                                            "VANDPSrr",
+                                            "VBLENDMPDZ128rr(b?)(k?)(z?)",
+                                            "VBLENDMPDZ256rr(b?)(k?)(z?)",
+                                            "VBLENDMPDZrr(b?)(k?)(z?)",
+                                            "VBLENDMPSZ128rr(b?)(k?)(z?)",
+                                            "VBLENDMPSZ256rr(b?)(k?)(z?)",
+                                            "VBLENDMPSZrr(b?)(k?)(z?)",
+                                            "VBLENDPDYrri",
+                                            "VBLENDPDrri",
+                                            "VBLENDPSYrri",
+                                            "VBLENDPSrri",
+                                            "VMOVAPDYrr",
+                                            "VMOVAPDZ128rr(b?)(k?)(z?)",
+                                            "VMOVAPDZ256rr(b?)(k?)(z?)",
+                                            "VMOVAPDZrr(b?)(k?)(z?)",
+                                            "VMOVAPDrr",
+                                            "VMOVAPSYrr",
+                                            "VMOVAPSZ128rr(b?)(k?)(z?)",
+                                            "VMOVAPSZ256rr(b?)(k?)(z?)",
+                                            "VMOVAPSZrr(b?)(k?)(z?)",
+                                            "VMOVAPSrr",
+                                            "VMOVDQA32Z128rr(b?)(k?)(z?)",
+                                            "VMOVDQA32Z256rr(b?)(k?)(z?)",
+                                            "VMOVDQA32Zrr(b?)(k?)(z?)",
+                                            "VMOVDQA64Z128rr(b?)(k?)(z?)",
+                                            "VMOVDQA64Z256rr(b?)(k?)(z?)",
+                                            "VMOVDQA64Zrr(b?)(k?)(z?)",
+                                            "VMOVDQAYrr",
+                                            "VMOVDQArr",
+                                            "VMOVDQU16Z128rr(b?)(k?)(z?)",
+                                            "VMOVDQU16Z256rr(b?)(k?)(z?)",
+                                            "VMOVDQU16Zrr(b?)(k?)(z?)",
+                                            "VMOVDQU32Z128rr(b?)(k?)(z?)",
+                                            "VMOVDQU32Z256rr(b?)(k?)(z?)",
+                                            "VMOVDQU32Zrr(b?)(k?)(z?)",
+                                            "VMOVDQU64Z128rr(b?)(k?)(z?)",
+                                            "VMOVDQU64Z256rr(b?)(k?)(z?)",
+                                            "VMOVDQU64Zrr(b?)(k?)(z?)",
+                                            "VMOVDQU8Z128rr(b?)(k?)(z?)",
+                                            "VMOVDQU8Z256rr(b?)(k?)(z?)",
+                                            "VMOVDQU8Zrr(b?)(k?)(z?)",
+                                            "VMOVDQUYrr",
+                                            "VMOVDQUrr",
+                                            "VMOVPQI(2Q|Lo2PQ)IZrr(b?)(k?)(z?)",
+                                            "VMOVPQI2QIrr",
+                                            "VMOVSSrr",
+                                            "VMOVUPDZ128rr(b?)(k?)(z?)",
+                                            "VMOVUPDZ256rr(b?)(k?)(z?)",
+                                            "VMOVUPDZrr(b?)(k?)(z?)",
+                                            "VMOVUPSZ128rr(b?)(k?)(z?)",
+                                            "VMOVUPSZ256rr(b?)(k?)(z?)",
+                                            "VMOVUPSZrr(b?)(k?)(z?)",
+                                            "VMOVZPQILo2PQIrr",
+                                            "VORPDYrr",
+                                            "VORPDZ128rr(b?)(k?)(z?)",
+                                            "VORPDZ256rr(b?)(k?)(z?)",
+                                            "VORPDZrr(b?)(k?)(z?)",
+                                            "VORPDrr",
+                                            "VORPSYrr",
+                                            "VORPSZ128rr(b?)(k?)(z?)",
+                                            "VORPSZ256rr(b?)(k?)(z?)",
+                                            "VORPSZrr(b?)(k?)(z?)",
+                                            "VORPSrr",
+                                            "VPADDBYrr",
+                                            "VPADDBZ128rr(b?)(k?)(z?)",
+                                            "VPADDBZ256rr(b?)(k?)(z?)",
+                                            "VPADDBZrr(b?)(k?)(z?)",
+                                            "VPADDBrr",
+                                            "VPADDDYrr",
+                                            "VPADDDZ128rr(b?)(k?)(z?)",
+                                            "VPADDDZ256rr(b?)(k?)(z?)",
+                                            "VPADDDZrr(b?)(k?)(z?)",
+                                            "VPADDDrr",
+                                            "VPADDQYrr",
+                                            "VPADDQZ128rr(b?)(k?)(z?)",
+                                            "VPADDQZ256rr(b?)(k?)(z?)",
+                                            "VPADDQZrr(b?)(k?)(z?)",
+                                            "VPADDQrr",
+                                            "VPADDWYrr",
+                                            "VPADDWZ128rr(b?)(k?)(z?)",
+                                            "VPADDWZ256rr(b?)(k?)(z?)",
+                                            "VPADDWZrr(b?)(k?)(z?)",
+                                            "VPADDWrr",
+                                            "VPANDDZ128rr(b?)(k?)(z?)",
+                                            "VPANDDZ256rr(b?)(k?)(z?)",
+                                            "VPANDDZrr(b?)(k?)(z?)",
+                                            "VPANDNDZ128rr(b?)(k?)(z?)",
+                                            "VPANDNDZ256rr(b?)(k?)(z?)",
+                                            "VPANDNDZrr(b?)(k?)(z?)",
+                                            "VPANDNQZ128rr(b?)(k?)(z?)",
+                                            "VPANDNQZ256rr(b?)(k?)(z?)",
+                                            "VPANDNQZrr(b?)(k?)(z?)",
+                                            "VPANDNYrr",
+                                            "VPANDNrr",
+                                            "VPANDQZ128rr(b?)(k?)(z?)",
+                                            "VPANDQZ256rr(b?)(k?)(z?)",
+                                            "VPANDQZrr(b?)(k?)(z?)",
+                                            "VPANDYrr",
+                                            "VPANDrr",
+                                            "VPBLENDDYrri",
+                                            "VPBLENDDrri",
+                                            "VPBLENDMBZ128rr(b?)(k?)(z?)",
+                                            "VPBLENDMBZ256rr(b?)(k?)(z?)",
+                                            "VPBLENDMBZrr(b?)(k?)(z?)",
+                                            "VPBLENDMDZ128rr(b?)(k?)(z?)",
+                                            "VPBLENDMDZ256rr(b?)(k?)(z?)",
+                                            "VPBLENDMDZrr(b?)(k?)(z?)",
+                                            "VPBLENDMQZ128rr(b?)(k?)(z?)",
+                                            "VPBLENDMQZ256rr(b?)(k?)(z?)",
+                                            "VPBLENDMQZrr(b?)(k?)(z?)",
+                                            "VPBLENDMWZ128rr(b?)(k?)(z?)",
+                                            "VPBLENDMWZ256rr(b?)(k?)(z?)",
+                                            "VPBLENDMWZrr(b?)(k?)(z?)",
+                                            "VPORDZ128rr(b?)(k?)(z?)",
+                                            "VPORDZ256rr(b?)(k?)(z?)",
+                                            "VPORDZrr(b?)(k?)(z?)",
+                                            "VPORQZ128rr(b?)(k?)(z?)",
+                                            "VPORQZ256rr(b?)(k?)(z?)",
+                                            "VPORQZrr(b?)(k?)(z?)",
+                                            "VPORYrr",
+                                            "VPORrr",
+                                            "VPSUBBYrr",
+                                            "VPSUBBZ128rr(b?)(k?)(z?)",
+                                            "VPSUBBZ256rr(b?)(k?)(z?)",
+                                            "VPSUBBZrr(b?)(k?)(z?)",
+                                            "VPSUBBrr",
+                                            "VPSUBDYrr",
+                                            "VPSUBDZ128rr(b?)(k?)(z?)",
+                                            "VPSUBDZ256rr(b?)(k?)(z?)",
+                                            "VPSUBDZrr(b?)(k?)(z?)",
+                                            "VPSUBDrr",
+                                            "VPSUBQYrr",
+                                            "VPSUBQZ128rr(b?)(k?)(z?)",
+                                            "VPSUBQZ256rr(b?)(k?)(z?)",
+                                            "VPSUBQZrr(b?)(k?)(z?)",
+                                            "VPSUBQrr",
+                                            "VPSUBWYrr",
+                                            "VPSUBWZ128rr(b?)(k?)(z?)",
+                                            "VPSUBWZrr(b?)(k?)(z?)",
+                                            "VPSUBWrr",
+                                            "VPTERNLOGDZ128rri(b?)(k?)(z?)",
+                                            "VPTERNLOGDZ256rri(b?)(k?)(z?)",
+                                            "VPTERNLOGDZrri(b?)(k?)(z?)",
+                                            "VPTERNLOGQZ128rri(b?)(k?)(z?)",
+                                            "VPTERNLOGQZ256rri(b?)(k?)(z?)",
+                                            "VPTERNLOGQZrri(b?)(k?)(z?)",
+                                            "VPXORDZ128rr(b?)(k?)(z?)",
+                                            "VPXORDZ256rr(b?)(k?)(z?)",
+                                            "VPXORDZrr(b?)(k?)(z?)",
+                                            "VPXORQZ128rr(b?)(k?)(z?)",
+                                            "VPXORQZ256rr(b?)(k?)(z?)",
+                                            "VPXORQZrr(b?)(k?)(z?)",
+                                            "VPXORYrr",
+                                            "VPXORrr",
+                                            "VXORPDYrr",
+                                            "VXORPDZ128rr(b?)(k?)(z?)",
+                                            "VXORPDZ256rr(b?)(k?)(z?)",
+                                            "VXORPDZrr(b?)(k?)(z?)",
+                                            "VXORPDrr",
+                                            "VXORPSYrr",
+                                            "VXORPSZ128rr(b?)(k?)(z?)",
+                                            "VXORPSZ256rr(b?)(k?)(z?)",
+                                            "VXORPSZrr(b?)(k?)(z?)",
+                                            "VXORPSrr",
+                                            "XORPDrr",
+                                            "XORPSrr")>;
 
 def SKXWriteResGroup10 : SchedWriteRes<[SKXPort0156]> {
   let Latency = 1;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup10], (instregex "ADD(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "ADD(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "ADD(8|16|32|64)i")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "AND(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "AND(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "AND(8|16|32|64)i")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "CBW")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "CLC")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "CMC")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "CMP(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "CMP(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "CMP(8|16|32|64)i")>;
 def: InstRW<[SKXWriteResGroup10], (instrs CWDE)>;
-def: InstRW<[SKXWriteResGroup10], (instregex "DEC(8|16|32|64)r")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "INC(8|16|32|64)r")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "LAHF")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOV(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOV(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOVSX(16|32|64)rr16")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOVSX(16|32|64)rr32")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOVSX(16|32|64)rr8")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOVZX(16|32|64)rr16")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "MOVZX(16|32|64)rr8")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "NEG(8|16|32|64)r")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "NOOP")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "NOT(8|16|32|64)r")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "OR(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "OR(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "OR(8|16|32|64)i")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SAHF")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SGDT64m")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SIDT64m")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SLDT64m")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SMSW16m")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "STC")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "STRm")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SUB(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SUB(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SUB(8|16|32|64)i")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "SYSCALL")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "TEST(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "TEST(8|16|32|64)i")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "TEST(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "XCHG(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "XOR(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "XOR(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup10], (instregex "XOR(8|16|32|64)i")>;
+def: InstRW<[SKXWriteResGroup10], (instregex "ADD(8|16|32|64)ri",
+                                             "ADD(8|16|32|64)rr",
+                                             "ADD(8|16|32|64)i",
+                                             "AND(8|16|32|64)ri",
+                                             "AND(8|16|32|64)rr",
+                                             "AND(8|16|32|64)i",
+                                             "CBW",
+                                             "CLC",
+                                             "CMC",
+                                             "CMP(8|16|32|64)ri",
+                                             "CMP(8|16|32|64)rr",
+                                             "CMP(8|16|32|64)i",
+                                             "DEC(8|16|32|64)r",
+                                             "INC(8|16|32|64)r",
+                                             "LAHF",
+                                             "MOV(8|16|32|64)rr",
+                                             "MOV(8|16|32|64)ri",
+                                             "MOVSX(16|32|64)rr16",
+                                             "MOVSX(16|32|64)rr32",
+                                             "MOVSX(16|32|64)rr8",
+                                             "MOVZX(16|32|64)rr16",
+                                             "MOVZX(16|32|64)rr8",
+                                             "NEG(8|16|32|64)r",
+                                             "NOOP",
+                                             "NOT(8|16|32|64)r",
+                                             "OR(8|16|32|64)ri",
+                                             "OR(8|16|32|64)rr",
+                                             "OR(8|16|32|64)i",
+                                             "SAHF",
+                                             "SGDT64m",
+                                             "SIDT64m",
+                                             "SLDT64m",
+                                             "SMSW16m",
+                                             "STC",
+                                             "STRm",
+                                             "SUB(8|16|32|64)ri",
+                                             "SUB(8|16|32|64)rr",
+                                             "SUB(8|16|32|64)i",
+                                             "SYSCALL",
+                                             "TEST(8|16|32|64)rr",
+                                             "TEST(8|16|32|64)i",
+                                             "TEST(8|16|32|64)ri",
+                                             "XCHG(16|32|64)rr",
+                                             "XOR(8|16|32|64)ri",
+                                             "XOR(8|16|32|64)rr",
+                                             "XOR(8|16|32|64)i")>;
 
 def SKXWriteResGroup11 : SchedWriteRes<[SKXPort4,SKXPort237]> {
   let Latency = 1;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup11], (instregex "FBSTPm")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "KMOVBmk")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "KMOVDmk")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "KMOVQmk")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "KMOVWmk")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MMX_MOVD64from64rm")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MMX_MOVD64mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MMX_MOVNTQmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MMX_MOVQ64mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOV(16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOV8mi")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOV8mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVAPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVAPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVDQAmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVDQUmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVHPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVHPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVLPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVLPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVNTDQmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVNTI_64mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVNTImr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVNTPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVNTPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVPDI2DImr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVPQI2QImr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVPQIto64mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVSDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVSSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVUPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "MOVUPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "ST_FP32m")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "ST_FP64m")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "ST_FP80m")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTF128mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTF32x4Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTF32x4Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTF32x8Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTF64x2Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTF64x2Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTF64x4Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTI128mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTI32x4Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTI32x4Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTI32x8Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTI64x2Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTI64x2Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VEXTRACTI64x4Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPDYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPSYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPSZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPSZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPSZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVAPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQA32Z128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQA32Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQA32Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQA64Z128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQA64Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQA64Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQAYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQAmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU16Z128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU16Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU16Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU32Z128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU32Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU32Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU64Z128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU64Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU64Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU8Z128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQU8Z256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQUYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVDQUmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVHPDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVHPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVHPSZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVHPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVLPDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVLPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVLPSZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVLPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTDQYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTDQZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTDQZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTDQZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTDQmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPDYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPSYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPSZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPSZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPSZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVNTPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVPDI2DIZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVPDI2DImr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVPQI(2QI|to64)Zmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVPQI2QImr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVPQIto64mr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVSDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVSDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVSSZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVSSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPDYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPDmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPSYmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPSZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPSZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPSZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMOVUPSmr")>;
-def: InstRW<[SKXWriteResGroup11], (instregex "VMPTRSTm")>;
+def: InstRW<[SKXWriteResGroup11], (instregex "FBSTPm",
+                                             "KMOVBmk",
+                                             "KMOVDmk",
+                                             "KMOVQmk",
+                                             "KMOVWmk",
+                                             "MMX_MOVD64from64rm",
+                                             "MMX_MOVD64mr",
+                                             "MMX_MOVNTQmr",
+                                             "MMX_MOVQ64mr",
+                                             "MOV(16|32|64)mr",
+                                             "MOV8mi",
+                                             "MOV8mr",
+                                             "MOVAPDmr",
+                                             "MOVAPSmr",
+                                             "MOVDQAmr",
+                                             "MOVDQUmr",
+                                             "MOVHPDmr",
+                                             "MOVHPSmr",
+                                             "MOVLPDmr",
+                                             "MOVLPSmr",
+                                             "MOVNTDQmr",
+                                             "MOVNTI_64mr",
+                                             "MOVNTImr",
+                                             "MOVNTPDmr",
+                                             "MOVNTPSmr",
+                                             "MOVPDI2DImr",
+                                             "MOVPQI2QImr",
+                                             "MOVPQIto64mr",
+                                             "MOVSDmr",
+                                             "MOVSSmr",
+                                             "MOVUPDmr",
+                                             "MOVUPSmr",
+                                             "ST_FP32m",
+                                             "ST_FP64m",
+                                             "ST_FP80m",
+                                             "VEXTRACTF128mr",
+                                             "VEXTRACTF32x4Z256mr(b?)(k?)(z?)",
+                                             "VEXTRACTF32x4Zmr(b?)(k?)(z?)",
+                                             "VEXTRACTF32x8Zmr(b?)(k?)(z?)",
+                                             "VEXTRACTF64x2Z256mr(b?)(k?)(z?)",
+                                             "VEXTRACTF64x2Zmr(b?)(k?)(z?)",
+                                             "VEXTRACTF64x4Zmr(b?)(k?)(z?)",
+                                             "VEXTRACTI128mr",
+                                             "VEXTRACTI32x4Z256mr(b?)(k?)(z?)",
+                                             "VEXTRACTI32x4Zmr(b?)(k?)(z?)",
+                                             "VEXTRACTI32x8Zmr(b?)(k?)(z?)",
+                                             "VEXTRACTI64x2Z256mr(b?)(k?)(z?)",
+                                             "VEXTRACTI64x2Zmr(b?)(k?)(z?)",
+                                             "VEXTRACTI64x4Zmr(b?)(k?)(z?)",
+                                             "VMOVAPDYmr",
+                                             "VMOVAPDZ128mr(b?)(k?)(z?)",
+                                             "VMOVAPDZ256mr(b?)(k?)(z?)",
+                                             "VMOVAPDZmr(b?)(k?)(z?)",
+                                             "VMOVAPDmr",
+                                             "VMOVAPSYmr",
+                                             "VMOVAPSZ128mr(b?)(k?)(z?)",
+                                             "VMOVAPSZ256mr(b?)(k?)(z?)",
+                                             "VMOVAPSZmr(b?)(k?)(z?)",
+                                             "VMOVAPSmr",
+                                             "VMOVDQA32Z128mr(b?)(k?)(z?)",
+                                             "VMOVDQA32Z256mr(b?)(k?)(z?)",
+                                             "VMOVDQA32Zmr(b?)(k?)(z?)",
+                                             "VMOVDQA64Z128mr(b?)(k?)(z?)",
+                                             "VMOVDQA64Z256mr(b?)(k?)(z?)",
+                                             "VMOVDQA64Zmr(b?)(k?)(z?)",
+                                             "VMOVDQAYmr",
+                                             "VMOVDQAmr",
+                                             "VMOVDQU16Z128mr(b?)(k?)(z?)",
+                                             "VMOVDQU16Z256mr(b?)(k?)(z?)",
+                                             "VMOVDQU16Zmr(b?)(k?)(z?)",
+                                             "VMOVDQU32Z128mr(b?)(k?)(z?)",
+                                             "VMOVDQU32Z256mr(b?)(k?)(z?)",
+                                             "VMOVDQU32Zmr(b?)(k?)(z?)",
+                                             "VMOVDQU64Z128mr(b?)(k?)(z?)",
+                                             "VMOVDQU64Z256mr(b?)(k?)(z?)",
+                                             "VMOVDQU64Zmr(b?)(k?)(z?)",
+                                             "VMOVDQU8Z128mr(b?)(k?)(z?)",
+                                             "VMOVDQU8Z256mr(b?)(k?)(z?)",
+                                             "VMOVDQUYmr",
+                                             "VMOVDQUmr",
+                                             "VMOVHPDZ128mr(b?)(k?)(z?)",
+                                             "VMOVHPDmr",
+                                             "VMOVHPSZ128mr(b?)(k?)(z?)",
+                                             "VMOVHPSmr",
+                                             "VMOVLPDZ128mr(b?)(k?)(z?)",
+                                             "VMOVLPDmr",
+                                             "VMOVLPSZ128mr(b?)(k?)(z?)",
+                                             "VMOVLPSmr",
+                                             "VMOVNTDQYmr",
+                                             "VMOVNTDQZ128mr(b?)(k?)(z?)",
+                                             "VMOVNTDQZ256mr(b?)(k?)(z?)",
+                                             "VMOVNTDQZmr(b?)(k?)(z?)",
+                                             "VMOVNTDQmr",
+                                             "VMOVNTPDYmr",
+                                             "VMOVNTPDZ128mr(b?)(k?)(z?)",
+                                             "VMOVNTPDZ256mr(b?)(k?)(z?)",
+                                             "VMOVNTPDZmr(b?)(k?)(z?)",
+                                             "VMOVNTPDmr",
+                                             "VMOVNTPSYmr",
+                                             "VMOVNTPSZ128mr(b?)(k?)(z?)",
+                                             "VMOVNTPSZ256mr(b?)(k?)(z?)",
+                                             "VMOVNTPSZmr(b?)(k?)(z?)",
+                                             "VMOVNTPSmr",
+                                             "VMOVPDI2DIZmr(b?)(k?)(z?)",
+                                             "VMOVPDI2DImr",
+                                             "VMOVPQI(2QI|to64)Zmr(b?)(k?)(z?)",
+                                             "VMOVPQI2QImr",
+                                             "VMOVPQIto64mr",
+                                             "VMOVSDZmr(b?)(k?)(z?)",
+                                             "VMOVSDmr",
+                                             "VMOVSSZmr(b?)(k?)(z?)",
+                                             "VMOVSSmr",
+                                             "VMOVUPDYmr",
+                                             "VMOVUPDZ128mr(b?)(k?)(z?)",
+                                             "VMOVUPDZ256mr(b?)(k?)(z?)",
+                                             "VMOVUPDZmr(b?)(k?)(z?)",
+                                             "VMOVUPDmr",
+                                             "VMOVUPSYmr",
+                                             "VMOVUPSZ128mr(b?)(k?)(z?)",
+                                             "VMOVUPSZ256mr(b?)(k?)(z?)",
+                                             "VMOVUPSZmr(b?)(k?)(z?)",
+                                             "VMOVUPSmr",
+                                             "VMPTRSTm")>;
 
 def SKXWriteResGroup12 : SchedWriteRes<[SKXPort0]> {
   let Latency = 2;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup12], (instregex "COMISDrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "COMISSrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "MMX_MOVD64from64rr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "MMX_MOVD64grr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "MMX_PMOVMSKBrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "MOVMSKPDrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "MOVMSKPSrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "MOVPDI2DIrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "MOVPQIto64rr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "PMOVMSKBrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "UCOMISDrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "UCOMISSrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VCOMISDZrr(b?)")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VCOMISDrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VCOMISSZrr(b?)")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VCOMISSrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVMSKPDYrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVMSKPDrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVMSKPSYrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVMSKPSrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVPDI2DIZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVPDI2DIrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVPQIto64Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VMOVPQIto64rr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VPMOVMSKBYrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VPMOVMSKBrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VTESTPDYrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VTESTPDrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VTESTPSYrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VTESTPSrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VUCOMISDZrr(b?)")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VUCOMISDrr")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VUCOMISSZrr(b?)")>;
-def: InstRW<[SKXWriteResGroup12], (instregex "VUCOMISSrr")>;
+def: InstRW<[SKXWriteResGroup12], (instregex "COMISDrr",
+                                             "COMISSrr",
+                                             "MMX_MOVD64from64rr",
+                                             "MMX_MOVD64grr",
+                                             "MMX_PMOVMSKBrr",
+                                             "MOVMSKPDrr",
+                                             "MOVMSKPSrr",
+                                             "MOVPDI2DIrr",
+                                             "MOVPQIto64rr",
+                                             "PMOVMSKBrr",
+                                             "UCOMISDrr",
+                                             "UCOMISSrr",
+                                             "VCOMISDZrr(b?)",
+                                             "VCOMISDrr",
+                                             "VCOMISSZrr(b?)",
+                                             "VCOMISSrr",
+                                             "VMOVMSKPDYrr",
+                                             "VMOVMSKPDrr",
+                                             "VMOVMSKPSYrr",
+                                             "VMOVMSKPSrr",
+                                             "VMOVPDI2DIZrr(b?)(k?)(z?)",
+                                             "VMOVPDI2DIrr",
+                                             "VMOVPQIto64Zrr(b?)(k?)(z?)",
+                                             "VMOVPQIto64rr",
+                                             "VPMOVMSKBYrr",
+                                             "VPMOVMSKBrr",
+                                             "VTESTPDYrr",
+                                             "VTESTPDrr",
+                                             "VTESTPSYrr",
+                                             "VTESTPSrr",
+                                             "VUCOMISDZrr(b?)",
+                                             "VUCOMISDrr",
+                                             "VUCOMISSZrr(b?)",
+                                             "VUCOMISSrr")>;
 
 def SKXWriteResGroup13 : SchedWriteRes<[SKXPort5]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup13], (instregex "MMX_MOVQ2DQrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "MMX_PINSRWrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "PINSRBrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "PINSRDrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "PINSRQrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "PINSRWrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRBrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRDrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRQrr")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup13], (instregex "VPINSRWrr")>;
+def: InstRW<[SKXWriteResGroup13], (instregex "MMX_MOVQ2DQrr",
+                                             "MMX_PINSRWrr",
+                                             "PINSRBrr",
+                                             "PINSRDrr",
+                                             "PINSRQrr",
+                                             "PINSRWrr",
+                                             "VPINSRBZrr(b?)(k?)(z?)",
+                                             "VPINSRBrr",
+                                             "VPINSRDZrr(b?)(k?)(z?)",
+                                             "VPINSRDrr",
+                                             "VPINSRQZrr(b?)(k?)(z?)",
+                                             "VPINSRQrr",
+                                             "VPINSRWZrr(b?)(k?)(z?)",
+                                             "VPINSRWrr")>;
 
 def SKXWriteResGroup14 : SchedWriteRes<[SKXPort05]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup14], (instregex "FDECSTP")>;
-def: InstRW<[SKXWriteResGroup14], (instregex "MMX_MOVDQ2Qrr")>;
+def: InstRW<[SKXWriteResGroup14], (instregex "FDECSTP",
+                                             "MMX_MOVDQ2Qrr")>;
 
 def SKXWriteResGroup15 : SchedWriteRes<[SKXPort06]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup15], (instregex "CMOV(A|BE)(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup15], (instregex "ROL(8|16|32|64)r1")>;
-def: InstRW<[SKXWriteResGroup15], (instregex "ROL(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup15], (instregex "ROR(8|16|32|64)r1")>;
-def: InstRW<[SKXWriteResGroup15], (instregex "ROR(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup15], (instregex "SET(A|BE)r")>;
+def: InstRW<[SKXWriteResGroup15], (instregex "CMOV(A|BE)(16|32|64)rr",
+                                             "ROL(8|16|32|64)r1",
+                                             "ROL(8|16|32|64)ri",
+                                             "ROR(8|16|32|64)r1",
+                                             "ROR(8|16|32|64)ri",
+                                             "SET(A|BE)r")>;
 
 def SKXWriteResGroup16 : SchedWriteRes<[SKXPort015]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup16], (instregex "BLENDVPDrr0")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "BLENDVPSrr0")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "PBLENDVBrr0")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "VBLENDVPDYrr")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "VBLENDVPDrr")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "VBLENDVPSYrr")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "VBLENDVPSrr")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "VPBLENDVBYrr")>;
-def: InstRW<[SKXWriteResGroup16], (instregex "VPBLENDVBrr")>;
+def: InstRW<[SKXWriteResGroup16], (instregex "BLENDVPDrr0",
+                                             "BLENDVPSrr0",
+                                             "PBLENDVBrr0",
+                                             "VBLENDVPDYrr",
+                                             "VBLENDVPDrr",
+                                             "VBLENDVPSYrr",
+                                             "VBLENDVPSrr",
+                                             "VPBLENDVBYrr",
+                                             "VPBLENDVBrr")>;
 
 def SKXWriteResGroup17 : SchedWriteRes<[SKXPort0156]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup17], (instregex "LFENCE")>;
-def: InstRW<[SKXWriteResGroup17], (instregex "WAIT")>;
-def: InstRW<[SKXWriteResGroup17], (instregex "XGETBV")>;
+def: InstRW<[SKXWriteResGroup17], (instregex "LFENCE",
+                                             "WAIT",
+                                             "XGETBV")>;
 
 def SKXWriteResGroup18 : SchedWriteRes<[SKXPort0,SKXPort237]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup18], (instregex "VMASKMOVPDYmr")>;
-def: InstRW<[SKXWriteResGroup18], (instregex "VMASKMOVPDmr")>;
-def: InstRW<[SKXWriteResGroup18], (instregex "VMASKMOVPSYmr")>;
-def: InstRW<[SKXWriteResGroup18], (instregex "VMASKMOVPSmr")>;
-def: InstRW<[SKXWriteResGroup18], (instregex "VPMASKMOVDYmr")>;
-def: InstRW<[SKXWriteResGroup18], (instregex "VPMASKMOVDmr")>;
-def: InstRW<[SKXWriteResGroup18], (instregex "VPMASKMOVQYmr")>;
-def: InstRW<[SKXWriteResGroup18], (instregex "VPMASKMOVQmr")>;
+def: InstRW<[SKXWriteResGroup18], (instregex "VMASKMOVPDYmr",
+                                             "VMASKMOVPDmr",
+                                             "VMASKMOVPSYmr",
+                                             "VMASKMOVPSmr",
+                                             "VPMASKMOVDYmr",
+                                             "VPMASKMOVDmr",
+                                             "VPMASKMOVQYmr",
+                                             "VPMASKMOVQmr")>;
 
 def SKXWriteResGroup19 : SchedWriteRes<[SKXPort5,SKXPort01]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup19], (instregex "PSLLDrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "PSLLQrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "PSLLWrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "PSRADrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "PSRAWrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "PSRLDrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "PSRLQrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "PSRLWrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSLLDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSLLDrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSLLQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSLLQrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSLLWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSLLWrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRADZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRADrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRAQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRAWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRAWrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRLDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRLDrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRLQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRLQrr")>;
-def: InstRW<[SKXWriteResGroup19], (instregex "VPSRLWrr")>;
+def: InstRW<[SKXWriteResGroup19], (instregex "PSLLDrr",
+                                             "PSLLQrr",
+                                             "PSLLWrr",
+                                             "PSRADrr",
+                                             "PSRAWrr",
+                                             "PSRLDrr",
+                                             "PSRLQrr",
+                                             "PSRLWrr",
+                                             "VPSLLDZ128rr(b?)(k?)(z?)",
+                                             "VPSLLDrr",
+                                             "VPSLLQZ128rr(b?)(k?)(z?)",
+                                             "VPSLLQrr",
+                                             "VPSLLWZ128rr(b?)(k?)(z?)",
+                                             "VPSLLWrr",
+                                             "VPSRADZ128rr(b?)(k?)(z?)",
+                                             "VPSRADrr",
+                                             "VPSRAQZ128rr(b?)(k?)(z?)",
+                                             "VPSRAWZ128rr(b?)(k?)(z?)",
+                                             "VPSRAWrr",
+                                             "VPSRLDZ128rr(b?)(k?)(z?)",
+                                             "VPSRLDrr",
+                                             "VPSRLQZ128rr(b?)(k?)(z?)",
+                                             "VPSRLQrr",
+                                             "VPSRLWrr")>;
 
 def SKXWriteResGroup20 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
   let Latency = 2;
@@ -1579,43 +1579,43 @@ def SKXWriteResGroup22 : SchedWriteRes<[SKXPort06,SKXPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup22], (instregex "BEXTR(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup22], (instregex "BSWAP(16|32|64)r")>;
+def: InstRW<[SKXWriteResGroup22], (instregex "BEXTR(32|64)rr",
+                                             "BSWAP(16|32|64)r")>;
 
 def SKXWriteResGroup23 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let Latency = 2;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup23], (instregex "ADC8i8")>;
-def: InstRW<[SKXWriteResGroup23], (instregex "ADC8ri")>;
 def: InstRW<[SKXWriteResGroup23], (instrs CWD)>;
 def: InstRW<[SKXWriteResGroup23], (instrs JCXZ, JECXZ, JRCXZ)>;
-def: InstRW<[SKXWriteResGroup23], (instregex "SBB8i8")>;
-def: InstRW<[SKXWriteResGroup23], (instregex "SBB8ri")>;
+def: InstRW<[SKXWriteResGroup23], (instregex "ADC8i8",
+                                             "ADC8ri",
+                                             "SBB8i8",
+                                             "SBB8ri")>;
 
 def SKXWriteResGroup24 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup24], (instregex "EXTRACTPSmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "PEXTRBmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "PEXTRDmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "PEXTRQmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "PEXTRWmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "STMXCSR")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VEXTRACTPSZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VEXTRACTPSmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRBmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRDmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRQZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRQmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRWZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VPEXTRWmr")>;
-def: InstRW<[SKXWriteResGroup24], (instregex "VSTMXCSR")>;
+def: InstRW<[SKXWriteResGroup24], (instregex "EXTRACTPSmr",
+                                             "PEXTRBmr",
+                                             "PEXTRDmr",
+                                             "PEXTRQmr",
+                                             "PEXTRWmr",
+                                             "STMXCSR",
+                                             "VEXTRACTPSZmr(b?)(k?)(z?)",
+                                             "VEXTRACTPSmr",
+                                             "VPEXTRBZmr(b?)(k?)(z?)",
+                                             "VPEXTRBmr",
+                                             "VPEXTRDZmr(b?)(k?)(z?)",
+                                             "VPEXTRDmr",
+                                             "VPEXTRQZmr(b?)(k?)(z?)",
+                                             "VPEXTRQmr",
+                                             "VPEXTRWZmr(b?)(k?)(z?)",
+                                             "VPEXTRWmr",
+                                             "VSTMXCSR")>;
 
 def SKXWriteResGroup25 : SchedWriteRes<[SKXPort4,SKXPort6,SKXPort237]> {
   let Latency = 2;
@@ -1644,12 +1644,12 @@ def SKXWriteResGroup28 : SchedWriteRes<[SKXPort4,SKXPort237,SKXPort0156]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[SKXWriteResGroup28], (instrs PUSH16r, PUSH32r, PUSH64r)>;
-def: InstRW<[SKXWriteResGroup28], (instregex "PUSH(16|32|64)rmr")>;
-def: InstRW<[SKXWriteResGroup28], (instregex "PUSH64i8")>;
-def: InstRW<[SKXWriteResGroup28], (instregex "STOSB")>;
-def: InstRW<[SKXWriteResGroup28], (instregex "STOSL")>;
-def: InstRW<[SKXWriteResGroup28], (instregex "STOSQ")>;
-def: InstRW<[SKXWriteResGroup28], (instregex "STOSW")>;
+def: InstRW<[SKXWriteResGroup28], (instregex "PUSH(16|32|64)rmr",
+                                             "PUSH64i8",
+                                             "STOSB",
+                                             "STOSL",
+                                             "STOSQ",
+                                             "STOSW")>;
 
 def SKXWriteResGroup29 : SchedWriteRes<[SKXPort4,SKXPort237,SKXPort15]> {
   let Latency = 2;
@@ -1663,40 +1663,39 @@ def SKXWriteResGroup30 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup30], (instregex "KADDBrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KADDDrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KADDQrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KADDWrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KMOVBrk")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KMOVDrk")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KMOVQrk")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KMOVWrk")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KORTESTBrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KORTESTDrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KORTESTQrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KORTESTWrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KTESTBrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KTESTDrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KTESTQrr")>;
-def: InstRW<[SKXWriteResGroup30], (instregex "KTESTWrr")>;
+def: InstRW<[SKXWriteResGroup30], (instregex "KADDBrr",
+                                             "KADDDrr",
+                                             "KADDQrr",
+                                             "KADDWrr",
+                                             "KMOVBrk",
+                                             "KMOVDrk",
+                                             "KMOVQrk",
+                                             "KMOVWrk",
+                                             "KORTESTBrr",
+                                             "KORTESTDrr",
+                                             "KORTESTQrr",
+                                             "KORTESTWrr",
+                                             "KTESTBrr",
+                                             "KTESTDrr",
+                                             "KTESTQrr",
+                                             "KTESTWrr")>;
 
 def SKXWriteResGroup31 : SchedWriteRes<[SKXPort1]> {
   let Latency = 3;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup31], (instregex "BSF(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup31], (instregex "BSR(16|32|64)rr")>;
 def: InstRW<[SKXWriteResGroup31], (instrs IMUL16rr, IMUL32rr, IMUL32rri, IMUL32rri8, IMUL64rr, IMUL64rri32, IMUL64rri8)>;
-def: InstRW<[SKXWriteResGroup31], (instrs IMUL8r)>;
-def: InstRW<[SKXWriteResGroup31], (instregex "LZCNT(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup31], (instrs MUL8r)>;
-def: InstRW<[SKXWriteResGroup31], (instregex "PDEP(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup31], (instregex "PEXT(32|64)rr")>;
-def: InstRW<[SKXWriteResGroup31], (instregex "POPCNT(16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup31], (instregex "SHLD(16|32|64)rri8")>;
-def: InstRW<[SKXWriteResGroup31], (instregex "SHRD(16|32|64)rri8")>;
-def: InstRW<[SKXWriteResGroup31], (instregex "TZCNT(16|32|64)rr")>;
+def: InstRW<[SKXWriteResGroup31], (instrs IMUL8r, MUL8r)>;
+def: InstRW<[SKXWriteResGroup31], (instregex "BSF(16|32|64)rr",
+                                             "BSR(16|32|64)rr",
+                                             "LZCNT(16|32|64)rr",
+                                             "PDEP(32|64)rr",
+                                             "PEXT(32|64)rr",
+                                             "POPCNT(16|32|64)rr",
+                                             "SHLD(16|32|64)rri8",
+                                             "SHRD(16|32|64)rri8",
+                                             "TZCNT(16|32|64)rr")>;
 
 def SKXWriteResGroup31_16i : SchedWriteRes<[SKXPort1, SKXPort0156]> {
   let Latency = 3;
@@ -1711,334 +1710,334 @@ def SKXWriteResGroup32 : SchedWriteRes<[SKXPort5]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup32], (instregex "ADD_FPrST0")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "ADD_FST0r")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "ADD_FrST0")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTLBri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTLDri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTLQri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTLWri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTRBri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTRDri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTRQri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KSHIFTRWri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KUNPCKBWrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KUNPCKDQrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "KUNPCKWDrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "MMX_PSADBWirr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "PCMPGTQrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "PSADBWrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "SUBR_FPrST0")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "SUBR_FST0r")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "SUBR_FrST0")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "SUB_FPrST0")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "SUB_FST0r")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "SUB_FrST0")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VALIGNDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VALIGNDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VALIGNDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VALIGNQZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VALIGNQZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VALIGNQZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTF32X2Z256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTF32X2Zr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTI32X2Z256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTI32X2Zr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTSDYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTSDZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTSDZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTSSYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTSSZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTSSZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VBROADCASTSSZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPPSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPPSZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPPSZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPSDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VCMPSSZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VDBPSADBWZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VDBPSADBWZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VDBPSADBWZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTF128rr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTF32x4Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTF32x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTF32x8Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTF64x2Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTF64x2Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTF64x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTI128rr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTI32x4Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTI32x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTI32x8Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTI64x2Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTI64x2Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VEXTRACTI64x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSSDrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VFPCLASSSSrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTF128rr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTF32x4Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTF32x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTF32x8Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTF64x2Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTF64x2Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTF64x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTI128rr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTI32x4Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTI32x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTI32x8Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTI64x2Z256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTI64x2Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VINSERTI64x4Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTBYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTBZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTBZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTBZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTBrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTDYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTDZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTDZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTDZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTDrZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTDrZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTDrZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTQZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTQZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTQZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTQrZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTQrZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTQrZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTWYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTWZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTWZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTWZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPBROADCASTWrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPBZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPBZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPBZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPEQWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTQrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPGTWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPQZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPQZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPQZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUBZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUBZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUBZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUQZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUQZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUQZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUWZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUWZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPUWZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPWZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPWZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPCMPWZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERM2F128rr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERM2I128rr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMDYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2D128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2D256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2Drr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2PD128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2PD256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2PDrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2PS128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2PS256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2PSrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2Q128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2Q256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMI2Qrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPDYri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPDZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPDZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPSYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMQYri")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMQZ256r(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMQZri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2D128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2D256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2Drr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2PD128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2PD256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2PDrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2PS128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2PS256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2PSrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2Q128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2Q256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPERMT2Qrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMAXSQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMAXSQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMAXSQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMAXUQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMAXUQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMAXUQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMINSQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMINSQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMINSQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMINUQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMINUQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMINUQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVQDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVQDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVQDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBDYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBWYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXBWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXDQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWDYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVSXWQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBDYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBWYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXBWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXDQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWDYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWQYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPMOVZXWQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPSADBWYrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPSADBWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPSADBWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPSADBWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPSADBWrr")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTMWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VPTESTNMWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFF32X4Z256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFF32X4Zrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFF64X2Z256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFF64X2Zrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFI32X4Z256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFI32X4Zrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFI64X2Z256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup32], (instregex "VSHUFI64X2Zrri(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup32], (instregex "ADD_FPrST0",
+                                             "ADD_FST0r",
+                                             "ADD_FrST0",
+                                             "KSHIFTLBri",
+                                             "KSHIFTLDri",
+                                             "KSHIFTLQri",
+                                             "KSHIFTLWri",
+                                             "KSHIFTRBri",
+                                             "KSHIFTRDri",
+                                             "KSHIFTRQri",
+                                             "KSHIFTRWri",
+                                             "KUNPCKBWrr",
+                                             "KUNPCKDQrr",
+                                             "KUNPCKWDrr",
+                                             "MMX_PSADBWirr",
+                                             "PCMPGTQrr",
+                                             "PSADBWrr",
+                                             "SUBR_FPrST0",
+                                             "SUBR_FST0r",
+                                             "SUBR_FrST0",
+                                             "SUB_FPrST0",
+                                             "SUB_FST0r",
+                                             "SUB_FrST0",
+                                             "VALIGNDZ128rri(b?)(k?)(z?)",
+                                             "VALIGNDZ256rri(b?)(k?)(z?)",
+                                             "VALIGNDZrri(b?)(k?)(z?)",
+                                             "VALIGNQZ128rri(b?)(k?)(z?)",
+                                             "VALIGNQZ256rri(b?)(k?)(z?)",
+                                             "VALIGNQZrri(b?)(k?)(z?)",
+                                             "VBROADCASTF32X2Z256r(b?)(k?)(z?)",
+                                             "VBROADCASTF32X2Zr(b?)(k?)(z?)",
+                                             "VBROADCASTI32X2Z256r(b?)(k?)(z?)",
+                                             "VBROADCASTI32X2Zr(b?)(k?)(z?)",
+                                             "VBROADCASTSDYrr",
+                                             "VBROADCASTSDZ256r(b?)(k?)(z?)",
+                                             "VBROADCASTSDZr(b?)(k?)(z?)",
+                                             "VBROADCASTSSYrr",
+                                             "VBROADCASTSSZ128r(b?)(k?)(z?)",
+                                             "VBROADCASTSSZ256r(b?)(k?)(z?)",
+                                             "VBROADCASTSSZr(b?)(k?)(z?)",
+                                             "VCMPPDZ128rri(b?)(k?)(z?)",
+                                             "VCMPPDZ256rri(b?)(k?)(z?)",
+                                             "VCMPPDZrri(b?)(k?)(z?)",
+                                             "VCMPPSZ128rri(b?)(k?)(z?)",
+                                             "VCMPPSZ256rri(b?)(k?)(z?)",
+                                             "VCMPPSZrri(b?)(k?)(z?)",
+                                             "VCMPSDZrr(b?)(_Int)?(k?)(z?)",
+                                             "VCMPSSZrr(b?)(_Int)?(k?)(z?)",
+                                             "VDBPSADBWZ128rri(b?)(k?)(z?)",
+                                             "VDBPSADBWZ256rri(b?)(k?)(z?)",
+                                             "VDBPSADBWZrri(b?)(k?)(z?)",
+                                             "VEXTRACTF128rr",
+                                             "VEXTRACTF32x4Z256rr(b?)(k?)(z?)",
+                                             "VEXTRACTF32x4Zrr(b?)(k?)(z?)",
+                                             "VEXTRACTF32x8Zrr(b?)(k?)(z?)",
+                                             "VEXTRACTF64x2Z256rr(b?)(k?)(z?)",
+                                             "VEXTRACTF64x2Zrr(b?)(k?)(z?)",
+                                             "VEXTRACTF64x4Zrr(b?)(k?)(z?)",
+                                             "VEXTRACTI128rr",
+                                             "VEXTRACTI32x4Z256rr(b?)(k?)(z?)",
+                                             "VEXTRACTI32x4Zrr(b?)(k?)(z?)",
+                                             "VEXTRACTI32x8Zrr(b?)(k?)(z?)",
+                                             "VEXTRACTI64x2Z256rr(b?)(k?)(z?)",
+                                             "VEXTRACTI64x2Zrr(b?)(k?)(z?)",
+                                             "VEXTRACTI64x4Zrr(b?)(k?)(z?)",
+                                             "VFPCLASSPDZ128rr(b?)(k?)(z?)",
+                                             "VFPCLASSPDZ256rr(b?)(k?)(z?)",
+                                             "VFPCLASSPDZrr(b?)(k?)(z?)",
+                                             "VFPCLASSPSZ128rr(b?)(k?)(z?)",
+                                             "VFPCLASSPSZ256rr(b?)(k?)(z?)",
+                                             "VFPCLASSPSZrr(b?)(k?)(z?)",
+                                             "VFPCLASSSDrr(b?)(k?)(z?)",
+                                             "VFPCLASSSSrr(b?)(k?)(z?)",
+                                             "VINSERTF128rr",
+                                             "VINSERTF32x4Z256rr(b?)(k?)(z?)",
+                                             "VINSERTF32x4Zrr(b?)(k?)(z?)",
+                                             "VINSERTF32x8Zrr(b?)(k?)(z?)",
+                                             "VINSERTF64x2Z256rr(b?)(k?)(z?)",
+                                             "VINSERTF64x2Zrr(b?)(k?)(z?)",
+                                             "VINSERTF64x4Zrr(b?)(k?)(z?)",
+                                             "VINSERTI128rr",
+                                             "VINSERTI32x4Z256rr(b?)(k?)(z?)",
+                                             "VINSERTI32x4Zrr(b?)(k?)(z?)",
+                                             "VINSERTI32x8Zrr(b?)(k?)(z?)",
+                                             "VINSERTI64x2Z256rr(b?)(k?)(z?)",
+                                             "VINSERTI64x2Zrr(b?)(k?)(z?)",
+                                             "VINSERTI64x4Zrr(b?)(k?)(z?)",
+                                             "VPBROADCASTBYrr",
+                                             "VPBROADCASTBZ128r(b?)(k?)(z?)",
+                                             "VPBROADCASTBZ256r(b?)(k?)(z?)",
+                                             "VPBROADCASTBZr(b?)(k?)(z?)",
+                                             "VPBROADCASTBrr",
+                                             "VPBROADCASTDYrr",
+                                             "VPBROADCASTDZ128r(b?)(k?)(z?)",
+                                             "VPBROADCASTDZ256r(b?)(k?)(z?)",
+                                             "VPBROADCASTDZr(b?)(k?)(z?)",
+                                             "VPBROADCASTDrZ128r(b?)(k?)(z?)",
+                                             "VPBROADCASTDrZ256r(b?)(k?)(z?)",
+                                             "VPBROADCASTDrZr(b?)(k?)(z?)",
+                                             "VPBROADCASTQYrr",
+                                             "VPBROADCASTQZ128r(b?)(k?)(z?)",
+                                             "VPBROADCASTQZ256r(b?)(k?)(z?)",
+                                             "VPBROADCASTQZr(b?)(k?)(z?)",
+                                             "VPBROADCASTQrZ128r(b?)(k?)(z?)",
+                                             "VPBROADCASTQrZ256r(b?)(k?)(z?)",
+                                             "VPBROADCASTQrZr(b?)(k?)(z?)",
+                                             "VPBROADCASTWYrr",
+                                             "VPBROADCASTWZ128r(b?)(k?)(z?)",
+                                             "VPBROADCASTWZ256r(b?)(k?)(z?)",
+                                             "VPBROADCASTWZr(b?)(k?)(z?)",
+                                             "VPBROADCASTWrr",
+                                             "VPCMPBZ128rri(b?)(k?)(z?)",
+                                             "VPCMPBZ256rri(b?)(k?)(z?)",
+                                             "VPCMPBZrri(b?)(k?)(z?)",
+                                             "VPCMPDZ128rri(b?)(k?)(z?)",
+                                             "VPCMPDZ256rri(b?)(k?)(z?)",
+                                             "VPCMPDZrri(b?)(k?)(z?)",
+                                             "VPCMPEQBZ128rr(b?)(k?)(z?)",
+                                             "VPCMPEQBZ256rr(b?)(k?)(z?)",
+                                             "VPCMPEQBZrr(b?)(k?)(z?)",
+                                             "VPCMPEQDZ128rr(b?)(k?)(z?)",
+                                             "VPCMPEQDZ256rr(b?)(k?)(z?)",
+                                             "VPCMPEQDZrr(b?)(k?)(z?)",
+                                             "VPCMPEQQZ128rr(b?)(k?)(z?)",
+                                             "VPCMPEQQZ256rr(b?)(k?)(z?)",
+                                             "VPCMPEQQZrr(b?)(k?)(z?)",
+                                             "VPCMPEQWZ128rr(b?)(k?)(z?)",
+                                             "VPCMPEQWZ256rr(b?)(k?)(z?)",
+                                             "VPCMPEQWZrr(b?)(k?)(z?)",
+                                             "VPCMPGTBZ128rr(b?)(k?)(z?)",
+                                             "VPCMPGTBZ256rr(b?)(k?)(z?)",
+                                             "VPCMPGTBZrr(b?)(k?)(z?)",
+                                             "VPCMPGTDZ128rr(b?)(k?)(z?)",
+                                             "VPCMPGTDZ256rr(b?)(k?)(z?)",
+                                             "VPCMPGTDZrr(b?)(k?)(z?)",
+                                             "VPCMPGTQYrr",
+                                             "VPCMPGTQZ128rr(b?)(k?)(z?)",
+                                             "VPCMPGTQZ256rr(b?)(k?)(z?)",
+                                             "VPCMPGTQZrr(b?)(k?)(z?)",
+                                             "VPCMPGTQrr",
+                                             "VPCMPGTWZ128rr(b?)(k?)(z?)",
+                                             "VPCMPGTWZ256rr(b?)(k?)(z?)",
+                                             "VPCMPGTWZrr(b?)(k?)(z?)",
+                                             "VPCMPQZ128rri(b?)(k?)(z?)",
+                                             "VPCMPQZ256rri(b?)(k?)(z?)",
+                                             "VPCMPQZrri(b?)(k?)(z?)",
+                                             "VPCMPUBZ128rri(b?)(k?)(z?)",
+                                             "VPCMPUBZ256rri(b?)(k?)(z?)",
+                                             "VPCMPUBZrri(b?)(k?)(z?)",
+                                             "VPCMPUDZ128rri(b?)(k?)(z?)",
+                                             "VPCMPUDZ256rri(b?)(k?)(z?)",
+                                             "VPCMPUDZrri(b?)(k?)(z?)",
+                                             "VPCMPUQZ128rri(b?)(k?)(z?)",
+                                             "VPCMPUQZ256rri(b?)(k?)(z?)",
+                                             "VPCMPUQZrri(b?)(k?)(z?)",
+                                             "VPCMPUWZ128rri(b?)(k?)(z?)",
+                                             "VPCMPUWZ256rri(b?)(k?)(z?)",
+                                             "VPCMPUWZrri(b?)(k?)(z?)",
+                                             "VPCMPWZ128rri(b?)(k?)(z?)",
+                                             "VPCMPWZ256rri(b?)(k?)(z?)",
+                                             "VPCMPWZrri(b?)(k?)(z?)",
+                                             "VPERM2F128rr",
+                                             "VPERM2I128rr",
+                                             "VPERMDYrr",
+                                             "VPERMDZ256rr(b?)(k?)(z?)",
+                                             "VPERMDZrr(b?)(k?)(z?)",
+                                             "VPERMI2D128rr(b?)(k?)(z?)",
+                                             "VPERMI2D256rr(b?)(k?)(z?)",
+                                             "VPERMI2Drr(b?)(k?)(z?)",
+                                             "VPERMI2PD128rr(b?)(k?)(z?)",
+                                             "VPERMI2PD256rr(b?)(k?)(z?)",
+                                             "VPERMI2PDrr(b?)(k?)(z?)",
+                                             "VPERMI2PS128rr(b?)(k?)(z?)",
+                                             "VPERMI2PS256rr(b?)(k?)(z?)",
+                                             "VPERMI2PSrr(b?)(k?)(z?)",
+                                             "VPERMI2Q128rr(b?)(k?)(z?)",
+                                             "VPERMI2Q256rr(b?)(k?)(z?)",
+                                             "VPERMI2Qrr(b?)(k?)(z?)",
+                                             "VPERMPDYri",
+                                             "VPERMPDZ256r(b?)i(k?)(z?)",
+                                             "VPERMPDZ256rr(b?)(k?)(z?)",
+                                             "VPERMPDZri(b?)(k?)(z?)",
+                                             "VPERMPDZrr(b?)(k?)(z?)",
+                                             "VPERMPSYrr",
+                                             "VPERMPSZ256rr(b?)(k?)(z?)",
+                                             "VPERMPSZrr(b?)(k?)(z?)",
+                                             "VPERMQYri",
+                                             "VPERMQZ256r(b?)i(k?)(z?)",
+                                             "VPERMQZ256rr(b?)(k?)(z?)",
+                                             "VPERMQZri(b?)(k?)(z?)",
+                                             "VPERMQZrr(b?)(k?)(z?)",
+                                             "VPERMT2D128rr(b?)(k?)(z?)",
+                                             "VPERMT2D256rr(b?)(k?)(z?)",
+                                             "VPERMT2Drr(b?)(k?)(z?)",
+                                             "VPERMT2PD128rr(b?)(k?)(z?)",
+                                             "VPERMT2PD256rr(b?)(k?)(z?)",
+                                             "VPERMT2PDrr(b?)(k?)(z?)",
+                                             "VPERMT2PS128rr(b?)(k?)(z?)",
+                                             "VPERMT2PS256rr(b?)(k?)(z?)",
+                                             "VPERMT2PSrr(b?)(k?)(z?)",
+                                             "VPERMT2Q128rr(b?)(k?)(z?)",
+                                             "VPERMT2Q256rr(b?)(k?)(z?)",
+                                             "VPERMT2Qrr(b?)(k?)(z?)",
+                                             "VPMAXSQZ128rr(b?)(k?)(z?)",
+                                             "VPMAXSQZ256rr(b?)(k?)(z?)",
+                                             "VPMAXSQZrr(b?)(k?)(z?)",
+                                             "VPMAXUQZ128rr(b?)(k?)(z?)",
+                                             "VPMAXUQZ256rr(b?)(k?)(z?)",
+                                             "VPMAXUQZrr(b?)(k?)(z?)",
+                                             "VPMINSQZ128rr(b?)(k?)(z?)",
+                                             "VPMINSQZ256rr(b?)(k?)(z?)",
+                                             "VPMINSQZrr(b?)(k?)(z?)",
+                                             "VPMINUQZ128rr(b?)(k?)(z?)",
+                                             "VPMINUQZ256rr(b?)(k?)(z?)",
+                                             "VPMINUQZrr(b?)(k?)(z?)",
+                                             "VPMOVQDZ128rr(b?)(k?)(z?)",
+                                             "VPMOVQDZ256rr(b?)(k?)(z?)",
+                                             "VPMOVQDZrr(b?)(k?)(z?)",
+                                             "VPMOVSXBDYrr",
+                                             "VPMOVSXBDZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSXBDZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSXBDZrr(b?)(k?)(z?)",
+                                             "VPMOVSXBQYrr",
+                                             "VPMOVSXBQZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSXBQZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSXBQZrr(b?)(k?)(z?)",
+                                             "VPMOVSXBWYrr",
+                                             "VPMOVSXBWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSXBWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSXBWZrr(b?)(k?)(z?)",
+                                             "VPMOVSXDQYrr",
+                                             "VPMOVSXDQZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSXDQZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSXDQZrr(b?)(k?)(z?)",
+                                             "VPMOVSXWDYrr",
+                                             "VPMOVSXWDZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSXWDZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSXWDZrr(b?)(k?)(z?)",
+                                             "VPMOVSXWQYrr",
+                                             "VPMOVSXWQZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSXWQZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSXWQZrr(b?)(k?)(z?)",
+                                             "VPMOVZXBDYrr",
+                                             "VPMOVZXBDZ128rr(b?)(k?)(z?)",
+                                             "VPMOVZXBDZ256rr(b?)(k?)(z?)",
+                                             "VPMOVZXBDZrr(b?)(k?)(z?)",
+                                             "VPMOVZXBQYrr",
+                                             "VPMOVZXBQZ128rr(b?)(k?)(z?)",
+                                             "VPMOVZXBQZ256rr(b?)(k?)(z?)",
+                                             "VPMOVZXBQZrr(b?)(k?)(z?)",
+                                             "VPMOVZXBWYrr",
+                                             "VPMOVZXBWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVZXBWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVZXBWZrr(b?)(k?)(z?)",
+                                             "VPMOVZXDQYrr",
+                                             "VPMOVZXDQZ128rr(b?)(k?)(z?)",
+                                             "VPMOVZXDQZ256rr(b?)(k?)(z?)",
+                                             "VPMOVZXDQZrr(b?)(k?)(z?)",
+                                             "VPMOVZXWDYrr",
+                                             "VPMOVZXWDZ128rr(b?)(k?)(z?)",
+                                             "VPMOVZXWDZ256rr(b?)(k?)(z?)",
+                                             "VPMOVZXWDZrr(b?)(k?)(z?)",
+                                             "VPMOVZXWQYrr",
+                                             "VPMOVZXWQZ128rr(b?)(k?)(z?)",
+                                             "VPMOVZXWQZ256rr(b?)(k?)(z?)",
+                                             "VPMOVZXWQZrr(b?)(k?)(z?)",
+                                             "VPSADBWYrr",
+                                             "VPSADBWZ128rr(b?)(k?)(z?)",
+                                             "VPSADBWZ256rr(b?)(k?)(z?)",
+                                             "VPSADBWZrr(b?)(k?)(z?)",
+                                             "VPSADBWrr",
+                                             "VPTESTMBZ128rr(b?)(k?)(z?)",
+                                             "VPTESTMBZ256rr(b?)(k?)(z?)",
+                                             "VPTESTMBZrr(b?)(k?)(z?)",
+                                             "VPTESTMDZ128rr(b?)(k?)(z?)",
+                                             "VPTESTMDZ256rr(b?)(k?)(z?)",
+                                             "VPTESTMDZrr(b?)(k?)(z?)",
+                                             "VPTESTMQZ128rr(b?)(k?)(z?)",
+                                             "VPTESTMQZ256rr(b?)(k?)(z?)",
+                                             "VPTESTMQZrr(b?)(k?)(z?)",
+                                             "VPTESTMWZ128rr(b?)(k?)(z?)",
+                                             "VPTESTMWZ256rr(b?)(k?)(z?)",
+                                             "VPTESTMWZrr(b?)(k?)(z?)",
+                                             "VPTESTNMBZ128rr(b?)(k?)(z?)",
+                                             "VPTESTNMBZ256rr(b?)(k?)(z?)",
+                                             "VPTESTNMBZrr(b?)(k?)(z?)",
+                                             "VPTESTNMDZ128rr(b?)(k?)(z?)",
+                                             "VPTESTNMDZ256rr(b?)(k?)(z?)",
+                                             "VPTESTNMDZrr(b?)(k?)(z?)",
+                                             "VPTESTNMQZ128rr(b?)(k?)(z?)",
+                                             "VPTESTNMQZ256rr(b?)(k?)(z?)",
+                                             "VPTESTNMQZrr(b?)(k?)(z?)",
+                                             "VPTESTNMWZ128rr(b?)(k?)(z?)",
+                                             "VPTESTNMWZ256rr(b?)(k?)(z?)",
+                                             "VPTESTNMWZrr(b?)(k?)(z?)",
+                                             "VSHUFF32X4Z256rri(b?)(k?)(z?)",
+                                             "VSHUFF32X4Zrri(b?)(k?)(z?)",
+                                             "VSHUFF64X2Z256rri(b?)(k?)(z?)",
+                                             "VSHUFF64X2Zrri(b?)(k?)(z?)",
+                                             "VSHUFI32X4Z256rri(b?)(k?)(z?)",
+                                             "VSHUFI32X4Zrri(b?)(k?)(z?)",
+                                             "VSHUFI64X2Z256rri(b?)(k?)(z?)",
+                                             "VSHUFI64X2Zrri(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup33 : SchedWriteRes<[SKXPort0,SKXPort5]> {
   let Latency = 3;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup33], (instregex "EXTRACTPSrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "MMX_PEXTRWrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "PEXTRBrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "PEXTRDrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "PEXTRQrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "PEXTRWrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "PTESTrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VEXTRACTPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VEXTRACTPSrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRBrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRDrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRQrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRWZrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPEXTRWrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPTESTYrr")>;
-def: InstRW<[SKXWriteResGroup33], (instregex "VPTESTrr")>;
+def: InstRW<[SKXWriteResGroup33], (instregex "EXTRACTPSrr",
+                                             "MMX_PEXTRWrr",
+                                             "PEXTRBrr",
+                                             "PEXTRDrr",
+                                             "PEXTRQrr",
+                                             "PEXTRWrr",
+                                             "PTESTrr",
+                                             "VEXTRACTPSZrr(b?)(k?)(z?)",
+                                             "VEXTRACTPSrr",
+                                             "VPEXTRBZrr(b?)(k?)(z?)",
+                                             "VPEXTRBrr",
+                                             "VPEXTRDZrr(b?)(k?)(z?)",
+                                             "VPEXTRDrr",
+                                             "VPEXTRQZrr(b?)(k?)(z?)",
+                                             "VPEXTRQrr",
+                                             "VPEXTRWZrr",
+                                             "VPEXTRWrr",
+                                             "VPTESTYrr",
+                                             "VPTESTrr")>;
 
 def SKXWriteResGroup34 : SchedWriteRes<[SKXPort0,SKXPort0156]> {
   let Latency = 3;
@@ -2052,76 +2051,76 @@ def SKXWriteResGroup35 : SchedWriteRes<[SKXPort06]> {
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
-def: InstRW<[SKXWriteResGroup35], (instregex "ROL(8|16|32|64)rCL")>;
-def: InstRW<[SKXWriteResGroup35], (instregex "ROR(8|16|32|64)rCL")>;
-def: InstRW<[SKXWriteResGroup35], (instregex "SAR(8|16|32|64)rCL")>;
-def: InstRW<[SKXWriteResGroup35], (instregex "SHL(8|16|32|64)rCL")>;
-def: InstRW<[SKXWriteResGroup35], (instregex "SHR(8|16|32|64)rCL")>;
+def: InstRW<[SKXWriteResGroup35], (instregex "ROL(8|16|32|64)rCL",
+                                             "ROR(8|16|32|64)rCL",
+                                             "SAR(8|16|32|64)rCL",
+                                             "SHL(8|16|32|64)rCL",
+                                             "SHR(8|16|32|64)rCL")>;
 
 def SKXWriteResGroup36 : SchedWriteRes<[SKXPort0156]> {
   let Latency = 3;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
-def: InstRW<[SKXWriteResGroup36], (instregex "XADD(8|16|32|64)rr")>;
-def: InstRW<[SKXWriteResGroup36], (instregex "XCHG8rr")>;
+def: InstRW<[SKXWriteResGroup36], (instregex "XADD(8|16|32|64)rr",
+                                             "XCHG8rr")>;
 
 def SKXWriteResGroup37 : SchedWriteRes<[SKXPort0,SKXPort5]> {
   let Latency = 3;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup37], (instregex "MMX_PHADDSWrr")>;
-def: InstRW<[SKXWriteResGroup37], (instregex "MMX_PHSUBSWrr")>;
+def: InstRW<[SKXWriteResGroup37], (instregex "MMX_PHADDSWrr",
+                                             "MMX_PHSUBSWrr")>;
 
 def SKXWriteResGroup38 : SchedWriteRes<[SKXPort5,SKXPort01]> {
   let Latency = 3;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup38], (instregex "PHADDSWrr")>;
-def: InstRW<[SKXWriteResGroup38], (instregex "PHSUBSWrr")>;
-def: InstRW<[SKXWriteResGroup38], (instregex "VPHADDSWrr")>;
-def: InstRW<[SKXWriteResGroup38], (instregex "VPHADDSWYrr")>;
-def: InstRW<[SKXWriteResGroup38], (instregex "VPHSUBSWrr")>;
-def: InstRW<[SKXWriteResGroup38], (instregex "VPHSUBSWYrr")>;
+def: InstRW<[SKXWriteResGroup38], (instregex "PHADDSWrr",
+                                             "PHSUBSWrr",
+                                             "VPHADDSWrr",
+                                             "VPHADDSWYrr",
+                                             "VPHSUBSWrr",
+                                             "VPHSUBSWYrr")>;
 
 def SKXWriteResGroup39 : SchedWriteRes<[SKXPort5,SKXPort05]> {
   let Latency = 3;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup39], (instregex "MMX_PHADDDrr")>;
-def: InstRW<[SKXWriteResGroup39], (instregex "MMX_PHADDWrr")>;
-def: InstRW<[SKXWriteResGroup39], (instregex "MMX_PHSUBDrr")>;
-def: InstRW<[SKXWriteResGroup39], (instregex "MMX_PHSUBWrr")>;
+def: InstRW<[SKXWriteResGroup39], (instregex "MMX_PHADDDrr",
+                                             "MMX_PHADDWrr",
+                                             "MMX_PHSUBDrr",
+                                             "MMX_PHSUBWrr")>;
 
 def SKXWriteResGroup40 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 3;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup40], (instregex "PHADDDrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "PHADDWrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "PHSUBDrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "PHSUBWrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHADDDYrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHADDDrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHADDWYrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHADDWrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHSUBDYrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHSUBDrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHSUBWYrr")>;
-def: InstRW<[SKXWriteResGroup40], (instregex "VPHSUBWrr")>;
+def: InstRW<[SKXWriteResGroup40], (instregex "PHADDDrr",
+                                             "PHADDWrr",
+                                             "PHSUBDrr",
+                                             "PHSUBWrr",
+                                             "VPHADDDYrr",
+                                             "VPHADDDrr",
+                                             "VPHADDWYrr",
+                                             "VPHADDWrr",
+                                             "VPHSUBDYrr",
+                                             "VPHSUBDrr",
+                                             "VPHSUBWYrr",
+                                             "VPHSUBWrr")>;
 
 def SKXWriteResGroup41 : SchedWriteRes<[SKXPort5,SKXPort0156]> {
   let Latency = 3;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup41], (instregex "MMX_PACKSSDWirr")>;
-def: InstRW<[SKXWriteResGroup41], (instregex "MMX_PACKSSWBirr")>;
-def: InstRW<[SKXWriteResGroup41], (instregex "MMX_PACKUSWBirr")>;
+def: InstRW<[SKXWriteResGroup41], (instregex "MMX_PACKSSDWirr",
+                                             "MMX_PACKSSWBirr",
+                                             "MMX_PACKUSWBirr")>;
 
 def SKXWriteResGroup42 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
   let Latency = 3;
@@ -2142,10 +2141,10 @@ def SKXWriteResGroup44 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup44], (instregex "RCL(8|16|32|64)r1")>;
-def: InstRW<[SKXWriteResGroup44], (instregex "RCL(8|16|32|64)ri")>;
-def: InstRW<[SKXWriteResGroup44], (instregex "RCR(8|16|32|64)r1")>;
-def: InstRW<[SKXWriteResGroup44], (instregex "RCR(8|16|32|64)ri")>;
+def: InstRW<[SKXWriteResGroup44], (instregex "RCL(8|16|32|64)r1",
+                                             "RCL(8|16|32|64)ri",
+                                             "RCR(8|16|32|64)r1",
+                                             "RCR(8|16|32|64)ri")>;
 
 def SKXWriteResGroup45 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort237]> {
   let Latency = 3;
@@ -2180,164 +2179,307 @@ def SKXWriteResGroup49 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup49], (instregex "AESDECLASTrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "AESDECrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "AESENCLASTrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "AESENCrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMADDUBSWrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMADDWDirr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMULHRSWrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMULHUWirr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMULHWirr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMULLWirr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMULUDQirr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MUL_FPrST0")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MUL_FST0r")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "MUL_FrST0")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "RCPPSr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "RCPSSr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "RSQRTPSr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "RSQRTSSr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VAESDECLASTrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VAESDECrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VAESENCLASTrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VAESENCrr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCP14PDZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCP14PDZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCP14PSZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCP14PSZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCP14SDrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCP14SSrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCPPSYr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCPPSr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRCPSSr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRT14PDZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRT14PDZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRT14PSZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRT14PSZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRT14SDrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRT14SSrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRTPSYr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRTPSr")>;
-def: InstRW<[SKXWriteResGroup49], (instregex "VRSQRTSSr")>;
+def: InstRW<[SKXWriteResGroup49], (instregex "AESDECLASTrr",
+                                             "AESDECrr",
+                                             "AESENCLASTrr",
+                                             "AESENCrr",
+                                             "MMX_PMADDUBSWrr",
+                                             "MMX_PMADDWDirr",
+                                             "MMX_PMULHRSWrr",
+                                             "MMX_PMULHUWirr",
+                                             "MMX_PMULHWirr",
+                                             "MMX_PMULLWirr",
+                                             "MMX_PMULUDQirr",
+                                             "MUL_FPrST0",
+                                             "MUL_FST0r",
+                                             "MUL_FrST0",
+                                             "RCPPSr",
+                                             "RCPSSr",
+                                             "RSQRTPSr",
+                                             "RSQRTSSr",
+                                             "VAESDECLASTrr",
+                                             "VAESDECrr",
+                                             "VAESENCLASTrr",
+                                             "VAESENCrr",
+                                             "VRCP14PDZ128r(b?)(k?)(z?)",
+                                             "VRCP14PDZ256r(b?)(k?)(z?)",
+                                             "VRCP14PSZ128r(b?)(k?)(z?)",
+                                             "VRCP14PSZ256r(b?)(k?)(z?)",
+                                             "VRCP14SDrr(b?)(k?)(z?)",
+                                             "VRCP14SSrr(b?)(k?)(z?)",
+                                             "VRCPPSYr",
+                                             "VRCPPSr",
+                                             "VRCPSSr",
+                                             "VRSQRT14PDZ128r(b?)(k?)(z?)",
+                                             "VRSQRT14PDZ256r(b?)(k?)(z?)",
+                                             "VRSQRT14PSZ128r(b?)(k?)(z?)",
+                                             "VRSQRT14PSZ256r(b?)(k?)(z?)",
+                                             "VRSQRT14SDrr(b?)(k?)(z?)",
+                                             "VRSQRT14SSrr(b?)(k?)(z?)",
+                                             "VRSQRTPSYr",
+                                             "VRSQRTPSr",
+                                             "VRSQRTSSr")>;
 
 def SKXWriteResGroup50 : SchedWriteRes<[SKXPort015]> {
   let Latency = 4;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup50], (instregex "ADDPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "ADDPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "ADDSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "ADDSSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "ADDSUBPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "ADDSUBPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "CMPPDrri")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "CMPPSrri")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "CMPSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "CMPSSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "CVTDQ2PSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "CVTPS2DQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "CVTTPS2DQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MAX(C?)PDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MAX(C?)PSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MAX(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MAX(C?)SSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MIN(C?)PDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MIN(C?)PSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MIN(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MIN(C?)SSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MULPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MULPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MULSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "MULSSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PHMINPOSUWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMADDUBSWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMADDWDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMULDQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMULHRSWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMULHUWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMULHWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMULLWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "PMULUDQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "SUBPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "SUBPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "SUBSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "SUBSSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPDYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPSYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSSZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSUBPDYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSUBPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSUBPSYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VADDSUBPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCMPPDYrri")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCMPPDrri")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCMPPSYrri")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCMPPSrri")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCMPSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCMPSSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTDQ2PSYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTDQ2PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTDQ2PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTDQ2PSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTDQ2PSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPD2QQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPD2QQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPD2QQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPD2UQQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPD2UQQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPD2UQQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2DQYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2DQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2DQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2DQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2DQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2UDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2UDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTPS2UDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTQQ2PDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTQQ2PDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTQQ2PDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPD2QQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPD2QQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPD2QQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPD2UQQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPD2UQQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPD2UQQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2DQYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2DQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2DQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2DQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2DQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2UDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2UDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTTPS2UDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTUDQ2PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTUDQ2PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTUDQ2PSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTUQQ2PDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTUQQ2PDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTUQQ2PDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMPSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMPSZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMPSZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMSDrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VFIXUPIMMSSrri(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup50], (instregex "ADDPDrr",
+                                             "ADDPSrr",
+                                             "ADDSDrr",
+                                             "ADDSSrr",
+                                             "ADDSUBPDrr",
+                                             "ADDSUBPSrr",
+                                             "CMPPDrri",
+                                             "CMPPSrri",
+                                             "CMPSDrr",
+                                             "CMPSSrr",
+                                             "CVTDQ2PSrr",
+                                             "CVTPS2DQrr",
+                                             "CVTTPS2DQrr",
+                                             "MAX(C?)PDrr",
+                                             "MAX(C?)PSrr",
+                                             "MAX(C?)SDrr",
+                                             "MAX(C?)SSrr",
+                                             "MIN(C?)PDrr",
+                                             "MIN(C?)PSrr",
+                                             "MIN(C?)SDrr",
+                                             "MIN(C?)SSrr",
+                                             "MULPDrr",
+                                             "MULPSrr",
+                                             "MULSDrr",
+                                             "MULSSrr",
+                                             "PHMINPOSUWrr",
+                                             "PMADDUBSWrr",
+                                             "PMADDWDrr",
+                                             "PMULDQrr",
+                                             "PMULHRSWrr",
+                                             "PMULHUWrr",
+                                             "PMULHWrr",
+                                             "PMULLWrr",
+                                             "PMULUDQrr",
+                                             "SUBPDrr",
+                                             "SUBPSrr",
+                                             "SUBSDrr",
+                                             "SUBSSrr",
+                                             "VADDPDYrr",
+                                             "VADDPDZ128rr(b?)(k?)(z?)",
+                                             "VADDPDZ256rr(b?)(k?)(z?)",
+                                             "VADDPDZrr(b?)(k?)(z?)",
+                                             "VADDPDrr",
+                                             "VADDPSYrr",
+                                             "VADDPSZ128rr(b?)(k?)(z?)",
+                                             "VADDPSZ256rr(b?)(k?)(z?)",
+                                             "VADDPSZrr(b?)(k?)(z?)",
+                                             "VADDPSrr",
+                                             "VADDSDZrr(b?)(_Int)?(k?)(z?)",
+                                             "VADDSDrr",
+                                             "VADDSSZrr(b?)(_Int)?(k?)(z?)",
+                                             "VADDSSrr",
+                                             "VADDSUBPDYrr",
+                                             "VADDSUBPDrr",
+                                             "VADDSUBPSYrr",
+                                             "VADDSUBPSrr",
+                                             "VCMPPDYrri",
+                                             "VCMPPDrri",
+                                             "VCMPPSYrri",
+                                             "VCMPPSrri",
+                                             "VCMPSDrr",
+                                             "VCMPSSrr",
+                                             "VCVTDQ2PSYrr",
+                                             "VCVTDQ2PSZ128rr(b?)(k?)(z?)",
+                                             "VCVTDQ2PSZ256rr(b?)(k?)(z?)",
+                                             "VCVTDQ2PSZrr(b?)(k?)(z?)",
+                                             "VCVTDQ2PSrr",
+                                             "VCVTPD2QQZ128rr(b?)(k?)(z?)",
+                                             "VCVTPD2QQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPD2QQZrr(b?)(k?)(z?)",
+                                             "VCVTPD2UQQZ128rr(b?)(k?)(z?)",
+                                             "VCVTPD2UQQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPD2UQQZrr(b?)(k?)(z?)",
+                                             "VCVTPS2DQYrr",
+                                             "VCVTPS2DQZ128rr(b?)(k?)(z?)",
+                                             "VCVTPS2DQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPS2DQZrr(b?)(k?)(z?)",
+                                             "VCVTPS2DQrr",
+                                             "VCVTPS2UDQZ128rr(b?)(k?)(z?)",
+                                             "VCVTPS2UDQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPS2UDQZrr(b?)(k?)(z?)",
+                                             "VCVTQQ2PDZ128rr(b?)(k?)(z?)",
+                                             "VCVTQQ2PDZ256rr(b?)(k?)(z?)",
+                                             "VCVTQQ2PDZrr(b?)(k?)(z?)",
+                                             "VCVTTPD2QQZ128rr(b?)(k?)(z?)",
+                                             "VCVTTPD2QQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPD2QQZrr(b?)(k?)(z?)",
+                                             "VCVTTPD2UQQZ128rr(b?)(k?)(z?)",
+                                             "VCVTTPD2UQQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPD2UQQZrr(b?)(k?)(z?)",
+                                             "VCVTTPS2DQYrr",
+                                             "VCVTTPS2DQZ128rr(b?)(k?)(z?)",
+                                             "VCVTTPS2DQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPS2DQZrr(b?)(k?)(z?)",
+                                             "VCVTTPS2DQrr",
+                                             "VCVTTPS2UDQZ128rr(b?)(k?)(z?)",
+                                             "VCVTTPS2UDQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPS2UDQZrr(b?)(k?)(z?)",
+                                             "VCVTUDQ2PSZ128rr(b?)(k?)(z?)",
+                                             "VCVTUDQ2PSZ256rr(b?)(k?)(z?)",
+                                             "VCVTUDQ2PSZrr(b?)(k?)(z?)",
+                                             "VCVTUQQ2PDZ128rr(b?)(k?)(z?)",
+                                             "VCVTUQQ2PDZ256rr(b?)(k?)(z?)",
+                                             "VCVTUQQ2PDZrr(b?)(k?)(z?)",
+                                             "VFIXUPIMMPDZ128rri(b?)(k?)(z?)",
+                                             "VFIXUPIMMPDZ256rri(b?)(k?)(z?)",
+                                             "VFIXUPIMMPDZrri(b?)(k?)(z?)",
+                                             "VFIXUPIMMPSZ128rri(b?)(k?)(z?)",
+                                             "VFIXUPIMMPSZ256rri(b?)(k?)(z?)",
+                                             "VFIXUPIMMPSZrri(b?)(k?)(z?)",
+                                             "VFIXUPIMMSDrri(b?)(k?)(z?)",
+                                             "VFIXUPIMMSSrri(b?)(k?)(z?)",
+                                             "VGETEXPPDZ128r(b?)(k?)(z?)",
+                                             "VGETEXPPDZ256r(b?)(k?)(z?)",
+                                             "VGETEXPPDr(b?)(k?)(z?)",
+                                             "VGETEXPPSZ128r(b?)(k?)(z?)",
+                                             "VGETEXPPSZ256r(b?)(k?)(z?)",
+                                             "VGETEXPPSr(b?)(k?)(z?)",
+                                             "VGETEXPSDr(b?)(k?)(z?)",
+                                             "VGETEXPSSr(b?)(k?)(z?)",
+                                             "VGETMANTPDZ128rri(b?)(k?)(z?)",
+                                             "VGETMANTPDZ256rri(b?)(k?)(z?)",
+                                             "VGETMANTPDZrri(b?)(k?)(z?)",
+                                             "VGETMANTPSZ128rri(b?)(k?)(z?)",
+                                             "VGETMANTPSZ256rri(b?)(k?)(z?)",
+                                             "VGETMANTPSZrri(b?)(k?)(z?)",
+                                             "VGETMANTSDZ128rri(b?)(k?)(z?)",
+                                             "VGETMANTSSZ128rri(b?)(k?)(z?)",
+                                             "VMAX(C?)PDYrr",
+                                             "VMAX(C?)PDZ128rr(b?)(k?)(z?)",
+                                             "VMAX(C?)PDZ256rr(b?)(k?)(z?)",
+                                             "VMAX(C?)PDZrr(b?)(k?)(z?)",
+                                             "VMAX(C?)PDrr",
+                                             "VMAX(C?)PSYrr",
+                                             "VMAX(C?)PSZ128rr(b?)(k?)(z?)",
+                                             "VMAX(C?)PSZ256rr(b?)(k?)(z?)",
+                                             "VMAX(C?)PSZrr(b?)(k?)(z?)",
+                                             "VMAX(C?)PSrr",
+                                             "VMAX(C?)SDZrr(b?)(_Int)?(k?)(z?)",
+                                             "VMAX(C?)SDrr",
+                                             "VMAX(C?)SSZrr(b?)(_Int)?(k?)(z?)",
+                                             "VMAX(C?)SSrr",
+                                             "VMIN(C?)PDYrr",
+                                             "VMIN(C?)PDZ128rr(b?)(k?)(z?)",
+                                             "VMIN(C?)PDZ256rr(b?)(k?)(z?)",
+                                             "VMIN(C?)PDZrr(b?)(k?)(z?)",
+                                             "VMIN(C?)PDrr",
+                                             "VMIN(C?)PSYrr",
+                                             "VMIN(C?)PSZ128rr(b?)(k?)(z?)",
+                                             "VMIN(C?)PSZ256rr(b?)(k?)(z?)",
+                                             "VMIN(C?)PSZrr(b?)(k?)(z?)",
+                                             "VMIN(C?)PSrr",
+                                             "VMIN(C?)SDZrr(b?)(_Int)?(k?)(z?)",
+                                             "VMIN(C?)SDrr",
+                                             "VMIN(C?)SSZrr(b?)(_Int)?(k?)(z?)",
+                                             "VMIN(C?)SSrr",
+                                             "VMULPDYrr",
+                                             "VMULPDZ128rr(b?)(k?)(z?)",
+                                             "VMULPDZ256rr(b?)(k?)(z?)",
+                                             "VMULPDZrr(b?)(k?)(z?)",
+                                             "VMULPDrr",
+                                             "VMULPSYrr",
+                                             "VMULPSZ128rr(b?)(k?)(z?)",
+                                             "VMULPSZ256rr(b?)(k?)(z?)",
+                                             "VMULPSZrr(b?)(k?)(z?)",
+                                             "VMULPSrr",
+                                             "VMULSDZrr(b?)(_Int)?(k?)(z?)",
+                                             "VMULSDrr",
+                                             "VMULSSZrr(b?)(_Int)?(k?)(z?)",
+                                             "VMULSSrr",
+                                             "VPHMINPOSUWrr",
+                                             "VPLZCNTDZ128rr(b?)(k?)(z?)",
+                                             "VPLZCNTDZ256rr(b?)(k?)(z?)",
+                                             "VPLZCNTDZrr(b?)(k?)(z?)",
+                                             "VPLZCNTQZ128rr(b?)(k?)(z?)",
+                                             "VPLZCNTQZ256rr(b?)(k?)(z?)",
+                                             "VPLZCNTQZrr(b?)(k?)(z?)",
+                                             "VPMADDUBSWYrr",
+                                             "VPMADDUBSWZ128rr(b?)(k?)(z?)",
+                                             "VPMADDUBSWZ256rr(b?)(k?)(z?)",
+                                             "VPMADDUBSWZrr(b?)(k?)(z?)",
+                                             "VPMADDUBSWrr",
+                                             "VPMADDWDYrr",
+                                             "VPMADDWDZ128rr(b?)(k?)(z?)",
+                                             "VPMADDWDZ256rr(b?)(k?)(z?)",
+                                             "VPMADDWDZrr(b?)(k?)(z?)",
+                                             "VPMADDWDrr",
+                                             "VPMULDQYrr",
+                                             "VPMULDQZ128rr(b?)(k?)(z?)",
+                                             "VPMULDQZ256rr(b?)(k?)(z?)",
+                                             "VPMULDQZrr(b?)(k?)(z?)",
+                                             "VPMULDQrr",
+                                             "VPMULHRSWYrr",
+                                             "VPMULHRSWZ128rr(b?)(k?)(z?)",
+                                             "VPMULHRSWZ256rr(b?)(k?)(z?)",
+                                             "VPMULHRSWZrr(b?)(k?)(z?)",
+                                             "VPMULHRSWrr",
+                                             "VPMULHUWYrr",
+                                             "VPMULHUWZ128rr(b?)(k?)(z?)",
+                                             "VPMULHUWZ256rr(b?)(k?)(z?)",
+                                             "VPMULHUWZrr(b?)(k?)(z?)",
+                                             "VPMULHUWrr",
+                                             "VPMULHWYrr",
+                                             "VPMULHWZ128rr(b?)(k?)(z?)",
+                                             "VPMULHWZ256rr(b?)(k?)(z?)",
+                                             "VPMULHWZrr(b?)(k?)(z?)",
+                                             "VPMULHWrr",
+                                             "VPMULLWYrr",
+                                             "VPMULLWZ128rr(b?)(k?)(z?)",
+                                             "VPMULLWZ256rr(b?)(k?)(z?)",
+                                             "VPMULLWZrr(b?)(k?)(z?)",
+                                             "VPMULLWrr",
+                                             "VPMULUDQYrr",
+                                             "VPMULUDQZ128rr(b?)(k?)(z?)",
+                                             "VPMULUDQZ256rr(b?)(k?)(z?)",
+                                             "VPMULUDQZrr(b?)(k?)(z?)",
+                                             "VPMULUDQrr",
+                                             "VRANGEPDZ128rri(b?)(k?)(z?)",
+                                             "VRANGEPDZ256rri(b?)(k?)(z?)",
+                                             "VRANGEPDZrri(b?)(k?)(z?)",
+                                             "VRANGEPSZ128rri(b?)(k?)(z?)",
+                                             "VRANGEPSZ256rri(b?)(k?)(z?)",
+                                             "VRANGEPSZrri(b?)(k?)(z?)",
+                                             "VRANGESDZ128rri(b?)(k?)(z?)",
+                                             "VRANGESSZ128rri(b?)(k?)(z?)",
+                                             "VREDUCEPDZ128rri(b?)(k?)(z?)",
+                                             "VREDUCEPDZ256rri(b?)(k?)(z?)",
+                                             "VREDUCEPDZrri(b?)(k?)(z?)",
+                                             "VREDUCEPSZ128rri(b?)(k?)(z?)",
+                                             "VREDUCEPSZ256rri(b?)(k?)(z?)",
+                                             "VREDUCEPSZrri(b?)(k?)(z?)",
+                                             "VREDUCESDZ128rri(b?)(k?)(z?)",
+                                             "VREDUCESSZ128rri(b?)(k?)(z?)",
+                                             "VSCALEFPDZ128rr(b?)(k?)(z?)",
+                                             "VSCALEFPDZ256rr(b?)(k?)(z?)",
+                                             "VSCALEFPDZrr(b?)(k?)(z?)",
+                                             "VSCALEFPSZ128rr(b?)(k?)(z?)",
+                                             "VSCALEFPSZ256rr(b?)(k?)(z?)",
+                                             "VSCALEFPSZrr(b?)(k?)(z?)",
+                                             "VSCALEFSDZ128rr(b?)(k?)(z?)",
+                                             "VSCALEFSSZ128rr(b?)(k?)(z?)",
+                                             "VSUBPDYrr",
+                                             "VSUBPDZ128rr(b?)(k?)(z?)",
+                                             "VSUBPDZ256rr(b?)(k?)(z?)",
+                                             "VSUBPDZrr(b?)(k?)(z?)",
+                                             "VSUBPDrr",
+                                             "VSUBPSYrr",
+                                             "VSUBPSZ128rr(b?)(k?)(z?)",
+                                             "VSUBPSZ256rr(b?)(k?)(z?)",
+                                             "VSUBPSZrr(b?)(k?)(z?)",
+                                             "VSUBPSrr",
+                                             "VSUBSDZrr(b?)(_Int)?(k?)(z?)",
+                                             "VSUBSDrr",
+                                             "VSUBSSZrr(b?)(_Int)?(k?)(z?)",
+                                             "VSUBSSrr")>;
 def: InstRW<[SKXWriteResGroup50],
           (instregex
            "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)Yr",
@@ -2347,222 +2489,80 @@ def: InstRW<[SKXWriteResGroup50],
            "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)r",
            "VF(N)?M(ADD|SUB)(132|213|231)S(D|S)Zr(b?)(_Int)?(k?)(z?)",
            "VF(N)?M(ADD|SUB)(132|213|231)S(D|S)r")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPPDZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPPDZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPPDr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPPSZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPPSZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPPSr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPSDr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETEXPSSr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTPSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTPSZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTPSZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTSDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VGETMANTSSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PDYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PSYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)PSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)SDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)SSZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMAX(C?)SSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PDYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PSYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)PSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)SDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)SDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)SSZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMIN(C?)SSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPDYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPSYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULSDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULSSZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VMULSSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPHMINPOSUWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPLZCNTDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPLZCNTDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPLZCNTDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPLZCNTQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPLZCNTQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPLZCNTQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDUBSWYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDUBSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDUBSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDUBSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDUBSWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDWDYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDWDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDWDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDWDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMADDWDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULDQYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULDQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHRSWYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHRSWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHRSWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHRSWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHRSWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHUWYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHUWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHUWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHUWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHUWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHWYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULHWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULLWYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULLWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULLWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULLWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULLWrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULUDQYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULUDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULUDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULUDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VPMULUDQrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGEPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGEPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGEPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGEPSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGEPSZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGEPSZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGESDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VRANGESSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCEPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCEPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCEPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCEPSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCEPSZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCEPSZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCESDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VREDUCESSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFSDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSCALEFSSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPDYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPSYrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBPSrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBSDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBSDrr")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBSSZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup50], (instregex "VSUBSSrr")>;
 
 def SKXWriteResGroup51 : SchedWriteRes<[SKXPort5]> {
   let Latency = 4;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup51], (instregex "MPSADBWrri")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VEXPANDPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VEXPANDPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VEXPANDPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VEXPANDPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VEXPANDPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VEXPANDPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VMPSADBWYrri")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VMPSADBWrri")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPEXPANDDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPEXPANDDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPEXPANDDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPEXPANDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPEXPANDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPEXPANDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVDBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVDBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVDBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVDWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVDWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVDWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVQBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVQBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVQBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVQWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVQWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVQWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSDBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSDBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSDBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSDWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSDWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSDWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSQWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSWBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSWBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVSWBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSDBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSDBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSDBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSDWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSDWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSDWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSQWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSWBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSWBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVUSWBZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVWBZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVWBZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup51], (instregex "VPMOVWBZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup51], (instregex "MPSADBWrri",
+                                             "VEXPANDPDZ128rr(b?)(k?)(z?)",
+                                             "VEXPANDPDZ256rr(b?)(k?)(z?)",
+                                             "VEXPANDPDZrr(b?)(k?)(z?)",
+                                             "VEXPANDPSZ128rr(b?)(k?)(z?)",
+                                             "VEXPANDPSZ256rr(b?)(k?)(z?)",
+                                             "VEXPANDPSZrr(b?)(k?)(z?)",
+                                             "VMPSADBWYrri",
+                                             "VMPSADBWrri",
+                                             "VPEXPANDDZ128rr(b?)(k?)(z?)",
+                                             "VPEXPANDDZ256rr(b?)(k?)(z?)",
+                                             "VPEXPANDDZrr(b?)(k?)(z?)",
+                                             "VPEXPANDQZ128rr(b?)(k?)(z?)",
+                                             "VPEXPANDQZ256rr(b?)(k?)(z?)",
+                                             "VPEXPANDQZrr(b?)(k?)(z?)",
+                                             "VPMOVDBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVDBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVDBZrr(b?)(k?)(z?)",
+                                             "VPMOVDWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVDWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVDWZrr(b?)(k?)(z?)",
+                                             "VPMOVQBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVQBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVQBZrr(b?)(k?)(z?)",
+                                             "VPMOVQWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVQWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVQWZrr(b?)(k?)(z?)",
+                                             "VPMOVSDBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSDBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSDBZrr(b?)(k?)(z?)",
+                                             "VPMOVSDWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSDWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSDWZrr(b?)(k?)(z?)",
+                                             "VPMOVSQBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSQBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSQBZrr(b?)(k?)(z?)",
+                                             "VPMOVSQDZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSQDZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSQDZrr(b?)(k?)(z?)",
+                                             "VPMOVSQWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSQWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSQWZrr(b?)(k?)(z?)",
+                                             "VPMOVSWBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVSWBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVSWBZrr(b?)(k?)(z?)",
+                                             "VPMOVUSDBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVUSDBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVUSDBZrr(b?)(k?)(z?)",
+                                             "VPMOVUSDWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVUSDWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVUSDWZrr(b?)(k?)(z?)",
+                                             "VPMOVUSQBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVUSQBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVUSQBZrr(b?)(k?)(z?)",
+                                             "VPMOVUSQDZ128rr(b?)(k?)(z?)",
+                                             "VPMOVUSQDZ256rr(b?)(k?)(z?)",
+                                             "VPMOVUSQDZrr(b?)(k?)(z?)",
+                                             "VPMOVUSQWZ128rr(b?)(k?)(z?)",
+                                             "VPMOVUSQWZ256rr(b?)(k?)(z?)",
+                                             "VPMOVUSQWZrr(b?)(k?)(z?)",
+                                             "VPMOVUSWBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVUSWBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVUSWBZrr(b?)(k?)(z?)",
+                                             "VPMOVWBZ128rr(b?)(k?)(z?)",
+                                             "VPMOVWBZ256rr(b?)(k?)(z?)",
+                                             "VPMOVWBZrr(b?)(k?)(z?)")>;
 
+// FIXME: IMUL32r/MUL32r should be uops lik SkylakeClient.
 def SKXWriteResGroup52 : SchedWriteRes<[SKXPort1,SKXPort5]> {
   let Latency = 4;
   let NumMicroOps = 2;
@@ -2576,57 +2576,56 @@ def SKXWriteResGroup52_16 : SchedWriteRes<[SKXPort1,SKXPort06,SKXPort0156]> {
   let Latency = 4;
   let NumMicroOps = 4;
 }
-def: InstRW<[SKXWriteResGroup52_16], (instrs IMUL16r)>;
-def: InstRW<[SKXWriteResGroup52_16], (instrs MUL16r)>;
+def: InstRW<[SKXWriteResGroup52_16], (instrs IMUL16r, MUL16r)>;
 
 def SKXWriteResGroup53 : SchedWriteRes<[SKXPort5,SKXPort01]> {
   let Latency = 4;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLDYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLQYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLWYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRADYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRADZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRADZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRAQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRAQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRAWYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRAWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRAWZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLDYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLQYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLWYrr")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup53], (instregex "VPSRLWZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup53], (instregex "VPSLLDYrr",
+                                             "VPSLLDZ256rr(b?)(k?)(z?)",
+                                             "VPSLLDZrr(b?)(k?)(z?)",
+                                             "VPSLLQYrr",
+                                             "VPSLLQZ256rr(b?)(k?)(z?)",
+                                             "VPSLLQZrr(b?)(k?)(z?)",
+                                             "VPSLLWYrr",
+                                             "VPSLLWZ256rr(b?)(k?)(z?)",
+                                             "VPSLLWZrr(b?)(k?)(z?)",
+                                             "VPSRADYrr",
+                                             "VPSRADZ256rr(b?)(k?)(z?)",
+                                             "VPSRADZrr(b?)(k?)(z?)",
+                                             "VPSRAQZ256rr(b?)(k?)(z?)",
+                                             "VPSRAQZrr(b?)(k?)(z?)",
+                                             "VPSRAWYrr",
+                                             "VPSRAWZ256rr(b?)(k?)(z?)",
+                                             "VPSRAWZrr(b?)(k?)(z?)",
+                                             "VPSRLDYrr",
+                                             "VPSRLDZ256rr(b?)(k?)(z?)",
+                                             "VPSRLDZrr(b?)(k?)(z?)",
+                                             "VPSRLQYrr",
+                                             "VPSRLQZ256rr(b?)(k?)(z?)",
+                                             "VPSRLQZrr(b?)(k?)(z?)",
+                                             "VPSRLWYrr",
+                                             "VPSRLWZ256rr(b?)(k?)(z?)",
+                                             "VPSRLWZrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup54 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort237]> {
   let Latency = 4;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup54], (instregex "ISTT_FP16m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "ISTT_FP32m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "ISTT_FP64m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "IST_F16m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "IST_F32m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "IST_FP16m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "IST_FP32m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "IST_FP64m")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "VPMOVQDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "VPMOVQDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup54], (instregex "VPMOVQDZmr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup54], (instregex "ISTT_FP16m",
+                                             "ISTT_FP32m",
+                                             "ISTT_FP64m",
+                                             "IST_F16m",
+                                             "IST_F32m",
+                                             "IST_FP16m",
+                                             "IST_FP32m",
+                                             "IST_FP64m",
+                                             "VPMOVQDZ128mr(b?)(k?)(z?)",
+                                             "VPMOVQDZ256mr(b?)(k?)(z?)",
+                                             "VPMOVQDZmr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup55 : SchedWriteRes<[SKXPort0156]> {
   let Latency = 4;
@@ -2654,31 +2653,31 @@ def SKXWriteResGroup58 : SchedWriteRes<[SKXPort23]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVD64rm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVD64to64rm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVQ64rm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOV(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOV64toPQIrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVDDUPrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVDI2PDIrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVQI2PQIrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVSDrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVSSrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVSX(16|32|64)rm16")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVSX(16|32|64)rm32")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVSX(16|32|64)rm8")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVZX(16|32|64)rm16")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVZX(16|32|64)rm8")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "PREFETCHNTA")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "PREFETCHT0")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "PREFETCHT1")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "PREFETCHT2")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "VMOV64toPQIrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "VMOVDDUPrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "VMOVDI2PDIrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "VMOVQI2PQIrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "VMOVSDrm")>;
-def: InstRW<[SKXWriteResGroup58], (instregex "VMOVSSrm")>;
+def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVD64rm",
+                                             "MMX_MOVD64to64rm",
+                                             "MMX_MOVQ64rm",
+                                             "MOV(8|16|32|64)rm",
+                                             "MOV64toPQIrm",
+                                             "MOVDDUPrm",
+                                             "MOVDI2PDIrm",
+                                             "MOVQI2PQIrm",
+                                             "MOVSDrm",
+                                             "MOVSSrm",
+                                             "MOVSX(16|32|64)rm16",
+                                             "MOVSX(16|32|64)rm32",
+                                             "MOVSX(16|32|64)rm8",
+                                             "MOVZX(16|32|64)rm16",
+                                             "MOVZX(16|32|64)rm8",
+                                             "PREFETCHNTA",
+                                             "PREFETCHT0",
+                                             "PREFETCHT1",
+                                             "PREFETCHT2",
+                                             "VMOV64toPQIrm",
+                                             "VMOVDDUPrm",
+                                             "VMOVDI2PDIrm",
+                                             "VMOVQI2PQIrm",
+                                             "VMOVSDrm",
+                                             "VMOVSSrm")>;
 
 def SKXWriteResGroup59 : SchedWriteRes<[SKXPort015]> {
   let Latency = 5;
@@ -2692,62 +2691,61 @@ def SKXWriteResGroup60 : SchedWriteRes<[SKXPort0,SKXPort5]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup60], (instregex "CVTDQ2PDrr")>;
-def: InstRW<[SKXWriteResGroup60], (instregex "MMX_CVTPI2PDirr")>;
-def: InstRW<[SKXWriteResGroup60], (instregex "VCVTDQ2PDrr")>;
+def: InstRW<[SKXWriteResGroup60], (instregex "(V?)CVTDQ2PDrr",
+                                             "MMX_CVTPI2PDirr")>;
 
 def SKXWriteResGroup61 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 5;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTPD2DQrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTPD2PSrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTPS2PDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTSD2SSrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTSI642SDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTSI2SDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTSI2SSrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTSS2SDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "CVTTPD2DQrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "MMX_CVTPD2PIirr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "MMX_CVTPS2PIirr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "MMX_CVTTPD2PIirr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "MMX_CVTTPS2PIirr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTDQ2PDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPD2DQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPD2DQrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPD2PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPD2PSrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPD2UDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPH2PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPH2PSrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPS2PDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPS2PDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPS2PHZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPS2PHrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPS2QQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTPS2UQQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTQQ2PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSD2SSrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSI642SDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSI2SDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSI2SDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSI2SSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSI2SSrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSI642SDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSS2SDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTSS2SDrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTTPD2DQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTTPD2DQrr")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTTPD2UDQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTTPS2QQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTTPS2UQQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTUDQ2PDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTUQQ2PSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTUSI2SDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTUSI2SSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup61], (instregex "VCVTUSI642SDZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup61], (instregex "CVTPD2DQrr",
+                                             "CVTPD2PSrr",
+                                             "CVTPS2PDrr",
+                                             "CVTSD2SSrr",
+                                             "CVTSI642SDrr",
+                                             "CVTSI2SDrr",
+                                             "CVTSI2SSrr",
+                                             "CVTSS2SDrr",
+                                             "CVTTPD2DQrr",
+                                             "MMX_CVTPD2PIirr",
+                                             "MMX_CVTPS2PIirr",
+                                             "MMX_CVTTPD2PIirr",
+                                             "MMX_CVTTPS2PIirr",
+                                             "VCVTDQ2PDZ128rr(b?)(k?)(z?)",
+                                             "VCVTPD2DQZ128rr(b?)(k?)(z?)",
+                                             "VCVTPD2DQrr",
+                                             "VCVTPD2PSZ128rr(b?)(k?)(z?)",
+                                             "VCVTPD2PSrr",
+                                             "VCVTPD2UDQZ128rr(b?)(k?)(z?)",
+                                             "VCVTPH2PSZ128rr(b?)(k?)(z?)",
+                                             "VCVTPH2PSrr",
+                                             "VCVTPS2PDZ128rr(b?)(k?)(z?)",
+                                             "VCVTPS2PDrr",
+                                             "VCVTPS2PHZ128rr(b?)(k?)(z?)",
+                                             "VCVTPS2PHrr",
+                                             "VCVTPS2QQZ128rr(b?)(k?)(z?)",
+                                             "VCVTPS2UQQZ128rr(b?)(k?)(z?)",
+                                             "VCVTQQ2PSZ128rr(b?)(k?)(z?)",
+                                             "VCVTSD2SSrr",
+                                             "VCVTSI642SDrr",
+                                             "VCVTSI2SDZrr(b?)(k?)(z?)",
+                                             "VCVTSI2SDrr",
+                                             "VCVTSI2SSZrr(b?)(k?)(z?)",
+                                             "VCVTSI2SSrr",
+                                             "VCVTSI642SDZrr(b?)(k?)(z?)",
+                                             "VCVTSS2SDZrr(b?)(_Int)?(k?)(z?)",
+                                             "VCVTSS2SDrr",
+                                             "VCVTTPD2DQZ128rr(b?)(k?)(z?)",
+                                             "VCVTTPD2DQrr",
+                                             "VCVTTPD2UDQZ128rr(b?)(k?)(z?)",
+                                             "VCVTTPS2QQZ128rr(b?)(k?)(z?)",
+                                             "VCVTTPS2UQQZ128rr(b?)(k?)(z?)",
+                                             "VCVTUDQ2PDZ128rr(b?)(k?)(z?)",
+                                             "VCVTUQQ2PSZ128rr(b?)(k?)(z?)",
+                                             "VCVTUSI2SDZrr(b?)(k?)(z?)",
+                                             "VCVTUSI2SSZrr(b?)(k?)(z?)",
+                                             "VCVTUSI642SDZrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup62 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 5;
@@ -2775,66 +2773,66 @@ def SKXWriteResGroup65 : SchedWriteRes<[SKXPort4,SKXPort237,SKXPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup65], (instregex "VCVTPS2PHZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup65], (instregex "VCVTPS2PHZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup65], (instregex "VCVTPS2PHZmr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup65], (instregex "VCVTPS2PHZ128mr(b?)(k?)(z?)",
+                                             "VCVTPS2PHZ256mr(b?)(k?)(z?)",
+                                             "VCVTPS2PHZmr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup66 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort237]> {
   let Latency = 5;
   let NumMicroOps = 4;
   let ResourceCycles = [1,2,1];
 }
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVDBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVDBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVDBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVDWZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVDWZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVDWZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVQBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVQBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVQBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVQWZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVQWZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVQWZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSDBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSDBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSDBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSDWZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSDWZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSDWZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQWZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQWZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSQWZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSWBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSWBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVSWBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSDBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSDBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSDBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSDWZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSDWZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSDWZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQWZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQWZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSQWZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSWBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSWBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVUSWBZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVWBZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVWBZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVWBZmr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup66], (instregex "VPMOVDBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVDBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVDBZmr(b?)(k?)(z?)",
+                                             "VPMOVDWZ128mr(b?)(k?)(z?)",
+                                             "VPMOVDWZ256mr(b?)(k?)(z?)",
+                                             "VPMOVDWZmr(b?)(k?)(z?)",
+                                             "VPMOVQBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVQBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVQBZmr(b?)(k?)(z?)",
+                                             "VPMOVQWZ128mr(b?)(k?)(z?)",
+                                             "VPMOVQWZ256mr(b?)(k?)(z?)",
+                                             "VPMOVQWZmr(b?)(k?)(z?)",
+                                             "VPMOVSDBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVSDBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVSDBZmr(b?)(k?)(z?)",
+                                             "VPMOVSDWZ128mr(b?)(k?)(z?)",
+                                             "VPMOVSDWZ256mr(b?)(k?)(z?)",
+                                             "VPMOVSDWZmr(b?)(k?)(z?)",
+                                             "VPMOVSQBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVSQBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVSQBZmr(b?)(k?)(z?)",
+                                             "VPMOVSQDZ128mr(b?)(k?)(z?)",
+                                             "VPMOVSQDZ256mr(b?)(k?)(z?)",
+                                             "VPMOVSQDZmr(b?)(k?)(z?)",
+                                             "VPMOVSQWZ128mr(b?)(k?)(z?)",
+                                             "VPMOVSQWZ256mr(b?)(k?)(z?)",
+                                             "VPMOVSQWZmr(b?)(k?)(z?)",
+                                             "VPMOVSWBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVSWBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVSWBZmr(b?)(k?)(z?)",
+                                             "VPMOVUSDBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVUSDBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVUSDBZmr(b?)(k?)(z?)",
+                                             "VPMOVUSDWZ128mr(b?)(k?)(z?)",
+                                             "VPMOVUSDWZ256mr(b?)(k?)(z?)",
+                                             "VPMOVUSDWZmr(b?)(k?)(z?)",
+                                             "VPMOVUSQBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVUSQBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVUSQBZmr(b?)(k?)(z?)",
+                                             "VPMOVUSQDZ128mr(b?)(k?)(z?)",
+                                             "VPMOVUSQDZ256mr(b?)(k?)(z?)",
+                                             "VPMOVUSQDZmr(b?)(k?)(z?)",
+                                             "VPMOVUSQWZ128mr(b?)(k?)(z?)",
+                                             "VPMOVUSQWZ256mr(b?)(k?)(z?)",
+                                             "VPMOVUSQWZmr(b?)(k?)(z?)",
+                                             "VPMOVUSWBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVUSWBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVUSWBZmr(b?)(k?)(z?)",
+                                             "VPMOVWBZ128mr(b?)(k?)(z?)",
+                                             "VPMOVWBZ256mr(b?)(k?)(z?)",
+                                             "VPMOVWBZmr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup67 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let Latency = 5;
@@ -2855,311 +2853,310 @@ def SKXWriteResGroup69 : SchedWriteRes<[SKXPort4,SKXPort237,SKXPort0156]> {
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,4];
 }
-def: InstRW<[SKXWriteResGroup69], (instregex "PUSHF16")>;
-def: InstRW<[SKXWriteResGroup69], (instregex "PUSHF64")>;
+def: InstRW<[SKXWriteResGroup69], (instregex "PUSHF16",
+                                             "PUSHF64")>;
 
 def SKXWriteResGroup70 : SchedWriteRes<[SKXPort5]> {
   let Latency = 6;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup70], (instregex "PCLMULQDQrr")>;
-def: InstRW<[SKXWriteResGroup70], (instregex "VPCLMULQDQrr")>;
+def: InstRW<[SKXWriteResGroup70], (instregex "(V?)PCLMULQDQrr")>;
 
 def SKXWriteResGroup71 : SchedWriteRes<[SKXPort23]> {
   let Latency = 6;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup71], (instregex "LDDQUrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVAPDrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVAPSrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVDQArm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVDQUrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVNTDQArm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVSHDUPrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVSLDUPrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVUPDrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "MOVUPSrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VBROADCASTSSrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VLDDQUrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVAPDrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVAPSrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVDQArm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVDQUrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVNTDQArm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVSHDUPrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVSLDUPrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVUPDrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VMOVUPSrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VPBROADCASTDrm")>;
-def: InstRW<[SKXWriteResGroup71], (instregex "VPBROADCASTQrm")>;
+def: InstRW<[SKXWriteResGroup71], (instregex "LDDQUrm",
+                                             "MOVAPDrm",
+                                             "MOVAPSrm",
+                                             "MOVDQArm",
+                                             "MOVDQUrm",
+                                             "MOVNTDQArm",
+                                             "MOVSHDUPrm",
+                                             "MOVSLDUPrm",
+                                             "MOVUPDrm",
+                                             "MOVUPSrm",
+                                             "VBROADCASTSSrm",
+                                             "VLDDQUrm",
+                                             "VMOVAPDrm",
+                                             "VMOVAPSrm",
+                                             "VMOVDQArm",
+                                             "VMOVDQUrm",
+                                             "VMOVNTDQArm",
+                                             "VMOVSHDUPrm",
+                                             "VMOVSLDUPrm",
+                                             "VMOVUPDrm",
+                                             "VMOVUPSrm",
+                                             "VPBROADCASTDrm",
+                                             "VPBROADCASTQrm")>;
 
 def SKXWriteResGroup72 : SchedWriteRes<[SKXPort0]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup72], (instregex "MMX_CVTPI2PSirr")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VCOMPRESSPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VCOMPRESSPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VCOMPRESSPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VCOMPRESSPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VCOMPRESSPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VCOMPRESSPSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPCOMPRESSDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPCOMPRESSDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPCOMPRESSDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPCOMPRESSQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPCOMPRESSQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPCOMPRESSQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPERMWZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPERMWZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup72], (instregex "VPERMWZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup72], (instregex "MMX_CVTPI2PSirr",
+                                             "VCOMPRESSPDZ128rr(b?)(k?)(z?)",
+                                             "VCOMPRESSPDZ256rr(b?)(k?)(z?)",
+                                             "VCOMPRESSPDZrr(b?)(k?)(z?)",
+                                             "VCOMPRESSPSZ128rr(b?)(k?)(z?)",
+                                             "VCOMPRESSPSZ256rr(b?)(k?)(z?)",
+                                             "VCOMPRESSPSZrr(b?)(k?)(z?)",
+                                             "VPCOMPRESSDZ128rr(b?)(k?)(z?)",
+                                             "VPCOMPRESSDZ256rr(b?)(k?)(z?)",
+                                             "VPCOMPRESSDZrr(b?)(k?)(z?)",
+                                             "VPCOMPRESSQZ128rr(b?)(k?)(z?)",
+                                             "VPCOMPRESSQZ256rr(b?)(k?)(z?)",
+                                             "VPCOMPRESSQZrr(b?)(k?)(z?)",
+                                             "VPERMWZ128rr(b?)(k?)(z?)",
+                                             "VPERMWZ256rr(b?)(k?)(z?)",
+                                             "VPERMWZrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup73 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PADDSBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PADDSWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PADDUSBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PADDUSWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PAVGBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PAVGWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PCMPEQBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PCMPEQDirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PCMPEQWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PCMPGTBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PCMPGTDirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PCMPGTWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PMAXSWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PMAXUBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PMINSWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PMINUBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSLLDrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSLLQrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSLLWrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSRADrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSRAWrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSRLDrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSRLQrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSRLWrm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSUBSBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSUBSWirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSUBUSBirm")>;
-def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PSUBUSWirm")>;
+def: InstRW<[SKXWriteResGroup73], (instregex "MMX_PADDSBirm",
+                                             "MMX_PADDSWirm",
+                                             "MMX_PADDUSBirm",
+                                             "MMX_PADDUSWirm",
+                                             "MMX_PAVGBirm",
+                                             "MMX_PAVGWirm",
+                                             "MMX_PCMPEQBirm",
+                                             "MMX_PCMPEQDirm",
+                                             "MMX_PCMPEQWirm",
+                                             "MMX_PCMPGTBirm",
+                                             "MMX_PCMPGTDirm",
+                                             "MMX_PCMPGTWirm",
+                                             "MMX_PMAXSWirm",
+                                             "MMX_PMAXUBirm",
+                                             "MMX_PMINSWirm",
+                                             "MMX_PMINUBirm",
+                                             "MMX_PSLLDrm",
+                                             "MMX_PSLLQrm",
+                                             "MMX_PSLLWrm",
+                                             "MMX_PSRADrm",
+                                             "MMX_PSRAWrm",
+                                             "MMX_PSRLDrm",
+                                             "MMX_PSRLQrm",
+                                             "MMX_PSRLWrm",
+                                             "MMX_PSUBSBirm",
+                                             "MMX_PSUBSWirm",
+                                             "MMX_PSUBUSBirm",
+                                             "MMX_PSUBUSWirm")>;
 
 def SKXWriteResGroup74 : SchedWriteRes<[SKXPort0,SKXPort015]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup74], (instregex "CVTSD2SI64rr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "CVTSD2SIrr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "CVTSS2SI64rr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "CVTSS2SIrr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "CVTTSD2SI64rr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "CVTTSD2SIrr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSD2SI64Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSD2SI64rr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSD2SIZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSD2SIrr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSD2USI64Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSD2USIZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSS2SI64Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSS2SI64rr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSS2SIZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSS2SIrr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTSS2USIZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTTSD2SI64Zrr(b?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTTSD2SI64rr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTTSD2SIZrr(b?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTTSD2SIrr")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTTSD2USI64Zrr(b?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTTSD2USIZrr(b?)")>;
-def: InstRW<[SKXWriteResGroup74], (instregex "VCVTTSS2USIZrr(b?)")>;
+def: InstRW<[SKXWriteResGroup74], (instregex "CVTSD2SI64rr",
+                                             "CVTSD2SIrr",
+                                             "CVTSS2SI64rr",
+                                             "CVTSS2SIrr",
+                                             "CVTTSD2SI64rr",
+                                             "CVTTSD2SIrr",
+                                             "VCVTSD2SI64Zrr(b?)(k?)(z?)",
+                                             "VCVTSD2SI64rr",
+                                             "VCVTSD2SIZrr(b?)(k?)(z?)",
+                                             "VCVTSD2SIrr",
+                                             "VCVTSD2USI64Zrr(b?)(k?)(z?)",
+                                             "VCVTSD2USIZrr(b?)(k?)(z?)",
+                                             "VCVTSS2SI64Zrr(b?)(k?)(z?)",
+                                             "VCVTSS2SI64rr",
+                                             "VCVTSS2SIZrr(b?)(k?)(z?)",
+                                             "VCVTSS2SIrr",
+                                             "VCVTSS2USIZrr(b?)(k?)(z?)",
+                                             "VCVTTSD2SI64Zrr(b?)",
+                                             "VCVTTSD2SI64rr",
+                                             "VCVTTSD2SIZrr(b?)",
+                                             "VCVTTSD2SIrr",
+                                             "VCVTTSD2USI64Zrr(b?)",
+                                             "VCVTTSD2USIZrr(b?)",
+                                             "VCVTTSS2USIZrr(b?)")>;
 
 def SKXWriteResGroup75 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PALIGNRrmi")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PINSRWrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PSHUFBrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PSHUFWmi")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PUNPCKHBWirm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PUNPCKHDQirm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PUNPCKHWDirm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PUNPCKLBWirm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PUNPCKLDQirm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PUNPCKLWDirm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MOVHPDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MOVHPSrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MOVLPDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "MOVLPSrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PINSRBrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PINSRDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PINSRQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PINSRWrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVSXBDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVSXBQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVSXBWrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVSXDQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVSXWDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVSXWQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVZXBDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVZXBQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVZXBWrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVZXDQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVZXWDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "PMOVZXWQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVHPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVHPDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVHPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVHPSrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVLPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVLPDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVLPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VMOVLPSrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRBrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPINSRWrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVSXBDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVSXBQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVSXBWrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVSXDQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVSXWDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVSXWQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVZXBDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVZXBQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVZXBWrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVZXDQrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVZXWDrm")>;
-def: InstRW<[SKXWriteResGroup75], (instregex "VPMOVZXWQrm")>;
+def: InstRW<[SKXWriteResGroup75], (instregex "MMX_PALIGNRrmi",
+                                             "MMX_PINSRWrm",
+                                             "MMX_PSHUFBrm",
+                                             "MMX_PSHUFWmi",
+                                             "MMX_PUNPCKHBWirm",
+                                             "MMX_PUNPCKHDQirm",
+                                             "MMX_PUNPCKHWDirm",
+                                             "MMX_PUNPCKLBWirm",
+                                             "MMX_PUNPCKLDQirm",
+                                             "MMX_PUNPCKLWDirm",
+                                             "MOVHPDrm",
+                                             "MOVHPSrm",
+                                             "MOVLPDrm",
+                                             "MOVLPSrm",
+                                             "PINSRBrm",
+                                             "PINSRDrm",
+                                             "PINSRQrm",
+                                             "PINSRWrm",
+                                             "PMOVSXBDrm",
+                                             "PMOVSXBQrm",
+                                             "PMOVSXBWrm",
+                                             "PMOVSXDQrm",
+                                             "PMOVSXWDrm",
+                                             "PMOVSXWQrm",
+                                             "PMOVZXBDrm",
+                                             "PMOVZXBQrm",
+                                             "PMOVZXBWrm",
+                                             "PMOVZXDQrm",
+                                             "PMOVZXWDrm",
+                                             "PMOVZXWQrm",
+                                             "VMOVHPDZ128rm(b?)(k?)(z?)",
+                                             "VMOVHPDrm",
+                                             "VMOVHPSZ128rm(b?)(k?)(z?)",
+                                             "VMOVHPSrm",
+                                             "VMOVLPDZ128rm(b?)(k?)(z?)",
+                                             "VMOVLPDrm",
+                                             "VMOVLPSZ128rm(b?)(k?)(z?)",
+                                             "VMOVLPSrm",
+                                             "VPINSRBZrm(b?)(k?)(z?)",
+                                             "VPINSRBrm",
+                                             "VPINSRDZrm(b?)(k?)(z?)",
+                                             "VPINSRDrm",
+                                             "VPINSRQZrm(b?)(k?)(z?)",
+                                             "VPINSRQrm",
+                                             "VPINSRWZrm(b?)(k?)(z?)",
+                                             "VPINSRWrm",
+                                             "VPMOVSXBDrm",
+                                             "VPMOVSXBQrm",
+                                             "VPMOVSXBWrm",
+                                             "VPMOVSXDQrm",
+                                             "VPMOVSXWDrm",
+                                             "VPMOVSXWQrm",
+                                             "VPMOVZXBDrm",
+                                             "VPMOVZXBQrm",
+                                             "VPMOVZXBWrm",
+                                             "VPMOVZXDQrm",
+                                             "VPMOVZXWDrm",
+                                             "VPMOVZXWQrm")>;
 
 def SKXWriteResGroup76 : SchedWriteRes<[SKXPort6,SKXPort23]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup76], (instregex "FARJMP64")>;
-def: InstRW<[SKXWriteResGroup76], (instregex "JMP(16|32|64)m")>;
+def: InstRW<[SKXWriteResGroup76], (instregex "FARJMP64",
+                                             "JMP(16|32|64)m")>;
 
 def SKXWriteResGroup77 : SchedWriteRes<[SKXPort23,SKXPort05]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PABSBrm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PABSDrm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PABSWrm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PADDBirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PADDDirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PADDQirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PADDWirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PANDNirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PANDirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PORirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PSIGNBrm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PSIGNDrm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PSIGNWrm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PSUBBirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PSUBDirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PSUBQirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PSUBWirm")>;
-def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PXORirm")>;
+def: InstRW<[SKXWriteResGroup77], (instregex "MMX_PABSBrm",
+                                             "MMX_PABSDrm",
+                                             "MMX_PABSWrm",
+                                             "MMX_PADDBirm",
+                                             "MMX_PADDDirm",
+                                             "MMX_PADDQirm",
+                                             "MMX_PADDWirm",
+                                             "MMX_PANDNirm",
+                                             "MMX_PANDirm",
+                                             "MMX_PORirm",
+                                             "MMX_PSIGNBrm",
+                                             "MMX_PSIGNDrm",
+                                             "MMX_PSIGNWrm",
+                                             "MMX_PSUBBirm",
+                                             "MMX_PSUBDirm",
+                                             "MMX_PSUBQirm",
+                                             "MMX_PSUBWirm",
+                                             "MMX_PXORirm")>;
 
 def SKXWriteResGroup78 : SchedWriteRes<[SKXPort23,SKXPort06]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup78], (instregex "ADC(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "ADCX(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "ADOX(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "BT(16|32|64)mi8")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "RORX(32|64)mi")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "SARX(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "SBB(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "SHLX(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup78], (instregex "SHRX(32|64)rm")>;
+def: InstRW<[SKXWriteResGroup78], (instregex "ADC(8|16|32|64)rm",
+                                             "ADCX(32|64)rm",
+                                             "ADOX(32|64)rm",
+                                             "BT(16|32|64)mi8",
+                                             "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rm",
+                                             "RORX(32|64)mi",
+                                             "SARX(32|64)rm",
+                                             "SBB(8|16|32|64)rm",
+                                             "SHLX(32|64)rm",
+                                             "SHRX(32|64)rm")>;
 
 def SKXWriteResGroup79 : SchedWriteRes<[SKXPort23,SKXPort15]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup79], (instregex "ANDN(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup79], (instregex "BLSI(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup79], (instregex "BLSMSK(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup79], (instregex "BLSR(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup79], (instregex "BZHI(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup79], (instregex "MOVBE(16|32|64)rm")>;
+def: InstRW<[SKXWriteResGroup79], (instregex "ANDN(32|64)rm",
+                                             "BLSI(32|64)rm",
+                                             "BLSMSK(32|64)rm",
+                                             "BLSR(32|64)rm",
+                                             "BZHI(32|64)rm",
+                                             "MOVBE(16|32|64)rm")>;
 
 def SKXWriteResGroup80 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup80], (instregex "VMOV(64to|QI2)PQIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup80], (instregex "VMOVDI2PDIZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup80], (instregex "VMOV(64to|QI2)PQIZrm(b?)(k?)(z?)",
+                                             "VMOVDI2PDIZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup81 : SchedWriteRes<[SKXPort23,SKXPort0156]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup81], (instregex "ADD(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "AND(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "CMP(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "CMP(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "CMP(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "OR(8|16|32|64)rm")>;
 def: InstRW<[SKXWriteResGroup81], (instrs POP16r, POP32r, POP64r)>;
-def: InstRW<[SKXWriteResGroup81], (instregex "POP(16|32|64)rmr")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "SUB(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "TEST(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "TEST(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup81], (instregex "XOR(8|16|32|64)rm")>;
+def: InstRW<[SKXWriteResGroup81], (instregex "ADD(8|16|32|64)rm",
+                                             "AND(8|16|32|64)rm",
+                                             "CMP(8|16|32|64)mi",
+                                             "CMP(8|16|32|64)mr",
+                                             "CMP(8|16|32|64)rm",
+                                             "OR(8|16|32|64)rm",
+                                             "POP(16|32|64)rmr",
+                                             "SUB(8|16|32|64)rm",
+                                             "TEST(8|16|32|64)mr",
+                                             "TEST(8|16|32|64)mi",
+                                             "XOR(8|16|32|64)rm")>;
 
 def SKXWriteResGroup82 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 6;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup82], (instregex "CVTSI642SSrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "HADDPDrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "HADDPSrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "HSUBPDrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "HSUBPSrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VCVTSI642SSrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VCVTSI642SSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VCVTUSI642SSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHADDPDYrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHADDPDrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHADDPSYrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHADDPSrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHSUBPDYrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHSUBPDrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHSUBPSYrr")>;
-def: InstRW<[SKXWriteResGroup82], (instregex "VHSUBPSrr")>;
+def: InstRW<[SKXWriteResGroup82], (instregex "CVTSI642SSrr",
+                                             "HADDPDrr",
+                                             "HADDPSrr",
+                                             "HSUBPDrr",
+                                             "HSUBPSrr",
+                                             "VCVTSI642SSrr",
+                                             "VCVTSI642SSZrr(b?)(k?)(z?)",
+                                             "VCVTUSI642SSZrr(b?)(k?)(z?)",
+                                             "VHADDPDYrr",
+                                             "VHADDPDrr",
+                                             "VHADDPSYrr",
+                                             "VHADDPSrr",
+                                             "VHSUBPDYrr",
+                                             "VHSUBPDrr",
+                                             "VHSUBPSYrr",
+                                             "VHSUBPSrr")>;
 
 def SKXWriteResGroup83 : SchedWriteRes<[SKXPort1,SKXPort06,SKXPort0156]> {
   let Latency = 6;
   let NumMicroOps = 4;
   let ResourceCycles = [1,2,1];
 }
-def: InstRW<[SKXWriteResGroup83], (instregex "SHLD(16|32|64)rrCL")>;
-def: InstRW<[SKXWriteResGroup83], (instregex "SHRD(16|32|64)rrCL")>;
+def: InstRW<[SKXWriteResGroup83], (instregex "SHLD(16|32|64)rrCL",
+                                             "SHRD(16|32|64)rrCL")>;
 
 def SKXWriteResGroup84 : SchedWriteRes<[SKXPort1,SKXPort6,SKXPort06,SKXPort0156]> {
   let Latency = 6;
@@ -3180,37 +3177,37 @@ def SKXWriteResGroup86 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06]
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,1,1];
 }
-def: InstRW<[SKXWriteResGroup86], (instregex "BTC(16|32|64)mi8")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "BTR(16|32|64)mi8")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "BTS(16|32|64)mi8")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "SAR(8|16|32|64)m1")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "SAR(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "SHL(8|16|32|64)m1")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "SHL(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "SHR(8|16|32|64)m1")>;
-def: InstRW<[SKXWriteResGroup86], (instregex "SHR(8|16|32|64)mi")>;
+def: InstRW<[SKXWriteResGroup86], (instregex "BTC(16|32|64)mi8",
+                                             "BTR(16|32|64)mi8",
+                                             "BTS(16|32|64)mi8",
+                                             "SAR(8|16|32|64)m1",
+                                             "SAR(8|16|32|64)mi",
+                                             "SHL(8|16|32|64)m1",
+                                             "SHL(8|16|32|64)mi",
+                                             "SHR(8|16|32|64)m1",
+                                             "SHR(8|16|32|64)mi")>;
 
 def SKXWriteResGroup87 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort0156]> {
   let Latency = 6;
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,1,1];
 }
-def: InstRW<[SKXWriteResGroup87], (instregex "ADD(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "ADD(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "AND(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "AND(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "DEC(8|16|32|64)m")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "INC(8|16|32|64)m")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "NEG(8|16|32|64)m")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "NOT(8|16|32|64)m")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "OR(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "OR(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "POP(16|32|64)rmm")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "PUSH(16|32|64)rmm")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "SUB(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "SUB(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "XOR(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup87], (instregex "XOR(8|16|32|64)mr")>;
+def: InstRW<[SKXWriteResGroup87], (instregex "ADD(8|16|32|64)mi",
+                                             "ADD(8|16|32|64)mr",
+                                             "AND(8|16|32|64)mi",
+                                             "AND(8|16|32|64)mr",
+                                             "DEC(8|16|32|64)m",
+                                             "INC(8|16|32|64)m",
+                                             "NEG(8|16|32|64)m",
+                                             "NOT(8|16|32|64)m",
+                                             "OR(8|16|32|64)mi",
+                                             "OR(8|16|32|64)mr",
+                                             "POP(16|32|64)rmm",
+                                             "PUSH(16|32|64)rmm",
+                                             "SUB(8|16|32|64)mi",
+                                             "SUB(8|16|32|64)mr",
+                                             "XOR(8|16|32|64)mi",
+                                             "XOR(8|16|32|64)mr")>;
 
 def SKXWriteResGroup88 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
   let Latency = 6;
@@ -3224,27 +3221,27 @@ def SKXWriteResGroup89 : SchedWriteRes<[SKXPort23]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup89], (instregex "LD_F32m")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "LD_F64m")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "LD_F80m")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VBROADCASTF128")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VBROADCASTI128")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VBROADCASTSDYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VBROADCASTSSYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VLDDQUYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVAPDYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVAPSYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVDDUPYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVDQAYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVDQUYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVNTDQAYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVNTDQAZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVSHDUPYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVSLDUPYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVUPDYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VMOVUPSYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VPBROADCASTDYrm")>;
-def: InstRW<[SKXWriteResGroup89], (instregex "VPBROADCASTQYrm")>;
+def: InstRW<[SKXWriteResGroup89], (instregex "LD_F32m",
+                                             "LD_F64m",
+                                             "LD_F80m",
+                                             "VBROADCASTF128",
+                                             "VBROADCASTI128",
+                                             "VBROADCASTSDYrm",
+                                             "VBROADCASTSSYrm",
+                                             "VLDDQUYrm",
+                                             "VMOVAPDYrm",
+                                             "VMOVAPSYrm",
+                                             "VMOVDDUPYrm",
+                                             "VMOVDQAYrm",
+                                             "VMOVDQUYrm",
+                                             "VMOVNTDQAYrm",
+                                             "VMOVNTDQAZrm(b?)(k?)(z?)",
+                                             "VMOVSHDUPYrm",
+                                             "VMOVSLDUPYrm",
+                                             "VMOVUPDYrm",
+                                             "VMOVUPSYrm",
+                                             "VPBROADCASTDYrm",
+                                             "VPBROADCASTQYrm")>;
 
 def SKXWriteResGroup90 : SchedWriteRes<[SKXPort0,SKXPort5]> {
   let Latency = 7;
@@ -3258,444 +3255,444 @@ def SKXWriteResGroup91 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup91], (instregex "COMISDrm")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "COMISSrm")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "UCOMISDrm")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "UCOMISSrm")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VCOMISDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VCOMISDrm")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VCOMISSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VCOMISSrm")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VUCOMISDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VUCOMISDrm")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VUCOMISSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup91], (instregex "VUCOMISSrm")>;
+def: InstRW<[SKXWriteResGroup91], (instregex "COMISDrm",
+                                             "COMISSrm",
+                                             "UCOMISDrm",
+                                             "UCOMISSrm",
+                                             "VCOMISDZrm(b?)(k?)(z?)",
+                                             "VCOMISDrm",
+                                             "VCOMISSZrm(b?)(k?)(z?)",
+                                             "VCOMISSrm",
+                                             "VUCOMISDZrm(b?)(k?)(z?)",
+                                             "VUCOMISDrm",
+                                             "VUCOMISSZrm(b?)(k?)(z?)",
+                                             "VUCOMISSrm")>;
 
 def SKXWriteResGroup92 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 7;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup92], (instregex "INSERTPSrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PACKSSDWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PACKSSWBrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PACKUSDWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PACKUSWBrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PALIGNRrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PBLENDWrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PSHUFBrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PSHUFDmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PSHUFHWmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PSHUFLWmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKHBWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKHDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKHQDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKHWDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKLBWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKLDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKLQDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "PUNPCKLWDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "SHUFPDrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "SHUFPSrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "UNPCKHPDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "UNPCKHPSrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "UNPCKLPDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "UNPCKLPSrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VINSERTPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VINSERTPSrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VMOVSDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VMOVSSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKSSDWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKSSDWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKSSWBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKSSWBrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKUSDWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKUSDWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKUSWBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPACKUSWBrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPALIGNRZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPALIGNRrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPBLENDWrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPBROADCASTBZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPBROADCASTBrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPBROADCASTWZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPBROADCASTWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPDZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPDmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPSZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPSmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPERMILPSrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFBrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFDZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFDmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFHWZ128mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFHWmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFLWZ128mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSHUFLWmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSLLDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPSRLDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHBWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHBWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHQDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHQDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHWDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKHWDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLBWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLBWrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLQDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLQDQrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLWDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VPUNPCKLWDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VSHUFPDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VSHUFPDrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VSHUFPSZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VSHUFPSrmi")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKHPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKHPDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKHPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKHPSrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKLPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKLPDrm")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKLPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup92], (instregex "VUNPCKLPSrm")>;
+def: InstRW<[SKXWriteResGroup92], (instregex "INSERTPSrm",
+                                             "PACKSSDWrm",
+                                             "PACKSSWBrm",
+                                             "PACKUSDWrm",
+                                             "PACKUSWBrm",
+                                             "PALIGNRrmi",
+                                             "PBLENDWrmi",
+                                             "PSHUFBrm",
+                                             "PSHUFDmi",
+                                             "PSHUFHWmi",
+                                             "PSHUFLWmi",
+                                             "PUNPCKHBWrm",
+                                             "PUNPCKHDQrm",
+                                             "PUNPCKHQDQrm",
+                                             "PUNPCKHWDrm",
+                                             "PUNPCKLBWrm",
+                                             "PUNPCKLDQrm",
+                                             "PUNPCKLQDQrm",
+                                             "PUNPCKLWDrm",
+                                             "SHUFPDrmi",
+                                             "SHUFPSrmi",
+                                             "UNPCKHPDrm",
+                                             "UNPCKHPSrm",
+                                             "UNPCKLPDrm",
+                                             "UNPCKLPSrm",
+                                             "VINSERTPSZrm(b?)(k?)(z?)",
+                                             "VINSERTPSrm",
+                                             "VMOVSDZrm(b?)(k?)(z?)",
+                                             "VMOVSSZrm(b?)(k?)(z?)",
+                                             "VPACKSSDWZ128rm(b?)(k?)(z?)",
+                                             "VPACKSSDWrm",
+                                             "VPACKSSWBZ128rm(b?)(k?)(z?)",
+                                             "VPACKSSWBrm",
+                                             "VPACKUSDWZ128rm(b?)(k?)(z?)",
+                                             "VPACKUSDWrm",
+                                             "VPACKUSWBZ128rm(b?)(k?)(z?)",
+                                             "VPACKUSWBrm",
+                                             "VPALIGNRZ128rmi(b?)(k?)(z?)",
+                                             "VPALIGNRrmi",
+                                             "VPBLENDWrmi",
+                                             "VPBROADCASTBZ128m(b?)(k?)(z?)",
+                                             "VPBROADCASTBrm",
+                                             "VPBROADCASTWZ128m(b?)(k?)(z?)",
+                                             "VPBROADCASTWrm",
+                                             "VPERMILPDZ128m(b?)i(k?)(z?)",
+                                             "VPERMILPDZ128rm(b?)(k?)(z?)",
+                                             "VPERMILPDmi",
+                                             "VPERMILPDrm",
+                                             "VPERMILPSZ128m(b?)i(k?)(z?)",
+                                             "VPERMILPSZ128rm(b?)(k?)(z?)",
+                                             "VPERMILPSmi",
+                                             "VPERMILPSrm",
+                                             "VPSHUFBZ128rm(b?)(k?)(z?)",
+                                             "VPSHUFBrm",
+                                             "VPSHUFDZ128m(b?)i(k?)(z?)",
+                                             "VPSHUFDmi",
+                                             "VPSHUFHWZ128mi(b?)(k?)(z?)",
+                                             "VPSHUFHWmi",
+                                             "VPSHUFLWZ128mi(b?)(k?)(z?)",
+                                             "VPSHUFLWmi",
+                                             "VPSLLDQZ128rm(b?)(k?)(z?)",
+                                             "VPSRLDQZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKHBWZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKHBWrm",
+                                             "VPUNPCKHDQZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKHDQrm",
+                                             "VPUNPCKHQDQZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKHQDQrm",
+                                             "VPUNPCKHWDZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKHWDrm",
+                                             "VPUNPCKLBWZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKLBWrm",
+                                             "VPUNPCKLDQZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKLDQrm",
+                                             "VPUNPCKLQDQZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKLQDQrm",
+                                             "VPUNPCKLWDZ128rm(b?)(k?)(z?)",
+                                             "VPUNPCKLWDrm",
+                                             "VSHUFPDZ128rm(b?)i(k?)(z?)",
+                                             "VSHUFPDrmi",
+                                             "VSHUFPSZ128rm(b?)i(k?)(z?)",
+                                             "VSHUFPSrmi",
+                                             "VUNPCKHPDZ128rm(b?)(k?)(z?)",
+                                             "VUNPCKHPDrm",
+                                             "VUNPCKHPSZ128rm(b?)(k?)(z?)",
+                                             "VUNPCKHPSrm",
+                                             "VUNPCKLPDZ128rm(b?)(k?)(z?)",
+                                             "VUNPCKLPDrm",
+                                             "VUNPCKLPSZ128rm(b?)(k?)(z?)",
+                                             "VUNPCKLPSrm")>;
 
 def SKXWriteResGroup93 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 7;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTDQ2PDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTDQ2PDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2DQYrr")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2DQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2DQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2PSYrr")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2PSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2UDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPD2UDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPH2PSYrr")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPH2PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPH2PSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2PDYrr")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2PDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2PDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2PHYrr")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2PHZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2PHZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2QQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2QQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2UQQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTPS2UQQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTQQ2PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTQQ2PSZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPD2DQYrr")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPD2DQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPD2DQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPD2UDQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPD2UDQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPS2QQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPS2QQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPS2UQQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTTPS2UQQZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTUDQ2PDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTUDQ2PDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTUQQ2PSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTUQQ2PSZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup93], (instregex "VCVTDQ2PDZ256rr(b?)(k?)(z?)",
+                                             "VCVTDQ2PDZrr(b?)(k?)(z?)",
+                                             "VCVTPD2DQYrr",
+                                             "VCVTPD2DQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPD2DQZrr(b?)(k?)(z?)",
+                                             "VCVTPD2PSYrr",
+                                             "VCVTPD2PSZ256rr(b?)(k?)(z?)",
+                                             "VCVTPD2PSZrr(b?)(k?)(z?)",
+                                             "VCVTPD2UDQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPD2UDQZrr(b?)(k?)(z?)",
+                                             "VCVTPH2PSYrr",
+                                             "VCVTPH2PSZ256rr(b?)(k?)(z?)",
+                                             "VCVTPH2PSZrr(b?)(k?)(z?)",
+                                             "VCVTPS2PDYrr",
+                                             "VCVTPS2PDZ256rr(b?)(k?)(z?)",
+                                             "VCVTPS2PDZrr(b?)(k?)(z?)",
+                                             "VCVTPS2PHYrr",
+                                             "VCVTPS2PHZ256rr(b?)(k?)(z?)",
+                                             "VCVTPS2PHZrr(b?)(k?)(z?)",
+                                             "VCVTPS2QQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPS2QQZrr(b?)(k?)(z?)",
+                                             "VCVTPS2UQQZ256rr(b?)(k?)(z?)",
+                                             "VCVTPS2UQQZrr(b?)(k?)(z?)",
+                                             "VCVTQQ2PSZ256rr(b?)(k?)(z?)",
+                                             "VCVTQQ2PSZrr(b?)(k?)(z?)",
+                                             "VCVTTPD2DQYrr",
+                                             "VCVTTPD2DQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPD2DQZrr(b?)(k?)(z?)",
+                                             "VCVTTPD2UDQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPD2UDQZrr(b?)(k?)(z?)",
+                                             "VCVTTPS2QQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPS2QQZrr(b?)(k?)(z?)",
+                                             "VCVTTPS2UQQZ256rr(b?)(k?)(z?)",
+                                             "VCVTTPS2UQQZrr(b?)(k?)(z?)",
+                                             "VCVTUDQ2PDZ256rr(b?)(k?)(z?)",
+                                             "VCVTUDQ2PDZrr(b?)(k?)(z?)",
+                                             "VCVTUQQ2PSZ256rr(b?)(k?)(z?)",
+                                             "VCVTUQQ2PSZrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup94 : SchedWriteRes<[SKXPort01,SKXPort23]> {
   let Latency = 7;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup94], (instregex "PABSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PABSDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PABSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PADDSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PADDSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PADDUSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PADDUSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PAVGBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PAVGWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PCMPEQBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PCMPEQDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PCMPEQQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PCMPEQWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PCMPGTBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PCMPGTDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PCMPGTWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMAXSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMAX(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMAXSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMAXUBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMAXUDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMAXUWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMINSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMIN(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMINSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMINUBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMINUDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PMINUWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSIGNBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSIGNDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSIGNWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSLLDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSLLQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSLLWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSRADrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSRAWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSRLDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSRLQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSRLWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSUBSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSUBSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSUBUSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "PSUBUSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPABSBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPABSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPABSDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPABSDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPABSQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPABSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPABSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDSBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDUSBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDUSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDUSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPADDUSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPAVGBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPAVGBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPAVGWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPAVGWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPCMPEQBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPCMPEQDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPCMPEQQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPCMPEQWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPCMPGTBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPCMPGTDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPCMPGTWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXSBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAX(C?)SDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAX(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXUBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXUBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXUDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXUDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXUWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMAXUWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINSBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMIN(C?)SDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMIN(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINUBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINUBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINUDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINUDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINUWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPMINUWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPROLDZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPROLQZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPROLVDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPROLVQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPRORDZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPRORQZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPRORVDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPRORVQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSIGNBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSIGNDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSIGNWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLDZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLQZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLVDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLVDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLVQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLVQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLVWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLWZ128mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSLLWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRADZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRADZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRADrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAQZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAVDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAVDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAVQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAVWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAWZ128mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRAWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLDZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLQZ128m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLVDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLVDrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLVQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLVQrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLVWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLWZ128mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSRLWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBSBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBSWrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBUSBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBUSBrm")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBUSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup94], (instregex "VPSUBUSWrm")>;
+def: InstRW<[SKXWriteResGroup94], (instregex "PABSBrm",
+                                             "PABSDrm",
+                                             "PABSWrm",
+                                             "PADDSBrm",
+                                             "PADDSWrm",
+                                             "PADDUSBrm",
+                                             "PADDUSWrm",
+                                             "PAVGBrm",
+                                             "PAVGWrm",
+                                             "PCMPEQBrm",
+                                             "PCMPEQDrm",
+                                             "PCMPEQQrm",
+                                             "PCMPEQWrm",
+                                             "PCMPGTBrm",
+                                             "PCMPGTDrm",
+                                             "PCMPGTWrm",
+                                             "PMAXSBrm",
+                                             "PMAX(C?)SDrm",
+                                             "PMAXSWrm",
+                                             "PMAXUBrm",
+                                             "PMAXUDrm",
+                                             "PMAXUWrm",
+                                             "PMINSBrm",
+                                             "PMIN(C?)SDrm",
+                                             "PMINSWrm",
+                                             "PMINUBrm",
+                                             "PMINUDrm",
+                                             "PMINUWrm",
+                                             "PSIGNBrm",
+                                             "PSIGNDrm",
+                                             "PSIGNWrm",
+                                             "PSLLDrm",
+                                             "PSLLQrm",
+                                             "PSLLWrm",
+                                             "PSRADrm",
+                                             "PSRAWrm",
+                                             "PSRLDrm",
+                                             "PSRLQrm",
+                                             "PSRLWrm",
+                                             "PSUBSBrm",
+                                             "PSUBSWrm",
+                                             "PSUBUSBrm",
+                                             "PSUBUSWrm",
+                                             "VPABSBZ128rm(b?)(k?)(z?)",
+                                             "VPABSBrm",
+                                             "VPABSDZ128rm(b?)(k?)(z?)",
+                                             "VPABSDrm",
+                                             "VPABSQZ128rm(b?)(k?)(z?)",
+                                             "VPABSWZ128rm(b?)(k?)(z?)",
+                                             "VPABSWrm",
+                                             "VPADDSBZ128rm(b?)(k?)(z?)",
+                                             "VPADDSBrm",
+                                             "VPADDSWZ128rm(b?)(k?)(z?)",
+                                             "VPADDSWrm",
+                                             "VPADDUSBZ128rm(b?)(k?)(z?)",
+                                             "VPADDUSBrm",
+                                             "VPADDUSWZ128rm(b?)(k?)(z?)",
+                                             "VPADDUSWrm",
+                                             "VPAVGBZ128rm(b?)(k?)(z?)",
+                                             "VPAVGBrm",
+                                             "VPAVGWZ128rm(b?)(k?)(z?)",
+                                             "VPAVGWrm",
+                                             "VPCMPEQBrm",
+                                             "VPCMPEQDrm",
+                                             "VPCMPEQQrm",
+                                             "VPCMPEQWrm",
+                                             "VPCMPGTBrm",
+                                             "VPCMPGTDrm",
+                                             "VPCMPGTWrm",
+                                             "VPMAXSBZ128rm(b?)(k?)(z?)",
+                                             "VPMAXSBrm",
+                                             "VPMAX(C?)SDZ128rm(b?)(k?)(z?)",
+                                             "VPMAX(C?)SDrm",
+                                             "VPMAXSWZ128rm(b?)(k?)(z?)",
+                                             "VPMAXSWrm",
+                                             "VPMAXUBZ128rm(b?)(k?)(z?)",
+                                             "VPMAXUBrm",
+                                             "VPMAXUDZ128rm(b?)(k?)(z?)",
+                                             "VPMAXUDrm",
+                                             "VPMAXUWZ128rm(b?)(k?)(z?)",
+                                             "VPMAXUWrm",
+                                             "VPMINSBZ128rm(b?)(k?)(z?)",
+                                             "VPMINSBrm",
+                                             "VPMIN(C?)SDZ128rm(b?)(k?)(z?)",
+                                             "VPMIN(C?)SDrm",
+                                             "VPMINSWZ128rm(b?)(k?)(z?)",
+                                             "VPMINSWrm",
+                                             "VPMINUBZ128rm(b?)(k?)(z?)",
+                                             "VPMINUBrm",
+                                             "VPMINUDZ128rm(b?)(k?)(z?)",
+                                             "VPMINUDrm",
+                                             "VPMINUWZ128rm(b?)(k?)(z?)",
+                                             "VPMINUWrm",
+                                             "VPROLDZ128m(b?)i(k?)(z?)",
+                                             "VPROLQZ128m(b?)i(k?)(z?)",
+                                             "VPROLVDZ128rm(b?)(k?)(z?)",
+                                             "VPROLVQZ128rm(b?)(k?)(z?)",
+                                             "VPRORDZ128m(b?)i(k?)(z?)",
+                                             "VPRORQZ128m(b?)i(k?)(z?)",
+                                             "VPRORVDZ128rm(b?)(k?)(z?)",
+                                             "VPRORVQZ128rm(b?)(k?)(z?)",
+                                             "VPSIGNBrm",
+                                             "VPSIGNDrm",
+                                             "VPSIGNWrm",
+                                             "VPSLLDZ128m(b?)i(k?)(z?)",
+                                             "VPSLLDZ128rm(b?)(k?)(z?)",
+                                             "VPSLLDrm",
+                                             "VPSLLQZ128m(b?)i(k?)(z?)",
+                                             "VPSLLQZ128rm(b?)(k?)(z?)",
+                                             "VPSLLQrm",
+                                             "VPSLLVDZ128rm(b?)(k?)(z?)",
+                                             "VPSLLVDrm",
+                                             "VPSLLVQZ128rm(b?)(k?)(z?)",
+                                             "VPSLLVQrm",
+                                             "VPSLLVWZ128rm(b?)(k?)(z?)",
+                                             "VPSLLWZ128mi(b?)(k?)(z?)",
+                                             "VPSLLWZ128rm(b?)(k?)(z?)",
+                                             "VPSLLWrm",
+                                             "VPSRADZ128m(b?)i(k?)(z?)",
+                                             "VPSRADZ128rm(b?)(k?)(z?)",
+                                             "VPSRADrm",
+                                             "VPSRAQZ128m(b?)i(k?)(z?)",
+                                             "VPSRAQZ128rm(b?)(k?)(z?)",
+                                             "VPSRAVDZ128rm(b?)(k?)(z?)",
+                                             "VPSRAVDrm",
+                                             "VPSRAVQZ128rm(b?)(k?)(z?)",
+                                             "VPSRAVWZ128rm(b?)(k?)(z?)",
+                                             "VPSRAWZ128mi(b?)(k?)(z?)",
+                                             "VPSRAWZ128rm(b?)(k?)(z?)",
+                                             "VPSRAWrm",
+                                             "VPSRLDZ128m(b?)i(k?)(z?)",
+                                             "VPSRLDZ128rm(b?)(k?)(z?)",
+                                             "VPSRLDrm",
+                                             "VPSRLQZ128m(b?)i(k?)(z?)",
+                                             "VPSRLQZ128rm(b?)(k?)(z?)",
+                                             "VPSRLQrm",
+                                             "VPSRLVDZ128rm(b?)(k?)(z?)",
+                                             "VPSRLVDrm",
+                                             "VPSRLVQZ128rm(b?)(k?)(z?)",
+                                             "VPSRLVQrm",
+                                             "VPSRLVWZ128rm(b?)(k?)(z?)",
+                                             "VPSRLWZ128mi(b?)(k?)(z?)",
+                                             "VPSRLWZ128rm(b?)(k?)(z?)",
+                                             "VPSRLWrm",
+                                             "VPSUBSBZ128rm(b?)(k?)(z?)",
+                                             "VPSUBSBrm",
+                                             "VPSUBSWZ128rm(b?)(k?)(z?)",
+                                             "VPSUBSWrm",
+                                             "VPSUBUSBZ128rm(b?)(k?)(z?)",
+                                             "VPSUBUSBrm",
+                                             "VPSUBUSWZ128rm(b?)(k?)(z?)",
+                                             "VPSUBUSWrm")>;
 
 def SKXWriteResGroup95 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 7;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup95], (instregex "ANDNPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "ANDNPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "ANDPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "ANDPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "BLENDPDrmi")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "BLENDPSrmi")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "ORPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "ORPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PADDBrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PADDDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PADDQrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PADDWrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PANDNrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PANDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PORrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PSUBBrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PSUBDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PSUBQrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PSUBWrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "PXORrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDNPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDNPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDNPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDNPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VANDPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VBLENDMPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VBLENDMPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VBLENDPDrmi")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VBLENDPSrmi")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VBROADCASTI32X2Z128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VBROADCASTSSZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VINSERTF128rm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VINSERTI128rm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMASKMOVPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMASKMOVPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVAPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVAPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVDDUPZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVDQA32Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVDQA64Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVDQU16Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVDQU32Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVDQU64Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVDQU8Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVNTDQAZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVSHDUPZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVSLDUPZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVUPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VMOVUPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VORPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VORPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VORPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VORPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDBrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDQrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPADDWrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPANDDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPANDNDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPANDNQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPANDNrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPANDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPANDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPBLENDDrmi")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPBLENDMBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPBLENDMDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPBLENDMQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPBLENDMWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPBROADCASTDZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPBROADCASTQZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPMASKMOVDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPMASKMOVQrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPORDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPORQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPORrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBBrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBQrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPSUBWrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPTERNLOGDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPTERNLOGQZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPXORDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPXORQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VPXORrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VXORPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VXORPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VXORPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "VXORPSrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "XORPDrm")>;
-def: InstRW<[SKXWriteResGroup95], (instregex "XORPSrm")>;
+def: InstRW<[SKXWriteResGroup95], (instregex "ANDNPDrm",
+                                             "ANDNPSrm",
+                                             "ANDPDrm",
+                                             "ANDPSrm",
+                                             "BLENDPDrmi",
+                                             "BLENDPSrmi",
+                                             "ORPDrm",
+                                             "ORPSrm",
+                                             "PADDBrm",
+                                             "PADDDrm",
+                                             "PADDQrm",
+                                             "PADDWrm",
+                                             "PANDNrm",
+                                             "PANDrm",
+                                             "PORrm",
+                                             "PSUBBrm",
+                                             "PSUBDrm",
+                                             "PSUBQrm",
+                                             "PSUBWrm",
+                                             "PXORrm",
+                                             "VANDNPDZ128rm(b?)(k?)(z?)",
+                                             "VANDNPDrm",
+                                             "VANDNPSZ128rm(b?)(k?)(z?)",
+                                             "VANDNPSrm",
+                                             "VANDPDZ128rm(b?)(k?)(z?)",
+                                             "VANDPDrm",
+                                             "VANDPSZ128rm(b?)(k?)(z?)",
+                                             "VANDPSrm",
+                                             "VBLENDMPDZ128rm(b?)(k?)(z?)",
+                                             "VBLENDMPSZ128rm(b?)(k?)(z?)",
+                                             "VBLENDPDrmi",
+                                             "VBLENDPSrmi",
+                                             "VBROADCASTI32X2Z128m(b?)(k?)(z?)",
+                                             "VBROADCASTSSZ128m(b?)(k?)(z?)",
+                                             "VINSERTF128rm",
+                                             "VINSERTI128rm",
+                                             "VMASKMOVPDrm",
+                                             "VMASKMOVPSrm",
+                                             "VMOVAPDZ128rm(b?)(k?)(z?)",
+                                             "VMOVAPSZ128rm(b?)(k?)(z?)",
+                                             "VMOVDDUPZ128rm(b?)(k?)(z?)",
+                                             "VMOVDQA32Z128rm(b?)(k?)(z?)",
+                                             "VMOVDQA64Z128rm(b?)(k?)(z?)",
+                                             "VMOVDQU16Z128rm(b?)(k?)(z?)",
+                                             "VMOVDQU32Z128rm(b?)(k?)(z?)",
+                                             "VMOVDQU64Z128rm(b?)(k?)(z?)",
+                                             "VMOVDQU8Z128rm(b?)(k?)(z?)",
+                                             "VMOVNTDQAZ128rm(b?)(k?)(z?)",
+                                             "VMOVSHDUPZ128rm(b?)(k?)(z?)",
+                                             "VMOVSLDUPZ128rm(b?)(k?)(z?)",
+                                             "VMOVUPDZ128rm(b?)(k?)(z?)",
+                                             "VMOVUPSZ128rm(b?)(k?)(z?)",
+                                             "VORPDZ128rm(b?)(k?)(z?)",
+                                             "VORPDrm",
+                                             "VORPSZ128rm(b?)(k?)(z?)",
+                                             "VORPSrm",
+                                             "VPADDBZ128rm(b?)(k?)(z?)",
+                                             "VPADDBrm",
+                                             "VPADDDZ128rm(b?)(k?)(z?)",
+                                             "VPADDDrm",
+                                             "VPADDQZ128rm(b?)(k?)(z?)",
+                                             "VPADDQrm",
+                                             "VPADDWZ128rm(b?)(k?)(z?)",
+                                             "VPADDWrm",
+                                             "VPANDDZ128rm(b?)(k?)(z?)",
+                                             "VPANDNDZ128rm(b?)(k?)(z?)",
+                                             "VPANDNQZ128rm(b?)(k?)(z?)",
+                                             "VPANDNrm",
+                                             "VPANDQZ128rm(b?)(k?)(z?)",
+                                             "VPANDrm",
+                                             "VPBLENDDrmi",
+                                             "VPBLENDMBZ128rm(b?)(k?)(z?)",
+                                             "VPBLENDMDZ128rm(b?)(k?)(z?)",
+                                             "VPBLENDMQZ128rm(b?)(k?)(z?)",
+                                             "VPBLENDMWZ128rm(b?)(k?)(z?)",
+                                             "VPBROADCASTDZ128m(b?)(k?)(z?)",
+                                             "VPBROADCASTQZ128m(b?)(k?)(z?)",
+                                             "VPMASKMOVDrm",
+                                             "VPMASKMOVQrm",
+                                             "VPORDZ128rm(b?)(k?)(z?)",
+                                             "VPORQZ128rm(b?)(k?)(z?)",
+                                             "VPORrm",
+                                             "VPSUBBZ128rm(b?)(k?)(z?)",
+                                             "VPSUBBrm",
+                                             "VPSUBDZ128rm(b?)(k?)(z?)",
+                                             "VPSUBDrm",
+                                             "VPSUBQZ128rm(b?)(k?)(z?)",
+                                             "VPSUBQrm",
+                                             "VPSUBWZ128rm(b?)(k?)(z?)",
+                                             "VPSUBWrm",
+                                             "VPTERNLOGDZ128rm(b?)i(k?)(z?)",
+                                             "VPTERNLOGQZ128rm(b?)i(k?)(z?)",
+                                             "VPXORDZ128rm(b?)(k?)(z?)",
+                                             "VPXORQZ128rm(b?)(k?)(z?)",
+                                             "VPXORrm",
+                                             "VXORPDZ128rm(b?)(k?)(z?)",
+                                             "VXORPDrm",
+                                             "VXORPSZ128rm(b?)(k?)(z?)",
+                                             "VXORPSrm",
+                                             "XORPDrm",
+                                             "XORPSrm")>;
 
 def SKXWriteResGroup96 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 7;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup96], (instregex "MMX_PACKSSDWirm")>;
-def: InstRW<[SKXWriteResGroup96], (instregex "MMX_PACKSSWBirm")>;
-def: InstRW<[SKXWriteResGroup96], (instregex "MMX_PACKUSWBirm")>;
+def: InstRW<[SKXWriteResGroup96], (instregex "MMX_PACKSSDWirm",
+                                             "MMX_PACKSSWBirm",
+                                             "MMX_PACKUSWBirm")>;
 
 def SKXWriteResGroup97 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 7;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup97], (instregex "VPERMI2W128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup97], (instregex "VPERMI2W256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup97], (instregex "VPERMI2Wrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup97], (instregex "VPERMT2W128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup97], (instregex "VPERMT2W256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup97], (instregex "VPERMT2Wrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup97], (instregex "VPERMI2W128rr(b?)(k?)(z?)",
+                                             "VPERMI2W256rr(b?)(k?)(z?)",
+                                             "VPERMI2Wrr(b?)(k?)(z?)",
+                                             "VPERMT2W128rr(b?)(k?)(z?)",
+                                             "VPERMT2W256rr(b?)(k?)(z?)",
+                                             "VPERMT2Wrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup98 : SchedWriteRes<[SKXPort23,SKXPort06]> {
   let Latency = 7;
@@ -3709,25 +3706,25 @@ def SKXWriteResGroup99 : SchedWriteRes<[SKXPort23,SKXPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup99], (instregex "LEAVE64")>;
-def: InstRW<[SKXWriteResGroup99], (instregex "SCASB")>;
-def: InstRW<[SKXWriteResGroup99], (instregex "SCASL")>;
-def: InstRW<[SKXWriteResGroup99], (instregex "SCASQ")>;
-def: InstRW<[SKXWriteResGroup99], (instregex "SCASW")>;
+def: InstRW<[SKXWriteResGroup99], (instregex "LEAVE64",
+                                             "SCASB",
+                                             "SCASL",
+                                             "SCASQ",
+                                             "SCASW")>;
 
 def SKXWriteResGroup100 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort015]> {
   let Latency = 7;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup100], (instregex "CVTTSS2SI64rr")>;
-def: InstRW<[SKXWriteResGroup100], (instregex "CVTTSS2SIrr")>;
-def: InstRW<[SKXWriteResGroup100], (instregex "VCVTSS2USI64Zrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup100], (instregex "VCVTTSS2SI64Zrr(b?)")>;
-def: InstRW<[SKXWriteResGroup100], (instregex "VCVTTSS2SI64rr")>;
-def: InstRW<[SKXWriteResGroup100], (instregex "VCVTTSS2SIZrr(b?)")>;
-def: InstRW<[SKXWriteResGroup100], (instregex "VCVTTSS2SIrr")>;
-def: InstRW<[SKXWriteResGroup100], (instregex "VCVTTSS2USI64Zrr(b?)")>;
+def: InstRW<[SKXWriteResGroup100], (instregex "CVTTSS2SI64rr",
+                                              "CVTTSS2SIrr",
+                                              "VCVTSS2USI64Zrr(b?)(k?)(z?)",
+                                              "VCVTTSS2SI64Zrr(b?)",
+                                              "VCVTTSS2SI64rr",
+                                              "VCVTTSS2SIZrr(b?)",
+                                              "VCVTTSS2SIrr",
+                                              "VCVTTSS2USI64Zrr(b?)")>;
 
 def SKXWriteResGroup101 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort05]> {
   let Latency = 7;
@@ -3741,26 +3738,25 @@ def SKXWriteResGroup102 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup102], (instregex "LDMXCSR")>;
-def: InstRW<[SKXWriteResGroup102], (instregex "VLDMXCSR")>;
+def: InstRW<[SKXWriteResGroup102], (instregex "(V?)LDMXCSR")>;
 
 def SKXWriteResGroup103 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort0156]> {
   let Latency = 7;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup103], (instregex "KMOVBkm")>;
-def: InstRW<[SKXWriteResGroup103], (instregex "KMOVDkm")>;
-def: InstRW<[SKXWriteResGroup103], (instregex "KMOVQkm")>;
-def: InstRW<[SKXWriteResGroup103], (instregex "KMOVWkm")>;
+def: InstRW<[SKXWriteResGroup103], (instregex "KMOVBkm",
+                                              "KMOVDkm",
+                                              "KMOVQkm",
+                                              "KMOVWkm")>;
 
 def SKXWriteResGroup104 : SchedWriteRes<[SKXPort6,SKXPort23,SKXPort0156]> {
   let Latency = 7;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup104], (instregex "LRETQ")>;
-def: InstRW<[SKXWriteResGroup104], (instregex "RETQ")>;
+def: InstRW<[SKXWriteResGroup104], (instregex "LRETQ",
+                                              "RETQ")>;
 
 def SKXWriteResGroup105 : SchedWriteRes<[SKXPort23,SKXPort06,SKXPort15]> {
   let Latency = 7;
@@ -3774,28 +3770,28 @@ def SKXWriteResGroup106 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort237]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,2,1];
 }
-def: InstRW<[SKXWriteResGroup106], (instregex "VCOMPRESSPDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VCOMPRESSPDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VCOMPRESSPDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VCOMPRESSPSZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VCOMPRESSPSZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VCOMPRESSPSZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VPCOMPRESSDZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VPCOMPRESSDZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VPCOMPRESSDZmr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VPCOMPRESSQZ128mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VPCOMPRESSQZ256mr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup106], (instregex "VPCOMPRESSQZmr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup106], (instregex "VCOMPRESSPDZ128mr(b?)(k?)(z?)",
+                                              "VCOMPRESSPDZ256mr(b?)(k?)(z?)",
+                                              "VCOMPRESSPDZmr(b?)(k?)(z?)",
+                                              "VCOMPRESSPSZ128mr(b?)(k?)(z?)",
+                                              "VCOMPRESSPSZ256mr(b?)(k?)(z?)",
+                                              "VCOMPRESSPSZmr(b?)(k?)(z?)",
+                                              "VPCOMPRESSDZ128mr(b?)(k?)(z?)",
+                                              "VPCOMPRESSDZ256mr(b?)(k?)(z?)",
+                                              "VPCOMPRESSDZmr(b?)(k?)(z?)",
+                                              "VPCOMPRESSQZ128mr(b?)(k?)(z?)",
+                                              "VPCOMPRESSQZ256mr(b?)(k?)(z?)",
+                                              "VPCOMPRESSQZmr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup107 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06]> {
   let Latency = 7;
   let NumMicroOps = 5;
   let ResourceCycles = [1,1,1,2];
 }
-def: InstRW<[SKXWriteResGroup107], (instregex "ROL(8|16|32|64)m1")>;
-def: InstRW<[SKXWriteResGroup107], (instregex "ROL(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup107], (instregex "ROR(8|16|32|64)m1")>;
-def: InstRW<[SKXWriteResGroup107], (instregex "ROR(8|16|32|64)mi")>;
+def: InstRW<[SKXWriteResGroup107], (instregex "ROL(8|16|32|64)m1",
+                                              "ROL(8|16|32|64)mi",
+                                              "ROR(8|16|32|64)m1",
+                                              "ROR(8|16|32|64)mi")>;
 
 def SKXWriteResGroup108 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort0156]> {
   let Latency = 7;
@@ -3809,8 +3805,8 @@ def SKXWriteResGroup109 : SchedWriteRes<[SKXPort4,SKXPort6,SKXPort23,SKXPort237,
   let NumMicroOps = 5;
   let ResourceCycles = [1,1,1,1,1];
 }
-def: InstRW<[SKXWriteResGroup109], (instregex "CALL(16|32|64)m")>;
-def: InstRW<[SKXWriteResGroup109], (instregex "FARCALL64")>;
+def: InstRW<[SKXWriteResGroup109], (instregex "CALL(16|32|64)m",
+                                              "FARCALL64")>;
 
 def SKXWriteResGroup110 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort237,SKXPort0156]> {
   let Latency = 7;
@@ -3861,70 +3857,67 @@ def SKXWriteResGroup115 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup115], (instregex "AESIMCrr")>;
-def: InstRW<[SKXWriteResGroup115], (instregex "VAESIMCrr")>;
+def: InstRW<[SKXWriteResGroup115], (instregex "(V?)AESIMCrr")>;
 
 def SKXWriteResGroup116 : SchedWriteRes<[SKXPort015]> {
   let Latency = 8;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup116], (instregex "ROUNDPDr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "ROUNDPSr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "ROUNDSDr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "ROUNDSSr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALEPDZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALEPDZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALEPDZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALEPSZ128rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALEPSZ256rri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALEPSZrri(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALESDr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VRNDSCALESSr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VROUNDPDr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VROUNDPSr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VROUNDSDr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VROUNDSSr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VROUNDYPDr")>;
-def: InstRW<[SKXWriteResGroup116], (instregex "VROUNDYPSr")>;
+def: InstRW<[SKXWriteResGroup116], (instregex "ROUNDPDr",
+                                              "ROUNDPSr",
+                                              "ROUNDSDr",
+                                              "ROUNDSSr",
+                                              "VRNDSCALEPDZ128rri(b?)(k?)(z?)",
+                                              "VRNDSCALEPDZ256rri(b?)(k?)(z?)",
+                                              "VRNDSCALEPDZrri(b?)(k?)(z?)",
+                                              "VRNDSCALEPSZ128rri(b?)(k?)(z?)",
+                                              "VRNDSCALEPSZ256rri(b?)(k?)(z?)",
+                                              "VRNDSCALEPSZrri(b?)(k?)(z?)",
+                                              "VRNDSCALESDr(b?)(k?)(z?)",
+                                              "VRNDSCALESSr(b?)(k?)(z?)",
+                                              "VROUNDPDr",
+                                              "VROUNDPSr",
+                                              "VROUNDSDr",
+                                              "VROUNDSSr",
+                                              "VROUNDYPDr",
+                                              "VROUNDYPSr")>;
 
 def SKXWriteResGroup116_2 : SchedWriteRes<[SKXPort015]> {
   let Latency = 10;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup116_2], (instregex "PMULLDrr")>;
-def: InstRW<[SKXWriteResGroup116_2], (instregex "VPMULLDYrr")>;
-def: InstRW<[SKXWriteResGroup116_2], (instregex "VPMULLDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116_2], (instregex "VPMULLDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116_2], (instregex "VPMULLDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup116_2], (instregex "VPMULLDrr")>;
+def: InstRW<[SKXWriteResGroup116_2], (instregex "PMULLDrr",
+                                                "VPMULLDYrr",
+                                                "VPMULLDZ128rr(b?)(k?)(z?)",
+                                                "VPMULLDZ256rr(b?)(k?)(z?)",
+                                                "VPMULLDZrr(b?)(k?)(z?)",
+                                                "VPMULLDrr")>;
 
 def SKXWriteResGroup117 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 8;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup117], (instregex "VTESTPDrm")>;
-def: InstRW<[SKXWriteResGroup117], (instregex "VTESTPSrm")>;
+def: InstRW<[SKXWriteResGroup117], (instregex "VTESTPDrm",
+                                              "VTESTPSrm")>;
 
 def SKXWriteResGroup118 : SchedWriteRes<[SKXPort1,SKXPort23]> {
   let Latency = 8;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup118], (instregex "BSF(16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup118], (instregex "BSR(16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup118], (instrs IMUL64m)>;
+def: InstRW<[SKXWriteResGroup118], (instrs IMUL64m, MUL64m)>;
 def: InstRW<[SKXWriteResGroup118], (instrs IMUL32rm, IMUL32rmi, IMUL32rmi8, IMUL64rm, IMUL64rmi32, IMUL64rmi8)>;
-def: InstRW<[SKXWriteResGroup118], (instrs IMUL8m)>;
-def: InstRW<[SKXWriteResGroup118], (instregex "LZCNT(16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup118], (instrs MUL64m)>;
-def: InstRW<[SKXWriteResGroup118], (instrs MUL8m)>;
-def: InstRW<[SKXWriteResGroup118], (instregex "PDEP(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup118], (instregex "PEXT(32|64)rm")>;
-def: InstRW<[SKXWriteResGroup118], (instregex "POPCNT(16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup118], (instregex "TZCNT(16|32|64)rm")>;
+def: InstRW<[SKXWriteResGroup118], (instrs IMUL8m, MUL8m)>;
+def: InstRW<[SKXWriteResGroup118], (instregex "BSF(16|32|64)rm",
+                                              "BSR(16|32|64)rm",
+                                              "LZCNT(16|32|64)rm",
+                                              "PDEP(32|64)rm",
+                                              "PEXT(32|64)rm",
+                                              "POPCNT(16|32|64)rm",
+                                              "TZCNT(16|32|64)rm")>;
 
 def SKXWriteResGroup118_16_1 : SchedWriteRes<[SKXPort1, SKXPort0156, SKXPort23]> {
   let Latency = 8;
@@ -3937,489 +3930,487 @@ def SKXWriteResGroup118_16_2 : SchedWriteRes<[SKXPort1, SKXPort0156, SKXPort23]>
   let Latency = 8;
   let NumMicroOps = 5;
 }
-def: InstRW<[SKXWriteResGroup118_16_2], (instrs IMUL16m)>;
-def: InstRW<[SKXWriteResGroup118_16_2], (instrs MUL16m)>;
+def: InstRW<[SKXWriteResGroup118_16_2], (instrs IMUL16m, MUL16m)>;
 
 def SKXWriteResGroup118_32 : SchedWriteRes<[SKXPort1, SKXPort0156, SKXPort23]> {
   let Latency = 8;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup118_32], (instrs IMUL32m)>;
-def: InstRW<[SKXWriteResGroup118_32], (instrs MUL32m)>;
+def: InstRW<[SKXWriteResGroup118_32], (instrs IMUL32m, MUL32m)>;
 
 def SKXWriteResGroup119 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 8;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup119], (instregex "FCOM32m")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "FCOM64m")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "FCOMP32m")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "FCOMP64m")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "MMX_PSADBWirm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VFPCLASSSDrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKSSDWYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKSSDWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKSSDWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKSSWBYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKSSWBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKSSWBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKUSDWYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKUSDWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKUSDWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKUSWBYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKUSWBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPACKUSWBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPALIGNRYrmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPALIGNRZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPALIGNRZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPBLENDWYrmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPBROADCASTBYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPBROADCASTBZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPBROADCASTBZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPBROADCASTWYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPBROADCASTWZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPBROADCASTWZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPDYmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPDYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPDZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPDZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPSYmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPSYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPSZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPSZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPERMILPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPMOVSXBDYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPMOVSXBQYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPMOVSXWQYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFBYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFDYmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFDZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFDZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFHWYmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFHWZ256mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFHWZmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFLWYmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFLWZ256mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSHUFLWZmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSLLDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSLLDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSRLDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPSRLDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHBWYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHBWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHBWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHDQYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHQDQYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHQDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHQDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHWDYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHWDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKHWDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLBWYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLBWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLBWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLDQYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLQDQYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLQDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLQDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLWDYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLWDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VPUNPCKLWDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VSHUFPDYrmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VSHUFPDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VSHUFPDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VSHUFPSYrmi")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VSHUFPSZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VSHUFPSZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKHPDYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKHPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKHPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKHPSYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKHPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKHPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKLPDYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKLPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKLPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKLPSYrm")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKLPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup119], (instregex "VUNPCKLPSZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup119], (instregex "FCOM32m",
+                                              "FCOM64m",
+                                              "FCOMP32m",
+                                              "FCOMP64m",
+                                              "MMX_PSADBWirm",
+                                              "VFPCLASSSDrm(b?)(k?)(z?)",
+                                              "VPACKSSDWYrm",
+                                              "VPACKSSDWZ256rm(b?)(k?)(z?)",
+                                              "VPACKSSDWZrm(b?)(k?)(z?)",
+                                              "VPACKSSWBYrm",
+                                              "VPACKSSWBZ256rm(b?)(k?)(z?)",
+                                              "VPACKSSWBZrm(b?)(k?)(z?)",
+                                              "VPACKUSDWYrm",
+                                              "VPACKUSDWZ256rm(b?)(k?)(z?)",
+                                              "VPACKUSDWZrm(b?)(k?)(z?)",
+                                              "VPACKUSWBYrm",
+                                              "VPACKUSWBZ256rm(b?)(k?)(z?)",
+                                              "VPACKUSWBZrm(b?)(k?)(z?)",
+                                              "VPALIGNRYrmi",
+                                              "VPALIGNRZ256rmi(b?)(k?)(z?)",
+                                              "VPALIGNRZrmi(b?)(k?)(z?)",
+                                              "VPBLENDWYrmi",
+                                              "VPBROADCASTBYrm",
+                                              "VPBROADCASTBZ256m(b?)(k?)(z?)",
+                                              "VPBROADCASTBZm(b?)(k?)(z?)",
+                                              "VPBROADCASTWYrm",
+                                              "VPBROADCASTWZ256m(b?)(k?)(z?)",
+                                              "VPBROADCASTWZm(b?)(k?)(z?)",
+                                              "VPERMILPDYmi",
+                                              "VPERMILPDYrm",
+                                              "VPERMILPDZ256m(b?)i(k?)(z?)",
+                                              "VPERMILPDZ256rm(b?)(k?)(z?)",
+                                              "VPERMILPDZm(b?)i(k?)(z?)",
+                                              "VPERMILPDZrm(b?)(k?)(z?)",
+                                              "VPERMILPSYmi",
+                                              "VPERMILPSYrm",
+                                              "VPERMILPSZ256m(b?)i(k?)(z?)",
+                                              "VPERMILPSZ256rm(b?)(k?)(z?)",
+                                              "VPERMILPSZm(b?)i(k?)(z?)",
+                                              "VPERMILPSZrm(b?)(k?)(z?)",
+                                              "VPMOVSXBDYrm",
+                                              "VPMOVSXBQYrm",
+                                              "VPMOVSXWQYrm",
+                                              "VPSHUFBYrm",
+                                              "VPSHUFBZ256rm(b?)(k?)(z?)",
+                                              "VPSHUFBZrm(b?)(k?)(z?)",
+                                              "VPSHUFDYmi",
+                                              "VPSHUFDZ256m(b?)i(k?)(z?)",
+                                              "VPSHUFDZm(b?)i(k?)(z?)",
+                                              "VPSHUFHWYmi",
+                                              "VPSHUFHWZ256mi(b?)(k?)(z?)",
+                                              "VPSHUFHWZmi(b?)(k?)(z?)",
+                                              "VPSHUFLWYmi",
+                                              "VPSHUFLWZ256mi(b?)(k?)(z?)",
+                                              "VPSHUFLWZmi(b?)(k?)(z?)",
+                                              "VPSLLDQZ256rm(b?)(k?)(z?)",
+                                              "VPSLLDQZrm(b?)(k?)(z?)",
+                                              "VPSRLDQZ256rm(b?)(k?)(z?)",
+                                              "VPSRLDQZrm(b?)(k?)(z?)",
+                                              "VPUNPCKHBWYrm",
+                                              "VPUNPCKHBWZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKHBWZrm(b?)(k?)(z?)",
+                                              "VPUNPCKHDQYrm",
+                                              "VPUNPCKHDQZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKHDQZrm(b?)(k?)(z?)",
+                                              "VPUNPCKHQDQYrm",
+                                              "VPUNPCKHQDQZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKHQDQZrm(b?)(k?)(z?)",
+                                              "VPUNPCKHWDYrm",
+                                              "VPUNPCKHWDZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKHWDZrm(b?)(k?)(z?)",
+                                              "VPUNPCKLBWYrm",
+                                              "VPUNPCKLBWZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKLBWZrm(b?)(k?)(z?)",
+                                              "VPUNPCKLDQYrm",
+                                              "VPUNPCKLDQZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKLDQZrm(b?)(k?)(z?)",
+                                              "VPUNPCKLQDQYrm",
+                                              "VPUNPCKLQDQZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKLQDQZrm(b?)(k?)(z?)",
+                                              "VPUNPCKLWDYrm",
+                                              "VPUNPCKLWDZ256rm(b?)(k?)(z?)",
+                                              "VPUNPCKLWDZrm(b?)(k?)(z?)",
+                                              "VSHUFPDYrmi",
+                                              "VSHUFPDZ256rm(b?)i(k?)(z?)",
+                                              "VSHUFPDZrm(b?)i(k?)(z?)",
+                                              "VSHUFPSYrmi",
+                                              "VSHUFPSZ256rm(b?)i(k?)(z?)",
+                                              "VSHUFPSZrm(b?)i(k?)(z?)",
+                                              "VUNPCKHPDYrm",
+                                              "VUNPCKHPDZ256rm(b?)(k?)(z?)",
+                                              "VUNPCKHPDZrm(b?)(k?)(z?)",
+                                              "VUNPCKHPSYrm",
+                                              "VUNPCKHPSZ256rm(b?)(k?)(z?)",
+                                              "VUNPCKHPSZrm(b?)(k?)(z?)",
+                                              "VUNPCKLPDYrm",
+                                              "VUNPCKLPDZ256rm(b?)(k?)(z?)",
+                                              "VUNPCKLPDZrm(b?)(k?)(z?)",
+                                              "VUNPCKLPSYrm",
+                                              "VUNPCKLPSZ256rm(b?)(k?)(z?)",
+                                              "VUNPCKLPSZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup120 : SchedWriteRes<[SKXPort01,SKXPort23]> {
   let Latency = 8;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPABSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDSBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDSBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDSBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDSWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDUSBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDUSBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDUSBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDUSWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDUSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPADDUSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPAVGBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPAVGBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPAVGBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPAVGWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPAVGWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPAVGWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPCMPEQBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPCMPEQDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPCMPEQQYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPCMPEQWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPCMPGTBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPCMPGTDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPCMPGTWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXSBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXSBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXSBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAX(C?)SDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAX(C?)SDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAX(C?)SDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXSWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMAXUWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINSBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINSBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINSBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMIN(C?)SDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMIN(C?)SDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMIN(C?)SDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINSWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPMINUWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLDZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLDZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLQZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLQZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLVDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLVDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLVQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPROLVQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORDZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORDZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORQZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORQZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORVDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORVDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORVQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPRORVQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSIGNBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSIGNDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSIGNWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLDZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLDZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLQYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLQZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLQZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVQYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLVWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLWZ256mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLWZmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSLLWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRADYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRADZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRADZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRADZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRADZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAQZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAQZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAVDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAVDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAVDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAVQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAVQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAVWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAVWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAWZ256mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAWZmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRAWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLDZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLDZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLQYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLQZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLQZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVDYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVQYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLVWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLWZ256mi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLWZmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSRLWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBSBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBSBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBSBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBSWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBUSBYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBUSBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBUSBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBUSWYrm")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBUSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup120], (instregex "VPSUBUSWZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup120], (instregex "VPABSBYrm",
+                                              "VPABSBZ256rm(b?)(k?)(z?)",
+                                              "VPABSBZrm(b?)(k?)(z?)",
+                                              "VPABSDYrm",
+                                              "VPABSDZ256rm(b?)(k?)(z?)",
+                                              "VPABSDZrm(b?)(k?)(z?)",
+                                              "VPABSQZ256rm(b?)(k?)(z?)",
+                                              "VPABSQZrm(b?)(k?)(z?)",
+                                              "VPABSWYrm",
+                                              "VPABSWZ256rm(b?)(k?)(z?)",
+                                              "VPABSWZrm(b?)(k?)(z?)",
+                                              "VPADDSBYrm",
+                                              "VPADDSBZ256rm(b?)(k?)(z?)",
+                                              "VPADDSBZrm(b?)(k?)(z?)",
+                                              "VPADDSWYrm",
+                                              "VPADDSWZ256rm(b?)(k?)(z?)",
+                                              "VPADDSWZrm(b?)(k?)(z?)",
+                                              "VPADDUSBYrm",
+                                              "VPADDUSBZ256rm(b?)(k?)(z?)",
+                                              "VPADDUSBZrm(b?)(k?)(z?)",
+                                              "VPADDUSWYrm",
+                                              "VPADDUSWZ256rm(b?)(k?)(z?)",
+                                              "VPADDUSWZrm(b?)(k?)(z?)",
+                                              "VPAVGBYrm",
+                                              "VPAVGBZ256rm(b?)(k?)(z?)",
+                                              "VPAVGBZrm(b?)(k?)(z?)",
+                                              "VPAVGWYrm",
+                                              "VPAVGWZ256rm(b?)(k?)(z?)",
+                                              "VPAVGWZrm(b?)(k?)(z?)",
+                                              "VPCMPEQBYrm",
+                                              "VPCMPEQDYrm",
+                                              "VPCMPEQQYrm",
+                                              "VPCMPEQWYrm",
+                                              "VPCMPGTBYrm",
+                                              "VPCMPGTDYrm",
+                                              "VPCMPGTWYrm",
+                                              "VPMAXSBYrm",
+                                              "VPMAXSBZ256rm(b?)(k?)(z?)",
+                                              "VPMAXSBZrm(b?)(k?)(z?)",
+                                              "VPMAX(C?)SDYrm",
+                                              "VPMAX(C?)SDZ256rm(b?)(k?)(z?)",
+                                              "VPMAX(C?)SDZrm(b?)(k?)(z?)",
+                                              "VPMAXSWYrm",
+                                              "VPMAXSWZ256rm(b?)(k?)(z?)",
+                                              "VPMAXSWZrm(b?)(k?)(z?)",
+                                              "VPMAXUBYrm",
+                                              "VPMAXUBZ256rm(b?)(k?)(z?)",
+                                              "VPMAXUBZrm(b?)(k?)(z?)",
+                                              "VPMAXUDYrm",
+                                              "VPMAXUDZ256rm(b?)(k?)(z?)",
+                                              "VPMAXUDZrm(b?)(k?)(z?)",
+                                              "VPMAXUWYrm",
+                                              "VPMAXUWZ256rm(b?)(k?)(z?)",
+                                              "VPMAXUWZrm(b?)(k?)(z?)",
+                                              "VPMINSBYrm",
+                                              "VPMINSBZ256rm(b?)(k?)(z?)",
+                                              "VPMINSBZrm(b?)(k?)(z?)",
+                                              "VPMIN(C?)SDYrm",
+                                              "VPMIN(C?)SDZ256rm(b?)(k?)(z?)",
+                                              "VPMIN(C?)SDZrm(b?)(k?)(z?)",
+                                              "VPMINSWYrm",
+                                              "VPMINSWZ256rm(b?)(k?)(z?)",
+                                              "VPMINSWZrm(b?)(k?)(z?)",
+                                              "VPMINUBYrm",
+                                              "VPMINUBZ256rm(b?)(k?)(z?)",
+                                              "VPMINUBZrm(b?)(k?)(z?)",
+                                              "VPMINUDYrm",
+                                              "VPMINUDZ256rm(b?)(k?)(z?)",
+                                              "VPMINUDZrm(b?)(k?)(z?)",
+                                              "VPMINUWYrm",
+                                              "VPMINUWZ256rm(b?)(k?)(z?)",
+                                              "VPMINUWZrm(b?)(k?)(z?)",
+                                              "VPROLDZ256m(b?)i(k?)(z?)",
+                                              "VPROLDZm(b?)i(k?)(z?)",
+                                              "VPROLQZ256m(b?)i(k?)(z?)",
+                                              "VPROLQZm(b?)i(k?)(z?)",
+                                              "VPROLVDZ256rm(b?)(k?)(z?)",
+                                              "VPROLVDZrm(b?)(k?)(z?)",
+                                              "VPROLVQZ256rm(b?)(k?)(z?)",
+                                              "VPROLVQZrm(b?)(k?)(z?)",
+                                              "VPRORDZ256m(b?)i(k?)(z?)",
+                                              "VPRORDZm(b?)i(k?)(z?)",
+                                              "VPRORQZ256m(b?)i(k?)(z?)",
+                                              "VPRORQZm(b?)i(k?)(z?)",
+                                              "VPRORVDZ256rm(b?)(k?)(z?)",
+                                              "VPRORVDZrm(b?)(k?)(z?)",
+                                              "VPRORVQZ256rm(b?)(k?)(z?)",
+                                              "VPRORVQZrm(b?)(k?)(z?)",
+                                              "VPSIGNBYrm",
+                                              "VPSIGNDYrm",
+                                              "VPSIGNWYrm",
+                                              "VPSLLDYrm",
+                                              "VPSLLDZ256m(b?)i(k?)(z?)",
+                                              "VPSLLDZ256rm(b?)(k?)(z?)",
+                                              "VPSLLDZm(b?)i(k?)(z?)",
+                                              "VPSLLDZrm(b?)(k?)(z?)",
+                                              "VPSLLQYrm",
+                                              "VPSLLQZ256m(b?)i(k?)(z?)",
+                                              "VPSLLQZ256rm(b?)(k?)(z?)",
+                                              "VPSLLQZm(b?)i(k?)(z?)",
+                                              "VPSLLQZrm(b?)(k?)(z?)",
+                                              "VPSLLVDYrm",
+                                              "VPSLLVDZ256rm(b?)(k?)(z?)",
+                                              "VPSLLVDZrm(b?)(k?)(z?)",
+                                              "VPSLLVQYrm",
+                                              "VPSLLVQZ256rm(b?)(k?)(z?)",
+                                              "VPSLLVQZrm(b?)(k?)(z?)",
+                                              "VPSLLVWZ256rm(b?)(k?)(z?)",
+                                              "VPSLLVWZrm(b?)(k?)(z?)",
+                                              "VPSLLWYrm",
+                                              "VPSLLWZ256mi(b?)(k?)(z?)",
+                                              "VPSLLWZ256rm(b?)(k?)(z?)",
+                                              "VPSLLWZmi(b?)(k?)(z?)",
+                                              "VPSLLWZrm(b?)(k?)(z?)",
+                                              "VPSRADYrm",
+                                              "VPSRADZ256m(b?)i(k?)(z?)",
+                                              "VPSRADZ256rm(b?)(k?)(z?)",
+                                              "VPSRADZm(b?)i(k?)(z?)",
+                                              "VPSRADZrm(b?)(k?)(z?)",
+                                              "VPSRAQZ256m(b?)i(k?)(z?)",
+                                              "VPSRAQZ256rm(b?)(k?)(z?)",
+                                              "VPSRAQZm(b?)i(k?)(z?)",
+                                              "VPSRAQZrm(b?)(k?)(z?)",
+                                              "VPSRAVDYrm",
+                                              "VPSRAVDZ256rm(b?)(k?)(z?)",
+                                              "VPSRAVDZrm(b?)(k?)(z?)",
+                                              "VPSRAVQZ256rm(b?)(k?)(z?)",
+                                              "VPSRAVQZrm(b?)(k?)(z?)",
+                                              "VPSRAVWZ256rm(b?)(k?)(z?)",
+                                              "VPSRAVWZrm(b?)(k?)(z?)",
+                                              "VPSRAWYrm",
+                                              "VPSRAWZ256mi(b?)(k?)(z?)",
+                                              "VPSRAWZ256rm(b?)(k?)(z?)",
+                                              "VPSRAWZmi(b?)(k?)(z?)",
+                                              "VPSRAWZrm(b?)(k?)(z?)",
+                                              "VPSRLDYrm",
+                                              "VPSRLDZ256m(b?)i(k?)(z?)",
+                                              "VPSRLDZ256rm(b?)(k?)(z?)",
+                                              "VPSRLDZm(b?)i(k?)(z?)",
+                                              "VPSRLDZrm(b?)(k?)(z?)",
+                                              "VPSRLQYrm",
+                                              "VPSRLQZ256m(b?)i(k?)(z?)",
+                                              "VPSRLQZ256rm(b?)(k?)(z?)",
+                                              "VPSRLQZm(b?)i(k?)(z?)",
+                                              "VPSRLQZrm(b?)(k?)(z?)",
+                                              "VPSRLVDYrm",
+                                              "VPSRLVDZ256rm(b?)(k?)(z?)",
+                                              "VPSRLVDZrm(b?)(k?)(z?)",
+                                              "VPSRLVQYrm",
+                                              "VPSRLVQZ256rm(b?)(k?)(z?)",
+                                              "VPSRLVQZrm(b?)(k?)(z?)",
+                                              "VPSRLVWZ256rm(b?)(k?)(z?)",
+                                              "VPSRLVWZrm(b?)(k?)(z?)",
+                                              "VPSRLWYrm",
+                                              "VPSRLWZ256mi(b?)(k?)(z?)",
+                                              "VPSRLWZ256rm(b?)(k?)(z?)",
+                                              "VPSRLWZmi(b?)(k?)(z?)",
+                                              "VPSRLWZrm(b?)(k?)(z?)",
+                                              "VPSUBSBYrm",
+                                              "VPSUBSBZ256rm(b?)(k?)(z?)",
+                                              "VPSUBSBZrm(b?)(k?)(z?)",
+                                              "VPSUBSWYrm",
+                                              "VPSUBSWZ256rm(b?)(k?)(z?)",
+                                              "VPSUBSWZrm(b?)(k?)(z?)",
+                                              "VPSUBUSBYrm",
+                                              "VPSUBUSBZ256rm(b?)(k?)(z?)",
+                                              "VPSUBUSBZrm(b?)(k?)(z?)",
+                                              "VPSUBUSWYrm",
+                                              "VPSUBUSWZ256rm(b?)(k?)(z?)",
+                                              "VPSUBUSWZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup121 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 8;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDNPDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDNPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDNPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDNPSYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDNPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDNPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDPDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDPSYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VANDPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDMPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDMPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDMPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDMPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDPDYrmi")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDPSYrmi")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF32X2Z256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF32X2Zm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF32X4Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF32X4rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF32X8rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF64X2Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF64X2rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTF64X4rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI32X2Z256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI32X2Zm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI32X4Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI32X4rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI32X8rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI64X2Z128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI64X2rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTI64X4rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTSDZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTSDZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTSSZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VBROADCASTSSZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTF32x4Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTF32x4Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTF32x8Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTF64x2Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTF64x2Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTF64x4Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTI32x4Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTI32x4Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTI32x8Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTI64x2Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTI64x2Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VINSERTI64x4Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMASKMOVPDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMASKMOVPSYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVAPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVAPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVAPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVAPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDDUPZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDDUPZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQA32Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQA32Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQA64Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQA64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU16Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU16Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU32Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU32Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU64Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU8Z256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVDQU8Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVNTDQAZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVSHDUPZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVSHDUPZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVSLDUPZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVSLDUPZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVUPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVUPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVUPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VMOVUPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VORPDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VORPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VORPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VORPSYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VORPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VORPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDBYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDQYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDWYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPADDWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDNDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDNDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDNQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDNQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDNYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPANDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDDYrmi")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBLENDMWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBROADCASTDZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBROADCASTDZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBROADCASTQZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPBROADCASTQZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPMASKMOVDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPMASKMOVQYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPORDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPORDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPORQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPORQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPORYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBBYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBQYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBWYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPSUBWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPTERNLOGDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPTERNLOGDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPTERNLOGQZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPTERNLOGQZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPXORDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPXORDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPXORQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPXORQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VPXORYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VXORPDYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VXORPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VXORPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VXORPSYrm")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VXORPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup121], (instregex "VXORPSZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup121], (instregex "VANDNPDYrm",
+                                              "VANDNPDZ256rm(b?)(k?)(z?)",
+                                              "VANDNPDZrm(b?)(k?)(z?)",
+                                              "VANDNPSYrm",
+                                              "VANDNPSZ256rm(b?)(k?)(z?)",
+                                              "VANDNPSZrm(b?)(k?)(z?)",
+                                              "VANDPDYrm",
+                                              "VANDPDZ256rm(b?)(k?)(z?)",
+                                              "VANDPDZrm(b?)(k?)(z?)",
+                                              "VANDPSYrm",
+                                              "VANDPSZ256rm(b?)(k?)(z?)",
+                                              "VANDPSZrm(b?)(k?)(z?)",
+                                              "VBLENDMPDZ256rm(b?)(k?)(z?)",
+                                              "VBLENDMPDZrm(b?)(k?)(z?)",
+                                              "VBLENDMPSZ256rm(b?)(k?)(z?)",
+                                              "VBLENDMPSZrm(b?)(k?)(z?)",
+                                              "VBLENDPDYrmi",
+                                              "VBLENDPSYrmi",
+                                              "VBROADCASTF32X2Z256m(b?)(k?)(z?)",
+                                              "VBROADCASTF32X2Zm(b?)(k?)(z?)",
+                                              "VBROADCASTF32X4Z256rm(b?)(k?)(z?)",
+                                              "VBROADCASTF32X4rm(b?)(k?)(z?)",
+                                              "VBROADCASTF32X8rm(b?)(k?)(z?)",
+                                              "VBROADCASTF64X2Z128rm(b?)(k?)(z?)",
+                                              "VBROADCASTF64X2rm(b?)(k?)(z?)",
+                                              "VBROADCASTF64X4rm(b?)(k?)(z?)",
+                                              "VBROADCASTI32X2Z256m(b?)(k?)(z?)",
+                                              "VBROADCASTI32X2Zm(b?)(k?)(z?)",
+                                              "VBROADCASTI32X4Z256rm(b?)(k?)(z?)",
+                                              "VBROADCASTI32X4rm(b?)(k?)(z?)",
+                                              "VBROADCASTI32X8rm(b?)(k?)(z?)",
+                                              "VBROADCASTI64X2Z128rm(b?)(k?)(z?)",
+                                              "VBROADCASTI64X2rm(b?)(k?)(z?)",
+                                              "VBROADCASTI64X4rm(b?)(k?)(z?)",
+                                              "VBROADCASTSDZ256m(b?)(k?)(z?)",
+                                              "VBROADCASTSDZm(b?)(k?)(z?)",
+                                              "VBROADCASTSSZ256m(b?)(k?)(z?)",
+                                              "VBROADCASTSSZm(b?)(k?)(z?)",
+                                              "VINSERTF32x4Z256rm(b?)(k?)(z?)",
+                                              "VINSERTF32x4Zrm(b?)(k?)(z?)",
+                                              "VINSERTF32x8Zrm(b?)(k?)(z?)",
+                                              "VINSERTF64x2Z256rm(b?)(k?)(z?)",
+                                              "VINSERTF64x2Zrm(b?)(k?)(z?)",
+                                              "VINSERTF64x4Zrm(b?)(k?)(z?)",
+                                              "VINSERTI32x4Z256rm(b?)(k?)(z?)",
+                                              "VINSERTI32x4Zrm(b?)(k?)(z?)",
+                                              "VINSERTI32x8Zrm(b?)(k?)(z?)",
+                                              "VINSERTI64x2Z256rm(b?)(k?)(z?)",
+                                              "VINSERTI64x2Zrm(b?)(k?)(z?)",
+                                              "VINSERTI64x4Zrm(b?)(k?)(z?)",
+                                              "VMASKMOVPDYrm",
+                                              "VMASKMOVPSYrm",
+                                              "VMOVAPDZ256rm(b?)(k?)(z?)",
+                                              "VMOVAPDZrm(b?)(k?)(z?)",
+                                              "VMOVAPSZ256rm(b?)(k?)(z?)",
+                                              "VMOVAPSZrm(b?)(k?)(z?)",
+                                              "VMOVDDUPZ256rm(b?)(k?)(z?)",
+                                              "VMOVDDUPZrm(b?)(k?)(z?)",
+                                              "VMOVDQA32Z256rm(b?)(k?)(z?)",
+                                              "VMOVDQA32Zrm(b?)(k?)(z?)",
+                                              "VMOVDQA64Z256rm(b?)(k?)(z?)",
+                                              "VMOVDQA64Zrm(b?)(k?)(z?)",
+                                              "VMOVDQU16Z256rm(b?)(k?)(z?)",
+                                              "VMOVDQU16Zrm(b?)(k?)(z?)",
+                                              "VMOVDQU32Z256rm(b?)(k?)(z?)",
+                                              "VMOVDQU32Zrm(b?)(k?)(z?)",
+                                              "VMOVDQU64Z256rm(b?)(k?)(z?)",
+                                              "VMOVDQU64Zrm(b?)(k?)(z?)",
+                                              "VMOVDQU8Z256rm(b?)(k?)(z?)",
+                                              "VMOVDQU8Zrm(b?)(k?)(z?)",
+                                              "VMOVNTDQAZ256rm(b?)(k?)(z?)",
+                                              "VMOVSHDUPZ256rm(b?)(k?)(z?)",
+                                              "VMOVSHDUPZrm(b?)(k?)(z?)",
+                                              "VMOVSLDUPZ256rm(b?)(k?)(z?)",
+                                              "VMOVSLDUPZrm(b?)(k?)(z?)",
+                                              "VMOVUPDZ256rm(b?)(k?)(z?)",
+                                              "VMOVUPDZrm(b?)(k?)(z?)",
+                                              "VMOVUPSZ256rm(b?)(k?)(z?)",
+                                              "VMOVUPSZrm(b?)(k?)(z?)",
+                                              "VORPDYrm",
+                                              "VORPDZ256rm(b?)(k?)(z?)",
+                                              "VORPDZrm(b?)(k?)(z?)",
+                                              "VORPSYrm",
+                                              "VORPSZ256rm(b?)(k?)(z?)",
+                                              "VORPSZrm(b?)(k?)(z?)",
+                                              "VPADDBYrm",
+                                              "VPADDBZ256rm(b?)(k?)(z?)",
+                                              "VPADDBZrm(b?)(k?)(z?)",
+                                              "VPADDDYrm",
+                                              "VPADDDZ256rm(b?)(k?)(z?)",
+                                              "VPADDDZrm(b?)(k?)(z?)",
+                                              "VPADDQYrm",
+                                              "VPADDQZ256rm(b?)(k?)(z?)",
+                                              "VPADDQZrm(b?)(k?)(z?)",
+                                              "VPADDWYrm",
+                                              "VPADDWZ256rm(b?)(k?)(z?)",
+                                              "VPADDWZrm(b?)(k?)(z?)",
+                                              "VPANDDZ256rm(b?)(k?)(z?)",
+                                              "VPANDDZrm(b?)(k?)(z?)",
+                                              "VPANDNDZ256rm(b?)(k?)(z?)",
+                                              "VPANDNDZrm(b?)(k?)(z?)",
+                                              "VPANDNQZ256rm(b?)(k?)(z?)",
+                                              "VPANDNQZrm(b?)(k?)(z?)",
+                                              "VPANDNYrm",
+                                              "VPANDQZ256rm(b?)(k?)(z?)",
+                                              "VPANDQZrm(b?)(k?)(z?)",
+                                              "VPANDYrm",
+                                              "VPBLENDDYrmi",
+                                              "VPBLENDMBZ256rm(b?)(k?)(z?)",
+                                              "VPBLENDMBZrm(b?)(k?)(z?)",
+                                              "VPBLENDMDZ256rm(b?)(k?)(z?)",
+                                              "VPBLENDMDZrm(b?)(k?)(z?)",
+                                              "VPBLENDMQZ256rm(b?)(k?)(z?)",
+                                              "VPBLENDMQZrm(b?)(k?)(z?)",
+                                              "VPBLENDMWZ256rm(b?)(k?)(z?)",
+                                              "VPBLENDMWZrm(b?)(k?)(z?)",
+                                              "VPBROADCASTDZ256m(b?)(k?)(z?)",
+                                              "VPBROADCASTDZm(b?)(k?)(z?)",
+                                              "VPBROADCASTQZ256m(b?)(k?)(z?)",
+                                              "VPBROADCASTQZm(b?)(k?)(z?)",
+                                              "VPMASKMOVDYrm",
+                                              "VPMASKMOVQYrm",
+                                              "VPORDZ256rm(b?)(k?)(z?)",
+                                              "VPORDZrm(b?)(k?)(z?)",
+                                              "VPORQZ256rm(b?)(k?)(z?)",
+                                              "VPORQZrm(b?)(k?)(z?)",
+                                              "VPORYrm",
+                                              "VPSUBBYrm",
+                                              "VPSUBBZ256rm(b?)(k?)(z?)",
+                                              "VPSUBBZrm(b?)(k?)(z?)",
+                                              "VPSUBDYrm",
+                                              "VPSUBDZ256rm(b?)(k?)(z?)",
+                                              "VPSUBDZrm(b?)(k?)(z?)",
+                                              "VPSUBQYrm",
+                                              "VPSUBQZ256rm(b?)(k?)(z?)",
+                                              "VPSUBQZrm(b?)(k?)(z?)",
+                                              "VPSUBWYrm",
+                                              "VPSUBWZrm(b?)(k?)(z?)",
+                                              "VPTERNLOGDZ256rm(b?)i(k?)(z?)",
+                                              "VPTERNLOGDZrm(b?)i(k?)(z?)",
+                                              "VPTERNLOGQZ256rm(b?)i(k?)(z?)",
+                                              "VPTERNLOGQZrm(b?)i(k?)(z?)",
+                                              "VPXORDZ256rm(b?)(k?)(z?)",
+                                              "VPXORDZrm(b?)(k?)(z?)",
+                                              "VPXORQZ256rm(b?)(k?)(z?)",
+                                              "VPXORQZrm(b?)(k?)(z?)",
+                                              "VPXORYrm",
+                                              "VXORPDYrm",
+                                              "VXORPDZ256rm(b?)(k?)(z?)",
+                                              "VXORPDZrm(b?)(k?)(z?)",
+                                              "VXORPSYrm",
+                                              "VXORPSZ256rm(b?)(k?)(z?)",
+                                              "VXORPSZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup122 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 8;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup122], (instregex "BLENDVPDrm0")>;
-def: InstRW<[SKXWriteResGroup122], (instregex "BLENDVPSrm0")>;
-def: InstRW<[SKXWriteResGroup122], (instregex "PBLENDVBrm0")>;
-def: InstRW<[SKXWriteResGroup122], (instregex "VBLENDVPDrm")>;
-def: InstRW<[SKXWriteResGroup122], (instregex "VBLENDVPSrm")>;
-def: InstRW<[SKXWriteResGroup122], (instregex "VPBLENDVBYrm")>;
-def: InstRW<[SKXWriteResGroup122], (instregex "VPBLENDVBrm")>;
+def: InstRW<[SKXWriteResGroup122], (instregex "BLENDVPDrm0",
+                                              "BLENDVPSrm0",
+                                              "PBLENDVBrm0",
+                                              "VBLENDVPDrm",
+                                              "VBLENDVPSrm",
+                                              "VPBLENDVBYrm",
+                                              "VPBLENDVBrm")>;
 
 def SKXWriteResGroup123 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 8;
   let NumMicroOps = 4;
   let ResourceCycles = [1,2,1];
 }
-def: InstRW<[SKXWriteResGroup123], (instregex "MMX_PHADDSWrm")>;
-def: InstRW<[SKXWriteResGroup123], (instregex "MMX_PHSUBSWrm")>;
+def: InstRW<[SKXWriteResGroup123], (instregex "MMX_PHADDSWrm",
+                                              "MMX_PHSUBSWrm")>;
 
 def SKXWriteResGroup124 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort05]> {
   let Latency = 8;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup124], (instregex "MMX_PHADDDrm")>;
-def: InstRW<[SKXWriteResGroup124], (instregex "MMX_PHADDWrm")>;
-def: InstRW<[SKXWriteResGroup124], (instregex "MMX_PHSUBDrm")>;
-def: InstRW<[SKXWriteResGroup124], (instregex "MMX_PHSUBWrm")>;
+def: InstRW<[SKXWriteResGroup124], (instregex "MMX_PHADDDrm",
+                                              "MMX_PHADDWrm",
+                                              "MMX_PHSUBDrm",
+                                              "MMX_PHSUBWrm")>;
 
 def SKXWriteResGroup125 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort237,SKXPort015]> {
   let Latency = 8;
@@ -4440,20 +4431,20 @@ def SKXWriteResGroup127 : SchedWriteRes<[SKXPort23,SKXPort237,SKXPort06,SKXPort0
   let NumMicroOps = 5;
   let ResourceCycles = [1,1,1,2];
 }
-def: InstRW<[SKXWriteResGroup127], (instregex "RCL(8|16|32|64)m1")>;
-def: InstRW<[SKXWriteResGroup127], (instregex "RCL(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup127], (instregex "RCR(8|16|32|64)m1")>;
-def: InstRW<[SKXWriteResGroup127], (instregex "RCR(8|16|32|64)mi")>;
+def: InstRW<[SKXWriteResGroup127], (instregex "RCL(8|16|32|64)m1",
+                                              "RCL(8|16|32|64)mi",
+                                              "RCR(8|16|32|64)m1",
+                                              "RCR(8|16|32|64)mi")>;
 
 def SKXWriteResGroup128 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06]> {
   let Latency = 8;
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,1,3];
 }
-def: InstRW<[SKXWriteResGroup128], (instregex "ROL(8|16|32|64)mCL")>;
-def: InstRW<[SKXWriteResGroup128], (instregex "SAR(8|16|32|64)mCL")>;
-def: InstRW<[SKXWriteResGroup128], (instregex "SHL(8|16|32|64)mCL")>;
-def: InstRW<[SKXWriteResGroup128], (instregex "SHR(8|16|32|64)mCL")>;
+def: InstRW<[SKXWriteResGroup128], (instregex "ROL(8|16|32|64)mCL",
+                                              "SAR(8|16|32|64)mCL",
+                                              "SHL(8|16|32|64)mCL",
+                                              "SHR(8|16|32|64)mCL")>;
 
 def SKXWriteResGroup129 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort0156]> {
   let Latency = 8;
@@ -4467,10 +4458,10 @@ def SKXWriteResGroup130 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,1,2,1];
 }
-def: InstRW<[SKXWriteResGroup130], (instregex "ADC(8|16|32|64)mr")>;
-def: InstRW<[SKXWriteResGroup130], (instregex "CMPXCHG(8|16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup130], (instregex "SBB(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup130], (instregex "SBB(8|16|32|64)mr")>;
+def: InstRW<[SKXWriteResGroup130], (instregex "ADC(8|16|32|64)mr",
+                                              "CMPXCHG(8|16|32|64)rm",
+                                              "SBB(8|16|32|64)mi",
+                                              "SBB(8|16|32|64)mr")>;
 
 def SKXWriteResGroup131 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort5,SKXPort237,SKXPort0156]> {
   let Latency = 8;
@@ -4510,162 +4501,160 @@ def SKXWriteResGroup135 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_CVTPI2PSirm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_PMADDUBSWrm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_PMADDWDirm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_PMULHRSWrm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_PMULHUWirm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_PMULHWirm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_PMULLWirm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "MMX_PMULUDQirm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "RCPSSm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "RSQRTSSm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "VRCPSSm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "VRSQRTSSm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "VTESTPDYrm")>;
-def: InstRW<[SKXWriteResGroup135], (instregex "VTESTPSYrm")>;
+def: InstRW<[SKXWriteResGroup135], (instregex "MMX_CVTPI2PSirm",
+                                              "MMX_PMADDUBSWrm",
+                                              "MMX_PMADDWDirm",
+                                              "MMX_PMULHRSWrm",
+                                              "MMX_PMULHUWirm",
+                                              "MMX_PMULHWirm",
+                                              "MMX_PMULLWirm",
+                                              "MMX_PMULUDQirm",
+                                              "RCPSSm",
+                                              "RSQRTSSm",
+                                              "VRCPSSm",
+                                              "VRSQRTSSm",
+                                              "VTESTPDYrm",
+                                              "VTESTPSYrm")>;
 
 def SKXWriteResGroup136 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 9;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup136], (instregex "PCMPGTQrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "PSADBWrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VALIGNDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VALIGNQZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VCMPPDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VCMPPSZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VCMPSDZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VCMPSSZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VDBPSADBWZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VFPCLASSSSrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPBZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPDZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPEQBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPEQDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPEQQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPEQWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPGTBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPGTDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPGTQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPGTQrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPGTWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPQZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPUBZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPUDZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPUQZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPUWZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPCMPWZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMI2D128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMI2PD128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMI2PS128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMI2Q128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMT2D128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMT2PD128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMT2PS128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPERMT2Q128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMAXSQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMAXUQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMINSQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMINUQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXBDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXBQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXBWYrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXBWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXDQYrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXWDYrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXWDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVSXWQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVZXBDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVZXBQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVZXBWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVZXDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVZXWDYrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVZXWDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPMOVZXWQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPSADBWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPSADBWrm")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTMBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTMDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTMQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTMWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTNMBZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTNMDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTNMQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup136], (instregex "VPTESTNMWZ128rm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup136], (instregex "PCMPGTQrm",
+                                              "PSADBWrm",
+                                              "VALIGNDZ128rm(b?)i(k?)(z?)",
+                                              "VALIGNQZ128rm(b?)i(k?)(z?)",
+                                              "VCMPPDZ128rm(b?)i(k?)(z?)",
+                                              "VCMPPSZ128rm(b?)i(k?)(z?)",
+                                              "VCMPSDZrm(_Int)?(k?)(z?)",
+                                              "VCMPSSZrm(_Int)?(k?)(z?)",
+                                              "VDBPSADBWZ128rmi(b?)(k?)(z?)",
+                                              "VFPCLASSSSrm(b?)(k?)(z?)",
+                                              "VPCMPBZ128rmi(b?)(k?)(z?)",
+                                              "VPCMPDZ128rmi(b?)(k?)(z?)",
+                                              "VPCMPEQBZ128rm(b?)(k?)(z?)",
+                                              "VPCMPEQDZ128rm(b?)(k?)(z?)",
+                                              "VPCMPEQQZ128rm(b?)(k?)(z?)",
+                                              "VPCMPEQWZ128rm(b?)(k?)(z?)",
+                                              "VPCMPGTBZ128rm(b?)(k?)(z?)",
+                                              "VPCMPGTDZ128rm(b?)(k?)(z?)",
+                                              "VPCMPGTQZ128rm(b?)(k?)(z?)",
+                                              "VPCMPGTQrm",
+                                              "VPCMPGTWZ128rm(b?)(k?)(z?)",
+                                              "VPCMPQZ128rmi(b?)(k?)(z?)",
+                                              "VPCMPUBZ128rmi(b?)(k?)(z?)",
+                                              "VPCMPUDZ128rmi(b?)(k?)(z?)",
+                                              "VPCMPUQZ128rmi(b?)(k?)(z?)",
+                                              "VPCMPUWZ128rmi(b?)(k?)(z?)",
+                                              "VPCMPWZ128rmi(b?)(k?)(z?)",
+                                              "VPERMI2D128rm(b?)(k?)(z?)",
+                                              "VPERMI2PD128rm(b?)(k?)(z?)",
+                                              "VPERMI2PS128rm(b?)(k?)(z?)",
+                                              "VPERMI2Q128rm(b?)(k?)(z?)",
+                                              "VPERMT2D128rm(b?)(k?)(z?)",
+                                              "VPERMT2PD128rm(b?)(k?)(z?)",
+                                              "VPERMT2PS128rm(b?)(k?)(z?)",
+                                              "VPERMT2Q128rm(b?)(k?)(z?)",
+                                              "VPMAXSQZ128rm(b?)(k?)(z?)",
+                                              "VPMAXUQZ128rm(b?)(k?)(z?)",
+                                              "VPMINSQZ128rm(b?)(k?)(z?)",
+                                              "VPMINUQZ128rm(b?)(k?)(z?)",
+                                              "VPMOVSXBDZ128rm(b?)(k?)(z?)",
+                                              "VPMOVSXBQZ128rm(b?)(k?)(z?)",
+                                              "VPMOVSXBWYrm",
+                                              "VPMOVSXBWZ128rm(b?)(k?)(z?)",
+                                              "VPMOVSXDQYrm",
+                                              "VPMOVSXDQZ128rm(b?)(k?)(z?)",
+                                              "VPMOVSXWDYrm",
+                                              "VPMOVSXWDZ128rm(b?)(k?)(z?)",
+                                              "VPMOVSXWQZ128rm(b?)(k?)(z?)",
+                                              "VPMOVZXBDZ128rm(b?)(k?)(z?)",
+                                              "VPMOVZXBQZ128rm(b?)(k?)(z?)",
+                                              "VPMOVZXBWZ128rm(b?)(k?)(z?)",
+                                              "VPMOVZXDQZ128rm(b?)(k?)(z?)",
+                                              "VPMOVZXWDYrm",
+                                              "VPMOVZXWDZ128rm(b?)(k?)(z?)",
+                                              "VPMOVZXWQZ128rm(b?)(k?)(z?)",
+                                              "VPSADBWZ128rm(b?)(k?)(z?)",
+                                              "VPSADBWrm",
+                                              "VPTESTMBZ128rm(b?)(k?)(z?)",
+                                              "VPTESTMDZ128rm(b?)(k?)(z?)",
+                                              "VPTESTMQZ128rm(b?)(k?)(z?)",
+                                              "VPTESTMWZ128rm(b?)(k?)(z?)",
+                                              "VPTESTNMBZ128rm(b?)(k?)(z?)",
+                                              "VPTESTNMDZ128rm(b?)(k?)(z?)",
+                                              "VPTESTNMQZ128rm(b?)(k?)(z?)",
+                                              "VPTESTNMWZ128rm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup137 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 9;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup137], (instregex "ADDSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "ADDSSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "CMPSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "CMPSSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "CVTPS2PDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MAX(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MAX(C?)SSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MIN(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MIN(C?)SSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MMX_CVTPS2PIirm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MMX_CVTTPS2PIirm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MULSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "MULSSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "SUBSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "SUBSSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VADDSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VADDSSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VCMPSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VCMPSSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VCVTPH2PSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VCVTPS2PDrm")>;
 def: InstRW<[SKXWriteResGroup137],
             (instregex "VF(N)?M(ADD|SUB)(132|213|231)S(D|S)m")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VMAX(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VMAX(C?)SSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VMIN(C?)SDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VMIN(C?)SSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VMULSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VMULSSrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VSUBSDrm")>;
-def: InstRW<[SKXWriteResGroup137], (instregex "VSUBSSrm")>;
+def: InstRW<[SKXWriteResGroup137], (instregex "ADDSDrm",
+                                              "ADDSSrm",
+                                              "CMPSDrm",
+                                              "CMPSSrm",
+                                              "CVTPS2PDrm",
+                                              "MAX(C?)SDrm",
+                                              "MAX(C?)SSrm",
+                                              "MIN(C?)SDrm",
+                                              "MIN(C?)SSrm",
+                                              "MMX_CVTPS2PIirm",
+                                              "MMX_CVTTPS2PIirm",
+                                              "MULSDrm",
+                                              "MULSSrm",
+                                              "SUBSDrm",
+                                              "SUBSSrm",
+                                              "VADDSDrm",
+                                              "VADDSSrm",
+                                              "VCMPSDrm",
+                                              "VCMPSSrm",
+                                              "VCVTPH2PSrm",
+                                              "VCVTPS2PDrm",
+                                              "VMAX(C?)SDrm",
+                                              "VMAX(C?)SSrm",
+                                              "VMIN(C?)SDrm",
+                                              "VMIN(C?)SSrm",
+                                              "VMULSDrm",
+                                              "VMULSSrm",
+                                              "VSUBSDrm",
+                                              "VSUBSSrm")>;
 
 def SKXWriteResGroup138 : SchedWriteRes<[SKXPort0,SKXPort015]> {
   let Latency = 9;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup138], (instregex "VRCP14PDZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup138], (instregex "VRCP14PSZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup138], (instregex "VRSQRT14PDZr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup138], (instregex "VRSQRT14PSZr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup138], (instregex "VRCP14PDZr(b?)(k?)(z?)",
+                                              "VRCP14PSZr(b?)(k?)(z?)",
+                                              "VRSQRT14PDZr(b?)(k?)(z?)",
+                                              "VRSQRT14PSZr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup139 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 9;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup139], (instregex "DPPDrri")>;
-def: InstRW<[SKXWriteResGroup139], (instregex "VDPPDrri")>;
+def: InstRW<[SKXWriteResGroup139], (instregex "(V?)DPPDrri")>;
 
 def SKXWriteResGroup140 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 9;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup140], (instregex "VBLENDVPDYrm")>;
-def: InstRW<[SKXWriteResGroup140], (instregex "VBLENDVPSYrm")>;
+def: InstRW<[SKXWriteResGroup140], (instregex "VBLENDVPDYrm",
+                                              "VBLENDVPSYrm")>;
 
 def SKXWriteResGroup141 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 9;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup141], (instregex "PTESTrm")>;
-def: InstRW<[SKXWriteResGroup141], (instregex "VPTESTrm")>;
+def: InstRW<[SKXWriteResGroup141], (instregex "(V?)PTESTrm")>;
 
 def SKXWriteResGroup142 : SchedWriteRes<[SKXPort1,SKXPort5,SKXPort23]> {
   let Latency = 9;
@@ -4679,421 +4668,414 @@ def SKXWriteResGroup143 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort23]> {
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup143], (instregex "PHADDSWrm")>;
-def: InstRW<[SKXWriteResGroup143], (instregex "PHSUBSWrm")>;
-def: InstRW<[SKXWriteResGroup143], (instregex "VPHADDSWrm")>;
-def: InstRW<[SKXWriteResGroup143], (instregex "VPHSUBSWrm")>;
+def: InstRW<[SKXWriteResGroup143], (instregex "(V?)PHADDSWrm",
+                                              "(V?)PHSUBSWrm")>;
 
 def SKXWriteResGroup144 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 9;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup144], (instregex "PHADDDrm")>;
-def: InstRW<[SKXWriteResGroup144], (instregex "PHADDWrm")>;
-def: InstRW<[SKXWriteResGroup144], (instregex "PHSUBDrm")>;
-def: InstRW<[SKXWriteResGroup144], (instregex "PHSUBWrm")>;
-def: InstRW<[SKXWriteResGroup144], (instregex "VPHADDDrm")>;
-def: InstRW<[SKXWriteResGroup144], (instregex "VPHADDWrm")>;
-def: InstRW<[SKXWriteResGroup144], (instregex "VPHSUBDrm")>;
-def: InstRW<[SKXWriteResGroup144], (instregex "VPHSUBWrm")>;
+def: InstRW<[SKXWriteResGroup144], (instregex "(V?)PHADDDrm",
+                                              "(V?)PHADDWrm",
+                                              "(V?)PHSUBDrm",
+                                              "(V?)PHSUBWrm")>;
 
 def SKXWriteResGroup145 : SchedWriteRes<[SKXPort1,SKXPort23,SKXPort237,SKXPort0156]> {
   let Latency = 9;
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,1,1];
 }
-def: InstRW<[SKXWriteResGroup145], (instregex "SHLD(16|32|64)mri8")>;
-def: InstRW<[SKXWriteResGroup145], (instregex "SHRD(16|32|64)mri8")>;
+def: InstRW<[SKXWriteResGroup145], (instregex "SHLD(16|32|64)mri8",
+                                              "SHRD(16|32|64)mri8")>;
 
 def SKXWriteResGroup146 : SchedWriteRes<[SKXPort1,SKXPort6,SKXPort23,SKXPort0156]> {
   let Latency = 9;
   let NumMicroOps = 5;
   let ResourceCycles = [1,2,1,1];
 }
-def: InstRW<[SKXWriteResGroup146], (instregex "LAR(16|32|64)rm")>;
-def: InstRW<[SKXWriteResGroup146], (instregex "LSL(16|32|64)rm")>;
+def: InstRW<[SKXWriteResGroup146], (instregex "LAR(16|32|64)rm",
+                                              "LSL(16|32|64)rm")>;
 
 def SKXWriteResGroup147 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 10;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup147], (instregex "AESDECLASTrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "AESDECrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "AESENCLASTrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "AESENCrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "RCPPSm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "RSQRTPSm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VAESDECLASTrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VAESDECrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VAESENCLASTrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VAESENCrm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRCP14PDZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRCP14PSZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRCP14SDrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRCP14SSrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRCPPSm")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRSQRT14PDZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRSQRT14PSZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRSQRT14SDrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRSQRT14SSrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup147], (instregex "VRSQRTPSm")>;
+def: InstRW<[SKXWriteResGroup147], (instregex "AESDECLASTrm",
+                                              "AESDECrm",
+                                              "AESENCLASTrm",
+                                              "AESENCrm",
+                                              "RCPPSm",
+                                              "RSQRTPSm",
+                                              "VAESDECLASTrm",
+                                              "VAESDECrm",
+                                              "VAESENCLASTrm",
+                                              "VAESENCrm",
+                                              "VRCP14PDZ128m(b?)(k?)(z?)",
+                                              "VRCP14PSZ128m(b?)(k?)(z?)",
+                                              "VRCP14SDrm(b?)(k?)(z?)",
+                                              "VRCP14SSrm(b?)(k?)(z?)",
+                                              "VRCPPSm",
+                                              "VRSQRT14PDZ128m(b?)(k?)(z?)",
+                                              "VRSQRT14PSZ128m(b?)(k?)(z?)",
+                                              "VRSQRT14SDrm(b?)(k?)(z?)",
+                                              "VRSQRT14SSrm(b?)(k?)(z?)",
+                                              "VRSQRTPSm")>;
 
 def SKXWriteResGroup148 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 10;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup148], (instregex "ADD_F32m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "ADD_F64m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "ILD_F16m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "ILD_F32m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "ILD_F64m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "SUBR_F32m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "SUBR_F64m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "SUB_F32m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "SUB_F64m")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VALIGNDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VALIGNDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VALIGNQZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VALIGNQZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VCMPPDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VCMPPDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VCMPPSZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VCMPPSZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VDBPSADBWZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VDBPSADBWZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPBZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPBZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPDZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPDZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPEQWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTQYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPGTWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPQZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPQZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUBZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUBZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUDZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUDZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUQZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUQZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUWZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPUWZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPWZ256rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPCMPWZrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERM2F128rm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERM2I128rm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMDYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2D256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2Drm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2PD256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2PDrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2PS256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2PSrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2Q256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMI2Qrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPDYmi")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPDZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPDZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPSYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMQYmi")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMQZ256m(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMQZm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2D256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2Drm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2PD256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2PDrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2PS256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2PSrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2Q256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPERMT2Qrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMAXSQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMAXSQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMAXUQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMAXUQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMINSQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMINSQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMINUQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMINUQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXBDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXBDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXBQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXBQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXBWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXBWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXWDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXWDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXWQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVSXWQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBDYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBQYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBWYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXBWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXDQYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXWDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXWDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXWQYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXWQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPMOVZXWQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPSADBWYrm")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPSADBWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPSADBWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTMWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMBZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMBZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VPTESTNMWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFF32X4Z256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFF32X4Zrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFF64X2Z256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFF64X2Zrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFI32X4Z256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFI32X4Zrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFI64X2Z256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup148], (instregex "VSHUFI64X2Zrm(b?)i(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup148], (instregex "ADD_F32m",
+                                              "ADD_F64m",
+                                              "ILD_F16m",
+                                              "ILD_F32m",
+                                              "ILD_F64m",
+                                              "SUBR_F32m",
+                                              "SUBR_F64m",
+                                              "SUB_F32m",
+                                              "SUB_F64m",
+                                              "VALIGNDZ256rm(b?)i(k?)(z?)",
+                                              "VALIGNDZrm(b?)i(k?)(z?)",
+                                              "VALIGNQZ256rm(b?)i(k?)(z?)",
+                                              "VALIGNQZrm(b?)i(k?)(z?)",
+                                              "VCMPPDZ256rm(b?)i(k?)(z?)",
+                                              "VCMPPDZrm(b?)i(k?)(z?)",
+                                              "VCMPPSZ256rm(b?)i(k?)(z?)",
+                                              "VCMPPSZrm(b?)i(k?)(z?)",
+                                              "VDBPSADBWZ256rmi(b?)(k?)(z?)",
+                                              "VDBPSADBWZrmi(b?)(k?)(z?)",
+                                              "VPCMPBZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPBZrmi(b?)(k?)(z?)",
+                                              "VPCMPDZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPDZrmi(b?)(k?)(z?)",
+                                              "VPCMPEQBZ256rm(b?)(k?)(z?)",
+                                              "VPCMPEQBZrm(b?)(k?)(z?)",
+                                              "VPCMPEQDZ256rm(b?)(k?)(z?)",
+                                              "VPCMPEQDZrm(b?)(k?)(z?)",
+                                              "VPCMPEQQZ256rm(b?)(k?)(z?)",
+                                              "VPCMPEQQZrm(b?)(k?)(z?)",
+                                              "VPCMPEQWZ256rm(b?)(k?)(z?)",
+                                              "VPCMPEQWZrm(b?)(k?)(z?)",
+                                              "VPCMPGTBZ256rm(b?)(k?)(z?)",
+                                              "VPCMPGTBZrm(b?)(k?)(z?)",
+                                              "VPCMPGTDZ256rm(b?)(k?)(z?)",
+                                              "VPCMPGTDZrm(b?)(k?)(z?)",
+                                              "VPCMPGTQYrm",
+                                              "VPCMPGTQZ256rm(b?)(k?)(z?)",
+                                              "VPCMPGTQZrm(b?)(k?)(z?)",
+                                              "VPCMPGTWZ256rm(b?)(k?)(z?)",
+                                              "VPCMPGTWZrm(b?)(k?)(z?)",
+                                              "VPCMPQZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPQZrmi(b?)(k?)(z?)",
+                                              "VPCMPUBZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPUBZrmi(b?)(k?)(z?)",
+                                              "VPCMPUDZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPUDZrmi(b?)(k?)(z?)",
+                                              "VPCMPUQZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPUQZrmi(b?)(k?)(z?)",
+                                              "VPCMPUWZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPUWZrmi(b?)(k?)(z?)",
+                                              "VPCMPWZ256rmi(b?)(k?)(z?)",
+                                              "VPCMPWZrmi(b?)(k?)(z?)",
+                                              "VPERM2F128rm",
+                                              "VPERM2I128rm",
+                                              "VPERMDYrm",
+                                              "VPERMDZ256rm(b?)(k?)(z?)",
+                                              "VPERMDZrm(b?)(k?)(z?)",
+                                              "VPERMI2D256rm(b?)(k?)(z?)",
+                                              "VPERMI2Drm(b?)(k?)(z?)",
+                                              "VPERMI2PD256rm(b?)(k?)(z?)",
+                                              "VPERMI2PDrm(b?)(k?)(z?)",
+                                              "VPERMI2PS256rm(b?)(k?)(z?)",
+                                              "VPERMI2PSrm(b?)(k?)(z?)",
+                                              "VPERMI2Q256rm(b?)(k?)(z?)",
+                                              "VPERMI2Qrm(b?)(k?)(z?)",
+                                              "VPERMPDYmi",
+                                              "VPERMPDZ256m(b?)i(k?)(z?)",
+                                              "VPERMPDZ256rm(b?)(k?)(z?)",
+                                              "VPERMPDZm(b?)i(k?)(z?)",
+                                              "VPERMPDZrm(b?)(k?)(z?)",
+                                              "VPERMPSYrm",
+                                              "VPERMPSZ256rm(b?)(k?)(z?)",
+                                              "VPERMPSZrm(b?)(k?)(z?)",
+                                              "VPERMQYmi",
+                                              "VPERMQZ256m(b?)i(k?)(z?)",
+                                              "VPERMQZ256rm(b?)(k?)(z?)",
+                                              "VPERMQZm(b?)i(k?)(z?)",
+                                              "VPERMQZrm(b?)(k?)(z?)",
+                                              "VPERMT2D256rm(b?)(k?)(z?)",
+                                              "VPERMT2Drm(b?)(k?)(z?)",
+                                              "VPERMT2PD256rm(b?)(k?)(z?)",
+                                              "VPERMT2PDrm(b?)(k?)(z?)",
+                                              "VPERMT2PS256rm(b?)(k?)(z?)",
+                                              "VPERMT2PSrm(b?)(k?)(z?)",
+                                              "VPERMT2Q256rm(b?)(k?)(z?)",
+                                              "VPERMT2Qrm(b?)(k?)(z?)",
+                                              "VPMAXSQZ256rm(b?)(k?)(z?)",
+                                              "VPMAXSQZrm(b?)(k?)(z?)",
+                                              "VPMAXUQZ256rm(b?)(k?)(z?)",
+                                              "VPMAXUQZrm(b?)(k?)(z?)",
+                                              "VPMINSQZ256rm(b?)(k?)(z?)",
+                                              "VPMINSQZrm(b?)(k?)(z?)",
+                                              "VPMINUQZ256rm(b?)(k?)(z?)",
+                                              "VPMINUQZrm(b?)(k?)(z?)",
+                                              "VPMOVSXBDZ256rm(b?)(k?)(z?)",
+                                              "VPMOVSXBDZrm(b?)(k?)(z?)",
+                                              "VPMOVSXBQZ256rm(b?)(k?)(z?)",
+                                              "VPMOVSXBQZrm(b?)(k?)(z?)",
+                                              "VPMOVSXBWZ256rm(b?)(k?)(z?)",
+                                              "VPMOVSXBWZrm(b?)(k?)(z?)",
+                                              "VPMOVSXDQZ256rm(b?)(k?)(z?)",
+                                              "VPMOVSXDQZrm(b?)(k?)(z?)",
+                                              "VPMOVSXWDZ256rm(b?)(k?)(z?)",
+                                              "VPMOVSXWDZrm(b?)(k?)(z?)",
+                                              "VPMOVSXWQZ256rm(b?)(k?)(z?)",
+                                              "VPMOVSXWQZrm(b?)(k?)(z?)",
+                                              "VPMOVZXBDYrm",
+                                              "VPMOVZXBDZ256rm(b?)(k?)(z?)",
+                                              "VPMOVZXBDZrm(b?)(k?)(z?)",
+                                              "VPMOVZXBQYrm",
+                                              "VPMOVZXBQZ256rm(b?)(k?)(z?)",
+                                              "VPMOVZXBQZrm(b?)(k?)(z?)",
+                                              "VPMOVZXBWYrm",
+                                              "VPMOVZXBWZ256rm(b?)(k?)(z?)",
+                                              "VPMOVZXBWZrm(b?)(k?)(z?)",
+                                              "VPMOVZXDQYrm",
+                                              "VPMOVZXDQZ256rm(b?)(k?)(z?)",
+                                              "VPMOVZXDQZrm(b?)(k?)(z?)",
+                                              "VPMOVZXWDZ256rm(b?)(k?)(z?)",
+                                              "VPMOVZXWDZrm(b?)(k?)(z?)",
+                                              "VPMOVZXWQYrm",
+                                              "VPMOVZXWQZ256rm(b?)(k?)(z?)",
+                                              "VPMOVZXWQZrm(b?)(k?)(z?)",
+                                              "VPSADBWYrm",
+                                              "VPSADBWZ256rm(b?)(k?)(z?)",
+                                              "VPSADBWZrm(b?)(k?)(z?)",
+                                              "VPTESTMBZ256rm(b?)(k?)(z?)",
+                                              "VPTESTMBZrm(b?)(k?)(z?)",
+                                              "VPTESTMDZ256rm(b?)(k?)(z?)",
+                                              "VPTESTMDZrm(b?)(k?)(z?)",
+                                              "VPTESTMQZ256rm(b?)(k?)(z?)",
+                                              "VPTESTMQZrm(b?)(k?)(z?)",
+                                              "VPTESTMWZ256rm(b?)(k?)(z?)",
+                                              "VPTESTMWZrm(b?)(k?)(z?)",
+                                              "VPTESTNMBZ256rm(b?)(k?)(z?)",
+                                              "VPTESTNMBZrm(b?)(k?)(z?)",
+                                              "VPTESTNMDZ256rm(b?)(k?)(z?)",
+                                              "VPTESTNMDZrm(b?)(k?)(z?)",
+                                              "VPTESTNMQZ256rm(b?)(k?)(z?)",
+                                              "VPTESTNMQZrm(b?)(k?)(z?)",
+                                              "VPTESTNMWZ256rm(b?)(k?)(z?)",
+                                              "VPTESTNMWZrm(b?)(k?)(z?)",
+                                              "VSHUFF32X4Z256rm(b?)i(k?)(z?)",
+                                              "VSHUFF32X4Zrm(b?)i(k?)(z?)",
+                                              "VSHUFF64X2Z256rm(b?)i(k?)(z?)",
+                                              "VSHUFF64X2Zrm(b?)i(k?)(z?)",
+                                              "VSHUFI32X4Z256rm(b?)i(k?)(z?)",
+                                              "VSHUFI32X4Zrm(b?)i(k?)(z?)",
+                                              "VSHUFI64X2Z256rm(b?)i(k?)(z?)",
+                                              "VSHUFI64X2Zrm(b?)i(k?)(z?)")>;
 
 def SKXWriteResGroup149 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 10;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup149], (instregex "ADDPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "ADDPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "ADDSUBPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "ADDSUBPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "CMPPDrmi")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "CMPPSrmi")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "CVTDQ2PSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "CVTPS2DQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "CVTSS2SDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "CVTTPS2DQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "MAX(C?)PDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "MAX(C?)PSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "MIN(C?)PDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "MIN(C?)PSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "MULPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "MULPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PHMINPOSUWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMADDUBSWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMADDWDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMULDQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMULHRSWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMULHUWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMULHWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMULLWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "PMULUDQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "SUBPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "SUBPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDSDZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDSSZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDSUBPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VADDSUBPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCMPPDrmi")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCMPPSrmi")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTDQ2PDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTDQ2PSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTDQ2PSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPD2QQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPD2UQQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPH2PSYrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPH2PSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPS2DQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPS2DQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPS2PDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPS2QQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPS2UDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTPS2UQQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTQQ2PDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTQQ2PSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTSS2SDZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTSS2SDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTTPD2QQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTTPD2UQQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTTPS2DQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTTPS2DQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTTPS2QQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTTPS2UDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTTPS2UQQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTUDQ2PDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTUDQ2PSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTUQQ2PDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VCVTUQQ2PSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VFIXUPIMMPDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VFIXUPIMMPSZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VFIXUPIMMSDrmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VFIXUPIMMSSrmi(b?)(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup149],
           (instregex
            "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)Z128m(b?)(k?)(z?)",
            "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)m",
            "VF(N)?M(ADD|SUB)(132|213|231)S(D|S)Zm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETEXPPDZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETEXPPSZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETEXPSDm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETEXPSSm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETMANTPDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETMANTPSZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETMANTSDZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VGETMANTSSZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMAX(C?)PDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMAX(C?)PDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMAX(C?)PSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMAX(C?)PSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMAX(C?)SDZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMAX(C?)SSZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMIN(C?)PDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMIN(C?)PDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMIN(C?)PSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMIN(C?)PSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMIN(C?)SDZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMIN(C?)SSZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMULPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMULPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMULPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMULPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMULSDZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VMULSSZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPHMINPOSUWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPLZCNTDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPLZCNTQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMADDUBSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMADDUBSWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMADDWDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMADDWDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULDQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULHRSWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULHRSWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULHUWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULHUWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULHWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULHWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULLWZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULLWrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULUDQZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VPMULUDQrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VRANGEPDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VRANGEPSZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VRANGESDZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VRANGESSZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VREDUCEPDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VREDUCEPSZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VREDUCESDZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VREDUCESSZ128rmi(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSCALEFPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSCALEFPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSCALEFSDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSCALEFSSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSUBPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSUBPDrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSUBPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSUBPSrm")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSUBSDZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup149], (instregex "VSUBSSZrm(_Int)?(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup149], (instregex "ADDPDrm",
+                                              "ADDPSrm",
+                                              "ADDSUBPDrm",
+                                              "ADDSUBPSrm",
+                                              "CMPPDrmi",
+                                              "CMPPSrmi",
+                                              "CVTDQ2PSrm",
+                                              "CVTPS2DQrm",
+                                              "CVTSS2SDrm",
+                                              "CVTTPS2DQrm",
+                                              "MAX(C?)PDrm",
+                                              "MAX(C?)PSrm",
+                                              "MIN(C?)PDrm",
+                                              "MIN(C?)PSrm",
+                                              "MULPDrm",
+                                              "MULPSrm",
+                                              "PHMINPOSUWrm",
+                                              "PMADDUBSWrm",
+                                              "PMADDWDrm",
+                                              "PMULDQrm",
+                                              "PMULHRSWrm",
+                                              "PMULHUWrm",
+                                              "PMULHWrm",
+                                              "PMULLWrm",
+                                              "PMULUDQrm",
+                                              "SUBPDrm",
+                                              "SUBPSrm",
+                                              "VADDPDZ128rm(b?)(k?)(z?)",
+                                              "VADDPDrm",
+                                              "VADDPSZ128rm(b?)(k?)(z?)",
+                                              "VADDPSrm",
+                                              "VADDSDZrm(_Int)?(k?)(z?)",
+                                              "VADDSSZrm(_Int)?(k?)(z?)",
+                                              "VADDSUBPDrm",
+                                              "VADDSUBPSrm",
+                                              "VCMPPDrmi",
+                                              "VCMPPSrmi",
+                                              "VCVTDQ2PDZ128rm(b?)(k?)(z?)",
+                                              "VCVTDQ2PSZ128rm(b?)(k?)(z?)",
+                                              "VCVTDQ2PSrm",
+                                              "VCVTPD2QQZ128rm(b?)(k?)(z?)",
+                                              "VCVTPD2UQQZ128rm(b?)(k?)(z?)",
+                                              "VCVTPH2PSYrm",
+                                              "VCVTPH2PSZ128rm(b?)(k?)(z?)",
+                                              "VCVTPS2DQZ128rm(b?)(k?)(z?)",
+                                              "VCVTPS2DQrm",
+                                              "VCVTPS2PDZ128rm(b?)(k?)(z?)",
+                                              "VCVTPS2QQZ128rm(b?)(k?)(z?)",
+                                              "VCVTPS2UDQZ128rm(b?)(k?)(z?)",
+                                              "VCVTPS2UQQZ128rm(b?)(k?)(z?)",
+                                              "VCVTQQ2PDZ128rm(b?)(k?)(z?)",
+                                              "VCVTQQ2PSZ128rm(b?)(k?)(z?)",
+                                              "VCVTSS2SDZrm(_Int)?(k?)(z?)",
+                                              "VCVTSS2SDrm",
+                                              "VCVTTPD2QQZ128rm(b?)(k?)(z?)",
+                                              "VCVTTPD2UQQZ128rm(b?)(k?)(z?)",
+                                              "VCVTTPS2DQZ128rm(b?)(k?)(z?)",
+                                              "VCVTTPS2DQrm",
+                                              "VCVTTPS2QQZ128rm(b?)(k?)(z?)",
+                                              "VCVTTPS2UDQZ128rm(b?)(k?)(z?)",
+                                              "VCVTTPS2UQQZ128rm(b?)(k?)(z?)",
+                                              "VCVTUDQ2PDZ128rm(b?)(k?)(z?)",
+                                              "VCVTUDQ2PSZ128rm(b?)(k?)(z?)",
+                                              "VCVTUQQ2PDZ128rm(b?)(k?)(z?)",
+                                              "VCVTUQQ2PSZ128rm(b?)(k?)(z?)",
+                                              "VFIXUPIMMPDZ128rm(b?)i(k?)(z?)",
+                                              "VFIXUPIMMPSZ128rm(b?)i(k?)(z?)",
+                                              "VFIXUPIMMSDrmi(b?)(k?)(z?)",
+                                              "VFIXUPIMMSSrmi(b?)(k?)(z?)",
+                                              "VGETEXPPDZ128m(b?)(k?)(z?)",
+                                              "VGETEXPPSZ128m(b?)(k?)(z?)",
+                                              "VGETEXPSDm(b?)(k?)(z?)",
+                                              "VGETEXPSSm(b?)(k?)(z?)",
+                                              "VGETMANTPDZ128rm(b?)i(k?)(z?)",
+                                              "VGETMANTPSZ128rm(b?)i(k?)(z?)",
+                                              "VGETMANTSDZ128rmi(b?)(k?)(z?)",
+                                              "VGETMANTSSZ128rmi(b?)(k?)(z?)",
+                                              "VMAX(C?)PDZ128rm(b?)(k?)(z?)",
+                                              "VMAX(C?)PDrm",
+                                              "VMAX(C?)PSZ128rm(b?)(k?)(z?)",
+                                              "VMAX(C?)PSrm",
+                                              "VMAX(C?)SDZrm(_Int)?(k?)(z?)",
+                                              "VMAX(C?)SSZrm(_Int)?(k?)(z?)",
+                                              "VMIN(C?)PDZ128rm(b?)(k?)(z?)",
+                                              "VMIN(C?)PDrm",
+                                              "VMIN(C?)PSZ128rm(b?)(k?)(z?)",
+                                              "VMIN(C?)PSrm",
+                                              "VMIN(C?)SDZrm(_Int)?(k?)(z?)",
+                                              "VMIN(C?)SSZrm(_Int)?(k?)(z?)",
+                                              "VMULPDZ128rm(b?)(k?)(z?)",
+                                              "VMULPDrm",
+                                              "VMULPSZ128rm(b?)(k?)(z?)",
+                                              "VMULPSrm",
+                                              "VMULSDZrm(_Int)?(k?)(z?)",
+                                              "VMULSSZrm(_Int)?(k?)(z?)",
+                                              "VPHMINPOSUWrm",
+                                              "VPLZCNTDZ128rm(b?)(k?)(z?)",
+                                              "VPLZCNTQZ128rm(b?)(k?)(z?)",
+                                              "VPMADDUBSWZ128rm(b?)(k?)(z?)",
+                                              "VPMADDUBSWrm",
+                                              "VPMADDWDZ128rm(b?)(k?)(z?)",
+                                              "VPMADDWDrm",
+                                              "VPMULDQZ128rm(b?)(k?)(z?)",
+                                              "VPMULDQrm",
+                                              "VPMULHRSWZ128rm(b?)(k?)(z?)",
+                                              "VPMULHRSWrm",
+                                              "VPMULHUWZ128rm(b?)(k?)(z?)",
+                                              "VPMULHUWrm",
+                                              "VPMULHWZ128rm(b?)(k?)(z?)",
+                                              "VPMULHWrm",
+                                              "VPMULLWZ128rm(b?)(k?)(z?)",
+                                              "VPMULLWrm",
+                                              "VPMULUDQZ128rm(b?)(k?)(z?)",
+                                              "VPMULUDQrm",
+                                              "VRANGEPDZ128rm(b?)i(k?)(z?)",
+                                              "VRANGEPSZ128rm(b?)i(k?)(z?)",
+                                              "VRANGESDZ128rmi(b?)(k?)(z?)",
+                                              "VRANGESSZ128rmi(b?)(k?)(z?)",
+                                              "VREDUCEPDZ128rm(b?)i(k?)(z?)",
+                                              "VREDUCEPSZ128rm(b?)i(k?)(z?)",
+                                              "VREDUCESDZ128rmi(b?)(k?)(z?)",
+                                              "VREDUCESSZ128rmi(b?)(k?)(z?)",
+                                              "VSCALEFPDZ128rm(b?)(k?)(z?)",
+                                              "VSCALEFPSZ128rm(b?)(k?)(z?)",
+                                              "VSCALEFSDZ128rm(b?)(k?)(z?)",
+                                              "VSCALEFSSZ128rm(b?)(k?)(z?)",
+                                              "VSUBPDZ128rm(b?)(k?)(z?)",
+                                              "VSUBPDrm",
+                                              "VSUBPSZ128rm(b?)(k?)(z?)",
+                                              "VSUBPSrm",
+                                              "VSUBSDZrm(_Int)?(k?)(z?)",
+                                              "VSUBSSZrm(_Int)?(k?)(z?)")>;
 
 def SKXWriteResGroup150 : SchedWriteRes<[SKXPort0]> {
   let Latency = 10;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
-def: InstRW<[SKXWriteResGroup150], (instregex "PCMPISTRIrr")>;
-def: InstRW<[SKXWriteResGroup150], (instregex "PCMPISTRM128rr")>;
-def: InstRW<[SKXWriteResGroup150], (instregex "VPCMPISTRIrr")>;
-def: InstRW<[SKXWriteResGroup150], (instregex "VPCMPISTRM128rr")>;
+def: InstRW<[SKXWriteResGroup150], (instregex "PCMPISTRIrr",
+                                              "PCMPISTRM128rr",
+                                              "VPCMPISTRIrr",
+                                              "VPCMPISTRM128rr")>;
 
 def SKXWriteResGroup151 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 10;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup151], (instregex "MPSADBWrmi")>;
-def: InstRW<[SKXWriteResGroup151], (instregex "VEXPANDPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup151], (instregex "VEXPANDPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup151], (instregex "VMPSADBWrmi")>;
-def: InstRW<[SKXWriteResGroup151], (instregex "VPEXPANDDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup151], (instregex "VPEXPANDQZ128rm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup151], (instregex "MPSADBWrmi",
+                                              "VEXPANDPDZ128rm(b?)(k?)(z?)",
+                                              "VEXPANDPSZ128rm(b?)(k?)(z?)",
+                                              "VMPSADBWrmi",
+                                              "VPEXPANDDZ128rm(b?)(k?)(z?)",
+                                              "VPEXPANDQZ128rm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup152 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 10;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup152], (instregex "MMX_CVTPI2PDirm")>;
-def: InstRW<[SKXWriteResGroup152], (instregex "VPTESTYrm")>;
+def: InstRW<[SKXWriteResGroup152], (instregex "MMX_CVTPI2PDirm",
+                                              "VPTESTYrm")>;
 
 def SKXWriteResGroup153 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 10;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup153], (instregex "CVTSD2SSrm")>;
-def: InstRW<[SKXWriteResGroup153], (instregex "VCVTSD2SSrm")>;
+def: InstRW<[SKXWriteResGroup153], (instregex "(V?)CVTSD2SSrm")>;
 
 def SKXWriteResGroup154 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort23]> {
   let Latency = 10;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup154], (instregex "VPHADDSWYrm")>;
-def: InstRW<[SKXWriteResGroup154], (instregex "VPHSUBSWYrm")>;
+def: InstRW<[SKXWriteResGroup154], (instregex "VPHADDSWYrm",
+                                              "VPHSUBSWYrm")>;
 
 def SKXWriteResGroup155 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 10;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup155], (instregex "VPHADDDYrm")>;
-def: InstRW<[SKXWriteResGroup155], (instregex "VPHADDWYrm")>;
-def: InstRW<[SKXWriteResGroup155], (instregex "VPHSUBDYrm")>;
-def: InstRW<[SKXWriteResGroup155], (instregex "VPHSUBWYrm")>;
+def: InstRW<[SKXWriteResGroup155], (instregex "VPHADDDYrm",
+                                              "VPHADDWYrm",
+                                              "VPHSUBDYrm",
+                                              "VPHSUBWYrm")>;
 
 def SKXWriteResGroup156 : SchedWriteRes<[SKXPort1,SKXPort23,SKXPort06,SKXPort0156]> {
   let Latency = 10;
@@ -5121,186 +5103,186 @@ def SKXWriteResGroup159 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup159], (instregex "DIVPSrr")>;
-def: InstRW<[SKXWriteResGroup159], (instregex "DIVSSrr")>;
-def: InstRW<[SKXWriteResGroup159], (instregex "VDIVPSYrr")>;
-def: InstRW<[SKXWriteResGroup159], (instregex "VDIVPSZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup159], (instregex "VDIVPSZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup159], (instregex "VDIVPSrr")>;
-def: InstRW<[SKXWriteResGroup159], (instregex "VDIVSSZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup159], (instregex "VDIVSSrr")>;
+def: InstRW<[SKXWriteResGroup159], (instregex "DIVPSrr",
+                                              "DIVSSrr",
+                                              "VDIVPSYrr",
+                                              "VDIVPSZ128rr(b?)(k?)(z?)",
+                                              "VDIVPSZ256rr(b?)(k?)(z?)",
+                                              "VDIVPSrr",
+                                              "VDIVSSZrr(b?)(_Int)?(k?)(z?)",
+                                              "VDIVSSrr")>;
 
 def SKXWriteResGroup160 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 11;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup160], (instregex "MUL_F32m")>;
-def: InstRW<[SKXWriteResGroup160], (instregex "MUL_F64m")>;
-def: InstRW<[SKXWriteResGroup160], (instregex "VRCP14PDZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup160], (instregex "VRCP14PSZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup160], (instregex "VRCPPSYm")>;
-def: InstRW<[SKXWriteResGroup160], (instregex "VRSQRT14PDZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup160], (instregex "VRSQRT14PSZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup160], (instregex "VRSQRTPSYm")>;
+def: InstRW<[SKXWriteResGroup160], (instregex "MUL_F32m",
+                                              "MUL_F64m",
+                                              "VRCP14PDZ256m(b?)(k?)(z?)",
+                                              "VRCP14PSZ256m(b?)(k?)(z?)",
+                                              "VRCPPSYm",
+                                              "VRSQRT14PDZ256m(b?)(k?)(z?)",
+                                              "VRSQRT14PSZ256m(b?)(k?)(z?)",
+                                              "VRSQRTPSYm")>;
 
 def SKXWriteResGroup161 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 11;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDPDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDPSYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDSUBPDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDSUBPSYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCMPPDYrmi")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCMPPSYrmi")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTDQ2PDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTDQ2PDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTDQ2PSYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTDQ2PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTDQ2PSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPD2QQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPD2QQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPD2UQQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPD2UQQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPH2PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPH2PSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2DQYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2DQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2DQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2PDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2PDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2PDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2QQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2UDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2UDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTPS2UQQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTQQ2PDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTQQ2PDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTQQ2PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPD2QQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPD2QQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPD2UQQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPD2UQQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPS2DQYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPS2DQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPS2DQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPS2QQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPS2UDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPS2UDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTTPS2UQQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUDQ2PDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUDQ2PDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUDQ2PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUDQ2PSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUQQ2PDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUQQ2PDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VCVTUQQ2PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VFIXUPIMMPDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VFIXUPIMMPDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VFIXUPIMMPSZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VFIXUPIMMPSZrm(b?)i(k?)(z?)")>;
 def: InstRW<[SKXWriteResGroup161],
           (instregex
            "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)Ym",
            "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)Z256m(b?)(k?)(z?)",
            "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)Zm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETEXPPDZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETEXPPDm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETEXPPSZ256m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETEXPPSm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETMANTPDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETMANTPDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETMANTPSZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VGETMANTPSZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMAX(C?)PDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMAX(C?)PDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMAX(C?)PDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMAX(C?)PSYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMAX(C?)PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMAX(C?)PSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMIN(C?)PDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMIN(C?)PDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMIN(C?)PDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMIN(C?)PSYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMIN(C?)PSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMIN(C?)PSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMULPDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMULPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMULPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMULPSYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMULPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VMULPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPLZCNTDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPLZCNTDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPLZCNTQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPLZCNTQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMADDUBSWYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMADDUBSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMADDUBSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMADDWDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMADDWDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMADDWDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULDQYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHRSWYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHRSWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHRSWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHUWYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHUWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHUWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHWYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULHWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULLWYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULLWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULLWZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULUDQYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULUDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VPMULUDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VRANGEPDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VRANGEPDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VRANGEPSZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VRANGEPSZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VREDUCEPDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VREDUCEPDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VREDUCEPSZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VREDUCEPSZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSCALEFPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSCALEFPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSCALEFPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSCALEFPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSUBPDYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSUBPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSUBPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSUBPSYrm")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSUBPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup161], (instregex "VSUBPSZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup161], (instregex "VADDPDYrm",
+                                              "VADDPDZ256rm(b?)(k?)(z?)",
+                                              "VADDPDZrm(b?)(k?)(z?)",
+                                              "VADDPSYrm",
+                                              "VADDPSZ256rm(b?)(k?)(z?)",
+                                              "VADDPSZrm(b?)(k?)(z?)",
+                                              "VADDSUBPDYrm",
+                                              "VADDSUBPSYrm",
+                                              "VCMPPDYrmi",
+                                              "VCMPPSYrmi",
+                                              "VCVTDQ2PDZ256rm(b?)(k?)(z?)",
+                                              "VCVTDQ2PDZrm(b?)(k?)(z?)",
+                                              "VCVTDQ2PSYrm",
+                                              "VCVTDQ2PSZ256rm(b?)(k?)(z?)",
+                                              "VCVTDQ2PSZrm(b?)(k?)(z?)",
+                                              "VCVTPD2QQZ256rm(b?)(k?)(z?)",
+                                              "VCVTPD2QQZrm(b?)(k?)(z?)",
+                                              "VCVTPD2UQQZ256rm(b?)(k?)(z?)",
+                                              "VCVTPD2UQQZrm(b?)(k?)(z?)",
+                                              "VCVTPH2PSZ256rm(b?)(k?)(z?)",
+                                              "VCVTPH2PSZrm(b?)(k?)(z?)",
+                                              "VCVTPS2DQYrm",
+                                              "VCVTPS2DQZ256rm(b?)(k?)(z?)",
+                                              "VCVTPS2DQZrm(b?)(k?)(z?)",
+                                              "VCVTPS2PDYrm",
+                                              "VCVTPS2PDZ256rm(b?)(k?)(z?)",
+                                              "VCVTPS2PDZrm(b?)(k?)(z?)",
+                                              "VCVTPS2QQZ256rm(b?)(k?)(z?)",
+                                              "VCVTPS2UDQZ256rm(b?)(k?)(z?)",
+                                              "VCVTPS2UDQZrm(b?)(k?)(z?)",
+                                              "VCVTPS2UQQZ256rm(b?)(k?)(z?)",
+                                              "VCVTQQ2PDZ256rm(b?)(k?)(z?)",
+                                              "VCVTQQ2PDZrm(b?)(k?)(z?)",
+                                              "VCVTQQ2PSZ256rm(b?)(k?)(z?)",
+                                              "VCVTTPD2QQZ256rm(b?)(k?)(z?)",
+                                              "VCVTTPD2QQZrm(b?)(k?)(z?)",
+                                              "VCVTTPD2UQQZ256rm(b?)(k?)(z?)",
+                                              "VCVTTPD2UQQZrm(b?)(k?)(z?)",
+                                              "VCVTTPS2DQYrm",
+                                              "VCVTTPS2DQZ256rm(b?)(k?)(z?)",
+                                              "VCVTTPS2DQZrm(b?)(k?)(z?)",
+                                              "VCVTTPS2QQZ256rm(b?)(k?)(z?)",
+                                              "VCVTTPS2UDQZ256rm(b?)(k?)(z?)",
+                                              "VCVTTPS2UDQZrm(b?)(k?)(z?)",
+                                              "VCVTTPS2UQQZ256rm(b?)(k?)(z?)",
+                                              "VCVTUDQ2PDZ256rm(b?)(k?)(z?)",
+                                              "VCVTUDQ2PDZrm(b?)(k?)(z?)",
+                                              "VCVTUDQ2PSZ256rm(b?)(k?)(z?)",
+                                              "VCVTUDQ2PSZrm(b?)(k?)(z?)",
+                                              "VCVTUQQ2PDZ256rm(b?)(k?)(z?)",
+                                              "VCVTUQQ2PDZrm(b?)(k?)(z?)",
+                                              "VCVTUQQ2PSZ256rm(b?)(k?)(z?)",
+                                              "VFIXUPIMMPDZ256rm(b?)i(k?)(z?)",
+                                              "VFIXUPIMMPDZrm(b?)i(k?)(z?)",
+                                              "VFIXUPIMMPSZ256rm(b?)i(k?)(z?)",
+                                              "VFIXUPIMMPSZrm(b?)i(k?)(z?)",
+                                              "VGETEXPPDZ256m(b?)(k?)(z?)",
+                                              "VGETEXPPDm(b?)(k?)(z?)",
+                                              "VGETEXPPSZ256m(b?)(k?)(z?)",
+                                              "VGETEXPPSm(b?)(k?)(z?)",
+                                              "VGETMANTPDZ256rm(b?)i(k?)(z?)",
+                                              "VGETMANTPDZrm(b?)i(k?)(z?)",
+                                              "VGETMANTPSZ256rm(b?)i(k?)(z?)",
+                                              "VGETMANTPSZrm(b?)i(k?)(z?)",
+                                              "VMAX(C?)PDYrm",
+                                              "VMAX(C?)PDZ256rm(b?)(k?)(z?)",
+                                              "VMAX(C?)PDZrm(b?)(k?)(z?)",
+                                              "VMAX(C?)PSYrm",
+                                              "VMAX(C?)PSZ256rm(b?)(k?)(z?)",
+                                              "VMAX(C?)PSZrm(b?)(k?)(z?)",
+                                              "VMIN(C?)PDYrm",
+                                              "VMIN(C?)PDZ256rm(b?)(k?)(z?)",
+                                              "VMIN(C?)PDZrm(b?)(k?)(z?)",
+                                              "VMIN(C?)PSYrm",
+                                              "VMIN(C?)PSZ256rm(b?)(k?)(z?)",
+                                              "VMIN(C?)PSZrm(b?)(k?)(z?)",
+                                              "VMULPDYrm",
+                                              "VMULPDZ256rm(b?)(k?)(z?)",
+                                              "VMULPDZrm(b?)(k?)(z?)",
+                                              "VMULPSYrm",
+                                              "VMULPSZ256rm(b?)(k?)(z?)",
+                                              "VMULPSZrm(b?)(k?)(z?)",
+                                              "VPLZCNTDZ256rm(b?)(k?)(z?)",
+                                              "VPLZCNTDZrm(b?)(k?)(z?)",
+                                              "VPLZCNTQZ256rm(b?)(k?)(z?)",
+                                              "VPLZCNTQZrm(b?)(k?)(z?)",
+                                              "VPMADDUBSWYrm",
+                                              "VPMADDUBSWZ256rm(b?)(k?)(z?)",
+                                              "VPMADDUBSWZrm(b?)(k?)(z?)",
+                                              "VPMADDWDYrm",
+                                              "VPMADDWDZ256rm(b?)(k?)(z?)",
+                                              "VPMADDWDZrm(b?)(k?)(z?)",
+                                              "VPMULDQYrm",
+                                              "VPMULDQZ256rm(b?)(k?)(z?)",
+                                              "VPMULDQZrm(b?)(k?)(z?)",
+                                              "VPMULHRSWYrm",
+                                              "VPMULHRSWZ256rm(b?)(k?)(z?)",
+                                              "VPMULHRSWZrm(b?)(k?)(z?)",
+                                              "VPMULHUWYrm",
+                                              "VPMULHUWZ256rm(b?)(k?)(z?)",
+                                              "VPMULHUWZrm(b?)(k?)(z?)",
+                                              "VPMULHWYrm",
+                                              "VPMULHWZ256rm(b?)(k?)(z?)",
+                                              "VPMULHWZrm(b?)(k?)(z?)",
+                                              "VPMULLWYrm",
+                                              "VPMULLWZ256rm(b?)(k?)(z?)",
+                                              "VPMULLWZrm(b?)(k?)(z?)",
+                                              "VPMULUDQYrm",
+                                              "VPMULUDQZ256rm(b?)(k?)(z?)",
+                                              "VPMULUDQZrm(b?)(k?)(z?)",
+                                              "VRANGEPDZ256rm(b?)i(k?)(z?)",
+                                              "VRANGEPDZrm(b?)i(k?)(z?)",
+                                              "VRANGEPSZ256rm(b?)i(k?)(z?)",
+                                              "VRANGEPSZrm(b?)i(k?)(z?)",
+                                              "VREDUCEPDZ256rm(b?)i(k?)(z?)",
+                                              "VREDUCEPDZrm(b?)i(k?)(z?)",
+                                              "VREDUCEPSZ256rm(b?)i(k?)(z?)",
+                                              "VREDUCEPSZrm(b?)i(k?)(z?)",
+                                              "VSCALEFPDZ256rm(b?)(k?)(z?)",
+                                              "VSCALEFPDZrm(b?)(k?)(z?)",
+                                              "VSCALEFPSZ256rm(b?)(k?)(z?)",
+                                              "VSCALEFPSZrm(b?)(k?)(z?)",
+                                              "VSUBPDYrm",
+                                              "VSUBPDZ256rm(b?)(k?)(z?)",
+                                              "VSUBPDZrm(b?)(k?)(z?)",
+                                              "VSUBPSYrm",
+                                              "VSUBPSZ256rm(b?)(k?)(z?)",
+                                              "VSUBPSZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup162 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 11;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup162], (instregex "FICOM16m")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "FICOM32m")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "FICOMP16m")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "FICOMP32m")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VEXPANDPDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VEXPANDPDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VEXPANDPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VEXPANDPSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VMPSADBWYrmi")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VPEXPANDDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VPEXPANDDZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VPEXPANDQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup162], (instregex "VPEXPANDQZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup162], (instregex "FICOM16m",
+                                              "FICOM32m",
+                                              "FICOMP16m",
+                                              "FICOMP32m",
+                                              "VEXPANDPDZ256rm(b?)(k?)(z?)",
+                                              "VEXPANDPDZrm(b?)(k?)(z?)",
+                                              "VEXPANDPSZ256rm(b?)(k?)(z?)",
+                                              "VEXPANDPSZrm(b?)(k?)(z?)",
+                                              "VMPSADBWYrmi",
+                                              "VPEXPANDDZ256rm(b?)(k?)(z?)",
+                                              "VPEXPANDDZrm(b?)(k?)(z?)",
+                                              "VPEXPANDQZ256rm(b?)(k?)(z?)",
+                                              "VPEXPANDQZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup163 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 11;
@@ -5314,52 +5296,51 @@ def SKXWriteResGroup164 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup164], (instregex "CVTDQ2PDrm")>;
-def: InstRW<[SKXWriteResGroup164], (instregex "VCVTDQ2PDrm")>;
+def: InstRW<[SKXWriteResGroup164], (instregex "(V?)CVTDQ2PDrm")>;
 
 def SKXWriteResGroup165 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015]> {
   let Latency = 11;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup165], (instregex "CVTSD2SI64rm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "CVTSD2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "CVTSS2SI64rm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "CVTSS2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "CVTTSD2SI64rm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "CVTTSD2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "CVTTSS2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSD2SI64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSD2SI64rm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSD2SIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSD2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSD2USI64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSS2SI64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSS2SI64rm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSS2SIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSS2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTSS2USIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSD2SI64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSD2SI64rm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSD2SIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSD2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSD2USI64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSS2SI64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSS2SI64rm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSS2SIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSS2SIrm")>;
-def: InstRW<[SKXWriteResGroup165], (instregex "VCVTTSS2USIZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup165], (instregex "CVTSD2SI64rm",
+                                              "CVTSD2SIrm",
+                                              "CVTSS2SI64rm",
+                                              "CVTSS2SIrm",
+                                              "CVTTSD2SI64rm",
+                                              "CVTTSD2SIrm",
+                                              "CVTTSS2SIrm",
+                                              "VCVTSD2SI64Zrm(b?)(k?)(z?)",
+                                              "VCVTSD2SI64rm",
+                                              "VCVTSD2SIZrm(b?)(k?)(z?)",
+                                              "VCVTSD2SIrm",
+                                              "VCVTSD2USI64Zrm(b?)(k?)(z?)",
+                                              "VCVTSS2SI64Zrm(b?)(k?)(z?)",
+                                              "VCVTSS2SI64rm",
+                                              "VCVTSS2SIZrm(b?)(k?)(z?)",
+                                              "VCVTSS2SIrm",
+                                              "VCVTSS2USIZrm(b?)(k?)(z?)",
+                                              "VCVTTSD2SI64Zrm(b?)(k?)(z?)",
+                                              "VCVTTSD2SI64rm",
+                                              "VCVTTSD2SIZrm(b?)(k?)(z?)",
+                                              "VCVTTSD2SIrm",
+                                              "VCVTTSD2USI64Zrm(b?)(k?)(z?)",
+                                              "VCVTTSS2SI64Zrm(b?)(k?)(z?)",
+                                              "VCVTTSS2SI64rm",
+                                              "VCVTTSS2SIZrm(b?)(k?)(z?)",
+                                              "VCVTTSS2SIrm",
+                                              "VCVTTSS2USIZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup166 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 11;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup166], (instregex "CVTPD2DQrm")>;
-def: InstRW<[SKXWriteResGroup166], (instregex "CVTPD2PSrm")>;
-def: InstRW<[SKXWriteResGroup166], (instregex "CVTTPD2DQrm")>;
-def: InstRW<[SKXWriteResGroup166], (instregex "MMX_CVTPD2PIirm")>;
-def: InstRW<[SKXWriteResGroup166], (instregex "MMX_CVTTPD2PIirm")>;
+def: InstRW<[SKXWriteResGroup166], (instregex "CVTPD2DQrm",
+                                              "CVTPD2PSrm",
+                                              "CVTTPD2DQrm",
+                                              "MMX_CVTPD2PIirm",
+                                              "MMX_CVTTPD2PIirm")>;
 
 def SKXWriteResGroup167 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 11;
@@ -5373,16 +5354,16 @@ def SKXWriteResGroup168 : SchedWriteRes<[SKXPort1,SKXPort23,SKXPort237,SKXPort06
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,1,2,1];
 }
-def: InstRW<[SKXWriteResGroup168], (instregex "SHLD(16|32|64)mrCL")>;
-def: InstRW<[SKXWriteResGroup168], (instregex "SHRD(16|32|64)mrCL")>;
+def: InstRW<[SKXWriteResGroup168], (instregex "SHLD(16|32|64)mrCL",
+                                              "SHRD(16|32|64)mrCL")>;
 
 def SKXWriteResGroup169 : SchedWriteRes<[SKXPort1,SKXPort06,SKXPort0156]> {
   let Latency = 11;
   let NumMicroOps = 7;
   let ResourceCycles = [2,3,2];
 }
-def: InstRW<[SKXWriteResGroup169], (instregex "RCL(16|32|64)rCL")>;
-def: InstRW<[SKXWriteResGroup169], (instregex "RCR(16|32|64)rCL")>;
+def: InstRW<[SKXWriteResGroup169], (instregex "RCL(16|32|64)rCL",
+                                              "RCR(16|32|64)rCL")>;
 
 def SKXWriteResGroup170 : SchedWriteRes<[SKXPort1,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 11;
@@ -5396,39 +5377,37 @@ def SKXWriteResGroup171 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let NumMicroOps = 11;
   let ResourceCycles = [2,9];
 }
-def: InstRW<[SKXWriteResGroup171], (instrs LOOPE)>;
-def: InstRW<[SKXWriteResGroup171], (instrs LOOPNE)>;
+def: InstRW<[SKXWriteResGroup171], (instrs LOOPE, LOOPNE)>;
 
 def SKXWriteResGroup172 : SchedWriteRes<[SKXPort0]> {
   let Latency = 12;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup172], (instregex "SQRTPSr")>;
-def: InstRW<[SKXWriteResGroup172], (instregex "SQRTSSr")>;
-def: InstRW<[SKXWriteResGroup172], (instregex "VSQRTPSYr")>;
-def: InstRW<[SKXWriteResGroup172], (instregex "VSQRTPSZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup172], (instregex "VSQRTPSZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup172], (instregex "VSQRTPSr")>;
-def: InstRW<[SKXWriteResGroup172], (instregex "VSQRTSSZr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup172], (instregex "VSQRTSSr")>;
+def: InstRW<[SKXWriteResGroup172], (instregex "SQRTPSr",
+                                              "SQRTSSr",
+                                              "VSQRTPSYr",
+                                              "VSQRTPSZ128r(b?)(k?)(z?)",
+                                              "VSQRTPSZ256r(b?)(k?)(z?)",
+                                              "VSQRTPSr",
+                                              "VSQRTSSZr(b?)(_Int)?(k?)(z?)",
+                                              "VSQRTSSr")>;
 
 def SKXWriteResGroup173 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 12;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup173], (instregex "PCLMULQDQrm")>;
-def: InstRW<[SKXWriteResGroup173], (instregex "VPCLMULQDQrm")>;
+def: InstRW<[SKXWriteResGroup173], (instregex "(V?)PCLMULQDQrm")>;
 
 def SKXWriteResGroup174 : SchedWriteRes<[SKXPort015]> {
   let Latency = 12;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
-def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQZ128rr(b?)(k?)(z?)",
+                                              "VPMULLQZ256rr(b?)(k?)(z?)",
+                                              "VPMULLQZrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup175 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 12;
@@ -5442,34 +5421,30 @@ def SKXWriteResGroup176 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup176], (instregex "VCVTSD2USIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup176], (instregex "VCVTSS2USI64Zrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup176], (instregex "VCVTTSD2USIZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup176], (instregex "VCVTTSS2USI64Zrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup176], (instregex "VCVTSD2USIZrm(b?)(k?)(z?)",
+                                              "VCVTSS2USI64Zrm(b?)(k?)(z?)",
+                                              "VCVTTSD2USIZrm(b?)(k?)(z?)",
+                                              "VCVTTSS2USI64Zrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup177 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 12;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup177], (instregex "VCVTPS2QQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup177], (instregex "VCVTPS2UQQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup177], (instregex "VCVTTPS2QQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup177], (instregex "VCVTTPS2UQQZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup177], (instregex "VCVTPS2QQZrm(b?)(k?)(z?)",
+                                              "VCVTPS2UQQZrm(b?)(k?)(z?)",
+                                              "VCVTTPS2QQZrm(b?)(k?)(z?)",
+                                              "VCVTTPS2UQQZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup178 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 12;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup178], (instregex "HADDPDrm")>;
-def: InstRW<[SKXWriteResGroup178], (instregex "HADDPSrm")>;
-def: InstRW<[SKXWriteResGroup178], (instregex "HSUBPDrm")>;
-def: InstRW<[SKXWriteResGroup178], (instregex "HSUBPSrm")>;
-def: InstRW<[SKXWriteResGroup178], (instregex "VHADDPDrm")>;
-def: InstRW<[SKXWriteResGroup178], (instregex "VHADDPSrm")>;
-def: InstRW<[SKXWriteResGroup178], (instregex "VHSUBPDrm")>;
-def: InstRW<[SKXWriteResGroup178], (instregex "VHSUBPSrm")>;
+def: InstRW<[SKXWriteResGroup178], (instregex "(V?)HADDPDrm",
+                                              "(V?)HADDPSrm",
+                                              "(V?)HSUBPDrm",
+                                              "(V?)HSUBPSrm")>;
 
 def SKXWriteResGroup179 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 12;
@@ -5483,14 +5458,14 @@ def SKXWriteResGroup180 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup180], (instregex "ADD_FI16m")>;
-def: InstRW<[SKXWriteResGroup180], (instregex "ADD_FI32m")>;
-def: InstRW<[SKXWriteResGroup180], (instregex "SUBR_FI16m")>;
-def: InstRW<[SKXWriteResGroup180], (instregex "SUBR_FI32m")>;
-def: InstRW<[SKXWriteResGroup180], (instregex "SUB_FI16m")>;
-def: InstRW<[SKXWriteResGroup180], (instregex "SUB_FI32m")>;
-def: InstRW<[SKXWriteResGroup180], (instregex "VPERMWZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup180], (instregex "VPERMWZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup180], (instregex "ADD_FI16m",
+                                              "ADD_FI32m",
+                                              "SUBR_FI16m",
+                                              "SUBR_FI32m",
+                                              "SUB_FI16m",
+                                              "SUB_FI32m",
+                                              "VPERMWZ256rm(b?)(k?)(z?)",
+                                              "VPERMWZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup181 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 13;
@@ -5504,101 +5479,100 @@ def SKXWriteResGroup182 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SKXWriteResGroup182], (instregex "DPPSrri")>;
-def: InstRW<[SKXWriteResGroup182], (instregex "VDPPSYrri")>;
-def: InstRW<[SKXWriteResGroup182], (instregex "VDPPSrri")>;
+def: InstRW<[SKXWriteResGroup182], (instregex "DPPSrri",
+                                              "VDPPSYrri",
+                                              "VDPPSrri")>;
 
 def SKXWriteResGroup183 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 13;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup183], (instregex "VHADDPDYrm")>;
-def: InstRW<[SKXWriteResGroup183], (instregex "VHADDPSYrm")>;
-def: InstRW<[SKXWriteResGroup183], (instregex "VHSUBPDYrm")>;
-def: InstRW<[SKXWriteResGroup183], (instregex "VHSUBPSYrm")>;
-def: InstRW<[SKXWriteResGroup183], (instregex "VPERMI2W128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup183], (instregex "VPERMT2W128rm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup183], (instregex "VHADDPDYrm",
+                                              "VHADDPSYrm",
+                                              "VHSUBPDYrm",
+                                              "VHSUBPSYrm",
+                                              "VPERMI2W128rm(b?)(k?)(z?)",
+                                              "VPERMT2W128rm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup184 : SchedWriteRes<[SKXPort0]> {
   let Latency = 14;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup184], (instregex "DIVPDrr")>;
-def: InstRW<[SKXWriteResGroup184], (instregex "DIVSDrr")>;
-def: InstRW<[SKXWriteResGroup184], (instregex "VDIVPDYrr")>;
-def: InstRW<[SKXWriteResGroup184], (instregex "VDIVPDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup184], (instregex "VDIVPDZ256rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup184], (instregex "VDIVPDrr")>;
-def: InstRW<[SKXWriteResGroup184], (instregex "VDIVSDZrr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup184], (instregex "VDIVSDrr")>;
+def: InstRW<[SKXWriteResGroup184], (instregex "DIVPDrr",
+                                              "DIVSDrr",
+                                              "VDIVPDYrr",
+                                              "VDIVPDZ128rr(b?)(k?)(z?)",
+                                              "VDIVPDZ256rr(b?)(k?)(z?)",
+                                              "VDIVPDrr",
+                                              "VDIVSDZrr(b?)(_Int)?(k?)(z?)",
+                                              "VDIVSDrr")>;
 
 def SKXWriteResGroup185 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 14;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup185], (instregex "AESIMCrm")>;
-def: InstRW<[SKXWriteResGroup185], (instregex "VAESIMCrm")>;
+def: InstRW<[SKXWriteResGroup185], (instregex "(V?)AESIMCrm")>;
 
 def SKXWriteResGroup186 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 14;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup186], (instregex "ROUNDPDm")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "ROUNDPSm")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "ROUNDSDm")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "ROUNDSSm")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VRNDSCALEPDZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VRNDSCALEPSZ128rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VRNDSCALESDm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VRNDSCALESSm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VROUNDPDm")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VROUNDPSm")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VROUNDSDm")>;
-def: InstRW<[SKXWriteResGroup186], (instregex "VROUNDSSm")>;
+def: InstRW<[SKXWriteResGroup186], (instregex "ROUNDPDm",
+                                              "ROUNDPSm",
+                                              "ROUNDSDm",
+                                              "ROUNDSSm",
+                                              "VRNDSCALEPDZ128rm(b?)i(k?)(z?)",
+                                              "VRNDSCALEPSZ128rm(b?)i(k?)(z?)",
+                                              "VRNDSCALESDm(b?)(k?)(z?)",
+                                              "VRNDSCALESSm(b?)(k?)(z?)",
+                                              "VROUNDPDm",
+                                              "VROUNDPSm",
+                                              "VROUNDSDm",
+                                              "VROUNDSSm")>;
 
 def SKXWriteResGroup186_2 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 16;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup186_2], (instregex "PMULLDrm")>;
-def: InstRW<[SKXWriteResGroup186_2], (instregex "VPMULLDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup186_2], (instregex "VPMULLDrm")>;
+def: InstRW<[SKXWriteResGroup186_2], (instregex "PMULLDrm",
+                                                "VPMULLDZ128rm(b?)(k?)(z?)",
+                                                "VPMULLDrm")>;
 
 def SKXWriteResGroup187 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 14;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup187], (instregex "MUL_FI16m")>;
-def: InstRW<[SKXWriteResGroup187], (instregex "MUL_FI32m")>;
+def: InstRW<[SKXWriteResGroup187], (instregex "MUL_FI16m",
+                                              "MUL_FI32m")>;
 
 def SKXWriteResGroup188 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 14;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup188], (instregex "VCVTPD2DQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup188], (instregex "VCVTPD2PSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup188], (instregex "VCVTPD2UDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup188], (instregex "VCVTQQ2PSZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup188], (instregex "VCVTTPD2DQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup188], (instregex "VCVTTPD2UDQZrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup188], (instregex "VCVTUQQ2PSZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup188], (instregex "VCVTPD2DQZrm(b?)(k?)(z?)",
+                                              "VCVTPD2PSZrm(b?)(k?)(z?)",
+                                              "VCVTPD2UDQZrm(b?)(k?)(z?)",
+                                              "VCVTQQ2PSZrm(b?)(k?)(z?)",
+                                              "VCVTTPD2DQZrm(b?)(k?)(z?)",
+                                              "VCVTTPD2UDQZrm(b?)(k?)(z?)",
+                                              "VCVTUQQ2PSZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup189 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 14;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup189], (instregex "VPERMI2W256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup189], (instregex "VPERMI2Wrm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup189], (instregex "VPERMT2W256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup189], (instregex "VPERMT2Wrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup189], (instregex "VPERMI2W256rm(b?)(k?)(z?)",
+                                              "VPERMI2Wrm(b?)(k?)(z?)",
+                                              "VPERMT2W256rm(b?)(k?)(z?)",
+                                              "VPERMT2Wrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup190 : SchedWriteRes<[SKXPort1,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 14;
@@ -5612,21 +5586,21 @@ def SKXWriteResGroup191 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup191], (instregex "DIVR_FPrST0")>;
-def: InstRW<[SKXWriteResGroup191], (instregex "DIVR_FST0r")>;
-def: InstRW<[SKXWriteResGroup191], (instregex "DIVR_FrST0")>;
+def: InstRW<[SKXWriteResGroup191], (instregex "DIVR_FPrST0",
+                                              "DIVR_FST0r",
+                                              "DIVR_FrST0")>;
 
 def SKXWriteResGroup192 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 15;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup192], (instregex "VRNDSCALEPDZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup192], (instregex "VRNDSCALEPDZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup192], (instregex "VRNDSCALEPSZ256rm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup192], (instregex "VRNDSCALEPSZrm(b?)i(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup192], (instregex "VROUNDYPDm")>;
-def: InstRW<[SKXWriteResGroup192], (instregex "VROUNDYPSm")>;
+def: InstRW<[SKXWriteResGroup192], (instregex "VRNDSCALEPDZ256rm(b?)i(k?)(z?)",
+                                              "VRNDSCALEPDZrm(b?)i(k?)(z?)",
+                                              "VRNDSCALEPSZ256rm(b?)i(k?)(z?)",
+                                              "VRNDSCALEPSZrm(b?)i(k?)(z?)",
+                                              "VROUNDYPDm",
+                                              "VROUNDYPSm")>;
 
 def SKXWriteResGroup192_2 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 17;
@@ -5642,8 +5616,7 @@ def SKXWriteResGroup193 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,2];
 }
-def: InstRW<[SKXWriteResGroup193], (instregex "DPPDrmi")>;
-def: InstRW<[SKXWriteResGroup193], (instregex "VDPPDrmi")>;
+def: InstRW<[SKXWriteResGroup193], (instregex "(V?)DPPDrmi")>;
 
 def SKXWriteResGroup194 : SchedWriteRes<[SKXPort1,SKXPort5,SKXPort01,SKXPort23,SKXPort015]> {
   let Latency = 15;
@@ -5664,28 +5637,27 @@ def SKXWriteResGroup196 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup196], (instregex "DIVSSrm")>;
-def: InstRW<[SKXWriteResGroup196], (instregex "VDIVSSrm")>;
+def: InstRW<[SKXWriteResGroup196], (instregex "(V?)DIVSSrm")>;
 
 def SKXWriteResGroup197 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 16;
   let NumMicroOps = 4;
   let ResourceCycles = [3,1];
 }
-def: InstRW<[SKXWriteResGroup197], (instregex "PCMPISTRIrm")>;
-def: InstRW<[SKXWriteResGroup197], (instregex "PCMPISTRM128rm")>;
-def: InstRW<[SKXWriteResGroup197], (instregex "VPCMPISTRIrm")>;
-def: InstRW<[SKXWriteResGroup197], (instregex "VPCMPISTRM128rm")>;
+def: InstRW<[SKXWriteResGroup197], (instregex "PCMPISTRIrm",
+                                              "PCMPISTRM128rm",
+                                              "VPCMPISTRIrm",
+                                              "VPCMPISTRM128rm")>;
 
 def SKXWriteResGroup198 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015]> {
   let Latency = 16;
   let NumMicroOps = 4;
   let ResourceCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup198], (instregex "VRCP14PDZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup198], (instregex "VRCP14PSZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup198], (instregex "VRSQRT14PDZm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup198], (instregex "VRSQRT14PSZm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup198], (instregex "VRCP14PDZm(b?)(k?)(z?)",
+                                              "VRCP14PSZm(b?)(k?)(z?)",
+                                              "VRSQRT14PDZm(b?)(k?)(z?)",
+                                              "VRSQRT14PSZm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup199 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 16;
@@ -5706,12 +5678,12 @@ def SKXWriteResGroup201 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup201], (instregex "DIVPSrm")>;
-def: InstRW<[SKXWriteResGroup201], (instregex "SQRTSSm")>;
-def: InstRW<[SKXWriteResGroup201], (instregex "VDIVPSZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup201], (instregex "VDIVPSrm")>;
-def: InstRW<[SKXWriteResGroup201], (instregex "VDIVSSZrm(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup201], (instregex "VSQRTSSm")>;
+def: InstRW<[SKXWriteResGroup201], (instregex "DIVPSrm",
+                                              "SQRTSSm",
+                                              "VDIVPSZ128rm(b?)(k?)(z?)",
+                                              "VDIVPSrm",
+                                              "VDIVSSZrm(_Int)?(k?)(z?)",
+                                              "VSQRTSSm")>;
 
 def SKXWriteResGroup202 : SchedWriteRes<[SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKXPort05,SKXPort0156]> {
   let Latency = 17;
@@ -5725,26 +5697,26 @@ def SKXWriteResGroup203 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup203], (instregex "SQRTPDr")>;
-def: InstRW<[SKXWriteResGroup203], (instregex "SQRTSDr")>;
-def: InstRW<[SKXWriteResGroup203], (instregex "VSQRTPDYr")>;
-def: InstRW<[SKXWriteResGroup203], (instregex "VSQRTPDZ128r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup203], (instregex "VSQRTPDZ256r(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup203], (instregex "VSQRTPDr")>;
-def: InstRW<[SKXWriteResGroup203], (instregex "VSQRTSDZr(b?)(_Int)?(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup203], (instregex "VSQRTSDr")>;
+def: InstRW<[SKXWriteResGroup203], (instregex "SQRTPDr",
+                                              "SQRTSDr",
+                                              "VSQRTPDYr",
+                                              "VSQRTPDZ128r(b?)(k?)(z?)",
+                                              "VSQRTPDZ256r(b?)(k?)(z?)",
+                                              "VSQRTPDr",
+                                              "VSQRTSDZr(b?)(_Int)?(k?)(z?)",
+                                              "VSQRTSDr")>;
 
 def SKXWriteResGroup204 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 18;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup204], (instregex "SQRTPSm")>;
-def: InstRW<[SKXWriteResGroup204], (instregex "VDIVPSYrm")>;
-def: InstRW<[SKXWriteResGroup204], (instregex "VDIVPSZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup204], (instregex "VSQRTPSZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup204], (instregex "VSQRTPSm")>;
-def: InstRW<[SKXWriteResGroup204], (instregex "VSQRTSSZm(_Int)?(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup204], (instregex "SQRTPSm",
+                                              "VDIVPSYrm",
+                                              "VDIVPSZ256rm(b?)(k?)(z?)",
+                                              "VSQRTPSZ128m(b?)(k?)(z?)",
+                                              "VSQRTPSm",
+                                              "VSQRTSSZm(_Int)?(k?)(z?)")>;
 
 def SKXWriteResGroup205 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 18;
@@ -5758,16 +5730,14 @@ def SKXWriteResGroup206 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort0156]> {
   let NumMicroOps = 8;
   let ResourceCycles = [4,3,1];
 }
-def: InstRW<[SKXWriteResGroup206], (instregex "PCMPESTRIrr")>;
-def: InstRW<[SKXWriteResGroup206], (instregex "VPCMPESTRIrr")>;
+def: InstRW<[SKXWriteResGroup206], (instregex "(V?)PCMPESTRIrr")>;
 
 def SKXWriteResGroup207 : SchedWriteRes<[SKXPort5,SKXPort6,SKXPort06,SKXPort0156]> {
   let Latency = 18;
   let NumMicroOps = 8;
   let ResourceCycles = [1,1,1,5];
 }
-def: InstRW<[SKXWriteResGroup207], (instregex "CPUID")>;
-def: InstRW<[SKXWriteResGroup207], (instrs RDTSC)>;
+def: InstRW<[SKXWriteResGroup207], (instrs CPUID, RDTSC)>;
 
 def SKXWriteResGroup208 : SchedWriteRes<[SKXPort1,SKXPort23,SKXPort237,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 18;
@@ -5781,10 +5751,10 @@ def SKXWriteResGroup209 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup209], (instregex "DIVSDrm")>;
-def: InstRW<[SKXWriteResGroup209], (instregex "VDIVSDrm")>;
-def: InstRW<[SKXWriteResGroup209], (instregex "VSQRTPSYm")>;
-def: InstRW<[SKXWriteResGroup209], (instregex "VSQRTPSZ256m(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup209], (instregex "DIVSDrm",
+                                              "VDIVSDrm",
+                                              "VSQRTPSYm",
+                                              "VSQRTPSZ256m(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup210 : SchedWriteRes<[SKXPort0,SKXPort015]> {
   let Latency = 19;
@@ -5798,24 +5768,22 @@ def SKXWriteResGroup211 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SKXWriteResGroup211], (instregex "VPMULLQZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup211], (instregex "VPMULLQZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup211], (instregex "VPMULLQZ256rm(b?)(k?)(z?)",
+                                              "VPMULLQZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup212 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 19;
   let NumMicroOps = 5;
   let ResourceCycles = [1,1,3];
 }
-def: InstRW<[SKXWriteResGroup212], (instregex "DPPSrmi")>;
-def: InstRW<[SKXWriteResGroup212], (instregex "VDPPSrmi")>;
+def: InstRW<[SKXWriteResGroup212], (instregex "(V?)DPPSrmi")>;
 
 def SKXWriteResGroup213 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort015,SKXPort0156]> {
   let Latency = 19;
   let NumMicroOps = 9;
   let ResourceCycles = [4,3,1,1];
 }
-def: InstRW<[SKXWriteResGroup213], (instregex "PCMPESTRM128rr")>;
-def: InstRW<[SKXWriteResGroup213], (instregex "VPCMPESTRM128rr")>;
+def: InstRW<[SKXWriteResGroup213], (instregex "(V?)PCMPESTRM128rr")>;
 
 def SKXWriteResGroup214 : SchedWriteRes<[]> {
   let Latency = 20;
@@ -5830,19 +5798,18 @@ def SKXWriteResGroup215 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup215], (instregex "DIV_FPrST0")>;
-def: InstRW<[SKXWriteResGroup215], (instregex "DIV_FST0r")>;
-def: InstRW<[SKXWriteResGroup215], (instregex "DIV_FrST0")>;
+def: InstRW<[SKXWriteResGroup215], (instregex "DIV_FPrST0",
+                                              "DIV_FST0r",
+                                              "DIV_FrST0")>;
 
 def SKXWriteResGroup216 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 20;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup216], (instregex "DIVPDrm")>;
-def: InstRW<[SKXWriteResGroup216], (instregex "VDIVPDZ128rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup216], (instregex "VDIVPDrm")>;
-def: InstRW<[SKXWriteResGroup216], (instregex "VDIVSDZrm(_Int)?(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup216], (instregex "(V?)DIVPDrm",
+                                              "VDIVPDZ128rm(b?)(k?)(z?)",
+                                              "VDIVSDZrm(_Int)?(k?)(z?)")>;
 
 def SKXWriteResGroup217 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 20;
@@ -5866,9 +5833,9 @@ def SKXWriteResGroup219 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort6,SKXPort23,SK
   let NumMicroOps = 8;
   let ResourceCycles = [1,1,1,1,1,1,2];
 }
-def: InstRW<[SKXWriteResGroup219], (instregex "INSB")>;
-def: InstRW<[SKXWriteResGroup219], (instregex "INSL")>;
-def: InstRW<[SKXWriteResGroup219], (instregex "INSW")>;
+def: InstRW<[SKXWriteResGroup219], (instregex "INSB",
+                                              "INSL",
+                                              "INSW")>;
 
 def SKXWriteResGroup220 : SchedWriteRes<[SKXPort5,SKXPort6,SKXPort0156]> {
   let Latency = 20;
@@ -5882,24 +5849,23 @@ def SKXWriteResGroup221 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort015]> {
   let NumMicroOps = 11;
   let ResourceCycles = [3,6,2];
 }
-def: InstRW<[SKXWriteResGroup221], (instregex "AESKEYGENASSIST128rr")>;
-def: InstRW<[SKXWriteResGroup221], (instregex "VAESKEYGENASSIST128rr")>;
+def: InstRW<[SKXWriteResGroup221], (instregex "(V?)AESKEYGENASSIST128rr")>;
 
 def SKXWriteResGroup222 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 21;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup222], (instregex "VDIVPDYrm")>;
-def: InstRW<[SKXWriteResGroup222], (instregex "VDIVPDZ256rm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup222], (instregex "VDIVPDYrm",
+                                              "VDIVPDZ256rm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup223 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 22;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup223], (instregex "DIV_F32m")>;
-def: InstRW<[SKXWriteResGroup223], (instregex "DIV_F64m")>;
+def: InstRW<[SKXWriteResGroup223], (instregex "DIV_F32m",
+                                              "DIV_F64m")>;
 
 def SKXWriteResGroup224 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015,SKXPort0156]> {
   let Latency = 22;
@@ -5958,24 +5924,23 @@ def SKXWriteResGroup225 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort015]> {
   let NumMicroOps = 14;
   let ResourceCycles = [5,5,4];
 }
-def: InstRW<[SKXWriteResGroup225], (instregex "VPCONFLICTDZ128rr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup225], (instregex "VPCONFLICTQZ256rr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup225], (instregex "VPCONFLICTDZ128rr(b?)(k?)(z?)",
+                                              "VPCONFLICTQZ256rr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup226 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 23;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup226], (instregex "SQRTSDm")>;
-def: InstRW<[SKXWriteResGroup226], (instregex "VSQRTSDm")>;
+def: InstRW<[SKXWriteResGroup226], (instregex "(V?)SQRTSDm")>;
 
 def SKXWriteResGroup227 : SchedWriteRes<[SKXPort0,SKXPort015]> {
   let Latency = 23;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup227], (instregex "VDIVPDZrr(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup227], (instregex "VDIVPSZrr(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup227], (instregex "VDIVPDZrr(b?)(k?)(z?)",
+                                              "VDIVPSZrr(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup228 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort5,SKXPort23,SKXPort237,SKXPort06,SKXPort0156]> {
   let Latency = 23;
@@ -5989,10 +5954,10 @@ def SKXWriteResGroup229 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup229], (instregex "SQRTPDm")>;
-def: InstRW<[SKXWriteResGroup229], (instregex "VSQRTPDZ128m(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup229], (instregex "VSQRTPDm")>;
-def: InstRW<[SKXWriteResGroup229], (instregex "VSQRTSDZm(_Int)?(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup229], (instregex "SQRTPDm",
+                                              "VSQRTPDZ128m(b?)(k?)(z?)",
+                                              "VSQRTPDm",
+                                              "VSQRTSDZm(_Int)?(k?)(z?)")>;
 
 def SKXWriteResGroup230 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015]> {
   let Latency = 24;
@@ -6006,24 +5971,23 @@ def SKXWriteResGroup231 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23,SKXPort0156
   let NumMicroOps = 9;
   let ResourceCycles = [4,3,1,1];
 }
-def: InstRW<[SKXWriteResGroup231], (instregex "PCMPESTRIrm")>;
-def: InstRW<[SKXWriteResGroup231], (instregex "VPCMPESTRIrm")>;
+def: InstRW<[SKXWriteResGroup231], (instregex "(V?)PCMPESTRIrm")>;
 
 def SKXWriteResGroup232 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let Latency = 25;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup232], (instregex "VSQRTPDYm")>;
-def: InstRW<[SKXWriteResGroup232], (instregex "VSQRTPDZ256m(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup232], (instregex "VSQRTPDYm",
+                                              "VSQRTPDZ256m(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup233 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 25;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup233], (instregex "DIV_FI16m")>;
-def: InstRW<[SKXWriteResGroup233], (instregex "DIV_FI32m")>;
+def: InstRW<[SKXWriteResGroup233], (instregex "DIV_FI16m",
+                                              "DIV_FI32m")>;
 
 def SKXWriteResGroup234 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015,SKXPort0156]> {
   let Latency = 25;
@@ -6041,16 +6005,14 @@ def SKXWriteResGroup235 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23,SKXPort015,
   let NumMicroOps = 10;
   let ResourceCycles = [4,3,1,1,1];
 }
-def: InstRW<[SKXWriteResGroup235], (instregex "PCMPESTRM128rm")>;
-def: InstRW<[SKXWriteResGroup235], (instregex "VPCMPESTRM128rm")>;
+def: InstRW<[SKXWriteResGroup235], (instregex "(V?)PCMPESTRM128rm")>;
 
 def SKXWriteResGroup236 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 25;
   let NumMicroOps = 11;
   let ResourceCycles = [3,6,1,1];
 }
-def: InstRW<[SKXWriteResGroup236], (instregex "AESKEYGENASSIST128rm")>;
-def: InstRW<[SKXWriteResGroup236], (instregex "VAESKEYGENASSIST128rm")>;
+def: InstRW<[SKXWriteResGroup236], (instregex "(V?)AESKEYGENASSIST128rm")>;
 
 def SKXWriteResGroup237 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015]> {
   let Latency = 26;
@@ -6074,8 +6036,8 @@ def SKXWriteResGroup239 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup239], (instregex "DIVR_F32m")>;
-def: InstRW<[SKXWriteResGroup239], (instregex "DIVR_F64m")>;
+def: InstRW<[SKXWriteResGroup239], (instregex "DIVR_F32m",
+                                              "DIVR_F64m")>;
 
 def SKXWriteResGroup240 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015,SKXPort0156]> {
   let Latency = 27;
@@ -6104,8 +6066,8 @@ def SKXWriteResGroup243 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup243], (instregex "DIVR_FI16m")>;
-def: InstRW<[SKXWriteResGroup243], (instregex "DIVR_FI32m")>;
+def: InstRW<[SKXWriteResGroup243], (instregex "DIVR_FI16m",
+                                              "DIVR_FI32m")>;
 
 def SKXWriteResGroup244 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015]> {
   let Latency = 30;
@@ -6134,16 +6096,16 @@ def SKXWriteResGroup247 : SchedWriteRes<[SKXPort5,SKXPort6,SKXPort23,SKXPort06,S
   let NumMicroOps = 23;
   let ResourceCycles = [1,5,3,4,10];
 }
-def: InstRW<[SKXWriteResGroup247], (instregex "IN(8|16|32)ri")>;
-def: InstRW<[SKXWriteResGroup247], (instregex "IN(8|16|32)rr")>;
+def: InstRW<[SKXWriteResGroup247], (instregex "IN(8|16|32)ri",
+                                              "IN(8|16|32)rr")>;
 
 def SKXWriteResGroup248 : SchedWriteRes<[SKXPort5,SKXPort6,SKXPort23,SKXPort237,SKXPort06,SKXPort0156]> {
   let Latency = 35;
   let NumMicroOps = 23;
   let ResourceCycles = [1,5,2,1,4,10];
 }
-def: InstRW<[SKXWriteResGroup248], (instregex "OUT(8|16|32)ir")>;
-def: InstRW<[SKXWriteResGroup248], (instregex "OUT(8|16|32)rr")>;
+def: InstRW<[SKXWriteResGroup248], (instregex "OUT(8|16|32)ir",
+                                              "OUT(8|16|32)rr")>;
 
 def SKXWriteResGroup249 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort015]> {
   let Latency = 37;
@@ -6200,8 +6162,8 @@ def SKXWriteResGroup256 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort23,SKXPort015
   let NumMicroOps = 22;
   let ResourceCycles = [9,7,1,5];
 }
-def: InstRW<[SKXWriteResGroup256], (instregex "VPCONFLICTDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup256], (instregex "VPCONFLICTQZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup256], (instregex "VPCONFLICTDZ256rm(b?)(k?)(z?)",
+                                              "VPCONFLICTQZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup258 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort05,SKXPort06,SKXPort0156]> {
   let Latency = 62;

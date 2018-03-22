@@ -25,6 +25,7 @@
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -55,7 +56,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -263,7 +263,7 @@ public:
 
   void addMemSet(int64_t OffsetFromFirst, MemSetInst *MSI) {
     int64_t Size = cast<ConstantInt>(MSI->getLength())->getZExtValue();
-    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getAlignment(), MSI);
+    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getDestAlignment(), MSI);
   }
 
   void addRange(int64_t Start, int64_t Size, Value *Ptr,
@@ -498,16 +498,25 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
   return AMemSet;
 }
 
-static unsigned findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
-                                     const LoadInst *LI) {
+static unsigned findStoreAlignment(const DataLayout &DL, const StoreInst *SI) {
   unsigned StoreAlign = SI->getAlignment();
   if (!StoreAlign)
     StoreAlign = DL.getABITypeAlignment(SI->getOperand(0)->getType());
+  return StoreAlign;
+}
+
+static unsigned findLoadAlignment(const DataLayout &DL, const LoadInst *LI) {
   unsigned LoadAlign = LI->getAlignment();
   if (!LoadAlign)
     LoadAlign = DL.getABITypeAlignment(LI->getType());
+  return LoadAlign;
+}
 
-  return std::min(StoreAlign, LoadAlign);
+static unsigned findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
+                                     const LoadInst *LI) {
+  unsigned StoreAlign = findStoreAlignment(DL, SI);
+  unsigned LoadAlign = findLoadAlignment(DL, LI);
+  return MinAlign(StoreAlign, LoadAlign);
 }
 
 // This method try to lift a store instruction before position P.
@@ -656,19 +665,20 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           if (!AA.isNoAlias(MemoryLocation::get(SI), LoadLoc))
             UseMemMove = true;
 
-          unsigned Align = findCommonAlignment(DL, SI, LI);
           uint64_t Size = DL.getTypeStoreSize(T);
 
           IRBuilder<> Builder(P);
           Instruction *M;
           if (UseMemMove)
-            M = Builder.CreateMemMove(SI->getPointerOperand(),
-                                      LI->getPointerOperand(), Size,
-                                      Align, SI->isVolatile());
+            M = Builder.CreateMemMove(
+                SI->getPointerOperand(), findStoreAlignment(DL, SI),
+                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size,
+                SI->isVolatile());
           else
-            M = Builder.CreateMemCpy(SI->getPointerOperand(),
-                                     LI->getPointerOperand(), Size,
-                                     Align, SI->isVolatile());
+            M = Builder.CreateMemCpy(
+                SI->getPointerOperand(), findStoreAlignment(DL, SI),
+                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size,
+                SI->isVolatile());
 
           DEBUG(dbgs() << "Promoting " << *LI << " to " << *SI
                        << " => " << *M << "\n");
@@ -1047,20 +1057,17 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 
   // If all checks passed, then we can transform M.
 
-  // Make sure to use the lesser of the alignment of the source and the dest
-  // since we're changing where we're reading from, but don't want to increase
-  // the alignment past what can be read from or written to.
   // TODO: Is this worth it if we're creating a less aligned memcpy? For
   // example we could be moving from movaps -> movq on x86.
-  unsigned Align = std::min(MDep->getAlignment(), M->getAlignment());
-
   IRBuilder<> Builder(M);
   if (UseMemMove)
-    Builder.CreateMemMove(M->getRawDest(), MDep->getRawSource(), M->getLength(),
-                          Align, M->isVolatile());
+    Builder.CreateMemMove(M->getRawDest(), M->getDestAlignment(),
+                          MDep->getRawSource(), MDep->getSourceAlignment(),
+                          M->getLength(), M->isVolatile());
   else
-    Builder.CreateMemCpy(M->getRawDest(), MDep->getRawSource(), M->getLength(),
-                         Align, M->isVolatile());
+    Builder.CreateMemCpy(M->getRawDest(), M->getDestAlignment(),
+                         MDep->getRawSource(), MDep->getSourceAlignment(),
+                         M->getLength(), M->isVolatile());
 
   // Remove the instruction we're replacing.
   MD->removeInstruction(M);
@@ -1106,7 +1113,7 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   // If Dest is aligned, and SrcSize is constant, use the minimum alignment
   // of the sum.
   const unsigned DestAlign =
-      std::max(MemSet->getAlignment(), MemCpy->getAlignment());
+      std::max(MemSet->getDestAlignment(), MemCpy->getDestAlignment());
   if (DestAlign > 1)
     if (ConstantInt *SrcSizeC = dyn_cast<ConstantInt>(SrcSize))
       Align = MinAlign(SrcSizeC->getZExtValue(), DestAlign);
@@ -1166,7 +1173,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 
   IRBuilder<> Builder(MemCpy);
   Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
-                       CopySize, MemCpy->getAlignment());
+                       CopySize, MemCpy->getDestAlignment());
   return true;
 }
 
@@ -1192,7 +1199,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
       if (Value *ByteVal = isBytewiseValue(GV->getInitializer())) {
         IRBuilder<> Builder(M);
         Builder.CreateMemSet(M->getRawDest(), ByteVal, M->getLength(),
-                             M->getAlignment(), false);
+                             M->getDestAlignment(), false);
         MD->removeInstruction(M);
         M->eraseFromParent();
         ++NumCpyToSet;
@@ -1221,8 +1228,11 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
   //   d) memcpy from a just-memset'd source can be turned into memset.
   if (DepInfo.isClobber()) {
     if (CallInst *C = dyn_cast<CallInst>(DepInfo.getInst())) {
+      // FIXME: Can we pass in either of dest/src alignment here instead
+      // of conservatively taking the minimum?
+      unsigned Align = MinAlign(M->getDestAlignment(), M->getSourceAlignment());
       if (performCallSlotOptzn(M, M->getDest(), M->getSource(),
-                               CopySize->getZExtValue(), M->getAlignment(),
+                               CopySize->getZExtValue(), Align,
                                C)) {
         MD->removeInstruction(M);
         M->eraseFromParent();
@@ -1337,7 +1347,7 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
   // source of the memcpy to the alignment we need.  If we fail, we bail out.
   AssumptionCache &AC = LookupAssumptionCache();
   DominatorTree &DT = LookupDomTree();
-  if (MDep->getAlignment() < ByValAlign &&
+  if (MDep->getSourceAlignment() < ByValAlign &&
       getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL,
                                  CS.getInstruction(), &AC, &DT) < ByValAlign)
     return false;

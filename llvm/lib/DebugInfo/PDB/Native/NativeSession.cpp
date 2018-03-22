@@ -260,3 +260,8 @@ std::unique_ptr<IPDBEnumInjectedSources>
 NativeSession::getInjectedSources() const {
   return nullptr;
 }
+
+std::unique_ptr<IPDBEnumSectionContribs>
+NativeSession::getSectionContribs() const {
+  return nullptr;
+}

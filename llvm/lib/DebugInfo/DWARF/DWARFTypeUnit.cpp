@@ -18,7 +18,7 @@
 
 using namespace llvm;
 
-bool DWARFTypeUnit::extractImpl(DataExtractor debug_info,
+bool DWARFTypeUnit::extractImpl(const DWARFDataExtractor &debug_info,
                                 uint32_t *offset_ptr) {
   if (!DWARFUnit::extractImpl(debug_info, offset_ptr))
     return false;

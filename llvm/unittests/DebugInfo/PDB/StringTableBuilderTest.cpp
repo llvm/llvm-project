@@ -27,10 +27,29 @@ class StringTableBuilderTest : public ::testing::Test {};
 TEST_F(StringTableBuilderTest, Simple) {
   // Create /names table contents.
   PDBStringTableBuilder Builder;
-  EXPECT_EQ(1U, Builder.insert("foo"));
-  EXPECT_EQ(5U, Builder.insert("bar"));
-  EXPECT_EQ(1U, Builder.insert("foo"));
-  EXPECT_EQ(9U, Builder.insert("baz"));
+
+  // This test case is carefully constructed to ensure that at least one
+  // string gets bucketed into slot 0, *and* to ensure that at least one
+  // has a hash collision at the end of the bucket list so it has to
+  // wrap around.
+  uint32_t FooID = Builder.insert("foo");
+  uint32_t BarID = Builder.insert("bar");
+  uint32_t BazID = Builder.insert("baz");
+  uint32_t BuzzID = Builder.insert("buzz");
+  uint32_t BazzID = Builder.insert("bazz");
+  uint32_t BarrID = Builder.insert("barr");
+
+  // Re-inserting the same item should return the same id.
+  EXPECT_EQ(FooID, Builder.insert("foo"));
+  EXPECT_EQ(BarID, Builder.insert("bar"));
+  EXPECT_EQ(BazID, Builder.insert("baz"));
+  EXPECT_EQ(BuzzID, Builder.insert("buzz"));
+  EXPECT_EQ(BazzID, Builder.insert("bazz"));
+  EXPECT_EQ(BarrID, Builder.insert("barr"));
+
+  // Each ID should be distinct.
+  std::set<uint32_t> Distinct{FooID, BarID, BazID, BuzzID, BazzID, BarrID};
+  EXPECT_EQ(6U, Distinct.size());
 
   std::vector<uint8_t> Buffer(Builder.calculateSerializedSize());
   MutableBinaryByteStream OutStream(Buffer, little);
@@ -43,13 +62,20 @@ TEST_F(StringTableBuilderTest, Simple) {
   PDBStringTable Table;
   EXPECT_THAT_ERROR(Table.reload(Reader), Succeeded());
 
-  EXPECT_EQ(3U, Table.getNameCount());
+  EXPECT_EQ(6U, Table.getNameCount());
   EXPECT_EQ(1U, Table.getHashVersion());
 
-  EXPECT_THAT_EXPECTED(Table.getStringForID(1), HasValue("foo"));
-  EXPECT_THAT_EXPECTED(Table.getStringForID(5), HasValue("bar"));
-  EXPECT_THAT_EXPECTED(Table.getStringForID(9), HasValue("baz"));
-  EXPECT_THAT_EXPECTED(Table.getIDForString("foo"), HasValue(1U));
-  EXPECT_THAT_EXPECTED(Table.getIDForString("bar"), HasValue(5U));
-  EXPECT_THAT_EXPECTED(Table.getIDForString("baz"), HasValue(9U));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(FooID), HasValue("foo"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(BarID), HasValue("bar"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(BazID), HasValue("baz"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(BuzzID), HasValue("buzz"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(BazzID), HasValue("bazz"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(BarrID), HasValue("barr"));
+
+  EXPECT_THAT_EXPECTED(Table.getIDForString("foo"), HasValue(FooID));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("bar"), HasValue(BarID));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("baz"), HasValue(BazID));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("buzz"), HasValue(BuzzID));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("bazz"), HasValue(BazzID));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("barr"), HasValue(BarrID));
 }

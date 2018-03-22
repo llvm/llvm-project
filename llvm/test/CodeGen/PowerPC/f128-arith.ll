@@ -8,10 +8,10 @@ entry:
   store fp128 %add, fp128* %res, align 16
   ret void
 ; CHECK-LABEL: qpAdd
-; CHECK-NOT bl __addtf3
-; CHECK xsaddqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: bl __addtf3
+; CHECK: xsaddqp
+; CHECK: stxv
+; CHECK: blr
 }
 
 ; Function Attrs: norecurse nounwind
@@ -22,10 +22,10 @@ entry:
   store fp128 %sub, fp128* %res, align 16
   ret void
 ; CHECK-LABEL: qpSub
-; CHECK-NOT bl __subtf3
-; CHECK xssubqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: bl __subtf3
+; CHECK: xssubqp
+; CHECK: stxv
+; CHECK: blr
 }
 
 ; Function Attrs: norecurse nounwind
@@ -36,10 +36,10 @@ entry:
   store fp128 %mul, fp128* %res, align 16
   ret void
 ; CHECK-LABEL: qpMul
-; CHECK-NOT bl __multf3
-; CHECK xsmulqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: bl __multf3
+; CHECK: xsmulqp
+; CHECK: stxv
+; CHECK: blr
 }
 
 ; Function Attrs: norecurse nounwind
@@ -50,10 +50,10 @@ entry:
   store fp128 %div, fp128* %res, align 16
   ret void
 ; CHECK-LABEL: qpDiv
-; CHECK-NOT bl __divtf3
-; CHECK xsdivqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: bl __divtf3
+; CHECK: xsdivqp
+; CHECK: stxv
+; CHECK: blr
 }
 
 define void @testLdNSt(i8* nocapture readonly %PtrC, fp128* nocapture %PtrF) {
@@ -67,8 +67,8 @@ entry:
   store fp128 %1, fp128* %3, align 16
   ret void
 ; CHECK-LABEL: testLdNSt
-; CHECK lxvx
-; CHECK stxvx
+; CHECK: lxvx
+; CHECK: stxvx
 ; CHECK-NEXT blr
 }
 
@@ -80,10 +80,10 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpSqrt
-; CHECK-NOT bl sqrtl
-; CHECK xssqrtqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: bl sqrtl
+; CHECK: xssqrtqp
+; CHECK: stxv
+; CHECK: blr
 }
 declare fp128 @llvm.sqrt.f128(fp128 %Val)
 
@@ -96,11 +96,11 @@ entry:
   store fp128 %2, fp128* %res, align 16
   ret void
 
-; CHECK-LABEL: qpSqrt
-; CHECK-NOT rldimi
-; CHECK xscpsgnqp
-; CHECK stxv
-; CHECK blr
+; CHECK-LABEL: qpCpsgn
+; CHECK-NOT: rldimi
+; CHECK: xscpsgnqp
+; CHECK: stxv
+; CHECK: blr
 }
 declare fp128 @llvm.copysign.f128(fp128 %Mag, fp128 %Sgn)
 
@@ -112,10 +112,10 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpAbs
-; CHECK-NOT clrldi
-; CHECK xsabsqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: clrldi
+; CHECK: xsabsqp
+; CHECK: stxv
+; CHECK: blr
 }
 declare fp128 @llvm.fabs.f128(fp128 %Val)
 
@@ -128,10 +128,10 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpNAbs
-; CHECK-NOT bl __subtf3
-; CHECK xsnabsqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: bl __subtf3
+; CHECK: xsnabsqp
+; CHECK: stxv
+; CHECK: blr
 }
 
 define void @qpNeg(fp128* nocapture readonly %a, fp128* nocapture %res) {
@@ -142,8 +142,8 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpNeg
-; CHECK-NOT bl __subtf3
-; CHECK xsnegqp
-; CHECK stxv
-; CHECK blr
+; CHECK-NOT: bl __subtf3
+; CHECK: xsnegqp
+; CHECK: stxv
+; CHECK: blr
 }

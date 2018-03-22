@@ -634,13 +634,8 @@ Init *ListInit::resolveReferences(Resolver &R) const {
   bool Changed = false;
 
   for (Init *CurElt : getValues()) {
-    Init *E;
-
-    do {
-      E = CurElt;
-      CurElt = CurElt->resolveReferences(R);
-      Changed |= E != CurElt;
-    } while (E != CurElt);
+    Init *E = CurElt->resolveReferences(R);
+    Changed |= E != CurElt;
     Resolved.push_back(E);
   }
 
@@ -1508,14 +1503,8 @@ Init *VarListElementInit::getBit(unsigned Bit) const {
   return VarBitInit::get(const_cast<VarListElementInit*>(this), Bit);
 }
 
-static RecordRecTy *makeDefInitType(Record *Rec) {
-  SmallVector<Record *, 4> SuperClasses;
-  Rec->getDirectSuperClasses(SuperClasses);
-  return RecordRecTy::get(SuperClasses);
-}
-
 DefInit::DefInit(Record *D)
-    : TypedInit(IK_DefInit, makeDefInitType(D)), Def(D) {}
+    : TypedInit(IK_DefInit, D->getType()), Def(D) {}
 
 DefInit *DefInit::get(Record *R) {
   return R->getDefInit();
@@ -1865,7 +1854,14 @@ void Record::checkName() {
   // Ensure the record name has string type.
   const TypedInit *TypedName = cast<const TypedInit>(Name);
   if (!isa<StringRecTy>(TypedName->getType()))
-    PrintFatalError(getLoc(), "Record name is not a string!");
+    PrintFatalError(getLoc(), Twine("Record name '") + Name->getAsString() +
+                                  "' is not a string!");
+}
+
+RecordRecTy *Record::getType() {
+  SmallVector<Record *, 4> DirectSCs;
+  getDirectSuperClasses(DirectSCs);
+  return RecordRecTy::get(DirectSCs);
 }
 
 DefInit *Record::getDefInit() {

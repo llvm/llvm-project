@@ -43,14 +43,9 @@ class RegisterFile {
     const unsigned TotalMappings;
     // Number of mappings that are currently in use.
     unsigned NumUsedMappings;
-    // Maximum number of register mappings used.
-    unsigned MaxUsedMappings;
-    // Total number of mappings allocated during the entire execution.
-    unsigned TotalMappingsCreated;
 
     RegisterMappingTracker(unsigned NumMappings)
-        : TotalMappings(NumMappings), NumUsedMappings(0), MaxUsedMappings(0),
-          TotalMappingsCreated(0) {}
+        : TotalMappings(NumMappings), NumUsedMappings(0) {}
   };
 
   // This is where information related to the various register files is kept.
@@ -105,11 +100,13 @@ class RegisterFile {
 
   // Allocates a new register mapping in every register file specified by the
   // register file mask. This method is called from addRegisterMapping.
-  void createNewMappings(unsigned RegisterFileMask);
+  void createNewMappings(unsigned RegisterFileMask,
+                         llvm::MutableArrayRef<unsigned> UsedPhysRegs);
 
   // Removes a previously allocated mapping from each register file in the
   // RegisterFileMask set. This method is called from invalidateRegisterMapping.
-  void removeMappings(unsigned RegisterFileMask);
+  void removeMappings(unsigned RegisterFileMask,
+                      llvm::MutableArrayRef<unsigned> FreedPhysRegs);
 
 public:
   RegisterFile(const llvm::MCRegisterInfo &mri, unsigned TempRegs = 0)
@@ -121,12 +118,14 @@ public:
   // Creates a new register mapping for RegID.
   // This reserves a microarchitectural register in every register file that
   // contains RegID.
-  void addRegisterMapping(WriteState &WS);
+  void addRegisterMapping(WriteState &WS,
+                          llvm::MutableArrayRef<unsigned> UsedPhysRegs);
 
   // Invalidates register mappings associated to the input WriteState object.
   // This releases previously allocated mappings for the physical register
   // associated to the WriteState.
-  void invalidateRegisterMapping(const WriteState &WS);
+  void invalidateRegisterMapping(const WriteState &WS,
+                                 llvm::MutableArrayRef<unsigned> FreedPhysRegs);
 
   // Checks if there are enough microarchitectural registers in the register
   // files.  Returns a "response mask" where each bit is the response from a
@@ -138,16 +137,7 @@ public:
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Writes,
                      unsigned RegID) const;
   void updateOnRead(ReadState &RS, unsigned RegID);
-  unsigned getMaxUsedRegisterMappings(unsigned RegisterFileIndex) const {
-    assert(RegisterFileIndex < getNumRegisterFiles() &&
-           "Invalid register file index!");
-    return RegisterFiles[RegisterFileIndex].MaxUsedMappings;
-  }
-  unsigned getTotalRegisterMappingsCreated(unsigned RegisterFileIndex) const {
-    assert(RegisterFileIndex < getNumRegisterFiles() &&
-           "Invalid register file index!");
-    return RegisterFiles[RegisterFileIndex].TotalMappingsCreated;
-  }
+
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }
 
 #ifndef NDEBUG
@@ -260,7 +250,7 @@ class DispatchUnit {
   bool checkScheduler(unsigned Index, const InstrDesc &Desc);
 
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
-  void notifyInstructionDispatched(unsigned IID);
+  void notifyInstructionDispatched(unsigned IID, llvm::ArrayRef<unsigned> UsedPhysRegs);
 
 public:
   DispatchUnit(Backend *B, const llvm::MCRegisterInfo &MRI,
@@ -295,12 +285,6 @@ public:
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
                      unsigned RegID) const {
     return RAT->collectWrites(Vec, RegID);
-  }
-  unsigned getMaxUsedRegisterMappings(unsigned RegFileIndex = 0) const {
-    return RAT->getMaxUsedRegisterMappings(RegFileIndex);
-  }
-  unsigned getTotalRegisterMappingsCreated(unsigned RegFileIndex = 0) const {
-    return RAT->getTotalRegisterMappingsCreated(RegFileIndex);
   }
 
   void cycleEvent(unsigned Cycle) {

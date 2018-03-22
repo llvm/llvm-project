@@ -17,6 +17,13 @@
 #ifndef LLVM_ANALYSIS_MUSTEXECUTE_H
 #define LLVM_ANALYSIS_MUSTEXECUTE_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instruction.h"
+
 namespace llvm {
 
 class Instruction;

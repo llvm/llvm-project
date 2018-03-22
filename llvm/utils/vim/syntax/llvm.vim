@@ -75,6 +75,8 @@ syn keyword llvmKeyword
       \ distinct
       \ dllexport
       \ dllimport
+      \ dso_local
+      \ dso_preemptable
       \ except
       \ external
       \ externally_initialized

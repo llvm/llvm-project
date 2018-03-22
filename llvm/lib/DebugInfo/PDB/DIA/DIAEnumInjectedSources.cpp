@@ -30,8 +30,7 @@ DIAEnumInjectedSources::getChildAtIndex(uint32_t Index) const {
   if (S_OK != Enumerator->Item(Index, &Item))
     return nullptr;
 
-  return std::unique_ptr<IPDBInjectedSource>(
-      new DIAInjectedSource(Session, Item));
+  return std::unique_ptr<IPDBInjectedSource>(new DIAInjectedSource(Item));
 }
 
 std::unique_ptr<IPDBInjectedSource> DIAEnumInjectedSources::getNext() {
@@ -40,8 +39,7 @@ std::unique_ptr<IPDBInjectedSource> DIAEnumInjectedSources::getNext() {
   if (S_OK != Enumerator->Next(1, &Item, &NumFetched))
     return nullptr;
 
-  return std::unique_ptr<IPDBInjectedSource>(
-      new DIAInjectedSource(Session, Item));
+  return std::unique_ptr<IPDBInjectedSource>(new DIAInjectedSource(Item));
 }
 
 void DIAEnumInjectedSources::reset() { Enumerator->Reset(); }

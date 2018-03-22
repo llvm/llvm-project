@@ -45,7 +45,8 @@ void RegisterFile::addRegisterFile(ArrayRef<unsigned> RegisterClasses,
   }
 }
 
-void RegisterFile::createNewMappings(unsigned RegisterFileMask) {
+void RegisterFile::createNewMappings(unsigned RegisterFileMask,
+                                     MutableArrayRef<unsigned> UsedPhysRegs) {
   assert(RegisterFileMask && "RegisterFileMask cannot be zero!");
   // Notify each register file that contains RegID.
   do {
@@ -53,13 +54,13 @@ void RegisterFile::createNewMappings(unsigned RegisterFileMask) {
     unsigned RegisterFileIndex = llvm::countTrailingZeros(NextRegisterFile);
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
     RMT.NumUsedMappings++;
-    RMT.MaxUsedMappings = std::max(RMT.MaxUsedMappings, RMT.NumUsedMappings);
-    RMT.TotalMappingsCreated++;
+    UsedPhysRegs[RegisterFileIndex]++;
     RegisterFileMask ^= NextRegisterFile;
   } while (RegisterFileMask);
 }
 
-void RegisterFile::removeMappings(unsigned RegisterFileMask) {
+void RegisterFile::removeMappings(unsigned RegisterFileMask,
+                                  MutableArrayRef<unsigned> FreedPhysRegs) {
   assert(RegisterFileMask && "RegisterFileMask cannot be zero!");
   // Notify each register file that contains RegID.
   do {
@@ -68,11 +69,13 @@ void RegisterFile::removeMappings(unsigned RegisterFileMask) {
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
     assert(RMT.NumUsedMappings);
     RMT.NumUsedMappings--;
+    FreedPhysRegs[RegisterFileIndex]++;
     RegisterFileMask ^= NextRegisterFile;
   } while (RegisterFileMask);
 }
 
-void RegisterFile::addRegisterMapping(WriteState &WS) {
+void RegisterFile::addRegisterMapping(WriteState &WS,
+                                      MutableArrayRef<unsigned> UsedPhysRegs) {
   unsigned RegID = WS.getRegisterID();
   assert(RegID && "Adding an invalid register definition?");
 
@@ -81,7 +84,8 @@ void RegisterFile::addRegisterMapping(WriteState &WS) {
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I)
     RegisterMappings[*I].first = &WS;
 
-  createNewMappings(Mapping.second);
+  createNewMappings(Mapping.second, UsedPhysRegs);
+
   // If this is a partial update, then we are done.
   if (!WS.fullyUpdatesSuperRegs())
     return;
@@ -90,7 +94,8 @@ void RegisterFile::addRegisterMapping(WriteState &WS) {
     RegisterMappings[*I].first = &WS;
 }
 
-void RegisterFile::invalidateRegisterMapping(const WriteState &WS) {
+void RegisterFile::invalidateRegisterMapping(
+    const WriteState &WS, MutableArrayRef<unsigned> FreedPhysRegs) {
   unsigned RegID = WS.getRegisterID();
   bool ShouldInvalidateSuperRegs = WS.fullyUpdatesSuperRegs();
 
@@ -102,7 +107,7 @@ void RegisterFile::invalidateRegisterMapping(const WriteState &WS) {
   if (!Mapping.first)
     return;
 
-  removeMappings(Mapping.second);
+  removeMappings(Mapping.second, FreedPhysRegs);
 
   if (Mapping.first == &WS)
     Mapping.first = nullptr;
@@ -196,8 +201,6 @@ void RegisterFile::dump() const {
     dbgs() << "Register File #" << I;
     const RegisterMappingTracker &RMT = RegisterFiles[I];
     dbgs() << "\n  TotalMappings:        " << RMT.TotalMappings
-           << "\n  TotalMappingsCreated: " << RMT.TotalMappingsCreated
-           << "\n  MaxUsedMappings:      " << RMT.MaxUsedMappings
            << "\n  NumUsedMappings:      " << RMT.NumUsedMappings << '\n';
   }
 }
@@ -220,21 +223,20 @@ unsigned RetireControlUnit::reserveSlot(unsigned Index, unsigned NumMicroOps) {
   return TokenID;
 }
 
-void DispatchUnit::notifyInstructionDispatched(unsigned Index) {
+void DispatchUnit::notifyInstructionDispatched(
+    unsigned Index, ArrayRef<unsigned> UsedRegs) {
   DEBUG(dbgs() << "[E] Instruction Dispatched: " << Index << '\n');
-  Owner->notifyInstructionEvent(
-      HWInstructionEvent(HWInstructionEvent::Dispatched, Index));
+  Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(Index, UsedRegs));
 }
 
 void DispatchUnit::notifyInstructionRetired(unsigned Index) {
   DEBUG(dbgs() << "[E] Instruction Retired: " << Index << '\n');
-  Owner->notifyInstructionEvent(
-      HWInstructionEvent(HWInstructionEvent::Retired, Index));
-
   const Instruction &IS = Owner->getInstruction(Index);
+  SmallVector<unsigned, 4> FreedRegs(RAT->getNumRegisterFiles());
   for (const std::unique_ptr<WriteState> &WS : IS.getDefs())
-    RAT->invalidateRegisterMapping(*WS.get());
+    RAT->invalidateRegisterMapping(*WS.get(), FreedRegs);
 
+  Owner->notifyInstructionEvent(HWInstructionRetiredEvent(Index, FreedRegs));
   Owner->eraseInstruction(Index);
 }
 
@@ -364,8 +366,9 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
     updateRAWDependencies(*RS, STI);
 
   // Allocate new mappings.
+  SmallVector<unsigned, 4> RegisterFiles(RAT->getNumRegisterFiles());
   for (std::unique_ptr<WriteState> &WS : NewInst->getDefs())
-    RAT->addRegisterMapping(*WS);
+    RAT->addRegisterMapping(*WS, RegisterFiles);
 
   // Set the cycles left before the write-back stage.
   const InstrDesc &D = NewInst->getDesc();
@@ -374,7 +377,7 @@ unsigned DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
   // Reserve slots in the RCU.
   unsigned RCUTokenID = RCU->reserveSlot(IID, NumMicroOps);
   NewInst->setRCUTokenID(RCUTokenID);
-  notifyInstructionDispatched(IID);
+  notifyInstructionDispatched(IID, RegisterFiles);
 
   SC->scheduleInstruction(IID, *NewInst);
   return RCUTokenID;

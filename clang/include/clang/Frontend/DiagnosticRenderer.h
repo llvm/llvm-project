@@ -1,4 +1,4 @@
-//===--- DiagnosticRenderer.h - Diagnostic Pretty-Printing ------*- C++ -*-===//
+//===- DiagnosticRenderer.h - Diagnostic Pretty-Printing --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,18 +17,21 @@
 #define LLVM_CLANG_FRONTEND_DIAGNOSTICRENDERER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 
-class DiagnosticOptions;
 class LangOptions;
 class SourceManager;
 
-typedef llvm::PointerUnion<const Diagnostic *,
-                           const StoredDiagnostic *> DiagOrStoredDiag;
+using DiagOrStoredDiag =
+    llvm::PointerUnion<const Diagnostic *, const StoredDiagnostic *>;
   
 /// \brief Class to encapsulate the logic for formatting a diagnostic message.
 ///
@@ -64,7 +67,7 @@ protected:
   ///
   /// The level of the last diagnostic emitted. Used to detect level changes
   /// which change the amount of information displayed.
-  DiagnosticsEngine::Level LastLevel;
+  DiagnosticsEngine::Level LastLevel = DiagnosticsEngine::Ignored;
 
   DiagnosticRenderer(const LangOptions &LangOpts,
                      DiagnosticOptions *DiagOpts);
@@ -97,7 +100,6 @@ protected:
   virtual void endDiagnostic(DiagOrStoredDiag D,
                              DiagnosticsEngine::Level Level) {}
 
-  
 private:
   void emitBasicNote(StringRef Message);
   void emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -142,7 +144,7 @@ class DiagnosticNoteRenderer : public DiagnosticRenderer {
 public:
   DiagnosticNoteRenderer(const LangOptions &LangOpts,
                          DiagnosticOptions *DiagOpts)
-    : DiagnosticRenderer(LangOpts, DiagOpts) {}
+      : DiagnosticRenderer(LangOpts, DiagOpts) {}
 
   ~DiagnosticNoteRenderer() override;
 
@@ -156,5 +158,7 @@ public:
 
   virtual void emitNote(FullSourceLoc Loc, StringRef Message) = 0;
 };
-} // end clang namespace
-#endif
+
+} // namespace clang
+
+#endif // LLVM_CLANG_FRONTEND_DIAGNOSTICRENDERER_H

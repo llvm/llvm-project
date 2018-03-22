@@ -75,6 +75,9 @@ public:
 
   virtual std::unique_ptr<IPDBEnumInjectedSources>
   getInjectedSources() const = 0;
+
+  virtual std::unique_ptr<IPDBEnumSectionContribs>
+  getSectionContribs() const = 0;
 };
 }
 }
