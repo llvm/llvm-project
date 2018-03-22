@@ -1514,8 +1514,8 @@ private:
         "UIView",
     };
 
-    for (auto &Line : AnnotatedLines) {
-      for (FormatToken *FormatTok = Line->First; FormatTok;
+    auto LineContainsObjCCode = [&Keywords](const AnnotatedLine &Line) {
+      for (const FormatToken *FormatTok = Line.First; FormatTok;
            FormatTok = FormatTok->Next) {
         if ((FormatTok->Previous && FormatTok->Previous->is(tok::at) &&
              (FormatTok->isObjCAtKeyword(tok::objc_interface) ||
@@ -1535,6 +1535,15 @@ private:
                                TT_ObjCMethodSpecifier, TT_ObjCProperty)) {
           return true;
         }
+      }
+      return false;
+    };
+    for (auto Line : AnnotatedLines) {
+      if (LineContainsObjCCode(*Line))
+        return true;
+      for (auto ChildLine : Line->Children) {
+        if (LineContainsObjCCode(*ChildLine))
+          return true;
       }
     }
     return false;

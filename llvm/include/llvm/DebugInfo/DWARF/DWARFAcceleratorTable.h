@@ -425,6 +425,10 @@ public:
 
     uint32_t getNameCount() const { return Hdr.NameCount; }
 
+    const DenseSet<Abbrev, AbbrevMapInfo> &getAbbrevs() const {
+      return Abbrevs;
+    }
+
     llvm::Error extract();
     uint32_t getUnitOffset() const { return Base; }
     uint32_t getNextUnitOffset() const { return Base + 4 + Hdr.UnitLength; }

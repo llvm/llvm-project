@@ -402,10 +402,10 @@ define <5 x i64> @test_ulong_rem(<5 x i64> %num, <5 x i64> %rem) {
 define void @test_int_div(<3 x i32>* %dest, <3 x i32>* %old, i32 %n) {
 ; CHECK-LABEL: test_int_div:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edx, %r9d
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    jle .LBB12_3
 ; CHECK-NEXT:  # %bb.1: # %bb.nph
+; CHECK-NEXT:    movl %edx, %r9d
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB12_2: # %for.body

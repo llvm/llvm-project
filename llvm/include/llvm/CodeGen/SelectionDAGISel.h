@@ -110,6 +110,9 @@ public:
                             CodeGenOpt::Level OptLevel,
                             bool IgnoreChains = false);
 
+  static void InvalidateNodeId(SDNode *N);
+  static int getUninvalidatedNodeId(SDNode *N);
+
   static void EnforceNodeIdInvariant(SDNode *N);
 
   // Opcodes used by the DAG state machine:

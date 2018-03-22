@@ -475,6 +475,9 @@ public:
     EmitLabelPlusOffset(Label, 0, Size, IsSectionRelative);
   }
 
+  /// Emit something like ".long Label + Offset".
+  void EmitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const;
+
   //===------------------------------------------------------------------===//
   // Dwarf Emission Helper Routines
   //===------------------------------------------------------------------===//

@@ -1406,8 +1406,8 @@ bool MachineOutliner::outline(
 }
 
 bool MachineOutliner::runOnModule(Module &M) {
-
-  // Is there anything in the module at all?
+  // Check if there's anything in the module. If it's empty, then there's
+  // nothing to outline.
   if (M.empty())
     return false;
 
@@ -1419,23 +1419,44 @@ bool MachineOutliner::runOnModule(Module &M) {
   
   InstructionMapper Mapper;
 
-  // Build instruction mappings for each function in the module.
+  // Build instruction mappings for each function in the module. Start by
+  // iterating over each Function in M.
   for (Function &F : M) {
-    MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
-    // Is the function empty? Safe to outline from?
-    if (F.empty() ||
-        !TII->isFunctionSafeToOutlineFrom(MF, OutlineFromLinkOnceODRs))
+    // If there's nothing in F, then there's no reason to try and outline from
+    // it.
+    if (F.empty())
       continue;
 
-    // If it is, look at each MachineBasicBlock in the function.
-    for (MachineBasicBlock &MBB : MF) {
+    // There's something in F. Check if it has a MachineFunction associated with
+    // it.
+    MachineFunction *MF = MMI.getMachineFunction(F);
 
-      // Is there anything in MBB? And is it the target of an indirect branch?
-      if (MBB.empty() || MBB.hasAddressTaken())
+    // If it doesn't, then there's nothing to outline from. Move to the next
+    // Function.
+    if (!MF)
+      continue;
+
+    // We have a MachineFunction. Ask the target if it's suitable for outlining.
+    // If it isn't, then move on to the next Function in the module.
+    if (!TII->isFunctionSafeToOutlineFrom(*MF, OutlineFromLinkOnceODRs))
+      continue;
+
+    // We have a function suitable for outlining. Iterate over every
+    // MachineBasicBlock in MF and try to map its instructions to a list of
+    // unsigned integers.
+    for (MachineBasicBlock &MBB : *MF) {
+      // If there isn't anything in MBB, then there's no point in outlining from
+      // it.
+      if (MBB.empty())
         continue;
 
-      // If yes, map it.
+      // Check if MBB could be the target of an indirect branch. If it is, then
+      // we don't want to outline from it.
+      if (MBB.hasAddressTaken())
+        continue;
+
+      // MBB is suitable for outlining. Map it to a list of unsigneds.
       Mapper.convertToUnsignedVec(MBB, *TRI, *TII);
     }
   }

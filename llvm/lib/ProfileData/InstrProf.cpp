@@ -355,7 +355,7 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       }
     }
   }
-  Sorted = false;
+
   finalizeSymtab();
   return Error::success();
 }
@@ -476,6 +476,7 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
     while (P < EndP && *P == 0)
       P++;
   }
+  Symtab.finalizeSymtab();
   return Error::success();
 }
 

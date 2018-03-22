@@ -137,7 +137,7 @@ syn keyword llvmKeyword
       \ seq_cst
       \ sideeffect
       \ signext
-      \ singlethread
+      \ syncscope
       \ source_filename
       \ speculatable
       \ spir_func

@@ -60,6 +60,7 @@
 
 #include "SourceMgr.h"
 #include "View.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
@@ -75,8 +76,9 @@ class ResourcePressureView : public View {
   llvm::MCInstPrinter &MCIP;
   const SourceMgr &Source;
 
-  // Map to quickly get a resource descriptor from a mask.
-  std::map<uint64_t, unsigned> Resource2VecIndex;
+  // Map to quickly obtain the ResourceUsage column index from a processor
+  // resource ID.
+  llvm::DenseMap<unsigned, unsigned> Resource2VecIndex;
 
   // Table of resources used by instructions.
   std::vector<unsigned> ResourceUsage;
@@ -90,9 +92,9 @@ class ResourcePressureView : public View {
   void initialize();
 
 public:
-  ResourcePressureView(const llvm::MCSubtargetInfo &ST,
+  ResourcePressureView(const llvm::MCSubtargetInfo &sti,
                        llvm::MCInstPrinter &Printer, const SourceMgr &SM)
-      : STI(ST), MCIP(Printer), Source(SM) {
+      : STI(sti), MCIP(Printer), Source(SM) {
     initialize();
   }
 

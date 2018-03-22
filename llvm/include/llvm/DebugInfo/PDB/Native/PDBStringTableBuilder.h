@@ -38,6 +38,9 @@ public:
   // Returns the ID for S.
   uint32_t insert(StringRef S);
 
+  uint32_t getIdForString(StringRef S) const;
+  StringRef getStringForId(uint32_t Id) const;
+
   uint32_t calculateSerializedSize() const;
   Error commit(BinaryStreamWriter &Writer) const;
 

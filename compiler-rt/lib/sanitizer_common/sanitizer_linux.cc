@@ -68,6 +68,7 @@
 #include <ucontext.h>
 #endif
 #if SANITIZER_OPENBSD
+#include <signal.h>
 #include <sys/futex.h>
 #endif
 #include <unistd.h>
@@ -391,9 +392,12 @@ uptr internal_dup2(int oldfd, int newfd) {
 }
 
 uptr internal_readlink(const char *path, char *buf, uptr bufsize) {
-#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS || SANITIZER_OPENBSD
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(readlinkat), AT_FDCWD, (uptr)path, (uptr)buf,
                           bufsize);
+#elif SANITIZER_OPENBSD
+  return internal_syscall_ptr(SYSCALL(readlinkat), AT_FDCWD, (uptr)path,
+                              (uptr)buf, bufsize);
 #else
   return internal_syscall_ptr(SYSCALL(readlink), path, buf, bufsize);
 #endif
@@ -1702,8 +1706,13 @@ static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
 }
 #endif
 
+#if SANITIZER_OPENBSD
+using Context = sigcontext;
+#else
+using Context = ucontext;
+#endif // !SANITIZER_OPENBSD
+
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
-#if !SANITIZER_OPENBSD
   ucontext_t *ucontext = (ucontext_t *)context;
 #if defined(__x86_64__) || defined(__i386__)
   static const uptr PF_WRITE = 1U << 1;
@@ -1711,12 +1720,14 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   uptr err = ucontext->uc_mcontext.mc_err;
 #elif SANITIZER_NETBSD
   uptr err = ucontext->uc_mcontext.__gregs[_REG_ERR];
+#elif SANITIZER_OPENBSD
+  uptr err = ucontext->sc_err;
 #elif SANITIZER_SOLARIS && defined(__i386__)
-# define ERR 13
-  uptr err = ucontext->uc_mcontext.gregs[ERR];
+  const int Err = 13;
+  uptr err = ucontext->uc_mcontext.gregs[Err];
 #else
   uptr err = ucontext->uc_mcontext.gregs[REG_ERR];
-#endif
+#endif // SANITIZER_FREEBSD
   return err & PF_WRITE ? WRITE : READ;
 #elif defined(__arm__)
   static const uptr FSR_WRITE = 1U << 11;
@@ -1737,9 +1748,6 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   (void)ucontext;
   return UNKNOWN;  // FIXME: Implement.
 #endif
-#else  // !SANITIZER_OPENBSD
-  return UNKNOWN;
-#endif // !SANITIZER_OPENBSD
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
@@ -1775,6 +1783,11 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.mc_rip;
   *bp = ucontext->uc_mcontext.mc_rbp;
   *sp = ucontext->uc_mcontext.mc_rsp;
+#elif SANITIZER_OPENBSD
+  sigcontext *ucontext = (sigcontext *)context;
+  *pc = ucontext->sc_rip;
+  *bp = ucontext->sc_rbp;
+  *sp = ucontext->sc_rsp;
 # else
   ucontext_t *ucontext = (ucontext_t*)context;
   *pc = ucontext->uc_mcontext.gregs[REG_RIP];
@@ -1787,6 +1800,11 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.mc_eip;
   *bp = ucontext->uc_mcontext.mc_ebp;
   *sp = ucontext->uc_mcontext.mc_esp;
+#elif SANITIZER_OPENBSD
+  sigcontext *ucontext = (sigcontext *)context;
+  *pc = ucontext->sc_eip;
+  *bp = ucontext->sc_ebp;
+  *sp = ucontext->sc_esp;
 # else
   ucontext_t *ucontext = (ucontext_t*)context;
 # if SANITIZER_SOLARIS

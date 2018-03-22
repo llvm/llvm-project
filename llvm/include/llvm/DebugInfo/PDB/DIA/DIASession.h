@@ -71,6 +71,8 @@ public:
 
   std::unique_ptr<IPDBEnumInjectedSources> getInjectedSources() const override;
 
+  std::unique_ptr<IPDBEnumSectionContribs> getSectionContribs() const override;
+
 private:
   CComPtr<IDiaSession> Session;
 };

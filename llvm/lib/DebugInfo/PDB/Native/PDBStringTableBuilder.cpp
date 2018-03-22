@@ -25,6 +25,14 @@ uint32_t PDBStringTableBuilder::insert(StringRef S) {
   return Strings.insert(S);
 }
 
+uint32_t PDBStringTableBuilder::getIdForString(StringRef S) const {
+  return Strings.getIdForString(S);
+}
+
+StringRef PDBStringTableBuilder::getStringForId(uint32_t Id) const {
+  return Strings.getStringForId(Id);
+}
+
 static uint32_t computeBucketCount(uint32_t NumStrings) {
   // The /names stream is basically an on-disk open-addressing hash table.
   // Hash collisions are resolved by linear probing. We cannot make

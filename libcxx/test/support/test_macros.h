@@ -157,6 +157,12 @@
 #define TEST_NORETURN [[noreturn]]
 #endif
 
+#if defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
+  (!(TEST_STD_VER > 14 || \
+    (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L)))
+#define TEST_HAS_NO_ALIGNED_ALLOCATION
+#endif
+
 #if defined(_LIBCPP_SAFE_STATIC)
 #define TEST_SAFE_STATIC _LIBCPP_SAFE_STATIC
 #else
@@ -227,6 +233,7 @@ inline void DoNotOptimize(Tp const& value) {
   _ReadWriteBarrier();
 }
 #endif
+
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

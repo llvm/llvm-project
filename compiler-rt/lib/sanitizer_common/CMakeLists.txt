@@ -64,10 +64,6 @@ set(SANITIZER_NOLIBC_SOURCES
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cc
   sanitizer_allocator_checks.cc
-  sancov_flags.cc
-  sanitizer_coverage_fuchsia.cc
-  sanitizer_coverage_libcdep_new.cc
-  sanitizer_coverage_win_sections.cc
   sanitizer_linux_libcdep.cc
   sanitizer_mac_libcdep.cc
   sanitizer_posix_libcdep.cc
@@ -76,6 +72,12 @@ set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_symbolizer_libcdep.cc
   sanitizer_symbolizer_posix_libcdep.cc
   sanitizer_unwind_linux_libcdep.cc)
+
+set(SANITIZER_COVERAGE_SOURCES
+  sancov_flags.cc
+  sanitizer_coverage_fuchsia.cc
+  sanitizer_coverage_libcdep_new.cc
+  sanitizer_coverage_win_sections.cc)
 
 # Explicitly list all sanitizer_common headers. Not all of these are
 # included in sanitizer_common source files, but we need to depend on
@@ -206,6 +208,12 @@ add_compiler_rt_object_libraries(RTSanitizerCommonLibc
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_LIBCDEP_SOURCES}
+  CFLAGS ${SANITIZER_CFLAGS}
+  DEFS ${SANITIZER_COMMON_DEFINITIONS})
+add_compiler_rt_object_libraries(RTSanitizerCommonCoverage
+  ${OS_OPTION}
+  ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+  SOURCES ${SANITIZER_COVERAGE_SOURCES}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 

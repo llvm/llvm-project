@@ -1000,20 +1000,28 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_vectorcall;
   case CC_X86Pascal:
     return llvm::dwarf::DW_CC_BORLAND_pascal;
-
-  // FIXME: Create new DW_CC_ codes for these calling conventions.
   case CC_Win64:
+    return llvm::dwarf::DW_CC_LLVM_Win64;
   case CC_X86_64SysV:
+    return llvm::dwarf::DW_CC_LLVM_X86_64SysV;
   case CC_AAPCS:
+    return llvm::dwarf::DW_CC_LLVM_AAPCS;
   case CC_AAPCS_VFP:
+    return llvm::dwarf::DW_CC_LLVM_AAPCS_VFP;
   case CC_IntelOclBicc:
+    return llvm::dwarf::DW_CC_LLVM_IntelOclBicc;
   case CC_SpirFunction:
+    return llvm::dwarf::DW_CC_LLVM_SpirFunction;
   case CC_OpenCLKernel:
+    return llvm::dwarf::DW_CC_LLVM_OpenCLKernel;
   case CC_Swift:
+    return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_PreserveMost:
+    return llvm::dwarf::DW_CC_LLVM_PreserveMost;
   case CC_PreserveAll:
+    return llvm::dwarf::DW_CC_LLVM_PreserveAll;
   case CC_X86RegCall:
-    return 0;
+    return llvm::dwarf::DW_CC_LLVM_X86RegCall;
   }
   return 0;
 }
