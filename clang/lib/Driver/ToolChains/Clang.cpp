@@ -3249,7 +3249,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (JA.getType() == types::TY_LLVM_BC)
       CmdArgs.push_back("-emit-llvm-uselists");
 
-    if (D.isUsingLTO()) {
+    // Device-side jobs do not support LTO.
+    bool isDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
+                                   JA.isDeviceOffloading(Action::OFK_Host));
+
+    if (D.isUsingLTO() && !isDeviceOffloadAction) {
       Args.AddLastArg(CmdArgs, options::OPT_flto, options::OPT_flto_EQ);
 
       // The Darwin and PS4 linkers currently use the legacy LTO API, which

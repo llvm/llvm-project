@@ -1307,19 +1307,19 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
 }
 
 RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
-                                                 const Expr *Arg,
+                                                 const CallExpr *TheCall,
                                                  bool IsDelete) {
   CallArgList Args;
-  const Stmt *ArgS = Arg;
-  EmitCallArgs(Args, *Type->param_type_begin(), llvm::makeArrayRef(ArgS));
+  EmitCallArgs(Args, Type->getParamTypes(), TheCall->arguments());
   // Find the allocation or deallocation function that we're calling.
   ASTContext &Ctx = getContext();
   DeclarationName Name = Ctx.DeclarationNames
       .getCXXOperatorName(IsDelete ? OO_Delete : OO_New);
+
   for (auto *Decl : Ctx.getTranslationUnitDecl()->lookup(Name))
     if (auto *FD = dyn_cast<FunctionDecl>(Decl))
       if (Ctx.hasSameType(FD->getType(), QualType(Type, 0)))
-        return EmitNewDeleteCall(*this, cast<FunctionDecl>(Decl), Type, Args);
+        return EmitNewDeleteCall(*this, FD, Type, Args);
   llvm_unreachable("predeclared global operator new/delete is missing");
 }
 
