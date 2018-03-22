@@ -282,10 +282,9 @@ template <class ELFT> static void createSyntheticSections() {
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
-  bool HasDataRelRo =
-      Script->HasSectionsCommand && findSection(".data.rel.ro");
-  InX::BssRelRo = make<BssSection>(
-      HasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
+  bool HasDataRelRo = Script->HasSectionsCommand && findSection(".data.rel.ro");
+  InX::BssRelRo =
+      make<BssSection>(HasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   Add(InX::BssRelRo);
 
   // Add MIPS-specific sections.
@@ -2024,12 +2023,13 @@ template <class ELFT> void Writer<ELFT>::checkNoOverlappingSections() {
   // space in the file so Sec->Offset + Sec->Size can overlap with others.
   // If --oformat binary is specified only add SHF_ALLOC sections are added to
   // the output file so we skip any non-allocated sections in that case.
-  checkForSectionOverlap(
-      OutputSections, "file", [](const OutputSection *Sec) { return Sec->Offset; },
-      [](const OutputSection *Sec) {
-        return Sec->Type == SHT_NOBITS ||
-               (Config->OFormatBinary && (Sec->Flags & SHF_ALLOC) == 0);
-      });
+  checkForSectionOverlap(OutputSections, "file",
+                         [](const OutputSection *Sec) { return Sec->Offset; },
+                         [](const OutputSection *Sec) {
+                           return Sec->Type == SHT_NOBITS ||
+                                  (Config->OFormatBinary &&
+                                   (Sec->Flags & SHF_ALLOC) == 0);
+                         });
 
   // When linking with -r there is no need to check for overlapping virtual/load
   // addresses since those addresses will only be assigned when the final

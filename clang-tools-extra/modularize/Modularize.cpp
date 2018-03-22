@@ -825,7 +825,7 @@ int main(int Argc, const char **Argv) {
   // No go if we have no header list file.
   if (ListFileNames.size() == 0) {
     cl::PrintHelpMessage();
-    return 0;
+    return 1;
   }
 
   std::unique_ptr<ModularizeUtilities> ModUtil;
