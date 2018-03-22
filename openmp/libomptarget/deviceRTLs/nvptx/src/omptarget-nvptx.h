@@ -259,10 +259,13 @@ public:
   // init
   INLINE void InitTeamDescr();
 
-  INLINE __kmpc_data_sharing_slot *RootS(int wid) {
+  INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
     // If this is invoked by the master thread of the master warp then intialize
     // it with a smaller slot.
-    if (wid == WARPSIZE - 1) {
+    if (IsMasterThread) {
+      // Do not initalize this slot again if it has already been initalized.
+      if (master_rootS[0].DataEnd == &master_rootS[0].Data[0] + DS_Slot_Size)
+        return 0;
       // Initialize the pointer to the end of the slot given the size of the
       // data section. DataEnd is non-inclusive.
       master_rootS[0].DataEnd = &master_rootS[0].Data[0] + DS_Slot_Size;
@@ -272,6 +275,10 @@ public:
       master_rootS[0].PrevSlotStackPtr = 0;
       return (__kmpc_data_sharing_slot *)&master_rootS[0];
     }
+    // Do not initalize this slot again if it has already been initalized.
+    if (worker_rootS[wid].DataEnd ==
+        &worker_rootS[wid].Data[0] + DS_Worker_Warp_Slot_Size)
+      return 0;
     // Initialize the pointer to the end of the slot given the size of the data
     // section. DataEnd is non-inclusive.
     worker_rootS[wid].DataEnd =
