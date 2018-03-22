@@ -576,14 +576,18 @@ static Function *Get__cilkrts_detach(Module &M) {
   // sf->spawn_helper_pedigree = w->pedigree;
   Value *WorkerPedigree = LoadSTyField(B, DL, WorkerBuilder::get(Ctx), W,
                                        WorkerBuilder::pedigree);
-  B.CreateInsertValue(
+  Value *NewHelperPedigree = B.CreateInsertValue(
       LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
                    StackFrameBuilder::parent_pedigree), WorkerPedigree, { 0 });
+  StoreSTyField(B, DL, StackFrameBuilder::get(Ctx), NewHelperPedigree, SF,
+                StackFrameBuilder::parent_pedigree);
 
   // parent->parent_pedigree = w->pedigree;
-  B.CreateInsertValue(
+  Value *NewParentPedigree = B.CreateInsertValue(
       LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), Parent,
                    StackFrameBuilder::parent_pedigree), WorkerPedigree, { 0 });
+  StoreSTyField(B, DL, StackFrameBuilder::get(Ctx), NewParentPedigree, Parent,
+                StackFrameBuilder::parent_pedigree);
 
   // w->pedigree.rank = 0;
   {
@@ -698,7 +702,7 @@ static Function *GetCilkSyncFn(Module &M, bool instrument = false) {
     IRBuilder<> B(SaveState);
 
     // sf.parent_pedigree = sf.worker->pedigree;
-    B.CreateInsertValue(
+    Value *NewParentPedigree = B.CreateInsertValue(
         LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
                      StackFrameBuilder::parent_pedigree),
         LoadSTyField(B, DL, WorkerBuilder::get(Ctx),
@@ -707,6 +711,8 @@ static Function *GetCilkSyncFn(Module &M, bool instrument = false) {
                                   /*isVolatile=*/false,
                                   AtomicOrdering::Acquire),
                      WorkerBuilder::pedigree), { 0 });
+    StoreSTyField(B, DL, StackFrameBuilder::get(Ctx), NewParentPedigree, SF,
+                  StackFrameBuilder::parent_pedigree);
 
     // if (!CILK_SETJMP(sf.ctx))
     Value *C = EmitCilkSetJmp(B, SF, M);
@@ -846,7 +852,7 @@ static Function *GetCilkSyncNoThrowFn(Module &M, bool instrument = false) {
     IRBuilder<> B(SaveState);
 
     // sf.parent_pedigree = sf.worker->pedigree;
-    B.CreateInsertValue(
+    Value *NewParentPedigree = B.CreateInsertValue(
         LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
                      StackFrameBuilder::parent_pedigree),
         LoadSTyField(B, DL, WorkerBuilder::get(Ctx),
@@ -855,6 +861,8 @@ static Function *GetCilkSyncNoThrowFn(Module &M, bool instrument = false) {
                                   /*isVolatile=*/false,
                                   AtomicOrdering::Acquire),
                      WorkerBuilder::pedigree), { 0 });
+    StoreSTyField(B, DL, StackFrameBuilder::get(Ctx), NewParentPedigree, SF,
+                  StackFrameBuilder::parent_pedigree);
 
     // if (!CILK_SETJMP(sf.ctx))
     Value *C = EmitCilkSetJmp(B, SF, M);
@@ -1449,6 +1457,9 @@ Function *CilkABI::createDetach(DetachInst &Detach,
                                       /*isFast=*/false, false);
   assert(SF && "null stack frame unexpected");
 
+  BasicBlock *CallBlock = SplitBlock(Detacher, &Detach, &DT);
+  Instruction *SetJmpPt = Detacher->getTerminator();
+
   Instruction *CallSite = nullptr;
   Function *Extracted = extractDetachBodyToFunction(Detach, DT, AC, &CallSite);
   assert(Extracted && "could not extract detach body to function");
@@ -1462,25 +1473,25 @@ Function *CilkABI::createDetach(DetachInst &Detach,
 
   Value *SetJmpRes;
   {
-    IRBuilder<> B(CallSite);
+    IRBuilder<> B(SetJmpPt);
     SetJmpRes = EmitCilkSetJmp(B, SF, *M);
   }
 
   // Conditionally call the new helper function based on the result of the
   // setjmp.
   {
-    BasicBlock *CallBlock = SplitBlock(CallSite->getParent(), CallSite, &DT);
+    // BasicBlock *CallBlock = SplitBlock(CallSite->getParent(), CallSite, &DT);
     BasicBlock *CallCont;
     if (InvokeInst *II = dyn_cast<InvokeInst>(CallSite))
       CallCont = SplitEdge(CallBlock, II->getNormalDest(), &DT);
     else // isa<CallInst>(CallSite)
       CallCont = SplitBlock(CallBlock, CallBlock->getTerminator(), &DT);
 
-    IRBuilder<> B(Detacher->getTerminator());
+    IRBuilder<> B(SetJmpPt);
     SetJmpRes = B.CreateICmpEQ(SetJmpRes,
                                ConstantInt::get(SetJmpRes->getType(), 0));
     B.CreateCondBr(SetJmpRes, CallBlock, CallCont);
-    Detacher->getTerminator()->eraseFromParent();
+    SetJmpPt->eraseFromParent();
   }
 
   // Mark this function as stealable.
