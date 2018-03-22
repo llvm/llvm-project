@@ -109,6 +109,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtF()) {
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+    for (auto CC :
+         {ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETO, ISD::SETUEQ,
+          ISD::SETUGT, ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE,
+          ISD::SETGT, ISD::SETGE, ISD::SETNE})
+      setCondCodeAction(CC, MVT::f32, Expand);
+    setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
+    setOperationAction(ISD::SELECT, MVT::f32, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f32, Expand);
   }
 
   setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
@@ -390,8 +398,13 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  assert(MI.getOpcode() == RISCV::Select_GPR_Using_CC_GPR &&
-         "Unexpected instr type to insert");
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
+  case RISCV::Select_GPR_Using_CC_GPR:
+  case RISCV::Select_FPR32_Using_CC_GPR:
+    break;
+  }
 
   // To "insert" a SELECT instruction, we actually have to insert the triangle
   // control-flow pattern.  The incoming instruction knows the destination vreg

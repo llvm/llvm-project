@@ -126,28 +126,16 @@ private:  // Semantic analysis methods.
   // iteration space.
   typedef std::vector<IterRecord> IterSet;
 
-  bool ProcessForeachDefs(Record *CurRec, SMLoc Loc);
-  bool ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals);
-
-  bool addToDefsets(Record &R);
+  bool addDefOne(std::unique_ptr<Record> Rec, Init *DefmName,
+                 IterSet &IterVals);
+  bool addDefForeach(Record *Rec, Init *DefmName, IterSet &IterVals);
+  bool addDef(std::unique_ptr<Record> Rec, Init *DefmName);
 
 private:  // Parser methods.
   bool ParseObjectList(MultiClass *MC = nullptr);
   bool ParseObject(MultiClass *MC);
   bool ParseClass();
   bool ParseMultiClass();
-  Record *InstantiateMulticlassDef(MultiClass &MC, Record *DefProto,
-                                   Init *&DefmPrefix, SMRange DefmPrefixRange,
-                                   ArrayRef<Init *> TArgs,
-                                   ArrayRef<Init *> TemplateVals);
-  bool ResolveMulticlassDefArgs(MultiClass &MC, Record *DefProto,
-                                SMLoc DefmPrefixLoc, SMLoc SubClassLoc,
-                                ArrayRef<Init *> TArgs,
-                                ArrayRef<Init *> TemplateVals, bool DeleteArgs);
-  bool ResolveMulticlassDef(MultiClass &MC,
-                            Record *CurRec,
-                            Record *DefProto,
-                            SMLoc DefmPrefixLoc);
   bool ParseDefm(MultiClass *CurMultiClass);
   bool ParseDef(MultiClass *CurMultiClass);
   bool ParseDefset();

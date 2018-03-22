@@ -27,6 +27,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -66,7 +67,6 @@
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>

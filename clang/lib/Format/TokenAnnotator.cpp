@@ -2615,8 +2615,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Line.Type == LT_ObjCMethodDecl) {
     if (Left.is(TT_ObjCMethodSpecifier))
       return true;
-    if (Left.is(tok::r_paren) && Right.is(tok::identifier))
-      // Don't space between ')' and <id>
+    if (Left.is(tok::r_paren) && Right.isOneOf(tok::identifier, tok::kw_new))
+      // Don't space between ')' and <id> or ')' and 'new'. 'new' is not a
+      // keyword in Objective-C, and '+ (instancetype)new;' is a standard class
+      // method declaration.
       return false;
   }
   if (Line.Type == LT_ObjCProperty &&

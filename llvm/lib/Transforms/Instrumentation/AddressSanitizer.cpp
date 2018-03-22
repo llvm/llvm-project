@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/Argument.h"
@@ -71,7 +72,6 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/ASanStackFrameLayout.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>

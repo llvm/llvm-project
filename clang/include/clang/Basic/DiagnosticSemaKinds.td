@@ -7627,6 +7627,11 @@ def err_destroying_operator_delete_not_usual : Error<
   "alignment parameter">;
 def note_implicit_delete_this_in_destructor_here : Note<
   "while checking implicit 'delete this' for virtual destructor">;
+def err_builtin_operator_new_delete_not_usual : Error<
+  "call to '%select{__builtin_operator_new|__builtin_operator_delete}0' "
+  "selects non-usual %select{allocation|deallocation}0 function">;
+def note_non_usual_function_declared_here : Note<
+  "non-usual %0 declared here">;
 
 // C++ literal operators
 def err_literal_operator_outside_namespace : Error<

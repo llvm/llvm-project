@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"

@@ -594,7 +594,7 @@ void CodeGenSchedModels::collectSchedClasses() {
   dbgs() << "\n+++ ITINERARIES and/or MACHINE MODELS (collectSchedClasses) +++\n";
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     StringRef InstName = Inst->TheDef->getName();
-    unsigned SCIdx = InstrClassMap.lookup(Inst->TheDef);
+    unsigned SCIdx = getSchedClassIdx(*Inst);
     if (!SCIdx) {
       if (!Inst->hasNoSchedulingInfo)
         dbgs() << "No machine model for " << Inst->TheDef->getName() << '\n';
@@ -652,12 +652,9 @@ void CodeGenSchedModels::collectSchedClasses() {
 unsigned CodeGenSchedModels::findSchedClassIdx(Record *ItinClassDef,
                                                ArrayRef<unsigned> Writes,
                                                ArrayRef<unsigned> Reads) const {
-  for (SchedClassIter I = schedClassBegin(), E = schedClassEnd(); I != E; ++I) {
-    if (I->ItinClassDef == ItinClassDef && makeArrayRef(I->Writes) == Writes &&
-        makeArrayRef(I->Reads) == Reads) {
+  for (SchedClassIter I = schedClassBegin(), E = schedClassEnd(); I != E; ++I)
+    if (I->isKeyEqual(ItinClassDef, Writes, Reads))
       return I - schedClassBegin();
-    }
-  }
   return 0;
 }
 
@@ -762,11 +759,10 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
       const RecVec &RWDefs = SchedClasses[OldSCIdx].InstRWs;
       if (!RWDefs.empty()) {
         const RecVec *OrigInstDefs = Sets.expand(RWDefs[0]);
-        unsigned OrigNumInstrs = 0;
-        for (Record *OIDef : *OrigInstDefs) {
-          if (InstrClassMap[OIDef] == OldSCIdx)
-            ++OrigNumInstrs;
-        }
+        unsigned OrigNumInstrs =
+          count_if(*OrigInstDefs, [&](Record *OIDef) {
+                     return InstrClassMap[OIDef] == OldSCIdx;
+                   });
         if (OrigNumInstrs == InstDefs.size()) {
           assert(SchedClasses[OldSCIdx].ProcIndices[0] == 0 &&
                  "expected a generic SchedClass");
@@ -804,27 +800,25 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
     SC.Writes = SchedClasses[OldSCIdx].Writes;
     SC.Reads = SchedClasses[OldSCIdx].Reads;
     SC.ProcIndices.push_back(0);
-    // Map each Instr to this new class.
-    // Note that InstDefs may be a smaller list than InstRWDef's "Instrs".
-    Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
-    SmallSet<unsigned, 4> RemappedClassIDs;
-    for (ArrayRef<Record*>::const_iterator
-           II = InstDefs.begin(), IE = InstDefs.end(); II != IE; ++II) {
-      unsigned OldSCIdx = InstrClassMap[*II];
-      if (OldSCIdx && RemappedClassIDs.insert(OldSCIdx).second) {
-        for (RecIter RI = SchedClasses[OldSCIdx].InstRWs.begin(),
-               RE = SchedClasses[OldSCIdx].InstRWs.end(); RI != RE; ++RI) {
-          if ((*RI)->getValueAsDef("SchedModel") == RWModelDef) {
-            PrintFatalError(InstRWDef->getLoc(), "Overlapping InstRW def " +
-                          (*II)->getName() + " also matches " +
-                          (*RI)->getValue("Instrs")->getValue()->getAsString());
+    // If we had an old class, copy it's InstRWs to this new class.
+    if (OldSCIdx) {
+      Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
+      for (Record *OldRWDef : SchedClasses[OldSCIdx].InstRWs) {
+        if (OldRWDef->getValueAsDef("SchedModel") == RWModelDef) {
+          for (Record *InstDef : InstDefs) {
+            PrintFatalError(OldRWDef->getLoc(), "Overlapping InstRW def " +
+                       InstDef->getName() + " also matches " +
+                       OldRWDef->getValue("Instrs")->getValue()->getAsString());
           }
-          assert(*RI != InstRWDef && "SchedClass has duplicate InstRW def");
-          SC.InstRWs.push_back(*RI);
         }
+        assert(OldRWDef != InstRWDef &&
+               "SchedClass has duplicate InstRW def");
+        SC.InstRWs.push_back(OldRWDef);
       }
-      InstrClassMap[*II] = SCIdx;
     }
+    // Map each Instr to this new class.
+    for (Record *InstDef : InstDefs)
+      InstrClassMap[InstDef] = SCIdx;
     SC.InstRWs.push_back(InstRWDef);
   }
 }

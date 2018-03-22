@@ -19,6 +19,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -28,11 +29,11 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -43,7 +44,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 
@@ -58,6 +58,7 @@ STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
 STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
+STATISTIC(NumUDivs,     "Number of udivs whose width was decreased");
 STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
@@ -432,6 +433,48 @@ static bool hasPositiveOperands(BinaryOperator *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
+/// Try to shrink a udiv/urem's width down to the smallest power of two that's
+/// sufficient to contain its operands.
+static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::UDiv ||
+         Instr->getOpcode() == Instruction::URem);
+  if (Instr->getType()->isVectorTy())
+    return false;
+
+  // Find the smallest power of two bitwidth that's sufficient to hold Instr's
+  // operands.
+  auto OrigWidth = Instr->getType()->getIntegerBitWidth();
+  ConstantRange OperandRange(OrigWidth, /*isFullset=*/false);
+  for (Value *Operand : Instr->operands()) {
+    OperandRange = OperandRange.unionWith(
+        LVI->getConstantRange(Operand, Instr->getParent()));
+  }
+  // Don't shrink below 8 bits wide.
+  unsigned NewWidth = std::max<unsigned>(
+      PowerOf2Ceil(OperandRange.getUnsignedMax().getActiveBits()), 8);
+  // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
+  // two.
+  if (NewWidth >= OrigWidth)
+    return false;
+
+  ++NumUDivs;
+  auto *TruncTy = Type::getIntNTy(Instr->getContext(), NewWidth);
+  auto *LHS = CastInst::Create(Instruction::Trunc, Instr->getOperand(0), TruncTy,
+                               Instr->getName() + ".lhs.trunc", Instr);
+  auto *RHS = CastInst::Create(Instruction::Trunc, Instr->getOperand(1), TruncTy,
+                               Instr->getName() + ".rhs.trunc", Instr);
+  auto *BO =
+      BinaryOperator::Create(Instr->getOpcode(), LHS, RHS, Instr->getName(), Instr);
+  auto *Zext = CastInst::Create(Instruction::ZExt, BO, Instr->getType(),
+                                Instr->getName() + ".zext", Instr);
+  if (BO->getOpcode() == Instruction::UDiv)
+    BO->setIsExact(Instr->isExact());
+
+  Instr->replaceAllUsesWith(Zext);
+  Instr->eraseFromParent();
+  return true;
+}
+
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy() || !hasPositiveOperands(SDI, LVI))
     return false;
@@ -441,6 +484,10 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
                                         SDI->getName(), SDI);
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
+
+  // Try to process our new urem.
+  processUDivOrURem(BO, LVI);
+
   return true;
 }
 
@@ -459,6 +506,9 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   BO->setIsExact(SDI->isExact());
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
+
+  // Try to simplify our new udiv.
+  processUDivOrURem(BO, LVI);
 
   return true;
 }
@@ -594,6 +644,10 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, const SimplifyQuery &SQ) {
         break;
       case Instruction::SDiv:
         BBChanged |= processSDiv(cast<BinaryOperator>(II), LVI);
+        break;
+      case Instruction::UDiv:
+      case Instruction::URem:
+        BBChanged |= processUDivOrURem(cast<BinaryOperator>(II), LVI);
         break;
       case Instruction::AShr:
         BBChanged |= processAShr(cast<BinaryOperator>(II), LVI);

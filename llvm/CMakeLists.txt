@@ -966,7 +966,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN ".svn" EXCLUDE
     )
 
-  install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm
+  install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm ${LLVM_INCLUDE_DIR}/llvm-c
     DESTINATION include
     COMPONENT llvm-headers
     FILES_MATCHING

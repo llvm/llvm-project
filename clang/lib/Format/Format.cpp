@@ -1449,6 +1449,19 @@ private:
     // Keep this array sorted, since we are binary searching over it.
     static constexpr llvm::StringLiteral FoundationIdentifiers[] = {
         "CGFloat",
+        "CGPoint",
+        "CGPointMake",
+        "CGPointZero",
+        "CGRect",
+        "CGRectEdge",
+        "CGRectInfinite",
+        "CGRectMake",
+        "CGRectNull",
+        "CGRectZero",
+        "CGSize",
+        "CGSizeMake",
+        "CGVector",
+        "CGVectorMake",
         "NSAffineTransform",
         "NSArray",
         "NSAttributedString",
@@ -1497,6 +1510,8 @@ private:
         "NSURLQueryItem",
         "NSUUID",
         "NSValue",
+        "UIImage",
+        "UIView",
     };
 
     for (auto &Line : AnnotatedLines) {

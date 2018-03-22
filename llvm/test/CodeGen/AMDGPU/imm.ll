@@ -501,10 +501,9 @@ define amdgpu_kernel void @add_inline_imm_16_f64(double addrspace(1)* %out, doub
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1_f64:
-; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; GCN: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -1
-; GCN: buffer_store_dwordx2 [[REG]]
+; GCN: v_mov_b32_e32 v0, -1
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: buffer_store_dwordx2 v[0:1]
 define amdgpu_kernel void @add_inline_imm_neg_1_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0xffffffffffffffff
   store double %y, double addrspace(1)* %out
@@ -512,10 +511,9 @@ define amdgpu_kernel void @add_inline_imm_neg_1_f64(double addrspace(1)* %out, d
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2_f64:
-; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; GCN: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -2
-; GCN: buffer_store_dwordx2 [[REG]]
+; GCN: v_mov_b32_e32 v0, -2
+; GCN: v_mov_b32_e32 v1, -1
+; GCN: buffer_store_dwordx2 v[0:1]
 define amdgpu_kernel void @add_inline_imm_neg_2_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0xfffffffffffffffe
   store double %y, double addrspace(1)* %out
@@ -523,10 +521,9 @@ define amdgpu_kernel void @add_inline_imm_neg_2_f64(double addrspace(1)* %out, d
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_16_f64:
-; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; GCN: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -16
-; GCN: buffer_store_dwordx2 [[REG]]
+; GCN: v_mov_b32_e32 v0, -16
+; GCN: v_mov_b32_e32 v1, -1
+; GCN: buffer_store_dwordx2 v[0:1]
 define amdgpu_kernel void @add_inline_imm_neg_16_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0xfffffffffffffff0
   store double %y, double addrspace(1)* %out

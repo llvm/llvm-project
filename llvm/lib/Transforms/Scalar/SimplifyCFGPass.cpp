@@ -28,6 +28,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -39,7 +40,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <utility>
 using namespace llvm;
 

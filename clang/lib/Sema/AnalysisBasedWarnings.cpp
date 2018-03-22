@@ -200,60 +200,41 @@ static bool hasRecursiveCallInPath(const FunctionDecl *FD, CFGBlock &Block) {
   return false;
 }
 
-// All blocks are in one of three states.  States are ordered so that blocks
-// can only move to higher states.
-enum RecursiveState {
-  FoundNoPath,
-  FoundPath,
-  FoundPathWithNoRecursiveCall
-};
-
-// Returns true if there exists a path to the exit block and every path
-// to the exit block passes through a call to FD.
+// Returns true if every path from the entry block passes through a call to FD.
 static bool checkForRecursiveFunctionCall(const FunctionDecl *FD, CFG *cfg) {
+  llvm::SmallPtrSet<CFGBlock *, 16> Visited;
+  llvm::SmallVector<CFGBlock *, 16> WorkList;
+  // Keep track of whether we found at least one recursive path.
+  bool foundRecursion = false;
 
   const unsigned ExitID = cfg->getExit().getBlockID();
 
-  // Mark all nodes as FoundNoPath, then set the status of the entry block.
-  SmallVector<RecursiveState, 16> States(cfg->getNumBlockIDs(), FoundNoPath);
-  States[cfg->getEntry().getBlockID()] = FoundPathWithNoRecursiveCall;
+  // Seed the work list with the entry block.
+  WorkList.push_back(&cfg->getEntry());
 
-  // Make the processing stack and seed it with the entry block.
-  SmallVector<CFGBlock *, 16> Stack;
-  Stack.push_back(&cfg->getEntry());
+  while (!WorkList.empty()) {
+    CFGBlock *Block = WorkList.pop_back_val();
 
-  while (!Stack.empty()) {
-    CFGBlock *CurBlock = Stack.back();
-    Stack.pop_back();
+    for (auto I = Block->succ_begin(), E = Block->succ_end(); I != E; ++I) {
+      if (CFGBlock *SuccBlock = *I) {
+        if (!Visited.insert(SuccBlock).second)
+          continue;
 
-    unsigned ID = CurBlock->getBlockID();
-    RecursiveState CurState = States[ID];
+        // Found a path to the exit node without a recursive call.
+        if (ExitID == SuccBlock->getBlockID())
+          return false;
 
-    if (CurState == FoundPathWithNoRecursiveCall) {
-      // Found a path to the exit node without a recursive call.
-      if (ExitID == ID)
-        return false;
-
-      // Only change state if the block has a recursive call.
-      if (hasRecursiveCallInPath(FD, *CurBlock))
-        CurState = FoundPath;
-    }
-
-    // Loop over successor blocks and add them to the Stack if their state
-    // changes.
-    for (auto I = CurBlock->succ_begin(), E = CurBlock->succ_end(); I != E; ++I)
-      if (*I) {
-        unsigned next_ID = (*I)->getBlockID();
-        if (States[next_ID] < CurState) {
-          States[next_ID] = CurState;
-          Stack.push_back(*I);
+        // If the successor block contains a recursive call, end analysis there.
+        if (hasRecursiveCallInPath(FD, *SuccBlock)) {
+          foundRecursion = true;
+          continue;
         }
-      }
-  }
 
-  // Return true if the exit node is reachable, and only reachable through
-  // a recursive call.
-  return States[ExitID] == FoundPath;
+        WorkList.push_back(SuccBlock);
+      }
+    }
+  }
+  return foundRecursion;
 }
 
 static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
@@ -268,10 +249,6 @@ static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
 
   CFG *cfg = AC.getCFG();
   if (!cfg) return;
-
-  // If the exit block is unreachable, skip processing the function.
-  if (cfg->getExit().pred_empty())
-    return;
 
   // Emit diagnostic if a recursive function call is detected for all paths.
   if (checkForRecursiveFunctionCall(FD, cfg))

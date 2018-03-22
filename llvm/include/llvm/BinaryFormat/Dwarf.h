@@ -578,22 +578,22 @@ private:
 template <typename Enum> struct EnumTraits : public std::false_type {};
 
 template <> struct EnumTraits<Attribute> : public std::true_type {
-  static constexpr char Type[] = "AT";
+  static constexpr char Type[3] = "AT";
   static constexpr StringRef (*StringFn)(unsigned) = &AttributeString;
 };
 
 template <> struct EnumTraits<Form> : public std::true_type {
-  static constexpr char Type[] = "FORM";
+  static constexpr char Type[5] = "FORM";
   static constexpr StringRef (*StringFn)(unsigned) = &FormEncodingString;
 };
 
 template <> struct EnumTraits<Index> : public std::true_type {
-  static constexpr char Type[] = "IDX";
+  static constexpr char Type[4] = "IDX";
   static constexpr StringRef (*StringFn)(unsigned) = &IndexString;
 };
 
 template <> struct EnumTraits<Tag> : public std::true_type {
-  static constexpr char Type[] = "TAG";
+  static constexpr char Type[4] = "TAG";
   static constexpr StringRef (*StringFn)(unsigned) = &TagString;
 };
 } // End of namespace dwarf

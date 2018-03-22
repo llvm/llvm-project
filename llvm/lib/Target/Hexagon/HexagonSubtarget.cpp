@@ -208,9 +208,11 @@ bool HexagonSubtarget::CallMutation::shouldTFRICallBind(
 void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
   SUnit* LastSequentialCall = nullptr;
-  unsigned VRegHoldingRet = 0;
-  unsigned RetRegister;
-  SUnit* LastUseOfRet = nullptr;
+  // Map from virtual register to physical register from the copy.
+  DenseMap<unsigned, unsigned> VRegHoldingReg;
+  // Map from the physical register to the instruction that uses virtual
+  // register. This is used to create the barrier edge.
+  DenseMap<unsigned, SUnit *> LastVRegUse;
   auto &TRI = *DAG->MF.getSubtarget().getRegisterInfo();
   auto &HII = *DAG->MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
 
@@ -227,8 +229,10 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
              shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
       DAG->addEdge(&DAG->SUnits[su], SDep(&DAG->SUnits[su-1], SDep::Barrier));
-    // Prevent redundant register copies between two calls, which are caused by
-    // both the return value and the argument for the next call being in %r0.
+    // Prevent redundant register copies due to reads and writes of physical
+    // registers. The original motivation for this was the code generated
+    // between two calls, which are caused both the return value and the
+    // argument for the next call being in %r0.
     // Example:
     //   1: <call1>
     //   2: %vreg = COPY %r0
@@ -237,21 +241,37 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     //   5: <call2>
     // The scheduler would often swap 3 and 4, so an additional register is
     // needed. This code inserts a Barrier dependence between 3 & 4 to prevent
-    // this. The same applies for %d0 and %v0/%w0, which are also handled.
+    // this.
+    // The code below checks for all the physical registers, not just R0/D0/V0.
     else if (SchedRetvalOptimization) {
       const MachineInstr *MI = DAG->SUnits[su].getInstr();
-      if (MI->isCopy() && (MI->readsRegister(Hexagon::R0, &TRI) ||
-                           MI->readsRegister(Hexagon::V0, &TRI)))  {
-        // %vreg = COPY %r0
-        VRegHoldingRet = MI->getOperand(0).getReg();
-        RetRegister = MI->getOperand(1).getReg();
-        LastUseOfRet = nullptr;
-      } else if (VRegHoldingRet && MI->readsVirtualRegister(VRegHoldingRet))
-        // <use of %X>
-        LastUseOfRet = &DAG->SUnits[su];
-      else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
-        // %r0 = ...
-        DAG->addEdge(&DAG->SUnits[su], SDep(LastUseOfRet, SDep::Barrier));
+      if (MI->isCopy() &&
+          TargetRegisterInfo::isPhysicalRegister(MI->getOperand(1).getReg())) {
+        // %vregX = COPY %r0
+        VRegHoldingReg[MI->getOperand(0).getReg()] = MI->getOperand(1).getReg();
+        LastVRegUse.erase(MI->getOperand(1).getReg());
+      } else {
+        for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+          const MachineOperand &MO = MI->getOperand(i);
+          if (!MO.isReg())
+            continue;
+          if (MO.isUse() && !MI->isCopy() &&
+              VRegHoldingReg.count(MO.getReg())) {
+            // <use of %vregX>
+            LastVRegUse[VRegHoldingReg[MO.getReg()]] = &DAG->SUnits[su];
+          } else if (MO.isDef() &&
+                     TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
+            for (MCRegAliasIterator AI(MO.getReg(), &TRI, true); AI.isValid();
+                 ++AI) {
+              if (LastVRegUse.count(*AI) &&
+                  LastVRegUse[*AI] != &DAG->SUnits[su])
+                // %r0 = ...
+                DAG->addEdge(&DAG->SUnits[su], SDep(LastVRegUse[*AI], SDep::Barrier));
+              LastVRegUse.erase(*AI);
+            }
+          }
+        }
+      }
     }
   }
 }

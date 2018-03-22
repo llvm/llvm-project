@@ -14,9 +14,9 @@
 
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 static Constant *getDefaultPersonalityFn(Module *M) {

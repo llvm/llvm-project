@@ -19,6 +19,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -31,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
-#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace PatternMatch;

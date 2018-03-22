@@ -2656,9 +2656,3 @@ The AMDGPU backend
 The AMDGPU code generator lives in the ``lib/Target/AMDGPU``
 directory. This code generator is capable of targeting a variety of
 AMD GPU processors. Refer to :doc:`AMDGPUUsage` for more information.
-
-The X86 backend
-------------------
-
-The X86 code generator lives in the ``lib/Target/X86``
-directory. Refer to :doc:`X86Usage` for more information.

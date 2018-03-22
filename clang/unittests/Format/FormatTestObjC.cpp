@@ -514,6 +514,7 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "    evenLongerKeyword:(float)theInterval\n"
                "                error:(NSError **)theError {\n"
                "}");
+  verifyFormat("+ (instancetype)new;\n");
   Style.ColumnLimit = 60;
   verifyFormat("- (instancetype)initXxxxxx:(id<x>)x\n"
                "                         y:(id<yyyyyyyyyyyyyyyyyyyy>)y\n"
@@ -912,6 +913,17 @@ TEST_F(FormatTestObjC, ObjCForIn) {
   verifyFormat("for (Foo *x in [bar baz:^{\n"
                "       [uh oh];\n"
                "     }]) {\n}");
+}
+
+TEST_F(FormatTestObjC, ObjCNew) {
+  verifyFormat("+ (instancetype)new {\n"
+               "  return nil;\n"
+               "}\n");
+  verifyFormat("+ (instancetype)myNew {\n"
+               "  return [self new];\n"
+               "}\n");
+  verifyFormat("SEL NewSelector(void) { return @selector(new); }\n");
+  verifyFormat("SEL MacroSelector(void) { return MACRO(new); }\n");
 }
 
 TEST_F(FormatTestObjC, ObjCLiterals) {
