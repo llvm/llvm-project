@@ -28,6 +28,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/TargetRegistry.h"
 
@@ -125,8 +126,11 @@ static std::string getCPUName(const HSACodeObject *CodeObject) {
   return "";
 }
 
-std::error_code CodeObjectDisassembler::printKernels(const HSACodeObject *CodeObject,
-                                                     raw_ostream &ES) {
+std::error_code
+CodeObjectDisassembler::printFunctions(const HSACodeObject *CodeObject,
+                                       raw_ostream &ES) {
+  AsmStreamer->getStreamer().InitSections(true);
+
   // setup disassembler
   auto SymbolsOr = CollectSymbols(CodeObject);
   if (!SymbolsOr)
@@ -152,45 +156,56 @@ std::error_code CodeObjectDisassembler::printKernels(const HSACodeObject *CodeOb
     InstDisasm->setSymbolizer(std::move(Symbolizer));
   }
 
-
-  // print kernels
-  for (const auto &Sym : CodeObject->kernels()) {
-    auto ExpectedKernel = KernelSym::asKernelSym(CodeObject->getSymbol(Sym.getRawDataRefImpl()));
-    if (!ExpectedKernel)
-      return errorToErrorCode(ExpectedKernel.takeError());
+  // print functions
+  for (const auto &Sym : CodeObject->functions()) {
+    auto ExpectedFunction = FunctionSym::asFunctionSym(
+        CodeObject->getSymbol(Sym.getRawDataRefImpl()));
+    if (!ExpectedFunction)
+      return errorToErrorCode(ExpectedFunction.takeError());
+    auto Function = ExpectedFunction.get();
 
     auto NameEr = Sym.getName();
     if (!NameEr)
       return object::object_error::parse_failed;
 
-    auto Kernel = ExpectedKernel.get();
-    auto KernelCodeTOr = Kernel->getAmdKernelCodeT(CodeObject);
-    if (!KernelCodeTOr)
-      return errorToErrorCode(KernelCodeTOr.takeError());
+    auto AddressOr = Function->getAddress(CodeObject);
+    if (!AddressOr)
+      return errorToErrorCode(AddressOr.takeError());
+    uint64_t Address = *AddressOr;
 
-    auto CodeOr = CodeObject->getKernelCode(Kernel);
+    auto ExpectedKernel = KernelSym::asKernelSym(Function);
+    if (ExpectedKernel) {
+      auto Kernel = ExpectedKernel.get();
+      Function = Kernel;
+
+      auto KernelCodeTOr = Kernel->getAmdKernelCodeT(CodeObject);
+      if (!KernelCodeTOr)
+        return errorToErrorCode(KernelCodeTOr.takeError());
+
+      AsmStreamer->EmitAMDGPUSymbolType(*NameEr, Kernel->getType());
+      AsmStreamer->getStreamer().EmitRawText("");
+
+      AsmStreamer->getStreamer().EmitRawText(*NameEr + ":");
+
+      AsmStreamer->EmitAMDKernelCodeT(*(*KernelCodeTOr));
+      AsmStreamer->getStreamer().EmitRawText("");
+
+      Address += (*KernelCodeTOr)->kernel_code_entry_byte_offset;
+    } else {
+      auto Name = *NameEr;
+      MCSymbolELF *Symbol = cast<MCSymbolELF>(
+          AsmStreamer->getStreamer().getContext().getOrCreateSymbol(Name));
+      Symbol->setType(ELF::STT_FUNC);
+      AsmStreamer->getStreamer().EmitSymbolAttribute(Symbol,
+                                                     MCSA_ELF_TypeFunction);
+      AsmStreamer->getStreamer().EmitLabel(Symbol);
+    }
+
+    auto CodeOr = CodeObject->getCode(Function);
     if (!CodeOr)
       return errorToErrorCode(CodeOr.takeError());
 
-    auto KernelAddressOr = Kernel->getAddress(CodeObject);
-    if (!KernelAddressOr)
-      return errorToErrorCode(KernelAddressOr.takeError());
-    
-    AsmStreamer->EmitAMDGPUSymbolType(*NameEr, Kernel->getType());
-    AsmStreamer->getStreamer().EmitRawText("");
-
-    AsmStreamer->getStreamer().EmitRawText(*NameEr + ":");
-
-    AsmStreamer->EmitAMDKernelCodeT(*(*KernelCodeTOr));
-    AsmStreamer->getStreamer().EmitRawText("");
-
-    printKernelCode(
-      *InstDisasm,
-      *CodeOr,
-      *KernelAddressOr + (*KernelCodeTOr)->kernel_code_entry_byte_offset,
-      *SymbolsOr,
-      ES);
-
+    printFunctionCode(*InstDisasm, *CodeOr, Address, *SymbolsOr, ES);
   }
   return std::error_code();
 }
@@ -203,11 +218,11 @@ static ArrayRef<T> trimTrailingZeroes(ArrayRef<T> A, size_t Limit) {
   return A;
 }
 
-void CodeObjectDisassembler::printKernelCode(const MCDisassembler &InstDisasm,
-                                             ArrayRef<uint8_t> Bytes,
-                                             uint64_t Address,
-                                             const SymbolsTy &Symbols,
-                                             raw_ostream &ES) {
+void CodeObjectDisassembler::printFunctionCode(const MCDisassembler &InstDisasm,
+                                               ArrayRef<uint8_t> Bytes,
+                                               uint64_t Address,
+                                               const SymbolsTy &Symbols,
+                                               raw_ostream &ES) {
 #ifdef NDEBUG
   const bool DebugFlag = false;
 #endif
@@ -283,7 +298,7 @@ std::error_code CodeObjectDisassembler::Disassemble(MemoryBufferRef Buffer,
   if (EC)
     return EC;
 
-  EC = printKernels(CodeObject.get(), ES);
+  EC = printFunctions(CodeObject.get(), ES);
   if (EC)
     return EC;
 

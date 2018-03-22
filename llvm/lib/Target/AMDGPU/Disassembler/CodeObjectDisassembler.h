@@ -46,10 +46,11 @@ private:
   Expected<SymbolsTy> CollectSymbols(const HSACodeObject *CodeObject);
 
   std::error_code printNotes(const HSACodeObject *CodeObject);
-  std::error_code printKernels(const HSACodeObject *CodeObject, raw_ostream &ES);
-  void printKernelCode(const MCDisassembler &InstDisasm, ArrayRef<uint8_t> Bytes,
-                       uint64_t Address, const SymbolsTy &Symbols, raw_ostream &ES);
-  
+  std::error_code printFunctions(const HSACodeObject *CodeObject,
+                                 raw_ostream &ES);
+  void printFunctionCode(const MCDisassembler &InstDisasm,
+                         ArrayRef<uint8_t> Bytes, uint64_t Address,
+                         const SymbolsTy &Symbols, raw_ostream &ES);
 
 public:
   CodeObjectDisassembler(MCContext *C, StringRef TripleName, MCInstPrinter *IP,

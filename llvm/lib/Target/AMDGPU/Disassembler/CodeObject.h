@@ -134,20 +134,13 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// KernelSym
+// FunctionSym
 //===----------------------------------------------------------------------===//
 
 class HSACodeObject;
 
-class KernelSym : public object::ELF64LEObjectFile::Elf_Sym {
+class FunctionSym : public object::ELF64LEObjectFile::Elf_Sym {
 public:
-  Expected<const amd_kernel_code_t *> getAmdKernelCodeT(
-    const HSACodeObject * CodeObject) const;
-
-  Expected<const amd_kernel_code_t *> getAmdKernelCodeT(
-    const HSACodeObject * CodeObject,
-    const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
-
   Expected<uint64_t> getAddress(const HSACodeObject *CodeObject) const;
 
   Expected<uint64_t> getAddress(
@@ -164,10 +157,25 @@ public:
     const HSACodeObject *CodeObject,
     const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
 
-  static Expected<const KernelSym *> asKernelSym(
-    const object::ELF64LEObjectFile::Elf_Sym *Sym);
+  static Expected<const FunctionSym *>
+  asFunctionSym(const object::ELF64LEObjectFile::Elf_Sym *Sym);
 };
 
+class KernelSym : public FunctionSym {
+public:
+  Expected<uint64_t>
+  getCodeOffset(const HSACodeObject *CodeObject,
+                const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
+
+  Expected<const amd_kernel_code_t *>
+  getAmdKernelCodeT(const HSACodeObject *CodeObject) const;
+
+  Expected<const amd_kernel_code_t *>
+  getAmdKernelCodeT(const HSACodeObject *CodeObject,
+                    const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
+
+  static Expected<const KernelSym *> asKernelSym(const FunctionSym *Sym);
+};
 
 template <typename BaseIterator>
 class conditional_iterator : public iterator_adaptor_base<
@@ -201,12 +209,12 @@ public:
   }
 };
 
-class kernel_sym_iterator : public conditional_iterator<object::elf_symbol_iterator> {
+class function_sym_iterator
+    : public conditional_iterator<object::elf_symbol_iterator> {
 public:
-  kernel_sym_iterator(object::elf_symbol_iterator It,
-                      object::elf_symbol_iterator End,
-                      PredicateTy P)
-    : conditional_iterator<object::elf_symbol_iterator>(It, End, P) {}
+  function_sym_iterator(object::elf_symbol_iterator It,
+                        object::elf_symbol_iterator End, PredicateTy P)
+      : conditional_iterator<object::elf_symbol_iterator>(It, End, P) {}
 
   const object::ELFSymbolRef &operator*() const {
     return *I;
@@ -219,7 +227,7 @@ public:
 
 class HSACodeObject : public object::ELF64LEObjectFile {
 private:
-  mutable SmallVector<uint64_t, 8> KernelMarkers;
+  mutable SmallVector<uint64_t, 8> FunctionMarkers;
 
   void InitMarkers() const;
 
@@ -244,11 +252,11 @@ public:
   note_iterator notes_end() const;
   iterator_range<note_iterator> notes() const;
 
-  kernel_sym_iterator kernels_begin() const;
-  kernel_sym_iterator kernels_end() const;
-  iterator_range<kernel_sym_iterator> kernels() const;
+  function_sym_iterator functions_begin() const;
+  function_sym_iterator functions_end() const;
+  iterator_range<function_sym_iterator> functions() const;
 
-  Expected<ArrayRef<uint8_t>> getKernelCode(const KernelSym *Kernel) const;
+  Expected<ArrayRef<uint8_t>> getCode(const FunctionSym *Function) const;
 
   Expected<const Elf_Shdr *> getSectionByName(StringRef Name) const;
 
@@ -258,6 +266,7 @@ public:
   Expected<const Elf_Shdr *> getTextSection() const;
   Expected<const Elf_Shdr *> getNoteSection() const;
 
+  friend class FunctionSym;
   friend class KernelSym;
 };
 

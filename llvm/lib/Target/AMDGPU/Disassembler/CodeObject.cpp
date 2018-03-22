@@ -49,8 +49,8 @@ Expected<const amd_kernel_code_t *> KernelSym::getAmdKernelCodeT(
   return reinterpret_cast<const amd_kernel_code_t *>((*ArrayOr).data() + *SectionOffsetOr);
 }
 
-Expected<uint64_t> KernelSym::getAddress(
-  const HSACodeObject *CodeObject) const {
+Expected<uint64_t>
+FunctionSym::getAddress(const HSACodeObject *CodeObject) const {
   auto TextOr = CodeObject->getTextSection();
   if (!TextOr) {
     return TextOr.takeError();
@@ -58,9 +58,9 @@ Expected<uint64_t> KernelSym::getAddress(
   return getAddress(CodeObject, TextOr.get());
 }
 
-Expected<uint64_t> KernelSym::getAddress(
-  const HSACodeObject *CodeObject,
-  const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
+Expected<uint64_t>
+FunctionSym::getAddress(const HSACodeObject *CodeObject,
+                        const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
   assert(Text);
   auto ElfHeader = CodeObject->getELFFile()->getHeader();
   if (ElfHeader->e_type == ELF::ET_REL) {
@@ -70,8 +70,8 @@ Expected<uint64_t> KernelSym::getAddress(
   return st_value;
 }
 
-Expected<uint64_t> KernelSym::getSectionOffset(
-  const HSACodeObject *CodeObject) const {
+Expected<uint64_t>
+FunctionSym::getSectionOffset(const HSACodeObject *CodeObject) const {
   auto TextOr = CodeObject->getTextSection();
   if (!TextOr) {
     return TextOr.takeError();
@@ -79,10 +79,9 @@ Expected<uint64_t> KernelSym::getSectionOffset(
   return getSectionOffset(CodeObject, TextOr.get());
 }
 
-
-Expected<uint64_t> KernelSym::getSectionOffset(
-  const HSACodeObject *CodeObject,
-  const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
+Expected<uint64_t> FunctionSym::getSectionOffset(
+    const HSACodeObject *CodeObject,
+    const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
   assert(Text);
 
   auto AddressOr = getAddress(CodeObject, Text);
@@ -90,6 +89,18 @@ Expected<uint64_t> KernelSym::getSectionOffset(
     return AddressOr.takeError();
 
   return *AddressOr - Text->sh_addr;
+}
+
+Expected<uint64_t> FunctionSym::getCodeOffset(
+    const HSACodeObject *CodeObject,
+    const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
+  assert(Text);
+
+  auto SectionOffsetOr = getSectionOffset(CodeObject, Text);
+  if (!SectionOffsetOr)
+    return SectionOffsetOr.takeError();
+
+  return *SectionOffsetOr;
 }
 
 Expected<uint64_t> KernelSym::getCodeOffset(
@@ -108,8 +119,16 @@ Expected<uint64_t> KernelSym::getCodeOffset(
   return *SectionOffsetOr + (*KernelCodeTOr)->kernel_code_entry_byte_offset;
 }
 
+Expected<const FunctionSym *>
+FunctionSym::asFunctionSym(const HSACodeObject::Elf_Sym *Sym) {
+  if (Sym->getType() != ELF::STT_FUNC &&
+      Sym->getType() != ELF::STT_AMDGPU_HSA_KERNEL)
+    return createError("invalid symbol type");
 
-Expected<const KernelSym *> KernelSym::asKernelSym(const HSACodeObject::Elf_Sym *Sym) {
+  return static_cast<const FunctionSym *>(Sym);
+}
+
+Expected<const KernelSym *> KernelSym::asKernelSym(const FunctionSym *Sym) {
   if (Sym->getType() != ELF::STT_AMDGPU_HSA_KERNEL)
     return createError("invalid symbol type");
 
@@ -122,32 +141,39 @@ void HSACodeObject::InitMarkers() const {
     return;
   auto TextSec = TextSecOr.get();
 
-  KernelMarkers.push_back(TextSec->sh_size);
+  FunctionMarkers.push_back(TextSec->sh_size);
 
-  for (const auto &Sym : kernels()) {
-    auto ExpectedKernel = KernelSym::asKernelSym(getSymbol(Sym.getRawDataRefImpl()));
-    if (!ExpectedKernel) {
-      consumeError(ExpectedKernel.takeError());
-      report_fatal_error("invalid kernel symbol");
+  for (const auto &Sym : functions()) {
+    auto ExpectedFunction =
+        FunctionSym::asFunctionSym(getSymbol(Sym.getRawDataRefImpl()));
+    if (!ExpectedFunction) {
+      consumeError(ExpectedFunction.takeError());
+      report_fatal_error("invalid function symbol");
     }
-    auto Kernel = ExpectedKernel.get();
+    auto Function = ExpectedFunction.get();
 
-    auto ExpectedKernelOffset = Kernel->getSectionOffset(this, TextSec);
-    if (!ExpectedKernelOffset) {
-      consumeError(ExpectedKernelOffset.takeError());
-      report_fatal_error("invalid kernel offset");
+    auto ExpectedSectionOffset = Function->getSectionOffset(this, TextSec);
+    if (!ExpectedSectionOffset) {
+      consumeError(ExpectedSectionOffset.takeError());
+      report_fatal_error("invalid section offset");
     }
-    KernelMarkers.push_back(*ExpectedKernelOffset);
+    FunctionMarkers.push_back(*ExpectedSectionOffset);
 
-    auto ExpectedCodeOffset = Kernel->getCodeOffset(this, TextSec);
-    if (!ExpectedCodeOffset) {
-      consumeError(ExpectedCodeOffset.takeError());
-      report_fatal_error("invalid kernel code offset");
+    auto ExpectedKernel = KernelSym::asKernelSym(Function);
+    if (ExpectedKernel) {
+      auto Kernel = ExpectedKernel.get();
+
+      auto ExpectedCodeOffset = Kernel->getCodeOffset(this, TextSec);
+      if (!ExpectedCodeOffset) {
+        consumeError(ExpectedCodeOffset.takeError());
+        report_fatal_error("invalid kernel code offset");
+      }
+
+      FunctionMarkers.push_back(*ExpectedCodeOffset);
     }
-    KernelMarkers.push_back(*ExpectedCodeOffset);
   }
 
-  array_pod_sort(KernelMarkers.begin(), KernelMarkers.end());
+  array_pod_sort(FunctionMarkers.begin(), FunctionMarkers.end());
 }
 
 HSACodeObject::note_iterator HSACodeObject::notes_begin() const {
@@ -167,43 +193,39 @@ iterator_range<HSACodeObject::note_iterator> HSACodeObject::notes() const {
   return make_range(notes_begin(), notes_end());
 }
 
-kernel_sym_iterator HSACodeObject::kernels_begin() const {
+function_sym_iterator HSACodeObject::functions_begin() const {
   auto TextIdxOr = getTextSectionIdx();
   if (!TextIdxOr)
-    return kernels_end();
+    return functions_end();
 
   auto TextIdx = TextIdxOr.get();
-  return kernel_sym_iterator(symbol_begin(), symbol_end(),
-    [this, TextIdx](const SymbolRef &Sym)->bool {
-
-      auto ExpectedKernel = KernelSym::asKernelSym(getSymbol(Sym.getRawDataRefImpl()));
-      if (!ExpectedKernel) {
-        consumeError(ExpectedKernel.takeError());
-        return false;
-      }
-
-      auto Kernel = ExpectedKernel.get();
-      if (Kernel->st_shndx != TextIdx)
-        return false;
-
-      return true;
-    });
+  return function_sym_iterator(symbol_begin(), symbol_end(),
+                               [this, TextIdx](const SymbolRef &Sym) -> bool {
+                                 auto ExpectedFunction =
+                                     FunctionSym::asFunctionSym(
+                                         getSymbol(Sym.getRawDataRefImpl()));
+                                 if (!ExpectedFunction) {
+                                   consumeError(ExpectedFunction.takeError());
+                                   return false;
+                                 }
+                                 auto Function = ExpectedFunction.get();
+                                 if (Function->st_shndx != TextIdx)
+                                   return false;
+                                 return true;
+                               });
 }
 
-kernel_sym_iterator HSACodeObject::kernels_end() const {
-  return kernel_sym_iterator(symbol_end(), symbol_end(),
-                             [](const SymbolRef&){return true;});
+function_sym_iterator HSACodeObject::functions_end() const {
+  return function_sym_iterator(symbol_end(), symbol_end(),
+                               [](const SymbolRef &) { return true; });
 }
 
-iterator_range<kernel_sym_iterator> HSACodeObject::kernels() const {
-  return make_range(kernels_begin(), kernels_end());
+iterator_range<function_sym_iterator> HSACodeObject::functions() const {
+  return make_range(functions_begin(), functions_end());
 }
 
-Expected<ArrayRef<uint8_t>> HSACodeObject::getKernelCode(const KernelSym *Kernel) const {
-  auto KernelCodeTOr = Kernel->getAmdKernelCodeT(this);
-  if (!KernelCodeTOr)
-    return KernelCodeTOr.takeError();
-
+Expected<ArrayRef<uint8_t>>
+HSACodeObject::getCode(const FunctionSym *Function) const {
   auto TextOr = getTextSection();
   if (!TextOr)
     return TextOr.takeError();
@@ -212,18 +234,26 @@ Expected<ArrayRef<uint8_t>> HSACodeObject::getKernelCode(const KernelSym *Kernel
   if (!SecBytesOr)
     return SecBytesOr.takeError();
 
-  auto CodeStartOr = Kernel->getCodeOffset(this, *TextOr);
+  auto CodeStartOr = Function->getCodeOffset(this, *TextOr);
   if (!CodeStartOr)
     return CodeStartOr.takeError();
   uint64_t CodeStart = CodeStartOr.get();
 
-  auto CodeEndI = std::upper_bound(KernelMarkers.begin(),
-                                   KernelMarkers.end(),
-                                   CodeStart);
+  auto ExpectedKernel = KernelSym::asKernelSym(Function);
+  if (ExpectedKernel) {
+    auto Kernel = ExpectedKernel.get();
+    auto KernelCodeStartOr = Kernel->getCodeOffset(this, *TextOr);
+    if (!KernelCodeStartOr)
+      return KernelCodeStartOr.takeError();
+    CodeStart = KernelCodeStartOr.get();
+  }
+
+  auto CodeEndI = std::upper_bound(FunctionMarkers.begin(),
+                                   FunctionMarkers.end(), CodeStart);
   uint64_t CodeEnd = CodeStart;
-  if (CodeEndI != KernelMarkers.end())
+  if (CodeEndI != FunctionMarkers.end())
     CodeEnd = *CodeEndI;
-  
+
   return SecBytesOr->slice(CodeStart, CodeEnd - CodeStart);
 }
 
@@ -233,7 +263,7 @@ HSACodeObject::getSectionByName(StringRef Name) const {
   auto SectionsOr = ELF->sections();
   if (!SectionsOr)
     return SectionsOr.takeError();
-  
+
   for (const auto &Sec : *SectionsOr) {
     auto SecNameOr = ELF->getSectionName(&Sec);
     if (!SecNameOr) {
