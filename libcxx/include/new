@@ -89,6 +89,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 #include <__config>
 #include <exception>
+#include <type_traits>
 #include <cstddef>
 #ifdef _LIBCPP_NO_EXCEPTIONS
 #include <cstdlib>
@@ -111,6 +112,14 @@ void  operator delete[](void* ptr, void*) noexcept;
     (!(defined(_LIBCPP_BUILDING_NEW) || _LIBCPP_STD_VER > 14 || \
     (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606)))
 # define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#endif
+
+
+#if !__has_builtin(__builtin_operator_new) || \
+   __has_builtin(__builtin_operator_new) < 201802L || \
+   defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
+   !defined(__cpp_aligned_new) || __cpp_aligned_new < 201606
+#define _LIBCPP_HAS_NO_BUILTIN_ALIGNED_OPERATOR_NEW_DELETE
 #endif
 
 namespace std  // purposefully not using versioning namespace
@@ -223,7 +232,27 @@ inline _LIBCPP_INLINE_VISIBILITY void  operator delete[](void*, void*) _NOEXCEPT
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-inline _LIBCPP_INLINE_VISIBILITY void *__allocate(size_t __size) {
+_LIBCPP_CONSTEXPR inline _LIBCPP_INLINE_VISIBILITY bool __is_overaligned_for_new(size_t __align) _NOEXCEPT {
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+  return __align > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+#else
+  return __align > alignment_of<max_align_t>::value;
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY void *__libcpp_allocate(size_t __size, size_t __align) {
+#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+  if (__is_overaligned_for_new(__align)) {
+    const align_val_t __align_val = static_cast<align_val_t>(__align);
+# ifdef _LIBCPP_HAS_NO_BUILTIN_ALIGNED_OPERATOR_NEW_DELETE
+    return ::operator new(__size, __align_val);
+# else
+    return __builtin_operator_new(__size, __align_val);
+# endif
+  }
+#else
+  ((void)__align);
+#endif
 #ifdef _LIBCPP_HAS_NO_BUILTIN_OPERATOR_NEW_DELETE
   return ::operator new(__size);
 #else
@@ -231,11 +260,23 @@ inline _LIBCPP_INLINE_VISIBILITY void *__allocate(size_t __size) {
 #endif
 }
 
-inline _LIBCPP_INLINE_VISIBILITY void __libcpp_deallocate(void *__ptr) {
-#ifdef _LIBCPP_HAS_NO_BUILTIN_OPERATOR_NEW_DELETE
-  ::operator delete(__ptr);
+inline _LIBCPP_INLINE_VISIBILITY void __libcpp_deallocate(void* __ptr, size_t __align) {
+#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+  if (__is_overaligned_for_new(__align)) {
+    const align_val_t __align_val = static_cast<align_val_t>(__align);
+# ifdef _LIBCPP_HAS_NO_BUILTIN_ALIGNED_OPERATOR_NEW_DELETE
+    return ::operator delete(__ptr, __align_val);
+# else
+    return __builtin_operator_delete(__ptr, __align_val);
+# endif
+  }
 #else
-  __builtin_operator_delete(__ptr);
+  ((void)__align);
+#endif
+#ifdef _LIBCPP_HAS_NO_BUILTIN_OPERATOR_NEW_DELETE
+  return ::operator delete(__ptr);
+#else
+  return __builtin_operator_delete(__ptr);
 #endif
 }
 

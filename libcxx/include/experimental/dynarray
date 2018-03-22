@@ -135,17 +135,18 @@ private:
     value_type *            __base_;
     _LIBCPP_ALWAYS_INLINE dynarray () noexcept :  __size_(0), __base_(nullptr) {}
     
-    static inline _LIBCPP_INLINE_VISIBILITY value_type* __allocate ( size_t count )
-    {
-        if ( numeric_limits<size_t>::max() / sizeof (value_type) <= count )
+    static inline _LIBCPP_INLINE_VISIBILITY
+    value_type* __allocate(size_t __count) {
+        if (numeric_limits<size_t>::max() / sizeof (value_type) <= __count)
             __throw_bad_array_length();
 
-        return static_cast<value_type *> (_VSTD::__allocate (sizeof(value_type) * count));
+        return static_cast<value_type *>(
+            _VSTD::__libcpp_allocate(sizeof(value_type) * __count, __alignof(value_type)));
     }
 
-    static inline _LIBCPP_INLINE_VISIBILITY void __deallocate_value( value_type* __ptr ) noexcept
-    {
-        _VSTD::__libcpp_deallocate (static_cast<void *> (__ptr));
+    static inline _LIBCPP_INLINE_VISIBILITY
+    void __deallocate_value(value_type* __ptr ) noexcept {
+        _VSTD::__libcpp_deallocate(static_cast<void *>(__ptr), __alignof(value_type));
     }
 
 public:

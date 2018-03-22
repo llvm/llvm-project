@@ -2273,6 +2273,10 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // dependence information for this check, but simplifycfg can't keep it up
   // to date, and this catches most of the cases we care about anyway.
   BasicBlock *BB = PN->getParent();
+  const Function *Fn = BB->getParent();
+  if (Fn && Fn->hasFnAttribute(Attribute::OptForFuzzing))
+    return false;
+
   BasicBlock *IfTrue, *IfFalse;
   Value *IfCond = GetIfCondition(BB, IfTrue, IfFalse);
   if (!IfCond ||
@@ -5799,6 +5803,9 @@ static BasicBlock *allPredecessorsComeFromSameSource(BasicBlock *BB) {
 
 bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   BasicBlock *BB = BI->getParent();
+  const Function *Fn = BB->getParent();
+  if (Fn && Fn->hasFnAttribute(Attribute::OptForFuzzing))
+    return false;
 
   // Conditional branch
   if (isValueEqualityComparison(BI)) {

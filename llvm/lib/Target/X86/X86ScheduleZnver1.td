@@ -802,10 +802,6 @@ def ZnWriteFPU3Lat2 : SchedWriteRes<[ZnFPU3]> {
   let Latency = 2;
 }
 
-def ZnWriteFPU3Lat2Ld : SchedWriteRes<[ZnAGU, ZnFPU3]> {
-  let Latency = 9;
-}
-
 def ZnWriteFPU3Lat1 : SchedWriteRes<[ZnFPU3]> ;
 
 def ZnWriteFPU0Lat1 : SchedWriteRes<[ZnFPU0]> ;

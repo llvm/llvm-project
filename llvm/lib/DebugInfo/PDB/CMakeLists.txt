@@ -16,6 +16,7 @@ if(LLVM_ENABLE_DIA_SDK)
     DIA/DIAEnumDebugStreams.cpp
     DIA/DIAEnumInjectedSources.cpp
     DIA/DIAEnumLineNumbers.cpp
+    DIA/DIAEnumSectionContribs.cpp
     DIA/DIAEnumSourceFiles.cpp
     DIA/DIAEnumSymbols.cpp
     DIA/DIAEnumTables.cpp
@@ -23,6 +24,7 @@ if(LLVM_ENABLE_DIA_SDK)
     DIA/DIAInjectedSource.cpp
     DIA/DIALineNumber.cpp
     DIA/DIARawSymbol.cpp
+    DIA/DIASectionContrib.cpp
     DIA/DIASession.cpp
     DIA/DIASourceFile.cpp
     DIA/DIATable.cpp

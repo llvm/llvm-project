@@ -2615,8 +2615,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Line.Type == LT_ObjCMethodDecl) {
     if (Left.is(TT_ObjCMethodSpecifier))
       return true;
-    if (Left.is(tok::r_paren) && Right.is(tok::identifier))
-      // Don't space between ')' and <id>
+    if (Left.is(tok::r_paren) && Right.isOneOf(tok::identifier, tok::kw_new))
+      // Don't space between ')' and <id> or ')' and 'new'. 'new' is not a
+      // keyword in Objective-C, and '+ (instancetype)new;' is a standard class
+      // method declaration.
       return false;
   }
   if (Line.Type == LT_ObjCProperty &&
@@ -2690,7 +2692,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
             Style.Standard == FormatStyle::LS_Cpp03) ||
            !(Left.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,
                           tok::kw___super, TT_TemplateCloser,
-                          TT_TemplateOpener));
+                          TT_TemplateOpener)) ||
+           (Left.is(tok ::l_paren) && Style.SpacesInParentheses);
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return Style.SpacesInAngles;
   // Space before TT_StructuredBindingLSquare.
@@ -2827,10 +2830,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Style.BreakBeforeInheritanceComma && Right.is(TT_InheritanceComma))
     return true;
   if (Right.is(tok::string_literal) && Right.TokenText.startswith("R\""))
-    // Raw string literals are special wrt. line breaks. The author has made a
-    // deliberate choice and might have aligned the contents of the string
-    // literal accordingly. Thus, we try keep existing line breaks.
-    return Right.NewlinesBefore > 0;
+    // Multiline raw string literals are special wrt. line breaks. The author
+    // has made a deliberate choice and might have aligned the contents of the
+    // string literal accordingly. Thus, we try keep existing line breaks.
+    return Right.IsMultiline && Right.NewlinesBefore > 0;
   if ((Right.Previous->is(tok::l_brace) ||
        (Right.Previous->is(tok::less) && Right.Previous->Previous &&
         Right.Previous->Previous->is(tok::equal))) &&

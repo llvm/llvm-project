@@ -112,6 +112,9 @@ def NoCfCheck : EnumAttr<"nocf_check">;
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind">;
 
+/// Select optimizations for best fuzzing signal.
+def OptForFuzzing : EnumAttr<"optforfuzzing">;
+
 /// opt_size.
 def OptimizeForSize : EnumAttr<"optsize">;
 

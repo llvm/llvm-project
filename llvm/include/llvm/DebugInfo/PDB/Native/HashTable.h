@@ -213,6 +213,7 @@ public:
     Deleted.clear();
   }
 
+  bool empty() const { return size() == 0; }
   uint32_t capacity() const { return Buckets.size(); }
   uint32_t size() const { return Present.count(); }
 

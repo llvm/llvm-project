@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "Instruction.h"
 #include "LSUnit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,9 +50,31 @@ void LSUnit::assignSQSlot(unsigned Index) {
   StoreQueue.insert(Index);
 }
 
+bool LSUnit::reserve(unsigned Index, const InstrDesc &Desc) {
+  unsigned MayLoad = Desc.MayLoad;
+  unsigned MayStore = Desc.MayStore;
+  unsigned IsMemBarrier = Desc.HasSideEffects;
+  if (!MayLoad && !MayStore)
+    return false;
+
+  if (MayLoad) {
+    if (IsMemBarrier)
+      LoadBarriers.insert(Index);
+    assignLQSlot(Index);
+  }
+  if (MayStore) {
+    if (IsMemBarrier)
+      StoreBarriers.insert(Index);
+    assignSQSlot(Index);
+  }
+  return true;
+}
+
 bool LSUnit::isReady(unsigned Index) const {
   bool IsALoad = LoadQueue.count(Index) != 0;
   bool IsAStore = StoreQueue.count(Index) != 0;
+  assert((IsALoad || IsAStore) && "Instruction is not in queue!");
+
   unsigned LoadBarrierIndex = LoadBarriers.empty() ? 0 : *LoadBarriers.begin();
   unsigned StoreBarrierIndex = StoreBarriers.empty() ? 0 : *StoreBarriers.begin();
 

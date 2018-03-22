@@ -80,13 +80,13 @@ Error DebugCrossModuleImportsSubsection::commit(
     Ids.push_back(&M);
 
   std::sort(Ids.begin(), Ids.end(), [this](const T &L1, const T &L2) {
-    return Strings.getStringId(L1->getKey()) <
-           Strings.getStringId(L2->getKey());
+    return Strings.getIdForString(L1->getKey()) <
+           Strings.getIdForString(L2->getKey());
   });
 
   for (const auto &Item : Ids) {
     CrossModuleImport Imp;
-    Imp.ModuleNameOffset = Strings.getStringId(Item->getKey());
+    Imp.ModuleNameOffset = Strings.getIdForString(Item->getKey());
     Imp.Count = Item->getValue().size();
     if (auto EC = Writer.writeObject(Imp))
       return EC;
