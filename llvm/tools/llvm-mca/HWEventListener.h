@@ -68,6 +68,26 @@ public:
   llvm::ArrayRef<std::pair<ResourceRef, unsigned>> UsedResources;
 };
 
+class HWInstructionDispatchedEvent : public HWInstructionEvent {
+public:
+  HWInstructionDispatchedEvent(unsigned Index, llvm::ArrayRef<unsigned> Regs)
+      : HWInstructionEvent(HWInstructionEvent::Dispatched, Index),
+        UsedPhysRegs(Regs) {}
+  // Number of physical register allocated for this instruction. There is one
+  // entry per register file.
+  llvm::ArrayRef<unsigned> UsedPhysRegs;
+};
+
+class HWInstructionRetiredEvent : public HWInstructionEvent {
+public:
+  HWInstructionRetiredEvent(unsigned Index, llvm::ArrayRef<unsigned> Regs)
+      : HWInstructionEvent(HWInstructionEvent::Retired, Index),
+        FreedPhysRegs(Regs) {}
+  // Number of register writes that have been architecturally committed. There
+  // is one entry per register file.
+  llvm::ArrayRef<unsigned> FreedPhysRegs;
+};
+
 // A HWStallEvent represents a pipeline stall caused by the lack of hardware
 // resources.
 class HWStallEvent {

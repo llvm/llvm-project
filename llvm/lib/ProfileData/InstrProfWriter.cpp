@@ -361,7 +361,8 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
       std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       for (uint32_t I = 0; I < ND; I++) {
         if (VK == IPVK_IndirectCallTarget)
-          OS << Symtab.getFuncName(VD[I].Value) << ":" << VD[I].Count << "\n";
+          OS << Symtab.getFuncNameOrExternalSymbol(VD[I].Value) << ":"
+             << VD[I].Count << "\n";
         else
           OS << VD[I].Value << ":" << VD[I].Count << "\n";
       }
@@ -379,7 +380,6 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
     if (shouldEncodeData(I.getValue()))
       if (Error E = Symtab.addFuncName(I.getKey()))
         return E;
-  Symtab.finalizeSymtab();
 
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))

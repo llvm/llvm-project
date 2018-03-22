@@ -272,9 +272,25 @@ def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;
 def : PatFpr32Fpr32<fminnum, FMIN_S>;
 def : PatFpr32Fpr32<fmaxnum, FMAX_S>;
 
+/// Setcc
+
+def : PatFpr32Fpr32<seteq, FEQ_S>;
 def : PatFpr32Fpr32<setoeq, FEQ_S>;
+def : PatFpr32Fpr32<setlt, FLT_S>;
 def : PatFpr32Fpr32<setolt, FLT_S>;
+def : PatFpr32Fpr32<setle, FLE_S>;
 def : PatFpr32Fpr32<setole, FLE_S>;
+
+// Define pattern expansions for setcc operations which aren't directly
+// handled by a RISC-V instruction and aren't expanded in the SelectionDAG
+// Legalizer.
+
+def : Pat<(setuo FPR32:$rs1, FPR32:$rs2),
+          (SLTIU (AND (FEQ_S FPR32:$rs1, FPR32:$rs1),
+                      (FEQ_S FPR32:$rs2, FPR32:$rs2)),
+                 1)>;
+
+def Select_FPR32_Using_CC_GPR : SelectCC_rrirr<FPR32, GPR>;
 
 /// Loads
 

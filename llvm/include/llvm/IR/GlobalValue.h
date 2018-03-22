@@ -572,6 +572,13 @@ public:
            V->getValueID() == Value::GlobalAliasVal ||
            V->getValueID() == Value::GlobalIFuncVal;
   }
+
+  /// True if GV can be left out of the object symbol table. This is the case
+  /// for linkonce_odr values whose address is not significant. While legal, it
+  /// is not normally profitable to omit them from the .o symbol table. Using
+  /// this analysis makes sense when the information can be passed down to the
+  /// linker or we are in LTO.
+  bool canBeOmittedFromSymbolTable() const;
 };
 
 } // end namespace llvm

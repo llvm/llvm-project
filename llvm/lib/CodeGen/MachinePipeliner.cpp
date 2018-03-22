@@ -218,6 +218,7 @@ public:
   }
 
 private:
+  void preprocessPhiNodes(MachineBasicBlock &B);
   bool canPipelineLoop(MachineLoop &L);
   bool scheduleLoop(MachineLoop &L);
   bool swingModuloScheduler(MachineLoop &L);
@@ -357,20 +358,6 @@ public:
 
   bool isLoopCarriedOrder(SUnit *Source, const SDep &Dep, bool isSucc = true);
 
-  /// The latency of the dependence.
-  unsigned getLatency(SUnit *Source, const SDep &Dep) {
-    // Anti dependences represent recurrences, so use the latency of the
-    // instruction on the back-edge.
-    if (Dep.getKind() == SDep::Anti) {
-      if (Source->getInstr()->isPHI())
-        return Dep.getSUnit()->Latency;
-      if (Dep.getSUnit()->getInstr()->isPHI())
-        return Source->Latency;
-      return Dep.getLatency();
-    }
-    return Dep.getLatency();
-  }
-
   /// The distance function, which indicates that operation V of iteration I
   /// depends on operations U of iteration I-distance.
   unsigned getDistance(SUnit *U, SUnit *V, const SDep &Dep) {
@@ -484,12 +471,19 @@ class NodeSet {
   int MaxDepth = 0;
   unsigned Colocate = 0;
   SUnit *ExceedPressure = nullptr;
+  unsigned Latency = 0;
 
 public:
   using iterator = SetVector<SUnit *>::const_iterator;
 
   NodeSet() = default;
-  NodeSet(iterator S, iterator E) : Nodes(S, E), HasRecurrence(true) {}
+  NodeSet(iterator S, iterator E) : Nodes(S, E), HasRecurrence(true) {
+    Latency = 0;
+    for (unsigned i = 0, e = Nodes.size(); i < e; ++i)
+      for (const SDep &Succ : Nodes[i]->Succs)
+        if (Nodes.count(Succ.getSUnit()))
+          Latency += Succ.getLatency();
+  }
 
   bool insert(SUnit *SU) { return Nodes.insert(SU); }
 
@@ -820,16 +814,39 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   if (!L.getLoopPreheader())
     return false;
 
-  // If any of the Phis contain subregs, then we can't pipeline
-  // because we don't know how to maintain subreg information in the
-  // VMap structure.
-  MachineBasicBlock *MBB = L.getHeader();
-  for (auto &PHI : MBB->phis())
-    for (unsigned i = 1; i != PHI.getNumOperands(); i += 2)
-      if (PHI.getOperand(i).getSubReg() != 0)
-        return false;
-
+  // Remove any subregisters from inputs to phi nodes.
+  preprocessPhiNodes(*L.getHeader());
   return true;
+}
+
+void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  SlotIndexes &Slots = *getAnalysis<LiveIntervals>().getSlotIndexes();
+
+  for (MachineInstr &PI : make_range(B.begin(), B.getFirstNonPHI())) {
+    MachineOperand &DefOp = PI.getOperand(0);
+    assert(DefOp.getSubReg() == 0);
+    auto *RC = MRI.getRegClass(DefOp.getReg());
+
+    for (unsigned i = 1, n = PI.getNumOperands(); i != n; i += 2) {
+      MachineOperand &RegOp = PI.getOperand(i);
+      if (RegOp.getSubReg() == 0)
+        continue;
+
+      // If the operand uses a subregister, replace it with a new register
+      // without subregisters, and generate a copy to the new register.
+      unsigned NewReg = MRI.createVirtualRegister(RC);
+      MachineBasicBlock &PredB = *PI.getOperand(i+1).getMBB();
+      MachineBasicBlock::iterator At = PredB.getFirstTerminator();
+      const DebugLoc &DL = PredB.findDebugLoc(At);
+      auto Copy = BuildMI(PredB, At, DL, TII->get(TargetOpcode::COPY), NewReg)
+                    .addReg(RegOp.getReg(), getRegState(RegOp),
+                            RegOp.getSubReg());
+      Slots.insertMachineInstrInMaps(*Copy);
+      RegOp.setReg(NewReg);
+      RegOp.setSubReg(0);
+    }
+  }
 }
 
 /// The SMS algorithm consists of the following main steps:
@@ -1078,31 +1095,41 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
           int64_t Offset1, Offset2;
           if (!TII->getMemOpBaseRegImmOfs(LdMI, BaseReg1, Offset1, TRI) ||
               !TII->getMemOpBaseRegImmOfs(MI, BaseReg2, Offset2, TRI)) {
-            SU.addPred(SDep(Load, SDep::Barrier));
+            SDep Dep(Load, SDep::Barrier);
+            Dep.setLatency(1);
+            SU.addPred(Dep);
             continue;            
           }
           if (BaseReg1 == BaseReg2 && (int)Offset1 < (int)Offset2) {
             assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI, AA) &&
                    "What happened to the chain edge?");
-            SU.addPred(SDep(Load, SDep::Barrier));
+            SDep Dep(Load, SDep::Barrier);
+            Dep.setLatency(1);
+            SU.addPred(Dep);
             continue;
           }
           // Second, the more expensive check that uses alias analysis on the
           // base registers. If they alias, and the load offset is less than
           // the store offset, the mark the dependence as loop carried.
           if (!AA) {
-            SU.addPred(SDep(Load, SDep::Barrier));
+            SDep Dep(Load, SDep::Barrier);
+            Dep.setLatency(1);
+            SU.addPred(Dep);
             continue;
           }
           MachineMemOperand *MMO1 = *LdMI.memoperands_begin();
           MachineMemOperand *MMO2 = *MI.memoperands_begin();
           if (!MMO1->getValue() || !MMO2->getValue()) {
-            SU.addPred(SDep(Load, SDep::Barrier));
+            SDep Dep(Load, SDep::Barrier);
+            Dep.setLatency(1);
+            SU.addPred(Dep);
             continue;
           }
           if (MMO1->getValue() == MMO2->getValue() &&
               MMO1->getOffset() <= MMO2->getOffset()) {
-            SU.addPred(SDep(Load, SDep::Barrier));
+            SDep Dep(Load, SDep::Barrier);
+            Dep.setLatency(1);
+            SU.addPred(Dep);
             continue;
           }
           AliasResult AAResult = AA->alias(
@@ -1111,8 +1138,11 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
               MemoryLocation(MMO2->getValue(), MemoryLocation::UnknownSize,
                              MMO2->getAAInfo()));
 
-          if (AAResult != NoAlias)
-            SU.addPred(SDep(Load, SDep::Barrier));
+          if (AAResult != NoAlias) {
+            SDep Dep(Load, SDep::Barrier);
+            Dep.setLatency(1);
+            SU.addPred(Dep);
+          }
         }
       }
     }
@@ -1154,6 +1184,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
           if (SU != nullptr && UseMI->isPHI()) {
             if (!MI->isPHI()) {
               SDep Dep(SU, SDep::Anti, Reg);
+              Dep.setLatency(1);
               I.addPred(Dep);
             } else {
               HasPhiDef = Reg;
@@ -1599,12 +1630,12 @@ void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
                                     EP = SU->Preds.end();
          IP != EP; ++IP) {
       SUnit *pred = IP->getSUnit();
-      if (getLatency(SU, *IP) == 0)
+      if (IP->getLatency() == 0)
         zeroLatencyDepth =
             std::max(zeroLatencyDepth, getZeroLatencyDepth(pred) + 1);
       if (ignoreDependence(*IP, true))
         continue;
-      asap = std::max(asap, (int)(getASAP(pred) + getLatency(SU, *IP) -
+      asap = std::max(asap, (int)(getASAP(pred) + IP->getLatency() -
                                   getDistance(pred, SU, *IP) * MII));
     }
     maxASAP = std::max(maxASAP, asap);
@@ -1623,12 +1654,12 @@ void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
                                     ES = SU->Succs.end();
          IS != ES; ++IS) {
       SUnit *succ = IS->getSUnit();
-      if (getLatency(SU, *IS) == 0)
+      if (IS->getLatency() == 0)
         zeroLatencyHeight =
             std::max(zeroLatencyHeight, getZeroLatencyHeight(succ) + 1);
       if (ignoreDependence(*IS, true))
         continue;
-      alap = std::min(alap, (int)(getALAP(succ) - getLatency(SU, *IS) +
+      alap = std::min(alap, (int)(getALAP(succ) - IS->getLatency() +
                                   getDistance(SU, succ, *IS) * MII));
     }
 
@@ -2340,6 +2371,8 @@ void SwingSchedulerDAG::generatePipelinedLoop(SMSchedule &Schedule) {
   addBranches(PrologBBs, KernelBB, EpilogBBs, Schedule, VRMap);
 
   // Remove the original loop since it's no longer referenced.
+  for (auto &I : *BB)
+    LIS.RemoveMachineInstrFromMaps(I);
   BB->clear();
   BB->eraseFromParent();
 
@@ -2916,6 +2949,7 @@ void SwingSchedulerDAG::removeDeadInstructions(MachineBasicBlock *KernelBB,
         used = false;
       }
       if (!used) {
+        LIS.RemoveMachineInstrFromMaps(*MI);
         MI++->eraseFromParent();
         continue;
       }
@@ -2930,6 +2964,7 @@ void SwingSchedulerDAG::removeDeadInstructions(MachineBasicBlock *KernelBB,
     ++BBI;
     unsigned reg = MI->getOperand(0).getReg();
     if (MRI.use_begin(reg) == MRI.use_end()) {
+      LIS.RemoveMachineInstrFromMaps(*MI);
       MI->eraseFromParent();
     }
   }
@@ -3636,7 +3671,7 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
         const SDep &Dep = SU->Preds[i];
         if (Dep.getSUnit() == I) {
           if (!DAG->isBackedge(SU, Dep)) {
-            int EarlyStart = cycle + DAG->getLatency(SU, Dep) -
+            int EarlyStart = cycle + Dep.getLatency() -
                              DAG->getDistance(Dep.getSUnit(), SU, Dep) * II;
             *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
             if (DAG->isLoopCarriedOrder(SU, Dep, false)) {
@@ -3644,7 +3679,7 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
               *MinEnd = std::min(*MinEnd, End);
             }
           } else {
-            int LateStart = cycle - DAG->getLatency(SU, Dep) +
+            int LateStart = cycle - Dep.getLatency() +
                             DAG->getDistance(SU, Dep.getSUnit(), Dep) * II;
             *MinLateStart = std::min(*MinLateStart, LateStart);
           }
@@ -3660,7 +3695,7 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
         if (SU->Succs[i].getSUnit() == I) {
           const SDep &Dep = SU->Succs[i];
           if (!DAG->isBackedge(SU, Dep)) {
-            int LateStart = cycle - DAG->getLatency(SU, Dep) +
+            int LateStart = cycle - Dep.getLatency() +
                             DAG->getDistance(SU, Dep.getSUnit(), Dep) * II;
             *MinLateStart = std::min(*MinLateStart, LateStart);
             if (DAG->isLoopCarriedOrder(SU, Dep)) {
@@ -3668,7 +3703,7 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
               *MaxStart = std::max(*MaxStart, Start);
             }
           } else {
-            int EarlyStart = cycle + DAG->getLatency(SU, Dep) -
+            int EarlyStart = cycle + Dep.getLatency() -
                              DAG->getDistance(Dep.getSUnit(), SU, Dep) * II;
             *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
           }

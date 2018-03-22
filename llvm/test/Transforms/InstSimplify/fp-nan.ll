@@ -5,8 +5,7 @@
 
 define double @fadd_nan_op0(double %x) {
 ; CHECK-LABEL: @fadd_nan_op0(
-; CHECK-NEXT:    [[R:%.*]] = fadd double 0x7FF8000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %r = fadd double 0x7FF8000000000000, %x
   ret double %r
@@ -16,8 +15,7 @@ define double @fadd_nan_op0(double %x) {
 
 define double @fadd_nan_op1(double %x) {
 ; CHECK-LABEL: @fadd_nan_op1(
-; CHECK-NEXT:    [[R:%.*]] = fadd double [[X:%.*]], 0xFFF8000000000000
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double 0xFFF8000000000000
 ;
   %r = fadd double %x, 0xFFF8000000000000
   ret double %r
@@ -27,8 +25,7 @@ define double @fadd_nan_op1(double %x) {
 
 define float @fsub_nan_op0(float %x) {
 ; CHECK-LABEL: @fsub_nan_op0(
-; CHECK-NEXT:    [[R:%.*]] = fsub float 0x7FFFFF0000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FFFFF0000000000
 ;
   %r = fsub float 0x7FFFFF0000000000, %x
   ret float %r
@@ -38,8 +35,7 @@ define float @fsub_nan_op0(float %x) {
 
 define float @fsub_nan_op1(float %x) {
 ; CHECK-LABEL: @fsub_nan_op1(
-; CHECK-NEXT:    [[R:%.*]] = fsub float [[X:%.*]], 0x7FF1000000000000
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF1000000000000
 ;
   %r = fsub float %x, 0x7FF1000000000000
   ret float %r
@@ -49,8 +45,7 @@ define float @fsub_nan_op1(float %x) {
 
 define double @fmul_nan_op0(double %x) {
 ; CHECK-LABEL: @fmul_nan_op0(
-; CHECK-NEXT:    [[R:%.*]] = fmul double 0xFFF0000000000001, [[X:%.*]]
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double 0xFFF0000000000001
 ;
   %r = fmul double 0xFFF0000000000001, %x
   ret double %r
@@ -60,8 +55,7 @@ define double @fmul_nan_op0(double %x) {
 
 define <2 x float> @fmul_nan_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_nan_op1(
-; CHECK-NEXT:    [[R:%.*]] = fmul <2 x float> [[X:%.*]], <float 0x7FF8000000000000, float 0x7FF8000000000000>
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>
 ;
   %r = fmul <2 x float> %x, <float 0x7FF8000000000000, float 0x7FF8000000000000>
   ret <2 x float> %r
@@ -71,8 +65,7 @@ define <2 x float> @fmul_nan_op1(<2 x float> %x) {
 
 define <2 x double> @fdiv_nan_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fdiv_nan_op0(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>, [[X:%.*]]
-; CHECK-NEXT:    ret <2 x double> [[R]]
+; CHECK-NEXT:    ret <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>
 ;
   %r = fdiv <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>, %x
   ret <2 x double>  %r
@@ -82,8 +75,7 @@ define <2 x double> @fdiv_nan_op0(<2 x double> %x) {
 
 define <2 x half> @fdiv_nan_op1(<2 x half> %x) {
 ; CHECK-LABEL: @fdiv_nan_op1(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <2 x half> [[X:%.*]], <half 0xH7FFF, half 0xHFF00>
-; CHECK-NEXT:    ret <2 x half> [[R]]
+; CHECK-NEXT:    ret <2 x half> <half 0xH7FFF, half 0xHFF00>
 ;
   %r = fdiv <2 x half> %x, <half 0xH7FFF, half 0xHFF00>
   ret <2 x half> %r
@@ -93,8 +85,7 @@ define <2 x half> @fdiv_nan_op1(<2 x half> %x) {
 
 define <2 x double> @frem_nan_op0(<2 x double> %x) {
 ; CHECK-LABEL: @frem_nan_op0(
-; CHECK-NEXT:    [[R:%.*]] = frem <2 x double> <double 0xFFFF000000000000, double undef>, [[X:%.*]]
-; CHECK-NEXT:    ret <2 x double> [[R]]
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
 ;
   %r = frem <2 x double> <double 0xFFFF000000000000, double undef>, %x
   ret <2 x double> %r
@@ -102,8 +93,7 @@ define <2 x double> @frem_nan_op0(<2 x double> %x) {
 
 define float @frem_nan_op1(float %x) {
 ; CHECK-LABEL: @frem_nan_op1(
-; CHECK-NEXT:    [[R:%.*]] = frem float [[X:%.*]], 0x7FF8000000000000
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = frem float %x, 0x7FF8000000000000
   ret float %r
@@ -131,8 +121,7 @@ define <2 x double> @fneg_nan_2(<2 x double> %x) {
 
 define float @fadd_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @fadd_nan_op0_nnan(
-; CHECK-NEXT:    [[R:%.*]] = fadd nnan float 0x7FF8000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fadd nnan float 0x7FF8000000000000, %x
   ret float %r
@@ -140,8 +129,7 @@ define float @fadd_nan_op0_nnan(float %x) {
 
 define float @fadd_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @fadd_nan_op1_fast(
-; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[X:%.*]], 0x7FF8000000000000
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fadd fast float %x, 0x7FF8000000000000
   ret float %r
@@ -149,8 +137,7 @@ define float @fadd_nan_op1_fast(float %x) {
 
 define float @fsub_nan_op0_fast(float %x) {
 ; CHECK-LABEL: @fsub_nan_op0_fast(
-; CHECK-NEXT:    [[R:%.*]] = fsub fast float 0x7FF8000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fsub fast float 0x7FF8000000000000, %x
   ret float %r
@@ -158,8 +145,7 @@ define float @fsub_nan_op0_fast(float %x) {
 
 define float @fsub_nan_op1_nnan(float %x) {
 ; CHECK-LABEL: @fsub_nan_op1_nnan(
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan float [[X:%.*]], 0x7FF8000000000000
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fsub nnan float %x, 0x7FF8000000000000
   ret float %r
@@ -167,8 +153,7 @@ define float @fsub_nan_op1_nnan(float %x) {
 
 define float @fmul_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @fmul_nan_op0_nnan(
-; CHECK-NEXT:    [[R:%.*]] = fmul nnan float 0x7FF8000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fmul nnan float 0x7FF8000000000000, %x
   ret float %r
@@ -176,8 +161,7 @@ define float @fmul_nan_op0_nnan(float %x) {
 
 define float @fmul_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @fmul_nan_op1_fast(
-; CHECK-NEXT:    [[R:%.*]] = fmul fast float [[X:%.*]], 0x7FF8000000000000
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fmul fast float %x, 0x7FF8000000000000
   ret float %r
@@ -185,8 +169,7 @@ define float @fmul_nan_op1_fast(float %x) {
 
 define float @fdiv_nan_op0_fast(float %x) {
 ; CHECK-LABEL: @fdiv_nan_op0_fast(
-; CHECK-NEXT:    [[R:%.*]] = fdiv fast float 0x7FF8000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fdiv fast float 0x7FF8000000000000, %x
   ret float %r
@@ -194,8 +177,7 @@ define float @fdiv_nan_op0_fast(float %x) {
 
 define float @fdiv_nan_op1_nnan(float %x) {
 ; CHECK-LABEL: @fdiv_nan_op1_nnan(
-; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[X:%.*]], 0x7FF8000000000000
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fdiv nnan float %x, 0x7FF8000000000000
   ret float %r
@@ -203,8 +185,7 @@ define float @fdiv_nan_op1_nnan(float %x) {
 
 define float @frem_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @frem_nan_op0_nnan(
-; CHECK-NEXT:    [[R:%.*]] = frem nnan float 0x7FF8000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = frem nnan float 0x7FF8000000000000, %x
   ret float %r
@@ -212,8 +193,7 @@ define float @frem_nan_op0_nnan(float %x) {
 
 define float @frem_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @frem_nan_op1_fast(
-; CHECK-NEXT:    [[R:%.*]] = frem fast float [[X:%.*]], 0x7FF8000000000000
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = frem fast float %x, 0x7FF8000000000000
   ret float %r

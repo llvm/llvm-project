@@ -1370,9 +1370,8 @@ public:
     init();
   }
 
-  explicit Record(StringRef N, ArrayRef<SMLoc> locs, RecordKeeper &records,
-                  bool Anonymous = false)
-    : Record(StringInit::get(N), locs, records, Anonymous) {}
+  explicit Record(StringRef N, ArrayRef<SMLoc> locs, RecordKeeper &records)
+      : Record(StringInit::get(N), locs, records) {}
 
   // When copy-constructing a Record, we must still guarantee a globally unique
   // ID number.  Don't copy TheInit either since it's owned by the original
@@ -1400,6 +1399,10 @@ public:
   void setName(Init *Name);      // Also updates RecordKeeper.
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
+  void appendLoc(SMLoc Loc) { Locs.push_back(Loc); }
+
+  // Make the type that this record should have based on its superclasses.
+  RecordRecTy *getType();
 
   /// get the corresponding DefInit.
   DefInit *getDefInit();
@@ -1491,6 +1494,7 @@ public:
   }
 
   void addSuperClass(Record *R, SMRange Range) {
+    assert(!TheInit && "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
     SuperClasses.push_back(std::make_pair(R, Range));
   }

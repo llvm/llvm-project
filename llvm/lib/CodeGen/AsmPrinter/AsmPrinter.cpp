@@ -31,7 +31,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
-#include "llvm/Analysis/ObjectUtils.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -376,7 +375,7 @@ static bool canBeHidden(const GlobalValue *GV, const MCAsmInfo &MAI) {
   if (!MAI.hasWeakDefCanBeHiddenDirective())
     return false;
 
-  return canBeOmittedFromSymbolTable(GV);
+  return GV->canBeOmittedFromSymbolTable();
 }
 
 void AsmPrinter::EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {

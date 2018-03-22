@@ -77,11 +77,12 @@ def : ProcessorModel<"bleeding-edge", NoSchedModel,
 // Target Declaration
 //===----------------------------------------------------------------------===//
 
-def WebAssembly : Target {
-  let InstructionSet = WebAssemblyInstrInfo;
-}
-
 def WebAssemblyAsmParser : AsmParser {
   // The physical register names are not in the binary format or asm text
   let ShouldEmitMatchRegisterName = 0;
+}
+
+def WebAssembly : Target {
+  let InstructionSet = WebAssemblyInstrInfo;
+  let AssemblyParsers  = [WebAssemblyAsmParser];
 }

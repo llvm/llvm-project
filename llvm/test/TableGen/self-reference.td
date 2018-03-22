@@ -24,6 +24,14 @@
 // CHECK:   E e = E0;
 // CHECK: }
 
+// CHECK: def F0 {
+// CHECK:   Fa as_a = F0;
+// CHECK:   Fb as_b = F0;
+// CHECK: }
+// CHECK: def F0x {
+// CHECK:   Fc as_c = F0;
+// CHECK: }
+
 def ops;
 
 class A<dag d> {
@@ -73,3 +81,18 @@ class E<E x> {
 // work here because E0 does not yet have E as a superclass while the template
 // arguments are being parsed.
 def E0 : E<!cast<E>("E0")>;
+
+// Ensure that records end up with the correct type even when direct self-
+// references are involved.
+class Fa;
+class Fb<Fa x> {
+  Fa as_a = x;
+}
+class Fc<Fb x> {
+  Fb as_b = x;
+}
+
+def F0 : Fa, Fb<F0>, Fc<F0>;
+def F0x {
+  Fc as_c = F0;
+}

@@ -46,6 +46,20 @@ define void @test2(i8* %P, i8* %Q) nounwind  {
 ; CHECK-NEXT: ret void
 }
 
+; The intermediate alloca and one of the memcpy's should be eliminated, the
+; other should be related with a memcpy.
+define void @test2_memcpy(i8* noalias %P, i8* noalias %Q) nounwind  {
+  %memtmp = alloca %0, align 16
+  %R = bitcast %0* %memtmp to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %R, i8* align 16 %P, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %Q, i8* align 16 %R, i32 32, i1 false)
+  ret void
+
+; CHECK-LABEL: @test2_memcpy(
+; CHECK-NEXT: call void @llvm.memcpy{{.*}}(i8* align 16 %Q, i8* align 16 %P
+; CHECK-NEXT: ret void
+}
+
 
 
 

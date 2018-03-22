@@ -22,17 +22,32 @@ namespace mca {
 
 void BackendStatistics::onInstructionEvent(const HWInstructionEvent &Event) {
   switch (Event.Type) {
-  case HWInstructionEvent::Retired:
+  default:
+    break;
+  case HWInstructionEvent::Retired: {
+    const auto &RE = static_cast<const HWInstructionRetiredEvent &>(Event);
+    for (unsigned I = 0, E = RegisterFiles.size(); I < E; ++I)
+      RegisterFiles[I].CurrentlyUsedMappings -= RE.FreedPhysRegs[I];
+
     ++NumRetired;
     break;
+  }
   case HWInstructionEvent::Issued:
     ++NumIssued;
     break;
-  case HWInstructionEvent::Dispatched:
+  case HWInstructionEvent::Dispatched: {
+    const auto &DE = static_cast<const HWInstructionDispatchedEvent &>(Event);
+    for (unsigned I = 0, E = RegisterFiles.size(); I < E; ++I) {
+      RegisterFileUsage &RFU = RegisterFiles[I];
+      unsigned NumUsedPhysRegs = DE.UsedPhysRegs[I];
+      RFU.CurrentlyUsedMappings += NumUsedPhysRegs;
+      RFU.TotalMappings += NumUsedPhysRegs;
+      RFU.MaxUsedMappings =
+          std::max(RFU.MaxUsedMappings, RFU.CurrentlyUsedMappings);
+    }
+
     ++NumDispatched;
-    break;
-  default:
-    break;
+  }
   }
 }
 
@@ -115,15 +130,19 @@ void BackendStatistics::printSchedulerStatistics(llvm::raw_ostream &OS) const {
   OS << Buffer;
 }
 
-void BackendStatistics::printRATStatistics(raw_ostream &OS,
-                                           unsigned TotalMappings,
-                                           unsigned MaxUsedMappings) const {
+void BackendStatistics::printRATStatistics(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
-  TempStream << "\n\nRegister Alias Table:";
-  TempStream << "\nTotal number of mappings created: " << TotalMappings;
-  TempStream << "\nMax number of mappings used:      " << MaxUsedMappings
-             << '\n';
+
+  TempStream << "\n\nRegister File statistics.";
+  for (unsigned I = 0, E = RegisterFiles.size(); I < E; ++I) {
+    const RegisterFileUsage &RFU = RegisterFiles[I];
+    TempStream << "\nRegister File #" << I;
+    TempStream << "\n  Total number of mappings created: " << RFU.TotalMappings;
+    TempStream << "\n  Max number of mappings used:      "
+               << RFU.MaxUsedMappings;
+  }
+
   TempStream.flush();
   OS << Buffer;
 }

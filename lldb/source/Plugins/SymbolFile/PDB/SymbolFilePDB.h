@@ -143,8 +143,7 @@ public:
                    bool append, lldb_private::TypeMap &types) override;
 
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
-                        uint32_t max_matches,
-                        lldb_private::TypeMap &types);
+                        uint32_t max_matches, lldb_private::TypeMap &types);
 
   lldb_private::TypeList *GetTypeList() override;
 
@@ -169,8 +168,8 @@ public:
   const llvm::pdb::IPDBSession &GetPDBSession() const;
 
 private:
-  lldb::CompUnitSP
-  ParseCompileUnitForUID(uint32_t id, uint32_t index = UINT32_MAX);
+  lldb::CompUnitSP ParseCompileUnitForUID(uint32_t id,
+                                          uint32_t index = UINT32_MAX);
 
   bool ParseCompileUnitLineTable(const lldb_private::SymbolContext &sc,
                                  uint32_t match_line);
@@ -185,15 +184,15 @@ private:
   lldb::CompUnitSP
   GetCompileUnitContainsAddress(const lldb_private::Address &so_addr);
 
-  typedef std::vector<lldb_private::Type*> TypeCollection;
+  typedef std::vector<lldb_private::Type *> TypeCollection;
 
-  void
-  GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
-                       uint32_t type_mask, TypeCollection &type_collection);
+  void GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
+                            uint32_t type_mask,
+                            TypeCollection &type_collection);
 
-  lldb_private::Function* ParseCompileUnitFunctionForPDBFunc(
-      const llvm::pdb::PDBSymbolFunc &pdb_func,
-      const lldb_private::SymbolContext &sc);
+  lldb_private::Function *
+  ParseCompileUnitFunctionForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func,
+                                     const lldb_private::SymbolContext &sc);
 
   void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
                            uint32_t &index);

@@ -88,12 +88,6 @@ public:
     return *It->second;
   }
   void eraseInstruction(unsigned Index) { Instructions.erase(Index); }
-  unsigned getTotalRegisterMappingsCreated() const {
-    return DU->getTotalRegisterMappingsCreated();
-  }
-  unsigned getMaxUsedRegisterMappings() const {
-    return DU->getMaxUsedRegisterMappings();
-  }
 
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);
