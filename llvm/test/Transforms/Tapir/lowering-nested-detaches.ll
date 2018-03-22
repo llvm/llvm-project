@@ -13,9 +13,14 @@ entry:
 loop_body:                                        ; preds = %loop_latch, %entry
   %c06 = phi i64 [ 0, %entry ], [ %0, %loop_latch ]
   detach within %syncreg, label %det.achd, label %loop_latch
-; CHECK: loop_body.split:
-; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk([24 x float]* %O1, i64 %c06, [24 x float]* %B, [24 x [21 x [33 x float]]]* %A)
-; CHECK-NEXT: br label %loop_latch
+; CHECK-LABEL: define void @kernel_anon(
+; CHECK-LABEL: loop_body.split: ; preds = %loop_body
+; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk(
+; CHECK-DAG: [24 x float]* %O1
+; CHECK-DAG: i64 %c06
+; CHECK-DAG: [24 x float]* %B
+; CHECK-DAG: [24 x [21 x [33 x float]]]* %A
+; CHECK-NEXT: {{br label %loop_latch|br label %loop_body.split.split}}
 
 loop_latch:                                       ; preds = %synced21, %loop_body
   %0 = add nuw nsw i64 %c06, 1
@@ -33,9 +38,14 @@ loop_body2:                                       ; preds = %loop_latch3, %det.a
   %c14 = phi i64 [ 0, %det.achd ], [ %1, %loop_latch3 ]
   detach within %syncreg5, label %block_exit, label %loop_latch3
 ; CHECK-LABEL: define internal fastcc void @kernel_anon_det.achd.cilk(
-; CHECK: loop_body2.cilk.split:
-; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk([24 x float]* %O1.cilk, i64 %c06.cilk, i64 %c14.cilk, [24 x float]* %B.cilk, [24 x [21 x [33 x float]]]* %A.cilk)
-; CHECK-NEXT: br label %loop_latch3.cilk
+; CHECK-LABEL: loop_body2.cilk.split: ; preds = %loop_body2.cilk
+; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk(
+; CHECK-DAG: [24 x float]* %O1.cilk
+; CHECK-DAG: i64 %c06.cilk
+; CHECK-DAG: i64 %c14.cilk
+; CHECK-DAG: [24 x float]* %B.cilk
+; CHECK-DAG: [24 x [21 x [33 x float]]]* %A.cilk
+; CHECK-NEXT: {{br label %loop_latch3.cilk|br label %loop_body2.cilk.split.split}}
 
 loop_latch3:                                      ; preds = %block_exit20, %loop_body2
   %1 = add nuw nsw i64 %c14, 1
@@ -57,9 +67,15 @@ loop_body8:                                       ; preds = %loop_latch9, %block
   %c22 = phi i64 [ 0, %block_exit ], [ %5, %loop_latch9 ]
   detach within %syncreg11, label %det.achd12, label %loop_latch9
 ; CHECK-LABEL: define internal fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk(
-; CHECK: loop_body8.cilk.cilk.split:
-; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk_det.achd12.cilk.cilk.cilk([24 x [21 x [33 x float]]]* %A.cilk.cilk, i64 %c06.cilk.cilk, i64 %c14.cilk.cilk, i64 %c22.cilk.cilk, float %2, float* nonnull %0)
-; CHECK-NEXT: br label %loop_latch9.cilk.cilk
+; CHECK-LABEL: loop_body8.cilk.cilk.split: ; preds = %loop_body8.cilk.cilk
+; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk_det.achd12.cilk.cilk.cilk(
+; CHECK-DAG: [24 x [21 x [33 x float]]]* %A.cilk.cilk
+; CHECK-DAG: i64 %c06.cilk.cilk
+; CHECK-DAG: i64 %c14.cilk.cilk
+; CHECK-DAG: i64 %c22.cilk.cilk
+; CHECK-DAG: float %2
+; CHECK-DAG: float* nonnull %0
+; CHECK-NEXT: {{br label %loop_latch9.cilk.cilk|br label %loop_body8.cilk.cilk.split.split}}
 
 loop_latch9:                                      ; preds = %synced, %loop_body8
   %5 = add nuw nsw i64 %c22, 1
@@ -78,8 +94,15 @@ loop_body14:                                      ; preds = %loop_latch15, %det.
   detach within %syncreg17, label %det.achd18, label %loop_latch15
 ; CHECK-LABEL: define internal fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk_det.achd12.cilk.cilk.cilk(
 ; CHECK: loop_body14.cilk.cilk.cilk.split:
-; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk_det.achd12.cilk.cilk.cilk_det.achd18.cilk.cilk.cilk.cilk([24 x [21 x [33 x float]]]* %A.cilk.cilk.cilk, i64 %c06.cilk.cilk.cilk, i64 %c14.cilk.cilk.cilk, i64 %c22.cilk.cilk.cilk, i64 %c31.cilk.cilk.cilk, float %.cilk, float* %.cilk1)
-; CHECK-NEXT: br label %loop_latch15.cilk.cilk.cilk
+; CHECK-NEXT: call fastcc void @kernel_anon_det.achd.cilk_block_exit.cilk.cilk_det.achd12.cilk.cilk.cilk_det.achd18.cilk.cilk.cilk.cilk(
+; CHECK-DAG: [24 x [21 x [33 x float]]]* %A.cilk.cilk.cilk
+; CHECK-DAG: i64 %c06.cilk.cilk.cilk
+; CHECK-DAG: i64 %c14.cilk.cilk.cilk
+; CHECK-DAG: i64 %c22.cilk.cilk.cilk
+; CHECK-DAG: i64 %c31.cilk.cilk.cilk
+; CHECK-DAG: float %.cilk
+; CHECK-DAG: float* %.cilk1
+; CHECK-NEXT: {{br label %loop_latch15.cilk.cilk.cilk|loop_body14.cilk.cilk.cilk.split.split}}
 
 loop_latch15:                                     ; preds = %det.achd18, %loop_body14
   %6 = add nuw nsw i64 %c31, 1

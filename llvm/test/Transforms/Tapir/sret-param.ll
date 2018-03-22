@@ -134,7 +134,7 @@ pfor.detach.lr.ph:                                ; preds = %invoke.cont4
 ; LS: pfor.detach.lr.ph:
 ; LS: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls(%"class.std::vector.0"* %agg.result, [[IVTYPE:i[0-9]+]] 0, [[IVTYPE]] %{{.+}}, [[IVTYPE]] %{{.+}},
 ; LS-NEXT: to label %{{.+}} unwind label %lpad78.loopexit
-; TT: pfor.detach.split1:
+; TT: pfor.detach.split:
 ; TT-NEXT: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.body.cilk(%"class.std::vector.0"* %agg.result,
 
 pfor.cond.cleanup:                                ; preds = %pfor.inc76, %if.end.i, %invoke.cont4
