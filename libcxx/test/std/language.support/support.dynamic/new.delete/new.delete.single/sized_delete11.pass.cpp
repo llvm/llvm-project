@@ -44,16 +44,16 @@ void operator delete(void* p, std::size_t) TEST_NOEXCEPT
     std::free(p);
 }
 
-int *volatile x;
-
 int main()
 {
-    x = new int(42);
+    int *x = new int(42);
+    DoNotOptimize(x);
     assert(0 == unsized_delete_called);
     assert(0 == unsized_delete_nothrow_called);
     assert(0 == sized_delete_called);
 
     delete x;
+    DoNotOptimize(x);
     assert(1 == unsized_delete_called);
     assert(0 == sized_delete_called);
     assert(0 == unsized_delete_nothrow_called);
