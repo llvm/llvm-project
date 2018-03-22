@@ -265,7 +265,8 @@ void remapInstructionsInBlocks(const SmallVectorImpl<BasicBlock *> &Blocks,
 BasicBlock *
 DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
                                     Instruction *StopAt,
-                                    ValueToValueMapTy &ValueMapping);
+                                    ValueToValueMapTy &ValueMapping,
+                                    DominatorTree *DT = nullptr);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

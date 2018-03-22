@@ -42,7 +42,7 @@ void Backend::runCycle(unsigned Cycle) {
 
     Instruction *IS = NewIS.get();
     Instructions[IR.first] = std::move(NewIS);
-    IS->setRCUTokenID(DU->dispatch(IR.first, IS, STI));
+    DU->dispatch(IR.first, IS, STI);
     SM.updateNext();
   }
 

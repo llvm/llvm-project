@@ -1,4 +1,4 @@
-//===--------------------- TimelineView.cpp ---------------*- C++ -*-===//
+//===--------------------- TimelineView.cpp ---------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

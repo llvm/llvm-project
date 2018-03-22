@@ -409,10 +409,9 @@ void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 }
 
 const InstrDesc &InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI) {
-  auto it = Descriptors.find(MCI.getOpcode());
-  if (it == Descriptors.end())
+  if (Descriptors.find_as(MCI.getOpcode()) == Descriptors.end())
     createInstrDescImpl(MCI);
-  return *Descriptors[MCI.getOpcode()].get();
+  return *Descriptors[MCI.getOpcode()];
 }
 
 std::unique_ptr<Instruction>
@@ -448,12 +447,11 @@ InstrBuilder::createInstruction(unsigned Idx, const MCInst &MCI) {
   for (const WriteDescriptor &WD : D.Writes) {
     unsigned RegID =
         WD.OpIndex == -1 ? WD.RegisterID : MCI.getOperand(WD.OpIndex).getReg();
-    assert((RegID || WD.IsOptionalDef) && "Expected a valid register ID!");
-    // Special case where this is a optional definition, and the actual register
-    // is 0.
+    // Check if this is a optional definition that references NoReg.
     if (WD.IsOptionalDef && !RegID)
       continue;
 
+    assert(RegID && "Expected a valid register ID!");
     NewIS->getDefs().emplace_back(llvm::make_unique<WriteState>(WD, RegID));
   }
 

@@ -1,4 +1,4 @@
-//===--------------------- TimelineView.h ---------------*- C++ -*-===//
+//===--------------------- TimelineView.h -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -150,6 +150,8 @@ class TimelineView : public View {
 
   const unsigned DEFAULT_ITERATIONS = 10;
 
+  void initialize(unsigned MaxIterations);
+
 public:
   TimelineView(const llvm::MCSubtargetInfo &sti, llvm::MCInstPrinter &Printer,
                const SourceMgr &Sequence, unsigned MaxIterations,
@@ -158,8 +160,6 @@ public:
         MaxCycle(Cycles == 0 ? 80 : Cycles), LastCycle(0) {
     initialize(MaxIterations);
   }
-
-  void initialize(unsigned MaxIterations);
 
   // Event handlers.
   void onCycleBegin(unsigned Cycle) override { CurrentCycle = Cycle; }
