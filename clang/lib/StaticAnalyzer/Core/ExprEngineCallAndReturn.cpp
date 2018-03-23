@@ -636,10 +636,11 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
 
     const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
 
-    auto CC = getCurrentCFGElement().getAs<CFGConstructor>();
-    const Stmt *ParentExpr = CC ? CC->getTriggerStmt() : nullptr;
+    auto CCE = getCurrentCFGElement().getAs<CFGConstructor>();
+    const ConstructionContext *CC = CCE ? CCE->getConstructionContext()
+                                        : nullptr;
 
-    if (ParentExpr && isa<CXXNewExpr>(ParentExpr) &&
+    if (CC && isa<NewAllocatedObjectConstructionContext>(CC) &&
         !Opts.mayInlineCXXAllocator())
       return CIP_DisallowedOnce;
 
