@@ -1345,7 +1345,7 @@ def run_suite():
     os.environ["ARCH"] = configuration.arch
     os.environ["CC"] = configuration.compiler
     if configuration.swiftCompiler:
-        os.environ["SWIFTCC"] = configuration.swiftCompiler
+        os.environ["SWIFTC"] = configuration.swiftCompiler
     if configuration.swiftLibrary:
         os.environ["USERSWIFTLIBRARY"] = configuration.swiftLibrary
     configString = "arch=%s compiler=%s" % (configuration.arch,

@@ -104,12 +104,12 @@ def getCCSpec(compiler):
     if not cc and "CC" in os.environ:
         cc = os.environ["CC"]
 
-    swiftcc = swift.getSwiftCompiler()
+    swiftc = swift.getSwiftCompiler()
 
     # Note the leading space character.
     if cc:
-        if swiftcc:
-            return (" CC=" + cc + " SWIFTCC=" + swiftcc)
+        if swiftc:
+            return (" CC=" + cc + " SWIFTC=" + swiftc)
         else:
             return "CC=\"%s\"" % cc
     return ""
