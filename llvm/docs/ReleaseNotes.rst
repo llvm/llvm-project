@@ -38,6 +38,8 @@ Non-comprehensive list of changes in this release
   the name used in the `def X : Target` definition to the call to
   `RegisterTarget`.
 
+* The LoopInstSimplify pass (-loop-instsimplify) has been removed.
+
 * The ``Debugify`` pass was added to ``opt`` to facilitate testing of debug
   info preservation. This pass attaches synthetic ``DILocations`` and
   ``DIVariables`` to the instructions in a ``Module``. The ``CheckDebugify``
