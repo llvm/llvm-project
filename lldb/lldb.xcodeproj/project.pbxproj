@@ -807,6 +807,7 @@
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
 		54067BF11DF2041B00749AA5 /* UBSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54067BEC1DF2034B00749AA5 /* UBSanRuntime.cpp */; };
 		6B74D89B200696BB0074051B /* Environment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22DC561920064C9600A7E9E8 /* Environment.cpp */; };
+		6B88947A2065AE5D002E5C59 /* CommandObjectStats.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */; };
 		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
 		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
 		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
@@ -1026,7 +1027,7 @@
 		AF1729D6182C907200E0AB97 /* HistoryThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D4182C907200E0AB97 /* HistoryThread.cpp */; };
 		AF1729D7182C907200E0AB97 /* HistoryUnwind.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D5182C907200E0AB97 /* HistoryUnwind.cpp */; };
 		AF1D88691B575E8D003CB899 /* ValueObjectConstResultCast.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF94726E1B575E430063D65C /* ValueObjectConstResultCast.cpp */; };
-		AF1DD02C20606EAC002A0283 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
+		AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		AF1F7B07189C904B0087DB9C /* AppleGetPendingItemsHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1F7B05189C904B0087DB9C /* AppleGetPendingItemsHandler.cpp */; };
 		AF20F7661AF18F8500751A6E /* ABISysV_arm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF20F7641AF18F8500751A6E /* ABISysV_arm.cpp */; };
 		AF20F76A1AF18F9000751A6E /* ABISysV_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF20F7681AF18F9000751A6E /* ABISysV_arm64.cpp */; };
@@ -1067,7 +1068,6 @@
 		AF77E0A91A033D740096C0EA /* RegisterContextPOSIXCore_powerpc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E0A71A033D740096C0EA /* RegisterContextPOSIXCore_powerpc.cpp */; };
 		AF81DEFA1828A23F0042CF19 /* SystemRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF81DEF91828A23F0042CF19 /* SystemRuntime.cpp */; };
 		AF8AD6371BEC28C400150209 /* PlatformRemoteAppleTV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF8AD6331BEC28C400150209 /* PlatformRemoteAppleTV.cpp */; };
-		AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		AF9107EE168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9113FD1FBE78EA004320CD /* RegisterContextPOSIXCore_ppc64le.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9113FB1FBE78EA004320CD /* RegisterContextPOSIXCore_ppc64le.cpp */; };
@@ -1078,6 +1078,7 @@
 		AFAFD80A1E57E1B90017A14F /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */; };
 		AFB3D2801AC262AB003B4B30 /* MICmdCmdGdbShow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */; };
 		AFC1A8991BEAF27000681CFD /* ValueObjectConstResultImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */; };
+		AFB6B9ED2065BBE90047661E /* CommandObjectStats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */; };
 		AFC234091AF85CE100CDE8B6 /* CommandObjectLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */; };
 		AFC2DCE71E6E2ED000283714 /* FastDemangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */; };
 		AFC2DCE91E6E2F2C00283714 /* Baton.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCE81E6E2F2C00283714 /* Baton.cpp */; };
@@ -1332,7 +1333,7 @@
 			dstPath = "/$(DT_VARIANT)/$(LLDB_TOOLS_INSTALL_DIR)/../share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				AF1DD02C20606EAC002A0283 /* lldb.1 in Copy Files */,
+				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1374,8 +1375,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
-				7F94D7182040A13A006EE3EA /* CleanUpTest.cpp in Copy Files */,
+				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2796,6 +2796,8 @@
 		69A01E1C1236C5D400C660B5 /* Host.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Host.cpp; sourceTree = "<group>"; };
 		69A01E1F1236C5D400C660B5 /* Symbols.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Symbols.cpp; sourceTree = "<group>"; };
 		6B74D89C2006972D0074051B /* Environment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Environment.h; path = include/lldb/Utility/Environment.h; sourceTree = "<group>"; };
+		6B8894772065AE5C002E5C59 /* CommandObjectStats.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectStats.h; path = source/Commands/CommandObjectStats.h; sourceTree = "<group>"; };
+		6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectStats.cpp; path = source/Commands/CommandObjectStats.cpp; sourceTree = "<group>"; };
 		6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DebugMacros.h; path = include/lldb/Symbol/DebugMacros.h; sourceTree = "<group>"; };
 		6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaASTContext.h; path = include/lldb/Symbol/JavaASTContext.h; sourceTree = "<group>"; };
 		6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaASTContext.cpp; path = source/Symbol/JavaASTContext.cpp; sourceTree = "<group>"; };
@@ -5348,6 +5350,8 @@
 				26BC7E4010F1B84700F91463 /* CommandObjectSettings.cpp */,
 				26BC7D2910F1B76300F91463 /* CommandObjectSource.h */,
 				26BC7E4210F1B84700F91463 /* CommandObjectSource.cpp */,
+				6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */,
+				6B8894772065AE5C002E5C59 /* CommandObjectStats.h */,
 				269416AE119A024800FF2715 /* CommandObjectTarget.h */,
 				269416AD119A024800FF2715 /* CommandObjectTarget.cpp */,
 				26BC7D2D10F1B76300F91463 /* CommandObjectThread.h */,
@@ -8474,6 +8478,7 @@
 				B2462247141AD37D00F3D409 /* OptionGroupWatchpoint.cpp in Sources */,
 				94B638631B8FB7F1004FE1E4 /* ObjCPlusPlusLanguage.cpp in Sources */,
 				49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */,
+				AFB6B9ED2065BBE90047661E /* CommandObjectStats.cpp in Sources */,
 				49A71FE7141FFA5C00D59478 /* IRInterpreter.cpp in Sources */,
 				4C848E0018D2873500EC6DD0 /* SwiftExpressionParser.cpp in Sources */,
 				23DDF226196C3EE600BB8417 /* CommandOptionValidators.cpp in Sources */,
