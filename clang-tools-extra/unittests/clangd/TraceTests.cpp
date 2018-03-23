@@ -41,7 +41,7 @@ bool VerifyObject(yaml::Node &N, std::map<std::string, std::string> Expected) {
   }
   bool Match = true;
   SmallString<32> Tmp;
-  for (auto Prop : *M) {
+  for (auto &Prop : *M) {
     auto *K = dyn_cast_or_null<yaml::ScalarNode>(Prop.getKey());
     if (!K)
       continue;

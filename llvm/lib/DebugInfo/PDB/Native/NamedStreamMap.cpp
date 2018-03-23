@@ -47,7 +47,7 @@ uint32_t NamedStreamMapTraits::lookupKeyToStorageKey(StringRef S) {
 }
 
 NamedStreamMap::NamedStreamMap()
-    : HashTraits(*this), OffsetIndexMap(HashTraits) {}
+    : HashTraits(*this), OffsetIndexMap(1, HashTraits) {}
 
 Error NamedStreamMap::load(BinaryStreamReader &Stream) {
   uint32_t StringBufferSize;

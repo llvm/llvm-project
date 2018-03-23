@@ -30,7 +30,7 @@ enum : SanitizerMask {
   NeedsUbsanCxxRt = Vptr | CFI,
   NotAllowedWithTrap = Vptr,
   NotAllowedWithMinimalRuntime = Vptr,
-  RequiresPIE = DataFlow | Scudo,
+  RequiresPIE = DataFlow | HWAddress | Scudo,
   NeedsUnwindTables = Address | HWAddress | Thread | Memory | DataFlow,
   SupportsCoverage = Address | HWAddress | KernelAddress | Memory | Leak |
                      Undefined | Integer | Nullability | DataFlow | Fuzzer |

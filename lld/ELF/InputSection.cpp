@@ -156,7 +156,7 @@ uint64_t SectionBase::getOffset(uint64_t Offset) const {
   case Merge:
     const MergeInputSection *MS = cast<MergeInputSection>(this);
     if (InputSection *IS = MS->getParent())
-      return IS->OutSecOff + MS->getOffset(Offset);
+      return cast<InputSection>(IS->Repl)->OutSecOff + MS->getOffset(Offset);
     return MS->getOffset(Offset);
   }
   llvm_unreachable("invalid section kind");
@@ -165,14 +165,14 @@ uint64_t SectionBase::getOffset(uint64_t Offset) const {
 OutputSection *SectionBase::getOutputSection() {
   InputSection *Sec;
   if (auto *IS = dyn_cast<InputSection>(this))
-    return IS->getParent();
+    Sec = IS;
   else if (auto *MS = dyn_cast<MergeInputSection>(this))
     Sec = MS->getParent();
   else if (auto *EH = dyn_cast<EhInputSection>(this))
     Sec = EH->getParent();
   else
     return cast<OutputSection>(this);
-  return Sec ? Sec->getParent() : nullptr;
+  return Sec ? cast<InputSection>(Sec->Repl)->getParent() : nullptr;
 }
 
 // Decompress section contents if required. Note that this function

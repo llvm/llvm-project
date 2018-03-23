@@ -121,7 +121,7 @@ private:
   MutableBinaryByteStream FileInfoBuffer;
   std::vector<SectionContrib> SectionContribs;
   ArrayRef<SecMapEntry> SectionMap;
-  llvm::SmallVector<DebugStream, (int)DbgHeaderType::Max> DbgStreams;
+  std::array<Optional<DebugStream>, (int)DbgHeaderType::Max> DbgStreams;
 };
 }
 }

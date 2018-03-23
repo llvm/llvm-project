@@ -100,7 +100,7 @@ namespace llvm {
 } // end namespace llvm
 
 static cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
-  cl::init(false), cl::desc("Enable branch probability info"));
+  cl::init(true), cl::desc("Enable branch probability info"));
 static cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,
   cl::desc("Size limit in Hexagon early if-conversion"));
 static cl::opt<bool> SkipExitBranches("eif-no-loop-exit", cl::init(false),
@@ -191,6 +191,7 @@ namespace {
     bool isProfitable(const FlowPattern &FP) const;
     bool isPredicableStore(const MachineInstr *MI) const;
     bool isSafeToSpeculate(const MachineInstr *MI) const;
+    bool isPredicate(unsigned R) const;
 
     unsigned getCondStoreOpcode(unsigned Opc, bool IfTrue) const;
     void predicateInstr(MachineBasicBlock *ToB, MachineBasicBlock::iterator At,
@@ -242,7 +243,7 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
 
   // Interested only in conditional branches, no .new, no new-value, etc.
   // Check the terminators directly, it's easier than handling all responses
-  // from AnalyzeBranch.
+  // from analyzeBranch.
   MachineBasicBlock *TB = nullptr, *FB = nullptr;
   MachineBasicBlock::const_iterator T1I = B->getFirstTerminator();
   if (T1I == B->end())
@@ -335,7 +336,7 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
   return true;
 }
 
-// KLUDGE: HexagonInstrInfo::AnalyzeBranch won't work on a block that
+// KLUDGE: HexagonInstrInfo::analyzeBranch won't work on a block that
 // contains EH_LABEL.
 bool HexagonEarlyIfConversion::hasEHLabel(const MachineBasicBlock *B) const {
   for (auto &I : *B)
@@ -344,7 +345,7 @@ bool HexagonEarlyIfConversion::hasEHLabel(const MachineBasicBlock *B) const {
   return false;
 }
 
-// KLUDGE: HexagonInstrInfo::AnalyzeBranch may be unable to recognize
+// KLUDGE: HexagonInstrInfo::analyzeBranch may be unable to recognize
 // that a block can never fall-through.
 bool HexagonEarlyIfConversion::hasUncondBranch(const MachineBasicBlock *B)
       const {
@@ -387,13 +388,8 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
       unsigned R = MO.getReg();
       if (!TargetRegisterInfo::isVirtualRegister(R))
         continue;
-      switch (MRI->getRegClass(R)->getID()) {
-        case Hexagon::PredRegsRegClassID:
-        case Hexagon::HvxQRRegClassID:
-          break;
-        default:
-          continue;
-      }
+      if (!isPredicate(R))
+        continue;
       for (auto U = MRI->use_begin(R); U != MRI->use_end(); ++U)
         if (U->getParent()->isPHI())
           return false;
@@ -443,8 +439,7 @@ bool HexagonEarlyIfConversion::isValid(const FlowPattern &FP) const {
       if (usesUndefVReg(&MI))
         return false;
       unsigned DefR = MI.getOperand(0).getReg();
-      const TargetRegisterClass *RC = MRI->getRegClass(DefR);
-      if (RC == &Hexagon::PredRegsRegClass)
+      if (isPredicate(DefR))
         return false;
     }
   }
@@ -500,7 +495,7 @@ unsigned HexagonEarlyIfConversion::countPredicateDefs(
       unsigned R = MO.getReg();
       if (!TargetRegisterInfo::isVirtualRegister(R))
         continue;
-      if (MRI->getRegClass(R) == &Hexagon::PredRegsRegClass)
+      if (isPredicate(R))
         PredDefs++;
     }
   }
@@ -508,10 +503,21 @@ unsigned HexagonEarlyIfConversion::countPredicateDefs(
 }
 
 bool HexagonEarlyIfConversion::isProfitable(const FlowPattern &FP) const {
+  BranchProbability JumpProb(1, 10);
+  BranchProbability Prob(9, 10);
+  if (MBPI && FP.TrueB && !FP.FalseB &&
+      (MBPI->getEdgeProbability(FP.SplitB, FP.TrueB) < JumpProb ||
+       MBPI->getEdgeProbability(FP.SplitB, FP.TrueB) > Prob))
+    return false;
+
+  if (MBPI && !FP.TrueB && FP.FalseB &&
+      (MBPI->getEdgeProbability(FP.SplitB, FP.FalseB) < JumpProb ||
+       MBPI->getEdgeProbability(FP.SplitB, FP.FalseB) > Prob))
+    return false;
+
   if (FP.TrueB && FP.FalseB) {
     // Do not IfCovert if the branch is one sided.
     if (MBPI) {
-      BranchProbability Prob(9, 10);
       if (MBPI->getEdgeProbability(FP.SplitB, FP.TrueB) > Prob)
         return false;
       if (MBPI->getEdgeProbability(FP.SplitB, FP.FalseB) > Prob)
@@ -680,8 +686,16 @@ bool HexagonEarlyIfConversion::isSafeToSpeculate(const MachineInstr *MI)
     return false;
   if (MI->hasUnmodeledSideEffects())
     return false;
+  if (MI->getOpcode() == TargetOpcode::LIFETIME_END)
+    return false;
 
   return true;
+}
+
+bool HexagonEarlyIfConversion::isPredicate(unsigned R) const {
+  const TargetRegisterClass *RC = MRI->getRegClass(R);
+  return RC == &Hexagon::PredRegsRegClass ||
+         RC == &Hexagon::HvxQRRegClass;
 }
 
 unsigned HexagonEarlyIfConversion::getCondStoreOpcode(unsigned Opc,
@@ -1015,11 +1029,7 @@ void HexagonEarlyIfConversion::mergeBlocks(MachineBasicBlock *PredB,
   HII->removeBranch(*PredB);
   PredB->removeSuccessor(SuccB);
   PredB->splice(PredB->end(), SuccB, SuccB->begin(), SuccB->end());
-  MachineBasicBlock::succ_iterator I, E = SuccB->succ_end();
-  for (I = SuccB->succ_begin(); I != E; ++I)
-    PredB->addSuccessor(*I);
-  PredB->normalizeSuccProbs();
-  replacePhiEdges(SuccB, PredB);
+  PredB->transferSuccessorsAndUpdatePHIs(SuccB);
   removeBlock(SuccB);
   if (!TermOk)
     PredB->updateTerminator();
@@ -1041,7 +1051,7 @@ void HexagonEarlyIfConversion::simplifyFlowGraph(const FlowPattern &FP) {
 
   // By now, the split block has only one successor (SB), and SB has only
   // one predecessor. We can try to merge them. We will need to update ter-
-  // minators in FP.Split+SB, and that requires working AnalyzeBranch, which
+  // minators in FP.Split+SB, and that requires working analyzeBranch, which
   // fails on Hexagon for blocks that have EH_LABELs. However, if SB ends
   // with an unconditional branch, we won't need to touch the terminators.
   if (!hasEHLabel(SB) || hasUncondBranch(SB))

@@ -33,8 +33,7 @@ using namespace llvm;
 /// A utility function for allocating memory, checking for allocation failures,
 /// and ensuring the contents are zeroed.
 inline static uint64_t* getClearedMemory(unsigned numWords) {
-  uint64_t * result = new uint64_t[numWords];
-  assert(result && "APInt memory allocation fails!");
+  uint64_t *result = new uint64_t[numWords];
   memset(result, 0, numWords * sizeof(uint64_t));
   return result;
 }
@@ -42,9 +41,7 @@ inline static uint64_t* getClearedMemory(unsigned numWords) {
 /// A utility function for allocating memory and checking for allocation
 /// failure.  The content is not zeroed.
 inline static uint64_t* getMemory(unsigned numWords) {
-  uint64_t * result = new uint64_t[numWords];
-  assert(result && "APInt memory allocation fails!");
-  return result;
+  return new uint64_t[numWords];
 }
 
 /// A utility function that converts a character to a digit.

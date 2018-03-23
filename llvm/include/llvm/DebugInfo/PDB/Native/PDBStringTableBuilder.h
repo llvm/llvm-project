@@ -31,6 +31,16 @@ struct MSFLayout;
 namespace pdb {
 
 class PDBFileBuilder;
+class PDBStringTableBuilder;
+
+struct StringTableHashTraits {
+  PDBStringTableBuilder *Table;
+
+  explicit StringTableHashTraits(PDBStringTableBuilder &Table);
+  uint32_t hashLookupKey(StringRef S) const;
+  StringRef storageKeyToLookupKey(uint32_t Offset) const;
+  uint32_t lookupKeyToStorageKey(StringRef S);
+};
 
 class PDBStringTableBuilder {
 public:

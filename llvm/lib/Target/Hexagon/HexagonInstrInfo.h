@@ -346,7 +346,11 @@ public:
   /// HexagonInstrInfo specifics.
 
   unsigned createVR(MachineFunction *MF, MVT VT) const;
+  MachineInstr *findLoopInstr(MachineBasicBlock *BB, unsigned EndLoopOp,
+                              MachineBasicBlock *TargetBB,
+                              SmallPtrSet<MachineBasicBlock *, 8> &Visited) const;
 
+  bool isBaseImmOffset(const MachineInstr &MI) const;
   bool isAbsoluteSet(const MachineInstr &MI) const;
   bool isAccumulator(const MachineInstr &MI) const;
   bool isAddrModeWithOffset(const MachineInstr &MI) const;

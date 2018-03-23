@@ -316,8 +316,10 @@ void HexagonExpandCondsets::updateKillFlags(unsigned Reg) {
   auto KillAt = [this,Reg] (SlotIndex K, LaneBitmask LM) -> void {
     // Set the <kill> flag on a use of Reg whose lane mask is contained in LM.
     MachineInstr *MI = LIS->getInstructionFromIndex(K);
-    for (auto &Op : MI->operands()) {
-      if (!Op.isReg() || !Op.isUse() || Op.getReg() != Reg)
+    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+      MachineOperand &Op = MI->getOperand(i);
+      if (!Op.isReg() || !Op.isUse() || Op.getReg() != Reg ||
+          MI->isRegTiedToDefOperand(i))
         continue;
       LaneBitmask SLM = getLaneMask(Reg, Op.getSubReg());
       if ((SLM & LM) == SLM) {
@@ -1324,7 +1326,6 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
-
 FunctionPass *llvm::createHexagonExpandCondsets() {
   return new HexagonExpandCondsets();
 }
