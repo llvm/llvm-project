@@ -1,4 +1,4 @@
-//===- CallEvent.h - Wrapper for all function and method calls ----*- C++ -*--//
+//===- CallEvent.h - Wrapper for all function and method calls --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,19 +16,42 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CALLEVENT_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CALLEVENT_H
 
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <limits>
 #include <utility>
 
 namespace clang {
+
+class LocationContext;
 class ProgramPoint;
 class ProgramPointTag;
+class StackFrameContext;
 
 namespace ento {
 
@@ -48,19 +71,20 @@ enum CallEventKind {
 };
 
 class CallEvent;
-class CallEventManager;
 
 /// This class represents a description of a function call using the number of
 /// arguments and the name of the function.
 class CallDescription {
   friend CallEvent;
-  mutable IdentifierInfo *II;
-  mutable bool IsLookupDone;
+
+  mutable IdentifierInfo *II = nullptr;
+  mutable bool IsLookupDone = false;
   StringRef FuncName;
   unsigned RequiredArgs;
 
 public:
-  const static unsigned NoArgRequirement = ~0;
+  const static unsigned NoArgRequirement = std::numeric_limits<unsigned>::max();
+
   /// \brief Constructs a CallDescription object.
   ///
   /// @param FuncName The name of the function that will be matched.
@@ -69,8 +93,7 @@ public:
   /// call. Omit this parameter to match every occurance of call with a given
   /// name regardless the number of arguments.
   CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
-      : II(nullptr), IsLookupDone(false), FuncName(FuncName),
-        RequiredArgs(RequiredArgs) {}
+      : FuncName(FuncName), RequiredArgs(RequiredArgs) {}
 
   /// \brief Get the name of the function that this object matches.
   StringRef getFunctionName() const { return FuncName; }
@@ -104,18 +127,19 @@ public:
 class RuntimeDefinition {
   /// The Declaration of the function which could be called at runtime.
   /// NULL if not available.
-  const Decl *D;
+  const Decl *D = nullptr;
 
   /// The region representing an object (ObjC/C++) on which the method is
   /// called. With dynamic dispatch, the method definition depends on the
   /// runtime type of this object. NULL when the DynamicTypeInfo is
   /// precise.
-  const MemRegion *R;
+  const MemRegion *R = nullptr;
 
 public:
-  RuntimeDefinition(): D(nullptr), R(nullptr) {}
-  RuntimeDefinition(const Decl *InD): D(InD), R(nullptr) {}
+  RuntimeDefinition() = default;
+  RuntimeDefinition(const Decl *InD): D(InD) {}
   RuntimeDefinition(const Decl *InD, const MemRegion *InR): D(InD), R(InR) {}
+
   const Decl *getDecl() { return D; }
     
   /// \brief Check if the definition we have is precise. 
@@ -139,14 +163,12 @@ public:
 /// Use the "Data" and "Location" fields instead.
 class CallEvent {
 public:
-  typedef CallEventKind Kind;
+  using Kind = CallEventKind;
 
 private:
   ProgramStateRef State;
   const LocationContext *LCtx;
   llvm::PointerUnion<const Expr *, const Decl *> Origin;
-
-  void operator=(const CallEvent &) = delete;
 
 protected:
   // This is user data for subclasses.
@@ -158,9 +180,10 @@ protected:
   SourceLocation Location;
 
 private:
-  mutable unsigned RefCount;
-
   template <typename T> friend struct llvm::IntrusiveRefCntPtrInfo;
+
+  mutable unsigned RefCount = 0;
+
   void Retain() const { ++RefCount; }
   void Release() const;
 
@@ -168,15 +191,15 @@ protected:
   friend class CallEventManager;
 
   CallEvent(const Expr *E, ProgramStateRef state, const LocationContext *lctx)
-      : State(std::move(state)), LCtx(lctx), Origin(E), RefCount(0) {}
+      : State(std::move(state)), LCtx(lctx), Origin(E) {}
 
   CallEvent(const Decl *D, ProgramStateRef state, const LocationContext *lctx)
-      : State(std::move(state)), LCtx(lctx), Origin(D), RefCount(0) {}
+      : State(std::move(state)), LCtx(lctx), Origin(D) {}
 
   // DO NOT MAKE PUBLIC
   CallEvent(const CallEvent &Original)
-    : State(Original.State), LCtx(Original.LCtx), Origin(Original.Origin),
-      Data(Original.Data), Location(Original.Location), RefCount(0) {}
+      : State(Original.State), LCtx(Original.LCtx), Origin(Original.Origin),
+        Data(Original.Data), Location(Original.Location) {}
 
   /// Copies this CallEvent, with vtable intact, into a new block of memory.
   virtual void cloneTo(void *Dest) const = 0;
@@ -186,8 +209,7 @@ protected:
     return getState()->getSVal(S, getLocationContext());
   }
 
-
-  typedef SmallVectorImpl<SVal> ValueList;
+  using ValueList = SmallVectorImpl<SVal>;
 
   /// \brief Used to specify non-argument regions that will be invalidated as a
   /// result of this call.
@@ -195,7 +217,8 @@ protected:
                  RegionAndSymbolInvalidationTraits *ETraits) const {}
 
 public:
-  virtual ~CallEvent() {}
+  CallEvent &operator=(const CallEvent &) = delete;
+  virtual ~CallEvent() = default;
 
   /// \brief Returns the kind of call this is.
   virtual Kind getKind() const = 0;
@@ -248,7 +271,7 @@ public:
 
     // Special case for implicitly-declared global operator new/delete.
     // These should be considered system functions.
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
       return FD->isOverloadedOperator() && FD->isImplicit() && FD->isGlobal();
 
     return false;
@@ -333,7 +356,7 @@ public:
   // FIXME: Move this down to AnyFunctionCall once checkers have more
   // precise callbacks.
   const IdentifierInfo *getCalleeIdentifier() const {
-    const NamedDecl *ND = dyn_cast_or_null<NamedDecl>(getDecl());
+    const auto *ND = dyn_cast_or_null<NamedDecl>(getDecl());
     if (!ND)
       return nullptr;
     return ND->getIdentifier();
@@ -350,8 +373,8 @@ public:
   ProgramStateRef invalidateRegions(unsigned BlockCount,
                                     ProgramStateRef Orig = nullptr) const;
 
-  typedef std::pair<Loc, SVal> FrameBindingTy;
-  typedef SmallVectorImpl<FrameBindingTy> BindingsTy;
+  using FrameBindingTy = std::pair<Loc, SVal>;
+  using BindingsTy = SmallVectorImpl<FrameBindingTy>;
 
   /// Populates the given SmallVector with the bindings in the callee's stack
   /// frame at the start of this call.
@@ -393,10 +416,10 @@ public:
   /// Remember that the number of formal parameters may not match the number
   /// of arguments for all calls. However, the first parameter will always
   /// correspond with the argument value returned by \c getArgSVal(0).
-  virtual ArrayRef<ParmVarDecl*> parameters() const = 0;
+  virtual ArrayRef<ParmVarDecl *> parameters() const = 0;
 
-  typedef llvm::mapped_iterator<ArrayRef<ParmVarDecl*>::iterator, GetTypeFn>
-    param_type_iterator;
+  using param_type_iterator =
+      llvm::mapped_iterator<ArrayRef<ParmVarDecl *>::iterator, GetTypeFn>;
 
   /// Returns an iterator over the types of the call's formal parameters.
   ///
@@ -416,18 +439,17 @@ public:
   void dump() const;
 };
 
-
 /// \brief Represents a call to any sort of function that might have a
 /// FunctionDecl.
 class AnyFunctionCall : public CallEvent {
 protected:
   AnyFunctionCall(const Expr *E, ProgramStateRef St,
                   const LocationContext *LCtx)
-    : CallEvent(E, St, LCtx) {}
+      : CallEvent(E, St, LCtx) {}
   AnyFunctionCall(const Decl *D, ProgramStateRef St,
                   const LocationContext *LCtx)
-    : CallEvent(D, St, LCtx) {}
-  AnyFunctionCall(const AnyFunctionCall &Other) : CallEvent(Other) {}
+      : CallEvent(D, St, LCtx) {}
+  AnyFunctionCall(const AnyFunctionCall &Other) = default;
 
 public:
   // This function is overridden by subclasses, but they must return
@@ -460,9 +482,9 @@ class SimpleFunctionCall : public AnyFunctionCall {
 protected:
   SimpleFunctionCall(const CallExpr *CE, ProgramStateRef St,
                      const LocationContext *LCtx)
-    : AnyFunctionCall(CE, St, LCtx) {}
-  SimpleFunctionCall(const SimpleFunctionCall &Other)
-    : AnyFunctionCall(Other) {}
+      : AnyFunctionCall(CE, St, LCtx) {}
+  SimpleFunctionCall(const SimpleFunctionCall &Other) = default;
+
   void cloneTo(void *Dest) const override {
     new (Dest) SimpleFunctionCall(*this);
   }
@@ -496,9 +518,9 @@ class BlockCall : public CallEvent {
 protected:
   BlockCall(const CallExpr *CE, ProgramStateRef St,
             const LocationContext *LCtx)
-    : CallEvent(CE, St, LCtx) {}
+      : CallEvent(CE, St, LCtx) {}
+  BlockCall(const BlockCall &Other) = default;
 
-  BlockCall(const BlockCall &Other) : CallEvent(Other) {}
   void cloneTo(void *Dest) const override { new (Dest) BlockCall(*this); }
 
   void getExtraInvalidatedValues(ValueList &Values,
@@ -598,18 +620,16 @@ public:
 /// it is written.
 class CXXInstanceCall : public AnyFunctionCall {
 protected:
-  void getExtraInvalidatedValues(ValueList &Values, 
-         RegionAndSymbolInvalidationTraits *ETraits) const override;
-
   CXXInstanceCall(const CallExpr *CE, ProgramStateRef St,
                   const LocationContext *LCtx)
-    : AnyFunctionCall(CE, St, LCtx) {}
+      : AnyFunctionCall(CE, St, LCtx) {}
   CXXInstanceCall(const FunctionDecl *D, ProgramStateRef St,
                   const LocationContext *LCtx)
-    : AnyFunctionCall(D, St, LCtx) {}
+      : AnyFunctionCall(D, St, LCtx) {}
+  CXXInstanceCall(const CXXInstanceCall &Other) = default;
 
-
-  CXXInstanceCall(const CXXInstanceCall &Other) : AnyFunctionCall(Other) {}
+  void getExtraInvalidatedValues(ValueList &Values, 
+         RegionAndSymbolInvalidationTraits *ETraits) const override;
 
 public:
   /// \brief Returns the expression representing the implicit 'this' object.
@@ -640,9 +660,9 @@ class CXXMemberCall : public CXXInstanceCall {
 protected:
   CXXMemberCall(const CXXMemberCallExpr *CE, ProgramStateRef St,
                 const LocationContext *LCtx)
-    : CXXInstanceCall(CE, St, LCtx) {}
+      : CXXInstanceCall(CE, St, LCtx) {}
+  CXXMemberCall(const CXXMemberCall &Other) = default;
 
-  CXXMemberCall(const CXXMemberCall &Other) : CXXInstanceCall(Other) {}
   void cloneTo(void *Dest) const override { new (Dest) CXXMemberCall(*this); }
 
 public:
@@ -681,10 +701,9 @@ class CXXMemberOperatorCall : public CXXInstanceCall {
 protected:
   CXXMemberOperatorCall(const CXXOperatorCallExpr *CE, ProgramStateRef St,
                         const LocationContext *LCtx)
-    : CXXInstanceCall(CE, St, LCtx) {}
+      : CXXInstanceCall(CE, St, LCtx) {}
+  CXXMemberOperatorCall(const CXXMemberOperatorCall &Other) = default;
 
-  CXXMemberOperatorCall(const CXXMemberOperatorCall &Other)
-    : CXXInstanceCall(Other) {}
   void cloneTo(void *Dest) const override {
     new (Dest) CXXMemberOperatorCall(*this);
   }
@@ -697,6 +716,7 @@ public:
   unsigned getNumArgs() const override {
     return getOriginExpr()->getNumArgs() - 1;
   }
+
   const Expr *getArgExpr(unsigned Index) const override {
     return getOriginExpr()->getArg(Index + 1);
   }
@@ -718,7 +738,7 @@ class CXXDestructorCall : public CXXInstanceCall {
   friend class CallEventManager;
 
 protected:
-  typedef llvm::PointerIntPair<const MemRegion *, 1, bool> DtorDataTy;
+  using DtorDataTy = llvm::PointerIntPair<const MemRegion *, 1, bool>;
 
   /// Creates an implicit destructor.
   ///
@@ -730,12 +750,13 @@ protected:
   CXXDestructorCall(const CXXDestructorDecl *DD, const Stmt *Trigger,
                     const MemRegion *Target, bool IsBaseDestructor,
                     ProgramStateRef St, const LocationContext *LCtx)
-    : CXXInstanceCall(DD, St, LCtx) {
+      : CXXInstanceCall(DD, St, LCtx) {
     Data = DtorDataTy(Target, IsBaseDestructor).getOpaqueValue();
     Location = Trigger->getLocEnd();
   }
 
-  CXXDestructorCall(const CXXDestructorCall &Other) : CXXInstanceCall(Other) {}
+  CXXDestructorCall(const CXXDestructorCall &Other) = default;
+
   void cloneTo(void *Dest) const override {new (Dest) CXXDestructorCall(*this);}
 
 public:
@@ -775,11 +796,12 @@ protected:
   /// \param LCtx The location context at this point in the program.
   CXXConstructorCall(const CXXConstructExpr *CE, const MemRegion *Target,
                      ProgramStateRef St, const LocationContext *LCtx)
-    : AnyFunctionCall(CE, St, LCtx) {
+      : AnyFunctionCall(CE, St, LCtx) {
     Data = Target;
   }
 
-  CXXConstructorCall(const CXXConstructorCall &Other) : AnyFunctionCall(Other){}
+  CXXConstructorCall(const CXXConstructorCall &Other) = default;
+
   void cloneTo(void *Dest) const override { new (Dest) CXXConstructorCall(*this); }
 
   void getExtraInvalidatedValues(ValueList &Values,
@@ -822,9 +844,9 @@ class CXXAllocatorCall : public AnyFunctionCall {
 protected:
   CXXAllocatorCall(const CXXNewExpr *E, ProgramStateRef St,
                    const LocationContext *LCtx)
-    : AnyFunctionCall(E, St, LCtx) {}
+      : AnyFunctionCall(E, St, LCtx) {}
+  CXXAllocatorCall(const CXXAllocatorCall &Other) = default;
 
-  CXXAllocatorCall(const CXXAllocatorCall &Other) : AnyFunctionCall(Other) {}
   void cloneTo(void *Dest) const override { new (Dest) CXXAllocatorCall(*this); }
 
 public:
@@ -875,11 +897,12 @@ class ObjCMethodCall : public CallEvent {
 protected:
   ObjCMethodCall(const ObjCMessageExpr *Msg, ProgramStateRef St,
                  const LocationContext *LCtx)
-    : CallEvent(Msg, St, LCtx) {
+      : CallEvent(Msg, St, LCtx) {
     Data = nullptr;
   }
 
-  ObjCMethodCall(const ObjCMethodCall &Other) : CallEvent(Other) {}
+  ObjCMethodCall(const ObjCMethodCall &Other) = default;
+
   void cloneTo(void *Dest) const override { new (Dest) ObjCMethodCall(*this); }
 
   void getExtraInvalidatedValues(ValueList &Values,
@@ -893,12 +916,15 @@ public:
   virtual const ObjCMessageExpr *getOriginExpr() const {
     return cast<ObjCMessageExpr>(CallEvent::getOriginExpr());
   }
+
   const ObjCMethodDecl *getDecl() const override {
     return getOriginExpr()->getMethodDecl();
   }
+
   unsigned getNumArgs() const override {
     return getOriginExpr()->getNumArgs();
   }
+
   const Expr *getArgExpr(unsigned Index) const override {
     return getOriginExpr()->getArg(Index);
   }
@@ -906,9 +932,11 @@ public:
   bool isInstanceMessage() const {
     return getOriginExpr()->isInstanceMessage();
   }
+
   ObjCMethodFamily getMethodFamily() const {
     return getOriginExpr()->getMethodFamily();
   }
+
   Selector getSelector() const {
     return getOriginExpr()->getSelector();
   }
@@ -971,7 +999,6 @@ public:
   }
 };
 
-
 /// \brief Manages the lifetime of CallEvent objects.
 ///
 /// CallEventManager provides a way to create arbitrary CallEvents "on the
@@ -984,7 +1011,8 @@ class CallEventManager {
 
   llvm::BumpPtrAllocator &Alloc;
   SmallVector<void *, 8> Cache;
-  typedef SimpleFunctionCall CallEventTemplateTy;
+
+  using CallEventTemplateTy = SimpleFunctionCall;
 
   void reclaim(const void *Memory) {
     Cache.push_back(const_cast<void *>(Memory));
@@ -1032,10 +1060,8 @@ class CallEventManager {
 public:
   CallEventManager(llvm::BumpPtrAllocator &alloc) : Alloc(alloc) {}
 
-
   CallEventRef<>
   getCaller(const StackFrameContext *CalleeCtx, ProgramStateRef State);
-
 
   CallEventRef<>
   getSimpleCall(const CallExpr *E, ProgramStateRef State,
@@ -1066,7 +1092,6 @@ public:
     return create<CXXAllocatorCall>(E, State, LCtx);
   }
 };
-
 
 template <typename T>
 CallEventRef<T> CallEvent::cloneWithState(ProgramStateRef NewState) const {
@@ -1099,19 +1124,22 @@ inline void CallEvent::Release() const {
   this->~CallEvent();
 }
 
-} // end namespace ento
-} // end namespace clang
+} // namespace ento
+
+} // namespace clang
 
 namespace llvm {
-  // Support isa<>, cast<>, and dyn_cast<> for CallEventRef.
-  template<class T> struct simplify_type< clang::ento::CallEventRef<T> > {
-    typedef const T *SimpleType;
 
-    static SimpleType
-    getSimplifiedValue(clang::ento::CallEventRef<T> Val) {
-      return Val.get();
-    }
-  };
-}
+// Support isa<>, cast<>, and dyn_cast<> for CallEventRef.
+template<class T> struct simplify_type< clang::ento::CallEventRef<T>> {
+  using SimpleType = const T *;
 
-#endif
+  static SimpleType
+  getSimplifiedValue(clang::ento::CallEventRef<T> Val) {
+    return Val.get();
+  }
+};
+
+} // namespace llvm
+
+#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CALLEVENT_H
