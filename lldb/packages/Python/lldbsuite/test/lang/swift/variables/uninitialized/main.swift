@@ -28,6 +28,8 @@ struct A<T> {
     }
 
     mutating func a() -> T? {
+        var adict : [String: Any] = ["key1" : "val1", "key2" : 9999] //% self.expect("frame var adict", "Frame var of uninitialized variable returns.")
+        adict["key3"] = 1.0
         var t : T? = nil
         let c = cs[0]
 
@@ -35,7 +37,7 @@ struct A<T> {
         let k2 = b(t:c) //% self.expect("expression -- c", "Unreadable variable is ignored", substrs = ["= 3"])
         let k3 = b(t:c)
 
-        if let maybeT = process(i:0, k1:k1, k2:k2, k3:k3) {
+        if let maybeT = process(i : adict.count, k1:k1, k2:k2, k3:k3) {
             t = maybeT
         }
 
