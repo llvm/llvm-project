@@ -189,8 +189,10 @@ public:
     // into the constructor. An assertion would require passing an ASTContext
     // which would mean paying for something we don't use.
     assert(C && (isa<TemporaryObjectConstructionContext>(C) ||
+                 // These are possible in C++17 due to mandatory copy elision.
                  isa<ReturnedValueConstructionContext>(C) ||
-                 isa<VariableConstructionContext>(C)));
+                 isa<VariableConstructionContext>(C) ||
+                 isa<ConstructorInitializerConstructionContext>(C)));
     Data2.setPointer(const_cast<ConstructionContext *>(C));
   }
 

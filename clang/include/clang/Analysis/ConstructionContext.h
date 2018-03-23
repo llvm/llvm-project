@@ -102,7 +102,10 @@ public:
     CXX17ElidedCopyVariableKind,
     VARIABLE_BEGIN = SimpleVariableKind,
     VARIABLE_END = CXX17ElidedCopyVariableKind,
-    ConstructorInitializerKind,
+    SimpleConstructorInitializerKind,
+    CXX17ElidedCopyConstructorInitializerKind,
+    INITIALIZER_BEGIN = SimpleConstructorInitializerKind,
+    INITIALIZER_END = CXX17ElidedCopyConstructorInitializerKind,
     NewAllocatedObjectKind,
     TemporaryObjectKind,
     SimpleReturnedValueKind,
@@ -202,17 +205,15 @@ public:
   }
 };
 
-/// Represents construction into a field or a base class within a bigger object
-/// via a constructor initializer, eg. T(): field(123) { ... }.
+// An abstract base class for constructor-initializer-based constructors.
 class ConstructorInitializerConstructionContext : public ConstructionContext {
   const CXXCtorInitializer *I;
 
-  friend class ConstructionContext; // Allows to create<>() itself.
-
+protected:
   explicit ConstructorInitializerConstructionContext(
-      const CXXCtorInitializer *I)
-      : ConstructionContext(ConstructionContext::ConstructorInitializerKind),
-        I(I) {
+      ConstructionContext::Kind K, const CXXCtorInitializer *I)
+      : ConstructionContext(K), I(I) {
+    assert(classof(this));
     assert(I);
   }
 
@@ -220,7 +221,57 @@ public:
   const CXXCtorInitializer *getCXXCtorInitializer() const { return I; }
 
   static bool classof(const ConstructionContext *CC) {
-    return CC->getKind() == ConstructorInitializerKind;
+    return CC->getKind() >= INITIALIZER_BEGIN &&
+           CC->getKind() <= INITIALIZER_END;
+  }
+};
+
+/// Represents construction into a field or a base class within a bigger object
+/// via a constructor initializer, eg. T(): field(123) { ... }.
+class SimpleConstructorInitializerConstructionContext
+    : public ConstructorInitializerConstructionContext {
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit SimpleConstructorInitializerConstructionContext(
+      const CXXCtorInitializer *I)
+      : ConstructorInitializerConstructionContext(
+            ConstructionContext::SimpleConstructorInitializerKind, I) {}
+
+public:
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == SimpleConstructorInitializerKind;
+  }
+};
+
+/// Represents construction into a field or a base class within a bigger object
+/// via a constructor initializer, with a single constructor, eg.
+/// T(): field(Field(123)) { ... }. Such construction context may only appear
+/// in C++17 because previously it was split into a temporary object constructor
+/// and an elidable simple constructor-initializer copy-constructor and we were
+/// producing separate construction contexts for these constructors. In C++17
+/// we have a single construction context that combines both. Note that if the
+/// object has trivial destructor, then this code is indistinguishable from
+/// a simple constructor-initializer constructor on the AST level; in this case
+/// we provide a simple constructor-initializer construction context.
+class CXX17ElidedCopyConstructorInitializerConstructionContext
+    : public ConstructorInitializerConstructionContext {
+  const CXXBindTemporaryExpr *BTE;
+
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit CXX17ElidedCopyConstructorInitializerConstructionContext(
+      const CXXCtorInitializer *I, const CXXBindTemporaryExpr *BTE)
+      : ConstructorInitializerConstructionContext(
+            CXX17ElidedCopyConstructorInitializerKind, I),
+        BTE(BTE) {
+    assert(BTE);
+  }
+
+public:
+  const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
+
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == CXX17ElidedCopyConstructorInitializerKind;
   }
 };
 

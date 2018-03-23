@@ -4911,10 +4911,18 @@ static void print_construction_context(raw_ostream &OS,
                                        const ConstructionContext *CC) {
   const Stmt *S1 = nullptr, *S2 = nullptr;
   switch (CC->getKind()) {
-  case ConstructionContext::ConstructorInitializerKind: {
+  case ConstructionContext::SimpleConstructorInitializerKind: {
     OS << ", ";
-    const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
-    print_initializer(OS, Helper, ICC->getCXXCtorInitializer());
+    const auto *SICC = cast<SimpleConstructorInitializerConstructionContext>(CC);
+    print_initializer(OS, Helper, SICC->getCXXCtorInitializer());
+    break;
+  }
+  case ConstructionContext::CXX17ElidedCopyConstructorInitializerKind: {
+    OS << ", ";
+    const auto *CICC =
+        cast<CXX17ElidedCopyConstructorInitializerConstructionContext>(CC);
+    print_initializer(OS, Helper, CICC->getCXXCtorInitializer());
+    S2 = CICC->getCXXBindTemporaryExpr();
     break;
   }
   case ConstructionContext::SimpleVariableKind: {

@@ -62,21 +62,31 @@ const ConstructionContext *ConstructionContext::createFromLayers(
       // lifetime extension on the parent layer.
       if (const ConstructionContextLayer *ParentLayer = TopLayer->getParent()) {
         assert(ParentLayer->isLast());
+        // C++17 *requires* elision of the constructor at the return site
+        // and at variable/member initialization site, while previous standards
+        // were allowing an optional elidable constructor.
+        // This is the C++17 copy-elided construction into a ctor initializer.
+        if (const CXXCtorInitializer *I = ParentLayer->getTriggerInit()) {
+          return create<
+              CXX17ElidedCopyConstructorInitializerConstructionContext>(C,
+                                                                        I, BTE);
+        }
+        assert(ParentLayer->getTriggerStmt() &&
+               "Non-statement-based layers have been handled above!");
+        // This is the normal, non-C++17 case: a temporary object which has
+        // both destruction and materialization info attached to it in the AST.
         if ((MTE = dyn_cast<MaterializeTemporaryExpr>(
                  ParentLayer->getTriggerStmt()))) {
-          // A temporary object which has both destruction and
-          // materialization info.
           return create<TemporaryObjectConstructionContext>(C, BTE, MTE);
         }
-        // C++17 *requires* elision of the constructor at the return site
-        // and at variable initialization site, while previous standards
-        // were allowing an optional elidable constructor.
+        // This is C++17 copy-elided construction into return statement.
         if (auto *RS = dyn_cast<ReturnStmt>(ParentLayer->getTriggerStmt())) {
           assert(!RS->getRetValue()->getType().getCanonicalType()
                     ->getAsCXXRecordDecl()->hasTrivialDestructor());
           return create<CXX17ElidedCopyReturnedValueConstructionContext>(C,
                                                                        RS, BTE);
         }
+        // This is C++17 copy-elided construction into a simple variable.
         if (auto *DS = dyn_cast<DeclStmt>(ParentLayer->getTriggerStmt())) {
           assert(!cast<VarDecl>(DS->getSingleDecl())->getType()
                       .getCanonicalType()->getAsCXXRecordDecl()
@@ -104,7 +114,7 @@ const ConstructionContext *ConstructionContext::createFromLayers(
     llvm_unreachable("Unexpected construction context with statement!");
   } else if (const CXXCtorInitializer *I = TopLayer->getTriggerInit()) {
     assert(TopLayer->isLast());
-    return create<ConstructorInitializerConstructionContext>(C, I);
+    return create<SimpleConstructorInitializerConstructionContext>(C, I);
   }
   llvm_unreachable("Unexpected construction context!");
 }

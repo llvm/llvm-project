@@ -252,6 +252,34 @@ public:
   D(double): C(C::get()), c1(new C(C::get())) {}
 };
 
+// Let's see if initializers work well for fields with destructors.
+class E {
+public:
+  static E get();
+  ~E();
+};
+
+class F {
+  E e;
+
+public:
+// FIXME: There should be no temporary destructor in C++17.
+// CHECK: F()
+// CHECK:          1: E::get
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class ctor_initializers::E (*)(
+// CXX11-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
+// CXX11-NEXT:     4: [B1.3] (BindTemporary)
+// CXX11-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class ctor_initializers::E)
+// CXX11-NEXT:     6: [B1.5]
+// CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, e([B1.6]) (Member initializer), class ctor_initializers
+// CXX11-NEXT:     8: e([B1.7]) (Member initializer)
+// CXX11-NEXT:     9: ~ctor_initializers::E() (Temporary object destructor)
+// CXX17-NEXT:     3: [B1.2]() (CXXRecordTypedCall, e([B1.4]) (Member initializer), [B1.4])
+// CXX17-NEXT:     4: [B1.3] (BindTemporary)
+// CXX17-NEXT:     5: e([B1.4]) (Member initializer)
+// CXX17-NEXT:     6: ~ctor_initializers::E() (Temporary object destructor)
+  F(): e(E::get()) {}
+};
 } // end namespace ctor_initializers
 
 namespace return_stmt_without_dtor {
