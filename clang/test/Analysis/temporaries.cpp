@@ -895,6 +895,45 @@ void test_ternary_temporary_with_copy(int coin) {
 }
 } // namespace test_match_constructors_and_destructors
 
+namespace destructors_for_return_values {
+
+class C {
+public:
+  ~C() {
+    1 / 0; // expected-warning{{Division by zero}}
+  }
+};
+
+C make();
+
+void testFloatingCall() {
+  make();
+  // Should have divided by zero in the destructor.
+  clang_analyzer_warnIfReached();
+#ifndef TEMPORARY_DTORS
+    // expected-warning@-2{{REACHABLE}}
+#endif
+}
+
+void testLifetimeExtendedCall() {
+  {
+    const C &c = make();
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+  }
+  // Should have divided by zero in the destructor.
+  clang_analyzer_warnIfReached(); // no-warning
+}
+
+void testCopiedCall() {
+  C c = make();
+  // Should have divided by zero in the temporary destructor.
+  clang_analyzer_warnIfReached();
+#ifndef TEMPORARY_DTORS
+    // expected-warning@-2{{REACHABLE}}
+#endif
+}
+} // namespace destructors_for_return_values
+
 namespace dont_forget_destructor_around_logical_op {
 int glob;
 
@@ -922,8 +961,17 @@ void test(int coin) {
   // return value of get() was initialized. However, we didn't track
   // temporaries returned from functions, so we took the wrong branch.
   coin && is(get()); // no-crash
-  // FIXME: Should be true once we inline all destructors.
-  clang_analyzer_eval(glob); // expected-warning{{UNKNOWN}}
+  if (coin) {
+    clang_analyzer_eval(glob);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-2{{TRUE}}
+#else
+    // expected-warning@-4{{UNKNOWN}}
+#endif
+  } else {
+    // The destructor is not called on this branch.
+    clang_analyzer_eval(glob); // expected-warning{{UNKNOWN}}
+  }
 }
 } // namespace dont_forget_destructor_around_logical_op
 
