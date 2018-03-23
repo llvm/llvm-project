@@ -153,6 +153,13 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
       ARMArchFeature += ",+nacl-trap";
   }
 
+  if (TT.isOSWindows()) {
+    if (ARMArchFeature.empty())
+      ARMArchFeature = "+noarm";
+    else
+      ARMArchFeature += ",+noarm";
+  }
+
   return ARMArchFeature;
 }
 

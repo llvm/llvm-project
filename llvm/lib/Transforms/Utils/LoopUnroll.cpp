@@ -403,8 +403,9 @@ LoopUnrollResult llvm::UnrollLoop(
          "Did not expect runtime trip-count unrolling "
          "and peeling for the same loop");
 
+  bool Peeled = false;
   if (PeelCount) {
-    bool Peeled = peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
+    Peeled = peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
 
     // Successful peeling may result in a change in the loop preheader/trip
     // counts. If we later unroll the loop, we want these to be updated.
@@ -790,7 +791,7 @@ LoopUnrollResult llvm::UnrollLoop(
   }
 
   // Simplify any new induction variables in the partially unrolled loop.
-  if (SE && !CompletelyUnroll && Count > 1) {
+  if (SE && !CompletelyUnroll && (Count > 1 || Peeled)) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     simplifyLoopIVs(L, SE, DT, LI, DeadInsts);
 

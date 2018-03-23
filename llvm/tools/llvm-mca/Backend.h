@@ -47,7 +47,7 @@ class HWStallEvent;
 class Backend {
   const llvm::MCSubtargetInfo &STI;
 
-  std::unique_ptr<InstrBuilder> IB;
+  InstrBuilder &IB;
   std::unique_ptr<Scheduler> HWS;
   std::unique_ptr<DispatchUnit> DU;
   SourceMgr &SM;
@@ -59,12 +59,12 @@ class Backend {
   void runCycle(unsigned Cycle);
 
 public:
-  Backend(const llvm::MCSubtargetInfo &Subtarget, const llvm::MCInstrInfo &MCII,
-          const llvm::MCRegisterInfo &MRI, SourceMgr &Source,
+  Backend(const llvm::MCSubtargetInfo &Subtarget,
+          const llvm::MCRegisterInfo &MRI, InstrBuilder &B, SourceMgr &Source,
           unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
           unsigned MaxRetirePerCycle = 0, unsigned LoadQueueSize = 0,
           unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
-      : STI(Subtarget),
+      : STI(Subtarget), IB(B),
         HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(),
                                          LoadQueueSize, StoreQueueSize,
                                          AssumeNoAlias)),
@@ -72,7 +72,6 @@ public:
             this, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
             RegisterFileSize, MaxRetirePerCycle, DispatchWidth, HWS.get())),
         SM(Source), Cycles(0) {
-    IB = llvm::make_unique<InstrBuilder>(Subtarget, MCII);
     HWS->setDispatchUnit(DU.get());
   }
 
@@ -98,7 +97,6 @@ public:
   void notifyReleasedBuffers(llvm::ArrayRef<unsigned> Buffers);
   void notifyCycleEnd(unsigned Cycle);
 };
-
 } // namespace mca
 
 #endif

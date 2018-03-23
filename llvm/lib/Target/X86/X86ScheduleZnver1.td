@@ -367,8 +367,7 @@ def : InstRW<[WriteALULd],
 // INC DEC NOT NEG.
 // m.
 def : InstRW<[WriteALULd],
-             (instregex "(INC|DEC|NOT|NEG)(8|16|32|64)m",
-              "(INC|DEC)64(16|32)m")>;
+             (instregex "(INC|DEC|NOT|NEG)(8|16|32|64)m")>;
 
 // MUL IMUL.
 // r16.
@@ -499,7 +498,7 @@ def ZnWriteRET : SchedWriteRes<[ZnALU03]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[ZnWriteRET], (instregex "RET(L|Q|W)", "LRET(L|Q|W)",
-                            "IRET(D|Q)", "RETF")>;
+                            "IRET(16|32|64)")>;
 
 //-- Logic instructions --//
 
@@ -913,7 +912,7 @@ def : InstRW<[ZnWriteFPU2], (instregex "MMX_MOVD64rr", "MMX_MOVD64to64rr",
 def : InstRW<[ZnWriteToALU2], (instregex "VMOVPQIto64rr")>;
 
 // (x)mm <- r64.
-def : InstRW<[ZnWriteFPU2], (instregex "VMOV64toPQIrr", "VMOVZQI2PQIrr")>;
+def : InstRW<[ZnWriteFPU2], (instregex "VMOV64toPQIrr")>;
 
 // (x)mm <- (x)mm.
 def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVQ64rr")>;
@@ -1033,7 +1032,7 @@ def ZnWritePEXTRr : SchedWriteRes<[ZnFPU12, ZnFPU2]> {
   let Latency = 2;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[ZnWritePEXTRr], (instregex "PEXTR(B|W|D|Q)rr", "MMX_PEXTRWrr")>;
+def : InstRW<[ZnWritePEXTRr], (instregex "(V?)PEXTR(B|W|D|Q)rr", "MMX_PEXTRWrr")>;
 
 def ZnWritePEXTRm : SchedWriteRes<[ZnAGU, ZnFPU12, ZnFPU2]> {
   let Latency = 5;
@@ -1041,7 +1040,7 @@ def ZnWritePEXTRm : SchedWriteRes<[ZnAGU, ZnFPU12, ZnFPU2]> {
   let ResourceCycles = [1, 2, 3];
 }
 // m8,x,i.
-def : InstRW<[ZnWritePEXTRm], (instregex "PEXTR(B|W|D|Q)mr")>;
+def : InstRW<[ZnWritePEXTRm], (instregex "(V?)PEXTR(B|W|D|Q)mr")>;
 
 // VPBROADCAST B/W.
 // x, m8/16.

@@ -102,6 +102,7 @@ class VectorType;
 
       VMOVRRD,      // double to two gprs.
       VMOVDRR,      // Two gprs to double.
+      VMOVSR,       // move gpr to single, used for f32 literal constructed in a gpr
 
       EH_SJLJ_SETJMP,         // SjLj exception handling setjmp.
       EH_SJLJ_LONGJMP,        // SjLj exception handling longjmp.
