@@ -918,11 +918,6 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
         self.cxx.addWarningFlagIfSupported('-Wno-noexcept-type')
         self.cxx.addWarningFlagIfSupported('-Wno-aligned-allocation-unavailable')
-        # FIXME: Remove this work-around. It is a temporary hack to get the
-        # throwing debug tests passing. For example:
-        #  * test/libcxx/experimental/filesystem/class.path/path.itr/iterator_db.pass.cpp
-        #  * test/libcxx/thread/futures/futures.promise/set_exception.pass.cpp
-        self.cxx.addWarningFlagIfSupported("-Wno-exceptions")
         # These warnings should be enabled in order to support the MSVC
         # team using the test suite; They enable the warnings below and
         # expect the test suite to be clean.

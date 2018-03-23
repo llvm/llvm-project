@@ -455,29 +455,51 @@ ProgramStateRef ExprEngine::addAllNecessaryTemporaryInfo(
     const LocationContext *LC, const MemRegion *R) {
   const CXXBindTemporaryExpr *BTE = nullptr;
   const MaterializeTemporaryExpr *MTE = nullptr;
-  const LocationContext *TempLC = LC;
 
   if (CC) {
-    // In case of temporary object construction, extract data necessary for
-    // destruction and lifetime extension.
-    const auto *TCC = dyn_cast<TemporaryObjectConstructionContext>(CC);
-
     // If the temporary is being returned from the function, it will be
     // destroyed or lifetime-extended in the caller stack frame.
     if (isa<ReturnedValueConstructionContext>(CC)) {
       const StackFrameContext *SFC = LC->getCurrentStackFrame();
       assert(SFC);
-      if (SFC->getParent()) {
-        TempLC = SFC->getParent();
-        const CFGElement &CallElem =
-            (*SFC->getCallSiteBlock())[SFC->getIndex()];
-        if (auto RTCElem = CallElem.getAs<CFGCXXRecordTypedCall>()) {
-          TCC = cast<TemporaryObjectConstructionContext>(
-              RTCElem->getConstructionContext());
-        }
+      LC = SFC->getParent();
+      if (!LC) {
+        // We are on the top frame. We won't ever need any info
+        // for this temporary, so don't set anything.
+        return State;
       }
+      const CFGElement &CallElem =
+          (*SFC->getCallSiteBlock())[SFC->getIndex()];
+      auto RTCElem = CallElem.getAs<CFGCXXRecordTypedCall>();
+      if (!RTCElem) {
+        // We have a parent stack frame, but no construction context for the
+        // return value. Give up until we provide the construction context
+        // at the call site.
+        return State;
+      }
+      // We use the ReturnedValueConstructionContext as an indication that we
+      // need to look for the actual construction context on the parent stack
+      // frame. This purpose has been fulfilled, so now we replace CC with the
+      // actual construction context.
+      CC = RTCElem->getConstructionContext();
+      if (!isa<TemporaryObjectConstructionContext>(CC)) {
+        // TODO: We are not returning an object into a temporary. There must
+        // be copy elision happening at the call site. We still need to
+        // explicitly support the situation when the return value is put
+        // into another return statement, i.e.
+        // ReturnedValueConstructionContexts are chained through multiple
+        // stack frames before finally settling in a temporary.
+        // We don't seem to need to explicitly support construction into
+        // a variable after a return.
+        return State;
+      }
+      // Proceed to deal with the temporary we've found on the parent
+      // stack frame.
     }
-    if (TCC) {
+
+    // In case of temporary object construction, extract data necessary for
+    // destruction and lifetime extension.
+    if (const auto *TCC = dyn_cast<TemporaryObjectConstructionContext>(CC)) {
       if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
         BTE = TCC->getCXXBindTemporaryExpr();
         MTE = TCC->getMaterializedTemporaryExpr();
@@ -496,12 +518,12 @@ ProgramStateRef ExprEngine::addAllNecessaryTemporaryInfo(
     }
 
     if (BTE) {
-      State = addInitializedTemporary(State, BTE, TempLC,
+      State = addInitializedTemporary(State, BTE, LC,
                                       cast<CXXTempObjectRegion>(R));
     }
 
     if (MTE) {
-      State = addTemporaryMaterialization(State, MTE, TempLC,
+      State = addTemporaryMaterialization(State, MTE, LC,
                                           cast<CXXTempObjectRegion>(R));
     }
   }

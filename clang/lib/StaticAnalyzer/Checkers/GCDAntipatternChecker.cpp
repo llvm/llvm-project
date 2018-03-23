@@ -43,26 +43,14 @@ using namespace ast_matchers;
 
 namespace {
 
-const char *WarningBinding = "semaphore_wait";
+// ID of a node at which the diagnostic would be emitted.
+const char *WarnAtNode = "waitcall";
 
 class GCDAntipatternChecker : public Checker<check::ASTCodeBody> {
 public:
   void checkASTCodeBody(const Decl *D,
                         AnalysisManager &AM,
                         BugReporter &BR) const;
-};
-
-class Callback : public MatchFinder::MatchCallback {
-  BugReporter &BR;
-  const GCDAntipatternChecker *C;
-  AnalysisDeclContext *ADC;
-
-public:
-  Callback(BugReporter &BR,
-           AnalysisDeclContext *ADC,
-           const GCDAntipatternChecker *C) : BR(BR), C(C), ADC(ADC) {}
-
-  virtual void run(const MatchFinder::MatchResult &Result) override;
 };
 
 auto callsName(const char *FunctionName)
@@ -81,24 +69,28 @@ auto bindAssignmentToDecl(const char *DeclName) -> decltype(hasLHS(expr())) {
                          declRefExpr(to(varDecl().bind(DeclName)))));
 }
 
-void GCDAntipatternChecker::checkASTCodeBody(const Decl *D,
-                                               AnalysisManager &AM,
-                                               BugReporter &BR) const {
-
-  // The pattern is very common in tests, and it is OK to use it there.
+/// The pattern is very common in tests, and it is OK to use it there.
+/// We have to heuristics for detecting tests: method name starts with "test"
+/// (used in XCTest), and a class name contains "mock" or "test" (used in
+/// helpers which are not tests themselves, but used exclusively in tests).
+static bool isTest(const Decl *D) {
   if (const auto* ND = dyn_cast<NamedDecl>(D)) {
     std::string DeclName = ND->getNameAsString();
     if (StringRef(DeclName).startswith("test"))
-      return;
+      return true;
   }
   if (const auto *OD = dyn_cast<ObjCMethodDecl>(D)) {
     if (const auto *CD = dyn_cast<ObjCContainerDecl>(OD->getParent())) {
       std::string ContainerName = CD->getNameAsString();
       StringRef CN(ContainerName);
       if (CN.contains_lower("test") || CN.contains_lower("mock"))
-        return;
+        return true;
     }
   }
+  return false;
+}
+
+static auto findGCDAntiPatternWithSemaphore() -> decltype(compoundStmt()) {
 
   const char *SemaphoreBinding = "semaphore_name";
   auto SemaphoreCreateM = callExpr(callsName("dispatch_semaphore_create"));
@@ -108,14 +100,6 @@ void GCDAntipatternChecker::checkASTCodeBody(const Decl *D,
           varDecl(hasDescendant(SemaphoreCreateM)).bind(SemaphoreBinding)),
       forEachDescendant(binaryOperator(bindAssignmentToDecl(SemaphoreBinding),
                      hasRHS(SemaphoreCreateM))));
-
-  auto SemaphoreWaitM = forEachDescendant(
-    callExpr(
-      allOf(
-        callsName("dispatch_semaphore_wait"),
-        equalsBoundArgDecl(0, SemaphoreBinding)
-      )
-    ).bind(WarningBinding));
 
   auto HasBlockArgumentM = hasAnyArgument(hasType(
             hasCanonicalType(blockPointerType())
@@ -129,34 +113,111 @@ void GCDAntipatternChecker::checkASTCodeBody(const Decl *D,
 
   auto HasBlockAndCallsSignalM = allOf(HasBlockArgumentM, ArgCallsSignalM);
 
-  auto AcceptsBlockM =
+  auto HasBlockCallingSignalM =
     forEachDescendant(
       stmt(anyOf(
         callExpr(HasBlockAndCallsSignalM),
         objcMessageExpr(HasBlockAndCallsSignalM)
            )));
 
-  auto FinalM = compoundStmt(SemaphoreBindingM, SemaphoreWaitM, AcceptsBlockM);
+  auto SemaphoreWaitM = forEachDescendant(
+    callExpr(
+      allOf(
+        callsName("dispatch_semaphore_wait"),
+        equalsBoundArgDecl(0, SemaphoreBinding)
+      )
+    ).bind(WarnAtNode));
 
-  MatchFinder F;
-  Callback CB(BR, AM.getAnalysisDeclContext(D), this);
-
-  F.addMatcher(FinalM, &CB);
-  F.match(*D->getBody(), AM.getASTContext());
+  return compoundStmt(
+      SemaphoreBindingM, HasBlockCallingSignalM, SemaphoreWaitM);
 }
 
-void Callback::run(const MatchFinder::MatchResult &Result) {
-  const auto *SW = Result.Nodes.getNodeAs<CallExpr>(WarningBinding);
+static auto findGCDAntiPatternWithGroup() -> decltype(compoundStmt()) {
+
+  const char *GroupBinding = "group_name";
+  auto DispatchGroupCreateM = callExpr(callsName("dispatch_group_create"));
+
+  auto GroupBindingM = anyOf(
+      forEachDescendant(
+          varDecl(hasDescendant(DispatchGroupCreateM)).bind(GroupBinding)),
+      forEachDescendant(binaryOperator(bindAssignmentToDecl(GroupBinding),
+                     hasRHS(DispatchGroupCreateM))));
+
+  auto GroupEnterM = forEachDescendant(
+      stmt(callExpr(allOf(callsName("dispatch_group_enter"),
+                          equalsBoundArgDecl(0, GroupBinding)))));
+
+  auto HasBlockArgumentM = hasAnyArgument(hasType(
+            hasCanonicalType(blockPointerType())
+            ));
+
+  auto ArgCallsSignalM = hasAnyArgument(stmt(hasDescendant(callExpr(
+          allOf(
+              callsName("dispatch_group_leave"),
+              equalsBoundArgDecl(0, GroupBinding)
+              )))));
+
+  auto HasBlockAndCallsLeaveM = allOf(HasBlockArgumentM, ArgCallsSignalM);
+
+  auto AcceptsBlockM =
+    forEachDescendant(
+      stmt(anyOf(
+        callExpr(HasBlockAndCallsLeaveM),
+        objcMessageExpr(HasBlockAndCallsLeaveM)
+           )));
+
+  auto GroupWaitM = forEachDescendant(
+    callExpr(
+      allOf(
+        callsName("dispatch_group_wait"),
+        equalsBoundArgDecl(0, GroupBinding)
+      )
+    ).bind(WarnAtNode));
+
+  return compoundStmt(GroupBindingM, GroupEnterM, AcceptsBlockM, GroupWaitM);
+}
+
+static void emitDiagnostics(const BoundNodes &Nodes,
+                            const char* Type,
+                            BugReporter &BR,
+                            AnalysisDeclContext *ADC,
+                            const GCDAntipatternChecker *Checker) {
+  const auto *SW = Nodes.getNodeAs<CallExpr>(WarnAtNode);
   assert(SW);
+
+  std::string Diagnostics;
+  llvm::raw_string_ostream OS(Diagnostics);
+  OS << "Waiting on a " << Type << " with Grand Central Dispatch creates "
+     << "useless threads and is subject to priority inversion; consider "
+     << "using a synchronous API or changing the caller to be asynchronous";
+
   BR.EmitBasicReport(
-      ADC->getDecl(), C,
-      /*Name=*/"Semaphore performance anti-pattern",
-      /*Category=*/"Performance",
-      "Waiting on a semaphore with Grand Central Dispatch creates useless "
-      "threads and is subject to priority inversion; consider "
-      "using a synchronous API or changing the caller to be asynchronous",
-      PathDiagnosticLocation::createBegin(SW, BR.getSourceManager(), ADC),
-      SW->getSourceRange());
+    ADC->getDecl(),
+    Checker,
+    /*Name=*/"GCD performance anti-pattern",
+    /*Category=*/"Performance",
+    OS.str(),
+    PathDiagnosticLocation::createBegin(SW, BR.getSourceManager(), ADC),
+    SW->getSourceRange());
+}
+
+void GCDAntipatternChecker::checkASTCodeBody(const Decl *D,
+                                             AnalysisManager &AM,
+                                             BugReporter &BR) const {
+  if (isTest(D))
+    return;
+
+  AnalysisDeclContext *ADC = AM.getAnalysisDeclContext(D);
+
+  auto SemaphoreMatcherM = findGCDAntiPatternWithSemaphore();
+  auto Matches = match(SemaphoreMatcherM, *D->getBody(), AM.getASTContext());
+  for (BoundNodes Match : Matches)
+    emitDiagnostics(Match, "semaphore", BR, ADC, this);
+
+  auto GroupMatcherM = findGCDAntiPatternWithGroup();
+  Matches = match(GroupMatcherM, *D->getBody(), AM.getASTContext());
+  for (BoundNodes Match : Matches)
+    emitDiagnostics(Match, "group", BR, ADC, this);
 }
 
 }

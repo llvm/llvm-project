@@ -2406,8 +2406,8 @@ def: InstRW<[SKLWriteResGroup105], (instregex "ROUNDPDr",
                                               "VROUNDPSr",
                                               "VROUNDSDr",
                                               "VROUNDSSr",
-                                              "VROUNDYPDr",
-                                              "VROUNDYPSr")>;
+                                              "VROUNDPDYr",
+                                              "VROUNDPSYr")>;
 
 def SKLWriteResGroup105_2 : SchedWriteRes<[SKLPort01]> {
   let Latency = 10;
@@ -3231,8 +3231,8 @@ def SKLWriteResGroup172 : SchedWriteRes<[SKLPort23,SKLPort01]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKLWriteResGroup172], (instregex "VROUNDYPDm",
-                                              "VROUNDYPSm")>;
+def: InstRW<[SKLWriteResGroup172], (instregex "VROUNDPDYm",
+                                              "VROUNDPSYm")>;
 
 def SKLWriteResGroup172_2 : SchedWriteRes<[SKLPort23,SKLPort01]> {
   let Latency = 17;

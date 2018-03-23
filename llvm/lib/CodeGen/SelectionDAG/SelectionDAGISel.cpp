@@ -1000,15 +1000,15 @@ void SelectionDAGISel::EnforceNodeIdInvariant(SDNode *Node) {
 // NodeId with the equivalent node id which is invalid for topological
 // pruning.
 void SelectionDAGISel::InvalidateNodeId(SDNode *N) {
-  int InvalidId = -N->getNodeId() + 1;
+  int InvalidId = -(N->getNodeId() + 1);
   N->setNodeId(InvalidId);
 }
 
 // getUninvalidatedNodeId - get original uninvalidated node id.
 int SelectionDAGISel::getUninvalidatedNodeId(SDNode *N) {
   int Id = N->getNodeId();
-  if (Id < 0)
-    return -Id + 1;
+  if (Id < -1)
+    return -(Id + 1);
   return Id;
 }
 

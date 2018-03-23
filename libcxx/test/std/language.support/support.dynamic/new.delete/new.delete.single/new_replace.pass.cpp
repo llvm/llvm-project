@@ -43,15 +43,15 @@ struct A
     ~A() {A_constructed = false;}
 };
 
-A *volatile ap;
-
 int main()
 {
-    ap = new A;
+    A *ap = new A;
+    DoNotOptimize(ap);
     assert(ap);
     assert(A_constructed);
     assert(new_called);
     delete ap;
+    DoNotOptimize(ap);
     assert(!A_constructed);
     assert(!new_called);
 }

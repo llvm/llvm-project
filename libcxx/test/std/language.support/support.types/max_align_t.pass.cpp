@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <type_traits>
 
-// max_align_t is a trivial standard-layout type whose alignment requirement 
+// max_align_t is a trivial standard-layout type whose alignment requirement
 //   is at least as great as that of every scalar type
 
 #include <stdio.h>

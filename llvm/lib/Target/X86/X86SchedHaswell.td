@@ -555,8 +555,8 @@ def: InstRW<[HWWriteResGroup0], (instregex "VBROADCASTSSrm",
                                            "(V?)MOVUPSrm",
                                            "VPBROADCASTDrm",
                                            "VPBROADCASTQrm",
-                                           "(V?)ROUND(Y?)PDr",
-                                           "(V?)ROUND(Y?)PSr",
+                                           "(V?)ROUNDPD(Y?)r",
+                                           "(V?)ROUNDPS(Y?)r",
                                            "(V?)ROUNDSDr",
                                            "(V?)ROUNDSSr")>;
 
@@ -2787,8 +2787,8 @@ def: InstRW<[HWWriteResGroup103], (instregex "ADD_FI16m",
                                              "SUBR_FI32m",
                                              "SUB_FI16m",
                                              "SUB_FI32m",
-                                             "VROUNDYPDm",
-                                             "VROUNDYPSm")>;
+                                             "VROUNDPDYm",
+                                             "VROUNDPSYm")>;
 
 def HWWriteResGroup103_1 : SchedWriteRes<[HWPort1,HWPort23]> {
   let Latency = 12;

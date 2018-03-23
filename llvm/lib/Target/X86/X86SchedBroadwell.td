@@ -1742,8 +1742,8 @@ def: InstRW<[BWWriteResGroup58], (instregex "LD_F32m",
                                             "VROUNDPSr",
                                             "VROUNDSDr",
                                             "VROUNDSSr",
-                                            "VROUNDYPDr",
-                                            "VROUNDYPSr")>;
+                                            "VROUNDPDYr",
+                                            "VROUNDPSYr")>;
 
 def BWWriteResGroup59 : SchedWriteRes<[BWPort0,BWPort23]> {
   let Latency = 6;
@@ -3014,8 +3014,8 @@ def: InstRW<[BWWriteResGroup135], (instregex "ADD_FI16m",
                                              "SUBR_FI32m",
                                              "SUB_FI16m",
                                              "SUB_FI32m",
-                                             "VROUNDYPDm",
-                                             "VROUNDYPSm")>;
+                                             "VROUNDPDYm",
+                                             "VROUNDPSYm")>;
 
 def BWWriteResGroup136 : SchedWriteRes<[BWPort0,BWPort5,BWPort23]> {
   let Latency = 12;
