@@ -249,7 +249,7 @@ bool AnalyzerOptions::mayInlineCXXSharedPtrDtor() {
 bool AnalyzerOptions::mayInlineCXXTemporaryDtors() {
   return getBooleanOption(InlineCXXTemporaryDtors,
                           "c++-temp-dtor-inlining",
-                          /*Default=*/false);
+                          /*Default=*/true);
 }
 
 bool AnalyzerOptions::mayInlineObjCMethod() {
