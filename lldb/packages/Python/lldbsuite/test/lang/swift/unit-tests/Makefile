@@ -18,7 +18,7 @@ UnitTest.xctest/Contents/MacOS/test: test.swift
 	mv test.dSYM UnitTest.xctest/Contents/MacOS/test.dSYM
 
 UnitTest.xctest/Contents/Info.plist: Info.plist
-	cp $(SRCDIR)/Info.plist UnitTest.xctest/Contents/
+	cp $< UnitTest.xctest/Contents/
 
 clean::
 	rm -rf *.dSYM *.dylib *.swiftdoc *.swiftmodule *.xctest xctest

@@ -23,14 +23,14 @@ SWIFTFLAGS+=-sdk "$(SWIFTSDKROOT)"
 # SWIFT_LIB_DIR=$(dir $(SWIFTCC))../lib
 SWIFT_LIB_DIR="$(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx"
 
-main: A.o B.o objc_main.m
-	$(CC) $(CFLAGS) objc_main.m -fobjc-arc -o main A.o B.o -L $(SWIFT_LIB_DIR) -Xlinker -add_ast_path -Xlinker A.swiftmodule -Xlinker -add_ast_path -Xlinker B.swiftmodule -Xlinker -rpath -Xlinker $(SWIFT_LIB_DIR)
+main: objc_main.m A.o B.o
+	$(CC) $(CFLAGS) $< -fobjc-arc -o main A.o B.o -L $(SWIFT_LIB_DIR) -Xlinker -add_ast_path -Xlinker A.swiftmodule -Xlinker -add_ast_path -Xlinker B.swiftmodule -Xlinker -rpath -Xlinker $(SWIFT_LIB_DIR)
 
 A.o: A.swift
-	$(SWIFTCC) $(SWIFTFLAGS) -c -parse-as-library -module-name A -emit-module-path A.swiftmodule -emit-objc-header-path A-Swift.h -output-file-map output_map A.swift
+	$(SWIFTCC) $(SWIFTFLAGS) -c -parse-as-library -module-name A -emit-module-path A.swiftmodule -emit-objc-header-path A-Swift.h -output-file-map output_map $<
 
 B.o: B.swift
-	$(SWIFTCC) $(SWIFTFLAGS) -c -parse-as-library -module-name B -emit-module-path B.swiftmodule -emit-objc-header-path B-Swift.h -output-file-map output_map B.swift -o B.o
+	$(SWIFTCC) $(SWIFTFLAGS) -c -parse-as-library -module-name B -emit-module-path B.swiftmodule -emit-objc-header-path B-Swift.h -output-file-map output_map $< -o $@
 
 clean::
 	rm -f *.o main *-Swift.h *.swiftmodule *.swiftdoc

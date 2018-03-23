@@ -259,7 +259,8 @@ SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
 
 # Setup a default per-user Swift module cache directory.
 SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
-SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
+SWIFT_MODULE_CACHE_FLAGS = -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
+SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
 ifneq (,$(findstring arm,$(ARCH)))
 	SWIFTFLAGS += -static-stdlib
