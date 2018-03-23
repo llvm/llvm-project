@@ -394,10 +394,6 @@ let ParentPackage = Security in {
   def FloatLoopCounter : Checker<"FloatLoopCounter">,
     HelpText<"Warn on using a floating point value as a loop counter (CERT: FLP30-C, FLP30-CPP)">,
     DescFile<"CheckSecuritySyntaxOnly.cpp">;
-
-  def MmapWriteExecChecker : Checker<"MmapWriteExec">,
-    HelpText<"Check if mmap() call is not both writable and executable">,
-    DescFile<"MmapWriteExecChecker.cpp">;
 }
 
 let ParentPackage = SecurityAlpha in {
