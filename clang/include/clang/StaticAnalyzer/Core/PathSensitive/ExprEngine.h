@@ -155,8 +155,7 @@ public:
 
   BugReporter& getBugReporter() { return BR; }
 
-  cross_tu::CrossTranslationUnitContext *
-  getCrossTranslationUnitContext() override {
+  cross_tu::CrossTranslationUnitContext *getCrossTranslationUnitContext() {
     return &CTU;
   }
 
