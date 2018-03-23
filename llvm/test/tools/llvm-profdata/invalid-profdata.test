@@ -1,0 +1,50 @@
+RUN: echo ":ir"                     > %t.input
+RUN: echo "_ZN6Thread5StartEv"      >> %t.input
+RUN: echo "# Func Hash:"            >> %t.input
+RUN: echo "288793635542036872"      >> %t.input
+RUN: echo "# Num Counters:"         >> %t.input
+RUN: echo "3"                       >> %t.input
+RUN: echo "# Counter Values:"       >> %t.input
+RUN: echo "0"                       >> %t.input
+RUN: echo "12"                      >> %t.input
+RUN: echo "12"                      >> %t.input
+RUN: echo "# Num Value Kinds:"      >> %t.input
+RUN: echo "1"                       >> %t.input
+RUN: echo "# ValueKind = IPVK_IndirectCallTarget:"       >> %t.input
+RUN: echo "0"                                            >> %t.input
+RUN: echo "# NumValueSites:"                             >> %t.input
+RUN: echo "2"                                            >> %t.input
+RUN: echo "2"                                            >> %t.input
+RUN: echo "f1:10"                                        >> %t.input
+RUN: echo "f2:0"                                         >> %t.input
+RUN: echo "1"                                            >> %t.input
+RUN: echo ":10"                                          >> %t.input
+
+RUN: not llvm-profdata merge %t.input -text -o /dev/null 2>&1  | FileCheck %s --check-prefix=BROKEN
+BROKEN: Malformed instrumentation profile data
+
+RUN: echo ":ir"                     > %t.input
+RUN: echo "_ZN6Thread5StartEv"      >> %t.input
+RUN: echo "# Func Hash:"            >> %t.input
+RUN: echo "288793635542036872"      >> %t.input
+RUN: echo "# Num Counters:"         >> %t.input
+RUN: echo "3"                       >> %t.input
+RUN: echo "# Counter Values:"       >> %t.input
+RUN: echo "0"                       >> %t.input
+RUN: echo "12"                      >> %t.input
+RUN: echo "12"                      >> %t.input
+RUN: echo "# Num Value Kinds:"      >> %t.input
+RUN: echo "1"                       >> %t.input
+RUN: echo "# ValueKind = IPVK_IndirectCallTarget:"       >> %t.input
+RUN: echo "0"                                            >> %t.input
+RUN: echo "# NumValueSites:"                             >> %t.input
+RUN: echo "2"                                            >> %t.input
+RUN: echo "2"                                            >> %t.input
+RUN: echo "f1:10"                                        >> %t.input
+RUN: echo "f2:0"                                         >> %t.input
+RUN: echo "1"                                            >> %t.input
+RUN: echo "** External Symbol **:10"             >> %t.input
+
+# RUN: llvm-profdata merge %t.input -text -output=%t.out && cat %t.out | FileCheck %s
+
+CHECK: ** External Symbol **:10

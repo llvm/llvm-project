@@ -194,8 +194,7 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
        << "\"" << Desc << "\", "
        << "{ " << Target << "::" << Name << " }, ";
 
-    const std::vector<Record*> &ImpliesList =
-      Feature->getValueAsListOfDefs("Implies");
+    RecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
     OS << "{";
     for (unsigned j = 0, M = ImpliesList.size(); j < M;) {
@@ -230,8 +229,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
   // For each processor
   for (Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
-    const std::vector<Record*> &FeatureList =
-      Processor->getValueAsListOfDefs("Features");
+    RecVec FeatureList = Processor->getValueAsListOfDefs("Features");
 
     // Emit as { "cpu", "description", { f1 , f2 , ... fn } },
     OS << "  { "
@@ -263,8 +261,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
                                                 std::string &ItinString,
                                                 unsigned &NStages) {
   // Get states list
-  const std::vector<Record*> &StageList =
-    ItinData->getValueAsListOfDefs("Stages");
+  RecVec StageList = ItinData->getValueAsListOfDefs("Stages");
 
   // For each stage
   unsigned N = NStages = StageList.size();
@@ -277,7 +274,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
     ItinString += "  { " + itostr(Cycles) + ", ";
 
     // Get unit list
-    const std::vector<Record*> &UnitList = Stage->getValueAsListOfDefs("Units");
+    RecVec UnitList = Stage->getValueAsListOfDefs("Units");
 
     // For each unit
     for (unsigned j = 0, M = UnitList.size(); j < M;) {
@@ -306,7 +303,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
 void SubtargetEmitter::FormItineraryOperandCycleString(Record *ItinData,
                          std::string &ItinString, unsigned &NOperandCycles) {
   // Get operand cycle list
-  const std::vector<int64_t> &OperandCycleList =
+  std::vector<int64_t> OperandCycleList =
     ItinData->getValueAsListOfInts("OperandCycles");
 
   // For each operand cycle
@@ -324,8 +321,7 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
                                                  Record *ItinData,
                                                  std::string &ItinString,
                                                  unsigned NOperandCycles) {
-  const std::vector<Record*> &BypassList =
-    ItinData->getValueAsListOfDefs("Bypasses");
+  RecVec BypassList = ItinData->getValueAsListOfDefs("Bypasses");
   unsigned N = BypassList.size();
   unsigned i = 0;
   for (; i < N;) {
@@ -356,7 +352,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
     if (!ItinsDefSet.insert(ProcModel.ItinsDef).second)
       continue;
 
-    std::vector<Record*> FUs = ProcModel.ItinsDef->getValueAsListOfDefs("FU");
+    RecVec FUs = ProcModel.ItinsDef->getValueAsListOfDefs("FU");
     if (FUs.empty())
       continue;
 
@@ -370,7 +366,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
 
     OS << "} // end namespace " << Name << "FU\n";
 
-    std::vector<Record*> BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
+    RecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (!BPs.empty()) {
       OS << "\n// Pipeline forwarding paths for itineraries \"" << Name
          << "\"\n" << "namespace " << Name << "Bypass {\n";

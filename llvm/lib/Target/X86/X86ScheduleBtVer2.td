@@ -599,7 +599,7 @@ def JWriteVCVTY: SchedWriteRes<[JFPU1, JSTC]> {
 }
 def : InstRW<[JWriteVCVTY], (instrs VCVTDQ2PDYrr, VCVTDQ2PSYrr,
                                     VCVTPS2DQYrr, VCVTTPS2DQYrr,
-                                    VROUNDYPDr,   VROUNDYPSr)>;
+                                    VROUNDPDYr,   VROUNDPSYr)>;
 
 def JWriteVCVTYLd: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
   let Latency = 8;
@@ -607,7 +607,7 @@ def JWriteVCVTYLd: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
 }
 def : InstRW<[JWriteVCVTYLd, ReadAfterLd], (instrs VCVTDQ2PDYrm, VCVTDQ2PSYrm,
                                                    VCVTPS2DQYrm, VCVTTPS2DQYrm,
-                                                   VROUNDYPDm,   VROUNDYPSm)>;
+                                                   VROUNDPDYm,   VROUNDPSYm)>;
 
 def JWriteVMOVNTDQSt: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 2;

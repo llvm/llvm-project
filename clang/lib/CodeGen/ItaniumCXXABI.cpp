@@ -2848,7 +2848,6 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
 
   const char *VTableName = nullptr;
 
-  const CXXRecordDecl *RD = nullptr;
   switch (Ty->getTypeClass()) {
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
@@ -2900,7 +2899,8 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     break;
 
   case Type::Record: {
-    RD = cast<CXXRecordDecl>(cast<RecordType>(Ty)->getDecl());
+    const CXXRecordDecl *RD =
+      cast<CXXRecordDecl>(cast<RecordType>(Ty)->getDecl());
 
     if (!RD->hasDefinition() || !RD->getNumBases()) {
       VTableName = ClassTypeInfo;
@@ -2948,7 +2948,6 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
 
   llvm::Constant *VTable =
     CGM.getModule().getOrInsertGlobal(VTableName, CGM.Int8PtrTy);
-  CGM.setGVProperties(cast<llvm::GlobalValue>(VTable->stripPointerCasts()), RD);
 
   llvm::Type *PtrDiffTy =
     CGM.getTypes().ConvertType(CGM.getContext().getPointerDiffType());

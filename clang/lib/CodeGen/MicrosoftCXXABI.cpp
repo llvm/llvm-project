@@ -523,10 +523,12 @@ public:
     if (llvm::GlobalVariable *GV = CGM.getModule().getNamedGlobal(Name))
       return GV;
 
-    return new llvm::GlobalVariable(CGM.getModule(), CGM.Int8Ty,
-                                    /*isConstant=*/true,
-                                    llvm::GlobalValue::ExternalLinkage,
-                                    /*Initializer=*/nullptr, Name);
+    auto *GV = new llvm::GlobalVariable(CGM.getModule(), CGM.Int8Ty,
+                                        /*isConstant=*/true,
+                                        llvm::GlobalValue::ExternalLinkage,
+                                        /*Initializer=*/nullptr, Name);
+    CGM.setDSOLocal(GV);
+    return GV;
   }
 
   llvm::Constant *getImageRelativeConstant(llvm::Constant *PtrVal) {

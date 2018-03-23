@@ -32,12 +32,21 @@ NSObject<NSObject>
 @interface NSString : NSObject<NSCopying>
 - (BOOL)isEqualToString : (NSString *)aString;
 - (NSString *)stringByAppendingString:(NSString *)aString;
++ (_Nonnull NSString *) generateString;
++ (_Nullable NSString *) generatePossiblyNullString;
 @end
 
 void NSSystemFunctionTakingNonnull(NSString *s);
 
 @interface NSSystemClass : NSObject
 - (void) takesNonnull:(NSString *)s;
+@end
+
+NSString* _Nullable getPossiblyNullString();
+NSString* _Nonnull  getString();
+
+@protocol MyProtocol
+- (_Nonnull NSString *) getString;
 @end
 
 NS_ASSUME_NONNULL_END

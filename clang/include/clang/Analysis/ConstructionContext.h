@@ -99,22 +99,37 @@ class ConstructionContext {
 public:
   enum Kind {
     SimpleVariableKind,
-    ConstructorInitializerKind,
+    CXX17ElidedCopyVariableKind,
+    VARIABLE_BEGIN = SimpleVariableKind,
+    VARIABLE_END = CXX17ElidedCopyVariableKind,
+    SimpleConstructorInitializerKind,
+    CXX17ElidedCopyConstructorInitializerKind,
+    INITIALIZER_BEGIN = SimpleConstructorInitializerKind,
+    INITIALIZER_END = CXX17ElidedCopyConstructorInitializerKind,
     NewAllocatedObjectKind,
     TemporaryObjectKind,
-    ReturnedValueKind
+    SimpleReturnedValueKind,
+    CXX17ElidedCopyReturnedValueKind,
+    RETURNED_VALUE_BEGIN = SimpleReturnedValueKind,
+    RETURNED_VALUE_END = CXX17ElidedCopyReturnedValueKind
   };
 
 protected:
   Kind K;
 
-protected:
   // Do not make public! These need to only be constructed
   // via createFromLayers().
   explicit ConstructionContext(Kind K) : K(K) {}
 
-public:
+private:
+  // A helper function for constructing an instance into a bump vector context.
+  template <typename T, typename... ArgTypes>
+  static T *create(BumpVectorContext &C, ArgTypes... Args) {
+    auto *CC = C.getAllocator().Allocate<T>();
+    return new (CC) T(Args...);
+  }
 
+public:
   /// Consume the construction context layer, together with its parent layers,
   /// and wrap it up into a complete construction context.
   static const ConstructionContext *
@@ -124,40 +139,139 @@ public:
   Kind getKind() const { return K; }
 };
 
-/// Represents construction into a simple local variable, eg. T var(123);.
-class SimpleVariableConstructionContext : public ConstructionContext {
+/// An abstract base class for local variable constructors.
+class VariableConstructionContext : public ConstructionContext {
   const DeclStmt *DS;
 
-public:
-  explicit SimpleVariableConstructionContext(const DeclStmt *DS)
-      : ConstructionContext(ConstructionContext::SimpleVariableKind), DS(DS) {
+protected:
+  VariableConstructionContext(ConstructionContext::Kind K, const DeclStmt *DS)
+      : ConstructionContext(K), DS(DS) {
+    assert(classof(this));
     assert(DS);
   }
 
+public:
   const DeclStmt *getDeclStmt() const { return DS; }
 
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() >= VARIABLE_BEGIN &&
+           CC->getKind() <= VARIABLE_END;
+  }
+};
+
+/// Represents construction into a simple local variable, eg. T var(123);.
+/// If a variable has an initializer, eg. T var = makeT();, then the final
+/// elidable copy-constructor from makeT() into var would also be a simple
+/// variable constructor handled by this class.
+class SimpleVariableConstructionContext : public VariableConstructionContext {
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit SimpleVariableConstructionContext(const DeclStmt *DS)
+      : VariableConstructionContext(ConstructionContext::SimpleVariableKind,
+                                    DS) {}
+
+public:
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() == SimpleVariableKind;
   }
 };
 
-/// Represents construction into a field or a base class within a bigger object
-/// via a constructor initializer, eg. T(): field(123) { ... }.
+/// Represents construction into a simple variable with an initializer syntax,
+/// with a single constructor, eg. T var = makeT();. Such construction context
+/// may only appear in C++17 because previously it was split into a temporary
+/// object constructor and an elidable simple variable copy-constructor and
+/// we were producing separate construction contexts for these constructors.
+/// In C++17 we have a single construction context that combines both.
+/// Note that if the object has trivial destructor, then this code is
+/// indistinguishable from a simple variable constructor on the AST level;
+/// in this case we provide a simple variable construction context.
+class CXX17ElidedCopyVariableConstructionContext
+    : public VariableConstructionContext {
+  const CXXBindTemporaryExpr *BTE;
+
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit CXX17ElidedCopyVariableConstructionContext(
+      const DeclStmt *DS, const CXXBindTemporaryExpr *BTE)
+      : VariableConstructionContext(CXX17ElidedCopyVariableKind, DS), BTE(BTE) {
+    assert(BTE);
+  }
+
+public:
+  const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
+
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == CXX17ElidedCopyVariableKind;
+  }
+};
+
+// An abstract base class for constructor-initializer-based constructors.
 class ConstructorInitializerConstructionContext : public ConstructionContext {
   const CXXCtorInitializer *I;
 
-public:
+protected:
   explicit ConstructorInitializerConstructionContext(
-      const CXXCtorInitializer *I)
-      : ConstructionContext(ConstructionContext::ConstructorInitializerKind),
-        I(I) {
+      ConstructionContext::Kind K, const CXXCtorInitializer *I)
+      : ConstructionContext(K), I(I) {
+    assert(classof(this));
     assert(I);
   }
 
+public:
   const CXXCtorInitializer *getCXXCtorInitializer() const { return I; }
 
   static bool classof(const ConstructionContext *CC) {
-    return CC->getKind() == ConstructorInitializerKind;
+    return CC->getKind() >= INITIALIZER_BEGIN &&
+           CC->getKind() <= INITIALIZER_END;
+  }
+};
+
+/// Represents construction into a field or a base class within a bigger object
+/// via a constructor initializer, eg. T(): field(123) { ... }.
+class SimpleConstructorInitializerConstructionContext
+    : public ConstructorInitializerConstructionContext {
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit SimpleConstructorInitializerConstructionContext(
+      const CXXCtorInitializer *I)
+      : ConstructorInitializerConstructionContext(
+            ConstructionContext::SimpleConstructorInitializerKind, I) {}
+
+public:
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == SimpleConstructorInitializerKind;
+  }
+};
+
+/// Represents construction into a field or a base class within a bigger object
+/// via a constructor initializer, with a single constructor, eg.
+/// T(): field(Field(123)) { ... }. Such construction context may only appear
+/// in C++17 because previously it was split into a temporary object constructor
+/// and an elidable simple constructor-initializer copy-constructor and we were
+/// producing separate construction contexts for these constructors. In C++17
+/// we have a single construction context that combines both. Note that if the
+/// object has trivial destructor, then this code is indistinguishable from
+/// a simple constructor-initializer constructor on the AST level; in this case
+/// we provide a simple constructor-initializer construction context.
+class CXX17ElidedCopyConstructorInitializerConstructionContext
+    : public ConstructorInitializerConstructionContext {
+  const CXXBindTemporaryExpr *BTE;
+
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit CXX17ElidedCopyConstructorInitializerConstructionContext(
+      const CXXCtorInitializer *I, const CXXBindTemporaryExpr *BTE)
+      : ConstructorInitializerConstructionContext(
+            CXX17ElidedCopyConstructorInitializerKind, I),
+        BTE(BTE) {
+    assert(BTE);
+  }
+
+public:
+  const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
+
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == CXX17ElidedCopyConstructorInitializerKind;
   }
 };
 
@@ -166,13 +280,15 @@ public:
 class NewAllocatedObjectConstructionContext : public ConstructionContext {
   const CXXNewExpr *NE;
 
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit NewAllocatedObjectConstructionContext(const CXXNewExpr *NE)
       : ConstructionContext(ConstructionContext::NewAllocatedObjectKind),
         NE(NE) {
     assert(NE);
   }
 
+public:
   const CXXNewExpr *getCXXNewExpr() const { return NE; }
 
   static bool classof(const ConstructionContext *CC) {
@@ -188,7 +304,8 @@ class TemporaryObjectConstructionContext : public ConstructionContext {
   const CXXBindTemporaryExpr *BTE;
   const MaterializeTemporaryExpr *MTE;
 
-public:
+  friend class ConstructionContext; // Allows to create<>() itself.
+
   explicit TemporaryObjectConstructionContext(
       const CXXBindTemporaryExpr *BTE, const MaterializeTemporaryExpr *MTE)
       : ConstructionContext(ConstructionContext::TemporaryObjectKind),
@@ -199,6 +316,7 @@ public:
     // nowhere that doesn't have a non-trivial destructor).
   }
 
+public:
   /// CXXBindTemporaryExpr here is non-null as long as the temporary has
   /// a non-trivial destructor.
   const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const {
@@ -219,24 +337,72 @@ public:
   }
 };
 
+class ReturnedValueConstructionContext : public ConstructionContext {
+  const ReturnStmt *RS;
+
+protected:
+  explicit ReturnedValueConstructionContext(ConstructionContext::Kind K,
+                                            const ReturnStmt *RS)
+      : ConstructionContext(K), RS(RS) {
+    assert(classof(this));
+    assert(RS);
+  }
+
+public:
+  const ReturnStmt *getReturnStmt() const { return RS; }
+
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() >= RETURNED_VALUE_BEGIN &&
+           CC->getKind() <= RETURNED_VALUE_END;
+  }
+};
+
 /// Represents a temporary object that is being immediately returned from a
 /// function by value, eg. return t; or return T(123);. In this case there is
 /// always going to be a constructor at the return site. However, the usual
 /// temporary-related bureaucracy (CXXBindTemporaryExpr,
 /// MaterializeTemporaryExpr) is normally located in the caller function's AST.
-class ReturnedValueConstructionContext : public ConstructionContext {
-  const ReturnStmt *RS;
+class SimpleReturnedValueConstructionContext
+    : public ReturnedValueConstructionContext {
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit SimpleReturnedValueConstructionContext(const ReturnStmt *RS)
+      : ReturnedValueConstructionContext(
+            ConstructionContext::SimpleReturnedValueKind, RS) {}
 
 public:
-  explicit ReturnedValueConstructionContext(const ReturnStmt *RS)
-      : ConstructionContext(ConstructionContext::ReturnedValueKind), RS(RS) {
-    assert(RS);
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == SimpleReturnedValueKind;
+  }
+};
+
+/// Represents a temporary object that is being immediately returned from a
+/// function by value, eg. return t; or return T(123); in C++17.
+/// In C++17 there is not going to be an elidable copy constructor at the
+/// return site.  However, the usual temporary-related bureaucracy (CXXBindTemporaryExpr,
+/// MaterializeTemporaryExpr) is normally located in the caller function's AST.
+/// Note that if the object has trivial destructor, then this code is
+/// indistinguishable from a simple returned value constructor on the AST level;
+/// in this case we provide a simple returned value construction context.
+class CXX17ElidedCopyReturnedValueConstructionContext
+    : public ReturnedValueConstructionContext {
+  const CXXBindTemporaryExpr *BTE;
+
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit CXX17ElidedCopyReturnedValueConstructionContext(
+      const ReturnStmt *RS, const CXXBindTemporaryExpr *BTE)
+      : ReturnedValueConstructionContext(
+            ConstructionContext::CXX17ElidedCopyReturnedValueKind, RS),
+        BTE(BTE) {
+    assert(BTE);
   }
 
-  const ReturnStmt *getReturnStmt() const { return RS; }
+public:
+  const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
 
   static bool classof(const ConstructionContext *CC) {
-    return CC->getKind() == ReturnedValueKind;
+    return CC->getKind() == CXX17ElidedCopyReturnedValueKind;
   }
 };
 

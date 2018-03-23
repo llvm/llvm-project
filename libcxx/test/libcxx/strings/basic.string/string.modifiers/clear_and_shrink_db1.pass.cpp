@@ -25,12 +25,12 @@ int main()
 
     assert(l.__invariants());
     assert(s.__invariants());
-    
+
     s.__clear_and_shrink();
     assert(s.__invariants());
     assert(s.size() == 0);
 
-    { 
+    {
     std::string::size_type cap = l.capacity();
     l.__clear_and_shrink();
     assert(l.__invariants());

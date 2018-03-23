@@ -1709,11 +1709,11 @@ static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
 #if SANITIZER_OPENBSD
 using Context = sigcontext;
 #else
-using Context = ucontext;
-#endif // !SANITIZER_OPENBSD
+using Context = ucontext_t;
+#endif
 
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
-  ucontext_t *ucontext = (ucontext_t *)context;
+  Context *ucontext = (Context *)context;
 #if defined(__x86_64__) || defined(__i386__)
   static const uptr PF_WRITE = 1U << 1;
 #if SANITIZER_FREEBSD

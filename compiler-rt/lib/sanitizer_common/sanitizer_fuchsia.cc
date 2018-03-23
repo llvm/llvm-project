@@ -418,16 +418,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   zx_handle_t vmo;
   zx_status_t status = _zx_vmo_create(size, 0, &vmo);
   if (status == ZX_OK) {
-    while (size > 0) {
-      size_t wrote;
-      status = _zx_vmo_write(vmo, reinterpret_cast<const void *>(beg), 0, size,
-                             &wrote);
-      if (status != ZX_OK) break;
-      CHECK_GT(wrote, 0);
-      CHECK_LE(wrote, size);
-      beg += wrote;
-      size -= wrote;
-    }
+    status = _zx_vmo_write(vmo, reinterpret_cast<const void *>(beg), 0, size);
     _zx_handle_close(vmo);
   }
   return status == ZX_OK;
