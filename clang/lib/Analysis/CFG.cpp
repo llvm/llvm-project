@@ -2986,7 +2986,7 @@ CFGBlock *
 CFGBuilder::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE,
                                           AddStmtChoice asc) {
   findConstructionContexts(
-      ConstructionContextLayer::create(cfg->getBumpVectorContext(), MTE),
+      ConstructionContext::create(cfg->getBumpVectorContext(), MTE),
       MTE->getTemporary());
 
   return VisitStmt(MTE, asc);
@@ -4723,13 +4723,20 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     } else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
       OS << " (CXXConstructExpr, ";
       if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
+        // TODO: Refactor into ConstructionContext::print().
         if (const Stmt *S = CE->getTriggerStmt())
-          Helper.handledStmt((const_cast<Stmt *>(S)), OS);
+          Helper.handledStmt(const_cast<Stmt *>(S), OS);
         else if (const CXXCtorInitializer *I = CE->getTriggerInit())
           print_initializer(OS, Helper, I);
         else
           llvm_unreachable("Unexpected trigger kind!");
         OS << ", ";
+        if (const Stmt *S = CE->getMaterializedTemporary()) {
+          if (S != CE->getTriggerStmt()) {
+            Helper.handledStmt(const_cast<Stmt *>(S), OS);
+            OS << ", ";
+          }
+        }
       }
       OS << CCE->getType().getAsString() << ")";
     } else if (const CastExpr *CE = dyn_cast<CastExpr>(S)) {

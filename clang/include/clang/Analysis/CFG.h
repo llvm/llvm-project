@@ -194,6 +194,17 @@ public:
     return Trigger.dyn_cast<CXXCtorInitializer *>();
   }
 
+  const MaterializeTemporaryExpr *getMaterializedTemporary() const {
+    // TODO: Be more careful to ensure that there's only one MTE around.
+    for (const ConstructionContext *CC = this; CC; CC = CC->getParent()) {
+      if (const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(
+              CC->getTriggerStmt())) {
+        return MTE;
+      }
+    }
+    return nullptr;
+  }
+
   bool isSameAsPartialContext(const ConstructionContext *Other) const {
     assert(Other);
     return (Trigger == Other->Trigger);
@@ -247,6 +258,10 @@ public:
 
   const CXXCtorInitializer *getTriggerInit() const {
     return getConstructionContext()->getTriggerInit();
+  }
+
+  const MaterializeTemporaryExpr *getMaterializedTemporary() const {
+    return getConstructionContext()->getMaterializedTemporary();
   }
 
 private:
