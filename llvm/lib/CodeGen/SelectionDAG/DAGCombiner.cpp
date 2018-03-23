@@ -426,7 +426,6 @@ namespace {
                                          unsigned HiOp);
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
     SDValue CombineExtLoad(SDNode *N);
-    SDValue CombineZExtLogicopShiftLoad(SDNode *N);
     SDValue combineRepeatedFPDivisors(SDNode *N);
     SDValue combineInsertEltToShuffle(SDNode *N, unsigned InsIndex);
     SDValue ConstantFoldBITCASTofBUILD_VECTOR(SDNode *, EVT);
@@ -7471,80 +7470,6 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
-// fold (zext (and/or/xor (shl/shr (load x), cst), cst)) ->
-//      (and/or/xor (shl/shr (zextload x), (zext cst)), (zext cst))
-SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
-  assert(N->getOpcode() == ISD::ZERO_EXTEND);
-  EVT VT = N->getValueType(0);
-
-  // and/or/xor
-  SDValue N0 = N->getOperand(0);
-  if (!(N0.getOpcode() == ISD::AND || N0.getOpcode() == ISD::OR ||
-        N0.getOpcode() == ISD::XOR) ||
-      N0.getOperand(1).getOpcode() != ISD::Constant ||
-      (LegalOperations && !TLI.isOperationLegal(N0.getOpcode(), VT)))
-    return SDValue();
-
-  // shl/shr
-  SDValue N1 = N0->getOperand(0);
-  if (!(N1.getOpcode() == ISD::SHL || N1.getOpcode() == ISD::SRL) ||
-      N1.getOperand(1).getOpcode() != ISD::Constant ||
-      (LegalOperations && !TLI.isOperationLegal(N1.getOpcode(), VT)))
-    return SDValue();
-
-  // load
-  if (!isa<LoadSDNode>(N1.getOperand(0)))
-    return SDValue();
-  LoadSDNode *Load = cast<LoadSDNode>(N1.getOperand(0));
-  EVT MemVT = Load->getMemoryVT();
-  if (!TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT) ||
-      Load->getExtensionType() == ISD::SEXTLOAD || Load->isIndexed())
-    return SDValue();
-
-
-  // If the shift op is SHL, the logic op must be AND, otherwise the result
-  // will be wrong.
-  if (N1.getOpcode() == ISD::SHL && N0.getOpcode() != ISD::AND)
-    return SDValue();
-
-  if (!N0.hasOneUse() || !N1.hasOneUse())
-    return SDValue();
-
-  SmallVector<SDNode*, 4> SetCCs;
-  if (!ExtendUsesToFormExtLoad(VT, N1.getNode(), N1.getOperand(0),
-                               ISD::ZERO_EXTEND, SetCCs, TLI))
-    return SDValue();
-
-  // Actually do the transformation.
-  SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(Load), VT,
-                                   Load->getChain(), Load->getBasePtr(),
-                                   Load->getMemoryVT(), Load->getMemOperand());
-
-  APInt ShiftCst = cast<ConstantSDNode>(N1.getOperand(1))->getAPIntValue();
-  ShiftCst = ShiftCst.zextOrSelf(VT.getSizeInBits());
-  SDLoc DL1(N1);
-  SDValue Shift = DAG.getNode(N1.getOpcode(), DL1, VT, ExtLoad,
-                              DAG.getConstant(ShiftCst, DL1, VT));
-
-  APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-  Mask = Mask.zext(VT.getSizeInBits());
-  SDLoc DL0(N0);
-  SDValue And = DAG.getNode(N0.getOpcode(), DL0, VT, Shift,
-                            DAG.getConstant(Mask, DL0, VT));
-
-  ExtendSetCCUses(SetCCs, N1.getOperand(0), ExtLoad, SDLoc(Load),
-                  ISD::ZERO_EXTEND);
-  CombineTo(N, And);
-  if (SDValue(Load, 0).hasOneUse()) {
-    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), ExtLoad.getValue(1));
-  } else {
-    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(Load),
-                                Load->getValueType(0), ExtLoad);
-    CombineTo(Load, Trunc, ExtLoad.getValue(1));
-  }
-  return SDValue(N,0); // Return N so it doesn't get rechecked!
-}
-
 /// If we're narrowing or widening the result of a vector select and the final
 /// size is the same size as a setcc (compare) feeding the select, then try to
 /// apply the cast operation to the select's operands because matching vector
@@ -8062,11 +7987,6 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       }
     }
   }
-
-  // fold (zext (and/or/xor (shl/shr (load x), cst), cst)) ->
-  //      (and/or/xor (shl/shr (zextload x), (zext cst)), (zext cst))
-  if (SDValue ZExtLoad = CombineZExtLogicopShiftLoad(N))
-    return ZExtLoad;
 
   // fold (zext (zextload x)) -> (zext (truncate (zextload x)))
   // fold (zext ( extload x)) -> (zext (truncate (zextload x)))

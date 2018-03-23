@@ -1033,7 +1033,7 @@ def ZnWritePEXTRr : SchedWriteRes<[ZnFPU12, ZnFPU2]> {
   let Latency = 2;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[ZnWritePEXTRr], (instregex "PEXTR(B|W|D|Q)rr", "MMX_PEXTRWrr")>;
+def : InstRW<[ZnWritePEXTRr], (instregex "(V?)PEXTR(B|W|D|Q)rr", "MMX_PEXTRWrr")>;
 
 def ZnWritePEXTRm : SchedWriteRes<[ZnAGU, ZnFPU12, ZnFPU2]> {
   let Latency = 5;
@@ -1041,7 +1041,7 @@ def ZnWritePEXTRm : SchedWriteRes<[ZnAGU, ZnFPU12, ZnFPU2]> {
   let ResourceCycles = [1, 2, 3];
 }
 // m8,x,i.
-def : InstRW<[ZnWritePEXTRm], (instregex "PEXTR(B|W|D|Q)mr")>;
+def : InstRW<[ZnWritePEXTRm], (instregex "(V?)PEXTR(B|W|D|Q)mr")>;
 
 // VPBROADCAST B/W.
 // x, m8/16.
