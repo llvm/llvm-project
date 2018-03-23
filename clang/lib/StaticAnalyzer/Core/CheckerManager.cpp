@@ -492,21 +492,23 @@ void CheckerManager::runCheckersForBranchCondition(const Stmt *Condition,
 }
 
 namespace {
+
   struct CheckNewAllocatorContext {
-    typedef std::vector<CheckerManager::CheckNewAllocatorFunc> CheckersTy;
+    using CheckersTy = std::vector<CheckerManager::CheckNewAllocatorFunc>;
+
     const CheckersTy &Checkers;
     const CXXNewExpr *NE;
     SVal Target;
     bool WasInlined;
     ExprEngine &Eng;
 
-    CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
-    CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
-
     CheckNewAllocatorContext(const CheckersTy &Checkers, const CXXNewExpr *NE,
                              SVal Target, bool WasInlined, ExprEngine &Eng)
         : Checkers(Checkers), NE(NE), Target(Target), WasInlined(WasInlined),
           Eng(Eng) {}
+
+    CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
+    CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
     void runChecker(CheckerManager::CheckNewAllocatorFunc checkFn,
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
@@ -515,7 +517,8 @@ namespace {
       checkFn(NE, Target, C);
     }
   };
-}
+
+} // namespace
 
 void CheckerManager::runCheckersForNewAllocator(
     const CXXNewExpr *NE, SVal Target, ExplodedNodeSet &Dst, ExplodedNode *Pred,
