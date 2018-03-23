@@ -30,8 +30,8 @@ cl::opt<bool>
                llvm::cl::desc("Use llvm.dbg.addr for all local variables"),
                cl::init(false), cl::Hidden);
 
-DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes)
-  : M(m), VMContext(M.getContext()), CUNode(nullptr),
+DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
+  : M(m), VMContext(M.getContext()), CUNode(CU),
       DeclareFn(nullptr), ValueFn(nullptr),
       AllowUnresolvedNodes(AllowUnresolvedNodes) {}
 
