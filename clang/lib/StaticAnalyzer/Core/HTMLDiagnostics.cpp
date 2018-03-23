@@ -523,6 +523,12 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 <h3>Annotated Source Code</h3>
 <p>Press <a href="#" onclick="toggleHelp(); return false;">'?'</a>
    to see keyboard shortcuts</p>
+<input type="checkbox" class="spoilerhider" id="showinvocation" />
+<label for="showinvocation" >Show analyzer invocation</label>
+<div class="spoiler">clang -cc1 )<<<";
+    os << html::EscapeText(AnalyzerOpts.FullCompilerInvocation);
+    os << R"<<<(
+</div>
 <div id='tooltiphint' hidden="true">
   <p>Keyboard shortcuts: </p>
   <ul>
