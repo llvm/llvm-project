@@ -43,9 +43,9 @@
 # CHECK: ============================================================
 # CHECK-LABEL:   Mod 0000 | `{{.*}}a.obj`:
 # CHECK:              232 | S_FILESTATIC [size = 16] `x`
-# CHECK-NEXT:               type = 0x0074 (int), file name = 1 (D:\src\llvmbuild\cl\Debug\x64\a.obj), flags = enreg global | enreg static
+# CHECK-NEXT:               type = 0x0074 (int), file name = 2 (D:\src\llvmbuild\cl\Debug\x64\a.obj), flags = enreg global | enreg static
 # CHECK:         Mod 0001 | `{{.*}}b.obj`:
 # CHECK:              232 | S_FILESTATIC [size = 16] `y`
-# CHECK-NEXT:               type = 0x0074 (int), file name = 73 (D:\src\llvmbuild\cl\Debug\x64\b.obj), flags = enreg global | enreg static
+# CHECK-NEXT:               type = 0x0074 (int), file name = 74 (D:\src\llvmbuild\cl\Debug\x64\b.obj), flags = enreg global | enreg static
 # CHECK-LABEL:   Mod 0002 | `* Linker *`:
 

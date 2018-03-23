@@ -212,11 +212,6 @@ public:
     return TargetTriple.getOS() == Triple::Mesa3D;
   }
 
-  bool isOpenCLEnv() const {
-    return TargetTriple.getEnvironment() == Triple::OpenCL ||
-           TargetTriple.getEnvironmentName() == "amdgizcl";
-  }
-
   bool isAmdPalOS() const {
     return TargetTriple.getOS() == Triple::AMDPAL;
   }
@@ -543,12 +538,13 @@ public:
     return isAmdHsaOS() ? 8 : 4;
   }
 
+  /// \returns Number of bytes of arguments that are passed to a shader or
+  /// kernel in addition to the explicit ones declared for the function.
   unsigned getImplicitArgNumBytes(const MachineFunction &MF) const {
     if (isMesaKernel(MF))
       return 16;
-    if (isAmdHsaOS() && isOpenCLEnv())
-      return 32;
-    return 0;
+    return AMDGPU::getIntegerAttribute(
+      MF.getFunction(), "amdgpu-implicitarg-num-bytes", 0);
   }
 
   // Scratch is allocated in 256 dword per wave blocks for the entire

@@ -86,6 +86,15 @@ Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
 
 uint32_t DebugStringTableSubsection::size() const { return StringToId.size(); }
 
+std::vector<uint32_t> DebugStringTableSubsection::sortedIds() const {
+  std::vector<uint32_t> Result;
+  Result.reserve(IdToString.size());
+  for (const auto &Entry : IdToString)
+    Result.push_back(Entry.first);
+  std::sort(Result.begin(), Result.end());
+  return Result;
+}
+
 uint32_t DebugStringTableSubsection::getIdForString(StringRef S) const {
   auto Iter = StringToId.find(S);
   assert(Iter != StringToId.end());

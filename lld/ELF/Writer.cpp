@@ -1757,11 +1757,9 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   // pages for the stack non-executable. If you really want an executable
   // stack, you can pass -z execstack, but that's not recommended for
   // security reasons.
-  unsigned Perm;
+  unsigned Perm = PF_R | PF_W;
   if (Config->ZExecstack)
-    Perm = PF_R | PF_W | PF_X;
-  else
-    Perm = PF_R | PF_W;
+    Perm |= PF_X;
   AddHdr(PT_GNU_STACK, Perm)->p_memsz = Config->ZStackSize;
 
   // PT_OPENBSD_WXNEEDED is a OpenBSD-specific header to mark the executable

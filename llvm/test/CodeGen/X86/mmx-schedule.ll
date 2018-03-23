@@ -3591,7 +3591,7 @@ define i64 @test_pmaddwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; GENERIC-LABEL: test_pmaddwd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pmaddwd %mm1, %mm0 # sched: [5:1.00]
-; GENERIC-NEXT:    pmaddwd (%rdi), %mm0 # sched: [9:1.00]
+; GENERIC-NEXT:    pmaddwd (%rdi), %mm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -3612,7 +3612,7 @@ define i64 @test_pmaddwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; SANDY-LABEL: test_pmaddwd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    pmaddwd %mm1, %mm0 # sched: [5:1.00]
-; SANDY-NEXT:    pmaddwd (%rdi), %mm0 # sched: [9:1.00]
+; SANDY-NEXT:    pmaddwd (%rdi), %mm0 # sched: [11:1.00]
 ; SANDY-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4114,7 +4114,7 @@ define i64 @test_pmulhrsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; GENERIC-LABEL: test_pmulhrsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pmulhrsw %mm1, %mm0 # sched: [5:1.00]
-; GENERIC-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [9:1.00]
+; GENERIC-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4135,7 +4135,7 @@ define i64 @test_pmulhrsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; SANDY-LABEL: test_pmulhrsw:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    pmulhrsw %mm1, %mm0 # sched: [5:1.00]
-; SANDY-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [9:1.00]
+; SANDY-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [11:1.00]
 ; SANDY-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;

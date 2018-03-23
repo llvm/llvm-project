@@ -417,11 +417,6 @@ namespace llvm {
     enum { ARG_VOLATILE = 3 };
 
   public:
-    // TODO: Remove this method entirely.
-    // Interim, for now, during transition from having an alignment
-    // arg to using alignment attributes.
-    unsigned getAlignment() const;
-
     ConstantInt *getVolatileCst() const {
       return cast<ConstantInt>(
           const_cast<Value *>(getArgOperand(ARG_VOLATILE)));
@@ -430,11 +425,6 @@ namespace llvm {
     bool isVolatile() const {
       return !getVolatileCst()->isZero();
     }
-
-    // TODO: Remove this method entirely. It is here only during transition
-    // from having an explicit alignment arg to using alignment attributes.
-    // For now we always set dest & source alignment attributes to match
-    void setAlignment(unsigned Align);
 
     void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
 
@@ -522,19 +512,6 @@ namespace llvm {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
     }
   };
-
-  inline unsigned MemIntrinsic::getAlignment() const {
-    if (const auto *MTI = dyn_cast<MemTransferInst>(this))
-      return std::min(MTI->getDestAlignment(), MTI->getSourceAlignment());
-    else
-      return getDestAlignment();
-  }
-
-  inline void MemIntrinsic::setAlignment(unsigned Align) {
-    setDestAlignment(Align);
-    if (auto *MTI = dyn_cast<MemTransferInst>(this))
-      MTI->setSourceAlignment(Align);
-  }
 
   /// This class wraps the llvm.memcpy intrinsic.
   class MemCpyInst : public MemTransferInst {
