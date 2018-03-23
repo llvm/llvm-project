@@ -8,11 +8,13 @@
 Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper. """
 
+import subprocess
 import re
 from libscanbuild import run_command
 from libscanbuild.shell import decode
 
-__all__ = ['get_version', 'get_arguments', 'get_checkers']
+__all__ = ['get_version', 'get_arguments', 'get_checkers', 'is_ctu_capable',
+           'get_triple_arch']
 
 # regex for activated checker
 ACTIVE_CHECKER_PATTERN = re.compile(r'^-analyzer-checker=(.*)$')
@@ -152,3 +154,26 @@ def get_checkers(clang, plugins):
         raise Exception('Could not query Clang for available checkers.')
 
     return checkers
+
+
+def is_ctu_capable(func_map_cmd):
+    """ Detects if the current (or given) clang and function mapping
+    executables are CTU compatible. """
+
+    try:
+        run_command([func_map_cmd, '-version'])
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    return True
+
+
+def get_triple_arch(command, cwd):
+    """Returns the architecture part of the target triple for the given
+    compilation command. """
+
+    cmd = get_arguments(command, cwd)
+    try:
+        separator = cmd.index("-triple")
+        return cmd[separator + 1]
+    except (IndexError, ValueError):
+        return ""
