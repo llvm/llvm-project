@@ -218,6 +218,14 @@ def NullableReturnedFromNonnullChecker : Checker<"NullableReturnedFromNonnull">,
 
 } // end "nullability"
 
+let ParentPackage = APIModeling in {
+
+def TrustNonnullChecker : Checker<"TrustNonnull">,
+  HelpText<"Trust that returns from framework methods annotated with _Nonnull are not null">,
+  DescFile<"TrustNonnullChecker.cpp">;
+
+}
+
 //===----------------------------------------------------------------------===//
 // Evaluate "builtin" functions.
 //===----------------------------------------------------------------------===//
