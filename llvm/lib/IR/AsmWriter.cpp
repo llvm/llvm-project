@@ -458,27 +458,73 @@ namespace {
 
 class TypePrinting {
 public:
-  /// NamedTypes - The named types that are used by the current module.
-  TypeFinder NamedTypes;
+  TypePrinting(const Module *M = nullptr) : DeferredM(M) {}
 
-  /// NumberedTypes - The numbered types, along with their value.
-  DenseMap<StructType*, unsigned> NumberedTypes;
-
-  TypePrinting() = default;
   TypePrinting(const TypePrinting &) = delete;
   TypePrinting &operator=(const TypePrinting &) = delete;
 
-  void incorporateTypes(const Module &M);
+  /// The named types that are used by the current module.
+  TypeFinder &getNamedTypes();
+
+  /// The numbered types, number to type mapping.
+  std::vector<StructType *> &getNumberedTypes();
+
+  bool empty();
 
   void print(Type *Ty, raw_ostream &OS);
 
   void printStructBody(StructType *Ty, raw_ostream &OS);
+
+private:
+  void incorporateTypes();
+
+  /// A module to process lazily when needed. Set to nullptr as soon as used.
+  const Module *DeferredM;
+
+  TypeFinder NamedTypes;
+
+  // The numbered types, along with their value.
+  DenseMap<StructType *, unsigned> Type2Number;
+
+  std::vector<StructType *> NumberedTypes;
 };
 
 } // end anonymous namespace
 
-void TypePrinting::incorporateTypes(const Module &M) {
-  NamedTypes.run(M, false);
+TypeFinder &TypePrinting::getNamedTypes() {
+  incorporateTypes();
+  return NamedTypes;
+}
+
+std::vector<StructType *> &TypePrinting::getNumberedTypes() {
+  incorporateTypes();
+
+  // We know all the numbers that each type is used and we know that it is a
+  // dense assignment. Convert the map to an index table, if it's not done
+  // already (judging from the sizes):
+  if (NumberedTypes.size() == Type2Number.size())
+    return NumberedTypes;
+
+  NumberedTypes.resize(Type2Number.size());
+  for (const auto &P : Type2Number) {
+    assert(P.second < NumberedTypes.size() && "Didn't get a dense numbering?");
+    assert(!NumberedTypes[P.second] && "Didn't get a unique numbering?");
+    NumberedTypes[P.second] = P.first;
+  }
+  return NumberedTypes;
+}
+
+bool TypePrinting::empty() {
+  incorporateTypes();
+  return NamedTypes.empty() && Type2Number.empty();
+}
+
+void TypePrinting::incorporateTypes() {
+  if (!DeferredM)
+    return;
+
+  NamedTypes.run(*DeferredM, false);
+  DeferredM = nullptr;
 
   // The list of struct types we got back includes all the struct types, split
   // the unnamed ones out to a numbering and remove the anonymous structs.
@@ -493,7 +539,7 @@ void TypePrinting::incorporateTypes(const Module &M) {
       continue;
 
     if (STy->getName().empty())
-      NumberedTypes[STy] = NextNumber++;
+      Type2Number[STy] = NextNumber++;
     else
       *NextToUse++ = STy;
   }
@@ -501,9 +547,8 @@ void TypePrinting::incorporateTypes(const Module &M) {
   NamedTypes.erase(NextToUse, NamedTypes.end());
 }
 
-
-/// CalcTypeName - Write the specified type to the specified raw_ostream, making
-/// use of type names or up references to shorten the type name where possible.
+/// Write the specified type to the specified raw_ostream, making use of type
+/// names or up references to shorten the type name where possible.
 void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   switch (Ty->getTypeID()) {
   case Type::VoidTyID:      OS << "void"; return;
@@ -547,8 +592,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     if (!STy->getName().empty())
       return PrintLLVMName(OS, STy->getName(), LocalPrefix);
 
-    DenseMap<StructType*, unsigned>::iterator I = NumberedTypes.find(STy);
-    if (I != NumberedTypes.end())
+    incorporateTypes();
+    const auto I = Type2Number.find(STy);
+    if (I != Type2Number.end())
       OS << '%' << I->second;
     else  // Not enumerated, print the hex address.
       OS << "%\"type " << STy << '\"';
@@ -2206,12 +2252,11 @@ private:
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const Module *M, AssemblyAnnotationWriter *AAW,
                                bool IsForDebug, bool ShouldPreserveUseListOrder)
-    : Out(o), TheModule(M), Machine(Mac), AnnotationWriter(AAW),
+    : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
       IsForDebug(IsForDebug),
       ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
   if (!TheModule)
     return;
-  TypePrinter.incorporateTypes(*TheModule);
   for (const GlobalObject &GO : TheModule->global_objects())
     if (const Comdat *C = GO.getComdat())
       Comdats.insert(C);
@@ -2665,39 +2710,30 @@ void AssemblyWriter::printComdat(const Comdat *C) {
 }
 
 void AssemblyWriter::printTypeIdentities() {
-  if (TypePrinter.NumberedTypes.empty() &&
-      TypePrinter.NamedTypes.empty())
+  if (TypePrinter.empty())
     return;
 
   Out << '\n';
 
-  // We know all the numbers that each type is used and we know that it is a
-  // dense assignment.  Convert the map to an index table.
-  std::vector<StructType*> NumberedTypes(TypePrinter.NumberedTypes.size());
-  for (DenseMap<StructType*, unsigned>::iterator I =
-       TypePrinter.NumberedTypes.begin(), E = TypePrinter.NumberedTypes.end();
-       I != E; ++I) {
-    assert(I->second < NumberedTypes.size() && "Didn't get a dense numbering?");
-    NumberedTypes[I->second] = I->first;
-  }
-
   // Emit all numbered types.
-  for (unsigned i = 0, e = NumberedTypes.size(); i != e; ++i) {
-    Out << '%' << i << " = type ";
+  auto &NumberedTypes = TypePrinter.getNumberedTypes();
+  for (unsigned I = 0, E = NumberedTypes.size(); I != E; ++I) {
+    Out << '%' << I << " = type ";
 
     // Make sure we print out at least one level of the type structure, so
     // that we do not get %2 = type %2
-    TypePrinter.printStructBody(NumberedTypes[i], Out);
+    TypePrinter.printStructBody(NumberedTypes[I], Out);
     Out << '\n';
   }
 
-  for (unsigned i = 0, e = TypePrinter.NamedTypes.size(); i != e; ++i) {
-    PrintLLVMName(Out, TypePrinter.NamedTypes[i]->getName(), LocalPrefix);
+  auto &NamedTypes = TypePrinter.getNamedTypes();
+  for (unsigned I = 0, E = NamedTypes.size(); I != E; ++I) {
+    PrintLLVMName(Out, NamedTypes[I]->getName(), LocalPrefix);
     Out << " = type ";
 
     // Make sure we print out at least one level of the type structure, so
     // that we do not get %FILE = type %FILE
-    TypePrinter.printStructBody(TypePrinter.NamedTypes[i], Out);
+    TypePrinter.printStructBody(NamedTypes[I], Out);
     Out << '\n';
   }
 }
@@ -3567,9 +3603,7 @@ static bool printWithoutType(const Value &V, raw_ostream &O,
 
 static void printAsOperandImpl(const Value &V, raw_ostream &O, bool PrintType,
                                ModuleSlotTracker &MST) {
-  TypePrinting TypePrinter;
-  if (const Module *M = MST.getModule())
-    TypePrinter.incorporateTypes(*M);
+  TypePrinting TypePrinter(MST.getModule());
   if (PrintType) {
     TypePrinter.print(V.getType(), O);
     O << ' ';
@@ -3608,9 +3642,7 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
                               bool OnlyAsOperand) {
   formatted_raw_ostream OS(ROS);
 
-  TypePrinting TypePrinter;
-  if (M)
-    TypePrinter.incorporateTypes(*M);
+  TypePrinting TypePrinter(M);
 
   WriteAsOperandInternal(OS, &MD, &TypePrinter, MST.getMachine(), M,
                          /* FromValue */ true);

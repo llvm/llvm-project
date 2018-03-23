@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <cassert>
+#include <iostream>
 
 #include "test_macros.h"
 #include "count_new.hpp"
@@ -59,7 +60,8 @@ void test_aligned() {
     assert(T::constructed == 0);
     globalMemCounter.last_new_size = 0;
     globalMemCounter.last_new_align = 0;
-    T* volatile ap = a.allocate(3);
+    T* ap = a.allocate(3);
+    DoNotOptimize(ap);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkNewCalledEq(1));
     assert(globalMemCounter.checkAlignedNewCalledEq(ExpectAligned));
@@ -79,6 +81,7 @@ void test_aligned() {
     globalMemCounter.last_new_size = 0;
     globalMemCounter.last_new_align = 0;
     T* volatile ap2 = a.allocate(11, (const void*)5);
+    DoNotOptimize(ap2);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkNewCalledEq(1));
     assert(globalMemCounter.checkAlignedNewCalledEq(ExpectAligned));
@@ -87,6 +90,7 @@ void test_aligned() {
     assert(T::constructed == 0);
     globalMemCounter.last_delete_align = 0;
     a.deallocate(ap2, 11);
+    DoNotOptimize(ap2);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(globalMemCounter.checkDeleteCalledEq(1));
     assert(globalMemCounter.checkAlignedDeleteCalledEq(ExpectAligned));

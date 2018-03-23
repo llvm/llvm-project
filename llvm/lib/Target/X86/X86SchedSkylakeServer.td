@@ -3876,8 +3876,8 @@ def: InstRW<[SKXWriteResGroup116], (instregex "ROUNDPDr",
                                               "VROUNDPSr",
                                               "VROUNDSDr",
                                               "VROUNDSSr",
-                                              "VROUNDYPDr",
-                                              "VROUNDYPSr")>;
+                                              "VROUNDPDYr",
+                                              "VROUNDPSYr")>;
 
 def SKXWriteResGroup116_2 : SchedWriteRes<[SKXPort015]> {
   let Latency = 10;
@@ -5555,8 +5555,8 @@ def: InstRW<[SKXWriteResGroup192], (instregex "VRNDSCALEPDZ256rm(b?)i(k?)(z?)",
                                               "VRNDSCALEPDZrm(b?)i(k?)(z?)",
                                               "VRNDSCALEPSZ256rm(b?)i(k?)(z?)",
                                               "VRNDSCALEPSZrm(b?)i(k?)(z?)",
-                                              "VROUNDYPDm",
-                                              "VROUNDYPSm")>;
+                                              "VROUNDPDYm",
+                                              "VROUNDPSYm")>;
 
 def SKXWriteResGroup192_2 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 17;

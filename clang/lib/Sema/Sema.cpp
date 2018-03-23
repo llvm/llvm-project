@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -31,7 +32,6 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/ObjCMethodList.h"
-#include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -1524,24 +1524,6 @@ void ExternalSemaSource::ReadUndefinedButUsed(
 
 void ExternalSemaSource::ReadMismatchingDeleteExpressions(llvm::MapVector<
     FieldDecl *, llvm::SmallVector<std::pair<SourceLocation, bool>, 4>> &) {}
-
-void PrettyDeclStackTraceEntry::print(raw_ostream &OS) const {
-  SourceLocation Loc = this->Loc;
-  if (!Loc.isValid() && TheDecl) Loc = TheDecl->getLocation();
-  if (Loc.isValid()) {
-    Loc.print(OS, S.getSourceManager());
-    OS << ": ";
-  }
-  OS << Message;
-
-  if (auto *ND = dyn_cast_or_null<NamedDecl>(TheDecl)) {
-    OS << " '";
-    ND->getNameForDiagnostic(OS, ND->getASTContext().getPrintingPolicy(), true);
-    OS << "'";
-  }
-
-  OS << '\n';
-}
 
 /// \brief Figure out if an expression could be turned into a call.
 ///

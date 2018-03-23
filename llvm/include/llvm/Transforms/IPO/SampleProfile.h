@@ -1,4 +1,4 @@
-//===- Transforms/SampleProfile.h - SamplePGO pass --------------*- C++ -*-===//
+//===- SampleProfile.h - SamplePGO pass ---------- --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SAMPLEPROFILE_H
-#define LLVM_TRANSFORMS_SAMPLEPROFILE_H
+#ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILE_H
+#define LLVM_TRANSFORMS_IPO_SAMPLEPROFILE_H
 
 #include "llvm/IR/PassManager.h"
 #include <string>

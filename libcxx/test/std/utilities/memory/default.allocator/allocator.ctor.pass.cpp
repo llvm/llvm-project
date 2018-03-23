@@ -46,5 +46,5 @@ int main()
     constexpr AL a3{a2};
     (void) a3;
     }
-    
+
 }

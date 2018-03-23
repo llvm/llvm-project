@@ -1,6 +1,9 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++11
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DTEMPORARY_DTORS -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++17
+
+// Note: The C++17 run-line doesn't -verify yet - it is a no-crash test.
 
 extern bool clang_analyzer_eval(bool);
 extern bool clang_analyzer_warnIfReached();

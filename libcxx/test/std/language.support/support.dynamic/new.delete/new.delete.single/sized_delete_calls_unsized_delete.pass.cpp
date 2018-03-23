@@ -35,15 +35,15 @@ void operator delete(void* p, const std::nothrow_t&) TEST_NOEXCEPT
     std::free(p);
 }
 
-int* volatile x;
-
 int main()
 {
-    x = new int(42);
+    int *x = new int(42);
+    DoNotOptimize(x);
     assert(0 == delete_called);
     assert(0 == delete_nothrow_called);
 
     delete x;
+    DoNotOptimize(x);
     assert(1 == delete_called);
     assert(0 == delete_nothrow_called);
 }

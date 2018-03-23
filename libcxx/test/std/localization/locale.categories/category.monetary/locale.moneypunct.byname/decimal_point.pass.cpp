@@ -21,6 +21,7 @@
 #include <locale>
 #include <limits>
 #include <cassert>
+#include <iostream> // FIXME: for debugging purposes only
 
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
@@ -119,6 +120,11 @@ int main()
 #endif
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
+        if (f.decimal_point() != sep) {
+            std::cout << "f.decimal_point() = '" << f.decimal_point() << "'\n";
+            std::cout << "sep = '" << sep << "'\n";
+            std::cout << std::endl;
+        }
         assert(f.decimal_point() == sep);
     }
     {

@@ -134,7 +134,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           makeZeroElementRegion(State, LValue, Ty, CallOpts.IsArrayCtorOrDtor);
       return LValue.getAsRegion();
     }
-    case ConstructionContext::ConstructorInitializerKind: {
+    case ConstructionContext::SimpleConstructorInitializerKind: {
       const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
       const auto *Init = ICC->getCXXCtorInitializer();
       assert(Init->isAnyMemberInitializer());
@@ -196,13 +196,17 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       CallOpts.IsTemporaryCtorOrDtor = true;
       return MRMgr.getCXXTempObjectRegion(CE, LCtx);
     }
-    case ConstructionContext::ReturnedValueKind: {
+    case ConstructionContext::SimpleReturnedValueKind: {
       // The temporary is to be managed by the parent stack frame.
       // So build it in the parent stack frame if we're not in the
       // top frame of the analysis.
       // TODO: What exactly happens when we are? Does the temporary object live
       // long enough in the region store in this case? Would checkers think
       // that this object immediately goes out of scope?
+      // TODO: We assume that the call site has a temporary object construction
+      // context. This is no longer true in C++17 or when copy elision is
+      // performed. We may need to unwrap multiple stack frames here and we
+      // won't necessarily end up with a temporary at the end.
       const LocationContext *TempLCtx = LCtx;
       if (const LocationContext *CallerLCtx =
               LCtx->getCurrentStackFrame()->getParent()) {
@@ -211,6 +215,11 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       CallOpts.IsTemporaryCtorOrDtor = true;
       return MRMgr.getCXXTempObjectRegion(CE, TempLCtx);
     }
+    case ConstructionContext::CXX17ElidedCopyVariableKind:
+    case ConstructionContext::CXX17ElidedCopyReturnedValueKind:
+    case ConstructionContext::CXX17ElidedCopyConstructorInitializerKind:
+      // Not implemented yet.
+      break;
     }
   }
   // If we couldn't find an existing region to construct into, assume we're
