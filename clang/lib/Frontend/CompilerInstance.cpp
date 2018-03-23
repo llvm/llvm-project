@@ -1199,11 +1199,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   llvm::CrashRecoveryContext CRC;
   CRC.RunSafelyOnThread(
       [&]() {
-        SmallString<64> CrashInfoMessage("While building module for '");
-        CrashInfoMessage += ModuleName;
-        CrashInfoMessage += "'";
-        llvm::PrettyStackTraceString CrashInfo(CrashInfoMessage.c_str());
-
         GenerateModuleFromModuleMapAction Action;
         Instance.ExecuteAction(Action);
       },
