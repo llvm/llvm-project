@@ -256,8 +256,7 @@ SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFile *obj_file) {
 SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFile *ofile)
     : SymbolFile(ofile), m_flags(), m_compile_unit_infos(), m_func_indexes(),
       m_glob_indexes(),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate),
-      m_initialized_swift_modules(false) {}
+      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
 
 SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() {}
 

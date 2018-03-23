@@ -105,7 +105,7 @@ public:
 
   lldb::LanguageType
   GetLanguageAttributeValue(SymbolFileDWARF *dwarf2Data,
-                            const DWARFCompileUnit *cu) const;
+                            const DWARFUnit *cu) const;
 
   uint64_t GetAttributeValueAsReference(
       SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,

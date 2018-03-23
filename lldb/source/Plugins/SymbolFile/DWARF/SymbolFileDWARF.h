@@ -258,7 +258,6 @@ public:
   const lldb_private::DWARFDataExtractor &get_debug_str_offsets_data();
   const lldb_private::DWARFDataExtractor &get_apple_names_data();
   const lldb_private::DWARFDataExtractor &get_apple_types_data();
-  const lldb_private::DWARFDataExtractor &get_apple_exttypes_data();
   const lldb_private::DWARFDataExtractor &get_apple_namespaces_data();
   const lldb_private::DWARFDataExtractor &get_apple_objc_data();
 
@@ -333,7 +332,7 @@ protected:
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
 
   struct DWARFDataSegment {
-    std::once_flag m_flag;
+    llvm::once_flag m_flag;
     lldb_private::DWARFDataExtractor m_data;
   };
 
@@ -513,7 +512,6 @@ protected:
   DWARFDataSegment m_data_debug_str_offsets;
   DWARFDataSegment m_data_apple_names;
   DWARFDataSegment m_data_apple_types;
-  DWARFDataSegment m_data_apple_exttypes;
   DWARFDataSegment m_data_apple_namespaces;
   DWARFDataSegment m_data_apple_objc;
 
@@ -525,7 +523,6 @@ protected:
   std::unique_ptr<DWARFDebugLine> m_line;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_names_ap;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_types_ap;
-  std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_exttypes_ap;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_namespaces_ap;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_objc_ap;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_ap;
@@ -546,8 +543,7 @@ protected:
   NameToDIE m_global_index;               // Global and static variables
   NameToDIE m_type_index;                 // All type DIE offsets
   NameToDIE m_namespace_index;            // All type DIE offsets
-  bool m_indexed : 1, m_using_apple_tables : 1, m_initialized_swift_modules : 1,
-      m_reported_missing_sdk : 1, m_fetched_external_modules : 1;
+  bool m_indexed : 1, m_using_apple_tables : 1, m_fetched_external_modules : 1;
   lldb_private::LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
 
   typedef std::shared_ptr<std::set<DIERef>> DIERefSetSP;

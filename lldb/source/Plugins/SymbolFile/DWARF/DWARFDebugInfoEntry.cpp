@@ -961,7 +961,7 @@ uint64_t DWARFDebugInfoEntry::GetAttributeValueAsUnsigned(
 }
 
 lldb::LanguageType DWARFDebugInfoEntry::GetLanguageAttributeValue(
-    SymbolFileDWARF *dwarf2Data, const DWARFCompileUnit *cu) const {
+    SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu) const {
   const uint64_t language = GetAttributeValueAsUnsigned(
       dwarf2Data, cu, DW_AT_language, lldb::eLanguageTypeUnknown);
   if (language == llvm::dwarf::DW_LANG_Swift)

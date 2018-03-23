@@ -308,7 +308,6 @@ protected:
   std::map<lldb_private::ConstString, OSOInfoSP> m_oso_map;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   lldb_private::LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
-  bool m_initialized_swift_modules;
   DebugMap m_debug_map;
 
   //------------------------------------------------------------------

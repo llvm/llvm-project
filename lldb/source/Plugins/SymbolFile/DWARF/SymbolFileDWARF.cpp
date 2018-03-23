@@ -13,7 +13,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Threading.h"
 
-#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -398,22 +397,20 @@ SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
 }
 
 SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile)
-    : SymbolFile(objfile),
-      UserID(uint64_t(DW_INVALID_OFFSET) << 32), // Used by SymbolFileDWARFDebugMap to when
+    : SymbolFile(objfile), UserID(0), // Used by SymbolFileDWARFDebugMap to when
                                                  // this class parses .o files to contain
                                                  // the .o file index/ID
       m_debug_map_module_wp(), m_debug_map_symfile(NULL), m_data_debug_abbrev(),
       m_data_debug_aranges(), m_data_debug_frame(), m_data_debug_info(),
       m_data_debug_line(), m_data_debug_macro(), m_data_debug_loc(),
       m_data_debug_ranges(), m_data_debug_str(), m_data_apple_names(),
-      m_data_apple_types(), m_data_apple_exttypes(), m_data_apple_namespaces(),
+      m_data_apple_types(), m_data_apple_namespaces(),
       m_abbr(), m_info(), m_line(), m_apple_names_ap(), m_apple_types_ap(),
-      m_apple_exttypes_ap(), m_apple_namespaces_ap(), m_apple_objc_ap(),
+      m_apple_namespaces_ap(), m_apple_objc_ap(),
       m_function_basename_index(), m_function_fullname_index(),
       m_function_method_index(), m_function_selector_index(),
       m_objc_class_selectors_index(), m_global_index(), m_type_index(),
       m_namespace_index(), m_indexed(false), m_using_apple_tables(false),
-      m_initialized_swift_modules(false), m_reported_missing_sdk(false),
       m_fetched_external_modules(false),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate), m_ranges(),
       m_unique_ast_type_map() {}
@@ -474,15 +471,6 @@ void SymbolFileDWARF::InitializeObject() {
       m_using_apple_tables = true;
     else
       m_apple_types_ap.reset();
-  }
-  get_apple_exttypes_data();
-  if (m_data_apple_exttypes.m_data.GetByteSize() > 0) {
-    m_apple_exttypes_ap.reset(new DWARFMappedHash::MemoryTable(
-        m_data_apple_exttypes.m_data, get_debug_str_data(), ".apple_exttypes"));
-    if (m_apple_exttypes_ap->IsValid())
-      m_using_apple_tables = true;
-    else
-      m_apple_exttypes_ap.reset();
   }
 
   get_apple_namespaces_data();
@@ -688,11 +676,6 @@ const DWARFDataExtractor &SymbolFileDWARF::get_apple_names_data() {
 
 const DWARFDataExtractor &SymbolFileDWARF::get_apple_types_data() {
   return GetCachedSectionData(eSectionTypeDWARFAppleTypes, m_data_apple_types);
-}
-
-const DWARFDataExtractor &SymbolFileDWARF::get_apple_exttypes_data() {
-  return GetCachedSectionData(eSectionTypeDWARFAppleExternalTypes,
-                              m_data_apple_exttypes);
 }
 
 const DWARFDataExtractor &SymbolFileDWARF::get_apple_namespaces_data() {
@@ -1183,15 +1166,11 @@ bool SymbolFileDWARF::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
   if (!dwarf_cu_die)
     return false;
 
-#if TODO_REQUIRES_LLVM_ORG_SYNC
-// Uncomment out the DW_AT_*macros and remove constants once GitHub llvm
-// contains a refersh from llvm.org llvm
-#endif
   lldb::offset_t sect_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(
-      0x79 /* DW_AT_macros */, DW_INVALID_OFFSET);
+      DW_AT_macros, DW_INVALID_OFFSET);
   if (sect_offset == DW_INVALID_OFFSET)
     sect_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(
-        0x2119 /* DW_AT_GNU_macros */, DW_INVALID_OFFSET);
+        DW_AT_GNU_macros, DW_INVALID_OFFSET);
   if (sect_offset == DW_INVALID_OFFSET)
     return false;
 
@@ -1584,8 +1563,7 @@ size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
   method_die_offsets.clear();
   if (m_using_apple_tables) {
     if (m_apple_objc_ap.get())
-      m_apple_objc_ap->FindByName(class_name.GetStringRef(),
-                                  method_die_offsets);
+      m_apple_objc_ap->FindByName(class_name.GetCString(), method_die_offsets);
   } else {
     if (!m_indexed)
       Index();
@@ -2066,10 +2044,9 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
 
 lldb::TypeSP
 SymbolFileDWARF::ResolveTypeFromAttribute(const DWARFFormValue &type_attr) {
-  if (type_attr) {
-    const dw_form_t form = type_attr.Form();
+  const dw_form_t form = type_attr.Form();
 
-    switch (form) {
+  switch (form) {
     case DW_FORM_ref_sig8: {
       // TODO: Find type in .debug_types and return an appropriate
       // lldb_private::Type *
@@ -2085,7 +2062,6 @@ SymbolFileDWARF::ResolveTypeFromAttribute(const DWARFFormValue &type_attr) {
       if (ref_type)
         return ref_type->shared_from_this();
     } break;
-    }
   }
   return lldb::TypeSP();
 }
@@ -3693,7 +3669,7 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
     const uint32_t num_compile_units = GetNumCompileUnits();
 
     if (cu) {
-      DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
 
       if (dwarf_cu) {
         const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
@@ -3712,7 +3688,7 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
       }
     } else {
       for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
           const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
@@ -3743,7 +3719,7 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
 
   if (debug_info) {
     if (cu) {
-      DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
 
       if (dwarf_cu) {
         const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
@@ -3764,7 +3740,7 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
       const uint32_t num_compile_units = GetNumCompileUnits();
 
       for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
           const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
@@ -4368,7 +4344,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               *this, ResolveTypeFromAttribute(type_die_form)));
         } else {
           type_sp.reset(
-              new SymbolFileType(*this, DIERef(type_die_form).GetUID(this)));
+            new SymbolFileType(*this, DIERef(type_die_form).GetUID(this)));
         }
 
         if (const_value.Form() && type_sp && type_sp->GetType())
