@@ -251,6 +251,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
         $<TARGET_OBJECTS:RTInterception.osx>
         $<TARGET_OBJECTS:RTSanitizerCommon.osx>
         $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
+        $<TARGET_OBJECTS:RTSanitizerCommonCoverage.osx>
         $<TARGET_OBJECTS:RTLSanCommon.osx>
         $<TARGET_OBJECTS:RTUbsan.osx>)
     else()
@@ -260,6 +261,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
         $<TARGET_OBJECTS:RTInterception.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+        $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
         $<TARGET_OBJECTS:RTLSanCommon.${arch}>
         $<TARGET_OBJECTS:RTUbsan.${arch}>
         $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>)
@@ -283,6 +285,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTInterception.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
       $<TARGET_OBJECTS:RTUbsan.${arch}>
       $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
       ${COMPILER_RT_GTEST_SOURCE}
