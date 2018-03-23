@@ -392,15 +392,15 @@ TEST(CoreAPIsTest, TestLookupWithThreadedMaterialization) {
 
   ExecutionSession ES(SSP);
 
-  auto MaterializeOnNewThread = [&ES](VSO &V,
-                                      std::unique_ptr<MaterializationUnit> MU) {
+  std::thread MaterializationThread;
+  auto MaterializeOnNewThread = [&](VSO &V,
+                                    std::unique_ptr<MaterializationUnit> MU) {
     // FIXME: Use move capture once we move to C++14.
     std::shared_ptr<MaterializationUnit> SharedMU = std::move(MU);
-    std::thread([&ES, &V, SharedMU]() {
+    MaterializationThread = std::thread([&ES, &V, SharedMU]() {
       if (auto Err = SharedMU->materialize(V))
         ES.reportError(std::move(Err));
-    })
-        .detach();
+    });
   };
 
   auto FooLookupResult =
@@ -410,6 +410,7 @@ TEST(CoreAPIsTest, TestLookupWithThreadedMaterialization) {
       << "lookup returned an incorrect address";
   EXPECT_EQ(FooLookupResult.getFlags(), FooSym.getFlags())
       << "lookup returned incorrect flags";
+  MaterializationThread.join();
 #endif
 }
 

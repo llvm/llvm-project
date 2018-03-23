@@ -89,6 +89,11 @@ static cl::opt<unsigned>
                               "be used for register mappings"),
                      cl::init(0));
 
+static cl::opt<bool>
+    PrintResourcePressureView("resource-pressure",
+                              cl::desc("Print the resource pressure view"),
+                              cl::init(true));
+
 static cl::opt<bool> PrintTimelineView("timeline",
                                        cl::desc("Print the timeline view"),
                                        cl::init(false));
@@ -316,8 +321,12 @@ int main(int argc, char **argv) {
   if (DispatchWidth)
     Width = DispatchWidth;
 
+  // Create an instruction builder.
+  std::unique_ptr<mca::InstrBuilder> IB =
+      llvm::make_unique<mca::InstrBuilder>(*STI, *MCII);
+
   std::unique_ptr<mca::Backend> B = llvm::make_unique<mca::Backend>(
-      *STI, *MCII, *MRI, *S, Width, RegisterFileSize, MaxRetirePerCycle,
+      *STI, *MRI, *IB, *S, Width, RegisterFileSize, MaxRetirePerCycle,
       LoadQueueSize, StoreQueueSize, AssumeNoAlias);
 
   std::unique_ptr<mca::BackendPrinter> Printer =
@@ -329,7 +338,8 @@ int main(int argc, char **argv) {
   if (PrintModeVerbose)
     Printer->addView(llvm::make_unique<mca::BackendStatistics>(*STI));
 
-  Printer->addView(llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
+  if (PrintResourcePressureView)
+    Printer->addView(llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
 
   if (PrintTimelineView) {
     Printer->addView(llvm::make_unique<mca::TimelineView>(
