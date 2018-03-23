@@ -5,8 +5,8 @@ import sys
 
 dotest_path = '@LLDB_SOURCE_DIR@/test/dotest.py'
 dotest_args_str = '@LLDB_DOTEST_ARGS@'
-swift_compiler = '@LLDB_SWIFTC'
-swift_library = '@LLDB_SWIFT_LIBS'
+swift_compiler = '@LLDB_SWIFTC@'
+swift_library = '@LLDB_SWIFT_LIBS@'
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
