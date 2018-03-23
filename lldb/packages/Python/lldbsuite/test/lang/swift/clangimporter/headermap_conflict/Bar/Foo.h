@@ -1,0 +1,1 @@
+struct FooToplevel { int j; };
