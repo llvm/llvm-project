@@ -205,11 +205,6 @@ static cl::opt<unsigned>
                   cl::desc("Max coefficients in AddRec during evolving"),
                   cl::init(16));
 
-static cl::opt<bool> VersionUnknown(
-    "scev-version-unknown", cl::Hidden,
-    cl::desc("Use predicated scalar evolution to version SCEVUnknowns"),
-    cl::init(false));
-
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -11644,8 +11639,6 @@ private:
   // couldn't create an AddRec for it, or couldn't add the predicate), we just
   // return \p Expr.
   const SCEV *convertToAddRecWithPreds(const SCEVUnknown *Expr) {
-    if (!VersionUnknown)
-      return Expr;
     if (!isa<PHINode>(Expr->getValue()))
       return Expr;
     Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>

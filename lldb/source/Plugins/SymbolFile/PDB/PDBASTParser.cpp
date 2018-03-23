@@ -312,6 +312,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     std::string name;
     PDBSymbolTypeFunctionSig *func_sig = nullptr;
     if (auto pdb_func = llvm::dyn_cast<PDBSymbolFunc>(&type)) {
+      if (pdb_func->isCompilerGenerated())
+        return nullptr;
+
       auto sig = pdb_func->getSignature();
       if (!sig)
         return nullptr;

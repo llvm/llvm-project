@@ -154,6 +154,9 @@ namespace llvm {
   /// This pass adds dead/undef flags after analyzing subregister lanes.
   extern char &DetectDeadLanesID;
 
+  /// This pass perform post-ra machine sink for COPY instructions.
+  extern char &PostRAMachineSinkingID;
+
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
   ///

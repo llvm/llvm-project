@@ -5863,49 +5863,35 @@ let Predicates = [UseAVX] in {
 // SSE4.1 - Round Instructions
 //===----------------------------------------------------------------------===//
 
-multiclass sse41_fp_unop_p<bits<8> opcps, bits<8> opcpd, string OpcodeStr,
+def SSE_ROUNDPS : OpndItins<
+  IIC_SSE_ROUNDPS_REG, IIC_SSE_ROUNDPS_MEM
+>;
+
+def SSE_ROUNDPD : OpndItins<
+  IIC_SSE_ROUNDPD_REG, IIC_SSE_ROUNDPD_MEM
+>;
+
+multiclass sse41_fp_unop_p<bits<8> opc, string OpcodeStr,
                            X86MemOperand x86memop, RegisterClass RC,
-                           ValueType VT32, ValueType VT64,
-                           PatFrag mem_frag32, PatFrag mem_frag64,
-                           SDNode OpNode> {
-let ExeDomain = SSEPackedSingle in {
+                           ValueType VT, PatFrag mem_frag, SDNode OpNode,
+                           OpndItins itins> {
   // Intrinsic operation, reg.
   // Vector intrinsic operation, reg
-  def PSr : SS4AIi8<opcps, MRMSrcReg,
-                    (outs RC:$dst), (ins RC:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                    "ps\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    [(set RC:$dst, (VT32 (OpNode RC:$src1, imm:$src2)))],
-                    IIC_SSE_ROUNDPS_REG>, Sched<[WriteFAdd]>;
+  def r : SS4AIi8<opc, MRMSrcReg,
+                  (outs RC:$dst), (ins RC:$src1, i32u8imm:$src2),
+                  !strconcat(OpcodeStr,
+                  "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                  [(set RC:$dst, (VT (OpNode RC:$src1, imm:$src2)))],
+                  itins.rr>, Sched<[WriteFAdd]>;
 
   // Vector intrinsic operation, mem
-  def PSm : SS4AIi8<opcps, MRMSrcMem,
-                    (outs RC:$dst), (ins x86memop:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                    "ps\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    [(set RC:$dst,
-                          (VT32 (OpNode (mem_frag32 addr:$src1),imm:$src2)))],
-                          IIC_SSE_ROUNDPS_MEM>, Sched<[WriteFAddLd]>;
-} // ExeDomain = SSEPackedSingle
-
-let ExeDomain = SSEPackedDouble in {
-  // Vector intrinsic operation, reg
-  def PDr : SS4AIi8<opcpd, MRMSrcReg,
-                    (outs RC:$dst), (ins RC:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                    "pd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    [(set RC:$dst, (VT64 (OpNode RC:$src1, imm:$src2)))],
-                    IIC_SSE_ROUNDPD_REG>, Sched<[WriteFAdd]>;
-
-  // Vector intrinsic operation, mem
-  def PDm : SS4AIi8<opcpd, MRMSrcMem,
-                    (outs RC:$dst), (ins x86memop:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                    "pd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    [(set RC:$dst,
-                          (VT64 (OpNode (mem_frag64 addr:$src1),imm:$src2)))],
-                          IIC_SSE_ROUNDPD_REG>, Sched<[WriteFAddLd]>;
-} // ExeDomain = SSEPackedDouble
+  def m : SS4AIi8<opc, MRMSrcMem,
+                  (outs RC:$dst), (ins x86memop:$src1, i32u8imm:$src2),
+                  !strconcat(OpcodeStr,
+                  "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                  [(set RC:$dst,
+                        (VT (OpNode (mem_frag addr:$src1),imm:$src2)))],
+                  itins.rm>, Sched<[WriteFAddLd]>;
 }
 
 multiclass avx_fp_unop_rm<bits<8> opcss, bits<8> opcsd,
@@ -6026,13 +6012,24 @@ let ExeDomain = SSEPackedDouble, isCodeGenOnly = 1 in {
 
 // FP round - roundss, roundps, roundsd, roundpd
 let Predicates = [HasAVX, NoVLX] in {
-  // Intrinsic form
-  defm VROUND  : sse41_fp_unop_p<0x08, 0x09, "vround", f128mem, VR128, v4f32,
-                                 v2f64, loadv4f32, loadv2f64, X86VRndScale>,
-                                 VEX, VEX_WIG;
-  defm VROUNDY : sse41_fp_unop_p<0x08, 0x09, "vround", f256mem, VR256, v8f32,
-                                 v4f64, loadv8f32, loadv4f64, X86VRndScale>,
-                                 VEX, VEX_L, VEX_WIG;
+  let ExeDomain = SSEPackedSingle in {
+    // Intrinsic form
+    defm VROUNDPS  : sse41_fp_unop_p<0x08, "vroundps", f128mem, VR128, v4f32,
+                                     loadv4f32, X86VRndScale, SSE_ROUNDPS>,
+                                   VEX, VEX_WIG;
+    defm VROUNDPSY : sse41_fp_unop_p<0x08, "vroundps", f256mem, VR256, v8f32,
+                                     loadv8f32, X86VRndScale, SSE_ROUNDPS>,
+                                   VEX, VEX_L, VEX_WIG;
+  }
+
+  let ExeDomain = SSEPackedDouble in {
+    defm VROUNDPD  : sse41_fp_unop_p<0x09, "vroundpd", f128mem, VR128, v2f64,
+                                     loadv2f64, X86VRndScale, SSE_ROUNDPD>,
+                                   VEX, VEX_WIG;
+    defm VROUNDPDY : sse41_fp_unop_p<0x09, "vroundpd", f256mem, VR256, v4f64,
+                                     loadv4f64, X86VRndScale, SSE_ROUNDPD>,
+                                   VEX, VEX_L, VEX_WIG;
+  }
 }
 let Predicates = [HasAVX, NoAVX512] in {
   defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround", v4f32, v2f64,
@@ -6087,30 +6084,34 @@ let Predicates = [HasAVX, NoVLX] in {
             (VROUNDPDr VR128:$src, (i32 0xB))>;
 
   def : Pat<(v8f32 (ffloor VR256:$src)),
-            (VROUNDYPSr VR256:$src, (i32 0x9))>;
+            (VROUNDPSYr VR256:$src, (i32 0x9))>;
   def : Pat<(v8f32 (fnearbyint VR256:$src)),
-            (VROUNDYPSr VR256:$src, (i32 0xC))>;
+            (VROUNDPSYr VR256:$src, (i32 0xC))>;
   def : Pat<(v8f32 (fceil VR256:$src)),
-            (VROUNDYPSr VR256:$src, (i32 0xA))>;
+            (VROUNDPSYr VR256:$src, (i32 0xA))>;
   def : Pat<(v8f32 (frint VR256:$src)),
-            (VROUNDYPSr VR256:$src, (i32 0x4))>;
+            (VROUNDPSYr VR256:$src, (i32 0x4))>;
   def : Pat<(v8f32 (ftrunc VR256:$src)),
-            (VROUNDYPSr VR256:$src, (i32 0xB))>;
+            (VROUNDPSYr VR256:$src, (i32 0xB))>;
 
   def : Pat<(v4f64 (ffloor VR256:$src)),
-            (VROUNDYPDr VR256:$src, (i32 0x9))>;
+            (VROUNDPDYr VR256:$src, (i32 0x9))>;
   def : Pat<(v4f64 (fnearbyint VR256:$src)),
-            (VROUNDYPDr VR256:$src, (i32 0xC))>;
+            (VROUNDPDYr VR256:$src, (i32 0xC))>;
   def : Pat<(v4f64 (fceil VR256:$src)),
-            (VROUNDYPDr VR256:$src, (i32 0xA))>;
+            (VROUNDPDYr VR256:$src, (i32 0xA))>;
   def : Pat<(v4f64 (frint VR256:$src)),
-            (VROUNDYPDr VR256:$src, (i32 0x4))>;
+            (VROUNDPDYr VR256:$src, (i32 0x4))>;
   def : Pat<(v4f64 (ftrunc VR256:$src)),
-            (VROUNDYPDr VR256:$src, (i32 0xB))>;
+            (VROUNDPDYr VR256:$src, (i32 0xB))>;
 }
 
-defm ROUND  : sse41_fp_unop_p<0x08, 0x09, "round", f128mem, VR128, v4f32, v2f64,
-                              memopv4f32, memopv2f64, X86VRndScale>;
+let ExeDomain = SSEPackedSingle in
+defm ROUNDPS  : sse41_fp_unop_p<0x08, "roundps", f128mem, VR128, v4f32,
+                                memopv4f32, X86VRndScale, SSE_ROUNDPS>;
+let ExeDomain = SSEPackedDouble in
+defm ROUNDPD  : sse41_fp_unop_p<0x09, "roundpd", f128mem, VR128, v2f64,
+                                memopv2f64, X86VRndScale, SSE_ROUNDPD>;
 
 defm ROUND  : sse41_fp_unop_s<0x0A, 0x0B, "round">;
 

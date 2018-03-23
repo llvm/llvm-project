@@ -21,6 +21,10 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SCCP_H
 #define LLVM_TRANSFORMS_SCALAR_SCCP_H
 
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -33,6 +37,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+bool runIPSCCP(Module &M, const DataLayout &DL, const TargetLibraryInfo *TLI);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_SCCP_H

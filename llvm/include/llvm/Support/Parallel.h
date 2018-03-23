@@ -56,12 +56,12 @@ public:
   ~Latch() { sync(); }
 
   void inc() {
-    std::unique_lock<std::mutex> lock(Mutex);
+    std::lock_guard<std::mutex> lock(Mutex);
     ++Count;
   }
 
   void dec() {
-    std::unique_lock<std::mutex> lock(Mutex);
+    std::lock_guard<std::mutex> lock(Mutex);
     if (--Count == 0)
       Cond.notify_all();
   }

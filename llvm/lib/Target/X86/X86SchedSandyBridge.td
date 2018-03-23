@@ -757,8 +757,8 @@ def: InstRW<[SBWriteResGroup21], (instregex "ADD_FPrST0",
                                             "(V?)ROUNDPSr",
                                             "(V?)ROUNDSDr",
                                             "(V?)ROUNDSSr",
-                                            "VROUNDYPDr",
-                                            "VROUNDYPSr",
+                                            "VROUNDPDYr",
+                                            "VROUNDPSYr",
                                             "VSUBPDYrr",
                                             "(V?)SUBPDrr",
                                             "VSUBPSYrr",
@@ -858,6 +858,7 @@ def: InstRW<[SBWriteResGroup26_2], (instregex "COM_FIPr",
                                               "UCOM_FIPr",
                                               "UCOM_FIr")>;
 
+// FIXME: this is probably incorrect.
 def SBWriteResGroup27 : SchedWriteRes<[SBPort0,SBPort1]> {
   let Latency = 4;
   let NumMicroOps = 2;
@@ -1746,6 +1747,7 @@ def: InstRW<[SBWriteResGroup93], (instregex "CVTSD2SI64rm",
                                             "CVTTSD2SIrm",
                                             "CVTTSS2SI64rm",
                                             "CVTTSS2SIrm")>;
+// FIXME this is probably incorrect.
 def: InstRW<[SBWriteResGroup93], (instrs MUL16m, MUL32m, MUL64m)>;
 
 def SBWriteResGroup94 : SchedWriteRes<[SBPort0,SBPort5,SBPort23]> {
@@ -1851,8 +1853,8 @@ def: InstRW<[SBWriteResGroup101], (instregex "ADD_F32m",
                                              "VMAX(C?)PSYrm",
                                              "VMIN(C?)PDYrm",
                                              "VMIN(C?)PSYrm",
-                                             "VROUNDYPDm",
-                                             "VROUNDYPSm",
+                                             "VROUNDPDYm",
+                                             "VROUNDPSYm",
                                              "VSUBPDYrm",
                                              "VSUBPSYrm")>;
 

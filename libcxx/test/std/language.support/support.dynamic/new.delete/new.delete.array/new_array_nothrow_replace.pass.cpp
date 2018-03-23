@@ -36,7 +36,7 @@ void  operator delete(void* p) TEST_NOEXCEPT
     std::free(p);
 }
 
-volatile int A_constructed = 0;
+int A_constructed = 0;
 
 struct A
 {
@@ -44,15 +44,15 @@ struct A
     ~A() {--A_constructed;}
 };
 
-A* volatile ap;
-
 int main()
 {
-    ap = new (std::nothrow) A[3];
+    A *ap = new (std::nothrow) A[3];
+    DoNotOptimize(ap);
     assert(ap);
     assert(A_constructed == 3);
     assert(new_called);
     delete [] ap;
+    DoNotOptimize(ap);
     assert(A_constructed == 0);
     assert(!new_called);
 }

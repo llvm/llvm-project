@@ -279,7 +279,7 @@ Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
   if (!LenC || !FillC || !FillC->getType()->isIntegerTy(8))
     return nullptr;
   uint64_t Len = LenC->getLimitedValue();
-  Alignment = MI->getAlignment();
+  Alignment = MI->getDestAlignment();
   assert(Len && "0-sized memory setting should be removed already.");
 
   // memset(s,c,n) -> store s, c (for n=1,2,4,8)

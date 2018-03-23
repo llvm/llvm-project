@@ -593,16 +593,16 @@ bool SystemZDAGToDAGISel::selectAddress(SDValue Addr,
 // The selection DAG must no longer depend on their uniqueness when this
 // function is used.
 static void insertDAGNode(SelectionDAG *DAG, SDNode *Pos, SDValue N) {
-  if (N.getNode()->getNodeId() == -1 ||
-      N.getNode()->getNodeId() > Pos->getNodeId()) {
+  if (N->getNodeId() == -1 ||
+      (SelectionDAGISel::getUninvalidatedNodeId(N.getNode()) >
+       SelectionDAGISel::getUninvalidatedNodeId(Pos))) {
     DAG->RepositionNode(Pos->getIterator(), N.getNode());
     // Mark Node as invalid for pruning as after this it may be a successor to a
     // selected node but otherwise be in the same position of Pos.
     // Conservatively mark it with the same -abs(Id) to assure node id
     // invariant is preserved.
-    int PId = Pos->getNodeId();
-    int InvalidatedPId = -(PId + 1);
-    N->setNodeId((PId > 0) ? InvalidatedPId : PId);
+    N->setNodeId(Pos->getNodeId());
+    SelectionDAGISel::InvalidateNodeId(N.getNode());
   }
 }
 

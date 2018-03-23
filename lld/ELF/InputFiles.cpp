@@ -115,51 +115,46 @@ std::string InputFile::getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
-  DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(this));
-  const DWARFObject &Obj = Dwarf.getDWARFObj();
+  Dwarf = llvm::make_unique<DWARFContext>(make_unique<LLDDwarfObj<ELFT>>(this));
+  const DWARFObject &Obj = Dwarf->getDWARFObj();
   DwarfLine.reset(new DWARFDebugLine);
   DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
                               Config->Wordsize);
 
-  // The second parameter is offset in .debug_line section
-  // for compilation unit (CU) of interest. We have only one
-  // CU (object file), so offset is always 0.
-  const DWARFDebugLine::LineTable *LT =
-      DwarfLine->getOrParseLineTable(LineData, 0, Dwarf, nullptr);
-  if (!LT)
-    return;
-
-  // Return if there is no debug information about CU available.
-  if (!Dwarf.getNumCompileUnits())
-    return;
-
-  // Loop over variable records and insert them to VariableLoc.
-  DWARFCompileUnit *CU = Dwarf.getCompileUnitAtIndex(0);
-  for (const auto &Entry : CU->dies()) {
-    DWARFDie Die(CU, &Entry);
-    // Skip all tags that are not variables.
-    if (Die.getTag() != dwarf::DW_TAG_variable)
+  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units()) {
+    const DWARFDebugLine::LineTable *LT = Dwarf->getLineTableForUnit(CU.get());
+    if (!LT)
       continue;
+    LineTables.push_back(LT);
 
-    // Skip if a local variable because we don't need them for generating error
-    // messages. In general, only non-local symbols can fail to be linked.
-    if (!dwarf::toUnsigned(Die.find(dwarf::DW_AT_external), 0))
-      continue;
+    // Loop over variable records and insert them to VariableLoc.
+    for (const auto &Entry : CU->dies()) {
+      DWARFDie Die(CU.get(), &Entry);
+      // Skip all tags that are not variables.
+      if (Die.getTag() != dwarf::DW_TAG_variable)
+        continue;
 
-    // Get the source filename index for the variable.
-    unsigned File = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_file), 0);
-    if (!LT->hasFileAtIndex(File))
-      continue;
+      // Skip if a local variable because we don't need them for generating
+      // error messages. In general, only non-local symbols can fail to be
+      // linked.
+      if (!dwarf::toUnsigned(Die.find(dwarf::DW_AT_external), 0))
+        continue;
 
-    // Get the line number on which the variable is declared.
-    unsigned Line = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_line), 0);
+      // Get the source filename index for the variable.
+      unsigned File = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_file), 0);
+      if (!LT->hasFileAtIndex(File))
+        continue;
 
-    // Get the name of the variable and add the collected information to
-    // VariableLoc. Usually Name is non-empty, but it can be empty if the input
-    // object file lacks some debug info.
-    StringRef Name = dwarf::toString(Die.find(dwarf::DW_AT_name), "");
-    if (!Name.empty())
-      VariableLoc.insert({Name, {File, Line}});
+      // Get the line number on which the variable is declared.
+      unsigned Line = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_line), 0);
+
+      // Get the name of the variable and add the collected information to
+      // VariableLoc. Usually Name is non-empty, but it can be empty if the
+      // input object file lacks some debug info.
+      StringRef Name = dwarf::toString(Die.find(dwarf::DW_AT_name), "");
+      if (!Name.empty())
+        VariableLoc.insert({Name, {LT, File, Line}});
+    }
   }
 }
 
@@ -170,11 +165,6 @@ Optional<std::pair<std::string, unsigned>>
 ObjFile<ELFT>::getVariableLoc(StringRef Name) {
   llvm::call_once(InitDwarfLine, [this]() { initializeDwarf(); });
 
-  // There is always only one CU so it's offset is 0.
-  const DWARFDebugLine::LineTable *LT = DwarfLine->getLineTable(0);
-  if (!LT)
-    return None;
-
   // Return if we have no debug information about data object.
   auto It = VariableLoc.find(Name);
   if (It == VariableLoc.end())
@@ -182,7 +172,7 @@ ObjFile<ELFT>::getVariableLoc(StringRef Name) {
 
   // Take file name string from line table.
   std::string FileName;
-  if (!LT->getFileNameByIndex(
+  if (!It->second.LT->getFileNameByIndex(
           It->second.File, nullptr,
           DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FileName))
     return None;
@@ -197,20 +187,15 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *S,
                                                   uint64_t Offset) {
   llvm::call_once(InitDwarfLine, [this]() { initializeDwarf(); });
 
-  // The offset to CU is 0.
-  const DWARFDebugLine::LineTable *Tbl = DwarfLine->getLineTable(0);
-  if (!Tbl)
-    return None;
-
   // Use fake address calcuated by adding section file offset and offset in
   // section. See comments for ObjectInfo class.
   DILineInfo Info;
-  Tbl->getFileLineInfoForAddress(
-      S->getOffsetInFile() + Offset, nullptr,
-      DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info);
-  if (Info.Line == 0)
-    return None;
-  return Info;
+  for (const llvm::DWARFDebugLine::LineTable *LT : LineTables)
+    if (LT->getFileLineInfoForAddress(
+            S->getOffsetInFile() + Offset, nullptr,
+            DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info))
+      return Info;
+  return None;
 }
 
 // Returns source line information for a given offset using DWARF debug info.
