@@ -933,9 +933,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /pdb
   bool ShouldCreatePDB = Args.hasArg(OPT_debug, OPT_debug_ghash);
-  if (ShouldCreatePDB)
+  if (ShouldCreatePDB) {
     if (auto *Arg = Args.getLastArg(OPT_pdb))
       Config->PDBPath = Arg->getValue();
+    if (Args.hasArg(OPT_natvis))
+      Config->NatvisFiles = Args.getAllArgValues(OPT_natvis);
+  }
 
   // Handle /noentry
   if (Args.hasArg(OPT_noentry)) {
