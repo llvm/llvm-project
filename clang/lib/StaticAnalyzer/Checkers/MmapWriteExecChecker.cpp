@@ -28,12 +28,13 @@ using llvm::APSInt;
 namespace {
 class MmapWriteExecChecker : public Checker<check::PreCall> {
   CallDescription MmapFn;
+  CallDescription MprotectFn;
   static int ProtWrite;
   static int ProtExec;
   static int ProtRead;
   mutable std::unique_ptr<BugType> BT;
 public:
-  MmapWriteExecChecker() : MmapFn("mmap", 6) {}
+  MmapWriteExecChecker() : MmapFn("mmap", 6), MprotectFn("mprotect", 3) {}
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   int ProtExecOv;
   int ProtReadOv;
@@ -46,8 +47,8 @@ int MmapWriteExecChecker::ProtRead  = 0x01;
 
 void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
                                          CheckerContext &C) const {
-  if (Call.isCalled(MmapFn)) {
-    SVal ProtVal = Call.getArgSVal(2); 
+  if (Call.isCalled(MmapFn) || Call.isCalled(MprotectFn)) {
+    SVal ProtVal = Call.getArgSVal(2);
     Optional<nonloc::ConcreteInt> ProtLoc = ProtVal.getAs<nonloc::ConcreteInt>();
     int64_t Prot = ProtLoc->getValue().getSExtValue();
     if (ProtExecOv != ProtExec)
