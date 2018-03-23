@@ -16,7 +16,7 @@ libmodb.dylib: modb_dir/modb.swift
 
 libmod%.dylib:
 	rm -rf mod$*_dir; mkdir mod$*_dir
-	cd mod$*_dir; $(SWIFTCC) $(SWIFTFLAGS_NOLINK) -emit-module -module-name mod$* $< -I$(dir $<)/cdeps -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@
+	cd mod$*_dir; $(SWIFTC) $(SWIFTFLAGS_NOLINK) -emit-module -module-name mod$* $< -I$(dir $<)/cdeps -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@
 	ln -sf $(shell pwd)/mod$*_dir/$@ $@
 	ln -sf $(shell pwd)/mod$*_dir/$@.dSYM $@.dSYM
 
