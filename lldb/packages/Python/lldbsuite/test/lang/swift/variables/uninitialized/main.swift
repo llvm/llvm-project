@@ -28,8 +28,9 @@ struct A<T> {
     }
 
     mutating func a() -> T? {
-        var adict : [String: Any] = ["key1" : "val1", "key2" : 9999] //% self.expect("frame var adict", "Frame var of uninitialized variable returns.")
-        adict["key3"] = 1.0
+        var adict : [String: Any]  //% self.expect("frame variable adict", "Frame variable of an uninitialized dict returns")
+        adict = [String: Any]() 
+        adict["key1"] = 1.0
         var t : T? = nil
         let c = cs[0]
 
