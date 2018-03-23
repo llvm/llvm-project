@@ -9,15 +9,13 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-typealias X = Double
+typealias X = Int
 
 func main() {
-  let d = unsafeBitCast(5, to: Double.self)
+  let d = unsafeBitCast(5, to: Int.self)
   let x = unsafeBitCast(5, to: X.self)
-  print("break here and do test") //%self.expect('frame variable d', substrs=['2.'])
-  //%self.expect('frame variable x', substrs=['(X)', '2.'])
-  //%self.expect('frame variable d', substrs=['_value'], matching=False)
-  //%self.expect('frame variable x', substrs=['_value'], matching=False)
+  print("break here and do test") //%self.expect('frame variable d', substrs=['5'])
+  //%self.expect('frame variable x', substrs=['(X)', '5'])
 }
 
 main()
