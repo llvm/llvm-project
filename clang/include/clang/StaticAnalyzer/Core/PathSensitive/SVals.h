@@ -195,7 +195,7 @@ public:
   void dump() const;
 
   SymExpr::symbol_iterator symbol_begin() const {
-    const SymExpr *SE = getAsSymbolicExpression();
+    const SymExpr *SE = getAsSymbol(/*IncludeBaseRegions=*/true);
     if (SE)
       return SE->symbol_begin();
     else
