@@ -156,17 +156,17 @@ ifeq "$(OS)" "Darwin"
 endif
 
 #----------------------------------------------------------------------
-# SWIFTCC defaults to swift.
+# SWIFTC defaults to swift.
 # TODO:
-# If you change the defaults of SWIFTCC, be sure to also change it in the file
+# If you change the defaults of SWIFTC, be sure to also change it in the file
 # test/plugins/builder_base.py, which provides a Python way to return the
-# value of the make variable SWIFTCC -- getSwiftCompiler().
+# value of the make variable SWIFTC -- getSwiftCompiler().
 #
 # See also these functions:
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-SWIFTCC ?= $(shell $(LEVEL)/find-swift.py)
+SWIFTC ?= $(shell $(LEVEL)/find-swift.py)
 ifeq "$(SDKROOT)" ""
 	SWIFTSDKROOT = $(shell $(LEVEL)/find-swift.py -s)
 else
@@ -583,7 +583,7 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 $(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTCC) $^ $(SWIFTFLAGS) -o "$(EXE)"
+	$(SWIFTC) $^ $(SWIFTFLAGS) -o "$(EXE)"
 else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""

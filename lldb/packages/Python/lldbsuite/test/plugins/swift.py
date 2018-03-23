@@ -22,7 +22,7 @@ configurations = ['Ninja-DebugAssert', 'Ninja-ReleaseAssert',
 
 def getSwiftCompiler():
     """Returns the swift compiler in effect the test suite is running with."""
-    env_var = "SWIFTCC"
+    env_var = "SWIFTC"
     if env_var in os.environ:
         return os.environ[env_var]
     else:

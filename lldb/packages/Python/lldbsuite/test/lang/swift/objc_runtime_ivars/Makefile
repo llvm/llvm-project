@@ -10,7 +10,7 @@ framework: cleanup
 	cp module.map aTestFramework.framework/
 
 exec_impl:
-	$(SWIFTCC) $(SWIFT_MODULE_CACHE_FLAGS) -g -Onone -o main main.swift -framework aTestFramework -framework Cocoa -sdk "$(SWIFTSDKROOT)" -F "$(PWD)"
+	$(SWIFTC) $(SWIFT_MODULE_CACHE_FLAGS) -g -Onone -o main main.swift -framework aTestFramework -framework Cocoa -sdk "$(SWIFTSDKROOT)" -F "$(PWD)"
 
 exec: framework exec_impl
 
