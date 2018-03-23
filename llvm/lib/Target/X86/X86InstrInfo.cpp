@@ -10868,10 +10868,15 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
 }
 
 X86GenInstrInfo::MachineOutlinerInstrType
-X86InstrInfo::getOutliningType(MachineInstr &MI) const {
-
+X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
+  MachineInstr &MI = *MIT;
   // Don't allow debug values to impact outlining type.
   if (MI.isDebugValue() || MI.isIndirectDebugValue())
+    return MachineOutlinerInstrType::Invisible;
+
+  // At this point, KILL instructions don't really tell us much so we can go
+  // ahead and skip over them.
+  if (MI.isKill())
     return MachineOutlinerInstrType::Invisible;
 
   // Is this a tail call? If yes, we can outline as a tail call.
