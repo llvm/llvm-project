@@ -85,6 +85,9 @@ if (lit.util.which('cvtres', config.environment['PATH'])) or \
 if (config.llvm_libxml2_enabled == '1'):
     config.available_features.add('libxml2')
 
+if config.have_dia_sdk:
+    config.available_features.add("diasdk")
+
 tar_executable = lit.util.which('tar', config.environment['PATH'])
 if tar_executable:
     tar_version = subprocess.Popen(
