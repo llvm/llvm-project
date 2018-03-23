@@ -1226,6 +1226,13 @@ const char *SuppressInlineDefensiveChecksVisitor::getTag() {
   return "IDCVisitor";
 }
 
+/// \return name of the macro inside the location \p Loc.
+static StringRef getMacroName(SourceLocation Loc,
+    BugReporterContext &BRC) {
+  return Lexer::getImmediateMacroName(
+      Loc, BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
+}
+
 std::shared_ptr<PathDiagnosticPiece>
 SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
                                                 const ExplodedNode *Pred,
@@ -1286,12 +1293,19 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
 
     SourceLocation TerminatorLoc = CurTerminatorStmt->getLocStart();
     if (TerminatorLoc.isMacroID()) {
-      SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
+      const SourceManager &SMgr = BRC.getSourceManager();
+      std::pair<FileID, unsigned> TLInfo = SMgr.getDecomposedLoc(TerminatorLoc);
+      SrcMgr::SLocEntry SE = SMgr.getSLocEntry(TLInfo.first);
+      const SrcMgr::ExpansionInfo &EInfo = SE.getExpansion();
+      if (EInfo.isFunctionMacroExpansion()) {
+        SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
 
-      // Suppress reports unless we are in that same macro.
-      if (!BugLoc.isMacroID() ||
-          getMacroName(BugLoc, BRC) != getMacroName(TerminatorLoc, BRC)) {
-        BR.markInvalid("Suppress Macro IDC", CurLC);
+        // Suppress reports unless we are in that same macro.
+        if (!BugLoc.isMacroID() ||
+            getMacroName(BugLoc, BRC) != getMacroName(TerminatorLoc, BRC)) {
+          BR.markInvalid("Suppress Macro IDC", CurLC);
+        }
+        return nullptr;
       }
       return nullptr;
     }
