@@ -116,9 +116,12 @@ class SelectionDAGBuilder {
     unsigned getSDNodeOrder() { return SDNodeOrder; }
   };
 
+  /// DanglingDebugInfoVector - Helper type for DanglingDebugInfoMap.
+  typedef std::vector<DanglingDebugInfo> DanglingDebugInfoVector;
+
   /// DanglingDebugInfoMap - Keeps track of dbg_values for which we have not
   /// yet seen the referent.  We defer handling these until we do see it.
-  DenseMap<const Value*, DanglingDebugInfo> DanglingDebugInfoMap;
+  DenseMap<const Value*, DanglingDebugInfoVector> DanglingDebugInfoMap;
 
 public:
   /// PendingLoads - Loads are not emitted to the program immediately.  We bunch
