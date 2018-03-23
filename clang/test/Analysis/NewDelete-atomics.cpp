@@ -2,6 +2,10 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -DTEST_INLINABLE_ALLOCATORS -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-inline-max-stack-depth 2 -analyzer-config ipa-always-inline-size=2 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-inline-max-stack-depth 2 -analyzer-config ipa-always-inline-size=2 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-inline-max-stack-depth 2 -analyzer-config ipa-always-inline-size=2 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-inline-max-stack-depth 2 -analyzer-config ipa-always-inline-size=2 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -DTEST_INLINABLE_ALLOCATORS -verify %s
 
 // expected-no-diagnostics
 
@@ -51,7 +55,7 @@ public:
       delete Ptr;
   }
 
-  Obj *getPtr() const { return Ptr; }
+  Obj *getPtr() const { return Ptr; } // no-warning
 };
 
 void testDestroyLocalRefPtr() {
