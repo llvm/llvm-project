@@ -96,8 +96,16 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
 }
 
 
-SVal ExprEngine::makeZeroElementRegion(ProgramStateRef State, SVal LValue,
-                                       QualType &Ty, bool &IsArray) {
+/// Returns a region representing the first element of a (possibly
+/// multi-dimensional) array, for the purposes of element construction or
+/// destruction.
+///
+/// On return, \p Ty will be set to the base type of the array.
+///
+/// If the type is not an array type at all, the original value is returned.
+/// Otherwise the "IsArray" flag is set.
+static SVal makeZeroElementRegion(ProgramStateRef State, SVal LValue,
+                                  QualType &Ty, bool &IsArray) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   ASTContext &Ctx = SVB.getContext();
 
@@ -114,7 +122,6 @@ SVal ExprEngine::makeZeroElementRegion(ProgramStateRef State, SVal LValue,
 const MemRegion *
 ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
                                           ExplodedNode *Pred,
-                                          const ConstructionContext *CC,
                                           EvalCallOptions &CallOpts) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
@@ -132,9 +139,9 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
                   getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())) {
             if (CNE->isArray()) {
-              // TODO: This code exists only to trigger the suppression for
-              // array constructors. In fact, we need to call the constructor
-              // for every allocated element, not just the first one!
+              // TODO: In fact, we need to call the constructor for every
+              // allocated element, not just the first one!
+              CallOpts.IsArrayConstructorOrDestructor = true;
               return getStoreManager().GetElementZeroRegion(
                   MR, CNE->getType()->getPointeeType());
             }
@@ -146,7 +153,8 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
             SVal LValue = State->getLValue(Var, LCtx);
             QualType Ty = Var->getType();
-            LValue = makeZeroElementRegion(State, LValue, Ty);
+            LValue = makeZeroElementRegion(
+                State, LValue, Ty, CallOpts.IsArrayConstructorOrDestructor);
             return LValue.getAsRegion();
           }
         }
@@ -173,7 +181,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
 
       QualType Ty = Field->getType();
       FieldVal = makeZeroElementRegion(State, FieldVal, Ty,
-                                       CallOpts.IsArrayCtorOrDtor);
+                                       CallOpts.IsArrayConstructorOrDestructor);
       return FieldVal.getAsRegion();
     }
     case ConstructionContext::NewAllocatedObjectKind: {
@@ -230,7 +238,8 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   }
   // If we couldn't find an existing region to construct into, assume we're
   // constructing a temporary. Notify the caller of our failure.
-  CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
+  CallOpts.IsConstructorWithImproperlyModeledTargetRegion = true;
+  MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
   return MRMgr.getCXXTempObjectRegion(CE, LCtx);
 }
 
@@ -323,39 +332,10 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   // the entire array).
 
   EvalCallOptions CallOpts;
-  auto C = getCurrentCFGElement().getAs<CFGConstructor>();
-  assert(C || getCurrentCFGElement().getAs<CFGStmt>());
-  const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
-
-  const CXXBindTemporaryExpr *BTE = nullptr;
-  const MaterializeTemporaryExpr *MTE = nullptr;
 
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
-    Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
-
-    // In case of temporary object construction, extract data necessary for
-    // destruction and lifetime extension.
-    if (const auto *TCC =
-            dyn_cast_or_null<TemporaryObjectConstructionContext>(CC)) {
-      assert(CallOpts.IsTemporaryCtorOrDtor);
-      assert(!CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion);
-      if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
-        BTE = TCC->getCXXBindTemporaryExpr();
-        MTE = TCC->getMaterializedTemporaryExpr();
-        if (!BTE) {
-          // FIXME: lifetime extension for temporaries without destructors
-          // is not implemented yet.
-          MTE = nullptr;
-        }
-        if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
-          // If the temporary is lifetime-extended, don't save the BTE,
-          // because we don't need a temporary destructor, but an automatic
-          // destructor.
-          BTE = nullptr;
-        }
-      }
-    }
+    Target = getRegionForConstructedObject(CE, Pred, CallOpts);
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -392,7 +372,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     if (dyn_cast_or_null<InitListExpr>(LCtx->getParentMap().getParent(CE))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
       Target = MRMgr.getCXXTempObjectRegion(CE, LCtx);
-      CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
+      CallOpts.IsConstructorWithImproperlyModeledTargetRegion = true;
       break;
     }
     // FALLTHROUGH
@@ -474,7 +454,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
 
   if (CE->getConstructor()->isTrivial() &&
       CE->getConstructor()->isCopyOrMoveConstructor() &&
-      !CallOpts.IsArrayCtorOrDtor) {
+      !CallOpts.IsArrayConstructorOrDestructor) {
     // FIXME: Handle other kinds of trivial constructors as well.
     for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
          I != E; ++I)
@@ -535,6 +515,19 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
                                     const EvalCallOptions &CallOpts) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
+
+  // FIXME: We need to run the same destructor on every element of the array.
+  // This workaround will just run the first destructor (which will still
+  // invalidate the entire array).
+  SVal DestVal = UnknownVal();
+  if (Dest)
+    DestVal = loc::MemRegionVal(Dest);
+
+  EvalCallOptions CallOpts;
+  DestVal = makeZeroElementRegion(State, DestVal, ObjectType,
+                                  CallOpts.IsArrayConstructorOrDestructor);
+
+  Dest = DestVal.getAsRegion();
 
   const CXXRecordDecl *RecordDecl = ObjectType->getAsCXXRecordDecl();
   assert(RecordDecl && "Only CXXRecordDecls should have destructors");
