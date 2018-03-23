@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Scheduler.h"
 #include "Backend.h"
 #include "HWEventListener.h"
-#include "Scheduler.h"
 #include "Support.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -180,7 +180,7 @@ bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) {
 
 void ResourceManager::issueInstruction(
     unsigned Index, const InstrDesc &Desc,
-    SmallVectorImpl<std::pair<ResourceRef, unsigned>> &Pipes) {
+    SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes) {
   for (const std::pair<uint64_t, ResourceUsage> &R : Desc.Resources) {
     const CycleSegment &CS = R.second.CS;
     if (!CS.size()) {
@@ -196,7 +196,8 @@ void ResourceManager::issueInstruction(
       // Replace the resource mask with a valid processor resource index.
       const ResourceState &RS = *Resources[Pipe.first];
       Pipe.first = RS.getProcResourceID();
-      Pipes.emplace_back(std::pair<ResourceRef, unsigned>(Pipe, CS.size()));
+      Pipes.emplace_back(
+          std::pair<ResourceRef, double>(Pipe, static_cast<double>(CS.size())));
     } else {
       assert((countPopulation(R.first) > 1) && "Expected a group!");
       // Mark this group as reserved.
@@ -338,7 +339,7 @@ void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {
   // two resources). We use a small vector here, and conservatively
   // initialize its capacity to 4. This should address the majority of
   // the cases.
-  SmallVector<std::pair<ResourceRef, unsigned>, 4> UsedResources;
+  SmallVector<std::pair<ResourceRef, double>, 4> UsedResources;
   Resources->issueInstruction(InstrIndex, D, UsedResources);
   // Notify the instruction that it started executing.
   // This updates the internal state of each write.
@@ -417,7 +418,7 @@ void Scheduler::updateIssuedQueue() {
 }
 
 void Scheduler::notifyInstructionIssued(
-    unsigned Index, ArrayRef<std::pair<ResourceRef, unsigned>> Used) {
+    unsigned Index, ArrayRef<std::pair<ResourceRef, double>> Used) {
   DEBUG({
     dbgs() << "[E] Instruction Issued: " << Index << '\n';
     for (const std::pair<ResourceRef, unsigned> &Resource : Used) {

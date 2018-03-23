@@ -220,7 +220,7 @@ bool PPCMIPeephole::simplifyCode(void) {
   bool Simplified = false;
   MachineInstr* ToErase = nullptr;
   std::map<MachineInstr *, bool> TOCSaves;
-
+  const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   NumFunctionsEnteredInMIPeephole++;
   if (ConvertRegReg) {
     // Fixed-point conversion of reg/reg instructions fed by load-immediate
@@ -297,9 +297,9 @@ bool PPCMIPeephole::simplifyCode(void) {
           // We have to look through chains of COPY and SUBREG_TO_REG
           // to find the real source values for comparison.
           unsigned TrueReg1 =
-            TII->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
+            TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
           unsigned TrueReg2 =
-            TII->lookThruCopyLike(MI.getOperand(2).getReg(), MRI);
+            TRI->lookThruCopyLike(MI.getOperand(2).getReg(), MRI);
 
           if (TrueReg1 == TrueReg2
               && TargetRegisterInfo::isVirtualRegister(TrueReg1)) {
@@ -314,7 +314,7 @@ bool PPCMIPeephole::simplifyCode(void) {
               if (DefOpc != PPC::XVCVDPSXDS && DefOpc != PPC::XVCVDPUXDS)
                 return false;
               unsigned DefReg =
-                TII->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
+                TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
               if (TargetRegisterInfo::isVirtualRegister(DefReg)) {
                 MachineInstr *LoadMI = MRI->getVRegDef(DefReg);
                 if (LoadMI && LoadMI->getOpcode() == PPC::LXVDSX)
@@ -341,9 +341,9 @@ bool PPCMIPeephole::simplifyCode(void) {
             if (DefOpc == PPC::XXPERMDI) {
               unsigned FeedImmed = DefMI->getOperand(3).getImm();
               unsigned FeedReg1 =
-                TII->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
+                TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
               unsigned FeedReg2 =
-                TII->lookThruCopyLike(DefMI->getOperand(2).getReg(), MRI);
+                TRI->lookThruCopyLike(DefMI->getOperand(2).getReg(), MRI);
 
               if ((FeedImmed == 0 || FeedImmed == 3) && FeedReg1 == FeedReg2) {
                 DEBUG(dbgs()
@@ -402,7 +402,7 @@ bool PPCMIPeephole::simplifyCode(void) {
         unsigned MyOpcode = MI.getOpcode();
         unsigned OpNo = MyOpcode == PPC::XXSPLTW ? 1 : 2;
         unsigned TrueReg =
-          TII->lookThruCopyLike(MI.getOperand(OpNo).getReg(), MRI);
+          TRI->lookThruCopyLike(MI.getOperand(OpNo).getReg(), MRI);
         if (!TargetRegisterInfo::isVirtualRegister(TrueReg))
           break;
         MachineInstr *DefMI = MRI->getVRegDef(TrueReg);
@@ -465,7 +465,7 @@ bool PPCMIPeephole::simplifyCode(void) {
       case PPC::XVCVDPSP: {
         // If this is a DP->SP conversion fed by an FRSP, the FRSP is redundant.
         unsigned TrueReg =
-          TII->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
+          TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
         if (!TargetRegisterInfo::isVirtualRegister(TrueReg))
           break;
         MachineInstr *DefMI = MRI->getVRegDef(TrueReg);
@@ -474,9 +474,9 @@ bool PPCMIPeephole::simplifyCode(void) {
         // values.
         if (DefMI && DefMI->getOpcode() == PPC::XXPERMDI) {
           unsigned DefsReg1 =
-            TII->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
+            TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
           unsigned DefsReg2 =
-            TII->lookThruCopyLike(DefMI->getOperand(2).getReg(), MRI);
+            TRI->lookThruCopyLike(DefMI->getOperand(2).getReg(), MRI);
           if (!TargetRegisterInfo::isVirtualRegister(DefsReg1) ||
               !TargetRegisterInfo::isVirtualRegister(DefsReg2))
             break;

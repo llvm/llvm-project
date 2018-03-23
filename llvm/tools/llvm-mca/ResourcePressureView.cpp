@@ -36,7 +36,7 @@ void ResourcePressureView::initialize() {
 
   NumResourceUnits = R2VIndex;
   ResourceUsage.resize(NumResourceUnits * (Source.size() + 1));
-  std::fill(ResourceUsage.begin(), ResourceUsage.end(), 0);
+  std::fill(ResourceUsage.begin(), ResourceUsage.end(), 0.0);
 }
 
 void ResourcePressureView::onInstructionEvent(const HWInstructionEvent &Event) {
@@ -45,7 +45,7 @@ void ResourcePressureView::onInstructionEvent(const HWInstructionEvent &Event) {
     return;
   const auto &IssueEvent = static_cast<const HWInstructionIssuedEvent &>(Event);
   unsigned SourceIdx = Event.Index % Source.size();
-  for (const std::pair<ResourceRef, unsigned> &Use : IssueEvent.UsedResources) {
+  for (const std::pair<ResourceRef, double> &Use : IssueEvent.UsedResources) {
     const ResourceRef &RR = Use.first;
     assert(Resource2VecIndex.find(RR.first) != Resource2VecIndex.end());
     unsigned R2VIndex = Resource2VecIndex[RR.first];
@@ -113,13 +113,13 @@ void ResourcePressureView::printResourcePressurePerIteration(
   TempStream << '\n';
 
   for (unsigned I = 0, E = NumResourceUnits; I < E; ++I) {
-    unsigned Usage = ResourceUsage[I + Source.size() * E];
+    double Usage = ResourceUsage[I + Source.size() * E];
     if (!Usage) {
       TempStream << " -     ";
       continue;
     }
 
-    double Pressure = (double)Usage / Executions;
+    double Pressure = Usage / Executions;
     TempStream << format("%.2f", Pressure);
     if (Pressure < 10.0)
       TempStream << "   ";
@@ -144,11 +144,11 @@ void ResourcePressureView::printResourcePressurePerInstruction(
 
   for (unsigned I = 0, E = Source.size(); I < E; ++I) {
     for (unsigned J = 0; J < NumResourceUnits; ++J) {
-      unsigned Usage = ResourceUsage[J + I * NumResourceUnits];
-      if (Usage == 0) {
+      double Usage = ResourceUsage[J + I * NumResourceUnits];
+      if (!Usage) {
         TempStream << " -     ";
       } else {
-        double Pressure = (double)Usage / Executions;
+        double Pressure = Usage / Executions;
         if (Pressure < 0.005) {
           TempStream << " -     ";
         } else {

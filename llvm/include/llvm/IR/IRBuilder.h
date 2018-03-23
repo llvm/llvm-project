@@ -438,25 +438,6 @@ public:
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
 
-  // TODO: Old API. Remove this when no longer used.
-  CallInst *CreateMemCpy(Value *Dst, Value *Src, uint64_t Size, unsigned Align,
-                         bool isVolatile = false, MDNode *TBAATag = nullptr,
-                         MDNode *TBAAStructTag = nullptr,
-                         MDNode *ScopeTag = nullptr,
-                         MDNode *NoAliasTag = nullptr) {
-    return CreateMemCpy(Dst, Align, Src, Align, getInt64(Size), isVolatile, TBAATag,
-                        TBAAStructTag, ScopeTag, NoAliasTag);
-  }
-  // TODO: Old API. Remove this when no longer used.
-  CallInst *CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
-                         bool isVolatile = false, MDNode *TBAATag = nullptr,
-                         MDNode *TBAAStructTag = nullptr,
-                         MDNode *ScopeTag = nullptr,
-                         MDNode *NoAliasTag = nullptr) {
-    return CreateMemCpy(Dst, Align, Src, Align, Size, isVolatile, TBAATag,
-                        TBAAStructTag, ScopeTag, NoAliasTag);
-  }
-
   /// \brief Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
   ///
@@ -499,23 +480,6 @@ public:
                           Value *Size, bool isVolatile = false, MDNode *TBAATag = nullptr,
                           MDNode *ScopeTag = nullptr,
                           MDNode *NoAliasTag = nullptr);
-
-  // TODO: Old API. Remove this when no longer used.
-  CallInst *CreateMemMove(Value *Dst, Value *Src, uint64_t Size, unsigned Align,
-                          bool isVolatile = false, MDNode *TBAATag = nullptr,
-                          MDNode *ScopeTag = nullptr,
-                          MDNode *NoAliasTag = nullptr) {
-    return CreateMemMove(Dst, Align, Src, Align, getInt64(Size), isVolatile,
-                         TBAATag, ScopeTag, NoAliasTag);
-  }
-  // TODO: Old API. Remove this when no longer used.
-  CallInst *CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
-                          bool isVolatile = false, MDNode *TBAATag = nullptr,
-                          MDNode *ScopeTag = nullptr,
-                          MDNode *NoAliasTag = nullptr) {
-    return CreateMemMove(Dst, Align, Src, Align, Size, isVolatile, TBAATag,
-                         ScopeTag, NoAliasTag);
-  }
 
   /// \brief Create a vector fadd reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value for ordered reductions.

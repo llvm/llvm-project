@@ -328,6 +328,34 @@ struct PDBStringTableHeader {
 
 const uint32_t PDBStringTableSignature = 0xEFFEEFFE;
 
+/// The header preceding the /src/headerblock stream.
+struct SrcHeaderBlockHeader {
+  support::ulittle32_t Version; // PdbRaw_SrcHeaderBlockVer enumeration.
+  support::ulittle32_t Size;    // Size of entire stream.
+  uint64_t FileTime;            // Time stamp (Windows FILETIME format).
+  support::ulittle32_t Age;     // Age
+  uint8_t Padding[44];          // Pad to 64 bytes.
+};
+static_assert(sizeof(SrcHeaderBlockHeader) == 64, "Incorrect struct size!");
+
+/// A single file record entry within the /src/headerblock stream.
+struct SrcHeaderBlockEntry {
+  support::ulittle32_t Size;     // Record Length.
+  support::ulittle32_t Version;  // PdbRaw_SrcHeaderBlockVer enumeration.
+  support::ulittle32_t CRC;      // CRC of the original file contents.
+  support::ulittle32_t FileSize; // Size of original source file.
+  support::ulittle32_t FileNI;   // String table index of file name.
+  support::ulittle32_t ObjNI;    // String table index of object name.
+  support::ulittle32_t VFileNI;  // String table index of virtual file name.
+  uint8_t Compression;           // PDB_SourceCompression enumeration.
+  uint8_t IsVirtual;             // Is this a virtual file (injected)?
+  short Padding;                 // Pad to 4 bytes.
+  char Reserved[8];
+};
+
+constexpr int I = sizeof(SrcHeaderBlockEntry);
+static_assert(sizeof(SrcHeaderBlockEntry) == 40, "Incorrect struct size!");
+
 } // namespace pdb
 } // namespace llvm
 

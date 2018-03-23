@@ -14,10 +14,13 @@ declare double @trunc(double)
 declare double @fabs(double)
 
 declare double @llvm.floor.f64(double)
+declare <2 x double> @llvm.floor.v2f64(<2 x double>)
 declare double @llvm.ceil.f64(double)
 declare double @llvm.round.f64(double)
+declare <2 x double> @llvm.round.v2f64(<2 x double>)
 declare double @llvm.nearbyint.f64(double)
 declare double @llvm.trunc.f64(double)
+declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
 declare double @llvm.fabs.f64(double)
 
 define float @test_shrink_libcall_floor(float %C) {
@@ -145,8 +148,8 @@ define float @test_shrink_libcall_fabs_fast(float %C) {
 
 define float @test_shrink_intrin_floor(float %C) {
 ; ALL-LABEL: @test_shrink_intrin_floor(
-; ALL-NEXT:    [[E:%.*]] = call float @llvm.floor.f32(float [[C:%.*]])
-; ALL-NEXT:    ret float [[E]]
+; ALL-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[C:%.*]])
+; ALL-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> floorf
@@ -157,8 +160,8 @@ define float @test_shrink_intrin_floor(float %C) {
 
 define float @test_shrink_intrin_ceil(float %C) {
 ; ALL-LABEL: @test_shrink_intrin_ceil(
-; ALL-NEXT:    [[E:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]])
-; ALL-NEXT:    ret float [[E]]
+; ALL-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]])
+; ALL-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> ceilf
@@ -169,8 +172,8 @@ define float @test_shrink_intrin_ceil(float %C) {
 
 define float @test_shrink_intrin_round(float %C) {
 ; ALL-LABEL: @test_shrink_intrin_round(
-; ALL-NEXT:    [[E:%.*]] = call float @llvm.round.f32(float [[C:%.*]])
-; ALL-NEXT:    ret float [[E]]
+; ALL-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[C:%.*]])
+; ALL-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> roundf
@@ -181,8 +184,8 @@ define float @test_shrink_intrin_round(float %C) {
 
 define float @test_shrink_intrin_nearbyint(float %C) {
 ; ALL-LABEL: @test_shrink_intrin_nearbyint(
-; ALL-NEXT:    [[E:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]])
-; ALL-NEXT:    ret float [[E]]
+; ALL-NEXT:    [[TMP1:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]])
+; ALL-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> nearbyintf
@@ -193,8 +196,8 @@ define float @test_shrink_intrin_nearbyint(float %C) {
 
 define float @test_shrink_intrin_trunc(float %C) {
 ; ALL-LABEL: @test_shrink_intrin_trunc(
-; ALL-NEXT:    [[E:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]])
-; ALL-NEXT:    ret float [[E]]
+; ALL-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]])
+; ALL-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   %E = call double @llvm.trunc.f64(double %D)
@@ -204,8 +207,8 @@ define float @test_shrink_intrin_trunc(float %C) {
 
 define float @test_shrink_intrin_fabs(float %C) {
 ; ALL-LABEL: @test_shrink_intrin_fabs(
-; ALL-NEXT:    [[E:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]])
-; ALL-NEXT:    ret float [[E]]
+; ALL-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]])
+; ALL-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   %E = call double @llvm.fabs.f64(double %D)
@@ -216,8 +219,8 @@ define float @test_shrink_intrin_fabs(float %C) {
 ; Make sure fast math flags are preserved
 define float @test_shrink_intrin_fabs_fast(float %C) {
 ; ALL-LABEL: @test_shrink_intrin_fabs_fast(
-; ALL-NEXT:    [[E:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]])
-; ALL-NEXT:    ret float [[E]]
+; ALL-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]])
+; ALL-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   %E = call fast double @llvm.fabs.f64(double %D)
@@ -445,22 +448,21 @@ define half @test_mismatched_type_intrin_fabs_fast_double_src(double %D) {
   ret half %F
 }
 
-define float @test_shrink_intrin_floor_fp16_src(half %C) {
-; ALL-LABEL: @test_shrink_intrin_floor_fp16_src(
-; ALL-NEXT:    [[E:%.*]] = call half @llvm.floor.f16(half [[C:%.*]])
-; ALL-NEXT:    [[F:%.*]] = fpext half [[E]] to float
-; ALL-NEXT:    ret float [[F]]
+define <2 x double> @test_shrink_intrin_floor_fp16_vec(<2 x half> %C) {
+; ALL-LABEL: @test_shrink_intrin_floor_fp16_vec(
+; ALL-NEXT:    [[TMP1:%.*]] = call arcp <2 x half> @llvm.floor.v2f16(<2 x half> [[C:%.*]])
+; ALL-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
+; ALL-NEXT:    ret <2 x double> [[E]]
 ;
-  %D = fpext half %C to double
-  %E = call double @llvm.floor.f64(double %D)
-  %F = fptrunc double %E to float
-  ret float %F
+  %D = fpext <2 x half> %C to <2 x double>
+  %E = call arcp <2 x double> @llvm.floor.v2f64(<2 x double> %D)
+  ret <2 x double> %E
 }
 
 define float @test_shrink_intrin_ceil_fp16_src(half %C) {
 ; ALL-LABEL: @test_shrink_intrin_ceil_fp16_src(
-; ALL-NEXT:    [[E:%.*]] = call half @llvm.ceil.f16(half [[C:%.*]])
-; ALL-NEXT:    [[F:%.*]] = fpext half [[E]] to float
+; ALL-NEXT:    [[TMP1:%.*]] = call half @llvm.ceil.f16(half [[C:%.*]])
+; ALL-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; ALL-NEXT:    ret float [[F]]
 ;
   %D = fpext half %C to double
@@ -469,22 +471,21 @@ define float @test_shrink_intrin_ceil_fp16_src(half %C) {
   ret float %F
 }
 
-define float @test_shrink_intrin_round_fp16_src(half %C) {
-; ALL-LABEL: @test_shrink_intrin_round_fp16_src(
-; ALL-NEXT:    [[E:%.*]] = call half @llvm.round.f16(half [[C:%.*]])
-; ALL-NEXT:    [[F:%.*]] = fpext half [[E]] to float
-; ALL-NEXT:    ret float [[F]]
+define <2 x double> @test_shrink_intrin_round_fp16_vec(<2 x half> %C) {
+; ALL-LABEL: @test_shrink_intrin_round_fp16_vec(
+; ALL-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.round.v2f16(<2 x half> [[C:%.*]])
+; ALL-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
+; ALL-NEXT:    ret <2 x double> [[E]]
 ;
-  %D = fpext half %C to double
-  %E = call double @llvm.round.f64(double %D)
-  %F = fptrunc double %E to float
-  ret float %F
+  %D = fpext <2 x  half> %C to <2 x double>
+  %E = call <2 x double> @llvm.round.v2f64(<2 x double> %D)
+  ret <2 x double> %E
 }
 
 define float @test_shrink_intrin_nearbyint_fp16_src(half %C) {
 ; ALL-LABEL: @test_shrink_intrin_nearbyint_fp16_src(
-; ALL-NEXT:    [[E:%.*]] = call half @llvm.nearbyint.f16(half [[C:%.*]])
-; ALL-NEXT:    [[F:%.*]] = fpext half [[E]] to float
+; ALL-NEXT:    [[TMP1:%.*]] = call half @llvm.nearbyint.f16(half [[C:%.*]])
+; ALL-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; ALL-NEXT:    ret float [[F]]
 ;
   %D = fpext half %C to double
@@ -493,22 +494,21 @@ define float @test_shrink_intrin_nearbyint_fp16_src(half %C) {
   ret float %F
 }
 
-define float @test_shrink_intrin_trunc_fp16_src(half %C) {
+define <2 x double> @test_shrink_intrin_trunc_fp16_src(<2 x half> %C) {
 ; ALL-LABEL: @test_shrink_intrin_trunc_fp16_src(
-; ALL-NEXT:    [[E:%.*]] = call half @llvm.trunc.f16(half [[C:%.*]])
-; ALL-NEXT:    [[F:%.*]] = fpext half [[E]] to float
-; ALL-NEXT:    ret float [[F]]
+; ALL-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.trunc.v2f16(<2 x half> [[C:%.*]])
+; ALL-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
+; ALL-NEXT:    ret <2 x double> [[E]]
 ;
-  %D = fpext half %C to double
-  %E = call double @llvm.trunc.f64(double %D)
-  %F = fptrunc double %E to float
-  ret float %F
+  %D = fpext <2 x half> %C to <2 x double>
+  %E = call <2 x double> @llvm.trunc.v2f64(<2 x double> %D)
+  ret <2 x double> %E
 }
 
 define float @test_shrink_intrin_fabs_fp16_src(half %C) {
 ; ALL-LABEL: @test_shrink_intrin_fabs_fp16_src(
-; ALL-NEXT:    [[E:%.*]] = call half @llvm.fabs.f16(half [[C:%.*]])
-; ALL-NEXT:    [[F:%.*]] = fpext half [[E]] to float
+; ALL-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[C:%.*]])
+; ALL-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; ALL-NEXT:    ret float [[F]]
 ;
   %D = fpext half %C to double
@@ -520,8 +520,8 @@ define float @test_shrink_intrin_fabs_fp16_src(half %C) {
 ; Make sure fast math flags are preserved
 define float @test_shrink_intrin_fabs_fast_fp16_src(half %C) {
 ; ALL-LABEL: @test_shrink_intrin_fabs_fast_fp16_src(
-; ALL-NEXT:    [[E:%.*]] = call fast half @llvm.fabs.f16(half [[C:%.*]])
-; ALL-NEXT:    [[F:%.*]] = fpext half [[E]] to float
+; ALL-NEXT:    [[TMP1:%.*]] = call fast half @llvm.fabs.f16(half [[C:%.*]])
+; ALL-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; ALL-NEXT:    ret float [[F]]
 ;
   %D = fpext half %C to double

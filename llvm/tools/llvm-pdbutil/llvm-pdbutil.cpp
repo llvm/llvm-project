@@ -534,8 +534,16 @@ cl::opt<bool> JustMyCode("jmc", cl::Optional,
                          cl::cat(FileOptions), cl::sub(DumpSubcommand));
 
 // MISCELLANEOUS OPTIONS
+cl::opt<bool> DumpNamedStreams("named-streams",
+                               cl::desc("dump PDB named stream table"),
+                               cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+
 cl::opt<bool> DumpStringTable("string-table", cl::desc("dump PDB String Table"),
                               cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpStringTableDetails("string-table-details",
+                                     cl::desc("dump PDB String Table Details"),
+                                     cl::cat(MiscOptions),
+                                     cl::sub(DumpSubcommand));
 
 cl::opt<bool> DumpSectionContribs("section-contribs",
                                   cl::desc("dump section contributions"),
@@ -1199,6 +1207,7 @@ int main(int argc_, const char *argv_[]) {
       opts::dump::DumpStreams = true;
       opts::dump::DumpStreamBlocks = true;
       opts::dump::DumpStringTable = true;
+      opts::dump::DumpStringTableDetails = true;
       opts::dump::DumpSummary = true;
       opts::dump::DumpSymbols = true;
       opts::dump::DumpSymbolStats = true;

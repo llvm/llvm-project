@@ -6012,7 +6012,7 @@ define i32 @test_pmovmskb(<16 x i8> %a0) {
 ;
 ; BTVER2-LABEL: test_pmovmskb:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vpmovmskb %xmm0, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    vpmovmskb %xmm0, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmovmskb:

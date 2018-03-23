@@ -2178,28 +2178,6 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return false;
 }
 
-unsigned PPCInstrInfo::lookThruCopyLike(unsigned SrcReg,
-                                        const MachineRegisterInfo *MRI) {
-  while (true) {
-    MachineInstr *MI = MRI->getVRegDef(SrcReg);
-    if (!MI->isCopyLike())
-      return SrcReg;
-
-    unsigned CopySrcReg;
-    if (MI->isCopy())
-      CopySrcReg = MI->getOperand(1).getReg();
-    else {
-      assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
-    }
-
-    if (!TargetRegisterInfo::isVirtualRegister(CopySrcReg))
-      return CopySrcReg;
-
-    SrcReg = CopySrcReg;
-  }
-}
-
 // Essentially a compile-time implementation of a compare->isel sequence.
 // It takes two constants to compare, along with the true/false registers
 // and the comparison type (as a subreg to a CR field) and returns one
@@ -2265,6 +2243,7 @@ MachineInstr *PPCInstrInfo::getConstantDefMI(MachineInstr &MI,
   ConstOp = ~0U;
   MachineInstr *DefMI = nullptr;
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
   // If we'ere in SSA, get the defs through the MRI. Otherwise, only look
   // within the basic block to see if the register is defined using an LI/LI8.
   if (MRI->isSSA()) {
@@ -2274,7 +2253,7 @@ MachineInstr *PPCInstrInfo::getConstantDefMI(MachineInstr &MI,
       unsigned Reg = MI.getOperand(i).getReg();
       if (!TargetRegisterInfo::isVirtualRegister(Reg))
         continue;
-      unsigned TrueReg = lookThruCopyLike(Reg, MRI);
+      unsigned TrueReg = TRI->lookThruCopyLike(Reg, MRI);
       if (TargetRegisterInfo::isVirtualRegister(TrueReg)) {
         DefMI = MRI->getVRegDef(TrueReg);
         if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8) {

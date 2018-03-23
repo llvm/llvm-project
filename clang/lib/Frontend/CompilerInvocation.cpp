@@ -3073,16 +3073,15 @@ createVFSFromCompilerInvocation(const CompilerInvocation &CI,
         BaseFS->getBufferForFile(File);
     if (!Buffer) {
       Diags.Report(diag::err_missing_vfs_overlay_file) << File;
-      return IntrusiveRefCntPtr<vfs::FileSystem>();
+      continue;
     }
 
     IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getVFSFromYAML(
         std::move(Buffer.get()), /*DiagHandler*/ nullptr, File);
-    if (!FS.get()) {
+    if (FS)
+      Overlay->pushOverlay(FS);
+    else
       Diags.Report(diag::err_invalid_vfs_overlay) << File;
-      return IntrusiveRefCntPtr<vfs::FileSystem>();
-    }
-    Overlay->pushOverlay(FS);
   }
   return Overlay;
 }

@@ -285,6 +285,19 @@ public:
     return true;
   }
 
+  // \p Constraint will be left pointing at the last character of
+  // the constraint.  In practice, it won't be changed unless the
+  // constraint is longer than one character.
+  std::string convertConstraint(const char *&Constraint) const override {
+    const char *Begin = Constraint;
+    TargetInfo::ConstraintInfo Info("", "");
+    if (validateAsmConstraint(Constraint, Info))
+      return std::string(Begin).substr(0, Constraint - Begin + 1);
+
+    Constraint = Begin;
+    return std::string(1, *Constraint);
+  }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,

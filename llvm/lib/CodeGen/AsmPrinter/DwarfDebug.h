@@ -264,6 +264,10 @@ class DwarfDebug : public DebugHandlerBase {
   /// Allow emission of .debug_ranges section.
   bool UseRangesSection = true;
 
+  /// True if the sections itself must be used as references and don't create
+  /// temp symbols inside DWARF sections.
+  bool UseSectionsAsReferences = false;
+
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
@@ -448,6 +452,9 @@ class DwarfDebug : public DebugHandlerBase {
   void collectVariableInfoFromMFTable(DwarfCompileUnit &TheCU,
                                       DenseSet<InlinedVariable> &P);
 
+  /// Emit the reference to the section.
+  void emitSectionReference(const DwarfCompileUnit &CU);
+
 protected:
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
@@ -512,6 +519,11 @@ public:
 
   /// Returns whether ranges section should be emitted.
   bool useRangesSection() const { return UseRangesSection; }
+
+  /// Returns whether to use sections as labels rather than temp symbols.
+  bool useSectionsAsReferences() const {
+    return UseSectionsAsReferences;
+  }
 
   // Experimental DWARF5 features.
 

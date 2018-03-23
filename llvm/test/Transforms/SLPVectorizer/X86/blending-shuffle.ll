@@ -141,15 +141,16 @@ define i8 @k_bb(<4 x i8> %x) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i8> [[X]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[X]], i32 1
+; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x i8> [[X]], i32 2
 ; CHECK-NEXT:    [[X0X0:%.*]] = mul i8 [[X0]], [[X0]]
 ; CHECK-NEXT:    [[X3X3:%.*]] = mul i8 [[X3]], [[X3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[X]], [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X0X0]], [[X3X3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sdiv i8 [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    ret i8 [[TMP6]]
+; CHECK-NEXT:    [[X1X1:%.*]] = mul i8 [[X1]], [[X1]]
+; CHECK-NEXT:    [[X2X2:%.*]] = mul i8 [[X2]], [[X2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X0X0]], [[X3X3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X1X1]], [[X2X2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
 ;
   %x0 = extractelement <4 x i8> %x, i32 0
   br label %bb1

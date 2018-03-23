@@ -74,3 +74,8 @@ test_double(const __global double *a, const __global double *b, __global double 
 
     c[i] = ci;
 }
+
+void test_long(int arg0) {
+  long v15_16;
+  __asm volatile("v_lshlrev_b64 v[15:16], 0, %0" : "={v[15:16]}"(v15_16) : "v"(arg0));
+}

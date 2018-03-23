@@ -23,6 +23,7 @@
 
 #include "BackendPrinter.h"
 #include "BackendStatistics.h"
+#include "InstructionInfoView.h"
 #include "ResourcePressureView.h"
 #include "SummaryView.h"
 #include "TimelineView.h"
@@ -332,8 +333,10 @@ int main(int argc, char **argv) {
   std::unique_ptr<mca::BackendPrinter> Printer =
       llvm::make_unique<mca::BackendPrinter>(*B);
 
+  Printer->addView(llvm::make_unique<mca::SummaryView>(*S, Width));
+
   Printer->addView(
-      llvm::make_unique<mca::SummaryView>(*STI, *MCII, *S, *IP, Width));
+      llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, *S, *IP));
 
   if (PrintModeVerbose)
     Printer->addView(llvm::make_unique<mca::BackendStatistics>(*STI));
