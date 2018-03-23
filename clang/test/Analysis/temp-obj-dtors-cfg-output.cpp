@@ -217,7 +217,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (1): B1
 // CHECK:   [B1]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], [B1.4], class A)
 // CHECK:     2: [B1.1] (BindTemporary)
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B1.3]
@@ -277,7 +277,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (1): B1
 // CHECK:   [B1]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], [B1.4], class A)
 // CHECK:     2: [B1.1] (BindTemporary)
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B1.3]
@@ -532,7 +532,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (2): B6 B5
 // CHECK:   [B8]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B8.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B8.2], [B8.4], class A)
 // CHECK:     2: [B8.1] (BindTemporary)
 // CHECK:     3: [B8.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B8.3]
@@ -552,7 +552,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     7: [B9.6] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     8: [B9.7]
 // WARNINGS:     9: [B9.8] (CXXConstructExpr, class A)
-// ANALYZER:     9: [B9.8] (CXXConstructExpr, [B9.10], class A)
+// ANALYZER:     9: [B9.8] (CXXConstructExpr, [B9.10], [B9.13], class A)
 // CHECK:    10: [B9.9] (BindTemporary)
 // CHECK:    11: A([B9.10]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
 // CHECK:    12: [B9.11] (ImplicitCastExpr, NoOp, const class A)
@@ -662,7 +662,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (1): B0
 // CHECK:   [B4]
 // WARNINGS:     1: C() (CXXConstructExpr, struct C)
-// ANALYZER:     1: C() (CXXConstructExpr, [B4.2], struct C)
+// ANALYZER:     1: C() (CXXConstructExpr, [B4.2], [B4.4], struct C)
 // CHECK:     2: [B4.1] (BindTemporary)
 // CHECK:     3: [B4.2] (ImplicitCastExpr, NoOp, const struct C)
 // CHECK:     4: [B4.3]
@@ -714,9 +714,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Preds (1): B3
 // CHECK:     Succs (1): B0
 // CHECK:   [B3]
-// WARNINGS:     1: D() (CXXConstructExpr, struct D)
-// CXX98-ANALYZER:     1: D() (CXXConstructExpr, struct D)
-// CXX11-ANALYZER:     1: D() (CXXConstructExpr, [B3.2], struct D)
+// CXX98-WARNINGS:     1: D() (CXXConstructExpr, struct D)
+// CXX98-ANALYZER:     1: D() (CXXConstructExpr, [B3.3], struct D)
 // CXX98:     2: [B3.1] (ImplicitCastExpr, NoOp, const struct D)
 // CXX98:     3: [B3.2]
 // CXX98-WARNINGS:     4: [B3.3] (CXXConstructExpr, struct D)
@@ -772,7 +771,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (2): B3 B2
 // CHECK:   [B5]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B5.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B5.2], [B5.4], class A)
 // CHECK:     2: [B5.1] (BindTemporary)
 // CHECK:     3: [B5.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B5.3]
@@ -792,7 +791,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     7: [B6.6] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     8: [B6.7]
 // WARNINGS:     9: [B6.8] (CXXConstructExpr, class A)
-// ANALYZER:     9: [B6.8] (CXXConstructExpr, [B6.10], class A)
+// ANALYZER:     9: [B6.8] (CXXConstructExpr, [B6.10], [B6.13], class A)
 // CHECK:    10: [B6.9] (BindTemporary)
 // CHECK:    11: A([B6.10]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
 // CHECK:    12: [B6.11] (ImplicitCastExpr, NoOp, const class A)
@@ -835,7 +834,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (2): B9 B8
 // CHECK:   [B11]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B11.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B11.2], [B11.4], class A)
 // CHECK:     2: [B11.1] (BindTemporary)
 // CHECK:     3: [B11.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B11.3]
@@ -855,7 +854,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     7: [B12.6] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     8: [B12.7]
 // WARNINGS:     9: [B12.8] (CXXConstructExpr, class A)
-// ANALYZER:     9: [B12.8] (CXXConstructExpr, [B12.10], class A)
+// ANALYZER:     9: [B12.8] (CXXConstructExpr, [B12.10], [B12.13], class A)
 // CHECK:    10: [B12.9] (BindTemporary)
 // CHECK:    11: A([B12.10]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
 // CHECK:    12: [B12.11] (ImplicitCastExpr, NoOp, const class A)
@@ -918,7 +917,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (1): B4
 // CHECK:   [B6]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B6.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B6.2], [B6.4], class A)
 // CHECK:     2: [B6.1] (BindTemporary)
 // CHECK:     3: [B6.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B6.3]
@@ -984,7 +983,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (1): B4
 // CHECK:   [B6]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B6.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B6.2], [B6.4], class A)
 // CHECK:     2: [B6.1] (BindTemporary)
 // CHECK:     3: [B6.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B6.3]
@@ -1069,7 +1068,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (1): B1
 // CHECK:   [B1]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], [B1.4], class A)
 // CHECK:     2: [B1.1] (BindTemporary)
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B1.3]
@@ -1087,7 +1086,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     Succs (1): B1
 // CHECK:   [B1]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], [B1.4], class A)
 // CHECK:     2: [B1.1] (BindTemporary)
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B1.3]
@@ -1095,7 +1094,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     6: foo
 // CHECK:     7: [B1.6] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class A &))
 // WARNINGS:     8: A() (CXXConstructExpr, class A)
-// ANALYZER:     8: A() (CXXConstructExpr, [B1.9], class A)
+// ANALYZER:     8: A() (CXXConstructExpr, [B1.9], [B1.11], class A)
 // CHECK:     9: [B1.8] (BindTemporary)
 // CHECK:    10: [B1.9] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:    11: [B1.10]
@@ -1263,7 +1262,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     1: check
 // CHECK:     2: [B6.1] (ImplicitCastExpr, FunctionToPointerDecay, _Bool (*)(const class NoReturn &))
 // WARNINGS:     3: NoReturn() (CXXConstructExpr, class NoReturn)
-// ANALYZER:     3: NoReturn() (CXXConstructExpr, [B6.4], class NoReturn)
+// ANALYZER:     3: NoReturn() (CXXConstructExpr, [B6.4], [B6.6], class NoReturn)
 // CHECK:     4: [B6.3] (BindTemporary)
 // CHECK:     5: [B6.4] (ImplicitCastExpr, NoOp, const class NoReturn)
 // CHECK:     6: [B6.5]
@@ -1314,7 +1313,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     1: check
 // CHECK:     2: [B6.1] (ImplicitCastExpr, FunctionToPointerDecay, _Bool (*)(const class NoReturn &))
 // WARNINGS:     3: NoReturn() (CXXConstructExpr, class NoReturn)
-// ANALYZER:     3: NoReturn() (CXXConstructExpr, [B6.4], class NoReturn)
+// ANALYZER:     3: NoReturn() (CXXConstructExpr, [B6.4], [B6.6], class NoReturn)
 // CHECK:     4: [B6.3] (BindTemporary)
 // CHECK:     5: [B6.4] (ImplicitCastExpr, NoOp, const class NoReturn)
 // CHECK:     6: [B6.5]
@@ -1372,7 +1371,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     1: check
 // CHECK:     2: [B6.1] (ImplicitCastExpr, FunctionToPointerDecay, _Bool (*)(const class NoReturn &))
 // WARNINGS:     3: NoReturn() (CXXConstructExpr, class NoReturn)
-// ANALYZER:     3: NoReturn() (CXXConstructExpr, [B6.4], class NoReturn)
+// ANALYZER:     3: NoReturn() (CXXConstructExpr, [B6.4], [B6.6], class NoReturn)
 // CHECK:     4: [B6.3] (BindTemporary)
 // CHECK:     5: [B6.4] (ImplicitCastExpr, NoOp, const class NoReturn)
 // CHECK:     6: [B6.5]
