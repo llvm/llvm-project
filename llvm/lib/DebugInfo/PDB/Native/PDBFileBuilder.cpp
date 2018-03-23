@@ -80,11 +80,20 @@ GSIStreamBuilder &PDBFileBuilder::getGsiBuilder() {
   return *Gsi;
 }
 
-Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
+Expected<uint32_t> PDBFileBuilder::allocateNamedStream(StringRef Name,
+                                                       uint32_t Size) {
   auto ExpectedStream = Msf->addStream(Size);
-  if (!ExpectedStream)
-    return ExpectedStream.takeError();
-  NamedStreams.set(Name, *ExpectedStream);
+  if (ExpectedStream)
+    NamedStreams.set(Name, *ExpectedStream);
+  return ExpectedStream;
+}
+
+Error PDBFileBuilder::addNamedStream(StringRef Name, StringRef Data) {
+  Expected<uint32_t> ExpectedIndex = allocateNamedStream(Name, Data.size());
+  if (!ExpectedIndex)
+    return ExpectedIndex.takeError();
+  assert(NamedStreamData.count(*ExpectedIndex) == 0);
+  NamedStreamData[*ExpectedIndex] = Data;
   return Error::success();
 }
 
@@ -101,27 +110,10 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
 
   uint32_t StringsLen = Strings.calculateSerializedSize();
 
-  if (auto EC = addNamedStream("/names", StringsLen))
-    return std::move(EC);
-  if (auto EC = addNamedStream("/LinkInfo", 0))
-    return std::move(EC);
+  Expected<uint32_t> SN = allocateNamedStream("/LinkInfo", 0);
+  if (!SN)
+    return SN.takeError();
 
-  if (Info) {
-    if (auto EC = Info->finalizeMsfLayout())
-      return std::move(EC);
-  }
-  if (Dbi) {
-    if (auto EC = Dbi->finalizeMsfLayout())
-      return std::move(EC);
-  }
-  if (Tpi) {
-    if (auto EC = Tpi->finalizeMsfLayout())
-      return std::move(EC);
-  }
-  if (Ipi) {
-    if (auto EC = Ipi->finalizeMsfLayout())
-      return std::move(EC);
-  }
   if (Gsi) {
     if (auto EC = Gsi->finalizeMsfLayout())
       return std::move(EC);
@@ -130,6 +122,29 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
       Dbi->setGlobalsStreamIndex(Gsi->getGlobalsStreamIndex());
       Dbi->setSymbolRecordStreamIndex(Gsi->getRecordStreamIdx());
     }
+  }
+  if (Tpi) {
+    if (auto EC = Tpi->finalizeMsfLayout())
+      return std::move(EC);
+  }
+  if (Dbi) {
+    if (auto EC = Dbi->finalizeMsfLayout())
+      return std::move(EC);
+  }
+  SN = allocateNamedStream("/names", StringsLen);
+  if (!SN)
+    return SN.takeError();
+
+  if (Ipi) {
+    if (auto EC = Ipi->finalizeMsfLayout())
+      return std::move(EC);
+  }
+
+  // Do this last, since it relies on the named stream map being complete, and
+  // that can be updated by previous steps in the finalization.
+  if (Info) {
+    if (auto EC = Info->finalizeMsfLayout())
+      return std::move(EC);
   }
 
   return Msf->build();
@@ -218,6 +233,17 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   BinaryStreamWriter NSWriter(*NS);
   if (auto EC = Strings.commit(NSWriter))
     return EC;
+
+  for (const auto &NSE : NamedStreamData) {
+    if (NSE.second.empty())
+      continue;
+
+    auto NS = WritableMappedBlockStream::createIndexedStream(
+        Layout, Buffer, NSE.first, Allocator);
+    BinaryStreamWriter NSW(*NS);
+    if (auto EC = NSW.writeBytes(arrayRefFromStringRef(NSE.second)))
+      return EC;
+  }
 
   if (Info) {
     if (auto EC = Info->commit(Layout, Buffer))

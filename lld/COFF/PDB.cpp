@@ -85,7 +85,12 @@ class PDBLinker {
 public:
   PDBLinker(SymbolTable *Symtab)
       : Alloc(), Symtab(Symtab), Builder(Alloc), TypeTable(Alloc),
-        IDTable(Alloc), GlobalTypeTable(Alloc), GlobalIDTable(Alloc) {}
+        IDTable(Alloc), GlobalTypeTable(Alloc), GlobalIDTable(Alloc) {
+    // This isn't strictly necessary, but link.exe usually puts an empty string
+    // as the first "valid" string in the string table, so we do the same in
+    // order to maintain as much byte-for-byte compatibility as possible.
+    PDBStrTab.insert("");
+  }
 
   /// Emit the basic PDB structure: initial streams, headers, etc.
   void initialize(const llvm::codeview::DebugInfo &BuildId);
@@ -1066,7 +1071,6 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setAge(BuildId.PDB70.Age);
   DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
-  ExitOnErr(DbiBuilder.addDbgStream(pdb::DbgHeaderType::NewFPO, {}));
 }
 
 void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,

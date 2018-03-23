@@ -82,6 +82,8 @@ public:
 
   StringMap<uint32_t>::const_iterator end() const { return StringToId.end(); }
 
+  std::vector<uint32_t> sortedIds() const;
+
 private:
   DenseMap<uint32_t, StringRef> IdToString;
   StringMap<uint32_t> StringToId;

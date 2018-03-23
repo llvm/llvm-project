@@ -1738,7 +1738,7 @@ define void @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [8:1.00]
+; ZNVER1-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [5:3.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast x86_mmx* %a2 to <2 x float>*
   %2 = load <2 x float>, <2 x float> *%1, align 8

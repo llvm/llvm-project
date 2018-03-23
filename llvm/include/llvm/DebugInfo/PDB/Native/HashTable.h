@@ -304,12 +304,12 @@ private:
 
   void grow() {
     uint32_t S = size();
+    uint32_t MaxLoad = maxLoad(capacity());
     if (S < maxLoad(capacity()))
       return;
     assert(capacity() != UINT32_MAX && "Can't grow Hash table!");
 
-    uint32_t NewCapacity =
-        (capacity() <= INT32_MAX) ? capacity() * 2 : UINT32_MAX;
+    uint32_t NewCapacity = (capacity() <= INT32_MAX) ? MaxLoad * 2 : UINT32_MAX;
 
     // Growing requires rebuilding the table and re-hashing every item.  Make a
     // copy with a larger capacity, insert everything into the copy, then swap

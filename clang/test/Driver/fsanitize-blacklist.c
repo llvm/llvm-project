@@ -23,7 +23,7 @@
 // Check that the default blacklist is not added as an extra dependency.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST-ASAN --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // CHECK-DEFAULT-BLACKLIST-ASAN: -fsanitize-blacklist={{.*[^w]}}asan_blacklist.txt
-// RUN: %clang -target aarch64-linux-gnu -fsanitize=hwaddress -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST-HWASAN --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST-HWASAN --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // CHECK-DEFAULT-BLACKLIST-HWASAN: -fsanitize-blacklist={{.*}}hwasan_blacklist.txt
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=integer -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=

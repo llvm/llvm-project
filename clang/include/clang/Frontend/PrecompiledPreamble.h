@@ -289,7 +289,6 @@ enum class BuildPreambleError {
   PreambleIsEmpty = 1,
   CouldntCreateTempFile,
   CouldntCreateTargetInfo,
-  CouldntCreateVFSOverlay,
   BeginSourceFileFailed,
   CouldntEmitPCH
 };

@@ -47,8 +47,7 @@ define void @test1(i32 %k) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC_PEEL7]], [[FOR_BODY_LR_PH_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[I_05]], 2
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    br label [[FOR_INC]]
@@ -56,7 +55,7 @@ define void @test1(i32 %k) {
 ; CHECK-NEXT:    call void @f2()
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_05]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !0
 ; CHECK:       for.end.loopexit:
@@ -186,8 +185,7 @@ define void @test2(i32 %k) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC_PEEL32]], [[FOR_BODY_LR_PH_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[I_05]], 2
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    br label [[IF2:%.*]]
@@ -195,13 +193,12 @@ define void @test2(i32 %k) {
 ; CHECK-NEXT:    call void @f2()
 ; CHECK-NEXT:    br label [[IF2]]
 ; CHECK:       if2:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[I_05]], 4
-; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN2:%.*]], label [[FOR_INC]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN2:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_05]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !2
 ; CHECK:       for.end.loopexit:
@@ -300,8 +297,7 @@ define void @test3(i32 %k) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC_PEEL15]], [[FOR_BODY_LR_PH_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[I_05]], 2
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    br label [[FOR_INC]]
@@ -309,7 +305,7 @@ define void @test3(i32 %k) {
 ; CHECK-NEXT:    call void @f2()
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_05]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !3
 ; CHECK:       for.end.loopexit:
@@ -445,7 +441,7 @@ define void @test4(i32 %k) {
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_05]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !4
 ; CHECK:       for.end.loopexit:
@@ -568,8 +564,7 @@ define void @test6(i32 %k) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[INC_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[I_05]], [[J]]
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    br label [[FOR_INC]]
@@ -577,7 +572,7 @@ define void @test6(i32 %k) {
 ; CHECK-NEXT:    call void @f2()
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_05]], 2
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !5
 ; CHECK:       for.end.loopexit:

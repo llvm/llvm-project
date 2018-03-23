@@ -133,6 +133,13 @@ static cl::opt<bool>
                          cl::desc("Disable emission .debug_ranges section."),
                          cl::init(false));
 
+static cl::opt<DefaultOnOff> DwarfSectionsAsReferences(
+    "dwarf-sections-as-references", cl::Hidden,
+    cl::desc("Use sections+offset as references rather than labels."),
+    cl::values(clEnumVal(Default, "Default for platform"),
+               clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
+    cl::init(Default));
+
 enum LinkageNameOption {
   DefaultLinkageNames,
   AllLinkageNames,
@@ -322,6 +329,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
 
   UsePubSections = !NoDwarfPubSections;
   UseRangesSection = !NoDwarfRangesSection;
+
+  // Use sections as references.
+  UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -1559,6 +1569,14 @@ void DwarfDebug::emitDebugPubSections() {
   }
 }
 
+void DwarfDebug::emitSectionReference(const DwarfCompileUnit &CU) {
+  if (useSectionsAsReferences())
+    Asm->EmitDwarfOffset(CU.getSection()->getBeginSymbol(),
+                         CU.getDebugSectionOffset());
+  else
+    Asm->emitDwarfSymbolReference(CU.getLabelBegin());
+}
+
 void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
                                      DwarfCompileUnit *TheU,
                                      const StringMap<const DIE *> &Globals) {
@@ -1577,7 +1595,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   Asm->EmitInt16(dwarf::DW_PUBNAMES_VERSION);
 
   Asm->OutStreamer->AddComment("Offset of Compilation Unit Info");
-  Asm->emitDwarfSymbolReference(TheU->getLabelBegin());
+  emitSectionReference(*TheU);
 
   Asm->OutStreamer->AddComment("Compilation Unit Length");
   Asm->EmitInt32(TheU->getLength());
@@ -1876,7 +1894,7 @@ void DwarfDebug::emitDebugARanges() {
     Asm->OutStreamer->AddComment("DWARF Arange version number");
     Asm->EmitInt16(dwarf::DW_ARANGES_VERSION);
     Asm->OutStreamer->AddComment("Offset Into Debug Info Section");
-    Asm->emitDwarfSymbolReference(CU->getLabelBegin());
+    emitSectionReference(*CU);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
     Asm->EmitInt8(PtrSize);
     Asm->OutStreamer->AddComment("Segment Size (in bytes)");

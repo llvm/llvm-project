@@ -724,8 +724,8 @@ declare <8 x i16> @llvm.x86.ssse3.phsub.w.128(<8 x i16>, <8 x i16>) nounwind rea
 define <8 x i16> @test_pmaddubsw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_pmaddubsw:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    pmaddubsw %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    pmaddubsw (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    pmaddubsw %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    pmaddubsw (%rdi), %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_pmaddubsw:
@@ -742,8 +742,8 @@ define <8 x i16> @test_pmaddubsw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SANDY-LABEL: test_pmaddubsw:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
+; SANDY-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaddubsw:
@@ -792,8 +792,8 @@ declare <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>) nounwind
 define <8 x i16> @test_pmulhrsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_pmulhrsw:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    pmulhrsw %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    pmulhrsw (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    pmulhrsw %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    pmulhrsw (%rdi), %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_pmulhrsw:
@@ -810,8 +810,8 @@ define <8 x i16> @test_pmulhrsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_pmulhrsw:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vpmulhrsw (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
+; SANDY-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpmulhrsw (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmulhrsw:

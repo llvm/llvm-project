@@ -54,10 +54,11 @@ public:
   Error commit(StringRef Filename);
 
   Expected<uint32_t> getNamedStreamIndex(StringRef Name) const;
-  Error addNamedStream(StringRef Name, uint32_t Size);
+  Error addNamedStream(StringRef Name, StringRef Data);
 
 private:
   Expected<msf::MSFLayout> finalizeMsfLayout();
+  Expected<uint32_t> allocateNamedStream(StringRef Name, uint32_t Size);
 
   void commitFpm(WritableBinaryStream &MsfBuffer, const msf::MSFLayout &Layout);
 
@@ -72,6 +73,7 @@ private:
 
   PDBStringTableBuilder Strings;
   NamedStreamMap NamedStreams;
+  DenseMap<uint32_t, std::string> NamedStreamData;
 };
 }
 }

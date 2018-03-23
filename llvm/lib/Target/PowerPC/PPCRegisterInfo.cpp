@@ -65,6 +65,12 @@ static cl::opt<bool>
 EnableGPRToVecSpills("ppc-enable-gpr-to-vsr-spills", cl::Hidden, cl::init(false),
          cl::desc("Enable spills from gpr to vsr rather than stack"));
 
+static cl::opt<bool>
+StackPtrConst("ppc-stack-ptr-caller-preserved",
+                cl::desc("Consider R1 caller preserved so stack saves of "
+                         "caller preserved registers can be LICM candidates"),
+                cl::init(true), cl::Hidden);
+
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   : PPCGenRegisterInfo(TM.isPPC64() ? PPC::LR8 : PPC::LR,
                        TM.isPPC64() ? 0 : 1,
@@ -304,15 +310,26 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 bool PPCRegisterInfo::isCallerPreservedPhysReg(unsigned PhysReg,
                                                const MachineFunction &MF) const {
   assert(TargetRegisterInfo::isPhysicalRegister(PhysReg));
-  if (TM.isELFv2ABI() && PhysReg == PPC::X2) {
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!TM.isPPC64())
+    return false;
+
+  if (!Subtarget.isSVR4ABI())
+    return false;
+  if (PhysReg == PPC::X2)
     // X2 is guaranteed to be preserved within a function if it is reserved.
     // The reason it's reserved is that it's the TOC pointer (and the function
     // uses the TOC). In functions where it isn't reserved (i.e. leaf functions
     // with no TOC access), we can't claim that it is preserved.
     return (getReservedRegs(MF).test(PPC::X2));
-  } else {
-    return false;
-  }
+  if (StackPtrConst && (PhysReg == PPC::X1) && !MFI.hasVarSizedObjects()
+      && !MFI.hasOpaqueSPAdjustment())
+    // The value of the stack pointer does not change within a function after
+    // the prologue and before the epilogue if there are no dynamic allocations
+    // and no inline asm which clobbers X1.
+    return true;
+  return false;
 }
 
 unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,

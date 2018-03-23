@@ -18,7 +18,8 @@
 ; CHECK-NEXT:     CallGraph Construction
 ; CHECK-NEXT:     Call Graph SCC Pass Manager
 ; CHECK-NEXT:       Inliner for always_inline functions
-; CHECK-NEXT:       FunctionPass Manager
+;                   A No-Op Barrier Pass
+; CHECK:            FunctionPass Manager
 ; CHECK-NEXT:         Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
 

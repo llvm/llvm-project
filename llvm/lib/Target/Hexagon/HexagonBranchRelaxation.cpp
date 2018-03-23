@@ -114,8 +114,12 @@ void HexagonBranchRelaxation::computeOffset(MachineFunction &MF,
       InstOffset = (InstOffset + ByteAlign) & ~(ByteAlign);
     }
     OffsetMap[&B] = InstOffset;
-    for (auto &MI : B.instrs())
+    for (auto &MI : B.instrs()) {
       InstOffset += HII->getSize(MI);
+      // Assume that all extendable branches will be extended.
+      if (MI.isBranch() && HII->isExtendable(MI))
+        InstOffset += HEXAGON_INSTR_SIZE;
+    }
   }
 }
 
@@ -143,6 +147,9 @@ bool HexagonBranchRelaxation::isJumpOutOfRange(MachineInstr &MI,
   MachineBasicBlock &B = *MI.getParent();
   auto FirstTerm = B.getFirstInstrTerminator();
   if (FirstTerm == B.instr_end())
+    return false;
+
+  if (HII->isExtended(MI))
     return false;
 
   unsigned InstOffset = BlockToInstOffset[&B];

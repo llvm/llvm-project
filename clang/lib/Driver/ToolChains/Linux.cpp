@@ -879,7 +879,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
     Res |= SanitizerKind::Function;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch)
     Res |= SanitizerKind::Scudo;
-  if (IsAArch64)
+  if (IsX86_64 || IsAArch64)
     Res |= SanitizerKind::HWAddress;
   return Res;
 }

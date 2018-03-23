@@ -90,7 +90,13 @@ Error DumpOutputStyle::dump() {
     P.NewLine();
   }
 
-  if (opts::dump::DumpStringTable) {
+  if (opts::dump::DumpNamedStreams) {
+    if (auto EC = dumpNamedStreams())
+      return EC;
+    P.NewLine();
+  }
+
+  if (opts::dump::DumpStringTable || opts::dump::DumpStringTableDetails) {
     if (auto EC = dumpStringTable())
       return EC;
     P.NewLine();
@@ -857,33 +863,64 @@ Error DumpOutputStyle::dumpStringTableFromPdb() {
     return Error::success();
   }
 
-  if (IS->name_ids().empty()) {
-    P.formatLine("Empty");
-    return Error::success();
+  if (opts::dump::DumpStringTable) {
+    if (IS->name_ids().empty())
+      P.formatLine("Empty");
+    else {
+      auto MaxID =
+          std::max_element(IS->name_ids().begin(), IS->name_ids().end());
+      uint32_t Digits = NumDigits(*MaxID);
+
+      P.formatLine("{0} | {1}", fmt_align("ID", AlignStyle::Right, Digits),
+                   "String");
+
+      std::vector<uint32_t> SortedIDs(IS->name_ids().begin(),
+                                      IS->name_ids().end());
+      std::sort(SortedIDs.begin(), SortedIDs.end());
+      for (uint32_t I : SortedIDs) {
+        auto ES = IS->getStringForID(I);
+        llvm::SmallString<32> Str;
+        if (!ES) {
+          consumeError(ES.takeError());
+          Str = "Error reading string";
+        } else if (!ES->empty()) {
+          Str.append("'");
+          Str.append(*ES);
+          Str.append("'");
+        }
+
+        if (!Str.empty())
+          P.formatLine("{0} | {1}", fmt_align(I, AlignStyle::Right, Digits),
+                       Str);
+      }
+    }
   }
 
-  auto MaxID = std::max_element(IS->name_ids().begin(), IS->name_ids().end());
-  uint32_t Digits = NumDigits(*MaxID);
-
-  P.formatLine("{0} | {1}", fmt_align("ID", AlignStyle::Right, Digits),
-               "String");
-
-  std::vector<uint32_t> SortedIDs(IS->name_ids().begin(), IS->name_ids().end());
-  std::sort(SortedIDs.begin(), SortedIDs.end());
-  for (uint32_t I : SortedIDs) {
-    auto ES = IS->getStringForID(I);
-    llvm::SmallString<32> Str;
-    if (!ES) {
-      consumeError(ES.takeError());
-      Str = "Error reading string";
-    } else if (!ES->empty()) {
-      Str.append("'");
-      Str.append(*ES);
-      Str.append("'");
+  if (opts::dump::DumpStringTableDetails) {
+    P.NewLine();
+    {
+      P.printLine("String Table Header:");
+      AutoIndent Indent(P);
+      P.formatLine("Signature: {0}", IS->getSignature());
+      P.formatLine("Hash Version: {0}", IS->getHashVersion());
+      P.formatLine("Name Buffer Size: {0}", IS->getByteSize());
+      P.NewLine();
     }
 
-    if (!Str.empty())
-      P.formatLine("{0} | {1}", fmt_align(I, AlignStyle::Right, Digits), Str);
+    BinaryStreamRef NameBuffer = IS->getStringTable().getBuffer();
+    ArrayRef<uint8_t> Contents;
+    cantFail(NameBuffer.readBytes(0, NameBuffer.getLength(), Contents));
+    P.formatBinary("Name Buffer", Contents, 0);
+    P.NewLine();
+    {
+      P.printLine("Hash Table:");
+      AutoIndent Indent(P);
+      P.formatLine("Bucket Count: {0}", IS->name_ids().size());
+      for (const auto &Entry : enumerate(IS->name_ids()))
+        P.formatLine("Bucket[{0}] : {1}", Entry.index(),
+                     uint32_t(Entry.value()));
+      P.formatLine("Name Count: {0}", IS->getNameCount());
+    }
   }
   return Error::success();
 }
@@ -906,6 +943,29 @@ Error DumpOutputStyle::dumpStringTableFromObj() {
                        Str);
         }
       });
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpNamedStreams() {
+  printHeader(P, "Named Streams");
+  AutoIndent Indent(P, 2);
+
+  if (File.isObj()) {
+    P.formatLine("Dumping Named Streams is only supported for PDB files.");
+    return Error::success();
+  }
+  ExitOnError Err("Invalid PDB File: ");
+
+  auto &IS = Err(File.pdb().getPDBInfoStream());
+  const NamedStreamMap &NS = IS.getNamedStreams();
+  for (const auto &Entry : NS.entries()) {
+    P.printLine(Entry.getKey());
+    AutoIndent Indent2(P, 2);
+    P.formatLine("Index: {0}", Entry.getValue());
+    P.formatLine("Size in bytes: {0}",
+                 File.pdb().getStreamByteSize(Entry.getValue()));
+  }
+
   return Error::success();
 }
 
