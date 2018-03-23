@@ -201,6 +201,7 @@ enum Kind {
   kw_noreturn,
   kw_nocf_check,
   kw_nounwind,
+  kw_optforfuzzing,
   kw_optnone,
   kw_optsize,
   kw_readnone,

@@ -588,6 +588,7 @@ enum AttributeKindCodes {
   ATTR_KIND_STRICT_FP = 54,
   ATTR_KIND_SANITIZE_HWADDRESS = 55,
   ATTR_KIND_NOCF_CHECK = 56,
+  ATTR_KIND_OPT_FOR_FUZZING = 57,
 };
 
 enum ComdatSelectionKindCodes {

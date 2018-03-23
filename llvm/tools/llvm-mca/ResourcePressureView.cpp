@@ -30,7 +30,7 @@ void ResourcePressureView::initialize() {
     if (ProcResource.SubUnitsIdxBegin || !NumUnits)
       continue;
 
-    Resource2VecIndex.insert(std::pair<uint64_t, unsigned>(I, R2VIndex));
+    Resource2VecIndex.insert(std::pair<unsigned, unsigned>(I, R2VIndex));
     R2VIndex += ProcResource.NumUnits;
   }
 
@@ -70,16 +70,14 @@ static void printColumnNames(raw_string_ostream &OS, const MCSchedModel &SM) {
         OS << "    ";
       else
         OS << "   ";
-      ResourceIndex++;
-      continue;
-    }
-
-    for (unsigned J = 0; J < NumUnits; ++J) {
-      OS << "[" << ResourceIndex << '.' << J << ']';
-      if (ResourceIndex < 10)
-        OS << "  ";
-      else
-        OS << ' ';
+    } else {
+      for (unsigned J = 0; J < NumUnits; ++J) {
+        OS << "[" << ResourceIndex << '.' << J << ']';
+        if (ResourceIndex < 10)
+          OS << "  ";
+        else
+          OS << ' ';
+      }
     }
     ResourceIndex++;
   }
@@ -114,8 +112,8 @@ void ResourcePressureView::printResourcePressurePerIteration(
   printColumnNames(TempStream, SM);
   TempStream << '\n';
 
-  for (unsigned I = 0; I < NumResourceUnits; ++I) {
-    unsigned Usage = ResourceUsage[I + Source.size() * NumResourceUnits];
+  for (unsigned I = 0, E = NumResourceUnits; I < E; ++I) {
+    unsigned Usage = ResourceUsage[I + Source.size() * E];
     if (!Usage) {
       TempStream << " -     ";
       continue;

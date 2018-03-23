@@ -24,14 +24,14 @@
 ; with the Orders insertion point vector.
 
 ; CHECK-LABEL: f: # @f
-; CHECK: .LBB0_1:                                # %while.body
+; CHECK: .LBB0_2:                                # %while.body
 ; CHECK:         movl    $32, %ecx
 ; CHECK:         testl   {{.*}}
-; CHECK:         jne     .LBB0_3
-; CHECK: # %bb.2:                                 # %if.then
+; CHECK:         jne     .LBB0_4
+; CHECK: # %bb.3:                                 # %if.then
 ; CHECK:         callq   if_then
 ; CHECK:         movl    %eax, %ecx
-; CHECK: .LBB0_3:                                # %if.end
+; CHECK: .LBB0_4:                                # %if.end
 ;        Check that this DEBUG_VALUE comes before the left shift.
 ; CHECK:         #DEBUG_VALUE: bit_offset <- $ecx
 ; CHECK:         .cv_loc 0 1 8 28                # t.c:8:28

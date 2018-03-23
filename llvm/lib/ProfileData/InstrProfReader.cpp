@@ -448,23 +448,23 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   if (atEnd())
     // At this point, ValueDataStart field points to the next header.
     if (Error E = readNextHeader(getNextHeaderPos()))
-      return error(std::move(E));
+      return E;
 
   // Read name ad set it in Record.
   if (Error E = readName(Record))
-    return error(std::move(E));
+    return E;
 
   // Read FuncHash and set it in Record.
   if (Error E = readFuncHash(Record))
-    return error(std::move(E));
+    return E;
 
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))
-    return error(std::move(E));
+    return E;
 
   // Read value data and set Record.
   if (Error E = readValueProfilingData(Record))
-    return error(std::move(E));
+    return E;
 
   // Iterate.
   advanceData();

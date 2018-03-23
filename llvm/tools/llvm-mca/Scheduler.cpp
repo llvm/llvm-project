@@ -241,16 +241,16 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
   // eliminated at register renaming stage, since we know in advance that those
   // clear their output register.
   if (MCIS.isZeroLatency()) {
+    assert(MCIS.isReady() && "data dependent zero-latency instruction?");
     notifyInstructionReady(Idx);
-    MCIS.forceExecuted();
+    MCIS.execute();
     notifyInstructionIssued(Idx, {});
+    assert(MCIS.isExecuted() && "Unexpected non-zero latency!");
     notifyInstructionExecuted(Idx);
     return;
   }
 
-  // Consume entries in the reservation stations.
   const InstrDesc &Desc = MCIS.getDesc();
-
   if (!Desc.Buffers.empty()) {
     // Reserve a slot in each buffered resource. Also, mark units with
     // BufferSize=0 as reserved. Resources with a buffer size of zero will only
@@ -260,17 +260,9 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
     notifyReservedBuffers(Desc.Buffers);
   }
 
-  bool MayLoad = Desc.MayLoad;
-  bool MayStore = Desc.MayStore;
-  if (MayLoad || MayStore)
-    LSU->reserve(Idx, MayLoad, MayStore, Desc.HasSideEffects);
-
-  MCIS.dispatch();
-  bool IsReady = MCIS.isReady();
-  if (IsReady && (MayLoad || MayStore))
-    IsReady &= LSU->isReady(Idx);
-
-  if (!IsReady) {
+  // If necessary, reserve queue entries in the load-store unit (LSU).
+  bool Reserved = LSU->reserve(Idx, Desc);
+  if (!MCIS.isReady() || (Reserved && !LSU->isReady(Idx))) {
     DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx << " to the Wait Queue\n");
     WaitQueue[Idx] = &MCIS;
     return;
@@ -352,14 +344,16 @@ void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {
   // This updates the internal state of each write.
   IS.execute();
 
+  notifyInstructionIssued(InstrIndex, UsedResources);
   if (D.MaxLatency) {
+    assert(IS.isExecuting() && "A zero latency instruction?");
     IssuedQueue[InstrIndex] = &IS;
-    notifyInstructionIssued(InstrIndex, UsedResources);
-  } else {
-    // A zero latency instruction which reads and/or updates registers.
-    notifyInstructionIssued(InstrIndex, UsedResources);
-    notifyInstructionExecuted(InstrIndex);
+    return;
   }
+
+  // A zero latency instruction which reads and/or updates registers.
+  assert(IS.isExecuted() && "Instruction still executing!");
+  notifyInstructionExecuted(InstrIndex);
 }
 
 void Scheduler::issue() {

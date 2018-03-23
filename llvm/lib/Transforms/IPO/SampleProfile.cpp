@@ -22,7 +22,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/SampleProfile.h"
+#include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"

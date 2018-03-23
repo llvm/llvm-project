@@ -1070,10 +1070,16 @@ bool X86DAGToDAGISel::matchAdd(SDValue N, X86ISelAddressMode &AM,
 // IDs! The selection DAG must no longer depend on their uniqueness when this
 // is used.
 static void insertDAGNode(SelectionDAG &DAG, SDValue Pos, SDValue N) {
-  if (N.getNode()->getNodeId() == -1 ||
-      N.getNode()->getNodeId() > Pos.getNode()->getNodeId()) {
-    DAG.RepositionNode(Pos.getNode()->getIterator(), N.getNode());
-    N.getNode()->setNodeId(Pos.getNode()->getNodeId());
+  if (N->getNodeId() == -1 ||
+      (SelectionDAGISel::getUninvalidatedNodeId(N.getNode()) >
+       SelectionDAGISel::getUninvalidatedNodeId(Pos.getNode()))) {
+    DAG.RepositionNode(Pos->getIterator(), N.getNode());
+    // Mark Node as invalid for pruning as after this it may be a successor to a
+    // selected node but otherwise be in the same position of Pos.
+    // Conservatively mark it with the same -abs(Id) to assure node id
+    // invariant is preserved.
+    N->setNodeId(Pos->getNodeId());
+    SelectionDAGISel::InvalidateNodeId(N.getNode());
   }
 }
 

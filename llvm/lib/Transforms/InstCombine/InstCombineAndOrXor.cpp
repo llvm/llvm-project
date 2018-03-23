@@ -2363,6 +2363,34 @@ Value *InstCombiner::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     }
   }
 
+  // TODO: This can be generalized to compares of non-signbits using
+  // decomposeBitTestICmp(). It could be enhanced more by using (something like)
+  // foldLogOpOfMaskedICmps().
+  ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
+  Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
+  Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
+  if ((LHS->hasOneUse() || RHS->hasOneUse()) &&
+      LHS0->getType() == RHS0->getType()) {
+    // (X > -1) ^ (Y > -1) --> (X ^ Y) < 0
+    // (X <  0) ^ (Y <  0) --> (X ^ Y) < 0
+    if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_AllOnes()) &&
+         PredR == CmpInst::ICMP_SGT && match(RHS1, m_AllOnes())) ||
+        (PredL == CmpInst::ICMP_SLT && match(LHS1, m_Zero()) &&
+         PredR == CmpInst::ICMP_SLT && match(RHS1, m_Zero()))) {
+      Value *Zero = ConstantInt::getNullValue(LHS0->getType());
+      return Builder.CreateICmpSLT(Builder.CreateXor(LHS0, RHS0), Zero);
+    }
+    // (X > -1) ^ (Y <  0) --> (X ^ Y) > -1
+    // (X <  0) ^ (Y > -1) --> (X ^ Y) > -1
+    if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_AllOnes()) &&
+         PredR == CmpInst::ICMP_SLT && match(RHS1, m_Zero())) ||
+        (PredL == CmpInst::ICMP_SLT && match(LHS1, m_Zero()) &&
+         PredR == CmpInst::ICMP_SGT && match(RHS1, m_AllOnes()))) {
+      Value *MinusOne = ConstantInt::getAllOnesValue(LHS0->getType());
+      return Builder.CreateICmpSGT(Builder.CreateXor(LHS0, RHS0), MinusOne);
+    }
+  }
+
   // Instead of trying to imitate the folds for and/or, decompose this 'xor'
   // into those logic ops. That is, try to turn this into an and-of-icmps
   // because we have many folds for that pattern.

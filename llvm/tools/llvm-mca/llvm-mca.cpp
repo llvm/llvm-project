@@ -198,7 +198,6 @@ public:
 
   const InstVec &GetInstructionSequence() const { return Insts; }
 };
-
 } // end of anonymous namespace
 
 int main(int argc, char **argv) {
@@ -324,25 +323,17 @@ int main(int argc, char **argv) {
   std::unique_ptr<mca::BackendPrinter> Printer =
       llvm::make_unique<mca::BackendPrinter>(*B);
 
-  std::unique_ptr<mca::SummaryView> SV =
-      llvm::make_unique<mca::SummaryView>(*STI, *MCII, *S, *IP, Width);
-  Printer->addView(std::move(SV));
+  Printer->addView(
+      llvm::make_unique<mca::SummaryView>(*STI, *MCII, *S, *IP, Width));
 
-  if (PrintModeVerbose) {
-    std::unique_ptr<mca::BackendStatistics> BS =
-        llvm::make_unique<mca::BackendStatistics>(*STI);
-    Printer->addView(std::move(BS));
-  }
+  if (PrintModeVerbose)
+    Printer->addView(llvm::make_unique<mca::BackendStatistics>(*STI));
 
-  std::unique_ptr<mca::ResourcePressureView> RPV =
-      llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S);
-  Printer->addView(std::move(RPV));
+  Printer->addView(llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
 
   if (PrintTimelineView) {
-    std::unique_ptr<mca::TimelineView> TV =
-        llvm::make_unique<mca::TimelineView>(
-            *STI, *IP, *S, TimelineMaxIterations, TimelineMaxCycles);
-    Printer->addView(std::move(TV));
+    Printer->addView(llvm::make_unique<mca::TimelineView>(
+        *STI, *IP, *S, TimelineMaxIterations, TimelineMaxCycles));
   }
 
   B->run();

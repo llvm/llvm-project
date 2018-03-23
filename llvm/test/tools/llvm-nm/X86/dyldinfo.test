@@ -1,6 +1,7 @@
 # RUN: llvm-nm %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=DEFAULT %s
 # RUN: llvm-nm -no-dyldinfo %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=NO-DYLDINFO %s
 # RUN: llvm-nm -dyldinfo-only %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=DYLDINFO-ONLY %s
+# RUN: llvm-nm %p/Inputs/Strip-N.hello.exe.macho-x86_64 | FileCheck --check-prefix=FUNC-STARTS %s
 
 # DEFAULT: 0000000000000f90 T __Bob_is_slow
 # DEFAULT: 0000000000001008 D __T0ims_data
@@ -16,3 +17,10 @@
 # DYLDINFO-ONLY: 0000000000001008 D __T0ims_data
 # DYLDINFO-ONLY: 0000000000000f80 T __T0om_is_not_swift
 # DYLDINFO-ONLY-NOT: U dyld_stub_binder
+
+# FUNC-STARTS: 0000000100000f70 t <redacted function 1>
+# FUNC-STARTS: 0000000100000f80 t <redacted function 2>
+# FUNC-STARTS: 0000000100000000 T __mh_execute_header
+# FUNC-STARTS: 0000000100000f30 T _main
+# FUNC-STARTS: U _printf
+# FUNC-STARTS: U dyld_stub_binder

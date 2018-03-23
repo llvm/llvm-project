@@ -994,33 +994,6 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
   return NextI;
 }
 
-/// trackRegDefsUses - Remember what registers the specified instruction uses
-/// and modifies.
-static void trackRegDefsUses(const MachineInstr &MI, BitVector &ModifiedRegs,
-                             BitVector &UsedRegs,
-                             const TargetRegisterInfo *TRI) {
-  for (const MachineOperand &MO : MI.operands()) {
-    if (MO.isRegMask())
-      ModifiedRegs.setBitsNotInMask(MO.getRegMask());
-
-    if (!MO.isReg())
-      continue;
-    unsigned Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    if (MO.isDef()) {
-      // WZR/XZR are not modified even when used as a destination register.
-      if (Reg != AArch64::WZR && Reg != AArch64::XZR)
-        for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-          ModifiedRegs.set(*AI);
-    } else {
-      assert(MO.isUse() && "Reg operand not a def and not a use?!?");
-      for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-        UsedRegs.set(*AI);
-    }
-  }
-}
-
 static bool inBoundsForPair(bool IsUnscaled, int Offset, int OffsetStride) {
   // Convert the byte-offset used by unscaled into an "element" offset used
   // by the scaled pair load/store instructions.
@@ -1109,7 +1082,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
       return false;
 
     // Update modified / uses register lists.
-    trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+    TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
 
     // Otherwise, if the base register is modified, we have no match, so
     // return early.
@@ -1229,7 +1202,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           // If the unscaled offset isn't a multiple of the MemSize, we can't
           // pair the operations together: bail and keep looking.
           if (MIOffset % MemSize) {
-            trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+            TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
             MemInsns.push_back(&MI);
             continue;
           }
@@ -1249,7 +1222,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           // the stored value is the same (i.e., WZR).
           if ((!IsUnscaled && alignTo(MinOffset, 2) != MinOffset) ||
               (IsPromotableZeroStore && Reg != getLdStRegOp(MI).getReg())) {
-            trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+            TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
             MemInsns.push_back(&MI);
             continue;
           }
@@ -1259,7 +1232,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           // immediate offset of merging these instructions is out of range for
           // a pairwise instruction, bail and keep looking.
           if (!inBoundsForPair(IsUnscaled, MinOffset, OffsetStride)) {
-            trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+            TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
             MemInsns.push_back(&MI);
             continue;
           }
@@ -1267,7 +1240,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           // can't express the offset of the unscaled input, bail and keep
           // looking.
           if (IsUnscaled && (alignTo(MinOffset, OffsetStride) != MinOffset)) {
-            trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+            TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
             MemInsns.push_back(&MI);
             continue;
           }
@@ -1276,7 +1249,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // and keep looking. A load-pair instruction with both destination
         // registers the same is UNPREDICTABLE and will result in an exception.
         if (MayLoad && Reg == getLdStRegOp(MI).getReg()) {
-          trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+          TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
           MemInsns.push_back(&MI);
           continue;
         }
@@ -1313,7 +1286,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
       return E;
 
     // Update modified / uses register lists.
-    trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+    TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
 
     // Otherwise, if the base register is modified, we have no match, so
     // return early.
@@ -1491,7 +1464,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
       return MBBI;
 
     // Update the status of what the instruction clobbered and used.
-    trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+    TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
 
     // Otherwise, if the base register is used or modified, we have no match, so
     // return early.
@@ -1543,7 +1516,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
       return MBBI;
 
     // Update the status of what the instruction clobbered and used.
-    trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+    TII->trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
 
     // Otherwise, if the base register is used or modified, we have no match, so
     // return early.
