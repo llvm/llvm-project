@@ -16,6 +16,7 @@
 
 typedef __typeof(sizeof(int)) size_t;
 void *mmap(void *, size_t, int, int, int, long);
+int mprotect(void *, size_t, int);
 
 void f1()
 {
@@ -33,4 +34,11 @@ void f2()
   callm = mmap;
   int prot = PROT_WRITE | PROT_EXEC;
   (void)callm(NULL, 1024, prot, MAP_PRIVATE | MAP_ANON, -1, 0); // expected-warning{{Both PROT_WRITE and PROT_EXEC flags are set. This can lead to exploitable memory regions, which could be overwritten with malicious code}}
+}
+
+void f3()
+{
+  void *p = mmap(NULL, 1024, PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0); // no-warning
+  int m = mprotect(p, 1024, PROT_WRITE | PROT_EXEC); // expected-warning{{Both PROT_WRITE and PROT_EXEC flags are set. This can lead to exploitable memory regions, which could be overwritten with malicious code}}
+  (void)m;
 }

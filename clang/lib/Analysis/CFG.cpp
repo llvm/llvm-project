@@ -234,6 +234,13 @@ public:
       assert(VarIter != 0 && "Iterator has invalid value of VarIter member");
       return &Scope->Vars[VarIter - 1];
     }
+
+    const VarDecl *getFirstVarInScope() const {
+      assert(Scope && "Dereferencing invalid iterator is not allowed");
+      assert(VarIter != 0 && "Iterator has invalid value of VarIter member");
+      return Scope->Vars[0];
+    }
+
     VarDecl *operator*() const {
       return *this->operator->();
     }
@@ -267,6 +274,7 @@ public:
 
     int distance(const_iterator L);
     const_iterator shared_parent(const_iterator L);
+    bool pointsToFirstDeclaredVar() { return VarIter == 1; }
   };
 
 private:
@@ -475,9 +483,12 @@ class CFGBuilder {
 
   // Information about the currently visited C++ object construction site.
   // This is set in the construction trigger and read when the constructor
-  // itself is being visited.
-  llvm::DenseMap<CXXConstructExpr *, const ConstructionContextLayer *>
+  // or a function that returns an object by value is being visited.
+  llvm::DenseMap<Expr *, const ConstructionContextLayer *>
       ConstructionContextMap;
+
+  using DeclsWithEndedScopeSetTy = llvm::SmallSetVector<VarDecl *, 16>;
+  DeclsWithEndedScopeSetTy DeclsWithEndedScope;
 
   bool badCFG = false;
   const CFG::BuildOptions &BuildOpts;
@@ -576,6 +587,12 @@ private:
   CFGBlock *VisitChildren(Stmt *S);
   CFGBlock *VisitNoRecurse(Expr *E, AddStmtChoice asc);
 
+  void maybeAddScopeBeginForVarDecl(CFGBlock *B, const VarDecl *VD,
+                                    const Stmt *S) {
+    if (ScopePos && (VD == ScopePos.getFirstVarInScope()))
+      appendScopeBegin(B, VD, S);
+  }
+
   /// When creating the CFG for temporary destructors, we want to mirror the
   /// branch structure of the corresponding constructor calls.
   /// Thus, while visiting a statement for temporary destructors, we keep a
@@ -656,7 +673,7 @@ private:
   // Remember to apply the construction context based on the current \p Layer
   // when constructing the CFG element for \p CE.
   void consumeConstructionContext(const ConstructionContextLayer *Layer,
-                                  CXXConstructExpr *CE);
+                                  Expr *E);
 
   // Scan \p Child statement to find constructors in it, while keeping in mind
   // that its parent statement is providing a partial construction context
@@ -667,9 +684,9 @@ private:
                                 Stmt *Child);
 
   // Unset the construction context after consuming it. This is done immediately
-  // after adding the CFGConstructor element, so there's no need to
-  // do this manually in every Visit... function.
-  void cleanupConstructionContext(CXXConstructExpr *CE);
+  // after adding the CFGConstructor or CFGCXXRecordTypedCall element, so
+  // there's no need to do this manually in every Visit... function.
+  void cleanupConstructionContext(Expr *E);
 
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
   CFGBlock *createBlock(bool add_successor = true);
@@ -688,6 +705,11 @@ private:
   void addAutomaticObjHandling(LocalScope::const_iterator B,
                                LocalScope::const_iterator E, Stmt *S);
   void addImplicitDtorsForDestructor(const CXXDestructorDecl *DD);
+  void addScopesEnd(LocalScope::const_iterator B, LocalScope::const_iterator E,
+                    Stmt *S);
+
+  void getDeclsWithEndedScope(LocalScope::const_iterator B,
+                              LocalScope::const_iterator E, Stmt *S);
 
   // Local scopes creation.
   LocalScope* createOrReuseLocalScope(LocalScope* Scope);
@@ -720,6 +742,28 @@ private:
         B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
         cleanupConstructionContext(CE);
         return;
+      }
+    }
+
+    // No valid construction context found. Fall back to statement.
+    B->appendStmt(CE, cfg->getBumpVectorContext());
+  }
+
+  void appendCall(CFGBlock *B, CallExpr *CE) {
+    if (alwaysAdd(CE) && cachedEntry)
+      cachedEntry->second = B;
+
+    if (BuildOpts.AddRichCXXConstructors) {
+      if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE, *Context)) {
+        if (const ConstructionContextLayer *Layer =
+                ConstructionContextMap.lookup(CE)) {
+          const ConstructionContext *CC =
+              ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
+                                                    Layer);
+          B->appendCXXRecordTypedCall(CE, CC, cfg->getBumpVectorContext());
+          cleanupConstructionContext(CE);
+          return;
+        }
       }
     }
 
@@ -770,6 +814,11 @@ private:
                                                  LocalScope::const_iterator B,
                                                  LocalScope::const_iterator E);
 
+  const VarDecl *
+  prependAutomaticObjScopeEndWithTerminator(CFGBlock *Blk,
+                                            LocalScope::const_iterator B,
+                                            LocalScope::const_iterator E);
+
   void addSuccessor(CFGBlock *B, CFGBlock *S, bool IsReachable = true) {
     B->addSuccessor(CFGBlock::AdjacentBlock(S, IsReachable),
                     cfg->getBumpVectorContext());
@@ -780,6 +829,26 @@ private:
   void addSuccessor(CFGBlock *B, CFGBlock *ReachableBlock, CFGBlock *AltBlock) {
     B->addSuccessor(CFGBlock::AdjacentBlock(ReachableBlock, AltBlock),
                     cfg->getBumpVectorContext());
+  }
+
+  void appendScopeBegin(CFGBlock *B, const VarDecl *VD, const Stmt *S) {
+    if (BuildOpts.AddScopes)
+      B->appendScopeBegin(VD, S, cfg->getBumpVectorContext());
+  }
+
+  void prependScopeBegin(CFGBlock *B, const VarDecl *VD, const Stmt *S) {
+    if (BuildOpts.AddScopes)
+      B->prependScopeBegin(VD, S, cfg->getBumpVectorContext());
+  }
+
+  void appendScopeEnd(CFGBlock *B, const VarDecl *VD, const Stmt *S) {
+    if (BuildOpts.AddScopes)
+      B->appendScopeEnd(VD, S, cfg->getBumpVectorContext());
+  }
+
+  void prependScopeEnd(CFGBlock *B, const VarDecl *VD, const Stmt *S) {
+    if (BuildOpts.AddScopes)
+      B->prependScopeEnd(VD, S, cfg->getBumpVectorContext());
   }
 
   /// \brief Find a relational comparison with an expression evaluating to a
@@ -1162,16 +1231,16 @@ static const VariableArrayType *FindVA(const Type *t) {
 }
 
 void CFGBuilder::consumeConstructionContext(
-    const ConstructionContextLayer *Layer, CXXConstructExpr *CE) {
+    const ConstructionContextLayer *Layer, Expr *E) {
   if (const ConstructionContextLayer *PreviouslyStoredLayer =
-          ConstructionContextMap.lookup(CE)) {
+          ConstructionContextMap.lookup(E)) {
     (void)PreviouslyStoredLayer;
     // We might have visited this child when we were finding construction
     // contexts within its parents.
     assert(PreviouslyStoredLayer->isStrictlyMoreSpecificThan(Layer) &&
            "Already within a different construction context!");
   } else {
-    ConstructionContextMap[CE] = Layer;
+    ConstructionContextMap[E] = Layer;
   }
 }
 
@@ -1189,6 +1258,18 @@ void CFGBuilder::findConstructionContexts(
     consumeConstructionContext(Layer, cast<CXXConstructExpr>(Child));
     break;
   }
+  // FIXME: This, like the main visit, doesn't support CUDAKernelCallExpr.
+  // FIXME: An isa<> would look much better but this whole switch is a
+  // workaround for an internal compiler error in MSVC 2015 (see r326021).
+  case Stmt::CallExprClass:
+  case Stmt::CXXMemberCallExprClass:
+  case Stmt::CXXOperatorCallExprClass:
+  case Stmt::UserDefinedLiteralClass: {
+    auto *CE = cast<CallExpr>(Child);
+    if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE, *Context))
+      consumeConstructionContext(Layer, CE);
+    break;
+  }
   case Stmt::ExprWithCleanupsClass: {
     auto *Cleanups = cast<ExprWithCleanups>(Child);
     findConstructionContexts(Layer, Cleanups->getSubExpr());
@@ -1201,9 +1282,14 @@ void CFGBuilder::findConstructionContexts(
   }
   case Stmt::ImplicitCastExprClass: {
     auto *Cast = cast<ImplicitCastExpr>(Child);
-    // TODO: We need to support CK_ConstructorConversion, maybe other kinds?
-    if (Cast->getCastKind() == CK_NoOp)
+    // Should we support other implicit cast kinds?
+    switch (Cast->getCastKind()) {
+    case CK_NoOp:
+    case CK_ConstructorConversion:
       findConstructionContexts(Layer, Cast->getSubExpr());
+    default:
+      break;
+    }
     break;
   }
   case Stmt::CXXBindTemporaryExprClass: {
@@ -1225,12 +1311,12 @@ void CFGBuilder::findConstructionContexts(
   }
 }
 
-void CFGBuilder::cleanupConstructionContext(CXXConstructExpr *CE) {
+void CFGBuilder::cleanupConstructionContext(Expr *E) {
   assert(BuildOpts.AddRichCXXConstructors &&
          "We should not be managing construction contexts!");
-  assert(ConstructionContextMap.count(CE) &&
+  assert(ConstructionContextMap.count(E) &&
          "Cannot exit construction context without the context!");
-  ConstructionContextMap.erase(CE);
+  ConstructionContextMap.erase(E);
 }
 
 
@@ -1294,6 +1380,9 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
                                               JT.scopePosition);
     prependAutomaticObjDtorsWithTerminator(B, I->scopePosition,
                                            JT.scopePosition);
+    const VarDecl *VD = prependAutomaticObjScopeEndWithTerminator(
+        B, I->scopePosition, JT.scopePosition);
+    appendScopeBegin(JT.block, VD, G);
     addSuccessor(B, JT.block);
   }
 
@@ -1451,9 +1540,34 @@ void CFGBuilder::addLoopExit(const Stmt *LoopStmt){
   appendLoopExit(Block, LoopStmt);
 }
 
+void CFGBuilder::getDeclsWithEndedScope(LocalScope::const_iterator B,
+                                        LocalScope::const_iterator E, Stmt *S) {
+  if (!BuildOpts.AddScopes)
+    return;
+
+  if (B == E)
+    return;
+
+  // To go from B to E, one first goes up the scopes from B to P
+  // then sideways in one scope from P to P' and then down
+  // the scopes from P' to E.
+  // The lifetime of all objects between B and P end.
+  LocalScope::const_iterator P = B.shared_parent(E);
+  int Dist = B.distance(P);
+  if (Dist <= 0)
+    return;
+
+  for (LocalScope::const_iterator I = B; I != P; ++I)
+    if (I.pointsToFirstDeclaredVar())
+      DeclsWithEndedScope.insert(*I);
+}
+
 void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
                                          LocalScope::const_iterator E,
                                          Stmt *S) {
+  getDeclsWithEndedScope(B, E, S);
+  if (BuildOpts.AddScopes)
+    addScopesEnd(B, E, S);
   if (BuildOpts.AddImplicitDtors)
     addAutomaticObjDtors(B, E, S);
   if (BuildOpts.AddLifetime)
@@ -1505,6 +1619,23 @@ void CFGBuilder::addLifetimeEnds(LocalScope::const_iterator B,
     appendLifetimeEnds(Block, *I, S);
 }
 
+/// Add to current block markers for ending scopes.
+void CFGBuilder::addScopesEnd(LocalScope::const_iterator B,
+                              LocalScope::const_iterator E, Stmt *S) {
+  // If implicit destructors are enabled, we'll add scope ends in
+  // addAutomaticObjDtors.
+  if (BuildOpts.AddImplicitDtors)
+    return;
+
+  autoCreateBlock();
+
+  for (auto I = DeclsWithEndedScope.rbegin(), E = DeclsWithEndedScope.rend();
+       I != E; ++I)
+    appendScopeEnd(Block, *I, S);
+
+  return;
+}
+
 /// addAutomaticObjDtors - Add to current block automatic objects destructors
 /// for objects in range of local scope positions. Use S as trigger statement
 /// for destructors.
@@ -1528,6 +1659,15 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
   for (SmallVectorImpl<VarDecl*>::reverse_iterator I = Decls.rbegin(),
                                                    E = Decls.rend();
        I != E; ++I) {
+    if (hasTrivialDestructor(*I)) {
+      // If AddScopes is enabled and *I is a first variable in a scope, add a
+      // ScopeEnd marker in a Block.
+      if (BuildOpts.AddScopes && DeclsWithEndedScope.count(*I)) {
+        autoCreateBlock();
+        appendScopeEnd(Block, *I, S);
+      }
+      continue;
+    }
     // If this destructor is marked as a no-return destructor, we need to
     // create a new block for the destructor which does not have as a successor
     // anything built thus far: control won't flow out of this block.
@@ -1542,6 +1682,9 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
     else
       autoCreateBlock();
 
+    // Add ScopeEnd just after automatic obj destructor.
+    if (BuildOpts.AddScopes && DeclsWithEndedScope.count(*I))
+      appendScopeEnd(Block, *I, S);
     appendAutomaticObjDtor(Block, *I, S);
   }
 }
@@ -1604,7 +1747,8 @@ LocalScope* CFGBuilder::createOrReuseLocalScope(LocalScope* Scope) {
 /// addLocalScopeForStmt - Add LocalScope to local scopes tree for statement
 /// that should create implicit scope (e.g. if/else substatements). 
 void CFGBuilder::addLocalScopeForStmt(Stmt *S) {
-  if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime)
+  if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime &&
+      !BuildOpts.AddScopes)
     return;
 
   LocalScope *Scope = nullptr;
@@ -1629,7 +1773,8 @@ void CFGBuilder::addLocalScopeForStmt(Stmt *S) {
 /// reuse Scope if not NULL.
 LocalScope* CFGBuilder::addLocalScopeForDeclStmt(DeclStmt *DS,
                                                  LocalScope* Scope) {
-  if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime)
+  if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime &&
+      !BuildOpts.AddScopes)
     return Scope;
 
   for (auto *DI : DS->decls())
@@ -1681,7 +1826,8 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
                                                 LocalScope* Scope) {
   assert(!(BuildOpts.AddImplicitDtors && BuildOpts.AddLifetime) &&
          "AddImplicitDtors and AddLifetime cannot be used at the same time");
-  if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime)
+  if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime &&
+      !BuildOpts.AddScopes)
     return Scope;
 
   // Check if variable is local.
@@ -1694,7 +1840,7 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
   }
 
   if (BuildOpts.AddImplicitDtors) {
-    if (!hasTrivialDestructor(VD)) {
+    if (!hasTrivialDestructor(VD) || BuildOpts.AddScopes) {
       // Add the variable to scope
       Scope = createOrReuseLocalScope(Scope);
       Scope->addVar(VD);
@@ -1752,6 +1898,26 @@ void CFGBuilder::prependAutomaticObjLifetimeWithTerminator(
       Blk->beginLifetimeEndsInsert(Blk->end(), B.distance(E), C);
   for (LocalScope::const_iterator I = B; I != E; ++I)
     InsertPos = Blk->insertLifetimeEnds(InsertPos, *I, Blk->getTerminator());
+}
+
+/// prependAutomaticObjScopeEndWithTerminator - Prepend scope end CFGElements for
+/// variables with automatic storage duration to CFGBlock's elements vector.
+/// Elements will be prepended to physical beginning of the vector which
+/// happens to be logical end. Use blocks terminator as statement that specifies
+/// where scope ends.
+const VarDecl *
+CFGBuilder::prependAutomaticObjScopeEndWithTerminator(
+    CFGBlock *Blk, LocalScope::const_iterator B, LocalScope::const_iterator E) {
+  if (!BuildOpts.AddScopes)
+    return nullptr;
+  BumpVectorContext &C = cfg->getBumpVectorContext();
+  CFGBlock::iterator InsertPos =
+      Blk->beginScopeEndInsert(Blk->end(), 1, C);
+  LocalScope::const_iterator PlaceToInsert = B;
+  for (LocalScope::const_iterator I = B; I != E; ++I)
+    PlaceToInsert = I;
+  Blk->insertScopeEnd(InsertPos, *PlaceToInsert, Blk->getTerminator());
+  return *PlaceToInsert;
 }
 
 /// Visit - Walk the subtree of a statement and add extra
@@ -2228,7 +2394,10 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   }
 
   if (!NoReturn && !AddEHEdge) {
-    return VisitStmt(C, asc.withAlwaysAdd(true));
+    autoCreateBlock();
+    appendCall(Block, C);
+
+    return VisitChildren(C);
   }
 
   if (Block) {
@@ -2242,7 +2411,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   else
     Block = createBlock();
 
-  appendStmt(Block, C);
+  appendCall(Block, C);
 
   if (AddEHEdge) {
     // Add exceptional edges.
@@ -2486,6 +2655,8 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
     if (CFGBlock *newBlock = addStmt(VA->getSizeExpr()))
       LastBlock = newBlock;
   }
+
+  maybeAddScopeBeginForVarDecl(Block, VD, DS);
 
   // Remove variable from local scope.
   if (ScopePos && VD == *ScopePos)
@@ -2951,6 +3122,7 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
 
   do {
     Expr *C = F->getCond();
+    SaveAndRestore<LocalScope::const_iterator> save_scope_pos(ScopePos);
 
     // Specially handle logical operators, which have a slightly
     // more optimal CFG representation.
@@ -2984,6 +3156,7 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
           appendStmt(Block, F->getConditionVariableDeclStmt());
           EntryConditionBlock = addStmt(Init);
           assert(Block == EntryConditionBlock);
+          maybeAddScopeBeginForVarDecl(EntryConditionBlock, VD, C);
         }
       }
 
@@ -3010,6 +3183,8 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
   // If the loop contains initialization, create a new block for those
   // statements.  This block can also contain statements that precede the loop.
   if (Stmt *I = F->getInit()) {
+    SaveAndRestore<LocalScope::const_iterator> save_scope_pos(ScopePos);
+    ScopePos = LoopBeginScopePos;
     Block = createBlock();
     return addStmt(I);
   }
@@ -3306,6 +3481,7 @@ CFGBlock *CFGBuilder::VisitWhileStmt(WhileStmt *W) {
         appendStmt(Block, W->getConditionVariableDeclStmt());
         EntryConditionBlock = addStmt(Init);
         assert(Block == EntryConditionBlock);
+        maybeAddScopeBeginForVarDecl(EntryConditionBlock, VD, C);
       }
     }
 
@@ -3631,6 +3807,7 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
       autoCreateBlock();
       appendStmt(Block, Terminator->getConditionVariableDeclStmt());
       LastBlock = addStmt(Init);
+      maybeAddScopeBeginForVarDecl(LastBlock, VD, Init);
     }
   }
 
@@ -4376,6 +4553,9 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
     case CFGElement::LifetimeEnds:
     case CFGElement::Statement:
     case CFGElement::Constructor:
+    case CFGElement::CXXRecordTypedCall:
+    case CFGElement::ScopeBegin:
+    case CFGElement::ScopeEnd:
       llvm_unreachable("getDestructorDecl should only be used with "
                        "ImplicitDtors");
     case CFGElement::AutomaticObjectDtor: {
@@ -4726,6 +4906,70 @@ static void print_initializer(raw_ostream &OS, StmtPrinterHelper &Helper,
     OS << " (Member initializer)";
 }
 
+static void print_construction_context(raw_ostream &OS,
+                                       StmtPrinterHelper &Helper,
+                                       const ConstructionContext *CC) {
+  const Stmt *S1 = nullptr, *S2 = nullptr;
+  switch (CC->getKind()) {
+  case ConstructionContext::SimpleConstructorInitializerKind: {
+    OS << ", ";
+    const auto *SICC = cast<SimpleConstructorInitializerConstructionContext>(CC);
+    print_initializer(OS, Helper, SICC->getCXXCtorInitializer());
+    break;
+  }
+  case ConstructionContext::CXX17ElidedCopyConstructorInitializerKind: {
+    OS << ", ";
+    const auto *CICC =
+        cast<CXX17ElidedCopyConstructorInitializerConstructionContext>(CC);
+    print_initializer(OS, Helper, CICC->getCXXCtorInitializer());
+    S2 = CICC->getCXXBindTemporaryExpr();
+    break;
+  }
+  case ConstructionContext::SimpleVariableKind: {
+    const auto *SDSCC = cast<SimpleVariableConstructionContext>(CC);
+    S1 = SDSCC->getDeclStmt();
+    break;
+  }
+  case ConstructionContext::CXX17ElidedCopyVariableKind: {
+    const auto *CDSCC = cast<CXX17ElidedCopyVariableConstructionContext>(CC);
+    S1 = CDSCC->getDeclStmt();
+    S2 = CDSCC->getCXXBindTemporaryExpr();
+    break;
+  }
+  case ConstructionContext::NewAllocatedObjectKind: {
+    const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
+    S1 = NECC->getCXXNewExpr();
+    break;
+  }
+  case ConstructionContext::SimpleReturnedValueKind: {
+    const auto *RSCC = cast<SimpleReturnedValueConstructionContext>(CC);
+    S1 = RSCC->getReturnStmt();
+    break;
+  }
+  case ConstructionContext::CXX17ElidedCopyReturnedValueKind: {
+    const auto *RSCC =
+        cast<CXX17ElidedCopyReturnedValueConstructionContext>(CC);
+    S1 = RSCC->getReturnStmt();
+    S2 = RSCC->getCXXBindTemporaryExpr();
+    break;
+  }
+  case ConstructionContext::TemporaryObjectKind: {
+    const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
+    S1 = TOCC->getCXXBindTemporaryExpr();
+    S2 = TOCC->getMaterializedTemporaryExpr();
+    break;
+  }
+  }
+  if (S1) {
+    OS << ", ";
+    Helper.handledStmt(const_cast<Stmt *>(S1), OS);
+  }
+  if (S2) {
+    OS << ", ";
+    Helper.handledStmt(const_cast<Stmt *>(S2), OS);
+  }
+}
+
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
                        const CFGElement &E) {
   if (Optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
@@ -4755,54 +4999,22 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     }
     S->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
 
-    if (isa<CXXOperatorCallExpr>(S)) {
+    if (auto VTC = E.getAs<CFGCXXRecordTypedCall>()) {
+      if (isa<CXXOperatorCallExpr>(S))
+        OS << " (OperatorCall)";
+      OS << " (CXXRecordTypedCall";
+      print_construction_context(OS, Helper, VTC->getConstructionContext());
+      OS << ")";
+    } else if (isa<CXXOperatorCallExpr>(S)) {
       OS << " (OperatorCall)";
     } else if (isa<CXXBindTemporaryExpr>(S)) {
       OS << " (BindTemporary)";
     } else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
-      OS << " (CXXConstructExpr, ";
+      OS << " (CXXConstructExpr";
       if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
-        const ConstructionContext *CC = CE->getConstructionContext();
-        const Stmt *S1 = nullptr, *S2 = nullptr;
-        switch (CC->getKind()) {
-        case ConstructionContext::ConstructorInitializerKind: {
-          const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
-          print_initializer(OS, Helper, ICC->getCXXCtorInitializer());
-          OS << ", ";
-          break;
-        }
-        case ConstructionContext::SimpleVariableKind: {
-          const auto *DSCC = cast<SimpleVariableConstructionContext>(CC);
-          S1 = DSCC->getDeclStmt();
-          break;
-        }
-        case ConstructionContext::NewAllocatedObjectKind: {
-          const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
-          S1 = NECC->getCXXNewExpr();
-          break;
-        }
-        case ConstructionContext::ReturnedValueKind: {
-          const auto *RSCC = cast<ReturnedValueConstructionContext>(CC);
-          S1 = RSCC->getReturnStmt();
-          break;
-        }
-        case ConstructionContext::TemporaryObjectKind: {
-          const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
-          S1 = TOCC->getCXXBindTemporaryExpr();
-          S2 = TOCC->getMaterializedTemporaryExpr();
-          break;
-        }
-        }
-        if (S1) {
-          Helper.handledStmt(const_cast<Stmt *>(S1), OS);
-          OS << ", ";
-        }
-        if (S2) {
-          Helper.handledStmt(const_cast<Stmt *>(S2), OS);
-          OS << ", ";
-        }
+        print_construction_context(OS, Helper, CE->getConstructionContext());
       }
-      OS << CCE->getType().getAsString() << ")";
+      OS << ", " << CCE->getType().getAsString() << ")";
     } else if (const CastExpr *CE = dyn_cast<CastExpr>(S)) {
       OS << " (" << CE->getStmtClassName() << ", "
          << CE->getCastKindName()
@@ -4836,6 +5048,16 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
   } else if (Optional<CFGLoopExit> LE = E.getAs<CFGLoopExit>()) {
     const Stmt *LoopStmt = LE->getLoopStmt();
     OS << LoopStmt->getStmtClassName() << " (LoopExit)\n";
+  } else if (Optional<CFGScopeBegin> SB = E.getAs<CFGScopeBegin>()) {
+    OS << "CFGScopeBegin(";
+    if (const VarDecl *VD = SB->getVarDecl())
+      OS << VD->getQualifiedNameAsString();
+    OS << ")\n";
+  } else if (Optional<CFGScopeEnd> SE = E.getAs<CFGScopeEnd>()) {
+    OS << "CFGScopeEnd(";
+    if (const VarDecl *VD = SE->getVarDecl())
+      OS << VD->getQualifiedNameAsString();
+    OS << ")\n";
   } else if (Optional<CFGNewAllocator> NE = E.getAs<CFGNewAllocator>()) {
     OS << "CFGNewAllocator(";
     if (const CXXNewExpr *AllocExpr = NE->getAllocatorExpr())

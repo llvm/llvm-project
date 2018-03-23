@@ -1,4 +1,4 @@
-//=== AnalysisDeclContext.h - Analysis context for Path Sens analysis --*- C++ -*-//
+// AnalysisDeclContext.h - Analysis context for Path Sens analysis -*- C++ -*-//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,37 +15,42 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSISDECLCONTEXT_H
 #define LLVM_CLANG_ANALYSIS_ANALYSISDECLCONTEXT_H
 
-#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CodeInjector.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
+#include <functional>
 #include <memory>
 
 namespace clang {
 
-class Stmt;
+class AnalysisDeclContextManager;
+class ASTContext;
+class BlockDecl;
+class BlockInvocationContext;
 class CFGReverseBlockReachabilityAnalysis;
 class CFGStmtMap;
-class LiveVariables;
-class ManagedAnalysis;
+class ImplicitParamDecl;
+class LocationContext;
+class LocationContextManager;
 class ParentMap;
 class PseudoConstantAnalysis;
-class LocationContextManager;
 class StackFrameContext;
-class BlockInvocationContext;
-class AnalysisDeclContextManager;
-class LocationContext;
-
-namespace idx { class TranslationUnit; }
+class Stmt;
+class VarDecl;
 
 /// The base class of a hierarchy of objects representing analyses tied
 /// to AnalysisDeclContext.
 class ManagedAnalysis {
 protected:
-  ManagedAnalysis() {}
+  ManagedAnalysis() = default;
+
 public:
   virtual ~ManagedAnalysis();
 
@@ -61,7 +66,6 @@ public:
   // which creates the analysis object given an AnalysisDeclContext.
 };
 
-
 /// AnalysisDeclContext contains the context data for the function or method
 /// under analysis.
 class AnalysisDeclContext {
@@ -75,18 +79,19 @@ class AnalysisDeclContext {
   std::unique_ptr<CFGStmtMap> cfgStmtMap;
 
   CFG::BuildOptions cfgBuildOptions;
-  CFG::BuildOptions::ForcedBlkExprs *forcedBlkExprs;
+  CFG::BuildOptions::ForcedBlkExprs *forcedBlkExprs = nullptr;
 
-  bool builtCFG, builtCompleteCFG;
+  bool builtCFG = false;
+  bool builtCompleteCFG = false;
   std::unique_ptr<ParentMap> PM;
   std::unique_ptr<PseudoConstantAnalysis> PCA;
   std::unique_ptr<CFGReverseBlockReachabilityAnalysis> CFA;
 
   llvm::BumpPtrAllocator A;
 
-  llvm::DenseMap<const BlockDecl*,void*> *ReferencedBlockVars;
+  llvm::DenseMap<const BlockDecl *,void *> *ReferencedBlockVars = nullptr;
 
-  void *ManagedAnalyses;
+  void *ManagedAnalyses = nullptr;
 
 public:
   AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
@@ -172,7 +177,7 @@ public:
   ParentMap &getParentMap();
   PseudoConstantAnalysis *getPseudoConstantAnalysis();
 
-  typedef const VarDecl * const * referenced_decls_iterator;
+  using referenced_decls_iterator = const VarDecl * const *;
 
   llvm::iterator_range<referenced_decls_iterator>
   getReferencedBlockVars(const BlockDecl *BD);
@@ -200,12 +205,13 @@ public:
     if (!data) {
       data = T::create(*this);
     }
-    return static_cast<T*>(data);
+    return static_cast<T *>(data);
   }
 
   /// Returns true if the root namespace of the given declaration is the 'std'
   /// C++ namespace.
   static bool isInStdNamespace(const Decl *D);
+
 private:
   ManagedAnalysis *&getAnalysisImpl(const void* tag);
 
@@ -228,7 +234,7 @@ private:
 protected:
   LocationContext(ContextKind k, AnalysisDeclContext *ctx,
                   const LocationContext *parent)
-    : Kind(k), Ctx(ctx), Parent(parent) {}
+      : Kind(k), Ctx(ctx), Parent(parent) {}
 
 public:
   virtual ~LocationContext();
@@ -266,7 +272,7 @@ public:
   virtual void Profile(llvm::FoldingSetNodeID &ID) = 0;
 
   void dumpStack(
-      raw_ostream &OS, StringRef Indent = "", const char *NL = "\n",
+      raw_ostream &OS, StringRef Indent = {}, const char *NL = "\n",
       const char *Sep = "",
       std::function<void(const LocationContext *)> printMoreInfoPerContext =
           [](const LocationContext *) {}) const;
@@ -281,6 +287,8 @@ public:
 };
 
 class StackFrameContext : public LocationContext {
+  friend class LocationContextManager;
+
   // The callsite where this stack frame is established.
   const Stmt *CallSite;
 
@@ -290,15 +298,14 @@ class StackFrameContext : public LocationContext {
   // The index of the callsite in the CFGBlock.
   unsigned Index;
 
-  friend class LocationContextManager;
   StackFrameContext(AnalysisDeclContext *ctx, const LocationContext *parent,
                     const Stmt *s, const CFGBlock *blk,
                     unsigned idx)
-    : LocationContext(StackFrame, ctx, parent), CallSite(s),
-      Block(blk), Index(idx) {}
+      : LocationContext(StackFrame, ctx, parent), CallSite(s),
+        Block(blk), Index(idx) {}
 
 public:
-  ~StackFrameContext() override {}
+  ~StackFrameContext() override = default;
 
   const Stmt *getCallSite() const { return CallSite; }
 
@@ -325,15 +332,16 @@ public:
 };
 
 class ScopeContext : public LocationContext {
+  friend class LocationContextManager;
+
   const Stmt *Enter;
 
-  friend class LocationContextManager;
   ScopeContext(AnalysisDeclContext *ctx, const LocationContext *parent,
                const Stmt *s)
-    : LocationContext(Scope, ctx, parent), Enter(s) {}
+      : LocationContext(Scope, ctx, parent), Enter(s) {}
 
 public:
-  ~ScopeContext() override {}
+  ~ScopeContext() override = default;
 
   void Profile(llvm::FoldingSetNodeID &ID) override;
 
@@ -348,20 +356,20 @@ public:
 };
 
 class BlockInvocationContext : public LocationContext {
+  friend class LocationContextManager;
+
   const BlockDecl *BD;
   
   // FIXME: Come up with a more type-safe way to model context-sensitivity.
   const void *ContextData;
 
-  friend class LocationContextManager;
-
   BlockInvocationContext(AnalysisDeclContext *ctx,
                          const LocationContext *parent,
                          const BlockDecl *bd, const void *contextData)
-    : LocationContext(Block, ctx, parent), BD(bd), ContextData(contextData) {}
+      : LocationContext(Block, ctx, parent), BD(bd), ContextData(contextData) {}
 
 public:
-  ~BlockInvocationContext() override {}
+  ~BlockInvocationContext() override = default;
 
   const BlockDecl *getBlockDecl() const { return BD; }
   
@@ -383,6 +391,7 @@ public:
 
 class LocationContextManager {
   llvm::FoldingSet<LocationContext> Contexts;
+
 public:
   ~LocationContextManager();
 
@@ -411,8 +420,8 @@ private:
 };
 
 class AnalysisDeclContextManager {
-  typedef llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>
-      ContextMap;
+  using ContextMap =
+      llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>;
 
   ContextMap Contexts;
   LocationContextManager LocContexts;
@@ -435,7 +444,9 @@ public:
                              bool addImplicitDtors = false,
                              bool addInitializers = false,
                              bool addTemporaryDtors = false,
-                             bool addLifetime = false, bool addLoopExit = false,
+                             bool addLifetime = false,
+                             bool addLoopExit = false,
+                             bool addScopes = false,
                              bool synthesizeBodies = false,
                              bool addStaticInitBranches = false,
                              bool addCXXNewAllocator = true,
@@ -493,5 +504,6 @@ private:
   }
 };
 
-} // end clang namespace
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_ANALYSIS_ANALYSISDECLCONTEXT_H

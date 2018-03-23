@@ -1,4 +1,4 @@
-//===- ThreadSafetyUtil.h --------------------------------------*- C++ --*-===//
+//===- ThreadSafetyUtil.h ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,18 +14,23 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYUTIL_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYUTIL_H
 
-#include "clang/AST/ExprCXX.h"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AlignOf.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
+#include <cstring>
+#include <iterator>
 #include <ostream>
-#include <utility>
+#include <string>
 #include <vector>
 
 namespace clang {
+
+class Expr;
+
 namespace threadSafety {
 namespace til {
 
@@ -41,7 +46,7 @@ private:
   };
 
 public:
-  MemRegionRef() : Allocator(nullptr) {}
+  MemRegionRef() = default;
   MemRegionRef(llvm::BumpPtrAllocator *A) : Allocator(A) {}
 
   void *allocate(size_t Sz) {
@@ -55,12 +60,13 @@ public:
   }
 
 private:
-  llvm::BumpPtrAllocator *Allocator;
+  llvm::BumpPtrAllocator *Allocator = nullptr;
 };
 
-} // end namespace til
-} // end namespace threadSafety
-} // end namespace clang
+} // namespace til
+} // namespace threadSafety
+
+} // namespace clang
 
 inline void *operator new(size_t Sz,
                           clang::threadSafety::til::MemRegionRef &R) {
@@ -70,10 +76,7 @@ inline void *operator new(size_t Sz,
 namespace clang {
 namespace threadSafety {
 
-std::string getSourceLiteralString(const clang::Expr *CE);
-
-using llvm::StringRef;
-using clang::SourceLocation;
+std::string getSourceLiteralString(const Expr *CE);
 
 namespace til {
 
@@ -81,11 +84,13 @@ namespace til {
 // suitable for use with bump pointer allocation.
 template <class T> class SimpleArray {
 public:
-  SimpleArray() : Data(nullptr), Size(0), Capacity(0) {}
+  SimpleArray() = default;
   SimpleArray(T *Dat, size_t Cp, size_t Sz = 0)
       : Data(Dat), Size(Sz), Capacity(Cp) {}
   SimpleArray(MemRegionRef A, size_t Cp)
-      : Data(Cp == 0 ? nullptr : A.allocateT<T>(Cp)), Size(0), Capacity(Cp) {}
+      : Data(Cp == 0 ? nullptr : A.allocateT<T>(Cp)), Capacity(Cp) {}
+  SimpleArray(const SimpleArray<T> &A) = delete;
+
   SimpleArray(SimpleArray<T> &&A)
       : Data(A.Data), Size(A.Size), Capacity(A.Capacity) {
     A.Data = nullptr;
@@ -123,10 +128,10 @@ public:
       reserve(u_max(Size + N, Capacity * 2), A);
   }
 
-  typedef T *iterator;
-  typedef const T *const_iterator;
-  typedef std::reverse_iterator<iterator> reverse_iterator;
-  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+  using iterator = T *;
+  using const_iterator = const T *;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   size_t size() const { return Size; }
   size_t capacity() const { return Capacity; }
@@ -135,27 +140,30 @@ public:
     assert(i < Size && "Array index out of bounds.");
     return Data[i];
   }
+
   const T &operator[](unsigned i) const {
     assert(i < Size && "Array index out of bounds.");
     return Data[i];
   }
+
   T &back() {
     assert(Size && "No elements in the array.");
     return Data[Size - 1];
   }
+
   const T &back() const {
     assert(Size && "No elements in the array.");
     return Data[Size - 1];
   }
 
   iterator begin() { return Data; }
-  iterator end()   { return Data + Size; }
+  iterator end() { return Data + Size; }
 
   const_iterator begin() const { return Data; }
-  const_iterator end()   const { return Data + Size; }
+  const_iterator end() const { return Data + Size; }
 
   const_iterator cbegin() const { return Data; }
-  const_iterator cend()   const { return Data + Size; }
+  const_iterator cend() const { return Data + Size; }
 
   reverse_iterator rbegin() { return reverse_iterator(end()); }
   reverse_iterator rend() { return reverse_iterator(begin()); }
@@ -163,6 +171,7 @@ public:
   const_reverse_iterator rbegin() const {
     return const_reverse_iterator(end());
   }
+
   const_reverse_iterator rend() const {
     return const_reverse_iterator(begin());
   }
@@ -198,6 +207,7 @@ public:
   llvm::iterator_range<reverse_iterator> reverse() {
     return llvm::make_range(rbegin(), rend());
   }
+
   llvm::iterator_range<const_reverse_iterator> reverse() const {
     return llvm::make_range(rbegin(), rend());
   }
@@ -209,14 +219,12 @@ private:
 
   static const size_t InitialCapacity = 4;
 
-  SimpleArray(const SimpleArray<T> &A) = delete;
-
-  T *Data;
-  size_t Size;
-  size_t Capacity;
+  T *Data = nullptr;
+  size_t Size = 0;
+  size_t Capacity = 0;
 };
 
-}  // end namespace til
+}  // namespace til
 
 // A copy on write vector.
 // The vector can be in one of three states:
@@ -228,20 +236,28 @@ template<typename T>
 class CopyOnWriteVector {
   class VectorData {
   public:
-    VectorData() : NumRefs(1) { }
-    VectorData(const VectorData &VD) : NumRefs(1), Vect(VD.Vect) { }
-
-    unsigned NumRefs;
+    unsigned NumRefs = 1;
     std::vector<T> Vect;
+
+    VectorData() = default;
+    VectorData(const VectorData &VD) : Vect(VD.Vect) {}
   };
 
-  // No copy constructor or copy assignment.  Use clone() with move assignment.
-  CopyOnWriteVector(const CopyOnWriteVector &V) = delete;
-  void operator=(const CopyOnWriteVector &V) = delete;
-
 public:
-  CopyOnWriteVector() : Data(nullptr) {}
+  CopyOnWriteVector() = default;
   CopyOnWriteVector(CopyOnWriteVector &&V) : Data(V.Data) { V.Data = nullptr; }
+
+  CopyOnWriteVector &operator=(CopyOnWriteVector &&V) {
+    destroy();
+    Data = V.Data;
+    V.Data = nullptr;
+    return *this;
+  }
+
+  // No copy constructor or copy assignment.  Use clone() with move assignment.
+  CopyOnWriteVector(const CopyOnWriteVector &) = delete;
+  CopyOnWriteVector &operator=(const CopyOnWriteVector &) = delete;
+
   ~CopyOnWriteVector() { destroy(); }
 
   // Returns true if this holds a valid vector.
@@ -283,14 +299,7 @@ public:
   // Create a lazy copy of this vector.
   CopyOnWriteVector clone() { return CopyOnWriteVector(Data); }
 
-  CopyOnWriteVector &operator=(CopyOnWriteVector &&V) {
-    destroy();
-    Data = V.Data;
-    V.Data = nullptr;
-    return *this;
-  }
-
-  typedef typename std::vector<T>::const_iterator const_iterator;
+  using const_iterator = typename std::vector<T>::const_iterator;
 
   const std::vector<T> &elements() const { return Data->Vect; }
 
@@ -336,14 +345,14 @@ private:
     ++Data->NumRefs;
   }
 
-  VectorData *Data;
+  VectorData *Data = nullptr;
 };
 
 inline std::ostream& operator<<(std::ostream& ss, const StringRef str) {
   return ss.write(str.data(), str.size());
 }
 
-} // end namespace threadSafety
-} // end namespace clang
+} // namespace threadSafety
+} // namespace clang
 
 #endif // LLVM_CLANG_THREAD_SAFETY_UTIL_H

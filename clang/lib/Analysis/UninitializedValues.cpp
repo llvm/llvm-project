@@ -1,4 +1,4 @@
-//==- UninitializedValues.cpp - Find Uninitialized Values -------*- C++ --*-==//
+//===- UninitializedValues.cpp - Find Uninitialized Values ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,23 +11,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
+#include "clang/Analysis/Analyses/UninitializedValues.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/OperationKinds.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
-#include "clang/Analysis/Analyses/UninitializedValues.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PackedVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/SaveAndRestore.h"
-#include <utility>
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cassert>
 
 using namespace clang;
 
@@ -48,10 +56,12 @@ static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
 //====------------------------------------------------------------------------//
 
 namespace {
+
 class DeclToIndex {
   llvm::DenseMap<const VarDecl *, unsigned> map;
+
 public:
-  DeclToIndex() {}
+  DeclToIndex() = default;
   
   /// Compute the actual mapping from declarations to bits.
   void computeMap(const DeclContext &dc);
@@ -62,7 +72,8 @@ public:
   /// Returns the bit vector index for a given declaration.
   Optional<unsigned> getValueIndex(const VarDecl *d) const;
 };
-}
+
+} // namespace
 
 void DeclToIndex::computeMap(const DeclContext &dc) {
   unsigned count = 0;
@@ -96,25 +107,28 @@ enum Value { Unknown = 0x0,         /* 00 */
 static bool isUninitialized(const Value v) {
   return v >= Uninitialized;
 }
+
 static bool isAlwaysUninit(const Value v) {
   return v == Uninitialized;
 }
 
 namespace {
 
-typedef llvm::PackedVector<Value, 2, llvm::SmallBitVector> ValueVector;
+using ValueVector = llvm::PackedVector<Value, 2, llvm::SmallBitVector>;
 
 class CFGBlockValues {
   const CFG &cfg;
   SmallVector<ValueVector, 8> vals;
   ValueVector scratch;
   DeclToIndex declToIndex;
+
 public:
   CFGBlockValues(const CFG &cfg);
 
   unsigned getNumEntries() const { return declToIndex.size(); }
   
   void computeSetOfDeclarations(const DeclContext &dc);  
+
   ValueVector &getValueVector(const CFGBlock *block) {
     return vals[block->getBlockID()];
   }
@@ -138,7 +152,8 @@ public:
     return getValueVector(block)[idx.getValue()];
   }
 };  
-} // end anonymous namespace
+
+} // namespace
 
 CFGBlockValues::CFGBlockValues(const CFG &c) : cfg(c), vals(0) {}
 
@@ -150,17 +165,16 @@ void CFGBlockValues::computeSetOfDeclarations(const DeclContext &dc) {
   if (!n)
     return;
   vals.resize(n);
-  for (unsigned i = 0; i < n; ++i)
-    vals[i].resize(decls);
+  for (auto &val : vals)
+    val.resize(decls);
 }
 
 #if DEBUG_LOGGING
 static void printVector(const CFGBlock *block, ValueVector &bv,
                         unsigned num) {
   llvm::errs() << block->getBlockID() << " :";
-  for (unsigned i = 0; i < bv.size(); ++i) {
-    llvm::errs() << ' ' << bv[i];
-  }
+  for (const auto &i : bv)
+    llvm::errs() << ' ' << i;
   llvm::errs() << " : " << num << '\n';
 }
 #endif
@@ -204,28 +218,31 @@ ValueVector::reference CFGBlockValues::operator[](const VarDecl *vd) {
 //====------------------------------------------------------------------------//
 
 namespace {
+
 class DataflowWorklist {
   PostOrderCFGView::iterator PO_I, PO_E;
   SmallVector<const CFGBlock *, 20> worklist;
   llvm::BitVector enqueuedBlocks;
+
 public:
   DataflowWorklist(const CFG &cfg, PostOrderCFGView &view)
-    : PO_I(view.begin()), PO_E(view.end()),
-      enqueuedBlocks(cfg.getNumBlockIDs(), true) {
-        // Treat the first block as already analyzed.
-        if (PO_I != PO_E) {
-          assert(*PO_I == &cfg.getEntry());
-          enqueuedBlocks[(*PO_I)->getBlockID()] = false;
-          ++PO_I;
-        }
-      }
+      : PO_I(view.begin()), PO_E(view.end()),
+        enqueuedBlocks(cfg.getNumBlockIDs(), true) {
+    // Treat the first block as already analyzed.
+    if (PO_I != PO_E) {
+      assert(*PO_I == &cfg.getEntry());
+      enqueuedBlocks[(*PO_I)->getBlockID()] = false;
+      ++PO_I;
+    }
+  }
   
   void enqueueSuccessors(const CFGBlock *block);
   const CFGBlock *dequeue();
 };
-}
 
-void DataflowWorklist::enqueueSuccessors(const clang::CFGBlock *block) {
+} // namespace
+
+void DataflowWorklist::enqueueSuccessors(const CFGBlock *block) {
   for (CFGBlock::const_succ_iterator I = block->succ_begin(),
        E = block->succ_end(); I != E; ++I) {
     const CFGBlock *Successor = *I;
@@ -250,9 +267,8 @@ const CFGBlock *DataflowWorklist::dequeue() {
     B = *PO_I;
     ++PO_I;
   }
-  else {
+  else
     return nullptr;
-  }
 
   assert(enqueuedBlocks[B->getBlockID()] == true);
   enqueuedBlocks[B->getBlockID()] = false;
@@ -264,9 +280,11 @@ const CFGBlock *DataflowWorklist::dequeue() {
 //====------------------------------------------------------------------------//
 
 namespace {
+
 class FindVarResult {
   const VarDecl *vd;
   const DeclRefExpr *dr;
+
 public:
   FindVarResult(const VarDecl *vd, const DeclRefExpr *dr) : vd(vd), dr(dr) {}
 
@@ -274,10 +292,12 @@ public:
   const VarDecl *getDecl() const { return vd; }
 };
 
+} // namespace
+
 static const Expr *stripCasts(ASTContext &C, const Expr *Ex) {
   while (Ex) {
     Ex = Ex->IgnoreParenNoopCasts(C);
-    if (const CastExpr *CE = dyn_cast<CastExpr>(Ex)) {
+    if (const auto *CE = dyn_cast<CastExpr>(Ex)) {
       if (CE->getCastKind() == CK_LValueBitCast) {
         Ex = CE->getSubExpr();
         continue;
@@ -291,13 +311,15 @@ static const Expr *stripCasts(ASTContext &C, const Expr *Ex) {
 /// If E is an expression comprising a reference to a single variable, find that
 /// variable.
 static FindVarResult findVar(const Expr *E, const DeclContext *DC) {
-  if (const DeclRefExpr *DRE =
-        dyn_cast<DeclRefExpr>(stripCasts(DC->getParentASTContext(), E)))
-    if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+  if (const auto *DRE =
+          dyn_cast<DeclRefExpr>(stripCasts(DC->getParentASTContext(), E)))
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
       if (isTrackedVar(VD, DC))
         return FindVarResult(VD, DRE);
   return FindVarResult(nullptr, nullptr);
 }
+
+namespace {
 
 /// \brief Classify each DeclRefExpr as an initialization or a use. Any
 /// DeclRefExpr which isn't explicitly classified will be assumed to have
@@ -313,7 +335,7 @@ public:
 
 private:
   const DeclContext *DC;
-  llvm::DenseMap<const DeclRefExpr*, Class> Classification;
+  llvm::DenseMap<const DeclRefExpr *, Class> Classification;
 
   bool isTrackedVar(const VarDecl *VD) const {
     return ::isTrackedVar(VD, DC);
@@ -338,21 +360,22 @@ public:
     if (I != Classification.end())
       return I->second;
 
-    const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
+    const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
     if (!VD || !isTrackedVar(VD))
       return Ignore;
 
     return Init;
   }
 };
-}
+
+} // namespace
 
 static const DeclRefExpr *getSelfInitExpr(VarDecl *VD) {
   if (VD->getType()->isRecordType())
     return nullptr;
   if (Expr *Init = VD->getInit()) {
-    const DeclRefExpr *DRE
-      = dyn_cast<DeclRefExpr>(stripCasts(VD->getASTContext(), Init));
+    const auto *DRE =
+        dyn_cast<DeclRefExpr>(stripCasts(VD->getASTContext(), Init));
     if (DRE && DRE->getDecl() == VD)
       return DRE;
   }
@@ -362,32 +385,31 @@ static const DeclRefExpr *getSelfInitExpr(VarDecl *VD) {
 void ClassifyRefs::classify(const Expr *E, Class C) {
   // The result of a ?: could also be an lvalue.
   E = E->IgnoreParens();
-  if (const ConditionalOperator *CO = dyn_cast<ConditionalOperator>(E)) {
+  if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
     classify(CO->getTrueExpr(), C);
     classify(CO->getFalseExpr(), C);
     return;
   }
 
-  if (const BinaryConditionalOperator *BCO =
-          dyn_cast<BinaryConditionalOperator>(E)) {
+  if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(E)) {
     classify(BCO->getFalseExpr(), C);
     return;
   }
 
-  if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
     classify(OVE->getSourceExpr(), C);
     return;
   }
 
-  if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
-    if (VarDecl *VD = dyn_cast<VarDecl>(ME->getMemberDecl())) {
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (const auto *VD = dyn_cast<VarDecl>(ME->getMemberDecl())) {
       if (!VD->isStaticDataMember())
         classify(ME->getBase(), C);
     }
     return;
   }
 
-  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
     switch (BO->getOpcode()) {
     case BO_PtrMemD:
     case BO_PtrMemI:
@@ -408,7 +430,7 @@ void ClassifyRefs::classify(const Expr *E, Class C) {
 
 void ClassifyRefs::VisitDeclStmt(DeclStmt *DS) {
   for (auto *DI : DS->decls()) {
-    VarDecl *VD = dyn_cast<VarDecl>(DI);
+    auto *VD = dyn_cast<VarDecl>(DI);
     if (VD && isTrackedVar(VD))
       if (const DeclRefExpr *DRE = getSelfInitExpr(VD))
         Classification[DRE] = SelfInit;
@@ -457,7 +479,7 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
         classify((*I), Ignore);
     } else if (isPointerToConst((*I)->getType())) {
       const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
-      const UnaryOperator *UO = dyn_cast<UnaryOperator>(Ex);
+      const auto *UO = dyn_cast<UnaryOperator>(Ex);
       if (UO && UO->getOpcode() == UO_AddrOf)
         Ex = UO->getSubExpr();
       classify(Ex, Ignore);
@@ -468,7 +490,7 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
 void ClassifyRefs::VisitCastExpr(CastExpr *CE) {
   if (CE->getCastKind() == CK_LValueToRValue)
     classify(CE->getSubExpr(), Use);
-  else if (CStyleCastExpr *CSE = dyn_cast<CStyleCastExpr>(CE)) {
+  else if (const auto *CSE = dyn_cast<CStyleCastExpr>(CE)) {
     if (CSE->getType()->isVoidType()) {
       // Squelch any detected load of an uninitialized value if
       // we cast it to void.
@@ -483,6 +505,7 @@ void ClassifyRefs::VisitCastExpr(CastExpr *CE) {
 //====------------------------------------------------------------------------//
 
 namespace {
+
 class TransferFunctions : public StmtVisitor<TransferFunctions> {
   CFGBlockValues &vals;
   const CFG &cfg;
@@ -497,9 +520,9 @@ public:
                     const CFGBlock *block, AnalysisDeclContext &ac,
                     const ClassifyRefs &classification,
                     UninitVariablesHandler &handler)
-    : vals(vals), cfg(cfg), block(block), ac(ac),
-      classification(classification), objCNoRet(ac.getASTContext()),
-      handler(handler) {}
+      : vals(vals), cfg(cfg), block(block), ac(ac),
+        classification(classification), objCNoRet(ac.getASTContext()),
+        handler(handler) {}
 
   void reportUse(const Expr *ex, const VarDecl *vd);
 
@@ -627,8 +650,7 @@ public:
 
     // Scan the frontier, looking for blocks where the variable was
     // uninitialized.
-    for (CFG::const_iterator BI = cfg.begin(), BE = cfg.end(); BI != BE; ++BI) {
-      const CFGBlock *Block = *BI;
+    for (const auto *Block : cfg) {
       unsigned BlockID = Block->getBlockID();
       const Stmt *Term = Block->getTerminator();
       if (SuccsVisited[BlockID] && SuccsVisited[BlockID] < Block->succ_size() &&
@@ -668,7 +690,8 @@ public:
     return Use;
   }
 };
-}
+
+} // namespace
 
 void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
   Value v = vals[vd];
@@ -678,8 +701,8 @@ void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
 
 void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
   // This represents an initialization of the 'element' value.
-  if (DeclStmt *DS = dyn_cast<DeclStmt>(FS->getElement())) {
-    const VarDecl *VD = cast<VarDecl>(DS->getSingleDecl());
+  if (const auto *DS = dyn_cast<DeclStmt>(FS->getElement())) {
+    const auto *VD = cast<VarDecl>(DS->getSingleDecl());
     if (isTrackedVar(VD))
       vals[VD] = Initialized;
   }
@@ -748,7 +771,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
 
 void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   for (auto *DI : DS->decls()) {
-    VarDecl *VD = dyn_cast<VarDecl>(DI);
+    auto *VD = dyn_cast<VarDecl>(DI);
     if (VD && isTrackedVar(VD)) {
       if (getSelfInitExpr(VD)) {
         // If the initializer consists solely of a reference to itself, we
@@ -815,34 +838,32 @@ static bool runOnBlock(const CFGBlock *block, const CFG &cfg,
   }
   // Apply the transfer function.
   TransferFunctions tf(vals, cfg, block, ac, classification, handler);
-  for (CFGBlock::const_iterator I = block->begin(), E = block->end(); 
-       I != E; ++I) {
-    if (Optional<CFGStmt> cs = I->getAs<CFGStmt>())
-      tf.Visit(const_cast<Stmt*>(cs->getStmt()));
+  for (const auto &I : *block) {
+    if (Optional<CFGStmt> cs = I.getAs<CFGStmt>())
+      tf.Visit(const_cast<Stmt *>(cs->getStmt()));
   }
   return vals.updateValueVectorWithScratch(block);
 }
+
+namespace {
 
 /// PruneBlocksHandler is a special UninitVariablesHandler that is used
 /// to detect when a CFGBlock has any *potential* use of an uninitialized
 /// variable.  It is mainly used to prune out work during the final
 /// reporting pass.
-namespace {
 struct PruneBlocksHandler : public UninitVariablesHandler {
-  PruneBlocksHandler(unsigned numBlocks)
-    : hadUse(numBlocks, false), hadAnyUse(false),
-      currentBlock(0) {}
-
-  ~PruneBlocksHandler() override {}
-
   /// Records if a CFGBlock had a potential use of an uninitialized variable.
   llvm::BitVector hadUse;
 
   /// Records if any CFGBlock had a potential use of an uninitialized variable.
-  bool hadAnyUse;
+  bool hadAnyUse = false;
 
   /// The current block to scribble use information.
-  unsigned currentBlock;
+  unsigned currentBlock = 0;
+
+  PruneBlocksHandler(unsigned numBlocks) : hadUse(numBlocks, false) {}
+
+  ~PruneBlocksHandler() override = default;
 
   void handleUseOfUninitVariable(const VarDecl *vd,
                                  const UninitUse &use) override {
@@ -858,7 +879,8 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
     hadAnyUse = true;
   }
 };
-}
+
+} // namespace
 
 void clang::runUninitializedVariablesAnalysis(
     const DeclContext &dc,
@@ -881,7 +903,7 @@ void clang::runUninitializedVariablesAnalysis(
   const CFGBlock &entry = cfg.getEntry();
   ValueVector &vec = vals.getValueVector(&entry);
   const unsigned n = vals.getNumEntries();
-  for (unsigned j = 0; j < n ; ++j) {
+  for (unsigned j = 0; j < n; ++j) {
     vec[j] = Uninitialized;
   }
 
@@ -909,13 +931,11 @@ void clang::runUninitializedVariablesAnalysis(
     return;
 
   // Run through the blocks one more time, and report uninitialized variables.
-  for (CFG::const_iterator BI = cfg.begin(), BE = cfg.end(); BI != BE; ++BI) {
-    const CFGBlock *block = *BI;
+  for (const auto *block : cfg)
     if (PBH.hadUse[block->getBlockID()]) {
       runOnBlock(block, cfg, ac, vals, classification, wasAnalyzed, handler);
       ++stats.NumBlockVisits;
     }
-  }
 }
 
-UninitVariablesHandler::~UninitVariablesHandler() {}
+UninitVariablesHandler::~UninitVariablesHandler() = default;
