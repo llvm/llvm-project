@@ -15,7 +15,6 @@
 #include "lldb/Interpreter/CommandObjectRegexCommand.h"
 
 #include "../Commands/CommandObjectApropos.h"
-#include "../Commands/CommandObjectArgs.h"
 #include "../Commands/CommandObjectBreakpoint.h"
 #include "../Commands/CommandObjectBugreport.h"
 #include "../Commands/CommandObjectCommands.h"

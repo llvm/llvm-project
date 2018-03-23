@@ -1,7 +1,6 @@
 add_lldb_library(lldbCommands
   CommandCompletions.cpp
   CommandObjectApropos.cpp
-  CommandObjectArgs.cpp
   CommandObjectBreakpoint.cpp
   CommandObjectBreakpointCommand.cpp
   CommandObjectBugreport.cpp

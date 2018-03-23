@@ -408,7 +408,6 @@
 		2689000F13353DB600698AC0 /* StoppointLocation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E1710F1B83100F91463 /* StoppointLocation.cpp */; };
 		2689001113353DB600698AC0 /* Watchpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E1810F1B83100F91463 /* Watchpoint.cpp */; };
 		2689001213353DDE00698AC0 /* CommandObjectApropos.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CA9637911B6E99A00780E28 /* CommandObjectApropos.cpp */; };
-		2689001313353DDE00698AC0 /* CommandObjectArgs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 499F381F11A5B3F300F5CE02 /* CommandObjectArgs.cpp */; };
 		2689001413353DDE00698AC0 /* CommandObjectBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E2D10F1B84700F91463 /* CommandObjectBreakpoint.cpp */; };
 		2689001513353DDE00698AC0 /* CommandObjectBreakpointCommand.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A42976211861AA600FE05CD /* CommandObjectBreakpointCommand.cpp */; };
 		2689001613353DDE00698AC0 /* CommandObjectCommands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5DBBC611E3FEC60035160F /* CommandObjectCommands.cpp */; };
@@ -2629,8 +2628,6 @@
 		4997E6841A3B74D100733D2F /* AppleObjCDeclVendor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCDeclVendor.h; sourceTree = "<group>"; };
 		4999FD061BC355630014BA69 /* SwiftREPLMaterializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftREPLMaterializer.cpp; path = ExpressionParser/Swift/SwiftREPLMaterializer.cpp; sourceTree = "<group>"; };
 		4999FD081BC355840014BA69 /* SwiftREPLMaterializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftREPLMaterializer.h; path = ExpressionParser/Swift/SwiftREPLMaterializer.h; sourceTree = "<group>"; };
-		499F381E11A5B3F300F5CE02 /* CommandObjectArgs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectArgs.h; path = source/Commands/CommandObjectArgs.h; sourceTree = "<group>"; };
-		499F381F11A5B3F300F5CE02 /* CommandObjectArgs.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectArgs.cpp; path = source/Commands/CommandObjectArgs.cpp; sourceTree = "<group>"; };
 		49A1CAC11430E21D00306AC9 /* ExpressionSourceCode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExpressionSourceCode.h; path = include/lldb/Expression/ExpressionSourceCode.h; sourceTree = "<group>"; };
 		49A1CAC31430E8BD00306AC9 /* ExpressionSourceCode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ExpressionSourceCode.cpp; path = source/Expression/ExpressionSourceCode.cpp; sourceTree = "<group>"; };
 		49A8A39F11D568A300AD3B68 /* ASTResultSynthesizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ASTResultSynthesizer.cpp; path = ExpressionParser/Clang/ASTResultSynthesizer.cpp; sourceTree = "<group>"; };
@@ -5311,8 +5308,6 @@
 			children = (
 				4CA9637A11B6E99A00780E28 /* CommandObjectApropos.h */,
 				4CA9637911B6E99A00780E28 /* CommandObjectApropos.cpp */,
-				499F381E11A5B3F300F5CE02 /* CommandObjectArgs.h */,
-				499F381F11A5B3F300F5CE02 /* CommandObjectArgs.cpp */,
 				26BC7D1410F1B76300F91463 /* CommandObjectBreakpoint.h */,
 				26BC7E2D10F1B84700F91463 /* CommandObjectBreakpoint.cpp */,
 				9A42976111861A9F00FE05CD /* CommandObjectBreakpointCommand.h */,
@@ -7949,7 +7944,6 @@
 				AE44FB4C1BB4BB540033EB62 /* GoFormatterFunctions.cpp in Sources */,
 				8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */,
 				23042D121976CA1D00621B2C /* PlatformKalimba.cpp in Sources */,
-				2689001313353DDE00698AC0 /* CommandObjectArgs.cpp in Sources */,
 				2689001413353DDE00698AC0 /* CommandObjectBreakpoint.cpp in Sources */,
 				2689001513353DDE00698AC0 /* CommandObjectBreakpointCommand.cpp in Sources */,
 				2689001613353DDE00698AC0 /* CommandObjectCommands.cpp in Sources */,
@@ -8825,15 +8819,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				"ARCHS[sdk=iphoneos*]" = (
-					arm64,
-					armv7,
-				);
-				"ARCHS[sdk=macosx*]" = (
-					x86_64,
-					i386,
-				);
+				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
+				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
@@ -8962,9 +8949,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
+				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
+				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
@@ -10063,6 +10049,28 @@
 					"$(inherited)",
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+				);
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
+				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					__STDC_CONSTANT_MACROS,
+					__STDC_LIMIT_MACROS,
+					LLDB_CONFIGURATION_BUILD_AND_INTEGRATION,
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
@@ -14021,9 +14029,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
+				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
+				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
