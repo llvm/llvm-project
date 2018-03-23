@@ -196,7 +196,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       CallOpts.IsTemporaryCtorOrDtor = true;
       return MRMgr.getCXXTempObjectRegion(CE, LCtx);
     }
-    case ConstructionContext::ReturnedValueKind: {
+    case ConstructionContext::SimpleReturnedValueKind: {
       // The temporary is to be managed by the parent stack frame.
       // So build it in the parent stack frame if we're not in the
       // top frame of the analysis.
@@ -211,6 +211,10 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       CallOpts.IsTemporaryCtorOrDtor = true;
       return MRMgr.getCXXTempObjectRegion(CE, TempLCtx);
     }
+    case ConstructionContext::CXX17ElidedCopyVariableKind:
+    case ConstructionContext::CXX17ElidedCopyReturnedValueKind:
+      // Not implemented yet.
+      break;
     }
   }
   // If we couldn't find an existing region to construct into, assume we're

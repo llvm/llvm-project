@@ -64,11 +64,43 @@ const ConstructionContext *ConstructionContext::createFromLayers(
       // lifetime extension on the parent layer.
       if (const ConstructionContextLayer *ParentLayer = TopLayer->getParent()) {
         assert(ParentLayer->isLast());
-        MTE = cast<MaterializeTemporaryExpr>(ParentLayer->getTriggerStmt());
+        if ((MTE = dyn_cast<MaterializeTemporaryExpr>(
+                 ParentLayer->getTriggerStmt()))) {
+          // A temporary object which has both destruction and
+          // materialization info.
+          auto *CC =
+              C.getAllocator().Allocate<TemporaryObjectConstructionContext>();
+          return new (CC) TemporaryObjectConstructionContext(BTE, MTE);
+        }
+        // C++17 *requires* elision of the constructor at the return site
+        // and at variable initialization site, while previous standards
+        // were allowing an optional elidable constructor.
+        if (auto *RS = dyn_cast<ReturnStmt>(ParentLayer->getTriggerStmt())) {
+          assert(!RS->getRetValue()->getType().getCanonicalType()
+                    ->getAsCXXRecordDecl()->hasTrivialDestructor());
+          auto *CC =
+              C.getAllocator()
+                  .Allocate<
+                      CXX17ElidedCopyReturnedValueConstructionContext>();
+          return new (CC)
+              CXX17ElidedCopyReturnedValueConstructionContext(RS, BTE);
+        }
+        if (auto *DS = dyn_cast<DeclStmt>(ParentLayer->getTriggerStmt())) {
+          assert(!cast<VarDecl>(DS->getSingleDecl())->getType()
+                      .getCanonicalType()->getAsCXXRecordDecl()
+                      ->hasTrivialDestructor());
+          auto *CC =
+              C.getAllocator()
+                  .Allocate<CXX17ElidedCopyVariableConstructionContext>();
+          return new (CC) CXX17ElidedCopyVariableConstructionContext(DS, BTE);
+        }
+        llvm_unreachable("Unexpected construction context with destructor!");
       }
+      // A temporary object that doesn't require materialization.
       auto *CC =
           C.getAllocator().Allocate<TemporaryObjectConstructionContext>();
-      return new (CC) TemporaryObjectConstructionContext(BTE, MTE);
+      return new (CC)
+          TemporaryObjectConstructionContext(BTE, /*MTE=*/nullptr);
     } else if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(S)) {
       // If the object requires destruction and is not lifetime-extended,
       // then it must have a BTE within its MTE.
@@ -82,8 +114,8 @@ const ConstructionContext *ConstructionContext::createFromLayers(
     } else if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
       assert(TopLayer->isLast());
       auto *CC =
-          C.getAllocator().Allocate<ReturnedValueConstructionContext>();
-      return new (CC) ReturnedValueConstructionContext(RS);
+          C.getAllocator().Allocate<SimpleReturnedValueConstructionContext>();
+      return new (CC) SimpleReturnedValueConstructionContext(RS);
     }
   } else if (const CXXCtorInitializer *I = TopLayer->getTriggerInit()) {
     assert(TopLayer->isLast());
