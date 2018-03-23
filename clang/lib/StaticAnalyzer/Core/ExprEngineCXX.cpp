@@ -203,6 +203,10 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       // TODO: What exactly happens when we are? Does the temporary object live
       // long enough in the region store in this case? Would checkers think
       // that this object immediately goes out of scope?
+      // TODO: We assume that the call site has a temporary object construction
+      // context. This is no longer true in C++17 or when copy elision is
+      // performed. We may need to unwrap multiple stack frames here and we
+      // won't necessarily end up with a temporary at the end.
       const LocationContext *TempLCtx = LCtx;
       if (const LocationContext *CallerLCtx =
               LCtx->getCurrentStackFrame()->getParent()) {
