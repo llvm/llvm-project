@@ -1111,7 +1111,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:   [B1]
 // CHECK:     1: A::make
 // CHECK:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class A (*)(void))
-// CHECK:     3: [B1.2]()
+// WARNINGS:     3: [B1.2]()
+// ANALYZER:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
 // CHECK:     4: [B1.3] (BindTemporary)
 // CHECK:     5: [B1.4] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     6: [B1.5]
@@ -1130,7 +1131,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:   [B1]
 // CHECK:     1: A::make
 // CHECK:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class A (*)(void))
-// CHECK:     3: [B1.2]()
+// WARNINGS:     3: [B1.2]()
+// ANALYZER:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
 // CHECK:     4: [B1.3] (BindTemporary)
 // CHECK:     5: [B1.4] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     6: [B1.5]
@@ -1139,7 +1141,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     9: [B1.8] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class A &))
 // CHECK:    10: A::make
 // CHECK:    11: [B1.10] (ImplicitCastExpr, FunctionToPointerDecay, class A (*)(void))
-// CHECK:    12: [B1.11]()
+// WARNINGS:    12: [B1.11]()
+// ANALYZER:    12: [B1.11]() (CXXRecordTypedCall, [B1.13], [B1.15])
 // CHECK:    13: [B1.12] (BindTemporary)
 // CHECK:    14: [B1.13] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:    15: [B1.14]
