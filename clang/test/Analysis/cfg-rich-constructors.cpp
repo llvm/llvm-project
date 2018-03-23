@@ -498,20 +498,70 @@ public:
   ~B() {}
 };
 
-// FIXME: Find construction context for the implicit constructor conversion.
+// CHECK: void implicitConstructionConversionFromTemporary()
+// CHECK:          1: implicit_constructor_conversion::A() (CXXConstructExpr, [B1.3], class implicit_constructor_conversion::A)
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
+// CHECK-NEXT:     3: [B1.2]
+// CHECK-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.6], [B1.8], class implicit_constructor_conversion::B)
+// CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, ConstructorConversion, class implicit_constructor_conversion::B)
+// CHECK-NEXT:     6: [B1.5] (BindTemporary)
+// CHECK-NEXT:     7: [B1.6] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::B)
+// CHECK-NEXT:     8: [B1.7]
+// CHECK-NEXT:     9: [B1.8] (CXXConstructExpr, [B1.10], class implicit_constructor_conversion::B)
+// CHECK-NEXT:    10: implicit_constructor_conversion::B b = implicit_constructor_conversion::A();
+// CHECK-NEXT:    11: ~implicit_constructor_conversion::B() (Temporary object destructor)
+// CHECK-NEXT:    12: [B1.10].~B() (Implicit destructor)
+void implicitConstructionConversionFromTemporary() {
+  B b = A();
+}
+
 // CHECK: void implicitConstructionConversionFromFunctionValue()
+// CHECK:          1: get
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class implicit_constructor_conversion::A (*)(void))
+// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
+// CHECK-NEXT:     5: [B1.4]
+// CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.8], [B1.10], class implicit_constructor_conversion::B)
+// CHECK-NEXT:     7: [B1.6] (ImplicitCastExpr, ConstructorConversion, class implicit_constructor_conversion::B)
+// CHECK-NEXT:     8: [B1.7] (BindTemporary)
+// CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::B)
+// CHECK-NEXT:    10: [B1.9]
+// CHECK-NEXT:    11: [B1.10] (CXXConstructExpr, [B1.12], class implicit_constructor_conversion::B)
+// CHECK-NEXT:    12: implicit_constructor_conversion::B b = get();
+// CHECK-NEXT:    13: ~implicit_constructor_conversion::B() (Temporary object destructor)
+// CHECK-NEXT:    14: [B1.12].~B() (Implicit destructor)
+void implicitConstructionConversionFromFunctionValue() {
+  B b = get();
+}
+
+// CHECK: void implicitConstructionConversionFromTemporaryWithLifetimeExtension()
+// CHECK:          1: implicit_constructor_conversion::A() (CXXConstructExpr, [B1.3], class implicit_constructor_conversion::A)
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
+// CHECK-NEXT:     3: [B1.2]
+// CHECK-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.7], class implicit_constructor_conversion::B)
+// CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, ConstructorConversion, class implicit_constructor_conversion::B)
+// CHECK-NEXT:     6: [B1.5] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::B)
+// CHECK-NEXT:     7: [B1.6]
+// CHECK-NEXT:     8: const implicit_constructor_conversion::B &b = implicit_constructor_conversion::A();
+// CHECK-NEXT:     9: [B1.8].~B() (Implicit destructor)
+void implicitConstructionConversionFromTemporaryWithLifetimeExtension() {
+  const B &b = A();
+}
+
+// FIXME: Find construction context for the implicit constructor conversion.
+// CHECK: void implicitConstructionConversionFromFunctionValueWithLifetimeExtension()
 // CHECK:          1: get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class implicit_constructor_conver
 // CHECK-NEXT:     3: [B1.2]()
 // CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
 // CHECK-NEXT:     5: [B1.4]
-// CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, class implicit_constructor_conversion::B)
+// CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.9], class implicit_constructor_conversion::B)
 // CHECK-NEXT:     7: [B1.6] (ImplicitCastExpr, ConstructorConversion, class implicit_constructor_convers
 // CHECK-NEXT:     8: [B1.7] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::B)
 // CHECK-NEXT:     9: [B1.8]
 // CHECK-NEXT:    10: const implicit_constructor_conversion::B &b = get();
 // CHECK-NEXT:    11: [B1.10].~B() (Implicit destructor)
-void implicitConstructionConversionFromFunctionValue() {
+void implicitConstructionConversionFromFunctionValueWithLifetimeExtension() {
   const B &b = get(); // no-crash
 }
 
