@@ -4779,10 +4779,6 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   if (!F.hasFnAttribute(Attribute::NoRedZone))
     return false;
 
-  // If anyone is using the address of this function, don't outline from it.
-  if (F.hasAddressTaken())
-    return false;
-
   // Can F be deduplicated by the linker? If it can, don't outline from it.
   if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
     return false;
