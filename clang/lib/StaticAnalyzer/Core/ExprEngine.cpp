@@ -31,6 +31,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/ConstructionContext.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -447,6 +448,65 @@ bool ExprEngine::areTemporaryMaterializationsClear(
     LC = LC->getParent();
   }
   return true;
+}
+
+ProgramStateRef ExprEngine::addAllNecessaryTemporaryInfo(
+    ProgramStateRef State, const ConstructionContext *CC,
+    const LocationContext *LC, const MemRegion *R) {
+  const CXXBindTemporaryExpr *BTE = nullptr;
+  const MaterializeTemporaryExpr *MTE = nullptr;
+  const LocationContext *TempLC = LC;
+
+  if (CC) {
+    // In case of temporary object construction, extract data necessary for
+    // destruction and lifetime extension.
+    const auto *TCC = dyn_cast<TemporaryObjectConstructionContext>(CC);
+
+    // If the temporary is being returned from the function, it will be
+    // destroyed or lifetime-extended in the caller stack frame.
+    if (const auto *RCC = dyn_cast<ReturnedValueConstructionContext>(CC)) {
+      const StackFrameContext *SFC = LC->getCurrentStackFrame();
+      assert(SFC);
+      if (SFC->getParent()) {
+        TempLC = SFC->getParent();
+        const CFGElement &CallElem =
+            (*SFC->getCallSiteBlock())[SFC->getIndex()];
+        if (auto RTCElem = CallElem.getAs<CFGCXXRecordTypedCall>()) {
+          TCC = cast<TemporaryObjectConstructionContext>(
+              RTCElem->getConstructionContext());
+        }
+      }
+    }
+    if (TCC) {
+      if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
+        BTE = TCC->getCXXBindTemporaryExpr();
+        MTE = TCC->getMaterializedTemporaryExpr();
+        if (!BTE) {
+          // FIXME: Lifetime extension for temporaries without destructors
+          // is not implemented yet.
+          MTE = nullptr;
+        }
+        if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
+          // If the temporary is lifetime-extended, don't save the BTE,
+          // because we don't need a temporary destructor, but an automatic
+          // destructor.
+          BTE = nullptr;
+        }
+      }
+    }
+
+    if (BTE) {
+      State = addInitializedTemporary(State, BTE, TempLC,
+                                      cast<CXXTempObjectRegion>(R));
+    }
+
+    if (MTE) {
+      State = addTemporaryMaterialization(State, MTE, TempLC,
+                                          cast<CXXTempObjectRegion>(R));
+    }
+  }
+
+  return State;
 }
 
 ProgramStateRef
