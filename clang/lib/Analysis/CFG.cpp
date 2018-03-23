@@ -750,6 +750,9 @@ private:
   }
 
   void appendCall(CFGBlock *B, CallExpr *CE) {
+    if (alwaysAdd(CE) && cachedEntry)
+      cachedEntry->second = B;
+
     if (BuildOpts.AddRichCXXConstructors) {
       if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE, *Context)) {
         if (const ConstructionContextLayer *Layer =
