@@ -1032,4 +1032,17 @@ void test() {
 }
 } // end namespace implicit_constructor_conversion
 
+namespace pass_references_through {
+class C {
+public:
+  ~C() {}
+};
 
+const C &foo1();
+C &&foo2();
+
+// In these examples the foo() expression has record type, not reference type.
+// Don't try to figure out how to perform construction of the record here.
+const C &bar1() { return foo1(); } // no-crash
+C &&bar2() { return foo2(); } // no-crash
+} // end namespace pass_references_through

@@ -751,7 +751,7 @@ private:
 
   void appendCall(CFGBlock *B, CallExpr *CE) {
     if (BuildOpts.AddRichCXXConstructors) {
-      if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE)) {
+      if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE, *Context)) {
         if (const ConstructionContextLayer *Layer =
                 ConstructionContextMap.lookup(CE)) {
           const ConstructionContext *CC =
@@ -1265,7 +1265,7 @@ void CFGBuilder::findConstructionContexts(
   case Stmt::CXXOperatorCallExprClass:
   case Stmt::UserDefinedLiteralClass: {
     auto *CE = cast<CallExpr>(Child);
-    if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE))
+    if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE, *Context))
       consumeConstructionContext(Layer, CE);
     break;
   }
