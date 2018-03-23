@@ -121,15 +121,15 @@ RAW:                               Modules
 RAW-NEXT: ============================================================
 RAW-NEXT:   Mod 0000 | `{{.*}}pdb.test.tmp1.obj`:
 RAW-NEXT:              Obj: `{{.*}}pdb.test.tmp1.obj`:
-RAW-NEXT:              debug stream: 9, # files: 1, has ec info: false
+RAW-NEXT:              debug stream: 11, # files: 1, has ec info: false
 RAW-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
 RAW-NEXT:   Mod 0001 | `{{.*}}pdb.test.tmp2.obj`:
 RAW-NEXT:              Obj: `{{.*}}pdb.test.tmp2.obj`:
-RAW-NEXT:              debug stream: 10, # files: 1, has ec info: false
+RAW-NEXT:              debug stream: 12, # files: 1, has ec info: false
 RAW-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
 RAW-NEXT:   Mod 0002 | `* Linker *`:
 RAW-NEXT:              Obj: ``:
-RAW-NEXT:              debug stream: 11, # files: 0, has ec info: false
+RAW-NEXT:              debug stream: 13, # files: 0, has ec info: false
 RAW-NEXT:              pdb file ni: 1 `{{.*pdb.test.tmp.pdb}}`, src file ni: 0 ``
 RAW:                          Types (TPI Stream)
 RAW-NEXT: ============================================================
