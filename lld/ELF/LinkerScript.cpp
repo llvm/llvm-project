@@ -380,7 +380,10 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
       // For -emit-relocs we have to ignore entries like
       //   .rela.dyn : { *(.rela.data) }
       // which are common because they are in the default bfd script.
-      if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
+      // We do not ignore SHT_REL[A] linker-synthesized sections here because
+      // want to support scripts that do custom layout for them.
+      if (!isa<SyntheticSection>(Sec) &&
+          (Sec->Type == SHT_REL || Sec->Type == SHT_RELA))
         continue;
 
       std::string Filename = getFilename(Sec->File);
@@ -405,7 +408,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
 void LinkerScript::discard(ArrayRef<InputSection *> V) {
   for (InputSection *S : V) {
     if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
-        S == InX::DynStrTab)
+        S == InX::DynStrTab || S == InX::RelaPlt || S == InX::RelaDyn)
       error("discarding " + S->Name + " section is not allowed");
 
     // You can discard .hash and .gnu.hash sections by linker scripts. Since

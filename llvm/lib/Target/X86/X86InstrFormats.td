@@ -136,13 +136,14 @@ def XD     : Prefix<4>;
 class Map<bits<3> val> {
   bits<3> Value = val;
 }
-def OB   : Map<0>;
-def TB   : Map<1>;
-def T8   : Map<2>;
-def TA   : Map<3>;
-def XOP8 : Map<4>;
-def XOP9 : Map<5>;
-def XOPA : Map<6>;
+def OB        : Map<0>;
+def TB        : Map<1>;
+def T8        : Map<2>;
+def TA        : Map<3>;
+def XOP8      : Map<4>;
+def XOP9      : Map<5>;
+def XOPA      : Map<6>;
+def ThreeDNow : Map<7>;
 
 // Class specifying the encoding
 class Encoding<bits<2> val> {
@@ -188,6 +189,7 @@ class TA     { Map OpMap = TA; }
 class XOP8   { Map OpMap = XOP8; Prefix OpPrefix = PS; }
 class XOP9   { Map OpMap = XOP9; Prefix OpPrefix = PS; }
 class XOPA   { Map OpMap = XOPA; Prefix OpPrefix = PS; }
+class ThreeDNow { Map OpMap = ThreeDNow; }
 class OBXS   { Prefix OpPrefix = XS; }
 class PS   : TB { Prefix OpPrefix = PS; }
 class PD   : TB { Prefix OpPrefix = PD; }
@@ -224,7 +226,6 @@ class EVEX_CD8<int esize, CD8VForm form> {
   bits<3> CD8_Form = form.Value;
 }
 
-class Has3DNow0F0FOpcode  { bit has3DNow0F0FOpcode = 1; }
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
 
@@ -295,7 +296,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   // Declare it int rather than bits<4> so that all bits are defined when
   // assigning to bits<7>.
   int CD8_EltSize = 0;      // Compressed disp8 form - element-size in bytes.
-  bit has3DNow0F0FOpcode =0;// Wacky 3dNow! encoding?
   bit hasEVEX_RC = 0;       // Explicitly specified rounding control in FP instruction.
   bit hasNoTrackPrefix = 0; // Does this inst has 0x3E (NoTrack) prefix?
 
@@ -347,9 +347,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{45}    = hasEVEX_B;
   // If we run out of TSFlags bits, it's possible to encode this in 3 bits.
   let TSFlags{52-46} = CD8_Scale;
-  let TSFlags{53}    = has3DNow0F0FOpcode;
-  let TSFlags{54}    = hasEVEX_RC;
-  let TSFlags{55}    = hasNoTrackPrefix;
+  let TSFlags{53}    = hasEVEX_RC;
+  let TSFlags{54}    = hasNoTrackPrefix;
 }
 
 class PseudoI<dag oops, dag iops, list<dag> pattern,

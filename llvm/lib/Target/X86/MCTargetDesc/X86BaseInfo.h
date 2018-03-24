@@ -433,6 +433,14 @@ namespace X86II {
     // XOPA - Prefix to encode 0xA in VEX.MMMM of XOP instructions.
     XOPA = 6 << OpMapShift,
 
+    /// ThreeDNow - This indicates that the instruction uses the
+    /// wacky 0x0F 0x0F prefix for 3DNow! instructions.  The manual documents
+    /// this as having a 0x0F prefix with a 0x0F opcode, and each instruction
+    /// storing a classifier in the imm8 field.  To simplify our implementation,
+    /// we handle this by storeing the classifier in the opcode field and using
+    /// this flag to indicate that the encoder should do the wacky 3DNow! thing.
+    ThreeDNow = 7 << OpMapShift,
+
     //===------------------------------------------------------------------===//
     // REX_W - REX prefixes are instruction prefixes used in 64-bit mode.
     // They are used to specify GPRs and SSE registers, 64-bit operand size,
@@ -562,17 +570,8 @@ namespace X86II {
     CD8_Scale_Shift = EVEX_BShift + 1,
     CD8_Scale_Mask = 127ULL << CD8_Scale_Shift,
 
-    /// Has3DNow0F0FOpcode - This flag indicates that the instruction uses the
-    /// wacky 0x0F 0x0F prefix for 3DNow! instructions.  The manual documents
-    /// this as having a 0x0F prefix with a 0x0F opcode, and each instruction
-    /// storing a classifier in the imm8 field.  To simplify our implementation,
-    /// we handle this by storeing the classifier in the opcode field and using
-    /// this flag to indicate that the encoder should do the wacky 3DNow! thing.
-    Has3DNow0F0FOpcodeShift = CD8_Scale_Shift + 7,
-    Has3DNow0F0FOpcode = 1ULL << Has3DNow0F0FOpcodeShift,
-
     /// Explicitly specified rounding control
-    EVEX_RCShift = Has3DNow0F0FOpcodeShift + 1,
+    EVEX_RCShift = CD8_Scale_Shift + 7,
     EVEX_RC = 1ULL << EVEX_RCShift,
 
     // NOTRACK prefix

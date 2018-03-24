@@ -493,8 +493,7 @@ enum VectorExtensionType {
   TYPE_VEX_2B       = 0x1,
   TYPE_VEX_3B       = 0x2,
   TYPE_EVEX         = 0x3,
-  TYPE_XOP          = 0x4,
-  TYPE_3DNOW        = 0x5
+  TYPE_XOP          = 0x4
 };
 
 /// \brief Type for the byte reader that the consumer must provide to

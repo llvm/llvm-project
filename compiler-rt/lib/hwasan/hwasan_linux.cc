@@ -202,7 +202,7 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
 
   const bool is_store = code & 0x10;
   const bool recover = code & 0x20;
-  const const uptr addr = uc->uc_mcontext.regs[0];
+  const uptr addr = uc->uc_mcontext.regs[0];
   const unsigned size_log = code & 0xf;
   if (size_log > 4 && size_log != 0xf)
     return AccessInfo{}; // Not ours.
