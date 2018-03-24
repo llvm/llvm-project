@@ -67,11 +67,13 @@ using namespace clang;
 using namespace ento;
 
 QualType CallEvent::getResultType() const {
-  const Expr *E = getOriginExpr();
-  assert(E && "Calls without origin expressions do not have results");
-  QualType ResultTy = E->getType();
-
   ASTContext &Ctx = getState()->getStateManager().getContext();
+  const Expr *E = getOriginExpr();
+  if (!E)
+    return Ctx.VoidTy;
+  assert(E);
+
+  QualType ResultTy = E->getType();
 
   // A function that returns a reference to 'int' will have a result type
   // of simply 'int'. Check the origin expr's value kind to recover the
