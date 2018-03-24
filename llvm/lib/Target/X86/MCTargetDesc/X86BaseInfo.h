@@ -386,7 +386,7 @@ namespace X86II {
     AdSizeShift = OpSizeShift + 2,
     AdSizeMask  = 0x3 << AdSizeShift,
 
-    AdSizeX  = 1 << AdSizeShift,
+    AdSizeX  = 0 << AdSizeShift,
     AdSize16 = 1 << AdSizeShift,
     AdSize32 = 2 << AdSizeShift,
     AdSize64 = 3 << AdSizeShift,

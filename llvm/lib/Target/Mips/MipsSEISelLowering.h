@@ -15,8 +15,8 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSEISELLOWERING_H
 
 #include "MipsISelLowering.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 

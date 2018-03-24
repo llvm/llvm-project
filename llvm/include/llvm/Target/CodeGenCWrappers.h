@@ -1,4 +1,4 @@
-//===- llvm/Support/CodeGenCWrappers.h - CodeGen C Wrappers -----*- C++ -*-===//
+//===- llvm/Target/CodeGenCWrappers.h - CodeGen C Wrappers ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_CODEGENCWRAPPERS_H
-#define LLVM_SUPPORT_CODEGENCWRAPPERS_H
+#ifndef LLVM_TARGET_CODEGENCWRAPPERS_H
+#define LLVM_TARGET_CODEGENCWRAPPERS_H
 
 #include "llvm-c/TargetMachine.h"
 #include "llvm/ADT/Optional.h"
@@ -56,7 +56,6 @@ inline LLVMCodeModel wrap(CodeModel::Model Model) {
   }
   llvm_unreachable("Bad CodeModel!");
 }
-
-} // end llvm namespace
+} // namespace llvm
 
 #endif

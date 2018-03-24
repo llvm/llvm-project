@@ -74,8 +74,8 @@ using namespace llvm::X86Disassembler;
 ///     accurate.  Sometimes they are not.
 /// (3) to fix the tables to reflect the actual context (for example, required
 ///     prefixes), and possibly to add a new context by editing
-///     lib/Target/X86/X86DisassemblerDecoderCommon.h.  This is unlikely to be
-///     the cause.
+///     include/llvm/Support/X86DisassemblerDecoderCommon.h.  This is unlikely
+///     to be the cause.
 ///
 /// DisassemblerEmitter.cpp contains the implementation for the emitter,
 ///   which simply pulls out instructions from the CodeGenTarget and pushes them

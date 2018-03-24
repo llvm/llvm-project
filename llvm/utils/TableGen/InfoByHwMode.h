@@ -16,7 +16,7 @@
 #define LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
 
 #include "CodeGenHwModes.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/MachineValueType.h"
 
 #include <map>
 #include <set>

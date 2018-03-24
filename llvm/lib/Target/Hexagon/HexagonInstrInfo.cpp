@@ -34,7 +34,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -49,6 +48,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -144,9 +144,9 @@ static unsigned nonDbgMICount(MachineBasicBlock::const_instr_iterator MIB,
 /// On Hexagon, we have two instructions used to set-up the hardware loop
 /// (LOOP0, LOOP1) with corresponding endloop (ENDLOOP0, ENDLOOP1) instructions
 /// to indicate the end of a loop.
-static MachineInstr *findLoopInstr(MachineBasicBlock *BB, unsigned EndLoopOp,
-      MachineBasicBlock *TargetBB,
-      SmallPtrSet<MachineBasicBlock *, 8> &Visited) {
+MachineInstr *HexagonInstrInfo::findLoopInstr(MachineBasicBlock *BB,
+      unsigned EndLoopOp, MachineBasicBlock *TargetBB,
+      SmallPtrSet<MachineBasicBlock *, 8> &Visited) const {
   unsigned LOOPi;
   unsigned LOOPr;
   if (EndLoopOp == Hexagon::ENDLOOP0) {
@@ -1884,6 +1884,10 @@ bool HexagonInstrInfo::isAbsoluteSet(const MachineInstr &MI) const {
 bool HexagonInstrInfo::isAccumulator(const MachineInstr &MI) const {
   const uint64_t F = MI.getDesc().TSFlags;
   return((F >> HexagonII::AccumulatorPos) & HexagonII::AccumulatorMask);
+}
+
+bool HexagonInstrInfo::isBaseImmOffset(const MachineInstr &MI) const {
+  return getAddrMode(MI) == HexagonII::BaseImmOffset;
 }
 
 bool HexagonInstrInfo::isComplex(const MachineInstr &MI) const {

@@ -1,4 +1,4 @@
-//===- CodeGen/MachineValueType.h - Machine-Level types ---------*- C++ -*-===//
+//===- Support/MachineValueType.h - Machine-Level types ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_MACHINEVALUETYPE_H
-#define LLVM_CODEGEN_MACHINEVALUETYPE_H
+#ifndef LLVM_SUPPORT_MACHINEVALUETYPE_H
+#define LLVM_SUPPORT_MACHINEVALUETYPE_H
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"

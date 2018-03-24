@@ -1,17 +1,25 @@
 ; RUN: opt -S < %s -functionattrs | FileCheck %s
+; RUN: opt -S < %s -passes=function-attrs | FileCheck %s
 
+; CHECK: Function Attrs
+; CHECK-SAME: inaccessiblememonly
+; CHECK-NEXT: declare void @llvm.sideeffect()
 declare void @llvm.sideeffect()
 
 ; Don't add readnone or similar attributes when an @llvm.sideeffect() intrinsic
 ; is present.
 
-; CHECK: define void @test() {
+; CHECK: Function Attrs
+; CHECK-NOT: readnone
+; CHECK: define void @test()
 define void @test() {
     call void @llvm.sideeffect()
     ret void
 }
 
-; CHECK: define void @loop() {
+; CHECK: Function Attrs
+; CHECK-NOT: readnone
+; CHECK: define void @loop()
 define void @loop() {
     br label %loop
 

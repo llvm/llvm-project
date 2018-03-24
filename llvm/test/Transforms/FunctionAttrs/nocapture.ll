@@ -1,4 +1,6 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
+; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
+
 @g = global i32* null		; <i32**> [#uses=1]
 
 ; CHECK: define i32* @c1(i32* readnone returned %q)
