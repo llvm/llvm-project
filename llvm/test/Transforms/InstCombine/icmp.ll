@@ -3313,29 +3313,3 @@ define <2 x i1> @PR36583(<2 x i8*>)  {
   ret <2 x i1> %res
 }
 
-define i1 @doublecast_signbit_set(i64 %x) {
-; CHECK-LABEL: @doublecast_signbit_set(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i64 [[X:%.*]] to float
-; CHECK-NEXT:    [[I:%.*]] = bitcast float [[F]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[I]], 0
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %f = sitofp i64 %x to float
-  %i = bitcast float %f to i32
-  %r = icmp slt i32 %i, 0
-  ret i1 %r
-}
-
-define <3 x i1> @doublecast_signbit_clear(<3 x i32> %x) {
-; CHECK-LABEL: @doublecast_signbit_clear(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i32> [[X:%.*]] to <3 x double>
-; CHECK-NEXT:    [[I:%.*]] = bitcast <3 x double> [[F]] to <3 x i64>
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <3 x i64> [[I]], <i64 -1, i64 undef, i64 -1>
-; CHECK-NEXT:    ret <3 x i1> [[R]]
-;
-  %f = sitofp <3 x i32> %x to <3 x double>
-  %i = bitcast <3 x double> %f to <3 x i64>
-  %r = icmp sgt <3 x i64> %i, <i64 -1, i64 undef, i64 -1>
-  ret <3 x i1> %r
-}
-

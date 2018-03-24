@@ -1881,7 +1881,7 @@ bool HCE::runOnMachineFunction(MachineFunction &MF) {
   AssignmentMap IMap;
 
   collect(MF);
-  std::sort(Extenders.begin(), Extenders.end(),
+  llvm::sort(Extenders.begin(), Extenders.end(),
     [](const ExtDesc &A, const ExtDesc &B) {
       return ExtValue(A) < ExtValue(B);
     });

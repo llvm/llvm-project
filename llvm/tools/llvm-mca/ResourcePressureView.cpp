@@ -170,5 +170,4 @@ void ResourcePressureView::printResourcePressurePerInstruction(
     Buffer = "";
   }
 }
-
 } // namespace mca

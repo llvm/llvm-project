@@ -68,9 +68,7 @@ define <3 x i1> @i32_cast_cmp_ne_int_0_sitofp_float_vec(<3 x i32> %i) {
 
 define i1 @i32_cast_cmp_slt_int_0_sitofp_float(i32 %i) {
 ; CHECK-LABEL: @i32_cast_cmp_slt_int_0_sitofp_float(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[I:%.*]] to float
-; CHECK-NEXT:    [[B:%.*]] = bitcast float [[F]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %i to float
@@ -146,9 +144,7 @@ define <3 x i1> @i32_cast_cmp_slt_int_1_sitofp_float_vec(<3 x i32> %i) {
 
 define i1 @i32_cast_cmp_sgt_int_m1_sitofp_float(i32 %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_sitofp_float(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[I:%.*]] to float
-; CHECK-NEXT:    [[B:%.*]] = bitcast float [[F]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %i to float
@@ -159,9 +155,7 @@ define i1 @i32_cast_cmp_sgt_int_m1_sitofp_float(i32 %i) {
 
 define <3 x i1> @i32_cast_cmp_sgt_int_m1_sitofp_float_vec(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_sitofp_float_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i32> [[I:%.*]] to <3 x float>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <3 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i32> [[B]], <i32 -1, i32 undef, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i32> [[I:%.*]], <i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i32> %i to  <3 x float>
@@ -224,9 +218,7 @@ define <3 x i1> @i32_cast_cmp_ne_int_0_sitofp_double_vec(<3 x i32> %i) {
 
 define i1 @i32_cast_cmp_slt_int_0_sitofp_double(i32 %i) {
 ; CHECK-LABEL: @i32_cast_cmp_slt_int_0_sitofp_double(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[I:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = bitcast double [[F]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %i to double
@@ -302,9 +294,7 @@ define <3 x i1> @i32_cast_cmp_slt_int_1_sitofp_double_vec(<3 x i32> %i) {
 
 define i1 @i32_cast_cmp_sgt_int_m1_sitofp_double(i32 %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_sitofp_double(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[I:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = bitcast double [[F]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %i to double
@@ -315,9 +305,7 @@ define i1 @i32_cast_cmp_sgt_int_m1_sitofp_double(i32 %i) {
 
 define <3 x i1> @i32_cast_cmp_sgt_int_m1_sitofp_double_vec(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_sitofp_double_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i32> [[I:%.*]] to <3 x double>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x double> [[F]] to <3 x i64>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i64> [[B]], <i64 -1, i64 undef, i64 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i32> [[I:%.*]], <i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i32> %i to  <3 x double>
@@ -380,9 +368,7 @@ define <3 x i1> @i32_cast_cmp_ne_int_0_sitofp_half_vec(<3 x i32> %i) {
 
 define i1 @i32_cast_cmp_slt_int_0_sitofp_half(i32 %i) {
 ; CHECK-LABEL: @i32_cast_cmp_slt_int_0_sitofp_half(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[I:%.*]] to half
-; CHECK-NEXT:    [[B:%.*]] = bitcast half [[F]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %i to half
@@ -458,9 +444,7 @@ define <3 x i1> @i32_cast_cmp_slt_int_1_sitofp_half_vec(<3 x i32> %i) {
 
 define i1 @i32_cast_cmp_sgt_int_m1_sitofp_half(i32 %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_sitofp_half(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[I:%.*]] to half
-; CHECK-NEXT:    [[B:%.*]] = bitcast half [[F]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %i to half
@@ -471,9 +455,7 @@ define i1 @i32_cast_cmp_sgt_int_m1_sitofp_half(i32 %i) {
 
 define <3 x i1> @i32_cast_cmp_sgt_int_m1_sitofp_half_vec(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_sitofp_half_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i32> [[I:%.*]] to <3 x half>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x half> [[F]] to <3 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[B]], <i16 -1, i16 undef, i16 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i32> [[I:%.*]], <i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i32> %i to  <3 x half>
@@ -536,9 +518,7 @@ define <3 x i1> @i64_cast_cmp_ne_int_0_sitofp_float_vec(<3 x i64> %i) {
 
 define i1 @i64_cast_cmp_slt_int_0_sitofp_float(i64 %i) {
 ; CHECK-LABEL: @i64_cast_cmp_slt_int_0_sitofp_float(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i64 [[I:%.*]] to float
-; CHECK-NEXT:    [[B:%.*]] = bitcast float [[F]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i64 %i to float
@@ -614,9 +594,7 @@ define <3 x i1> @i64_cast_cmp_slt_int_1_sitofp_float_vec(<3 x i64> %i) {
 
 define i1 @i64_cast_cmp_sgt_int_m1_sitofp_float(i64 %i) {
 ; CHECK-LABEL: @i64_cast_cmp_sgt_int_m1_sitofp_float(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i64 [[I:%.*]] to float
-; CHECK-NEXT:    [[B:%.*]] = bitcast float [[F]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i64 %i to float
@@ -627,9 +605,7 @@ define i1 @i64_cast_cmp_sgt_int_m1_sitofp_float(i64 %i) {
 
 define <3 x i1> @i64_cast_cmp_sgt_int_m1_sitofp_float_vec(<3 x i64> %i) {
 ; CHECK-LABEL: @i64_cast_cmp_sgt_int_m1_sitofp_float_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i64> [[I:%.*]] to <3 x float>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <3 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i32> [[B]], <i32 -1, i32 undef, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i64> [[I:%.*]], <i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i64> %i to  <3 x float>
@@ -692,9 +668,7 @@ define <3 x i1> @i64_cast_cmp_ne_int_0_sitofp_double_vec(<3 x i64> %i) {
 
 define i1 @i64_cast_cmp_slt_int_0_sitofp_double(i64 %i) {
 ; CHECK-LABEL: @i64_cast_cmp_slt_int_0_sitofp_double(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i64 [[I:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = bitcast double [[F]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i64 %i to double
@@ -770,9 +744,7 @@ define <3 x i1> @i64_cast_cmp_slt_int_1_sitofp_double_vec(<3 x i64> %i) {
 
 define i1 @i64_cast_cmp_sgt_int_m1_sitofp_double(i64 %i) {
 ; CHECK-LABEL: @i64_cast_cmp_sgt_int_m1_sitofp_double(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i64 [[I:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = bitcast double [[F]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i64 %i to double
@@ -783,9 +755,7 @@ define i1 @i64_cast_cmp_sgt_int_m1_sitofp_double(i64 %i) {
 
 define <3 x i1> @i64_cast_cmp_sgt_int_m1_sitofp_double_vec(<3 x i64> %i) {
 ; CHECK-LABEL: @i64_cast_cmp_sgt_int_m1_sitofp_double_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i64> [[I:%.*]] to <3 x double>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x double> [[F]] to <3 x i64>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i64> [[B]], <i64 -1, i64 undef, i64 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i64> [[I:%.*]], <i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i64> %i to  <3 x double>
@@ -848,9 +818,7 @@ define <3 x i1> @i64_cast_cmp_ne_int_0_sitofp_half_vec(<3 x i64> %i) {
 
 define i1 @i64_cast_cmp_slt_int_0_sitofp_half(i64 %i) {
 ; CHECK-LABEL: @i64_cast_cmp_slt_int_0_sitofp_half(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i64 [[I:%.*]] to half
-; CHECK-NEXT:    [[B:%.*]] = bitcast half [[F]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i64 %i to half
@@ -926,9 +894,7 @@ define <3 x i1> @i64_cast_cmp_slt_int_1_sitofp_half_vec(<3 x i64> %i) {
 
 define i1 @i64_cast_cmp_sgt_int_m1_sitofp_half(i64 %i) {
 ; CHECK-LABEL: @i64_cast_cmp_sgt_int_m1_sitofp_half(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i64 [[I:%.*]] to half
-; CHECK-NEXT:    [[B:%.*]] = bitcast half [[F]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i64 %i to half
@@ -939,9 +905,7 @@ define i1 @i64_cast_cmp_sgt_int_m1_sitofp_half(i64 %i) {
 
 define <3 x i1> @i64_cast_cmp_sgt_int_m1_sitofp_half_vec(<3 x i64> %i) {
 ; CHECK-LABEL: @i64_cast_cmp_sgt_int_m1_sitofp_half_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i64> [[I:%.*]] to <3 x half>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x half> [[F]] to <3 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[B]], <i16 -1, i16 undef, i16 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i64> [[I:%.*]], <i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i64> %i to  <3 x half>
@@ -1004,9 +968,7 @@ define <3 x i1> @i16_cast_cmp_ne_int_0_sitofp_float_vec(<3 x i16> %i) {
 
 define i1 @i16_cast_cmp_slt_int_0_sitofp_float(i16 %i) {
 ; CHECK-LABEL: @i16_cast_cmp_slt_int_0_sitofp_float(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[I:%.*]] to float
-; CHECK-NEXT:    [[B:%.*]] = bitcast float [[F]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i16 %i to float
@@ -1082,9 +1044,7 @@ define <3 x i1> @i16_cast_cmp_slt_int_1_sitofp_float_vec(<3 x i16> %i) {
 
 define i1 @i16_cast_cmp_sgt_int_m1_sitofp_float(i16 %i) {
 ; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_float(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[I:%.*]] to float
-; CHECK-NEXT:    [[B:%.*]] = bitcast float [[F]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i16 %i to float
@@ -1095,9 +1055,7 @@ define i1 @i16_cast_cmp_sgt_int_m1_sitofp_float(i16 %i) {
 
 define <3 x i1> @i16_cast_cmp_sgt_int_m1_sitofp_float_vec(<3 x i16> %i) {
 ; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_float_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i16> [[I:%.*]] to <3 x float>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <3 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i32> [[B]], <i32 -1, i32 undef, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[I:%.*]], <i16 -1, i16 -1, i16 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i16> %i to  <3 x float>
@@ -1160,9 +1118,7 @@ define <3 x i1> @i16_cast_cmp_ne_int_0_sitofp_double_vec(<3 x i16> %i) {
 
 define i1 @i16_cast_cmp_slt_int_0_sitofp_double(i16 %i) {
 ; CHECK-LABEL: @i16_cast_cmp_slt_int_0_sitofp_double(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[I:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = bitcast double [[F]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i16 %i to double
@@ -1238,9 +1194,7 @@ define <3 x i1> @i16_cast_cmp_slt_int_1_sitofp_double_vec(<3 x i16> %i) {
 
 define i1 @i16_cast_cmp_sgt_int_m1_sitofp_double(i16 %i) {
 ; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_double(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[I:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = bitcast double [[F]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i16 %i to double
@@ -1251,9 +1205,7 @@ define i1 @i16_cast_cmp_sgt_int_m1_sitofp_double(i16 %i) {
 
 define <3 x i1> @i16_cast_cmp_sgt_int_m1_sitofp_double_vec(<3 x i16> %i) {
 ; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_double_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i16> [[I:%.*]] to <3 x double>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x double> [[F]] to <3 x i64>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i64> [[B]], <i64 -1, i64 undef, i64 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[I:%.*]], <i16 -1, i16 -1, i16 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i16> %i to  <3 x double>
@@ -1316,9 +1268,7 @@ define <3 x i1> @i16_cast_cmp_ne_int_0_sitofp_half_vec(<3 x i16> %i) {
 
 define i1 @i16_cast_cmp_slt_int_0_sitofp_half(i16 %i) {
 ; CHECK-LABEL: @i16_cast_cmp_slt_int_0_sitofp_half(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[I:%.*]] to half
-; CHECK-NEXT:    [[B:%.*]] = bitcast half [[F]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[I:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i16 %i to half
@@ -1394,9 +1344,7 @@ define <3 x i1> @i16_cast_cmp_slt_int_1_sitofp_half_vec(<3 x i16> %i) {
 
 define i1 @i16_cast_cmp_sgt_int_m1_sitofp_half(i16 %i) {
 ; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_half(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[I:%.*]] to half
-; CHECK-NEXT:    [[B:%.*]] = bitcast half [[F]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[B]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[I:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i16 %i to half
@@ -1407,9 +1355,7 @@ define i1 @i16_cast_cmp_sgt_int_m1_sitofp_half(i16 %i) {
 
 define <3 x i1> @i16_cast_cmp_sgt_int_m1_sitofp_half_vec(<3 x i16> %i) {
 ; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_half_vec(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i16> [[I:%.*]] to <3 x half>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x half> [[F]] to <3 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[B]], <i16 -1, i16 undef, i16 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[I:%.*]], <i16 -1, i16 -1, i16 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i16> %i to  <3 x half>
