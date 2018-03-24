@@ -573,6 +573,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
         LanguageType class_language = eLanguageTypeUnknown;
         bool is_complete_objc_class = false;
+        size_t calling_convention 
+                = llvm::dwarf::CallingConvention::DW_CC_normal;
+        
         // bool struct_is_class = false;
         const size_t num_attributes = die.GetAttributes(attributes);
         if (num_attributes > 0) {
@@ -628,7 +631,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               case DW_AT_APPLE_objc_complete_type:
                 is_complete_objc_class = form_value.Signed();
                 break;
-
+              case DW_AT_calling_convention:
+                calling_convention = form_value.Unsigned();
+                break;
+                
               case DW_AT_allocated:
               case DW_AT_associated:
               case DW_AT_data_location:
@@ -884,7 +890,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                                                 class_language, &metadata);
           }
         }
-
+        
         // Store a forward declaration to this class type in case any
         // parameters in any class methods need it for the clang
         // types for function prototypes.
@@ -997,6 +1003,20 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
           }
         }
+        
+        // If we made a clang type, set the trivial abi if applicable:
+        // We only do this for pass by value - which implies the Trivial ABI.
+        // There isn't a way to assert that something that would normally be
+        // pass by value is pass by reference, so we ignore that attribute if
+        // set.
+        if (calling_convention == llvm::dwarf::DW_CC_pass_by_value) {
+          clang::CXXRecordDecl *record_decl =
+                  m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
+          if (record_decl) {
+            record_decl->setHasTrivialSpecialMemberForCall();
+          }
+        }
+
       } break;
 
       case DW_TAG_enumeration_type: {

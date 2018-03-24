@@ -28,7 +28,6 @@ module LLVM_Backend {
     textual header "CodeGen/CommandFlags.def"
     textual header "CodeGen/DIEValue.def"
     textual header "CodeGen/RuntimeLibcalls.def"
-    textual header "CodeGen/TargetOpcodes.def"
   }
 
   module Target {
@@ -303,6 +302,7 @@ module LLVM_Utils {
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"
     textual header "Support/AArch64TargetParser.def"
+    textual header "Support/TargetOpcodes.def"
     textual header "Support/X86TargetParser.def"
   }
 

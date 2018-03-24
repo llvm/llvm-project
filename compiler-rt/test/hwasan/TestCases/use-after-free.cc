@@ -32,7 +32,7 @@ int main() {
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:16
 
   // CHECK: previously allocated here:
-  // CHECK: #0 {{.*}} in __interceptor_malloc {{.*}}hwasan_interceptors.cc
+  // CHECK: #0 {{.*}} in {{.*}}malloc {{.*}}hwasan_interceptors.cc
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:15
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main

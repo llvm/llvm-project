@@ -17,8 +17,8 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 

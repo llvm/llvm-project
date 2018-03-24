@@ -6,12 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements methods in the CodeGen/ValueTypes.h header.
-//
-//===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/ValueTypes.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"

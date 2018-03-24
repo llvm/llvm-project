@@ -143,6 +143,14 @@ void PrintWarning(uptr pc, uptr bp) {
   ReportInvalidAccess(&stack, 0);
 }
 
+static void HWAsanCheckFailed(const char *file, int line, const char *cond,
+                              u64 v1, u64 v2) {
+  Report("HWAddressSanitizer CHECK failed: %s:%d \"%s\" (0x%zx, 0x%zx)\n", file,
+         line, cond, (uptr)v1, (uptr)v2);
+  PRINT_CURRENT_STACK_CHECK();
+  Die();
+}
+
 } // namespace __hwasan
 
 // Interface.
@@ -159,6 +167,9 @@ void __hwasan_init() {
 
   CacheBinaryName();
   InitializeFlags();
+
+  // Install tool-specific callbacks in sanitizer_common.
+  SetCheckFailedCallback(HWAsanCheckFailed);
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
@@ -240,11 +251,23 @@ void __sanitizer_unaligned_store64(uu64 *p, u64 x) {
 
 template<unsigned X>
 __attribute__((always_inline))
-static void SigTrap() {
+static void SigTrap(uptr p) {
 #if defined(__aarch64__)
-  asm("brk %0\n\t" ::"n"(X));
-#elif defined(__x86_64__) || defined(__i386__)
-  asm("ud2\n\t");
+  (void)p;
+  // 0x900 is added to do not interfere with the kernel use of lower values of
+  // brk immediate.
+  // FIXME: Add a constraint to put the pointer into x0, the same as x86 branch.
+  asm("brk %0\n\t" ::"n"(0x900 + X));
+#elif defined(__x86_64__)
+  // INT3 + NOP DWORD ptr [EAX + X] to pass X to our signal handler, 5 bytes
+  // total. The pointer is passed via rdi.
+  // 0x40 is added as a safeguard, to help distinguish our trap from others and
+  // to avoid 0 offsets in the command (otherwise it'll be reduced to a
+  // different nop command, the three bytes one).
+  asm volatile(
+      "int3\n"
+      "nopl %c0(%%rax)\n"
+      :: "n"(0x40 + X), "D"(p));
 #else
   // FIXME: not always sigill.
   __builtin_trap();
@@ -261,8 +284,8 @@ __attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
   uptr ptr_raw = p & ~kAddressTagMask;
   tag_t mem_tag = *(tag_t *)MEM_TO_SHADOW(ptr_raw);
   if (UNLIKELY(ptr_tag != mem_tag)) {
-    SigTrap<0x900 + 0x20 * (EA == ErrorAction::Recover) +
-           0x10 * (AT == AccessType::Store) + LogSize>();
+    SigTrap<0x20 * (EA == ErrorAction::Recover) +
+           0x10 * (AT == AccessType::Store) + LogSize>(p);
     if (EA == ErrorAction::Abort) __builtin_unreachable();
   }
 }
@@ -277,8 +300,8 @@ __attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
   tag_t *shadow_last = (tag_t *)MEM_TO_SHADOW(ptr_raw + sz - 1);
   for (tag_t *t = shadow_first; t <= shadow_last; ++t)
     if (UNLIKELY(ptr_tag != *t)) {
-      SigTrap<0x900 + 0x20 * (EA == ErrorAction::Recover) +
-             0x10 * (AT == AccessType::Store) + 0xf>();
+      SigTrap<0x20 * (EA == ErrorAction::Recover) +
+             0x10 * (AT == AccessType::Store) + 0xf>(p);
       if (EA == ErrorAction::Abort) __builtin_unreachable();
     }
 }

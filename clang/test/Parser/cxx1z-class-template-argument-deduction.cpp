@@ -137,7 +137,6 @@ namespace expr {
     (void)A{n};
     (void)new A(n);
     (void)new A{n};
-    // FIXME: We should diagnose the lack of an initializer here.
     (void)new A;
   }
 }
@@ -150,7 +149,7 @@ namespace decl {
 
   auto k() -> A; // expected-error{{requires template arguments}}
 
-  A a; // expected-error {{declaration of variable 'a' with deduced type 'A' requires an initializer}}
+  A a;
   A b = 0;
   const A c = 0;
   A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}

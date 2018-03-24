@@ -1156,24 +1156,29 @@ public:
       : __impl(in_place_index<_Ip>, _VSTD::forward<_Arg>(__arg)) {}
 
   template <size_t _Ip, class... _Args,
-            enable_if_t<(_Ip < sizeof...(_Types)), size_t> _Ip2 = _Ip,
-            class _Tp = variant_alternative_t<_Ip2, variant<_Types...>>,
-            enable_if_t<is_constructible<_Tp, _Args...>::value, int> = 0>
+            class = enable_if_t<(_Ip < sizeof...(_Types)), int>,
+            class _Tp = variant_alternative_t<_Ip, variant<_Types...>>,
+            enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
   inline _LIBCPP_INLINE_VISIBILITY
-  explicit constexpr variant(in_place_index_t<_Ip>,
-                             _Args&&... __args)
-        noexcept(is_nothrow_constructible_v<_Tp, _Args...>)
+  explicit constexpr variant(
+      in_place_index_t<_Ip>,
+      _Args&&... __args) noexcept(is_nothrow_constructible_v<_Tp, _Args...>)
       : __impl(in_place_index<_Ip>, _VSTD::forward<_Args>(__args)...) {}
 
-  template <size_t _Ip, class _Up, class... _Args,
-      enable_if_t<(_Ip < sizeof...(_Types)), size_t> _Ip2 = _Ip,
-      class _Tp = variant_alternative_t<_Ip2, variant<_Types...>>,
+  template <
+      size_t _Ip,
+      class _Up,
+      class... _Args,
+      enable_if_t<(_Ip < sizeof...(_Types)), int> = 0,
+      class _Tp = variant_alternative_t<_Ip, variant<_Types...>>,
       enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>,
                   int> = 0>
   inline _LIBCPP_INLINE_VISIBILITY
-  explicit constexpr variant(in_place_index_t<_Ip>, initializer_list<_Up> __il,
-                             _Args&&... __args)
-        noexcept(is_nothrow_constructible_v<_Tp, initializer_list<_Up>&, _Args...>)
+  explicit constexpr variant(
+      in_place_index_t<_Ip>,
+      initializer_list<_Up> __il,
+      _Args&&... __args) noexcept(
+      is_nothrow_constructible_v<_Tp, initializer_list<_Up>&, _Args...>)
       : __impl(in_place_index<_Ip>, __il, _VSTD::forward<_Args>(__args)...) {}
 
   template <

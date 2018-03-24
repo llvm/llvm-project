@@ -15,7 +15,6 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
-#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/IR/ValueTypes.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;

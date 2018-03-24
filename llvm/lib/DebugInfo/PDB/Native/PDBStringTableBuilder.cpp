@@ -23,6 +23,21 @@ using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace llvm::pdb;
 
+StringTableHashTraits::StringTableHashTraits(PDBStringTableBuilder &Table)
+    : Table(&Table) {}
+
+uint32_t StringTableHashTraits::hashLookupKey(StringRef S) const {
+  return Table->getIdForString(S);
+}
+
+StringRef StringTableHashTraits::storageKeyToLookupKey(uint32_t Offset) const {
+  return Table->getStringForId(Offset);
+}
+
+uint32_t StringTableHashTraits::lookupKeyToStorageKey(StringRef S) {
+  return Table->insert(S);
+}
+
 uint32_t PDBStringTableBuilder::insert(StringRef S) {
   return Strings.insert(S);
 }

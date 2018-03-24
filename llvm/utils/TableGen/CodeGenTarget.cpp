@@ -351,7 +351,7 @@ GetInstByName(const char *Name,
 
 static const char *const FixedInstrs[] = {
 #define HANDLE_TARGET_OPCODE(OPC) #OPC,
-#include "llvm/CodeGen/TargetOpcodes.def"
+#include "llvm/Support/TargetOpcodes.def"
     nullptr};
 
 unsigned CodeGenTarget::getNumFixedInstructions() {

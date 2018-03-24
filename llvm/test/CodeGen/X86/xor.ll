@@ -167,6 +167,8 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ;
 ; X64-WIN-LABEL: test5:
 ; X64-WIN:       # %bb.0: # %entry
+; X64-WIN-NEXT:    # kill: def $dx killed $dx def $edx
+; X64-WIN-NEXT:    # kill: def $cx killed $cx def $ecx
 ; X64-WIN-NEXT:    .p2align 4, 0x90
 ; X64-WIN-NEXT:  .LBB4_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -427,7 +429,8 @@ define i32 @PR17487(i1 %tobool) {
 ;
 ; X64-WIN-LABEL: PR17487:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    movd %ecx, %xmm0
+; X64-WIN-NEXT:    movzbl %cl, %eax
+; X64-WIN-NEXT:    movd %eax, %xmm0
 ; X64-WIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-WIN-NEXT:    pandn __xmm@{{.*}}(%rip), %xmm0
 ; X64-WIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
