@@ -9,11 +9,12 @@
 #
 #===------------------------------------------------------------------------===#
 
+from __future__ import print_function
+
 import argparse
 import os
 import re
 import sys
-
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new entry
 # and 'False' if the entry already existed.
@@ -30,7 +31,7 @@ def adapt_cmake(module_path, check_name_camel):
       return False
 
   print('Updating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     cpp_found = False
     file_added = False
     for line in lines:
@@ -50,7 +51,7 @@ def write_header(module_path, module, check_name, check_name_camel):
   check_name_dashes = module + '-' + check_name
   filename = os.path.join(module_path, check_name_camel) + '.h'
   print('Creating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     header_guard = ('LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_' + module.upper() + '_'
                     + check_name_camel.upper() + '_H')
     f.write('//===--- ')
@@ -103,7 +104,7 @@ public:
 def write_implementation(module_path, module, check_name_camel):
   filename = os.path.join(module_path, check_name_camel) + '.cpp'
   print('Creating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     f.write('//===--- ')
     f.write(os.path.basename(filename))
     f.write(' - clang-tidy')
@@ -152,14 +153,15 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
 
 # Modifies the module to include the new check.
 def adapt_module(module_path, module, check_name, check_name_camel):
-  modulecpp = filter(lambda p: p.lower() == module.lower() + 'tidymodule.cpp',
-                     os.listdir(module_path))[0]
+  modulecpp = list(filter(
+      lambda p: p.lower() == module.lower() + 'tidymodule.cpp',
+      os.listdir(module_path)))[0]
   filename = os.path.join(module_path, modulecpp)
   with open(filename, 'r') as f:
     lines = f.readlines()
 
   print('Updating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     header_added = False
     header_found = False
     check_added = False
@@ -199,7 +201,7 @@ def add_release_notes(module_path, module, check_name):
     lines = f.readlines()
 
   print('Updating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     note_added = False
     header_found = False
 
@@ -227,7 +229,7 @@ def write_test(module_path, module, check_name, test_extension):
   filename = os.path.normpath(os.path.join(module_path, '../../test/clang-tidy',
                                            check_name_dashes + '.' + test_extension))
   print('Creating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     f.write("""// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t
 
 // FIXME: Add something that triggers the check here.
@@ -251,8 +253,8 @@ def update_checks_list(clang_tidy_path):
   filename = os.path.normpath(os.path.join(docs_dir, 'list.rst'))
   with open(filename, 'r') as f:
     lines = f.readlines()
-  doc_files = filter(lambda s: s.endswith('.rst') and s != 'list.rst',
-                     os.listdir(docs_dir))
+  doc_files = list(filter(lambda s: s.endswith('.rst') and s != 'list.rst',
+                     os.listdir(docs_dir)))
   doc_files.sort()
 
   def format_link(doc_file):
@@ -275,7 +277,7 @@ def update_checks_list(clang_tidy_path):
   checks = map(format_link, doc_files)
 
   print('Updating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     for line in lines:
       f.write(line)
       if line.startswith('.. toctree::'):
@@ -289,7 +291,7 @@ def write_docs(module_path, module, check_name):
   filename = os.path.normpath(os.path.join(
       module_path, '../../docs/clang-tidy/checks/', check_name_dashes + '.rst'))
   print('Creating %s...' % filename)
-  with open(filename, 'wb') as f:
+  with open(filename, 'w') as f:
     f.write(""".. title:: clang-tidy - %(check_name_dashes)s
 
 %(check_name_dashes)s
@@ -333,7 +335,7 @@ def main():
     return
 
   if not args.module or not args.check:
-    print 'Module and check must be specified.'
+    print('Module and check must be specified.')
     parser.print_usage()
     return
 
@@ -341,8 +343,8 @@ def main():
   check_name = args.check
 
   if check_name.startswith(module):
-    print 'Check name "%s" must not start with the module "%s". Exiting.' % (
-        check_name, module)
+    print('Check name "%s" must not start with the module "%s". Exiting.' % (
+        check_name, module))
     return
   check_name_camel = ''.join(map(lambda elem: elem.capitalize(),
                                  check_name.split('-'))) + 'Check'

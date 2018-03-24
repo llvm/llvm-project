@@ -223,8 +223,8 @@ unsigned RetireControlUnit::reserveSlot(unsigned Index, unsigned NumMicroOps) {
   return TokenID;
 }
 
-void DispatchUnit::notifyInstructionDispatched(
-    unsigned Index, ArrayRef<unsigned> UsedRegs) {
+void DispatchUnit::notifyInstructionDispatched(unsigned Index,
+                                               ArrayRef<unsigned> UsedRegs) {
   DEBUG(dbgs() << "[E] Instruction Dispatched: " << Index << '\n');
   Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(Index, UsedRegs));
 }
@@ -389,5 +389,4 @@ void DispatchUnit::dump() const {
   RCU->dump();
 }
 #endif
-
 } // namespace mca

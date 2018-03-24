@@ -418,9 +418,9 @@ class Scheduler {
   std::map<unsigned, Instruction *> ReadyQueue;
   std::map<unsigned, Instruction *> IssuedQueue;
 
-  void notifyInstructionIssued(
-      unsigned Index,
-      llvm::ArrayRef<std::pair<ResourceRef, double>> Used);
+  void
+  notifyInstructionIssued(unsigned Index,
+                          llvm::ArrayRef<std::pair<ResourceRef, double>> Used);
   void notifyInstructionExecuted(unsigned Index);
   void notifyInstructionReady(unsigned Index);
   void notifyResourceAvailable(const ResourceRef &RR);

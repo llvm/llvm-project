@@ -173,7 +173,6 @@ public:
     printAverageWaitTimes(OS);
   }
 };
-
 } // namespace mca
 
 #endif

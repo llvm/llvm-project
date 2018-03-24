@@ -433,7 +433,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
 // Sort recorded regions by pressure - highest at the front
 void GCNIterativeScheduler::sortRegionsByPressure(unsigned TargetOcc) {
   const auto &ST = MF.getSubtarget<SISubtarget>();
-  std::sort(Regions.begin(), Regions.end(),
+  llvm::sort(Regions.begin(), Regions.end(),
     [&ST, TargetOcc](const Region *R1, const Region *R2) {
     return R2->MaxPressure.less(ST, R1->MaxPressure, TargetOcc);
   });

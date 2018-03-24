@@ -17,5 +17,4 @@
 namespace mca {
 
 void View::anchor() {}
-
 } // namespace mca

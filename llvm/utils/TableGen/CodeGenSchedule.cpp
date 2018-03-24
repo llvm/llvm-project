@@ -95,9 +95,10 @@ struct InstRegexOp : public SetTheory::Operator {
 
       Optional<Regex> Regexpr = None;
       StringRef Prefix = Original.substr(0, FirstMeta);
-      std::string pat = Original.substr(FirstMeta);
-      if (!pat.empty()) {
+      StringRef PatStr = Original.substr(FirstMeta);
+      if (!PatStr.empty()) {
         // For the rest use a python-style prefix match.
+        std::string pat = PatStr;
         if (pat[0] != '^') {
           pat.insert(0, "^(");
           pat.insert(pat.end(), ')');

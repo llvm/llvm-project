@@ -4506,7 +4506,16 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
         return New;
   }
 
+  // Sign-bit checks are preserved through signed floating-point casts:
+  // icmp slt (bitcast (sitofp X)),  0 --> icmp slt X,  0
+  // icmp sgt (bitcast (sitofp X)), -1 --> icmp sgt X, -1
   Value *X;
+  if (match(Op0, m_BitCast(m_SIToFP(m_Value(X))))) {
+    if (Pred == ICmpInst::ICMP_SLT && match(Op1, m_Zero()))
+      return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
+    if (Pred == ICmpInst::ICMP_SGT && match(Op1, m_AllOnes()))
+      return new ICmpInst(Pred, X, ConstantInt::getAllOnesValue(X->getType()));
+  }
 
   // Zero-equality checks are preserved through unsigned floating-point casts:
   // icmp eq (bitcast (uitofp X)), 0 --> icmp eq X, 0

@@ -342,7 +342,8 @@ int main(int argc, char **argv) {
     Printer->addView(llvm::make_unique<mca::BackendStatistics>(*STI));
 
   if (PrintResourcePressureView)
-    Printer->addView(llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
+    Printer->addView(
+        llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
 
   if (PrintTimelineView) {
     Printer->addView(llvm::make_unique<mca::TimelineView>(

@@ -29,6 +29,10 @@
 // Similar code is used in Google Perftools,
 // https://github.com/gperftools/gperftools.
 
+namespace __sanitizer {
+extern malloc_zone_t sanitizer_zone;
+}
+
 INTERCEPTOR(malloc_zone_t *, malloc_create_zone,
                              vm_size_t start_size, unsigned zone_flags) {
   COMMON_MALLOC_ENTER();

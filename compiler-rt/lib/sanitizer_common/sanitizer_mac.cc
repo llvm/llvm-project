@@ -344,9 +344,9 @@ uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);
 }
 
-extern unsigned malloc_num_zones;
-extern malloc_zone_t **malloc_zones;
-static malloc_zone_t sanitizer_zone;
+extern "C" unsigned malloc_num_zones;
+extern "C" malloc_zone_t **malloc_zones;
+malloc_zone_t sanitizer_zone;
 
 // We need to make sure that sanitizer_zone is registered as malloc_zones[0]. If
 // libmalloc tries to set up a different zone as malloc_zones[0], it will call
