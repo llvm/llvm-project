@@ -258,6 +258,8 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
+  if (UNLIKELY(!hwasan_init_is_running))
+    ENSURE_HWASAN_INITED();
   if (UNLIKELY(!hwasan_inited))
     // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
     return AllocateFromLocalPool(size);

@@ -70,8 +70,8 @@ struct HwasanMapUnmapCallback {
   }
 };
 
-#if !defined(__aarch64__)
-#error unsupported platform
+#if !defined(__aarch64__) && !defined(__x86_64__)
+#error Unsupported platform
 #endif
 
 static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
