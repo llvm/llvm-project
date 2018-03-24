@@ -55,6 +55,8 @@ static cl::opt<int> MaxHSDR("max-hsdr", cl::Hidden, cl::init(-1),
     cl::desc("Maximum number of split partitions"));
 static cl::opt<bool> MemRefsFixed("hsdr-no-mem", cl::Hidden, cl::init(true),
     cl::desc("Do not split loads or stores"));
+  static cl::opt<bool> SplitAll("hsdr-split-all", cl::Hidden, cl::init(false),
+      cl::desc("Split all partitions"));
 
 namespace {
 
@@ -97,6 +99,7 @@ namespace {
     bool isFixedInstr(const MachineInstr *MI) const;
     void partitionRegisters(UUSetMap &P2Rs);
     int32_t profit(const MachineInstr *MI) const;
+    int32_t profit(unsigned Reg) const;
     bool isProfitable(const USet &Part, LoopRegMap &IRM) const;
 
     void collectIndRegsForLoop(const MachineLoop *L, USet &Rs);
@@ -306,13 +309,10 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
 
 static inline int32_t profitImm(unsigned Lo, unsigned Hi) {
   int32_t P = 0;
-  bool LoZ1 = false, HiZ1 = false;
   if (Lo == 0 || Lo == 0xFFFFFFFF)
-    P += 10, LoZ1 = true;
+    P += 10;
   if (Hi == 0 || Hi == 0xFFFFFFFF)
-    P += 10, HiZ1 = true;
-  if (!LoZ1 && !HiZ1 && Lo == Hi)
-    P += 3;
+    P += 10;
   return P;
 }
 
@@ -368,8 +368,11 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
 
     case Hexagon::A2_andp:
     case Hexagon::A2_orp:
-    case Hexagon::A2_xorp:
-      return 1;
+    case Hexagon::A2_xorp: {
+      unsigned Rs = MI->getOperand(1).getReg();
+      unsigned Rt = MI->getOperand(2).getReg();
+      return profit(Rs) + profit(Rt);
+    }
 
     case Hexagon::S2_asl_i_p_or: {
       unsigned S = MI->getOperand(3).getImm();
@@ -390,6 +393,25 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
       return -10;
   }
 
+  return 0;
+}
+
+int32_t HexagonSplitDoubleRegs::profit(unsigned Reg) const {
+  assert(TargetRegisterInfo::isVirtualRegister(Reg));
+
+  const MachineInstr *DefI = MRI->getVRegDef(Reg);
+  switch (DefI->getOpcode()) {
+    case Hexagon::A2_tfrpi:
+    case Hexagon::CONST64:
+    case Hexagon::A2_combineii:
+    case Hexagon::A4_combineii:
+    case Hexagon::A4_combineri:
+    case Hexagon::A4_combineir:
+    case Hexagon::A2_combinew:
+      return profit(DefI);
+    default:
+      break;
+  }
   return 0;
 }
 
@@ -443,6 +465,8 @@ bool HexagonSplitDoubleRegs::isProfitable(const USet &Part, LoopRegMap &IRM)
     TotalP -= 20*LoopPhiNum;
 
   DEBUG(dbgs() << "Partition profit: " << TotalP << '\n');
+  if (SplitAll)
+    return true;
   return TotalP > 0;
 }
 
@@ -1160,11 +1184,11 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
 }
 
 bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "Splitting double registers in function: "
-        << MF.getName() << '\n');
-
   if (skipFunction(MF.getFunction()))
     return false;
+
+  DEBUG(dbgs() << "Splitting double registers in function: "
+        << MF.getName() << '\n');
 
   auto &ST = MF.getSubtarget<HexagonSubtarget>();
   TRI = ST.getRegisterInfo();

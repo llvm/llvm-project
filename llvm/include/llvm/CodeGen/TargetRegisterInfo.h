@@ -21,11 +21,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include <cassert>
@@ -443,6 +443,13 @@ public:
         return true;
     return false;
   }
+
+  /// Returns the original SrcReg unless it is the target of a copy-like
+  /// operation, in which case we chain backwards through all such operations
+  /// to the ultimate source register.  If a physical register is encountered,
+  /// we stop the search.
+  virtual unsigned lookThruCopyLike(unsigned SrcReg,
+                                    const MachineRegisterInfo *MRI) const;
 
   /// Return a null-terminated list of all of the callee-saved registers on
   /// this target. The register should be in the order of desired callee-save

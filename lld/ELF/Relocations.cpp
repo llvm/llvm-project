@@ -1343,7 +1343,7 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
         for (InputSection *IS : ISD->Sections)
           for (Relocation &Rel : IS->Relocations) {
-            uint64_t Src = OS->Addr + IS->OutSecOff + Rel.Offset;
+            uint64_t Src = IS->getVA(Rel.Offset);
 
             // If we are a relocation to an existing Thunk, check if it is
             // still in range. If not then Rel will be altered to point to its

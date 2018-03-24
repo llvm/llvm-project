@@ -1507,9 +1507,9 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
 
 Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
-
-  if (Value *V = SimplifyGEPInst(GEP.getSourceElementType(), Ops,
-                                 SQ.getWithInstruction(&GEP)))
+  Type *GEPType = GEP.getType();
+  Type *GEPEltType = GEP.getSourceElementType();
+  if (Value *V = SimplifyGEPInst(GEPEltType, Ops, SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
   Value *PtrOp = GEP.getOperand(0);
@@ -1557,8 +1557,8 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return &GEP;
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
-  if (PHINode *PN = dyn_cast<PHINode>(PtrOp)) {
-    GetElementPtrInst *Op1 = dyn_cast<GetElementPtrInst>(PN->getOperand(0));
+  if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
+    auto *Op1 = dyn_cast<GetElementPtrInst>(PN->getOperand(0));
     if (!Op1)
       return nullptr;
 
@@ -1574,7 +1574,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     int DI = -1;
 
     for (auto I = PN->op_begin()+1, E = PN->op_end(); I !=E; ++I) {
-      GetElementPtrInst *Op2 = dyn_cast<GetElementPtrInst>(*I);
+      auto *Op2 = dyn_cast<GetElementPtrInst>(*I);
       if (!Op2 || Op1->getNumOperands() != Op2->getNumOperands())
         return nullptr;
 
@@ -1616,7 +1616,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         if (J > 0) {
           if (J == 1) {
             CurTy = Op1->getSourceElementType();
-          } else if (CompositeType *CT = dyn_cast<CompositeType>(CurTy)) {
+          } else if (auto *CT = dyn_cast<CompositeType>(CurTy)) {
             CurTy = CT->getTypeAtIndex(Op1->getOperand(J));
           } else {
             CurTy = nullptr;
@@ -1631,7 +1631,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (DI != -1 && !PN->hasOneUse())
       return nullptr;
 
-    GetElementPtrInst *NewGEP = cast<GetElementPtrInst>(Op1->clone());
+    auto *NewGEP = cast<GetElementPtrInst>(Op1->clone());
     if (DI == -1) {
       // All the GEPs feeding the PHI are identical. Clone one down into our
       // BB so that it can be merged with the current GEP.
@@ -1666,15 +1666,14 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // Combine Indices - If the source pointer to this getelementptr instruction
   // is a getelementptr instruction, combine the indices of the two
   // getelementptr instructions into a single instruction.
-  if (GEPOperator *Src = dyn_cast<GEPOperator>(PtrOp)) {
+  if (auto *Src = dyn_cast<GEPOperator>(PtrOp)) {
     if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
       return nullptr;
 
     // Note that if our source is a gep chain itself then we wait for that
     // chain to be resolved before we perform this transformation.  This
     // avoids us creating a TON of code in some cases.
-    if (GEPOperator *SrcGEP =
-          dyn_cast<GEPOperator>(Src->getOperand(0)))
+    if (auto *SrcGEP = dyn_cast<GEPOperator>(Src->getOperand(0)))
       if (SrcGEP->getNumOperands() == 2 && shouldMergeGEPs(*Src, *SrcGEP))
         return nullptr;   // Wait until our source is folded to completion.
 
@@ -1738,8 +1737,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {
-      Type *Ty = GEP.getSourceElementType();
-      uint64_t TyAllocSize = DL.getTypeAllocSize(Ty);
+      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType);
 
       bool Matched = false;
       uint64_t C;
@@ -1766,22 +1764,20 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           Operator *Index = cast<Operator>(V);
           Value *PtrToInt = Builder.CreatePtrToInt(PtrOp, Index->getType());
           Value *NewSub = Builder.CreateSub(PtrToInt, Index->getOperand(1));
-          return CastInst::Create(Instruction::IntToPtr, NewSub, GEP.getType());
+          return CastInst::Create(Instruction::IntToPtr, NewSub, GEPType);
         }
         // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X))
         // to (bitcast Y)
         Value *Y;
         if (match(V, m_Sub(m_PtrToInt(m_Value(Y)),
-                           m_PtrToInt(m_Specific(GEP.getOperand(0)))))) {
-          return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y,
-                                                               GEP.getType());
-        }
+                           m_PtrToInt(m_Specific(GEP.getOperand(0))))))
+          return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
       }
     }
   }
 
   // We do not handle pointer-vector geps here.
-  if (GEP.getType()->isVectorTy())
+  if (GEPType->isVectorTy())
     return nullptr;
 
   // Handle gep(bitcast x) and gep(gep x, 0, 0, 0).
@@ -1790,7 +1786,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   if (StrippedPtr != PtrOp) {
     bool HasZeroPointerIndex = false;
-    if (ConstantInt *C = dyn_cast<ConstantInt>(GEP.getOperand(1)))
+    if (auto *C = dyn_cast<ConstantInt>(GEP.getOperand(1)))
       HasZeroPointerIndex = C->isZero();
 
     // Transform: GEP (bitcast [10 x i8]* X to [0 x i8]*), i32 0, ...
@@ -1801,8 +1797,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     //
     // This occurs when the program declares an array extern like "int X[];"
     if (HasZeroPointerIndex) {
-      if (ArrayType *CATy =
-          dyn_cast<ArrayType>(GEP.getSourceElementType())) {
+      if (auto *CATy = dyn_cast<ArrayType>(GEPEltType)) {
         // GEP (bitcast i8* X to [0 x i8]*), i32 0, ... ?
         if (CATy->getElementType() == StrippedPtrTy->getElementType()) {
           // -> GEP i8* X, ...
@@ -1818,11 +1813,10 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           // ->
           // %0 = GEP i8 addrspace(1)* X, ...
           // addrspacecast i8 addrspace(1)* %0 to i8*
-          return new AddrSpaceCastInst(Builder.Insert(Res), GEP.getType());
+          return new AddrSpaceCastInst(Builder.Insert(Res), GEPType);
         }
 
-        if (ArrayType *XATy =
-              dyn_cast<ArrayType>(StrippedPtrTy->getElementType())){
+        if (auto *XATy = dyn_cast<ArrayType>(StrippedPtrTy->getElementType())) {
           // GEP (bitcast [10 x i8]* X to [0 x i8]*), i32 0, ... ?
           if (CATy->getElementType() == XATy->getElementType()) {
             // -> GEP [10 x i8]* X, i32 0, ...
@@ -1850,7 +1844,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                       nullptr, StrippedPtr, Idx, GEP.getName())
                                 : Builder.CreateGEP(nullptr, StrippedPtr, Idx,
                                                     GEP.getName());
-            return new AddrSpaceCastInst(NewGEP, GEP.getType());
+            return new AddrSpaceCastInst(NewGEP, GEPType);
           }
         }
       }
@@ -1858,12 +1852,11 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // Transform things like:
       // %t = getelementptr i32* bitcast ([2 x i32]* %str to i32*), i32 %V
       // into:  %t1 = getelementptr [2 x i32]* %str, i32 0, i32 %V; bitcast
-      Type *SrcElTy = StrippedPtrTy->getElementType();
-      Type *ResElTy = GEP.getSourceElementType();
-      if (SrcElTy->isArrayTy() &&
-          DL.getTypeAllocSize(SrcElTy->getArrayElementType()) ==
-              DL.getTypeAllocSize(ResElTy)) {
-        Type *IdxType = DL.getIndexType(GEP.getType());
+      Type *SrcEltTy = StrippedPtrTy->getElementType();
+      if (SrcEltTy->isArrayTy() &&
+          DL.getTypeAllocSize(SrcEltTy->getArrayElementType()) ==
+              DL.getTypeAllocSize(GEPEltType)) {
+        Type *IdxType = DL.getIndexType(GEPType);
         Value *Idx[2] = { Constant::getNullValue(IdxType), GEP.getOperand(1) };
         Value *NewGEP =
             GEP.isInBounds()
@@ -1872,19 +1865,18 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                 : Builder.CreateGEP(nullptr, StrippedPtr, Idx, GEP.getName());
 
         // V and GEP are both pointer types --> BitCast
-        return CastInst::CreatePointerBitCastOrAddrSpaceCast(NewGEP,
-                                                             GEP.getType());
+        return CastInst::CreatePointerBitCastOrAddrSpaceCast(NewGEP, GEPType);
       }
 
       // Transform things like:
       // %V = mul i64 %N, 4
       // %t = getelementptr i8* bitcast (i32* %arr to i8*), i32 %V
       // into:  %t1 = getelementptr i32* %arr, i32 %N; bitcast
-      if (ResElTy->isSized() && SrcElTy->isSized()) {
+      if (GEPEltType->isSized() && SrcEltTy->isSized()) {
         // Check that changing the type amounts to dividing the index by a scale
         // factor.
-        uint64_t ResSize = DL.getTypeAllocSize(ResElTy);
-        uint64_t SrcSize = DL.getTypeAllocSize(SrcElTy);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
+        uint64_t SrcSize = DL.getTypeAllocSize(SrcEltTy);
         if (ResSize && SrcSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -1893,7 +1885,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           // Earlier transforms ensure that the index has the right type
           // according to Data Layout, which considerably simplifies the
           // logic by eliminating implicit casts.
-          assert(Idx->getType() == DL.getIndexType(GEP.getType()) &&
+          assert(Idx->getType() == DL.getIndexType(GEPType) &&
                  "Index type does not match the Data Layout preferences");
 
           bool NSW;
@@ -1910,7 +1902,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
             // The NewGEP must be pointer typed, so must the old one -> BitCast
             return CastInst::CreatePointerBitCastOrAddrSpaceCast(NewGEP,
-                                                                 GEP.getType());
+                                                                 GEPType);
           }
         }
       }
@@ -1919,12 +1911,13 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // getelementptr i8* bitcast ([100 x double]* X to i8*), i32 %tmp
       //   (where tmp = 8*tmp2) into:
       // getelementptr [100 x double]* %arr, i32 0, i32 %tmp2; bitcast
-      if (ResElTy->isSized() && SrcElTy->isSized() && SrcElTy->isArrayTy()) {
+      if (GEPEltType->isSized() && SrcEltTy->isSized() &&
+          SrcEltTy->isArrayTy()) {
         // Check that changing to the array element type amounts to dividing the
         // index by a scale factor.
-        uint64_t ResSize = DL.getTypeAllocSize(ResElTy);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
         uint64_t ArrayEltSize =
-            DL.getTypeAllocSize(SrcElTy->getArrayElementType());
+            DL.getTypeAllocSize(SrcEltTy->getArrayElementType());
         if (ResSize && ArrayEltSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -1933,7 +1926,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           // Earlier transforms ensure that the index has the right type
           // according to the Data Layout, which considerably simplifies
           // the logic by eliminating implicit casts.
-          assert(Idx->getType() == DL.getIndexType(GEP.getType()) &&
+          assert(Idx->getType() == DL.getIndexType(GEPType) &&
                  "Index type does not match the Data Layout preferences");
 
           bool NSW;
@@ -1941,17 +1934,17 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
             // Successfully decomposed Idx as NewIdx * Scale, form a new GEP.
             // If the multiplication NewIdx * Scale may overflow then the new
             // GEP may not be "inbounds".
-            Type *IndTy = DL.getIndexType(GEP.getType());
+            Type *IndTy = DL.getIndexType(GEPType);
             Value *Off[2] = {Constant::getNullValue(IndTy), NewIdx};
 
             Value *NewGEP = GEP.isInBounds() && NSW
                                 ? Builder.CreateInBoundsGEP(
-                                      SrcElTy, StrippedPtr, Off, GEP.getName())
-                                : Builder.CreateGEP(SrcElTy, StrippedPtr, Off,
+                                      SrcEltTy, StrippedPtr, Off, GEP.getName())
+                                : Builder.CreateGEP(SrcEltTy, StrippedPtr, Off,
                                                     GEP.getName());
             // The NewGEP must be pointer typed, so must the old one -> BitCast
             return CastInst::CreatePointerBitCastOrAddrSpaceCast(NewGEP,
-                                                                 GEP.getType());
+                                                                 GEPType);
           }
         }
       }
@@ -1961,12 +1954,12 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // addrspacecast between types is canonicalized as a bitcast, then an
   // addrspacecast. To take advantage of the below bitcast + struct GEP, look
   // through the addrspacecast.
-  if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(PtrOp)) {
+  if (auto *ASC = dyn_cast<AddrSpaceCastInst>(PtrOp)) {
     //   X = bitcast A addrspace(1)* to B addrspace(1)*
     //   Y = addrspacecast A addrspace(1)* to B addrspace(2)*
     //   Z = gep Y, <...constant indices...>
     // Into an addrspacecasted GEP of the struct.
-    if (BitCastInst *BC = dyn_cast<BitCastInst>(ASC->getOperand(0)))
+    if (auto *BC = dyn_cast<BitCastInst>(ASC->getOperand(0)))
       PtrOp = BC;
   }
 
@@ -1975,20 +1968,18 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   ///   Y = gep X, <...constant indices...>
   /// into a gep of the original struct.  This is important for SROA and alias
   /// analysis of unions.  If "A" is also a bitcast, wait for A/X to be merged.
-  if (BitCastInst *BCI = dyn_cast<BitCastInst>(PtrOp)) {
-    Value *Operand = BCI->getOperand(0);
-    PointerType *OpType = cast<PointerType>(Operand->getType());
-    unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEP.getType());
+  if (auto *BCI = dyn_cast<BitCastInst>(PtrOp)) {
+    Value *SrcOp = BCI->getOperand(0);
+    PointerType *SrcType = cast<PointerType>(BCI->getSrcTy());
+    unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEPType);
     APInt Offset(OffsetBits, 0);
-    if (!isa<BitCastInst>(Operand) &&
-        GEP.accumulateConstantOffset(DL, Offset)) {
-
+    if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset)) {
       // If this GEP instruction doesn't move the pointer, just replace the GEP
       // with a bitcast of the real input to the dest type.
       if (!Offset) {
         // If the bitcast is of an allocation, and the allocation will be
         // converted to match the type of the cast, don't touch this.
-        if (isa<AllocaInst>(Operand) || isAllocationFn(Operand, &TLI)) {
+        if (isa<AllocaInst>(SrcOp) || isAllocationFn(SrcOp, &TLI)) {
           // See if the bitcast simplifies, if so, don't nuke this GEP yet.
           if (Instruction *I = visitBitCast(*BCI)) {
             if (I != BCI) {
@@ -2000,28 +1991,28 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
         }
 
-        if (Operand->getType()->getPointerAddressSpace() != GEP.getAddressSpace())
-          return new AddrSpaceCastInst(Operand, GEP.getType());
-        return new BitCastInst(Operand, GEP.getType());
+        if (SrcType->getPointerAddressSpace() != GEP.getAddressSpace())
+          return new AddrSpaceCastInst(SrcOp, GEPType);
+        return new BitCastInst(SrcOp, GEPType);
       }
 
       // Otherwise, if the offset is non-zero, we need to find out if there is a
       // field at Offset in 'A's type.  If so, we can pull the cast through the
       // GEP.
       SmallVector<Value*, 8> NewIndices;
-      if (FindElementAtOffset(OpType, Offset.getSExtValue(), NewIndices)) {
+      if (FindElementAtOffset(SrcType, Offset.getSExtValue(), NewIndices)) {
         Value *NGEP =
             GEP.isInBounds()
-                ? Builder.CreateInBoundsGEP(nullptr, Operand, NewIndices)
-                : Builder.CreateGEP(nullptr, Operand, NewIndices);
+                ? Builder.CreateInBoundsGEP(nullptr, SrcOp, NewIndices)
+                : Builder.CreateGEP(nullptr, SrcOp, NewIndices);
 
-        if (NGEP->getType() == GEP.getType())
+        if (NGEP->getType() == GEPType)
           return replaceInstUsesWith(GEP, NGEP);
         NGEP->takeName(&GEP);
 
         if (NGEP->getType()->getPointerAddressSpace() != GEP.getAddressSpace())
-          return new AddrSpaceCastInst(NGEP, GEP.getType());
-        return new BitCastInst(NGEP, GEP.getType());
+          return new AddrSpaceCastInst(NGEP, GEPType);
+        return new BitCastInst(NGEP, GEPType);
       }
     }
   }

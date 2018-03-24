@@ -433,10 +433,11 @@ bool HexagonStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
     const MCInstrDesc &StD = TII->get(WOpc);
     MachineOperand &MR = FirstSt->getOperand(0);
     int64_t Off = FirstSt->getOperand(1).getImm();
-    MachineInstr *StI = BuildMI(*MF, DL, StD)
-                          .addReg(MR.getReg(), getKillRegState(MR.isKill()))
-                          .addImm(Off)
-                          .addImm(Val);
+    MachineInstr *StI =
+        BuildMI(*MF, DL, StD)
+            .addReg(MR.getReg(), getKillRegState(MR.isKill()), MR.getSubReg())
+            .addImm(Off)
+            .addImm(Val);
     StI->addMemOperand(*MF, NewM);
     NG.push_back(StI);
   } else {
@@ -455,10 +456,11 @@ bool HexagonStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
     const MCInstrDesc &StD = TII->get(WOpc);
     MachineOperand &MR = FirstSt->getOperand(0);
     int64_t Off = FirstSt->getOperand(1).getImm();
-    MachineInstr *StI = BuildMI(*MF, DL, StD)
-                          .addReg(MR.getReg(), getKillRegState(MR.isKill()))
-                          .addImm(Off)
-                          .addReg(VReg, RegState::Kill);
+    MachineInstr *StI =
+        BuildMI(*MF, DL, StD)
+            .addReg(MR.getReg(), getKillRegState(MR.isKill()), MR.getSubReg())
+            .addImm(Off)
+            .addReg(VReg, RegState::Kill);
     StI->addMemOperand(*MF, NewM);
     NG.push_back(StI);
   }

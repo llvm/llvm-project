@@ -73,5 +73,6 @@ Error InfoStreamBuilder::commit(const msf::MSFLayout &Layout,
     if (auto EC = Writer.writeEnum(E))
       return EC;
   }
+  assert(Writer.bytesRemaining() == 0);
   return Error::success();
 }

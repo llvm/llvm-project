@@ -3034,7 +3034,11 @@ SDValue X86TargetLowering::LowerFormalArguments(
             getv64i1Argument(VA, ArgLocs[++I], Chain, DAG, dl, Subtarget);
       } else {
         const TargetRegisterClass *RC;
-        if (RegVT == MVT::i32)
+        if (RegVT == MVT::i8)
+          RC = &X86::GR8RegClass;
+        else if (RegVT == MVT::i16)
+          RC = &X86::GR16RegClass;
+        else if (RegVT == MVT::i32)
           RC = &X86::GR32RegClass;
         else if (Is64Bit && RegVT == MVT::i64)
           RC = &X86::GR64RegClass;
@@ -38530,6 +38534,33 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Simplify PMULDQ and PMULUDQ operations.
+static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                        !DCI.isBeforeLegalizeOps());
+  APInt DemandedMask(APInt::getLowBitsSet(64, 32));
+
+  // PMULQDQ/PMULUDQ only uses lower 32 bits from each vector element.
+  KnownBits LHSKnown;
+  if (TLI.SimplifyDemandedBits(LHS, DemandedMask, LHSKnown, TLO)) {
+    DCI.CommitTargetLoweringOpt(TLO);
+    return SDValue(N, 0);
+  }
+
+  KnownBits RHSKnown;
+  if (TLI.SimplifyDemandedBits(RHS, DemandedMask, RHSKnown, TLO)) {
+    DCI.CommitTargetLoweringOpt(TLO);
+    return SDValue(N, 0);
+  }
+
+  return SDValue();
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -38651,6 +38682,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI, Subtarget);
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
+  case X86ISD::PMULDQ:
+  case X86ISD::PMULUDQ:     return combinePMULDQ(N, DAG, DCI);
   }
 
   return SDValue();

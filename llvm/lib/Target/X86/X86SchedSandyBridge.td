@@ -1683,7 +1683,7 @@ def SBWriteResGroup89_2 : SchedWriteRes<[SBPort0,SBPort23]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SBWriteResGroup89], (instregex "MMX_PMADDUBSWrm",
-                                            "MMX_PMADDWDirm"
+                                            "MMX_PMADDWDirm",
                                             "MMX_PMULHRSWrm",
                                             "MMX_PMULHUWirm",
                                             "MMX_PMULHWirm",

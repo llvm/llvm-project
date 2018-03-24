@@ -893,8 +893,14 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
       // Since we do not allow splitting EH-block with BlockColors in
       // canSplitPredecessors(), we can simply assign predecessor's color to
       // the new block.
-      if (!BlockColors.empty())
-        BlockColors[NewPred] = BlockColors[PredBB];
+      if (!BlockColors.empty()) {
+        // Grab a reference to the ColorVector to be inserted before getting the
+        // reference to the vector we are copying because inserting the new
+        // element in BlockColors might cause the map to be reallocated.
+        ColorVector &ColorsForNewBlock = BlockColors[NewPred];
+        ColorVector &ColorsForOldBlock = BlockColors[PredBB];
+        ColorsForNewBlock = ColorsForOldBlock;
+      }
     }
     PredBBs.remove(PredBB);
   }

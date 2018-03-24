@@ -77,3 +77,309 @@ define void @store_doubleword(%struct.c* %ctx, i32 %xor72, i64 %val) nounwind {
   store i64 %val, i64* %arrayidx86, align 8
   ret void
 }
+
+; Check that we combine a shift into the offset instead of using a narrower load
+; when we have a load followed by a trunc
+
+define i32 @load_doubleword_trunc_word(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_word:
+; CHECK: ldr x0, [x0, x1, lsl #3]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i32
+  ret i32 %trunc
+}
+
+define i16 @load_doubleword_trunc_halfword(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_halfword:
+; CHECK: ldr x0, [x0, x1, lsl #3]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i16
+  ret i16 %trunc
+}
+
+define i8 @load_doubleword_trunc_byte(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_byte:
+; CHECK: ldr x0, [x0, x1, lsl #3]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i8
+  ret i8 %trunc
+}
+
+define i16 @load_word_trunc_halfword(i32* %ptr, i64 %off) {
+entry:
+; CHECK-LABEL: load_word_trunc_halfword:
+; CHECK: ldr w0, [x0, x1, lsl #2]
+  %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+  %x = load i32, i32* %idx, align 8
+  %trunc = trunc i32 %x to i16
+  ret i16 %trunc
+}
+
+define i8 @load_word_trunc_byte(i32* %ptr, i64 %off) {
+; CHECK-LABEL: load_word_trunc_byte:
+; CHECK: ldr w0, [x0, x1, lsl #2]
+entry:
+ %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+ %x = load i32, i32* %idx, align 8
+ %trunc = trunc i32 %x to i8
+ ret i8 %trunc
+}
+
+define i8 @load_halfword_trunc_byte(i16* %ptr, i64 %off) {
+; CHECK-LABEL: load_halfword_trunc_byte:
+; CHECK: ldrh w0, [x0, x1, lsl #1]
+entry:
+ %idx = getelementptr inbounds i16, i16* %ptr, i64 %off
+ %x = load i16, i16* %idx, align 8
+ %trunc = trunc i16 %x to i8
+ ret i8 %trunc
+}
+
+; Check that we do use a narrower load, and so don't combine the shift, when
+; the loaded value is zero-extended.
+
+define i64 @load_doubleword_trunc_word_zext(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_word_zext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #3
+; CHECK: ldr w0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i32
+  %ext = zext i32 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_doubleword_trunc_halfword_zext(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_halfword_zext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #3
+; CHECK: ldrh w0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i16
+  %ext = zext i16 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_doubleword_trunc_byte_zext(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_byte_zext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #3
+; CHECK: ldrb w0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i8
+  %ext = zext i8 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_word_trunc_halfword_zext(i32* %ptr, i64 %off) {
+; CHECK-LABEL: load_word_trunc_halfword_zext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #2
+; CHECK: ldrh w0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+  %x = load i32, i32* %idx, align 8
+  %trunc = trunc i32 %x to i16
+  %ext = zext i16 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_word_trunc_byte_zext(i32* %ptr, i64 %off) {
+; CHECK-LABEL: load_word_trunc_byte_zext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #2
+; CHECK: ldrb w0, [x0, [[REG]]]
+entry:
+ %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+ %x = load i32, i32* %idx, align 8
+ %trunc = trunc i32 %x to i8
+ %ext = zext i8 %trunc to i64
+ ret i64 %ext
+}
+
+define i64 @load_halfword_trunc_byte_zext(i16* %ptr, i64 %off) {
+; CHECK-LABEL: load_halfword_trunc_byte_zext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #1
+; CHECK: ldrb w0, [x0, [[REG]]]
+entry:
+ %idx = getelementptr inbounds i16, i16* %ptr, i64 %off
+ %x = load i16, i16* %idx, align 8
+ %trunc = trunc i16 %x to i8
+ %ext = zext i8 %trunc to i64
+ ret i64 %ext
+}
+
+; Check that we do use a narrower load, and so don't combine the shift, when
+; the loaded value is sign-extended.
+
+define i64 @load_doubleword_trunc_word_sext(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_word_sext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #3
+; CHECK: ldrsw x0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i32
+  %ext = sext i32 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_doubleword_trunc_halfword_sext(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_halfword_sext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #3
+; CHECK: ldrsh x0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i16
+  %ext = sext i16 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_doubleword_trunc_byte_sext(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_byte_sext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #3
+; CHECK: ldrsb x0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i8
+  %ext = sext i8 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_word_trunc_halfword_sext(i32* %ptr, i64 %off) {
+; CHECK-LABEL: load_word_trunc_halfword_sext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #2
+; CHECK: ldrsh x0, [x0, [[REG]]]
+entry:
+  %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+  %x = load i32, i32* %idx, align 8
+  %trunc = trunc i32 %x to i16
+  %ext = sext i16 %trunc to i64
+  ret i64 %ext
+}
+
+define i64 @load_word_trunc_byte_sext(i32* %ptr, i64 %off) {
+; CHECK-LABEL: load_word_trunc_byte_sext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #2
+; CHECK: ldrsb x0, [x0, [[REG]]]
+entry:
+ %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+ %x = load i32, i32* %idx, align 8
+ %trunc = trunc i32 %x to i8
+ %ext = sext i8 %trunc to i64
+ ret i64 %ext
+}
+
+define i64 @load_halfword_trunc_byte_sext(i16* %ptr, i64 %off) {
+; CHECK-LABEL: load_halfword_trunc_byte_sext:
+; CHECK: lsl [[REG:x[0-9]+]], x1, #1
+; CHECK: ldrsb x0, [x0, [[REG]]]
+entry:
+ %idx = getelementptr inbounds i16, i16* %ptr, i64 %off
+ %x = load i16, i16* %idx, align 8
+ %trunc = trunc i16 %x to i8
+ %ext = sext i8 %trunc to i64
+ ret i64 %ext
+}
+
+; Check that we don't combine the shift, and so will use a narrower load, when
+; the shift is used more than once.
+
+define i32 @load_doubleword_trunc_word_reuse_shift(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_word_reuse_shift:
+; CHECK: lsl x[[REG1:[0-9]+]], x1, #3
+; CHECK: ldr w[[REG2:[0-9]+]], [x0, x[[REG1]]]
+; CHECL: add w0, w[[REG2]], w[[REG1]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i32
+  %lsl = shl i64 %off, 3
+  %lsl.trunc = trunc i64 %lsl to i32
+  %add = add i32 %trunc, %lsl.trunc
+  ret i32 %add
+}
+
+define i16 @load_doubleword_trunc_halfword_reuse_shift(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_halfword_reuse_shift:
+; CHECK: lsl x[[REG1:[0-9]+]], x1, #3
+; CHECK: ldrh w[[REG2:[0-9]+]], [x0, x[[REG1]]]
+; CHECK: add w0, w[[REG2]], w[[REG1]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i16
+  %lsl = shl i64 %off, 3
+  %lsl.trunc = trunc i64 %lsl to i16
+  %add = add i16 %trunc, %lsl.trunc
+  ret i16 %add
+}
+
+define i8 @load_doubleword_trunc_byte_reuse_shift(i64* %ptr, i64 %off) {
+; CHECK-LABEL: load_doubleword_trunc_byte_reuse_shift:
+; CHECK: lsl x[[REG1:[0-9]+]], x1, #3
+; CHECK: ldrb w[[REG2:[0-9]+]], [x0, x[[REG1]]]
+; CHECK: add w0, w[[REG2]], w[[REG1]]
+entry:
+  %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
+  %x = load i64, i64* %idx, align 8
+  %trunc = trunc i64 %x to i8
+  %lsl = shl i64 %off, 3
+  %lsl.trunc = trunc i64 %lsl to i8
+  %add = add i8 %trunc, %lsl.trunc
+  ret i8 %add
+}
+
+define i16 @load_word_trunc_halfword_reuse_shift(i32* %ptr, i64 %off) {
+entry:
+; CHECK-LABEL: load_word_trunc_halfword_reuse_shift:
+; CHECK: lsl x[[REG1:[0-9]+]], x1, #2
+; CHECK: ldrh w[[REG2:[0-9]+]], [x0, x[[REG1]]]
+; CHECK: add w0, w[[REG2]], w[[REG1]]
+  %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+  %x = load i32, i32* %idx, align 8
+  %trunc = trunc i32 %x to i16
+  %lsl = shl i64 %off, 2
+  %lsl.trunc = trunc i64 %lsl to i16
+  %add = add i16 %trunc, %lsl.trunc
+  ret i16 %add
+}
+
+define i8 @load_word_trunc_byte_reuse_shift(i32* %ptr, i64 %off) {
+; CHECK-LABEL: load_word_trunc_byte_reuse_shift:
+; CHECK: lsl x[[REG1:[0-9]+]], x1, #2
+; CHECK: ldrb w[[REG2:[0-9]+]], [x0, x[[REG1]]]
+; CHECK: add w0, w[[REG2]], w[[REG1]]
+entry:
+  %idx = getelementptr inbounds i32, i32* %ptr, i64 %off
+  %x = load i32, i32* %idx, align 8
+  %trunc = trunc i32 %x to i8
+  %lsl = shl i64 %off, 2
+  %lsl.trunc = trunc i64 %lsl to i8
+  %add = add i8 %trunc, %lsl.trunc
+  ret i8 %add
+}
+
+define i8 @load_halfword_trunc_byte_reuse_shift(i16* %ptr, i64 %off) {
+; CHECK-LABEL: load_halfword_trunc_byte_reuse_shift:
+; CHECK: lsl x[[REG1:[0-9]+]], x1, #1
+; CHECK: ldrb w[[REG2:[0-9]+]], [x0, x[[REG1]]]
+; CHECK: add w0, w[[REG2]], w[[REG1]]
+entry:
+  %idx = getelementptr inbounds i16, i16* %ptr, i64 %off
+  %x = load i16, i16* %idx, align 8
+  %trunc = trunc i16 %x to i8
+  %lsl = shl i64 %off, 1
+  %lsl.trunc = trunc i64 %lsl to i8
+  %add = add i8 %trunc, %lsl.trunc
+  ret i8 %add
+}

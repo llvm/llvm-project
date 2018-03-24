@@ -150,14 +150,14 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   PSH->finalizeBuckets(PSHZero);
   GSH->finalizeBuckets(GSHZero);
 
-  Expected<uint32_t> Idx = Msf.addStream(calculatePublicsHashStreamSize());
-  if (!Idx)
-    return Idx.takeError();
-  PSH->StreamIndex = *Idx;
-  Idx = Msf.addStream(calculateGlobalsHashStreamSize());
+  Expected<uint32_t> Idx = Msf.addStream(calculateGlobalsHashStreamSize());
   if (!Idx)
     return Idx.takeError();
   GSH->StreamIndex = *Idx;
+  Idx = Msf.addStream(calculatePublicsHashStreamSize());
+  if (!Idx)
+    return Idx.takeError();
+  PSH->StreamIndex = *Idx;
 
   uint32_t RecordBytes =
       GSH->calculateRecordByteSize() + PSH->calculateRecordByteSize();

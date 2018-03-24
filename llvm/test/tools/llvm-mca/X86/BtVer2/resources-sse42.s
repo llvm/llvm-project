@@ -58,13 +58,13 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT: 4.00    -      -      -      -      -      -     1.00    -      -      -      -      -      -     	crc32b	(%rax), %rcx
 # CHECK-NEXT:  -     4.00    -      -      -      -      -      -      -      -      -      -      -      -     	crc32q	%rax, %rcx
 # CHECK-NEXT: 4.00    -      -      -      -      -      -     1.00    -      -      -      -      -      -     	crc32q	(%rax), %rcx
-# CHECK-NEXT:  -      -      -      -      -     5.00   10.00  5.00    -      -      -      -      -      -     	pcmpestri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     5.00   10.00  6.00    -      -      -      -      -      -     	pcmpestri	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     5.00   10.00  5.00    -      -      -      -      -      -     	pcmpestrm	$1, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     5.00   10.00  6.00    -      -      -      -      -      -     	pcmpestrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     	pcmpistri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00   1.00    -      -      -      -      -      -     	pcmpistri	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     	pcmpistrm	$1, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00   1.00    -      -      -      -      -      -     	pcmpistrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -     	pcmpgtq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00   2.00    -     2.00    -     6.00   4.00    -     	pcmpestri	$1, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00   3.00    -     2.00    -     6.00   4.00    -     	pcmpestri	$1, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00   2.00    -     2.00    -     6.00   4.00    -     	pcmpestrm	$1, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00   3.00    -     2.00    -     6.00   4.00    -     	pcmpestrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -      -      -      -      -     2.00    -     	pcmpistri	$1, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00   1.00    -      -      -      -     2.00    -     	pcmpistri	$1, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -      -      -      -      -     2.00    -     	pcmpistrm	$1, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00   1.00    -      -      -      -     2.00    -     	pcmpistrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -     	pcmpgtq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -     1.00    -      -     	pcmpgtq	(%rax), %xmm2

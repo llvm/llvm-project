@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -28,6 +27,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
@@ -470,6 +470,29 @@ unsigned TargetRegisterInfo::getRegSizeInBits(unsigned Reg,
   }
   assert(RC && "Unable to deduce the register class");
   return getRegSizeInBits(*RC);
+}
+
+unsigned
+TargetRegisterInfo::lookThruCopyLike(unsigned SrcReg,
+                                     const MachineRegisterInfo *MRI) const {
+  while (true) {
+    const MachineInstr *MI = MRI->getVRegDef(SrcReg);
+    if (!MI->isCopyLike())
+      return SrcReg;
+
+    unsigned CopySrcReg;
+    if (MI->isCopy())
+      CopySrcReg = MI->getOperand(1).getReg();
+    else {
+      assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
+      CopySrcReg = MI->getOperand(2).getReg();
+    }
+
+    if (!isVirtualRegister(CopySrcReg))
+      return CopySrcReg;
+
+    SrcReg = CopySrcReg;
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

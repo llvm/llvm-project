@@ -456,11 +456,11 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl $7, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    movl $7, %edx # sched: [1:0.50]
-; BTVER2-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [14:10.00]
+; BTVER2-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [14:5.00]
 ; BTVER2-NEXT:    movl $7, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    movl $7, %edx # sched: [1:0.50]
 ; BTVER2-NEXT:    movl %ecx, %esi # sched: [1:0.50]
-; BTVER2-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [19:10.00]
+; BTVER2-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [19:5.00]
 ; BTVER2-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; BTVER2-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -560,10 +560,10 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl $7, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    movl $7, %edx # sched: [1:0.50]
-; BTVER2-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [14:10.00]
+; BTVER2-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [14:5.00]
 ; BTVER2-NEXT:    movl $7, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    movl $7, %edx # sched: [1:0.50]
-; BTVER2-NEXT:    vpcmpestrm $7, (%rdi), %xmm0 # sched: [19:10.00]
+; BTVER2-NEXT:    vpcmpestrm $7, (%rdi), %xmm0 # sched: [19:5.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpestrm:

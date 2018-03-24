@@ -309,6 +309,9 @@ public:
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
+                             EVT NewVT) const override;
+
   bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
   bool isTruncateFree(EVT VT1, EVT VT2) const override;
 

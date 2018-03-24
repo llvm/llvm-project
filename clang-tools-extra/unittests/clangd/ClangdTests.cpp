@@ -42,7 +42,7 @@ using ::testing::UnorderedElementsAre;
 
 namespace {
 
-static bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
+bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
   for (auto D : Diagnostics) {
     if (D.Severity == DiagnosticsEngine::Error ||
         D.Severity == DiagnosticsEngine::Fatal)

@@ -203,7 +203,6 @@ public:
     Itanium,
     Cygnus,
     CoreCLR,
-    OpenCL,
     Simulator,  // Simulator variants of other systems, e.g., Apple's iOS
     LastEnvironmentType = Simulator
   };

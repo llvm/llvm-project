@@ -20,7 +20,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/ValueTypes.h"
 #include <cassert>
 
 namespace llvm {
