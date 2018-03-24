@@ -49,6 +49,10 @@ struct OpcodeDecision {
 /// entries in this table, rather than 2^(ATTR_max).
 struct ContextDecision {
   OpcodeDecision opcodeDecisions[llvm::X86Disassembler::IC_max];
+
+  ContextDecision() {
+    memset(opcodeDecisions, 0, sizeof(opcodeDecisions));
+  }
 };
 
 #endif

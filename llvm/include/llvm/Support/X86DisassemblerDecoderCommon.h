@@ -31,6 +31,7 @@ namespace X86Disassembler {
 #define XOP8_MAP_SYM      x86DisassemblerXOP8Opcodes
 #define XOP9_MAP_SYM      x86DisassemblerXOP9Opcodes
 #define XOPA_MAP_SYM      x86DisassemblerXOPAOpcodes
+#define THREEDNOW_MAP_SYM x86Disassembler3DNowOpcodes
 
 #define INSTRUCTIONS_STR  "x86DisassemblerInstrSpecifiers"
 #define CONTEXTS_STR      "x86DisassemblerContexts"
@@ -41,6 +42,7 @@ namespace X86Disassembler {
 #define XOP8_MAP_STR      "x86DisassemblerXOP8Opcodes"
 #define XOP9_MAP_STR      "x86DisassemblerXOP9Opcodes"
 #define XOPA_MAP_STR      "x86DisassemblerXOPAOpcodes"
+#define THREEDNOW_MAP_STR "x86Disassembler3DNowOpcodes"
 
 // Attributes of an instruction that must be known before the opcode can be
 // processed correctly.  Most of these indicate the presence of particular
@@ -60,8 +62,7 @@ namespace X86Disassembler {
   ENUM_ENTRY(ATTR_EVEXL2, (0x1 << 10))  \
   ENUM_ENTRY(ATTR_EVEXK,  (0x1 << 11))  \
   ENUM_ENTRY(ATTR_EVEXKZ, (0x1 << 12))  \
-  ENUM_ENTRY(ATTR_EVEXB,  (0x1 << 13))  \
-  ENUM_ENTRY(ATTR_3DNOW,  (0x1 << 14))
+  ENUM_ENTRY(ATTR_EVEXB,  (0x1 << 13))
 
 #define ENUM_ENTRY(n, v) n = v,
 enum attributeBits {
@@ -271,8 +272,7 @@ enum attributeBits {
   ENUM_ENTRY(IC_EVEX_L2_W_KZ,        3,  "requires EVEX_KZ, L2 and W")               \
   ENUM_ENTRY(IC_EVEX_L2_W_XS_KZ,     4,  "requires EVEX_KZ, L2, W and XS prefix")    \
   ENUM_ENTRY(IC_EVEX_L2_W_XD_KZ,     4,  "requires EVEX_KZ, L2, W and XD prefix")    \
-  ENUM_ENTRY(IC_EVEX_L2_W_OPSIZE_KZ, 4,  "requires EVEX_KZ, L2, W and OpSize")       \
-  ENUM_ENTRY(IC_3DNOW,               8,  "requires AMD 3DNow prefix 0f0f")
+  ENUM_ENTRY(IC_EVEX_L2_W_OPSIZE_KZ, 4,  "requires EVEX_KZ, L2, W and OpSize")
 
 #define ENUM_ENTRY(n, r, d) n,
 enum InstructionContext {
@@ -290,7 +290,8 @@ enum OpcodeType {
   THREEBYTE_3A  = 3,
   XOP8_MAP      = 4,
   XOP9_MAP      = 5,
-  XOPA_MAP      = 6
+  XOPA_MAP      = 6,
+  THREEDNOW_MAP = 7
 };
 
 // The following structs are used for the hierarchical decode table.  After

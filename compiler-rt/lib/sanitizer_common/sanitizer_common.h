@@ -106,6 +106,8 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
 bool MprotectNoAccess(uptr addr, uptr size);
 bool MprotectReadOnly(uptr addr, uptr size);
 
+void MprotectMallocZones(void *addr, int prot);
+
 // Find an available address space.
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
                               uptr *largest_gap_found, uptr *max_occupied_addr);
@@ -378,7 +380,7 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
 void ReportErrorSummary(const char *error_type, const StackTrace *trace,
                         const char *alt_tool_name = nullptr);
 
-void ReportMmapWriteExec();
+void ReportMmapWriteExec(int prot);
 
 // Math
 #if SANITIZER_WINDOWS && !defined(__clang__) && !defined(__GNUC__)
