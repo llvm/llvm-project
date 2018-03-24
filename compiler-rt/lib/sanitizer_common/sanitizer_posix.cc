@@ -153,6 +153,10 @@ bool MprotectReadOnly(uptr addr, uptr size) {
   return 0 == internal_mprotect((void *)addr, size, PROT_READ);
 }
 
+#if !SANITIZER_MAC
+void MprotectMallocZones(void *addr, int prot) {}
+#endif
+
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *errno_p) {
   int flags;
   switch (mode) {
