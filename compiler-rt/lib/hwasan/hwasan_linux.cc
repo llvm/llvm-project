@@ -69,13 +69,13 @@ static void ProtectGap(uptr addr, uptr size) {
 
   Report(
       "ERROR: Failed to protect the shadow gap. "
-      "ASan cannot proceed correctly. ABORTING.\n");
+      "HWASan cannot proceed correctly. ABORTING.\n");
   DumpProcessMap();
   Die();
 }
 
 // LowMem covers as much of the first 4GB as possible.
-const uptr kLowMemEnd = 1UL<<32;
+const uptr kLowMemEnd = 1UL << 32;
 const uptr kLowShadowEnd = kLowMemEnd >> kShadowScale;
 const uptr kLowShadowStart = kLowShadowEnd >> kShadowScale;
 static uptr kHighShadowStart;
@@ -84,7 +84,6 @@ static uptr kHighMemStart;
 
 bool InitShadow() {
   const uptr maxVirtualAddress = GetMaxUserVirtualAddress();
-
 
   // HighMem covers the upper part of the address space.
   kHighShadowEnd = (maxVirtualAddress >> kShadowScale) + 1;
@@ -186,43 +185,57 @@ struct AccessInfo {
   bool recover;
 };
 
+static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
+  // Access type is passed in a platform dependent way (see below) and encoded
+  // as 0xXY, where X&1 is 1 for store, 0 for load, and X&2 is 1 if the error is
+  // recoverable. Valid values of Y are 0 to 4, which are interpreted as
+  // log2(access_size), and 0xF, which means that access size is passed via
+  // platform dependent register (see below).
 #if defined(__aarch64__)
-static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
-  // Access type is encoded in BRK immediate as 0x9XY,
-  // where X&1 is 1 for store, 0 for load,
-  // and X&2 is 1 if the error is recoverable.
-  // Valid values of Y are 0 to 4, which are interpreted as log2(access_size),
-  // and 0xF, which means that access size is stored in X1 register.
-  // Access address is always in X0 register.
-  AccessInfo ai;
+  // Access type is encoded in BRK immediate as 0x900 + 0xXY. For Y == 0xF,
+  // access size is stored in X1 register. Access address is always in X0
+  // register.
   uptr pc = (uptr)info->si_addr;
-  unsigned code = ((*(u32 *)pc) >> 5) & 0xffff;
+  const unsigned code = ((*(u32 *)pc) >> 5) & 0xffff;
   if ((code & 0xff00) != 0x900)
-    return AccessInfo{0, 0, false, false}; // Not ours.
-  bool is_store = code & 0x10;
-  bool recover = code & 0x20;
-  unsigned size_log = code & 0xf;
-  if (size_log > 4 && size_log != 0xf)
-    return AccessInfo{0, 0, false, false}; // Not ours.
+    return AccessInfo{}; // Not ours.
 
-  ai.is_store = is_store;
-  ai.is_load = !is_store;
-  ai.addr = uc->uc_mcontext.regs[0];
-  if (size_log == 0xf)
-    ai.size = uc->uc_mcontext.regs[1];
-  else
-    ai.size = 1U << size_log;
-  ai.recover = recover;
-  return ai;
-}
+  const bool is_store = code & 0x10;
+  const bool recover = code & 0x20;
+  const uptr addr = uc->uc_mcontext.regs[0];
+  const unsigned size_log = code & 0xf;
+  if (size_log > 4 && size_log != 0xf)
+    return AccessInfo{}; // Not ours.
+  const uptr size = size_log == 0xf ? uc->uc_mcontext.regs[1] : 1U << size_log;
+
+#elif defined(__x86_64__)
+  // Access type is encoded in the instruction following INT3 as
+  // NOP DWORD ptr [EAX + 0x40 + 0xXY]. For Y == 0xF, access size is stored in
+  // RSI register. Access address is always in RDI register.
+  uptr pc = (uptr)uc->uc_mcontext.gregs[REG_RIP];
+  uint8_t *nop = (uint8_t*)pc;
+  if (*nop != 0x0f || *(nop + 1) != 0x1f || *(nop + 2) != 0x40  ||
+      *(nop + 3) < 0x40)
+    return AccessInfo{}; // Not ours.
+  const unsigned code = *(nop + 3);
+
+  const bool is_store = code & 0x10;
+  const bool recover = code & 0x20;
+  const uptr addr = uc->uc_mcontext.gregs[REG_RDI];
+  const unsigned size_log = code & 0xf;
+  if (size_log > 4 && size_log != 0xf)
+    return AccessInfo{}; // Not ours.
+  const uptr size =
+      size_log == 0xf ? uc->uc_mcontext.gregs[REG_RSI] : 1U << size_log;
+
 #else
-static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
-  return AccessInfo{0, 0, false, false};
-}
+# error Unsupported architecture
 #endif
 
+  return AccessInfo{addr, size, is_store, !is_store, recover};
+}
+
 static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
-  SignalContext sig{info, uc};
   AccessInfo ai = GetAccessInfo(info, uc);
   if (!ai.is_store && !ai.is_load)
     return false;
@@ -230,6 +243,7 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
+  SignalContext sig{info, uc};
   GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, uc,
                 common_flags()->fast_unwind_on_fatal);
 
@@ -239,7 +253,12 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   if (flags()->halt_on_error || !ai.recover)
     Die();
 
+#if defined(__aarch64__)
   uc->uc_mcontext.pc += 4;
+#elif defined(__x86_64__)
+#else
+# error Unsupported architecture
+#endif
   return true;
 }
 

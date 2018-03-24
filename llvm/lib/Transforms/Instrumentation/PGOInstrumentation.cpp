@@ -48,7 +48,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/PGOInstrumentation.h"
+#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "CFGMST.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"

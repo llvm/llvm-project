@@ -13,7 +13,7 @@
 #include <cstring>
 #include <string>
 
-#include "../../lib/Target/X86/Disassembler/X86DisassemblerDecoderCommon.h"
+#include "llvm/Support/X86DisassemblerDecoderCommon.h"
 
 struct InstructionSpecifier {
   llvm::X86Disassembler::OperandSpecifier

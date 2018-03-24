@@ -15,9 +15,9 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 
-#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
 

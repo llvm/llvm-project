@@ -10,8 +10,8 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCTARGETOBJECTFILE_H
 #define LLVM_LIB_TARGET_POWERPC_PPCTARGETOBJECTFILE_H
 
-#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {

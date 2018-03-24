@@ -16,8 +16,8 @@
 #ifndef LLVM_LIB_TARGET_X86_DISASSEMBLER_X86DISASSEMBLERDECODER_H
 #define LLVM_LIB_TARGET_X86_DISASSEMBLER_X86DISASSEMBLERDECODER_H
 
-#include "X86DisassemblerDecoderCommon.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/X86DisassemblerDecoderCommon.h"
 
 namespace llvm {
 namespace X86Disassembler {

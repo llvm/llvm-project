@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ValueTypes.h"
+#include "llvm/Support/MachineValueType.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

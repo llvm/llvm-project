@@ -1,4 +1,4 @@
-//===- Transforms/PGOInstrumentation.h - PGO gen/use passes -----*- C++ -*-===//
+//===- Transforms/Instrumentation/PGOInstrumentation.h ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

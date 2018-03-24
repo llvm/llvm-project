@@ -1,5 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 
+// UNSUPPORTED: linux
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

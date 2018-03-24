@@ -1,4 +1,4 @@
-//===- Transforms/GCOVProfiler.h - GCOVProfiler pass  ----------*- C++ -*-===//
+//===- Transforms/Instrumentation/GCOVProfiler.h ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

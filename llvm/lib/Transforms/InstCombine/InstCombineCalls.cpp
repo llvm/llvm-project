@@ -2070,17 +2070,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::rint:
   case Intrinsic::trunc: {
     Value *ExtSrc;
-    if (match(II->getArgOperand(0), m_FPExt(m_Value(ExtSrc))) &&
-        II->getArgOperand(0)->hasOneUse()) {
-      // fabs (fpext x) -> fpext (fabs x)
-      Value *F = Intrinsic::getDeclaration(II->getModule(), II->getIntrinsicID(),
-                                           { ExtSrc->getType() });
-      CallInst *NewFabs = Builder.CreateCall(F, ExtSrc);
-      NewFabs->copyFastMathFlags(II);
-      NewFabs->takeName(II);
-      return new FPExtInst(NewFabs, II->getType());
+    if (match(II->getArgOperand(0), m_OneUse(m_FPExt(m_Value(ExtSrc))))) {
+      // Narrow the call: intrinsic (fpext x) -> fpext (intrinsic x)
+      Value *NarrowII = Builder.CreateIntrinsic(II->getIntrinsicID(),
+                                                { ExtSrc }, II);
+      return new FPExtInst(NarrowII, II->getType());
     }
-
     break;
   }
   case Intrinsic::cos:
