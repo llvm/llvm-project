@@ -2641,12 +2641,10 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
     m_initialized_clang_importer_options = true;
 
     // Set the Clang module search path.
-    llvm::SmallString<128> Path;
-    // FIXME: This should be querying
-    // target.GetClangModulesCachePath(), but most of the times there
-    // is no target available when this function is called.
-    clang::driver::Driver::getDefaultModuleCachePath(Path);
-    clang_importer_options.ModuleCachePath = Path.str();
+    llvm::SmallString<128> path;
+    auto props = ModuleList::GetGlobalModuleListProperties();
+    props.GetClangModulesCachePath().GetPath(path);
+    clang_importer_options.ModuleCachePath = path.str();
 
     FileSpec clang_dir_spec;
     if (HostInfo::GetLLDBPath(ePathTypeClangDir, clang_dir_spec))
