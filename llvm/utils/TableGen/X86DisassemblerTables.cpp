@@ -546,8 +546,6 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_L2_W_XD_KZ_B:
   case IC_EVEX_L2_W_OPSIZE_KZ_B:
     return false;
-  case IC_3DNOW:
-    return false;
   default:
     errs() << "Unknown instruction class: " <<
       stringForContext((InstructionContext)parent) << "\n";
@@ -644,21 +642,13 @@ static const char* stringForDecisionType(ModRMDecisionType dt) {
 }
 
 DisassemblerTables::DisassemblerTables() {
-  unsigned i;
-
-  for (i = 0; i < array_lengthof(Tables); i++) {
-    Tables[i] = new ContextDecision;
-    memset(Tables[i], 0, sizeof(ContextDecision));
-  }
+  for (unsigned i = 0; i < array_lengthof(Tables); i++)
+    Tables[i] = llvm::make_unique<ContextDecision>();
 
   HasConflicts = false;
 }
 
 DisassemblerTables::~DisassemblerTables() {
-  unsigned i;
-
-  for (i = 0; i < array_lengthof(Tables); i++)
-    delete Tables[i];
 }
 
 void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
@@ -890,7 +880,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
 }
 
 void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
-  const unsigned int tableSize = 32768;
+  const unsigned int tableSize = 16384;
   o.indent(i * 2) << "static const uint8_t " CONTEXTS_STR
                      "[" << tableSize << "] = {\n";
   i++;
@@ -898,9 +888,7 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
   for (unsigned index = 0; index < tableSize; ++index) {
     o.indent(i * 2);
 
-    if (index & ATTR_3DNOW)
-      o << "IC_3DNOW";
-    else if (index & ATTR_EVEX) {
+    if (index & ATTR_EVEX) {
       o << "IC_EVEX";
       if (index & ATTR_EVEXL2)
         o << "_L2";
@@ -1023,6 +1011,7 @@ void DisassemblerTables::emitContextDecisions(raw_ostream &o1, raw_ostream &o2,
   emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[4], XOP8_MAP_STR);
   emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[5], XOP9_MAP_STR);
   emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[6], XOPA_MAP_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[7], THREEDNOW_MAP_STR);
 }
 
 void DisassemblerTables::emit(raw_ostream &o) const {
