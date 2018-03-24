@@ -22,7 +22,7 @@ namespace TargetOpcode {
 enum {
 #define HANDLE_TARGET_OPCODE(OPC) OPC,
 #define HANDLE_TARGET_OPCODE_MARKER(IDENT, OPC) IDENT = OPC,
-#include "llvm/CodeGen/TargetOpcodes.def"
+#include "llvm/Support/TargetOpcodes.def"
 };
 } // end namespace TargetOpcode
 

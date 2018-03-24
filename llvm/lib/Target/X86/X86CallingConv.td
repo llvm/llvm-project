@@ -593,8 +593,8 @@ def CC_X86_Win64_C : CallingConv<[
   // FIXME: Handle byval stuff.
   // FIXME: Handle varargs.
 
-  // Promote i1/i8/i16/v1i1 arguments to i32.
-  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i8.
+  CCIfType<[i1, v1i1], CCPromoteToType<i8>>,
 
   // The 'nest' parameter, if any, is passed in R10.
   CCIfNest<CCAssignToReg<[R10]>>,
@@ -619,6 +619,10 @@ def CC_X86_Win64_C : CallingConv<[
   CCIfType<[x86mmx], CCBitConvertToType<i64>>,
 
   // The first 4 integer arguments are passed in integer registers.
+  CCIfType<[i8 ], CCAssignToRegWithShadow<[CL  , DL  , R8B , R9B ],
+                                          [XMM0, XMM1, XMM2, XMM3]>>,
+  CCIfType<[i16], CCAssignToRegWithShadow<[CX  , DX  , R8W , R9W ],
+                                          [XMM0, XMM1, XMM2, XMM3]>>,
   CCIfType<[i32], CCAssignToRegWithShadow<[ECX , EDX , R8D , R9D ],
                                           [XMM0, XMM1, XMM2, XMM3]>>,
 
@@ -847,13 +851,15 @@ def CC_X86_32_MCU : CallingConv<[
 ]>;
 
 def CC_X86_32_FastCall : CallingConv<[
-  // Promote i1/i8/i16/v1i1 arguments to i32.
-  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
+  // Promote i1 to i8.
+  CCIfType<[i1], CCPromoteToType<i8>>,
 
   // The 'nest' parameter, if any, is passed in EAX.
   CCIfNest<CCAssignToReg<[EAX]>>,
 
   // The first 2 integer arguments are passed in ECX/EDX
+  CCIfInReg<CCIfType<[ i8], CCAssignToReg<[ CL,  DL]>>>,
+  CCIfInReg<CCIfType<[i16], CCAssignToReg<[ CX,  DX]>>>,
   CCIfInReg<CCIfType<[i32], CCAssignToReg<[ECX, EDX]>>>,
 
   // Otherwise, same as everything else.

@@ -33,6 +33,7 @@
 #include "../Commands/CommandObjectRegister.h"
 #include "../Commands/CommandObjectSettings.h"
 #include "../Commands/CommandObjectSource.h"
+#include "../Commands/CommandObjectStats.h"
 #include "../Commands/CommandObjectTarget.h"
 #include "../Commands/CommandObjectThread.h"
 #include "../Commands/CommandObjectType.h"
@@ -424,6 +425,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       CommandObjectSP(new CommandObjectMultiwordSettings(*this));
   m_command_dict["source"] =
       CommandObjectSP(new CommandObjectMultiwordSource(*this));
+  m_command_dict["stats"] = CommandObjectSP(new CommandObjectStats(*this));
   m_command_dict["target"] =
       CommandObjectSP(new CommandObjectMultiwordTarget(*this));
   m_command_dict["thread"] =

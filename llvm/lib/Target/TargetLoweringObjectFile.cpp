@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Constants.h"

@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/TargetLoweringObjectFile.h - Object Info ---*- C++ -*-===//
+//===-- llvm/Target/TargetLoweringObjectFile.h - Object Info ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

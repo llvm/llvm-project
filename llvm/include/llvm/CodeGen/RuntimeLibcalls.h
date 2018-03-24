@@ -15,7 +15,7 @@
 #ifndef LLVM_CODEGEN_RUNTIMELIBCALLS_H
 #define LLVM_CODEGEN_RUNTIMELIBCALLS_H
 
-#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/ValueTypes.h"
 
 namespace llvm {
 namespace RTLIB {

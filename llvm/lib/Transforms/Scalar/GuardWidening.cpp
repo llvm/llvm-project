@@ -212,32 +212,6 @@ public:
   /// The entry point for this pass.
   bool run();
 };
-
-struct GuardWideningLegacyPass : public FunctionPass {
-  static char ID;
-  GuardWideningPass Impl;
-
-  GuardWideningLegacyPass() : FunctionPass(ID) {
-    initializeGuardWideningLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    return GuardWideningImpl(
-               getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-               getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree(),
-               getAnalysis<LoopInfoWrapperPass>().getLoopInfo()).run();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-  }
-};
-
 }
 
 bool GuardWideningImpl::run() {
@@ -651,19 +625,6 @@ bool GuardWideningImpl::combineRangeChecks(
   return RangeChecksOut.size() != OldCount;
 }
 
-PreservedAnalyses GuardWideningPass::run(Function &F,
-                                         FunctionAnalysisManager &AM) {
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!GuardWideningImpl(DT, PDT, LI).run())
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
-
 #ifndef NDEBUG
 StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {
   switch (WS) {
@@ -680,6 +641,46 @@ StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {
   llvm_unreachable("Fully covered switch above!");
 }
 #endif
+
+PreservedAnalyses GuardWideningPass::run(Function &F,
+                                         FunctionAnalysisManager &AM) {
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
+  if (!GuardWideningImpl(DT, PDT, LI).run())
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+namespace {
+struct GuardWideningLegacyPass : public FunctionPass {
+  static char ID;
+  GuardWideningPass Impl;
+
+  GuardWideningLegacyPass() : FunctionPass(ID) {
+    initializeGuardWideningLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+    return GuardWideningImpl(
+               getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
+               getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree(),
+               getAnalysis<LoopInfoWrapperPass>().getLoopInfo()).run();
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<PostDominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+  }
+};
+}
 
 char GuardWideningLegacyPass::ID = 0;
 

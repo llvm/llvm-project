@@ -17,7 +17,7 @@
 
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/ValueTypes.h"
 
 namespace llvm {
 

@@ -1,25 +1,32 @@
 ; RUN: opt < %s -basicaa -functionattrs -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=function-attrs -S | FileCheck %s
+
 @x = global i32 0
 
-; CHECK: declare i32 @e() #0
+; CHECK: Function Attrs
+; CHECK-SAME: readnone
+; CHECK-NEXT: declare i32 @e
 declare i32 @e() readnone
 
-; CHECK: define i32 @f() #0
+; CHECK: Function Attrs
+; CHECK-SAME: readnone
+; CHECK-NEXT: define i32 @f
 define i32 @f() {
 	%tmp = call i32 @e( )		; <i32> [#uses=1]
 	ret i32 %tmp
 }
 
-; CHECK: define i32 @g() #1
+; CHECK: Function Attrs
+; CHECK-SAME: readnone
+; CHECK-NEXT: define i32 @g
 define i32 @g() readonly {
 	ret i32 0
 }
 
-; CHECK: define i32 @h() #1
+; CHECK: Function Attrs
+; CHECK-SAME: readnone
+; CHECK-NEXT: define i32 @h
 define i32 @h() readnone {
 	%tmp = load i32, i32* @x		; <i32> [#uses=1]
 	ret i32 %tmp
 }
-
-; CHECK: attributes #0 = { readnone }
-; CHECK: attributes #1 = { norecurse readnone }

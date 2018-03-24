@@ -24,7 +24,6 @@
 
 #if SANITIZER_POSIX
 #include "sanitizer_posix.h"
-#include <sys/mman.h>
 #endif
 
 namespace __sanitizer {
@@ -82,11 +81,8 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
 #endif
 }
 
-void ReportMmapWriteExec(int prot) {
-#if SANITIZER_POSIX && (!SANITIZER_GO && !SANITIZER_ANDROID)
-  if ((prot & (PROT_WRITE | PROT_EXEC)) != (PROT_WRITE | PROT_EXEC))
-    return;
-
+void ReportMmapWriteExec() {
+#if !SANITIZER_GO && !SANITIZER_ANDROID
   ScopedErrorReportLock l;
   SanitizerCommonDecorator d;
 

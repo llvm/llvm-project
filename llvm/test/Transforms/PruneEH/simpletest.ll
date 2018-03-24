@@ -1,4 +1,5 @@
-; RUN: opt < %s -prune-eh -S | not grep invoke
+; RUN: opt < %s -prune-eh -S | FileCheck %s
+; RUN: opt < %s -passes='function-attrs,function(simplify-cfg)' -S | FileCheck %s
 
 declare void @nounwind() nounwind
 
@@ -7,7 +8,9 @@ define internal void @foo() {
 	ret void
 }
 
+; CHECK-LABEL: define i32 @caller()
 define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+; CHECK-NOT: invoke void @foo
 	invoke void @foo( )
 			to label %Normal unwind label %Except
 

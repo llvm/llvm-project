@@ -2,7 +2,9 @@
 // printing a stack trace repeatedly
 UNSUPPORTED: darwin
 
-RUN: %cpp_compiler %S/TraceMallocThreadedTest.cpp -o %t-TraceMallocThreadedTest
+// Avoid optimizing since it causes the malloc to go away.
+RUN: %cpp_compiler -O0 %S/TraceMallocThreadedTest.cpp -o \
+RUN:   %t-TraceMallocThreadedTest
 
 RUN: %t-TraceMallocThreadedTest -trace_malloc=2 -runs=1 2>&1 | FileCheck %s
 CHECK: {{MALLOC\[[0-9]+] +0x[0-9]+ 5639}}
