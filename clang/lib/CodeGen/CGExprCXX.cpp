@@ -489,8 +489,9 @@ CodeGenFunction::EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                                ReturnValueSlot ReturnValue) {
   assert(MD->isInstance() &&
          "Trying to emit a member call expr on a static method!");
-  if (E->isAssignmentOp() &&
-      isa<CilkSpawnExpr>(E->getArg(1)->IgnoreImplicit())) {
+  bool SpawnedExpr = E->isAssignmentOp() &&
+    isa<CilkSpawnExpr>(E->getArg(1)->IgnoreImplicit());
+  if (SpawnedExpr) {
     // Set up to perform a detach.
     assert(!IsSpawned &&
            "_Cilk_spawn statement found in spawning environment.");
@@ -499,7 +500,7 @@ CodeGenFunction::EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
   RValue Result = EmitCXXMemberOrOperatorMemberCallExpr(
       E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
       /*IsArrow=*/false, E->getArg(0));
-  if (IsSpawned) {
+  if (SpawnedExpr && IsSpawned) {
     // Finish the detach.
     assert(CurDetachScope->IsDetachStarted() &&
            "Processing _Cilk_spawn of expression did not produce a detach.");
