@@ -790,9 +790,12 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   // If the caller is known-emitted, mark the callee as known-emitted.
   // Otherwise, mark the call in our call graph so we can traverse it later.
   bool CallerKnownEmitted = IsKnownEmitted(*this, Caller);
-  if (CallerKnownEmitted)
-    MarkKnownEmitted(*this, Caller, Callee, Loc);
-  else {
+  if (CallerKnownEmitted) {
+    // Host-side references to a __global__ function refer to the stub, so the
+    // function itself is never emitted and therefore should not be marked.
+    if (getLangOpts().CUDAIsDevice || IdentifyCUDATarget(Callee) != CFT_Global)
+      MarkKnownEmitted(*this, Caller, Callee, Loc);
+  } else {
     // If we have
     //   host fn calls kernel fn calls host+device,
     // the HD function does not get instantiated on the host.  We model this by

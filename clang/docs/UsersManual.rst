@@ -2180,7 +2180,7 @@ to the target, for example:
    .. code-block:: console
 
      $ clang -target nvptx64-unknown-unknown test.cl
-     $ clang -target amdgcn-amd-amdhsa-opencl test.cl
+     $ clang -target amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
 
 Compiling to bitcode can be done as follows:
 
@@ -2288,7 +2288,7 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 
    .. code-block:: console
 
-     $ clang -target amdgcn-amd-amdhsa-opencl test.cl
+     $ clang -target amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
 
 - For Nvidia architectures:
 
