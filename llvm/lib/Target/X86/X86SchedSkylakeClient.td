@@ -61,6 +61,8 @@ def SKLPort015 : ProcResGroup<[SKLPort0, SKLPort1, SKLPort5]>;
 def SKLPort056 : ProcResGroup<[SKLPort0, SKLPort5, SKLPort6]>;
 def SKLPort0156: ProcResGroup<[SKLPort0, SKLPort1, SKLPort5, SKLPort6]>;
 
+def SKLDivider : ProcResource<1>; // Integer division issued on port 0.
+
 // 60 Entry Unified Scheduler
 def SKLPortAny : ProcResGroup<[SKLPort0, SKLPort1, SKLPort2, SKLPort3, SKLPort4,
                               SKLPort5, SKLPort6, SKLPort7]> {
@@ -103,17 +105,9 @@ def : WriteRes<WriteRMW, [SKLPort4]>;
 // Arithmetic.
 defm : SKLWriteResPair<WriteALU,   [SKLPort0156], 1>; // Simple integer ALU op.
 defm : SKLWriteResPair<WriteIMul,  [SKLPort1],   3>; // Integer multiplication.
-def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
-def SKLDivider : ProcResource<1>; // Integer division issued on port 0.
-def : WriteRes<WriteIDiv, [SKLPort0, SKLDivider]> { // Integer division.
-  let Latency = 25;
-  let ResourceCycles = [1, 10];
-}
-def : WriteRes<WriteIDivLd, [SKLPort23, SKLPort0, SKLDivider]> {
-  let Latency = 29;
-  let ResourceCycles = [1, 1, 10];
-}
+defm : SKLWriteResPair<WriteIDiv, [SKLPort0, SKLDivider], 25, [1,10], 1, 4>; // Integer division.
 
+def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 def : WriteRes<WriteLEA, [SKLPort15]>; // LEA instructions can't fold loads.
 
 // Integer shifts and rotates.
@@ -589,7 +583,7 @@ def: InstRW<[SKLWriteResGroup9], (instregex "(V?)ANDNPD(Y?)rr",
                                             "(V?)PSUBQ(Y?)rr",
                                             "(V?)PSUBW(Y?)rr",
                                             "(V?)PXOR(Y?)rr",
-                                            "(V?)XORPD(Y?)rr"
+                                            "(V?)XORPD(Y?)rr",
                                             "(V?)XORPS(Y?)rr")>;
 
 def SKLWriteResGroup10 : SchedWriteRes<[SKLPort0156]> {
@@ -664,24 +658,24 @@ def: InstRW<[SKLWriteResGroup11], (instregex "FBSTPm",
                                              "ST_FP80m",
                                              "VEXTRACTF128mr",
                                              "VEXTRACTI128mr",
-                                             "(Y?)MOVAPDYmr",
-                                             "(Y?)MOVAPS(Y?)mr",
-                                             "(Y?)MOVDQA(Y?)mr",
-                                             "(Y?)MOVDQU(Y?)mr",
-                                             "(Y?)MOVHPDmr",
-                                             "(Y?)MOVHPSmr",
-                                             "(Y?)MOVLPDmr",
-                                             "(Y?)MOVLPSmr",
-                                             "(Y?)MOVNTDQ(Y?)mr",
-                                             "(Y?)MOVNTPD(Y?)mr",
-                                             "(Y?)MOVNTPS(Y?)mr",
-                                             "(Y?)MOVPDI2DImr",
-                                             "(Y?)MOVPQI2QImr",
-                                             "(Y?)MOVPQIto64mr",
-                                             "(Y?)MOVSDmr",
-                                             "(Y?)MOVSSmr",
-                                             "(Y?)MOVUPD(Y?)mr",
-                                             "(Y?)MOVUPS(Y?)mr",
+                                             "(V?)MOVAPDYmr",
+                                             "(V?)MOVAPS(Y?)mr",
+                                             "(V?)MOVDQA(Y?)mr",
+                                             "(V?)MOVDQU(Y?)mr",
+                                             "(V?)MOVHPDmr",
+                                             "(V?)MOVHPSmr",
+                                             "(V?)MOVLPDmr",
+                                             "(V?)MOVLPSmr",
+                                             "(V?)MOVNTDQ(Y?)mr",
+                                             "(V?)MOVNTPD(Y?)mr",
+                                             "(V?)MOVNTPS(Y?)mr",
+                                             "(V?)MOVPDI2DImr",
+                                             "(V?)MOVPQI2QImr",
+                                             "(V?)MOVPQIto64mr",
+                                             "(V?)MOVSDmr",
+                                             "(V?)MOVSSmr",
+                                             "(V?)MOVUPD(Y?)mr",
+                                             "(V?)MOVUPS(Y?)mr",
                                              "VMPTRSTm")>;
 
 def SKLWriteResGroup12 : SchedWriteRes<[SKLPort0]> {

@@ -233,6 +233,15 @@ define float @fneg2(float %x) {
   ret float %sub
 }
 
+define <2 x float> @fneg2_vec_undef(<2 x float> %x) {
+; CHECK-LABEL: @fneg2_vec_undef(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz <2 x float> <float undef, float 0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %sub = fsub nsz <2 x float> <float undef, float 0.0>, %x
+  ret <2 x float> %sub
+}
+
 ; =========================================================================
 ;
 ;   Testing-cases about div

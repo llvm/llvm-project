@@ -98,14 +98,7 @@ defm : SLMWriteResPair<WriteJump,  [SLM_IEC_RSV1],   1>;
 def : WriteRes<WriteLEA, [SLM_IEC_RSV1]>;
 
 // This is quite rough, latency depends on the dividend.
-def : WriteRes<WriteIDiv, [SLM_IEC_RSV01, SLMDivider]> {
-  let Latency = 25;
-  let ResourceCycles = [1, 25];
-}
-def : WriteRes<WriteIDivLd, [SLM_MEC_RSV, SLM_IEC_RSV01, SLMDivider]> {
-  let Latency = 29;
-  let ResourceCycles = [1, 1, 25];
-}
+defm : SLMWriteResPair<WriteIDiv, [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 4>;
 
 // Scalar and vector floating point.
 def  : WriteRes<WriteFStore,       [SLM_FPC_RSV01, SLM_MEC_RSV]>;
