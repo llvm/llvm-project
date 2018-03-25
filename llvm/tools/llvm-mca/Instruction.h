@@ -309,7 +309,6 @@ public:
 
   void cycleEvent();
 };
-
 } // namespace mca
 
 #endif
