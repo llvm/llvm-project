@@ -387,9 +387,9 @@ void CodeGenSchedModels::collectSchedRW() {
     RecVec RWDefs = Records.getAllDerivedDefinitions("SchedReadWrite");
     for (Record *RWDef : RWDefs) {
       if (!getSchedRWIdx(RWDef, RWDef->isSubClassOf("SchedRead"))) {
-        const std::string &Name = RWDef->getName();
+        StringRef Name = RWDef->getName();
         if (Name != "NoWrite" && Name != "ReadDefault")
-          dbgs() << "Unused SchedReadWrite " << RWDef->getName() << '\n';
+          dbgs() << "Unused SchedReadWrite " << Name << '\n';
       }
     });
 }
@@ -710,7 +710,7 @@ unsigned CodeGenSchedModels::addSchedClass(Record *ItinClassDef,
                    SchedClasses[Idx].ProcIndices.end(),
                    ProcIndices.begin(), ProcIndices.end(),
                    std::back_inserter(PI));
-    SchedClasses[Idx].ProcIndices.swap(PI);
+    SchedClasses[Idx].ProcIndices = std::move(PI);
     return Idx;
   }
   Idx = SchedClasses.size();
@@ -939,8 +939,7 @@ void CodeGenSchedModels::inferFromItinClass(Record *ItinClassDef,
       HasMatch = true;
       IdxVec Writes, Reads;
       findRWs((*II)->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
-      IdxVec ProcIndices(1, PIdx);
-      inferFromRW(Writes, Reads, FromClassIdx, ProcIndices);
+      inferFromRW(Writes, Reads, FromClassIdx, PIdx);
     }
   }
 }
@@ -963,8 +962,7 @@ void CodeGenSchedModels::inferFromInstRWs(unsigned SCIdx) {
     IdxVec Writes, Reads;
     findRWs(Rec->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
     unsigned PIdx = getProcModel(Rec->getValueAsDef("SchedModel")).Index;
-    IdxVec ProcIndices(1, PIdx);
-    inferFromRW(Writes, Reads, SCIdx, ProcIndices); // May mutate SchedClasses.
+    inferFromRW(Writes, Reads, SCIdx, PIdx); // May mutate SchedClasses.
   }
 }
 
@@ -1359,12 +1357,11 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
               [&SchedModels](ArrayRef<unsigned> RS) {
                 return SchedModels.findOrInsertRW(RS, /*IsRead=*/true);
               });
-    IdxVec ProcIndices(I->ProcIndices.begin(), I->ProcIndices.end());
     CodeGenSchedTransition SCTrans;
     SCTrans.ToClassIdx =
       SchedModels.addSchedClass(/*ItinClassDef=*/nullptr, OperWritesVariant,
-                                OperReadsVariant, ProcIndices);
-    SCTrans.ProcIndices = ProcIndices;
+                                OperReadsVariant, I->ProcIndices);
+    SCTrans.ProcIndices.assign(I->ProcIndices.begin(), I->ProcIndices.end());
     // The final PredTerm is unique set of predicates guarding the transition.
     RecVec Preds;
     transform(I->PredTerm, std::back_inserter(Preds),
@@ -1372,8 +1369,9 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
                 return P.Predicate;
               });
     Preds.erase(std::unique(Preds.begin(), Preds.end()), Preds.end());
-    SCTrans.PredTerm = Preds;
-    SchedModels.getSchedClass(FromClassIdx).Transitions.push_back(SCTrans);
+    SCTrans.PredTerm = std::move(Preds);
+    SchedModels.getSchedClass(FromClassIdx)
+        .Transitions.push_back(std::move(SCTrans));
   }
 }
 
@@ -1498,11 +1496,11 @@ void CodeGenSchedModels::collectProcResources() {
         for (RecIter RWI = SCI->InstRWs.begin(), RWE = SCI->InstRWs.end();
              RWI != RWE; ++RWI) {
           Record *RWModelDef = (*RWI)->getValueAsDef("SchedModel");
-          IdxVec ProcIndices(1, getProcModel(RWModelDef).Index);
+          unsigned PIdx = getProcModel(RWModelDef).Index;
           IdxVec Writes, Reads;
           findRWs((*RWI)->getValueAsListOfDefs("OperandReadWrites"),
                   Writes, Reads);
-          collectRWResources(Writes, Reads, ProcIndices);
+          collectRWResources(Writes, Reads, PIdx);
         }
       }
       collectRWResources(SCI->Writes, SCI->Reads, SCI->ProcIndices);
@@ -1659,8 +1657,7 @@ void CodeGenSchedModels::collectItinProcResources(Record *ItinClassDef) {
       HasMatch = true;
       IdxVec Writes, Reads;
       findRWs((*II)->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
-      IdxVec ProcIndices(1, PIdx);
-      collectRWResources(Writes, Reads, ProcIndices);
+      collectRWResources(Writes, Reads, PIdx);
     }
   }
 }

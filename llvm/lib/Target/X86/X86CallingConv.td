@@ -593,7 +593,7 @@ def CC_X86_Win64_C : CallingConv<[
   // FIXME: Handle byval stuff.
   // FIXME: Handle varargs.
 
-  // Promote i1/i8/i16/v1i1 arguments to i8.
+  // Promote i1/v1i1 arguments to i8.
   CCIfType<[i1, v1i1], CCPromoteToType<i8>>,
 
   // The 'nest' parameter, if any, is passed in R10.
