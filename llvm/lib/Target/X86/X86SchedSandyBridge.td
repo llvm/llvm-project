@@ -72,7 +72,8 @@ def : ReadAdvance<ReadAfterLd, 4>;
 // folded loads.
 multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
-                          int Lat, list<int> Res = [1], int UOps = 1> {
+                          int Lat, list<int> Res = [1], int UOps = 1,
+                          int LoadLat = 4> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -80,12 +81,12 @@ multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
     let NumMicroOps = UOps;
   }
 
-  // Memory variant also uses a cycle on port 2/3 and adds 4 cycles to the
-  // latency.
+  // Memory variant also uses a cycle on port 2/3 and adds LoadLat cycles to
+  // the latency (default = 4).
   def : WriteRes<SchedRW.Folded, !listconcat([SBPort23], ExePorts)> {
-    let Latency = !add(Lat, 4);
+    let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
-    let NumMicroOps = UOps;
+    let NumMicroOps = !add(UOps, 1);
   }
 }
 
