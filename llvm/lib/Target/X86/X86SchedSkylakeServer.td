@@ -19,7 +19,7 @@ def SkylakeServerModel : SchedMachineModel {
   let MicroOpBufferSize = 224; // Based on the reorder buffer.
   let LoadLatency = 5;
   let MispredictPenalty = 14;
-  
+
   // Based on the LSD (loop-stream detector) queue size and benchmarking data.
   let LoopMicroOpBufferSize = 50;
 
@@ -60,6 +60,8 @@ def SKXPort56  : ProcResGroup<[SKXPort5, SKXPort6]>;
 def SKXPort015 : ProcResGroup<[SKXPort0, SKXPort1, SKXPort5]>;
 def SKXPort056 : ProcResGroup<[SKXPort0, SKXPort5, SKXPort6]>;
 def SKXPort0156: ProcResGroup<[SKXPort0, SKXPort1, SKXPort5, SKXPort6]>;
+
+def SKXDivider : ProcResource<1>; // Integer division issued on port 0.
 
 // 60 Entry Unified Scheduler
 def SKXPortAny : ProcResGroup<[SKXPort0, SKXPort1, SKXPort2, SKXPort3, SKXPort4,
@@ -103,17 +105,9 @@ def : WriteRes<WriteRMW, [SKXPort4]>;
 // Arithmetic.
 defm : SKXWriteResPair<WriteALU,   [SKXPort0156], 1>; // Simple integer ALU op.
 defm : SKXWriteResPair<WriteIMul,  [SKXPort1],   3>; // Integer multiplication.
-def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
-def SKXDivider : ProcResource<1>; // Integer division issued on port 0.     
-def : WriteRes<WriteIDiv, [SKXPort0, SKXDivider]> { // Integer division.
-  let Latency = 25;
-  let ResourceCycles = [1, 10];
-}
-def : WriteRes<WriteIDivLd, [SKXPort23, SKXPort0, SKXDivider]> {
-  let Latency = 29;
-  let ResourceCycles = [1, 1, 10];
-}
+defm : SKXWriteResPair<WriteIDiv, [SKXPort0, SKXDivider], 25, [1,10], 1, 4>; // Integer division.
 
+def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 def : WriteRes<WriteLEA, [SKXPort15]>; // LEA instructions can't fold loads.
 
 // Integer shifts and rotates.
@@ -185,7 +179,7 @@ def : WriteRes<WritePCmpIStrMLd, [SKXPort0, SKXPort23]> {
   let Latency = 16;
   let NumMicroOps = 4;
   let ResourceCycles = [3,1];
-} 
+}
 
 // Packed Compare Explicit Length Strings, Return Mask
 def : WriteRes<WritePCmpEStrM, [SKXPort0, SKXPort5, SKXPort015, SKXPort0156]> {
@@ -3918,7 +3912,7 @@ def: InstRW<[SKXWriteResGroup118], (instregex "BSF(16|32|64)rm",
 def SKXWriteResGroup118_16_1 : SchedWriteRes<[SKXPort1, SKXPort0156, SKXPort23]> {
   let Latency = 8;
   let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1]; 
+  let ResourceCycles = [1,1,1];
 }
 def: InstRW<[SKXWriteResGroup118_16_1], (instrs IMUL16rm, IMUL16rmi, IMUL16rmi8)>;
 
@@ -5564,9 +5558,9 @@ def SKXWriteResGroup192_2 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKXWriteResGroup192_2], (instregex "VPMULLDYrm")>;
-def: InstRW<[SKXWriteResGroup192_2], (instregex "VPMULLDZ256rm(b?)(k?)(z?)")>;
-def: InstRW<[SKXWriteResGroup192_2], (instregex "VPMULLDZrm(b?)(k?)(z?)")>;
+def: InstRW<[SKXWriteResGroup192_2], (instregex "VPMULLDYrm",
+                                                "VPMULLDZ256rm(b?)(k?)(z?)",
+                                                "VPMULLDZrm(b?)(k?)(z?)")>;
 
 def SKXWriteResGroup193 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let Latency = 15;

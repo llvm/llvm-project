@@ -122,15 +122,7 @@ defm : HWWriteResPair<WriteJump,  [HWPort06],   1>;
 def : WriteRes<WriteLEA, [HWPort15]>;
 
 // This is quite rough, latency depends on the dividend.
-def : WriteRes<WriteIDiv, [HWPort0, HWDivider]> {
-  let Latency = 25;
-  let ResourceCycles = [1, 10];
-}
-def : WriteRes<WriteIDivLd, [HWPort23, HWPort0, HWDivider]> {
-  let Latency = 29;
-  let ResourceCycles = [1, 1, 10];
-}
-
+defm : HWWriteResPair<WriteIDiv,  [HWPort0, HWDivider], 25, [1,10], 1, 4>;
 // Scalar and vector floating point.
 def  : WriteRes<WriteFStore,       [HWPort237, HWPort4]>;
 def  : WriteRes<WriteFLoad,        [HWPort23]> { let Latency = 5; }
