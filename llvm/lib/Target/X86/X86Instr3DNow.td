@@ -44,14 +44,14 @@ def I3DNOW_PSHUF_ITINS : OpndItins<
 
 class I3DNow<bits<8> o, Format F, dag outs, dag ins, string asm, list<dag> pat,
              InstrItinClass itin>
-      : I<o, F, outs, ins, asm, pat, itin>, TB, Requires<[Has3DNow]> {
+      : I<o, F, outs, ins, asm, pat, itin>, Requires<[Has3DNow]> {
 }
 
 class I3DNow_binop<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat,
                    InstrItinClass itin>
       : I3DNow<o, F, (outs VR64:$dst), ins,
           !strconcat(Mnemonic, "\t{$src2, $dst|$dst, $src2}"), pat, itin>,
-        Has3DNow0F0FOpcode {
+        ThreeDNow {
   let Constraints = "$src1 = $dst";
 }
 
@@ -59,7 +59,7 @@ class I3DNow_conv<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat,
                   InstrItinClass itin>
       : I3DNow<o, F, (outs VR64:$dst), ins,
           !strconcat(Mnemonic, "\t{$src, $dst|$dst, $src}"), pat, itin>,
-        Has3DNow0F0FOpcode;
+        ThreeDNow;
 
 multiclass I3DNow_binop_rm_int<bits<8> opc, string Mn, OpndItins itins,
                                bit Commutable = 0, string Ver = ""> {
@@ -111,7 +111,7 @@ defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", I3DNOW_MISC_FUNC_ITINS, 1>;
 // FIXME: Is there a better scheduler class for EMMS/FEMMS?
 let SchedRW = [WriteMicrocoded] in
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
-                   [(int_x86_mmx_femms)], IIC_MMX_EMMS>;
+                   [(int_x86_mmx_femms)], IIC_MMX_EMMS>, TB;
 
 // PREFETCHWT1 is supported we want to use it for everything but T0.
 def PrefetchWLevel : PatFrag<(ops), (i32 imm), [{
@@ -128,7 +128,7 @@ let Predicates = [Has3DNow, NoSSEPrefetch] in
 def PREFETCH : I3DNow<0x0D, MRM0m, (outs), (ins i8mem:$addr),
                       "prefetch\t$addr",
                       [(prefetch addr:$addr, imm, imm, (i32 1))],
-                      IIC_SSE_PREFETCH>;
+                      IIC_SSE_PREFETCH>, TB;
 
 def PREFETCHW : I<0x0D, MRM1m, (outs), (ins i8mem:$addr), "prefetchw\t$addr",
                   [(prefetch addr:$addr, (i32 1), (i32 PrefetchWLevel), (i32 1))],

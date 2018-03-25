@@ -6856,8 +6856,8 @@ INTERCEPTOR(SIZE_T, strlcpy, char *dst, char *src, SIZE_T size) {
   COMMON_INTERCEPTOR_ENTER(ctx, strlcpy, dst, src, size);
   if (src) {
     // Keep strnlen as macro argument, as macro may ignore it.
-    COMMON_INTERCEPTOR_READ_STRING(ctx, src,
-      Min(REAL(strnlen)(src, size), size - 1) + 1);
+    COMMON_INTERCEPTOR_READ_STRING(
+        ctx, src, Min(internal_strnlen(src, size), size - 1) + 1);
   }
   res = REAL(strlcpy)(dst, src, size);
   COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, REAL(strlen)(dst) + 1);
@@ -6870,7 +6870,7 @@ INTERCEPTOR(SIZE_T, strlcat, char *dst, char *src, SIZE_T size) {
   COMMON_INTERCEPTOR_ENTER(ctx, strlcat, dst, src, size);
   // src is checked in the strlcpy() interceptor
   if (dst) {
-    len = REAL(strnlen)(dst, size);
+    len = internal_strnlen(dst, size);
     COMMON_INTERCEPTOR_READ_STRING(ctx, dst, Min(len, size - 1) + 1);
   }
   // Reuse the rest of the code in the strlcpy() interceptor
@@ -6888,13 +6888,26 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags, int fd,
             OFF_T off) {
   void *ctx;
   if (common_flags()->detect_write_exec)
-    ReportMmapWriteExec();
+    ReportMmapWriteExec(prot);
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return (void *)internal_mmap(addr, sz, prot, flags, fd, off);
   COMMON_INTERCEPTOR_ENTER(ctx, mmap, addr, sz, prot, flags, fd, off);
   COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, sz, prot, flags, fd, off);
 }
-#define INIT_MMAP COMMON_INTERCEPT_FUNCTION(mmap);
+
+INTERCEPTOR(int, mprotect, void *addr, SIZE_T sz, int prot) {
+  void *ctx;
+  if (common_flags()->detect_write_exec)
+    ReportMmapWriteExec(prot);
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return (int)internal_mprotect(addr, sz, prot);
+  COMMON_INTERCEPTOR_ENTER(ctx, mprotect, addr, sz, prot);
+  MprotectMallocZones(addr, prot);
+  return REAL(mprotect)(addr, sz, prot);
+}
+#define INIT_MMAP                                                              \
+  COMMON_INTERCEPT_FUNCTION(mmap);                                             \
+  COMMON_INTERCEPT_FUNCTION(mprotect);
 #else
 #define INIT_MMAP
 #endif
@@ -6904,7 +6917,7 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags, int fd,
             OFF64_T off) {
   void *ctx;
   if (common_flags()->detect_write_exec)
-    ReportMmapWriteExec();
+    ReportMmapWriteExec(prot);
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return (void *)internal_mmap(addr, sz, prot, flags, fd, off);
   COMMON_INTERCEPTOR_ENTER(ctx, mmap64, addr, sz, prot, flags, fd, off);

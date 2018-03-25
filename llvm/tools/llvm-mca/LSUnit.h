@@ -144,7 +144,6 @@ public:
   bool isReady(unsigned Index) const;
   void onInstructionExecuted(unsigned Index);
 };
-
 } // namespace mca
 
 #endif

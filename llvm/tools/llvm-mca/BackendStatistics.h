@@ -130,8 +130,8 @@ class BackendStatistics : public View {
 
 public:
   BackendStatistics(const llvm::MCSubtargetInfo &sti)
-      : STI(sti), NumDispatched(0), NumIssued(0), NumRetired(0),
-        NumCycles(0), HWStalls(HWStallEvent::LastGenericEvent),
+      : STI(sti), NumDispatched(0), NumIssued(0), NumRetired(0), NumCycles(0),
+        HWStalls(HWStallEvent::LastGenericEvent),
         // TODO: The view currently assumes a single register file. This will
         // change in future.
         RegisterFiles(1) {}

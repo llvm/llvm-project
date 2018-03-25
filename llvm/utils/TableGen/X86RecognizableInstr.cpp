@@ -90,7 +90,6 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   HasEVEX_K          = Rec->getValueAsBit("hasEVEX_K");
   HasEVEX_KZ         = Rec->getValueAsBit("hasEVEX_Z");
   HasEVEX_B          = Rec->getValueAsBit("hasEVEX_B");
-  Has3DNow0F0FOpcode = Rec->getValueAsBit("has3DNow0F0FOpcode");
   IsCodeGenOnly      = Rec->getValueAsBit("isCodeGenOnly");
   ForceDisassemble   = Rec->getValueAsBit("ForceDisassemble");
   CD8_Scale          = byteFromRec(Rec, "CD8_Scale");
@@ -289,8 +288,6 @@ InstructionContext RecognizableInstr::insnContext() const {
       errs() << "Instruction does not use a prefix: " << Name << "\n";
       llvm_unreachable("Invalid prefix");
     }
-  } else if (Has3DNow0F0FOpcode) {
-    insnContext = IC_3DNOW;
   } else if (Is64Bit || HasREX_WPrefix || AdSize == X86Local::AdSize64) {
     if (HasREX_WPrefix && (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD))
       insnContext = IC_64BIT_REXW_OPSIZE;
@@ -666,34 +663,15 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(immediate)
     HANDLE_OPERAND(immediate)
     break;
-  case X86Local::MRM_C0: case X86Local::MRM_C1: case X86Local::MRM_C2:
-  case X86Local::MRM_C3: case X86Local::MRM_C4: case X86Local::MRM_C5:
-  case X86Local::MRM_C6: case X86Local::MRM_C7: case X86Local::MRM_C8:
-  case X86Local::MRM_C9: case X86Local::MRM_CA: case X86Local::MRM_CB:
-  case X86Local::MRM_CC: case X86Local::MRM_CD: case X86Local::MRM_CE:
-  case X86Local::MRM_CF: case X86Local::MRM_D0: case X86Local::MRM_D1:
-  case X86Local::MRM_D2: case X86Local::MRM_D3: case X86Local::MRM_D4:
-  case X86Local::MRM_D5: case X86Local::MRM_D6: case X86Local::MRM_D7:
-  case X86Local::MRM_D8: case X86Local::MRM_D9: case X86Local::MRM_DA:
-  case X86Local::MRM_DB: case X86Local::MRM_DC: case X86Local::MRM_DD:
-  case X86Local::MRM_DE: case X86Local::MRM_DF: case X86Local::MRM_E0:
-  case X86Local::MRM_E1: case X86Local::MRM_E2: case X86Local::MRM_E3:
-  case X86Local::MRM_E4: case X86Local::MRM_E5: case X86Local::MRM_E6:
-  case X86Local::MRM_E7: case X86Local::MRM_E8: case X86Local::MRM_E9:
-  case X86Local::MRM_EA: case X86Local::MRM_EB: case X86Local::MRM_EC:
-  case X86Local::MRM_ED: case X86Local::MRM_EE: case X86Local::MRM_EF:
-  case X86Local::MRM_F0: case X86Local::MRM_F1: case X86Local::MRM_F2:
-  case X86Local::MRM_F3: case X86Local::MRM_F4: case X86Local::MRM_F5:
-  case X86Local::MRM_F6: case X86Local::MRM_F7: case X86Local::MRM_F8:
-  case X86Local::MRM_F9: case X86Local::MRM_FA: case X86Local::MRM_FB:
-  case X86Local::MRM_FC: case X86Local::MRM_FD: case X86Local::MRM_FE:
-  case X86Local::MRM_FF:
+#define MAP(from, to) case X86Local::MRM_##from:
+  X86_INSTR_MRM_MAPPING
+#undef MAP
     HANDLE_OPTIONAL(relocation)
     break;
   }
 
-  #undef HANDLE_OPERAND
-  #undef HANDLE_OPTIONAL
+#undef HANDLE_OPERAND
+#undef HANDLE_OPTIONAL
 }
 
 void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
@@ -703,77 +681,64 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::MRM_##from:
 
   llvm::Optional<OpcodeType> opcodeType;
-
-  ModRMFilter*  filter      = nullptr;
-  uint8_t       opcodeToSet = 0;
-
   switch (OpMap) {
   default: llvm_unreachable("Invalid map!");
-  case X86Local::OB:
-  case X86Local::TB:
-  case X86Local::T8:
-  case X86Local::TA:
-  case X86Local::XOP8:
-  case X86Local::XOP9:
-  case X86Local::XOPA:
-    switch (OpMap) {
-    default: llvm_unreachable("Unexpected map!");
-    case X86Local::OB:   opcodeType = ONEBYTE;      break;
-    case X86Local::TB:   opcodeType = TWOBYTE;      break;
-    case X86Local::T8:   opcodeType = THREEBYTE_38; break;
-    case X86Local::TA:   opcodeType = THREEBYTE_3A; break;
-    case X86Local::XOP8: opcodeType = XOP8_MAP;     break;
-    case X86Local::XOP9: opcodeType = XOP9_MAP;     break;
-    case X86Local::XOPA: opcodeType = XOPA_MAP;     break;
-    }
+  case X86Local::OB:        opcodeType = ONEBYTE;       break;
+  case X86Local::TB:        opcodeType = TWOBYTE;       break;
+  case X86Local::T8:        opcodeType = THREEBYTE_38;  break;
+  case X86Local::TA:        opcodeType = THREEBYTE_3A;  break;
+  case X86Local::XOP8:      opcodeType = XOP8_MAP;      break;
+  case X86Local::XOP9:      opcodeType = XOP9_MAP;      break;
+  case X86Local::XOPA:      opcodeType = XOPA_MAP;      break;
+  case X86Local::ThreeDNow: opcodeType = THREEDNOW_MAP; break;
+  }
 
-    switch (Form) {
-    default: llvm_unreachable("Invalid form!");
-    case X86Local::Pseudo: llvm_unreachable("Pseudo should not be emitted!");
-    case X86Local::RawFrm:
-    case X86Local::AddRegFrm:
-    case X86Local::RawFrmMemOffs:
-    case X86Local::RawFrmSrc:
-    case X86Local::RawFrmDst:
-    case X86Local::RawFrmDstSrc:
-    case X86Local::RawFrmImm8:
-    case X86Local::RawFrmImm16:
-      filter = new DumbFilter();
-      break;
-    case X86Local::MRMDestReg:
-    case X86Local::MRMSrcReg:
-    case X86Local::MRMSrcReg4VOp3:
-    case X86Local::MRMSrcRegOp4:
-    case X86Local::MRMXr:
-      filter = new ModFilter(true);
-      break;
-    case X86Local::MRMDestMem:
-    case X86Local::MRMSrcMem:
-    case X86Local::MRMSrcMem4VOp3:
-    case X86Local::MRMSrcMemOp4:
-    case X86Local::MRMXm:
-      filter = new ModFilter(false);
-      break;
-    case X86Local::MRM0r:      case X86Local::MRM1r:
-    case X86Local::MRM2r:      case X86Local::MRM3r:
-    case X86Local::MRM4r:      case X86Local::MRM5r:
-    case X86Local::MRM6r:      case X86Local::MRM7r:
-      filter = new ExtendedFilter(true, Form - X86Local::MRM0r);
-      break;
-    case X86Local::MRM0m:      case X86Local::MRM1m:
-    case X86Local::MRM2m:      case X86Local::MRM3m:
-    case X86Local::MRM4m:      case X86Local::MRM5m:
-    case X86Local::MRM6m:      case X86Local::MRM7m:
-      filter = new ExtendedFilter(false, Form - X86Local::MRM0m);
-      break;
-    X86_INSTR_MRM_MAPPING
-      filter = new ExactFilter(0xC0 + Form - X86Local::MRM_C0);   \
-      break;
-    } // switch (Form)
-
-    opcodeToSet = Opcode;
+  std::unique_ptr<ModRMFilter> filter;
+  switch (Form) {
+  default: llvm_unreachable("Invalid form!");
+  case X86Local::Pseudo: llvm_unreachable("Pseudo should not be emitted!");
+  case X86Local::RawFrm:
+  case X86Local::AddRegFrm:
+  case X86Local::RawFrmMemOffs:
+  case X86Local::RawFrmSrc:
+  case X86Local::RawFrmDst:
+  case X86Local::RawFrmDstSrc:
+  case X86Local::RawFrmImm8:
+  case X86Local::RawFrmImm16:
+    filter = llvm::make_unique<DumbFilter>();
     break;
-  } // switch (OpMap)
+  case X86Local::MRMDestReg:
+  case X86Local::MRMSrcReg:
+  case X86Local::MRMSrcReg4VOp3:
+  case X86Local::MRMSrcRegOp4:
+  case X86Local::MRMXr:
+    filter = llvm::make_unique<ModFilter>(true);
+    break;
+  case X86Local::MRMDestMem:
+  case X86Local::MRMSrcMem:
+  case X86Local::MRMSrcMem4VOp3:
+  case X86Local::MRMSrcMemOp4:
+  case X86Local::MRMXm:
+    filter = llvm::make_unique<ModFilter>(false);
+    break;
+  case X86Local::MRM0r: case X86Local::MRM1r:
+  case X86Local::MRM2r: case X86Local::MRM3r:
+  case X86Local::MRM4r: case X86Local::MRM5r:
+  case X86Local::MRM6r: case X86Local::MRM7r:
+    filter = llvm::make_unique<ExtendedFilter>(true, Form - X86Local::MRM0r);
+    break;
+  case X86Local::MRM0m: case X86Local::MRM1m:
+  case X86Local::MRM2m: case X86Local::MRM3m:
+  case X86Local::MRM4m: case X86Local::MRM5m:
+  case X86Local::MRM6m: case X86Local::MRM7m:
+    filter = llvm::make_unique<ExtendedFilter>(false, Form - X86Local::MRM0m);
+    break;
+  X86_INSTR_MRM_MAPPING
+    filter = llvm::make_unique<ExactFilter>(0xC0 + Form - X86Local::MRM_C0);
+    break;
+  } // switch (Form)
+
+  uint8_t opcodeToSet = Opcode;
 
   unsigned AddressSize = 0;
   switch (AdSize) {
@@ -803,8 +768,6 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
                           Is32Bit, OpPrefix == 0, IgnoresVEX_L || EncodeRC,
                           VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   }
-
-  delete filter;
 
 #undef MAP
 }

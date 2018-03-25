@@ -23,10 +23,10 @@ namespace mca {
 
 using namespace llvm;
 
-static void
-initializeUsedResources(InstrDesc &ID, const MCSchedClassDesc &SCDesc,
-                        const MCSubtargetInfo &STI,
-                        ArrayRef<uint64_t> ProcResourceMasks) {
+static void initializeUsedResources(InstrDesc &ID,
+                                    const MCSchedClassDesc &SCDesc,
+                                    const MCSubtargetInfo &STI,
+                                    ArrayRef<uint64_t> ProcResourceMasks) {
   const MCSchedModel &SM = STI.getSchedModel();
 
   // Populate resources consumed.

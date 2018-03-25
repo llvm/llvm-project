@@ -61,6 +61,7 @@ extern "C" {
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #include <mach/vm_statistics.h>
+#include <malloc/malloc.h>
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
@@ -341,6 +342,29 @@ void ReExec() {
 
 uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);
+}
+
+extern "C" unsigned malloc_num_zones;
+extern "C" malloc_zone_t **malloc_zones;
+malloc_zone_t sanitizer_zone;
+
+// We need to make sure that sanitizer_zone is registered as malloc_zones[0]. If
+// libmalloc tries to set up a different zone as malloc_zones[0], it will call
+// mprotect(malloc_zones, ..., PROT_READ).  This interceptor will catch that and
+// make sure we are still the first (default) zone.
+void MprotectMallocZones(void *addr, int prot) {
+  if (addr == malloc_zones && prot == PROT_READ) {
+    if (malloc_num_zones > 1 && malloc_zones[0] != &sanitizer_zone) {
+      for (unsigned i = 1; i < malloc_num_zones; i++) {
+        if (malloc_zones[i] == &sanitizer_zone) {
+          // Swap malloc_zones[0] and malloc_zones[i].
+          malloc_zones[i] = malloc_zones[0];
+          malloc_zones[0] = &sanitizer_zone;
+          break;
+        }
+      }
+    }
+  }
 }
 
 BlockingMutex::BlockingMutex() {
