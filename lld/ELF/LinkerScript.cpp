@@ -386,9 +386,9 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
       // which are common because they are in the default bfd script.
       // We do not ignore SHT_REL[A] linker-synthesized sections here because
       // want to support scripts that do custom layout for them.
-      if (!isa<SyntheticSection>(Sec) &&
-          (Sec->Type == SHT_REL || Sec->Type == SHT_RELA))
-        continue;
+      if (auto *IS = dyn_cast<InputSection>(Sec))
+        if (IS->getRelocatedSection())
+          continue;
 
       std::string Filename = getFilename(Sec->File);
       if (!Cmd->FilePat.match(Filename) ||
@@ -665,9 +665,8 @@ void LinkerScript::addOrphanSections() {
   // to create target sections first. We do not want priority handling
   // for synthetic sections because them are special.
   for (InputSectionBase *IS : InputSections) {
-    if ((IS->Type == SHT_REL || IS->Type == SHT_RELA) &&
-        !isa<SyntheticSection>(IS))
-      if (auto *Rel = cast<InputSection>(IS)->getRelocatedSection())
+    if (auto *Sec = dyn_cast<InputSection>(IS))
+      if (InputSectionBase *Rel = Sec->getRelocatedSection())
         if (auto *RelIS = dyn_cast_or_null<InputSectionBase>(Rel->Parent))
           Add(RelIS);
     Add(IS);
