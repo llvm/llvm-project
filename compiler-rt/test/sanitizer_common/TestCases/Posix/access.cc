@@ -2,4 +2,4 @@
 
 #include <unistd.h>
 
-int main(void) { return access("/root", F_OK); }
+int main(void) { return access("/dev/null", F_OK); }
