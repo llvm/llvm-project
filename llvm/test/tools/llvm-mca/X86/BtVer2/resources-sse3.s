@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 < %s | FileCheck %s --check-prefixes=CHECK,BTVER2
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -instruction-tables < %s | FileCheck %s --check-prefixes=CHECK,BTVER2
 
 addsubpd  %xmm0, %xmm2
 addsubpd  (%rax),  %xmm2
@@ -28,7 +28,6 @@ movshdup  (%rax), %xmm2
 
 movsldup  %xmm0, %xmm2
 movsldup  (%rax), %xmm2
-
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0] - JALU0
@@ -60,10 +59,10 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     1.00    -      -      -      -      -      -     	hsubpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	hsubps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     1.00    -      -      -      -      -      -     	hsubps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -      -     0.50   0.50    -     	lddqu	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -     1.00   0.01   0.99    -      -      -      -      -      -      -     	movddup	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -     1.00    -     1.00   1.00    -      -      -      -      -      -     	movddup	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.03   0.97   0.03   0.97    -      -      -      -      -      -      -     	movshdup	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.01   0.99   0.01   0.99   1.00    -      -      -      -      -      -     	movshdup	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.03   0.97   0.03   0.97    -      -      -      -      -      -      -     	movsldup	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.96   0.04   0.96   0.04   1.00    -      -      -      -      -      -     	movsldup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	lddqu	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     	movddup	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     	movddup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     	movshdup	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     	movshdup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     	movsldup	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     	movsldup	(%rax), %xmm2

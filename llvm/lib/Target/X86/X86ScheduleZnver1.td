@@ -152,6 +152,12 @@ defm : ZnWriteResPair<WriteIMul,   [ZnALU1, ZnMultiplier], 4>;
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 
+// Bit counts.
+defm : ZnWriteResPair<WriteBitScan, [ZnALU], 3>;
+defm : ZnWriteResPair<WriteLZCNT,   [ZnALU], 2>;
+defm : ZnWriteResPair<WriteTZCNT,   [ZnALU], 2>;
+defm : ZnWriteResPair<WritePOPCNT,  [ZnALU], 1>;
+
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
 
@@ -522,19 +528,6 @@ def ZnWriteALULat2Ld : SchedWriteRes<[ZnAGU, ZnALU]> {
   let Latency = 6;
 }
 
-def ZnWriteALULat3 : SchedWriteRes<[ZnALU]> {
-  let Latency = 3;
-}
-def ZnWriteALULat3Ld : SchedWriteRes<[ZnAGU, ZnALU]> {
-  let Latency = 7;
-}
-
-// BSF BSR.
-// r,r.
-def : InstRW<[ZnWriteALULat3], (instregex "BS(R|F)(16|32|64)rr")>;
-// r,m.
-def : InstRW<[ZnWriteALULat3Ld, ReadAfterLd], (instregex "BS(R|F)(16|32|64)rm")>;
-
 // BT.
 // r,r/i.
 def : InstRW<[WriteShift], (instregex "BT(16|32|64)r(r|i8)")>;
@@ -629,12 +622,6 @@ def : InstRW<[WriteShift],
 // m.
 def : InstRW<[WriteShift],
              (instregex "SET(O|NO|B|AE|E|NE|BE|A|S|NS|P|NP|L|GE|LE|G)m")>;
-
-// LZCNT TZCNT.
-// r,r.
-def : InstRW<[ZnWriteALULat2], (instregex "(LZCNT|TZCNT)(16|32|64)rr")>;
-// r,m.
-def : InstRW<[ZnWriteALULat2Ld, ReadAfterLd], (instregex "(LZCNT|TZCNT)(16|32|64)rm")>;
 
 //-- Misc instructions --//
 // CMPXCHG.

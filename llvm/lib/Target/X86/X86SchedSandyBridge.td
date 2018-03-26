@@ -112,6 +112,12 @@ defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 // the port to read all inputs. We don't model that.
 def : WriteRes<WriteLEA, [SBPort15]>;
 
+// Bit counts.
+defm : SBWriteResPair<WriteBitScan, [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteLZCNT,   [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteTZCNT,   [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WritePOPCNT,  [SBPort1], 3, [1], 1, 5>;
+
 // Scalar and vector floating point.
 def  : WriteRes<WriteFStore,       [SBPort23, SBPort4]>;
 def  : WriteRes<WriteFLoad,        [SBPort23]> { let Latency = 6; }
@@ -672,8 +678,6 @@ def: InstRW<[SBWriteResGroup21], (instrs MUL8r, IMUL16rr, IMUL32rr, IMUL32rri, I
 def: InstRW<[SBWriteResGroup21], (instregex "ADD_FPrST0",
                                             "ADD_FST0r",
                                             "ADD_FrST0",
-                                            "BSF(16|32|64)rr",
-                                            "BSR(16|32|64)rr",
                                             "CRC32r(16|32|64)r8",
                                             "CRC32r(16|32|64)r64",
                                             "MMX_CVTPI2PSirr",
@@ -1412,9 +1416,7 @@ def SBWriteResGroup72 : SchedWriteRes<[SBPort1,SBPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup72], (instregex "BSF(16|32|64)rm",
-                                            "BSR(16|32|64)rm",
-                                            "CRC32r(16|32|64)m64",
+def: InstRW<[SBWriteResGroup72], (instregex "CRC32r(16|32|64)m64",
                                             "CRC32r(16|32|64)m8",
                                             "FCOM32m",
                                             "FCOM64m",

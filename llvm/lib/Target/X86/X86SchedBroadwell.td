@@ -110,6 +110,12 @@ def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, h
 
 def : WriteRes<WriteLEA, [BWPort15]>; // LEA instructions can't fold loads.
 
+// Bit counts.
+defm : BWWriteResPair<WriteBitScan, [BWPort1], 3>;
+defm : BWWriteResPair<WriteLZCNT,   [BWPort1], 3>;
+defm : BWWriteResPair<WriteTZCNT,   [BWPort1], 3>;
+defm : BWWriteResPair<WritePOPCNT,  [BWPort1], 3>;
+
 // Integer shifts and rotates.
 defm : BWWriteResPair<WriteShift, [BWPort06],  1>;
 
@@ -851,13 +857,9 @@ def: InstRW<[BWWriteResGroup27], (instrs IMUL8r, MUL8r)>;
 def: InstRW<[BWWriteResGroup27], (instregex "ADD_FPrST0",
                                             "ADD_FST0r",
                                             "ADD_FrST0",
-                                            "BSF(16|32|64)rr",
-                                            "BSR(16|32|64)rr",
-                                            "LZCNT(16|32|64)rr",
                                             "MMX_CVTPI2PSirr",
                                             "PDEP(32|64)rr",
                                             "PEXT(32|64)rr",
-                                            "POPCNT(16|32|64)rr",
                                             "SHLD(16|32|64)rri8",
                                             "SHRD(16|32|64)rri8",
                                             "SUBR_FPrST0",
@@ -866,7 +868,6 @@ def: InstRW<[BWWriteResGroup27], (instregex "ADD_FPrST0",
                                             "SUB_FPrST0",
                                             "SUB_FST0r",
                                             "SUB_FrST0",
-                                            "TZCNT(16|32|64)rr",
                                             "(V?)ADDPD(Y?)rr",
                                             "(V?)ADDPS(Y?)rr",
                                             "(V?)ADDSDrr",
@@ -1889,16 +1890,11 @@ def BWWriteResGroup91 : SchedWriteRes<[BWPort1,BWPort23]> {
 }
 def: InstRW<[BWWriteResGroup91], (instrs IMUL32rm, IMUL32rmi, IMUL32rmi8, IMUL64rm, IMUL64rmi8, IMUL64rmi32)>;
 def: InstRW<[BWWriteResGroup91], (instrs IMUL8m, MUL8m)>;
-def: InstRW<[BWWriteResGroup91], (instregex "BSF(16|32|64)rm",
-                                            "BSR(16|32|64)rm",
-                                            "LZCNT(16|32|64)rm",
-                                            "MMX_CVTPI2PSirm",
+def: InstRW<[BWWriteResGroup91], (instregex "MMX_CVTPI2PSirm",
                                             "MMX_CVTPS2PIirm",
                                             "MMX_CVTTPS2PIirm",
                                             "PDEP(32|64)rm",
                                             "PEXT(32|64)rm",
-                                            "POPCNT(16|32|64)rm",
-                                            "TZCNT(16|32|64)rm",
                                             "(V?)ADDPDrm",
                                             "(V?)ADDPSrm",
                                             "(V?)ADDSDrm",

@@ -97,6 +97,12 @@ defm : SLMWriteResPair<WriteJump,  [SLM_IEC_RSV1],   1>;
 // the port to read all inputs. We don't model that.
 def : WriteRes<WriteLEA, [SLM_IEC_RSV1]>;
 
+// Bit counts.
+defm : SLMWriteResPair<WriteBitScan, [SLM_IEC_RSV01], 10, [20], 10>;
+defm : SLMWriteResPair<WriteLZCNT,   [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WriteTZCNT,   [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WritePOPCNT,  [SLM_IEC_RSV0], 3>;
+
 // This is quite rough, latency depends on the dividend.
 defm : SLMWriteResPair<WriteIDiv, [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 4>;
 

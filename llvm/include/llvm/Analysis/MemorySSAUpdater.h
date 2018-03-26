@@ -43,6 +43,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -141,8 +142,12 @@ private:
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, WhereType Where);
   MemoryAccess *getPreviousDef(MemoryAccess *);
   MemoryAccess *getPreviousDefInBlock(MemoryAccess *);
-  MemoryAccess *getPreviousDefFromEnd(BasicBlock *);
-  MemoryAccess *getPreviousDefRecursive(BasicBlock *);
+  MemoryAccess *
+  getPreviousDefFromEnd(BasicBlock *,
+                        DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
+  MemoryAccess *
+  getPreviousDefRecursive(BasicBlock *,
+                          DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
   MemoryAccess *recursePhi(MemoryAccess *Phi);
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);

@@ -100,7 +100,7 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
   reply(json::obj{
       {{"capabilities",
         json::obj{
-            {"textDocumentSync", 1},
+            {"textDocumentSync", (int)TextDocumentSyncKind::Incremental},
             {"documentFormattingProvider", true},
             {"documentRangeFormattingProvider", true},
             {"documentOnTypeFormattingProvider",
@@ -147,25 +147,30 @@ void ClangdLSPServer::onDocumentDidOpen(DidOpenTextDocumentParams &Params) {
   PathRef File = Params.textDocument.uri.file();
   std::string &Contents = Params.textDocument.text;
 
-  DraftMgr.updateDraft(File, Contents);
+  DraftMgr.addDraft(File, Contents);
   Server.addDocument(File, Contents, WantDiagnostics::Yes);
 }
 
 void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
-  if (Params.contentChanges.size() != 1)
-    return replyError(ErrorCode::InvalidParams,
-                      "can only apply one change at a time");
   auto WantDiags = WantDiagnostics::Auto;
   if (Params.wantDiagnostics.hasValue())
     WantDiags = Params.wantDiagnostics.getValue() ? WantDiagnostics::Yes
                                                   : WantDiagnostics::No;
 
   PathRef File = Params.textDocument.uri.file();
-  std::string &Contents = Params.contentChanges[0].text;
+  llvm::Expected<std::string> Contents =
+      DraftMgr.updateDraft(File, Params.contentChanges);
+  if (!Contents) {
+    // If this fails, we are most likely going to be not in sync anymore with
+    // the client.  It is better to remove the draft and let further operations
+    // fail rather than giving wrong results.
+    DraftMgr.removeDraft(File);
+    Server.removeDocument(File);
+    log(llvm::toString(Contents.takeError()));
+    return;
+  }
 
-  // We only support full syncing right now.
-  DraftMgr.updateDraft(File, Contents);
-  Server.addDocument(File, Contents, WantDiags);
+  Server.addDocument(File, *Contents, WantDiags);
 }
 
 void ClangdLSPServer::onFileEvent(DidChangeWatchedFilesParams &Params) {

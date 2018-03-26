@@ -43,6 +43,10 @@ void HexagonTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Runtime = UP.Partial = true;
 }
 
+bool HexagonTTIImpl::shouldFavorPostInc() const {
+  return true;
+}
+
 unsigned HexagonTTIImpl::getNumberOfRegisters(bool vector) const {
   return vector ? 0 : 32;
 }
@@ -81,5 +85,5 @@ int HexagonTTIImpl::getUserCost(const User *U,
 }
 
 bool HexagonTTIImpl::shouldBuildLookupTables() const {
-   return EmitLookupTables;
+  return EmitLookupTables;
 }
