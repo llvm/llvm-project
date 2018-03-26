@@ -15,14 +15,13 @@
 // void permissions(const path& p, perms prms, std::error_code& ec) noexcept;
 
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
-namespace fs = std::experimental::filesystem;
+using namespace fs;
 
 using PR = fs::perms;
 

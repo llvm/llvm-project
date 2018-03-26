@@ -13,7 +13,7 @@
 
 // enum class perms;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 #include <sys/stat.h>
@@ -21,7 +21,6 @@
 #include "test_macros.h"
 #include "check_bitmask_types.hpp"
 
-namespace fs = std::experimental::filesystem;
 
 constexpr fs::perms ME(int val) { return static_cast<fs::perms>(val); }
 
