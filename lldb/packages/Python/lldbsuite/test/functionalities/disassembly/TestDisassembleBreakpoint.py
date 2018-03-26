@@ -16,40 +16,29 @@ from lldbsuite.test import lldbutil
 class DisassemblyTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="function names print fully demangled instead of name-only")
     def test(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.expect("file " + exe,
-                    patterns=["Current executable set to .*a.out.*"])
+        target, _, _, bkpt = lldbutil.run_to_source_breakpoint(self,
+                "Set a breakpoint here", lldb.SBFileSpec("main.cpp"))
+        self.runCmd("dis -f")
+        disassembly_with_break = self.res.GetOutput().splitlines()
 
-        self.runCmd("dis -n main")
-        disassembly_before_break = self.res.GetOutput().splitlines()
+        self.assertTrue(target.BreakpointDelete(bkpt.GetID()))
 
-        match_object = lldbutil.run_break_set_command(self, "br s -n sum")
-        lldbutil.check_breakpoint_result(
-            self,
-            match_object,
-            symbol_name='sum',
-            symbol_match_exact=False,
-            num_locations=1)
+        self.runCmd("dis -f")
+        disassembly_without_break = self.res.GetOutput().splitlines()
 
-        self.expect("run",
-                    patterns=["Process .* launched: "])
-
-        self.runCmd("dis -n main")
-        disassembly_after_break = self.res.GetOutput().splitlines()
-
-        # make sure all assembly instructions are the same as the original
-        # instructions before inserting breakpoints.
-        self.assertEqual(len(disassembly_before_break),
-                         len(disassembly_after_break))
-
-        for dis_inst_before, dis_inst_after in \
-                zip(disassembly_before_break, disassembly_after_break):
-            inst_before = dis_inst_before.split(':')[-1]
-            inst_after = dis_inst_after.split(':')[-1]
-            self.assertEqual(inst_before, inst_after)
+        # Make sure all assembly instructions are the same as instructions
+        # with the breakpoint removed.
+        self.assertEqual(len(disassembly_with_break),
+                         len(disassembly_without_break))
+        for dis_inst_with, dis_inst_without in \
+                zip(disassembly_with_break, disassembly_without_break):
+            inst_with = dis_inst_with.split(':')[-1]
+            inst_without = dis_inst_without.split(':')[-1]
+            self.assertEqual(inst_with, inst_without)
