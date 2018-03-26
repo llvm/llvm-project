@@ -655,6 +655,7 @@ public:
   /// TODO: to be removed later and replaced with suitable properties
   bool isAtom() const { return X86ProcFamily == IntelAtom; }
   bool isSLM() const { return X86ProcFamily == IntelSLM; }
+  bool isGLM() const { return X86ProcFamily == IntelGLM; }
   bool useSoftFloat() const { return UseSoftFloat; }
 
   /// Use mfence if we have SSE2 or we're on x86-64 (even if we asked for

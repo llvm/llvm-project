@@ -40,7 +40,6 @@ class InstrBuilder {
   llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
 
   llvm::DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
-  llvm::DenseMap<unsigned, std::unique_ptr<Instruction>> Instructions;
 
   void createInstrDescImpl(const llvm::MCInst &MCI);
 

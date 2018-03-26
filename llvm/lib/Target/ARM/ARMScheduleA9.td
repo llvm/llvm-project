@@ -2537,8 +2537,7 @@ def : SchedAlias<WriteCMPsr, A9WriteALU>;
 def : InstRW< [A9WriteIsr], (instregex "MOVsr", "MOVsi", "MVNsr", "MOVCCsi",
                                        "MOVCCsr")>;
 def : InstRW< [WriteALU, A9ReadALU], (instregex "MVNr")>;
-def : InstRW< [A9WriteI2], (instregex "MOVCCi32imm", "MOVi32imm",
-                                      "MOV_ga_dyn")>;
+def : InstRW< [A9WriteI2], (instregex "MOVCCi32imm", "MOVi32imm")>;
 def : InstRW< [A9WriteI2pc], (instregex "MOV_ga_pcrel")>;
 def : InstRW< [A9WriteI2ld], (instregex "MOV_ga_pcrel_ldr")>;
 
@@ -2551,12 +2550,12 @@ def : InstRW< [A9WriteM],
       "SMMLA", "SMMLAR", "SMMLS", "SMMLSR")>;
 def : InstRW< [A9WriteM, A9WriteMHi],
       (instregex "SMULL", "SMULLv5", "UMULL", "UMULLv5", "SMLAL$", "UMLAL",
-      "UMAAL", "SMLALv5", "UMLALv5", "UMAALv5", "SMLALBB", "SMLALBT", "SMLALTB",
+      "UMAAL", "SMLALv5", "UMLALv5", "SMLALBB", "SMLALBT", "SMLALTB",
       "SMLALTT")>;
 // FIXME: These instructions used to have NoItinerary. Just copied the one from above.
 def : InstRW< [A9WriteM, A9WriteMHi],
       (instregex "SMLAD", "SMLADX", "SMLALD", "SMLALDX", "SMLSD", "SMLSDX",
-      "SMLSLD", "SMLLDX", "SMUAD", "SMUADX", "SMUSD", "SMUSDX")>;
+      "SMLSLD", "SMLSLDX", "SMUAD", "SMUADX", "SMUSD", "SMUSDX")>;
 
 def : InstRW<[A9WriteM16, A9WriteM16Hi],
       (instregex "SMULBB", "SMULBT", "SMULTB", "SMULTT", "SMULWB", "SMULWT")>;

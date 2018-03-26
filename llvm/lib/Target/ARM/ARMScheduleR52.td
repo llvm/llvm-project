@@ -217,12 +217,11 @@ def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_ISS],
       "t2SXTB", "t2SXTH", "t2SXTB16", "t2UXTB", "t2UXTH", "t2UXTB16")>;
 
 def : InstRW<[R52WriteALU_EX1, R52Read_ISS],
-      (instregex "MOVCCi32imm", "MOVi32imm", "MOV_ga_dyn", "t2MOVCCi",
-      "t2MOVi", "t2MOV_ga_dyn")>;
+      (instregex "MOVCCi32imm", "MOVi32imm", "t2MOVCCi", "t2MOVi")>;
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1],
-      (instregex "MOV_ga_pcrel$", "t2MOV_ga_pcrel$")>;
+      (instregex "MOV_ga_pcrel$")>;
 def : InstRW<[R52WriteLd,R52Read_ISS],
-      (instregex "MOV_ga_pcrel_ldr", "t2MOV_ga_pcrel_ldr")>;
+      (instregex "MOV_ga_pcrel_ldr")>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_EX1], (instregex "SEL", "t2SEL")>;
 
@@ -257,12 +256,12 @@ def : InstRW< [R52WriteALU_EX2, R52Read_EX1, R52Read_EX1],
 
 // Sum of Absolute Difference
 def : InstRW< [R52WriteALU_WRI, R52Read_ISS, R52Read_ISS, R52Read_ISS],
-      (instregex "USAD8", "t2USAD8", "tUSAD8","USADA8", "t2USADA8", "tUSADA8") >;
+      (instregex "USAD8", "t2USAD8", "USADA8", "t2USADA8") >;
 
 // Integer Multiply
 def : InstRW<[R52WriteMAC, R52Read_ISS, R52Read_ISS],
-      (instregex "MULS", "MUL", "SMMUL", "SMMULR", "SMULBB", "SMULBT",
-      "SMULTB", "SMULTT", "SMULWB", "SMULWT", "SMUSD", "SMUSDXi", "t2MUL",
+      (instregex "MUL", "SMMUL", "SMMULR", "SMULBB", "SMULBT",
+      "SMULTB", "SMULTT", "SMULWB", "SMULWT", "SMUSD", "SMUSDX", "t2MUL",
       "t2SMMUL", "t2SMMULR", "t2SMULBB", "t2SMULBT", "t2SMULTB", "t2SMULTT",
       "t2SMULWB", "t2SMULWT", "t2SMUSD")>;
 
@@ -270,17 +269,17 @@ def : InstRW<[R52WriteMAC, R52Read_ISS, R52Read_ISS],
 // Even for 64-bit accumulation (or Long), the single MAC is used (not ALUs).
 // The store pipeline is used partly for 64-bit operations.
 def : InstRW<[R52WriteMAC, R52Read_ISS, R52Read_ISS, R52Read_ISS],
-      (instregex "MLAS", "MLA", "MLS", "SMMLA", "SMMLAR", "SMMLS", "SMMLSR",
-      "t2MLA", "t2MLS", "t2MLAS", "t2SMMLA", "t2SMMLAR", "t2SMMLS", "t2SMMLSR",
+      (instregex "MLA", "MLS", "SMMLA", "SMMLAR", "SMMLS", "SMMLSR",
+      "t2MLA", "t2MLS", "t2SMMLA", "t2SMMLAR", "t2SMMLS", "t2SMMLSR",
       "SMUAD", "SMUADX", "t2SMUAD", "t2SMUADX",
       "SMLABB", "SMLABT", "SMLATB", "SMLATT", "SMLSD", "SMLSDX",
       "SMLAWB", "SMLAWT", "t2SMLABB", "t2SMLABT", "t2SMLATB", "t2SMLATT",
       "t2SMLSD", "t2SMLSDX", "t2SMLAWB", "t2SMLAWT",
       "SMLAD", "SMLADX", "t2SMLAD", "t2SMLADX",
       "SMULL$", "UMULL$", "t2SMULL$", "t2UMULL$",
-      "SMLALS", "UMLALS", "SMLAL", "UMLAL", "MLALBB", "SMLALBT",
+      "SMLAL", "UMLAL", "SMLALBT",
       "SMLALTB", "SMLALTT", "SMLALD", "SMLALDX", "SMLSLD", "SMLSLDX",
-      "UMAAL", "t2SMLALS", "t2UMLALS", "t2SMLAL", "t2UMLAL", "t2MLALBB",
+      "UMAAL", "t2SMLAL", "t2UMLAL",
       "t2SMLALBT", "t2SMLALTB", "t2SMLALTT", "t2SMLALD", "t2SMLALDX",
       "t2SMLSLD", "t2SMLSLDX", "t2UMAAL")>;
 
@@ -301,31 +300,31 @@ def : InstRW<[R52WriteLd, R52WriteAdr, R52Read_ISS, R52Read_ISS],
       "LDRBT_POST$", "LDR(T|BT)_POST_(REG|IMM)", "LDRHT(i|r)",
       "t2LD(R|RB|RH)_(PRE|POST)", "t2LD(R|RB|RH)T",
       "LDR(SH|SB)(_POST|_PRE)", "t2LDR(SH|SB)(_POST|_PRE)",
-      "LDRS(B|H)T(i|r)", "t2LDRS(B|H)T(i|r)", "t2LDRS(B|H)T",
+      "LDRS(B|H)T(i|r)", "t2LDRS(B|H)T(i|r)?",
       "LDRD_(POST|PRE)", "t2LDRD_(POST|PRE)")>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1], (instregex "MOVS?sr", "t2MOVS?sr")>;
 def : InstRW<[R52WriteALU_WRI, R52Read_EX2], (instregex "MOVT", "t2MOVT")>;
 
-def : InstRW<[R52WriteALU_EX2, R52Read_EX1], (instregex "AD(C|D)S?ri","ANDS?ri",
+def : InstRW<[R52WriteALU_EX2, R52Read_EX1], (instregex "AD(C|D)S?ri", "ANDS?ri",
       "BICS?ri", "CLZ", "EORri", "MVNS?r", "ORRri", "RSBS?ri", "RSCri", "SBCri",
       "t2AD(C|D)S?ri", "t2ANDS?ri", "t2BICS?ri","t2CLZ", "t2EORri", "t2MVN",
       "t2ORRri", "t2RSBS?ri", "t2SBCri")>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_EX1], (instregex "AD(C|D)S?rr",
-      "ANDS?rr", "BICS?rr", "CRC*", "EORrr", "ORRrr", "RSBrr", "RSCrr", "SBCrr",
+      "ANDS?rr", "BICS?rr", "CRC", "EORrr", "ORRrr", "RSBrr", "RSCrr", "SBCrr",
       "t2AD(C|D)S?rr", "t2ANDS?rr", "t2BICS?rr", "t2CRC", "t2EORrr", "t2SBCrr")>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_ISS], (instregex "AD(C|D)S?rsi",
       "ANDS?rsi", "BICS?rsi", "EORrsi", "ORRrsi", "RSBrsi", "RSCrsi", "SBCrsi",
-      "t2AD(|D)S?rsi", "t2ANDS?rsi", "t2BICS?rsi", "t2EORrsi", "t2ORRrsi", "t2RSBrsi", "t2SBCrsi")>;
+      "t2AD(C|D)S?rs", "t2ANDS?rs", "t2BICS?rs", "t2EORrs", "t2ORRrs", "t2RSBrs", "t2SBCrs")>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_ISS, R52Read_ISS],
       (instregex "AD(C|D)S?rsr", "ANDS?rsr", "BICS?rsr", "EORrsr", "MVNS?sr",
-      "ORRrsrr", "RSBrsr", "RSCrsr", "SBCrsr")>;
+      "ORRrsr", "RSBrsr", "RSCrsr", "SBCrsr")>;
 
 def : InstRW<[R52WriteALU_EX1],
-    (instregex "ADR", "MOVSi", "MOVSsi", "MOVST?i16*", "MVNS?s?i", "t2MOVS?si")>;
+    (instregex "ADR", "MOVsi", "MVNS?s?i", "t2MOVS?si")>;
 
 def : InstRW<[R52WriteALU_EX1, R52Read_ISS], (instregex "ASRi", "RORS?i")>;
 def : InstRW<[R52WriteALU_EX1, R52Read_ISS, R52Read_ISS],
@@ -484,7 +483,7 @@ def : InstRW<[R52WriteILDM, R52Read_ISS],
 def : InstRW<[R52WriteILDM, R52WriteAdr, R52Read_ISS],
       (instregex "LDM(IA|DA|DB|IB)_UPD", "(t2|sys|t)LDM(IA|DA|DB|IB)_UPD")>;
 def : InstRW<[R52WriteILDM, R52WriteAdr, R52Read_ISS],
-        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET", "POP", "tPOP")>;
+        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET", "tPOP")>;
 
 // Integer Store, Single Element
 def : InstRW<[R52WriteLd, R52Read_ISS, R52Read_EX2],
@@ -500,7 +499,7 @@ def : InstRW<[R52WriteLd, R52WriteAdr, R52Read_ISS, R52Read_EX2],
 
 // Integer Store, Dual
 def : InstRW<[R52WriteLd, R52Read_ISS, R52Read_EX2],
-    (instregex "STRD$", "t2STRDi8", "STL", "t2STRD$", "t2STL")>;
+    (instregex "STRD$", "t2STRDi8", "STL", "t2STL")>;
 def : InstRW<[R52WriteLd, R52WriteAdr, R52Read_ISS, R52Read_EX2],
     (instregex "(t2|t)STRD_(POST|PRE)", "STRD_(POST|PRE)")>;
 
@@ -508,7 +507,7 @@ def : InstRW<[R52WriteISTM, R52Read_ISS, R52Read_EX2],
     (instregex "STM(IB|IA|DB|DA)$", "(t2|sys|t)STM(IB|IA|DB|DA)$")>;
 def : InstRW<[R52WriteISTM, R52WriteAdr, R52Read_ISS, R52Read_EX2],
     (instregex "STM(IB|IA|DB|DA)_UPD", "(t2|sys|t)STM(IB|IA|DB|DA)_UPD",
-    "PUSH", "tPUSH")>;
+    "tPUSH")>;
 
 // LDRLIT pseudo instructions, they expand to LDR + PICADD
 def : InstRW<[R52WriteLd],

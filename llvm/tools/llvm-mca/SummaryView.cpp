@@ -38,5 +38,4 @@ void SummaryView::printView(raw_ostream &OS) const {
   TempStream.flush();
   OS << Buffer;
 }
-
 } // namespace mca.

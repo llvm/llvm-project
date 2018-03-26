@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Instruction.h"
 #include "LSUnit.h"
+#include "Instruction.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -76,7 +76,8 @@ bool LSUnit::isReady(unsigned Index) const {
   assert((IsALoad || IsAStore) && "Instruction is not in queue!");
 
   unsigned LoadBarrierIndex = LoadBarriers.empty() ? 0 : *LoadBarriers.begin();
-  unsigned StoreBarrierIndex = StoreBarriers.empty() ? 0 : *StoreBarriers.begin();
+  unsigned StoreBarrierIndex =
+      StoreBarriers.empty() ? 0 : *StoreBarriers.begin();
 
   if (IsALoad && LoadBarrierIndex) {
     if (Index > LoadBarrierIndex)

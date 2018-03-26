@@ -59,7 +59,6 @@ public:
 
   bool isEmpty() const { return size() == 0; }
 };
-
 } // namespace mca
 
 #endif

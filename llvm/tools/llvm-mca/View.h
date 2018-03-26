@@ -27,7 +27,6 @@ public:
   virtual ~View() = default;
   void anchor() override;
 };
-
-}
+} // namespace mca
 
 #endif

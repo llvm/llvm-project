@@ -233,5 +233,4 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
     OS << Buffer;
   }
 }
-
 } // namespace mca

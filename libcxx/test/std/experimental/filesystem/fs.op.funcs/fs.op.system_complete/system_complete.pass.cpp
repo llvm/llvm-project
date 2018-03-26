@@ -17,7 +17,7 @@
 // Note: For POSIX based operating systems, 'system_complete(p)' has the
 // same semantics as 'absolute(p, current_path())'.
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -25,7 +25,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_system_complete_test_suite)
 

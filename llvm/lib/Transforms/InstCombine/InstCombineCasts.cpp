@@ -1484,9 +1484,10 @@ static Type *getMinimumFPType(Value *V) {
   return V->getType();
 }
 
-Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
-  if (Instruction *I = commonCastTransforms(CI))
+Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
+  if (Instruction *I = commonCastTransforms(FPT))
     return I;
+
   // If we have fptrunc(OpI (fpextend x), (fpextend y)), we would like to
   // simplify this expression to avoid one or more of the trunc/extend
   // operations if we can do so without changing the numerical results.
@@ -1494,7 +1495,8 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
   // The exact manner in which the widths of the operands interact to limit
   // what we can and cannot do safely varies from operation to operation, and
   // is explained below in the various case statements.
-  BinaryOperator *OpI = dyn_cast<BinaryOperator>(CI.getOperand(0));
+  Type *Ty = FPT.getType();
+  BinaryOperator *OpI = dyn_cast<BinaryOperator>(FPT.getOperand(0));
   if (OpI && OpI->hasOneUse()) {
     Type *LHSMinType = getMinimumFPType(OpI->getOperand(0));
     Type *RHSMinType = getMinimumFPType(OpI->getOperand(1));
@@ -1502,7 +1504,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
     unsigned LHSWidth = LHSMinType->getFPMantissaWidth();
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
     unsigned SrcWidth = std::max(LHSWidth, RHSWidth);
-    unsigned DstWidth = CI.getType()->getFPMantissaWidth();
+    unsigned DstWidth = Ty->getFPMantissaWidth();
     switch (OpI->getOpcode()) {
       default: break;
       case Instruction::FAdd:
@@ -1526,10 +1528,9 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         // could be tightened for those cases, but they are rare (the main
         // case of interest here is (float)((double)float + float)).
         if (OpWidth >= 2*DstWidth+1 && DstWidth >= SrcWidth) {
-          Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), CI.getType());
-          Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), CI.getType());
-          Instruction *RI =
-            BinaryOperator::Create(OpI->getOpcode(), LHS, RHS);
+          Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), Ty);
+          Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
+          Instruction *RI = BinaryOperator::Create(OpI->getOpcode(), LHS, RHS);
           RI->copyFastMathFlags(OpI);
           return RI;
         }
@@ -1541,10 +1542,9 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         // rounding can possibly occur; we can safely perform the operation
         // in the destination format if it can represent both sources.
         if (OpWidth >= LHSWidth + RHSWidth && DstWidth >= SrcWidth) {
-          Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), CI.getType());
-          Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), CI.getType());
-          Instruction *RI =
-            BinaryOperator::CreateFMul(LHS, RHS);
+          Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), Ty);
+          Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
+          Instruction *RI = BinaryOperator::CreateFMul(LHS, RHS);
           RI->copyFastMathFlags(OpI);
           return RI;
         }
@@ -1557,10 +1557,9 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         // condition used here is a good conservative first pass.
         // TODO: Tighten bound via rigorous analysis of the unbalanced case.
         if (OpWidth >= 2*DstWidth && DstWidth >= SrcWidth) {
-          Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), CI.getType());
-          Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), CI.getType());
-          Instruction *RI =
-            BinaryOperator::CreateFDiv(LHS, RHS);
+          Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), Ty);
+          Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
+          Instruction *RI = BinaryOperator::CreateFDiv(LHS, RHS);
           RI->copyFastMathFlags(OpI);
           return RI;
         }
@@ -1584,14 +1583,13 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         Value *ExactResult = Builder.CreateFRem(LHS, RHS);
         if (Instruction *RI = dyn_cast<Instruction>(ExactResult))
           RI->copyFastMathFlags(OpI);
-        return CastInst::CreateFPCast(ExactResult, CI.getType());
+        return CastInst::CreateFPCast(ExactResult, Ty);
       }
     }
 
     // (fptrunc (fneg x)) -> (fneg (fptrunc x))
     if (BinaryOperator::isFNeg(OpI)) {
-      Value *InnerTrunc = Builder.CreateFPTrunc(OpI->getOperand(1),
-                                                CI.getType());
+      Value *InnerTrunc = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
       Instruction *RI = BinaryOperator::CreateFNeg(InnerTrunc);
       RI->copyFastMathFlags(OpI);
       return RI;
@@ -1605,26 +1603,25 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
   // ruin min/max canonical form which is to have the select and
   // compare's operands be of the same type with no casts to look through.
   Value *LHS, *RHS;
-  SelectInst *SI = dyn_cast<SelectInst>(CI.getOperand(0));
+  SelectInst *SI = dyn_cast<SelectInst>(FPT.getOperand(0));
   if (SI &&
       (isa<ConstantFP>(SI->getOperand(1)) ||
        isa<ConstantFP>(SI->getOperand(2))) &&
       matchSelectPattern(SI, LHS, RHS).Flavor == SPF_UNKNOWN) {
-    Value *LHSTrunc = Builder.CreateFPTrunc(SI->getOperand(1), CI.getType());
-    Value *RHSTrunc = Builder.CreateFPTrunc(SI->getOperand(2), CI.getType());
+    Value *LHSTrunc = Builder.CreateFPTrunc(SI->getOperand(1), Ty);
+    Value *RHSTrunc = Builder.CreateFPTrunc(SI->getOperand(2), Ty);
     return SelectInst::Create(SI->getOperand(0), LHSTrunc, RHSTrunc);
   }
 
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI.getOperand(0));
-  if (II) {
+  if (auto *II = dyn_cast<IntrinsicInst>(FPT.getOperand(0))) {
     switch (II->getIntrinsicID()) {
     default: break;
-    case Intrinsic::fabs:
     case Intrinsic::ceil:
+    case Intrinsic::fabs:
     case Intrinsic::floor:
+    case Intrinsic::nearbyint:
     case Intrinsic::rint:
     case Intrinsic::round:
-    case Intrinsic::nearbyint:
     case Intrinsic::trunc: {
       Value *Src = II->getArgOperand(0);
       if (!Src->hasOneUse())
@@ -1635,30 +1632,26 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
       // truncating.
       if (II->getIntrinsicID() != Intrinsic::fabs) {
         FPExtInst *FPExtSrc = dyn_cast<FPExtInst>(Src);
-        if (!FPExtSrc || FPExtSrc->getOperand(0)->getType() != CI.getType())
+        if (!FPExtSrc || FPExtSrc->getSrcTy() != Ty)
           break;
       }
 
       // Do unary FP operation on smaller type.
       // (fptrunc (fabs x)) -> (fabs (fptrunc x))
-      Value *InnerTrunc = Builder.CreateFPTrunc(Src, CI.getType());
-      Type *IntrinsicType[] = { CI.getType() };
-      Function *Overload = Intrinsic::getDeclaration(
-        CI.getModule(), II->getIntrinsicID(), IntrinsicType);
-
+      Value *InnerTrunc = Builder.CreateFPTrunc(Src, Ty);
+      Function *Overload = Intrinsic::getDeclaration(FPT.getModule(),
+                                                     II->getIntrinsicID(), Ty);
       SmallVector<OperandBundleDef, 1> OpBundles;
       II->getOperandBundlesAsDefs(OpBundles);
-
-      Value *Args[] = { InnerTrunc };
-      CallInst *NewCI =  CallInst::Create(Overload, Args,
-                                          OpBundles, II->getName());
+      CallInst *NewCI = CallInst::Create(Overload, { InnerTrunc }, OpBundles,
+                                         II->getName());
       NewCI->copyFastMathFlags(II);
       return NewCI;
     }
     }
   }
 
-  if (Instruction *I = shrinkInsertElt(CI, Builder))
+  if (Instruction *I = shrinkInsertElt(FPT, Builder))
     return I;
 
   return nullptr;

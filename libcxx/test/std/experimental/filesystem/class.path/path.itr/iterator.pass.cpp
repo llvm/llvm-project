@@ -19,7 +19,7 @@
 //      path(InputIterator first, InputIterator last);
 
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <iterator>
 #include <type_traits>
 #include <cassert>
@@ -27,7 +27,6 @@
 #include "test_macros.h"
 #include "filesystem_test_helper.hpp"
 
-namespace fs = std::experimental::filesystem;
 
 
 template <class It>

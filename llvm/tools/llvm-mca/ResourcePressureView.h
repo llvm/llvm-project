@@ -106,7 +106,6 @@ public:
     printResourcePressurePerInstruction(OS, Executions);
   }
 };
-
 } // namespace mca
 
 #endif

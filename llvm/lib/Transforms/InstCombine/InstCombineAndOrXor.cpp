@@ -1121,8 +1121,8 @@ Value *InstCombiner::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) 
       return nullptr;
 
     // FCmp canonicalization ensures that (fcmp ord/uno X, X) and
-    // (fcmp ord/uno X, C) will be transformed to (fcmp X, 0.0).
-    if (match(LHS1, m_Zero()) && LHS1 == RHS1)
+    // (fcmp ord/uno X, C) will be transformed to (fcmp X, +0.0).
+    if (match(LHS1, m_PosZeroFP()) && match(RHS1, m_PosZeroFP()))
       // Ignore the constants because they are obviously not NANs:
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)

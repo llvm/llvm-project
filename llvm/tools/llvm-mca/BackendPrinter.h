@@ -26,7 +26,6 @@
 
 namespace mca {
 
-
 /// \brief A printer class that knows how to collects statistics on the
 /// code analyzed by the llvm-mca tool.
 ///
@@ -48,7 +47,6 @@ public:
 
   void printReport(llvm::raw_ostream &OS) const;
 };
-
 } // namespace mca
 
 #endif

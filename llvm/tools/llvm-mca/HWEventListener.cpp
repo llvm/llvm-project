@@ -18,5 +18,4 @@ namespace mca {
 
 // Anchor the vtable here.
 void HWEventListener::anchor() {}
-
 } // namespace mca

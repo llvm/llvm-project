@@ -15,7 +15,7 @@
 
 // recursive_directory_iterator& operator=(recursive_directory_iterator const&);
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <set>
 #include <cassert>
@@ -30,7 +30,7 @@
 #pragma clang diagnostic ignored "-Wself-move"
 #endif
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(recursive_directory_iterator_move_assign_tests)
 
