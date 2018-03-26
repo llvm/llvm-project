@@ -656,12 +656,11 @@ def skipUnlessSupportedTypeAttribute(attr):
     """Decorate the item to skip test unless Clang supports type __attribute__(attr)."""
     def compiler_doesnt_support_struct_attribute(self):
         compiler_path = self.getCompiler()
-        compiler = os.path.basename(compiler_path)
         f = tempfile.NamedTemporaryFile()
-        cmd = "echo 'struct __attribute__((%s)) Test {};' | %s -x c++ -c -o %s - ; exit" % (attr, compiler_path, f.name)
-        p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        test_result = p.stderr.read()
-        if attr in test_result:
+        cmd = [self.getCompiler(), "-x", "c++", "-c", "-o", f.name, "-"]
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate('struct __attribute__((%s)) Test {};'%attr)
+        if attr in stderr:
             return "Compiler does not support attribute %s"%(attr)
         return None
     return skipTestIfFn(compiler_doesnt_support_struct_attribute)

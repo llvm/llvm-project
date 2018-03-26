@@ -1440,8 +1440,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
   //        uint32_t hash;
   //    } __attribute__((__packed__));
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES 
-                                    | LLDB_LOG_OPTION_VERBOSE));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   uint32_t num_parsed = 0;
 
   // Iterate through all ClassInfo structures
@@ -1450,7 +1449,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
     ObjCISA isa = data.GetPointer(&offset);
 
     if (isa == 0) {
-      if (log)
+      if (log && log->GetVerbose())
         log->Printf(
             "AppleObjCRuntimeV2 found NULL isa, ignoring this class info");
       continue;

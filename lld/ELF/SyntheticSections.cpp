@@ -587,10 +587,18 @@ void EhFrameSection::writeTo(uint8_t *Buf) {
 
 GotSection::GotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotEntrySize, ".got") {}
+                       Target->GotEntrySize, ".got") {
+  // PPC64 saves the ElfSym::GlobalOffsetTable .TOC. as the first entry in the
+  // .got. If there are no references to .TOC. in the symbol table,
+  // ElfSym::GlobalOffsetTable will not be defined and we won't need to save
+  // .TOC. in the .got. When it is defined, we increase NumEntries by the number
+  // of entries used to emit ElfSym::GlobalOffsetTable.
+  if (ElfSym::GlobalOffsetTable && !Target->GotBaseSymInGotPlt)
+    NumEntries += Target->GotHeaderEntriesNum;
+}
 
 void GotSection::addEntry(Symbol &Sym) {
-  Sym.GotIndex = Target->GotHeaderEntriesNum + NumEntries;
+  Sym.GotIndex = NumEntries;
   ++NumEntries;
 }
 
@@ -622,7 +630,7 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &B) const {
 }
 
 void GotSection::finalizeContents() {
-  Size = (NumEntries + Target->GotHeaderEntriesNum) * Config->Wordsize;
+  Size = NumEntries * Config->Wordsize;
 }
 
 bool GotSection::empty() const {
