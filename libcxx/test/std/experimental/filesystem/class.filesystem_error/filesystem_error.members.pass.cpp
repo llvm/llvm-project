@@ -21,13 +21,12 @@
 // const path& path1() const noexcept;
 // const path& path2() const noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 
-namespace fs = std::experimental::filesystem;
 
 void test_constructors() {
   using namespace fs;

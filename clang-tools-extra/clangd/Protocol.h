@@ -197,6 +197,20 @@ inline bool fromJSON(const json::Expr &, NoParams &) { return true; }
 using ShutdownParams = NoParams;
 using ExitParams = NoParams;
 
+/// Defines how the host (editor) should sync document changes to the language
+/// server.
+enum class TextDocumentSyncKind {
+  /// Documents should not be synced at all.
+  None = 0,
+
+  /// Documents are synced by always sending the full content of the document.
+  Full = 1,
+
+  /// Documents are synced by sending the full content on open.  After that
+  /// only incremental updates to the document are send.
+  Incremental = 2,
+};
+
 struct CompletionItemClientCapabilities {
   /// Client supports snippets as insert text.
   bool snippetSupport = false;
@@ -287,7 +301,13 @@ struct DidCloseTextDocumentParams {
 bool fromJSON(const json::Expr &, DidCloseTextDocumentParams &);
 
 struct TextDocumentContentChangeEvent {
-  /// The new text of the document.
+  /// The range of the document that changed.
+  llvm::Optional<Range> range;
+
+  /// The length of the range that got replaced.
+  llvm::Optional<int> rangeLength;
+
+  /// The new text of the range/document.
   std::string text;
 };
 bool fromJSON(const json::Expr &, TextDocumentContentChangeEvent &);
@@ -744,5 +764,15 @@ json::Expr toJSON(const DocumentHighlight &DH);
 
 } // namespace clangd
 } // namespace clang
+
+namespace llvm {
+template <> struct format_provider<clang::clangd::Position> {
+  static void format(const clang::clangd::Position &Pos, raw_ostream &OS,
+                     StringRef Style) {
+    assert(Style.empty() && "style modifiers for this type are not supported");
+    OS << Pos;
+  }
+};
+} // namespace llvm
 
 #endif

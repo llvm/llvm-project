@@ -16,7 +16,7 @@
 // directory_iterator begin(directory_iterator iter) noexcept;
 // directory_iterator end(directory_iterator iter) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <set>
 #include <cassert>
@@ -26,7 +26,7 @@
 #include "filesystem_test_helper.hpp"
 #include <iostream>
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(directory_iterator_begin_end_tests)
 

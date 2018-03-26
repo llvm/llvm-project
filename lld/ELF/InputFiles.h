@@ -308,7 +308,9 @@ public:
 
   void parseSoName();
   void parseRest();
-  std::vector<const Elf_Verdef *> parseVerdefs(const Elf_Versym *&Versym);
+  uint32_t getAlignment(ArrayRef<Elf_Shdr> Sections, const Elf_Sym &Sym);
+  std::vector<const Elf_Verdef *> parseVerdefs();
+  std::vector<uint32_t> parseVersyms();
 
   struct NeededVer {
     // The string table offset of the version name in the output file.

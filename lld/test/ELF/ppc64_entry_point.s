@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
-# RUN: llvm-objdump -d %t2 | FileCheck %s
+# RUN: llvm-objdump -D %t2 | FileCheck %s
 
 .text
 .abiversion 2
@@ -31,3 +31,6 @@ _start:
 // CHECK-NEXT: 10010004:       00 00 84 38     addi 4, 4, 0
 // CHECK-NEXT: 10010008:       02 00 a0 3c     lis 5, 2
 // CHECK-NEXT: 1001000c:       00 80 a5 38     addi 5, 5, -32768
+// CHECK: Disassembly of section .got:
+// CHECK-NEXT: .got:
+// CHECK-NEXT: 10020000:       00 80 02 10

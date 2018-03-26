@@ -1215,6 +1215,17 @@ void Sema::popOpenMPFunctionRegion(const FunctionScopeInfo *OldFSI) {
   DSAStack->popFunction(OldFSI);
 }
 
+static llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
+isDeclareTargetDeclaration(const ValueDecl *VD) {
+  for (const auto *D : VD->redecls()) {
+    if (!D->hasAttrs())
+      continue;
+    if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
+      return Attr->getMapType();
+  }
+  return llvm::None;
+}
+
 bool Sema::IsOpenMPCapturedByRef(ValueDecl *D, unsigned Level) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
 
@@ -1392,10 +1403,8 @@ VarDecl *Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
     // If the declaration is enclosed in a 'declare target' directive,
     // then it should not be captured.
     //
-    for (const auto *Var = VD->getMostRecentDecl(); Var;
-         Var = Var->getPreviousDecl())
-      if (Var->hasAttr<OMPDeclareTargetDeclAttr>())
-        return nullptr;
+    if (isDeclareTargetDeclaration(VD))
+      return nullptr;
     return VD;
   }
 
@@ -1929,7 +1938,10 @@ public:
         return;
 
       // Skip internally declared static variables.
-      if (VD->hasGlobalStorage() && !CS->capturesVariable(VD))
+      llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+          isDeclareTargetDeclaration(VD);
+      if (VD->hasGlobalStorage() && !CS->capturesVariable(VD) &&
+          (!Res || *Res != OMPDeclareTargetDeclAttr::MT_Link))
         return;
 
       auto ELoc = E->getExprLoc();
@@ -1976,7 +1988,7 @@ public:
           IsFirstprivate =
               IsFirstprivate ||
               (VD->getType().getNonReferenceType()->isScalarType() &&
-               Stack->getDefaultDMA() != DMA_tofrom_scalar);
+               Stack->getDefaultDMA() != DMA_tofrom_scalar && !Res);
           if (IsFirstprivate)
             ImplicitFirstprivate.emplace_back(E);
           else

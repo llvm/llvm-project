@@ -9,7 +9,6 @@
 
 // FIXME: (possibly) incomplete list of features that clang mangles that this
 // file does not yet support:
-//   - enable_if attribute
 //   - C++ modules TS
 //   - All C++14 and C++17 features
 
@@ -110,6 +109,7 @@ public:
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
   unsigned CurrentPackIndex = std::numeric_limits<unsigned>::max();
+  unsigned CurrentPackMax = std::numeric_limits<unsigned>::max();
 
   OutputStream &operator+=(StringView R) {
     size_t Size = R.size();
@@ -127,7 +127,8 @@ public:
     return *this;
   }
 
-  size_t getCurrentPosition() const { return CurrentPosition; };
+  size_t getCurrentPosition() const { return CurrentPosition; }
+  void setCurrentPosition(size_t NewPos) { CurrentPosition = NewPos; }
 
   char back() const {
     return CurrentPosition ? Buffer[CurrentPosition - 1] : '\0';
@@ -168,6 +169,7 @@ public:
     KElaboratedTypeSpefType,
     KNameType,
     KAbiTagAttr,
+    KEnableIfAttr,
     KObjCProtoName,
     KPointerType,
     KLValueReferenceType,
@@ -188,6 +190,7 @@ public:
     KTemplateArgumentPack,
     KParameterPackExpansion,
     KTemplateArgs,
+    KForwardTemplateReference,
     KNameWithTemplateArgs,
     KGlobalQualifiedName,
     KStdQualifiedName,
@@ -202,10 +205,6 @@ public:
     KBracedExpr,
     KBracedRangeExpr,
   };
-
-  static constexpr unsigned NoParameterPack =
-    std::numeric_limits<unsigned>::max();
-  unsigned ParameterPackSize = NoParameterPack;
 
   Kind K;
 
@@ -225,16 +224,10 @@ public:
   /// affect how we format the output string.
   Cache FunctionCache;
 
-  Node(Kind K_, unsigned ParameterPackSize_ = NoParameterPack,
-       Cache RHSComponentCache_ = Cache::No, Cache ArrayCache_ = Cache::No,
-       Cache FunctionCache_ = Cache::No)
-      : ParameterPackSize(ParameterPackSize_), K(K_),
-        RHSComponentCache(RHSComponentCache_), ArrayCache(ArrayCache_),
+  Node(Kind K_, Cache RHSComponentCache_ = Cache::No,
+       Cache ArrayCache_ = Cache::No, Cache FunctionCache_ = Cache::No)
+      : K(K_), RHSComponentCache(RHSComponentCache_), ArrayCache(ArrayCache_),
         FunctionCache(FunctionCache_) {}
-
-  bool containsUnexpandedParameterPack() const {
-    return ParameterPackSize != NoParameterPack;
-  }
 
   bool hasRHSComponent(OutputStream &S) const {
     if (RHSComponentCache != Cache::Unknown)
@@ -259,10 +252,6 @@ public:
   virtual bool hasRHSComponentSlow(OutputStream &) const { return false; }
   virtual bool hasArraySlow(OutputStream &) const { return false; }
   virtual bool hasFunctionSlow(OutputStream &) const { return false; }
-
-  /// If this node is a pack expansion that expands to 0 elements. This can have
-  /// an effect on how we should format the output.
-  bool isEmptyPackExpansion() const;
 
   void print(OutputStream &S) const {
     printLeft(S);
@@ -316,12 +305,20 @@ public:
   void printWithComma(OutputStream &S) const {
     bool FirstElement = true;
     for (size_t Idx = 0; Idx != NumElements; ++Idx) {
-      if (Elements[Idx]->isEmptyPackExpansion())
-        continue;
+      size_t BeforeComma = S.getCurrentPosition();
       if (!FirstElement)
         S += ", ";
-      FirstElement = false;
+      size_t AfterComma = S.getCurrentPosition();
       Elements[Idx]->print(S);
+
+      // Elements[Idx] is an empty parameter pack expansion, we should erase the
+      // comma we just printed.
+      if (AfterComma == S.getCurrentPosition()) {
+        S.setCurrentPosition(BeforeComma);
+        continue;
+      }
+
+      FirstElement = false;
     }
   }
 };
@@ -348,8 +345,7 @@ class VendorExtQualType final : public Node {
 
 public:
   VendorExtQualType(Node *Ty_, StringView Ext_)
-      : Node(KVendorExtQualType, Ty_->ParameterPackSize),
-        Ty(Ty_), Ext(Ext_) {}
+      : Node(KVendorExtQualType), Ty(Ty_), Ext(Ext_) {}
 
   void printLeft(OutputStream &S) const override {
     Ty->print(S);
@@ -391,7 +387,7 @@ protected:
 
 public:
   QualType(Node *Child_, Qualifiers Quals_)
-      : Node(KQualType, Child_->ParameterPackSize, Child_->RHSComponentCache,
+      : Node(KQualType, Child_->RHSComponentCache,
              Child_->ArrayCache, Child_->FunctionCache),
         Quals(Quals_), Child(Child_) {}
 
@@ -418,7 +414,7 @@ class ConversionOperatorType final : public Node {
 
 public:
   ConversionOperatorType(Node *Ty_)
-      : Node(KConversionOperatorType, Ty_->ParameterPackSize), Ty(Ty_) {}
+      : Node(KConversionOperatorType), Ty(Ty_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "operator ";
@@ -432,8 +428,7 @@ class PostfixQualifiedType final : public Node {
 
 public:
   PostfixQualifiedType(Node *Ty_, StringView Postfix_)
-      : Node(KPostfixQualifiedType, Ty_->ParameterPackSize),
-        Ty(Ty_), Postfix(Postfix_) {}
+      : Node(KPostfixQualifiedType), Ty(Ty_), Postfix(Postfix_) {}
 
   void printLeft(OutputStream &s) const override {
     Ty->printLeft(s);
@@ -458,9 +453,7 @@ class ElaboratedTypeSpefType : public Node {
   Node *Child;
 public:
   ElaboratedTypeSpefType(StringView Kind_, Node *Child_)
-      : Node(KElaboratedTypeSpefType), Kind(Kind_), Child(Child_) {
-    ParameterPackSize = Child->ParameterPackSize;
-  }
+      : Node(KElaboratedTypeSpefType), Kind(Kind_), Child(Child_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Kind;
@@ -474,7 +467,7 @@ class AbiTagAttr final : public Node {
   StringView Tag;
 public:
   AbiTagAttr(const Node* Base_, StringView Tag_)
-      : Node(KAbiTagAttr, Base_->ParameterPackSize, Base_->RHSComponentCache,
+      : Node(KAbiTagAttr, Base_->RHSComponentCache,
              Base_->ArrayCache, Base_->FunctionCache),
         Base(Base_), Tag(Tag_) {}
 
@@ -483,6 +476,19 @@ public:
     S += "[abi:";
     S += Tag;
     S += "]";
+  }
+};
+
+class EnableIfAttr : public Node {
+  NodeArray Conditions;
+public:
+  EnableIfAttr(NodeArray Conditions_)
+      : Node(KEnableIfAttr), Conditions(Conditions_) {}
+
+  void printLeft(OutputStream &S) const override {
+    S += " [enable_if:";
+    Conditions.printWithComma(S);
+    S += ']';
   }
 };
 
@@ -514,8 +520,7 @@ class PointerType final : public Node {
 
 public:
   PointerType(Node *Pointee_)
-      : Node(KPointerType, Pointee_->ParameterPackSize,
-             Pointee_->RHSComponentCache),
+      : Node(KPointerType, Pointee_->RHSComponentCache),
         Pointee(Pointee_) {}
 
   bool hasRHSComponentSlow(OutputStream &S) const override {
@@ -555,8 +560,7 @@ class LValueReferenceType final : public Node {
 
 public:
   LValueReferenceType(Node *Pointee_)
-      : Node(KLValueReferenceType, Pointee_->ParameterPackSize,
-             Pointee_->RHSComponentCache),
+      : Node(KLValueReferenceType, Pointee_->RHSComponentCache),
         Pointee(Pointee_) {}
 
   bool hasRHSComponentSlow(OutputStream &S) const override {
@@ -584,8 +588,7 @@ class RValueReferenceType final : public Node {
 
 public:
   RValueReferenceType(Node *Pointee_)
-      : Node(KRValueReferenceType, Pointee_->ParameterPackSize,
-             Pointee_->RHSComponentCache),
+      : Node(KRValueReferenceType, Pointee_->RHSComponentCache),
         Pointee(Pointee_) {}
 
   bool hasRHSComponentSlow(OutputStream &S) const override {
@@ -615,10 +618,7 @@ class PointerToMemberType final : public Node {
 
 public:
   PointerToMemberType(Node *ClassType_, Node *MemberType_)
-      : Node(KPointerToMemberType,
-             std::min(MemberType_->ParameterPackSize,
-                      ClassType_->ParameterPackSize),
-             MemberType_->RHSComponentCache),
+      : Node(KPointerToMemberType, MemberType_->RHSComponentCache),
         ClassType(ClassType_), MemberType(MemberType_) {}
 
   bool hasRHSComponentSlow(OutputStream &S) const override {
@@ -684,18 +684,14 @@ class ArrayType final : public Node {
 
 public:
   ArrayType(Node *Base_, NodeOrString Dimension_)
-      : Node(KArrayType, Base_->ParameterPackSize,
+      : Node(KArrayType,
              /*RHSComponentCache=*/Cache::Yes,
              /*ArrayCache=*/Cache::Yes),
-        Base(Base_), Dimension(Dimension_) {
-    if (Dimension.isNode())
-      ParameterPackSize =
-          std::min(ParameterPackSize, Dimension.asNode()->ParameterPackSize);
-  }
+        Base(Base_), Dimension(Dimension_) {}
 
   // Incomplete array type.
   ArrayType(Node *Base_)
-      : Node(KArrayType, Base_->ParameterPackSize,
+      : Node(KArrayType,
              /*RHSComponentCache=*/Cache::Yes,
              /*ArrayCache=*/Cache::Yes),
         Base(Base_) {}
@@ -728,17 +724,11 @@ class FunctionType final : public Node {
 public:
   FunctionType(Node *Ret_, NodeArray Params_, Qualifiers CVQuals_,
                FunctionRefQual RefQual_, Node *ExceptionSpec_)
-      : Node(KFunctionType, Ret_->ParameterPackSize,
+      : Node(KFunctionType,
              /*RHSComponentCache=*/Cache::Yes, /*ArrayCache=*/Cache::No,
              /*FunctionCache=*/Cache::Yes),
         Ret(Ret_), Params(Params_), CVQuals(CVQuals_), RefQual(RefQual_),
-        ExceptionSpec(ExceptionSpec_) {
-    for (Node *P : Params)
-      ParameterPackSize = std::min(ParameterPackSize, P->ParameterPackSize);
-    if (ExceptionSpec != nullptr)
-      ParameterPackSize =
-        std::min(ParameterPackSize, ExceptionSpec->ParameterPackSize);
-  }
+        ExceptionSpec(ExceptionSpec_) {}
 
   bool hasRHSComponentSlow(OutputStream &) const override { return true; }
   bool hasFunctionSlow(OutputStream &) const override { return true; }
@@ -783,7 +773,7 @@ public:
 class NoexceptSpec : public Node {
   Node *E;
 public:
-  NoexceptSpec(Node *E_) : Node(KNoexceptSpec, E_->ParameterPackSize), E(E_) {}
+  NoexceptSpec(Node *E_) : Node(KNoexceptSpec), E(E_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "noexcept(";
@@ -796,10 +786,7 @@ class DynamicExceptionSpec : public Node {
   NodeArray Types;
 public:
   DynamicExceptionSpec(NodeArray Types_)
-      : Node(KDynamicExceptionSpec), Types(Types_) {
-    for (Node *T : Types)
-      ParameterPackSize = std::min(ParameterPackSize, T->ParameterPackSize);
-  }
+      : Node(KDynamicExceptionSpec), Types(Types_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "throw(";
@@ -812,22 +799,18 @@ class FunctionEncoding final : public Node {
   const Node *Ret;
   const Node *Name;
   NodeArray Params;
+  Node *Attrs;
   Qualifiers CVQuals;
   FunctionRefQual RefQual;
 
 public:
   FunctionEncoding(Node *Ret_, Node *Name_, NodeArray Params_,
-                   Qualifiers CVQuals_, FunctionRefQual RefQual_)
-      : Node(KFunctionEncoding, NoParameterPack,
+                   Node *Attrs_, Qualifiers CVQuals_, FunctionRefQual RefQual_)
+      : Node(KFunctionEncoding,
              /*RHSComponentCache=*/Cache::Yes, /*ArrayCache=*/Cache::No,
              /*FunctionCache=*/Cache::Yes),
-        Ret(Ret_), Name(Name_), Params(Params_), CVQuals(CVQuals_),
-        RefQual(RefQual_) {
-    for (Node *P : Params)
-      ParameterPackSize = std::min(ParameterPackSize, P->ParameterPackSize);
-    if (Ret)
-      ParameterPackSize = std::min(ParameterPackSize, Ret->ParameterPackSize);
-  }
+        Ret(Ret_), Name(Name_), Params(Params_), Attrs(Attrs_),
+        CVQuals(CVQuals_), RefQual(RefQual_) {}
 
   bool hasRHSComponentSlow(OutputStream &) const override { return true; }
   bool hasFunctionSlow(OutputStream &) const override { return true; }
@@ -861,6 +844,9 @@ public:
       S += " &";
     else if (RefQual == FrefQualRValue)
       S += " &&";
+
+    if (Attrs != nullptr)
+      Attrs->print(S);
   }
 };
 
@@ -868,8 +854,7 @@ class LiteralOperator : public Node {
   const Node *OpName;
 
 public:
-  LiteralOperator(Node *OpName_)
-      : Node(KLiteralOperator, OpName_->ParameterPackSize), OpName(OpName_) {}
+  LiteralOperator(Node *OpName_) : Node(KLiteralOperator), OpName(OpName_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "operator\"\" ";
@@ -883,8 +868,7 @@ class SpecialName final : public Node {
 
 public:
   SpecialName(StringView Special_, Node* Child_)
-      : Node(KSpecialName, Child_->ParameterPackSize), Special(Special_),
-        Child(Child_) {}
+      : Node(KSpecialName), Special(Special_), Child(Child_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Special;
@@ -898,8 +882,7 @@ class CtorVtableSpecialName final : public Node {
 
 public:
   CtorVtableSpecialName(Node *FirstType_, Node *SecondType_)
-      : Node(KCtorVtableSpecialName, std::min(FirstType_->ParameterPackSize,
-                                              SecondType_->ParameterPackSize)),
+      : Node(KCtorVtableSpecialName),
         FirstType(FirstType_), SecondType(SecondType_) {}
 
   void printLeft(OutputStream &S) const override {
@@ -917,9 +900,7 @@ class QualifiedName final : public Node {
 
 public:
   QualifiedName(Node* Qualifier_, Node* Name_)
-      : Node(KQualifiedName,
-             std::min(Qualifier_->ParameterPackSize, Name_->ParameterPackSize)),
-        Qualifier(Qualifier_), Name(Name_) {}
+      : Node(KQualifiedName), Qualifier(Qualifier_), Name(Name_) {}
 
   StringView getBaseName() const override { return Name->getBaseName(); }
 
@@ -944,17 +925,10 @@ class VectorType final : public Node {
 public:
   VectorType(NodeOrString Dimension_)
       : Node(KVectorType), BaseType(nullptr), Dimension(Dimension_),
-        IsPixel(true) {
-    if (Dimension.isNode())
-      ParameterPackSize = Dimension.asNode()->ParameterPackSize;
-  }
+        IsPixel(true) {}
   VectorType(Node *BaseType_, NodeOrString Dimension_)
-      : Node(KVectorType, BaseType_->ParameterPackSize), BaseType(BaseType_),
-        Dimension(Dimension_), IsPixel(false) {
-    if (Dimension.isNode())
-      ParameterPackSize =
-          std::min(ParameterPackSize, Dimension.asNode()->ParameterPackSize);
-  }
+      : Node(KVectorType), BaseType(BaseType_),
+        Dimension(Dimension_), IsPixel(false) {}
 
   void printLeft(OutputStream &S) const override {
     if (IsPixel) {
@@ -983,9 +957,17 @@ public:
 /// T_).
 class ParameterPack final : public Node {
   NodeArray Data;
+
+  // Setup OutputStream for a pack expansion unless we're already expanding one.
+  void initializePackExpansion(OutputStream &S) const {
+    if (S.CurrentPackMax == std::numeric_limits<unsigned>::max()) {
+      S.CurrentPackMax = static_cast<unsigned>(Data.size());
+      S.CurrentPackIndex = 0;
+    }
+  }
+
 public:
-  ParameterPack(NodeArray Data_)
-      : Node(KParameterPack, static_cast<unsigned>(Data_.size())), Data(Data_) {
+  ParameterPack(NodeArray Data_) : Node(KParameterPack), Data(Data_) {
     ArrayCache = FunctionCache = RHSComponentCache = Cache::Unknown;
     if (std::all_of(Data.begin(), Data.end(), [](Node* P) {
           return P->ArrayCache == Cache::No;
@@ -1002,24 +984,29 @@ public:
   }
 
   bool hasRHSComponentSlow(OutputStream &S) const override {
+    initializePackExpansion(S);
     size_t Idx = S.CurrentPackIndex;
     return Idx < Data.size() && Data[Idx]->hasRHSComponent(S);
   }
   bool hasArraySlow(OutputStream &S) const override {
+    initializePackExpansion(S);
     size_t Idx = S.CurrentPackIndex;
     return Idx < Data.size() && Data[Idx]->hasArray(S);
   }
   bool hasFunctionSlow(OutputStream &S) const override {
+    initializePackExpansion(S);
     size_t Idx = S.CurrentPackIndex;
     return Idx < Data.size() && Data[Idx]->hasFunction(S);
   }
 
   void printLeft(OutputStream &S) const override {
+    initializePackExpansion(S);
     size_t Idx = S.CurrentPackIndex;
     if (Idx < Data.size())
       Data[Idx]->printLeft(S);
   }
   void printRight(OutputStream &S) const override {
+    initializePackExpansion(S);
     size_t Idx = S.CurrentPackIndex;
     if (Idx < Data.size())
       Data[Idx]->printRight(S);
@@ -1035,10 +1022,7 @@ class TemplateArgumentPack final : public Node {
   NodeArray Elements;
 public:
   TemplateArgumentPack(NodeArray Elements_)
-      : Node(KTemplateArgumentPack), Elements(Elements_) {
-    for (Node *E : Elements)
-      ParameterPackSize = std::min(E->ParameterPackSize, ParameterPackSize);
-  }
+      : Node(KTemplateArgumentPack), Elements(Elements_) {}
 
   NodeArray getElements() const { return Elements; }
 
@@ -1059,63 +1043,100 @@ public:
   const Node *getChild() const { return Child; }
 
   void printLeft(OutputStream &S) const override {
-    unsigned PackSize = Child->ParameterPackSize;
-    if (PackSize == NoParameterPack) {
-      Child->print(S);
+    constexpr unsigned Max = std::numeric_limits<unsigned>::max();
+    SwapAndRestore<unsigned> SavePackIdx(S.CurrentPackIndex, Max);
+    SwapAndRestore<unsigned> SavePackMax(S.CurrentPackMax, Max);
+    size_t StreamPos = S.getCurrentPosition();
+
+    // Print the first element in the pack. If Child contains a ParameterPack,
+    // it will set up S.CurrentPackMax and print the first element.
+    Child->print(S);
+
+    // No ParameterPack was found in Child. This can occur if we've found a pack
+    // expansion on a <function-param>.
+    if (S.CurrentPackMax == Max) {
       S += "...";
       return;
     }
 
-    SwapAndRestore<unsigned> SavePackIndex(S.CurrentPackIndex, 0);
-    for (unsigned I = 0; I != PackSize; ++I) {
-      if (I != 0)
-        S += ", ";
+    // We found a ParameterPack, but it has no elements. Erase whatever we may
+    // of printed.
+    if (S.CurrentPackMax == 0) {
+      S.setCurrentPosition(StreamPos);
+      return;
+    }
+
+    // Else, iterate through the rest of the elements in the pack.
+    for (unsigned I = 1, E = S.CurrentPackMax; I < E; ++I) {
+      S += ", ";
       S.CurrentPackIndex = I;
       Child->print(S);
     }
   }
 };
 
-inline bool Node::isEmptyPackExpansion() const {
-  if (getKind() == KParameterPackExpansion) {
-    auto *AsPack = static_cast<const ParameterPackExpansion *>(this);
-    return AsPack->getChild()->isEmptyPackExpansion();
-  }
-  if (getKind() == KTemplateArgumentPack) {
-    auto *AsTemplateArg = static_cast<const TemplateArgumentPack *>(this);
-    for (Node *E : AsTemplateArg->getElements())
-      if (!E->isEmptyPackExpansion())
-        return false;
-    return true;
-  }
-  return ParameterPackSize == 0;
-}
-
 class TemplateArgs final : public Node {
   NodeArray Params;
 
 public:
-  TemplateArgs(NodeArray Params_) : Node(KTemplateArgs), Params(Params_) {
-    for (Node *P : Params)
-      ParameterPackSize = std::min(ParameterPackSize, P->ParameterPackSize);
-  }
+  TemplateArgs(NodeArray Params_) : Node(KTemplateArgs), Params(Params_) {}
 
   NodeArray getParams() { return Params; }
 
   void printLeft(OutputStream &S) const override {
     S += "<";
-    bool FirstElement = true;
-    for (size_t Idx = 0, E = Params.size(); Idx != E; ++Idx) {
-      if (Params[Idx]->isEmptyPackExpansion())
-        continue;
-      if (!FirstElement)
-        S += ", ";
-      FirstElement = false;
-      Params[Idx]->print(S);
-    }
+    Params.printWithComma(S);
     if (S.back() == '>')
       S += " ";
     S += ">";
+  }
+};
+
+struct ForwardTemplateReference : Node {
+  size_t Index;
+  Node *Ref = nullptr;
+
+  // If we're currently printing this node. It is possible (though invalid) for
+  // a forward template reference to refer to itself via a substitution. This
+  // creates a cyclic AST, which will stack overflow printing. To fix this, bail
+  // out if more than one print* function is active.
+  mutable bool Printing = false;
+
+  ForwardTemplateReference(size_t Index_)
+      : Node(KForwardTemplateReference, Cache::Unknown, Cache::Unknown,
+             Cache::Unknown),
+        Index(Index_) {}
+
+  bool hasRHSComponentSlow(OutputStream &S) const override {
+    if (Printing)
+      return false;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    return Ref->hasRHSComponent(S);
+  }
+  bool hasArraySlow(OutputStream &S) const override {
+    if (Printing)
+      return false;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    return Ref->hasArray(S);
+  }
+  bool hasFunctionSlow(OutputStream &S) const override {
+    if (Printing)
+      return false;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    return Ref->hasFunction(S);
+  }
+
+  void printLeft(OutputStream &S) const override {
+    if (Printing)
+      return;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    Ref->printLeft(S);
+  }
+  void printRight(OutputStream &S) const override {
+    if (Printing)
+      return;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    Ref->printRight(S);
   }
 };
 
@@ -1126,9 +1147,7 @@ class NameWithTemplateArgs final : public Node {
 
 public:
   NameWithTemplateArgs(Node *Name_, Node *TemplateArgs_)
-      : Node(KNameWithTemplateArgs, std::min(Name_->ParameterPackSize,
-                                             TemplateArgs_->ParameterPackSize)),
-        Name(Name_), TemplateArgs(TemplateArgs_) {}
+      : Node(KNameWithTemplateArgs), Name(Name_), TemplateArgs(TemplateArgs_) {}
 
   StringView getBaseName() const override { return Name->getBaseName(); }
 
@@ -1143,7 +1162,7 @@ class GlobalQualifiedName final : public Node {
 
 public:
   GlobalQualifiedName(Node* Child_)
-      : Node(KGlobalQualifiedName, Child_->ParameterPackSize), Child(Child_) {}
+      : Node(KGlobalQualifiedName), Child(Child_) {}
 
   StringView getBaseName() const override { return Child->getBaseName(); }
 
@@ -1157,8 +1176,7 @@ class StdQualifiedName final : public Node {
   Node *Child;
 
 public:
-  StdQualifiedName(Node *Child_)
-      : Node(KStdQualifiedName, Child_->ParameterPackSize), Child(Child_) {}
+  StdQualifiedName(Node *Child_) : Node(KStdQualifiedName), Child(Child_) {}
 
   StringView getBaseName() const override { return Child->getBaseName(); }
 
@@ -1281,8 +1299,7 @@ class CtorDtorName final : public Node {
 
 public:
   CtorDtorName(Node *Basename_, bool IsDtor_)
-      : Node(KCtorDtorName, Basename_->ParameterPackSize),
-        Basename(Basename_), IsDtor(IsDtor_) {}
+      : Node(KCtorDtorName), Basename(Basename_), IsDtor(IsDtor_) {}
 
   void printLeft(OutputStream &S) const override {
     if (IsDtor)
@@ -1295,9 +1312,7 @@ class DtorName : public Node {
   const Node *Base;
 
 public:
-  DtorName(Node *Base_) : Node(KDtorName), Base(Base_) {
-    ParameterPackSize = Base->ParameterPackSize;
-  }
+  DtorName(Node *Base_) : Node(KDtorName), Base(Base_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "~";
@@ -1324,10 +1339,7 @@ class ClosureTypeName : public Node {
 
 public:
   ClosureTypeName(NodeArray Params_, StringView Count_)
-      : Node(KClosureTypeName), Params(Params_), Count(Count_) {
-    for (Node *P : Params)
-      ParameterPackSize = std::min(ParameterPackSize, P->ParameterPackSize);
-  }
+      : Node(KClosureTypeName), Params(Params_), Count(Count_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "\'lambda";
@@ -1364,10 +1376,7 @@ class BinaryExpr : public Expr {
 
 public:
   BinaryExpr(Node *LHS_, StringView InfixOperator_, Node *RHS_)
-      : LHS(LHS_), InfixOperator(InfixOperator_), RHS(RHS_) {
-    ParameterPackSize =
-      std::min(LHS->ParameterPackSize, RHS->ParameterPackSize);
-  }
+      : LHS(LHS_), InfixOperator(InfixOperator_), RHS(RHS_) {}
 
   void printLeft(OutputStream &S) const override {
     // might be a template argument expression, then we need to disambiguate
@@ -1393,10 +1402,7 @@ class ArraySubscriptExpr : public Expr {
   const Node *Op2;
 
 public:
-  ArraySubscriptExpr(Node *Op1_, Node *Op2_) : Op1(Op1_), Op2(Op2_) {
-    ParameterPackSize =
-      std::min(Op1->ParameterPackSize, Op2->ParameterPackSize);
-  }
+  ArraySubscriptExpr(Node *Op1_, Node *Op2_) : Op1(Op1_), Op2(Op2_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1413,9 +1419,7 @@ class PostfixExpr : public Expr {
 
 public:
   PostfixExpr(Node *Child_, StringView Operand_)
-      : Child(Child_), Operand(Operand_) {
-    ParameterPackSize = Child->ParameterPackSize;
-  }
+      : Child(Child_), Operand(Operand_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1432,11 +1436,7 @@ class ConditionalExpr : public Expr {
 
 public:
   ConditionalExpr(Node *Cond_, Node *Then_, Node *Else_)
-      : Cond(Cond_), Then(Then_), Else(Else_) {
-    ParameterPackSize =
-        std::min(Cond->ParameterPackSize,
-                 std::min(Then->ParameterPackSize, Else->ParameterPackSize));
-  }
+      : Cond(Cond_), Then(Then_), Else(Else_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1456,10 +1456,7 @@ class MemberExpr : public Expr {
 
 public:
   MemberExpr(Node *LHS_, StringView Kind_, Node *RHS_)
-      : LHS(LHS_), Kind(Kind_), RHS(RHS_) {
-    ParameterPackSize =
-      std::min(LHS->ParameterPackSize, RHS->ParameterPackSize);
-  }
+      : LHS(LHS_), Kind(Kind_), RHS(RHS_) {}
 
   void printLeft(OutputStream &S) const override {
     LHS->print(S);
@@ -1475,9 +1472,7 @@ class EnclosingExpr : public Expr {
 
 public:
   EnclosingExpr(StringView Prefix_, Node *Infix_, StringView Postfix_)
-      : Prefix(Prefix_), Infix(Infix_), Postfix(Postfix_) {
-    ParameterPackSize = Infix->ParameterPackSize;
-  }
+      : Prefix(Prefix_), Infix(Infix_), Postfix(Postfix_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Prefix;
@@ -1494,10 +1489,7 @@ class CastExpr : public Expr {
 
 public:
   CastExpr(StringView CastKind_, Node *To_, Node *From_)
-      : CastKind(CastKind_), To(To_), From(From_) {
-    ParameterPackSize =
-      std::min(To->ParameterPackSize, From->ParameterPackSize);
-  }
+      : CastKind(CastKind_), To(To_), From(From_) {}
 
   void printLeft(OutputStream &S) const override {
     S += CastKind;
@@ -1528,11 +1520,7 @@ class CallExpr : public Expr {
   NodeArray Args;
 
 public:
-  CallExpr(Node *Callee_, NodeArray Args_) : Callee(Callee_), Args(Args_) {
-    for (Node *P : Args)
-      ParameterPackSize = std::min(ParameterPackSize, P->ParameterPackSize);
-    ParameterPackSize = std::min(ParameterPackSize, Callee->ParameterPackSize);
-  }
+  CallExpr(Node *Callee_, NodeArray Args_) : Callee(Callee_), Args(Args_) {}
 
   void printLeft(OutputStream &S) const override {
     Callee->print(S);
@@ -1553,14 +1541,7 @@ public:
   NewExpr(NodeArray ExprList_, Node *Type_, NodeArray InitList_, bool IsGlobal_,
           bool IsArray_)
       : ExprList(ExprList_), Type(Type_), InitList(InitList_),
-        IsGlobal(IsGlobal_), IsArray(IsArray_) {
-    for (Node *E : ExprList)
-      ParameterPackSize = std::min(ParameterPackSize, E->ParameterPackSize);
-    for (Node *I : InitList)
-      ParameterPackSize = std::min(ParameterPackSize, I->ParameterPackSize);
-    if (Type)
-      ParameterPackSize = std::min(ParameterPackSize, Type->ParameterPackSize);
-  }
+        IsGlobal(IsGlobal_), IsArray(IsArray_) {}
 
   void printLeft(OutputStream &S) const override {
     if (IsGlobal)
@@ -1591,9 +1572,7 @@ class DeleteExpr : public Expr {
 
 public:
   DeleteExpr(Node *Op_, bool IsGlobal_, bool IsArray_)
-      : Op(Op_), IsGlobal(IsGlobal_), IsArray(IsArray_) {
-    ParameterPackSize = Op->ParameterPackSize;
-  }
+      : Op(Op_), IsGlobal(IsGlobal_), IsArray(IsArray_) {}
 
   void printLeft(OutputStream &S) const override {
     if (IsGlobal)
@@ -1610,9 +1589,7 @@ class PrefixExpr : public Expr {
   Node *Child;
 
 public:
-  PrefixExpr(StringView Prefix_, Node *Child_) : Prefix(Prefix_), Child(Child_) {
-    ParameterPackSize = Child->ParameterPackSize;
-  }
+  PrefixExpr(StringView Prefix_, Node *Child_) : Prefix(Prefix_), Child(Child_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Prefix;
@@ -1640,11 +1617,7 @@ class ConversionExpr : public Expr {
 
 public:
   ConversionExpr(const Node *Type_, NodeArray Expressions_)
-      : Type(Type_), Expressions(Expressions_) {
-    for (Node *E : Expressions)
-      ParameterPackSize = std::min(ParameterPackSize, E->ParameterPackSize);
-    ParameterPackSize = std::min(ParameterPackSize, Type->ParameterPackSize);
-  }
+      : Type(Type_), Expressions(Expressions_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1659,13 +1632,7 @@ class InitListExpr : public Expr {
   Node *Ty;
   NodeArray Inits;
 public:
-  InitListExpr(Node *Ty_, NodeArray Inits_)
-      : Ty(Ty_), Inits(Inits_) {
-    if (Ty)
-      ParameterPackSize = Ty->ParameterPackSize;
-    for (Node *I : Inits)
-      ParameterPackSize = std::min(I->ParameterPackSize, ParameterPackSize);
-  }
+  InitListExpr(Node *Ty_, NodeArray Inits_) : Ty(Ty_), Inits(Inits_) {}
 
   void printLeft(OutputStream &S) const override {
     if (Ty)
@@ -1723,9 +1690,7 @@ class ThrowExpr : public Expr {
   const Node *Op;
 
 public:
-  ThrowExpr(Node *Op_) : Op(Op_) {
-    ParameterPackSize = Op->ParameterPackSize;
-  }
+  ThrowExpr(Node *Op_) : Op(Op_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "throw ";
@@ -1750,9 +1715,8 @@ class IntegerCastExpr : public Expr {
   StringView Integer;
 
 public:
-  IntegerCastExpr(Node *Ty_, StringView Integer_) : Ty(Ty_), Integer(Integer_) {
-    ParameterPackSize = Ty->ParameterPackSize;
-  }
+  IntegerCastExpr(Node *Ty_, StringView Integer_)
+      : Ty(Ty_), Integer(Integer_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -2009,10 +1973,12 @@ struct Db {
   // stored on the stack.
   PODSmallVector<Node *, 8> TemplateParams;
 
-  unsigned EncodingDepth = 0;
-  bool TagTemplates = true;
-  bool FixForwardReferences = false;
+  // Set of unresolved forward <template-param> references. These can occur in a
+  // conversion operator's type, and are resolved in the enclosing <encoding>.
+  PODSmallVector<ForwardTemplateReference *, 4> ForwardTemplateRefs;
+
   bool TryToParseTemplateArgs = true;
+  bool PermitForwardTemplateReferences = false;
   bool ParsingLambdaParams = false;
 
   BumpPointerAllocator ASTAllocator;
@@ -2074,7 +2040,7 @@ struct Db {
   bool parseSeqId(size_t *Out);
   Node *parseSubstitution();
   Node *parseTemplateParam();
-  Node *parseTemplateArgs();
+  Node *parseTemplateArgs(bool TagTemplates = false);
   Node *parseTemplateArg();
 
   /// Parse the <expr> production.
@@ -2110,7 +2076,24 @@ struct Db {
     bool EndsWithTemplateArgs = false;
     Qualifiers CVQualifiers = QualNone;
     FunctionRefQual ReferenceQualifier = FrefQualNone;
+    size_t ForwardTemplateRefsBegin;
+
+    NameState(Db *Enclosing)
+        : ForwardTemplateRefsBegin(Enclosing->ForwardTemplateRefs.size()) {}
   };
+
+  bool resolveForwardTemplateRefs(NameState &State) {
+    size_t I = State.ForwardTemplateRefsBegin;
+    size_t E = ForwardTemplateRefs.size();
+    for (; I < E; ++I) {
+      size_t Idx = ForwardTemplateRefs[I]->Index;
+      if (Idx >= TemplateParams.size())
+        return true;
+      ForwardTemplateRefs[I]->Ref = TemplateParams[Idx];
+    }
+    ForwardTemplateRefs.dropBack(State.ForwardTemplateRefsBegin);
+    return false;
+  }
 
   /// Parse the <name> production>
   Node *parseName(NameState *State = nullptr);
@@ -2160,7 +2143,7 @@ Node *Db::parseName(NameState *State) {
       return nullptr;
     if (look() != 'I')
       return nullptr;
-    Node *TA = parseTemplateArgs();
+    Node *TA = parseTemplateArgs(State != nullptr);
     if (TA == nullptr)
       return nullptr;
     if (State) State->EndsWithTemplateArgs = true;
@@ -2173,7 +2156,7 @@ Node *Db::parseName(NameState *State) {
   //        ::= <unscoped-template-name> <template-args>
   if (look() == 'I') {
     Subs.push_back(N);
-    Node *TA = parseTemplateArgs();
+    Node *TA = parseTemplateArgs(State != nullptr);
     if (TA == nullptr)
       return nullptr;
     if (State) State->EndsWithTemplateArgs = true;
@@ -2387,9 +2370,15 @@ Node *Db::parseOperatorName(NameState *State) {
       return make<NameType>("operator~");
     //                   ::= cv <type>    # (cast)
     case 'v': {
-      SwapAndRestore<bool> SaveTemplate(TryToParseTemplateArgs, false);
       First += 2;
-      Node *Ty = parseType();
+      SwapAndRestore<bool> SaveTemplate(TryToParseTemplateArgs, false);
+      // If we're parsing an encoding, State != nullptr and the conversion
+      // operators' <type> could have a <template-param> that refers to some
+      // <template-arg>s further ahead in the mangled name.
+      SwapAndRestore<bool> SavePermit(PermitForwardTemplateReferences,
+                                      PermitForwardTemplateReferences ||
+                                          State != nullptr);
+      Node* Ty = parseType();
       if (Ty == nullptr)
         return nullptr;
       if (State) State->CtorDtorConversion = true;
@@ -2613,7 +2602,7 @@ Node *Db::parseCtorDtorName(Node *&SoFar, NameState *State) {
     ++First;
     if (State) State->CtorDtorConversion = true;
     if (IsInherited) {
-      if (parseName() == nullptr)
+      if (parseName(State) == nullptr)
         return nullptr;
     }
     return make<CtorDtorName>(SoFar, false);
@@ -2683,7 +2672,7 @@ Node *Db::parseNestedName(NameState *State) {
 
     //          ::= <template-prefix> <template-args>
     if (look() == 'I') {
-      Node *TA = parseTemplateArgs();
+      Node *TA = parseTemplateArgs(State != nullptr);
       if (TA == nullptr || SoFar == nullptr)
         return nullptr;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
@@ -4454,15 +4443,6 @@ Node *Db::parseSpecialName() {
 //            ::= <data name>
 //            ::= <special-name>
 Node *Db::parseEncoding() {
-  // Always "tag" templates (insert them into Db::TemplateParams) unless we're
-  // doing a second parse to resolve a forward template reference, in which case
-  // we only tag templates if EncodingDepth > 1.
-  // FIXME: This is kinda broken; it would be better to make a forward reference
-  // and patch it all in one pass.
-  SwapAndRestore<bool> SaveTagTemplates(TagTemplates,
-                                        TagTemplates || EncodingDepth);
-  SwapAndRestore<unsigned> SaveEncodingDepth(EncodingDepth, EncodingDepth + 1);
-
   if (look() == 'G' || look() == 'T')
     return parseSpecialName();
 
@@ -4473,12 +4453,28 @@ Node *Db::parseEncoding() {
     return numLeft() == 0 || look() == 'E' || look() == '.' || look() == '_';
   };
 
-  NameState NameInfo;
+  NameState NameInfo(this);
   Node *Name = parseName(&NameInfo);
-  if (Name == nullptr || IsEndOfEncoding())
+  if (Name == nullptr)
+    return nullptr;
+
+  if (resolveForwardTemplateRefs(NameInfo))
+    return nullptr;
+
+  if (IsEndOfEncoding())
     return Name;
 
-  TagTemplates = false;
+  Node *Attrs = nullptr;
+  if (consumeIf("Ua9enable_ifI")) {
+    size_t BeforeArgs = Names.size();
+    while (!consumeIf('E')) {
+      Node *Arg = parseTemplateArg();
+      if (Arg == nullptr)
+        return nullptr;
+      Names.push_back(Arg);
+    }
+    Attrs = make<EnableIfAttr>(popTrailingNodeArray(BeforeArgs));
+  }
 
   Node *ReturnType = nullptr;
   if (!NameInfo.CtorDtorConversion && NameInfo.EndsWithTemplateArgs) {
@@ -4489,7 +4485,7 @@ Node *Db::parseEncoding() {
 
   if (consumeIf('v'))
     return make<FunctionEncoding>(ReturnType, Name, NodeArray(),
-                                  NameInfo.CVQualifiers,
+                                  Attrs, NameInfo.CVQualifiers,
                                   NameInfo.ReferenceQualifier);
 
   size_t ParamsBegin = Names.size();
@@ -4502,7 +4498,7 @@ Node *Db::parseEncoding() {
 
   return make<FunctionEncoding>(ReturnType, Name,
                                 popTrailingNodeArray(ParamsBegin),
-                                NameInfo.CVQualifiers,
+                                Attrs, NameInfo.CVQualifiers,
                                 NameInfo.ReferenceQualifier);
 }
 
@@ -4674,10 +4670,16 @@ Node *Db::parseTemplateParam() {
   if (ParsingLambdaParams)
     return make<NameType>("auto");
 
-  if (Index >= TemplateParams.size()) {
-    FixForwardReferences = true;
-    return make<NameType>("FORWARD_REFERENCE");
+  // If we're in a context where this <template-param> refers to a
+  // <template-arg> further ahead in the mangled name (currently just conversion
+  // operator types), then we should only look it up in the right context.
+  if (PermitForwardTemplateReferences) {
+    ForwardTemplateRefs.push_back(make<ForwardTemplateReference>(Index));
+    return ForwardTemplateRefs.back();
   }
+
+  if (Index >= TemplateParams.size())
+    return nullptr;
   return TemplateParams[Index];
 }
 
@@ -4726,7 +4728,7 @@ Node *Db::parseTemplateArg() {
 
 // <template-args> ::= I <template-arg>* E
 //     extension, the abi says <template-arg>+
-Node *Db::parseTemplateArgs() {
+Node *Db::parseTemplateArgs(bool TagTemplates) {
   if (!consumeIf('I'))
     return nullptr;
 
@@ -4863,23 +4865,9 @@ __cxa_demangle(const char *MangledName, char *Buf, size_t *N, int *Status) {
   if (AST == nullptr)
     InternalStatus = invalid_mangled_name;
 
-  if (InternalStatus == success && Parser.FixForwardReferences &&
-      !Parser.TemplateParams.empty()) {
-    Parser.FixForwardReferences = false;
-    Parser.TagTemplates = false;
-    Parser.Names.clear();
-    Parser.Subs.clear();
-    Parser.First = MangledName;
-    Parser.Last = MangledName + MangledNameLength;
-    AST = Parser.parse();
-    if (AST == nullptr || Parser.FixForwardReferences)
-      InternalStatus = invalid_mangled_name;
-  }
-
-  if (InternalStatus == success && AST->containsUnexpandedParameterPack())
-    InternalStatus = invalid_mangled_name;
-
   if (InternalStatus == success) {
+    assert(Parser.ForwardTemplateRefs.empty());
+
     if (Buf == nullptr) {
       BufSize = 1024;
       Buf = static_cast<char*>(std::malloc(BufSize));

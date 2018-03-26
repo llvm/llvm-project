@@ -16,57 +16,29 @@ from lldbsuite.test import lldbutil
 class DisassemblyTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="function names print fully demangled instead of name-only")
     def test(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.expect("file " + exe,
-                    patterns=["Current executable set to .*a.out.*"])
+        target, _, _, bkpt = lldbutil.run_to_source_breakpoint(self,
+                "Set a breakpoint here", lldb.SBFileSpec("main.cpp"))
+        self.runCmd("dis -f")
+        disassembly_with_break = self.res.GetOutput().splitlines()
 
-        match_object = lldbutil.run_break_set_command(self, "br s -n sum")
-        lldbutil.check_breakpoint_result(
-            self,
-            match_object,
-            symbol_name='sum',
-            symbol_match_exact=False,
-            num_locations=1)
-
-        self.expect("run",
-                    patterns=["Process .* launched: "])
+        self.assertTrue(target.BreakpointDelete(bkpt.GetID()))
 
         self.runCmd("dis -f")
-        disassembly = self.res.GetOutput()
+        disassembly_without_break = self.res.GetOutput().splitlines()
 
-        # ARCH, if not specified, defaults to x86_64.
-        arch = self.getArchitecture()
-        if arch in ["", 'x86_64', 'i386', 'i686']:
-            breakpoint_opcodes = ["int3"]
-            instructions = [' mov', ' addl ', 'ret']
-        elif arch in ["arm", "aarch64", "arm64", "armv7", "armv7k"]:
-            breakpoint_opcodes = ["brk", "udf"]
-            instructions = [' add ', ' ldr ', ' str ']
-        elif re.match("mips", arch):
-            breakpoint_opcodes = ["break"]
-            instructions = ['lw', 'sw']
-        elif arch in ["s390x"]:
-            breakpoint_opcodes = [".long"]
-            instructions = [' l ', ' a ', ' st ']
-        else:
-            # TODO please add your arch here
-            self.fail(
-                'unimplemented for arch = "{arch}"'.format(
-                    arch=self.getArchitecture()))
-
-        # make sure that the software breakpoint has been removed
-        for op in breakpoint_opcodes:
-            self.assertFalse(op in disassembly)
-
-        # make sure a few reasonable assembly instructions are here
-        self.expect(
-            disassembly,
-            exe=False,
-            startstr="a.out`sum",
-            substrs=instructions)
+        # Make sure all assembly instructions are the same as instructions
+        # with the breakpoint removed.
+        self.assertEqual(len(disassembly_with_break),
+                         len(disassembly_without_break))
+        for dis_inst_with, dis_inst_without in \
+                zip(disassembly_with_break, disassembly_without_break):
+            inst_with = dis_inst_with.split(':')[-1]
+            inst_without = dis_inst_without.split(':')[-1]
+            self.assertEqual(inst_with, inst_without)

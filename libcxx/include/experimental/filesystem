@@ -68,6 +68,7 @@
 
     enum class file_type;
     enum class perms;
+    enum class perm_options;
     enum class copy_options;
     enum class directory_options;
 
@@ -178,8 +179,11 @@
     void last_write_time(const path& p, file_time_type new_time,
                                  error_code& ec) _NOEXCEPT;
 
-    void permissions(const path& p, perms prms);
-    void permissions(const path& p, perms prms, error_code& ec) _NOEXCEPT;
+    void permissions(const path& p, perms prms,
+                     perm_options opts=perm_options::replace);
+    void permissions(const path& p, perms prms, error_code& ec) noexcept;
+    void permissions(const path& p, perms prms, perm_options opts,
+                     error_code& ec);
 
     path read_symlink(const path& p);
     path read_symlink(const path& p, error_code& ec);
@@ -290,10 +294,6 @@ enum class _LIBCPP_ENUM_VIS perms : unsigned
     sticky_bit   = 01000,
     mask         = 07777,
     unknown      = 0xFFFF,
-
-    add_perms        = 0x10000,
-    remove_perms     = 0x20000,
-    symlink_nofollow = 0x40000
 };
 
 _LIBCPP_INLINE_VISIBILITY
@@ -322,6 +322,41 @@ inline perms& operator|=(perms& _LHS, perms _RHS)
 
 _LIBCPP_INLINE_VISIBILITY
 inline perms& operator^=(perms& _LHS, perms _RHS)
+{ return _LHS = _LHS ^ _RHS; }
+
+enum class _LIBCPP_ENUM_VIS perm_options : unsigned char {
+  replace  = 1,
+  add      = 2,
+  remove   = 4,
+  nofollow = 8
+};
+
+_LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_CONSTEXPR perm_options operator&(perm_options _LHS, perm_options _RHS)
+{ return static_cast<perm_options>(static_cast<unsigned>(_LHS) & static_cast<unsigned>(_RHS)); }
+
+_LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_CONSTEXPR perm_options operator|(perm_options _LHS, perm_options _RHS)
+{ return static_cast<perm_options>(static_cast<unsigned>(_LHS) | static_cast<unsigned>(_RHS)); }
+
+_LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_CONSTEXPR perm_options operator^(perm_options _LHS, perm_options _RHS)
+{ return static_cast<perm_options>(static_cast<unsigned>(_LHS) ^ static_cast<unsigned>(_RHS)); }
+
+_LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_CONSTEXPR perm_options operator~(perm_options _LHS)
+{ return static_cast<perm_options>(~static_cast<unsigned>(_LHS)); }
+
+_LIBCPP_INLINE_VISIBILITY
+inline perm_options& operator&=(perm_options& _LHS, perm_options _RHS)
+{ return _LHS = _LHS & _RHS; }
+
+_LIBCPP_INLINE_VISIBILITY
+inline perm_options& operator|=(perm_options& _LHS, perm_options _RHS)
+{ return _LHS = _LHS | _RHS; }
+
+_LIBCPP_INLINE_VISIBILITY
+inline perm_options& operator^=(perm_options& _LHS, perm_options _RHS)
 { return _LHS = _LHS ^ _RHS; }
 
 enum class _LIBCPP_ENUM_VIS copy_options : unsigned short
@@ -1286,7 +1321,7 @@ _LIBCPP_FUNC_VIS
 void __last_write_time(const path& p, file_time_type new_time,
         error_code *ec=nullptr);
 _LIBCPP_FUNC_VIS
-void __permissions(const path& p, perms prms, error_code *ec=nullptr);
+void __permissions(const path&, perms, perm_options, error_code* = nullptr);
 _LIBCPP_FUNC_VIS
 path __read_symlink(const path& p, error_code *ec=nullptr);
 _LIBCPP_FUNC_VIS
@@ -1664,13 +1699,20 @@ void last_write_time(const path& __p, file_time_type __t, error_code& __ec) _NOE
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-void permissions(const path& __p, perms __prms) {
-    __permissions(__p, __prms);
+void permissions(const path& __p, perms __prms,
+                 perm_options __opts = perm_options::replace) {
+    __permissions(__p, __prms, __opts);
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-void permissions(const path& __p, perms __prms, error_code& __ec)  {
-    __permissions(__p, __prms, &__ec);
+void permissions(const path& __p, perms __prms, error_code& __ec) _NOEXCEPT {
+    __permissions(__p, __prms, perm_options::replace, &__ec);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void permissions(const path& __p, perms __prms, perm_options __opts,
+                 error_code& __ec)  {
+    __permissions(__p, __prms, __opts, &__ec);
 }
 
 inline _LIBCPP_INLINE_VISIBILITY

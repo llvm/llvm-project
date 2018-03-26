@@ -1,4 +1,4 @@
-//===-- CompilerInvocation.h - Compiler Invocation Helper Data --*- C++ -*-===//
+//===- CompilerInvocation.h - Compiler Invocation Helper Data ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H_
-#define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H_
+#ifndef LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
+#define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 
 #include "clang/APINotes/APINotesOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
@@ -22,23 +23,27 @@
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include <memory>
 #include <string>
 
 namespace llvm {
+
 class Triple;
 
 namespace opt {
+
 class ArgList;
-}
-}
+
+} // namespace opt
+
+} // namespace llvm
 
 namespace clang {
-class PreprocessorOptions;
-class HeaderSearchOptions;
-class TargetOptions;
-class LangOptions;
-class CompilerInvocation;
+
 class DiagnosticsEngine;
+class HeaderSearchOptions;
+class PreprocessorOptions;
+class TargetOptions;
 
 /// \brief Fill out Opts based on the options given in Args.
 ///
@@ -53,8 +58,6 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          bool DefaultShowOpt = true);
 
 class CompilerInvocationBase {
-  void operator=(const CompilerInvocationBase &) = delete;
-
 public:
   /// Options controlling the language variant.
   std::shared_ptr<LangOptions> LangOpts;
@@ -72,24 +75,24 @@ public:
   std::shared_ptr<PreprocessorOptions> PreprocessorOpts;
 
   CompilerInvocationBase();
-  ~CompilerInvocationBase();
-
   CompilerInvocationBase(const CompilerInvocationBase &X);
+  CompilerInvocationBase &operator=(const CompilerInvocationBase &) = delete;
+  ~CompilerInvocationBase();
 
   LangOptions *getLangOpts() { return LangOpts.get(); }
   const LangOptions *getLangOpts() const { return LangOpts.get(); }
 
   TargetOptions &getTargetOpts() { return *TargetOpts.get(); }
-  const TargetOptions &getTargetOpts() const {
-    return *TargetOpts.get();
-  }
+  const TargetOptions &getTargetOpts() const { return *TargetOpts.get(); }
 
   DiagnosticOptions &getDiagnosticOpts() const { return *DiagnosticOpts; }
 
   HeaderSearchOptions &getHeaderSearchOpts() { return *HeaderSearchOpts; }
+
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     return *HeaderSearchOpts;
   }
+
   std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
     return HeaderSearchOpts;
   }
@@ -97,7 +100,9 @@ public:
   std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
     return PreprocessorOpts;
   }
+
   PreprocessorOptions &getPreprocessorOpts() { return *PreprocessorOpts; }
+
   const PreprocessorOptions &getPreprocessorOpts() const {
     return *PreprocessorOpts;
   }
@@ -180,45 +185,38 @@ public:
   /// @name Option Subgroups
   /// @{
 
-  AnalyzerOptionsRef getAnalyzerOpts() const {
-    return AnalyzerOpts;
-  }
+  AnalyzerOptionsRef getAnalyzerOpts() const { return AnalyzerOpts; }
 
   MigratorOptions &getMigratorOpts() { return MigratorOpts; }
-  const MigratorOptions &getMigratorOpts() const {
-    return MigratorOpts;
-  }
+  const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }
 
   APINotesOptions &getAPINotesOpts() { return APINotesOpts; }
-  const APINotesOptions &getAPINotesOpts() const {
-    return APINotesOpts;
-  }
+  const APINotesOptions &getAPINotesOpts() const { return APINotesOpts; }
   
   CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }
-  const CodeGenOptions &getCodeGenOpts() const {
-    return CodeGenOpts;
-  }
+  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
 
   DependencyOutputOptions &getDependencyOutputOpts() {
     return DependencyOutputOpts;
   }
+
   const DependencyOutputOptions &getDependencyOutputOpts() const {
     return DependencyOutputOpts;
   }
 
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
+
   const FileSystemOptions &getFileSystemOpts() const {
     return FileSystemOpts;
   }
 
   FrontendOptions &getFrontendOpts() { return FrontendOpts; }
-  const FrontendOptions &getFrontendOpts() const {
-    return FrontendOpts;
-  }
+  const FrontendOptions &getFrontendOpts() const { return FrontendOpts; }
 
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return PreprocessorOutputOpts;
   }
+
   const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
     return PreprocessorOutputOpts;
   }
@@ -227,8 +225,10 @@ public:
 };
 
 namespace vfs {
-  class FileSystem;
-}
+
+class FileSystem;
+
+} // namespace vfs
 
 IntrusiveRefCntPtr<vfs::FileSystem>
 createVFSFromCompilerInvocation(const CompilerInvocation &CI,
@@ -239,6 +239,6 @@ createVFSFromCompilerInvocation(const CompilerInvocation &CI,
                                 DiagnosticsEngine &Diags,
                                 IntrusiveRefCntPtr<vfs::FileSystem> BaseFS);
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
