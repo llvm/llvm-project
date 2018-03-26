@@ -341,7 +341,7 @@ static bool is843419ErratumSequence(uint32_t Instr1, uint32_t Instr2,
 // patch or 0 if no patch required.
 static uint64_t scanCortexA53Errata843419(InputSection *IS, uint64_t &Off,
                                           uint64_t Limit) {
-  uint64_t ISAddr = IS->getParent()->Addr + IS->OutSecOff;
+  uint64_t ISAddr = IS->getVA(0);
 
   // Advance Off so that (ISAddr + Off) modulo 0x1000 is at least 0xff8.
   uint64_t InitialPageOff = (ISAddr + Off) & 0xfff;
@@ -405,7 +405,7 @@ lld::elf::Patch843419Section::Patch843419Section(InputSection *P, uint64_t Off)
 }
 
 uint64_t lld::elf::Patch843419Section::getLDSTAddr() const {
-  return Patchee->getParent()->Addr + Patchee->OutSecOff + PatcheeOffset;
+  return Patchee->getVA(PatcheeOffset);
 }
 
 void lld::elf::Patch843419Section::writeTo(uint8_t *Buf) {
@@ -601,7 +601,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
           (DataSym == MapSyms.end()) ? IS->Data.size() : (*DataSym)->Value;
 
       while (Off < Limit) {
-        uint64_t StartAddr = IS->getParent()->Addr + IS->OutSecOff + Off;
+        uint64_t StartAddr = IS->getVA(Off);
         if (uint64_t PatcheeOffset = scanCortexA53Errata843419(IS, Off, Limit))
           implementPatch(StartAddr, PatcheeOffset, IS, Patches);
       }

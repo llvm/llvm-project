@@ -142,9 +142,9 @@ uint64_t SectionBase::getOffset(uint64_t Offset) const {
     return Offset == uint64_t(-1) ? OS->Size : Offset;
   }
   case Regular:
-    return cast<InputSection>(this)->OutSecOff + Offset;
+    return cast<InputSection>(this->Repl)->OutSecOff + Offset;
   case Synthetic: {
-    auto *IS = cast<InputSection>(this);
+    auto *IS = cast<InputSection>(this->Repl);
     // For synthetic sections we treat offset -1 as the end of the section.
     return IS->OutSecOff + (Offset == uint64_t(-1) ? IS->getSize() : Offset);
   }
@@ -160,6 +160,11 @@ uint64_t SectionBase::getOffset(uint64_t Offset) const {
     return MS->getOffset(Offset);
   }
   llvm_unreachable("invalid section kind");
+}
+
+uint64_t SectionBase::getVA(uint64_t Offset) const {
+  const OutputSection *Out = getOutputSection();
+  return (Out ? Out->Addr : 0) + getOffset(Offset);
 }
 
 OutputSection *SectionBase::getOutputSection() {
@@ -349,7 +354,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
     // Output section VA is zero for -r, so r_offset is an offset within the
     // section, but for --emit-relocs it is an virtual address.
-    P->r_offset = Sec->getOutputSection()->Addr + Sec->getOffset(Rel.r_offset);
+    P->r_offset = Sec->getVA(Rel.r_offset);
     P->setSymbolAndType(InX::SymTab->getSymbolIndex(&Sym), Type,
                         Config->IsMips64EL);
 
@@ -704,11 +709,10 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
   const unsigned Bits = Config->Wordsize * 8;
 
   for (const Relocation &Rel : Relocations) {
-    uint64_t Offset = getOffset(Rel.Offset);
-    uint8_t *BufLoc = Buf + Offset;
+    uint8_t *BufLoc = Buf + getOffset(Rel.Offset);
     RelType Type = Rel.Type;
 
-    uint64_t AddrLoc = getOutputSection()->Addr + Offset;
+    uint64_t AddrLoc = getVA(Rel.Offset);
     RelExpr Expr = Rel.Expr;
     uint64_t TargetVA = SignExtend64(
         getRelocTargetVA(Type, Rel.Addend, AddrLoc, *Rel.Sym, Expr), Bits);

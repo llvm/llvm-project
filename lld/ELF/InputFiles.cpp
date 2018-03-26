@@ -784,17 +784,15 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
 
 // Parse the version definitions in the object file if present. Returns a vector
 // whose nth element contains a pointer to the Elf_Verdef for version identifier
-// n. Version identifiers that are not definitions map to nullptr. The array
-// always has at least length 1.
+// n. Version identifiers that are not definitions map to nullptr.
 template <class ELFT>
 std::vector<const typename ELFT::Verdef *>
 SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
-  std::vector<const Elf_Verdef *> Verdefs(1);
   // We only need to process symbol versions for this DSO if it has both a
   // versym and a verdef section, which indicates that the DSO contains symbol
   // version definitions.
   if (!VersymSec || !VerdefSec)
-    return Verdefs;
+    return {};
 
   // The location of the first global versym entry.
   const char *Base = this->MB.getBuffer().data();
@@ -806,7 +804,7 @@ SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
   // sequentially starting from 1, so we predict that the largest identifier
   // will be VerdefCount.
   unsigned VerdefCount = VerdefSec->sh_info;
-  Verdefs.resize(VerdefCount + 1);
+  std::vector<const Elf_Verdef *> Verdefs(VerdefCount + 1);
 
   // Build the Verdefs array by following the chain of Elf_Verdef objects
   // from the start of the .gnu.version_d section.
@@ -864,7 +862,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // MIPS BFD linker puts _gp_disp symbol into DSO files and incorrectly
     // assigns VER_NDX_LOCAL to this section global symbol. Here is a
     // workaround for this bug.
-    if (Config->EMachine == EM_MIPS && Versym && VersymIndex == VER_NDX_LOCAL &&
+    if (Config->EMachine == EM_MIPS && VersymIndex == VER_NDX_LOCAL &&
         Name == "_gp_disp")
       continue;
 
@@ -877,8 +875,6 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
         continue;
       }
       Ver = Verdefs[VersymIndex];
-    } else {
-      VersymIndex = 0;
     }
 
     // We do not usually care about alignments of data in shared object
