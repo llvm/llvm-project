@@ -126,29 +126,29 @@ let Uses = [RM] in {
   // Load indexed instructions
   let mayLoad = 1, mayStore = 0 in {
     let CodeSize = 3 in
-    def LXSDX : XX1Form<31, 588,
+    def LXSDX : XX1Form_memOp<31, 588,
                         (outs vsfrc:$XT), (ins memrr:$src),
                         "lxsdx $XT, $src", IIC_LdStLFD,
                         [(set f64:$XT, (load xoaddr:$src))]>;
 
     // Pseudo instruction XFLOADf64 will be expanded to LXSDX or LFDX later
     let isPseudo = 1, CodeSize = 3 in
-      def XFLOADf64  : Pseudo<(outs vsfrc:$XT), (ins memrr:$src),
+      def XFLOADf64  : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
                               "#XFLOADf64",
                               [(set f64:$XT, (load xoaddr:$src))]>;
 
     let Predicates = [HasVSX, HasOnlySwappingMemOps] in
-    def LXVD2X : XX1Form<31, 844,
+    def LXVD2X : XX1Form_memOp<31, 844,
                          (outs vsrc:$XT), (ins memrr:$src),
                          "lxvd2x $XT, $src", IIC_LdStLFD,
                          [(set v2f64:$XT, (int_ppc_vsx_lxvd2x xoaddr:$src))]>;
 
-    def LXVDSX : XX1Form<31, 332,
+    def LXVDSX : XX1Form_memOp<31, 332,
                          (outs vsrc:$XT), (ins memrr:$src),
                          "lxvdsx $XT, $src", IIC_LdStLFD, []>;
 
     let Predicates = [HasVSX, HasOnlySwappingMemOps] in
-    def LXVW4X : XX1Form<31, 780,
+    def LXVW4X : XX1Form_memOp<31, 780,
                          (outs vsrc:$XT), (ins memrr:$src),
                          "lxvw4x $XT, $src", IIC_LdStLFD,
                          []>;
@@ -157,26 +157,26 @@ let Uses = [RM] in {
   // Store indexed instructions
   let mayStore = 1, mayLoad = 0 in {
     let CodeSize = 3 in
-    def STXSDX : XX1Form<31, 716,
+    def STXSDX : XX1Form_memOp<31, 716,
                         (outs), (ins vsfrc:$XT, memrr:$dst),
                         "stxsdx $XT, $dst", IIC_LdStSTFD,
                         [(store f64:$XT, xoaddr:$dst)]>;
 
     // Pseudo instruction XFSTOREf64  will be expanded to STXSDX or STFDX later
     let isPseudo = 1, CodeSize = 3 in
-      def XFSTOREf64 : Pseudo<(outs), (ins vsfrc:$XT, memrr:$dst),
+      def XFSTOREf64 : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
                               "#XFSTOREf64",
                               [(store f64:$XT, xoaddr:$dst)]>;
 
     let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
     // The behaviour of this instruction is endianness-specific so we provide no
     // pattern to match it without considering endianness.
-    def STXVD2X : XX1Form<31, 972,
+    def STXVD2X : XX1Form_memOp<31, 972,
                          (outs), (ins vsrc:$XT, memrr:$dst),
                          "stxvd2x $XT, $dst", IIC_LdStSTFD,
                          []>;
 
-    def STXVW4X : XX1Form<31, 908,
+    def STXVW4X : XX1Form_memOp<31, 908,
                          (outs), (ins vsrc:$XT, memrr:$dst),
                          "stxvw4x $XT, $dst", IIC_LdStSTFD,
                          []>;
@@ -1226,11 +1226,11 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   // VSX scalar loads introduced in ISA 2.07
   let mayLoad = 1, mayStore = 0 in {
     let CodeSize = 3 in
-    def LXSSPX : XX1Form<31, 524, (outs vssrc:$XT), (ins memrr:$src),
+    def LXSSPX : XX1Form_memOp<31, 524, (outs vssrc:$XT), (ins memrr:$src),
                          "lxsspx $XT, $src", IIC_LdStLFD, []>;
-    def LXSIWAX : XX1Form<31, 76, (outs vsfrc:$XT), (ins memrr:$src),
+    def LXSIWAX : XX1Form_memOp<31, 76, (outs vsfrc:$XT), (ins memrr:$src),
                           "lxsiwax $XT, $src", IIC_LdStLFD, []>;
-    def LXSIWZX : XX1Form<31, 12, (outs vsfrc:$XT), (ins memrr:$src),
+    def LXSIWZX : XX1Form_memOp<31, 12, (outs vsfrc:$XT), (ins memrr:$src),
                           "lxsiwzx $XT, $src", IIC_LdStLFD, []>;
 
     // Please note let isPseudo = 1 is not part of class Pseudo<>. Missing it
@@ -1238,15 +1238,15 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
     let isPseudo = 1 in {
       // Pseudo instruction XFLOADf32 will be expanded to LXSSPX or LFSX later
       let CodeSize = 3 in
-      def XFLOADf32  : Pseudo<(outs vssrc:$XT), (ins memrr:$src),
+      def XFLOADf32  : PseudoXFormMemOp<(outs vssrc:$XT), (ins memrr:$src),
                               "#XFLOADf32",
                               [(set f32:$XT, (load xoaddr:$src))]>;
       // Pseudo instruction LIWAX will be expanded to LXSIWAX or LFIWAX later
-      def LIWAX : Pseudo<(outs vsfrc:$XT), (ins memrr:$src),
+      def LIWAX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
                          "#LIWAX",
                          [(set f64:$XT, (PPClfiwax xoaddr:$src))]>;
       // Pseudo instruction LIWZX will be expanded to LXSIWZX or LFIWZX later
-      def LIWZX : Pseudo<(outs vsfrc:$XT), (ins memrr:$src),
+      def LIWZX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
                          "#LIWZX",
                          [(set f64:$XT, (PPClfiwzx xoaddr:$src))]>;
     }
@@ -1255,9 +1255,9 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   // VSX scalar stores introduced in ISA 2.07
   let mayStore = 1, mayLoad = 0 in {
     let CodeSize = 3 in
-    def STXSSPX : XX1Form<31, 652, (outs), (ins vssrc:$XT, memrr:$dst),
+    def STXSSPX : XX1Form_memOp<31, 652, (outs), (ins vssrc:$XT, memrr:$dst),
                           "stxsspx $XT, $dst", IIC_LdStSTFD, []>;
-    def STXSIWX : XX1Form<31, 140, (outs), (ins vsfrc:$XT, memrr:$dst),
+    def STXSIWX : XX1Form_memOp<31, 140, (outs), (ins vsfrc:$XT, memrr:$dst),
                           "stxsiwx $XT, $dst", IIC_LdStSTFD, []>;
 
     // Please note let isPseudo = 1 is not part of class Pseudo<>. Missing it
@@ -1265,11 +1265,11 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
     let isPseudo = 1 in {
       // Pseudo instruction XFSTOREf32 will be expanded to STXSSPX or STFSX later
       let CodeSize = 3 in
-      def XFSTOREf32 : Pseudo<(outs), (ins vssrc:$XT, memrr:$dst),
+      def XFSTOREf32 : PseudoXFormMemOp<(outs), (ins vssrc:$XT, memrr:$dst),
                               "#XFSTOREf32",
                               [(store f32:$XT, xoaddr:$dst)]>;
       // Pseudo instruction STIWX will be expanded to STXSIWX or STFIWX later
-      def STIWX : Pseudo<(outs), (ins vsfrc:$XT, memrr:$dst),
+      def STIWX : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
                          "#STIWX",
                         [(PPCstfiwx f64:$XT, xoaddr:$dst)]>;
     }
@@ -2470,6 +2470,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Convert DP -> QP
   def XSCVDPQP  : X_VT5_XO5_VB5_TyVB<63, 22, 836, "xscvdpqp", vfrc, []>;
+  def : Pat<(f128 (fpextend f64:$src)), (f128 (XSCVDPQP $src))>;
 
   // Round & Convert QP -> DP (dword[1] is set to zero)
   def XSCVQPDP  : X_VT5_XO5_VB5   <63, 20, 836, "xscvqpdp" , []>;
@@ -2679,7 +2680,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // "out" and "in" dag
   class X_XT6_RA5_RB5<bits<6> opcode, bits<10> xo, string opc,
                       RegisterOperand vtype, list<dag> pattern>
-    : XX1Form<opcode, xo, (outs vtype:$XT), (ins memrr:$src),
+    : XX1Form_memOp<opcode, xo, (outs vtype:$XT), (ins memrr:$src),
               !strconcat(opc, " $XT, $src"), IIC_LdStLFD, pattern>, UseVSXReg;
 
   // Load as Integer Byte/Halfword & Zero Indexed
@@ -2696,11 +2697,11 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def LXVX    : X_XT6_RA5_RB5<31, 268, "lxvx"   , vsrc,
                 [(set v2f64:$XT, (load xaddr:$src))]>;
   // Load Vector (Left-justified) with Length
-  def LXVL : XX1Form<31, 269, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
+  def LXVL : XX1Form_memOp<31, 269, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
                    "lxvl $XT, $src, $rB", IIC_LdStLoad,
                    [(set v4i32:$XT, (int_ppc_vsx_lxvl addr:$src, i64:$rB))]>,
                     UseVSXReg;
-  def LXVLL : XX1Form<31,301, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
+  def LXVLL : XX1Form_memOp<31,301, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
                    "lxvll $XT, $src, $rB", IIC_LdStLoad,
                    [(set v4i32:$XT, (int_ppc_vsx_lxvll addr:$src, i64:$rB))]>,
                     UseVSXReg;
@@ -2725,7 +2726,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // [PO S RA RB XO SX]
   class X_XS6_RA5_RB5<bits<6> opcode, bits<10> xo, string opc,
                       RegisterOperand vtype, list<dag> pattern>
-    : XX1Form<opcode, xo, (outs), (ins vtype:$XT, memrr:$dst),
+    : XX1Form_memOp<opcode, xo, (outs), (ins vtype:$XT, memrr:$dst),
               !strconcat(opc, " $XT, $dst"), IIC_LdStSTFD, pattern>, UseVSXReg;
 
   // Store as Integer Byte/Halfword Indexed
@@ -2747,14 +2748,18 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                  [(store v2f64:$XT, xaddr:$dst)]>;
 
   // Store Vector (Left-justified) with Length
-  def STXVL : XX1Form<31, 397, (outs), (ins vsrc:$XT, memr:$dst, g8rc:$rB),
-                   "stxvl $XT, $dst, $rB", IIC_LdStLoad,
-                   [(int_ppc_vsx_stxvl v4i32:$XT, addr:$dst, i64:$rB)]>,
-                    UseVSXReg;
-  def STXVLL : XX1Form<31, 429, (outs), (ins vsrc:$XT, memr:$dst, g8rc:$rB),
-                   "stxvll $XT, $dst, $rB", IIC_LdStLoad,
-                   [(int_ppc_vsx_stxvll v4i32:$XT, addr:$dst, i64:$rB)]>,
-                    UseVSXReg;
+  def STXVL : XX1Form_memOp<31, 397, (outs),
+                            (ins vsrc:$XT, memr:$dst, g8rc:$rB),
+                            "stxvl $XT, $dst, $rB", IIC_LdStLoad,
+                            [(int_ppc_vsx_stxvl v4i32:$XT, addr:$dst,
+                              i64:$rB)]>,
+                            UseVSXReg;
+  def STXVLL : XX1Form_memOp<31, 429, (outs),
+                            (ins vsrc:$XT, memr:$dst, g8rc:$rB),
+                            "stxvll $XT, $dst, $rB", IIC_LdStLoad,
+                            [(int_ppc_vsx_stxvll v4i32:$XT, addr:$dst,
+                              i64:$rB)]>,
+                            UseVSXReg;
   } // mayStore
 
   let Predicates = [IsLittleEndian] in {
@@ -3089,14 +3094,16 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 let Predicates = [HasP9Vector] in {
   let isPseudo = 1 in {
     let mayStore = 1 in {
-      def SPILLTOVSR_STX : Pseudo<(outs), (ins spilltovsrrc:$XT, memrr:$dst),
-                                "#SPILLTOVSR_STX", []>;
+      def SPILLTOVSR_STX : PseudoXFormMemOp<(outs),
+                                            (ins spilltovsrrc:$XT, memrr:$dst),
+                                            "#SPILLTOVSR_STX", []>;
       def SPILLTOVSR_ST : Pseudo<(outs), (ins spilltovsrrc:$XT, memrix:$dst),
                                 "#SPILLTOVSR_ST", []>;
     }
     let mayLoad = 1 in {
-      def SPILLTOVSR_LDX : Pseudo<(outs spilltovsrrc:$XT), (ins memrr:$src),
-                                "#SPILLTOVSR_LDX", []>;
+      def SPILLTOVSR_LDX : PseudoXFormMemOp<(outs spilltovsrrc:$XT),
+                                            (ins memrr:$src),
+                                            "#SPILLTOVSR_LDX", []>;
       def SPILLTOVSR_LD : Pseudo<(outs spilltovsrrc:$XT), (ins memrix:$src),
                                 "#SPILLTOVSR_LD", []>;
 

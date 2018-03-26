@@ -408,46 +408,46 @@ def MTVSCR : VXForm_5<1604, (outs), (ins vrrc:$vB),
                       [(int_ppc_altivec_mtvscr v4i32:$vB)]>; 
 
 let PPC970_Unit = 2, mayLoad = 1, mayStore = 0 in {  // Loads.
-def LVEBX: XForm_1<31,   7, (outs vrrc:$vD), (ins memrr:$src),
+def LVEBX: XForm_1_memOp<31,   7, (outs vrrc:$vD), (ins memrr:$src),
                    "lvebx $vD, $src", IIC_LdStLoad,
                    [(set v16i8:$vD, (int_ppc_altivec_lvebx xoaddr:$src))]>;
-def LVEHX: XForm_1<31,  39, (outs vrrc:$vD), (ins memrr:$src),
+def LVEHX: XForm_1_memOp<31,  39, (outs vrrc:$vD), (ins memrr:$src),
                    "lvehx $vD, $src", IIC_LdStLoad,
                    [(set v8i16:$vD, (int_ppc_altivec_lvehx xoaddr:$src))]>;
-def LVEWX: XForm_1<31,  71, (outs vrrc:$vD), (ins memrr:$src),
+def LVEWX: XForm_1_memOp<31,  71, (outs vrrc:$vD), (ins memrr:$src),
                    "lvewx $vD, $src", IIC_LdStLoad,
                    [(set v4i32:$vD, (int_ppc_altivec_lvewx xoaddr:$src))]>;
-def LVX  : XForm_1<31, 103, (outs vrrc:$vD), (ins memrr:$src),
+def LVX  : XForm_1_memOp<31, 103, (outs vrrc:$vD), (ins memrr:$src),
                    "lvx $vD, $src", IIC_LdStLoad,
                    [(set v4i32:$vD, (int_ppc_altivec_lvx xoaddr:$src))]>;
-def LVXL : XForm_1<31, 359, (outs vrrc:$vD), (ins memrr:$src),
+def LVXL : XForm_1_memOp<31, 359, (outs vrrc:$vD), (ins memrr:$src),
                    "lvxl $vD, $src", IIC_LdStLoad,
                    [(set v4i32:$vD, (int_ppc_altivec_lvxl xoaddr:$src))]>;
 }
 
-def LVSL : XForm_1<31,   6, (outs vrrc:$vD), (ins memrr:$src),
+def LVSL : XForm_1_memOp<31,   6, (outs vrrc:$vD), (ins memrr:$src),
                    "lvsl $vD, $src", IIC_LdStLoad,
                    [(set v16i8:$vD, (int_ppc_altivec_lvsl xoaddr:$src))]>,
                    PPC970_Unit_LSU;
-def LVSR : XForm_1<31,  38, (outs vrrc:$vD), (ins memrr:$src),
+def LVSR : XForm_1_memOp<31,  38, (outs vrrc:$vD), (ins memrr:$src),
                    "lvsr $vD, $src", IIC_LdStLoad,
                    [(set v16i8:$vD, (int_ppc_altivec_lvsr xoaddr:$src))]>,
                    PPC970_Unit_LSU;
 
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {   // Stores.
-def STVEBX: XForm_8<31, 135, (outs), (ins vrrc:$rS, memrr:$dst),
+def STVEBX: XForm_8_memOp<31, 135, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvebx $rS, $dst", IIC_LdStStore,
                    [(int_ppc_altivec_stvebx v16i8:$rS, xoaddr:$dst)]>;
-def STVEHX: XForm_8<31, 167, (outs), (ins vrrc:$rS, memrr:$dst),
+def STVEHX: XForm_8_memOp<31, 167, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvehx $rS, $dst", IIC_LdStStore,
                    [(int_ppc_altivec_stvehx v8i16:$rS, xoaddr:$dst)]>;
-def STVEWX: XForm_8<31, 199, (outs), (ins vrrc:$rS, memrr:$dst),
+def STVEWX: XForm_8_memOp<31, 199, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvewx $rS, $dst", IIC_LdStStore,
                    [(int_ppc_altivec_stvewx v4i32:$rS, xoaddr:$dst)]>;
-def STVX  : XForm_8<31, 231, (outs), (ins vrrc:$rS, memrr:$dst),
+def STVX  : XForm_8_memOp<31, 231, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvx $rS, $dst", IIC_LdStStore,
                    [(int_ppc_altivec_stvx v4i32:$rS, xoaddr:$dst)]>;
-def STVXL : XForm_8<31, 487, (outs), (ins vrrc:$rS, memrr:$dst),
+def STVXL : XForm_8_memOp<31, 487, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvxl $rS, $dst", IIC_LdStStore,
                    [(int_ppc_altivec_stvxl v4i32:$rS, xoaddr:$dst)]>;
 }

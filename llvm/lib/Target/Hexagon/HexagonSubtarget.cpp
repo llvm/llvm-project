@@ -353,22 +353,27 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
   if (!hasV60TOps())
     return;
 
-  // If it's a REG_SEQUENCE, use its destination instruction to determine
+  // Set the latency for a copy to zero since we hope that is will get removed.
+  if (DstInst->isCopy())
+    Dep.setLatency(0);
+
+  // If it's a REG_SEQUENCE/COPY, use its destination instruction to determine
   // the correct latency.
-  if (DstInst->isRegSequence() && Dst->NumSuccs == 1) {
-    unsigned RSeqReg = DstInst->getOperand(0).getReg();
-    MachineInstr *RSeqDst = Dst->Succs[0].getSUnit()->getInstr();
+  if ((DstInst->isRegSequence() || DstInst->isCopy()) && Dst->NumSuccs == 1) {
+    unsigned DReg = DstInst->getOperand(0).getReg();
+    MachineInstr *DDst = Dst->Succs[0].getSUnit()->getInstr();
     unsigned UseIdx = -1;
-    for (unsigned OpNum = 0; OpNum < RSeqDst->getNumOperands(); OpNum++) {
-      const MachineOperand &MO = RSeqDst->getOperand(OpNum);
-      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == RSeqReg) {
+    for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
+      const MachineOperand &MO = DDst->getOperand(OpNum);
+      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
         UseIdx = OpNum;
         break;
       }
     }
-    unsigned RSeqLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
-                                                        0, *RSeqDst, UseIdx));
-    Dep.setLatency(RSeqLatency);
+    int DLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
+                                                0, *DDst, UseIdx));
+    DLatency = std::max(DLatency, 0);
+    Dep.setLatency((unsigned)DLatency);
   }
 
   // Try to schedule uses near definitions to generate .cur.
@@ -440,6 +445,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     }
     assert(DefIdx >= 0 && "Def Reg not found in Src MI");
     MachineInstr *DstI = Dst->getInstr();
+    SDep T = I;
     for (unsigned OpNum = 0; OpNum < DstI->getNumOperands(); OpNum++) {
       const MachineOperand &MO = DstI->getOperand(OpNum);
       if (MO.isReg() && MO.isUse() && MO.getReg() == DepR) {
@@ -448,8 +454,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
 
         // For some instructions (ex: COPY), we might end up with < 0 latency
         // as they don't have any Itinerary class associated with them.
-        if (Latency <= 0)
-          Latency = 1;
+        Latency = std::max(Latency, 0);
 
         I.setLatency(Latency);
         updateLatency(*SrcI, *DstI, I);
@@ -457,11 +462,10 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     }
 
     // Update the latency of opposite edge too.
-    for (auto &J : Dst->Preds) {
-      if (J.getSUnit() != Src)
-        continue;
-      J.setLatency(I.getLatency());
-    }
+    T.setSUnit(Src);
+    auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
+    assert(F != Dst->Preds.end());
+    F->setLatency(I.getLatency());
   }
 }
 
@@ -469,7 +473,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
 void HexagonSubtarget::changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat)
       const {
   for (auto &I : Src->Succs) {
-    if (I.getSUnit() != Dst)
+    if (!I.isAssignedRegDep() || I.getSUnit() != Dst)
       continue;
     SDep T = I;
     I.setLatency(Lat);
@@ -478,7 +482,7 @@ void HexagonSubtarget::changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat)
     T.setSUnit(Src);
     auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
     assert(F != Dst->Preds.end());
-    F->setLatency(I.getLatency());
+    F->setLatency(Lat);
   }
 }
 

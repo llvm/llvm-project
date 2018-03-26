@@ -36,7 +36,7 @@
 # CHECK-NEXT:          ","
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "textDocumentSync": 1
+# CHECK-NEXT:      "textDocumentSync": 2
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 ---

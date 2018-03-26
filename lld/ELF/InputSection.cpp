@@ -330,7 +330,8 @@ template <class ELFT> void InputSection::copyShtGroup(uint8_t *Buf) {
 }
 
 InputSectionBase *InputSection::getRelocatedSection() {
-  assert(Type == SHT_RELA || Type == SHT_REL);
+  if (!File || (Type != SHT_RELA && Type != SHT_REL))
+    return nullptr;
   ArrayRef<InputSectionBase *> Sections = File->getSections();
   return Sections[Info];
 }

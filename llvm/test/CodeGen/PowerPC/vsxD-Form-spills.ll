@@ -24,14 +24,14 @@ define <4 x i32> @testSpill(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: testSpill:
-; CHECK-PWR9:    stxv 62, 80(1) # 16-byte Folded Spill
-; CHECK-PWR9:    stxv 63, 96(1) # 16-byte Folded Spill
-; CHECK-PWR9:    stxv 60, 48(1) # 16-byte Folded Spill
-; CHECK-PWR9:    stxv 61, 64(1) # 16-byte Folded Spill
-; CHECK-PWR9:    lxv 63, 96(1) # 16-byte Folded Reload
-; CHECK-PWR9:    lxv 62, 80(1) # 16-byte Folded Reload
-; CHECK-PWR9:    lxv 61, 64(1) # 16-byte Folded Reload
-; CHECK-PWR9:    lxv 60, 48(1) # 16-byte Folded Reload
+; CHECK-PWR9:    stxv 62, 64(1) # 16-byte Folded Spill
+; CHECK-PWR9:    stxv 63, 80(1) # 16-byte Folded Spill
+; CHECK-PWR9:    stxv 60, 32(1) # 16-byte Folded Spill
+; CHECK-PWR9:    stxv 61, 48(1) # 16-byte Folded Spill
+; CHECK-PWR9:    lxv 63, 80(1) # 16-byte Folded Reload
+; CHECK-PWR9:    lxv 62, 64(1) # 16-byte Folded Reload
+; CHECK-PWR9:    lxv 61, 48(1) # 16-byte Folded Reload
+; CHECK-PWR9:    lxv 60, 32(1) # 16-byte Folded Reload
 ; CHECK-PWR9:    mtlr 0
 ; CHECK-PWR9-NEXT:    blr
 

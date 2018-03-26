@@ -186,6 +186,7 @@ define void @g16xh(i16 inreg %x) nounwind {
 ; CHECK-WIN32-64-LABEL: g16xh:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    # kill: def $cx killed $cx def $ecx
 ; CHECK-WIN32-64-NEXT:    testl $2048, %ecx # imm = 0x800
 ; CHECK-WIN32-64-NEXT:    jne .LBB4_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
@@ -228,6 +229,7 @@ define void @g16xl(i16 inreg %x) nounwind {
 ; CHECK-WIN32-64-LABEL: g16xl:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    # kill: def $cx killed $cx def $ecx
 ; CHECK-WIN32-64-NEXT:    testb $8, %cl
 ; CHECK-WIN32-64-NEXT:    jne .LBB5_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
@@ -497,6 +499,7 @@ define void @truncand32(i16 inreg %x) nounwind {
 ; CHECK-WIN32-64-LABEL: truncand32:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    # kill: def $cx killed $cx def $ecx
 ; CHECK-WIN32-64-NEXT:    testl $2049, %ecx # imm = 0x801
 ; CHECK-WIN32-64-NEXT:    je .LBB11_1
 ; CHECK-WIN32-64-NEXT:  # %bb.2: # %no
@@ -543,6 +546,7 @@ define void @testw(i16 inreg %x) nounwind minsize {
 ; CHECK-WIN32-64-LABEL: testw:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    # kill: def $cx killed $cx def $ecx
 ; CHECK-WIN32-64-NEXT:    testw $2049, %cx # imm = 0x801
 ; CHECK-WIN32-64-NEXT:    jne .LBB12_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes

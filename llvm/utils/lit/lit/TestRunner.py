@@ -156,7 +156,7 @@ def executeShCmd(cmd, shenv, results, timeout=0):
 
 def expand_glob(arg, cwd):
     if isinstance(arg, GlobItem):
-        return arg.resolve(cwd)
+        return sorted(arg.resolve(cwd))
     return [arg]
 
 def expand_glob_expressions(args, cwd):
@@ -745,6 +745,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     stderrTempFiles = []
     opened_files = []
     named_temp_files = []
+    builtin_commands = set(['cat'])
+    builtin_commands_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_commands")
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
     # stderr.
@@ -780,15 +782,17 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Resolve the executable path ourselves.
         args = list(j.args)
         executable = None
-        # For paths relative to cwd, use the cwd of the shell environment.
-        if args[0].startswith('.'):
-            exe_in_cwd = os.path.join(cmd_shenv.cwd, args[0])
-            if os.path.isfile(exe_in_cwd):
-                executable = exe_in_cwd
-        if not executable:
-            executable = lit.util.which(args[0], cmd_shenv.env['PATH'])
-        if not executable:
-            raise InternalShellError(j, '%r: command not found' % j.args[0])
+        is_builtin_cmd = args[0] in builtin_commands;
+        if not is_builtin_cmd:
+            # For paths relative to cwd, use the cwd of the shell environment.
+            if args[0].startswith('.'):
+                exe_in_cwd = os.path.join(cmd_shenv.cwd, args[0])
+                if os.path.isfile(exe_in_cwd):
+                    executable = exe_in_cwd
+            if not executable:
+                executable = lit.util.which(args[0], cmd_shenv.env['PATH'])
+            if not executable:
+                raise InternalShellError(j, '%r: command not found' % j.args[0])
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
@@ -801,6 +805,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Expand all glob expressions
         args = expand_glob_expressions(args, cmd_shenv.cwd)
+        if is_builtin_cmd:
+            args.insert(0, "python")
+            args[1] = os.path.join(builtin_commands_dir ,args[1] + ".py")
 
         # On Windows, do our own command line quoting for better compatibility
         # with some core utility distributions.

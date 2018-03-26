@@ -61,17 +61,9 @@ class VOP2_SDWA9Ae <bits<6> op, VOPProfile P> : VOP_SDWA9Ae <P> {
 }
 
 class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suffix = "_e32"> :
-  InstSI <P.Outs32, P.Ins32, "", pattern>,
-  VOP <opName>,
-  SIMCInstr <opName#suffix, SIEncodingFamily.NONE>,
-  MnemonicAlias<opName#suffix, opName> {
+  VOP_Pseudo <opName, suffix, P, P.Outs32, P.Ins32, "", pattern> {
 
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let UseNamedOperandTable = 1;
-
-  string Mnemonic = opName;
-  string AsmOperands = P.Asm32;
+  let AsmOperands = P.Asm32;
 
   let Size = 4;
   let mayLoad = 0;
@@ -84,8 +76,6 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
   let Uses = [EXEC];
 
   let AsmVariantName = AMDGPUAsmVariants.Default;
-
-  VOPProfile Pfl = P;
 }
 
 class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily> :

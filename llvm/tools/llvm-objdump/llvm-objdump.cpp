@@ -595,23 +595,42 @@ public:
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
 
-    if (!MI) {
-      OS << " <unknown>";
-      return;
+    typedef support::ulittle32_t U32;
+
+    if (MI) {
+      SmallString<40> InstStr;
+      raw_svector_ostream IS(InstStr);
+
+      IP.printInst(MI, IS, "", STI);
+
+      OS << left_justify(IS.str(), 60);
+    } else {
+      // an unrecognized encoding - this is probably data so represent it
+      // using the .long directive, or .byte directive if fewer than 4 bytes
+      // remaining
+      if (Bytes.size() >= 4) {
+        OS << format("\t.long 0x%08" PRIx32 " ",
+                     static_cast<uint32_t>(*reinterpret_cast<const U32*>(Bytes.data())));
+        OS.indent(42);
+      } else {
+          OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
+          for (unsigned int i = 1; i < Bytes.size(); i++)
+            OS << format(", 0x%02" PRIx8, Bytes[i]);
+          OS.indent(55 - (6 * Bytes.size()));
+      }
     }
 
-    SmallString<40> InstStr;
-    raw_svector_ostream IS(InstStr);
-
-    IP.printInst(MI, IS, "", STI);
-
-    OS << left_justify(IS.str(), 60) << format("// %012" PRIX64 ": ", Address);
-    typedef support::ulittle32_t U32;
-    for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
-                               Bytes.size() / sizeof(U32)))
-      // D should be explicitly casted to uint32_t here as it is passed
-      // by format to snprintf as vararg.
-      OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
+    OS << format("// %012" PRIX64 ": ", Address);
+    if (Bytes.size() >=4) {
+      for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
+                                 Bytes.size() / sizeof(U32)))
+        // D should be explicitly casted to uint32_t here as it is passed
+        // by format to snprintf as vararg.
+        OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
+    } else {
+      for (unsigned int i = 0; i < Bytes.size(); i++)
+        OS << format("%02" PRIX8 " ", Bytes[i]);
+    }
 
     if (!Annot.empty())
       OS << "// " << Annot;
@@ -1459,8 +1478,6 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         End = StopAddress - SectionAddr;
 
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
-        // make size 4 bytes folded
-        End = Start + ((End - Start) & ~0x3ull);
         if (std::get<2>(Symbols[si]) == ELF::STT_AMDGPU_HSA_KERNEL) {
           // skip amd_kernel_code_t at the begining of kernel symbol (256 bytes)
           Start += 256;

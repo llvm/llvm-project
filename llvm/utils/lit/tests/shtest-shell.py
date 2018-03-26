@@ -10,6 +10,21 @@
 
 # CHECK: -- Testing:
 
+# CHECK: FAIL: shtest-shell :: cat-error-0.txt
+# CHECK: *** TEST 'shtest-shell :: cat-error-0.txt' FAILED ***
+# CHECK: $ "cat" "-b" "temp1.txt"
+# CHECK: # command stderr:
+# CHECK: Unsupported: 'cat':  option -b not recognized
+# CHECK: error: command failed with exit status: 1
+# CHECK: ***
+
+# CHECK: FAIL: shtest-shell :: cat-error-1.txt
+# CHECK: *** TEST 'shtest-shell :: cat-error-1.txt' FAILED ***
+# CHECK: $ "cat" "temp1.txt"
+# CHECK: # command stderr:
+# CHECK: [Errno 2] No such file or directory: 'temp1.txt'
+# CHECK: error: command failed with exit status: 1
+# CHECK: ***
 
 # CHECK: FAIL: shtest-shell :: diff-error-0.txt
 # CHECK: *** TEST 'shtest-shell :: diff-error-0.txt' FAILED ***
@@ -204,4 +219,4 @@
 # CHECK: PASS: shtest-shell :: sequencing-0.txt
 # CHECK: XFAIL: shtest-shell :: sequencing-1.txt
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failing Tests (24)
+# CHECK: Failing Tests (26)

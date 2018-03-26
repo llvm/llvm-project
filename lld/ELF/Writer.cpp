@@ -94,13 +94,13 @@ StringRef elf::getOutputSectionName(InputSectionBase *S) {
   // This is for --emit-relocs. If .text.foo is emitted as .text.bar, we want
   // to emit .rela.text.foo as .rela.text.bar for consistency (this is not
   // technically required, but not doing it is odd). This code guarantees that.
-  if ((S->Type == SHT_REL || S->Type == SHT_RELA) &&
-      !isa<SyntheticSection>(S)) {
-    OutputSection *Out =
-        cast<InputSection>(S)->getRelocatedSection()->getOutputSection();
-    if (S->Type == SHT_RELA)
-      return Saver.save(".rela" + Out->Name);
-    return Saver.save(".rel" + Out->Name);
+  if (auto *IS = dyn_cast<InputSection>(S)) {
+    if (InputSectionBase *Rel = IS->getRelocatedSection()) {
+      OutputSection *Out = Rel->getOutputSection();
+      if (S->Type == SHT_RELA)
+        return Saver.save(".rela" + Out->Name);
+      return Saver.save(".rel" + Out->Name);
+    }
   }
 
   for (StringRef V :

@@ -51,6 +51,13 @@ public:
   }
 
   const InstrDesc &getOrCreateInstrDesc(const llvm::MCInst &MCI);
+  // Returns an array of processor resource masks.
+  // Masks are computed by function mca::computeProcResourceMasks. see
+  // Support.h for a description of how masks are computed and how masks can be
+  // used to solve set membership problems.
+  llvm::ArrayRef<uint64_t> getProcResourceMasks() const {
+    return ProcResourceMasks;
+  }
 
   std::unique_ptr<Instruction> createInstruction(unsigned Idx,
                                                  const llvm::MCInst &MCI);

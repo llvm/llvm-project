@@ -6227,35 +6227,35 @@ let Defs = [EFLAGS], Predicates = [HasPOPCNT] in {
   def POPCNT16rr : I<0xB8, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                      "popcnt{w}\t{$src, $dst|$dst, $src}",
                      [(set GR16:$dst, (ctpop GR16:$src)), (implicit EFLAGS)],
-                     IIC_SSE_POPCNT_RR>, Sched<[WriteFAdd]>,
+                     IIC_SSE_POPCNT_RR>, Sched<[WritePOPCNT]>,
                      OpSize16, XS;
   def POPCNT16rm : I<0xB8, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                      "popcnt{w}\t{$src, $dst|$dst, $src}",
                      [(set GR16:$dst, (ctpop (loadi16 addr:$src))),
                       (implicit EFLAGS)], IIC_SSE_POPCNT_RM>,
-                      Sched<[WriteFAddLd]>, OpSize16, XS;
+                      Sched<[WritePOPCNTLd]>, OpSize16, XS;
 
   def POPCNT32rr : I<0xB8, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                      "popcnt{l}\t{$src, $dst|$dst, $src}",
                      [(set GR32:$dst, (ctpop GR32:$src)), (implicit EFLAGS)],
-                     IIC_SSE_POPCNT_RR>, Sched<[WriteFAdd]>,
+                     IIC_SSE_POPCNT_RR>, Sched<[WritePOPCNT]>,
                      OpSize32, XS;
 
   def POPCNT32rm : I<0xB8, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
                      "popcnt{l}\t{$src, $dst|$dst, $src}",
                      [(set GR32:$dst, (ctpop (loadi32 addr:$src))),
                       (implicit EFLAGS)], IIC_SSE_POPCNT_RM>,
-                      Sched<[WriteFAddLd]>, OpSize32, XS;
+                      Sched<[WritePOPCNTLd]>, OpSize32, XS;
 
   def POPCNT64rr : RI<0xB8, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                       "popcnt{q}\t{$src, $dst|$dst, $src}",
                       [(set GR64:$dst, (ctpop GR64:$src)), (implicit EFLAGS)],
-                      IIC_SSE_POPCNT_RR>, Sched<[WriteFAdd]>, XS;
+                      IIC_SSE_POPCNT_RR>, Sched<[WritePOPCNT]>, XS;
   def POPCNT64rm : RI<0xB8, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                       "popcnt{q}\t{$src, $dst|$dst, $src}",
                       [(set GR64:$dst, (ctpop (loadi64 addr:$src))),
                        (implicit EFLAGS)], IIC_SSE_POPCNT_RM>,
-                       Sched<[WriteFAddLd]>, XS;
+                       Sched<[WritePOPCNTLd]>, XS;
 }
 
 // SS41I_unop_rm_int_v16 - SSE 4.1 unary operator whose type is v8i16.
@@ -7074,14 +7074,14 @@ class SS42I_crc32r<bits<8> opc, string asm, RegisterClass RCOut,
   SS42FI<opc, MRMSrcReg, (outs RCOut:$dst), (ins RCOut:$src1, RCIn:$src2),
          !strconcat(asm, "\t{$src2, $src1|$src1, $src2}"),
          [(set RCOut:$dst, (Int RCOut:$src1, RCIn:$src2))], IIC_CRC32_REG>,
-         Sched<[WriteFAdd]>;
+         Sched<[WriteCRC32]>;
 
 class SS42I_crc32m<bits<8> opc, string asm, RegisterClass RCOut,
                    X86MemOperand x86memop, SDPatternOperator Int> :
   SS42FI<opc, MRMSrcMem, (outs RCOut:$dst), (ins RCOut:$src1, x86memop:$src2),
          !strconcat(asm, "\t{$src2, $src1|$src1, $src2}"),
          [(set RCOut:$dst, (Int RCOut:$src1, (load addr:$src2)))],
-         IIC_CRC32_MEM>, Sched<[WriteFAddLd, ReadAfterLd]>;
+         IIC_CRC32_MEM>, Sched<[WriteCRC32Ld, ReadAfterLd]>;
 
 let Constraints = "$src1 = $dst" in {
   def CRC32r32m8  : SS42I_crc32m<0xF0, "crc32{b}", GR32, i8mem,

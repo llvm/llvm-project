@@ -19,17 +19,28 @@ def GPRIdxMode : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
+                  list<dag> pattern=[]> :
+    InstSI<outs, ins, "", pattern>,
+    SIMCInstr<opName, SIEncodingFamily.NONE> {
+
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  let SubtargetPredicate = isGCN;
+
+  string Mnemonic = opName;
+  string AsmOperands = asmOps;
+
+  bits<1> has_sdst = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // SOP1 Instructions
 //===----------------------------------------------------------------------===//
 
 class SOP1_Pseudo <string opName, dag outs, dag ins,
                    string asmOps, list<dag> pattern=[]> :
-  InstSI <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let SubtargetPredicate = isGCN;
+  SOP_Pseudo<opName, outs, ins, asmOps, pattern> {
 
   let mayLoad = 0;
   let mayStore = 0;
@@ -39,9 +50,6 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let SchedRW = [WriteSALU];
   let Size = 4;
   let UseNamedOperandTable = 1;
-
-  string Mnemonic = opName;
-  string AsmOperands = asmOps;
 
   bits<1> has_src0 = 1;
   bits<1> has_sdst = 1;
@@ -253,11 +261,8 @@ def S_SET_GPR_IDX_IDX : SOP1_0_32<"s_set_gpr_idx_idx"> {
 
 class SOP2_Pseudo<string opName, dag outs, dag ins,
                   string asmOps, list<dag> pattern=[]> :
-  InstSI<outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let SubtargetPredicate = isGCN;
+  SOP_Pseudo<opName, outs, ins, asmOps, pattern> {
+
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -266,10 +271,7 @@ class SOP2_Pseudo<string opName, dag outs, dag ins,
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
 
-  string Mnemonic = opName;
-  string AsmOperands = asmOps;
-
-  bits<1> has_sdst = 1;
+  let has_sdst = 1;
 
   // Pseudo instructions have no encodings, but adding this field here allows
   // us to do:
@@ -279,7 +281,7 @@ class SOP2_Pseudo<string opName, dag outs, dag ins,
   // let Size = 4; // Do we need size here?
 }
 
-class SOP2_Real<bits<7> op, SOP2_Pseudo ps> :
+class SOP2_Real<bits<7> op, SOP_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList,
           ps.Mnemonic # " " # ps.AsmOperands, []>,
   Enc32 {
