@@ -314,6 +314,7 @@ struct is_all_ones {
   bool isValue(const APInt &C) { return C.isAllOnesValue(); }
 };
 /// Match an integer or vector with all bits set.
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_all_ones> m_AllOnes() {
   return cst_pred_ty<is_all_ones>();
 }
@@ -323,6 +324,7 @@ struct is_maxsignedvalue {
 };
 /// Match an integer or vector with values having all bits except for the high
 /// bit set (0x7f...).
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_maxsignedvalue> m_MaxSignedValue() {
   return cst_pred_ty<is_maxsignedvalue>();
 }
@@ -334,6 +336,7 @@ struct is_negative {
   bool isValue(const APInt &C) { return C.isNegative(); }
 };
 /// Match an integer or vector of negative values.
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_negative> m_Negative() {
   return cst_pred_ty<is_negative>();
 }
@@ -345,6 +348,7 @@ struct is_nonnegative {
   bool isValue(const APInt &C) { return C.isNonNegative(); }
 };
 /// Match an integer or vector of nonnegative values.
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_nonnegative> m_NonNegative() {
   return cst_pred_ty<is_nonnegative>();
 }
@@ -356,6 +360,7 @@ struct is_one {
   bool isValue(const APInt &C) { return C.isOneValue(); }
 };
 /// Match an integer 1 or a vector with all elements equal to 1.
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_one> m_One() {
   return cst_pred_ty<is_one>();
 }
@@ -364,6 +369,7 @@ struct is_power2 {
   bool isValue(const APInt &C) { return C.isPowerOf2(); }
 };
 /// Match an integer or vector power-of-2.
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_power2> m_Power2() {
   return cst_pred_ty<is_power2>();
 }
@@ -375,6 +381,7 @@ struct is_power2_or_zero {
   bool isValue(const APInt &C) { return !C || C.isPowerOf2(); }
 };
 /// Match an integer or vector of 0 or power-of-2 values.
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_power2_or_zero> m_Power2OrZero() {
   return cst_pred_ty<is_power2_or_zero>();
 }
@@ -386,22 +393,16 @@ struct is_sign_mask {
   bool isValue(const APInt &C) { return C.isSignMask(); }
 };
 /// Match an integer or vector with only the sign bit(s) set.
+/// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_sign_mask> m_SignMask() {
   return cst_pred_ty<is_sign_mask>();
-}
-
-struct is_neg_zero {
-  bool isValue(const APFloat &C) { return C.isNegZero(); }
-};
-/// Match an FP or FP vector with all -0.0 values.
-inline cstfp_pred_ty<is_neg_zero> m_NegZero() {
-  return cstfp_pred_ty<is_neg_zero>();
 }
 
 struct is_nan {
   bool isValue(const APFloat &C) { return C.isNaN(); }
 };
-// Match an arbitrary NaN constant. This includes quiet and signalling nans.
+/// Match an arbitrary NaN constant. This includes quiet and signalling nans.
+/// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_nan> m_NaN() {
   return cstfp_pred_ty<is_nan>();
 }
@@ -409,10 +410,28 @@ inline cstfp_pred_ty<is_nan> m_NaN() {
 struct is_any_zero_fp {
   bool isValue(const APFloat &C) { return C.isZero(); }
 };
-
-/// Match a floating-point negative zero or positive zero
+/// Match a floating-point negative zero or positive zero.
+/// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_any_zero_fp> m_AnyZeroFP() {
   return cstfp_pred_ty<is_any_zero_fp>();
+}
+
+struct is_pos_zero_fp {
+  bool isValue(const APFloat &C) { return C.isPosZero(); }
+};
+/// Match a floating-point positive zero.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_pos_zero_fp> m_PosZeroFP() {
+  return cstfp_pred_ty<is_pos_zero_fp>();
+}
+
+struct is_neg_zero_fp {
+  bool isValue(const APFloat &C) { return C.isNegZero(); }
+};
+/// Match a floating-point negative zero.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_neg_zero_fp> m_NegZeroFP() {
+  return cstfp_pred_ty<is_neg_zero_fp>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

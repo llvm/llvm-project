@@ -22,7 +22,7 @@
 // operator>>(basic_istream<charT, traits>& is, path& p)
 //
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <sstream>
 #include <cassert>

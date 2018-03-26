@@ -18274,7 +18274,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // If this is a SETNE against the signed minimum value, change it to SETGT.
-  // If this is a SETNE against the signed maximum value, change it to SETLT 
+  // If this is a SETNE against the signed maximum value, change it to SETLT.
   // which will be swapped to SETGT.
   // Otherwise we use PCMPEQ+invert.
   APInt ConstValue;

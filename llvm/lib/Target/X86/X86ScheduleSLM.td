@@ -57,7 +57,8 @@ def : ReadAdvance<ReadAfterLd, 3>;
 // folded loads.
 multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
                            list<ProcResourceKind> ExePorts,
-                           int Lat, list<int> Res = [1], int UOps = 1> {
+                           int Lat, list<int> Res = [1], int UOps = 1,
+                           int LoadLat = 3> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -65,10 +66,10 @@ multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
     let NumMicroOps = UOps;
   }
 
-  // Memory variant also uses a cycle on MEC_RSV and adds 3 cycles to the
-  // latency.
+  // Memory variant also uses a cycle on MEC_RSV and adds LoadLat cycles to
+  // the latency (default = 3).
   def : WriteRes<SchedRW.Folded, !listconcat([SLM_MEC_RSV], ExePorts)> {
-    let Latency = !add(Lat, 3);
+    let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
     let NumMicroOps = UOps;
   }
@@ -97,14 +98,7 @@ defm : SLMWriteResPair<WriteJump,  [SLM_IEC_RSV1],   1>;
 def : WriteRes<WriteLEA, [SLM_IEC_RSV1]>;
 
 // This is quite rough, latency depends on the dividend.
-def : WriteRes<WriteIDiv, [SLM_IEC_RSV01, SLMDivider]> {
-  let Latency = 25;
-  let ResourceCycles = [1, 25];
-}
-def : WriteRes<WriteIDivLd, [SLM_MEC_RSV, SLM_IEC_RSV01, SLMDivider]> {
-  let Latency = 29;
-  let ResourceCycles = [1, 1, 25];
-}
+defm : SLMWriteResPair<WriteIDiv, [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 4>;
 
 // Scalar and vector floating point.
 def  : WriteRes<WriteFStore,       [SLM_FPC_RSV01, SLM_MEC_RSV]>;

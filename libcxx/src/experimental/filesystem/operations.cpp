@@ -178,7 +178,7 @@ bool copy_file_impl(const path& from, const path& to, perms from_perms,
                      ec, "copy_file", from, to);
         return false;
     }
-    __permissions(to, from_perms, ec);
+    __permissions(to, from_perms, perm_options::replace, ec);
     // TODO what if permissions fails?
     return true;
 }
@@ -635,14 +635,17 @@ void __last_write_time(const path& p, file_time_type new_time,
 }
 
 
-void __permissions(const path& p, perms prms, std::error_code *ec)
+void __permissions(const path& p, perms prms, perm_options opts,
+                   std::error_code *ec)
 {
-
-    const bool resolve_symlinks = !bool(perms::symlink_nofollow & prms);
-    const bool add_perms = bool(perms::add_perms & prms);
-    const bool remove_perms = bool(perms::remove_perms & prms);
-    _LIBCPP_ASSERT(!(add_perms && remove_perms),
-                   "Both add_perms and remove_perms are set");
+    auto has_opt = [&](perm_options o) { return bool(o & opts); };
+    const bool resolve_symlinks = !has_opt(perm_options::nofollow);
+    const bool add_perms = has_opt(perm_options::add);
+    const bool remove_perms = has_opt(perm_options::remove);
+    _LIBCPP_ASSERT(
+       (add_perms + remove_perms + has_opt(perm_options::replace)) == 1,
+       "One and only one of the perm_options constants replace, add, or remove "
+        "is present in opts");
 
     bool set_sym_perms = false;
     prms &= perms::mask;

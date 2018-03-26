@@ -140,24 +140,21 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
     ARMArchFeature = (ARMArchFeature + "+" + ARM::getArchName(ArchID)).str();
 
   if (TT.isThumb()) {
-    if (ARMArchFeature.empty())
-      ARMArchFeature = "+thumb-mode,+v4t";
-    else
-      ARMArchFeature += ",+thumb-mode,+v4t";
+    if (!ARMArchFeature.empty())
+      ARMArchFeature += ",";
+    ARMArchFeature += "+thumb-mode,+v4t";
   }
 
   if (TT.isOSNaCl()) {
-    if (ARMArchFeature.empty())
-      ARMArchFeature = "+nacl-trap";
-    else
-      ARMArchFeature += ",+nacl-trap";
+    if (!ARMArchFeature.empty())
+      ARMArchFeature += ",";
+    ARMArchFeature += "+nacl-trap";
   }
 
   if (TT.isOSWindows()) {
-    if (ARMArchFeature.empty())
-      ARMArchFeature = "+noarm";
-    else
-      ARMArchFeature += ",+noarm";
+    if (!ARMArchFeature.empty())
+      ARMArchFeature += ",";
+    ARMArchFeature += "+noarm";
   }
 
   return ARMArchFeature;

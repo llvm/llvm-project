@@ -106,6 +106,8 @@ struct InstRegexOp : public SetTheory::Operator {
         Regexpr = Regex(pat);
       }
 
+      int NumMatches = 0;
+
       unsigned NumGeneric = Target.getNumFixedInstructions();
       ArrayRef<const CodeGenInstruction *> Generics =
           Target.getInstructionsByEnumValue().slice(0, NumGeneric + 1);
@@ -114,8 +116,10 @@ struct InstRegexOp : public SetTheory::Operator {
       for (auto *Inst : Generics) {
         StringRef InstName = Inst->TheDef->getName();
         if (InstName.startswith(Prefix) &&
-            (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))))
+            (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))) {
           Elts.insert(Inst->TheDef);
+          NumMatches++;
+        }
       }
 
       ArrayRef<const CodeGenInstruction *> Instructions =
@@ -139,9 +143,14 @@ struct InstRegexOp : public SetTheory::Operator {
       // a regex that needs to be checked.
       for (auto *Inst : make_range(Range)) {
         StringRef InstName = Inst->TheDef->getName();
-        if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))
+        if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))) {
           Elts.insert(Inst->TheDef);
+          NumMatches++;
+        }
       }
+
+      if (0 == NumMatches)
+        PrintFatalError(Loc, "instregex has no matches: " + Original);
     }
   }
 };
