@@ -26,6 +26,9 @@ class DisassemblyTestCase(TestBase):
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out.*"])
 
+        self.runCmd("dis -n main")
+        disassembly_before_break = self.res.GetOutput().splitlines()
+
         match_object = lldbutil.run_break_set_command(self, "br s -n sum")
         lldbutil.check_breakpoint_result(
             self,
@@ -37,36 +40,16 @@ class DisassemblyTestCase(TestBase):
         self.expect("run",
                     patterns=["Process .* launched: "])
 
-        self.runCmd("dis -f")
-        disassembly = self.res.GetOutput()
+        self.runCmd("dis -n main")
+        disassembly_after_break = self.res.GetOutput().splitlines()
 
-        # ARCH, if not specified, defaults to x86_64.
-        arch = self.getArchitecture()
-        if arch in ["", 'x86_64', 'i386', 'i686']:
-            breakpoint_opcodes = ["int3"]
-            instructions = [' mov', ' addl ', 'ret']
-        elif arch in ["arm", "aarch64", "arm64", "armv7", "armv7k"]:
-            breakpoint_opcodes = ["brk", "udf"]
-            instructions = [' add ', ' ldr ', ' str ']
-        elif re.match("mips", arch):
-            breakpoint_opcodes = ["break"]
-            instructions = ['lw', 'sw']
-        elif arch in ["s390x"]:
-            breakpoint_opcodes = [".long"]
-            instructions = [' l ', ' a ', ' st ']
-        else:
-            # TODO please add your arch here
-            self.fail(
-                'unimplemented for arch = "{arch}"'.format(
-                    arch=self.getArchitecture()))
+        # make sure all assembly instructions are the same as the original
+        # instructions before inserting breakpoints.
+        self.assertEqual(len(disassembly_before_break),
+                         len(disassembly_after_break))
 
-        # make sure that the software breakpoint has been removed
-        for op in breakpoint_opcodes:
-            self.assertFalse(op in disassembly)
-
-        # make sure a few reasonable assembly instructions are here
-        self.expect(
-            disassembly,
-            exe=False,
-            startstr="a.out`sum",
-            substrs=instructions)
+        for dis_inst_before, dis_inst_after in \
+                zip(disassembly_before_break, disassembly_after_break):
+            inst_before = dis_inst_before.split(':')[-1]
+            inst_after = dis_inst_after.split(':')[-1]
+            self.assertEqual(inst_before, inst_after)
