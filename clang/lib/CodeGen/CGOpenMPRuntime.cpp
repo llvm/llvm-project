@@ -893,6 +893,17 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   CGF.EmitBlock(DoneBB, /*IsFinished=*/true);
 }
 
+static llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
+isDeclareTargetDeclaration(const ValueDecl *VD) {
+  for (const auto *D : VD->redecls()) {
+    if (!D->hasAttrs())
+      continue;
+    if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
+      return Attr->getMapType();
+  }
+  return llvm::None;
+}
+
 LValue ReductionCodeGen::emitSharedLValue(CodeGenFunction &CGF, const Expr *E) {
   return CGF.EmitOMPSharedLValue(E);
 }
@@ -2324,6 +2335,28 @@ llvm::Constant *CGOpenMPRuntime::createDispatchNextFunction(unsigned IVSize,
   llvm::FunctionType *FnTy =
       llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
   return CGM.CreateRuntimeFunction(FnTy, Name);
+}
+
+Address CGOpenMPRuntime::getAddrOfDeclareTargetLink(CodeGenFunction &CGF,
+                                                    const VarDecl *VD) {
+  llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+      isDeclareTargetDeclaration(VD);
+  if (Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
+    SmallString<64> PtrName;
+    {
+      llvm::raw_svector_ostream OS(PtrName);
+      OS << CGM.getMangledName(GlobalDecl(VD)) << "_decl_tgt_link_ptr";
+    }
+    llvm::Value *Ptr = CGM.getModule().getNamedValue(PtrName);
+    if (!Ptr) {
+      QualType PtrTy = CGM.getContext().getPointerType(VD->getType());
+      Ptr = getOrCreateInternalVariable(CGM.getTypes().ConvertTypeForMem(PtrTy),
+                                        PtrName);
+      CGF.CGM.addUsedGlobal(cast<llvm::GlobalValue>(Ptr));
+    }
+    return Address(Ptr, CGM.getContext().getDeclAlign(VD));
+  }
+  return Address::invalid();
 }
 
 llvm::Constant *
@@ -6320,6 +6353,50 @@ private:
     return ConstLength.getSExtValue() != 1;
   }
 
+  /// \brief Return the adjusted map modifiers if the declaration a capture
+  /// refers to appears in a first-private clause. This is expected to be used
+  /// only with directives that start with 'target'.
+  unsigned adjustMapModifiersForPrivateClauses(const CapturedStmt::Capture &Cap,
+                                               unsigned CurrentModifiers) {
+    assert(Cap.capturesVariable() && "Expected capture by reference only!");
+
+    // A first private variable captured by reference will use only the
+    // 'private ptr' and 'map to' flag. Return the right flags if the captured
+    // declaration is known as first-private in this handler.
+    if (FirstPrivateDecls.count(Cap.getCapturedVar()))
+      return MappableExprsHandler::OMP_MAP_PRIVATE |
+             MappableExprsHandler::OMP_MAP_TO;
+    // Reduction variable  will use only the 'private ptr' and 'map to_from'
+    // flag.
+    if (ReductionDecls.count(Cap.getCapturedVar())) {
+      return MappableExprsHandler::OMP_MAP_TO |
+             MappableExprsHandler::OMP_MAP_FROM;
+    }
+
+    // We didn't modify anything.
+    return CurrentModifiers;
+  }
+
+public:
+  MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
+      : CurDir(Dir), CGF(CGF) {
+    // Extract firstprivate clause information.
+    for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
+      for (const auto *D : C->varlists())
+        FirstPrivateDecls.insert(
+            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
+    for (const auto *C : Dir.getClausesOfKind<OMPReductionClause>()) {
+      for (const auto *D : C->varlists()) {
+        ReductionDecls.insert(
+            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
+      }
+    }
+    // Extract device pointer clause information.
+    for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
+      for (auto L : C->component_lists())
+        DevPointersMap[L.first].push_back(L.second);
+  }
+
   /// \brief Generate the base pointers, section pointers, sizes and map type
   /// bits for the provided map type, map modifier, and expression components.
   /// \a IsFirstComponent should be set to true if the provided set of
@@ -6445,6 +6522,7 @@ private:
 
     // Track if the map information being generated is the first for a capture.
     bool IsCaptureFirstInfo = IsFirstComponentList;
+    bool IsLink = false; // Is this variable a "declare target link"?
 
     // Scan the components from the base to the complete expression.
     auto CI = Components.rbegin();
@@ -6464,6 +6542,20 @@ private:
       // The base is the reference to the variable.
       // BP = &Var.
       BP = CGF.EmitOMPSharedLValue(I->getAssociatedExpression()).getPointer();
+      if (const auto *VD =
+              dyn_cast_or_null<VarDecl>(I->getAssociatedDeclaration())) {
+        if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+            isDeclareTargetDeclaration(VD)) {
+          assert(*Res == OMPDeclareTargetDeclAttr::MT_Link &&
+                 "Declare target link is expected.");
+          // Avoid warning in release build.
+          (void)*Res;
+          IsLink = true;
+          BP = CGF.CGM.getOpenMPRuntime()
+                   .getAddrOfDeclareTargetLink(CGF, VD)
+                   .getPointer();
+        }
+      }
 
       // If the variable is a pointer and is being dereferenced (i.e. is not
       // the last component), the base has to be the pointer itself, not its
@@ -6552,9 +6644,10 @@ private:
         // same expression except for the first one. We also need to signal
         // this map is the first one that relates with the current capture
         // (there is a set of entries for each capture).
-        Types.push_back(DefaultFlags | getMapTypeBits(MapType, MapTypeModifier,
-                                                      !IsExpressionFirstInfo,
-                                                      IsCaptureFirstInfo));
+        Types.push_back(DefaultFlags |
+                        getMapTypeBits(MapType, MapTypeModifier,
+                                       !IsExpressionFirstInfo || IsLink,
+                                       IsCaptureFirstInfo && !IsLink));
 
         // If we have a final array section, we are done with this expression.
         if (IsFinalArraySection)
@@ -6568,50 +6661,6 @@ private:
         IsCaptureFirstInfo = false;
       }
     }
-  }
-
-  /// \brief Return the adjusted map modifiers if the declaration a capture
-  /// refers to appears in a first-private clause. This is expected to be used
-  /// only with directives that start with 'target'.
-  unsigned adjustMapModifiersForPrivateClauses(const CapturedStmt::Capture &Cap,
-                                               unsigned CurrentModifiers) {
-    assert(Cap.capturesVariable() && "Expected capture by reference only!");
-
-    // A first private variable captured by reference will use only the
-    // 'private ptr' and 'map to' flag. Return the right flags if the captured
-    // declaration is known as first-private in this handler.
-    if (FirstPrivateDecls.count(Cap.getCapturedVar()))
-      return MappableExprsHandler::OMP_MAP_PRIVATE |
-             MappableExprsHandler::OMP_MAP_TO;
-    // Reduction variable  will use only the 'private ptr' and 'map to_from'
-    // flag.
-    if (ReductionDecls.count(Cap.getCapturedVar())) {
-      return MappableExprsHandler::OMP_MAP_TO |
-             MappableExprsHandler::OMP_MAP_FROM;
-    }
-
-    // We didn't modify anything.
-    return CurrentModifiers;
-  }
-
-public:
-  MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
-      : CurDir(Dir), CGF(CGF) {
-    // Extract firstprivate clause information.
-    for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
-      for (const auto *D : C->varlists())
-        FirstPrivateDecls.insert(
-            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
-    for (const auto *C : Dir.getClausesOfKind<OMPReductionClause>()) {
-      for (const auto *D : C->varlists()) {
-        ReductionDecls.insert(
-            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
-      }
-    }
-    // Extract device pointer clause information.
-    for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
-      for (auto L : C->component_lists())
-        DevPointersMap[L.first].push_back(L.second);
   }
 
   /// \brief Generate all the base pointers, section pointers, sizes and map
@@ -7254,6 +7303,25 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
       Sizes.append(CurSizes.begin(), CurSizes.end());
       MapTypes.append(CurMapTypes.begin(), CurMapTypes.end());
     }
+    // Map other list items in the map clause which are not captured variables
+    // but "declare target link" global variables.
+    for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
+      for (auto L : C->component_lists()) {
+        if (!L.first)
+          continue;
+        const auto *VD = dyn_cast<VarDecl>(L.first);
+        if (!VD)
+          continue;
+        llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+            isDeclareTargetDeclaration(VD);
+        if (!Res || *Res != OMPDeclareTargetDeclAttr::MT_Link)
+          continue;
+        MEHandler.generateInfoForComponentList(
+            C->getMapType(), C->getMapTypeModifier(), L.second, BasePointers,
+            Pointers, Sizes, MapTypes, /*IsFirstComponentList=*/true,
+            C->isImplicit());
+      }
+    }
 
     TargetDataInfo Info;
     // Fill up the arrays and create the arguments.
@@ -7406,14 +7474,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   scanForTargetRegionsFunctions(FD.getBody(), CGM.getMangledName(GD));
 
   // Do not to emit function if it is not marked as declare target.
-  if (!GD.getDecl()->hasAttrs())
-    return true;
-
-  for (const auto *D = FD.getMostRecentDecl(); D; D = D->getPreviousDecl())
-    if (D->hasAttr<OMPDeclareTargetDeclAttr>())
-      return false;
-
-  return true;
+  return !isDeclareTargetDeclaration(&FD);
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
@@ -7439,15 +7500,9 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
   }
 
   // Do not to emit variable if it is not marked as declare target.
-  if (!GD.getDecl()->hasAttrs())
-    return true;
-
-  for (const Decl *D = GD.getDecl()->getMostRecentDecl(); D;
-       D = D->getPreviousDecl())
-    if (D->hasAttr<OMPDeclareTargetDeclAttr>())
-      return false;
-
-  return true;
+  llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+      isDeclareTargetDeclaration(cast<ValueDecl>(GD.getDecl()));
+  return !Res || *Res == OMPDeclareTargetDeclAttr::MT_Link;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobal(GlobalDecl GD) {
@@ -7477,9 +7532,8 @@ bool CGOpenMPRuntime::markAsGlobalTarget(const FunctionDecl *D) {
     return true;
   // Do not to emit function if it is marked as declare target as it was already
   // emitted.
-  for (const auto *FD = D->getMostRecentDecl(); FD; FD = FD->getPreviousDecl())
-    if (FD->hasAttr<OMPDeclareTargetDeclAttr>())
-      return true;
+  if (isDeclareTargetDeclaration(D))
+    return true;
 
   const FunctionDecl *FD = D->getCanonicalDecl();
   // Do not mark member functions except for static.

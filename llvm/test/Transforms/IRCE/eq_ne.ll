@@ -5,7 +5,7 @@
 ; CHECK: irce: in function test_01u: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK-NOT: irce: in function test_02: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_03: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
-; CHECK-NOT: irce: in function test_04: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
+; CHECK: irce: in function test_04: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_05: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK-NOT: irce: in function test_06: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_07: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
@@ -112,7 +112,7 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK: test_03(
 ; CHECK:        main.exit.selector:
 ; CHECK-NEXT:     [[PSEUDO_PHI:%[^ ]+]] = phi i32 [ %idx.next, %in.bounds ]
-; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp slt i32 [[PSEUDO_PHI]], 100
+; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 [[PSEUDO_PHI]], 100
 ; CHECK-NEXT:     br i1 [[COND]]
 
 entry:
@@ -138,11 +138,7 @@ exit:
   ret void
 }
 
-; Show that if n is not known to be greater than the starting value, IRCE
-; doesn't apply.
 define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
-
-; CHECK: test_04(
 
 entry:
   %len = load i32, i32* %a_len_ptr, !range !0

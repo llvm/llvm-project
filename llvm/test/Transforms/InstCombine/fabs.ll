@@ -277,15 +277,15 @@ define double @select_fcmp_nnan_ole_zero(double %x) {
 
 ; X <= -0.0 ? (0.0 - X) : X --> fabs(X)
 
-define float @select_fcmp_nnan_ole_negzero(float %x) {
+define <2 x float> @select_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ole_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
-  %lezero = fcmp nnan ole float %x, -0.0
-  %negx = fsub float 0.0, %x
-  %fabs = select i1 %lezero, float %negx, float %x
-  ret float %fabs
+  %lezero = fcmp nnan ole <2 x float> %x, <float -0.0, float -0.0>
+  %negx = fsub <2 x float> <float 0.0, float undef>, %x
+  %fabs = select <2 x i1> %lezero, <2 x float> %negx, <2 x float> %x
+  ret <2 x float> %fabs
 }
 
 ; X > 0.0 ? X : (0.0 - X) --> fabs(X)

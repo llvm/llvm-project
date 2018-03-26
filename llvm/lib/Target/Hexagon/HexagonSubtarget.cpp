@@ -353,22 +353,27 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
   if (!hasV60TOps())
     return;
 
-  // If it's a REG_SEQUENCE, use its destination instruction to determine
+  // Set the latency for a copy to zero since we hope that is will get removed.
+  if (DstInst->isCopy())
+    Dep.setLatency(0);
+
+  // If it's a REG_SEQUENCE/COPY, use its destination instruction to determine
   // the correct latency.
-  if (DstInst->isRegSequence() && Dst->NumSuccs == 1) {
-    unsigned RSeqReg = DstInst->getOperand(0).getReg();
-    MachineInstr *RSeqDst = Dst->Succs[0].getSUnit()->getInstr();
+  if ((DstInst->isRegSequence() || DstInst->isCopy()) && Dst->NumSuccs == 1) {
+    unsigned DReg = DstInst->getOperand(0).getReg();
+    MachineInstr *DDst = Dst->Succs[0].getSUnit()->getInstr();
     unsigned UseIdx = -1;
-    for (unsigned OpNum = 0; OpNum < RSeqDst->getNumOperands(); OpNum++) {
-      const MachineOperand &MO = RSeqDst->getOperand(OpNum);
-      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == RSeqReg) {
+    for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
+      const MachineOperand &MO = DDst->getOperand(OpNum);
+      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
         UseIdx = OpNum;
         break;
       }
     }
-    unsigned RSeqLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
-                                                        0, *RSeqDst, UseIdx));
-    Dep.setLatency(RSeqLatency);
+    int DLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
+                                                0, *DDst, UseIdx));
+    DLatency = std::max(DLatency, 0);
+    Dep.setLatency((unsigned)DLatency);
   }
 
   // Try to schedule uses near definitions to generate .cur.
@@ -448,8 +453,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
 
         // For some instructions (ex: COPY), we might end up with < 0 latency
         // as they don't have any Itinerary class associated with them.
-        if (Latency <= 0)
-          Latency = 1;
+        Latency = std::max(Latency, 0);
 
         I.setLatency(Latency);
         updateLatency(*SrcI, *DstI, I);

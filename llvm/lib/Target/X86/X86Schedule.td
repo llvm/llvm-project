@@ -46,6 +46,11 @@ def  WriteIMulH : SchedWrite;       // Integer multiplication, high part.
 defm WriteIDiv : X86SchedWritePair; // Integer division.
 def  WriteLEA  : SchedWrite;        // LEA instructions can't fold loads.
 
+defm WriteBitScan : X86SchedWritePair; // Bit scan forward/reverse.
+defm WritePOPCNT : X86SchedWritePair; // Bit population count.
+defm WriteLZCNT : X86SchedWritePair; // Leading zero count.
+defm WriteTZCNT : X86SchedWritePair; // Trailing zero count.
+
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;
 

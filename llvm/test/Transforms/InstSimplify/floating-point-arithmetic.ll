@@ -62,12 +62,20 @@ define float @fsub_-0_0_x(float %a) {
 }
 
 ; fsub X, 0 ==> X
-define float @fsub_x_0(float %a) {
+define float @fsub_x_0(float %x) {
 ; CHECK-LABEL: @fsub_x_0(
-; CHECK-NEXT:    ret float [[A:%.*]]
+; CHECK-NEXT:    ret float [[X:%.*]]
 ;
-  %ret = fsub float %a, 0.0
-  ret float %ret
+  %r = fsub float %x, 0.0
+  ret float %r
+}
+
+define <2 x float> @fsub_x_0_vec_undef(<2 x float> %x) {
+; CHECK-LABEL: @fsub_x_0_vec_undef(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = fsub <2 x float> %x, <float undef, float 0.0>
+  ret <2 x float> %r
 }
 
 ; fadd X, -0 ==> X

@@ -181,28 +181,40 @@ int X86TTIImpl::getArithmeticInstrCost(
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  static const CostTblEntry GLMCostTable[] = {
+    { ISD::FDIV,  MVT::f32,   18 }, // divss
+    { ISD::FDIV,  MVT::v4f32, 35 }, // divps
+    { ISD::FDIV,  MVT::f64,   33 }, // divsd
+    { ISD::FDIV,  MVT::v2f64, 65 }, // divpd
+  };
+
+  if (ST->isGLM())
+    if (const auto *Entry = CostTableLookup(GLMCostTable, ISD,
+                                            LT.second))
+      return LT.first * Entry->Cost;
+
   static const CostTblEntry SLMCostTable[] = {
-    { ISD::MUL,  MVT::v4i32, 11 }, // pmulld
-    { ISD::MUL,  MVT::v8i16, 2  }, // pmullw
-    { ISD::MUL,  MVT::v16i8, 14 }, // extend/pmullw/trunc sequence.
-    { ISD::FMUL, MVT::f64,   2  }, // mulsd
-    { ISD::FMUL, MVT::v2f64, 4  }, // mulpd
-    { ISD::FMUL, MVT::v4f32, 2  }, // mulps
-    { ISD::FDIV, MVT::f32,   17 }, // divss
-    { ISD::FDIV, MVT::v4f32, 39 }, // divps
-    { ISD::FDIV, MVT::f64,   32 }, // divsd
-    { ISD::FDIV, MVT::v2f64, 69 }, // divpd
-    { ISD::FADD, MVT::v2f64, 2  }, // addpd
-    { ISD::FSUB, MVT::v2f64, 2  }, // subpd
+    { ISD::MUL,   MVT::v4i32, 11 }, // pmulld
+    { ISD::MUL,   MVT::v8i16, 2  }, // pmullw
+    { ISD::MUL,   MVT::v16i8, 14 }, // extend/pmullw/trunc sequence.
+    { ISD::FMUL,  MVT::f64,   2  }, // mulsd
+    { ISD::FMUL,  MVT::v2f64, 4  }, // mulpd
+    { ISD::FMUL,  MVT::v4f32, 2  }, // mulps
+    { ISD::FDIV,  MVT::f32,   17 }, // divss
+    { ISD::FDIV,  MVT::v4f32, 39 }, // divps
+    { ISD::FDIV,  MVT::f64,   32 }, // divsd
+    { ISD::FDIV,  MVT::v2f64, 69 }, // divpd
+    { ISD::FADD,  MVT::v2f64, 2  }, // addpd
+    { ISD::FSUB,  MVT::v2f64, 2  }, // subpd
     // v2i64/v4i64 mul is custom lowered as a series of long:
     // multiplies(3), shifts(3) and adds(2)
     // slm muldq version throughput is 2 and addq throughput 4
     // thus: 3X2 (muldq throughput) + 3X1 (shift throughput) +
     //       3X4 (addq throughput) = 17
-    { ISD::MUL,  MVT::v2i64, 17 },
+    { ISD::MUL,   MVT::v2i64, 17 },
     // slm addq\subq throughput is 4
-    { ISD::ADD,  MVT::v2i64, 4  },
-    { ISD::SUB,  MVT::v2i64, 4  },
+    { ISD::ADD,   MVT::v2i64, 4  },
+    { ISD::SUB,   MVT::v2i64, 4  },
   };
 
   if (ST->isSLM()) {
@@ -225,6 +237,7 @@ int X86TTIImpl::getArithmeticInstrCost(
       if (!signedMode && OpMinSize <= 16)
         return LT.first * 5; // pmullw/pmulhw/pshuf
     }
+
     if (const auto *Entry = CostTableLookup(SLMCostTable, ISD,
                                             LT.second)) {
       return LT.first * Entry->Cost;
@@ -1665,6 +1678,18 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::v2f64,  21 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f64,  43 }, // SNB from http://www.agner.org/
   };
+  static const CostTblEntry GLMCostTbl[] = {
+    { ISD::FSQRT, MVT::f32,   19 }, // sqrtss
+    { ISD::FSQRT, MVT::v4f32, 37 }, // sqrtps
+    { ISD::FSQRT, MVT::f64,   34 }, // sqrtsd
+    { ISD::FSQRT, MVT::v2f64, 67 }, // sqrtpd
+  };
+  static const CostTblEntry SLMCostTbl[] = {
+    { ISD::FSQRT, MVT::f32,   20 }, // sqrtss
+    { ISD::FSQRT, MVT::v4f32, 40 }, // sqrtps
+    { ISD::FSQRT, MVT::f64,   35 }, // sqrtsd
+    { ISD::FSQRT, MVT::v2f64, 70 }, // sqrtpd
+  };
   static const CostTblEntry SSE42CostTbl[] = {
     { ISD::FSQRT,      MVT::f32,    18 }, // Nehalem from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  18 }, // Nehalem from http://www.agner.org/
@@ -1755,6 +1780,14 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
   MVT MTy = LT.second;
 
   // Attempt to lookup cost.
+  if (ST->isGLM())
+    if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
+  if (ST->isSLM())
+    if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
   if (ST->hasCDI())
     if (const auto *Entry = CostTableLookup(AVX512CDCostTbl, ISD, MTy))
       return LT.first * Entry->Cost;

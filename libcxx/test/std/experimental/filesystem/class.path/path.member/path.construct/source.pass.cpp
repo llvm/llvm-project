@@ -19,7 +19,7 @@
 //      path(InputIterator first, InputIterator last);
 
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -28,7 +28,6 @@
 #include "min_allocator.h"
 #include "filesystem_test_helper.hpp"
 
-namespace fs = std::experimental::filesystem;
 
 template <class CharT>
 void RunTestCase(MultiStringType const& MS) {

@@ -163,19 +163,9 @@ if [ "$DOCKER_TAG" != "" ]; then
   DOCKER_TAG=":$DOCKER_TAG"
 fi
 
-echo "Building from $IMAGE_SOURCE"
-echo "Building $DOCKER_REPOSITORY-build$DOCKER_TAG"
-docker build -t "$DOCKER_REPOSITORY-build$DOCKER_TAG" \
-  --build-arg "buildscript_args=$BUILDSCRIPT_ARGS" \
-  -f "$BUILD_DIR/$IMAGE_SOURCE/build/Dockerfile" \
-  "$BUILD_DIR"
-
-echo "Copying clang installation to release image sources"
-docker run -v "$BUILD_DIR/$IMAGE_SOURCE:/workspace" "$DOCKER_REPOSITORY-build$DOCKER_TAG" \
-  cp /tmp/clang.tar.gz /workspace/release
-
-echo "Building release image"
+echo "Building ${DOCKER_REPOSITORY}${DOCKER_TAG} from $IMAGE_SOURCE"
 docker build -t "${DOCKER_REPOSITORY}${DOCKER_TAG}" \
-  "$BUILD_DIR/$IMAGE_SOURCE/release"
-
+  --build-arg "buildscript_args=$BUILDSCRIPT_ARGS" \
+  -f "$BUILD_DIR/$IMAGE_SOURCE/Dockerfile" \
+  "$BUILD_DIR"
 echo "Done"

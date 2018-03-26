@@ -553,7 +553,7 @@ declare float @sqrtf(float) readnone
 define float @sqrtA(float %a) nounwind uwtable readnone ssp {
 ; GENERIC-LABEL: sqrtA:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [114:1.00]
+; GENERIC-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [14:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: sqrtA:
@@ -585,7 +585,7 @@ declare float @llvm.sqrt.f32(float)
 define float @sqrtC(float %a) nounwind {
 ; GENERIC-LABEL: sqrtC:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [114:1.00]
+; GENERIC-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [14:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: sqrtC:

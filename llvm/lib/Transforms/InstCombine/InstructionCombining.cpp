@@ -1670,6 +1670,23 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
       return nullptr;
 
+    // Try to reassociate loop invariant GEP chains to enable LICM.
+    if (LI && Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
+        Src->hasOneUse()) {
+      if (Loop *L = LI->getLoopFor(GEP.getParent())) {
+        Value *GO1 = GEP.getOperand(1);
+        Value *SO1 = Src->getOperand(1);
+        // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
+        // invariant: this breaks the dependence between GEPs and allows LICM
+        // to hoist the invariant part out of the loop.
+        if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
+          Src->setOperand(1, GO1);
+          GEP.setOperand(1, SO1);
+          return &GEP;
+        }
+      }
+    }
+
     // Note that if our source is a gep chain itself then we wait for that
     // chain to be resolved before we perform this transformation.  This
     // avoids us creating a TON of code in some cases.

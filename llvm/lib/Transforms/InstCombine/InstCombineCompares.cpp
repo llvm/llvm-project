@@ -4506,13 +4506,23 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
         return New;
   }
 
-  // Sign-bit checks are preserved through signed floating-point casts:
-  // icmp slt (bitcast (sitofp X)),  0 --> icmp slt X,  0
-  // icmp sgt (bitcast (sitofp X)), -1 --> icmp sgt X, -1
+  // Zero-equality and sign-bit checks are preserved through sitofp + bitcast.
   Value *X;
   if (match(Op0, m_BitCast(m_SIToFP(m_Value(X))))) {
-    if (Pred == ICmpInst::ICMP_SLT && match(Op1, m_Zero()))
+    // icmp  eq (bitcast (sitofp X)), 0 --> icmp  eq X, 0
+    // icmp  ne (bitcast (sitofp X)), 0 --> icmp  ne X, 0
+    // icmp slt (bitcast (sitofp X)), 0 --> icmp slt X, 0
+    // icmp sgt (bitcast (sitofp X)), 0 --> icmp sgt X, 0
+    if ((Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_SLT ||
+         Pred == ICmpInst::ICMP_NE || Pred == ICmpInst::ICMP_SGT) &&
+        match(Op1, m_Zero()))
       return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
+
+    // icmp slt (bitcast (sitofp X)), 1 --> icmp slt X, 1
+    if (Pred == ICmpInst::ICMP_SLT && match(Op1, m_One()))
+      return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), 1));
+
+    // icmp sgt (bitcast (sitofp X)), -1 --> icmp sgt X, -1
     if (Pred == ICmpInst::ICMP_SGT && match(Op1, m_AllOnes()))
       return new ICmpInst(Pred, X, ConstantInt::getAllOnesValue(X->getType()));
   }
@@ -4932,11 +4942,11 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   // If we're just checking for a NaN (ORD/UNO) and have a non-NaN operand,
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
-    if (!match(Op0, m_Zero()) && isKnownNeverNaN(Op0)) {
+    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0)) {
       I.setOperand(0, ConstantFP::getNullValue(Op0->getType()));
       return &I;
     }
-    if (!match(Op1, m_Zero()) && isKnownNeverNaN(Op1)) {
+    if (!match(Op1, m_PosZeroFP()) && isKnownNeverNaN(Op1)) {
       I.setOperand(1, ConstantFP::getNullValue(Op0->getType()));
       return &I;
     }

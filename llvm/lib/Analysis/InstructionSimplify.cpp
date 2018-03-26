@@ -4196,11 +4196,11 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     return C;
 
   // fadd X, -0 ==> X
-  if (match(Op1, m_NegZero()))
+  if (match(Op1, m_NegZeroFP()))
     return Op0;
 
   // fadd X, 0 ==> X, when we know X is not -0
-  if (match(Op1, m_Zero()) &&
+  if (match(Op1, m_PosZeroFP()) &&
       (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
     return Op0;
 
@@ -4228,18 +4228,19 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = simplifyFPBinop(Op0, Op1))
     return C;
 
-  // fsub X, 0 ==> X
-  if (match(Op1, m_Zero()))
+  // fsub X, +0 ==> X
+  if (match(Op1, m_PosZeroFP()))
     return Op0;
 
   // fsub X, -0 ==> X, when we know X is not -0
-  if (match(Op1, m_NegZero()) &&
+  if (match(Op1, m_NegZeroFP()) &&
       (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
     return Op0;
 
   // fsub -0.0, (fsub -0.0, X) ==> X
   Value *X;
-  if (match(Op0, m_NegZero()) && match(Op1, m_FSub(m_NegZero(), m_Value(X))))
+  if (match(Op0, m_NegZeroFP()) &&
+      match(Op1, m_FSub(m_NegZeroFP(), m_Value(X))))
     return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
@@ -4358,11 +4359,11 @@ static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // The constant match may include undef elements in a vector, so return a full
   // zero constant as the result.
   if (FMF.noNaNs()) {
-    // 0 % X -> 0
-    if (match(Op0, m_Zero()))
+    // +0 % X -> 0
+    if (match(Op0, m_PosZeroFP()))
       return ConstantFP::getNullValue(Op0->getType());
     // -0 % X -> -0
-    if (match(Op0, m_NegZero()))
+    if (match(Op0, m_NegZeroFP()))
       return ConstantFP::getNegativeZero(Op0->getType());
   }
 

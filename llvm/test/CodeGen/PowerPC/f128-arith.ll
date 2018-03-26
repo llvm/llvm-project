@@ -1,4 +1,5 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
+; RUN:   -enable-ppc-quad-precision < %s | FileCheck %s
 
 ; Function Attrs: norecurse nounwind
 define void @qpAdd(fp128* nocapture readonly %a, fp128* nocapture %res) {
@@ -145,5 +146,32 @@ entry:
 ; CHECK-NOT: bl __subtf3
 ; CHECK: xsnegqp
 ; CHECK: stxv
+; CHECK: blr
+}
+
+; Function Attrs: norecurse nounwind
+define void @dpConv2qp(double* nocapture readonly %a, fp128* nocapture %res) {
+entry:
+  %0 = load double, double* %a, align 8
+  %conv = fpext double %0 to fp128
+  store fp128 %conv, fp128* %res, align 16
+  ret void
+; CHECK-LABEL: dpConv2qp
+; CHECK-NOT: bl __extenddftf2
+; CHECK: lxsd
+; CHECK: xscvdpqp
+; CHECK: blr
+}
+
+; Function Attrs: norecurse nounwind
+define void @dpConv2qp_02(double %a, fp128* nocapture %res) {
+entry:
+  %conv = fpext double %a to fp128
+  store fp128 %conv, fp128* %res, align 16
+  ret void
+; CHECK-LABEL: dpConv2qp_02
+; CHECK-NOT: bl __extenddftf2
+; CHECK: xxlor
+; CHECK: xscvdpqp
 ; CHECK: blr
 }

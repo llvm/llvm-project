@@ -952,6 +952,11 @@ public:
                                          Address VDAddr,
                                          SourceLocation Loc);
 
+  /// Returns the address of the variable marked as declare target with link
+  /// clause.
+  virtual Address getAddrOfDeclareTargetLink(CodeGenFunction &CGF,
+                                             const VarDecl *VD);
+
   /// \brief Emit a code for initialization of threadprivate variable. It emits
   /// a call to runtime library which adds initial value to the newly created
   /// threadprivate variable (if it is not constant) and registers destructor

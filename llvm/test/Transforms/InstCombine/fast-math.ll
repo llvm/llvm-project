@@ -134,12 +134,13 @@ define float @fold10(float %f1, float %f2) {
   ret float %t3
 }
 
-; once cause Crash/miscompilation
+; This used to crash/miscompile.
+
 define float @fail1(float %f1, float %f2) {
 ; CHECK-LABEL: @fail1(
-; CHECK-NEXT:    [[CONV3:%.*]] = fadd fast float [[F1:%.*]], -1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[CONV3]], 3.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[F1:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast float [[TMP1]], -3.000000e+00
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %conv3 = fadd fast float %f1, -1.000000e+00
   %add = fadd fast float %conv3, %conv3
@@ -231,6 +232,15 @@ define float @fneg2(float %x) {
 ;
   %sub = fsub nsz float 0.0, %x
   ret float %sub
+}
+
+define <2 x float> @fneg2_vec_undef(<2 x float> %x) {
+; CHECK-LABEL: @fneg2_vec_undef(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %sub = fsub nsz <2 x float> <float undef, float 0.0>, %x
+  ret <2 x float> %sub
 }
 
 ; =========================================================================

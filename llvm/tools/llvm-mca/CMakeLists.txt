@@ -18,6 +18,7 @@ add_llvm_tool(llvm-mca
   InstrBuilder.cpp
   Instruction.cpp
   InstructionInfoView.cpp
+  InstructionTables.cpp
   LSUnit.cpp
   llvm-mca.cpp
   ResourcePressureView.cpp

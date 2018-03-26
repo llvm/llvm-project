@@ -14,7 +14,7 @@
 // path temp_directory_path();
 // path temp_directory_path(error_code& ec);
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <memory>
 #include <cstdlib>
 #include <cstring>
@@ -24,7 +24,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 void PutEnv(std::string var, std::string value) {
     assert(::setenv(var.c_str(), value.c_str(), /* overwrite */ 1) == 0);

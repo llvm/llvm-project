@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DraftStore.h"
+#include "SourceCode.h"
+#include "llvm/Support/Errc.h"
 
 using namespace clang;
 using namespace clang::clangd;
@@ -32,10 +34,70 @@ std::vector<Path> DraftStore::getActiveFiles() const {
   return ResultVector;
 }
 
-void DraftStore::updateDraft(PathRef File, StringRef Contents) {
+void DraftStore::addDraft(PathRef File, StringRef Contents) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
   Drafts[File] = Contents;
+}
+
+llvm::Expected<std::string> DraftStore::updateDraft(
+    PathRef File, llvm::ArrayRef<TextDocumentContentChangeEvent> Changes) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+
+  auto EntryIt = Drafts.find(File);
+  if (EntryIt == Drafts.end()) {
+    return llvm::make_error<llvm::StringError>(
+        "Trying to do incremental update on non-added document: " + File,
+        llvm::errc::invalid_argument);
+  }
+
+  std::string Contents = EntryIt->second;
+
+  for (const TextDocumentContentChangeEvent &Change : Changes) {
+    if (!Change.range) {
+      Contents = Change.text;
+      continue;
+    }
+
+    const Position &Start = Change.range->start;
+    llvm::Expected<size_t> StartIndex =
+        positionToOffset(Contents, Start, false);
+    if (!StartIndex)
+      return StartIndex.takeError();
+
+    const Position &End = Change.range->end;
+    llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
+    if (!EndIndex)
+      return EndIndex.takeError();
+
+    if (*EndIndex < *StartIndex)
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv(
+              "Range's end position ({0}) is before start position ({1})", End,
+              Start),
+          llvm::errc::invalid_argument);
+
+    if (Change.rangeLength &&
+        (ssize_t)(*EndIndex - *StartIndex) != *Change.rangeLength)
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("Change's rangeLength ({0}) doesn't match the "
+                        "computed range length ({1}).",
+                        *Change.rangeLength, *EndIndex - *StartIndex),
+          llvm::errc::invalid_argument);
+
+    std::string NewContents;
+    NewContents.reserve(*StartIndex + Change.text.length() +
+                        (Contents.length() - *EndIndex));
+
+    NewContents = Contents.substr(0, *StartIndex);
+    NewContents += Change.text;
+    NewContents += Contents.substr(*EndIndex);
+
+    Contents = std::move(NewContents);
+  }
+
+  EntryIt->second = Contents;
+  return Contents;
 }
 
 void DraftStore::removeDraft(PathRef File) {

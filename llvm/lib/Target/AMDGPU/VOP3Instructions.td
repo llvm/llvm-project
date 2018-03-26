@@ -718,9 +718,9 @@ multiclass VOP3Interp_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> 
 }
 
 multiclass VOP3_Real_gfx9<bits<10> op, string AsmName> {
-  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
-              VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
-              VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME);
+  def _gfx9 : VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.GFX9>,
+              VOP3e_vi <op, !cast<VOP_Pseudo>(NAME).Pfl> {
+              VOP_Pseudo ps = !cast<VOP_Pseudo>(NAME);
               let AsmString = AsmName # ps.AsmOperands;
             }
 }

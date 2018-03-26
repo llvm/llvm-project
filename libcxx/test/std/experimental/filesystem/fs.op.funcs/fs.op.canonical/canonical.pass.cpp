@@ -15,7 +15,7 @@
 // path canonical(const path& p, error_code& ec);
 // path canonical(const path& p, const path& base, error_code& ec);
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -23,7 +23,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_canonical_path_test_suite)
 

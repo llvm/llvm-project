@@ -112,14 +112,18 @@ static void expandMemoryRegion(MemoryRegion *MemRegion, uint64_t Size,
           "': overflowed by " + Twine(NewSize - MemRegion->Length) + " bytes");
 }
 
-void LinkerScript::expandOutputSection(uint64_t Size) {
-  Ctx->OutSec->Size += Size;
+void LinkerScript::expandMemoryRegions(uint64_t Size) {
   if (Ctx->MemRegion)
     expandMemoryRegion(Ctx->MemRegion, Size, Ctx->MemRegion->Name,
                        Ctx->OutSec->Name);
   if (Ctx->LMARegion)
     expandMemoryRegion(Ctx->LMARegion, Size, Ctx->LMARegion->Name,
                        Ctx->OutSec->Name);
+}
+
+void LinkerScript::expandOutputSection(uint64_t Size) {
+  Ctx->OutSec->Size += Size;
+  expandMemoryRegions(Size);
 }
 
 void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
@@ -707,9 +711,11 @@ void LinkerScript::output(InputSection *S) {
 void LinkerScript::switchTo(OutputSection *Sec) {
   if (Ctx->OutSec == Sec)
     return;
-
   Ctx->OutSec = Sec;
+
+  uint64_t Before = advance(0, 1);
   Ctx->OutSec->Addr = advance(0, Ctx->OutSec->Alignment);
+  expandMemoryRegions(Ctx->OutSec->Addr - Before);
 }
 
 // This function searches for a memory region to place the given output

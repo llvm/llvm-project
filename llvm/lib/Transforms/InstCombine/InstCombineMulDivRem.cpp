@@ -447,70 +447,6 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
-/// Helper function of InstCombiner::visitFMul(). Return true iff the given
-/// value is FMul or FDiv with one and only one operand being a finite-non-zero
-/// constant (i.e. not Zero/NaN/Infinity).
-static bool isFMulOrFDivWithConstant(Value *V) {
-  Constant *C;
-  return (match(V, m_FMul(m_Value(), m_Constant(C))) ||
-          match(V, m_FDiv(m_Value(), m_Constant(C))) ||
-          match(V, m_FDiv(m_Constant(C), m_Value()))) && C->isFiniteNonZeroFP();
-}
-
-/// foldFMulConst() is a helper routine of InstCombiner::visitFMul().
-/// The input \p FMulOrDiv is a FMul/FDiv with one and only one operand
-/// being a constant (i.e. isFMulOrFDivWithConstant(FMulOrDiv) == true).
-/// This function is to simplify "FMulOrDiv * C" and returns the
-/// resulting expression. Note that this function could return NULL in
-/// case the constants cannot be folded into a normal floating-point.
-Value *InstCombiner::foldFMulConst(Instruction *FMulOrDiv, Constant *C,
-                                   Instruction *InsertBefore) {
-  assert(isFMulOrFDivWithConstant(FMulOrDiv) && "V is invalid");
-
-  Value *Opnd0 = FMulOrDiv->getOperand(0);
-  Value *Opnd1 = FMulOrDiv->getOperand(1);
-
-  Constant *C0 = dyn_cast<Constant>(Opnd0);
-  Constant *C1 = dyn_cast<Constant>(Opnd1);
-
-  BinaryOperator *R = nullptr;
-
-  // (X * C0) * C => X * (C0*C)
-  if (FMulOrDiv->getOpcode() == Instruction::FMul) {
-    Constant *F = ConstantExpr::getFMul(C1 ? C1 : C0, C);
-    if (F->isNormalFP())
-      R = BinaryOperator::CreateFMul(C1 ? Opnd0 : Opnd1, F);
-  } else {
-    if (C0) {
-      // (C0 / X) * C => (C0 * C) / X
-      if (FMulOrDiv->hasOneUse()) {
-        // It would otherwise introduce another div.
-        Constant *F = ConstantExpr::getFMul(C0, C);
-        if (F->isNormalFP())
-          R = BinaryOperator::CreateFDiv(F, Opnd1);
-      }
-    } else {
-      // (X / C1) * C => X * (C/C1) if C/C1 is not a denormal
-      Constant *F = ConstantExpr::getFDiv(C, C1);
-      if (F->isNormalFP()) {
-        R = BinaryOperator::CreateFMul(Opnd0, F);
-      } else {
-        // (X / C1) * C => X / (C1/C)
-        Constant *F = ConstantExpr::getFDiv(C1, C);
-        if (F->isNormalFP())
-          R = BinaryOperator::CreateFDiv(Opnd0, F);
-      }
-    }
-  }
-
-  if (R) {
-    R->setFast(true);
-    InsertNewInstWith(R, *InsertBefore);
-  }
-
-  return R;
-}
-
 Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -556,6 +492,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   // Reassociate constant RHS with another constant to form constant expression.
+  // FIXME: These folds do not require all FMF.
   if (I.isFast() && match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP()) {
     Constant *C1;
     if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
@@ -577,40 +514,20 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
         return BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
     }
 
-    // Let MDC denote an expression in one of these forms:
-    // X * C, C/X, X/C, where C is a constant.
-    // (MDC +/- C1) * C => (MDC * C) +/- (C1 * C)
-    Instruction *FAddSub = dyn_cast<Instruction>(Op0);
-    if (FAddSub &&
-        (FAddSub->getOpcode() == Instruction::FAdd ||
-         FAddSub->getOpcode() == Instruction::FSub)) {
-      Value *Opnd0 = FAddSub->getOperand(0);
-      Value *Opnd1 = FAddSub->getOperand(1);
-      Constant *C0 = dyn_cast<Constant>(Opnd0);
-      Constant *C1 = dyn_cast<Constant>(Opnd1);
-      bool Swap = false;
-      if (C0) {
-        std::swap(C0, C1);
-        std::swap(Opnd0, Opnd1);
-        Swap = true;
-      }
-
-      if (C1 && C1->isFiniteNonZeroFP() && isFMulOrFDivWithConstant(Opnd0)) {
-        Value *M1 = ConstantExpr::getFMul(C1, C);
-        Value *M0 = cast<Constant>(M1)->isNormalFP() ?
-                        foldFMulConst(cast<Instruction>(Opnd0), C, &I) :
-                        nullptr;
-        if (M0 && M1) {
-          if (Swap && FAddSub->getOpcode() == Instruction::FSub)
-            std::swap(M0, M1);
-
-          Instruction *RI = (FAddSub->getOpcode() == Instruction::FAdd)
-                                ? BinaryOperator::CreateFAdd(M0, M1)
-                                : BinaryOperator::CreateFSub(M0, M1);
-          RI->copyFastMathFlags(&I);
-          return RI;
-        }
-      }
+    // We do not need to match 'fadd C, X' and 'fsub X, C' because they are
+    // canonicalized to 'fadd X, C'. Distributing the multiply may allow further
+    // folds and (X * C) + C2 is 'fma'.
+    if (match(Op0, m_OneUse(m_FAdd(m_Value(X), m_Constant(C1))))) {
+      // (X + C1) * C --> (X * C) + (C * C1)
+      Constant *CC1 = ConstantExpr::getFMul(C, C1);
+      Value *XC = Builder.CreateFMulFMF(X, C, &I);
+      return BinaryOperator::CreateFAddFMF(XC, CC1, &I);
+    }
+    if (match(Op0, m_OneUse(m_FSub(m_Constant(C1), m_Value(X))))) {
+      // (C1 - X) * C --> (C * C1) - (X * C)
+      Constant *CC1 = ConstantExpr::getFMul(C, C1);
+      Value *XC = Builder.CreateFMulFMF(X, C, &I);
+      return BinaryOperator::CreateFSubFMF(CC1, XC, &I);
     }
   }
 

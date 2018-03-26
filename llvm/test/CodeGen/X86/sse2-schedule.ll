@@ -1090,9 +1090,10 @@ define <2 x double> @test_cvtdq2pd(<4 x i32> %a0, <4 x i32> *%a1) {
 ;
 ; ATOM-LABEL: test_cvtdq2pd:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    cvtdq2pd %xmm0, %xmm1 # sched: [8:4.00]
-; ATOM-NEXT:    cvtdq2pd (%rdi), %xmm0 # sched: [7:3.50]
-; ATOM-NEXT:    addpd %xmm1, %xmm0 # sched: [6:3.00]
+; ATOM-NEXT:    cvtdq2pd (%rdi), %xmm1 # sched: [8:4.00]
+; ATOM-NEXT:    cvtdq2pd %xmm0, %xmm0 # sched: [7:3.50]
+; ATOM-NEXT:    addpd %xmm0, %xmm1 # sched: [6:3.00]
+; ATOM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cvtdq2pd:
@@ -1945,15 +1946,15 @@ define i32 @test_cvtsd2si(double %a0, double *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvtsd2si:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvtsd2si (%rdi), %eax # sched: [8:1.00]
-; BTVER2-SSE-NEXT:    cvtsd2si %xmm0, %ecx # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtsd2si (%rdi), %eax # sched: [12:1.00]
+; BTVER2-SSE-NEXT:    cvtsd2si %xmm0, %ecx # sched: [7:1.00]
 ; BTVER2-SSE-NEXT:    addl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvtsd2si:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcvtsd2si (%rdi), %eax # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtsd2si %xmm0, %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtsd2si (%rdi), %eax # sched: [12:1.00]
+; BTVER2-NEXT:    vcvtsd2si %xmm0, %ecx # sched: [7:1.00]
 ; BTVER2-NEXT:    addl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2074,15 +2075,15 @@ define i64 @test_cvtsd2siq(double %a0, double *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvtsd2siq:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvtsd2si (%rdi), %rax # sched: [8:1.00]
-; BTVER2-SSE-NEXT:    cvtsd2si %xmm0, %rcx # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtsd2si (%rdi), %rax # sched: [12:1.00]
+; BTVER2-SSE-NEXT:    cvtsd2si %xmm0, %rcx # sched: [7:1.00]
 ; BTVER2-SSE-NEXT:    addq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvtsd2siq:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcvtsd2si (%rdi), %rax # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtsd2si %xmm0, %rcx # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtsd2si (%rdi), %rax # sched: [12:1.00]
+; BTVER2-NEXT:    vcvtsd2si %xmm0, %rcx # sched: [7:1.00]
 ; BTVER2-NEXT:    addq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2217,17 +2218,17 @@ define float @test_cvtsd2ss(double %a0, double *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvtsd2ss:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvtsd2ss %xmm0, %xmm1 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtsd2ss %xmm0, %xmm1 # sched: [7:2.00]
 ; BTVER2-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [5:1.00]
-; BTVER2-SSE-NEXT:    cvtsd2ss %xmm0, %xmm0 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtsd2ss %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvtsd2ss:
 ; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero sched: [5:1.00]
-; BTVER2-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1 # sched: [7:2.00]
 ; BTVER2-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2347,15 +2348,15 @@ define double @test_cvtsi2sd(i32 %a0, i32 *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvtsi2sd:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvtsi2sdl (%rsi), %xmm0 # sched: [8:1.00]
-; BTVER2-SSE-NEXT:    cvtsi2sdl %edi, %xmm1 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtsi2sdl (%rsi), %xmm0 # sched: [14:1.00]
+; BTVER2-SSE-NEXT:    cvtsi2sdl %edi, %xmm1 # sched: [9:1.00]
 ; BTVER2-SSE-NEXT:    addsd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvtsi2sd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vcvtsi2sdl (%rsi), %xmm1, %xmm1 # sched: [8:1.00]
+; BTVER2-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0 # sched: [9:1.00]
+; BTVER2-NEXT:    vcvtsi2sdl (%rsi), %xmm1, %xmm1 # sched: [14:1.00]
 ; BTVER2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2473,15 +2474,15 @@ define double @test_cvtsi2sdq(i64 %a0, i64 *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvtsi2sdq:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvtsi2sdq (%rsi), %xmm0 # sched: [8:1.00]
-; BTVER2-SSE-NEXT:    cvtsi2sdq %rdi, %xmm1 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtsi2sdq (%rsi), %xmm0 # sched: [14:1.00]
+; BTVER2-SSE-NEXT:    cvtsi2sdq %rdi, %xmm1 # sched: [9:1.00]
 ; BTVER2-SSE-NEXT:    addsd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvtsi2sdq:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vcvtsi2sdq (%rsi), %xmm1, %xmm1 # sched: [8:1.00]
+; BTVER2-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 # sched: [9:1.00]
+; BTVER2-NEXT:    vcvtsi2sdq (%rsi), %xmm1, %xmm1 # sched: [14:1.00]
 ; BTVER2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2615,17 +2616,17 @@ define double @test_cvtss2sd(float %a0, float *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvtss2sd:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvtss2sd %xmm0, %xmm1 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtss2sd %xmm0, %xmm1 # sched: [7:2.00]
 ; BTVER2-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:1.00]
-; BTVER2-SSE-NEXT:    cvtss2sd %xmm0, %xmm0 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvtss2sd %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-SSE-NEXT:    addsd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvtss2sd:
 ; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:1.00]
-; BTVER2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1 # sched: [7:2.00]
 ; BTVER2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3002,15 +3003,15 @@ define i32 @test_cvttsd2si(double %a0, double *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvttsd2si:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvttsd2si (%rdi), %eax # sched: [8:1.00]
-; BTVER2-SSE-NEXT:    cvttsd2si %xmm0, %ecx # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvttsd2si (%rdi), %eax # sched: [12:1.00]
+; BTVER2-SSE-NEXT:    cvttsd2si %xmm0, %ecx # sched: [7:1.00]
 ; BTVER2-SSE-NEXT:    addl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvttsd2si:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcvttsd2si (%rdi), %eax # sched: [8:1.00]
-; BTVER2-NEXT:    vcvttsd2si %xmm0, %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    vcvttsd2si (%rdi), %eax # sched: [12:1.00]
+; BTVER2-NEXT:    vcvttsd2si %xmm0, %ecx # sched: [7:1.00]
 ; BTVER2-NEXT:    addl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3128,15 +3129,15 @@ define i64 @test_cvttsd2siq(double %a0, double *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvttsd2siq:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvttsd2si (%rdi), %rax # sched: [8:1.00]
-; BTVER2-SSE-NEXT:    cvttsd2si %xmm0, %rcx # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    cvttsd2si (%rdi), %rax # sched: [12:1.00]
+; BTVER2-SSE-NEXT:    cvttsd2si %xmm0, %rcx # sched: [7:1.00]
 ; BTVER2-SSE-NEXT:    addq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvttsd2siq:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcvttsd2si (%rdi), %rax # sched: [8:1.00]
-; BTVER2-NEXT:    vcvttsd2si %xmm0, %rcx # sched: [3:1.00]
+; BTVER2-NEXT:    vcvttsd2si (%rdi), %rax # sched: [12:1.00]
+; BTVER2-NEXT:    vcvttsd2si %xmm0, %rcx # sched: [7:1.00]
 ; BTVER2-NEXT:    addq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -3193,8 +3194,8 @@ define <2 x double> @test_divpd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; HASWELL-SSE-LABEL: test_divpd:
 ; HASWELL-SSE:       # %bb.0:
-; HASWELL-SSE-NEXT:    divpd %xmm1, %xmm0 # sched: [14:1.00]
-; HASWELL-SSE-NEXT:    divpd (%rdi), %xmm0 # sched: [20:1.00]
+; HASWELL-SSE-NEXT:    divpd %xmm1, %xmm0 # sched: [20:1.00]
+; HASWELL-SSE-NEXT:    divpd (%rdi), %xmm0 # sched: [26:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_divpd:
@@ -3301,8 +3302,8 @@ define double @test_divsd(double %a0, double %a1, double *%a2) {
 ;
 ; HASWELL-SSE-LABEL: test_divsd:
 ; HASWELL-SSE:       # %bb.0:
-; HASWELL-SSE-NEXT:    divsd %xmm1, %xmm0 # sched: [14:1.00]
-; HASWELL-SSE-NEXT:    divsd (%rdi), %xmm0 # sched: [19:1.00]
+; HASWELL-SSE-NEXT:    divsd %xmm1, %xmm0 # sched: [20:1.00]
+; HASWELL-SSE-NEXT:    divsd (%rdi), %xmm0 # sched: [25:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_divsd:
@@ -14141,8 +14142,8 @@ define <2 x double> @test_shufpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 define <2 x double> @test_sqrtpd(<2 x double> %a0, <2 x double> *%a1) {
 ; GENERIC-LABEL: test_sqrtpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [22:1.00]
-; GENERIC-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [28:1.00]
+; GENERIC-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [21:1.00]
+; GENERIC-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [27:1.00]
 ; GENERIC-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14163,50 +14164,50 @@ define <2 x double> @test_sqrtpd(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; SANDY-SSE-LABEL: test_sqrtpd:
 ; SANDY-SSE:       # %bb.0:
-; SANDY-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [22:1.00]
-; SANDY-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [28:1.00]
+; SANDY-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [21:1.00]
+; SANDY-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [27:1.00]
 ; SANDY-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_sqrtpd:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [22:1.00]
-; SANDY-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [28:1.00]
+; SANDY-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [21:1.00]
+; SANDY-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [27:1.00]
 ; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_sqrtpd:
 ; HASWELL-SSE:       # %bb.0:
-; HASWELL-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [20:1.00]
-; HASWELL-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [26:1.00]
+; HASWELL-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [16:1.00]
+; HASWELL-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [22:1.00]
 ; HASWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_sqrtpd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [21:1.00]
-; HASWELL-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [27:1.00]
+; HASWELL-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [16:1.00]
+; HASWELL-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [22:1.00]
 ; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_sqrtpd:
 ; BROADWELL-SSE:       # %bb.0:
-; BROADWELL-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [20:1.00]
-; BROADWELL-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [25:1.00]
+; BROADWELL-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [16:1.00]
+; BROADWELL-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [21:1.00]
 ; BROADWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_sqrtpd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [21:1.00]
-; BROADWELL-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [26:1.00]
+; BROADWELL-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [16:1.00]
+; BROADWELL-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [21:1.00]
 ; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_sqrtpd:
 ; SKYLAKE-SSE:       # %bb.0:
-; SKYLAKE-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [20:1.00]
-; SKYLAKE-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [26:1.00]
+; SKYLAKE-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [18:1.00]
+; SKYLAKE-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [24:1.00]
 ; SKYLAKE-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -14233,15 +14234,15 @@ define <2 x double> @test_sqrtpd(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_sqrtpd:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [21:21.00]
-; BTVER2-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [26:21.00]
+; BTVER2-SSE-NEXT:    sqrtpd %xmm0, %xmm1 # sched: [27:27.00]
+; BTVER2-SSE-NEXT:    sqrtpd (%rdi), %xmm0 # sched: [32:27.00]
 ; BTVER2-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_sqrtpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [26:21.00]
-; BTVER2-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [21:21.00]
+; BTVER2-NEXT:    vsqrtpd (%rdi), %xmm1 # sched: [32:27.00]
+; BTVER2-NEXT:    vsqrtpd %xmm0, %xmm0 # sched: [27:27.00]
 ; BTVER2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -14271,33 +14272,33 @@ declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
 define <2 x double> @test_sqrtsd(<2 x double> %a0, <2 x double> *%a1) {
 ; GENERIC-LABEL: test_sqrtsd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [22:1.00]
+; GENERIC-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [21:1.00]
 ; GENERIC-NEXT:    movapd (%rdi), %xmm1 # sched: [6:0.50]
-; GENERIC-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [22:1.00]
+; GENERIC-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [21:1.00]
 ; GENERIC-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_sqrtsd:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movapd (%rdi), %xmm1 # sched: [1:1.00]
-; ATOM-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [0:?]
-; ATOM-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [0:?]
+; ATOM-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [62:31.00]
+; ATOM-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [62:31.00]
 ; ATOM-NEXT:    addpd %xmm1, %xmm0 # sched: [6:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_sqrtsd:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    movapd (%rdi), %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [18:1.00]
-; SLM-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [18:1.00]
+; SLM-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [15:1.00]
+; SLM-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [15:1.00]
 ; SLM-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_sqrtsd:
 ; SANDY-SSE:       # %bb.0:
-; SANDY-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [22:1.00]
+; SANDY-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [21:1.00]
 ; SANDY-SSE-NEXT:    movapd (%rdi), %xmm1 # sched: [6:0.50]
-; SANDY-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [22:1.00]
+; SANDY-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [21:1.00]
 ; SANDY-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14311,41 +14312,41 @@ define <2 x double> @test_sqrtsd(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; HASWELL-SSE-LABEL: test_sqrtsd:
 ; HASWELL-SSE:       # %bb.0:
-; HASWELL-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [20:1.00]
+; HASWELL-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [16:1.00]
 ; HASWELL-SSE-NEXT:    movapd (%rdi), %xmm1 # sched: [6:0.50]
-; HASWELL-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [20:1.00]
+; HASWELL-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [16:1.00]
 ; HASWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_sqrtsd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [21:1.00]
+; HASWELL-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [16:1.00]
 ; HASWELL-NEXT:    vmovapd (%rdi), %xmm1 # sched: [6:0.50]
-; HASWELL-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [21:1.00]
+; HASWELL-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [16:1.00]
 ; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_sqrtsd:
 ; BROADWELL-SSE:       # %bb.0:
-; BROADWELL-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [20:1.00]
+; BROADWELL-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [16:1.00]
 ; BROADWELL-SSE-NEXT:    movapd (%rdi), %xmm1 # sched: [5:0.50]
-; BROADWELL-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [20:1.00]
+; BROADWELL-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [16:1.00]
 ; BROADWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_sqrtsd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [21:1.00]
+; BROADWELL-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [16:1.00]
 ; BROADWELL-NEXT:    vmovapd (%rdi), %xmm1 # sched: [5:0.50]
-; BROADWELL-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [21:1.00]
+; BROADWELL-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [16:1.00]
 ; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_sqrtsd:
 ; SKYLAKE-SSE:       # %bb.0:
-; SKYLAKE-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [20:1.00]
+; SKYLAKE-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [18:1.00]
 ; SKYLAKE-SSE-NEXT:    movapd (%rdi), %xmm1 # sched: [6:0.50]
-; SKYLAKE-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [20:1.00]
+; SKYLAKE-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [18:1.00]
 ; SKYLAKE-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -14376,32 +14377,32 @@ define <2 x double> @test_sqrtsd(<2 x double> %a0, <2 x double> *%a1) {
 ; BTVER2-SSE-LABEL: test_sqrtsd:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    movapd (%rdi), %xmm1 # sched: [5:1.00]
-; BTVER2-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [26:21.00]
-; BTVER2-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [26:21.00]
+; BTVER2-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [27:27.00]
+; BTVER2-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [27:27.00]
 ; BTVER2-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_sqrtsd:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovapd (%rdi), %xmm1 # sched: [5:1.00]
-; BTVER2-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [26:21.00]
-; BTVER2-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [26:21.00]
+; BTVER2-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [27:27.00]
+; BTVER2-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [27:27.00]
 ; BTVER2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_sqrtsd:
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movapd (%rdi), %xmm1 # sched: [8:0.50]
-; ZNVER1-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [27:1.00]
-; ZNVER1-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [27:1.00]
+; ZNVER1-SSE-NEXT:    sqrtsd %xmm0, %xmm0 # sched: [20:1.00]
+; ZNVER1-SSE-NEXT:    sqrtsd %xmm1, %xmm1 # sched: [20:1.00]
 ; ZNVER1-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_sqrtsd:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovapd (%rdi), %xmm1 # sched: [8:0.50]
-; ZNVER1-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [27:1.00]
-; ZNVER1-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [27:1.00]
+; ZNVER1-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 # sched: [20:1.00]
+; ZNVER1-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1 # sched: [20:1.00]
 ; ZNVER1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %a0)

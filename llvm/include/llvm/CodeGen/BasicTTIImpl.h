@@ -111,6 +111,22 @@ private:
     return static_cast<const T *>(this)->getTLI();
   }
 
+  static ISD::MemIndexedMode getISDIndexedMode(TTI::MemIndexedMode M) {
+    switch (M) {
+      case TTI::MIM_Unindexed:
+        return ISD::UNINDEXED;
+      case TTI::MIM_PreInc:
+        return ISD::PRE_INC;
+      case TTI::MIM_PreDec:
+        return ISD::PRE_DEC;
+      case TTI::MIM_PostInc:
+        return ISD::POST_INC;
+      case TTI::MIM_PostDec:
+        return ISD::POST_DEC;
+    }
+    llvm_unreachable("Unexpected MemIndexedMode");
+  }
+
 protected:
   explicit BasicTTIImplBase(const TargetMachine *TM, const DataLayout &DL)
       : BaseT(DL) {}
@@ -155,6 +171,18 @@ public:
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
+  }
+
+  bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty,
+                          const DataLayout &DL) const {
+    EVT VT = getTLI()->getValueType(DL, Ty);
+    return getTLI()->isIndexedLoadLegal(getISDIndexedMode(M), VT);
+  }
+
+  bool isIndexedStoreLegal(TTI::MemIndexedMode M, Type *Ty,
+                           const DataLayout &DL) const {
+    EVT VT = getTLI()->getValueType(DL, Ty);
+    return getTLI()->isIndexedStoreLegal(getISDIndexedMode(M), VT);
   }
 
   bool isLSRCostLess(TTI::LSRCost C1, TTI::LSRCost C2) {

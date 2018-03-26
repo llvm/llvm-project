@@ -3034,11 +3034,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
             getv64i1Argument(VA, ArgLocs[++I], Chain, DAG, dl, Subtarget);
       } else {
         const TargetRegisterClass *RC;
-        if (RegVT == MVT::i8)
-          RC = &X86::GR8RegClass;
-        else if (RegVT == MVT::i16)
-          RC = &X86::GR16RegClass;
-        else if (RegVT == MVT::i32)
+        if (RegVT == MVT::i32)
           RC = &X86::GR32RegClass;
         else if (Is64Bit && RegVT == MVT::i64)
           RC = &X86::GR64RegClass;
@@ -18274,7 +18270,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // If this is a SETNE against the signed minimum value, change it to SETGT.
-  // If this is a SETNE against the signed maximum value, change it to SETLT 
+  // If this is a SETNE against the signed maximum value, change it to SETLT.
   // which will be swapped to SETGT.
   // Otherwise we use PCMPEQ+invert.
   APInt ConstValue;

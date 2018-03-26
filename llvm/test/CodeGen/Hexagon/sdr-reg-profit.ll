@@ -1,3 +1,5 @@
+; XFAIL: *
+; This requires further patches.
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ;
 ; Split all andp/orp instructions (by boosting the profitability of their

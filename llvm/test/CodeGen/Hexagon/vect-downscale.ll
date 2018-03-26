@@ -12,6 +12,8 @@
 ; CHECK: {
 ; CHECK: }
 ; CHECK: {
+; CHECK: }
+; CHECK: {
 ; CHECK-NOT: }
 ; CHECK: }{{[ \t]*}}:endloop0
 
