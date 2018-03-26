@@ -246,7 +246,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Res && IsSDWA)
     Res = convertSDWAInst(MI);
 
-  Size = Res ? (MaxInstBytesNum - Bytes.size()) : 0;
+  // if the opcode was not recognized we'll assume a Size of 4 bytes
+  // (unless there are fewer bytes left)
+  Size = Res ? (MaxInstBytesNum - Bytes.size())
+             : std::min((size_t)4, Bytes_.size());
   return Res;
 }
 

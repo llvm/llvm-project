@@ -40,17 +40,9 @@ class VOP1_SDWA9Ae <bits<8> op, VOPProfile P> : VOP_SDWA9Ae <P> {
 }
 
 class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP1Only = 0> :
-  InstSI <P.Outs32, P.Ins32, "", pattern>,
-  VOP <opName>,
-  SIMCInstr <!if(VOP1Only, opName, opName#"_e32"), SIEncodingFamily.NONE>,
-  MnemonicAlias<!if(VOP1Only, opName, opName#"_e32"), opName> {
+  VOP_Pseudo <opName, !if(VOP1Only, "", "_e32"), P, P.Outs32, P.Ins32, "", pattern> {
 
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let UseNamedOperandTable = 1;
-
-  string Mnemonic = opName;
-  string AsmOperands = P.Asm32;
+  let AsmOperands = P.Asm32;
 
   let Size = 4;
   let mayLoad = 0;
@@ -63,8 +55,6 @@ class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP1On
   let Uses = [EXEC];
 
   let AsmVariantName = AMDGPUAsmVariants.Default;
-
-  VOPProfile Pfl = P;
 }
 
 class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily> :

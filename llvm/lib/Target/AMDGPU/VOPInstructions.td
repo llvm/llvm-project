@@ -38,6 +38,23 @@ class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let Uses = [EXEC];
 }
 
+class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
+                  string asm, list<dag> pattern> :
+  InstSI <outs, ins, asm, pattern>,
+  VOP <opName>,
+  SIMCInstr <opName#suffix, SIEncodingFamily.NONE>,
+  MnemonicAlias<opName#suffix, opName> {
+
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  let UseNamedOperandTable = 1;
+
+  string Mnemonic = opName;
+  VOPProfile Pfl = P;
+
+  string AsmOperands;
+}
+
 class VOP3Common <dag outs, dag ins, string asm = "",
                   list<dag> pattern = [], bit HasMods = 0,
                   bit VOP3Only = 0> :
@@ -66,26 +83,18 @@ class VOP3Common <dag outs, dag ins, string asm = "",
 
 class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
                    bit VOP3Only = 0, bit isVOP3P = 0, bit isVop3OpSel = 0> :
-  InstSI <P.Outs64,
-          !if(isVop3OpSel,
-              P.InsVOP3OpSel,
-              !if(!and(isVOP3P, P.IsPacked), P.InsVOP3P, P.Ins64)),
-          "",
-          pattern>,
-  VOP <opName>,
-  SIMCInstr<opName#"_e64", SIEncodingFamily.NONE>,
-  MnemonicAlias<opName#"_e64", opName> {
+  VOP_Pseudo <opName, "_e64", P, P.Outs64,
+              !if(isVop3OpSel,
+                  P.InsVOP3OpSel,
+                  !if(!and(isVOP3P, P.IsPacked), P.InsVOP3P, P.Ins64)),
+              "", pattern> {
 
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let UseNamedOperandTable = 1;
   let VOP3_OPSEL = isVop3OpSel;
   let IsPacked = P.IsPacked;
 
-  string Mnemonic = opName;
-  string AsmOperands = !if(isVop3OpSel,
-                           P.AsmVOP3OpSel,
-                           !if(!and(isVOP3P, P.IsPacked), P.AsmVOP3P, P.Asm64));
+  let AsmOperands = !if(isVop3OpSel,
+                        P.AsmVOP3OpSel,
+                        !if(!and(isVOP3P, P.IsPacked), P.AsmVOP3P, P.Asm64));
 
   let Size = 8;
   let mayLoad = 0;
@@ -120,8 +129,6 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
         !if(!or(P.HasModifiers, !or(P.HasOMod, P.HasIntClamp)),
             "cvtVOP3",
             ""));
-
-  VOPProfile Pfl = P;
 }
 
 class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
@@ -129,7 +136,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   let VOP3P = 1;
 }
 
-class VOP3_Real <VOP3_Pseudo ps, int EncodingFamily> :
+class VOP3_Real <VOP_Pseudo ps, int EncodingFamily> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
@@ -156,7 +163,7 @@ class VOP3_Real <VOP3_Pseudo ps, int EncodingFamily> :
 
 // XXX - Is there any reason to distingusih this from regular VOP3
 // here?
-class VOP3P_Real<VOP3P_Pseudo ps, int EncodingFamily> :
+class VOP3P_Real<VOP_Pseudo ps, int EncodingFamily> :
   VOP3_Real<ps, EncodingFamily>;
 
 class VOP3a<VOPProfile P> : Enc64 {

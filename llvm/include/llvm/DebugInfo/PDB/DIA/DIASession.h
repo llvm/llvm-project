@@ -34,6 +34,11 @@ public:
   std::unique_ptr<PDBSymbolExe> getGlobalScope() override;
   std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override;
 
+  bool addressForVA(uint64_t VA, uint32_t &Section,
+                    uint32_t &Offset) const override;
+  bool addressForRVA(uint32_t RVA, uint32_t &Section,
+                     uint32_t &Offset) const override;
+
   std::unique_ptr<PDBSymbol>
   findSymbolByAddress(uint64_t Address, PDB_SymType Type) const override;
 
@@ -42,6 +47,8 @@ public:
                   const IPDBSourceFile &File) const override;
   std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbersByAddress(uint64_t Address, uint32_t Length) const override;
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findLineNumbersByRVA(uint32_t RVA, uint32_t Length) const override;
   std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbersBySectOffset(uint32_t Section, uint32_t Offset,
                               uint32_t Length) const override;
@@ -76,6 +83,6 @@ public:
 private:
   CComPtr<IDiaSession> Session;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 #endif

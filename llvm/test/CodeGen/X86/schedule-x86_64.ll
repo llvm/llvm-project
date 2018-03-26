@@ -1964,8 +1964,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; SLM-LABEL: test_bsf16:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsfw %di, %ax # sched: [1:1.00]
-; SLM-NEXT:    bsfw (%rsi), %cx # sched: [4:1.00]
+; SLM-NEXT:    bsfw %di, %ax # sched: [10:10.00]
+; SLM-NEXT:    bsfw (%rsi), %cx # sched: [13:10.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -2024,8 +2024,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; BTVER2-LABEL: test_bsf16:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsfw %di, %ax # sched: [1:0.50]
-; BTVER2-NEXT:    bsfw (%rsi), %cx # sched: [4:1.00]
+; BTVER2-NEXT:    bsfw %di, %ax # sched: [5:2.00]
+; BTVER2-NEXT:    bsfw (%rsi), %cx # sched: [8:2.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -2068,8 +2068,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; SLM-LABEL: test_bsf32:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsfl %edi, %eax # sched: [1:1.00]
-; SLM-NEXT:    bsfl (%rsi), %ecx # sched: [4:1.00]
+; SLM-NEXT:    bsfl %edi, %eax # sched: [10:10.00]
+; SLM-NEXT:    bsfl (%rsi), %ecx # sched: [13:10.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -2122,8 +2122,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; BTVER2-LABEL: test_bsf32:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsfl %edi, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    bsfl (%rsi), %ecx # sched: [4:1.00]
+; BTVER2-NEXT:    bsfl %edi, %eax # sched: [5:2.00]
+; BTVER2-NEXT:    bsfl (%rsi), %ecx # sched: [8:2.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -2164,8 +2164,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; SLM-LABEL: test_bsf64:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsfq %rdi, %rax # sched: [1:1.00]
-; SLM-NEXT:    bsfq (%rsi), %rcx # sched: [4:1.00]
+; SLM-NEXT:    bsfq %rdi, %rax # sched: [10:10.00]
+; SLM-NEXT:    bsfq (%rsi), %rcx # sched: [13:10.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -2218,8 +2218,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; BTVER2-LABEL: test_bsf64:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsfq %rdi, %rax # sched: [1:0.50]
-; BTVER2-NEXT:    bsfq (%rsi), %rcx # sched: [4:1.00]
+; BTVER2-NEXT:    bsfq %rdi, %rax # sched: [5:2.00]
+; BTVER2-NEXT:    bsfq (%rsi), %rcx # sched: [8:2.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -2263,8 +2263,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; SLM-LABEL: test_bsr16:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsrw %di, %ax # sched: [1:1.00]
-; SLM-NEXT:    bsrw (%rsi), %cx # sched: [4:1.00]
+; SLM-NEXT:    bsrw %di, %ax # sched: [10:10.00]
+; SLM-NEXT:    bsrw (%rsi), %cx # sched: [13:10.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -2323,8 +2323,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; BTVER2-LABEL: test_bsr16:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsrw %di, %ax # sched: [1:0.50]
-; BTVER2-NEXT:    bsrw (%rsi), %cx # sched: [4:1.00]
+; BTVER2-NEXT:    bsrw %di, %ax # sched: [5:2.00]
+; BTVER2-NEXT:    bsrw (%rsi), %cx # sched: [8:2.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -2367,8 +2367,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; SLM-LABEL: test_bsr32:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsrl %edi, %eax # sched: [1:1.00]
-; SLM-NEXT:    bsrl (%rsi), %ecx # sched: [4:1.00]
+; SLM-NEXT:    bsrl %edi, %eax # sched: [10:10.00]
+; SLM-NEXT:    bsrl (%rsi), %ecx # sched: [13:10.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -2421,8 +2421,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; BTVER2-LABEL: test_bsr32:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsrl %edi, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    bsrl (%rsi), %ecx # sched: [4:1.00]
+; BTVER2-NEXT:    bsrl %edi, %eax # sched: [5:2.00]
+; BTVER2-NEXT:    bsrl (%rsi), %ecx # sched: [8:2.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -2463,8 +2463,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; SLM-LABEL: test_bsr64:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsrq %rdi, %rax # sched: [1:1.00]
-; SLM-NEXT:    bsrq (%rsi), %rcx # sched: [4:1.00]
+; SLM-NEXT:    bsrq %rdi, %rax # sched: [10:10.00]
+; SLM-NEXT:    bsrq (%rsi), %rcx # sched: [13:10.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -2517,8 +2517,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; BTVER2-LABEL: test_bsr64:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsrq %rdi, %rax # sched: [1:0.50]
-; BTVER2-NEXT:    bsrq (%rsi), %rcx # sched: [4:1.00]
+; BTVER2-NEXT:    bsrq %rdi, %rax # sched: [5:2.00]
+; BTVER2-NEXT:    bsrq (%rsi), %rcx # sched: [8:2.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]

@@ -74,7 +74,7 @@ SinkInstsToAvoidSpills("sink-insts-to-avoid-spills",
 static cl::opt<bool>
 HoistConstStores("hoist-const-stores",
                  cl::desc("Hoist invariant stores"),
-                 cl::init(true), cl::Hidden);
+                 cl::init(false), cl::Hidden);
 
 STATISTIC(NumHoisted,
           "Number of machine instructions hoisted out of loops");

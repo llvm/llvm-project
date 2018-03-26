@@ -134,12 +134,13 @@ define float @fold10(float %f1, float %f2) {
   ret float %t3
 }
 
-; once cause Crash/miscompilation
+; This used to crash/miscompile.
+
 define float @fail1(float %f1, float %f2) {
 ; CHECK-LABEL: @fail1(
-; CHECK-NEXT:    [[CONV3:%.*]] = fadd fast float [[F1:%.*]], -1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[CONV3]], 3.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[F1:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast float [[TMP1]], -3.000000e+00
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %conv3 = fadd fast float %f1, -1.000000e+00
   %add = fadd fast float %conv3, %conv3

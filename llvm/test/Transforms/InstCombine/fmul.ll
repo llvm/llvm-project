@@ -439,13 +439,12 @@ define float @fdiv_constant_denominator_fmul_denorm_try_harder_extra_use(float %
   ret float %r
 }
 
-; FIXME: Distribute to fma form.
 ; (X + C1) * C2 --> (X * C2) + C1*C2
 
 define float @fmul_fadd_distribute(float %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute(
-; CHECK-NEXT:    [[T2:%.*]] = fadd float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T2]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[TMP1]], 6.000000e+00
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t2 = fadd float %x, 2.0
@@ -453,13 +452,12 @@ define float @fmul_fadd_distribute(float %x) {
   ret float %t3
 }
 
-; FIXME: Distribute to fma form.
 ; (X - C1) * C2 --> (X * C2) - C1*C2
 
 define float @fmul_fsub_distribute1(float %x) {
 ; CHECK-LABEL: @fmul_fsub_distribute1(
-; CHECK-NEXT:    [[T2:%.*]] = fadd float [[X:%.*]], -2.000000e+00
-; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T2]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[TMP1]], -6.000000e+00
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t2 = fsub float %x, 2.0
@@ -467,13 +465,12 @@ define float @fmul_fsub_distribute1(float %x) {
   ret float %t3
 }
 
-; FIXME: Distribute to fma form.
 ; (C1 - X) * C2 --> C1*C2 - (X * C2)
 
 define float @fmul_fsub_distribute2(float %x) {
 ; CHECK-LABEL: @fmul_fsub_distribute2(
-; CHECK-NEXT:    [[T2:%.*]] = fsub float 2.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T2]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[T3:%.*]] = fsub fast float 6.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t2 = fsub float 2.0, %x
@@ -495,14 +492,11 @@ define float @fmul_fadd_fmul_distribute(float %x) {
   ret float %t3
 }
 
-; FIXME: More instructions than we started with.
-
 define float @fmul_fadd_distribute_extra_use(float %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul float [[X:%.*]], 6.000000e+00
 ; CHECK-NEXT:    [[T2:%.*]] = fadd float [[T1]], 2.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X]], 3.000000e+01
-; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[TMP1]], 1.000000e+01
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T2]], 5.000000e+00
 ; CHECK-NEXT:    call void @use_f32(float [[T2]])
 ; CHECK-NEXT:    ret float [[T3]]
 ;
@@ -559,14 +553,11 @@ define float @fmul_fsub_fmul_distribute(float %x) {
   ret float %t3
 }
 
-; FIXME: More instructions than we started with.
-
 define float @fmul_fsub_fmul_distribute_extra_use(float %x) {
 ; CHECK-LABEL: @fmul_fsub_fmul_distribute_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul float [[X:%.*]], 6.000000e+00
 ; CHECK-NEXT:    [[T2:%.*]] = fsub float 2.000000e+00, [[T1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X]], 3.000000e+01
-; CHECK-NEXT:    [[T3:%.*]] = fsub fast float 1.000000e+01, [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T2]], 5.000000e+00
 ; CHECK-NEXT:    call void @use_f32(float [[T2]])
 ; CHECK-NEXT:    ret float [[T3]]
 ;
@@ -591,14 +582,11 @@ define float @fmul_fsub_fmul_distribute2(float %x) {
   ret float %t3
 }
 
-; FIXME: More instructions than we started with.
-
 define float @fmul_fsub_fmul_distribute2_extra_use(float %x) {
 ; CHECK-LABEL: @fmul_fsub_fmul_distribute2_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul float [[X:%.*]], 6.000000e+00
 ; CHECK-NEXT:    [[T2:%.*]] = fsub float 2.000000e+00, [[T1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X]], 3.000000e+01
-; CHECK-NEXT:    [[T3:%.*]] = fsub fast float 1.000000e+01, [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T2]], 5.000000e+00
 ; CHECK-NEXT:    call void @use_f32(float [[T2]])
 ; CHECK-NEXT:    ret float [[T3]]
 ;

@@ -1,8 +1,9 @@
 ; RUN: llc < %s -mtriple=armv7-linux -stack-size-section | FileCheck %s
 
 ; CHECK-LABEL: func1:
+; CHECK-NEXT: .Lfunc_begin0:
 ; CHECK: .section .stack_sizes,"",%progbits
-; CHECK-NEXT: .long func1
+; CHECK-NEXT: .long .Lfunc_begin0
 ; CHECK-NEXT: .byte 8
 define void @func1(i32, i32) #0 {
   alloca i32, align 4
@@ -11,8 +12,9 @@ define void @func1(i32, i32) #0 {
 }
 
 ; CHECK-LABEL: func2:
+; CHECK-NEXT: .Lfunc_begin1:
 ; CHECK: .section .stack_sizes,"",%progbits
-; CHECK-NEXT: .long func2
+; CHECK-NEXT: .long .Lfunc_begin1
 ; CHECK-NEXT: .byte 16
 define void @func2() #0 {
   alloca i32, align 4

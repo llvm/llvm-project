@@ -8,9 +8,10 @@
 ; correct value. We need to do this even if we haven't generated the
 ; kernel code for the other Phi yet.
 
-; CHECK: [[REG0:(v[0-9]+)]] = [[REG1:(v[0-9]+)]]
+; CHECK: v[[REG0:[0-9]+]] = v[[REG1:[0-9]+]]
 ; CHECK: loop0
-; CHECK: [[REG0]] = [[REG1]]
+; Check for copy REG0 = REG1 (via vcombine):
+; CHECK: v{{[0-9]+}}:[[REG0]] = vcombine(v{{[0-9]+}},v[[REG1]])
 ; CHECK: endloop0
 
 ; Function Attrs: nounwind
