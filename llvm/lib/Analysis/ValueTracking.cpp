@@ -2687,7 +2687,7 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
       return true;
 
   // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
-  if (match(Op, m_FAdd(m_Value(), m_Zero())))
+  if (match(Op, m_FAdd(m_Value(), m_PosZeroFP())))
     return true;
 
   // sitofp and uitofp turn into +0.0 for zero.

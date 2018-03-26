@@ -206,8 +206,7 @@ define <2 x float> @fadd_zero_nsz_vec(<2 x float> %x) {
 
 define <2 x float> @fadd_zero_nsz_vec_undef(<2 x float> %x) {
 ; CHECK-LABEL: @fadd_zero_nsz_vec_undef(
-; CHECK-NEXT:    [[R:%.*]] = fadd nsz <2 x float> [[X:%.*]], <float 0.000000e+00, float undef>
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
 ;
   %r = fadd nsz <2 x float> %x, <float 0.0, float undef>
   ret <2 x float> %r
@@ -259,8 +258,7 @@ define double @frem_zero_by_x(double %x) {
 
 define <2 x double> @frem_poszero_by_x_vec_undef(<2 x double> %x) {
 ; CHECK-LABEL: @frem_poszero_by_x_vec_undef(
-; CHECK-NEXT:    [[R:%.*]] = frem nnan <2 x double> <double 0.000000e+00, double undef>, [[X:%.*]]
-; CHECK-NEXT:    ret <2 x double> [[R]]
+; CHECK-NEXT:    ret <2 x double> zeroinitializer
 ;
   %r = frem nnan <2 x double> <double 0.0, double undef>, %x
   ret <2 x double> %r

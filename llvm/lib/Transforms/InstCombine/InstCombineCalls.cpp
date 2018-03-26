@@ -2362,7 +2362,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Folding cmp(sub(a,b),0) -> cmp(a,b) and cmp(0,sub(a,b)) -> cmp(b,a)
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    bool Arg0IsZero = match(Arg0, m_Zero());
+    bool Arg0IsZero = match(Arg0, m_PosZeroFP());
     if (Arg0IsZero)
       std::swap(Arg0, Arg1);
     Value *A, *B;
@@ -2374,7 +2374,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // The compare intrinsic uses the above assumptions and therefore
     // doesn't require additional flags.
     if ((match(Arg0, m_OneUse(m_FSub(m_Value(A), m_Value(B)))) &&
-         match(Arg1, m_Zero()) && isa<Instruction>(Arg0) &&
+         match(Arg1, m_PosZeroFP()) && isa<Instruction>(Arg0) &&
          cast<Instruction>(Arg0)->getFastMathFlags().noInfs())) {
       if (Arg0IsZero)
         std::swap(A, B);
