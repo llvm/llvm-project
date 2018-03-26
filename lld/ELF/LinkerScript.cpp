@@ -112,14 +112,18 @@ static void expandMemoryRegion(MemoryRegion *MemRegion, uint64_t Size,
           "': overflowed by " + Twine(NewSize - MemRegion->Length) + " bytes");
 }
 
-void LinkerScript::expandOutputSection(uint64_t Size) {
-  Ctx->OutSec->Size += Size;
+void LinkerScript::expandMemoryRegions(uint64_t Size) {
   if (Ctx->MemRegion)
     expandMemoryRegion(Ctx->MemRegion, Size, Ctx->MemRegion->Name,
                        Ctx->OutSec->Name);
   if (Ctx->LMARegion)
     expandMemoryRegion(Ctx->LMARegion, Size, Ctx->LMARegion->Name,
                        Ctx->OutSec->Name);
+}
+
+void LinkerScript::expandOutputSection(uint64_t Size) {
+  Ctx->OutSec->Size += Size;
+  expandMemoryRegions(Size);
 }
 
 void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
@@ -380,8 +384,11 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
       // For -emit-relocs we have to ignore entries like
       //   .rela.dyn : { *(.rela.data) }
       // which are common because they are in the default bfd script.
-      if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
-        continue;
+      // We do not ignore SHT_REL[A] linker-synthesized sections here because
+      // want to support scripts that do custom layout for them.
+      if (auto *IS = dyn_cast<InputSection>(Sec))
+        if (IS->getRelocatedSection())
+          continue;
 
       std::string Filename = getFilename(Sec->File);
       if (!Cmd->FilePat.match(Filename) ||
@@ -405,7 +412,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
 void LinkerScript::discard(ArrayRef<InputSection *> V) {
   for (InputSection *S : V) {
     if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
-        S == InX::DynStrTab)
+        S == InX::DynStrTab || S == InX::RelaPlt || S == InX::RelaDyn)
       error("discarding " + S->Name + " section is not allowed");
 
     // You can discard .hash and .gnu.hash sections by linker scripts. Since
@@ -658,9 +665,8 @@ void LinkerScript::addOrphanSections() {
   // to create target sections first. We do not want priority handling
   // for synthetic sections because them are special.
   for (InputSectionBase *IS : InputSections) {
-    if ((IS->Type == SHT_REL || IS->Type == SHT_RELA) &&
-        !isa<SyntheticSection>(IS))
-      if (auto *Rel = cast<InputSection>(IS)->getRelocatedSection())
+    if (auto *Sec = dyn_cast<InputSection>(IS))
+      if (InputSectionBase *Rel = Sec->getRelocatedSection())
         if (auto *RelIS = dyn_cast_or_null<InputSectionBase>(Rel->Parent))
           Add(RelIS);
     Add(IS);
@@ -704,9 +710,11 @@ void LinkerScript::output(InputSection *S) {
 void LinkerScript::switchTo(OutputSection *Sec) {
   if (Ctx->OutSec == Sec)
     return;
-
   Ctx->OutSec = Sec;
+
+  uint64_t Before = advance(0, 1);
   Ctx->OutSec->Addr = advance(0, Ctx->OutSec->Alignment);
+  expandMemoryRegions(Ctx->OutSec->Addr - Before);
 }
 
 // This function searches for a memory region to place the given output

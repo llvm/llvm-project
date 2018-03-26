@@ -587,10 +587,18 @@ void EhFrameSection::writeTo(uint8_t *Buf) {
 
 GotSection::GotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotEntrySize, ".got") {}
+                       Target->GotEntrySize, ".got") {
+  // PPC64 saves the ElfSym::GlobalOffsetTable .TOC. as the first entry in the
+  // .got. If there are no references to .TOC. in the symbol table,
+  // ElfSym::GlobalOffsetTable will not be defined and we won't need to save
+  // .TOC. in the .got. When it is defined, we increase NumEntries by the number
+  // of entries used to emit ElfSym::GlobalOffsetTable.
+  if (ElfSym::GlobalOffsetTable && !Target->GotBaseSymInGotPlt)
+    NumEntries += Target->GotHeaderEntriesNum;
+}
 
 void GotSection::addEntry(Symbol &Sym) {
-  Sym.GotIndex = Target->GotHeaderEntriesNum + NumEntries;
+  Sym.GotIndex = NumEntries;
   ++NumEntries;
 }
 
@@ -622,7 +630,7 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &B) const {
 }
 
 void GotSection::finalizeContents() {
-  Size = (NumEntries + Target->GotHeaderEntriesNum) * Config->Wordsize;
+  Size = NumEntries * Config->Wordsize;
 }
 
 bool GotSection::empty() const {
@@ -1016,8 +1024,7 @@ void DynamicSection<ELFT>::addInt(int32_t Tag, uint64_t Val) {
 
 template <class ELFT>
 void DynamicSection<ELFT>::addInSec(int32_t Tag, InputSection *Sec) {
-  Entries.push_back(
-      {Tag, [=] { return Sec->getParent()->Addr + Sec->OutSecOff; }});
+  Entries.push_back({Tag, [=] { return Sec->getVA(0); }});
 }
 
 template <class ELFT>
@@ -1194,7 +1201,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  return InputSec->getOutputSection()->Addr + InputSec->getOffset(OffsetInSec);
+  return InputSec->getVA(OffsetInSec);
 }
 
 int64_t DynamicReloc::computeAddend() const {
@@ -2145,8 +2152,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   // Write the address area.
   for (GdbIndexChunk &D : Chunks) {
     for (GdbIndexChunk::AddressEntry &E : D.AddressAreas) {
-      uint64_t BaseAddr =
-          E.Section->getParent()->Addr + E.Section->getOffset(0);
+      uint64_t BaseAddr = E.Section->getVA(0);
       write64le(Buf, BaseAddr + E.LowAddress);
       write64le(Buf + 8, BaseAddr + E.HighAddress);
       write32le(Buf + 16, E.CuIndex);
@@ -2329,8 +2335,7 @@ VersionNeedSection<ELFT>::VersionNeedSection()
 template <class ELFT>
 void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
   SharedFile<ELFT> &File = SS->getFile<ELFT>();
-  const typename ELFT::Verdef *Ver = File.Verdefs[SS->VerdefIndex];
-  if (!Ver) {
+  if (SS->VerdefIndex == VER_NDX_GLOBAL) {
     SS->VersionId = VER_NDX_GLOBAL;
     return;
   }
@@ -2340,7 +2345,9 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
   // for the soname.
   if (File.VerdefMap.empty())
     Needed.push_back({&File, InX::DynStrTab->addString(File.SoName)});
+  const typename ELFT::Verdef *Ver = File.Verdefs[SS->VerdefIndex];
   typename SharedFile<ELFT>::NeededVer &NV = File.VerdefMap[Ver];
+
   // If we don't already know that we need an Elf_Vernaux for this Elf_Verdef,
   // prepare to create one by allocating a version identifier and creating a
   // dynstr entry for the version name.
@@ -2589,8 +2596,7 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 // address described by any other table entry.
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
   assert(Highest);
-  uint64_t S =
-      Highest->getParent()->Addr + Highest->getOffset(Highest->getSize());
+  uint64_t S = Highest->getVA(Highest->getSize());
   uint64_t P = getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 1);

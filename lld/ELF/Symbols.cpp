@@ -56,7 +56,6 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     if (!IS)
       return D.Value;
 
-    IS = IS->Repl;
     uint64_t Offset = D.Value;
 
     // An object in an SHF_MERGE section might be referenced via a
@@ -75,8 +74,6 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
       Addend = 0;
     }
 
-    const OutputSection *OutSec = IS->getOutputSection();
-
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
     // 1. The address of the output section.
@@ -87,7 +84,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     // If you understand the data structures involved with this next
     // line (and how they get built), then you have a pretty good
     // understanding of the linker.
-    uint64_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset(Offset);
+    uint64_t VA = IS->getVA(Offset);
 
     if (D.isTls() && !Config->Relocatable) {
       if (!Out::TlsPhdr)
@@ -100,7 +97,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   case Symbol::SharedKind: {
     auto &SS = cast<SharedSymbol>(Sym);
     if (SS.CopyRelSec)
-      return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff;
+      return SS.CopyRelSec->getVA(0);
     if (SS.NeedsPltAddr)
       return Sym.getPltVA();
     return 0;
@@ -153,7 +150,7 @@ uint64_t Symbol::getSize() const {
 OutputSection *Symbol::getOutputSection() const {
   if (auto *S = dyn_cast<Defined>(this)) {
     if (auto *Sec = S->Section)
-      return Sec->Repl->getOutputSection();
+      return Sec->getOutputSection();
     return nullptr;
   }
 
