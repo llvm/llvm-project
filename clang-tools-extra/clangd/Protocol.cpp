@@ -248,7 +248,8 @@ bool fromJSON(const json::Expr &Params, DidChangeWatchedFilesParams &R) {
 
 bool fromJSON(const json::Expr &Params, TextDocumentContentChangeEvent &R) {
   json::ObjectMapper O(Params);
-  return O && O.map("text", R.text);
+  return O && O.map("range", R.range) && O.map("rangeLength", R.rangeLength) &&
+         O.map("text", R.text);
 }
 
 bool fromJSON(const json::Expr &Params, FormattingOptions &R) {
