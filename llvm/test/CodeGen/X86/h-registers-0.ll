@@ -98,8 +98,7 @@ define i16 @qux16(i16 inreg %x) nounwind {
 ; X86-64: movzbl %ah, %eax
 
 ; WIN64-LABEL:  qux16:
-; WIN64:  movzwl  %cx, %eax
-; WIN64:  shrl    $8, %eax
+; WIN64:  movzbl %ch, %eax
 
 ; X86-32-LABEL: qux16:
 ; X86-32: movzbl %ah, %eax

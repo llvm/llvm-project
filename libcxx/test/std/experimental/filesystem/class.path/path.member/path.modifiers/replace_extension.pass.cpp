@@ -15,7 +15,7 @@
 
 // path& replace_extension(path const& p = path())
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -24,7 +24,6 @@
 #include "count_new.hpp"
 #include "filesystem_test_helper.hpp"
 
-namespace fs = std::experimental::filesystem;
 
 struct ReplaceExtensionTestcase {
   const char* value;

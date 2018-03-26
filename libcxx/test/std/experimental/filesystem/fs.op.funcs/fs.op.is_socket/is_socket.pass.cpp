@@ -15,7 +15,7 @@
 // bool is_socket(path const& p);
 // bool is_socket(path const& p, std::error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -23,7 +23,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(is_socket_test_suite)
 

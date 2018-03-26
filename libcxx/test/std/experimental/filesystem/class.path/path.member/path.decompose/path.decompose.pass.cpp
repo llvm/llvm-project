@@ -44,7 +44,7 @@
 // iterator end() const;
 
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <vector>
 #include <cassert>
@@ -54,7 +54,6 @@
 #include "count_new.hpp"
 #include "filesystem_test_helper.hpp"
 
-namespace fs = std::experimental::filesystem;
 struct PathDecomposeTestcase
 {
     std::string raw;

@@ -16,11 +16,10 @@
 // const path& path() const noexcept;
 // operator const path&() const noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
-namespace fs = std::experimental::filesystem;
 
 void test_path_method() {
   using namespace fs;

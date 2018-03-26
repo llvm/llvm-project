@@ -13,7 +13,7 @@
 
 // path absolute(const path& p, const path& base=current_path());
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -21,7 +21,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_absolute_path_test_suite)
 

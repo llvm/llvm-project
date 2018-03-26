@@ -14,14 +14,13 @@
 // void resize_file(const path& p, uintmax_t new_size);
 // void resize_file(const path& p, uintmax_t new_size, error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
-namespace fs = std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_resize_file_test_suite)
 

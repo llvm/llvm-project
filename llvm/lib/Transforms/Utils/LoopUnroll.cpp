@@ -97,15 +97,9 @@ static inline void remapInstruction(Instruction *I,
 
 /// Folds a basic block into its predecessor if it only has one predecessor, and
 /// that predecessor only has one successor.
-/// The LoopInfo Analysis that is passed will be kept consistent.  If folding is
-/// successful references to the containing loop must be removed from
-/// ScalarEvolution by calling ScalarEvolution::forgetLoop because SE may have
-/// references to the eliminated BB.  The argument ForgottenLoops contains a set
-/// of loops that have already been forgotten to prevent redundant, expensive
-/// calls to ScalarEvolution::forgetLoop.  Returns the new combined block.
+/// The LoopInfo Analysis that is passed will be kept consistent.
 static BasicBlock *
 foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
-                         SmallPtrSetImpl<Loop *> &ForgottenLoops,
                          DominatorTree *DT) {
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
@@ -149,13 +143,6 @@ foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
       DT->eraseNode(BB);
     }
 
-  // ScalarEvolution holds references to loop exit blocks.
-  if (SE) {
-    if (Loop *L = LI->getLoopFor(BB)) {
-      if (ForgottenLoops.insert(L).second)
-        SE->forgetLoop(L);
-    }
-  }
   LI->removeBlock(BB);
 
   // Inherit predecessor's name if it exists...
@@ -450,11 +437,6 @@ LoopUnrollResult llvm::UnrollLoop(
     }
   }
 
-  // Notify ScalarEvolution that the loop will be substantially changed,
-  // if not outright eliminated.
-  if (SE)
-    SE->forgetLoop(L);
-
   // If we know the trip count, we know the multiple...
   unsigned BreakoutTrip = 0;
   if (TripCount != 0) {
@@ -521,6 +503,21 @@ LoopUnrollResult llvm::UnrollLoop(
     DEBUG(dbgs() << "!\n");
   }
 
+  // We are going to make changes to this loop. SCEV may be keeping cached info
+  // about it, in particular about backedge taken count. The changes we make
+  // are guaranteed to invalidate this information for our loop. It is tempting
+  // to only invalidate the loop being unrolled, but it is incorrect as long as
+  // all exiting branches from all inner loops have impact on the outer loops,
+  // and if something changes inside them then any of outer loops may also
+  // change. When we forget outermost loop, we also forget all contained loops
+  // and this is what we need here.
+  if (SE) {
+    const Loop *CurrL = L;
+    while (const Loop *ParentL = CurrL->getParentLoop())
+      CurrL = ParentL;
+    SE->forgetLoop(CurrL);
+  }
+
   bool ContinueOnTrue = L->contains(BI->getSuccessor(0));
   BasicBlock *LoopExit = BI->getSuccessor(ContinueOnTrue);
 
@@ -578,13 +575,8 @@ LoopUnrollResult llvm::UnrollLoop(
              "Header should not be in a sub-loop");
       // Tell LI about New.
       const Loop *OldLoop = addClonedBlockToLoopInfo(*BB, New, LI, NewLoops);
-      if (OldLoop) {
+      if (OldLoop)
         LoopsToSimplify.insert(NewLoops[OldLoop]);
-
-        // Forget the old loop, since its inputs may have changed.
-        if (SE)
-          SE->forgetLoop(OldLoop);
-      }
 
       if (*BB == Header)
         // Loop over all of the PHI nodes in the block, changing them to use
@@ -774,13 +766,11 @@ LoopUnrollResult llvm::UnrollLoop(
       DT->verify(DominatorTree::VerificationLevel::Fast));
 
   // Merge adjacent basic blocks, if possible.
-  SmallPtrSet<Loop *, 4> ForgottenLoops;
   for (BasicBlock *Latch : Latches) {
     BranchInst *Term = cast<BranchInst>(Latch->getTerminator());
     if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
-      if (BasicBlock *Fold =
-              foldBlockIntoPredecessor(Dest, LI, SE, ForgottenLoops, DT)) {
+      if (BasicBlock *Fold = foldBlockIntoPredecessor(Dest, LI, SE, DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
         UnrolledLoopBlocks.erase(std::remove(UnrolledLoopBlocks.begin(),
