@@ -1096,23 +1096,48 @@ struct ForwardTemplateReference : Node {
   size_t Index;
   Node *Ref = nullptr;
 
+  // If we're currently printing this node. It is possible (though invalid) for
+  // a forward template reference to refer to itself via a substitution. This
+  // creates a cyclic AST, which will stack overflow printing. To fix this, bail
+  // out if more than one print* function is active.
+  mutable bool Printing = false;
+
   ForwardTemplateReference(size_t Index_)
       : Node(KForwardTemplateReference, Cache::Unknown, Cache::Unknown,
              Cache::Unknown),
         Index(Index_) {}
 
   bool hasRHSComponentSlow(OutputStream &S) const override {
+    if (Printing)
+      return false;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
     return Ref->hasRHSComponent(S);
   }
   bool hasArraySlow(OutputStream &S) const override {
+    if (Printing)
+      return false;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
     return Ref->hasArray(S);
   }
   bool hasFunctionSlow(OutputStream &S) const override {
+    if (Printing)
+      return false;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
     return Ref->hasFunction(S);
   }
 
-  void printLeft(OutputStream &S) const override { Ref->printLeft(S); }
-  void printRight(OutputStream &S) const override { Ref->printRight(S); }
+  void printLeft(OutputStream &S) const override {
+    if (Printing)
+      return;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    Ref->printLeft(S);
+  }
+  void printRight(OutputStream &S) const override {
+    if (Printing)
+      return;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    Ref->printRight(S);
+  }
 };
 
 class NameWithTemplateArgs final : public Node {
