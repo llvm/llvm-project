@@ -29,6 +29,7 @@ class TestSwiftTypeAliasFormatters(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_type_alias_formatters(self):
         """Test that Swift typealiases get formatted properly"""
         self.build()
