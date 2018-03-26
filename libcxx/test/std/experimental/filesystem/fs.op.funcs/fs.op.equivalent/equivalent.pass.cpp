@@ -14,7 +14,7 @@
 // bool equivalent(path const& lhs, path const& rhs);
 // bool equivalent(path const& lhs, path const& rhs, std::error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -22,7 +22,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(equivalent_test_suite)
 

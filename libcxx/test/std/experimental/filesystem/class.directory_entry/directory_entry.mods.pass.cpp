@@ -18,11 +18,10 @@
 // void assign(path const&);
 // void replace_filename(path const&);
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
-namespace fs = std::experimental::filesystem;
 
 void test_copy_assign_operator()
 {

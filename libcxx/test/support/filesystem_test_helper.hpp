@@ -1,7 +1,7 @@
 #ifndef FILESYSTEM_TEST_HELPER_HPP
 #define FILESYSTEM_TEST_HELPER_HPP
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <cassert>
 #include <cstdio> // for printf
 #include <string>
@@ -9,7 +9,6 @@
 #include <random>
 #include <chrono>
 
-namespace fs = std::experimental::filesystem;
 
 // static test helpers
 

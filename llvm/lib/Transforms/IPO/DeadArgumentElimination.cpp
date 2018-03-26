@@ -837,10 +837,14 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
 
   AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
+  // Strip allocsize attributes. They might refer to the deleted arguments.
+  AttributeSet FnAttrs = PAL.getFnAttributes().removeAttribute(
+      F->getContext(), Attribute::AllocSize);
+
   // Reconstruct the AttributesList based on the vector we constructed.
   assert(ArgAttrVec.size() == Params.size());
-  AttributeList NewPAL = AttributeList::get(
-      F->getContext(), PAL.getFnAttributes(), RetAttrs, ArgAttrVec);
+  AttributeList NewPAL =
+      AttributeList::get(F->getContext(), FnAttrs, RetAttrs, ArgAttrVec);
 
   // Create the new function type based on the recomputed parameters.
   FunctionType *NFTy = FunctionType::get(NRetTy, Params, FTy->isVarArg());

@@ -17,12 +17,11 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 // UNSUPPORTED: clang-3.3, clang-3.4, clang-3.5, clang-3.6, clang-3.7, clang-3.8
 
-#include <experimental/filesystem>
-
+#include "filesystem_include.hpp"
 #include "test_macros.h"
 
 int main ()
 {
-    std::experimental::filesystem::path c;
+    fs::path c;
     c.empty();  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

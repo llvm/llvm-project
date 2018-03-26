@@ -14,13 +14,13 @@
 // file_status symlink_status(const path& p);
 // file_status symlink_status(const path& p, error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_symlink_status_test_suite)
 
