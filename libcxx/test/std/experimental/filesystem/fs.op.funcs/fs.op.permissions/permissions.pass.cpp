@@ -95,7 +95,10 @@ TEST_CASE(basic_permissions_test)
       path p;
       perms set_perms;
       perms expected;
-      perm_options opts = perm_options::replace;
+      perm_options opts;
+      TestCase(path xp, perms xperms, perms xexpect,
+               perm_options xopts = perm_options::replace)
+          : p(xp), set_perms(xperms), expected(xexpect), opts(xopts) {}
     } cases[] = {
         // test file
         {file, perms::none, perms::none},
@@ -147,6 +150,9 @@ TEST_CASE(test_no_resolve_symlink_on_symlink)
         perms set_perms;
         perms expected; // only expected on platform that support symlink perms.
         perm_options opts = perm_options::replace;
+        TestCase(perms xperms, perms xexpect,
+               perm_options xopts = perm_options::replace)
+          : set_perms(xperms), expected(xexpect), opts(xopts) {}
     } cases[] = {
         {perms::owner_all, perms::owner_all},
         {perms::group_all, perms::owner_all | perms::group_all, perm_options::add},
