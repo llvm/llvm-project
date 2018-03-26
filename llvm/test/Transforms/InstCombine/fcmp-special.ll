@@ -155,7 +155,7 @@ define <2 x i1> @uno_vec_with_undef(<2 x double> %x) {
 
 define <2 x i1> @ord_vec_with_undef(<2 x double> %x) {
 ; CHECK-LABEL: @ord_vec_with_undef(
-; CHECK-NEXT:    [[F:%.*]] = fcmp ord <2 x double> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord <2 x double> [[X:%.*]], <double 0.000000e+00, double undef>
 ; CHECK-NEXT:    ret <2 x i1> [[F]]
 ;
   %f = fcmp ord <2 x double> %x, <double 0.0, double undef>

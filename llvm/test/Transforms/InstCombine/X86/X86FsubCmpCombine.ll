@@ -34,8 +34,7 @@ define i8 @sub_compare_foldingPD128(<2 x double> %a, <2 x double> %b){
 
 define i8 @sub_compare_foldingPD128_undef_elt(<2 x double> %a, <2 x double> %b){
 ; CHECK-LABEL: @sub_compare_foldingPD128_undef_elt(
-; CHECK-NEXT:    [[SUB_I:%.*]] = fsub ninf <2 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[T0:%.*]] = call <2 x i1> @llvm.x86.avx512.mask.cmp.pd.128(<2 x double> [[SUB_I]], <2 x double> <double 0.000000e+00, double undef>, i32 5)
+; CHECK-NEXT:    [[T0:%.*]] = call <2 x i1> @llvm.x86.avx512.mask.cmp.pd.128(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], i32 5)
 ; CHECK-NEXT:    [[T1:%.*]] = shufflevector <2 x i1> [[T0]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
 ; CHECK-NEXT:    [[T2:%.*]] = bitcast <8 x i1> [[T1]] to i8
 ; CHECK-NEXT:    ret i8 [[T2]]

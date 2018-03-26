@@ -1700,7 +1700,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
 
   // Subtraction from -0.0 is the canonical form of fneg.
   // fsub nsz 0, X ==> fsub nsz -0.0, X
-  if (I.getFastMathFlags().noSignedZeros() && match(Op0, m_Zero()))
+  if (I.getFastMathFlags().noSignedZeros() && match(Op0, m_PosZeroFP()))
     return BinaryOperator::CreateFNegFMF(Op1, &I);
 
   if (isa<Constant>(Op0))

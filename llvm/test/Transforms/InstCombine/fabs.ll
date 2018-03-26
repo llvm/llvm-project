@@ -279,10 +279,8 @@ define double @select_fcmp_nnan_ole_zero(double %x) {
 
 define <2 x float> @select_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ole_negzero(
-; CHECK-NEXT:    [[LEZERO:%.*]] = fcmp nnan ole <2 x float> [[X:%.*]], <float -0.000000e+00, float -0.000000e+00>
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub <2 x float> <float 0.000000e+00, float undef>, [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = select <2 x i1> [[LEZERO]], <2 x float> [[NEGX]], <2 x float> [[X]]
-; CHECK-NEXT:    ret <2 x float> [[FABS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %lezero = fcmp nnan ole <2 x float> %x, <float -0.0, float -0.0>
   %negx = fsub <2 x float> <float 0.0, float undef>, %x

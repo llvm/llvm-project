@@ -72,8 +72,7 @@ define float @fsub_x_0(float %x) {
 
 define <2 x float> @fsub_x_0_vec_undef(<2 x float> %x) {
 ; CHECK-LABEL: @fsub_x_0_vec_undef(
-; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> [[X:%.*]], <float undef, float 0.000000e+00>
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
 ;
   %r = fsub <2 x float> %x, <float undef, float 0.0>
   ret <2 x float> %r

@@ -1579,10 +1579,10 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (match(FCI->getOperand(1), m_AnyZeroFP()) && FCI->hasNoNaNs()) {
       // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
       // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
-      if ((X == FalseVal && match(TrueVal, m_FSub(m_Zero(), m_Specific(X))) &&
-          Pred == FCmpInst::FCMP_OLE) ||
-          (X == TrueVal && match(FalseVal, m_FSub(m_Zero(), m_Specific(X))) &&
-          Pred == FCmpInst::FCMP_OGT)) {
+      if ((X == FalseVal && Pred == FCmpInst::FCMP_OLE &&
+           match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) ||
+          (X == TrueVal && Pred == FCmpInst::FCMP_OGT &&
+           match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(X))))) {
         Value *Fabs = Builder.CreateIntrinsic(Intrinsic::fabs, { X }, FCI);
         return replaceInstUsesWith(SI, Fabs);
       }
