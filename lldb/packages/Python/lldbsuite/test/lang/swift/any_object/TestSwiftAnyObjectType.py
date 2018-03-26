@@ -25,6 +25,7 @@ class TestSwiftAnyObjectType(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_any_object_type(self):
         """Test the Any type"""
         self.build()
@@ -68,7 +69,7 @@ class TestSwiftAnyObjectType(TestBase):
             self,
             var_object,
             use_dynamic=False,
-            typename="Swift.AnyObject")
+            typename="AnyObject")
         lldbutil.check_variable(
             self,
             var_object,
