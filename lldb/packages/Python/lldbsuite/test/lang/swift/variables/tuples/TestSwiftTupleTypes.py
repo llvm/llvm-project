@@ -83,11 +83,11 @@ class TestSwiftTupleTypes(TestBase):
         self.expect("frame variable --raw-output --show-types tuple4",
                     substrs=['(p1: ', 'Point, p2: ', '.Point) tuple4',
                              'Point) p1',
-                             '(Builtin.FPIEEE32)', 'value = 1.25',
-                             '(Builtin.FPIEEE32)', 'value = 2.125',
+                             'FPIEEE32)', 'value = 1.25',
+                             'FPIEEE32)', 'value = 2.125',
                              'Point) p2',
-                             '(Builtin.FPIEEE32)', 'value = 4.5',
-                             '(Builtin.FPIEEE32)', 'value = 8.75'])
+                             'FPIEEE32)', 'value = 4.5',
+                             'FPIEEE32)', 'value = 8.75'])
 
 if __name__ == '__main__':
     import atexit
