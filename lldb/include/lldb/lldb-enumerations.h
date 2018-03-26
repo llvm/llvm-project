@@ -609,8 +609,6 @@ enum SymbolType {
   eSymbolTypeIVarOffset, // A symbol that contains an offset for an instance
                          // variable
   eSymbolTypeReExported,
-  eSymbolTypeMetadata, // A symbol that contains the location of a direct
-                       // metadata for a type
   eSymbolTypeASTFile   // A symbol whose name is the path to a compiler AST file
 };
 
