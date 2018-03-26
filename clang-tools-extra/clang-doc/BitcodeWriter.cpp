@@ -264,8 +264,8 @@ void ClangDocBitcodeWriter::emitBlockID(BlockId BID) {
   Record.push_back(BID);
   Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_SETBID, Record);
   Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_BLOCKNAME,
-                    ArrayRef<unsigned char>(BlockIdNameMap[BID].bytes_begin(),
-                                            BlockIdNameMap[BID].bytes_end()));
+                    ArrayRef<unsigned char>(BlockIdName.bytes_begin(),
+                                            BlockIdName.bytes_end()));
 }
 
 /// \brief Emits a record name to the BLOCKINFO block.
