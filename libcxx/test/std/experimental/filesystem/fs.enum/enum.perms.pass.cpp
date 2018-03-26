@@ -59,9 +59,6 @@ int main() {
         E::set_gid      == ME(02000) &&
         E::sticky_bit   == ME(01000) &&
         E::mask         == ME(07777) &&
-        E::unknown      == ME(0xFFFF) &&
-        E::add_perms        == ME(0x10000) &&
-        E::remove_perms     == ME(0x20000) &&
-        E::symlink_nofollow == ME(0x40000),
+        E::unknown      == ME(0xFFFF),
         "Expected enumeration values do not match");
 }

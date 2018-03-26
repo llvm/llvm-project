@@ -255,8 +255,8 @@ TEST_CASE(test_PR35078)
 
     // Change the permissions so we can no longer iterate
     permissions(permDeniedDir,
-                perms::remove_perms|perms::group_exec
-               |perms::owner_exec|perms::others_exec);
+                perms::group_exec|perms::owner_exec|perms::others_exec,
+                perm_options::remove);
 
     const std::error_code eacess_ec =
         std::make_error_code(std::errc::permission_denied);
@@ -329,8 +329,8 @@ TEST_CASE(test_PR35078_with_symlink)
 
     // Change the permissions so we can no longer iterate
     permissions(permDeniedDir,
-                perms::remove_perms|perms::group_exec
-               |perms::owner_exec|perms::others_exec);
+                perms::group_exec|perms::owner_exec|perms::others_exec,
+                perm_options::remove);
 
     const std::error_code eacess_ec =
         std::make_error_code(std::errc::permission_denied);
@@ -413,8 +413,8 @@ TEST_CASE(test_PR35078_with_symlink_file)
 
     // Change the permissions so we can no longer iterate
     permissions(permDeniedDir,
-                perms::remove_perms|perms::group_exec
-               |perms::owner_exec|perms::others_exec);
+                perms::group_exec|perms::owner_exec|perms::others_exec,
+                perm_options::remove);
 
     const std::error_code eacess_ec =
         std::make_error_code(std::errc::permission_denied);
