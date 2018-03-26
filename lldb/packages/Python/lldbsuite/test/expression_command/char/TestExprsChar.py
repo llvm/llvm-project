@@ -49,6 +49,7 @@ class ExprCharTestCase(TestBase):
         archs=[
             "arm",
             "aarch64",
+            "powerpc64le",
             "s390x"],
         bugnumber="llvm.org/pr23069")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")

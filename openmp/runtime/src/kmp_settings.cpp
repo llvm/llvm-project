@@ -665,9 +665,6 @@ static void __kmp_stg_print_blocktime(kmp_str_buf_t *buffer, char const *name,
   __kmp_stg_print_int(buffer, name, __kmp_dflt_blocktime);
 } // __kmp_stg_print_blocktime
 
-// Used for OMP_WAIT_POLICY
-static char const *blocktime_str = NULL;
-
 // -----------------------------------------------------------------------------
 // KMP_DUPLICATE_LIB_OK
 
@@ -701,6 +698,9 @@ static void __kmp_stg_print_inherit_fp_control(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_inherit_fp_control
 
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
+
+// Used for OMP_WAIT_POLICY
+static char const *blocktime_str = NULL;
 
 // -----------------------------------------------------------------------------
 // KMP_LIBRARY, OMP_WAIT_POLICY

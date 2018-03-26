@@ -129,7 +129,7 @@ createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
 static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
     SmallVector<WeakTrackingVH, 8> WUsers(CE->user_begin(), CE->user_end());
-    std::sort(WUsers.begin(), WUsers.end());
+    llvm::sort(WUsers.begin(), WUsers.end());
     WUsers.erase(std::unique(WUsers.begin(), WUsers.end()), WUsers.end());
     while (!WUsers.empty())
       if (WeakTrackingVH WU = WUsers.pop_back_val()) {

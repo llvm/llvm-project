@@ -1077,6 +1077,18 @@ class GdbRemoteTestCaseBase(TestBase):
 
         auxv_dict = {}
 
+        # PowerPC64le's auxvec has a special key that must be ignored.
+        # This special key may be used multiple times, resulting in
+        # multiple key/value pairs with the same key, which would otherwise
+        # break this test check for repeated keys.
+        #
+        # AT_IGNOREPPC = 22
+        ignored_keys_for_arch = { 'powerpc64le' : [22] }
+        arch = self.getArchitecture()
+        ignore_keys = None
+        if arch in ignored_keys_for_arch:
+            ignore_keys = ignored_keys_for_arch[arch]
+
         while len(auxv_data) > 0:
             # Chop off key.
             raw_key = auxv_data[:word_size]
@@ -1089,6 +1101,9 @@ class GdbRemoteTestCaseBase(TestBase):
             # Convert raw text from target endian.
             key = unpack_endian_binary_string(endian, raw_key)
             value = unpack_endian_binary_string(endian, raw_value)
+
+            if ignore_keys and key in ignore_keys:
+                continue
 
             # Handle ending entry.
             if key == 0:

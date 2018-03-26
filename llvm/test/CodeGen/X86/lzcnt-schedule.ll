@@ -10,7 +10,7 @@
 define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-LABEL: test_ctlz_i16:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    lzcntw (%rsi), %cx # sched: [7:1.00]
+; GENERIC-NEXT:    lzcntw (%rsi), %cx # sched: [8:1.00]
 ; GENERIC-NEXT:    lzcntw %di, %ax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -66,7 +66,7 @@ declare i16 @llvm.ctlz.i16(i16, i1)
 define i32 @test_ctlz_i32(i32 %a0, i32 *%a1) {
 ; GENERIC-LABEL: test_ctlz_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    lzcntl (%rsi), %ecx # sched: [7:1.00]
+; GENERIC-NEXT:    lzcntl (%rsi), %ecx # sched: [8:1.00]
 ; GENERIC-NEXT:    lzcntl %edi, %eax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -116,7 +116,7 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 define i64 @test_ctlz_i64(i64 %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_ctlz_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    lzcntq (%rsi), %rcx # sched: [7:1.00]
+; GENERIC-NEXT:    lzcntq (%rsi), %rcx # sched: [8:1.00]
 ; GENERIC-NEXT:    lzcntq %rdi, %rax # sched: [3:1.00]
 ; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]

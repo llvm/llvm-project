@@ -22,6 +22,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 
 using namespace llvm;
@@ -339,11 +340,19 @@ static void PrintVersion(raw_ostream &OS) {
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
+  SmallVector<const char *, 256> Args;
+  llvm::SpecificBumpPtrAllocator<char> ArgAllocator;
+  std::error_code EC = llvm::sys::Process::GetArgumentVector(
+      Args, llvm::makeArrayRef(argv, argc), ArgAllocator);
+  if (EC) {
+    llvm::errs() << "error: couldn't get arguments: " << EC.message() << '\n';
+  }
+
   cl::HideUnrelatedOptions(ClangFormatCategory);
 
   cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(
-      argc, argv,
+      Args.size(), &Args[0],
       "A tool to format C/C++/Java/JavaScript/Objective-C/Protobuf code.\n\n"
       "If no arguments are specified, it formats the code from standard input\n"
       "and writes the result to the standard output.\n"

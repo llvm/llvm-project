@@ -3837,8 +3837,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   if (PatternDecl->isLateTemplateParsed() &&
       !LateTemplateParser) {
     Function->setInstantiationIsPending(true);
-    PendingInstantiations.push_back(
-      std::make_pair(Function, PointOfInstantiation));
+    LateParsedInstantiations.push_back(
+        std::make_pair(Function, PointOfInstantiation));
     return;
   }
 

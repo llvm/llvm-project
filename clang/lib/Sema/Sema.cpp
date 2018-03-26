@@ -850,6 +850,20 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (PP.isCodeCompletionEnabled())
     return;
 
+  // Transfer late parsed template instantiations over to the pending template
+  // instantiation list. During normal compliation, the late template parser
+  // will be installed and instantiating these templates will succeed.
+  //
+  // If we are building a TU prefix for serialization, it is also safe to
+  // transfer these over, even though they are not parsed. The end of the TU
+  // should be outside of any eager template instantiation scope, so when this
+  // AST is deserialized, these templates will not be parsed until the end of
+  // the combined TU.
+  PendingInstantiations.insert(PendingInstantiations.end(),
+                               LateParsedInstantiations.begin(),
+                               LateParsedInstantiations.end());
+  LateParsedInstantiations.clear();
+
   // Complete translation units and modules define vtables and perform implicit
   // instantiations. PCH files do not.
   if (TUKind != TU_Prefix) {
@@ -879,7 +893,12 @@ void Sema::ActOnEndOfTranslationUnit() {
       PendingInstantiations.insert(PendingInstantiations.begin(),
                                    Pending.begin(), Pending.end());
     }
+
     PerformPendingInstantiations();
+
+    assert(LateParsedInstantiations.empty() &&
+           "end of TU template instantiation should not create more "
+           "late-parsed templates");
 
     if (LateTemplateParserCleanup)
       LateTemplateParserCleanup(OpaqueParser);

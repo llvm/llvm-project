@@ -1,33 +1,30 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
 
 ; Multiply and accumulate
 ; CHECK: mpyi([[REG0:r([0-9]+)]],[[REG1:r([0-9]+)]])
-; CHECK-NEXT: add(r{{[0-9]+}},#4)
-; CHECK-DAG: [[REG1]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
-; CHECK-DAG: [[REG0]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
+; CHECK-NEXT: [[REG1]] = memw(r{{[0-9]+}}++#4)
+; CHECK-NEXT: [[REG0]] = memw(r{{[0-9]+}}++#4)
 ; CHECK-NEXT: endloop0
 
-define i32 @foo(i32* %a, i32* %b, i32 %n) {
-entry:
-  br label %for.body
+define i32 @f0(i32* %a0, i32* %a1, i32 %a2) {
+b0:
+  br label %b1
 
-for.body:
-  %sum.03 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx.phi = phi i32* [ %a, %entry ], [ %arrayidx.inc, %for.body ]
-  %arrayidx1.phi = phi i32* [ %b, %entry ], [ %arrayidx1.inc, %for.body ]
-  %i.02 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load i32, i32* %arrayidx.phi, align 4
-  %1 = load i32, i32* %arrayidx1.phi, align 4
-  %mul = mul nsw i32 %1, %0
-  %add = add nsw i32 %mul, %sum.03
-  %inc = add nsw i32 %i.02, 1
-  %exitcond = icmp eq i32 %inc, 10000
-  %arrayidx.inc = getelementptr i32, i32* %arrayidx.phi, i32 1
-  %arrayidx1.inc = getelementptr i32, i32* %arrayidx1.phi, i32 1
-  br i1 %exitcond, label %for.end, label %for.body
+b1:                                               ; preds = %b1, %b0
+  %v0 = phi i32 [ 0, %b0 ], [ %v7, %b1 ]
+  %v1 = phi i32* [ %a0, %b0 ], [ %v10, %b1 ]
+  %v2 = phi i32* [ %a1, %b0 ], [ %v11, %b1 ]
+  %v3 = phi i32 [ 0, %b0 ], [ %v8, %b1 ]
+  %v4 = load i32, i32* %v1, align 4
+  %v5 = load i32, i32* %v2, align 4
+  %v6 = mul nsw i32 %v5, %v4
+  %v7 = add nsw i32 %v6, %v0
+  %v8 = add nsw i32 %v3, 1
+  %v9 = icmp eq i32 %v8, 10000
+  %v10 = getelementptr i32, i32* %v1, i32 1
+  %v11 = getelementptr i32, i32* %v2, i32 1
+  br i1 %v9, label %b2, label %b1
 
-for.end:
-  ret i32 %add
+b2:                                               ; preds = %b1
+  ret i32 %v7
 }
-

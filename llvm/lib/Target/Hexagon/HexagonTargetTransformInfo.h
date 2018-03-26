@@ -57,6 +57,9 @@ public:
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 
+  /// Bias LSR towards creating post-increment opportunities.
+  bool shouldFavorPostInc() const;
+
   // L1 cache prefetch.
   unsigned getPrefetchDistance() const;
   unsigned getCacheLineSize() const;
