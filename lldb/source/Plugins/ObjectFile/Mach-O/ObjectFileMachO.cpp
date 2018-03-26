@@ -1298,10 +1298,6 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         return eAddressClassRuntime;
       case eSymbolTypeObjCIVar:
         return eAddressClassRuntime;
-      case eSymbolTypeIVarOffset:
-        return eAddressClassRuntime;
-      case eSymbolTypeMetadata:
-        return eAddressClassRuntime;
       case eSymbolTypeReExported:
         return eAddressClassRuntime;
       case eSymbolTypeASTFile:
@@ -2201,8 +2197,6 @@ static SymbolType GetSymbolType(
             type = eSymbolTypeObjCIVar;
             demangled_is_synthesized = true;
           }
-        } else if (symbol_name_ref.startswith("__TM")) {
-          type = eSymbolTypeMetadata;
         }
       }
     } else if (symbol_sect_name &&
@@ -3589,9 +3583,6 @@ size_t ObjectFileMachO::ParseSymtab() {
                                         type = eSymbolTypeObjCIVar;
                                         demangled_is_synthesized = true;
                                       }
-                                    } else if (symbol_name_ref.startswith(
-                                                   "__TM")) {
-                                      type = eSymbolTypeMetadata;
                                     }
                                   }
                                 } else if (symbol_sect_name &&
@@ -4546,8 +4537,6 @@ size_t ObjectFileMachO::ParseSymtab() {
                           type = eSymbolTypeObjCIVar;
                           demangled_is_synthesized = true;
                         }
-                      } else if (symbol_name_ref.startswith("__TM")) {
-                        type = eSymbolTypeMetadata;
                       }
                     }
                   } else if (symbol_sect_name &&
