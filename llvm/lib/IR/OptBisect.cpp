@@ -36,7 +36,7 @@ static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
                                    cl::Optional,
                                    cl::desc("Maximum optimization to perform"));
 
-OptBisect::OptBisect() {
+OptBisect::OptBisect() : OptPassGate() {
   BisectEnabled = OptBisectLimit != std::numeric_limits<int>::max();
 }
 
@@ -92,19 +92,28 @@ static std::string getDescription(const CallGraphSCC &SCC) {
   return Desc;
 }
 
-// Force instantiations.
-template bool OptBisect::shouldRunPass(const Pass *, const Module &);
-template bool OptBisect::shouldRunPass(const Pass *, const Function &);
-template bool OptBisect::shouldRunPass(const Pass *, const BasicBlock &);
-template bool OptBisect::shouldRunPass(const Pass *, const Loop &);
-template bool OptBisect::shouldRunPass(const Pass *, const CallGraphSCC &);
-template bool OptBisect::shouldRunPass(const Pass *, const Region &);
+bool OptBisect::shouldRunPass(const Pass *P, const Module &U) {
+  return !BisectEnabled || checkPass(P->getPassName(), getDescription(U));
+}
 
-template <class UnitT>
-bool OptBisect::shouldRunPass(const Pass *P, const UnitT &U) {
-  if (!BisectEnabled)
-    return true;
-  return checkPass(P->getPassName(), getDescription(U));
+bool OptBisect::shouldRunPass(const Pass *P, const Function &U) {
+  return !BisectEnabled || checkPass(P->getPassName(), getDescription(U));
+}
+
+bool OptBisect::shouldRunPass(const Pass *P, const BasicBlock &U) {
+  return !BisectEnabled || checkPass(P->getPassName(), getDescription(U));
+}
+
+bool OptBisect::shouldRunPass(const Pass *P, const Region &U) {
+  return !BisectEnabled || checkPass(P->getPassName(), getDescription(U));
+}
+
+bool OptBisect::shouldRunPass(const Pass *P, const Loop &U) {
+  return !BisectEnabled || checkPass(P->getPassName(), getDescription(U));
+}
+
+bool OptBisect::shouldRunPass(const Pass *P, const CallGraphSCC &U) {
+  return !BisectEnabled || checkPass(P->getPassName(), getDescription(U));
 }
 
 bool OptBisect::checkPass(const StringRef PassName,

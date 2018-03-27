@@ -473,8 +473,8 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree *DT,
                     AssumptionCache *AC, bool PreserveLCSSA) {
-  if (!canPeel(L))
-    return false;
+  assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
+  assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
 
   LoopBlocksDFS LoopBlocks(L);
   LoopBlocks.perform(LI);

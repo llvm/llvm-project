@@ -4,4 +4,4 @@ define i32 @foo() {
   ret i32 0
 }
 
-; CHECK: @feat.00 = 1
+; CHECK: .set @feat.00, 1

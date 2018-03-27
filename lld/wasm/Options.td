@@ -103,11 +103,17 @@ defm check_signatures: B<"check-signatures",
 defm export: Eq<"export">,
   HelpText<"Force a symbol to be exported">;
 
+def export_table: F<"export-table">,
+  HelpText<"Export function table to the environment">;
+
 def global_base: J<"global-base=">,
   HelpText<"Where to start to place global data">;
 
 def import_memory: F<"import-memory">,
   HelpText<"Import memory from the environment">;
+
+def import_table: F<"import-table">,
+  HelpText<"Import function table from the environment">;
 
 def initial_memory: J<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;

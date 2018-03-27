@@ -274,9 +274,11 @@ void RetireControlUnit::dump() const {
 #endif
 
 bool DispatchUnit::checkRAT(unsigned Index, const Instruction &Instr) {
-  const InstrDesc &Desc = Instr.getDesc();
-  unsigned NumWrites = Desc.Writes.size();
-  unsigned RegisterMask = RAT->isAvailable(NumWrites);
+  SmallVector<unsigned, 4> RegDefs;
+  for (const std::unique_ptr<WriteState> &RegDef : Instr.getDefs())
+    RegDefs.emplace_back(RegDef->getRegisterID());
+
+  unsigned RegisterMask = RAT->isAvailable(RegDefs);
   // A mask with all zeroes means: register files are available.
   if (RegisterMask) {
     Owner->notifyStallEvent(

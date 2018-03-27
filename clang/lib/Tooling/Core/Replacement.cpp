@@ -483,11 +483,11 @@ Replacements Replacements::merge(const Replacements &ReplacesToMerge) const {
 // Returns a set of non-overlapping and sorted ranges that is equivalent to
 // \p Ranges.
 static std::vector<Range> combineAndSortRanges(std::vector<Range> Ranges) {
-  std::sort(Ranges.begin(), Ranges.end(),
-            [](const Range &LHS, const Range &RHS) {
-              if (LHS.getOffset() != RHS.getOffset())
-                return LHS.getOffset() < RHS.getOffset();
-              return LHS.getLength() < RHS.getLength();
+  llvm::sort(Ranges.begin(), Ranges.end(),
+             [](const Range &LHS, const Range &RHS) {
+               if (LHS.getOffset() != RHS.getOffset())
+                 return LHS.getOffset() < RHS.getOffset();
+               return LHS.getLength() < RHS.getLength();
             });
   std::vector<Range> Result;
   for (const auto &R : Ranges) {

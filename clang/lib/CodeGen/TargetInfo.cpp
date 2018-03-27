@@ -8513,7 +8513,7 @@ static bool appendRecordType(SmallStringEnc &Enc, const RecordType *RT,
     // The ABI requires unions to be sorted but not structures.
     // See FieldEncoding::operator< for sort algorithm.
     if (RT->isUnionType())
-      std::sort(FE.begin(), FE.end());
+      llvm::sort(FE.begin(), FE.end());
     // We can now complete the TypeString.
     unsigned E = FE.size();
     for (unsigned I = 0; I != E; ++I) {
@@ -8557,7 +8557,7 @@ static bool appendEnumType(SmallStringEnc &Enc, const EnumType *ET,
       EnumEnc += '}';
       FE.push_back(FieldEncoding(!I->getName().empty(), EnumEnc));
     }
-    std::sort(FE.begin(), FE.end());
+    llvm::sort(FE.begin(), FE.end());
     unsigned E = FE.size();
     for (unsigned I = 0; I != E; ++I) {
       if (I)

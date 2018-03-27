@@ -338,6 +338,10 @@ unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
   return TTIImpl->getMinVectorRegisterBitWidth();
 }
 
+bool TargetTransformInfo::shouldMaximizeVectorBandwidth(bool OptSize) const {
+  return TTIImpl->shouldMaximizeVectorBandwidth(OptSize);
+}
+
 bool TargetTransformInfo::shouldConsiderAddressTypePromotion(
     const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const {
   return TTIImpl->shouldConsiderAddressTypePromotion(

@@ -741,7 +741,7 @@ public:
       List.pop();
     }
     // TODO this is here to get a stable output, not a good heuristic
-    std::sort(Result.begin(), Result.end());
+    llvm::sort(Result.begin(), Result.end());
     return Result;
   }
   int peekMax() const {

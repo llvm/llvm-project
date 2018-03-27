@@ -187,7 +187,7 @@ namespace {
     }
 
     void done() {
-      std::sort(list.begin(), list.end(), UnqualUsingEntry::Comparator());
+      llvm::sort(list.begin(), list.end(), UnqualUsingEntry::Comparator());
     }
 
     typedef ListTy::const_iterator const_iterator;

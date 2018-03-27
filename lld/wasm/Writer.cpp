@@ -39,6 +39,7 @@ using namespace lld::wasm;
 
 static constexpr int kStackAlignment = 16;
 static constexpr int kInitialTableOffset = 1;
+static constexpr const char *kFunctionTableName = "__indirect_function_table";
 
 namespace {
 
@@ -126,6 +127,8 @@ void Writer::createImportSection() {
   uint32_t NumImports = ImportedSymbols.size();
   if (Config->ImportMemory)
     ++NumImports;
+  if (Config->Table == ExposeAs::IMPORT)
+    ++NumImports;
 
   if (NumImports == 0)
     return;
@@ -146,6 +149,17 @@ void Writer::createImportSection() {
       Import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
       Import.Memory.Maximum = MaxMemoryPages;
     }
+    writeImport(OS, Import);
+  }
+
+  if (Config->Table == ExposeAs::IMPORT) {
+    uint32_t TableSize = kInitialTableOffset + IndirectFunctions.size();
+    WasmImport Import;
+    Import.Module = "env";
+    Import.Field = kFunctionTableName;
+    Import.Kind = WASM_EXTERNAL_TABLE;
+    Import.Table.ElemType = WASM_TYPE_ANYFUNC;
+    Import.Table.Limits = {WASM_LIMITS_FLAG_HAS_MAX, TableSize, TableSize};
     writeImport(OS, Import);
   }
 
@@ -222,8 +236,11 @@ void Writer::createGlobalSection() {
 }
 
 void Writer::createTableSection() {
-  // Always output a table section, even if there are no indirect calls.
-  // There are two reasons for this:
+  if (Config->Table == ExposeAs::IMPORT)
+    return;
+
+  // Always output a table section (or table import), even if there are no
+  // indirect calls.  There are two reasons for this:
   //  1. For executables it is useful to have an empty table slot at 0
   //     which can be filled with a null function call handler.
   //  2. If we don't do this, any program that contains a call_indirect but
@@ -236,16 +253,16 @@ void Writer::createTableSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, 1, "table count");
-  writeU8(OS, WASM_TYPE_ANYFUNC, "table type");
-  writeUleb128(OS, WASM_LIMITS_FLAG_HAS_MAX, "table flags");
-  writeUleb128(OS, TableSize, "table initial size");
-  writeUleb128(OS, TableSize, "table max size");
+  WasmLimits Limits = {WASM_LIMITS_FLAG_HAS_MAX, TableSize, TableSize};
+  writeTableType(OS, WasmTable{WASM_TYPE_ANYFUNC, Limits});
 }
 
 void Writer::createExportSection() {
   bool ExportMemory = !Config->Relocatable && !Config->ImportMemory;
+  bool ExportTable = !Config->Relocatable && Config->Table == ExposeAs::EXPORT;
 
-  uint32_t NumExports = (ExportMemory ? 1 : 0) + ExportedSymbols.size();
+  uint32_t NumExports =
+      (ExportMemory ? 1 : 0) + (ExportTable ? 1 : 0) + ExportedSymbols.size();
   if (!NumExports)
     return;
 
@@ -256,6 +273,8 @@ void Writer::createExportSection() {
 
   if (ExportMemory)
     writeExport(OS, {"memory", WASM_EXTERNAL_MEMORY, 0});
+  if (ExportTable)
+    writeExport(OS, {kFunctionTableName, WASM_EXTERNAL_TABLE, 0});
 
   unsigned FakeGlobalIndex = NumImportedGlobals + InputGlobals.size();
 

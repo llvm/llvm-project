@@ -28,11 +28,11 @@ int main() {
   // STORE: #0 {{.*}} in main {{.*}}use-after-free.cc:19
 
   // CHECK: freed here:
-  // CHECK: #0 {{.*}} in free {{.*}}hwasan_interceptors.cc
+  // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_interceptors.cc
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:16
 
   // CHECK: previously allocated here:
-  // CHECK: #0 {{.*}} in {{.*}}malloc {{.*}}hwasan_interceptors.cc
+  // CHECK: #0 {{.*}} in {{.*}}malloc{{.*}} {{.*}}hwasan_interceptors.cc
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:15
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
