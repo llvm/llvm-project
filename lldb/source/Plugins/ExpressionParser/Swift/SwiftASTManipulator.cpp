@@ -1529,7 +1529,10 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
       swift::TypeAliasDecl(source_loc, swift::SourceLoc(), name, source_loc,
                            nullptr, &m_source_file);
-  type_alias_decl->setUnderlyingType(GetSwiftType(type));
+  swift::Type underlying_type = GetSwiftType(type);
+  type_alias_decl->setUnderlyingType(underlying_type);
+  if (underlying_type->hasArchetype())
+    type_alias_decl->markAsDebuggerAlias(true);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   if (log) {
