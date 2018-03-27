@@ -276,6 +276,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
       bool is_forward_declaration = false;
       DWARFAttributes attributes;
       const char *type_name_cstr = NULL;
+      const char *mangled_name_cstr = NULL;
       ConstString type_name_const_str;
       Type::ResolveState resolve_state = Type::eResolveStateUnresolved;
       uint64_t byte_size = 0;
@@ -1231,9 +1232,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
               case DW_AT_linkage_name:
               case DW_AT_MIPS_linkage_name:
-                break; // mangled =
-                       // form_value.AsCString(&dwarf->get_debug_str_data());
-                       // break;
+                mangled_name_cstr = form_value.AsCString();
+                break;
               case DW_AT_type:
                 type_die_form = form_value;
                 break;
@@ -1594,9 +1594,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                           clang::CXXMethodDecl *cxx_method_decl =
                               m_ast.AddMethodToCXXRecordType(
                                   class_opaque_type.GetOpaqueQualType(),
-                                  type_name_cstr, clang_type, accessibility,
-                                  is_virtual, is_static, is_inline, is_explicit,
-                                  is_attr_used, is_artificial);
+                                  type_name_cstr, mangled_name_cstr, clang_type,
+                                  accessibility, is_virtual, is_static,
+                                  is_inline, is_explicit, is_attr_used,
+                                  is_artificial);
 
                           type_handled = cxx_method_decl != NULL;
 

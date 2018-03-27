@@ -312,9 +312,19 @@ ObjFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
-  // We don't merge sections if -O0 (default is -O1). This makes sometimes
-  // the linker significantly faster, although the output will be bigger.
-  if (Config->Optimize == 0)
+  // On a regular link we don't merge sections if -O0 (default is -O1). This
+  // sometimes makes the linker significantly faster, although the output will
+  // be bigger.
+  //
+  // Doing the same for -r would create a problem as it would combine sections
+  // with different sh_entsize. One option would be to just copy every SHF_MERGE
+  // section as is to the output. While this would produce a valid ELF file with
+  // usable SHF_MERGE sections, tools like (llvm-)?dwarfdump get confused when
+  // they see two .debug_str. We could have separate logic for combining
+  // SHF_MERGE sections based both on their name and sh_entsize, but that seems
+  // to be more trouble than it is worth. Instead, we just use the regular (-O1)
+  // logic for -r.
+  if (Config->Optimize == 0 && !Config->Relocatable)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have
@@ -518,10 +528,11 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   }
   case SHT_RELA:
   case SHT_REL: {
-    // Find the relocation target section and associate this
-    // section with it. Target can be discarded, for example
-    // if it is a duplicated member of SHT_GROUP section, we
-    // do not create or proccess relocatable sections then.
+    // Find a relocation target section and associate this section with that.
+    // Target may have been discarded if it is in a different section group
+    // and the group is discarded, even though it's a violation of the
+    // spec. We handle that situation gracefully by discarding dangling
+    // relocation sections.
     InputSectionBase *Target = getRelocTarget(Sec);
     if (!Target)
       return nullptr;
@@ -536,32 +547,28 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
 
-    // Mergeable sections with relocations are tricky because relocations
-    // need to be taken into account when comparing section contents for
-    // merging. It's not worth supporting such mergeable sections because
-    // they are rare and it'd complicates the internal design (we usually
-    // have to determine if two sections are mergeable early in the link
-    // process much before applying relocations). We simply handle mergeable
-    // sections with relocations as non-mergeable.
+    // ELF spec allows mergeable sections with relocations, but they are
+    // rare, and it is in practice hard to merge such sections by contents,
+    // because applying relocations at end of linking changes section
+    // contents. So, we simply handle such sections as non-mergeable ones.
+    // Degrading like this is acceptable because section merging is optional.
     if (auto *MS = dyn_cast<MergeInputSection>(Target)) {
       Target = toRegularSection(MS);
       this->Sections[Sec.sh_info] = Target;
     }
 
-    size_t NumRelocations;
     if (Sec.sh_type == SHT_RELA) {
       ArrayRef<Elf_Rela> Rels = CHECK(this->getObj().relas(&Sec), this);
       Target->FirstRelocation = Rels.begin();
-      NumRelocations = Rels.size();
+      Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = true;
     } else {
       ArrayRef<Elf_Rel> Rels = CHECK(this->getObj().rels(&Sec), this);
       Target->FirstRelocation = Rels.begin();
-      NumRelocations = Rels.size();
+      Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = false;
     }
-    assert(isUInt<31>(NumRelocations));
-    Target->NumRelocations = NumRelocations;
+    assert(isUInt<31>(Target->NumRelocations));
 
     // Relocation sections processed by the linker are usually removed
     // from the output, so returning `nullptr` for the normal case.
