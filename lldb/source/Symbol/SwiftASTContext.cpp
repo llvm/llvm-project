@@ -6849,21 +6849,18 @@ static int64_t GetInstanceVariableOffset_Metadata(
   if (process) {
     SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
     if (runtime) {
-      if (auto resolver_sp = runtime->GetMemberVariableOffsetResolver(type)) {
-        Status error;
-        if (auto result = resolver_sp->ResolveOffset(valobj, ivar_name, &error))
-        {
-          if (log)
-            log->Printf("[GetInstanceVariableOffset_Metadata] for %s: %llu",
-                        ivar_name.AsCString(), result.getValue());
-          return result.getValue();
-        }
-        else if (log)
-          log->Printf(
-              "[GetInstanceVariableOffset_Metadata] resolver failure: %s",
-              error.AsCString());
-      } else if (log)
-        log->Printf("[GetInstanceVariableOffset_Metadata] no offset resolver");
+      Status error;
+      if (auto offset =
+            runtime->GetMemberVariableOffset(type, valobj, ivar_name, &error)) {
+        if (log)
+          log->Printf("[GetInstanceVariableOffset_Metadata] for %s: %llu",
+                      ivar_name.AsCString(), *offset);
+        return *offset;
+      }
+      else if (log) {
+        log->Printf("[GetInstanceVariableOffset_Metadata] resolver failure: %s",
+                    error.AsCString());
+      }
     } else if (log)
       log->Printf("[GetInstanceVariableOffset_Metadata] no runtime");
   } else if (log)
