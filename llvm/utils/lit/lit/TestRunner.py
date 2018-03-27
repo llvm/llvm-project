@@ -798,7 +798,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
             for i,arg in enumerate(args):
-                if kDevNull in arg:
+                if isinstance(arg, basestring) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)

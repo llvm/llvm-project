@@ -6413,11 +6413,11 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
 const SCEV *
 ScalarEvolution::getPredicatedBackedgeTakenCount(const Loop *L,
                                                  SCEVUnionPredicate &Preds) {
-  return getPredicatedBackedgeTakenInfo(L).getExact(this, &Preds);
+  return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
 }
 
 const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L) {
-  return getBackedgeTakenInfo(L).getExact(this);
+  return getBackedgeTakenInfo(L).getExact(L, this);
 }
 
 /// Similar to getBackedgeTakenCount, except return the least SCEV value that is
@@ -6474,8 +6474,8 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // must be cleared in this scope.
   BackedgeTakenInfo Result = computeBackedgeTakenCount(L);
 
-  if (Result.getExact(this) != getCouldNotCompute()) {
-    assert(isLoopInvariant(Result.getExact(this), L) &&
+  if (Result.getExact(L, this) != getCouldNotCompute()) {
+    assert(isLoopInvariant(Result.getExact(L, this), L) &&
            isLoopInvariant(Result.getMax(this), L) &&
            "Computed backedge-taken count isn't loop invariant for loop!");
     ++NumTripCountsComputed;
@@ -6648,28 +6648,37 @@ void ScalarEvolution::forgetValue(Value *V) {
 }
 
 /// Get the exact loop backedge taken count considering all loop exits. A
-/// computable result can only be returned for loops with a single exit.
-/// Returning the minimum taken count among all exits is incorrect because one
-/// of the loop's exit limit's may have been skipped. howFarToZero assumes that
-/// the limit of each loop test is never skipped. This is a valid assumption as
-/// long as the loop exits via that test. For precise results, it is the
-/// caller's responsibility to specify the relevant loop exit using
-/// getExact(ExitingBlock, SE).
+/// computable result can only be returned for loops with all exiting blocks
+/// dominating the latch. howFarToZero assumes that the limit of each loop test
+/// is never skipped. This is a valid assumption as long as the loop exits via
+/// that test. For precise results, it is the caller's responsibility to specify
+/// the relevant loop exiting block using getExact(ExitingBlock, SE).
 const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getExact(ScalarEvolution *SE,
+ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
                                              SCEVUnionPredicate *Preds) const {
   // If any exits were not computable, the loop is not computable.
   if (!isComplete() || ExitNotTaken.empty())
     return SE->getCouldNotCompute();
 
   const SCEV *BECount = nullptr;
+  const BasicBlock *Latch = L->getLoopLatch();
+  // All exiting blocks we have collected must dominate the only backedge.
+  if (!Latch)
+    return SE->getCouldNotCompute();
+
+  // All exiting blocks we have gathered dominate loop's latch, so exact trip
+  // count is simply a minimum out of all these calculated exit counts.
   for (auto &ENT : ExitNotTaken) {
-    assert(ENT.ExactNotTaken != SE->getCouldNotCompute() && "bad exit SCEV");
+    assert(ENT.ExactNotTaken != SE->getCouldNotCompute() && "Bad exit SCEV!");
+    assert(SE->DT.dominates(ENT.ExitingBlock, Latch) &&
+           "We should only have known counts for exiting blocks that dominate "
+           "latch!");
 
     if (!BECount)
       BECount = ENT.ExactNotTaken;
     else if (BECount != ENT.ExactNotTaken)
-      return SE->getCouldNotCompute();
+      BECount = SE->getUMinFromMismatchedTypes(BECount, ENT.ExactNotTaken);
+
     if (Preds && !ENT.hasAlwaysTruePredicate())
       Preds->add(ENT.Predicate.get());
 
@@ -9449,17 +9458,25 @@ Optional<APInt> ScalarEvolution::computeConstantDifference(const SCEV *More,
     return M - L;
   }
 
-  const SCEV *L, *R;
   SCEV::NoWrapFlags Flags;
-  if (splitBinaryAdd(Less, L, R, Flags))
-    if (const auto *LC = dyn_cast<SCEVConstant>(L))
-      if (R == More)
-        return -(LC->getAPInt());
+  const SCEV *LLess = nullptr, *RLess = nullptr;
+  const SCEV *LMore = nullptr, *RMore = nullptr;
+  const SCEVConstant *C1 = nullptr, *C2 = nullptr;
+  // Compare (X + C1) vs X.
+  if (splitBinaryAdd(Less, LLess, RLess, Flags))
+    if ((C1 = dyn_cast<SCEVConstant>(LLess)))
+      if (RLess == More)
+        return -(C1->getAPInt());
 
-  if (splitBinaryAdd(More, L, R, Flags))
-    if (const auto *LC = dyn_cast<SCEVConstant>(L))
-      if (R == Less)
-        return LC->getAPInt();
+  // Compare X vs (X + C2).
+  if (splitBinaryAdd(More, LMore, RMore, Flags))
+    if ((C2 = dyn_cast<SCEVConstant>(LMore)))
+      if (RMore == Less)
+        return C2->getAPInt();
+
+  // Compare (X + C1) vs (X + C2).
+  if (C1 && C2 && RLess == RMore)
+    return C2->getAPInt() - C1->getAPInt();
 
   return None;
 }
