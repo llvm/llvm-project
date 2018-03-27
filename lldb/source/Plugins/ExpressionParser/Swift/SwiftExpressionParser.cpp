@@ -1113,6 +1113,150 @@ CreateMainFile(SwiftASTContext &swift_ast_context, StringRef filename,
   return {buffer_id, filename};
 }
 
+/// Attempt to materialize one variable.
+static llvm::Optional<SwiftExpressionParser::SILVariableInfo>
+MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
+                    SwiftUserExpression &user_expression,
+                    Materializer &materializer,
+                    SwiftASTManipulator &manipulator,
+                    lldb::StackFrameWP &stack_frame_wp,
+                    DiagnosticManager &diagnostic_manager, Log *log,
+                    bool repl) {
+  uint64_t offset = 0;
+  bool needs_init = false;
+
+  bool is_result =
+      variable.MetadataIs<SwiftASTManipulatorBase::VariableMetadataResult>();
+  bool is_error =
+      variable.MetadataIs<SwiftASTManipulatorBase::VariableMetadataError>();
+
+  if (is_result || is_error) {
+    needs_init = true;
+
+    Status error;
+
+    if (repl) {
+      if (swift::TypeBase *swift_type =
+              (swift::TypeBase *)variable.GetType().GetOpaqueQualType()) {
+        if (!swift_type->getCanonicalType()->isVoid()) {
+          auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
+          if (is_result)
+            offset = repl_mat.AddREPLResultVariable(
+                variable.GetType(), variable.GetDecl(),
+                &user_expression.GetResultDelegate(), error);
+          else
+            offset = repl_mat.AddREPLResultVariable(
+                variable.GetType(), variable.GetDecl(),
+                &user_expression.GetErrorDelegate(), error);
+        }
+      }
+    } else {
+      CompilerType actual_type(variable.GetType());
+      if (Flags(actual_type.GetTypeInfo())
+              .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsArchetype)) {
+        lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
+        if (stack_frame_sp && stack_frame_sp->GetThread() &&
+            stack_frame_sp->GetThread()->GetProcess()) {
+          SwiftLanguageRuntime *swift_runtime = stack_frame_sp->GetThread()
+                                                    ->GetProcess()
+                                                    ->GetSwiftLanguageRuntime();
+          if (swift_runtime) {
+            actual_type = swift_runtime->GetConcreteType(
+                stack_frame_sp.get(), actual_type.GetTypeName());
+            if (actual_type.IsValid())
+              variable.SetType(actual_type);
+            else
+              actual_type = variable.GetType();
+          }
+        }
+      }
+      swift::Type actual_swift_type =
+          swift::Type((swift::TypeBase *)actual_type.GetOpaqueQualType());
+
+      swift::Type fixed_type = manipulator.FixupResultType(
+          actual_swift_type, user_expression.GetLanguageFlags());
+
+      if (!fixed_type.isNull()) {
+        actual_type =
+            CompilerType(actual_type.GetTypeSystem(), fixed_type.getPointer());
+        variable.SetType(actual_type);
+      }
+
+      if (is_result)
+        offset = materializer.AddResultVariable(
+            actual_type, false, true, &user_expression.GetResultDelegate(),
+            error);
+      else
+        offset = materializer.AddResultVariable(
+            actual_type, false, true, &user_expression.GetErrorDelegate(),
+            error);
+    }
+
+    if (!error.Success()) {
+      diagnostic_manager.Printf(
+          eDiagnosticSeverityError, "couldn't add %s variable to struct: %s.\n",
+          is_result ? "result" : "error", error.AsCString());
+      return llvm::None;
+    }
+
+    if (log)
+      log->Printf("Added %s variable to struct at offset %llu",
+                  is_result ? "result" : "error", (unsigned long long)offset);
+  } else if (variable.MetadataIs<VariableMetadataVariable>()) {
+    Status error;
+
+    VariableMetadataVariable *variable_metadata =
+        static_cast<VariableMetadataVariable *>(variable.m_metadata.get());
+
+    offset = materializer.AddVariable(variable_metadata->m_variable_sp, error);
+
+    if (!error.Success()) {
+      diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                "couldn't add variable to struct: %s.\n",
+                                error.AsCString());
+      return llvm::None;
+    }
+
+    if (log)
+      log->Printf("Added variable %s to struct at offset %llu",
+                  variable_metadata->m_variable_sp->GetName().AsCString(),
+                  (unsigned long long)offset);
+  } else if (variable.MetadataIs<VariableMetadataPersistent>()) {
+    VariableMetadataPersistent *variable_metadata =
+        static_cast<VariableMetadataPersistent *>(variable.m_metadata.get());
+
+    needs_init = llvm::cast<SwiftExpressionVariable>(
+                     variable_metadata->m_persistent_variable_sp.get())
+                     ->m_swift_flags &
+                 SwiftExpressionVariable::EVSNeedsInit;
+
+    Status error;
+
+    offset = materializer.AddPersistentVariable(
+        variable_metadata->m_persistent_variable_sp,
+        &user_expression.GetPersistentVariableDelegate(), error);
+
+    if (!error.Success()) {
+      diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                "couldn't add variable to struct: %s.\n",
+                                error.AsCString());
+      return llvm::None;
+    }
+
+    if (log)
+      log->Printf(
+          "Added persistent variable %s with flags 0x%llx to "
+          "struct at offset %llu",
+          variable_metadata->m_persistent_variable_sp->GetName().AsCString(),
+          (unsigned long long)
+              variable_metadata->m_persistent_variable_sp->m_flags,
+          (unsigned long long)offset);
+  }
+
+  return SwiftExpressionParser::SILVariableInfo(variable.GetType(), offset,
+                                                needs_init);
+}
+
 unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                                       uint32_t first_line, uint32_t last_line,
                                       uint32_t line_offset) {
@@ -1223,8 +1367,6 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       false; // normally we'd like to verify, but unfortunately the verifier's
              // error mode is abort().
 
-  bool created_main_file = false;
-
   unsigned buffer_id;
   std::string main_filename;
   std::tie(buffer_id, main_filename) =
@@ -1269,7 +1411,6 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // inserting them in.
   m_swift_ast_context->AddDebuggerClient(external_lookup);
 
-  
   swift::PersistentParserState persistent_state;
 
   while (!done) {
@@ -1581,156 +1722,19 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     }
   }
 
-  Materializer *materializer = m_expr.GetMaterializer();
-
-  if (materializer && !playground) {
-    for (SwiftASTManipulatorBase::VariableInfo &variable :
-         code_manipulator->GetVariableInfo()) {
-      uint64_t offset = 0;
-      bool needs_init = false;
-
-      bool is_result =
-          variable
-              .MetadataIs<SwiftASTManipulatorBase::VariableMetadataResult>();
-      bool is_error =
-          variable.MetadataIs<SwiftASTManipulatorBase::VariableMetadataError>();
-
-      SwiftUserExpression *user_expression = static_cast<SwiftUserExpression *>(
-          &m_expr); // this is the only thing that has a materializer
-
-      if (is_result || is_error) {
-        needs_init = true;
-
-        Status error;
-
-        if (repl) {
-          if (swift::TypeBase *swift_type =
-                  (swift::TypeBase *)variable.GetType().GetOpaqueQualType()) {
-            if (!swift_type->getCanonicalType()->isVoid()) {
-              if (is_result)
-                offset = llvm::cast<SwiftREPLMaterializer>(materializer)
-                             ->AddREPLResultVariable(
-                                 variable.GetType(), variable.GetDecl(),
-                                 &user_expression->GetResultDelegate(), error);
-              else
-                offset = llvm::cast<SwiftREPLMaterializer>(materializer)
-                             ->AddREPLResultVariable(
-                                 variable.GetType(), variable.GetDecl(),
-                                 &user_expression->GetErrorDelegate(), error);
-            }
-          }
-        } else {
-          CompilerType actual_type(variable.GetType());
-          if (Flags(actual_type.GetTypeInfo())
-                  .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsArchetype)) {
-            lldb::StackFrameSP stack_frame_sp = m_stack_frame_wp.lock();
-            if (stack_frame_sp && stack_frame_sp->GetThread() &&
-                stack_frame_sp->GetThread()->GetProcess()) {
-              SwiftLanguageRuntime *swift_runtime =
-                  stack_frame_sp->GetThread()
-                      ->GetProcess()
-                      ->GetSwiftLanguageRuntime();
-              if (swift_runtime) {
-                actual_type = swift_runtime->GetConcreteType(
-                    stack_frame_sp.get(), actual_type.GetTypeName());
-                if (actual_type.IsValid())
-                  variable.SetType(actual_type);
-                else
-                  actual_type = variable.GetType();
-              }
-            }
-          }
-          swift::Type actual_swift_type =
-              swift::Type((swift::TypeBase *)actual_type.GetOpaqueQualType());
-
-          swift::Type fixed_type = code_manipulator->FixupResultType(
-              actual_swift_type, user_expression->GetLanguageFlags());
-
-          if (!fixed_type.isNull()) {
-            actual_type = CompilerType(actual_type.GetTypeSystem(),
-                                       fixed_type.getPointer());
-            variable.SetType(actual_type);
-          }
-
-          if (is_result)
-            offset = materializer->AddResultVariable(
-                actual_type, false, true, &user_expression->GetResultDelegate(),
-                error);
-          else
-            offset = materializer->AddResultVariable(
-                actual_type, false, true, &user_expression->GetErrorDelegate(),
-                error);
-        }
-
-        if (!error.Success()) {
-          diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                    "couldn't add %s variable to struct: %s.\n",
-                                    is_result ? "result" : "error",
-                                    error.AsCString());
+  if (!playground)
+    if (auto *materializer = m_expr.GetMaterializer())
+      for (auto &variable : code_manipulator->GetVariableInfo()) {
+        auto &swift_expr = *static_cast<SwiftUserExpression *>(&m_expr);
+        auto var_info = MaterializeVariable(variable, swift_expr, *materializer,
+                                            *code_manipulator, m_stack_frame_wp,
+                                            diagnostic_manager, log, repl);
+        if (!var_info) 
           return 1;
-        }
-
-        if (log)
-          log->Printf("Added %s variable to struct at offset %llu",
-                      is_result ? "result" : "error",
-                      (unsigned long long)offset);
-      } else if (variable.MetadataIs<VariableMetadataVariable>()) {
-        Status error;
-
-        VariableMetadataVariable *variable_metadata =
-            static_cast<VariableMetadataVariable *>(variable.m_metadata.get());
-
-        offset =
-            materializer->AddVariable(variable_metadata->m_variable_sp, error);
-
-        if (!error.Success()) {
-          diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                    "couldn't add variable to struct: %s.\n",
-                                    error.AsCString());
-          return 1;
-        }
-
-        if (log)
-          log->Printf("Added variable %s to struct at offset %llu",
-                      variable_metadata->m_variable_sp->GetName().AsCString(),
-                      (unsigned long long)offset);
-      } else if (variable.MetadataIs<VariableMetadataPersistent>()) {
-        VariableMetadataPersistent *variable_metadata =
-            static_cast<VariableMetadataPersistent *>(
-                variable.m_metadata.get());
-
-        needs_init = llvm::cast<SwiftExpressionVariable>(
-                         variable_metadata->m_persistent_variable_sp.get())
-                         ->m_swift_flags &
-                     SwiftExpressionVariable::EVSNeedsInit;
-
-        Status error;
-
-        offset = materializer->AddPersistentVariable(
-            variable_metadata->m_persistent_variable_sp,
-            &user_expression->GetPersistentVariableDelegate(), error);
-
-        if (!error.Success()) {
-          diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                    "couldn't add variable to struct: %s.\n",
-                                    error.AsCString());
-          return 1;
-        }
-
-        if (log)
-          log->Printf("Added persistent variable %s with flags 0x%llx to "
-                      "struct at offset %llu",
-                      variable_metadata->m_persistent_variable_sp->GetName()
-                          .AsCString(),
-                      (unsigned long long)
-                          variable_metadata->m_persistent_variable_sp->m_flags,
-                      (unsigned long long)offset);
+        
+        const char *name = ConstString(variable.GetName().get()).GetCString();
+        variable_map[name] = *var_info;
       }
-
-      variable_map[ConstString(variable.GetName().get()).GetCString()] =
-          SILVariableInfo(variable.GetType(), offset, needs_init);
-    }
-  }
 
   std::unique_ptr<swift::SILModule> sil_module(swift::performSILGeneration(
       *source_file, m_swift_ast_context->GetSILOptions()));
