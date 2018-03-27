@@ -180,7 +180,7 @@ void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
   OS << "\n";
   OS.indent(Indent);
   Variant V = VariantFromVARIANT(Value);
-  OS << V;
+  OS << Name << ": " << V;
 }
 }
 

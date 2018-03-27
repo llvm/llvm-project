@@ -1,4 +1,4 @@
-//===--- FixItRewriter.h - Fix-It Rewriter Diagnostic Client ----*- C++ -*-===//
+//===- FixItRewriter.h - Fix-It Rewriter Diagnostic Client ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,24 +12,28 @@
 // then forwards any diagnostics to the adapted diagnostic client.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_REWRITE_FRONTEND_FIXITREWRITER_H
 #define LLVM_CLANG_REWRITE_FRONTEND_FIXITREWRITER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/EditedSource.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 
+class LangOptions;
 class SourceManager;
-class FileEntry;
 
 class FixItOptions {
 public:
-  FixItOptions() : InPlace(false), FixWhatYouCan(false),
-                   FixOnlyWarnings(false), Silent(false) { }
-
+  FixItOptions() = default;
   virtual ~FixItOptions();
 
   /// \brief This file is about to be rewritten. Return the name of the file
@@ -38,23 +42,22 @@ public:
   /// \param fd out parameter for file descriptor. After the call it may be set
   /// to an open file descriptor for the returned filename, or it will be -1
   /// otherwise.
-  ///
   virtual std::string RewriteFilename(const std::string &Filename, int &fd) = 0;
 
   /// True if files should be updated in place. RewriteFilename is only called
   /// if this is false.
-  bool InPlace;
+  bool InPlace = false;
 
   /// \brief Whether to abort fixing a file when not all errors could be fixed.
-  bool FixWhatYouCan;
+  bool FixWhatYouCan = false;
 
   /// \brief Whether to only fix warnings and not errors.
-  bool FixOnlyWarnings;
+  bool FixOnlyWarnings = false;
 
   /// \brief If true, only pass the diagnostic to the actual diagnostic consumer
   /// if it is an error or a fixit was applied as part of the diagnostic.
   /// It basically silences warnings without accompanying fixits.
-  bool Silent;
+  bool Silent = false;
 };
 
 class FixItRewriter : public DiagnosticConsumer {
@@ -77,14 +80,12 @@ class FixItRewriter : public DiagnosticConsumer {
   FixItOptions *FixItOpts;
 
   /// \brief The number of rewriter failures.
-  unsigned NumFailures;
+  unsigned NumFailures = 0;
 
   /// \brief Whether the previous diagnostic was not passed to the consumer.
-  bool PrevDiagSilenced;
+  bool PrevDiagSilenced = false;
 
 public:
-  typedef Rewriter::buffer_iterator iterator;
-
   /// \brief Initialize a new fix-it rewriter.
   FixItRewriter(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                 const LangOptions &LangOpts, FixItOptions *FixItOpts);
@@ -96,6 +97,8 @@ public:
   bool IsModified(FileID ID) const {
     return Rewrite.getRewriteBufferFor(ID) != nullptr;
   }
+
+  using iterator = Rewriter::buffer_iterator;
 
   // Iteration over files with changes.
   iterator buffer_begin() { return Rewrite.buffer_begin(); }
@@ -110,7 +113,7 @@ public:
   ///
   /// \returns true if there was an error, false otherwise.
   bool WriteFixedFiles(
-     std::vector<std::pair<std::string, std::string> > *RewrittenFiles=nullptr);
+    std::vector<std::pair<std::string, std::string>> *RewrittenFiles = nullptr);
 
   /// IncludeInDiagnosticCounts - This method (whose default implementation
   /// returns true) indicates whether the diagnostics handled by this
@@ -127,6 +130,6 @@ public:
   void Diag(SourceLocation Loc, unsigned DiagID);
 };
 
-}
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_REWRITE_FRONTEND_FIXITREWRITER_H

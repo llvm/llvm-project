@@ -1,4 +1,4 @@
-//===--- TokenRewriter.h - Token-based Rewriter -----------------*- C++ -*-===//
+//===- TokenRewriter.h - Token-based Rewriter -------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,13 +17,16 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Token.h"
+#include <cassert>
 #include <list>
 #include <map>
 #include <memory>
 
 namespace clang {
-  class LangOptions;
-  class ScratchBuffer;
+
+class LangOptions;
+class ScratchBuffer;
+class SourceManager;
 
   class TokenRewriter {
     /// TokenList - This is the list of raw tokens that make up this file.  Each
@@ -31,7 +34,7 @@ namespace clang {
     std::list<Token> TokenList;
 
     /// TokenRefTy - This is the type used to refer to a token in the TokenList.
-    typedef std::list<Token>::iterator TokenRefTy;
+    using TokenRefTy = std::list<Token>::iterator;
 
     /// TokenAtLoc - This map indicates which token exists at a specific
     /// SourceLocation.  Since each token has a unique SourceLocation, this is a
@@ -40,23 +43,24 @@ namespace clang {
     std::map<SourceLocation, TokenRefTy> TokenAtLoc;
 
     /// ScratchBuf - This is the buffer that we create scratch tokens from.
-    ///
     std::unique_ptr<ScratchBuffer> ScratchBuf;
 
-    TokenRewriter(const TokenRewriter &) = delete;
-    void operator=(const TokenRewriter &) = delete;
   public:
     /// TokenRewriter - This creates a TokenRewriter for the file with the
     /// specified FileID.
     TokenRewriter(FileID FID, SourceManager &SM, const LangOptions &LO);
+
+    TokenRewriter(const TokenRewriter &) = delete;
+    TokenRewriter &operator=(const TokenRewriter &) = delete;
     ~TokenRewriter();
 
-    typedef std::list<Token>::const_iterator token_iterator;
+    using token_iterator = std::list<Token>::const_iterator;
+
     token_iterator token_begin() const { return TokenList.begin(); }
     token_iterator token_end() const { return TokenList.end(); }
 
-
     token_iterator AddTokenBefore(token_iterator I, const char *Val);
+
     token_iterator AddTokenAfter(token_iterator I, const char *Val) {
       assert(I != token_end() && "Cannot insert after token_end()!");
       return AddTokenBefore(++I, Val);
@@ -72,8 +76,6 @@ namespace clang {
     TokenRefTy AddToken(const Token &T, TokenRefTy Where);
   };
 
+} // namespace clang
 
-
-} // end namespace clang
-
-#endif
+#endif // LLVM_CLANG_REWRITE_CORE_TOKENREWRITER_H

@@ -1,4 +1,4 @@
-//===----- EditedSource.cpp - Collection of source edits ------------------===//
+//===- EditedSource.cpp - Collection of source edits ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,12 +9,21 @@
 
 #include "clang/Edit/EditedSource.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditsReceiver.h"
+#include "clang/Edit/FileOffset.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include <algorithm>
+#include <cassert>
+#include <tuple>
+#include <utility>
 
 using namespace clang;
 using namespace edit;
@@ -269,9 +278,11 @@ bool EditedSource::commit(const Commit &commit) {
 
   struct CommitRAII {
     EditedSource &Editor;
+
     CommitRAII(EditedSource &Editor) : Editor(Editor) {
       Editor.startingCommit();
     }
+
     ~CommitRAII() {
       Editor.finishedCommit();
     }

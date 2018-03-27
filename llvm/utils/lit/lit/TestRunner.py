@@ -36,6 +36,7 @@ kUseCloseFDs = not kIsWindows
 
 # Use temporary files to replace /dev/null on Windows.
 kAvoidDevNull = kIsWindows
+kDevNull = "/dev/null"
 
 class ShellEnvironment(object):
 
@@ -626,7 +627,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
            raise InternalShellError(cmd, "Unsupported: glob in "
                                     "redirect expanded to multiple files")
         name = name[0]
-        if kAvoidDevNull and name == '/dev/null':
+        if kAvoidDevNull and name == kDevNull:
             fd = tempfile.TemporaryFile(mode=mode)
         elif kIsWindows and name == '/dev/tty':
             # Simulate /dev/tty on Windows.
@@ -797,11 +798,11 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
             for i,arg in enumerate(args):
-                if arg == "/dev/null":
+                if isinstance(arg, basestring) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)
-                    args[i] = f.name
+                    args[i] = arg.replace(kDevNull, f.name)
 
         # Expand all glob expressions
         args = expand_glob_expressions(args, cmd_shenv.cwd)
