@@ -518,10 +518,11 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   }
   case SHT_RELA:
   case SHT_REL: {
-    // Find the relocation target section and associate this
-    // section with it. Target can be discarded, for example
-    // if it is a duplicated member of SHT_GROUP section, we
-    // do not create or proccess relocatable sections then.
+    // Find a relocation target section and associate this section with that.
+    // Target may have been discarded if it is in a different section group
+    // and the group is discarded, even though it's a violation of the
+    // spec. We handle that situation gracefully by discarding dangling
+    // relocation sections.
     InputSectionBase *Target = getRelocTarget(Sec);
     if (!Target)
       return nullptr;
@@ -536,32 +537,28 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
 
-    // Mergeable sections with relocations are tricky because relocations
-    // need to be taken into account when comparing section contents for
-    // merging. It's not worth supporting such mergeable sections because
-    // they are rare and it'd complicates the internal design (we usually
-    // have to determine if two sections are mergeable early in the link
-    // process much before applying relocations). We simply handle mergeable
-    // sections with relocations as non-mergeable.
+    // ELF spec allows mergeable sections with relocations, but they are
+    // rare, and it is in practice hard to merge such sections by contents,
+    // because applying relocations at end of linking changes section
+    // contents. So, we simply handle such sections as non-mergeable ones.
+    // Degrading like this is acceptable because section merging is optional.
     if (auto *MS = dyn_cast<MergeInputSection>(Target)) {
       Target = toRegularSection(MS);
       this->Sections[Sec.sh_info] = Target;
     }
 
-    size_t NumRelocations;
     if (Sec.sh_type == SHT_RELA) {
       ArrayRef<Elf_Rela> Rels = CHECK(this->getObj().relas(&Sec), this);
       Target->FirstRelocation = Rels.begin();
-      NumRelocations = Rels.size();
+      Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = true;
     } else {
       ArrayRef<Elf_Rel> Rels = CHECK(this->getObj().rels(&Sec), this);
       Target->FirstRelocation = Rels.begin();
-      NumRelocations = Rels.size();
+      Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = false;
     }
-    assert(isUInt<31>(NumRelocations));
-    Target->NumRelocations = NumRelocations;
+    assert(isUInt<31>(Target->NumRelocations));
 
     // Relocation sections processed by the linker are usually removed
     // from the output, so returning `nullptr` for the normal case.
