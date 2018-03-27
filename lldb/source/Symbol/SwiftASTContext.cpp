@@ -4222,32 +4222,6 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
   return CompilerType();
 }
 
-size_t SwiftASTContext::FindContainedType(llvm::StringRef name,
-                                          CompilerType container_type,
-                                          std::set<CompilerType> &results,
-                                          bool append) {
-  VALID_OR_RETURN(0);
-
-  if (!append)
-    results.clear();
-
-  size_t size_before = results.size();
-
-  TypesOrDecls types_or_decl_results;
-  FindContainedTypeOrDecl(name, container_type, types_or_decl_results);
-
-  for (const auto &result : types_or_decl_results) {
-    CompilerType type = result.Apply<CompilerType>(
-        [](CompilerType type) -> CompilerType { return type; },
-        [this](swift::Decl *decl) -> CompilerType {
-          return DeclToType(decl, GetASTContext());
-        });
-    results.emplace(type);
-  }
-
-  return results.size() - size_before;
-}
-
 size_t
 SwiftASTContext::FindContainedTypeOrDecl(llvm::StringRef name,
                                          TypeOrDecl container_type_or_decl,
