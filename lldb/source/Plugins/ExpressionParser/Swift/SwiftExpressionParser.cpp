@@ -1076,6 +1076,91 @@ protected:
   const bool m_saved_colorize;
 };
 
+/// Initialize the SwiftASTContext and return the wrapped
+/// swift::ASTContext when successful.
+static swift::ASTContext *SetupASTContext(
+    SwiftASTContext *swift_ast_context, DiagnosticManager &diagnostic_manager,
+    std::function<bool()> disable_objc_runtime, bool repl, bool playground) {
+  if (!swift_ast_context) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "No AST context to parse into.  Please parse with a target.\n");
+    return nullptr;
+  }
+
+  // Lazily get the clang importer if we can to make sure it exists in case we
+  // need it
+  if (!swift_ast_context->GetClangImporter()) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "Swift expressions require OS X 10.10 / iOS 8 SDKs or later.\n");
+    return nullptr;
+  }
+
+  if (swift_ast_context->HasFatalErrors()) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "The AST context is in a fatal error state.");
+    return nullptr;
+  }
+
+  swift::ASTContext *ast_context = swift_ast_context->GetASTContext();
+  if (!ast_context) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "Couldn't initialize the AST context.  Please check your settings.");
+    return nullptr;
+  }
+
+  if (swift_ast_context->HasFatalErrors()) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "The AST context is in a fatal error state.");
+    return nullptr;
+  }
+
+  // TODO find a way to get contraint-solver output sent to a stream so we can
+  // log it
+  // swift_ast_context->GetLanguageOptions().DebugConstraintSolver = true;
+
+  swift_ast_context->ClearDiagnostics();
+
+  // Make a class that will set/restore the colorize setting in the
+  // SwiftASTContext for us
+  // SetColorize colorize(swift_ast_context,
+  // stream.GetFlags().Test(Stream::eANSIColor));
+
+  swift_ast_context->GetLanguageOptions().DebuggerSupport = true;
+  swift_ast_context->GetLanguageOptions().EnableDollarIdentifiers =
+      true; // No longer part of debugger support, set it separately.
+  swift_ast_context->GetLanguageOptions().EnableAccessControl =
+      (repl || playground);
+  swift_ast_context->GetLanguageOptions().EnableTargetOSChecking = false;
+
+  if (disable_objc_runtime())
+    swift_ast_context->GetLanguageOptions().EnableObjCInterop = false;
+
+  if (repl || playground) {
+    swift_ast_context->GetLanguageOptions().Playground = true;
+    swift_ast_context->GetIRGenOptions().Playground = true;
+  } else {
+    swift_ast_context->GetLanguageOptions().Playground = true;
+    swift_ast_context->GetIRGenOptions().Playground = false;
+  }
+
+  // For the expression parser and REPL we want to relax the requirement that
+  // you put "try" in
+  // front of every expression that might throw.
+  if (!playground) {
+    swift_ast_context->GetLanguageOptions().EnableThrowWithoutTry = true;
+  }
+
+  swift_ast_context->GetIRGenOptions().OptMode =
+      swift::OptimizationMode::NoOptimization;
+  // Normally we'd like to verify, but unfortunately the verifier's
+  // error mode is abort().
+  swift_ast_context->GetIRGenOptions().Verify = false;
+  return ast_context;
+}
+
 /// Returns the buffer_id for the expression's source code.
 static std::pair<unsigned, std::string>
 CreateMainFile(SwiftASTContext &swift_ast_context, StringRef filename,
@@ -1266,43 +1351,21 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   const bool repl = m_options.GetREPLEnabled();
   const bool playground = m_options.GetPlaygroundTransformEnabled();
+  auto should_disable_objc_runtime = [&]() {
+    lldb::StackFrameSP this_frame_sp(m_stack_frame_wp.lock());
+    if (!this_frame_sp)
+      return false;
+    lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
+    if (!process_sp)
+      return false;
+    return !process_sp->GetObjCLanguageRuntime();
+  };
 
-  if (!m_swift_ast_context) {
-    diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
-        "No AST context to parse into.  Please parse with a target.\n");
+  swift::ASTContext *ast_context =
+      SetupASTContext(m_swift_ast_context, diagnostic_manager,
+                      should_disable_objc_runtime, repl, playground);
+  if (!ast_context)
     return 1;
-  }
-
-  // Lazily get the clang importer if we can to make sure it exists in case we
-  // need it
-  if (!m_swift_ast_context->GetClangImporter()) {
-    diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
-        "Swift expressions require OS X 10.10 / iOS 8 SDKs or later.\n");
-    return 1;
-  }
-
-  if (m_swift_ast_context->HasFatalErrors()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                  "The AST context is in a fatal error state.");
-    return 1;
-  }
-
-  swift::ASTContext *ast_context = m_swift_ast_context->GetASTContext();
-
-  if (!ast_context) {
-    diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
-        "Couldn't initialize the AST context.  Please check your settings.");
-    return 1;
-  }
-
-  if (m_swift_ast_context->HasFatalErrors()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                  "The AST context is in a fatal error state.");
-    return 1;
-  }
 
   // If we are using the playground, hand import the necessary modules.
   // FIXME: We won't have to do this once the playground adds import statements
@@ -1314,59 +1377,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                 lldb::eLanguageTypeSwift));
     persistent_state->AddHandLoadedModule(ConstString("Swift"));
   }
-
-  // TODO find a way to get contraint-solver output sent to a stream so we can
-  // log it
-  // m_swift_ast_context->GetLanguageOptions().DebugConstraintSolver = true;
-
-  m_swift_ast_context->ClearDiagnostics();
-
-  // Make a class that will set/restore the colorize setting in the
-  // SwiftASTContext for us
-  // SetColorize colorize(m_swift_ast_context,
-  // stream.GetFlags().Test(Stream::eANSIColor));
-
-  m_swift_ast_context->GetLanguageOptions().DebuggerSupport = true;
-  m_swift_ast_context->GetLanguageOptions().EnableDollarIdentifiers =
-      true; // No longer part of debugger support, set it separately.
-  m_swift_ast_context->GetLanguageOptions().EnableAccessControl =
-      (repl || playground);
-  m_swift_ast_context->GetLanguageOptions().EnableTargetOSChecking = false;
-
-  {
-    lldb::StackFrameSP this_frame_sp(m_stack_frame_wp.lock());
-    if (this_frame_sp) {
-      lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
-      if (process_sp) {
-        Status error;
-        if (!process_sp->GetObjCLanguageRuntime()) {
-          m_swift_ast_context->GetLanguageOptions().EnableObjCInterop = false;
-        }
-      }
-    }
-  }
-
-  if (repl || playground) {
-    m_swift_ast_context->GetLanguageOptions().Playground = true;
-    m_swift_ast_context->GetIRGenOptions().Playground = true;
-  } else {
-    m_swift_ast_context->GetLanguageOptions().Playground = true;
-    m_swift_ast_context->GetIRGenOptions().Playground = false;
-  }
-
-  // For the expression parser and REPL we want to relax the requirement that
-  // you put "try" in
-  // front of every expression that might throw.
-  if (!playground) {
-    m_swift_ast_context->GetLanguageOptions().EnableThrowWithoutTry = true;
-  }
-
-  m_swift_ast_context->GetIRGenOptions().OptMode 
-          = swift::OptimizationMode::NoOptimization;
-  m_swift_ast_context->GetIRGenOptions().Verify =
-      false; // normally we'd like to verify, but unfortunately the verifier's
-             // error mode is abort().
-
+  
   unsigned buffer_id;
   std::string main_filename;
   std::tie(buffer_id, main_filename) =
