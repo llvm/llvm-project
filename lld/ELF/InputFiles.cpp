@@ -518,10 +518,11 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   }
   case SHT_RELA:
   case SHT_REL: {
-    // Find the relocation target section and associate this
-    // section with it. Target can be discarded, for example
-    // if it is a duplicated member of SHT_GROUP section, we
-    // do not create or proccess relocatable sections then.
+    // Find a relocation target section and associate this section with that.
+    // Target may have been discarded if it is in a different section group
+    // and the group is discarded, even though it's a violation of the
+    // spec. We handle that situation gracefully by discarding dangling
+    // relocation sections.
     InputSectionBase *Target = getRelocTarget(Sec);
     if (!Target)
       return nullptr;
@@ -536,32 +537,28 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
 
-    // Mergeable sections with relocations are tricky because relocations
-    // need to be taken into account when comparing section contents for
-    // merging. It's not worth supporting such mergeable sections because
-    // they are rare and it'd complicates the internal design (we usually
-    // have to determine if two sections are mergeable early in the link
-    // process much before applying relocations). We simply handle mergeable
-    // sections with relocations as non-mergeable.
+    // ELF spec allows mergeable sections with relocations, but they are
+    // rare, and it is in practice hard to merge such sections by contents,
+    // because applying relocations at end of linking changes section
+    // contents. So, we simply handle such sections as non-mergeable ones.
+    // Degrading like this is acceptable because section merging is optional.
     if (auto *MS = dyn_cast<MergeInputSection>(Target)) {
       Target = toRegularSection(MS);
       this->Sections[Sec.sh_info] = Target;
     }
 
-    size_t NumRelocations;
     if (Sec.sh_type == SHT_RELA) {
       ArrayRef<Elf_Rela> Rels = CHECK(this->getObj().relas(&Sec), this);
       Target->FirstRelocation = Rels.begin();
-      NumRelocations = Rels.size();
+      Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = true;
     } else {
       ArrayRef<Elf_Rel> Rels = CHECK(this->getObj().rels(&Sec), this);
       Target->FirstRelocation = Rels.begin();
-      NumRelocations = Rels.size();
+      Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = false;
     }
-    assert(isUInt<31>(NumRelocations));
-    Target->NumRelocations = NumRelocations;
+    assert(isUInt<31>(Target->NumRelocations));
 
     // Relocation sections processed by the linker are usually removed
     // from the output, so returning `nullptr` for the normal case.
@@ -782,22 +779,31 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   }
 }
 
+// Parses ".gnu.version" section which is a parallel array for the symbol table.
+// If a given file doesn't have ".gnu.version" section, returns VER_NDX_GLOBAL.
+template <class ELFT> std::vector<uint32_t> SharedFile<ELFT>::parseVersyms() {
+  size_t Size = this->ELFSyms.size() - this->FirstNonLocal;
+  if (!VersymSec)
+    return std::vector<uint32_t>(Size, VER_NDX_GLOBAL);
+
+  const char *Base = this->MB.getBuffer().data();
+  const Elf_Versym *Versym =
+      reinterpret_cast<const Elf_Versym *>(Base + VersymSec->sh_offset) +
+      this->FirstNonLocal;
+
+  std::vector<uint32_t> Ret(Size);
+  for (size_t I = 0; I < Size; ++I)
+    Ret[I] = Versym[I].vs_index;
+  return Ret;
+}
+
 // Parse the version definitions in the object file if present. Returns a vector
 // whose nth element contains a pointer to the Elf_Verdef for version identifier
 // n. Version identifiers that are not definitions map to nullptr.
 template <class ELFT>
-std::vector<const typename ELFT::Verdef *>
-SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
-  // We only need to process symbol versions for this DSO if it has both a
-  // versym and a verdef section, which indicates that the DSO contains symbol
-  // version definitions.
-  if (!VersymSec || !VerdefSec)
+std::vector<const typename ELFT::Verdef *> SharedFile<ELFT>::parseVerdefs() {
+  if (!VerdefSec)
     return {};
-
-  // The location of the first global versym entry.
-  const char *Base = this->MB.getBuffer().data();
-  Versym = reinterpret_cast<const Elf_Versym *>(Base + VersymSec->sh_offset) +
-           this->FirstNonLocal;
 
   // We cannot determine the largest verdef identifier without inspecting
   // every Elf_Verdef, but both bfd and gold assign verdef identifiers
@@ -808,6 +814,7 @@ SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
 
   // Build the Verdefs array by following the chain of Elf_Verdef objects
   // from the start of the .gnu.version_d section.
+  const char *Base = this->MB.getBuffer().data();
   const char *Verdef = Base + VerdefSec->sh_offset;
   for (unsigned I = 0; I != VerdefCount; ++I) {
     auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
@@ -821,24 +828,49 @@ SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
   return Verdefs;
 }
 
-// Fully parse the shared object file. This must be called after parseSoName().
-template <class ELFT> void SharedFile<ELFT>::parseRest() {
-  // Create mapping from version identifiers to Elf_Verdef entries.
-  const Elf_Versym *Versym = nullptr;
-  Verdefs = parseVerdefs(Versym);
+// We do not usually care about alignments of data in shared object
+// files because the loader takes care of it. However, if we promote a
+// DSO symbol to point to .bss due to copy relocation, we need to keep
+// the original alignment requirements. We infer it in this function.
+template <class ELFT>
+uint32_t SharedFile<ELFT>::getAlignment(ArrayRef<Elf_Shdr> Sections,
+                                        const Elf_Sym &Sym) {
+  uint64_t Ret = 1;
+  if (Sym.st_value)
+    Ret = 1ULL << countTrailingZeros((uint64_t)Sym.st_value);
+  if (0 < Sym.st_shndx && Sym.st_shndx < Sections.size())
+    Ret = std::min<uint64_t>(Ret, Sections[Sym.st_shndx].sh_addralign);
 
+  if (Ret > UINT32_MAX)
+    error(toString(this) + ": alignment too large: " +
+          CHECK(Sym.getName(this->StringTable), this));
+  return Ret;
+}
+
+// Fully parse the shared object file. This must be called after parseSoName().
+//
+// This function parses symbol versions. If a DSO has version information,
+// the file has a ".gnu.version_d" section which contains symbol version
+// definitions. Each symbol is associated to one version through a table in
+// ".gnu.version" section. That table is a parallel array for the symbol
+// table, and each table entry contains an index in ".gnu.version_d".
+//
+// The special index 0 is reserved for VERF_NDX_LOCAL and 1 is for
+// VER_NDX_GLOBAL. There's no table entry for these special versions in
+// ".gnu.version_d".
+//
+// The file format for symbol versioning is perhaps a bit more complicated
+// than necessary, but you can easily understand the code if you wrap your
+// head around the data structure described above.
+template <class ELFT> void SharedFile<ELFT>::parseRest() {
+  Verdefs = parseVerdefs();                       // parse .gnu.version_d
+  std::vector<uint32_t> Versyms = parseVersyms(); // parse .gnu.version
   ArrayRef<Elf_Shdr> Sections = CHECK(this->getObj().sections(), this);
 
   // Add symbols to the symbol table.
-  Elf_Sym_Range Syms = this->getGlobalELFSyms();
-  for (const Elf_Sym &Sym : Syms) {
-    unsigned VersymIndex = VER_NDX_GLOBAL;
-    if (Versym) {
-      VersymIndex = Versym->vs_index;
-      ++Versym;
-    }
-    bool Hidden = VersymIndex & VERSYM_HIDDEN;
-    VersymIndex = VersymIndex & ~VERSYM_HIDDEN;
+  ArrayRef<Elf_Sym> Syms = this->getGlobalELFSyms();
+  for (size_t I = 0; I < Syms.size(); ++I) {
+    const Elf_Sym &Sym = Syms[I];
 
     StringRef Name = CHECK(Sym.getName(this->StringTable), this);
     if (Sym.isUndefined()) {
@@ -862,45 +894,31 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // MIPS BFD linker puts _gp_disp symbol into DSO files and incorrectly
     // assigns VER_NDX_LOCAL to this section global symbol. Here is a
     // workaround for this bug.
-    if (Config->EMachine == EM_MIPS && VersymIndex == VER_NDX_LOCAL &&
+    uint32_t Idx = Versyms[I] & ~VERSYM_HIDDEN;
+    if (Config->EMachine == EM_MIPS && Idx == VER_NDX_LOCAL &&
         Name == "_gp_disp")
       continue;
 
-    const Elf_Verdef *Ver = nullptr;
-    if (VersymIndex != VER_NDX_GLOBAL) {
-      if (VersymIndex >= Verdefs.size() || VersymIndex == VER_NDX_LOCAL) {
-        error("corrupt input file: version definition index " +
-              Twine(VersymIndex) + " for symbol " + Name +
-              " is out of bounds\n>>> defined in " + toString(this));
-        continue;
-      }
-      Ver = Verdefs[VersymIndex];
-    }
-
-    // We do not usually care about alignments of data in shared object
-    // files because the loader takes care of it. However, if we promote a
-    // DSO symbol to point to .bss due to copy relocation, we need to keep
-    // the original alignment requirements. We infer it here.
-    uint64_t Alignment = 1;
-    if (Sym.st_value)
-      Alignment = 1ULL << countTrailingZeros((uint64_t)Sym.st_value);
-    if (0 < Sym.st_shndx && Sym.st_shndx < Sections.size()) {
-      uint64_t SecAlign = Sections[Sym.st_shndx].sh_addralign;
-      Alignment = std::min(Alignment, SecAlign);
-    }
-    if (Alignment > UINT32_MAX)
-      error(toString(this) + ": alignment too large: " + Name);
-
-    if (!Hidden)
-      Symtab->addShared(Name, *this, Sym, Alignment, VersymIndex);
+    uint64_t Alignment = getAlignment(Sections, Sym);
+    if (!(Versyms[I] & VERSYM_HIDDEN))
+      Symtab->addShared(Name, *this, Sym, Alignment, Idx);
 
     // Also add the symbol with the versioned name to handle undefined symbols
     // with explicit versions.
-    if (Ver) {
-      StringRef VerName = this->StringTable.data() + Ver->getAux()->vda_name;
-      Name = Saver.save(Name + "@" + VerName);
-      Symtab->addShared(Name, *this, Sym, Alignment, VersymIndex);
+    if (Idx == VER_NDX_GLOBAL)
+      continue;
+
+    if (Idx >= Verdefs.size() || Idx == VER_NDX_LOCAL) {
+      error("corrupt input file: version definition index " + Twine(Idx) +
+            " for symbol " + Name + " is out of bounds\n>>> defined in " +
+            toString(this));
+      continue;
     }
+
+    StringRef VerName =
+        this->StringTable.data() + Verdefs[Idx]->getAux()->vda_name;
+    Name = Saver.save(Name + "@" + VerName);
+    Symtab->addShared(Name, *this, Sym, Alignment, Idx);
   }
 }
 

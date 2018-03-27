@@ -1,4 +1,4 @@
-//===--- FrontendOptions.h --------------------------------------*- C++ -*-===//
+//===- FrontendOptions.h ----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,55 +14,124 @@
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "llvm/ADT/StringRef.h"
+#include <cassert>
+#include <memory>
 #include <string>
 #include <vector>
 #include <unordered_map>
 
 namespace llvm {
+
 class MemoryBuffer;
-}
+
+} // namespace llvm
 
 namespace clang {
-class FileEntry;
 
 namespace frontend {
-  enum ActionKind {
-    ASTDeclList,            ///< Parse ASTs and list Decl nodes.
-    ASTDump,                ///< Parse ASTs and dump them.
-    ASTPrint,               ///< Parse ASTs and print them.
-    ASTView,                ///< Parse ASTs and view them in Graphviz.
-    DumpRawTokens,          ///< Dump out raw tokens.
-    DumpTokens,             ///< Dump out preprocessed tokens.
-    EmitAssembly,           ///< Emit a .s file.
-    EmitBC,                 ///< Emit a .bc file.
-    EmitHTML,               ///< Translate input source into HTML.
-    EmitLLVM,               ///< Emit a .ll file.
-    EmitLLVMOnly,           ///< Generate LLVM IR, but do not emit anything.
-    EmitCodeGenOnly,        ///< Generate machine code, but don't emit anything.
-    EmitObj,                ///< Emit a .o file.
-    FixIt,                  ///< Parse and apply any fixits to the source.
-    GenerateModule,         ///< Generate pre-compiled module from a module map.
-    GenerateModuleInterface,///< Generate pre-compiled module from a C++ module
-                            ///< interface file.
-    GeneratePCH,            ///< Generate pre-compiled header.
-    GeneratePTH,            ///< Generate pre-tokenized header.
-    InitOnly,               ///< Only execute frontend initialization.
-    ModuleFileInfo,         ///< Dump information about a module file.
-    VerifyPCH,              ///< Load and verify that a PCH file is usable.
-    ParseSyntaxOnly,        ///< Parse and perform semantic analysis.
-    PluginAction,           ///< Run a plugin action, \see ActionName.
-    PrintDeclContext,       ///< Print DeclContext and their Decls.
-    PrintPreamble,          ///< Print the "preamble" of the input file
-    PrintPreprocessedInput, ///< -E mode.
-    RewriteMacros,          ///< Expand macros but not \#includes.
-    RewriteObjC,            ///< ObjC->C Rewriter.
-    RewriteTest,            ///< Rewriter playground
-    RunAnalysis,            ///< Run one or more source code analyses.
-    TemplightDump,          ///< Dump template instantiations
-    MigrateSource,          ///< Run migrator.
-    RunPreprocessorOnly     ///< Just lex, no output.
-  };
-}
+
+enum ActionKind {
+  /// Parse ASTs and list Decl nodes.
+  ASTDeclList,
+
+  /// Parse ASTs and dump them.
+  ASTDump,
+
+  /// Parse ASTs and print them.
+  ASTPrint,
+
+  /// Parse ASTs and view them in Graphviz.
+  ASTView,
+
+  /// Dump out raw tokens.
+  DumpRawTokens,
+
+  /// Dump out preprocessed tokens.
+  DumpTokens,
+
+  /// Emit a .s file.
+  EmitAssembly,
+
+  /// Emit a .bc file.
+  EmitBC,
+
+  /// Translate input source into HTML.
+  EmitHTML,
+
+  /// Emit a .ll file.
+  EmitLLVM,
+
+  /// Generate LLVM IR, but do not emit anything.
+  EmitLLVMOnly,
+
+  /// Generate machine code, but don't emit anything.
+  EmitCodeGenOnly,
+
+  /// Emit a .o file.
+  EmitObj,
+
+  /// Parse and apply any fixits to the source.
+  FixIt,
+
+  /// Generate pre-compiled module from a module map.
+  GenerateModule,
+
+  /// Generate pre-compiled module from a C++ module interface file.
+  GenerateModuleInterface,
+
+  /// Generate pre-compiled header.
+  GeneratePCH,
+
+  /// Generate pre-tokenized header.
+  GeneratePTH,
+
+  /// Only execute frontend initialization.
+  InitOnly,
+
+  /// Dump information about a module file.
+  ModuleFileInfo,
+
+  /// Load and verify that a PCH file is usable.
+  VerifyPCH,
+
+  /// Parse and perform semantic analysis.
+  ParseSyntaxOnly,
+
+  /// Run a plugin action, \see ActionName.
+  PluginAction,
+
+  /// Print DeclContext and their Decls.
+  PrintDeclContext,
+
+  /// Print the "preamble" of the input file
+  PrintPreamble,
+
+  /// -E mode.
+  PrintPreprocessedInput,
+
+  /// Expand macros but not \#includes.
+  RewriteMacros,
+
+  /// ObjC->C Rewriter.
+  RewriteObjC,
+
+  /// Rewriter playground
+  RewriteTest,
+
+  /// Run one or more source code analyses.
+  RunAnalysis,
+
+  /// Dump template instantiations
+  TemplightDump,
+
+  /// Run migrator.
+  MigrateSource,
+
+  /// Just lex, no output.
+  RunPreprocessorOnly
+};
+
+} // namespace frontend
 
 /// The kind of a file that we've been handed as an input.
 class InputKind {
@@ -119,6 +188,7 @@ public:
   InputKind getPreprocessed() const {
     return InputKind(getLanguage(), getFormat(), true);
   }
+
   InputKind withFormat(Format F) const {
     return InputKind(getLanguage(), F, isPreprocessed());
   }
@@ -141,12 +211,12 @@ class FrontendInputFile {
   bool IsSystem = false;
 
 public:
-  FrontendInputFile() { }
+  FrontendInputFile() = default;
   FrontendInputFile(StringRef File, InputKind Kind, bool IsSystem = false)
-    : File(File.str()), Kind(Kind), IsSystem(IsSystem) { }
+      : File(File.str()), Kind(Kind), IsSystem(IsSystem) {}
   FrontendInputFile(llvm::MemoryBuffer *Buffer, InputKind Kind,
                     bool IsSystem = false)
-    : Buffer(Buffer), Kind(Kind), IsSystem(IsSystem) { }
+      : Buffer(Buffer), Kind(Kind), IsSystem(IsSystem) {}
 
   InputKind getKind() const { return Kind; }
   bool isSystem() const { return IsSystem; }
@@ -160,6 +230,7 @@ public:
     assert(isFile());
     return File;
   }
+
   llvm::MemoryBuffer *getBuffer() const {
     assert(isBuffer());
     return Buffer;
@@ -169,43 +240,67 @@ public:
 /// FrontendOptions - Options for controlling the behavior of the frontend.
 class FrontendOptions {
 public:
-  unsigned DisableFree : 1;                ///< Disable memory freeing on exit.
-  unsigned RelocatablePCH : 1;             ///< When generating PCH files,
-                                           /// instruct the AST writer to create
-                                           /// relocatable PCH files.
-  unsigned ShowHelp : 1;                   ///< Show the -help text.
-  unsigned ShowStats : 1;                  ///< Show frontend performance
-                                           /// metrics and statistics.
-  unsigned ShowTimers : 1;                 ///< Show timers for individual
-                                           /// actions.
-  unsigned ShowVersion : 1;                ///< Show the -version text.
-  unsigned FixWhatYouCan : 1;              ///< Apply fixes even if there are
-                                           /// unfixable errors.
-  unsigned FixOnlyWarnings : 1;            ///< Apply fixes only for warnings.
-  unsigned FixAndRecompile : 1;            ///< Apply fixes and recompile.
-  unsigned FixToTemporaries : 1;           ///< Apply fixes to temporary files.
-  unsigned ARCMTMigrateEmitARCErrors : 1;  /// Emit ARC errors even if the
-                                           /// migrator can fix them
-  unsigned SkipFunctionBodies : 1;         ///< Skip over function bodies to
-                                           /// speed up parsing in cases you do
-                                           /// not need them (e.g. with code
-                                           /// completion).
-  unsigned UseGlobalModuleIndex : 1;       ///< Whether we can use the
-                                           ///< global module index if available.
-  unsigned GenerateGlobalModuleIndex : 1;  ///< Whether we can generate the
-                                           ///< global module index if needed.
-  unsigned ASTDumpDecls : 1;               ///< Whether we include declaration
-                                           ///< dumps in AST dumps.
-  unsigned ASTDumpAll : 1;                 ///< Whether we deserialize all decls
-                                           ///< when forming AST dumps.
-  unsigned ASTDumpLookups : 1;             ///< Whether we include lookup table
-                                           ///< dumps in AST dumps.
-  unsigned BuildingImplicitModule : 1;     ///< Whether we are performing an
-                                           ///< implicit module build.
-  unsigned ModulesEmbedAllFiles : 1;       ///< Whether we should embed all used
-                                           ///< files into the PCM file.
-  unsigned IncludeTimestamps : 1;          ///< Whether timestamps should be
-                                           ///< written to the produced PCH file.
+  /// Disable memory freeing on exit.
+  unsigned DisableFree : 1;
+
+  /// When generating PCH files, instruct the AST writer to create relocatable
+  /// PCH files.
+  unsigned RelocatablePCH : 1;
+
+  /// Show the -help text.
+  unsigned ShowHelp : 1;
+
+  /// Show frontend performance metrics and statistics.
+  unsigned ShowStats : 1;
+
+  /// Show timers for individual actions.
+  unsigned ShowTimers : 1;
+
+  /// Show the -version text.
+  unsigned ShowVersion : 1;
+
+  /// Apply fixes even if there are unfixable errors.
+  unsigned FixWhatYouCan : 1;
+
+  /// Apply fixes only for warnings.
+  unsigned FixOnlyWarnings : 1;
+
+  /// Apply fixes and recompile.
+  unsigned FixAndRecompile : 1;
+
+  /// Apply fixes to temporary files.
+  unsigned FixToTemporaries : 1;
+
+  /// Emit ARC errors even if the migrator can fix them.
+  unsigned ARCMTMigrateEmitARCErrors : 1;
+
+  /// Skip over function bodies to speed up parsing in cases you do not need
+  /// them (e.g. with code completion).
+  unsigned SkipFunctionBodies : 1;
+
+  /// Whether we can use the global module index if available.
+  unsigned UseGlobalModuleIndex : 1;
+
+  /// Whether we can generate the global module index if needed.
+  unsigned GenerateGlobalModuleIndex : 1;
+
+  /// Whether we include declaration dumps in AST dumps.
+  unsigned ASTDumpDecls : 1;
+
+  /// Whether we deserialize all decls when forming AST dumps.
+  unsigned ASTDumpAll : 1;
+
+  /// Whether we include lookup table dumps in AST dumps.
+  unsigned ASTDumpLookups : 1;
+
+  /// Whether we are performing an implicit module build.
+  unsigned BuildingImplicitModule : 1;
+
+  /// Whether we should embed all used files into the PCM file.
+  unsigned ModulesEmbedAllFiles : 1;
+
+  /// Whether timestamps should be written to the produced PCH file.
+  unsigned IncludeTimestamps : 1;
 
   CodeCompleteOptions CodeCompleteOpts;
 
@@ -214,38 +309,53 @@ public:
     ARCMT_Check,
     ARCMT_Modify,
     ARCMT_Migrate
-  } ARCMTAction;
+  } ARCMTAction = ARCMT_None;
 
   enum {
     ObjCMT_None = 0,
+
     /// \brief Enable migration to modern ObjC literals.
     ObjCMT_Literals = 0x1,
+
     /// \brief Enable migration to modern ObjC subscripting.
     ObjCMT_Subscripting = 0x2,
+
     /// \brief Enable migration to modern ObjC readonly property.
     ObjCMT_ReadonlyProperty = 0x4,
+
     /// \brief Enable migration to modern ObjC readwrite property.
     ObjCMT_ReadwriteProperty = 0x8,
+
     /// \brief Enable migration to modern ObjC property.
     ObjCMT_Property = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty),
+
     /// \brief Enable annotation of ObjCMethods of all kinds.
     ObjCMT_Annotation = 0x10,
+
     /// \brief Enable migration of ObjC methods to 'instancetype'.
     ObjCMT_Instancetype = 0x20,
+
     /// \brief Enable migration to NS_ENUM/NS_OPTIONS macros.
     ObjCMT_NsMacros = 0x40,
+
     /// \brief Enable migration to add conforming protocols.
     ObjCMT_ProtocolConformance = 0x80,
+
     /// \brief prefer 'atomic' property over 'nonatomic'.
     ObjCMT_AtomicProperty = 0x100,
+
     /// \brief annotate property with NS_RETURNS_INNER_POINTER
     ObjCMT_ReturnsInnerPointerProperty = 0x200,
+
     /// \brief use NS_NONATOMIC_IOSONLY for property 'atomic' attribute
     ObjCMT_NsAtomicIOSOnlyProperty = 0x400,
+
     /// \brief Enable inferring NS_DESIGNATED_INITIALIZER for ObjC methods.
     ObjCMT_DesignatedInitializer = 0x800,
+
     /// \brief Enable converting setter/getter expressions to property-dot syntx.
     ObjCMT_PropertyDotSyntax = 0x1000,
+
     ObjCMT_MigrateDecls = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty |
                            ObjCMT_Annotation | ObjCMT_Instancetype |
                            ObjCMT_NsMacros | ObjCMT_ProtocolConformance |
@@ -254,7 +364,7 @@ public:
     ObjCMT_MigrateAll = (ObjCMT_Literals | ObjCMT_Subscripting |
                          ObjCMT_MigrateDecls | ObjCMT_PropertyDotSyntax)
   };
-  unsigned ObjCMTAction;
+  unsigned ObjCMTAction = ObjCMT_None;
   std::string ObjCMTWhiteListPath;
 
   std::string MTMigrateDir;
@@ -280,7 +390,7 @@ public:
   ParsedSourceLocation CodeCompletionAt;
 
   /// The frontend action to perform.
-  frontend::ActionKind ProgramAction;
+  frontend::ActionKind ProgramAction = frontend::ParseSyntaxOnly;
 
   /// The name of the action to run when using a plugin action.
   std::string ActionName;
@@ -329,17 +439,15 @@ public:
   std::string StatsFile;
 
 public:
-  FrontendOptions() :
-    DisableFree(false), RelocatablePCH(false), ShowHelp(false),
-    ShowStats(false), ShowTimers(false), ShowVersion(false),
-    FixWhatYouCan(false), FixOnlyWarnings(false), FixAndRecompile(false),
-    FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
-    SkipFunctionBodies(false), UseGlobalModuleIndex(true),
-    GenerateGlobalModuleIndex(true), ASTDumpDecls(false), ASTDumpLookups(false),
-    BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-    IncludeTimestamps(true), ARCMTAction(ARCMT_None),
-    ObjCMTAction(ObjCMT_None), ProgramAction(frontend::ParseSyntaxOnly)
-  {}
+  FrontendOptions()
+      : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
+        ShowStats(false), ShowTimers(false), ShowVersion(false),
+        FixWhatYouCan(false), FixOnlyWarnings(false), FixAndRecompile(false),
+        FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
+        SkipFunctionBodies(false), UseGlobalModuleIndex(true),
+        GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
+        ASTDumpLookups(false), BuildingImplicitModule(false),
+        ModulesEmbedAllFiles(false), IncludeTimestamps(true) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return InputKind::C.
@@ -349,6 +457,6 @@ public:
   static InputKind getInputKindForExtension(StringRef Extension);
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_FRONTEND_FRONTENDOPTIONS_H

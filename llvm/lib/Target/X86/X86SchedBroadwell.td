@@ -106,6 +106,7 @@ def : WriteRes<WriteRMW, [BWPort4]>;
 defm : BWWriteResPair<WriteALU,   [BWPort0156], 1>; // Simple integer ALU op.
 defm : BWWriteResPair<WriteIMul,  [BWPort1],   3>; // Integer multiplication.
 defm : BWWriteResPair<WriteIDiv, [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteCRC32, [BWPort1],   3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 
 def : WriteRes<WriteLEA, [BWPort15]>; // LEA instructions can't fold loads.

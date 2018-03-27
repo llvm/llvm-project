@@ -445,6 +445,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     }
     assert(DefIdx >= 0 && "Def Reg not found in Src MI");
     MachineInstr *DstI = Dst->getInstr();
+    SDep T = I;
     for (unsigned OpNum = 0; OpNum < DstI->getNumOperands(); OpNum++) {
       const MachineOperand &MO = DstI->getOperand(OpNum);
       if (MO.isReg() && MO.isUse() && MO.getReg() == DepR) {
@@ -461,11 +462,10 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     }
 
     // Update the latency of opposite edge too.
-    for (auto &J : Dst->Preds) {
-      if (J.getSUnit() != Src)
-        continue;
-      J.setLatency(I.getLatency());
-    }
+    T.setSUnit(Src);
+    auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
+    assert(F != Dst->Preds.end());
+    F->setLatency(I.getLatency());
   }
 }
 
@@ -473,7 +473,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
 void HexagonSubtarget::changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat)
       const {
   for (auto &I : Src->Succs) {
-    if (I.getSUnit() != Dst)
+    if (!I.isAssignedRegDep() || I.getSUnit() != Dst)
       continue;
     SDep T = I;
     I.setLatency(Lat);
@@ -482,7 +482,7 @@ void HexagonSubtarget::changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat)
     T.setSUnit(Src);
     auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
     assert(F != Dst->Preds.end());
-    F->setLatency(I.getLatency());
+    F->setLatency(Lat);
   }
 }
 

@@ -199,13 +199,6 @@ public:
     llvm_unreachable("bad ABI kind");
   }
 
-  /// \brief Is the default C++ member function calling convention
-  /// the same as the default calling convention?
-  bool isMemberFunctionCCDefault() const {
-    // Right now, this is always false for Microsoft.
-    return !isMicrosoft();
-  }
-
   /// Are arguments to a call destroyed left to right in the callee?
   /// This is a fundamental language change, since it implies that objects
   /// passed by value do *not* live to the end of the full expression.
