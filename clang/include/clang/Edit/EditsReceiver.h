@@ -1,4 +1,4 @@
-//===----- EditedSource.h - Collection of source edits ----------*- C++ -*-===//
+//===- EditedSource.h - Collection of source edits --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,25 +11,24 @@
 #define LLVM_CLANG_EDIT_EDITSRECEIVER_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
-  class SourceLocation;
-  class CharSourceRange;
-
 namespace edit {
 
 class EditsReceiver {
 public:
-  virtual ~EditsReceiver() { }
+  virtual ~EditsReceiver() = default;
 
   virtual void insert(SourceLocation loc, StringRef text) = 0;
   virtual void replace(CharSourceRange range, StringRef text) = 0;
+
   /// \brief By default it calls replace with an empty string.
   virtual void remove(CharSourceRange range);
 };
 
-}
+} // namespace edit
+} // namespace clang
 
-} // end namespace clang
-
-#endif
+#endif // LLVM_CLANG_EDIT_EDITSRECEIVER_H
