@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic | FileCheck -check-prefix=LARGE-BSS %s
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
 @bar = common global i32 0, align 4
 
 declare i32 @call_foo(i32, ...)
@@ -29,3 +30,6 @@ entry:
 ; LARGE-BSS:       [[VREF]]:
 ; LARGE-BSS-NEXT:     .p2align 2
 ; LARGE-BSS-NEXT:    .long bar
+; LARGE-SECUREPLT:   addis 30, 30, .LTOC-.L0$pb@ha
+; LARGE-SECUREPLT:   addi 30, 30, .LTOC-.L0$pb@l
+; LARGE-SECUREPLT:   bl call_foo@PLT+32768

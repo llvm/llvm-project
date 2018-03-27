@@ -133,6 +133,7 @@ protected:
   bool HasFloat128;
   bool IsISA3_0;
   bool UseLongCalls;
+  bool SecurePlt;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -255,6 +256,7 @@ public:
   bool hasOnlyMSYNC() const { return HasOnlyMSYNC; }
   bool isPPC4xx() const { return IsPPC4xx; }
   bool isPPC6xx() const { return IsPPC6xx; }
+  bool isSecurePlt() const {return SecurePlt; }
   bool isE500() const { return IsE500; }
   bool isFeatureMFTB() const { return FeatureMFTB; }
   bool isDeprecatedDST() const { return DeprecatedDST; }

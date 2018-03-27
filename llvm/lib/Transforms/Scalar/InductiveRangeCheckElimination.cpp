@@ -694,12 +694,64 @@ void LoopConstrainer::replacePHIBlock(PHINode *PN, BasicBlock *Block,
       PN->setIncomingBlock(i, ReplaceBy);
 }
 
-static bool CanBeMax(ScalarEvolution &SE, const SCEV *S, bool Signed) {
-  APInt Max = Signed ?
-      APInt::getSignedMaxValue(cast<IntegerType>(S->getType())->getBitWidth()) :
-      APInt::getMaxValue(cast<IntegerType>(S->getType())->getBitWidth());
-  return SE.getSignedRange(S).contains(Max) &&
-         SE.getUnsignedRange(S).contains(Max);
+static bool CannotBeMaxInLoop(const SCEV *BoundSCEV, Loop *L,
+                              ScalarEvolution &SE, bool Signed) {
+  unsigned BitWidth = cast<IntegerType>(BoundSCEV->getType())->getBitWidth();
+  APInt Max = Signed ? APInt::getSignedMaxValue(BitWidth) :
+    APInt::getMaxValue(BitWidth);
+  auto Predicate = Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+  return SE.isAvailableAtLoopEntry(BoundSCEV, L) &&
+         SE.isLoopEntryGuardedByCond(L, Predicate, BoundSCEV,
+                                     SE.getConstant(Max));
+}
+
+/// Given a loop with an deccreasing induction variable, is it possible to
+/// safely calculate the bounds of a new loop using the given Predicate.
+static bool isSafeDecreasingBound(const SCEV *Start,
+                                  const SCEV *BoundSCEV, const SCEV *Step,
+                                  ICmpInst::Predicate Pred,
+                                  unsigned LatchBrExitIdx,
+                                  Loop *L, ScalarEvolution &SE) {
+  if (Pred != ICmpInst::ICMP_SLT && Pred != ICmpInst::ICMP_SGT &&
+      Pred != ICmpInst::ICMP_ULT && Pred != ICmpInst::ICMP_UGT)
+    return false;
+
+  if (!SE.isAvailableAtLoopEntry(BoundSCEV, L))
+    return false;
+
+  assert(SE.isKnownNegative(Step) && "expecting negative step");
+
+  DEBUG(dbgs() << "irce: isSafeDecreasingBound with:\n");
+  DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
+  DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
+  DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
+  DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred) << "\n");
+  DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
+
+  bool IsSigned = ICmpInst::isSigned(Pred);
+  // The predicate that we need to check that the induction variable lies
+  // within bounds.
+  ICmpInst::Predicate BoundPred =
+    IsSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
+
+  if (LatchBrExitIdx == 1)
+    return SE.isLoopEntryGuardedByCond(L, BoundPred, Start, BoundSCEV);
+
+  assert(LatchBrExitIdx == 0 &&
+         "LatchBrExitIdx should be either 0 or 1");
+            
+  const SCEV *StepPlusOne = SE.getAddExpr(Step, SE.getOne(Step->getType()));
+  unsigned BitWidth = cast<IntegerType>(BoundSCEV->getType())->getBitWidth();
+  APInt Min = IsSigned ? APInt::getSignedMinValue(BitWidth) :
+    APInt::getMinValue(BitWidth);
+  const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Min), StepPlusOne);
+
+  const SCEV *MinusOne =
+    SE.getMinusSCEV(BoundSCEV, SE.getOne(BoundSCEV->getType()));
+
+  return SE.isLoopEntryGuardedByCond(L, BoundPred, Start, MinusOne) &&
+         SE.isLoopEntryGuardedByCond(L, BoundPred, BoundSCEV, Limit);
+
 }
 
 /// Given a loop with an increasing induction variable, is it possible to
@@ -755,21 +807,6 @@ static bool CannotBeMinInLoop(const SCEV *BoundSCEV, Loop *L,
   return SE.isAvailableAtLoopEntry(BoundSCEV, L) &&
          SE.isLoopEntryGuardedByCond(L, Predicate, BoundSCEV,
                                      SE.getConstant(Min));
-}
-
-static bool SumCanReachMin(ScalarEvolution &SE, const SCEV *S1, const SCEV *S2,
-                           bool Signed) {
-  // S1 > INT_MIN - S2 ===> S1 + S2 > INT_MIN.
-  assert(SE.isKnownNonPositive(S2) &&
-         "We expected the 2nd arg to be non-positive!");
-  const SCEV *Max = SE.getConstant(
-      Signed ? APInt::getSignedMinValue(
-                   cast<IntegerType>(S1->getType())->getBitWidth())
-             : APInt::getMinValue(
-                   cast<IntegerType>(S1->getType())->getBitWidth()));
-  const SCEV *CapForS1 = SE.getMinusSCEV(Max, S2);
-  return !SE.isKnownPredicate(Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT,
-                              S1, CapForS1);
 }
 
 Optional<LoopStructure>
@@ -1001,17 +1038,22 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
         // that both operands are non-negative, because it will only pessimize
         // our check against "RightSCEV - 1".
         Pred = ICmpInst::ICMP_SGT;
-      else if (Pred == ICmpInst::ICMP_EQ && LatchBrExitIdx == 0 &&
-               !CanBeMax(SE, RightSCEV, /* IsSignedPredicate */ true)) {
+      else if (Pred == ICmpInst::ICMP_EQ && LatchBrExitIdx == 0) {
         // while (true) {               while (true) {
         //   if (--i == len)     --->     if (--i < len + 1)
         //     break;                       break;
         //   ...                          ...
         // }                            }
-        // TODO: Insert ICMP_ULT if both are non-negative?
-        Pred = ICmpInst::ICMP_SLT;
-        RightSCEV = SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType()));
-        IncreasedRightValueByOne = true;
+        if (IndVarBase->getNoWrapFlags(SCEV::FlagNUW) &&
+            CannotBeMaxInLoop(RightSCEV, &L, SE, /* Signed */ false)) {
+          Pred = ICmpInst::ICMP_ULT;
+          RightSCEV = SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType()));
+          IncreasedRightValueByOne = true;
+        } else if (CannotBeMaxInLoop(RightSCEV, &L, SE, /* Signed */ true)) {
+          Pred = ICmpInst::ICMP_SLT;
+          RightSCEV = SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType()));
+          IncreasedRightValueByOne = true;
+        }
       }
     }
 
@@ -1034,28 +1076,13 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
       return None;
     }
 
-    // The predicate that we need to check that the induction variable lies
-    // within bounds.
-    ICmpInst::Predicate BoundPred =
-        IsSignedPredicate ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
+    if (!isSafeDecreasingBound(IndVarStart, RightSCEV, Step, Pred,
+                               LatchBrExitIdx, &L, SE)) {
+      FailureReason = "Unsafe bounds";
+      return None;
+    }
 
     if (LatchBrExitIdx == 0) {
-      const SCEV *StepPlusOne = SE.getAddExpr(Step, SE.getOne(Step->getType()));
-      if (SumCanReachMin(SE, RightSCEV, StepPlusOne, IsSignedPredicate)) {
-        // TODO: this restriction is easily removable -- we just have to
-        // remember that the icmp was an sgt and not an sge.
-        FailureReason = "limit may overflow when coercing ge to gt";
-        return None;
-      }
-
-      if (!SE.isAvailableAtLoopEntry(RightSCEV, &L) ||
-          !SE.isLoopEntryGuardedByCond(
-               &L, BoundPred, IndVarStart,
-               SE.getMinusSCEV(RightSCEV, SE.getOne(RightSCEV->getType())))) {
-        FailureReason = "Induction variable start not bounded by lower limit";
-        return None;
-      }
-
       // We need to decrease the right value unless we have already increased
       // it virtually when we replaced EQ with SLT.
       if (!IncreasedRightValueByOne) {
@@ -1063,11 +1090,6 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
         RightValue = B.CreateSub(RightValue, One);
       }
     } else {
-      if (!SE.isAvailableAtLoopEntry(RightSCEV, &L) ||
-          !SE.isLoopEntryGuardedByCond(&L, BoundPred, IndVarStart, RightSCEV)) {
-        FailureReason = "Induction variable start not bounded by lower limit";
-        return None;
-      }
       assert(!IncreasedRightValueByOne &&
              "Right value can be increased only for LatchBrExitIdx == 0!");
     }

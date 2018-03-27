@@ -107,10 +107,20 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
       break;
   }
 
-  if (MO.getTargetFlags() == PPCII::MO_PLT)
+ if (MO.getTargetFlags() == PPCII::MO_PLT)
     RefKind = MCSymbolRefExpr::VK_PLT;
 
+  const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+  const PPCSubtarget *Subtarget = &(MF->getSubtarget<PPCSubtarget>());
+  const TargetMachine &TM = Printer.TM;
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, RefKind, Ctx);
+  // -msecure-plt option works only in PIC mode. If secure plt mode
+  // is on add 32768 to symbol.
+  if (Subtarget->isSecurePlt() && TM.isPositionIndependent() &&
+      MO.getTargetFlags() == PPCII::MO_PLT)
+    Expr = MCBinaryExpr::createAdd(Expr,
+                                   MCConstantExpr::create(32768, Ctx),
+                                   Ctx);
 
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(Expr,

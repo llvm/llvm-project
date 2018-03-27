@@ -776,7 +776,7 @@ def JWriteVMOVMSK: SchedWriteRes<[JFPU0, JFPA, JALU0]> {
 }
 def : InstRW<[JWriteVMOVMSK], (instrs MOVMSKPDrr, VMOVMSKPDrr, VMOVMSKPDYrr,
                                       MOVMSKPSrr, VMOVMSKPSrr, VMOVMSKPSYrr,
-                                      PMOVMSKBrr, VPMOVMSKBrr)>;
+                                      PMOVMSKBrr, VPMOVMSKBrr, MMX_PMOVMSKBrr)>;
 
 def JWriteVTESTY: SchedWriteRes<[JFPU01, JFPX, JFPA, JALU0]> {
   let Latency = 4;

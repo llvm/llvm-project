@@ -563,33 +563,63 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Transform %rd = UpdateGBR(%rt, %ri)
     // Into: lwz %rt, .L0$poff - .L0$pb(%ri)
     //       add %rd, %rt, %ri
+    // or into (if secure plt mode is on):
+    //       addis r30, r30, .LTOC - .L0$pb@ha
+    //       addi r30, r30, .LTOC - .L0$pb@l
     // Get the offset from the GOT Base Register to the GOT
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
-    MCSymbol *PICOffset =
-      MF->getInfo<PPCFunctionInfo>()->getPICOffsetSymbol();
-    TmpInst.setOpcode(PPC::LWZ);
-    const MCExpr *Exp =
-      MCSymbolRefExpr::create(PICOffset, MCSymbolRefExpr::VK_None, OutContext);
-    const MCExpr *PB =
-      MCSymbolRefExpr::create(MF->getPICBaseSymbol(),
-                              MCSymbolRefExpr::VK_None,
-                              OutContext);
-    const MCOperand TR = TmpInst.getOperand(1);
-    const MCOperand PICR = TmpInst.getOperand(0);
+    if (Subtarget->isSecurePlt() && isPositionIndependent() ) {
+      unsigned PICR = TmpInst.getOperand(0).getReg();
+      MCSymbol *LTOCSymbol = OutContext.getOrCreateSymbol(StringRef(".LTOC"));
+      const MCExpr *PB =
+        MCSymbolRefExpr::create(MF->getPICBaseSymbol(),
+                                OutContext);
 
-    // Step 1: lwz %rt, .L$poff - .L$pb(%ri)
-    TmpInst.getOperand(1) =
-        MCOperand::createExpr(MCBinaryExpr::createSub(Exp, PB, OutContext));
-    TmpInst.getOperand(0) = TR;
-    TmpInst.getOperand(2) = PICR;
-    EmitToStreamer(*OutStreamer, TmpInst);
+      const MCExpr *LTOCDeltaExpr =
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(LTOCSymbol, OutContext),
+                                PB, OutContext);
 
-    TmpInst.setOpcode(PPC::ADD4);
-    TmpInst.getOperand(0) = PICR;
-    TmpInst.getOperand(1) = TR;
-    TmpInst.getOperand(2) = PICR;
-    EmitToStreamer(*OutStreamer, TmpInst);
-    return;
+      const MCExpr *LTOCDeltaHi =
+        PPCMCExpr::createHa(LTOCDeltaExpr, false, OutContext);
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
+                                   .addReg(PICR)
+                                   .addReg(PICR)
+                                   .addExpr(LTOCDeltaHi));
+
+      const MCExpr *LTOCDeltaLo =
+        PPCMCExpr::createLo(LTOCDeltaExpr, false, OutContext);
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDI)
+                                   .addReg(PICR)
+                                   .addReg(PICR)
+                                   .addExpr(LTOCDeltaLo));
+      return;
+    } else {
+      MCSymbol *PICOffset =
+        MF->getInfo<PPCFunctionInfo>()->getPICOffsetSymbol();
+      TmpInst.setOpcode(PPC::LWZ);
+      const MCExpr *Exp =
+        MCSymbolRefExpr::create(PICOffset, MCSymbolRefExpr::VK_None, OutContext);
+      const MCExpr *PB =
+        MCSymbolRefExpr::create(MF->getPICBaseSymbol(),
+                                MCSymbolRefExpr::VK_None,
+                                OutContext);
+      const MCOperand TR = TmpInst.getOperand(1);
+      const MCOperand PICR = TmpInst.getOperand(0);
+
+      // Step 1: lwz %rt, .L$poff - .L$pb(%ri)
+      TmpInst.getOperand(1) =
+          MCOperand::createExpr(MCBinaryExpr::createSub(Exp, PB, OutContext));
+      TmpInst.getOperand(0) = TR;
+      TmpInst.getOperand(2) = PICR;
+      EmitToStreamer(*OutStreamer, TmpInst);
+
+      TmpInst.setOpcode(PPC::ADD4);
+      TmpInst.getOperand(0) = PICR;
+      TmpInst.getOperand(1) = TR;
+      TmpInst.getOperand(2) = PICR;
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
+    }
   }
   case PPC::LWZtoc: {
     // Transform %r3 = LWZtoc @min1, %r2
@@ -1233,7 +1263,7 @@ void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
 
   if (!Subtarget->isPPC64()) {
     const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
-    if (PPCFI->usesPICBase()) {
+    if (PPCFI->usesPICBase() && !Subtarget->isSecurePlt()) {
       MCSymbol *RelocSymbol = PPCFI->getPICOffsetSymbol();
       MCSymbol *PICBase = MF->getPICBaseSymbol();
       OutStreamer->EmitLabel(RelocSymbol);
