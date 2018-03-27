@@ -47,10 +47,6 @@ public:
   class MetadataPromise;
   typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
 
-  class MemberVariableOffsetResolver;
-  typedef std::shared_ptr<MemberVariableOffsetResolver>
-      MemberVariableOffsetResolverSP;
-
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------
@@ -151,24 +147,6 @@ public:
     FulfillKindPromise(Status *error = nullptr);
 
     bool IsStaticallyDetermined();
-  };
-
-  class MemberVariableOffsetResolver {
-    friend class SwiftLanguageRuntime;
-
-    MemberVariableOffsetResolver(swift::ASTContext *, SwiftLanguageRuntime *,
-                                 swift::TypeBase *);
-
-    swift::ASTContext *m_swift_ast;
-    std::unique_ptr<swift::remoteAST::RemoteASTContext> m_remote_ast;
-    SwiftLanguageRuntime *m_swift_runtime;
-    swift::TypeBase *m_swift_type;
-    std::unordered_map<const char *, uint64_t> m_offsets;
-
-  public:
-    llvm::Optional<uint64_t> ResolveOffset(ValueObject *valobj,
-                                           ConstString ivar_name,
-                                           Status * = nullptr);
   };
 
   class SwiftExceptionPrecondition : public Breakpoint::BreakpointPrecondition {
@@ -327,8 +305,19 @@ public:
   GetMetadataPromise(lldb::addr_t addr,
                      SwiftASTContext *swift_ast_ctx = nullptr);
 
-  virtual MemberVariableOffsetResolverSP
-  GetMemberVariableOffsetResolver(CompilerType compiler_type);
+  /// Retrieve the remote AST context for the given Swift AST context.
+  swift::remoteAST::RemoteASTContext &
+  GetRemoteASTContext(SwiftASTContext &swift_ast_ctx);
+
+  /// Retrieve the offset of the named member variable within an instance
+  /// of the given type.
+  ///
+  /// \param instance_type
+  llvm::Optional<uint64_t>
+  GetMemberVariableOffset(CompilerType instance_type,
+                          ValueObject *instance,
+                          ConstString member_name,
+                          Status *error = nullptr);
 
   void AddToLibraryNegativeCache(const char *library_name);
 
@@ -455,8 +444,10 @@ protected:
 
   typename KeyHasher<swift::ASTContext *, lldb::addr_t,
                      MetadataPromiseSP>::MapType m_promises_map;
-  typename KeyHasher<swift::ASTContext *, swift::TypeBase *,
-                     MemberVariableOffsetResolverSP>::MapType m_resolvers_map;
+
+  std::unordered_map<swift::ASTContext *,
+                     std::unique_ptr<swift::remoteAST::RemoteASTContext>>
+    m_remote_ast_contexts;
 
   std::unordered_map<const char *, lldb::SyntheticChildrenSP>
       m_bridged_synthetics_map;
