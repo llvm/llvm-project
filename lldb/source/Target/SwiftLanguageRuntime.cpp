@@ -85,7 +85,7 @@ SwiftLanguageRuntime::~SwiftLanguageRuntime() {}
 SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_negative_cache_mutex(),
       m_SwiftNativeNSErrorISA(), m_memory_reader_sp(), m_promises_map(),
-      m_resolvers_map(), m_bridged_synthetics_map(), m_box_metadata_type() {
+      m_bridged_synthetics_map(), m_box_metadata_type() {
   SetupSwiftError();
   SetupExclusivity();
 }
@@ -1185,99 +1185,6 @@ SwiftASTContext *SwiftLanguageRuntime::GetScratchSwiftASTContext() {
   return m_process->GetTarget().GetScratchSwiftASTContext(error);
 }
 
-SwiftLanguageRuntime::MemberVariableOffsetResolver::
-    MemberVariableOffsetResolver(swift::ASTContext *ast_ctx,
-                                 SwiftLanguageRuntime *runtime,
-                                 swift::TypeBase *type)
-    : m_swift_ast(ast_ctx), m_swift_runtime(runtime), m_offsets() {
-  lldbassert(m_swift_ast &&
-             "MemberVariableOffsetResolver requires a swift::ASTContext");
-  lldbassert(m_swift_runtime &&
-             "MemberVariableOffsetResolver requires a SwiftLanguageRuntime");
-  lldbassert(type && "MemberVariableOffsetResolver requires a swift::Type");
-  m_swift_type = type;
-  m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(
-      *ast_ctx, m_swift_runtime->GetMemoryReader()));
-}
-
-llvm::Optional<uint64_t>
-SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset(
-    ValueObject *valobj, ConstString ivar_name, Status *error) {
-  if (error)
-    error->Clear();
-
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
-  if (log)
-    log->Printf(
-        "[MemberVariableOffsetResolver] asked to resolve offset for ivar %s",
-        ivar_name.AsCString());
-
-  auto iter = m_offsets.find(ivar_name.AsCString()), end = m_offsets.end();
-  if (iter != end)
-    return iter->second;
-
-  auto optmeta = swift::remote::RemoteAddress(nullptr);
-
-  const swift::TypeKind type_kind = m_swift_type->getKind();
-  switch (type_kind) {
-  case swift::TypeKind::Class:
-  case swift::TypeKind::BoundGenericClass: {
-    if (log)
-      log->Printf("[MemberVariableOffsetResolver] type is a class - trying to "
-                  "get metadata for valueobject %s",
-                  (valobj ? valobj->GetName().AsCString() : "<null>"));
-    // retrieve the metadata for class types as this is where we get the maximum
-    // benefit
-    if (valobj) {
-      lldb::addr_t value = valobj->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-      if (value == 0 || value == LLDB_INVALID_ADDRESS)
-        break;
-      Status error;
-      lldb::addr_t meta_ptr =
-          m_swift_runtime->GetProcess()->ReadPointerFromMemory(value, error);
-      if (error.Fail() || meta_ptr == 0 || meta_ptr == LLDB_INVALID_ADDRESS)
-        break;
-      if (auto objc_runtime = m_swift_runtime->GetObjCRuntime()) {
-        if (objc_runtime->GetRuntimeVersion() ==
-            ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2) {
-          meta_ptr =
-              ((AppleObjCRuntimeV2 *)objc_runtime)->GetPointerISA(meta_ptr);
-        }
-      }
-      optmeta = swift::remote::RemoteAddress(meta_ptr);
-    }
-    if (log)
-      log->Printf("[MemberVariableOffsetResolver] optmeta = 0x%" PRIx64,
-                  optmeta.getAddressData());
-  } break;
-  default: {
-    if (log)
-      log->Printf("[MemberVariableOffsetResolver] type is not a class - no "
-                  "metadata needed");
-  } break;
-  }
-
-  swift::remoteAST::Result<uint64_t> result = m_remote_ast->getOffsetOfMember(
-      m_swift_type, optmeta, ivar_name.GetStringRef());
-  if (result) {
-    if (log)
-      log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
-                  (uint64_t)result.getValue());
-    m_offsets.emplace(ivar_name.AsCString(), result.getValue());
-    return result.getValue();
-  } else {
-    const auto &failure = result.getFailure();
-    if (error)
-      error->SetErrorStringWithFormat("error in resolving type offset: %s",
-                                      failure.render().c_str());
-    if (log)
-      log->Printf("[MemberVariableOffsetResolver] failure: %s",
-                  failure.render().c_str());
-    return llvm::Optional<uint64_t>();
-  }
-}
-
 SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
     swift::ASTContext *ast_ctx, SwiftLanguageRuntime *runtime,
     lldb::addr_t location)
@@ -1413,31 +1320,100 @@ SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
   return promise_sp;
 }
 
-SwiftLanguageRuntime::MemberVariableOffsetResolverSP
-SwiftLanguageRuntime::GetMemberVariableOffsetResolver(
-    CompilerType compiler_type) {
-  if (!compiler_type.IsValid())
-    return nullptr;
+swift::remoteAST::RemoteASTContext &
+SwiftLanguageRuntime::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
+  // If we already have a remote AST context for this AST context,
+  // return it.
+  auto known = m_remote_ast_contexts.find(swift_ast_ctx.GetASTContext());
+  if (known != m_remote_ast_contexts.end())
+    return *known->second;
+
+  // Initialize a new remote AST context.
+  return *m_remote_ast_contexts.emplace(
+             swift_ast_ctx.GetASTContext(),
+             llvm::make_unique<swift::remoteAST::RemoteASTContext>(
+                                             *swift_ast_ctx.GetASTContext(),
+                                             GetMemoryReader()))
+    .first->second;
+}
+
+llvm::Optional<uint64_t>
+SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
+                                              ValueObject *instance,
+                                              ConstString member_name,
+                                              Status *error) {
+  if (!instance_type.IsValid())
+    return llvm::None;
 
   SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem());
+      llvm::dyn_cast_or_null<SwiftASTContext>(instance_type.GetTypeSystem());
   if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
-    return nullptr;
+    return llvm::None;
 
-  swift::TypeBase *swift_type = reinterpret_cast<swift::TypeBase *>(
-      compiler_type.GetCanonicalType().GetOpaqueQualType());
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  typename decltype(m_resolvers_map)::key_type key{
-      swift_ast_ctx->GetASTContext(), swift_type};
+  if (log)
+    log->Printf(
+        "[GetMemberVariableOffset] asked to resolve offset for member %s",
+        member_name.AsCString());
 
-  auto iter = m_resolvers_map.find(key), end = m_resolvers_map.end();
-  if (iter != end)
-    return iter->second;
+  // Dig out metadata describing the type, if it's easy to find.
+  // FIXME: the Remote AST library should make this easier.
+  auto &remote_ast_context = GetRemoteASTContext(*swift_ast_ctx);
+  swift::remote::RemoteAddress optmeta(nullptr);
+  swift::TypeBase *swift_type =
+    reinterpret_cast<swift::TypeBase *>(
+      instance_type.GetCanonicalType().GetOpaqueQualType());
+  const swift::TypeKind type_kind = swift_type->getKind();
+  switch (type_kind) {
+  case swift::TypeKind::Class:
+  case swift::TypeKind::BoundGenericClass: {
+    if (log)
+      log->Printf("[MemberVariableOffsetResolver] type is a class - trying to "
+                  "get metadata for valueobject %s",
+                  (instance ? instance->GetName().AsCString() : "<null>"));
+    // retrieve the metadata for class types as this is where we get the maximum
+    // benefit
+    if (instance) {
+      lldb::addr_t pointer = instance->GetPointerValue();
+      if (pointer == 0 || pointer == LLDB_INVALID_ADDRESS)
+        break;
+      swift::remote::RemoteAddress address(pointer);
+      if (auto metadata =
+            remote_ast_context.getHeapMetadataForObject(address)) {
+        optmeta = metadata.getValue();
+      }
+    }
+    if (log)
+      log->Printf("[MemberVariableOffsetResolver] optmeta = 0x%" PRIx64,
+                  optmeta.getAddressData());
+  } break;
+  default: {
+    if (log)
+      log->Printf("[MemberVariableOffsetResolver] type is not a class - no "
+                  "metadata needed");
+  } break;
+  }
 
-  MemberVariableOffsetResolverSP resolver_sp(new MemberVariableOffsetResolver(
-      std::get<0>(key), this, std::get<1>(key)));
-  m_resolvers_map.emplace(key, resolver_sp);
-  return resolver_sp;
+  // Determine the member offset.
+  swift::remoteAST::Result<uint64_t> result =
+    remote_ast_context.getOffsetOfMember(swift_type, optmeta,
+                                         member_name.GetStringRef());
+  if (result) {
+    if (log)
+      log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
+                  (uint64_t)result.getValue());
+    return result.getValue();
+  }
+
+  const auto &failure = result.getFailure();
+  if (error)
+    error->SetErrorStringWithFormat("error in resolving type offset: %s",
+                                    failure.render().c_str());
+  if (log)
+    log->Printf("[MemberVariableOffsetResolver] failure: %s",
+                failure.render().c_str());
+  return llvm::None;
 }
 
 static size_t BaseClassDepth(ValueObject &in_value) {
