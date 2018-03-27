@@ -1076,6 +1076,43 @@ protected:
   const bool m_saved_colorize;
 };
 
+/// Returns the buffer_id for the expression's source code.
+static std::pair<unsigned, std::string>
+CreateMainFile(SwiftASTContext &swift_ast_context, StringRef filename,
+               StringRef text, const EvaluateExpressionOptions &options) {
+  const bool generate_debug_info = options.GetGenerateDebugInfo();
+  swift_ast_context.SetGenerateDebugInfo(generate_debug_info
+                                             ? swift::IRGenDebugInfoKind::Normal
+                                             : swift::IRGenDebugInfoKind::None);
+  swift::IRGenOptions &ir_gen_options = swift_ast_context.GetIRGenOptions();
+
+  if (generate_debug_info) {
+    std::string temp_source_path;
+    if (ExpressionSourceCode::SaveExpressionTextToTempFile(text, options,
+                                                           temp_source_path)) {
+      auto error_or_buffer_ap =
+          llvm::MemoryBuffer::getFile(temp_source_path.c_str());
+      if (error_or_buffer_ap.getError() == std::error_condition()) {
+        unsigned buffer_id =
+            swift_ast_context.GetSourceManager().addNewSourceBuffer(
+                std::move(error_or_buffer_ap.get()));
+
+        llvm::SmallString<256> source_dir(temp_source_path);
+        llvm::sys::path::remove_filename(source_dir);
+        ir_gen_options.DebugCompilationDir = source_dir.str();
+
+        return {buffer_id, temp_source_path};
+      }
+    }
+  }
+
+  std::unique_ptr<llvm::MemoryBuffer> expr_buffer(
+      llvm::MemoryBuffer::getMemBufferCopy(text, filename));
+  unsigned buffer_id = swift_ast_context.GetSourceManager().addNewSourceBuffer(
+      std::move(expr_buffer));
+  return {buffer_id, filename};
+}
+
 unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                                       uint32_t first_line, uint32_t last_line,
                                       uint32_t line_offset) {
@@ -1188,43 +1225,11 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   bool created_main_file = false;
 
-  unsigned buffer_id = 0;
-
-  const bool generate_debug_info = m_options.GetGenerateDebugInfo();
-  m_swift_ast_context->SetGenerateDebugInfo(
-      generate_debug_info ? swift::IRGenDebugInfoKind::Normal
-                          : swift::IRGenDebugInfoKind::None);
-  swift::IRGenOptions &ir_gen_options = m_swift_ast_context->GetIRGenOptions();
-  std::string mainInputFilename;
-
-  if (generate_debug_info) {
-    std::string temp_source_path;
-    if (ExpressionSourceCode::SaveExpressionTextToTempFile(
-            m_expr.Text(), m_options, temp_source_path)) {
-      auto error_or_buffer_ap =
-          llvm::MemoryBuffer::getFile(temp_source_path.c_str());
-      if (error_or_buffer_ap.getError() == std::error_condition()) {
-        buffer_id = m_swift_ast_context->GetSourceManager().addNewSourceBuffer(
-            std::move(error_or_buffer_ap.get()));
-        mainInputFilename = temp_source_path;
-
-        llvm::SmallString<256> source_dir(temp_source_path);
-        llvm::sys::path::remove_filename(source_dir);
-        ir_gen_options.DebugCompilationDir = source_dir.str();
-
-        created_main_file = true;
-      }
-    }
-  }
-
-  if (!created_main_file) {
-    const char *filename = repl ? "<REPL>" : "<EXPR>";
-    mainInputFilename = filename;
-    std::unique_ptr<llvm::MemoryBuffer> expr_buffer(
-        llvm::MemoryBuffer::getMemBufferCopy(m_expr.Text(), filename));
-    buffer_id = m_swift_ast_context->GetSourceManager().addNewSourceBuffer(
-        std::move(expr_buffer));
-  }
+  unsigned buffer_id;
+  std::string main_filename;
+  std::tie(buffer_id, main_filename) =
+      CreateMainFile(*m_swift_ast_context, repl ? "<REPL>" : "<EXPR>",
+                     m_expr.Text(), m_options);
 
   char expr_name_buf[32];
 
@@ -1264,6 +1269,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // inserting them in.
   m_swift_ast_context->AddDebuggerClient(external_lookup);
 
+  
   swift::PersistentParserState persistent_state;
 
   while (!done) {
@@ -1784,7 +1790,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
     m_module = swift::performIRGeneration(
         m_swift_ast_context->GetIRGenOptions(), module, std::move(sil_module),
-        "lldb_module", swift::PrimarySpecificPaths("", mainInputFilename),
+        "lldb_module", swift::PrimarySpecificPaths("", main_filename),
         SwiftASTContext::GetGlobalLLVMContext(), llvm::ArrayRef<std::string>());
   }
 
