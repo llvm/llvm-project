@@ -2105,8 +2105,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXMethodDecl *MD = I.second;
 
       ThunkInfoVectorTy ThunksVector = Thunks[MD];
-      std::sort(ThunksVector.begin(), ThunksVector.end(),
-                [](const ThunkInfo &LHS, const ThunkInfo &RHS) {
+      llvm::sort(ThunksVector.begin(), ThunksVector.end(),
+                 [](const ThunkInfo &LHS, const ThunkInfo &RHS) {
         assert(LHS.Method == nullptr && RHS.Method == nullptr);
         return std::tie(LHS.This, LHS.Return) < std::tie(RHS.This, RHS.Return);
       });
@@ -2206,9 +2206,9 @@ VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
   else
     this->VTableIndices = OwningArrayRef<size_t>(VTableIndices);
 
-  std::sort(this->VTableThunks.begin(), this->VTableThunks.end(),
-            [](const VTableLayout::VTableThunkTy &LHS,
-               const VTableLayout::VTableThunkTy &RHS) {
+  llvm::sort(this->VTableThunks.begin(), this->VTableThunks.end(),
+             [](const VTableLayout::VTableThunkTy &LHS,
+                const VTableLayout::VTableThunkTy &RHS) {
               assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
                      "Different thunks should have unique indices!");
               return LHS.first < RHS.first;
@@ -3344,8 +3344,8 @@ static bool rebucketPaths(VPtrInfoVector &Paths) {
   PathsSorted.reserve(Paths.size());
   for (auto& P : Paths)
     PathsSorted.push_back(*P);
-  std::sort(PathsSorted.begin(), PathsSorted.end(),
-            [](const VPtrInfo &LHS, const VPtrInfo &RHS) {
+  llvm::sort(PathsSorted.begin(), PathsSorted.end(),
+             [](const VPtrInfo &LHS, const VPtrInfo &RHS) {
     return LHS.MangledPath < RHS.MangledPath;
   });
   bool Changed = false;

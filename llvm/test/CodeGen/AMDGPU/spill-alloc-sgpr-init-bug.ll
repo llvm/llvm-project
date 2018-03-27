@@ -16,9 +16,9 @@ entry:
 
 ; mark 128-bit SGPR registers as used so they are unavailable for the
 ; scratch resource descriptor
-  call void asm sideeffect "", "~{SGPR4},~{SGPR8},~{SGPR12},~{SGPR16},~{SGPR20},~{SGPR24},~{SGPR28}" ()
-  call void asm sideeffect "", "~{SGPR32},~{SGPR36},~{SGPR40},~{SGPR44},~{SGPR48},~{SGPR52},~{SGPR56}" ()
-  call void asm sideeffect "", "~{SGPR60},~{SGPR64},~{SGPR68}" ()
+  call void asm sideeffect "", "~{s4},~{s8},~{s12},~{s16},~{s20},~{s24},~{s28}" ()
+  call void asm sideeffect "", "~{s32},~{s36},~{s40},~{s44},~{s48},~{s52},~{s56}" ()
+  call void asm sideeffect "", "~{s60},~{s64},~{s68}" ()
   ret void
 }
 

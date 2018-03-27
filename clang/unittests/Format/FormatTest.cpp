@@ -12159,6 +12159,12 @@ TEST_F(FormatTest, GuessLanguageWithChildLines) {
             guessLanguage("foo.h", "#define FOO ({ std::string s; })"));
   EXPECT_EQ(FormatStyle::LK_ObjC,
             guessLanguage("foo.h", "#define FOO ({ NSString *s; })"));
+  EXPECT_EQ(
+      FormatStyle::LK_Cpp,
+      guessLanguage("foo.h", "#define FOO ({ foo(); ({ std::string s; }) })"));
+  EXPECT_EQ(
+      FormatStyle::LK_ObjC,
+      guessLanguage("foo.h", "#define FOO ({ foo(); ({ NSString *s; }) })"));
 }
 
 } // end namespace

@@ -670,6 +670,14 @@ public:
   /// \return The width of the smallest vector register type.
   unsigned getMinVectorRegisterBitWidth() const;
 
+  /// \return True if the vectorization factor should be chosen to
+  /// make the vector of the smallest element type match the size of a
+  /// vector register. For wider element types, this could result in
+  /// creating vectors that span multiple vector registers.
+  /// If false, the vectorization factor will be chosen based on the
+  /// size of the widest element type.
+  bool shouldMaximizeVectorBandwidth(bool OptSize) const;
+
   /// \return True if it should be considered for address type promotion.
   /// \p AllowPromotionWithoutCommonHeader Set true if promoting \p I is
   /// profitable without finding other extensions fed by the same input.
@@ -1062,6 +1070,7 @@ public:
   virtual unsigned getNumberOfRegisters(bool Vector) = 0;
   virtual unsigned getRegisterBitWidth(bool Vector) const = 0;
   virtual unsigned getMinVectorRegisterBitWidth() = 0;
+  virtual bool shouldMaximizeVectorBandwidth(bool OptSize) const = 0;
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() = 0;
@@ -1356,6 +1365,9 @@ public:
   }
   unsigned getMinVectorRegisterBitWidth() override {
     return Impl.getMinVectorRegisterBitWidth();
+  }
+  bool shouldMaximizeVectorBandwidth(bool OptSize) const override {
+    return Impl.shouldMaximizeVectorBandwidth(OptSize);
   }
   bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) override {

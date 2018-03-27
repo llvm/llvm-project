@@ -2186,7 +2186,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
       }
     }
 
-    std::sort(
+    llvm::sort(
         Bases.begin(), Bases.end(), [&](const std::pair<QualType, int64_t> &L,
                                         const std::pair<QualType, int64_t> &R) {
           return Layout.getBaseClassOffset(L.first->getAsCXXRecordDecl()) <

@@ -58,23 +58,23 @@ define weak_odr dllexport void @weak1() {
 
 
 ; CHECK: .globl alias
-; CHECK: alias = notExported
+; CHECK: .set alias, notExported
 @alias = dllexport alias void(), void()* @notExported
 
 ; CHECK: .globl aliasNotExported
-; CHECK: aliasNotExported = f1
+; CHECK: .set aliasNotExported, f1
 @aliasNotExported = alias void(), void()* @f1
 
 ; CHECK: .globl alias2
-; CHECK: alias2 = f1
+; CHECK: .set alias2, f1
 @alias2 = dllexport alias void(), void()* @f1
 
 ; CHECK: .globl alias3
-; CHECK: alias3 = notExported
+; CHECK: .set alias3, notExported
 @alias3 = dllexport alias void(), void()* @notExported
 
 ; CHECK: .weak weak_alias
-; CHECK: weak_alias = f1
+; CHECK: .set weak_alias, f1
 @weak_alias = weak_odr dllexport alias void(), void()* @f1
 
 @blob = global [6 x i8] c"\B8*\00\00\00\C3", section ".text", align 16

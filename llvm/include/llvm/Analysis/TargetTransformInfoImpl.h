@@ -349,6 +349,8 @@ public:
 
   unsigned getMinVectorRegisterBitWidth() { return 128; }
 
+  bool shouldMaximizeVectorBandwidth(bool OptSize) const { return false; }
+
   bool
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader) {

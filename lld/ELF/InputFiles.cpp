@@ -312,9 +312,19 @@ ObjFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
-  // We don't merge sections if -O0 (default is -O1). This makes sometimes
-  // the linker significantly faster, although the output will be bigger.
-  if (Config->Optimize == 0)
+  // On a regular link we don't merge sections if -O0 (default is -O1). This
+  // sometimes makes the linker significantly faster, although the output will
+  // be bigger.
+  //
+  // Doing the same for -r would create a problem as it would combine sections
+  // with different sh_entsize. One option would be to just copy every SHF_MERGE
+  // section as is to the output. While this would produce a valid ELF file with
+  // usable SHF_MERGE sections, tools like (llvm-)?dwarfdump get confused when
+  // they see two .debug_str. We could have separate logic for combining
+  // SHF_MERGE sections based both on their name and sh_entsize, but that seems
+  // to be more trouble than it is worth. Instead, we just use the regular (-O1)
+  // logic for -r.
+  if (Config->Optimize == 0 && !Config->Relocatable)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have

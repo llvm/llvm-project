@@ -114,14 +114,27 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
       return createError("unsupported rnglists encoding DW_RLE_startx_length "
                          "at offset 0x%" PRIx32,
                          *OffsetPtr - 1);
-    case dwarf::DW_RLE_offset_pair:
-      return createError("unsupported rnglists encoding DW_RLE_offset_pair at "
-                         "offset 0x%" PRIx32,
-                         *OffsetPtr - 1);
-    case dwarf::DW_RLE_base_address:
-      return createError("unsupported rnglists encoding DW_RLE_base_address at "
-                         "offset 0x%" PRIx32,
-                         *OffsetPtr - 1);
+    case dwarf::DW_RLE_offset_pair: {
+      uint32_t PreviousOffset = *OffsetPtr - 1;
+      uint64_t StartingOffset = Data.getULEB128(OffsetPtr);
+      uint64_t EndingOffset = Data.getULEB128(OffsetPtr);
+      if (End < *OffsetPtr)
+        return createError("read past end of table when reading "
+                           "DW_RLE_offset_pair encoding at offset 0x%" PRIx32,
+                           PreviousOffset);
+      CurrentRanges.push_back(
+          RangeListEntry{EntryOffset, Encoding, StartingOffset, EndingOffset});
+      break;
+    }
+    case dwarf::DW_RLE_base_address: {
+      if ((End - *OffsetPtr) < HeaderData.AddrSize)
+        return createError("insufficient space remaining in table for "
+                           "DW_RLE_base_address encoding at offset 0x%" PRIx32,
+                           *OffsetPtr - 1);
+      uint64_t Base = Data.getAddress(OffsetPtr);
+      CurrentRanges.push_back(RangeListEntry{EntryOffset, Encoding, Base, 0});
+      break;
+    }
     case dwarf::DW_RLE_start_end: {
       if ((End - *OffsetPtr) < unsigned(HeaderData.AddrSize * 2))
         return createError("insufficient space remaining in table for "
@@ -173,7 +186,18 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
 static void dumpRangeEntry(raw_ostream &OS,
                            DWARFDebugRnglists::RangeListEntry Entry,
                            uint8_t AddrSize, uint8_t MaxEncodingStringLength,
-                           DIDumpOptions DumpOpts) {
+                           uint64_t &CurrentBase, DIDumpOptions DumpOpts) {
+  auto PrintRawEntry = [](raw_ostream &OS,
+                          DWARFDebugRnglists::RangeListEntry Entry,
+                          uint8_t AddrSize, DIDumpOptions DumpOpts) {
+    if (DumpOpts.Verbose) {
+      DumpOpts.DisplayRawContents = true;
+      DWARFAddressRange(Entry.Value0, Entry.Value1)
+          .dump(OS, AddrSize, DumpOpts);
+      OS << " => ";
+    }
+  };
+
   if (DumpOpts.Verbose) {
     // Print the section offset in verbose mode.
     OS << format("0x%8.8" PRIx32 ":", Entry.Offset);
@@ -190,17 +214,21 @@ static void dumpRangeEntry(raw_ostream &OS,
   case dwarf::DW_RLE_end_of_list:
     OS << (DumpOpts.Verbose ? "" : "<End of list>");
     break;
+  case dwarf::DW_RLE_base_address:
+    // In non-verbose mode we do not print anything for this entry.
+    CurrentBase = Entry.Value0;
+    if (!DumpOpts.Verbose)
+      return;
+    OS << format(" 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, Entry.Value0);
+    break;
   case dwarf::DW_RLE_start_length:
-    if (DumpOpts.Verbose) {
-      // Make the address range display its contents in raw form rather than
-      // as an interval (i.e. without brackets).
-      DumpOpts.DisplayRawContents = true;
-      DWARFAddressRange(Entry.Value0, Entry.Value1)
-          .dump(OS, AddrSize, DumpOpts);
-      OS << " => ";
-    }
-    DumpOpts.DisplayRawContents = false;
+    PrintRawEntry(OS, Entry, AddrSize, DumpOpts);
     DWARFAddressRange(Entry.Value0, Entry.Value0 + Entry.Value1)
+        .dump(OS, AddrSize, DumpOpts);
+    break;
+  case dwarf::DW_RLE_offset_pair:
+    PrintRawEntry(OS, Entry, AddrSize, DumpOpts);
+    DWARFAddressRange(Entry.Value0 + CurrentBase, Entry.Value1 + CurrentBase)
         .dump(OS, AddrSize, DumpOpts);
     break;
   case dwarf::DW_RLE_start_end:
@@ -235,10 +263,11 @@ void DWARFDebugRnglists::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   }
   OS << "Ranges:\n";
 
+  uint64_t CurrentBase = 0;
   for (const auto &List : Ranges)
     for (const auto &Entry : List)
       dumpRangeEntry(OS, Entry, HeaderData.AddrSize, MaxEncodingStringLength,
-                     DumpOpts);
+                     CurrentBase, DumpOpts);
 }
 
 uint32_t DWARFDebugRnglists::length() const {

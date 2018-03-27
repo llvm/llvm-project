@@ -9,5 +9,5 @@ entry:
   ret void
 }
 
-; CHECK: MODULE = 1
-; CHECK: FUNCTION = 1
+; CHECK: .set MODULE, 1
+; CHECK: .set FUNCTION, 1

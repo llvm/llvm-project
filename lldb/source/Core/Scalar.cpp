@@ -2266,7 +2266,7 @@ const Scalar lldb_private::operator/(const Scalar &lhs, const Scalar &rhs) {
     case Scalar::e_float:
     case Scalar::e_double:
     case Scalar::e_long_double:
-      if (b->m_float.isZero()) {
+      if (!b->m_float.isZero()) {
         result.m_float = a->m_float / b->m_float;
         return result;
       }
