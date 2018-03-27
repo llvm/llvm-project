@@ -322,6 +322,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isAnyPointer);
   REGISTER_MATCHER(isArray);
   REGISTER_MATCHER(isArrow);
+  REGISTER_MATCHER(isAssignmentOperator);
   REGISTER_MATCHER(isBaseInitializer);
   REGISTER_MATCHER(isBitField);
   REGISTER_MATCHER(isCatchAll);
