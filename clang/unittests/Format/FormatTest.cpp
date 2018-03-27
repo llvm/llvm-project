@@ -276,6 +276,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "\n"
                    "}"));
 
+  // FIXME: This is slightly inconsistent.
   FormatStyle LLVMWithNoNamespaceFix = getLLVMStyle();
   LLVMWithNoNamespaceFix.FixNamespaceComments = false;
   EXPECT_EQ("namespace {\n"
@@ -294,25 +295,12 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "}"));
   EXPECT_EQ("namespace {\n"
             "int i;\n"
-            "};",
-            format("namespace {\n"
-                   "int i;\n"
-                   "\n"
-                   "};"));
-  EXPECT_EQ("namespace {\n"
-            "int i;\n"
+            "\n"
             "} // namespace",
             format("namespace {\n"
                    "int i;\n"
                    "\n"
                    "}  // namespace"));
-  EXPECT_EQ("namespace {\n"
-            "int i;\n"
-            "}; // namespace",
-            format("namespace {\n"
-                   "int i;\n"
-                   "\n"
-                   "};  // namespace"));
 
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;

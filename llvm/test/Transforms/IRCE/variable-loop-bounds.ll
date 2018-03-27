@@ -4,6 +4,11 @@
 ; CHECK: irce: in function test_inc_ne: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%if.then,%for.inc<latch><exiting>
 ; CHECK: irce: in function test_inc_slt: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%if.then,%for.inc<latch><exiting>
 ; CHECK: irce: in function test_inc_ult: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%if.then,%for.inc<latch><exiting>
+; CHECK: irce: in function signed_var_imm_dec_sgt: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
+; CHECK-NOT: irce: in function signed_var_imm_dec_slt: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
+; CHECK: irce: in function signed_var_imm_dec_sge: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
+; CHECK: irce: in function signed_var_imm_dec_ne: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
+; CHECK-NOT: irce: in function signed_var_imm_dec_eq: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
 
 ; CHECK-LABEL: test_inc_eq(
 ; CHECK: main.exit.selector:
@@ -171,4 +176,179 @@ for.inc:
   %inc = add nuw nsw i32 %i.017, 1
   %exitcond = icmp ult i32 %inc, %N
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
+}
+
+; CHECK-LABEL: signed_var_imm_dec_sgt(
+; CHECK: main.exit.selector:
+; CHECK: [[PSEUDO_PHI:%[^ ]+]] = phi i32 [ %dec, %for.inc ]
+; CHECK: [[COND:%[^ ]+]] = icmp sgt i32 [[PSEUDO_PHI]], %M
+; CHECK: br i1 [[COND]]
+define void @signed_var_imm_dec_sgt(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %M) {
+entry:
+  %cmp14 = icmp slt i32 %M, 1024
+  br i1 %cmp14, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.inc, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.inc
+  %iv = phi i32 [ %dec, %for.inc ], [ 1024, %entry ]
+  %cmp1 = icmp slt i32 %iv, 1024
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 %iv
+  %1 = load i32, i32* %arrayidx2, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx3 = getelementptr inbounds i32, i32* %a, i32 %iv
+  br i1 %cmp1, label %for.inc, label %if.else
+
+if.else:                                          ; preds = %for.body
+  %2 = load i32, i32* %arrayidx3, align 4
+  %add = add nsw i32 %2, %mul
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.else
+  %storemerge = phi i32 [ %add, %if.else ], [ %mul, %for.body ]
+  store i32 %storemerge, i32* %arrayidx3, align 4
+  %dec = add nsw i32 %iv, -1
+  %cmp = icmp sgt i32 %dec, %M
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+; CHECK-LABEL: signed_var_imm_dec_sge(
+; CHECK: main.exit.selector:          ; preds = %for.inc
+; CHECK: [[PSEUDO_PHI:%[^ ]+]] = phi i32 [ %iv, %for.inc ]
+; CHECK: [[COND:%[^ ]+]] = icmp sgt i32 [[PSEUDO_PHI]], %M
+; CHECK: br i1 [[COND]]
+define void @signed_var_imm_dec_sge(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %M) {
+entry:
+  %cmp14 = icmp sgt i32 %M, 1024
+  br i1 %cmp14, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.inc, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.inc
+  %iv = phi i32 [ %dec, %for.inc ], [ 1024, %entry ]
+  %cmp1 = icmp slt i32 %iv, 1024
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 %iv
+  %1 = load i32, i32* %arrayidx2, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx3 = getelementptr inbounds i32, i32* %a, i32 %iv
+  br i1 %cmp1, label %for.inc, label %if.else
+
+if.else:                                          ; preds = %for.body
+  %2 = load i32, i32* %arrayidx3, align 4
+  %add = add nsw i32 %2, %mul
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.else
+  %storemerge = phi i32 [ %add, %if.else ], [ %mul, %for.body ]
+  store i32 %storemerge, i32* %arrayidx3, align 4
+  %dec = add nsw i32 %iv, -1
+  %cmp = icmp sgt i32 %iv, %M
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+define void @signed_var_imm_dec_slt(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %M) {
+entry:
+  %cmp14 = icmp sgt i32 %M, 1024
+  br i1 %cmp14, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.inc, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.inc
+  %iv = phi i32 [ %dec, %for.inc ], [ 1024, %entry ]
+  %cmp1 = icmp slt i32 %iv, 1024
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 %iv
+  %1 = load i32, i32* %arrayidx2, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx3 = getelementptr inbounds i32, i32* %a, i32 %iv
+  br i1 %cmp1, label %for.inc, label %if.else
+
+if.else:                                          ; preds = %for.body
+  %2 = load i32, i32* %arrayidx3, align 4
+  %add = add nsw i32 %2, %mul
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.else
+  %storemerge = phi i32 [ %add, %if.else ], [ %mul, %for.body ]
+  store i32 %storemerge, i32* %arrayidx3, align 4
+  %dec = add nsw i32 %iv, -1
+  %cmp = icmp slt i32 %iv, %M
+  br i1 %cmp, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: signed_var_imm_dec_ne(
+; CHECK: main.exit.selector:          ; preds = %for.inc
+; CHECK: [[PSEUDO_PHI:%[^ ]+]] = phi i32 [ %dec, %for.inc ]
+; CHECK: [[COND:%[^ ]+]] = icmp sgt i32 [[PSEUDO_PHI]], %M
+; CHECK: br i1 [[COND]]
+define void @signed_var_imm_dec_ne(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %M) {
+entry:
+  %cmp14 = icmp slt i32 %M, 1024
+  br i1 %cmp14, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.inc, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.inc
+  %iv = phi i32 [ %dec, %for.inc ], [ 1024, %entry ]
+  %cmp1 = icmp slt i32 %iv, 1024
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 %iv
+  %1 = load i32, i32* %arrayidx2, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx3 = getelementptr inbounds i32, i32* %a, i32 %iv
+  br i1 %cmp1, label %for.inc, label %if.else
+
+if.else:                                          ; preds = %for.body
+  %2 = load i32, i32* %arrayidx3, align 4
+  %add = add nsw i32 %2, %mul
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.else
+  %storemerge = phi i32 [ %add, %if.else ], [ %mul, %for.body ]
+  store i32 %storemerge, i32* %arrayidx3, align 4
+  %dec = add nsw i32 %iv, -1
+  %cmp = icmp ne i32 %dec, %M
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+define void @signed_var_imm_dec_eq(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %M) {
+entry:
+  %cmp14 = icmp slt i32 %M, 1024
+  br i1 %cmp14, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.inc, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.inc
+  %iv = phi i32 [ %dec, %for.inc ], [ 1024, %entry ]
+  %cmp1 = icmp slt i32 %iv, 1024
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 %iv
+  %1 = load i32, i32* %arrayidx2, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx3 = getelementptr inbounds i32, i32* %a, i32 %iv
+  br i1 %cmp1, label %for.inc, label %if.else
+
+if.else:                                          ; preds = %for.body
+  %2 = load i32, i32* %arrayidx3, align 4
+  %add = add nsw i32 %2, %mul
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.else
+  %storemerge = phi i32 [ %add, %if.else ], [ %mul, %for.body ]
+  store i32 %storemerge, i32* %arrayidx3, align 4
+  %dec = add nsw i32 %iv, -1
+  %cmp = icmp eq i32 %dec, %M
+  br i1 %cmp, label %for.cond.cleanup, label %for.body
 }

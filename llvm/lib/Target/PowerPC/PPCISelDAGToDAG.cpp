@@ -4001,6 +4001,27 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     break;
 
+  case PPCISD::CALL: {
+    const Module *M = MF->getFunction().getParent();
+
+    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
+        !PPCSubTarget->isSecurePlt() || !PPCSubTarget->isTargetELF() ||
+        M->getPICLevel() == PICLevel::SmallPIC)
+      break;
+
+    SDValue Op = N->getOperand(1);
+
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
+      if (GA->getTargetFlags() == PPCII::MO_PLT)
+        getGlobalBaseReg();
+    }
+    else if (ExternalSymbolSDNode *ES = dyn_cast<ExternalSymbolSDNode>(Op)) {
+      if (ES->getTargetFlags() == PPCII::MO_PLT)
+        getGlobalBaseReg();
+    }
+  }
+    break;
+
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
     return;

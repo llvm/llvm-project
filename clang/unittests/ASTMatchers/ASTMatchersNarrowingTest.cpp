@@ -2139,5 +2139,20 @@ TEST(HasTrailingReturn, MatchesLambdaTrailingReturn) {
           functionDecl(hasTrailingReturn())));
 }
 
+TEST(IsAssignmentOperator, Basic) {
+  StatementMatcher BinAsgmtOperator = binaryOperator(isAssignmentOperator());
+  StatementMatcher CXXAsgmtOperator =
+      cxxOperatorCallExpr(isAssignmentOperator());
+
+  EXPECT_TRUE(matches("void x() { int a; a += 1; }", BinAsgmtOperator));
+  EXPECT_TRUE(matches("void x() { int a; a = 2; }", BinAsgmtOperator));
+  EXPECT_TRUE(matches("void x() { int a; a &= 3; }", BinAsgmtOperator));
+  EXPECT_TRUE(matches("struct S { S& operator=(const S&); };"
+                      "void x() { S s1, s2; s1 = s2; }",
+                      CXXAsgmtOperator));
+  EXPECT_TRUE(
+      notMatches("void x() { int a; if(a == 0) return; }", BinAsgmtOperator));
+}
+
 } // namespace ast_matchers
 } // namespace clang

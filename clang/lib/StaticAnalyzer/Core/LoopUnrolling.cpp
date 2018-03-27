@@ -97,9 +97,7 @@ changeIntBoundNode(internal::Matcher<Decl> VarNodeMatcher) {
       unaryOperator(anyOf(hasOperatorName("--"), hasOperatorName("++")),
                     hasUnaryOperand(ignoringParenImpCasts(
                         declRefExpr(to(varDecl(VarNodeMatcher)))))),
-      binaryOperator(anyOf(hasOperatorName("="), hasOperatorName("+="),
-                           hasOperatorName("/="), hasOperatorName("*="),
-                           hasOperatorName("-=")),
+      binaryOperator(isAssignmentOperator(),
                      hasLHS(ignoringParenImpCasts(
                          declRefExpr(to(varDecl(VarNodeMatcher)))))));
 }
