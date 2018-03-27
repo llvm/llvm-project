@@ -216,6 +216,15 @@ static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
   return Arg->getValue();
 }
 
+static ExposeAs getExpose(opt::InputArgList &Args, unsigned Import,
+                          unsigned Export) {
+  auto *Arg = Args.getLastArg(Import, Export);
+  if (!Arg)
+    return ExposeAs::NONE;
+  return Arg->getOption().getID() == Import ? ExposeAs::IMPORT
+                                            : ExposeAs::EXPORT;
+}
+
 static const uint8_t UnreachableFn[] = {
     0x03 /* ULEB length */, 0x00 /* ULEB num locals */,
     0x00 /* opcode unreachable */, 0x0b /* opcode end */
@@ -296,6 +305,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
+  Config->Table = getExpose(Args, OPT_import_table, OPT_export_table);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
 
