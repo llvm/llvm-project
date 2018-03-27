@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_CVDEBUGRECORD_H
-#define LLVM_DEBUGINFO_CODEVIEW_CVDEBUGRECORD_H
+#ifndef LLVM_OBJECT_CVDEBUGRECORD_H
+#define LLVM_OBJECT_CVDEBUGRECORD_H
 
 #include "llvm/Support/Endian.h"
 

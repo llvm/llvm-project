@@ -106,6 +106,7 @@ def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 
 defm : SBWriteResPair<WriteShift, [SBPort05],  1>;
 defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
+defm : SBWriteResPair<WriteCRC32, [SBPort1],   3, [1], 1, 5>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -678,8 +679,6 @@ def: InstRW<[SBWriteResGroup21], (instrs MUL8r, IMUL16rr, IMUL32rr, IMUL32rri, I
 def: InstRW<[SBWriteResGroup21], (instregex "ADD_FPrST0",
                                             "ADD_FST0r",
                                             "ADD_FrST0",
-                                            "CRC32r(16|32|64)r8",
-                                            "CRC32r(16|32|64)r64",
                                             "MMX_CVTPI2PSirr",
                                             "MMX_CVTPS2PIirr",
                                             "MMX_CVTTPS2PIirr",
@@ -1416,9 +1415,7 @@ def SBWriteResGroup72 : SchedWriteRes<[SBPort1,SBPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup72], (instregex "CRC32r(16|32|64)m64",
-                                            "CRC32r(16|32|64)m8",
-                                            "FCOM32m",
+def: InstRW<[SBWriteResGroup72], (instregex "FCOM32m",
                                             "FCOM64m",
                                             "FCOMP32m",
                                             "FCOMP64m")>;

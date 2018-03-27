@@ -110,6 +110,9 @@ defm WriteCvtF2I : X86SchedWritePair; // Float -> Integer.
 defm WriteCvtI2F : X86SchedWritePair; // Integer -> Float.
 defm WriteCvtF2F : X86SchedWritePair; // Float -> Float size conversion.
 
+// CRC32 instruction.
+defm WriteCRC32 : X86SchedWritePair;
+
 // Strings instructions.
 // Packed Compare Implicit Length Strings, Return Mask
 defm WritePCmpIStrM : X86SchedWritePair;

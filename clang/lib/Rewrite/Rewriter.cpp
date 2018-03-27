@@ -1,4 +1,4 @@
-//===--- Rewriter.cpp - Code rewriting interface --------------------------===//
+//===- Rewriter.cpp - Code rewriting interface ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,11 +15,24 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Rewrite/Core/RewriteBuffer.h"
+#include "clang/Rewrite/Core/RewriteRope.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <system_error>
+#include <utility>
+
 using namespace clang;
 
 raw_ostream &RewriteBuffer::write(raw_ostream &os) const {
@@ -91,7 +104,6 @@ void RewriteBuffer::RemoveText(unsigned OrigOffset, unsigned Size,
 
 void RewriteBuffer::InsertText(unsigned OrigOffset, StringRef Str,
                                bool InsertAfter) {
-
   // Nothing to insert, exit early.
   if (Str.empty()) return;
 
@@ -114,7 +126,6 @@ void RewriteBuffer::ReplaceText(unsigned OrigOffset, unsigned OrigLength,
     AddReplaceDelta(OrigOffset, NewStr.size() - OrigLength);
 }
 
-
 //===----------------------------------------------------------------------===//
 // Rewriter class
 //===----------------------------------------------------------------------===//
@@ -127,10 +138,8 @@ int Rewriter::getRangeSize(const CharSourceRange &Range,
       !isRewritable(Range.getEnd())) return -1;
 
   FileID StartFileID, EndFileID;
-  unsigned StartOff, EndOff;
-
-  StartOff = getLocationOffsetAndFileID(Range.getBegin(), StartFileID);
-  EndOff   = getLocationOffsetAndFileID(Range.getEnd(), EndFileID);
+  unsigned StartOff = getLocationOffsetAndFileID(Range.getBegin(), StartFileID);
+  unsigned EndOff = getLocationOffsetAndFileID(Range.getEnd(), EndFileID);
 
   if (StartFileID != EndFileID)
     return -1;
@@ -145,7 +154,6 @@ int Rewriter::getRangeSize(const CharSourceRange &Range,
     StartOff = RB.getMappedOffset(StartOff, !opts.IncludeInsertsAtBeginOfRange);
   }
 
-
   // Adjust the end offset to the end of the last token, instead of being the
   // start of the last token if this is a token range.
   if (Range.isTokenRange())
@@ -158,17 +166,15 @@ int Rewriter::getRangeSize(SourceRange Range, RewriteOptions opts) const {
   return getRangeSize(CharSourceRange::getTokenRange(Range), opts);
 }
 
-
 /// getRewrittenText - Return the rewritten form of the text in the specified
 /// range.  If the start or end of the range was unrewritable or if they are
 /// in different buffers, this returns an empty string.
 ///
 /// Note that this method is not particularly efficient.
-///
 std::string Rewriter::getRewrittenText(SourceRange Range) const {
   if (!isRewritable(Range.getBegin()) ||
       !isRewritable(Range.getEnd()))
-    return "";
+    return {};
 
   FileID StartFileID, EndFileID;
   unsigned StartOff, EndOff;
@@ -176,7 +182,7 @@ std::string Rewriter::getRewrittenText(SourceRange Range) const {
   EndOff   = getLocationOffsetAndFileID(Range.getEnd(), EndFileID);
 
   if (StartFileID != EndFileID)
-    return ""; // Start and end in different buffers.
+    return {}; // Start and end in different buffers.
 
   // If edits have been made to this buffer, the delta between the range may
   // have changed.
@@ -212,14 +218,12 @@ std::string Rewriter::getRewrittenText(SourceRange Range) const {
 unsigned Rewriter::getLocationOffsetAndFileID(SourceLocation Loc,
                                               FileID &FID) const {
   assert(Loc.isValid() && "Invalid location");
-  std::pair<FileID,unsigned> V = SourceMgr->getDecomposedLoc(Loc);
+  std::pair<FileID, unsigned> V = SourceMgr->getDecomposedLoc(Loc);
   FID = V.first;
   return V.second;
 }
 
-
 /// getEditBuffer - Get or create a RewriteBuffer for the specified FileID.
-///
 RewriteBuffer &Rewriter::getEditBuffer(FileID FID) {
   std::map<FileID, RewriteBuffer>::iterator I =
     RewriteBuffers.lower_bound(FID);
@@ -393,6 +397,7 @@ bool Rewriter::IncreaseIndentation(CharSourceRange range,
 }
 
 namespace {
+
 // A wrapper for a file stream that atomically overwrites the target.
 //
 // Creates a file output stream for a temporary file in the constructor,
@@ -403,7 +408,7 @@ class AtomicallyMovedFile {
 public:
   AtomicallyMovedFile(DiagnosticsEngine &Diagnostics, StringRef Filename,
                       bool &AllWritten)
-    : Diagnostics(Diagnostics), Filename(Filename), AllWritten(AllWritten) {
+      : Diagnostics(Diagnostics), Filename(Filename), AllWritten(AllWritten) {
     TempFilename = Filename;
     TempFilename += "-%%%%%%%%";
     int FD;
@@ -441,7 +446,8 @@ private:
   std::unique_ptr<llvm::raw_fd_ostream> FileStream;
   bool &AllWritten;
 };
-} // end anonymous namespace
+
+} // namespace
 
 bool Rewriter::overwriteChangedFiles() {
   bool AllWritten = true;

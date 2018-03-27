@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -verify %s -fcxx-exceptions -fexceptions
+// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -verify %s -fcxx-exceptions -fexceptions -Wunused-result
 
 void no_coroutine_traits_bad_arg_await() {
   co_await a; // expected-error {{include <experimental/coroutine>}}
@@ -1337,3 +1337,27 @@ bad_coroutine_calls_with_no_matching_constructor(int, int) {
 }
 
 } // namespace CoroHandleMemberFunctionTest
+
+
+class awaitable_no_unused_warn {
+public:
+  using handle_type = std::experimental::coroutine_handle<>;
+  constexpr bool await_ready()  { return false; }
+  void await_suspend(handle_type) noexcept {}
+  int await_resume() { return 1; }
+};
+
+
+class awaitable_unused_warn {
+public:
+  using handle_type = std::experimental::coroutine_handle<>;
+  constexpr bool await_ready()  { return false; }
+  void await_suspend(handle_type) noexcept {}
+  [[nodiscard]]
+  int await_resume() { return 1; }
+};
+
+void test_unused_warning() {
+  co_await awaitable_no_unused_warn();
+  co_await awaitable_unused_warn(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}

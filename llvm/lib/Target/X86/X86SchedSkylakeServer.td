@@ -106,6 +106,7 @@ def : WriteRes<WriteRMW, [SKXPort4]>;
 defm : SKXWriteResPair<WriteALU,   [SKXPort0156], 1>; // Simple integer ALU op.
 defm : SKXWriteResPair<WriteIMul,  [SKXPort1],   3>; // Integer multiplication.
 defm : SKXWriteResPair<WriteIDiv, [SKXPort0, SKXDivider], 25, [1,10], 1, 4>; // Integer division.
+defm : SKXWriteResPair<WriteCRC32, [SKXPort1], 3>;
 
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 def : WriteRes<WriteLEA, [SKXPort15]>; // LEA instructions can't fold loads.

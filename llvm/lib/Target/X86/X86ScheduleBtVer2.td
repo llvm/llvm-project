@@ -124,6 +124,7 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 defm : JWriteResIntPair<WriteALU,   [JALU01], 1>;
 defm : JWriteResIntPair<WriteIMul,  [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 multiplication
 defm : JWriteResIntPair<WriteIDiv,  [JALU1, JDiv], 41, [1, 41], 2>; // Worst case (i64 division)
+defm : JWriteResIntPair<WriteCRC32, [JALU01], 3, [4], 3>;
 
 def  : WriteRes<WriteIMulH, [JALU1]> {
   let Latency = 6;
@@ -189,22 +190,6 @@ def JWriteIDiv32Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
 }
 def : InstRW<[JWriteIDiv32], (instrs DIV32r, IDIV32r)>;
 def : InstRW<[JWriteIDiv32Ld], (instrs DIV32m, IDIV32m)>;
-
-def JWriteCRC32 : SchedWriteRes<[JALU01]> {
-  let Latency = 3;
-  let ResourceCycles = [4];
-  let NumMicroOps = 3;
-}
-def : InstRW<[JWriteCRC32], (instrs CRC32r32r8, CRC32r32r16, CRC32r32r32,
-                                    CRC32r64r8, CRC32r64r64)>;
-
-def JWriteCRC32Ld : SchedWriteRes<[JLAGU, JALU01]> {
-  let Latency = 6;
-  let ResourceCycles = [1, 4];
-  let NumMicroOps = 3;
-}
-def : InstRW<[JWriteCRC32Ld], (instrs CRC32r32m8, CRC32r32m16, CRC32r32m32,
-                                      CRC32r64m8, CRC32r64m64)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer shifts and rotates.

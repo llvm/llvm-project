@@ -151,6 +151,7 @@ defm : ZnWriteResPair<WriteALU,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteIMul,   [ZnALU1, ZnMultiplier], 4>;
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
+defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
 
 // Bit counts.
 defm : ZnWriteResPair<WriteBitScan, [ZnALU], 3>;

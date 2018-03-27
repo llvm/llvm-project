@@ -90,7 +90,8 @@ def : InstRW<[WriteMove], (instrs COPY)>;
 defm : SLMWriteResPair<WriteALU,   [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteIMul,  [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteShift, [SLM_IEC_RSV0],  1>;
-defm : SLMWriteResPair<WriteJump,  [SLM_IEC_RSV1],   1>;
+defm : SLMWriteResPair<WriteJump,  [SLM_IEC_RSV1],  1>;
+defm : SLMWriteResPair<WriteCRC32, [SLM_IEC_RSV1],  3>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on

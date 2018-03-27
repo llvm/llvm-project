@@ -141,7 +141,7 @@ define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; GENERIC-LABEL: crc32_32_16:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    crc32w %si, %edi # sched: [3:1.00]
-; GENERIC-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
+; GENERIC-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -155,14 +155,14 @@ define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; SANDY-SSE-LABEL: crc32_32_16:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    crc32w %si, %edi # sched: [3:1.00]
-; SANDY-SSE-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
+; SANDY-SSE-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; SANDY-SSE-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: crc32_32_16:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    crc32w %si, %edi # sched: [3:1.00]
-; SANDY-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
+; SANDY-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -260,7 +260,7 @@ define i32 @crc32_32_32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: crc32_32_32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
-; GENERIC-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
+; GENERIC-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -274,14 +274,14 @@ define i32 @crc32_32_32(i32 %a0, i32 %a1, i32 *%a2) {
 ; SANDY-SSE-LABEL: crc32_32_32:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
-; SANDY-SSE-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
+; SANDY-SSE-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; SANDY-SSE-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: crc32_32_32:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
-; SANDY-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
+; SANDY-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
