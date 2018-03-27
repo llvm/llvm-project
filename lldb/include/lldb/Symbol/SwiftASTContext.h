@@ -278,9 +278,6 @@ public:
   size_t FindTypesOrDecls(const char *name, swift::ModuleDecl *swift_module,
                           TypesOrDecls &results, bool append = true);
 
-  size_t FindContainedType(llvm::StringRef name, CompilerType container_type,
-                           std::set<CompilerType> &results, bool append = true);
-
   size_t FindContainedTypeOrDecl(llvm::StringRef name,
                                  TypeOrDecl container_type_or_decl,
                                  TypesOrDecls &results, bool append = true);
