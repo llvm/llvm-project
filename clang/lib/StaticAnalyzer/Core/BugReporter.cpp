@@ -2947,8 +2947,8 @@ TrimmedGraph::TrimmedGraph(const ExplodedGraph *OriginalGraph,
   }
 
   // Sort the error paths from longest to shortest.
-  std::sort(ReportNodes.begin(), ReportNodes.end(),
-            PriorityCompare<true>(PriorityMap));
+  llvm::sort(ReportNodes.begin(), ReportNodes.end(),
+             PriorityCompare<true>(PriorityMap));
 }
 
 bool TrimmedGraph::popNextReportGraph(ReportGraph &GraphWrapper) {

@@ -77,6 +77,7 @@
 #include "Config.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -164,6 +165,12 @@ static bool isEligible(InputSection *S) {
   // Don't merge read only data sections unless
   // --ignore-data-address-equality was passed.
   if (!(S->Flags & SHF_EXECINSTR) && !Config->IgnoreDataAddressEquality)
+    return false;
+
+  // Don't merge synthetic sections as their Data member is not valid and empty.
+  // The Data member needs to be valid for ICF as it is used by ICF to determine
+  // the equality of section contents.
+  if (isa<SyntheticSection>(S))
     return false;
 
   // .init and .fini contains instructions that must be executed to

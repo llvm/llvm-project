@@ -48,7 +48,7 @@ void DiagTools::printCommands(llvm::raw_ostream &out) {
     if (len > maxName)
       maxName = len;    
   }
-  std::sort(toolNames.begin(), toolNames.end());
+  llvm::sort(toolNames.begin(), toolNames.end());
 
   for (std::vector<llvm::StringRef>::iterator it = toolNames.begin(),
        ei = toolNames.end(); it != ei; ++it) {

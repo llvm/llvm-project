@@ -32,21 +32,21 @@ define void @g1(i32 %a1, i32 %a2) {
 ;CHECK:	.comm	.L_MergedGlobals,12,8
 
 ;CHECK:	.globl	x
-;CHECK: x = .L_MergedGlobals
+;CHECK: .set x, .L_MergedGlobals
 ;CHECK: .size x, 4
 ;CHECK:	.globl	y
-;CHECK: y = .L_MergedGlobals+4
+;CHECK: .set y, .L_MergedGlobals+4
 ;CHECK: .size y, 4
 ;CHECK:	.globl	z
-;CHECK: z = .L_MergedGlobals+8
+;CHECK: .set z, .L_MergedGlobals+8
 ;CHECK: .size z, 4
 
 ;CHECK-APPLE-IOS: .zerofill __DATA,__common,__MergedGlobals_x,12,3
 
 ;CHECK-APPLE-IOS: .globl	_x
-;CHECK-APPLE-IOS:  = __MergedGlobals_x
+;CHECK-APPLE-IOS: .set {{.*}}, __MergedGlobals_x
 ;CHECK-APPLE-IOS: .globl	_y
-;CHECK-APPLE-IOS: _y = __MergedGlobals_x+4
+;CHECK-APPLE-IOS: .set _y, __MergedGlobals_x+4
 ;CHECK-APPLE-IOS: .globl	_z
-;CHECK-APPLE-IOS: _z = __MergedGlobals_x+8
+;CHECK-APPLE-IOS: .set _z, __MergedGlobals_x+8
 ;CHECK-APPLE-IOS: .subsections_via_symbols

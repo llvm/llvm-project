@@ -26,6 +26,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -687,7 +688,7 @@ bool yaml::scanTokens(StringRef Input) {
   return true;
 }
 
-std::string yaml::escape(StringRef Input) {
+std::string yaml::escape(StringRef Input, bool EscapePrintable) {
   std::string EscapedInput;
   for (StringRef::iterator i = Input.begin(), e = Input.end(); i != e; ++i) {
     if (*i == '\\')
@@ -734,6 +735,9 @@ std::string yaml::escape(StringRef Input) {
         EscapedInput += "\\L";
       else if (UnicodeScalarValue.first == 0x2029)
         EscapedInput += "\\P";
+      else if (!EscapePrintable &&
+               sys::unicode::isPrintable(UnicodeScalarValue.first))
+        EscapedInput += StringRef(i, UnicodeScalarValue.second);
       else {
         std::string HexStr = utohexstr(UnicodeScalarValue.first);
         if (HexStr.size() <= 2)

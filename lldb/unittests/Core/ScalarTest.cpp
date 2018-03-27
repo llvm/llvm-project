@@ -132,3 +132,11 @@ TEST(ScalarTest, GetValue) {
   EXPECT_EQ(std::to_string(std::numeric_limits<unsigned long long>::max()),
             ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
 }
+
+TEST(ScalarTest, Division) {
+  Scalar lhs(5.0);
+  Scalar rhs(2.0);
+  Scalar r = lhs / rhs;
+  EXPECT_TRUE(r.IsValid());
+  EXPECT_EQ(r, Scalar(2.5));
+}

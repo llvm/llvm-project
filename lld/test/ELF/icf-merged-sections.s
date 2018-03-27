@@ -1,20 +1,28 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t --icf=all --ignore-data-address-equality --print-icf-sections | FileCheck %s --check-prefix ICF
-# RUN: llvm-objdump -s -d -print-imm-hex %t | FileCheck %s
+# RUN: ld.lld %t.o -o %t --icf=all --ignore-data-address-equality --print-icf-sections | FileCheck -allow-empty --check-prefix=NOICF %s
+# RUN: llvm-readobj -s -section-data %t | FileCheck %s
 
-# ICF: selected section <internal>:(.rodata)
-# ICF-NEXT: removing identical section <internal>:(.rodata)
+# Check that merge synthetic sections are not merged by ICF.
 
-# CHECK: {{^}}.text:
-# CHECK-NEXT: movq 0x[[ADDR:[0-9a-f]+]], %rax
-# CHECK-NEXT: movq 0x[[ADDR]], %rax
-# CHECK: Contents of section .rodata:
-# CHECK-NEXT: 2a000000 00000000 67452301 10325476
+# NOICF-NOT: selected section <internal>:(.rodata)
 
-.section .rodata, "a"
-  .quad 42
+# CHECK:      Name: .rodata
+# CHECK-NEXT: Type: SHT_PROGBITS
+# CHECK-NEXT: Flags [
+# CHECK-NEXT:   SHF_ALLOC
+# CHECK-NEXT:   SHF_MERGE
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address:
+# CHECK-NEXT: Offset:
+# CHECK-NEXT: Size: 16
+# CHECK-NEXT: Link:
+# CHECK-NEXT: Info:
+# CHECK-NEXT: AddressAlignment: 8
+# CHECK-NEXT: EntrySize: 0
+# CHECK-NEXT: SectionData (
+# CHECK-NEXT:   0000: 67452301 10325476 67452301 10325476
 
 .section .rodata.cst4,"aM",@progbits,4
 rodata4:
@@ -27,7 +35,3 @@ rodata4:
 rodata8:
   .long 0x01234567
   .long 0x76543210
-
-.section .text,"ax"
-  movq rodata4, %rax
-  movq rodata8, %rax

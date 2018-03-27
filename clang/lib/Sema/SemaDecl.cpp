@@ -9375,7 +9375,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
 
   TargetAttr::ParsedTargetAttr NewParsed = NewTA->parse();
   // Sort order doesn't matter, it just needs to be consistent.
-  std::sort(NewParsed.Features.begin(), NewParsed.Features.end());
+  llvm::sort(NewParsed.Features.begin(), NewParsed.Features.end());
 
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
   if (!OldFD->isMultiVersion()) {

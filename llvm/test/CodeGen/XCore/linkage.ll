@@ -19,14 +19,14 @@ define protected void @test_protected() {
 }
 
 ; CHECK: .globl array.globound
-; CHECK: array.globound = 2
+; CHECK: .set array.globound, 2
 ; CHECK: .weak array.globound
 ; CHECK: .globl array
 ; CHECK: .weak array
 @array = weak global [2 x i32] zeroinitializer
 
 ; CHECK: .globl ac.globound
-; CHECK: ac.globound = 2
+; CHECK: .set ac.globound, 2
 ; CHECK: .weak ac.globound
 ; CHECK: .globl ac
 ; CHECK: .weak ac

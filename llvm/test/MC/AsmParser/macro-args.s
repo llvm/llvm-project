@@ -49,7 +49,7 @@ top bar, 42
 // CHECK: _foo:
 // CHECK-NOT: fred
 // CHECK: _bar
-// CHECK-NEXT: fred = 42
+// CHECK-NEXT: .set fred, 42
 
 
 .macro foo

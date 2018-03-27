@@ -97,7 +97,7 @@ void CheckerRegistry::addChecker(InitializationFunction fn, StringRef name,
 void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
                                   SmallVectorImpl<CheckerOptInfo> &opts) const {
   // Sort checkers for efficient collection.
-  std::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
+  llvm::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
 
   // Collect checkers enabled by the options.
   CheckerInfoSet enabledCheckers;
@@ -141,7 +141,7 @@ void CheckerRegistry::printHelp(raw_ostream &out,
   // FIXME: Alphabetical sort puts 'experimental' in the middle.
   // Would it be better to name it '~experimental' or something else
   // that's ASCIIbetically last?
-  std::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
+  llvm::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
 
   // FIXME: Print available packages.
 
@@ -178,7 +178,7 @@ void CheckerRegistry::printHelp(raw_ostream &out,
 
 void CheckerRegistry::printList(
     raw_ostream &out, SmallVectorImpl<CheckerOptInfo> &opts) const {
-  std::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
+  llvm::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
 
   // Collect checkers enabled by the options.
   CheckerInfoSet enabledCheckers;

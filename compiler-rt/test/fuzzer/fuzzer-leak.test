@@ -1,9 +1,7 @@
 REQUIRES: lsan
 
-// Avoid optimizing since it causes these leaks to go away.
-RUN: %cpp_compiler -O0 %S/LeakTest.cpp -o %t-LeakTest
-RUN: %cpp_compiler -O0 %S/ThreadedLeakTest.cpp -o %t-ThreadedLeakTest
-
+RUN: %cpp_compiler %S/LeakTest.cpp -o %t-LeakTest
+RUN: %cpp_compiler %S/ThreadedLeakTest.cpp -o %t-ThreadedLeakTest
 RUN: %cpp_compiler %S/LeakTimeoutTest.cpp -o %t-LeakTimeoutTest
 
 RUN: rm -rf %t-corpus && mkdir -p %t-corpus

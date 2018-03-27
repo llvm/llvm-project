@@ -2480,6 +2480,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   if (Left.is(TT_TemplateCloser) && Right.is(tok::l_square))
     return false;
+  if (Right.is(tok::r_brace) && Right.MatchingParen &&
+      Right.MatchingParen->endsSequence(TT_DictLiteral, tok::at))
+    // Objective-C dictionary literal -> no space before closing brace.
+    return false;
   return true;
 }
 

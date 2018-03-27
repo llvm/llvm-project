@@ -79,19 +79,19 @@ define weak_odr dllexport void @weak1() {
 
 
 ; CHECK: .globl _alias
-; CHECK: _alias = _notExported
+; CHECK: .set _alias, _notExported
 @alias = dllexport alias void(), void()* @notExported
 
 ; CHECK: .globl _alias2
-; CHECK: _alias2 = _f1
+; CHECK: .set _alias2, _f1
 @alias2 = dllexport alias void(), void()* @f1
 
 ; CHECK: .globl _alias3
-; CHECK: _alias3 = _notExported
+; CHECK: .set _alias3, _notExported
 @alias3 = dllexport alias void(), void()* @notExported
 
 ; CHECK: .weak _weak_alias
-; CHECK: _weak_alias = _f1
+; CHECK: .set _weak_alias, _f1
 @weak_alias = weak_odr dllexport alias void(), void()* @f1
 
 ; Verify items that should not be exported do not appear in the export table.

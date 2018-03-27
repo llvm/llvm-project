@@ -2166,7 +2166,7 @@ void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
     CXXMethodDecl *method_decl =
         ClangASTContext::GetASTContext(m_ast_context)
             ->AddMethodToCXXRecordType(
-                copied_clang_type.GetOpaqueQualType(), "$__lldb_expr",
+                copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", NULL,
                 method_type, lldb::eAccessPublic, is_virtual, is_static,
                 is_inline, is_explicit, is_attr_used, is_artificial);
 

@@ -224,6 +224,11 @@ def : WriteRes<WritePCmpEStrILd, [SKLPort0, SKLPort5, SKLPort23, SKLPort0156]> {
   let ResourceCycles = [4,3,1,1];
 }
 
+// MOVMSK Instructions.
+def : WriteRes<WriteFMOVMSK, [SKLPort0]> { let Latency = 2; }
+def : WriteRes<WriteVecMOVMSK, [SKLPort0]> { let Latency = 2; }
+def : WriteRes<WriteMMXMOVMSK, [SKLPort0]> { let Latency = 2; }
+
 // AES instructions.
 def : WriteRes<WriteAESDecEnc, [SKLPort0]> { // Decryption, encryption.
   let Latency = 4;
@@ -692,14 +697,10 @@ def SKLWriteResGroup12 : SchedWriteRes<[SKLPort0]> {
 }
 def: InstRW<[SKLWriteResGroup12], (instregex "MMX_MOVD64from64rr",
                                              "MMX_MOVD64grr",
-                                             "MMX_PMOVMSKBrr",
                                              "(V?)COMISDrr",
                                              "(V?)COMISSrr",
-                                             "(V?)MOVMSKPD(Y?)rr",
-                                             "(V?)MOVMSKPS(Y?)rr",
                                              "(V?)MOVPDI2DIrr",
                                              "(V?)MOVPQIto64rr",
-                                             "(V?)PMOVMSKB(Y?)rr",
                                              "VTESTPD(Y?)rr",
                                              "VTESTPS(Y?)rr",
                                              "(V?)UCOMISDrr",

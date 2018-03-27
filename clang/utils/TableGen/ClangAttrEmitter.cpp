@@ -3908,9 +3908,9 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
   for (auto &I : SplitDocs) {
     WriteCategoryHeader(I.first, OS);
 
-    std::sort(I.second.begin(), I.second.end(),
-              [](const DocumentationData &D1, const DocumentationData &D2) {
-                return D1.Heading < D2.Heading;
+    llvm::sort(I.second.begin(), I.second.end(),
+               [](const DocumentationData &D1, const DocumentationData &D2) {
+                 return D1.Heading < D2.Heading;
               });
 
     // Walk over each of the attributes in the category and write out their

@@ -2,7 +2,7 @@
 
 ;16: main:
 ;16-NEXT: [[TMP:.*]]:
-;16-NEXT: $func_begin0 = ([[TMP]])
+;16-NEXT: .set $func_begin0, ([[TMP]])
 ;16-NEXT: .cfi_startproc
 ;16-NEXT: .cfi_personality
 @.str = private unnamed_addr constant [7 x i8] c"hello\0A\00", align 1
