@@ -131,8 +131,29 @@ createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                                       IncrementalLinkerCompatible);
 }
 
+namespace {
+
+class AArch64MCInstrAnalysis : public MCInstrAnalysis {
+public:
+  AArch64MCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    if (Inst.getNumOperands() == 0 ||
+        Info->get(Inst.getOpcode()).OpInfo[0].OperandType !=
+            MCOI::OPERAND_PCREL)
+      return false;
+
+    int64_t Imm = Inst.getOperand(0).getImm() * 4;
+    Target = Addr + Imm;
+    return true;
+  }
+};
+
+} // end anonymous namespace
+
 static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
-  return new MCInstrAnalysis(Info);
+  return new AArch64MCInstrAnalysis(Info);
 }
 
 // Force static initialization.

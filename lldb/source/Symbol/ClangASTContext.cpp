@@ -7889,7 +7889,7 @@ clang::VarDecl *ClangASTContext::AddVariableToRecordType(
 }
 
 clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
-    lldb::opaque_compiler_type_t type, const char *name,
+    lldb::opaque_compiler_type_t type, const char *name, const char *mangled_name,
     const CompilerType &method_clang_type, lldb::AccessType access,
     bool is_virtual, bool is_static, bool is_inline, bool is_explicit,
     bool is_attr_used, bool is_artificial) {
@@ -8008,6 +8008,11 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
 
   if (is_attr_used)
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(*getASTContext()));
+
+  if (mangled_name != NULL) {
+    cxx_method_decl->addAttr(
+        clang::AsmLabelAttr::CreateImplicit(*getASTContext(), mangled_name));
+  }
 
   // Populate the method decl with parameter decls
 

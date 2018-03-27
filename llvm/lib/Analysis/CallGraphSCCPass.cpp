@@ -648,7 +648,7 @@ Pass *CallGraphSCCPass::createPrinterPass(raw_ostream &OS,
 bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC) const {
   return !SCC.getCallGraph().getModule()
               .getContext()
-              .getOptBisect()
+              .getOptPassGate()
               .shouldRunPass(this, SCC);
 }
 

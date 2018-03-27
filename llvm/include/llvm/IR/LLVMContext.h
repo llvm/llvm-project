@@ -31,7 +31,7 @@ class Function;
 class Instruction;
 class LLVMContextImpl;
 class Module;
-class OptBisect;
+class OptPassGate;
 template <typename T> class SmallVectorImpl;
 class SMDiagnostic;
 class StringRef;
@@ -317,7 +317,8 @@ public:
 
   /// \brief Access the object which manages optimization bisection for failure
   /// analysis.
-  OptBisect &getOptBisect();
+  OptPassGate &getOptPassGate();
+
 private:
   // Module needs access to the add/removeModule methods.
   friend class Module;

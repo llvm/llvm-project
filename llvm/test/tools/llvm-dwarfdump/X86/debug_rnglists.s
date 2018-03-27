@@ -56,14 +56,40 @@
 # BOTH-NOT:     Offsets:
 # BOTH:         Ranges:
 # BOTH-NOT:     [
+
+# TERSE-NEXT:   Range List Header: length = 0x0000000e, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
+# VERBOSE-SAME: Range List Header: length = 0x0000000e, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# BOTH-NEXT:    Ranges:
+# TERSE-NEXT:   [0x0000000000000800, 0x0000000000001000)
+# TERSE-NEXT:   <End of list>
+
+# VERBOSE-NEXT: 0x000000b1: [DW_RLE_offset_pair]:  0x0000000000000800, 0x0000000000001000 =>
+# VERBOSE-SAME:                                   [0x0000000000000800, 0x0000000000001000)
+# VERBOSE-NEXT: 0x000000b6: [DW_RLE_end_of_list]
+
+# TERSE-NEXT:   Range List Header: length = 0x00000017, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
+# VERBOSE-SAME: Range List Header: length = 0x00000017, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# BOTH-NEXT:    Ranges:
+# TERSE-NEXT:   [0x0000000000001800, 0x0000000000002000)
+# TERSE-NEXT:   <End of list>
+
+# VERBOSE-NEXT: 0x000000c3: [DW_RLE_base_address]:  0x0000000000001000
+# VERBOSE-NEXT: 0x000000cc: [DW_RLE_offset_pair ]:  0x0000000000000800, 0x0000000000001000 =>
+# VERBOSE-SAME:                                    [0x0000000000001800, 0x0000000000002000)
+# VERBOSE-NEXT: 0x000000d1: [DW_RLE_end_of_list ]
+
 # BOTH-NOT:     Range List Header:
 
 # ERR-NOT:  error:
 # ERR:      error: unsupported rnglists encoding DW_RLE_base_addressx at offset 0x82
 # ERR-NEXT: error: unsupported rnglists encoding DW_RLE_startx_endx at offset 0x91
 # ERR-NEXT: error: unsupported rnglists encoding DW_RLE_startx_length at offset 0xa1
-# ERR-NEXT: error: unsupported rnglists encoding DW_RLE_offset_pair at offset 0xb1
-# ERR-NEXT: error: unsupported rnglists encoding DW_RLE_base_address at offset 0xc
 # ERR-NOT:  error:
 
 .section .debug_rnglists,"",@progbits
@@ -161,7 +187,7 @@
 .byte 0          # DW_RLE_end_of_list
 
 # Seventh table (testing DW_RLE_offset_pair)
-.long 12 # Table length
+.long 14 # Table length
 .short 5 # Version
 .byte 8  # Address size
 .byte 0  # Segment selector size
@@ -169,12 +195,13 @@
 
 # First range list
 .byte 4          # DW_RLE_offset_pair
-.byte 3            # Start offset (index in .debug_addr)
-.byte 19           # End offset (index in .debug_addr)
+.byte 0x80, 0x10   # Start offset
+.byte 0x80, 0x20   # End offset (index in .debug_addr)
 .byte 0          # DW_RLE_end_of_list
 
-# Eigth table (testing DW_RLE_base_address)
-.long 18 # Table length
+# Eigth table (testing DW_RLE_base_address and its impact
+# on DW_RLE_offset_pair)
+.long 23 # Table length
 .short 5 # Version
 .byte 8  # Address size
 .byte 0  # Segment selector size
@@ -183,4 +210,7 @@
 # First range list
 .byte 5          # DW_RLE_base_address
 .quad 0x1000       # Base address
+.byte 4          # DW_RLE_offset_pair
+.byte 0x80, 0x10 # Start offset
+.byte 0x80, 0x20 # End offset
 .byte 0          # DW_RLE_end_of_list

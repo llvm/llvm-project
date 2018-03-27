@@ -992,8 +992,8 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
                            AP.second.AddressPointIndex));
 
   // Sort the bit set entries for determinism.
-  std::sort(BitsetEntries.begin(), BitsetEntries.end(),
-            [this](const BSEntry &E1, const BSEntry &E2) {
+  llvm::sort(BitsetEntries.begin(), BitsetEntries.end(),
+             [this](const BSEntry &E1, const BSEntry &E2) {
     if (&E1 == &E2)
       return false;
 

@@ -3098,7 +3098,7 @@ define i32 @test_movmskps(<4 x float> %a0) {
 ;
 ; SLM-LABEL: test_movmskps:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movmskps %xmm0, %eax # sched: [1:0.50]
+; SLM-NEXT:    movmskps %xmm0, %eax # sched: [4:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_movmskps:
