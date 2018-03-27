@@ -122,10 +122,13 @@ public:
 
   static ConstString GetPluginNameStatic();
 
-  /// Create a SwiftASTContext from a Module.
+  /// Create a SwiftASTContext from a Module.  This context is used
+  /// for frame variable ans uses ClangImporter options specific to
+  /// this lldb::Module.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module &module);
-  /// Create a SwiftASTContext from a Target.
+  /// Create a SwiftASTContext from a Target.  This context is global
+  /// and used for the expression evaluator.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Target &target,
                                            const char *extra_options);

@@ -156,17 +156,17 @@ ifeq "$(OS)" "Darwin"
 endif
 
 #----------------------------------------------------------------------
-# SWIFTCC defaults to swift.
+# SWIFTC defaults to swift.
 # TODO:
-# If you change the defaults of SWIFTCC, be sure to also change it in the file
+# If you change the defaults of SWIFTC, be sure to also change it in the file
 # test/plugins/builder_base.py, which provides a Python way to return the
-# value of the make variable SWIFTCC -- getSwiftCompiler().
+# value of the make variable SWIFTC -- getSwiftCompiler().
 #
 # See also these functions:
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-SWIFTCC ?= $(shell $(LEVEL)/find-swift.py)
+SWIFTC ?= $(shell $(LEVEL)/find-swift.py)
 ifeq "$(SDKROOT)" ""
 	SWIFTSDKROOT = $(shell $(LEVEL)/find-swift.py -s)
 else
@@ -259,7 +259,8 @@ SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
 
 # Setup a default per-user Swift module cache directory.
 SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
-SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
+SWIFT_MODULE_CACHE_FLAGS = -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
+SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
 ifneq (,$(findstring arm,$(ARCH)))
 	SWIFTFLAGS += -static-stdlib
@@ -487,8 +488,16 @@ endif
 # Check if we need the Swift/ObjC interop features
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_OBJC_INTEROP)" "1"
-	SWIFTFLAGS += -framework Foundation -framework CoreGraphics
-	LDFLAGS +=-lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
+        ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -framework Foundation -framework CoreGraphics
+		LDFLAGS += -lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
+        else
+                # CFLAGS_EXTRAS is used via "dotest.py -E" to pass the -I and -L paths
+                # for Foundation and libdispatch on Linux.
+                SWIFTFLAGS += $(CFLAGS_EXTRAS)
+                LDFLAGS += $(CFLAGS_EXTRAS)
+        endif
+
 endif
 
 #----------------------------------------------------------------------
@@ -574,7 +583,7 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 $(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTCC) $^ $(SWIFTFLAGS) -o "$(EXE)"
+	$(SWIFTC) $^ $(SWIFTFLAGS) -o "$(EXE)"
 else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""

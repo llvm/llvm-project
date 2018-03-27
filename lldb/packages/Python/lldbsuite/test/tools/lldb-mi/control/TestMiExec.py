@@ -18,29 +18,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr25000: lldb-mi does not receive broadcasted notification from Core/Process about process stopped")
-    def test_lldbmi_exec_run(self):
-        """Test that 'lldb-mi --interpreter' can stop at entry."""
-
-        self.spawnLldbMi(args=None)
-
-        # Load executable
-        self.runCmd("-file-exec-and-symbols %s" % self.myexe)
-        self.expect("\^done")
-
-        # Test that program is stopped at entry
-        self.runCmd("-exec-run --start")
-        self.expect("\^running")
-        self.expect(
-            "\*stopped,reason=\"signal-received\",signal-name=\"SIGSTOP\",signal-meaning=\"Stop\",.*?thread-id=\"1\",stopped-threads=\"all\"")
-        # Test that lldb-mi is ready to execute next commands
-        self.expect(self.child_prompt, exactly=True)
-
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
-    @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
-    @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_abort(self):
         """Test that 'lldb-mi --interpreter' works for -exec-abort."""
 

@@ -89,7 +89,7 @@ class MiSignalTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\*stopped,reason=\"breakpoint-hit\"")
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
-    @skipUnlessDarwin
+    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stopped_when_stopatentry_remote(self):
         """Test that 'lldb-mi --interpreter' notifies after it was stopped on entry (remote)."""

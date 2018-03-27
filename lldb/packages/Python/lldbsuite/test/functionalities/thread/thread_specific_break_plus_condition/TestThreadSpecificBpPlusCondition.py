@@ -21,6 +21,7 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
 
     # test frequently times out or hangs
     @skipIf(oslist=['windows', 'freebsd'])
+    @skipIfDarwin
     # hits break in another thread in testrun
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr18522')
     @add_test_categories(['pyapi'])

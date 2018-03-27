@@ -124,6 +124,9 @@ class TestSwiftStepping(lldbtest.TestBase):
         self.hit_correct_line(thread, "Step over the if should get here")
 
         thread.StepOver()
+        self.hit_correct_line(thread, "Step over the print should get here.")
+
+        thread.StepOver()
         self.hit_correct_line(thread, "Stop here to step into B constructor.")
 
         thread.StepInto()

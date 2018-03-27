@@ -966,27 +966,7 @@ bool SymbolFileDWARF::ParseImportedModules(
   assert(sc.comp_unit);
   DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
-    if (ClangModulesDeclVendor::LanguageSupportsClangModules(
-            sc.comp_unit->GetLanguage())) {
-      const DWARFDIE cu_die = dwarf_cu->GetCompileUnitDIEOnly();
-      bool found_one = false;
-
-      if (cu_die) {
-        for (DWARFDIE child_die = cu_die.GetFirstChild(); child_die.IsValid();
-             child_die = child_die.GetSibling()) {
-          if (child_die.Tag() == DW_TAG_module) {
-            const char *modulename = child_die.GetName();
-
-            if (modulename) {
-              found_one = true;
-              imported_modules.push_back(ConstString(modulename));
-            }
-          }
-        }
-
-        return found_one;
-      }
-    } else if (IsSwiftLanguage(sc.comp_unit->GetLanguage())) {
+    if (IsSwiftLanguage(sc.comp_unit->GetLanguage())) {
       const DWARFDIE cu_die = dwarf_cu->GetCompileUnitDIEOnly();
       bool found_one = false;
 
@@ -1031,8 +1011,8 @@ bool SymbolFileDWARF::ParseImportedModules(
 
         return found_one;
       }
-    }
-  } else {
+    } // IsSwiftLanguage
+
     if (ClangModulesDeclVendor::LanguageSupportsClangModules(
             sc.comp_unit->GetLanguage())) {
       UpdateExternalModuleListIfNeeded();

@@ -1032,12 +1032,22 @@ SwiftLanguageRuntime::GetMemoryReader() {
 
     virtual ~MemoryReader() = default;
 
-    uint8_t getPointerSize() override {
-      return m_process->GetAddressByteSize();
-    }
+    bool queryDataLayout(DataLayoutQueryType type, void *inBuffer,
+                         void *outBuffer) override {
+      switch (type) {
+        case DLQ_GetPointerSize: {
+          auto result = static_cast<uint8_t *>(outBuffer);
+          *result = m_process->GetAddressByteSize();
+          return true;
+        }
+        case DLQ_GetSizeSize: {
+          auto result = static_cast<uint8_t *>(outBuffer);
+          *result = m_process->GetAddressByteSize();  // FIXME: sizeof(size_t)
+          return true;
+        }
+      }
 
-    uint8_t getSizeSize() override {
-      return getPointerSize(); // FIXME: sizeof(size_t)
+      return false;
     }
 
     swift::remote::RemoteAddress

@@ -1,5 +1,4 @@
 // Basic sanity checking of the REPL.
-// REQUIRES: darwin
 
 // RUN: %lldb --repl --repl-language swift | FileCheck %s --check-prefix=SWIFT
 // SWIFT: Welcome to Swift version {{.*}} (LLVM {{.*}}, Clang {{.*}}, Swift {{.*}})

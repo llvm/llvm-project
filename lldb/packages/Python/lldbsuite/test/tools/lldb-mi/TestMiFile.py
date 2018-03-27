@@ -59,7 +59,7 @@ class MiFileTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Test that -file-exec-and-symbols works for relative path
         import os
-        path = os.path.relpath(self.myexe)
+        path = os.path.relpath(self.myexe, self.getBuildDir())
         self.runCmd("-file-exec-and-symbols %s" % path)
         self.expect("\^done")
 

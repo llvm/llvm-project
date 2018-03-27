@@ -21,9 +21,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
-    @expectedFailureAll(
-        oslist=lldbplatformutil.getDarwinOSTriples(),
-        bugnumber="llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>")
+    @skipIfDarwin # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
@@ -58,6 +56,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    @skipIfDarwin # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
     def test_process_interrupt(self):
         """Test process interrupt."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
@@ -68,6 +67,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    @skipIfDarwin # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
     def test_process_state(self):
         """Test thread states (comprehensive)."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))

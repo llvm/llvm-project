@@ -115,7 +115,7 @@ protected:
 
   virtual bool IsValid();
 
-  bool ReadBitmaskAtIndex(Index);
+  bool ReadBitmaskAtIndex(Index, Status &error);
 
   lldb::addr_t GetLocationOfKeyAtCell(Cell);
 

@@ -1,0 +1,34 @@
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         "c3c3c3c3"
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x4
+    Content:         "3232"
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Align: 0x4
+    Sections:
+      - Section: .text
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_W ]
+    VAddr: 0x2000
+    PAddr: 0x1004
+    Align: 0x4
+    Sections:
+      - Section: .data

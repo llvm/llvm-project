@@ -18,12 +18,12 @@ class TargetSymbolsAddCommand(TestBase):
 
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     @skipUnlessPlatform(['linux'])
-    @expectedFailureAll(bugnumber="rdar://problem/33684210") # no llvm-objcopy yet
+    @skipIf(bugnumber="rdar://38550275")
     def test_target_symbols_add(self):
         """Test that 'target symbols add' can load the symbols
         even if gnu.build-id and gnu_debuglink are not present in the module.
         Similar to test_add_dsym_mid_execution test for macos."""
-        self.build(clean=True)
+        self.build()
         exe = self.getBuildArtifact("stripped.out")
 
         self.target = self.dbg.CreateTarget(exe)

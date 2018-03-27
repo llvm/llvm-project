@@ -1,0 +1,1 @@
+struct FooBar { int j; };

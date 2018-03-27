@@ -12,13 +12,13 @@ SWIFT_TRIPLE ?= -target x86_64-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)
 SDK_PATH ?= $(shell xcrun --show-sdk-path --sdk macosx)
 
 UnitTest.xctest/Contents/MacOS/test: test.swift
-	$(SWIFTCC) $(SWIFTFLAGS) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -module-name test -emit-library -o test $<
+	$(SWIFTC) $(SWIFTFLAGS) $(SWIFT_TRIPLE) -sdk $(SDK_PATH) -module-name test -emit-library -o test $<
 	mkdir -p UnitTest.xctest/Contents/MacOS
 	mv test UnitTest.xctest/Contents/MacOS/test
 	mv test.dSYM UnitTest.xctest/Contents/MacOS/test.dSYM
 
 UnitTest.xctest/Contents/Info.plist: Info.plist
-	cp $(SRCDIR)/Info.plist UnitTest.xctest/Contents/
+	cp $< UnitTest.xctest/Contents/
 
 clean::
 	rm -rf *.dSYM *.dylib *.swiftdoc *.swiftmodule *.xctest xctest

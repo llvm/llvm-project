@@ -10,7 +10,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+import six
 
 class SingleQuoteInCommandLineTestCase(TestBase):
 
@@ -50,32 +50,24 @@ class SingleQuoteInCommandLineTestCase(TestBase):
              self.getBuildArtifact(self.myexe)))
         child = self.child
         child.setecho(True)
-        # Turn on logging for input/output to/from the child.
-        with open('child_send.txt', 'w') as f_send:
-            with open('child_read.txt', 'w') as f_read:
-                child.logfile_send = f_send
-                child.logfile_read = f_read
+        child.logfile_send = send = six.StringIO()
+        child.logfile_read = read = six.StringIO()
+        child.expect_exact(prompt)
 
-                child.expect_exact(prompt)
-
-                child.send("help watchpoint")
-                child.sendline('')
-                child.expect_exact(prompt)
+        child.send("help watchpoint")
+        child.sendline('')
+        child.expect_exact(prompt)
 
         # Now that the necessary logging is done, restore logfile to None to
         # stop further logging.
         child.logfile_send = None
         child.logfile_read = None
 
-        with open('child_send.txt', 'r') as fs:
-            if self.TraceOn():
-                print("\n\nContents of child_send.txt:")
-                print(fs.read())
-        with open('child_read.txt', 'r') as fr:
-            from_child = fr.read()
-            if self.TraceOn():
-                print("\n\nContents of child_read.txt:")
-                print(from_child)
+        if self.TraceOn():
+            print("\n\nContents of send")
+            print(send.getvalue())
+            print("\n\nContents of read")
+            print(read.getvalue())
 
-            self.expect(from_child, exe=False,
-                        substrs=["Current executable set to"])
+        self.expect(read.getvalue(), exe=False,
+                    substrs=["Current executable set to"])

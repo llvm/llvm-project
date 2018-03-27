@@ -1,0 +1,3 @@
+struct STRUCTNAME {
+  int i;
+};

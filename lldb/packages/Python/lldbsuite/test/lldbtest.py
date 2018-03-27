@@ -368,8 +368,8 @@ class _RemoteProcess(_BaseProcess):
     def launch(self, executable, args):
         if self._install_remote:
             src_path = executable
-            dst_path = lldbutil.append_to_process_working_directory(
-                os.path.basename(executable))
+            dst_path = lldbutil.join_remote_paths(
+                    lldb.remote_platform.GetWorkingDirectory(), os.path.basename(executable))
 
             dst_file_spec = lldb.SBFileSpec(dst_path, False)
             err = lldb.remote_platform.Install(
@@ -1600,10 +1600,10 @@ class Base(unittest2.TestCase):
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [
-            "llvm-build/Release+Asserts/x86_64/Release+Asserts/bin/clang",
-            "llvm-build/Debug+Asserts/x86_64/Debug+Asserts/bin/clang",
-            "llvm-build/Release/x86_64/Release/bin/clang",
-            "llvm-build/Debug/x86_64/Debug/bin/clang",
+            "llvm-build/Release+Asserts/x86_64/bin/clang",
+            "llvm-build/Debug+Asserts/x86_64/bin/clang",
+            "llvm-build/Release/x86_64/bin/clang",
+            "llvm-build/Debug/x86_64/bin/clang",
         ]
         lldb_root_path = os.path.join(
             os.path.dirname(__file__), "..", "..", "..", "..")
@@ -1618,6 +1618,31 @@ class Base(unittest2.TestCase):
             return path
 
         return os.environ["CC"]
+
+    def findYaml2obj(self):
+        """
+        Get the path to the yaml2obj executable, which can be used to create
+        test object files from easy to write yaml instructions.
+
+        Throws an Exception if the executable cannot be found.
+        """
+        # Tries to find yaml2obj at the same folder as clang
+        clang_dir = os.path.dirname(self.findBuiltClang())
+        path = os.path.join(clang_dir, "yaml2obj")
+        if os.path.exists(path):
+            return path
+        raise Exception("yaml2obj executable not found")
+
+
+    def yaml2obj(self, yaml_path, obj_path):
+        """
+        Create an object file at the given path from a yaml file.
+
+        Throws subprocess.CalledProcessError if the object could not be created.
+        """
+        yaml2obj = self.findYaml2obj()
+        command = [yaml2obj, "-o=%s" % obj_path, yaml_path]
+        system([command])
 
     def getBuildFlags(
             self,
@@ -1962,7 +1987,7 @@ class TestBase(Base):
             if lldb.remote_platform:
                 # We must set the remote install location if we want the shared library
                 # to get uploaded to the remote target
-                remote_shlib_path = lldbutil.append_to_process_working_directory(
+                remote_shlib_path = lldbutil.append_to_process_working_directory(self,
                     os.path.basename(local_shlib_path))
                 shlib_module.SetRemoteInstallFileSpec(
                     lldb.SBFileSpec(remote_shlib_path, False))

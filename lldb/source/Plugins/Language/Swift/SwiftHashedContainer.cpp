@@ -78,8 +78,16 @@ SwiftHashedContainerNativeBufferHandler::GetElementAtIndex(size_t idx) {
   if (!IsValid())
     return null_valobj_sp;
   int64_t found_idx = -1;
+  Status error;
   for (Cell cell_idx = 0; cell_idx < m_capacity; cell_idx++) {
-    const bool used = ReadBitmaskAtIndex(cell_idx);
+    const bool used = ReadBitmaskAtIndex(cell_idx, error);
+    if (error.Fail()) {
+      Status bitmask_error;
+      bitmask_error.SetErrorStringWithFormat(
+              "Failed to read bit-mask index from Dictionary: %s",
+              error.AsCString());
+      return ValueObjectConstResult::Create(m_process, bitmask_error);
+    }
     if (!used)
       continue;
     if (++found_idx == idx) {
@@ -108,12 +116,12 @@ SwiftHashedContainerNativeBufferHandler::GetElementAtIndex(size_t idx) {
   return null_valobj_sp;
 }
 
-bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i) {
+bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i, 
+                                                                 Status &error) {
   if (i >= m_capacity)
     return false;
   const size_t word = i / (8 * m_ptr_size);
   const size_t offset = i % (8 * m_ptr_size);
-  Status error;
   const lldb::addr_t effective_ptr = m_bitmask_ptr + (word * m_ptr_size);
 #ifdef DICTIONARY_IS_BROKEN_AGAIN
   printf("for idx = %" PRIu64
@@ -278,6 +286,19 @@ SwiftHashedContainerNativeBufferHandler::
   }
   m_keys_ptr = m_nativeStorage->GetChildAtNamePath({g_keys, g__rawValue})
                    ->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  // Make sure we can read the bitmask at the ount index.  
+  // and this will keep us from trying
+  // to reconstruct many bajillions of invalid children.
+  // Don't bother if the native buffer handler is invalid already, however. 
+  if (IsValid())
+  {
+    Status error;
+    ReadBitmaskAtIndex(m_capacity - 1, error);
+    if (error.Fail())
+    {
+      m_bitmask_ptr = LLDB_INVALID_ADDRESS;
+    }
+  }
 }
 
 bool SwiftHashedContainerNativeBufferHandler::IsValid() {

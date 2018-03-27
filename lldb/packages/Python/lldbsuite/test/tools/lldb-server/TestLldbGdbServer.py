@@ -261,7 +261,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             lldbgdbserverutils.parse_reg_info_response(reg_info_packet))
 
     @debugserver_test
-    @expectedFailureDarwin("llvm.org/pr25486")
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qRegisterInfo_returns_one_valid_result_debugserver(self):
         self.init_debugserver_test()
@@ -294,7 +293,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assert_valid_reg_info(reg_info)
 
     @debugserver_test
-    @expectedFailureDarwin("llvm.org/pr25486")
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qRegisterInfo_returns_all_valid_results_debugserver(self):
         self.init_debugserver_test()
