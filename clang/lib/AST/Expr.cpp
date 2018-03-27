@@ -2050,7 +2050,8 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     return cast<GenericSelectionExpr>(this)->getResultExpr()->
       isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   case CoawaitExprClass:
-    return cast<CoawaitExpr>(this)->getResumeExpr()->
+  case CoyieldExprClass:
+    return cast<CoroutineSuspendExpr>(this)->getResumeExpr()->
       isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   case ChooseExprClass:
     return cast<ChooseExpr>(this)->getChosenSubExpr()->

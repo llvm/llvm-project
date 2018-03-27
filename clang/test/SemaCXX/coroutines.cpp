@@ -1338,7 +1338,6 @@ bad_coroutine_calls_with_no_matching_constructor(int, int) {
 
 } // namespace CoroHandleMemberFunctionTest
 
-
 class awaitable_no_unused_warn {
 public:
   using handle_type = std::experimental::coroutine_handle<>;
@@ -1357,7 +1356,25 @@ public:
   int await_resume() { return 1; }
 };
 
-void test_unused_warning() {
+template <class Await>
+struct check_warning_promise {
+  coro<check_warning_promise> get_return_object();
+  Await initial_suspend();
+  Await final_suspend();
+  Await yield_value(int);
+  void return_void();
+  void unhandled_exception();
+};
+
+
+coro<check_warning_promise<awaitable_no_unused_warn>>
+test_no_unused_warning() {
   co_await awaitable_no_unused_warn();
+  co_yield 42;
+}
+
+coro<check_warning_promise<awaitable_unused_warn>>
+test_unused_warning() {
   co_await awaitable_unused_warn(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  co_yield 42; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
