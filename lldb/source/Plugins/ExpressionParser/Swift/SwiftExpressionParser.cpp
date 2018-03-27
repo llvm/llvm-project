@@ -1146,12 +1146,11 @@ static swift::ASTContext *SetupASTContext(
     swift_ast_context->GetIRGenOptions().Playground = false;
   }
 
-  // For the expression parser and REPL we want to relax the requirement that
-  // you put "try" in
-  // front of every expression that might throw.
-  if (!playground) {
+  // For the expression parser and REPL we want to relax the
+  // requirement that you put "try" in front of every expression that
+  // might throw.
+  if (repl || !playground)
     swift_ast_context->GetLanguageOptions().EnableThrowWithoutTry = true;
-  }
 
   swift_ast_context->GetIRGenOptions().OptMode =
       swift::OptimizationMode::NoOptimization;
@@ -1458,9 +1457,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
 
-  if (!playground) {
+  if (repl || !playground) {
     code_manipulator.reset(new SwiftASTManipulator(*source_file, repl));
-
     code_manipulator->RewriteResult();
   }
 
@@ -1623,7 +1621,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     log->PutCString(s.c_str());
   }
 
-  if (m_sc.target_sp && !playground) {
+  // Allow variables to be re-used from previous REPL statements.
+  if (m_sc.target_sp && (repl || !playground)) {
     if (!code_manipulator->CheckPatternBindings()) // Do this first, so we don't
                                                    // pollute the persistent
                                                    // variable namespace
@@ -1733,7 +1732,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     }
   }
 
-  if (!playground)
+  if (repl || !playground)
     if (auto *materializer = m_expr.GetMaterializer())
       for (auto &variable : code_manipulator->GetVariableInfo()) {
         auto &swift_expr = *static_cast<SwiftUserExpression *>(&m_expr);
