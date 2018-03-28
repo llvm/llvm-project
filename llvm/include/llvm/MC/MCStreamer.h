@@ -775,6 +775,12 @@ public:
       MD5::MD5Result *Checksum = nullptr, Optional<StringRef> Source = None,
       unsigned CUID = 0);
 
+  /// Specify the "root" file of the compilation, using the ".file 0" extension.
+  virtual void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
+                                       MD5::MD5Result *Checksum,
+                                       Optional<StringRef> Source,
+                                       unsigned CUID = 0);
+
   /// \brief This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.
   virtual void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,

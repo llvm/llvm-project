@@ -219,6 +219,10 @@ public:
                                                MD5::MD5Result *Checksum = 0,
                                                Optional<StringRef> Source = None,
                                                unsigned CUID = 0) override;
+  void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
+                               MD5::MD5Result *Checksum,
+                               Optional<StringRef> Source,
+                               unsigned CUID = 0) override;
   void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
                              unsigned Column, unsigned Flags,
                              unsigned Isa, unsigned Discriminator,
@@ -1077,21 +1081,10 @@ void MCAsmStreamer::EmitFileDirective(StringRef Filename) {
   EmitEOL();
 }
 
-Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
-    unsigned FileNo, StringRef Directory, StringRef Filename,
-    MD5::MD5Result *Checksum, Optional<StringRef> Source, unsigned CUID) {
-  assert(CUID == 0);
-
-  MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
-  unsigned NumFiles = Table.getMCDwarfFiles().size();
-  Expected<unsigned> FileNoOrErr =
-      Table.tryGetFile(Directory, Filename, Checksum, Source, FileNo);
-  if (!FileNoOrErr)
-    return FileNoOrErr.takeError();
-  FileNo = FileNoOrErr.get();
-  if (NumFiles == Table.getMCDwarfFiles().size())
-    return FileNo;
-
+void printDwarfFileDirective(unsigned FileNo, StringRef Directory,
+                             StringRef Filename, MD5::MD5Result *Checksum,
+                             Optional<StringRef> Source, bool UseDwarfDirectory,
+                             raw_svector_ostream &OS) {
   SmallString<128> FullPathName;
 
   if (!UseDwarfDirectory && !Directory.empty()) {
@@ -1105,29 +1098,66 @@ Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
     }
   }
 
-  SmallString<128> Str;
-  raw_svector_ostream OS1(Str);
-  OS1 << "\t.file\t" << FileNo << ' ';
+  OS << "\t.file\t" << FileNo << ' ';
   if (!Directory.empty()) {
-    PrintQuotedString(Directory, OS1);
-    OS1 << ' ';
+    PrintQuotedString(Directory, OS);
+    OS << ' ';
   }
-  PrintQuotedString(Filename, OS1);
+  PrintQuotedString(Filename, OS);
   if (Checksum) {
-    OS1 << " md5 ";
-    PrintQuotedString(Checksum->digest(), OS1);
+    OS << " md5 ";
+    PrintQuotedString(Checksum->digest(), OS);
   }
   if (Source) {
-    OS1 << " source ";
-    PrintQuotedString(*Source, OS1);
+    OS << " source ";
+    PrintQuotedString(*Source, OS);
   }
-  if (MCTargetStreamer *TS = getTargetStreamer()) {
+}
+
+Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
+    unsigned FileNo, StringRef Directory, StringRef Filename,
+    MD5::MD5Result *Checksum, Optional<StringRef> Source, unsigned CUID) {
+  assert(CUID == 0 && "multiple CUs not supported by MCAsmStreamer");
+
+  MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
+  unsigned NumFiles = Table.getMCDwarfFiles().size();
+  Expected<unsigned> FileNoOrErr =
+      Table.tryGetFile(Directory, Filename, Checksum, Source, FileNo);
+  if (!FileNoOrErr)
+    return FileNoOrErr.takeError();
+  FileNo = FileNoOrErr.get();
+  if (NumFiles == Table.getMCDwarfFiles().size())
+    return FileNo;
+
+  SmallString<128> Str;
+  raw_svector_ostream OS1(Str);
+  printDwarfFileDirective(FileNo, Directory, Filename, Checksum, Source,
+                          UseDwarfDirectory, OS1);
+
+  if (MCTargetStreamer *TS = getTargetStreamer())
     TS->emitDwarfFileDirective(OS1.str());
-  } else {
+  else
     EmitRawText(OS1.str());
-  }
 
   return FileNo;
+}
+
+void MCAsmStreamer::emitDwarfFile0Directive(StringRef Directory,
+                                            StringRef Filename,
+                                            MD5::MD5Result *Checksum,
+                                            Optional<StringRef> Source,
+                                            unsigned CUID) {
+  assert(CUID == 0);
+
+  SmallString<128> Str;
+  raw_svector_ostream OS1(Str);
+  printDwarfFileDirective(0, Directory, Filename, Checksum, Source,
+                          UseDwarfDirectory, OS1);
+
+  if (MCTargetStreamer *TS = getTargetStreamer())
+    TS->emitDwarfFileDirective(OS1.str());
+  else
+    EmitRawText(OS1.str());
 }
 
 void MCAsmStreamer::EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
