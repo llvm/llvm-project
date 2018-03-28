@@ -9,6 +9,7 @@ import os
 import time
 import re
 import lldb
+import subprocess
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import decorators

@@ -17,19 +17,18 @@
 namespace lld {
 namespace wasm {
 
-enum class ExposeAs { IMPORT, EXPORT, NONE };
-
 struct Configuration {
   bool AllowUndefined;
   bool CheckSignatures;
   bool Demangle;
+  bool ExportTable;
   bool GcSections;
   bool ImportMemory;
+  bool ImportTable;
   bool PrintGcSections;
   bool Relocatable;
   bool StripAll;
   bool StripDebug;
-  ExposeAs Table;
   uint32_t GlobalBase;
   uint32_t InitialMemory;
   uint32_t MaxMemory;
