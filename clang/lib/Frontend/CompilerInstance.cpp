@@ -1197,8 +1197,14 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   llvm::CrashRecoveryContext CRC;
   CRC.RunSafelyOnThread(
       [&]() {
-        GenerateModuleFromModuleMapAction Action;
-        Instance.ExecuteAction(Action);
+        // FIXME: I have no idea what the best way to do this is, but it's
+        // probably not this. Interfaces changed upstream.
+        std::unique_ptr<FrontendAction> Action(
+            new GenerateModuleFromModuleMapAction);
+        if (wrapGenModuleAction) {
+          Action = wrapGenModuleAction(FrontendOpts, std::move(Action));
+        }
+        Instance.ExecuteAction(*Action);
       },
       ThreadStackSize);
 
