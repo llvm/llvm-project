@@ -4068,7 +4068,7 @@ define i32 @test_pmovmskb(x86_mmx %a0) optsize {
 ;
 ; SLM-LABEL: test_pmovmskb:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    pmovmskb %mm0, %eax # sched: [1:0.50]
+; SLM-NEXT:    pmovmskb %mm0, %eax # sched: [4:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pmovmskb:

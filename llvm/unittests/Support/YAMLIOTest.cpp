@@ -2493,7 +2493,6 @@ TEST(YAMLIO, TestEscaped) {
   // zero-width space). The thing to test here is that we emit a
   // unicode-scalar level escape like \uNNNN (at the YAML level), and don't
   // just pass the UTF-8 byte sequence through as with quoted printables.
-  TestEscaped("foo\u200Bbar", "\"foo\\u200Bbar\"");
   {
     const unsigned char foobar[10] = {'f', 'o', 'o',
                                       0xE2, 0x80, 0x8B, // UTF-8 of U+200B

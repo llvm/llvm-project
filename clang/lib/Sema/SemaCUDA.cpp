@@ -521,7 +521,7 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
     if (!getSourceManager().isInSystemHeader(Match->getLocation())) {
       Diag(NewD->getLocation(),
            diag::err_cuda_unattributed_constexpr_cannot_overload_device)
-          << NewD->getName();
+          << NewD;
       Diag(Match->getLocation(),
            diag::note_cuda_conflicting_device_function_declared_here);
     }

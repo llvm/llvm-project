@@ -216,6 +216,11 @@ defm : ZnWriteResFpuPair<WriteShuffle256, [ZnFPU],   2>;
 // Vector Shift Operations
 defm : ZnWriteResFpuPair<WriteVarVecShift, [ZnFPU12], 1>;
 
+// MOVMSK Instructions.
+def : WriteRes<WriteFMOVMSK, [ZnFPU2]>;
+def : WriteRes<WriteVecMOVMSK, [ZnFPU2]>;
+def : WriteRes<WriteMMXMOVMSK, [ZnFPU2]>;
+
 // AES Instructions.
 defm : ZnWriteResFpuPair<WriteAESDecEnc, [ZnFPU01], 4>;
 defm : ZnWriteResFpuPair<WriteAESIMC,    [ZnFPU01], 4>;
@@ -1004,14 +1009,12 @@ def : InstRW<[WriteMicrocoded],
 // m, v,v.
 def : InstRW<[WriteMicrocoded], (instregex "VPMASKMOV(D|Q)(Y?)mr")>;
 
-// PMOVMSKB.
-def ZnWritePMOVMSKB : SchedWriteRes<[ZnFPU2]> {
-  let NumMicroOps = 2;
-}
+// PMOVMSKBY.
 def ZnWritePMOVMSKBY : SchedWriteRes<[ZnFPU2]> {
+  let NumMicroOps = 2;
   let Latency = 2;
+  let ResourceCycles = [2];
 }
-def : InstRW<[ZnWritePMOVMSKB], (instregex "(V|MMX_)?PMOVMSKBrr")>;
 def : InstRW<[ZnWritePMOVMSKBY], (instregex "(V|MMX_)?PMOVMSKBYrr")>;
 
 // PEXTR B/W/D/Q.
@@ -1149,11 +1152,6 @@ def : InstRW<[ZnWritePShiftY], (instregex "(V?)PS(R|L)LDQYri")>;
 
 //=== Floating Point XMM and YMM Instructions ===//
 //-- Move instructions --//
-
-// MOVMSKP S/D.
-// r32 <- x,y.
-def ZnWriteMOVMSKPr : SchedWriteRes<[ZnFPU2]> ;
-def : InstRW<[ZnWriteMOVMSKPr], (instregex "(V?)MOVMSKP(S|D)(Y?)rr")>;
 
 // VPERM2F128.
 def : InstRW<[WriteMicrocoded], (instregex "VPERM2F128rr")>;

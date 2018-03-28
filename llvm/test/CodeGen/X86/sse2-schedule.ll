@@ -5107,7 +5107,7 @@ define i32 @test_movmskpd(<2 x double> %a0) {
 ;
 ; SLM-LABEL: test_movmskpd:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movmskpd %xmm0, %eax # sched: [1:0.50]
+; SLM-NEXT:    movmskpd %xmm0, %eax # sched: [4:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_movmskpd:
@@ -9684,7 +9684,7 @@ define i32 @test_pmovmskb(<16 x i8> %a0) {
 ;
 ; SLM-LABEL: test_pmovmskb:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    pmovmskb %xmm0, %eax # sched: [1:0.50]
+; SLM-NEXT:    pmovmskb %xmm0, %eax # sched: [4:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_pmovmskb:
