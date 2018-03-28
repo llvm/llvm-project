@@ -217,7 +217,7 @@ protected:
   /// \brief Creates offloading entry for the provided entry ID \a ID,
   /// address \a Addr, size \a Size, and flags \a Flags.
   virtual void createOffloadEntry(llvm::Constant *ID, llvm::Constant *Addr,
-                                  uint64_t Size, int32_t Flags = 0);
+                                  uint64_t Size, int32_t Flags);
 
   /// \brief Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
@@ -382,6 +382,15 @@ private:
   ///                                         // entries (non inclusive).
   /// };
   QualType TgtBinaryDescriptorQTy;
+  /// Kind of the target registry entry.
+  enum OMPTargetRegionEntryKind {
+    /// Mark the entry as target region.
+    OMPTargetRegionEntryTargetRegion = 0x0,
+    /// Mark the entry as a global constructor.
+    OMPTargetRegionEntryCtor = 0x02,
+    /// Mark the entry as a global destructor.
+    OMPTargetRegionEntryDtor = 0x04,
+  };
   /// \brief Entity that registers the offloading constants that were emitted so
   /// far.
   class OffloadEntriesInfoManagerTy {
@@ -394,31 +403,31 @@ private:
     /// Base class of the entries info.
     class OffloadEntryInfo {
     public:
-      /// Kind of a given entry. Currently, only target regions are
-      /// supported.
+      /// Kind of a given entry.
       enum OffloadingEntryInfoKinds : unsigned {
-        // Entry is a target region.
-        OFFLOAD_ENTRY_INFO_TARGET_REGION = 0,
-        // Invalid entry info.
-        OFFLOAD_ENTRY_INFO_INVALID = ~0u
+        /// Entry is a target region.
+        OffloadingEntryInfoTargetRegion = 0,
+        /// Invalid entry info.
+        OffloadingEntryInfoInvalid = ~0u
       };
 
       OffloadEntryInfo()
-          : Flags(0), Order(~0u), Kind(OFFLOAD_ENTRY_INFO_INVALID) {}
+          : Flags(OMPTargetRegionEntryTargetRegion), Order(~0u),
+            Kind(OffloadingEntryInfoInvalid) {}
       explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind, unsigned Order,
-                                int32_t Flags)
+                                OMPTargetRegionEntryKind Flags)
           : Flags(Flags), Order(Order), Kind(Kind) {}
 
       bool isValid() const { return Order != ~0u; }
       unsigned getOrder() const { return Order; }
       OffloadingEntryInfoKinds getKind() const { return Kind; }
       int32_t getFlags() const { return Flags; }
-      void setFlags(int32_t NewFlags) { Flags = NewFlags; }
+      void setFlags(OMPTargetRegionEntryKind NewFlags) { Flags = NewFlags; }
       static bool classof(const OffloadEntryInfo *Info) { return true; }
 
     private:
       /// Flags associated with the device global.
-      int32_t Flags;
+      OMPTargetRegionEntryKind Flags;
 
       /// Order this entry was emitted.
       unsigned Order;
@@ -445,27 +454,28 @@ private:
 
     public:
       OffloadEntryInfoTargetRegion()
-          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, ~0u,
-                             /*Flags=*/0),
+          : OffloadEntryInfo(OffloadingEntryInfoTargetRegion, ~0u,
+                             OMPTargetRegionEntryTargetRegion),
             Addr(nullptr), ID(nullptr) {}
       explicit OffloadEntryInfoTargetRegion(unsigned Order,
                                             llvm::Constant *Addr,
-                                            llvm::Constant *ID, int32_t Flags)
-          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, Order, Flags),
+                                            llvm::Constant *ID,
+                                            OMPTargetRegionEntryKind Flags)
+          : OffloadEntryInfo(OffloadingEntryInfoTargetRegion, Order, Flags),
             Addr(Addr), ID(ID) {}
 
       llvm::Constant *getAddress() const { return Addr; }
       llvm::Constant *getID() const { return ID; }
       void setAddress(llvm::Constant *V) {
-        assert(!Addr && "Address as been set before!");
+        assert(!Addr && "Address has been set before!");
         Addr = V;
       }
       void setID(llvm::Constant *V) {
-        assert(!ID && "ID as been set before!");
+        assert(!ID && "ID has been set before!");
         ID = V;
       }
       static bool classof(const OffloadEntryInfo *Info) {
-        return Info->getKind() == OFFLOAD_ENTRY_INFO_TARGET_REGION;
+        return Info->getKind() == OffloadingEntryInfoTargetRegion;
       }
     };
     /// \brief Initialize target region entry.
@@ -476,7 +486,7 @@ private:
     void registerTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
                                        StringRef ParentName, unsigned LineNum,
                                        llvm::Constant *Addr, llvm::Constant *ID,
-                                       int32_t Flags);
+                                       OMPTargetRegionEntryKind Flags);
     /// \brief Return true if a target region entry with the provided
     /// information exists.
     bool hasTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
@@ -579,6 +589,9 @@ private:
 
   /// \brief Set of threadprivate variables with the generated initializer.
   llvm::SmallPtrSet<const VarDecl *, 4> ThreadPrivateWithDefinition;
+
+  /// Set of declare target variables with the generated initializer.
+  llvm::SmallPtrSet<const VarDecl *, 4> DeclareTargetWithDefinition;
 
   /// \brief Emits initialization code for the threadprivate variables.
   /// \param VDAddr Address of the global variable \a VD.
@@ -969,6 +982,14 @@ public:
   emitThreadPrivateVarDefinition(const VarDecl *VD, Address VDAddr,
                                  SourceLocation Loc, bool PerformInit,
                                  CodeGenFunction *CGF = nullptr);
+
+  /// \brief Emit a code for initialization of declare target variable.
+  /// \param VD Declare target variable.
+  /// \param Addr Address of the global variable \a VD.
+  /// \param PerformInit true if initialization expression is not constant.
+  virtual bool emitDeclareTargetVarDefinition(const VarDecl *VD,
+                                              llvm::GlobalVariable *Addr,
+                                              bool PerformInit);
 
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.

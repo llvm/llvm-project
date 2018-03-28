@@ -1867,11 +1867,11 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
           Changed |= expandCopy(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::STriw_pred:
-        case Hexagon::STriw_mod:
+        case Hexagon::STriw_ctr:
           Changed |= expandStoreInt(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::LDriw_pred:
-        case Hexagon::LDriw_mod:
+        case Hexagon::LDriw_ctr:
           Changed |= expandLoadInt(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::PS_vstorerq_ai:

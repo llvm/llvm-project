@@ -182,7 +182,6 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   CurDAG->RemoveDeadNode(LD);
 }
 
-
 MachineSDNode *HexagonDAGToDAGISel::LoadInstrForLoadIntrinsic(SDNode *IntN) {
   if (IntN->getOpcode() != ISD::INTRINSIC_W_CHAIN)
     return nullptr;
@@ -200,15 +199,14 @@ MachineSDNode *HexagonDAGToDAGISel::LoadInstrForLoadIntrinsic(SDNode *IntN) {
   };
   auto FLC = LoadPciMap.find(IntNo);
   if (FLC != LoadPciMap.end()) {
-    SDNode *Mod = CurDAG->getMachineNode(Hexagon::A2_tfrrcr, dl, MVT::i32,
-          IntN->getOperand(4));
     EVT ValTy = (IntNo == Intrinsic::hexagon_circ_ldd) ? MVT::i64 : MVT::i32;
     EVT RTys[] = { ValTy, MVT::i32, MVT::Other };
     // Operands: { Base, Increment, Modifier, Chain }
     auto Inc = cast<ConstantSDNode>(IntN->getOperand(5));
     SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), dl, MVT::i32);
     MachineSDNode *Res = CurDAG->getMachineNode(FLC->second, dl, RTys,
-          { IntN->getOperand(2), I, SDValue(Mod,0), IntN->getOperand(0) });
+          { IntN->getOperand(2), I, IntN->getOperand(4),
+            IntN->getOperand(0) });
     return Res;
   }
 
@@ -337,6 +335,93 @@ bool HexagonDAGToDAGISel::tryLoadOfLoadIntrinsic(LoadSDNode *N) {
     CurDAG->RemoveDeadNode(C);
     return true;
   }
+  return false;
+}
+
+/// Generate a machine instruction node for the new circlar buffer intrinsics.
+/// The new versions use a CSx register instead of the K field.
+bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
+  if (IntN->getOpcode() != ISD::INTRINSIC_W_CHAIN)
+    return false;
+
+  SDLoc DL(IntN);
+  unsigned IntNo = cast<ConstantSDNode>(IntN->getOperand(1))->getZExtValue();
+  SmallVector<SDValue, 7> Ops;
+
+  static std::map<unsigned,unsigned> LoadNPcMap = {
+    { Intrinsic::hexagon_L2_loadrub_pci, Hexagon::PS_loadrub_pci },
+    { Intrinsic::hexagon_L2_loadrb_pci, Hexagon::PS_loadrb_pci },
+    { Intrinsic::hexagon_L2_loadruh_pci, Hexagon::PS_loadruh_pci },
+    { Intrinsic::hexagon_L2_loadrh_pci, Hexagon::PS_loadrh_pci },
+    { Intrinsic::hexagon_L2_loadri_pci, Hexagon::PS_loadri_pci },
+    { Intrinsic::hexagon_L2_loadrd_pci, Hexagon::PS_loadrd_pci },
+    { Intrinsic::hexagon_L2_loadrub_pcr, Hexagon::PS_loadrub_pcr },
+    { Intrinsic::hexagon_L2_loadrb_pcr, Hexagon::PS_loadrb_pcr },
+    { Intrinsic::hexagon_L2_loadruh_pcr, Hexagon::PS_loadruh_pcr },
+    { Intrinsic::hexagon_L2_loadrh_pcr, Hexagon::PS_loadrh_pcr },
+    { Intrinsic::hexagon_L2_loadri_pcr, Hexagon::PS_loadri_pcr },
+    { Intrinsic::hexagon_L2_loadrd_pcr, Hexagon::PS_loadrd_pcr }
+  };
+  auto FLI = LoadNPcMap.find (IntNo);
+  if (FLI != LoadNPcMap.end()) {
+    EVT ValTy = MVT::i32;
+    if (IntNo == Intrinsic::hexagon_L2_loadrd_pci ||
+        IntNo == Intrinsic::hexagon_L2_loadrd_pcr)
+      ValTy = MVT::i64;
+    EVT RTys[] = { ValTy, MVT::i32, MVT::Other };
+    // Handle load.*_pci case which has 6 operands.
+    if (IntN->getNumOperands() == 6) {
+      auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
+      SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
+      // Operands: { Base, Increment, Modifier, Start, Chain }.
+      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
+              IntN->getOperand(0) };
+    } else
+      // Handle load.*_pcr case which has 5 operands.
+      // Operands: { Base, Modifier, Start, Chain }.
+      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
+              IntN->getOperand(0) };
+    MachineSDNode *Res = CurDAG->getMachineNode(FLI->second, DL, RTys, Ops);
+    ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
+    ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
+    ReplaceUses(SDValue(IntN, 2), SDValue(Res, 2));
+    CurDAG->RemoveDeadNode(IntN);
+    return true;
+  }
+
+  static std::map<unsigned,unsigned> StoreNPcMap = {
+    { Intrinsic::hexagon_S2_storerb_pci, Hexagon::PS_storerb_pci },
+    { Intrinsic::hexagon_S2_storerh_pci, Hexagon::PS_storerh_pci },
+    { Intrinsic::hexagon_S2_storerf_pci, Hexagon::PS_storerf_pci },
+    { Intrinsic::hexagon_S2_storeri_pci, Hexagon::PS_storeri_pci },
+    { Intrinsic::hexagon_S2_storerd_pci, Hexagon::PS_storerd_pci },
+    { Intrinsic::hexagon_S2_storerb_pcr, Hexagon::PS_storerb_pcr },
+    { Intrinsic::hexagon_S2_storerh_pcr, Hexagon::PS_storerh_pcr },
+    { Intrinsic::hexagon_S2_storerf_pcr, Hexagon::PS_storerf_pcr },
+    { Intrinsic::hexagon_S2_storeri_pcr, Hexagon::PS_storeri_pcr },
+    { Intrinsic::hexagon_S2_storerd_pcr, Hexagon::PS_storerd_pcr }
+  };
+  auto FSI = StoreNPcMap.find (IntNo);
+  if (FSI != StoreNPcMap.end()) {
+    EVT RTys[] = { MVT::i32, MVT::Other };
+    // Handle store.*_pci case which has 7 operands.
+    if (IntN->getNumOperands() == 7) {
+      auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
+      SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
+      // Operands: { Base, Increment, Modifier, Value, Start, Chain }.
+      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
+              IntN->getOperand(6), IntN->getOperand(0) };
+    } else
+      // Handle store.*_pcr case which has 6 operands.
+      // Operands: { Base, Modifier, Value, Start, Chain }.
+      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
+              IntN->getOperand(5), IntN->getOperand(0) };
+    MachineSDNode *Res = CurDAG->getMachineNode(FSI->second, DL, RTys, Ops);
+    ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
+    ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
+    CurDAG->RemoveDeadNode(IntN);
+    return true;
+  }
 
   return false;
 }
@@ -344,9 +429,9 @@ bool HexagonDAGToDAGISel::tryLoadOfLoadIntrinsic(LoadSDNode *N) {
 void HexagonDAGToDAGISel::SelectLoad(SDNode *N) {
   SDLoc dl(N);
   LoadSDNode *LD = cast<LoadSDNode>(N);
-  ISD::MemIndexedMode AM = LD->getAddressingMode();
 
   // Handle indexed loads.
+  ISD::MemIndexedMode AM = LD->getAddressingMode();
   if (AM != ISD::UNINDEXED) {
     SelectIndexedLoad(LD, dl);
     return;
@@ -452,9 +537,9 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
 void HexagonDAGToDAGISel::SelectStore(SDNode *N) {
   SDLoc dl(N);
   StoreSDNode *ST = cast<StoreSDNode>(N);
-  ISD::MemIndexedMode AM = ST->getAddressingMode();
 
   // Handle indexed stores.
+  ISD::MemIndexedMode AM = ST->getAddressingMode();
   if (AM != ISD::UNINDEXED) {
     SelectIndexedStore(ST, dl);
     return;
@@ -526,6 +611,9 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
     CurDAG->RemoveDeadNode(N);
     return;
   }
+
+  if (SelectNewCircIntrinsic(N))
+    return;
 
   unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
   if (IntNo == Intrinsic::hexagon_V6_vgathermw ||
@@ -619,7 +707,6 @@ void HexagonDAGToDAGISel::SelectConstant(SDNode *N) {
 
   SelectCode(N);
 }
-
 
 void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   MachineFrameInfo &MFI = MF->getFrameInfo();

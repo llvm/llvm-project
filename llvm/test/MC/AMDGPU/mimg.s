@@ -140,6 +140,47 @@ image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16
 // GFX9:     image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16 ; encoding: [0x00,0x0f,0x01,0xf0,0x01,0x05,0x02,0x80]
 
 //===----------------------------------------------------------------------===//
+// Image Load/Store: PCK variants
+//===----------------------------------------------------------------------===//
+
+image_load_mip_pck v5, v[1:4], s[8:15] dmask:0x1
+// GCN: image_load_mip_pck v5, v[1:4], s[8:15] dmask:0x1 ; encoding: [0x00,0x01,0x10,0xf0,0x01,0x05,0x02,0x00]
+
+image_load_mip_pck v[5:6], v[1:4], s[8:15] dmask:0x3
+// GCN: image_load_mip_pck v[5:6], v[1:4], s[8:15] dmask:0x3 ; encoding: [0x00,0x03,0x10,0xf0,0x01,0x05,0x02,0x00]
+
+image_load_mip_pck v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc tfe lwe da
+// GCN: image_load_mip_pck v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc tfe lwe da ; encoding: [0x00,0x71,0x13,0xf2,0x01,0x05,0x02,0x00]
+
+image_load_mip_pck_sgn v[5:6], v[1:4], s[8:15] dmask:0x5
+// GCN: image_load_mip_pck_sgn v[5:6], v[1:4], s[8:15] dmask:0x5 ; encoding: [0x00,0x05,0x14,0xf0,0x01,0x05,0x02,0x00]
+
+image_load_pck v5, v[1:4], s[8:15] dmask:0x1 glc
+// GCN: image_load_pck v5, v[1:4], s[8:15] dmask:0x1 glc ; encoding: [0x00,0x21,0x08,0xf0,0x01,0x05,0x02,0x00]
+
+image_load_pck_sgn v5, v[1:4], s[8:15] dmask:0x1 lwe
+// GCN: image_load_pck_sgn v5, v[1:4], s[8:15] dmask:0x1 lwe ; encoding: [0x00,0x01,0x0e,0xf0,0x01,0x05,0x02,0x00]
+
+image_load_mip_pck v5, v[1:4], s[8:15] dmask:0x1 d16
+// NOSICI: error: invalid operand for instruction
+// NOVI:   error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+
+image_store_mip_pck v252, v[2:5], s[12:19] dmask:0x1 unorm
+// GCN: image_store_mip_pck v252, v[2:5], s[12:19] dmask:0x1 unorm ; encoding: [0x00,0x11,0x2c,0xf0,0x02,0xfc,0x03,0x00]
+
+image_store_mip_pck v1, v[2:5], s[12:19] dmask:0x1 unorm glc slc lwe da
+// GCN: image_store_mip_pck v1, v[2:5], s[12:19] dmask:0x1 unorm glc slc lwe da ; encoding: [0x00,0x71,0x2e,0xf2,0x02,0x01,0x03,0x00]
+
+image_store_pck v1, v[2:5], s[12:19] dmask:0x1 unorm da
+// GCN: image_store_pck v1, v[2:5], s[12:19] dmask:0x1 unorm da ; encoding: [0x00,0x51,0x28,0xf0,0x02,0x01,0x03,0x00]
+
+image_store_mip_pck v252, v[2:5], s[12:19] dmask:0x1 d16
+// NOSICI: error: invalid operand for instruction
+// NOVI:   error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+
+//===----------------------------------------------------------------------===//
 // Image Sample
 //===----------------------------------------------------------------------===//
 

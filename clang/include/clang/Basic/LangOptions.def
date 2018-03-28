@@ -284,6 +284,10 @@ LANGOPT(XRayAlwaysEmitCustomEvents, 1, 0,
 BENIGN_LANGOPT(AllowEditorPlaceholders, 1, 0,
                "allow editor placeholders in source")
 
+ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest,
+             "version of Clang that we should attempt to be ABI-compatible "
+             "with")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

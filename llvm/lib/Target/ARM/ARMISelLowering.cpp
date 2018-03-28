@@ -4519,8 +4519,8 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   bool InvalidOnQNaN;
   FPCCToARMCC(CC, CondCode, CondCode2, InvalidOnQNaN);
 
-  // Try to generate VMAXNM/VMINNM on ARMv8. Except if we compare to a zero.
-  // This ensures we use CMPFPw0 instead of CMPFP in such case.
+  // Normalize the fp compare. If RHS is zero we keep it there so we match
+  // CMPFPw0 instead of CMPFP.
   if (Subtarget->hasFPARMv8() && !isFloatingPointZero(RHS) &&
     (TrueVal.getValueType() == MVT::f32 || TrueVal.getValueType() == MVT::f64)) {
     bool swpCmpOps = false;

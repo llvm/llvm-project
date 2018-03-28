@@ -719,7 +719,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     SourceLocation DTLoc = ConsumeAnyToken();
     if (Tok.isNot(tok::annot_pragma_openmp_end)) {
       // OpenMP 4.5 syntax with list of entities.
-      llvm::SmallSetVector<const NamedDecl*, 16> SameDirectiveDecls;
+      Sema::NamedDeclSetType SameDirectiveDecls;
       while (Tok.isNot(tok::annot_pragma_openmp_end)) {
         OMPDeclareTargetDeclAttr::MapTypeTy MT =
             OMPDeclareTargetDeclAttr::MT_To;
@@ -736,11 +736,12 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
           ConsumeToken();
         }
         auto Callback = [this, MT, &SameDirectiveDecls](
-            CXXScopeSpec &SS, DeclarationNameInfo NameInfo) {
+                            CXXScopeSpec &SS, DeclarationNameInfo NameInfo) {
           Actions.ActOnOpenMPDeclareTargetName(getCurScope(), SS, NameInfo, MT,
                                                SameDirectiveDecls);
         };
-        if (ParseOpenMPSimpleVarList(OMPD_declare_target, Callback, true))
+        if (ParseOpenMPSimpleVarList(OMPD_declare_target, Callback,
+                                     /*AllowScopeSpecifier=*/true))
           break;
 
         // Consume optional ','.
@@ -749,7 +750,13 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       }
       SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
       ConsumeAnyToken();
-      return DeclGroupPtrTy();
+      SmallVector<Decl *, 4> Decls;
+      Decls.reserve(SameDirectiveDecls.size());
+      for (Decl *D : SameDirectiveDecls)
+        Decls.emplace_back(D);
+      if (Decls.empty())
+        return DeclGroupPtrTy();
+      return Actions.BuildDeclaratorGroup(Decls);
     }
 
     // Skip the last annot_pragma_openmp_end.
@@ -802,8 +809,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       Diag(DTLoc, diag::note_matching) << "'#pragma omp declare target'";
     }
     Actions.ActOnFinishOpenMPDeclareTargetDirective();
-    return DeclGroupPtrTy::make(DeclGroupRef::Create(
-        Actions.getASTContext(), Decls.begin(), Decls.size()));
+    return Actions.BuildDeclaratorGroup(Decls);
   }
   case OMPD_unknown:
     Diag(Tok, diag::err_omp_unknown_directive);

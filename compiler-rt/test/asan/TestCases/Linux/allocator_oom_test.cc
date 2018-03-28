@@ -84,5 +84,5 @@ int main(int argc, char **argv) {
 // CHECK-REALLOC: realloc:
 // CHECK-MALLOC-REALLOC: realloc-after-malloc:
 
-// CHECK-CRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-CRASH: SUMMARY: AddressSanitizer: out-of-memory
 // CHECK-NULL: x: 0

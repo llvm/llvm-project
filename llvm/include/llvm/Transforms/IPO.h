@@ -211,11 +211,6 @@ ModulePass *createMergeFunctionsPass();
 ModulePass *createPartialInliningPass();
 
 //===----------------------------------------------------------------------===//
-// createMetaRenamerPass - Rename everything with metasyntatic names.
-//
-ModulePass *createMetaRenamerPass();
-
-//===----------------------------------------------------------------------===//
 /// createBarrierNoopPass - This pass is purely a module pass barrier in a pass
 /// manager.
 ModulePass *createBarrierNoopPass();

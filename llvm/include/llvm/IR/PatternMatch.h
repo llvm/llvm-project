@@ -979,6 +979,84 @@ m_SelectCst(const Cond &C) {
 }
 
 //===----------------------------------------------------------------------===//
+// Matchers for InsertElementInst classes
+//
+
+template <typename Val_t, typename Elt_t, typename Idx_t>
+struct InsertElementClass_match {
+  Val_t V;
+  Elt_t E;
+  Idx_t I;
+
+  InsertElementClass_match(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx)
+      : V(Val), E(Elt), I(Idx) {}
+
+  template <typename OpTy> bool match(OpTy *VV) {
+    if (auto *II = dyn_cast<InsertElementInst>(VV))
+      return V.match(II->getOperand(0)) && E.match(II->getOperand(1)) &&
+             I.match(II->getOperand(2));
+    return false;
+  }
+};
+
+template <typename Val_t, typename Elt_t, typename Idx_t>
+inline InsertElementClass_match<Val_t, Elt_t, Idx_t>
+m_InsertElement(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
+  return InsertElementClass_match<Val_t, Elt_t, Idx_t>(Val, Elt, Idx);
+}
+
+//===----------------------------------------------------------------------===//
+// Matchers for ExtractElementInst classes
+//
+
+template <typename Val_t, typename Idx_t> struct ExtractElementClass_match {
+  Val_t V;
+  Idx_t I;
+
+  ExtractElementClass_match(const Val_t &Val, const Idx_t &Idx)
+      : V(Val), I(Idx) {}
+
+  template <typename OpTy> bool match(OpTy *VV) {
+    if (auto *II = dyn_cast<ExtractElementInst>(VV))
+      return V.match(II->getOperand(0)) && I.match(II->getOperand(1));
+    return false;
+  }
+};
+
+template <typename Val_t, typename Idx_t>
+inline ExtractElementClass_match<Val_t, Idx_t>
+m_ExtractElement(const Val_t &Val, const Idx_t &Idx) {
+  return ExtractElementClass_match<Val_t, Idx_t>(Val, Idx);
+}
+
+//===----------------------------------------------------------------------===//
+// Matchers for ShuffleVectorInst classes
+//
+
+template <typename V1_t, typename V2_t, typename Mask_t>
+struct ShuffleVectorClass_match {
+  V1_t V1;
+  V2_t V2;
+  Mask_t M;
+
+  ShuffleVectorClass_match(const V1_t &v1, const V2_t &v2, const Mask_t &m)
+      : V1(v1), V2(v2), M(m) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *SI = dyn_cast<ShuffleVectorInst>(V))
+      return V1.match(SI->getOperand(0)) && V2.match(SI->getOperand(1)) &&
+             M.match(SI->getOperand(2));
+    return false;
+  }
+};
+
+template <typename V1_t, typename V2_t, typename Mask_t>
+inline ShuffleVectorClass_match<V1_t, V2_t, Mask_t>
+m_ShuffleVector(const V1_t &v1, const V2_t &v2, const Mask_t &m) {
+  return ShuffleVectorClass_match<V1_t, V2_t, Mask_t>(v1, v2, m);
+}
+
+//===----------------------------------------------------------------------===//
 // Matchers for CastInst classes
 //
 
