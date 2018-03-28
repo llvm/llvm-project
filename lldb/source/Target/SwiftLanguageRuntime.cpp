@@ -1357,13 +1357,20 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
         "[GetMemberVariableOffset] asked to resolve offset for member %s",
         member_name.AsCString());
 
+  // Check whether we've already cached this offset.
+  swift::TypeBase *swift_type =
+    reinterpret_cast<swift::TypeBase *>(
+      instance_type.GetCanonicalType().GetOpaqueQualType());
+  auto known_offset =
+    m_member_offsets.find(
+                       std::make_tuple(swift_type, member_name.GetCString()));
+  if (known_offset != m_member_offsets.end())
+    return known_offset->second;
+
   // Dig out metadata describing the type, if it's easy to find.
   // FIXME: the Remote AST library should make this easier.
   auto &remote_ast_context = GetRemoteASTContext(*swift_ast_ctx);
   swift::remote::RemoteAddress optmeta(nullptr);
-  swift::TypeBase *swift_type =
-    reinterpret_cast<swift::TypeBase *>(
-      instance_type.GetCanonicalType().GetOpaqueQualType());
   const swift::TypeKind type_kind = swift_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::Class:
@@ -1403,6 +1410,10 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
     if (log)
       log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
                   (uint64_t)result.getValue());
+
+    // Cache this result.
+    m_member_offsets[std::make_tuple(swift_type, member_name.GetCString())] =
+      result.getValue();
     return result.getValue();
   }
 
