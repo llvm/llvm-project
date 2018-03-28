@@ -26,6 +26,7 @@ class TestDictionaryNSObjectAnyObject(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_dictionary_nsobject_any_object(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary<NSObject,AnyObject>"""
         self.build()
