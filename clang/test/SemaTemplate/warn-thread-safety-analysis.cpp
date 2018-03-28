@@ -23,8 +23,8 @@ void f() {
   a.mu2.Lock();
   a.bar<int>();
   a.mu2.Unlock();
-  a.bar<int>(); // expected-warning {{calling function 'bar' requires holding mutex 'a.mu2' exclusively}}
+  a.bar<int>(); // expected-warning {{calling function 'bar<int>' requires holding mutex 'a.mu2' exclusively}}
   a.mu1.Unlock();
-  a.bar<int>(); // expected-warning {{calling function 'bar' requires holding mutex 'a.mu1' exclusively}} \
-                   expected-warning {{calling function 'bar' requires holding mutex 'a.mu2' exclusively}}
+  a.bar<int>(); // expected-warning {{calling function 'bar<int>' requires holding mutex 'a.mu1' exclusively}} \
+                   expected-warning {{calling function 'bar<int>' requires holding mutex 'a.mu2' exclusively}}
 }

@@ -86,7 +86,7 @@ protected:
 char *OrcCAPIExecutionTest::testFuncName = nullptr;
 
 TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
-  if (!TM)
+  if (!SupportsJIT)
     return;
 
   LLVMOrcJITStackRef JIT =
@@ -112,7 +112,7 @@ TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
 }
 
 TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
-  if (!TM)
+  if (!SupportsIndirection)
     return;
 
   LLVMOrcJITStackRef JIT =
@@ -138,7 +138,7 @@ TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
 }
 
 TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
-  if (!TM)
+  if (!SupportsJIT)
     return;
 
   auto ObjBuffer = createTestObject();
@@ -163,7 +163,7 @@ TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
 }
 
 TEST_F(OrcCAPIExecutionTest, TestDirectCallbacksAPI) {
-  if (!TM)
+  if (!SupportsIndirection)
     return;
 
   LLVMOrcJITStackRef JIT =

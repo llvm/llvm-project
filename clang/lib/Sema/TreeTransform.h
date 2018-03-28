@@ -10388,7 +10388,7 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
   //   the corresponding pack is empty
   if (AllEmptyPacks && !RequiresADL) {
     getSema().Diag(Old->getNameLoc(), diag::err_using_pack_expansion_empty)
-        << isa<UnresolvedMemberExpr>(Old) << Old->getNameInfo().getName();
+        << isa<UnresolvedMemberExpr>(Old) << Old->getName();
     return true;
   }
 

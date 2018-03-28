@@ -1329,7 +1329,7 @@ def err_invalid_member_in_interface : Error<
           "nested class }0%1 is not permitted within an interface type">;
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "
-  "%select{'struct|non-public 'interface|'class}0 %1'">;
+  "%select{struct|non-public interface|class}0 %1">;
 
 def err_abstract_type_in_decl : Error<
   "%select{return|parameter|variable|field|instance variable|"
@@ -1629,7 +1629,7 @@ def err_missing_default_ctor : Error<
   "%select{base class|member}2 %3 %select{which|which|of %1}0 "
   "does not have a default constructor">;
 def note_due_to_dllexported_class : Note<
-  "due to '%0' being dllexported%select{|; try compiling in C++11 mode}1">;
+  "due to %0 being dllexported%select{|; try compiling in C++11 mode}1">;
 
 def err_illegal_union_or_anon_struct_member : Error<
   "%select{anonymous struct|union}0 member %1 has a non-trivial "
@@ -2986,11 +2986,11 @@ def warn_lock_exclusive_and_shared : Warning<
 def note_lock_exclusive_and_shared : Note<
   "the other acquisition of %0 '%1' is here">;
 def warn_variable_requires_any_lock : Warning<
-  "%select{reading|writing}1 variable '%0' requires holding "
+  "%select{reading|writing}1 variable %0 requires holding "
   "%select{any mutex|any mutex exclusively}1">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_var_deref_requires_any_lock : Warning<
-  "%select{reading|writing}1 the value pointed to by '%0' requires holding "
+  "%select{reading|writing}1 the value pointed to by %0 requires holding "
   "%select{any mutex|any mutex exclusively}1">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_fun_excludes_mutex : Warning<
@@ -3014,25 +3014,25 @@ def warn_acquire_requires_negative_cap : Warning<
 
 // Thread safety warnings on pass by reference
 def warn_guarded_pass_by_reference : Warning<
-  "passing variable '%1' by reference requires holding %0 "
+  "passing variable %1 by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReference>, DefaultIgnore;
 def warn_pt_guarded_pass_by_reference : Warning<
-  "passing the value that '%1' points to by reference requires holding %0 "
+  "passing the value that %1 points to by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReference>, DefaultIgnore;
 
 // Imprecise thread safety warnings
 def warn_variable_requires_lock : Warning<
-  "%select{reading|writing}3 variable '%1' requires holding %0 "
+  "%select{reading|writing}3 variable %1 requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_var_deref_requires_lock : Warning<
-  "%select{reading|writing}3 the value pointed to by '%1' requires "
+  "%select{reading|writing}3 the value pointed to by %1 requires "
   "holding %0 %select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_fun_requires_lock : Warning<
-  "calling function '%1' requires holding %0 %select{'%2'|'%2' exclusively}3">,
+  "calling function %1 requires holding %0 %select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
 // Precise thread safety warnings
@@ -3050,7 +3050,7 @@ def note_found_mutex_near_match : Note<"found near match '%0'">;
 // Verbose thread safety warnings
 def warn_thread_safety_verbose : Warning<"Thread safety verbose warning.">, 
   InGroup<ThreadSafetyVerbose>, DefaultIgnore;
-def note_thread_warning_in_fun : Note<"Thread warning in function '%0'">;
+def note_thread_warning_in_fun : Note<"Thread warning in function %0">;
 def note_guarded_by_declared_here : Note<"Guarded_by declared here.">;
 
 // Dummy warning that will trigger "beta" warnings from the analysis if enabled. 
@@ -6186,9 +6186,9 @@ def err_objc_object_catch : Error<
 def err_incomplete_type_objc_at_encode : Error<
   "'@encode' of incomplete type %0">;
 def warn_objc_circular_container : Warning<
-  "adding '%0' to '%1' might cause circular dependency in container">,
+  "adding %0 to %1 might cause circular dependency in container">,
   InGroup<DiagGroup<"objc-circular-container">>;
-def note_objc_circular_container_declared_here : Note<"'%0' declared here">;
+def note_objc_circular_container_declared_here : Note<"%0 declared here">;
 def warn_objc_unsafe_perform_selector : Warning<
   "%0 is incompatible with selectors that return a "
   "%select{struct|union|vector}1 type">,
@@ -7137,7 +7137,7 @@ def err_va_arg_in_device : Error<
   "CUDA device code does not support va_arg">;
 def err_alias_not_supported_on_nvptx : Error<"CUDA does not support aliases">;
 def err_cuda_unattributed_constexpr_cannot_overload_device : Error<
-  "constexpr function '%0' without __host__ or __device__ attributes cannot "
+  "constexpr function %0 without __host__ or __device__ attributes cannot "
   "overload __device__ function with same signature.  Add a __host__ "
   "attribute, or build with -fno-cuda-host-device-constexpr.">;
 def note_cuda_conflicting_device_function_declared_here : Note<
@@ -9336,7 +9336,8 @@ def ext_warn_gnu_final : ExtWarn<
   InGroup<GccCompat>;
 
 def warn_shadow_field :
-  Warning<"non-static data member '%0' of '%1' shadows member inherited from type '%2'">,
+  Warning<"non-static data member %0 of %1 shadows member inherited from "
+  "type %2">,
   InGroup<ShadowField>, DefaultIgnore;
 def note_shadow_field : Note<"declared here">;
 
