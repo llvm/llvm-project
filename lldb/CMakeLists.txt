@@ -71,16 +71,15 @@ add_subdirectory(tools)
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests."
   ${LLVM_INCLUDE_TESTS})
 if(LLDB_INCLUDE_TESTS)
-  # TARGET clang works for a non-standalone build.
-  #
-  # FIXME: This can be avoided by importing the cmake configuration from swift.
-  if (TARGET clang OR LLDB_BUILD_STANDALONE)
-    set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLDB_DEFAULT_TEST_C_COMPILER "")
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "")
-  endif()
+  # BEGIN - Swift Mods
+  # The clang target is sometimes unavailable (rdar://38935299). Instead of
+  # failing the build when the target is missing, make the in-tree compiler the
+  # default compiler to test.
+
+  set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+  set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+
+  # END - Swift Mods
 
   set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
   set(LLDB_TEST_CXX_COMPILER "${LLDB_DEFAULT_TEST_CXX_COMPILER}" CACHE PATH "C++ Compiler to use for building LLDB test inferiors")
