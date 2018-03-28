@@ -921,14 +921,8 @@ void MergeInputSection::splitIntoPieces() {
     splitNonStrings(Data, Entsize);
 
   if (Config->GcSections && (Flags & SHF_ALLOC))
-    for (uint64_t Off : LiveOffsets)
+    for (uint32_t Off : LiveOffsets)
       getSectionPiece(Off)->Live = true;
-}
-
-// Do binary search to get a section piece at a given input offset.
-SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
-  auto *This = static_cast<const MergeInputSection *>(this);
-  return const_cast<SectionPiece *>(This->getSectionPiece(Offset));
 }
 
 template <class It, class T, class Compare>
@@ -944,7 +938,8 @@ static It fastUpperBound(It First, It Last, const T &Value, Compare Comp) {
   return Comp(Value, *First) ? First : First + 1;
 }
 
-const SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) const {
+// Do binary search to get a section piece at a given input offset.
+SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
   if (Data.size() <= Offset)
     fatal(toString(this) + ": entry is past the end of the section");
 
@@ -963,13 +958,6 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
   if (!Live)
     return 0;
 
-  // Initialize OffsetMap lazily.
-  llvm::call_once(InitOffsetMap, [&] {
-    OffsetMap.reserve(Pieces.size());
-    for (size_t I = 0; I < Pieces.size(); ++I)
-      OffsetMap[Pieces[I].InputOff] = I;
-  });
-
   // Find a string starting at a given offset.
   auto It = OffsetMap.find(Offset);
   if (It != OffsetMap.end())
@@ -983,6 +971,12 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
 
   uint64_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;
+}
+
+void MergeInputSection::initOffsetMap() {
+  OffsetMap.reserve(Pieces.size());
+  for (size_t I = 0; I < Pieces.size(); ++I)
+    OffsetMap[Pieces[I].InputOff] = I;
 }
 
 template InputSection::InputSection(ObjFile<ELF32LE> &, const ELF32LE::Shdr &,

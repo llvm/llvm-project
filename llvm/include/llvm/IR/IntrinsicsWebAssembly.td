@@ -39,4 +39,10 @@ def int_wasm_grow_memory : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], []>;
 def int_wasm_throw : Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty],
                                [Throws, IntrNoReturn]>;
 def int_wasm_rethrow : Intrinsic<[], [], [Throws, IntrNoReturn]>;
+
+// Since wasm does not use landingpad instructions, these instructions return
+// exception pointer and selector values until we lower them in WasmEHPrepare.
+def int_wasm_get_exception : Intrinsic<[llvm_ptr_ty], [], [IntrHasSideEffects]>;
+def int_wasm_get_ehselector : Intrinsic<[llvm_i32_ty], [],
+                                        [IntrHasSideEffects]>;
 }

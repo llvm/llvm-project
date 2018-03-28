@@ -5053,6 +5053,13 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     return MachineOutlinerInstrType::Illegal;
   }
 
+  // Make sure none of the operands are un-outlinable.
+  for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
+        MOP.isTargetIndex())
+      return MachineOutlinerInstrType::Illegal;
+  }
+
   // Special cases for instructions that can always be outlined, but will fail
   // the later tests. e.g, ADRPs, which are PC-relative use LR, but can always
   // be outlined because they don't require a *specific* value to be in LR.
@@ -5131,17 +5138,6 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   if (MI.readsRegister(AArch64::W30, &getRegisterInfo()) ||
       MI.modifiesRegister(AArch64::W30, &getRegisterInfo()))
     return MachineOutlinerInstrType::Illegal;
-
-  // Make sure none of the operands are un-outlinable.
-  for (const MachineOperand &MOP : MI.operands()) {
-    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
-        MOP.isTargetIndex())
-      return MachineOutlinerInstrType::Illegal;
-
-    // Don't outline anything that uses the link register.
-    if (MOP.isReg() && getRegisterInfo().regsOverlap(MOP.getReg(), AArch64::LR))
-      return MachineOutlinerInstrType::Illegal;
-  }
 
   // Does this use the stack?
   if (MI.modifiesRegister(AArch64::SP, &RI) ||
