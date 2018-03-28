@@ -1069,7 +1069,7 @@ def VMOVSR : AVConv4I<0b11100000, 0b1010,
   // pipelines.
   let D = VFPNeonDomain;
 }
-def : Pat<(arm_vmovsr GPR:$Rt), (VMOVSR GPR:$Rt)>;
+def : Pat<(arm_vmovsr GPR:$Rt), (VMOVSR GPR:$Rt)>, Requires<[HasVFP2, UseVMOVSR]>;
 
 let hasSideEffects = 0 in {
 def VMOVRRD  : AVConv3I<0b11000101, 0b1011,

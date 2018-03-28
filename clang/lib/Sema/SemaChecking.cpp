@@ -11521,7 +11521,7 @@ void Sema::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
       if (ArgRE->isObjCSelfExpr()) {
         Diag(Message->getSourceRange().getBegin(),
              diag::warn_objc_circular_container)
-          << ArgRE->getDecl()->getName() << StringRef("super");
+          << ArgRE->getDecl() << StringRef("'super'");
       }
     }
   } else {
@@ -11537,11 +11537,11 @@ void Sema::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
           ValueDecl *Decl = ReceiverRE->getDecl();
           Diag(Message->getSourceRange().getBegin(),
                diag::warn_objc_circular_container)
-            << Decl->getName() << Decl->getName();
+            << Decl << Decl;
           if (!ArgRE->isObjCSelfExpr()) {
             Diag(Decl->getLocation(),
                  diag::note_objc_circular_container_declared_here)
-              << Decl->getName();
+              << Decl;
           }
         }
       }
@@ -11551,10 +11551,10 @@ void Sema::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
           ObjCIvarDecl *Decl = IvarRE->getDecl();
           Diag(Message->getSourceRange().getBegin(),
                diag::warn_objc_circular_container)
-            << Decl->getName() << Decl->getName();
+            << Decl << Decl;
           Diag(Decl->getLocation(),
                diag::note_objc_circular_container_declared_here)
-            << Decl->getName();
+            << Decl;
         }
       }
     }
