@@ -79,6 +79,20 @@ if(LLDB_INCLUDE_TESTS)
   set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
   set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
 
+  # If the build would have failed due to a missing clang target, log some
+  # diagnostics.
+  message(STATUS "lldb: Found SwiftConfig: ${Swift_FOUND}")
+  message(STATUS "lldb: Found ClangConfig: ${Clang_FOUND}")
+  if (TARGET clang)
+    message(STATUS "lldb: Found the clang target.")
+  else()
+    message(WARNING "lldb: Could not find the clang target!")
+    message(STATUS "-> CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
+    message(STATUS "-> CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+    message(STATUS "-> LLVM_CONFIG: ${LLVM_CONFIG}")
+    message(STATUS "-> LLDB_PATH_TO_CLANG_SOURCE: ${LLDB_PATH_TO_CLANG_SOURCE}")
+    message(STATUS "-> LLVM_BINARY_DIR: ${LLVM_BINARY_DIR}")
+  endif()
   # END - Swift Mods
 
   set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
