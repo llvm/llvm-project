@@ -30,7 +30,7 @@
 // RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t new 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH
 // RUN: %env_asan_opts=allocator_may_return_null=1 not %run %t new 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH
+// RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH-OOM
 // RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnCRASH
 // RUN: %env_asan_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
@@ -98,19 +98,21 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-mCRASH: malloc:
-// CHECK-mCRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-mCRASH: SUMMARY: AddressSanitizer: allocation-size-too-big
 // CHECK-cCRASH: calloc:
-// CHECK-cCRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-cCRASH: SUMMARY: AddressSanitizer: allocation-size-too-big
 // CHECK-coCRASH: calloc-overflow:
-// CHECK-coCRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-coCRASH: SUMMARY: AddressSanitizer: calloc-overflow
 // CHECK-rCRASH: realloc:
-// CHECK-rCRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-rCRASH: SUMMARY: AddressSanitizer: allocation-size-too-big
 // CHECK-mrCRASH: realloc-after-malloc:
-// CHECK-mrCRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-mrCRASH: SUMMARY: AddressSanitizer: allocation-size-too-big
 // CHECK-nCRASH: new:
-// CHECK-nCRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-nCRASH: SUMMARY: AddressSanitizer: allocation-size-too-big
+// CHECK-nCRASH-OOM: new:
+// CHECK-nCRASH-OOM: SUMMARY: AddressSanitizer: out-of-memory
 // CHECK-nnCRASH: new-nothrow:
-// CHECK-nnCRASH: AddressSanitizer's allocator is terminating the process
+// CHECK-nnCRASH: SUMMARY: AddressSanitizer: allocation-size-too-big
 
 // CHECK-mNULL: malloc:
 // CHECK-mNULL: errno: 12

@@ -172,6 +172,106 @@ void ErrorSanitizerGetAllocatedSizeNotOwned::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
+void ErrorCallocOverflow::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  Report(
+      "ERROR: AddressSanitizer: calloc parameters overflow: count * size "
+      "(%zd * %zd) cannot be represented in type size_t (thread T%d%s)\n",
+      count, size, tid, ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorPvallocOverflow::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  Report(
+      "ERROR: AddressSanitizer: pvalloc parameters overflow: size 0x%zx "
+      "rounded up to system page size 0x%zx cannot be represented in type "
+      "size_t (thread T%d%s)\n",
+      size, GetPageSizeCached(), tid,
+      ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorInvalidAllocationAlignment::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  Report(
+      "ERROR: AddressSanitizer: invalid allocation alignment: %zd, "
+      "alignment must be a power of two (thread T%d%s)\n",
+      alignment, tid, ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorInvalidPosixMemalignAlignment::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  Report(
+      "ERROR: AddressSanitizer: invalid alignment requested in posix_memalign: "
+      "%zd, alignment must be a power of two and a multiple of sizeof(void*) "
+      "== %zd (thread T%d%s)\n",
+      alignment, sizeof(void*), tid,  // NOLINT
+      ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorAllocationSizeTooBig::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  Report(
+      "ERROR: AddressSanitizer: requested allocation size 0x%zx (0x%zx after "
+      "adjustments for alignment, red zones etc.) exceeds maximum supported "
+      "size of 0x%zx (thread T%d%s)\n",
+      user_size, total_size, max_size, tid,
+      ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorRssLimitExceeded::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report(
+      "ERROR: AddressSanitizer: specified RSS limit exceeded, currently set to "
+      "soft_rss_limit_mb=%zd\n", common_flags()->soft_rss_limit_mb);
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorOutOfMemory::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report(
+      "ERROR: AddressSanitizer: allocator is out of memory trying to allocate "
+      "0x%zx bytes\n", requested_size);
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
 void ErrorStringFunctionMemoryRangesOverlap::Print() {
   Decorator d;
   char bug_type[100];

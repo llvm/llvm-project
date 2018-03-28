@@ -65,4 +65,4 @@ int main() {
 // CHECK_MAY_RETURN_0: allocating 128 times
 // CHECK_MAY_RETURN_0: Some of the malloc calls returned non-null: 128
 // CHECK_MAY_RETURN_0: allocating 256 times
-// CHECK_MAY_RETURN_0: allocator is terminating the process instead of returning
+// CHECK_MAY_RETURN_0: {{SUMMARY: .*Sanitizer: rss-limit-exceeded}}

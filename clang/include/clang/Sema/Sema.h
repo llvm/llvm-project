@@ -546,7 +546,7 @@ public:
   /// FieldCollector - Collects CXXFieldDecls during parsing of C++ classes.
   std::unique_ptr<CXXFieldCollector> FieldCollector;
 
-  typedef llvm::SmallSetVector<const NamedDecl*, 16> NamedDeclSetType;
+  typedef llvm::SmallSetVector<NamedDecl *, 16> NamedDeclSetType;
 
   /// \brief Set containing all declared private fields that are not used.
   NamedDeclSetType UnusedPrivateFields;
