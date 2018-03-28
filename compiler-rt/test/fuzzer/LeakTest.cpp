@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
-static volatile void *Sink;
+static void * volatile Sink;
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size > 0 && *Data == 'H') {

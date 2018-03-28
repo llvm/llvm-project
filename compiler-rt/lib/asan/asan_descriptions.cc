@@ -402,7 +402,7 @@ void StackAddressDescription::Print() const {
   }
   Printf(
       "HINT: this may be a false positive if your program uses "
-      "some custom stack unwind mechanism or swapcontext\n");
+      "some custom stack unwind mechanism, swapcontext or vfork\n");
   if (SANITIZER_WINDOWS)
     Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
   else

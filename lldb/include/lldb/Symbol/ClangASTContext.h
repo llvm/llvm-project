@@ -824,6 +824,7 @@ public:
 
   clang::CXXMethodDecl *
   AddMethodToCXXRecordType(lldb::opaque_compiler_type_t type, const char *name,
+                           const char *mangled_name,
                            const CompilerType &method_type,
                            lldb::AccessType access, bool is_virtual,
                            bool is_static, bool is_inline, bool is_explicit,

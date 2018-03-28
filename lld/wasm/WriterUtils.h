@@ -47,6 +47,8 @@ void writeGlobalType(raw_ostream &OS, const llvm::wasm::WasmGlobalType &Type);
 
 void writeGlobal(raw_ostream &OS, const llvm::wasm::WasmGlobal &Global);
 
+void writeTableType(raw_ostream &OS, const llvm::wasm::WasmTable &Type);
+
 void writeImport(raw_ostream &OS, const llvm::wasm::WasmImport &Import);
 
 void writeExport(raw_ostream &OS, const llvm::wasm::WasmExport &Export);
