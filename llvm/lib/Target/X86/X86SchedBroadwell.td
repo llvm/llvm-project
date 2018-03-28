@@ -227,6 +227,11 @@ def : WriteRes<WritePCmpEStrILd, [BWPort0, BWPort5, BWPort23, BWPort0156]> {
   let ResourceCycles = [4,3,1,1];
 }
 
+// MOVMSK Instructions.
+def : WriteRes<WriteFMOVMSK, [BWPort0]> { let Latency = 3; }
+def : WriteRes<WriteVecMOVMSK, [BWPort0]> { let Latency = 3; }
+def : WriteRes<WriteMMXMOVMSK, [BWPort0]> { let Latency = 1; }
+
 // AES instructions.
 def : WriteRes<WriteAESDecEnc, [BWPort5]> { // Decryption, encryption.
   let Latency = 7;
@@ -297,7 +302,6 @@ def BWWriteResGroup1 : SchedWriteRes<[BWPort0]> {
 }
 def: InstRW<[BWWriteResGroup1], (instregex "MMX_MOVD64from64rr",
                                            "MMX_MOVD64grr",
-                                           "MMX_PMOVMSKBrr",
                                            "MMX_PSLLDri",
                                            "MMX_PSLLDrr",
                                            "MMX_PSLLQri",
@@ -838,15 +842,6 @@ def: InstRW<[BWWriteResGroup25], (instregex "PUSH(16|32|64)rmr",
                                             "STOSL",
                                             "STOSQ",
                                             "STOSW")>;
-
-def BWWriteResGroup26 : SchedWriteRes<[BWPort0]> {
-  let Latency = 3;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[BWWriteResGroup26], (instregex "(V?)MOVMSKPD(Y?)rr",
-                                            "(V?)MOVMSKPS(Y?)rr",
-                                            "(V?)PMOVMSKB(Y?)rr")>;
 
 def BWWriteResGroup27 : SchedWriteRes<[BWPort1]> {
   let Latency = 3;

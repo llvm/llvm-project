@@ -224,6 +224,11 @@ def : WriteRes<WritePCmpEStrILd, [SKXPort0, SKXPort5, SKXPort23, SKXPort0156]> {
   let ResourceCycles = [4,3,1,1];
 }
 
+// MOVMSK Instructions.
+def : WriteRes<WriteFMOVMSK, [SKXPort0]> { let Latency = 2; }
+def : WriteRes<WriteVecMOVMSK, [SKXPort0]> { let Latency = 2; }
+def : WriteRes<WriteMMXMOVMSK, [SKXPort0]> { let Latency = 2; }
+
 // AES instructions.
 def : WriteRes<WriteAESDecEnc, [SKXPort0]> { // Decryption, encryption.
   let Latency = 4;
@@ -1444,28 +1449,18 @@ def: InstRW<[SKXWriteResGroup12], (instregex "COMISDrr",
                                              "COMISSrr",
                                              "MMX_MOVD64from64rr",
                                              "MMX_MOVD64grr",
-                                             "MMX_PMOVMSKBrr",
-                                             "MOVMSKPDrr",
-                                             "MOVMSKPSrr",
                                              "MOVPDI2DIrr",
                                              "MOVPQIto64rr",
-                                             "PMOVMSKBrr",
                                              "UCOMISDrr",
                                              "UCOMISSrr",
                                              "VCOMISDZrr(b?)",
                                              "VCOMISDrr",
                                              "VCOMISSZrr(b?)",
                                              "VCOMISSrr",
-                                             "VMOVMSKPDYrr",
-                                             "VMOVMSKPDrr",
-                                             "VMOVMSKPSYrr",
-                                             "VMOVMSKPSrr",
                                              "VMOVPDI2DIZrr(b?)(k?)(z?)",
                                              "VMOVPDI2DIrr",
                                              "VMOVPQIto64Zrr(b?)(k?)(z?)",
                                              "VMOVPQIto64rr",
-                                             "VPMOVMSKBYrr",
-                                             "VPMOVMSKBrr",
                                              "VTESTPDYrr",
                                              "VTESTPDrr",
                                              "VTESTPSYrr",

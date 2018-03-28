@@ -106,13 +106,11 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_8_1(<8 x i16> %a, <8 x i16> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_halfword_8_1
-; CHECK: vsldoi 2, 2, 2, 6
-; CHECK: vinserth 3, 2, 14
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 6
+; CHECK: vinserth {{[0-9]+}}, {{[0-9]+}}, 14
 ; CHECK-BE-LABEL: shuffle_vector_halfword_8_1
-; CHECK-BE: vsldoi 2, 2, 2, 12
-; CHECK-BE: vinserth 3, 2, 0
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 12
+; CHECK-BE: vinserth {{[0-9]+}}, {{[0-9]+}}, 0
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
@@ -122,13 +120,11 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_9_7(<8 x i16> %a, <8 x i16> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_halfword_9_7
-; CHECK: vsldoi 2, 2, 2, 10
-; CHECK: vinserth 3, 2, 12
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 10
+; CHECK: vinserth {{[0-9]+}}, {{[0-9]+}}, 12
 ; CHECK-BE-LABEL: shuffle_vector_halfword_9_7
-; CHECK-BE: vsldoi 2, 2, 2, 8
-; CHECK-BE: vinserth 3, 2, 2
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 8
+; CHECK-BE: vinserth {{[0-9]+}}, {{[0-9]+}}, 2
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 7, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
@@ -139,9 +135,8 @@ entry:
 ; CHECK: vinserth 3, 2, 10
 ; CHECK: vmr 2, 3
 ; CHECK-BE-LABEL: shuffle_vector_halfword_10_4
-; CHECK-BE: vsldoi 2, 2, 2, 2
-; CHECK-BE: vinserth 3, 2, 4
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 2
+; CHECK-BE: vinserth {{[0-9]+}}, {{[0-9]+}}, 4
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 4, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
@@ -149,13 +144,11 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_11_2(<8 x i16> %a, <8 x i16> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_halfword_11_2
-; CHECK: vsldoi 2, 2, 2, 4
-; CHECK: vinserth 3, 2, 8
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 4
+; CHECK: vinserth {{[0-9]+}}, {{[0-9]+}}, 8
 ; CHECK-BE-LABEL: shuffle_vector_halfword_11_2
-; CHECK-BE: vsldoi 2, 2, 2, 14
-; CHECK-BE: vinserth 3, 2, 6
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 14
+; CHECK-BE: vinserth {{[0-9]+}}, {{[0-9]+}}, 6
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 2, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
@@ -163,13 +156,11 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_12_6(<8 x i16> %a, <8 x i16> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_halfword_12_6
-; CHECK: vsldoi 2, 2, 2, 12
-; CHECK: vinserth 3, 2, 6
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 12
+; CHECK: vinserth {{[0-9]+}}, {{[0-9]+}}, 6
 ; CHECK-BE-LABEL: shuffle_vector_halfword_12_6
-; CHECK-BE: vsldoi 2, 2, 2, 6
-; CHECK-BE: vinserth 3, 2, 8
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 6
+; CHECK-BE: vinserth {{[0-9]+}}, {{[0-9]+}}, 8
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 6, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
@@ -177,9 +168,8 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_13_3(<8 x i16> %a, <8 x i16> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_halfword_13_3
-; CHECK: vsldoi 2, 2, 2, 2
-; CHECK: vinserth 3, 2, 4
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 2
+; CHECK: vinserth {{[0-9]+}}, {{[0-9]+}}, 4
 ; CHECK-BE-LABEL: shuffle_vector_halfword_13_3
 ; CHECK-BE: vinserth 3, 2, 10
 ; CHECK-BE: vmr 2, 3
@@ -190,13 +180,11 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_14_5(<8 x i16> %a, <8 x i16> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_halfword_14_5
-; CHECK: vsldoi 2, 2, 2, 14
-; CHECK: vinserth 3, 2, 2
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 14
+; CHECK: vinserth {{[0-9]+}}, {{[0-9]+}}, 2
 ; CHECK-BE-LABEL: shuffle_vector_halfword_14_5
-; CHECK-BE: vsldoi 2, 2, 2, 4
-; CHECK-BE: vinserth 3, 2, 12
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 4
+; CHECK-BE: vinserth {{[0-9]+}}, {{[0-9]+}}, 12
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 5, i32 15>
   ret <8 x i16> %vecins
 }
@@ -204,13 +192,11 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_15_0(<8 x i16> %a, <8 x i16> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_halfword_15_0
-; CHECK: vsldoi 2, 2, 2, 8
-; CHECK: vinserth 3, 2, 0
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 8
+; CHECK: vinserth {{[0-9]+}}, {{[0-9]+}}, 0
 ; CHECK-BE-LABEL: shuffle_vector_halfword_15_0
-; CHECK-BE: vsldoi 2, 2, 2, 10
-; CHECK-BE: vinserth 3, 2, 14
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 10
+; CHECK-BE: vinserth {{[0-9]+}}, {{[0-9]+}}, 14
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0>
   ret <8 x i16> %vecins
 }
@@ -498,9 +484,8 @@ entry:
 ; CHECK: vinsertb 3, 2, 15
 ; CHECK: vmr 2, 3
 ; CHECK-BE-LABEL: shuffle_vector_byte_16_8
-; CHECK-BE: vsldoi 2, 2, 2, 1
-; CHECK-BE: vinsertb 3, 2, 0
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 1
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 0
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -508,13 +493,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_17_1(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_17_1
-; CHECK: vsldoi 2, 2, 2, 7
-; CHECK: vinsertb 3, 2, 14
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 7
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 14
 ; CHECK-BE-LABEL: shuffle_vector_byte_17_1
-; CHECK-BE: vsldoi 2, 2, 2, 10
-; CHECK-BE: vinsertb 3, 2, 1
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 10
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 1
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 1, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -522,13 +505,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_18_10(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_18_10
-; CHECK: vsldoi 2, 2, 2, 14
-; CHECK: vinsertb 3, 2, 13
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 14
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 13
 ; CHECK-BE-LABEL: shuffle_vector_byte_18_10
-; CHECK-BE: vsldoi 2, 2, 2, 3
-; CHECK-BE: vinsertb 3, 2, 2
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 3
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 2
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 10, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -536,13 +517,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_19_3(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_19_3
-; CHECK: vsldoi 2, 2, 2, 5
-; CHECK: vinsertb 3, 2, 12
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 5
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 12
 ; CHECK-BE-LABEL: shuffle_vector_byte_19_3
-; CHECK-BE: vsldoi 2, 2, 2, 12
-; CHECK-BE: vinsertb 3, 2, 3
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 12
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 3
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 3, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -550,13 +529,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_20_12(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_20_12
-; CHECK: vsldoi 2, 2, 2, 12
-; CHECK: vinsertb 3, 2, 11
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 12
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 11
 ; CHECK-BE-LABEL: shuffle_vector_byte_20_12
-; CHECK-BE: vsldoi 2, 2, 2, 5
-; CHECK-BE: vinsertb 3, 2, 4
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 5
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 4
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 12, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -564,13 +541,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_21_5(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_21_5
-; CHECK: vsldoi 2, 2, 2, 3
-; CHECK: vinsertb 3, 2, 10
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 3
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 10
 ; CHECK-BE-LABEL: shuffle_vector_byte_21_5
-; CHECK-BE: vsldoi 2, 2, 2, 14
-; CHECK-BE: vinsertb 3, 2, 5
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 14
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 5
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 5, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -578,13 +553,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_22_14(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_22_14
-; CHECK: vsldoi 2, 2, 2, 10
-; CHECK: vinsertb 3, 2, 9
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 10
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 9
 ; CHECK-BE-LABEL: shuffle_vector_byte_22_14
-; CHECK-BE: vsldoi 2, 2, 2, 7
-; CHECK-BE: vinsertb 3, 2, 6
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 7
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 6
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 14, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -592,9 +565,8 @@ entry:
 define <16 x i8> @shuffle_vector_byte_23_7(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_23_7
-; CHECK: vsldoi 2, 2, 2, 1
-; CHECK: vinsertb 3, 2, 8
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 1
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 8
 ; CHECK-BE-LABEL: shuffle_vector_byte_23_7
 ; CHECK-BE: vinsertb 3, 2, 7
 ; CHECK-BE: vmr 2, 3
@@ -605,13 +577,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_24_0(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_24_0
-; CHECK: vsldoi 2, 2, 2, 8
-; CHECK: vinsertb 3, 2, 7
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 8
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 7
 ; CHECK-BE-LABEL: shuffle_vector_byte_24_0
-; CHECK-BE: vsldoi 2, 2, 2, 9
-; CHECK-BE: vinsertb 3, 2, 8
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 9
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 8
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 0, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -619,13 +589,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_25_9(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_25_9
-; CHECK: vsldoi 2, 2, 2, 15
-; CHECK: vinsertb 3, 2, 6
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 15
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 6
 ; CHECK-BE-LABEL: shuffle_vector_byte_25_9
-; CHECK-BE: vsldoi 2, 2, 2, 2
-; CHECK-BE: vinsertb 3, 2, 9
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 2
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 9
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 9, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -633,13 +601,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_26_2(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_26_2
-; CHECK: vsldoi 2, 2, 2, 6
-; CHECK: vinsertb 3, 2, 5
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 6
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 5
 ; CHECK-BE-LABEL: shuffle_vector_byte_26_2
-; CHECK-BE: vsldoi 2, 2, 2, 11
-; CHECK-BE: vinsertb 3, 2, 10
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 11
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 10
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 2, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -647,13 +613,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_27_11(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_27_11
-; CHECK: vsldoi 2, 2, 2, 13
-; CHECK: vinsertb 3, 2, 4
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 13
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 4
 ; CHECK-BE-LABEL: shuffle_vector_byte_27_11
-; CHECK-BE: vsldoi 2, 2, 2, 4
-; CHECK-BE: vinsertb 3, 2, 11
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 4
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 11
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 11, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -661,13 +625,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_28_4(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_28_4
-; CHECK: vsldoi 2, 2, 2, 4
-; CHECK: vinsertb 3, 2, 3
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 4
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 3
 ; CHECK-BE-LABEL: shuffle_vector_byte_28_4
-; CHECK-BE: vsldoi 2, 2, 2, 13
-; CHECK-BE: vinsertb 3, 2, 12
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 13
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 12
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 4, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -675,13 +637,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_29_13(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_29_13
-; CHECK: vsldoi 2, 2, 2, 11
-; CHECK: vinsertb 3, 2, 2
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 11
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 2
 ; CHECK-BE-LABEL: shuffle_vector_byte_29_13
-; CHECK-BE: vsldoi 2, 2, 2, 6
-; CHECK-BE: vinsertb 3, 2, 13
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 6
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 13
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 13, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
@@ -689,13 +649,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_30_6(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_30_6
-; CHECK: vsldoi 2, 2, 2, 2
-; CHECK: vinsertb 3, 2, 1
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 2
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 1
 ; CHECK-BE-LABEL: shuffle_vector_byte_30_6
-; CHECK-BE: vsldoi 2, 2, 2, 15
-; CHECK-BE: vinsertb 3, 2, 14
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 15
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 14
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 6, i32 31>
   ret <16 x i8> %vecins
 }
@@ -703,13 +661,11 @@ entry:
 define <16 x i8> @shuffle_vector_byte_31_15(<16 x i8> %a, <16 x i8> %b) {
 entry:
 ; CHECK-LABEL: shuffle_vector_byte_31_15
-; CHECK: vsldoi 2, 2, 2, 9
-; CHECK: vinsertb 3, 2, 0
-; CHECK: vmr 2, 3
+; CHECK: vsldoi {{[0-9]+}}, 2, 2, 9
+; CHECK: vinsertb {{[0-9]+}}, {{[0-9]+}}, 0
 ; CHECK-BE-LABEL: shuffle_vector_byte_31_15
-; CHECK-BE: vsldoi 2, 2, 2, 8
-; CHECK-BE: vinsertb 3, 2, 15
-; CHECK-BE: vmr 2, 3
+; CHECK-BE: vsldoi {{[0-9]+}}, 2, 2, 8
+; CHECK-BE: vinsertb {{[0-9]+}}, {{[0-9]+}}, 15
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 15>
   ret <16 x i8> %vecins
 }

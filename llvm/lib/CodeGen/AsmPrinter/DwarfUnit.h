@@ -306,6 +306,10 @@ public:
                                       const MCSymbol *Label,
                                       const MCSymbol *Sec);
 
+  /// If the \p File has an MD5 checksum, return it as an MD5Result
+  /// allocated in the MCContext.
+  MD5::MD5Result *getMD5AsBytes(const DIFile *File) const;
+
 protected:
   ~DwarfUnit();
 
@@ -315,10 +319,6 @@ protected:
   /// Look up the source ID for the given file. If none currently exists,
   /// create a new ID and insert it in the line table.
   virtual unsigned getOrCreateSourceID(const DIFile *File) = 0;
-
-  /// If the \p File has an MD5 checksum, return it as an MD5Result
-  /// allocated in the MCContext.
-  MD5::MD5Result *getMD5AsBytes(const DIFile *File);
 
   /// Look in the DwarfDebug map for the MDNode that corresponds to the
   /// reference.
@@ -367,6 +367,7 @@ class DwarfTypeUnit final : public DwarfUnit {
   const DIE *Ty;
   DwarfCompileUnit &CU;
   MCDwarfDwoLineTable *SplitLineTable;
+  bool UsedLineTable = false;
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
   bool isDwoUnit() const override;

@@ -216,6 +216,11 @@ def : WriteRes<WritePCmpEStrILd, [HWPort0, HWPort5, HWPort23, HWPort0156]> {
   let ResourceCycles = [4,3,1,1];
 }
 
+// MOVMSK Instructions.
+def : WriteRes<WriteFMOVMSK, [HWPort0]> { let Latency = 3; }
+def : WriteRes<WriteVecMOVMSK, [HWPort0]> { let Latency = 3; }
+def : WriteRes<WriteMMXMOVMSK, [HWPort0]> { let Latency = 1; }
+
 // AES Instructions.
 def : WriteRes<WriteAESDecEnc, [HWPort5]> {
   let Latency = 7;
@@ -658,7 +663,6 @@ def HWWriteResGroup2 : SchedWriteRes<[HWPort0]> {
 }
 def: InstRW<[HWWriteResGroup2], (instregex "MMX_MOVD64from64rr",
                                            "MMX_MOVD64grr",
-                                           "MMX_PMOVMSKBrr",
                                            "MMX_PSLLDri",
                                            "MMX_PSLLDrr",
                                            "MMX_PSLLQri",
@@ -1762,15 +1766,6 @@ def HWWriteResGroup48 : SchedWriteRes<[HWPort4,HWPort6,HWPort23,HWPort237,HWPort
 }
 def: InstRW<[HWWriteResGroup48], (instregex "CALL(16|32|64)m",
                                             "FARCALL64")>;
-
-def HWWriteResGroup49 : SchedWriteRes<[HWPort0]> {
-  let Latency = 3;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[HWWriteResGroup49], (instregex "(V?)MOVMSKPD(Y?)rr",
-                                            "(V?)MOVMSKPS(Y?)rr",
-                                            "(V?)PMOVMSKB(Y?)rr")>;
 
 def HWWriteResGroup50 : SchedWriteRes<[HWPort1]> {
   let Latency = 3;

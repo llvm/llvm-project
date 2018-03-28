@@ -26,6 +26,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagontti"
 
+static cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(false),
+  cl::Hidden, cl::desc("Enable loop vectorizer for HVX"));
+
 static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
   cl::init(true), cl::Hidden,
   cl::desc("Control lookup table emission on Hexagon target"));
@@ -47,8 +50,41 @@ bool HexagonTTIImpl::shouldFavorPostInc() const {
   return true;
 }
 
-unsigned HexagonTTIImpl::getNumberOfRegisters(bool vector) const {
-  return vector ? 0 : 32;
+unsigned HexagonTTIImpl::getNumberOfRegisters(bool Vector) const {
+  if (Vector)
+    return HexagonAutoHVX && getST()->useHVXOps() ? 32 : 0;
+  return 32;
+}
+
+unsigned HexagonTTIImpl::getMaxInterleaveFactor(unsigned VF) {
+  return HexagonAutoHVX && getST()->useHVXOps() ? 64 : 0;
+}
+
+unsigned HexagonTTIImpl::getRegisterBitWidth(bool Vector) const {
+  return Vector ? getMinVectorRegisterBitWidth() : 32;
+}
+
+unsigned HexagonTTIImpl::getMinVectorRegisterBitWidth() const {
+  return getST()->useHVXOps() ? getST()->getVectorLength()*8 : 0;
+}
+
+unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+      unsigned Alignment, unsigned AddressSpace, const Instruction *I) {
+  if (Opcode == Instruction::Load && Src->isVectorTy()) {
+    VectorType *VecTy = cast<VectorType>(Src);
+    unsigned VecWidth = VecTy->getBitWidth();
+    if (VecWidth > 64) {
+      // Assume that vectors longer than 64 bits are meant for HVX.
+      if (getNumberOfRegisters(true) > 0) {
+        if (VecWidth % getRegisterBitWidth(true) == 0)
+          return 1;
+      }
+      unsigned AlignWidth = 8 * std::max(1u, Alignment);
+      unsigned NumLoads = alignTo(VecWidth, AlignWidth) / AlignWidth;
+      return 3*NumLoads;
+    }
+  }
+  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, I);
 }
 
 unsigned HexagonTTIImpl::getPrefetchDistance() const {
@@ -61,21 +97,22 @@ unsigned HexagonTTIImpl::getCacheLineSize() const {
 
 int HexagonTTIImpl::getUserCost(const User *U,
                                 ArrayRef<const Value *> Operands) {
-  auto isCastFoldedIntoLoad = [](const CastInst *CI) -> bool {
+  auto isCastFoldedIntoLoad = [this](const CastInst *CI) -> bool {
     if (!CI->isIntegerCast())
       return false;
+    // Only extensions from an integer type shorter than 32-bit to i32
+    // can be folded into the load.
+    const DataLayout &DL = getDataLayout();
+    unsigned SBW = DL.getTypeSizeInBits(CI->getSrcTy());
+    unsigned DBW = DL.getTypeSizeInBits(CI->getDestTy());
+    if (DBW != 32 || SBW >= DBW)
+      return false;
+
     const LoadInst *LI = dyn_cast<const LoadInst>(CI->getOperand(0));
     // Technically, this code could allow multiple uses of the load, and
     // check if all the uses are the same extension operation, but this
     // should be sufficient for most cases.
-    if (!LI || !LI->hasOneUse())
-      return false;
-
-    // Only extensions from an integer type shorter than 32-bit to i32
-    // can be folded into the load.
-    unsigned SBW = CI->getSrcTy()->getIntegerBitWidth();
-    unsigned DBW = CI->getDestTy()->getIntegerBitWidth();
-    return DBW == 32 && (SBW < DBW);
+    return LI && LI->hasOneUse();
   };
 
   if (const CastInst *CI = dyn_cast<const CastInst>(U))

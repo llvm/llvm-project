@@ -121,7 +121,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
 }
 
 TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
-  if (!TM)
+  if (!SupportsJIT)
     return;
 
   SymbolStringPool SSP;
@@ -206,7 +206,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
 }
 
 TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
-  if (!TM)
+  if (!SupportsJIT)
     return;
 
   SymbolStringPool SSP;

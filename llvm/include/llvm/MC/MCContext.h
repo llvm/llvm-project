@@ -537,8 +537,13 @@ namespace llvm {
       DwarfCompileUnitID = CUIndex;
     }
 
-    void setMCLineTableCompilationDir(unsigned CUID, StringRef CompilationDir) {
-      getMCDwarfLineTable(CUID).setCompilationDir(CompilationDir);
+    /// Specifies the "root" file and directory of the compilation unit.
+    /// These are "file 0" and "directory 0" in DWARF v5.
+    void setMCLineTableRootFile(unsigned CUID, StringRef CompilationDir,
+                                StringRef Filename, MD5::MD5Result *Checksum,
+                                Optional<StringRef> Source) {
+      getMCDwarfLineTable(CUID).setRootFile(CompilationDir, Filename, Checksum,
+                                            Source);
     }
 
     /// Saves the information from the currently parsed dwarf .loc directive

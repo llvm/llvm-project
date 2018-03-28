@@ -2542,14 +2542,14 @@ body:             |
     %6 = LI8 889
     %7,%17 = LWZUX %0, killed %6 :: (load 4 from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWZU 889, %0
-    ; CHECK-LATE: lwzu 5, 889(4)
+    ; CHECK-LATE: lwzu {{[0-9]+}}, 889({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -2
     %12,%18 = LWZUX %0, killed %11 :: (load 4 from %ir.arrayidx3, !tbaa !8)
     ; CHECK: LWZU -2, %0
-    ; CHECK-LATE: lwzu 4, -2(3)
+    ; CHECK-LATE: lwzu {{[0-9]+}}, -2({{[0-9]+}})
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
     %14 = INSERT_SUBREG %15, killed %13, 1
@@ -2772,14 +2772,14 @@ body:             |
     %6 = LI8 100
     %7,%14 = LDUX %0, killed %6 :: (load 8 from %ir.arrayidx, !tbaa !10)
     ; CHECK: LDU 100, %0
-    ; CHECK-LATE: ldu 5, 100(4)
+    ; CHECK-LATE: ldu {{[0-9]+}}, 100({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 200
     %12,%15 = LDUX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !10)
     ; CHECK: LDU 200, %0
-    ; CHECK-LATE: ldu 4, 200(3)
+    ; CHECK-LATE: ldu {{[0-9]+}}, 200({{[0-9]+}})
     %13 = ADD8 killed %12, killed %7
     $x3 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2920,14 +2920,14 @@ body:             |
     %6 = LI8 440
     %7,%14 = LFDUX %0, killed %6 :: (load 8 from %ir.arrayidx, !tbaa !12)
     ; CHECK: LFDU 440, %0
-    ; CHECK-LATE: lfdu 0, 440(4)
+    ; CHECK-LATE: lfdu {{[0-9]+}}, 440({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 16
     %12,%15 = LFDUX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !12)
     ; CHECK: LFDU 16, %0
-    ; CHECK-LATE: lfdu 1, 16(3)
+    ; CHECK-LATE: lfdu {{[0-9]+}}, 16({{[0-9]+}})
     %13 = FADD killed %7, killed %12, implicit $rm
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
@@ -2993,14 +2993,14 @@ body:             |
     %6 = RLDIC %4, 3, 29
     %7 = LFDX %0, killed %6 :: (load 8 from %ir.arrayidx, !tbaa !12)
     ; CHECK: LFD -20, killed %6
-    ; CHECK-LATE: lfd 0, -20(5)
+    ; CHECK-LATE: lfd {{[0-9]+}}, -20({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = RLDIC %9, 3, 29
     %12 = LFDX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !12)
     ; CHECK: LFD -20, killed %11
-    ; CHECK-LATE: lfd 1, -20(4)
+    ; CHECK-LATE: lfd {{[0-9]+}}, -20({{[0-9]+}})
     %13 = FADD killed %7, killed %12, implicit $rm
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
@@ -5100,14 +5100,14 @@ body:             |
     %8 = LI8 966
     %13 = STBUX %3, %0, killed %8 :: (store 1 into %ir.arrayidx, !tbaa !3)
     ; CHECK: STBU %3, 966, %0
-    ; CHECK-LATE: 4, 966(5)
+    ; CHECK-LATE: {{[0-9]+}}, 966({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 777
     %14 = STBUX %3, %0, killed %12 :: (store 1 into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STBU %3, 777, %0
-    ; CHECK-LATE: 4, 777(3)
+    ; CHECK-LATE: {{[0-9]+}}, 777({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -5248,14 +5248,14 @@ body:             |
     %8 = LI8 32000
     %13 = STHUX %3, %0, killed %8 :: (store 2 into %ir.arrayidx, !tbaa !6)
     ; CHECK: STHU %3, 32000, %0
-    ; CHECK-LATE: sthu 4, 32000(5)
+    ; CHECK-LATE: sthu {{[0-9]+}}, 32000({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 -761
     %14 = STHUX %3, %0, killed %12 :: (store 2 into %ir.arrayidx3, !tbaa !6)
     ; CHECK: STHU %3, -761, %0
-    ; CHECK-LATE: sthu 4, -761(3)
+    ; CHECK-LATE: sthu {{[0-9]+}}, -761({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -5321,14 +5321,14 @@ body:             |
     %8 = LI8 900
     STHX %3, %0, killed %8 :: (store 1 into %ir.arrayidx, !tbaa !3)
     ; CHECK: STH %3, 900, %0
-    ; CHECK-LATE: sth 4, 900(3)
+    ; CHECK-LATE: sth {{[0-9]+}}, 900({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 -900
     STHX %3, %0, killed %12 :: (store 1 into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STH %3, -900, %0
-    ; CHECK-LATE: sth 4, -900(3)
+    ; CHECK-LATE: sth {{[0-9]+}}, -900({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -5396,14 +5396,14 @@ body:             |
     %8 = LI8 111
     %13 = STWUX %3, %0, killed %8 :: (store 4 into %ir.arrayidx, !tbaa !8)
     ; CHECK: STWU %3, 111, %0
-    ; CHECK-LATE: stwu 4, 111(5)
+    ; CHECK-LATE: stwu {{[0-9]+}}, 111({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 0
     %14 = STWUX %3, %0, killed %12 :: (store 4 into %ir.arrayidx3, !tbaa !8)
     ; CHECK: STWU %3, 0, %0
-    ; CHECK-LATE: stwu 4, 0(3)
+    ; CHECK-LATE: stwu {{[0-9]+}}, 0({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -5542,14 +5542,14 @@ body:             |
     %7 = LI8 444
     %12 = STDUX %1, %0, killed %7 :: (store 8 into %ir.arrayidx, !tbaa !10)
     ; CHECK: STDU %1, 444, %0
-    ; CHECK-LATE: stdu 4, 444(5)
+    ; CHECK-LATE: stdu {{[0-9]+}}, 444({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -8
     %13 = STDUX %1, %0, killed %11 :: (store 8 into %ir.arrayidx3, !tbaa !10)
     ; CHECK: STDU %1, -8, %0
-    ; CHECK-LATE: stdu 4, -8(3)
+    ; CHECK-LATE: stdu {{[0-9]+}}, -8({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -5613,14 +5613,14 @@ body:             |
     %7 = LI8 900
     STDX %1, %0, killed %7 :: (store 8 into %ir.arrayidx, !tbaa !10)
     ; CHECK: STD %1, 1000, killed %7
-    ; CHECK-LATE: 4, 1000(5)
+    ; CHECK-LATE: {{[0-9]+}}, 1000({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -900
     STDX %1, %0, killed %11 :: (store 8 into %ir.arrayidx3, !tbaa !10)
     ; CHECK: STD %1, 1000, killed %11
-    ; CHECK-LATE: 4, 1000(6)
+    ; CHECK-LATE: {{[0-9]+}}, 1000({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -5757,14 +5757,14 @@ body:             |
     %7 = LI8 111
     %12 = STFSUX %1, %0, killed %7 :: (store 4 into %ir.arrayidx, !tbaa !14)
     ; CHECK: STFSU %1, 111, %0
-    ; CHECK-LATE: stfsu 1, 111(4)
+    ; CHECK-LATE: stfsu {{[0-9]+}}, 111({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 987
     %13 = STFSUX %1, %0, killed %11 :: (store 4 into %ir.arrayidx3, !tbaa !14)
     ; CHECK: STFSU %1, 987, %0
-    ; CHECK-LATE: stfsu 1, 987(3)
+    ; CHECK-LATE: stfsu {{[0-9]+}}, 987({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -5901,14 +5901,14 @@ body:             |
     %7 = LI8 -9038
     %12 = STFDUX %1, %0, killed %7 :: (store 8 into %ir.arrayidx, !tbaa !12)
     ; CHECK: STFDU %1, -9038, %0
-    ; CHECK-LATE: stfdu 1, -9038(4)
+    ; CHECK-LATE: stfdu {{[0-9]+}}, -9038({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 6477
     %13 = STFDUX %1, %0, killed %11 :: (store 8 into %ir.arrayidx3, !tbaa !12)
     ; CHECK: STFDU %1, 6477, %0
-    ; CHECK-LATE: stfdu 1, 6477(3)
+    ; CHECK-LATE: stfdu {{[0-9]+}}, 6477({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
 ...

@@ -280,10 +280,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// a monolithic sequence of string offsets.
   bool UseSegmentedStringOffsetsTable;
 
-  /// Whether we have emitted any type units with split DWARF (and therefore
-  /// need to emit a line table to the .dwo file).
-  bool HasSplitTypeUnits = false;
-
   /// Separated Dwarf Variables
   /// In general these will all be for bits that are left in the
   /// original object file, rather than things that are meant

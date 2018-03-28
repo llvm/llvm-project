@@ -2573,8 +2573,11 @@ void elf::mergeSections() {
     }
     (*I)->addSection(MS);
   }
-  for (auto *MS : MergeSections)
+  for (auto *MS : MergeSections) {
     MS->finalizeContents();
+    parallelForEach(MS->Sections,
+                    [](MergeInputSection *Sec) { Sec->initOffsetMap(); });
+  }
 
   std::vector<InputSectionBase *> &V = InputSections;
   V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());

@@ -105,6 +105,11 @@ defm WriteMPSAD : X86SchedWritePair; // Vector MPSAD.
 // These are often used on both floating point and integer vectors.
 defm WriteVecLogic : X86SchedWritePair; // Vector and/or/xor.
 
+// MOVMSK operations.
+def WriteFMOVMSK : SchedWrite;
+def WriteVecMOVMSK : SchedWrite;
+def WriteMMXMOVMSK : SchedWrite;
+
 // Conversion between integer and float.
 defm WriteCvtF2I : X86SchedWritePair; // Float -> Integer.
 defm WriteCvtI2F : X86SchedWritePair; // Integer -> Float.

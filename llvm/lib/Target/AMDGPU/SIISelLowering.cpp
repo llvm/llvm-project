@@ -1087,7 +1087,7 @@ bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
 bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
   const MemSDNode *MemNode = cast<MemSDNode>(N);
   const Value *Ptr = MemNode->getMemOperand()->getValue();
-  const Instruction *I = dyn_cast<Instruction>(Ptr);
+  const Instruction *I = dyn_cast_or_null<Instruction>(Ptr);
   return I && I->getMetadata("amdgpu.noclobber");
 }
 
@@ -3351,8 +3351,13 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::ADJCALLSTACKDOWN: {
     const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
     MachineInstrBuilder MIB(*MF, &MI);
+
+    // Add an implicit use of the frame offset reg to prevent the restore copy
+    // inserted after the call from being reorderd after stack operations in the
+    // the caller's frame.
     MIB.addReg(Info->getStackPtrOffsetReg(), RegState::ImplicitDefine)
-        .addReg(Info->getStackPtrOffsetReg(), RegState::Implicit);
+        .addReg(Info->getStackPtrOffsetReg(), RegState::Implicit)
+        .addReg(Info->getFrameOffsetReg(), RegState::Implicit);
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL:

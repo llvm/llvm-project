@@ -4096,7 +4096,7 @@ declare <16 x i16> @llvm.x86.avx2.pminu.w(<16 x i16>, <16 x i16>) nounwind readn
 define i32 @test_pmovmskb(<32 x i8> %a0) {
 ; GENERIC-LABEL: test_pmovmskb:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmovmskb %ymm0, %eax # sched: [1:1.00]
+; GENERIC-NEXT:    vpmovmskb %ymm0, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4126,7 +4126,7 @@ define i32 @test_pmovmskb(<32 x i8> %a0) {
 ;
 ; ZNVER1-LABEL: test_pmovmskb:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpmovmskb %ymm0, %eax # sched: [2:1.00]
+; ZNVER1-NEXT:    vpmovmskb %ymm0, %eax # sched: [2:2.00]
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.avx2.pmovmskb(<32 x i8> %a0)
