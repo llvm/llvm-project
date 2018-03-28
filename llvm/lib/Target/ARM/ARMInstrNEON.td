@@ -6935,6 +6935,9 @@ def : VFPPat<(f64 (uint_to_fp (extractelt (v4i32 QPR:$src), imm:$lane))),
 def : Pat<(f32 (bitconvert GPR:$a)),
           (EXTRACT_SUBREG (VMOVDRR GPR:$a, GPR:$a), ssub_0)>,
         Requires<[HasNEON, DontUseVMOVSR]>;
+def : Pat<(arm_vmovsr GPR:$a),
+          (EXTRACT_SUBREG (VMOVDRR GPR:$a, GPR:$a), ssub_0)>,
+        Requires<[HasNEON, DontUseVMOVSR]>;
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns

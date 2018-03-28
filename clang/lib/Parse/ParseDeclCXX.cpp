@@ -4036,7 +4036,7 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
 
     if (TryConsumeToken(tok::ellipsis))
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis)
-        << AttrName->getName();
+        << AttrName;
   }
 
   if (ExpectAndConsume(tok::r_square))

@@ -2404,7 +2404,7 @@ bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
           // The Microsoft extension __interface does not permit bases that
           // are not themselves public interfaces.
           Diag(KnownBase->getLocStart(), diag::err_invalid_base_in_interface)
-            << getRecordDiagFromTagKind(RD->getTagKind()) << RD->getName()
+            << getRecordDiagFromTagKind(RD->getTagKind()) << RD
             << RD->getSourceRange();
           Invalid = true;
         }
@@ -2862,7 +2862,7 @@ void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
     if (AS_none !=
         CXXRecordDecl::MergeAccess(P.Access, BaseField->getAccess())) {
       Diag(Loc, diag::warn_shadow_field)
-        << FieldName.getAsString() << RD->getName() << Base->getName();
+        << FieldName << RD << Base;
       Diag(BaseField->getLocation(), diag::note_shadow_field);
       Bases.erase(It);
     }
@@ -5528,7 +5528,7 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
         S.MarkFunctionReferenced(Class->getLocation(), MD);
         if (Trap.hasErrorOccurred()) {
           S.Diag(ClassAttr->getLocation(), diag::note_due_to_dllexported_class)
-              << Class->getName() << !S.getLangOpts().CPlusPlus11;
+              << Class << !S.getLangOpts().CPlusPlus11;
           break;
         }
 

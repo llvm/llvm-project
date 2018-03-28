@@ -1097,6 +1097,16 @@ Expr ScriptParser::readPrimary() {
       return Cmd->getLMA();
     };
   }
+  if (Tok == "MAX" || Tok == "MIN") {
+    expect("(");
+    Expr A = readExpr();
+    expect(",");
+    Expr B = readExpr();
+    expect(")");
+    if (Tok == "MIN")
+      return [=] { return std::min(A().getValue(), B().getValue()); };
+    return [=] { return std::max(A().getValue(), B().getValue()); };
+  }
   if (Tok == "ORIGIN") {
     StringRef Name = readParenLiteral();
     if (Script->MemoryRegions.count(Name) == 0) {
