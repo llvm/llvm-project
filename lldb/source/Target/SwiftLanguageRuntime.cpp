@@ -1433,58 +1433,47 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
 
   AddressType address_type;
   lldb::addr_t class_metadata_ptr = in_value.GetPointerValue(&address_type);
-  if (auto objc_runtime = GetObjCRuntime()) {
-    if (objc_runtime->IsTaggedPointer(class_metadata_ptr)) {
-      Value::ValueType value_type;
-      return objc_runtime->GetDynamicTypeAndAddress(
-          in_value, use_dynamic, class_type_or_name, address, value_type,
-          /* allow_swift = */ true);
-    }
-  }
   if (class_metadata_ptr == LLDB_INVALID_ADDRESS || class_metadata_ptr == 0)
     return false;
   address.SetRawAddress(class_metadata_ptr);
 
-  size_t base_depth = BaseClassDepth(in_value);
-
-  lldb::addr_t class_instance_location;
-  if (in_value.IsBaseClass())
-    class_instance_location = in_value.GetPointerValue();
-  else
-    class_instance_location = in_value.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  if (class_instance_location == LLDB_INVALID_ADDRESS)
-    return false;
-  Status error;
-  lldb::addr_t class_metadata_location =
-      m_process->ReadPointerFromMemory(class_instance_location, error);
-  if (error.Fail() || class_metadata_location == 0 ||
-      class_metadata_location == LLDB_INVALID_ADDRESS)
-    return false;
-
   SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
       in_value.GetCompilerType().GetTypeSystem());
 
-  MetadataPromiseSP promise_sp(
-      GetMetadataPromise(class_metadata_location, swift_ast_ctx));
-  if (!promise_sp)
-    return false;
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  CompilerType class_type(promise_sp->FulfillTypePromise());
-  if (!class_type)
-    return false;
+  auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
 
-  while (base_depth > 0) {
-    class_type = class_type.GetDirectBaseClassAtIndex(0, nullptr);
-    assert(class_type && "failed to get base class");
-    base_depth--;
+  swift::remote::RemoteAddress instance_address(class_metadata_ptr);
+  auto metadata_address =
+    remote_ast.getHeapMetadataForObject(instance_address);
+  if (!metadata_address) {
+    if (log) {
+      log->Printf("could not read heap metadata for object at %llu: %s\n",
+                  class_metadata_ptr,
+                  metadata_address.getFailure().render().c_str());
+    }
+
+    return false;
   }
 
-  class_type_or_name.SetCompilerType(class_type);
+  auto instance_type =
+    remote_ast.getTypeForRemoteTypeMetadata(metadata_address.getValue(),
+                                            /*skipArtificial=*/true);
+  if (!instance_type) {
+    if (log) {
+      log->Printf("could not get type metadata from address %llu: %s\n",
+                  metadata_address.getValue(),
+                  instance_type.getFailure().render().c_str());
+    }
 
-  if (error.Fail())
     return false;
+  }
 
-  return class_type_or_name.GetCompilerType().IsValid();
+  CompilerType result_type(swift_ast_ctx,
+                           instance_type.getValue().getPointer());
+  class_type_or_name.SetCompilerType(result_type);
+  return true;
 }
 
 SwiftLanguageRuntime::SwiftErrorDescriptor::SwiftErrorDescriptor()

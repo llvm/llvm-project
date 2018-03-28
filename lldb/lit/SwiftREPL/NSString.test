@@ -6,7 +6,7 @@
 import Foundation
 var aString = "patatino" as NSString
 // NSSTRING: Welcome to Swift
-// NSSTRING-NEXT: aString: NSTaggedPointerString = "patatino"
+// NSSTRING-NEXT: aString: NSString = "patatino"
 
 aString.substring(to: 3)
 // NSSTRING: $R0: String = "pat"
