@@ -707,6 +707,18 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
             api_levels,
             archs))
 
+def skipUnlessSupportedTypeAttribute(attr):
+    """Decorate the item to skip test unless Clang supports type __attribute__(attr)."""
+    def compiler_doesnt_support_struct_attribute(self):
+        compiler_path = self.getCompiler()
+        f = tempfile.NamedTemporaryFile()
+        cmd = [self.getCompiler(), "-x", "c++", "-c", "-o", f.name, "-"]
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate('struct __attribute__((%s)) Test {};'%attr)
+        if attr in stderr:
+            return "Compiler does not support attribute %s"%(attr)
+        return None
+    return skipTestIfFn(compiler_doesnt_support_struct_attribute)
 
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
