@@ -359,6 +359,14 @@ defm : JWriteResFpuPair<WritePCmpEStrI, [JFPU1, JSAGU, JLAGU, JVALU, JVALU1, JFP
 defm : JWriteResFpuPair<WritePCmpEStrM, [JFPU1, JSAGU, JLAGU, JVALU, JVALU1, JFPA, JALU0], 14, [1, 2, 2, 6, 4, 1, 1], 9>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// MOVMSK Instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+def  : WriteRes<WriteFMOVMSK, [JFPU0, JFPA, JALU0]> { let Latency = 3; }
+def  : WriteRes<WriteVecMOVMSK, [JFPU0, JFPA, JALU0]> { let Latency = 3; }
+def  : WriteRes<WriteMMXMOVMSK, [JFPU0, JFPA, JALU0]> { let Latency = 3; }
+
+////////////////////////////////////////////////////////////////////////////////
 // AES Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -770,13 +778,6 @@ def JWriteVMaskMovYSt: SchedWriteRes<[JFPU01, JFPX, JSAGU]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteVMaskMovYSt], (instrs VMASKMOVPDYmr, VMASKMOVPSYmr)>;
-
-def JWriteVMOVMSK: SchedWriteRes<[JFPU0, JFPA, JALU0]> {
-  let Latency = 3;
-}
-def : InstRW<[JWriteVMOVMSK], (instrs MOVMSKPDrr, VMOVMSKPDrr, VMOVMSKPDYrr,
-                                      MOVMSKPSrr, VMOVMSKPSrr, VMOVMSKPSYrr,
-                                      PMOVMSKBrr, VPMOVMSKBrr, MMX_PMOVMSKBrr)>;
 
 def JWriteVTESTY: SchedWriteRes<[JFPU01, JFPX, JFPA, JALU0]> {
   let Latency = 4;

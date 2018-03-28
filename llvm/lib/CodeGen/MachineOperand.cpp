@@ -1100,7 +1100,12 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
       break;
     case PseudoSourceValue::TargetCustom:
-      llvm_unreachable("TargetCustom pseudo source values are not supported");
+      // FIXME: This is not necessarily the correct MIR serialization format for
+      // a custom pseudo source value, but at least it allows
+      // -print-machineinstrs to work on a target with custom pseudo source
+      // values.
+      OS << "custom ";
+      PVal->printCustom(OS);
       break;
     }
   }

@@ -204,6 +204,11 @@ def : WriteRes<WritePCmpEStrILd, [SBPort015, SBPort23]> {
   let ResourceCycles = [7, 1];
 }
 
+// MOVMSK Instructions.
+def : WriteRes<WriteFMOVMSK, [SBPort0]> { let Latency = 2; }
+def : WriteRes<WriteVecMOVMSK, [SBPort0]> { let Latency = 2; }
+def : WriteRes<WriteMMXMOVMSK, [SBPort0]> { let Latency = 1; }
+
 // AES Instructions.
 def : WriteRes<WriteAESDecEnc, [SBPort5,SBPort015]> {
   let Latency = 7;
@@ -527,10 +532,7 @@ def SBWriteResGroup7 : SchedWriteRes<[SBPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SBWriteResGroup7], (instregex "(V?)PMOVMSKBrr",
-                                           "(V?)MOVMSKPD(Y?)rr",
-                                           "(V?)MOVMSKPS(Y?)rr",
-                                           "(V?)MOVPDI2DIrr",
+def: InstRW<[SBWriteResGroup7], (instregex "(V?)MOVPDI2DIrr",
                                            "(V?)MOVPQIto64rr")>;
 
 def SBWriteResGroup9 : SchedWriteRes<[SBPort05]> {

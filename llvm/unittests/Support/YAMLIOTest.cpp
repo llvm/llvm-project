@@ -2464,7 +2464,10 @@ static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {
   yamlize(xout, Input, true, Ctx);
 
   ostr.flush();
-  EXPECT_EQ(Expected, out);
+
+  // Make a separate StringRef so we get nice byte-by-byte output.
+  llvm::StringRef Got(out);
+  EXPECT_EQ(Expected, Got);
 }
 
 TEST(YAMLIO, TestEscaped) {
@@ -2485,4 +2488,16 @@ TEST(YAMLIO, TestEscaped) {
   // UTF8 with single quote inside double quote
   TestEscaped("parameter 'параметр' is unused",
               "\"parameter 'параметр' is unused\"");
+
+  // String with embedded non-printable multibyte UTF-8 sequence (U+200B
+  // zero-width space). The thing to test here is that we emit a
+  // unicode-scalar level escape like \uNNNN (at the YAML level), and don't
+  // just pass the UTF-8 byte sequence through as with quoted printables.
+  {
+    const unsigned char foobar[10] = {'f', 'o', 'o',
+                                      0xE2, 0x80, 0x8B, // UTF-8 of U+200B
+                                      'b', 'a', 'r',
+                                      0x0};
+    TestEscaped((char const *)foobar, "\"foo\\u200Bbar\"");
+  }
 }

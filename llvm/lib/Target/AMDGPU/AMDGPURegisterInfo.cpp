@@ -82,5 +82,6 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 }
 
 unsigned SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return AMDGPU::NoRegister;
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  return FuncInfo->getFrameOffsetReg();
 }

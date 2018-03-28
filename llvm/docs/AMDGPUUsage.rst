@@ -910,6 +910,34 @@ This section provides code conventions used when the target triple OS is
 
 .. _amdgpu-amdhsa-hsa-code-object-metadata:
 
+Code Object Target Identification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The AMDHSA OS uses the following syntax to specify the code object
+target as a single string:
+
+  ``<Architecture>-<Vendor>-<OS>-<Environment>-<Processor><Target Features>``
+
+Where:
+
+  - ``<Architecture>``, ``<Vendor>``, ``<OS>`` and ``<Environment>``
+    are the same as the *Target Triple* (see
+    :ref:`amdgpu-target-triples`).
+
+  - ``<Processor>`` is the same as the *Processor* (see
+    :ref:`amdgpu-processors`).
+
+  - ``<Target Features>`` is a list of the enabled *Target Features*
+    (see :ref:`amdgpu-target-features`), each prefixed by a plus, that
+    apply to *Processor*. The list must be in the same order as listed
+    in the table :ref:`amdgpu-target-feature-table`. Note that *Target
+    Features* must be included in the list if they are enabled even if
+    that is the default for *Processor*.
+
+For example:
+
+  ``"amdgcn-amd-amdhsa--gfx902+xnack"``
+
 Code Object Metadata
 ~~~~~~~~~~~~~~~~~~~~
 

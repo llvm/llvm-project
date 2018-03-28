@@ -273,10 +273,9 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
       }
 
       Optional<int> CSRSpillFI;
-      if (FrameInfo.hasCalls() && CSRegs && isCalleeSavedReg(CSRegs, LaneVGPR)) {
-        // TODO: Should this be a CreateSpillStackObject? This is technically a
-        // weird CSR spill.
-        CSRSpillFI = FrameInfo.CreateStackObject(4, 4, false);
+      if ((FrameInfo.hasCalls() || !isEntryFunction()) && CSRegs &&
+          isCalleeSavedReg(CSRegs, LaneVGPR)) {
+        CSRSpillFI = FrameInfo.CreateSpillStackObject(4, 4);
       }
 
       SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, CSRSpillFI));

@@ -280,6 +280,7 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::Fuzzer;
+  Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Scudo;
   return Res;

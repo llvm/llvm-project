@@ -73,6 +73,7 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF);
   unsigned getRegisterBitWidth(bool Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
+  bool shouldMaximizeVectorBandwidth(bool OptSize) const { return true; }
 
   bool supportsEfficientVectorElementLoadStore() {
     return false;

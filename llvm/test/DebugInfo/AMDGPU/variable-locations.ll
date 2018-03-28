@@ -31,6 +31,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x0)
 @GlobB = common addrspace(1) global i32 0, align 4, !dbg !6
 
+; CHECK: {{.*}}DW_TAG_subprogram
+; CHECK: DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg9 SGPR9)
+
 define amdgpu_kernel void @kernel1(
 ; CHECK: {{.*}}DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +4, DW_OP_constu 0x1, DW_OP_swap, DW_OP_xderef)

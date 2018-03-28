@@ -73,8 +73,11 @@ bool dumpTokens(StringRef Input, raw_ostream &);
 /// \returns true if there was an error, false otherwise.
 bool scanTokens(StringRef Input);
 
-/// \brief Escape \a Input for a double quoted scalar.
-std::string escape(StringRef Input);
+/// \brief Escape \a Input for a double quoted scalar; if \p EscapePrintable
+/// is true, all UTF8 sequences will be escaped, if \p EscapePrintable is
+/// false, those UTF8 sequences encoding printable unicode scalars will not be
+/// escaped, but emitted verbatim.
+std::string escape(StringRef Input, bool EscapePrintable = true);
 
 /// \brief This class represents a YAML stream potentially containing multiple
 ///        documents.

@@ -471,7 +471,8 @@ void BCECmpChain::mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     IRBuilder<> Builder(BB);
     const auto &DL = Phi.getModule()->getDataLayout();
     Value *const MemCmpCall = emitMemCmp(
-        FirstComparison.Lhs().GEP, FirstComparison.Rhs().GEP, ConstantInt::get(DL.getIntPtrType(Context), TotalSize),
+        FirstComparison.Lhs().GEP, FirstComparison.Rhs().GEP,
+        ConstantInt::get(DL.getIntPtrType(Context), TotalSize),
         Builder, DL, TLI);
     Value *const MemCmpIsZero = Builder.CreateICmpEQ(
         MemCmpCall, ConstantInt::get(Type::getInt32Ty(Context), 0));
