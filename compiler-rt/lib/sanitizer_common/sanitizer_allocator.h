@@ -43,9 +43,12 @@ struct DieOnFailure {
   static void NORETURN *OnOOM();
 };
 
+void PrintHintAllocatorCannotReturnNull(const char *options_name);
+
 // Returns true if allocator detected OOM condition. Can be used to avoid memory
 // hungry operations. Set when AllocatorReturnNullOrDieOnOOM() is called.
 bool IsAllocatorOutOfMemory();
+void SetAllocatorOutOfMemory();
 
 // Allocators call these callbacks on mmap/munmap.
 struct NoOpMapUnmapCallback {
