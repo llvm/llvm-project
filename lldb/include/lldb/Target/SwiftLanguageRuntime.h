@@ -452,6 +452,10 @@ protected:
   std::unordered_map<const char *, lldb::SyntheticChildrenSP>
       m_bridged_synthetics_map;
 
+  /// Cached member variable offsets.
+  typename KeyHasher<const swift::TypeBase *, const char *, uint64_t>::MapType
+    m_member_offsets;
+
   CompilerType m_box_metadata_type;
 
 
