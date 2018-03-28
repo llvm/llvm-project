@@ -6339,12 +6339,17 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
 
   case swift::TypeKind::Tuple:
   case swift::TypeKind::Struct:
-  case swift::TypeKind::Class:
-  case swift::TypeKind::BoundGenericClass:
   case swift::TypeKind::BoundGenericStruct:
+    return GetNumFields(type);
+
+  case swift::TypeKind::Class:
+  case swift::TypeKind::BoundGenericClass: {
+    auto class_decl = swift_can_type->getClassOrBoundGenericClass();
+    return (class_decl->hasSuperclass() ? 1 : 0) + GetNumFields(type);
+  }
+
   case swift::TypeKind::Protocol:
-  case swift::TypeKind::ProtocolComposition:
-  case swift::TypeKind::Archetype: {
+  case swift::TypeKind::ProtocolComposition: {
     CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
     if (cached_member_info)
       return cached_member_info->member_infos.size();
@@ -6352,6 +6357,7 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
+  case swift::TypeKind::Archetype:
     return 0;
 
   case swift::TypeKind::LValue: {
@@ -6453,21 +6459,25 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   } break;
 
   case swift::TypeKind::Tuple:
-  case swift::TypeKind::Struct:
+    return cast<swift::TupleType>(swift_can_type)->getNumElements();
+
   case swift::TypeKind::Class:
+  case swift::TypeKind::BoundGenericClass:
+  {
+    if (CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type)) {
+      auto class_decl = swift_can_type->getClassOrBoundGenericClass();
+      const size_t num_members = cached_member_info->member_infos.size();
+      return num_members - (class_decl->hasSuperclass() ? 1 : 0);
+    }
+  } break;
+
+  case swift::TypeKind::Struct:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition:
-  case swift::TypeKind::BoundGenericClass:
   case swift::TypeKind::BoundGenericStruct: {
     CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
     if (cached_member_info) {
-      const size_t num_members = cached_member_info->member_infos.size();
-      if (num_members > 0 &&
-          cached_member_info->member_infos.front().member_type ==
-              MemberType::BaseClass)
-        return num_members - 1;
-      else
-        return num_members;
+      return cached_member_info->member_infos.size();
     }
   } break;
 
@@ -6861,62 +6871,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinVector:
-
-  //            case swift::TypeKind::Tuple:
-  //                {
-  //                    swift::TupleType *tuple_type =
-  //                    swift_can_type->getAs<swift::TupleType>();
-  //                    if (tuple_type && idx < tuple_type->getNumElements())
-  //                    {
-  //                        child_byte_offset = 0; // TODO: figure out how to
-  //                        get byte offset of tuple field...
-  //                        child_bitfield_bit_size = 0;
-  //                        child_bitfield_bit_offset = 0;
-  //                        child_is_base_class = false;
-  //                        child_is_deref_of_parent = false;
-  //
-  //                        uint32_t tuple_idx = 0;
-  //                        for (auto tuple_field : tuple_type->getFields())
-  //                        {
-  //                            CompilerType tuple_field_type(m_swift_ast,
-  //                            tuple_field.getType().getPointer());
-  //                            auto tuple_field_byte_size =
-  //                            tuple_field_type.GetByteSize();
-  //
-  //                            if (tuple_idx == idx)
-  //                            {
-  //                                child_byte_size = tuple_field_byte_size;
-  //                                const char *tuple_name =
-  //                                tuple_field.getName().get();
-  //                                if (tuple_name)
-  //                                {
-  //                                    child_name = tuple_name;
-  //                                }
-  //                                else
-  //                                {
-  //                                    StreamString tuple_name_strm;
-  //                                    tuple_name_strm.Printf("%u",
-  //                                    (uint32_t)idx);
-  //                                    child_name =
-  //                                    std::move(tuple_name_strm.GetString());
-  //                                }
-  //                                return tuple_field_type;
-  //                            }
-  //                            else
-  //                            {
-  //                                const uint64_t tuple_field_bit_size =
-  //                                tuple_field_byte_size * 8;
-  //                                const uint64_t tuple_aligned_bit_size =
-  //                                tuple_field_type.GetAlignedBitSize();
-  //                                child_byte_offset +=
-  //                                llvm::RoundUpToAlignment(tuple_field_bit_size,
-  //                                tuple_aligned_bit_size) / 8;
-  //                                ++tuple_idx;
-  //                            }
-  //                        }
-  //                    }
-  //                }
-  //                break;
+    break;
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
