@@ -313,9 +313,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
     std::vector<const swift::irgen::TypeInfo *> field_type_infos;
-    swift::irgen::LayoutStrategy layout_strategy =
-        swift::irgen::LayoutStrategy::Optimal;
-
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
     case swift::TypeKind::Error:
@@ -347,36 +344,10 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     case swift::TypeKind::SILBlockStorage:
     case swift::TypeKind::InOut:
     case swift::TypeKind::Unresolved:
+    case swift::TypeKind::Tuple:
       assert(false &&
              "Caller must only call this function with valid type_kind");
       break;
-
-    case swift::TypeKind::Tuple: {
-      layout_strategy = swift::irgen::LayoutStrategy::Universal;
-
-      swift::TupleType *tuple_type = swift_can_type->castTo<swift::TupleType>();
-      for (auto tuple_field : tuple_type->getElements()) {
-        MemberInfo member_info(MemberType::Field);
-        member_info.clang_type =
-            CompilerType(GetASTContext(), tuple_field.getType().getPointer());
-        member_info.byte_size = member_info.clang_type.GetByteSize(nullptr);
-
-        const char *tuple_name = tuple_field.getName().get();
-        if (tuple_name) {
-          member_info.name.SetCString(tuple_name);
-        } else {
-          StreamString tuple_name_strm;
-          tuple_name_strm.Printf(
-              "%u", (uint32_t)member_infos_sp->member_infos.size());
-          member_info.name.SetCString(tuple_name_strm.GetString().data());
-        }
-
-        field_type_infos.push_back(
-            GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
-        assert(field_type_infos.back() != nullptr);
-        member_infos_sp->member_infos.push_back(member_info);
-      }
-    } break;
 
     case swift::TypeKind::Protocol:
     case swift::TypeKind::ProtocolComposition: {
@@ -498,6 +469,9 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
         // As for protocols, their fields are artificially generated from what a
         // protocol_container contains in the Swift runtime itself, and it's
         // just pointers, so no need to get fancy.
+        swift::irgen::LayoutStrategy layout_strategy =
+          swift::irgen::LayoutStrategy::Optimal;
+
         swift::irgen::StructLayout layout(
             GetIRGenModule(), swift_can_type,
             swift::irgen::LayoutKind::NonHeapObject, layout_strategy,
@@ -6536,6 +6510,24 @@ SwiftASTContext::GetVirtualBaseClassAtIndex(void *opaque_type, size_t idx,
   return CompilerType();
 }
 
+/// Retrieve the printable name of a tuple element.
+static std::string GetTupleElementName(const swift::TupleType *tuple_type,
+                                       unsigned index,
+                                       llvm::StringRef printed_index = "") {
+  const auto &element = tuple_type->getElement(index);
+
+  // Use the element name if there is one.
+  if (!element.getName().empty()) return element.getName().str();
+
+  // If we know the printed index already, use that.
+  if (!printed_index.empty()) return printed_index;
+
+  // Print the index and return that.
+  std::string str;
+  llvm::raw_string_ostream(str) << index;
+  return str;
+}
+
 CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
                                               std::string &name,
                                               uint64_t *bit_offset_ptr,
@@ -6589,7 +6581,25 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     }
   } break;
 
-  case swift::TypeKind::Tuple:
+  case swift::TypeKind::Tuple: {
+    auto tuple_type = cast<swift::TupleType>(swift_can_type);
+    if (idx >= tuple_type->getNumElements()) break;
+
+    // We cannot reliably get layout information without an execution
+    // context.
+    if (bit_offset_ptr)
+      *bit_offset_ptr = LLDB_INVALID_IVAR_OFFSET;
+    if (bitfield_bit_size_ptr)
+      *bitfield_bit_size_ptr = 0;
+    if (is_bitfield_ptr)
+      *is_bitfield_ptr = false;
+
+    name = GetTupleElementName(tuple_type, idx);
+
+    const auto &child = tuple_type->getElement(idx);
+    return CompilerType(GetASTContext(), child.getType().getPointer());
+  }
+
   case swift::TypeKind::Struct:
   case swift::TypeKind::Class:
   case swift::TypeKind::Protocol:
@@ -6911,7 +6921,35 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     }
   } break;
 
-  case swift::TypeKind::Tuple:
+  case swift::TypeKind::Tuple: {
+    auto tuple_type = cast<swift::TupleType>(swift_can_type);
+    if (idx >= tuple_type->getNumElements()) break;
+
+    const auto &child = tuple_type->getElement(idx);
+
+    // Format the integer.
+    llvm::SmallString<16> printed_idx;
+    llvm::raw_svector_ostream(printed_idx) << idx;
+
+    CompilerType child_type(GetASTContext(), child.getType().getPointer());
+
+    auto exe_ctx_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
+    child_name = GetTupleElementName(tuple_type, idx, printed_idx);
+    child_byte_size = child_type.GetByteSize(exe_ctx_scope);
+      child_is_base_class = false;
+    child_is_deref_of_parent = false;
+
+    CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
+    child_byte_offset =
+      GetInstanceVariableOffset(valobj, exe_ctx, compiler_type,
+                                printed_idx.c_str(), child_type);
+    child_bitfield_bit_size = 0;
+    child_bitfield_bit_offset = 0;
+
+    return child_type;
+  }
+
   case swift::TypeKind::Struct:
   case swift::TypeKind::Class:
   case swift::TypeKind::BoundGenericClass:
@@ -7102,8 +7140,18 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
         } else
           return 0;
       }
+
+      // Otherwise, perform lookup by name.
+      for (uint32_t tuple_idx : swift::range(tuple_type->getNumElements())) {
+        if (tuple_type->getElement(tuple_idx).getName().str() == name) {
+          child_indexes.push_back(tuple_idx);
+          return child_indexes.size();
+        }
+      }
+
+      return 0;
     }
-    // Fall through to class/union/struct case...
+
     case swift::TypeKind::Struct:
     case swift::TypeKind::Class:
     case swift::TypeKind::Protocol:
@@ -7240,14 +7288,13 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     } break;
 
     case swift::TypeKind::Tuple: {
-      swift::TupleType *tuple_type = swift_can_type->castTo<swift::TupleType>();
-      uint32_t tuple_idx = StringConvert::ToUInt32(name, UINT32_MAX);
-      if (tuple_idx != UINT32_MAX) {
-        if (tuple_idx < tuple_type->getNumElements())
-          return tuple_idx;
-      }
+      std::vector<uint32_t> child_indexes;
+      size_t num_child_indexes =
+        GetIndexOfChildMemberWithName(type, name, omit_empty_base_classes,
+                                      child_indexes);
+      return num_child_indexes == 1 ? child_indexes.front() : UINT32_MAX;
     }
-    // Fall through to struct/union/class case...
+
     case swift::TypeKind::Struct:
     case swift::TypeKind::Class:
     case swift::TypeKind::Protocol:
