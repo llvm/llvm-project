@@ -5791,11 +5791,20 @@ static void DefineImplicitSpecialMember(Sema &S, CXXMethodDecl *MD,
   }
 }
 
-/// Determine whether a type is permitted to be passed or returned in
-/// registers, per C++ [class.temporary]p3.
-static bool computeCanPassInRegisters(Sema &S, CXXRecordDecl *D) {
+/// Determine whether a type would be destructed in the callee if it had a
+/// non-trivial destructor. The rules here are based on C++ [class.temporary]p3,
+/// which determines whether a struct can be passed to or returned from
+/// functions in registers.
+static bool paramCanBeDestroyedInCallee(Sema &S, CXXRecordDecl *D,
+                                        TargetInfo::CallingConvKind CCK) {
   if (D->isDependentType() || D->isInvalidDecl())
     return false;
+
+  // Clang <= 4 used the pre-C++11 rule, which ignores move operations.
+  // The PS4 platform ABI follows the behavior of Clang 3.2.
+  if (CCK == TargetInfo::CCK_ClangABI4OrPS4)
+    return !D->hasNonTrivialDestructorForCall() &&
+           !D->hasNonTrivialCopyConstructorForCall();
 
   // Per C++ [class.temporary]p3, the relevant condition is:
   //   each copy constructor, move constructor, and destructor of X is
@@ -5836,6 +5845,77 @@ static bool computeCanPassInRegisters(Sema &S, CXXRecordDecl *D) {
   }
 
   return HasNonDeletedCopyOrMove;
+}
+
+static bool computeCanPassInRegister(bool DestroyedInCallee,
+                                     const CXXRecordDecl *RD,
+                                     TargetInfo::CallingConvKind CCK,
+                                     Sema &S) {
+  if (RD->isDependentType() || RD->isInvalidDecl())
+    return true;
+
+  // The param cannot be passed in registers if CanPassInRegisters is already
+  // set to false.
+  if (!RD->canPassInRegisters())
+    return false;
+
+  if (CCK != TargetInfo::CCK_MicrosoftX86_64)
+    return DestroyedInCallee;
+
+  bool CopyCtorIsTrivial = false, CopyCtorIsTrivialForCall = false;
+  bool DtorIsTrivialForCall = false;
+
+  // If a class has at least one non-deleted, trivial copy constructor, it
+  // is passed according to the C ABI. Otherwise, it is passed indirectly.
+  //
+  // Note: This permits classes with non-trivial copy or move ctors to be
+  // passed in registers, so long as they *also* have a trivial copy ctor,
+  // which is non-conforming.
+  if (RD->needsImplicitCopyConstructor()) {
+    if (!RD->defaultedCopyConstructorIsDeleted()) {
+      if (RD->hasTrivialCopyConstructor())
+        CopyCtorIsTrivial = true;
+      if (RD->hasTrivialCopyConstructorForCall())
+        CopyCtorIsTrivialForCall = true;
+    }
+  } else {
+    for (const CXXConstructorDecl *CD : RD->ctors()) {
+      if (CD->isCopyConstructor() && !CD->isDeleted()) {
+        if (CD->isTrivial())
+          CopyCtorIsTrivial = true;
+        if (CD->isTrivialForCall())
+          CopyCtorIsTrivialForCall = true;
+      }
+    }
+  }
+
+  if (RD->needsImplicitDestructor()) {
+    if (!RD->defaultedDestructorIsDeleted() &&
+        RD->hasTrivialDestructorForCall())
+      DtorIsTrivialForCall = true;
+  } else if (const auto *D = RD->getDestructor()) {
+    if (!D->isDeleted() && D->isTrivialForCall())
+      DtorIsTrivialForCall = true;
+  }
+
+  // If the copy ctor and dtor are both trivial-for-calls, pass direct.
+  if (CopyCtorIsTrivialForCall && DtorIsTrivialForCall)
+    return true;
+
+  // If a class has a destructor, we'd really like to pass it indirectly
+  // because it allows us to elide copies.  Unfortunately, MSVC makes that
+  // impossible for small types, which it will pass in a single register or
+  // stack slot. Most objects with dtors are large-ish, so handle that early.
+  // We can't call out all large objects as being indirect because there are
+  // multiple x64 calling conventions and the C++ ABI code shouldn't dictate
+  // how we pass large POD types.
+
+  // Note: This permits small classes with nontrivial destructors to be
+  // passed in registers, which is non-conforming.
+  if (CopyCtorIsTrivial &&
+      S.getASTContext().getTypeSize(RD->getTypeForDecl()) <= 64)
+    return true;
+  return false;
 }
 
 /// \brief Perform semantic checks on a class definition that has been
@@ -6001,7 +6081,17 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
 
   checkClassLevelDLLAttribute(Record);
 
-  Record->setCanPassInRegisters(computeCanPassInRegisters(*this, Record));
+  bool ClangABICompat4 =
+      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver4;
+  TargetInfo::CallingConvKind CCK =
+      Context.getTargetInfo().getCallingConvKind(ClangABICompat4);
+  bool DestroyedInCallee = paramCanBeDestroyedInCallee(*this, Record, CCK);
+
+  if (Record->hasNonTrivialDestructor())
+    Record->setParamDestroyedInCallee(DestroyedInCallee);
+
+  Record->setCanPassInRegisters(
+      computeCanPassInRegister(DestroyedInCallee, Record, CCK, *this));
 }
 
 /// Look up the special member function that would be called by a special

@@ -127,7 +127,7 @@ void Writer::createImportSection() {
   uint32_t NumImports = ImportedSymbols.size();
   if (Config->ImportMemory)
     ++NumImports;
-  if (Config->Table == ExposeAs::IMPORT)
+  if (Config->ImportTable)
     ++NumImports;
 
   if (NumImports == 0)
@@ -152,7 +152,7 @@ void Writer::createImportSection() {
     writeImport(OS, Import);
   }
 
-  if (Config->Table == ExposeAs::IMPORT) {
+  if (Config->ImportTable) {
     uint32_t TableSize = kInitialTableOffset + IndirectFunctions.size();
     WasmImport Import;
     Import.Module = "env";
@@ -236,7 +236,7 @@ void Writer::createGlobalSection() {
 }
 
 void Writer::createTableSection() {
-  if (Config->Table == ExposeAs::IMPORT)
+  if (Config->ImportTable)
     return;
 
   // Always output a table section (or table import), even if there are no
@@ -259,7 +259,7 @@ void Writer::createTableSection() {
 
 void Writer::createExportSection() {
   bool ExportMemory = !Config->Relocatable && !Config->ImportMemory;
-  bool ExportTable = !Config->Relocatable && Config->Table == ExposeAs::EXPORT;
+  bool ExportTable = !Config->Relocatable && Config->ExportTable;
 
   uint32_t NumExports =
       (ExportMemory ? 1 : 0) + (ExportTable ? 1 : 0) + ExportedSymbols.size();

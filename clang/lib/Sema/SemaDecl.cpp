@@ -4063,7 +4063,8 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
   }
 
   // Redefinition coming from different files or couldn't do better above.
-  Diag(Old->getLocation(), diag::note_previous_definition);
+  if (Old->getLocation().isValid())
+    Diag(Old->getLocation(), diag::note_previous_definition);
 }
 
 /// We've just determined that \p Old and \p New both appear to be definitions
@@ -15476,8 +15477,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       QualType::PrimitiveCopyKind PCK = FT.isNonTrivialToPrimitiveCopy();
       if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
         Record->setNonTrivialToPrimitiveCopy(true);
-      if (FT.isDestructedType())
+      if (FT.isDestructedType()) {
         Record->setNonTrivialToPrimitiveDestroy(true);
+        Record->setParamDestroyedInCallee(true);
+      }
       if (!FT.canPassInRegisters())
         Record->setCanPassInRegisters(false);
     }

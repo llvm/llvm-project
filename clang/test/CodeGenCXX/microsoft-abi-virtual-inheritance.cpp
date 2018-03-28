@@ -538,3 +538,20 @@ D::D() : C() {}
 // CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[C_i8]], i32 8
 // CHECK:   call void @llvm.memset.p0i8.i32(i8* align 4 %[[FIELD]], i8 0, i32 4, i1 false)
 }
+
+namespace pr36921 {
+struct A {
+  virtual ~A() {}
+};
+struct B {
+  virtual ~B() {}
+};
+struct C : virtual B {};
+struct D : virtual A, C {};
+D d;
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_GD@pr36921@@UAEPAXI@Z"(
+// CHECK:   %[[THIS:.*]] = load %"struct.pr36921::D"*, %"struct.pr36921::D"**
+// CHECK:   %[[THIS_UNADJ_i8:.*]] = bitcast %"struct.pr36921::D"* %[[THIS_RELOAD]] to i8*
+// CHECK:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_UNADJ_i8]], i32 -4
+// CHECK:   %[[THIS:.*]] = bitcast i8* %[[THIS_ADJ_i8]] to %"struct.pr36921::D"*
+}

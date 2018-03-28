@@ -379,6 +379,10 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
        D->hasAttr<CUDASharedAttr>()))
     return;
 
+  if (getLangOpts().OpenMP &&
+      getOpenMPRuntime().emitDeclareTargetVarDefinition(D, Addr, PerformInit))
+    return;
+
   // Check if we've already initialized this decl.
   auto I = DelayedCXXInitPosition.find(D);
   if (I != DelayedCXXInitPosition.end() && I->second == ~0U)

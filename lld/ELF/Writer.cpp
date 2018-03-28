@@ -2097,12 +2097,10 @@ static uint16_t getELFType() {
 }
 
 static uint8_t getAbiVersion() {
-  if (Config->EMachine == EM_MIPS) {
-    // Increment the ABI version for non-PIC executable files.
-    if (getELFType() == ET_EXEC &&
-        (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
-      return 1;
-  }
+  // MIPS non-PIC executable gets ABI version 1.
+  if (Config->EMachine == EM_MIPS && getELFType() == ET_EXEC &&
+      (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
+    return 1;
   return 0;
 }
 

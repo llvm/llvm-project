@@ -37,12 +37,7 @@ TestClient::~TestClient() {
   if (!IsConnected())
     return;
 
-  std::string response;
-  // Debugserver (non-conformingly?) sends a reply to the k packet instead of
-  // simply closing the connection.
-  PacketResult result =
-      IsDebugServer() ? PacketResult::Success : PacketResult::ErrorDisconnected;
-  EXPECT_THAT_ERROR(SendMessage("k", response, result), Succeeded());
+  EXPECT_THAT_ERROR(SendMessage("k"), Succeeded());
 }
 
 Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log) {

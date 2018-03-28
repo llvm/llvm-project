@@ -914,7 +914,8 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
           if (GetSendAcks()) {
             const char *packet_checksum_cstr = &m_bytes[checksum_idx];
             char packet_checksum = strtol(packet_checksum_cstr, NULL, 16);
-            char actual_checksum = CalculcateChecksum(packet_str);
+            char actual_checksum = CalculcateChecksum(
+                llvm::StringRef(m_bytes).slice(content_start, content_end));
             success = packet_checksum == actual_checksum;
             if (!success) {
               if (log)

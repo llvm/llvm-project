@@ -2131,8 +2131,8 @@ class X86_64ABIInfo : public SwiftABIInfo {
   /// classify it as INTEGER (for compatibility with older clang compilers).
   bool classifyIntegerMMXAsSSE() const {
     // Clang <= 3.8 did not do this.
-    if (getCodeGenOpts().getClangABICompat() <=
-        CodeGenOptions::ClangABI::Ver3_8)
+    if (getContext().getLangOpts().getClangABICompat() <=
+        LangOptions::ClangABI::Ver3_8)
       return false;
 
     const llvm::Triple &Triple = getTarget().getTriple();
