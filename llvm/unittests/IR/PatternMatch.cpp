@@ -340,6 +340,114 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
   EXPECT_FALSE(m_NUWShl(m_Value(), m_Value()).match(IRB.CreateNUWAdd(L, R)));
 }
 
+TEST_F(PatternMatchTest, VectorOps) {
+  // Build up small tree of vector operations
+  //
+  //   Val = 0 + 1
+  //   Val2 = Val + 3
+  //   VI1 = insertelement <2 x i8> undef, i8 1, i32 0 = <1, undef>
+  //   VI2 = insertelement <2 x i8> %VI1, i8 %Val2, i8 %Val = <1, 4>
+  //   VI3 = insertelement <2 x i8> %VI1, i8 %Val2, i32 1 = <1, 4>
+  //   VI4 = insertelement <2 x i8> %VI1, i8 2, i8 %Val = <1, 2>
+  //
+  //   SI1 = shufflevector <2 x i8> %VI1, <2 x i8> undef, zeroinitializer
+  //   SI2 = shufflevector <2 x i8> %VI3, <2 x i8> %VI4, <2 x i8> <i8 0, i8 2>
+  //   SI3 = shufflevector <2 x i8> %VI3, <2 x i8> undef, zeroinitializer
+  //   SI4 = shufflevector <2 x i8> %VI4, <2 x i8> undef, zeroinitializer
+  //
+  //   SP1 = VectorSplat(2, i8 2)
+  //   SP2 = VectorSplat(2, i8 %Val)
+  Type *VecTy = VectorType::get(IRB.getInt8Ty(), 2);
+  Type *i32 = IRB.getInt32Ty();
+  Type *i32VecTy = VectorType::get(i32, 2);
+
+  Value *Val = IRB.CreateAdd(IRB.getInt8(0), IRB.getInt8(1));
+  Value *Val2 = IRB.CreateAdd(Val, IRB.getInt8(3));
+
+  SmallVector<Constant *, 2> VecElemIdxs;
+  VecElemIdxs.push_back(ConstantInt::get(i32, 0));
+  VecElemIdxs.push_back(ConstantInt::get(i32, 2));
+  auto *IdxVec = ConstantVector::get(VecElemIdxs);
+
+  Value *UndefVec = UndefValue::get(VecTy);
+  Value *VI1 = IRB.CreateInsertElement(UndefVec, IRB.getInt8(1), (uint64_t)0);
+  Value *VI2 = IRB.CreateInsertElement(VI1, Val2, Val);
+  Value *VI3 = IRB.CreateInsertElement(VI1, Val2, (uint64_t)1);
+  Value *VI4 = IRB.CreateInsertElement(VI1, IRB.getInt8(2), Val);
+
+  Value *EX1 = IRB.CreateExtractElement(VI4, Val);
+  Value *EX2 = IRB.CreateExtractElement(VI4, (uint64_t)0);
+  Value *EX3 = IRB.CreateExtractElement(IdxVec, (uint64_t)1);
+
+  Value *Zero = ConstantAggregateZero::get(i32VecTy);
+  Value *SI1 = IRB.CreateShuffleVector(VI1, UndefVec, Zero);
+  Value *SI2 = IRB.CreateShuffleVector(VI3, VI4, IdxVec);
+  Value *SI3 = IRB.CreateShuffleVector(VI3, UndefVec, Zero);
+  Value *SI4 = IRB.CreateShuffleVector(VI4, UndefVec, Zero);
+
+  Value *SP1 = IRB.CreateVectorSplat(2, IRB.getInt8(2));
+  Value *SP2 = IRB.CreateVectorSplat(2, Val);
+
+  Value *A = nullptr, *B = nullptr, *C = nullptr;
+
+  // Test matching insertelement
+  EXPECT_TRUE(match(VI1, m_InsertElement(m_Value(), m_Value(), m_Value())));
+  EXPECT_TRUE(
+      match(VI1, m_InsertElement(m_Undef(), m_ConstantInt(), m_ConstantInt())));
+  EXPECT_TRUE(
+      match(VI1, m_InsertElement(m_Undef(), m_ConstantInt(), m_Zero())));
+  EXPECT_TRUE(
+      match(VI1, m_InsertElement(m_Undef(), m_SpecificInt(1), m_Zero())));
+  EXPECT_TRUE(match(VI2, m_InsertElement(m_Value(), m_Value(), m_Value())));
+  EXPECT_FALSE(
+      match(VI2, m_InsertElement(m_Value(), m_Value(), m_ConstantInt())));
+  EXPECT_FALSE(
+      match(VI2, m_InsertElement(m_Value(), m_ConstantInt(), m_Value())));
+  EXPECT_FALSE(match(VI2, m_InsertElement(m_Constant(), m_Value(), m_Value())));
+  EXPECT_TRUE(match(VI3, m_InsertElement(m_Value(A), m_Value(B), m_Value(C))));
+  EXPECT_TRUE(A == VI1);
+  EXPECT_TRUE(B == Val2);
+  EXPECT_TRUE(isa<ConstantInt>(C));
+  A = B = C = nullptr; // reset
+
+  // Test matching extractelement
+  EXPECT_TRUE(match(EX1, m_ExtractElement(m_Value(A), m_Value(B))));
+  EXPECT_TRUE(A == VI4);
+  EXPECT_TRUE(B == Val);
+  A = B = C = nullptr; // reset
+  EXPECT_FALSE(match(EX1, m_ExtractElement(m_Value(), m_ConstantInt())));
+  EXPECT_TRUE(match(EX2, m_ExtractElement(m_Value(), m_ConstantInt())));
+  EXPECT_TRUE(match(EX3, m_ExtractElement(m_Constant(), m_ConstantInt())));
+
+  // Test matching shufflevector
+  EXPECT_TRUE(match(SI1, m_ShuffleVector(m_Value(), m_Undef(), m_Zero())));
+  EXPECT_TRUE(match(SI2, m_ShuffleVector(m_Value(A), m_Value(B), m_Value(C))));
+  EXPECT_TRUE(A == VI3);
+  EXPECT_TRUE(B == VI4);
+  EXPECT_TRUE(C == IdxVec);
+  A = B = C = nullptr; // reset
+
+  // Test matching the vector splat pattern
+  EXPECT_TRUE(match(
+      SI1,
+      m_ShuffleVector(m_InsertElement(m_Undef(), m_SpecificInt(1), m_Zero()),
+                      m_Undef(), m_Zero())));
+  EXPECT_FALSE(match(
+      SI3, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_Zero()),
+                           m_Undef(), m_Zero())));
+  EXPECT_FALSE(match(
+      SI4, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_Zero()),
+                           m_Undef(), m_Zero())));
+  EXPECT_TRUE(match(
+      SP1,
+      m_ShuffleVector(m_InsertElement(m_Undef(), m_SpecificInt(2), m_Zero()),
+                      m_Undef(), m_Zero())));
+  EXPECT_TRUE(match(
+      SP2, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(A), m_Zero()),
+                           m_Undef(), m_Zero())));
+  EXPECT_TRUE(A == Val);
+}
+
 template <typename T> struct MutableConstTest : PatternMatchTest { };
 
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,

@@ -279,6 +279,8 @@ public:
 
   bool isProfitableToHoist(Instruction *I) { return true; }
 
+  bool useAA() { return false; }
+
   bool isTypeLegal(Type *Ty) { return false; }
 
   unsigned getJumpBufAlignment() { return 0; }

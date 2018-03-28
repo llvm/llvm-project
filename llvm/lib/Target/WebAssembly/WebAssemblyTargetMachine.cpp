@@ -25,6 +25,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm"

@@ -21,6 +21,13 @@ let TargetPrefix = "hexagon" in {
                               list<IntrinsicProperty> properties>
     : GCCBuiltin<!strconcat("__builtin_", GCCIntSuffix)>,
       Intrinsic<ret_types, param_types, properties>;
+
+  /// Hexagon_NonGCC_Intrinsic - Base class for bitcode convertible Hexagon
+  /// intrinsics.
+  class Hexagon_NonGCC_Intrinsic<list<LLVMType> ret_types,
+                                 list<LLVMType> param_types,
+                                 list<IntrinsicProperty> properties>
+    : Intrinsic<ret_types, param_types, properties>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9299,6 +9306,39 @@ Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorentq_128B">;
 
 def int_hexagon_V6_vmaskedstorentnq_128B :
 Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorentnq_128B">;
+
+multiclass Hexagon_custom_circ_ld_Intrinsic<LLVMType ElTy> {
+  def NAME#_pci : Hexagon_NonGCC_Intrinsic<
+    [ElTy, llvm_ptr_ty],
+    [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
+    [IntrArgMemOnly, NoCapture<3>]>;
+  def NAME#_pcr : Hexagon_NonGCC_Intrinsic<
+    [ElTy, llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty, llvm_ptr_ty],
+    [IntrArgMemOnly, NoCapture<2>]>;
+}
+
+defm int_hexagon_L2_loadrub : Hexagon_custom_circ_ld_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_L2_loadrb : Hexagon_custom_circ_ld_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_L2_loadruh : Hexagon_custom_circ_ld_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_L2_loadrh : Hexagon_custom_circ_ld_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_L2_loadri : Hexagon_custom_circ_ld_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_L2_loadrd : Hexagon_custom_circ_ld_Intrinsic<llvm_i64_ty>;
+
+multiclass Hexagon_custom_circ_st_Intrinsic<LLVMType ElTy> {
+  def NAME#_pci : Hexagon_NonGCC_Intrinsic<
+    [llvm_ptr_ty],
+    [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, ElTy, llvm_ptr_ty],
+    [IntrArgMemOnly, NoCapture<4>]>;
+  def NAME#_pcr : Hexagon_NonGCC_Intrinsic<
+    [llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty, ElTy, llvm_ptr_ty],
+    [IntrArgMemOnly, NoCapture<3>]>;
+}
+
+defm int_hexagon_S2_storerb : Hexagon_custom_circ_st_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_S2_storerh : Hexagon_custom_circ_st_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_S2_storerf : Hexagon_custom_circ_st_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_S2_storeri : Hexagon_custom_circ_st_Intrinsic<llvm_i32_ty>;
+defm int_hexagon_S2_storerd : Hexagon_custom_circ_st_Intrinsic<llvm_i64_ty>;
 
 
 ///

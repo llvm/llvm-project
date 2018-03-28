@@ -203,14 +203,16 @@ void elf::addReservedSymbols() {
   // this symbol unconditionally even when using a linker script, which
   // differs from the behavior implemented by GNU linker which only define
   // this symbol if ELF headers are in the memory mapped segment.
+  addOptionalRegular("__ehdr_start", Out::ElfHeader, 0, STV_HIDDEN);
+
   // __executable_start is not documented, but the expectation of at
-  // least the android libc is that it points to the elf header too.
+  // least the Android libc is that it points to the ELF header.
+  addOptionalRegular("__executable_start", Out::ElfHeader, 0, STV_HIDDEN);
+
   // __dso_handle symbol is passed to cxa_finalize as a marker to identify
   // each DSO. The address of the symbol doesn't matter as long as they are
   // different in different DSOs, so we chose the start address of the DSO.
-  for (const char *Name :
-       {"__ehdr_start", "__executable_start", "__dso_handle"})
-    addOptionalRegular(Name, Out::ElfHeader, 0, STV_HIDDEN);
+  addOptionalRegular("__dso_handle", Out::ElfHeader, 0, STV_HIDDEN);
 
   // If linker script do layout we do not need to create any standart symbols.
   if (Script->HasSectionsCommand)

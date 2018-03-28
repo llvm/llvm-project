@@ -5066,7 +5066,13 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   if (MI.getOpcode() == AArch64::ADRP)
     return MachineOutlinerInstrType::Legal;
 
-  // Outline calls without stack parameters or aggregate parameters.
+  // If MI is a call we might be able to outline it. We don't want to outline
+  // any calls that rely on the position of items on the stack. When we outline
+  // something containing a call, we have to emit a save and restore of LR in
+  // the outlined function. Currently, this always happens by saving LR to the
+  // stack. Thus, if we outline, say, half the parameters for a function call
+  // plus the call, then we'll break the callee's expectations for the layout
+  // of the stack.
   if (MI.isCall()) {
     const Module *M = MF->getFunction().getParent();
     assert(M && "No module?");
@@ -5089,44 +5095,25 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     // Only handle functions that we have information about.
     if (!Callee)
       return MachineOutlinerInstrType::Illegal;
-    
+
     // We have a function we have information about. Check it if it's something
     // can safely outline.
-
-    // If the callee is vararg, it passes parameters on the stack. Don't touch
-    // it.
-    // FIXME: Functions like printf are very common and we should be able to
-    // outline them.
-    if (Callee->isVarArg())
-      return MachineOutlinerInstrType::Illegal;
-
-    // Check if any of the arguments are a pointer to a struct. We don't want
-    // to outline these since they might be loaded in two instructions.
-    for (Argument &Arg : Callee->args()) {
-      if (Arg.getType()->isPointerTy() &&
-          Arg.getType()->getPointerElementType()->isAggregateType()) 
-        return MachineOutlinerInstrType::Illegal;
-    }
-
-    // If the thing we're calling doesn't access memory at all, then we're good
-    // to go.
-    if (Callee->doesNotAccessMemory()) 
-      return MachineOutlinerInstrType::Legal;
-    
-
-    // It accesses memory. Get the machine function for the callee to see if
-    // it's safe to outline.
     MachineFunction *CalleeMF = MF->getMMI().getMachineFunction(*Callee);
 
     // We don't know what's going on with the callee at all. Don't touch it.
-    if (!CalleeMF) 
+    if (!CalleeMF)
       return MachineOutlinerInstrType::Illegal;
 
-    // Does it pass anything on the stack? If it does, don't outline it.
-    if (CalleeMF->getInfo<AArch64FunctionInfo>()->getBytesInStackArgArea() != 0)
+    // Check if we know anything about the callee saves on the function. If we
+    // don't, then don't touch it, since that implies that we haven't
+    // computed anything about its stack frame yet.
+    MachineFrameInfo &MFI = CalleeMF->getFrameInfo();
+    if (!MFI.isCalleeSavedInfoValid() || MFI.getStackSize() > 0 ||
+        MFI.getNumObjects() > 0)
       return MachineOutlinerInstrType::Illegal;
-    
-    // It doesn't, so it's safe to outline and we're done.
+
+    // At this point, we can say that CalleeMF ought to not pass anything on the
+    // stack. Therefore, we can outline it.
     return MachineOutlinerInstrType::Legal;
   }
 

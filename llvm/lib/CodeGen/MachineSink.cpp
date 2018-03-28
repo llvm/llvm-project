@@ -948,6 +948,11 @@ public:
   PostRAMachineSinking() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "PostRA Machine Sink"; }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
 private:
   /// Track which registers have been modified and used.
   BitVector ModifiedRegs, UsedRegs;
