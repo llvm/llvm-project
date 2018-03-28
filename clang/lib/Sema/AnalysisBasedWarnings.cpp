@@ -1388,8 +1388,8 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
 
   // Sort by first use so that we emit the warnings in a deterministic order.
   SourceManager &SM = S.getSourceManager();
-  std::sort(UsesByStmt.begin(), UsesByStmt.end(),
-            [&SM](const StmtUsesPair &LHS, const StmtUsesPair &RHS) {
+  llvm::sort(UsesByStmt.begin(), UsesByStmt.end(),
+             [&SM](const StmtUsesPair &LHS, const StmtUsesPair &RHS) {
     return SM.isBeforeInTranslationUnit(LHS.first->getLocStart(),
                                         RHS.first->getLocStart());
   });
@@ -1527,8 +1527,8 @@ public:
         // Sort the uses by their SourceLocations.  While not strictly
         // guaranteed to produce them in line/column order, this will provide
         // a stable ordering.
-        std::sort(vec->begin(), vec->end(),
-                  [](const UninitUse &a, const UninitUse &b) {
+        llvm::sort(vec->begin(), vec->end(),
+                   [](const UninitUse &a, const UninitUse &b) {
           // Prefer a more confident report over a less confident one.
           if (a.getKind() != b.getKind())
             return a.getKind() > b.getKind();
@@ -1601,7 +1601,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (Verbose && CurrentFunction) {
       PartialDiagnosticAt FNote(CurrentFunction->getBody()->getLocStart(),
                                 S.PDiag(diag::note_thread_warning_in_fun)
-                                    << CurrentFunction->getNameAsString());
+                                    << CurrentFunction);
       return OptionalNotes(1, FNote);
     }
     return OptionalNotes();
@@ -1612,7 +1612,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (Verbose && CurrentFunction) {
       PartialDiagnosticAt FNote(CurrentFunction->getBody()->getLocStart(),
                                 S.PDiag(diag::note_thread_warning_in_fun)
-                                    << CurrentFunction->getNameAsString());
+                                    << CurrentFunction);
       ONS.push_back(std::move(FNote));
     }
     return ONS;
@@ -1626,7 +1626,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (Verbose && CurrentFunction) {
       PartialDiagnosticAt FNote(CurrentFunction->getBody()->getLocStart(),
                                 S.PDiag(diag::note_thread_warning_in_fun)
-                                    << CurrentFunction->getNameAsString());
+                                    << CurrentFunction);
       ONS.push_back(std::move(FNote));
     }
     return ONS;
@@ -1742,7 +1742,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                         diag::warn_variable_requires_any_lock:
                         diag::warn_var_deref_requires_any_lock;
     PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID)
-      << D->getNameAsString() << getLockKindFromAccessKind(AK));
+      << D << getLockKindFromAccessKind(AK));
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
@@ -1770,7 +1770,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
-                                                       << D->getNameAsString()
+                                                       << D
                                                        << LockName << LK);
       PartialDiagnosticAt Note(Loc, S.PDiag(diag::note_found_mutex_near_match)
                                         << *PossibleMatch);
@@ -1800,12 +1800,11 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
-                                                       << D->getNameAsString()
+                                                       << D
                                                        << LockName << LK);
       if (Verbose && POK == POK_VarAccess) {
         PartialDiagnosticAt Note(D->getLocation(),
-                                 S.PDiag(diag::note_guarded_by_declared_here)
-                                     << D->getNameAsString());
+                                 S.PDiag(diag::note_guarded_by_declared_here));
         Warnings.emplace_back(std::move(Warning), getNotes(Note));
       } else
         Warnings.emplace_back(std::move(Warning), getNotes());

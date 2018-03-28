@@ -1812,8 +1812,8 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
 }
 
 void YAMLVFSWriter::write(llvm::raw_ostream &OS) {
-  std::sort(Mappings.begin(), Mappings.end(),
-            [](const YAMLVFSEntry &LHS, const YAMLVFSEntry &RHS) {
+  llvm::sort(Mappings.begin(), Mappings.end(),
+             [](const YAMLVFSEntry &LHS, const YAMLVFSEntry &RHS) {
     return LHS.VPath < RHS.VPath;
   });
 

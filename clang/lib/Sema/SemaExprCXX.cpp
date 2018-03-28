@@ -4513,6 +4513,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     // does not correctly compute triviality in the presence of multiple special
     // members of the same kind. Revisit this once the g++ bug is fixed.
   case UTT_HasTrivialDefaultConstructor:
+    if (T.isNonTrivialToPrimitiveDefaultInitialize())
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
     //   If __is_pod (type) is true then the trait is true, else if type is
     //   a cv class or union type (or array thereof) with a trivial default
@@ -4524,6 +4526,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
              !RD->hasNonTrivialDefaultConstructor();
     return false;
   case UTT_HasTrivialMoveConstructor:
+    if (T.isNonTrivialToPrimitiveDestructiveMove())
+      return false;
     //  This trait is implemented by MSVC 2012 and needed to parse the
     //  standard library headers. Specifically this is used as the logic
     //  behind std::is_trivially_move_constructible (20.9.4.3).
@@ -4533,6 +4537,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return RD->hasTrivialMoveConstructor() && !RD->hasNonTrivialMoveConstructor();
     return false;
   case UTT_HasTrivialCopy:
+    if (T.isNonTrivialToPrimitiveCopy())
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
     //   If __is_pod (type) is true or type is a reference type then
     //   the trait is true, else if type is a cv class or union type
@@ -4545,6 +4551,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
              !RD->hasNonTrivialCopyConstructor();
     return false;
   case UTT_HasTrivialMoveAssign:
+    if (T.isNonTrivialToPrimitiveDestructiveMove())
+      return false;
     //  This trait is implemented by MSVC 2012 and needed to parse the
     //  standard library headers. Specifically it is used as the logic
     //  behind std::is_trivially_move_assignable (20.9.4.3)
@@ -4554,6 +4562,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return RD->hasTrivialMoveAssignment() && !RD->hasNonTrivialMoveAssignment();
     return false;
   case UTT_HasTrivialAssign:
+    if (T.isNonTrivialToPrimitiveCopy())
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
     //   If type is const qualified or is a reference type then the
     //   trait is false. Otherwise if __is_pod (type) is true then the
@@ -4624,6 +4634,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return true;
 
   case UTT_HasTrivialDestructor:
+    if (T.isDestructedType() == QualType::DK_nontrivial_c_struct)
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html
     //   If __is_pod (type) is true or type is a reference type
     //   then the trait is true, else if type is a cv class or union

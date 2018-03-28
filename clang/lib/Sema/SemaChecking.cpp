@@ -1209,7 +1209,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaOpenCLBuiltinKernelWorkGroupSize(*this, TheCall))
       return ExprError();
     break;
-    break;
   case Builtin::BIget_kernel_max_sub_group_size_for_ndrange:
   case Builtin::BIget_kernel_sub_group_count_for_ndrange:
     if (SemaOpenCLBuiltinNDRangeAndBlock(*this, TheCall))
@@ -10226,18 +10225,22 @@ void Sema::CheckForIntOverflow (Expr *E) {
   SmallVector<Expr *, 2> Exprs(1, E);
 
   do {
-    Expr *E = Exprs.pop_back_val();
+    Expr *OriginalE = Exprs.pop_back_val();
+    Expr *E = OriginalE->IgnoreParenCasts();
 
-    if (isa<BinaryOperator>(E->IgnoreParenCasts())) {
-      E->IgnoreParenCasts()->EvaluateForOverflow(Context);
+    if (isa<BinaryOperator>(E)) {
+      E->EvaluateForOverflow(Context);
       continue;
     }
 
-    if (auto InitList = dyn_cast<InitListExpr>(E))
+    if (auto InitList = dyn_cast<InitListExpr>(OriginalE))
       Exprs.append(InitList->inits().begin(), InitList->inits().end());
-
-    if (isa<ObjCBoxedExpr>(E))
-      E->IgnoreParenCasts()->EvaluateForOverflow(Context);
+    else if (isa<ObjCBoxedExpr>(OriginalE))
+      E->EvaluateForOverflow(Context);
+    else if (auto Call = dyn_cast<CallExpr>(E))
+      Exprs.append(Call->arg_begin(), Call->arg_end());
+    else if (auto Message = dyn_cast<ObjCMessageExpr>(E))
+      Exprs.append(Message->arg_begin(), Message->arg_end());
   } while (!Exprs.empty());
 }
 
@@ -11518,7 +11521,7 @@ void Sema::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
       if (ArgRE->isObjCSelfExpr()) {
         Diag(Message->getSourceRange().getBegin(),
              diag::warn_objc_circular_container)
-          << ArgRE->getDecl()->getName() << StringRef("super");
+          << ArgRE->getDecl() << StringRef("'super'");
       }
     }
   } else {
@@ -11534,11 +11537,11 @@ void Sema::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
           ValueDecl *Decl = ReceiverRE->getDecl();
           Diag(Message->getSourceRange().getBegin(),
                diag::warn_objc_circular_container)
-            << Decl->getName() << Decl->getName();
+            << Decl << Decl;
           if (!ArgRE->isObjCSelfExpr()) {
             Diag(Decl->getLocation(),
                  diag::note_objc_circular_container_declared_here)
-              << Decl->getName();
+              << Decl;
           }
         }
       }
@@ -11548,10 +11551,10 @@ void Sema::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
           ObjCIvarDecl *Decl = IvarRE->getDecl();
           Diag(Message->getSourceRange().getBegin(),
                diag::warn_objc_circular_container)
-            << Decl->getName() << Decl->getName();
+            << Decl << Decl;
           Diag(Decl->getLocation(),
                diag::note_objc_circular_container_declared_here)
-            << Decl->getName();
+            << Decl;
         }
       }
     }

@@ -471,7 +471,7 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
   }
 
   // Check sorted contents.
-  std::sort(Contents.begin(), Contents.end());
+  llvm::sort(Contents.begin(), Contents.end());
   EXPECT_EQ(Expected.size(), Contents.size());
   EXPECT_TRUE(std::equal(Contents.begin(), Contents.end(), Expected.begin()));
 }
@@ -488,8 +488,8 @@ static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
   for (DirIter E; !EC && I != E; I.increment(EC))
     InputToCheck.push_back(I->getName());
 
-  std::sort(InputToCheck.begin(), InputToCheck.end());
-  std::sort(Expected.begin(), Expected.end());
+  llvm::sort(InputToCheck.begin(), InputToCheck.end());
+  llvm::sort(Expected.begin(), Expected.end());
   EXPECT_EQ(InputToCheck.size(), Expected.size());
 
   unsigned LastElt = std::min(InputToCheck.size(), Expected.size());

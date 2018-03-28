@@ -4003,6 +4003,26 @@ AST_POLYMORPHIC_MATCHER_P(hasOperatorName,
   return Name == Node.getOpcodeStr(Node.getOpcode());
 }
 
+/// \brief Matches on all kinds of assignment operators.
+///
+/// Example 1: matches a += b (matcher = binaryOperator(isAssignmentOperator()))
+/// \code
+///   if (a == b)
+///     a += b;
+/// \endcode
+///
+/// Example 2: matches s1 = s2
+///            (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
+/// \code
+///   struct S { S& operator=(const S&); };
+///   void x() { S s1, s2; s1 = s2; })
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isAssignmentOperator,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(BinaryOperator,
+                                                        CXXOperatorCallExpr)) {
+  return Node.isAssignmentOp();
+}
+
 /// \brief Matches the left hand side of binary operator expressions.
 ///
 /// Example matches a (matcher = binaryOperator(hasLHS()))

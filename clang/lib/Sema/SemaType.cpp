@@ -4851,8 +4851,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (Chunk.Fun.TypeQuals & Qualifiers::Restrict)
           RemovalLocs.push_back(Chunk.Fun.getRestrictQualifierLoc());
         if (!RemovalLocs.empty()) {
-          std::sort(RemovalLocs.begin(), RemovalLocs.end(),
-                    BeforeThanCompare<SourceLocation>(S.getSourceManager()));
+          llvm::sort(RemovalLocs.begin(), RemovalLocs.end(),
+                     BeforeThanCompare<SourceLocation>(S.getSourceManager()));
           RemovalRange = SourceRange(RemovalLocs.front(), RemovalLocs.back());
           Loc = RemovalLocs.front();
         }

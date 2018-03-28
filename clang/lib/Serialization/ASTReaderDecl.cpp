@@ -232,7 +232,7 @@ namespace clang {
 
       if (auto &Old = LazySpecializations) {
         IDs.insert(IDs.end(), Old + 1, Old + 1 + Old[0]);
-        std::sort(IDs.begin(), IDs.end());
+        llvm::sort(IDs.begin(), IDs.end());
         IDs.erase(std::unique(IDs.begin(), IDs.end()), IDs.end());
       }
 

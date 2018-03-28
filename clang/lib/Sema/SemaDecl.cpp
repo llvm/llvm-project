@@ -9381,7 +9381,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
 
   TargetAttr::ParsedTargetAttr NewParsed = NewTA->parse();
   // Sort order doesn't matter, it just needs to be consistent.
-  std::sort(NewParsed.Features.begin(), NewParsed.Features.end());
+  llvm::sort(NewParsed.Features.begin(), NewParsed.Features.end());
 
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
   if (!OldFD->isMultiVersion()) {
@@ -10342,7 +10342,7 @@ namespace {
 
       S.DiagRuntimeBehavior(DRE->getLocStart(), DRE,
                             S.PDiag(diag)
-                              << DRE->getNameInfo().getName()
+                              << DRE->getDecl()
                               << OrigDecl->getLocation()
                               << DRE->getSourceRange());
     }
@@ -16166,7 +16166,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
     // Emit warning for one enum constant.
     ECDVector::iterator I = Vec->begin();
     S.Diag((*I)->getLocation(), diag::warn_duplicate_enum_values)
-      << (*I)->getName() << (*I)->getInitVal().toString(10)
+      << (*I) << (*I)->getInitVal().toString(10)
       << (*I)->getSourceRange();
     ++I;
 
@@ -16174,7 +16174,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
     // the same value.
     for (ECDVector::iterator E = Vec->end(); I != E; ++I)
       S.Diag((*I)->getLocation(), diag::note_duplicate_element)
-        << (*I)->getName() << (*I)->getInitVal().toString(10)
+        << (*I) << (*I)->getInitVal().toString(10)
         << (*I)->getSourceRange();
     delete Vec;
   }

@@ -5511,7 +5511,7 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
       // CUDA: Kernel calls must be to global functions
       if (FDecl && !FDecl->hasAttr<CUDAGlobalAttr>())
         return ExprError(Diag(LParenLoc,diag::err_kern_call_not_global_function)
-            << FDecl->getName() << Fn->getSourceRange());
+            << FDecl << Fn->getSourceRange());
 
       // CUDA: Kernel function must have 'void' return type
       if (!FuncT->getReturnType()->isVoidType())
@@ -5521,7 +5521,7 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
       // CUDA: Calls to global functions must be configured
       if (FDecl && FDecl->hasAttr<CUDAGlobalAttr>())
         return ExprError(Diag(LParenLoc, diag::err_global_call_not_config)
-            << FDecl->getName() << Fn->getSourceRange());
+            << FDecl << Fn->getSourceRange());
     }
   }
 
@@ -8030,7 +8030,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
   if (Diagnose && isa<ObjCProtocolExpr>(PRE)) {
     ObjCProtocolDecl *PDecl = cast<ObjCProtocolExpr>(PRE)->getProtocol();
     if (PDecl && !PDecl->hasDefinition()) {
-      Diag(PRE->getExprLoc(), diag::warn_atprotocol_protocol) << PDecl->getName();
+      Diag(PRE->getExprLoc(), diag::warn_atprotocol_protocol) << PDecl;
       Diag(PDecl->getLocation(), diag::note_entity_declared_at) << PDecl;
     }
   }
@@ -13516,7 +13516,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   if (DiagKind == diag::warn_incompatible_qualified_id &&
       PDecl && IFace && !IFace->hasDefinition())
       Diag(IFace->getLocation(), diag::note_incomplete_class_and_qualified_id)
-        << IFace->getName() << PDecl->getName();
+        << IFace << PDecl;
     
   if (SecondType == Context.OverloadTy)
     NoteAllOverloadCandidates(OverloadExpr::find(SrcExpr).Expression,
