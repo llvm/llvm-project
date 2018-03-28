@@ -949,6 +949,13 @@ defm BUFFER_STORE_SHORT_D16_HI : MUBUF_Pseudo_Stores <
   "buffer_store_short_d16_hi", VGPR_32, i32
 >;
 
+defm BUFFER_LOAD_FORMAT_D16_HI_X : MUBUF_Pseudo_Loads <
+  "buffer_load_format_d16_hi_x", VGPR_32
+>;
+defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
+  "buffer_store_format_d16_hi_x", VGPR_32
+>;
+
 } // End HasD16LoadStore
 
 def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
@@ -1945,6 +1952,9 @@ defm BUFFER_LOAD_SBYTE_D16      : MUBUF_Real_AllAddr_vi <0x22>;
 defm BUFFER_LOAD_SBYTE_D16_HI   : MUBUF_Real_AllAddr_vi <0x23>;
 defm BUFFER_LOAD_SHORT_D16      : MUBUF_Real_AllAddr_vi <0x24>;
 defm BUFFER_LOAD_SHORT_D16_HI   : MUBUF_Real_AllAddr_vi <0x25>;
+
+defm BUFFER_LOAD_FORMAT_D16_HI_X  : MUBUF_Real_AllAddr_vi <0x26>;
+defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Real_AllAddr_vi <0x27>;
 
 defm BUFFER_ATOMIC_SWAP         : MUBUF_Real_Atomic_vi <0x40>;
 defm BUFFER_ATOMIC_CMPSWAP      : MUBUF_Real_Atomic_vi <0x41>;

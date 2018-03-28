@@ -43,7 +43,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 using namespace llvm;

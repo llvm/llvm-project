@@ -245,7 +245,7 @@ def _SLASH_Guard : CLJoined<"guard:">,
 def _SLASH_GX : CLFlag<"GX">,
   HelpText<"Enable exception handling">;
 def _SLASH_GX_ : CLFlag<"GX-">,
-  HelpText<"Enable exception handling">;
+  HelpText<"Disable exception handling">;
 def _SLASH_imsvc : CLJoinedOrSeparate<"imsvc">,
   HelpText<"Add directory to system include search path, as if part of %INCLUDE%">,
   MetaVarName<"<dir>">;

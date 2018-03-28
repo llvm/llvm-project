@@ -672,6 +672,20 @@ def JWriteFCmpLd: SchedWriteRes<[JLAGU, JFPU0, JFPA]> {
 def : InstRW<[JWriteFCmpLd], (instregex "(V)?M(AX|IN)(P|S)(D|S)rm",
                                         "(V)?CMPP(S|D)rmi", "(V)?CMPS(S|D)rm")>;
 
+def JWriteFCmpY: SchedWriteRes<[JFPU0, JFPA]> {
+  let Latency = 2;
+  let ResourceCycles = [2, 2];
+  let NumMicroOps = 2;
+}
+def : InstRW<[JWriteFCmpY], (instregex "VCMPP(S|D)Yrri", "VM(AX|IN)P(D|S)Yrr")>;
+
+def JWriteFCmpYLd: SchedWriteRes<[JLAGU, JFPU0, JFPA]> {
+  let Latency = 7;
+  let ResourceCycles = [2, 2, 2];
+  let NumMicroOps = 2;
+}
+def : InstRW<[JWriteFCmpYLd, ReadAfterLd], (instregex "VCMPP(S|D)Yrmi", "VM(AX|IN)P(D|S)Yrm")>;
+
 def JWriteVCVTPDY: SchedWriteRes<[JFPU1, JSTC, JFPX]> {
   let Latency = 6;
   let ResourceCycles = [2, 2, 4];
@@ -751,20 +765,6 @@ def JWriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteVBROADCASTYLd, ReadAfterLd], (instrs VBROADCASTSDYrm, VBROADCASTSSYrm)>;
-
-def JWriteFPAY22: SchedWriteRes<[JFPU0, JFPA]> {
-  let Latency = 2;
-  let ResourceCycles = [2, 2];
-  let NumMicroOps = 2;
-}
-def : InstRW<[JWriteFPAY22], (instregex "VCMPP(S|D)Yrri", "VM(AX|IN)P(D|S)Yrr")>;
-
-def JWriteFPAY22Ld: SchedWriteRes<[JLAGU, JFPU0, JFPA]> {
-  let Latency = 7;
-  let ResourceCycles = [2, 2, 2];
-  let NumMicroOps = 2;
-}
-def : InstRW<[JWriteFPAY22Ld, ReadAfterLd], (instregex "VCMPP(S|D)Yrmi", "VM(AX|IN)P(D|S)Yrm")>;
 
 def JWriteVMaskMovLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
   let Latency = 6;
