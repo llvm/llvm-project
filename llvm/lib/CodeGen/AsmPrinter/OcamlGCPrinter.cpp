@@ -129,7 +129,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
     // Very rude!
     report_fatal_error(" Too much descriptor for ocaml GC");
   }
-  AP.EmitInt16(NumDescriptors);
+  AP.emitInt16(NumDescriptors);
   AP.EmitAlignment(IntPtrSize == 4 ? 2 : 3);
 
   for (GCModuleInfo::FuncInfoVec::iterator I = Info.funcinfo_begin(),
@@ -166,8 +166,8 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
       }
 
       AP.OutStreamer->EmitSymbolValue(J->Label, IntPtrSize);
-      AP.EmitInt16(FrameSize);
-      AP.EmitInt16(LiveCount);
+      AP.emitInt16(FrameSize);
+      AP.emitInt16(LiveCount);
 
       for (GCFunctionInfo::live_iterator K = FI.live_begin(J),
                                          KE = FI.live_end(J);
@@ -178,7 +178,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
               "GC root stack offset is outside of fixed stack frame and out "
               "of range for ocaml GC!");
         }
-        AP.EmitInt16(K->StackOffset);
+        AP.emitInt16(K->StackOffset);
       }
 
       AP.EmitAlignment(IntPtrSize == 4 ? 2 : 3);

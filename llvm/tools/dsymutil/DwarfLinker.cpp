@@ -933,12 +933,12 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
   // Emit size of content not including length itself. The size has already
   // been computed in CompileUnit::computeOffsets(). Subtract 4 to that size to
   // account for the length field.
-  Asm->EmitInt32(Unit.getNextUnitOffset() - Unit.getStartOffset() - 4);
-  Asm->EmitInt16(Version);
+  Asm->emitInt32(Unit.getNextUnitOffset() - Unit.getStartOffset() - 4);
+  Asm->emitInt16(Version);
   // We share one abbreviations table across all units so it's always at the
   // start of the section.
-  Asm->EmitInt32(0);
-  Asm->EmitInt8(Unit.getOrigUnit().getAddressByteSize());
+  Asm->emitInt32(0);
+  Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
 }
 
 /// Emit the \p Abbrevs array as the shared abbreviation table
@@ -967,7 +967,7 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
     // Emit the string itself.
     Asm->OutStreamer->EmitBytes(Entry.getString());
     // Emit a null terminator.
-    Asm->EmitInt8(0);
+    Asm->emitInt8(0);
   }
 }
 
@@ -1089,10 +1089,10 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
 
     Asm->EmitLabelDifference(EndLabel, BeginLabel, 4); // Arange length
     Asm->OutStreamer->EmitLabel(BeginLabel);
-    Asm->EmitInt16(dwarf::DW_ARANGES_VERSION); // Version number
-    Asm->EmitInt32(Unit.getStartOffset());     // Corresponding unit's offset
-    Asm->EmitInt8(AddressSize);                // Address size
-    Asm->EmitInt8(0);                          // Segment size
+    Asm->emitInt16(dwarf::DW_ARANGES_VERSION); // Version number
+    Asm->emitInt32(Unit.getStartOffset());     // Corresponding unit's offset
+    Asm->emitInt8(AddressSize);                // Address size
+    Asm->emitInt8(0);                          // Segment size
 
     Asm->OutStreamer->emitFill(Padding, 0x0);
 
@@ -1375,22 +1375,22 @@ void DwarfStreamer::emitPubSectionForUnit(
       // Emit the header.
       Asm->EmitLabelDifference(EndLabel, BeginLabel, 4); // Length
       Asm->OutStreamer->EmitLabel(BeginLabel);
-      Asm->EmitInt16(dwarf::DW_PUBNAMES_VERSION); // Version
-      Asm->EmitInt32(Unit.getStartOffset());      // Unit offset
-      Asm->EmitInt32(Unit.getNextUnitOffset() - Unit.getStartOffset()); // Size
+      Asm->emitInt16(dwarf::DW_PUBNAMES_VERSION); // Version
+      Asm->emitInt32(Unit.getStartOffset());      // Unit offset
+      Asm->emitInt32(Unit.getNextUnitOffset() - Unit.getStartOffset()); // Size
       HeaderEmitted = true;
     }
-    Asm->EmitInt32(Name.Die->getOffset());
+    Asm->emitInt32(Name.Die->getOffset());
 
     // Emit the string itself.
     Asm->OutStreamer->EmitBytes(Name.Name.getString());
     // Emit a null terminator.
-    Asm->EmitInt8(0);
+    Asm->emitInt8(0);
   }
 
   if (!HeaderEmitted)
     return;
-  Asm->EmitInt32(0); // End marker.
+  Asm->emitInt32(0); // End marker.
   Asm->OutStreamer->EmitLabel(EndLabel);
 }
 
