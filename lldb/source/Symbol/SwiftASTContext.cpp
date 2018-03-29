@@ -292,6 +292,24 @@ llvm::LLVMContext &SwiftASTContext::GetGlobalLLVMContext() {
   return s_global_context;
 }
 
+llvm::ArrayRef<swift::VarDecl *> SwiftASTContext::GetStoredProperties(
+                                             swift::NominalTypeDecl *nominal) {
+  VALID_OR_RETURN(llvm::ArrayRef<swift::VarDecl *>());
+
+  // Check whether we already have the stored properties for this
+  // nominal type.
+  auto known = m_stored_properties.find(nominal);
+  if (known != m_stored_properties.end()) return known->second;
+
+  // Collect the stored properties from the AST and put them in the
+  // cache.
+  auto stored_properties = nominal->getStoredProperties();
+  auto &stored = m_stored_properties[nominal];
+  stored = std::vector<swift::VarDecl *>(stored_properties.begin(),
+                                         stored_properties.end());
+  return stored;
+}
+
 CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
   VALID_OR_RETURN(nullptr);
 
@@ -345,6 +363,10 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     case swift::TypeKind::InOut:
     case swift::TypeKind::Unresolved:
     case swift::TypeKind::Tuple:
+    case swift::TypeKind::Struct:
+    case swift::TypeKind::Class:
+    case swift::TypeKind::BoundGenericStruct:
+    case swift::TypeKind::BoundGenericClass:
       assert(false &&
              "Caller must only call this function with valid type_kind");
       break;
@@ -385,63 +407,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
         }
         member_info.name = ConstString(child_name_stream.GetData());
         member_infos_sp->member_infos.push_back(member_info);
-      }
-    } break;
-
-    case swift::TypeKind::Struct:
-    case swift::TypeKind::Class:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::BoundGenericClass: {
-      auto t_decl = swift_can_type.getAnyNominal();
-      auto class_decl = swift::dyn_cast<swift::ClassDecl>(t_decl);
-      if (class_decl) {
-        is_class = true;
-        swift::Type superclass_type(swift_can_type->getSuperclass());
-        if (superclass_type) {
-          MemberInfo member_info(MemberType::BaseClass);
-          member_info.clang_type =
-              CompilerType(GetASTContext(), superclass_type.getPointer());
-          member_info.byte_size =
-              member_info.clang_type.GetByteSize(nullptr);
-          // Showing somemodule.sometype<A> is confusing to the user because
-          // it will show the *unboud* archetype name even though the type
-          // is actually properly bound (or it should!) and since one cannot
-          // overload a class on the number of generic arguments,
-          // somemodule.sometype is just as unique.
-          member_info.name.SetCString(
-              member_info.clang_type.GetUnboundType()
-                  .GetTypeName()
-                  .AsCString("<no type name>"));
-          field_type_infos.push_back(
-              GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
-          assert(field_type_infos.back() != nullptr);
-          member_infos_sp->member_infos.push_back(member_info);
-        }
-      }
-
-      for (auto decl : t_decl->getMembers()) {
-        // Find ivars that aren't properties
-        if (swift::isa<swift::VarDecl>(decl)) {
-          swift::VarDecl *var_decl = swift::cast<swift::VarDecl>(decl);
-          if (var_decl->hasStorage() && !var_decl->isStatic()) {
-            MemberInfo member_info(MemberType::Field);
-            swift::Type member_type = swift_can_type->getTypeOfMember(
-                t_decl->getModuleContext(), var_decl, nullptr);
-            member_info.clang_type =
-                CompilerType(GetASTContext(), member_type.getPointer());
-            member_info.byte_size =
-                member_info.clang_type.GetByteSize(nullptr);
-            member_info.is_fragile =
-                is_class; // Class fields are all fragile...
-            const char *child_name_cstr = var_decl->getName().get();
-            if (child_name_cstr)
-              member_info.name.SetCString(child_name_cstr);
-            field_type_infos.push_back(GetSwiftTypeInfo(
-                member_info.clang_type.GetOpaqueQualType()));
-            assert(field_type_infos.back() != nullptr);
-            member_infos_sp->member_infos.push_back(member_info);
-          }
-        }
       }
     } break;
 
@@ -6435,20 +6400,16 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::Tuple:
     return cast<swift::TupleType>(swift_can_type)->getNumElements();
 
+  case swift::TypeKind::Struct:
   case swift::TypeKind::Class:
   case swift::TypeKind::BoundGenericClass:
-  {
-    if (CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type)) {
-      auto class_decl = swift_can_type->getClassOrBoundGenericClass();
-      const size_t num_members = cached_member_info->member_infos.size();
-      return num_members - (class_decl->hasSuperclass() ? 1 : 0);
-    }
-  } break;
-
-  case swift::TypeKind::Struct:
-  case swift::TypeKind::Protocol:
-  case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::BoundGenericStruct: {
+    auto nominal = swift_can_type->getAnyNominal();
+    return GetStoredProperties(nominal).size();
+  }
+
+  case swift::TypeKind::Protocol:
+  case swift::TypeKind::ProtocolComposition: {
     CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
     if (cached_member_info) {
       return cached_member_info->member_infos.size();
@@ -6528,6 +6489,12 @@ static std::string GetTupleElementName(const swift::TupleType *tuple_type,
   return str;
 }
 
+/// Retrieve the printable name of a type referenced as a superclass.
+static std::string GetSuperclassName(const CompilerType &superclass_type) {
+  return superclass_type.GetUnboundType().GetTypeName()
+    .AsCString("<no type name>");
+}
+
 CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
                                               std::string &name,
                                               uint64_t *bit_offset_ptr,
@@ -6600,12 +6567,61 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     return CompilerType(GetASTContext(), child.getType().getPointer());
   }
 
-  case swift::TypeKind::Struct:
   case swift::TypeKind::Class:
-  case swift::TypeKind::Protocol:
-  case swift::TypeKind::ProtocolComposition:
-  case swift::TypeKind::BoundGenericClass:
+  case swift::TypeKind::BoundGenericClass: {
+    auto class_decl = swift_can_type->getClassOrBoundGenericClass();
+    if (class_decl->hasSuperclass()) {
+      if (idx == 0) {
+        swift::Type superclass_swift_type = swift_can_type->getSuperclass();
+        CompilerType superclass_type(GetASTContext(),
+                                     superclass_swift_type.getPointer());
+
+        name = GetSuperclassName(superclass_type);
+
+        // We cannot reliably get layout information without an execution
+        // context.
+        if (bit_offset_ptr)
+          *bit_offset_ptr = LLDB_INVALID_IVAR_OFFSET;
+        if (bitfield_bit_size_ptr)
+          *bitfield_bit_size_ptr = 0;
+        if (is_bitfield_ptr)
+          *is_bitfield_ptr = false;
+
+        return superclass_type;
+      }
+
+      // Adjust the index to refer into the stored properties.
+      --idx;
+    }
+
+    LLVM_FALLTHROUGH;
+  }
+
+  case swift::TypeKind::Struct:
   case swift::TypeKind::BoundGenericStruct: {
+    auto nominal = swift_can_type->getAnyNominal();
+    auto stored_properties = GetStoredProperties(nominal);
+    if (idx >= stored_properties.size()) break;
+
+    auto property = stored_properties[idx];
+    name = property->getBaseName().userFacingName();
+
+    // We cannot reliably get layout information without an execution
+    // context.
+    if (bit_offset_ptr)
+      *bit_offset_ptr = LLDB_INVALID_IVAR_OFFSET;
+    if (bitfield_bit_size_ptr)
+      *bitfield_bit_size_ptr = 0;
+    if (is_bitfield_ptr)
+      *is_bitfield_ptr = false;
+
+    swift::Type child_swift_type = swift_can_type->getTypeOfMember(
+        nominal->getModuleContext(), property, nullptr);
+    return CompilerType(GetASTContext(), child_swift_type.getPointer());
+  }
+
+  case swift::TypeKind::Protocol:
+  case swift::TypeKind::ProtocolComposition: {
     CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
     if (cached_member_info) {
       const size_t num_members = cached_member_info->member_infos.size();
@@ -6950,10 +6966,68 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     return child_type;
   }
 
-  case swift::TypeKind::Struct:
   case swift::TypeKind::Class:
-  case swift::TypeKind::BoundGenericClass:
-  case swift::TypeKind::BoundGenericStruct:
+  case swift::TypeKind::BoundGenericClass: {
+    auto class_decl = swift_can_type->getClassOrBoundGenericClass();
+    // Child 0 is the superclass, if there is one.
+    if (class_decl->hasSuperclass()) {
+      if (idx == 0) {
+        swift::Type superclass_swift_type = swift_can_type->getSuperclass();
+        CompilerType superclass_type(GetASTContext(),
+                                     superclass_swift_type.getPointer());
+
+        child_name = GetSuperclassName(superclass_type);
+
+        auto exe_ctx_scope =
+          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
+        child_byte_size = superclass_type.GetByteSize(exe_ctx_scope);
+        child_is_base_class = true;
+        child_is_deref_of_parent = false;
+
+        child_byte_offset = 0;
+        child_bitfield_bit_size = 0;
+        child_bitfield_bit_offset = 0;
+
+        language_flags |= LanguageFlags::eIgnoreInstancePointerness;
+        return superclass_type;
+      }
+
+      // Adjust the index to refer into the stored properties.
+      --idx;
+    }
+    LLVM_FALLTHROUGH;
+  }
+
+  case swift::TypeKind::Struct:
+  case swift::TypeKind::BoundGenericStruct: {
+    auto nominal = swift_can_type->getAnyNominal();
+    auto stored_properties = GetStoredProperties(nominal);
+    if (idx >= stored_properties.size()) break;
+
+    // Find the stored property with this index.
+    auto property = stored_properties[idx];
+    swift::Type child_swift_type = swift_can_type->getTypeOfMember(
+        nominal->getModuleContext(), property, nullptr);
+
+    CompilerType child_type(GetASTContext(), child_swift_type.getPointer());
+
+    auto exe_ctx_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
+
+    child_name = property->getBaseName().userFacingName();
+    child_byte_size = child_type.GetByteSize(exe_ctx_scope);
+    child_is_base_class = false;
+    child_is_deref_of_parent = false;
+
+    CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
+    child_byte_offset =
+      GetInstanceVariableOffset(valobj, exe_ctx, compiler_type,
+                                child_name.c_str(), child_type);
+    child_bitfield_bit_size = 0;
+    child_bitfield_bit_offset = 0;
+    return child_type;
+  }
+
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition: {
     CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
@@ -7154,10 +7228,49 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
     case swift::TypeKind::Struct:
     case swift::TypeKind::Class:
-    case swift::TypeKind::Protocol:
-    case swift::TypeKind::ProtocolComposition:
     case swift::TypeKind::BoundGenericClass:
     case swift::TypeKind::BoundGenericStruct: {
+      auto nominal = swift_can_type->getAnyNominal();
+      auto stored_properties = GetStoredProperties(nominal);
+      auto class_decl = llvm::dyn_cast<swift::ClassDecl>(nominal);
+
+      // Search the stored properties.
+      for (unsigned idx : indices(stored_properties)) {
+        auto property = stored_properties[idx];
+        if (property->getBaseName().userFacingName() == name) {
+          // We found it!
+
+          // If we have a superclass, adjust the index accordingly.
+          if (class_decl && class_decl->hasSuperclass())
+            ++idx;
+
+          child_indexes.push_back(idx);
+          return child_indexes.size();
+        }
+      }
+
+      // Search the superclass, if there is one.
+      if (class_decl && class_decl->hasSuperclass()) {
+        // Push index zero for the base class
+        child_indexes.push_back(0);
+
+        // Look in the superclass.
+        swift::Type superclass_swift_type = swift_can_type->getSuperclass();
+        CompilerType superclass_type(GetASTContext(),
+                                     superclass_swift_type.getPointer());
+        if (superclass_type.GetIndexOfChildMemberWithName(
+                name, omit_empty_base_classes, child_indexes))
+          return child_indexes.size();
+
+        // We didn't find a stored property matching "name" in our
+        // superclass, pop the superclass zero index that
+        // we pushed on above.
+        child_indexes.pop_back();
+      }
+    } break;
+
+    case swift::TypeKind::Protocol:
+    case swift::TypeKind::ProtocolComposition: {
       CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
       if (cached_member_info) {
         ConstString const_name(name);
@@ -7165,8 +7278,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
         if (num_members > 0) {
           for (size_t i = 0; i < num_members; ++i) {
             const MemberInfo &member_info = cached_member_info->member_infos[i];
-            if (member_info.name &&
-                member_info.member_type != MemberType::BaseClass) {
+            if (member_info.name) {
               if (const_name == member_info.name) {
                 child_indexes.push_back(i);
                 return child_indexes.size();

@@ -35,8 +35,10 @@ namespace swift {
 enum class IRGenDebugInfoKind : unsigned;
 class CanType;
 class IRGenOptions;
+class NominalTypeDecl;
 struct PrintOptions;
 class SILModule;
+class VarDecl;
 namespace irgen {
 class FixedTypeInfo;
 class TypeInfo;
@@ -858,6 +860,19 @@ protected:
   ExtraTypeInformation GetExtraTypeInformation(void *type);
 
   CachedMemberInfo *GetCachedMemberInfo(void *type);
+
+  /// Record the set of stored properties for each nominal type declaration
+  /// for which we've asked this question.
+  ///
+  /// All of the information in this DenseMap is easily re-constructed
+  /// with NominalTypeDecl::getStoredProperties(), but we cache the
+  /// result to provide constant-time indexed access.
+  llvm::DenseMap<swift::NominalTypeDecl *, std::vector<swift::VarDecl *>>
+    m_stored_properties;
+
+  /// Retrieve the stored properties for the given nominal type declaration.
+  llvm::ArrayRef<swift::VarDecl *> GetStoredProperties(
+                                               swift::NominalTypeDecl *nominal);
 
   SwiftEnumDescriptor *GetCachedEnumInfo(void *type);
 
