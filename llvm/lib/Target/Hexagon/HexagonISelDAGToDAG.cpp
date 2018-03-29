@@ -210,26 +210,6 @@ MachineSDNode *HexagonDAGToDAGISel::LoadInstrForLoadIntrinsic(SDNode *IntN) {
     return Res;
   }
 
-  static std::map<unsigned,unsigned> LoadPbrMap = {
-    { Intrinsic::hexagon_brev_ldb,  Hexagon::L2_loadrb_pbr  },
-    { Intrinsic::hexagon_brev_ldub, Hexagon::L2_loadrub_pbr },
-    { Intrinsic::hexagon_brev_ldh,  Hexagon::L2_loadrh_pbr  },
-    { Intrinsic::hexagon_brev_lduh, Hexagon::L2_loadruh_pbr },
-    { Intrinsic::hexagon_brev_ldw,  Hexagon::L2_loadri_pbr  },
-    { Intrinsic::hexagon_brev_ldd,  Hexagon::L2_loadrd_pbr  },
-  };
-  auto FLB = LoadPbrMap.find(IntNo);
-  if (FLB != LoadPbrMap.end()) {
-    SDNode *Mod = CurDAG->getMachineNode(Hexagon::A2_tfrrcr, dl, MVT::i32,
-            IntN->getOperand(4));
-    EVT ValTy = (IntNo == Intrinsic::hexagon_brev_ldd) ? MVT::i64 : MVT::i32;
-    EVT RTys[] = { ValTy, MVT::i32, MVT::Other };
-    // Operands: { Base, Modifier, Chain }
-    MachineSDNode *Res = CurDAG->getMachineNode(FLB->second, dl, RTys,
-          { IntN->getOperand(2), SDValue(Mod,0), IntN->getOperand(0) });
-    return Res;
-  }
-
   return nullptr;
 }
 
@@ -300,14 +280,10 @@ bool HexagonDAGToDAGISel::tryLoadOfLoadIntrinsic(LoadSDNode *N) {
   // a sign-extending intrinsic into (or the other way around).
   ISD::LoadExtType IntExt;
   switch (cast<ConstantSDNode>(C->getOperand(1))->getZExtValue()) {
-    case Intrinsic::hexagon_brev_ldub:
-    case Intrinsic::hexagon_brev_lduh:
     case Intrinsic::hexagon_circ_ldub:
     case Intrinsic::hexagon_circ_lduh:
       IntExt = ISD::ZEXTLOAD;
       break;
-    case Intrinsic::hexagon_brev_ldw:
-    case Intrinsic::hexagon_brev_ldd:
     case Intrinsic::hexagon_circ_ldw:
     case Intrinsic::hexagon_circ_ldd:
       IntExt = ISD::NON_EXTLOAD;
@@ -333,6 +309,47 @@ bool HexagonDAGToDAGISel::tryLoadOfLoadIntrinsic(LoadSDNode *N) {
     // the DAG, the selection code will see it again, but without the load,
     // and it will generate a store that is normally required for it.
     CurDAG->RemoveDeadNode(C);
+    return true;
+  }
+  return false;
+}
+
+// Convert the bit-reverse load intrinsic to appropriate target instruction.
+bool HexagonDAGToDAGISel::SelectBrevLdIntrinsic(SDNode *IntN) {
+  if (IntN->getOpcode() != ISD::INTRINSIC_W_CHAIN)
+    return false;
+
+  const SDLoc &dl(IntN);
+  unsigned IntNo = cast<ConstantSDNode>(IntN->getOperand(1))->getZExtValue();
+
+  static const std::map<unsigned, unsigned> LoadBrevMap = {
+    { Intrinsic::hexagon_L2_loadrb_pbr, Hexagon::L2_loadrb_pbr },
+    { Intrinsic::hexagon_L2_loadrub_pbr, Hexagon::L2_loadrub_pbr },
+    { Intrinsic::hexagon_L2_loadrh_pbr, Hexagon::L2_loadrh_pbr },
+    { Intrinsic::hexagon_L2_loadruh_pbr, Hexagon::L2_loadruh_pbr },
+    { Intrinsic::hexagon_L2_loadri_pbr, Hexagon::L2_loadri_pbr },
+    { Intrinsic::hexagon_L2_loadrd_pbr, Hexagon::L2_loadrd_pbr }
+  };
+  auto FLI = LoadBrevMap.find(IntNo);
+  if (FLI != LoadBrevMap.end()) {
+    EVT ValTy =
+        (IntNo == Intrinsic::hexagon_L2_loadrd_pbr) ? MVT::i64 : MVT::i32;
+    EVT RTys[] = { ValTy, MVT::i32, MVT::Other };
+    // Operands of Intrinsic: {chain, enum ID of intrinsic, baseptr,
+    // modifier}.
+    // Operands of target instruction: { Base, Modifier, Chain }.
+    MachineSDNode *Res = CurDAG->getMachineNode(
+        FLI->second, dl, RTys,
+        {IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(0)});
+
+    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+    MemOp[0] = cast<MemIntrinsicSDNode>(IntN)->getMemOperand();
+    Res->setMemRefs(MemOp, MemOp + 1);
+
+    ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
+    ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
+    ReplaceUses(SDValue(IntN, 2), SDValue(Res, 2));
+    CurDAG->RemoveDeadNode(IntN);
     return true;
   }
   return false;
@@ -611,6 +628,10 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
     CurDAG->RemoveDeadNode(N);
     return;
   }
+
+  // Handle bit-reverse load intrinsics.
+  if (SelectBrevLdIntrinsic(N))
+    return;
 
   if (SelectNewCircIntrinsic(N))
     return;

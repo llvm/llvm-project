@@ -1588,8 +1588,10 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         }
       }
 
-      // Trying adding symbol from the function starts table.
+      // Trying adding symbol from the function starts table and LC_MAIN entry
+      // point.
       SmallVector<uint64_t, 8> FoundFns;
+      uint64_t lc_main_offset = UINT64_MAX;
       for (const auto &Command : MachO->load_commands()) {
         if (Command.C.cmd == MachO::LC_FUNCTION_STARTS) {
           // We found a function starts segment, parse the addresses for 
@@ -1598,6 +1600,10 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
             MachO->getLinkeditDataLoadCommand(Command);
 
           MachO->ReadULEB128s(LLC.dataoff, FoundFns);
+        } else if (Command.C.cmd == MachO::LC_MAIN) {
+          MachO::entry_point_command LCmain =
+            MachO->getEntryPointCommand(Command);
+          lc_main_offset = LCmain.entryoff;
         }
       }
       // See if these addresses are already in the symbol table.
@@ -1647,7 +1653,10 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
           F.NDesc = 0;
           F.IndirectName = StringRef();
           SymbolList.push_back(F);
-          FOS << "<redacted function " << f << ">";
+          if (FoundFns[f] == lc_main_offset)
+            FOS << "<redacted LC_MAIN>";
+          else
+            FOS << "<redacted function " << f << ">";
           FOS << '\0';
           FunctionStartsAdded++;
         }

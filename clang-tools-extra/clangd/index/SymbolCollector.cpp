@@ -202,7 +202,7 @@ llvm::Optional<SymbolLocation> getSymbolLocation(
 // in a header file, in which case clangd would prefer to use ND as a canonical
 // declaration.
 // FIXME: handle symbol types that are not TagDecl (e.g. functions), if using
-// the the first seen declaration as canonical declaration is not a good enough
+// the first seen declaration as canonical declaration is not a good enough
 // heuristic.
 bool isPreferredDeclaration(const NamedDecl &ND, index::SymbolRoleSet Roles) {
   using namespace clang::ast_matchers;

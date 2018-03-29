@@ -635,6 +635,12 @@ bool LoopUnswitch::processCurrentLoop() {
     return true;
   }
 
+  // Do not do non-trivial unswitch while optimizing for size.
+  // FIXME: Use Function::optForSize().
+  if (OptimizeForSize ||
+      loopHeader->getParent()->hasFnAttribute(Attribute::OptimizeForSize))
+    return false;
+
   // Run through the instructions in the loop, keeping track of three things:
   //
   //  - That we do not unswitch loops containing convergent operations, as we
@@ -665,12 +671,6 @@ bool LoopUnswitch::processCurrentLoop() {
           Guards.push_back(II);
     }
   }
-
-  // Do not do non-trivial unswitch while optimizing for size.
-  // FIXME: Use Function::optForSize().
-  if (OptimizeForSize ||
-      loopHeader->getParent()->hasFnAttribute(Attribute::OptimizeForSize))
-    return false;
 
   for (IntrinsicInst *Guard : Guards) {
     Value *LoopCond =

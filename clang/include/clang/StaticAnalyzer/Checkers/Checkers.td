@@ -616,6 +616,9 @@ def ObjCSuperDeallocChecker : Checker<"SuperDealloc">,
   HelpText<"Warn about improper use of '[super dealloc]' in Objective-C">,
   DescFile<"ObjCSuperDeallocChecker.cpp">;
 
+def AutoreleaseWriteChecker : Checker<"AutoreleaseWrite">,
+  HelpText<"Warn about potentially crashing writes to autoreleasing objects from different autoreleasing pools in Objective-C">,
+  DescFile<"ObjCAutoreleaseWriteChecker.cpp">;
 } // end "osx.cocoa"
 
 let ParentPackage = Performance in {

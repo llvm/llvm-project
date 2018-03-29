@@ -9,23 +9,29 @@
 
 # CHECK: debug_line[0x00000000]
 # CHECK: version: 5
-# CHECK: include_directories[ 0] = .debug_line_str[0x[[DIR0:[0-9a-f]+]]] = ""
+# CHECK: include_directories[ 0] = .debug_line_str[0x[[DIR0:[0-9a-f]+]]] = "{{.+}}"
 # CHECK: include_directories[ 1] = .debug_line_str[0x[[DIR1:[0-9a-f]+]]] = "dir1"
 # CHECK: include_directories[ 2] = .debug_line_str[0x[[DIR2:[0-9a-f]+]]] = "dir2"
 # CHECK-NOT: include_directories
 # CHECK: file_names[ 0]:
+# CHECK-NEXT: name: .debug_line_str[0x[[FILE0:[0-9a-f]+]]] = "{{.+}}"
+# CHECK-NEXT: dir_index: 0
+# CHECK-NEXT: source: .debug_line_str[0x[[FILE0SRC:[0-9a-f]+]]] = ""
+# CHECK: file_names[ 1]:
 # CHECK-NEXT: name: .debug_line_str[0x[[FILE1:[0-9a-f]+]]] = "foo"
 # CHECK-NEXT: dir_index: 1
 # CHECK-NEXT: source: .debug_line_str[0x[[FILE1SRC:[0-9a-f]+]]] = "void foo() {}"
-# CHECK: file_names[ 1]:
+# CHECK: file_names[ 2]:
 # CHECK-NEXT: name: .debug_line_str[0x[[FILE2:[0-9a-f]+]]] = "bar"
 # CHECK-NEXT: dir_index: 2
 # CHECK-NEXT: source: .debug_line_str[0x[[FILE2SRC:[0-9a-f]+]]] = "void bar()\n{\n}"
 
 # CHECK: .debug_line_str contents:
-# CHECK-NEXT: 0x[[DIR0]]: ""
+# CHECK-NEXT: 0x[[DIR0]]: "{{.+}}"
 # CHECK-NEXT: 0x[[DIR1]]: "dir1"
 # CHECK-NEXT: 0x[[DIR2]]: "dir2"
+# CHECK-NEXT: 0x[[FILE0]]: "{{.+}}"
+# CHECK-NEXT: 0x[[FILE0SRC]]: ""
 # CHECK-NEXT: 0x[[FILE1]]: "foo"
 # CHECK-NEXT: 0x[[FILE1SRC]]: "void foo() {}"
 # CHECK-NEXT: 0x[[FILE2]]: "bar"

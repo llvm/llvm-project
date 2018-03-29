@@ -121,7 +121,7 @@
 	.byte	46                      # Abbrev code
 	.byte	46                      # DW_TAG_subprogram
 	.byte	3                       # DW_IDX_die_offset
-	.byte	6                       # DW_FORM_data4
+	.byte	19                      # DW_FORM_ref4
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev list
@@ -163,7 +163,7 @@
 	.byte	46                      # Abbrev code
 	.byte	46                      # DW_TAG_subprogram
 	.byte	3                       # DW_IDX_die_offset
-	.byte	6                       # DW_FORM_data4
+	.byte	19                      # DW_FORM_ref4
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev list

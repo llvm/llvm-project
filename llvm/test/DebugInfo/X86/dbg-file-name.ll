@@ -2,7 +2,7 @@
 
 ; Verify that the file name is relative to the directory.
 ; rdar://problem/8884898
-; CHECK: file	1 "simple.c"
+; CHECK: file	1 "/Users/manav/one/two" "simple.c"
 
 declare i32 @printf(i8*, ...) nounwind
 

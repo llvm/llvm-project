@@ -6,32 +6,29 @@
 
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf -dwarf-version 4 -filetype=asm -o - %s | FileCheck %s --check-prefix=ASM
-; RUN: %llc_dwarf -dwarf-version 5 -filetype=asm -o - %s | FileCheck %s --check-prefix=ASM
+; RUN: %llc_dwarf -dwarf-version 5 -filetype=asm -o - %s | FileCheck %s --check-prefixes=ASM,ASM-5
 ; RUN: %llc_dwarf -dwarf-version 4 -filetype=obj -o %t4.o %s
-; RUN: llvm-dwarfdump -debug-line %t4.o | FileCheck %s --check-prefix=OBJ-4
+; RUN: llvm-dwarfdump -debug-line %t4.o | FileCheck %s --check-prefixes=OBJ,OBJ-4
 ; RUN: %llc_dwarf -dwarf-version 5 -filetype=obj -o %t5.o %s
-; RUN: llvm-dwarfdump -debug-line %t5.o | FileCheck %s --check-prefix=OBJ-5
+; RUN: llvm-dwarfdump -debug-line %t5.o | FileCheck %s --check-prefixes=OBJ,OBJ-5
 
-; FIXME: Need to convey the source for the primary source file.
-; ASM: .file 1 ".{{/|\\\\}}t1.h" source "11111111111111111111111111111111"
-; ASM: .file 2 ".{{/|\\\\}}t2.h" source "22222222222222222222222222222222"
-
-; OBJ-4: file_names[ 1]:
-; OBJ-4-NEXT: name: "t1.h"
-; OBJ-4-NEXT: dir_index: 1
-; OBJ-4-NOT: 11111111111111111111111111111111
-; OBJ-4: file_names[ 2]:
-; OBJ-4-NEXT: name: "t2.h"
-; OBJ-4-NEXT: dir_index: 1
-; OBJ-4-NOT: 22222222222222222222222222222222
+; ASM-5: .file 0 "/test{{.*[/\\]}}t.c" source "00000000000000000000000000000000"
+; ASM: .file 1 "/test{{.*[/\\]}}t1.h" source "11111111111111111111111111111111"
+; ASM: .file 2 "/test{{.*[/\\]}}t2.h" source "22222222222222222222222222222222"
 
 ; OBJ-5: file_names[ 0]:
-; OBJ-5-NEXT: name: "t1.h"
-; OBJ-5-NEXT: dir_index: 1
+; OBJ-5-NEXT: name: "t.c"
+; OBJ-5-NEXT: dir_index: 0
+; OBJ-5-NEXT: source: "00000000000000000000000000000000"
+; OBJ: file_names[ 1]:
+; OBJ-NEXT: name: "t1.h"
+; OBJ-NEXT: dir_index: 0
+; OBJ-4-NOT: 11111111111111111111111111111111
 ; OBJ-5-NEXT: source: "11111111111111111111111111111111"
-; OBJ-5: file_names[ 1]:
-; OBJ-5-NEXT: name: "t2.h"
-; OBJ-5-NEXT: dir_index: 1
+; OBJ: file_names[ 2]:
+; OBJ-NEXT: name: "t2.h"
+; OBJ-NEXT: dir_index: 0
+; OBJ-4-NOT: 22222222222222222222222222222222
 ; OBJ-5-NEXT: source: "22222222222222222222222222222222"
 
 ; ModuleID = 't.c'
@@ -52,9 +49,9 @@ source_filename = "t.c"
 !5 = !{!0, !6}
 !6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = distinct !DIGlobalVariable(name: "t2", scope: !2, file: !8, line: 1, type: !9, isLocal: false, isDefinition: true)
-!8 = !DIFile(filename: "./t2.h", directory: "/test", source: "22222222222222222222222222222222")
+!8 = !DIFile(filename: "t2.h", directory: "/test", source: "22222222222222222222222222222222")
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !DIFile(filename: "./t1.h", directory: "/test", source: "11111111111111111111111111111111")
+!10 = !DIFile(filename: "t1.h", directory: "/test", source: "11111111111111111111111111111111")
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{i32 1, !"wchar_size", i32 4}

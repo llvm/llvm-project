@@ -430,9 +430,14 @@ class Scheduler {
   // Notify the Backend that buffered resources were freed.
   void notifyReleasedBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
-  /// Issue instructions from the ready queue by giving priority to older
-  /// instructions.
-  void issue();
+  /// Issue instructions from the ReadyQueue by giving priority to older
+  /// instructions. This method returns true if at least one instruction has
+  /// been promoted in the process from the WaitQueue to the ReadyQueue.
+  bool issue();
+
+  /// Scans the WaitQueue in search of instructions that can be moved to
+  /// the ReadyQueue.
+  bool promoteToReadyQueue();
 
   /// Issue an instruction without updating the ready queue.
   void issueInstruction(Instruction &IS, unsigned InstrIndex);

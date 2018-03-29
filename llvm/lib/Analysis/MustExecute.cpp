@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/Passes.h"
@@ -19,7 +20,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
 /// Computes loop safety information, checks loop body & header

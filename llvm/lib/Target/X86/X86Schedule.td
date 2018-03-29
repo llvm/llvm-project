@@ -54,6 +54,10 @@ defm WriteTZCNT : X86SchedWritePair; // Trailing zero count.
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;
 
+// BMI1 BEXTR, BMI2 BZHI
+defm WriteBEXTR : X86SchedWritePair;
+defm WriteBZHI  : X86SchedWritePair;
+
 // Loads, stores, and moves, not folded with other operations.
 def WriteLoad  : SchedWrite;
 def WriteStore : SchedWrite;
