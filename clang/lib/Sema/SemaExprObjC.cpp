@@ -2408,11 +2408,12 @@ ExprResult Sema::BuildClassMessage(TypeSourceInfo *ReceiverTypeInfo,
       << FixItHint::CreateInsertion(Loc, "[");
     LBracLoc = Loc;
   }
-  SourceLocation SelLoc;
+  ArrayRef<SourceLocation> SelectorSlotLocs;
   if (!SelectorLocs.empty() && SelectorLocs.front().isValid())
-    SelLoc = SelectorLocs.front();
+    SelectorSlotLocs = SelectorLocs;
   else
-    SelLoc = Loc;
+    SelectorSlotLocs = Loc;
+  SourceLocation SelLoc = SelectorSlotLocs.front();
 
   if (ReceiverType->isDependentType()) {
     // If the receiver type is dependent, we can't type-check anything
@@ -2437,7 +2438,7 @@ ExprResult Sema::BuildClassMessage(TypeSourceInfo *ReceiverTypeInfo,
   assert(Class && "We don't know which class we're messaging?");
   // objc++ diagnoses during typename annotation.
   if (!getLangOpts().CPlusPlus)
-    (void)DiagnoseUseOfDecl(Class, SelLoc);
+    (void)DiagnoseUseOfDecl(Class, SelectorSlotLocs);
   // Find the method we are messaging.
   if (!Method) {
     SourceRange TypeRange 
@@ -2462,7 +2463,7 @@ ExprResult Sema::BuildClassMessage(TypeSourceInfo *ReceiverTypeInfo,
     if (!Method)
       Method = Class->lookupPrivateClassMethod(Sel);
 
-    if (Method && DiagnoseUseOfDecl(Method, SelLoc))
+    if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs))
       return ExprError();
   }
 
@@ -2632,11 +2633,12 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
   SourceLocation Loc = SuperLoc.isValid()? SuperLoc : Receiver->getLocStart();
   SourceRange RecRange =
       SuperLoc.isValid()? SuperLoc : Receiver->getSourceRange();
-  SourceLocation SelLoc;
+  ArrayRef<SourceLocation> SelectorSlotLocs;
   if (!SelectorLocs.empty() && SelectorLocs.front().isValid())
-    SelLoc = SelectorLocs.front();
+    SelectorSlotLocs = SelectorLocs;
   else
-    SelLoc = Loc;
+    SelectorSlotLocs = Loc;
+  SourceLocation SelLoc = SelectorSlotLocs.front();
 
   if (LBracLoc.isInvalid()) {
     Diag(Loc, diag::err_missing_open_square_message_send)
@@ -2748,7 +2750,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
         if (!AreMultipleMethodsInGlobalPool(Sel, Method,
                                             SourceRange(LBracLoc, RBracLoc),
                                             receiverIsIdLike, Methods))
-           DiagnoseUseOfDecl(Method, SelLoc);
+          DiagnoseUseOfDecl(Method, SelectorSlotLocs);
       }
     } else if (ReceiverType->isObjCClassOrClassKindOfType() ||
                ReceiverType->isObjCQualifiedClassType()) {
@@ -2780,7 +2782,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
             if (!Method)
               Method = ClassDecl->lookupPrivateClassMethod(Sel);
           }
-          if (Method && DiagnoseUseOfDecl(Method, SelLoc))
+          if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs))
             return ExprError();
         }
         if (!Method) {
@@ -2827,7 +2829,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
         Method = LookupMethodInQualifiedType(Sel, QIdTy, true);
         if (!Method)
           Method = LookupMethodInQualifiedType(Sel, QIdTy, false);
-        if (Method && DiagnoseUseOfDecl(Method, SelLoc))
+        if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs))
           return ExprError();
       } else if (const ObjCObjectPointerType *OCIType
                    = ReceiverType->getAsObjCInterfacePointerType()) {
@@ -2902,7 +2904,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
             }
           }
         }
-        if (Method && DiagnoseUseOfDecl(Method, SelLoc, forwardClass))
+        if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs, forwardClass))
           return ExprError();
       } else {
         // Reject other random receiver types (e.g. structs).

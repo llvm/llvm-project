@@ -66,6 +66,9 @@ Fn h1() {
 inline void foo() {}
 void bar() { foo(); }
 
+// ITANIUM: define weak void @__cfi_check
+// MS: define weak dso_local void @__cfi_check
+
 // CHECK: !{i32 4, !"Cross-DSO CFI", i32 1}
 
 // Check that the type entries are correct.

@@ -467,13 +467,11 @@ namespace {
     }
   };
 
-  struct DestroyNRVOVariable final : EHScopeStack::Cleanup {
-    DestroyNRVOVariable(Address addr,
-                        const CXXDestructorDecl *Dtor,
-                        llvm::Value *NRVOFlag)
-      : Dtor(Dtor), NRVOFlag(NRVOFlag), Loc(addr) {}
+  template <class Derived>
+  struct DestroyNRVOVariable : EHScopeStack::Cleanup {
+    DestroyNRVOVariable(Address addr, llvm::Value *NRVOFlag)
+        : NRVOFlag(NRVOFlag), Loc(addr) {}
 
-    const CXXDestructorDecl *Dtor;
     llvm::Value *NRVOFlag;
     Address Loc;
 
@@ -492,12 +490,39 @@ namespace {
         CGF.EmitBlock(RunDtorBB);
       }
 
-      CGF.EmitCXXDestructorCall(Dtor, Dtor_Complete,
-                                /*ForVirtualBase=*/false,
-                                /*Delegating=*/false,
-                                Loc);
+      static_cast<Derived *>(this)->emitDestructorCall(CGF);
 
       if (NRVO) CGF.EmitBlock(SkipDtorBB);
+    }
+
+    virtual ~DestroyNRVOVariable() = default;
+  };
+
+  struct DestroyNRVOVariableCXX final
+      : DestroyNRVOVariable<DestroyNRVOVariableCXX> {
+    DestroyNRVOVariableCXX(Address addr, const CXXDestructorDecl *Dtor,
+                           llvm::Value *NRVOFlag)
+      : DestroyNRVOVariable<DestroyNRVOVariableCXX>(addr, NRVOFlag),
+        Dtor(Dtor) {}
+
+    const CXXDestructorDecl *Dtor;
+
+    void emitDestructorCall(CodeGenFunction &CGF) {
+      CGF.EmitCXXDestructorCall(Dtor, Dtor_Complete,
+                                /*ForVirtualBase=*/false,
+                                /*Delegating=*/false, Loc);
+    }
+  };
+
+  struct DestroyNRVOVariableC final
+      : DestroyNRVOVariable<DestroyNRVOVariableC> {
+    DestroyNRVOVariableC(Address addr, llvm::Value *NRVOFlag, QualType Ty)
+        : DestroyNRVOVariable<DestroyNRVOVariableC>(addr, NRVOFlag), Ty(Ty) {}
+
+    QualType Ty;
+
+    void emitDestructorCall(CodeGenFunction &CGF) {
+      CGF.destroyNonTrivialCStruct(CGF, Loc, Ty);
     }
   };
 
@@ -1088,7 +1113,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       address = ReturnValue;
 
       if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
-        if (!cast<CXXRecordDecl>(RecordTy->getDecl())->hasTrivialDestructor()) {
+        const auto *RD = RecordTy->getDecl();
+        const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        if ((CXXRD && !CXXRD->hasTrivialDestructor()) ||
+            RD->isNonTrivialToPrimitiveDestroy()) {
           // Create a flag that is used to indicate when the NRVO was applied
           // to this variable. Set it to zero to indicate that NRVO was not
           // applied.
@@ -1461,8 +1489,8 @@ void CodeGenFunction::emitAutoVarTypeCleanup(
     if (emission.NRVOFlag) {
       assert(!type->isArrayType());
       CXXDestructorDecl *dtor = type->getAsCXXRecordDecl()->getDestructor();
-      EHStack.pushCleanup<DestroyNRVOVariable>(cleanupKind, addr,
-                                               dtor, emission.NRVOFlag);
+      EHStack.pushCleanup<DestroyNRVOVariableCXX>(cleanupKind, addr, dtor,
+                                                  emission.NRVOFlag);
       return;
     }
     break;
@@ -1484,6 +1512,12 @@ void CodeGenFunction::emitAutoVarTypeCleanup(
 
   case QualType::DK_nontrivial_c_struct:
     destroyer = CodeGenFunction::destroyNonTrivialCStruct;
+    if (emission.NRVOFlag) {
+      assert(!type->isArrayType());
+      EHStack.pushCleanup<DestroyNRVOVariableC>(cleanupKind, addr,
+                                                emission.NRVOFlag, type);
+      return;
+    }
     break;
   }
 
