@@ -760,6 +760,9 @@ const internal::VariadicOperatorMatcherFunc<
 const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                  internal::hasAnyNameFunc>
     hasAnyName = {};
+const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>, StringRef,
+                                 internal::hasAnySelectorFunc>
+    hasAnySelector = {};
 const internal::ArgumentAdaptingMatcherFunc<internal::HasMatcher> has = {};
 const internal::ArgumentAdaptingMatcherFunc<internal::HasDescendantMatcher>
     hasDescendant = {};
