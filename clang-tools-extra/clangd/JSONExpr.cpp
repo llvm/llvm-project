@@ -113,7 +113,7 @@ private:
       ++P;
   }
 
-  // On invalid syntax, parseX() functions return false and and set Err.
+  // On invalid syntax, parseX() functions return false and set Err.
   bool parseNumber(char First, double &Out);
   bool parseString(std::string &Out);
   bool parseUnicode(std::string &Out);

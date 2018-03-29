@@ -14,7 +14,7 @@
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
 # CHECK-NEXT:     BlockSize:       4096
-# CHECK-NEXT:     FreeBlockMap:    1
+# CHECK-NEXT:     FreeBlockMap:    2
 # CHECK-NEXT:     NumBlocks:
 # CHECK-NEXT:     NumDirectoryBytes:
 # CHECK-NEXT:     Unknown1:        0
