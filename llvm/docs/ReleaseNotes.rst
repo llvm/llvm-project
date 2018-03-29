@@ -40,6 +40,9 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* Libraries have been renamed from 7.0 to 7. This change also impacts
+  downstream libraries like lldb.
+
 * The LoopInstSimplify pass (-loop-instsimplify) has been removed.
 
 * Symbols starting with ``?`` are no longer mangled by LLVM when using the

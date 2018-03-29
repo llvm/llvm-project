@@ -29050,7 +29050,6 @@ static bool matchBinaryPermuteVectorShuffle(
 static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                                       ArrayRef<int> BaseMask, int Depth,
                                       bool HasVariableMask, SelectionDAG &DAG,
-                                      TargetLowering::DAGCombinerInfo &DCI,
                                       const X86Subtarget &Subtarget) {
   assert(!BaseMask.empty() && "Cannot combine an empty shuffle mask!");
   assert((Inputs.size() == 1 || Inputs.size() == 2) &&
@@ -29112,11 +29111,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     PermMask |= ((BaseMask[1] < 0 ? 0x8 : (BaseMask[1] & 1)) << 4);
 
     Res = DAG.getBitcast(ShuffleVT, V1);
-    DCI.AddToWorklist(Res.getNode());
     Res = DAG.getNode(X86ISD::VPERM2X128, DL, ShuffleVT, Res,
                       DAG.getUNDEF(ShuffleVT),
                       DAG.getConstant(PermMask, DL, MVT::i8));
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29182,9 +29179,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
       Res = DAG.getBitcast(ShuffleSrcVT, NewV1);
-      DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
-      DCI.AddToWorklist(Res.getNode());
       return DAG.getBitcast(RootVT, Res);
     }
 
@@ -29195,10 +29190,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
       Res = DAG.getBitcast(ShuffleVT, V1);
-      DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res,
                         DAG.getConstant(PermuteImm, DL, MVT::i8));
-      DCI.AddToWorklist(Res.getNode());
       return DAG.getBitcast(RootVT, Res);
     }
   }
@@ -29212,11 +29205,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
     NewV1 = DAG.getBitcast(ShuffleSrcVT, NewV1);
-    DCI.AddToWorklist(NewV1.getNode());
     NewV2 = DAG.getBitcast(ShuffleSrcVT, NewV2);
-    DCI.AddToWorklist(NewV2.getNode());
     Res = DAG.getNode(Shuffle, DL, ShuffleVT, NewV1, NewV2);
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29229,12 +29219,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
     NewV1 = DAG.getBitcast(ShuffleVT, NewV1);
-    DCI.AddToWorklist(NewV1.getNode());
     NewV2 = DAG.getBitcast(ShuffleVT, NewV2);
-    DCI.AddToWorklist(NewV2.getNode());
     Res = DAG.getNode(Shuffle, DL, ShuffleVT, NewV1, NewV2,
                       DAG.getConstant(PermuteImm, DL, MVT::i8));
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29250,11 +29237,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       if (Depth == 1 && Root.getOpcode() == X86ISD::EXTRQI)
         return SDValue(); // Nothing to do!
       V1 = DAG.getBitcast(IntMaskVT, V1);
-      DCI.AddToWorklist(V1.getNode());
       Res = DAG.getNode(X86ISD::EXTRQI, DL, IntMaskVT, V1,
                         DAG.getConstant(BitLen, DL, MVT::i8),
                         DAG.getConstant(BitIdx, DL, MVT::i8));
-      DCI.AddToWorklist(Res.getNode());
       return DAG.getBitcast(RootVT, Res);
     }
 
@@ -29262,13 +29247,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       if (Depth == 1 && Root.getOpcode() == X86ISD::INSERTQI)
         return SDValue(); // Nothing to do!
       V1 = DAG.getBitcast(IntMaskVT, V1);
-      DCI.AddToWorklist(V1.getNode());
       V2 = DAG.getBitcast(IntMaskVT, V2);
-      DCI.AddToWorklist(V2.getNode());
       Res = DAG.getNode(X86ISD::INSERTQI, DL, IntMaskVT, V1, V2,
                         DAG.getConstant(BitLen, DL, MVT::i8),
                         DAG.getConstant(BitIdx, DL, MVT::i8));
-      DCI.AddToWorklist(Res.getNode());
       return DAG.getBitcast(RootVT, Res);
     }
   }
@@ -29298,11 +29280,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
          (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
          (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
       SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
-      DCI.AddToWorklist(VPermMask.getNode());
       Res = DAG.getBitcast(MaskVT, V1);
-      DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(X86ISD::VPERMV, DL, MaskVT, VPermMask, Res);
-      DCI.AddToWorklist(Res.getNode());
       return DAG.getBitcast(RootVT, Res);
     }
 
@@ -29325,13 +29304,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
           Mask[i] = NumMaskElts + i;
 
       SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
-      DCI.AddToWorklist(VPermMask.getNode());
       Res = DAG.getBitcast(MaskVT, V1);
-      DCI.AddToWorklist(Res.getNode());
       SDValue Zero = getZeroVector(MaskVT, Subtarget, DAG, DL);
-      DCI.AddToWorklist(Zero.getNode());
       Res = DAG.getNode(X86ISD::VPERMV3, DL, MaskVT, Res, VPermMask, Zero);
-      DCI.AddToWorklist(Res.getNode());
       return DAG.getBitcast(RootVT, Res);
     }
 
@@ -29348,13 +29323,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
          (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
          (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
       SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
-      DCI.AddToWorklist(VPermMask.getNode());
       V1 = DAG.getBitcast(MaskVT, V1);
-      DCI.AddToWorklist(V1.getNode());
       V2 = DAG.getBitcast(MaskVT, V2);
-      DCI.AddToWorklist(V2.getNode());
       Res = DAG.getNode(X86ISD::VPERMV3, DL, MaskVT, V1, VPermMask, V2);
-      DCI.AddToWorklist(Res.getNode());
       return DAG.getBitcast(RootVT, Res);
     }
     return SDValue();
@@ -29380,13 +29351,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       EltBits[i] = AllOnes;
     }
     SDValue BitMask = getConstVector(EltBits, UndefElts, MaskVT, DAG, DL);
-    DCI.AddToWorklist(BitMask.getNode());
     Res = DAG.getBitcast(MaskVT, V1);
-    DCI.AddToWorklist(Res.getNode());
     unsigned AndOpcode =
         FloatDomain ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
     Res = DAG.getNode(AndOpcode, DL, MaskVT, Res, BitMask);
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29403,11 +29371,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       VPermIdx.push_back(Idx);
     }
     SDValue VPermMask = DAG.getBuildVector(IntMaskVT, DL, VPermIdx);
-    DCI.AddToWorklist(VPermMask.getNode());
     Res = DAG.getBitcast(MaskVT, V1);
-    DCI.AddToWorklist(Res.getNode());
     Res = DAG.getNode(X86ISD::VPERMILPV, DL, MaskVT, Res, VPermMask);
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29439,14 +29404,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       VPerm2Idx.push_back(Index);
     }
     V1 = DAG.getBitcast(MaskVT, V1);
-    DCI.AddToWorklist(V1.getNode());
     V2 = DAG.getBitcast(MaskVT, V2);
-    DCI.AddToWorklist(V2.getNode());
     SDValue VPerm2MaskOp = getConstVector(VPerm2Idx, IntMaskVT, DAG, DL, true);
-    DCI.AddToWorklist(VPerm2MaskOp.getNode());
     Res = DAG.getNode(X86ISD::VPERMIL2, DL, MaskVT, V1, V2, VPerm2MaskOp,
                       DAG.getConstant(M2ZImm, DL, MVT::i8));
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29478,11 +29439,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
     MVT ByteVT = MVT::getVectorVT(MVT::i8, NumBytes);
     Res = DAG.getBitcast(ByteVT, V1);
-    DCI.AddToWorklist(Res.getNode());
     SDValue PSHUFBMaskOp = DAG.getBuildVector(ByteVT, DL, PSHUFBMask);
-    DCI.AddToWorklist(PSHUFBMaskOp.getNode());
     Res = DAG.getNode(X86ISD::PSHUFB, DL, ByteVT, Res, PSHUFBMaskOp);
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29511,13 +29469,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
     MVT ByteVT = MVT::v16i8;
     V1 = DAG.getBitcast(ByteVT, V1);
-    DCI.AddToWorklist(V1.getNode());
     V2 = DAG.getBitcast(ByteVT, V2);
-    DCI.AddToWorklist(V2.getNode());
     SDValue VPPERMMaskOp = DAG.getBuildVector(ByteVT, DL, VPPERMMask);
-    DCI.AddToWorklist(VPPERMMaskOp.getNode());
     Res = DAG.getNode(X86ISD::VPPERM, DL, ByteVT, V1, V2, VPPERMMaskOp);
-    DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
@@ -29532,7 +29486,6 @@ static SDValue combineX86ShufflesConstants(const SmallVectorImpl<SDValue> &Ops,
                                            ArrayRef<int> Mask, SDValue Root,
                                            bool HasVariableMask,
                                            SelectionDAG &DAG,
-                                           TargetLowering::DAGCombinerInfo &DCI,
                                            const X86Subtarget &Subtarget) {
   MVT VT = Root.getSimpleValueType();
 
@@ -29608,7 +29561,6 @@ static SDValue combineX86ShufflesConstants(const SmallVectorImpl<SDValue> &Ops,
 
   SDLoc DL(Root);
   SDValue CstOp = getConstVector(ConstantBitData, UndefElts, MaskVT, DAG, DL);
-  DCI.AddToWorklist(CstOp.getNode());
   return DAG.getBitcast(VT, CstOp);
 }
 
@@ -29644,8 +29596,7 @@ static SDValue combineX86ShufflesConstants(const SmallVectorImpl<SDValue> &Ops,
 static SDValue combineX86ShufflesRecursively(
     ArrayRef<SDValue> SrcOps, int SrcOpIndex, SDValue Root,
     ArrayRef<int> RootMask, ArrayRef<const SDNode *> SrcNodes, unsigned Depth,
-    bool HasVariableMask, SelectionDAG &DAG,
-    TargetLowering::DAGCombinerInfo &DCI, const X86Subtarget &Subtarget) {
+    bool HasVariableMask, SelectionDAG &DAG, const X86Subtarget &Subtarget) {
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
   const unsigned MaxRecursionDepth = 8;
@@ -29810,13 +29761,13 @@ static SDValue combineX86ShufflesRecursively(
           SDNode::areOnlyUsersOf(CombinedNodes, Ops[i].getNode()))
         if (SDValue Res = combineX86ShufflesRecursively(
                 Ops, i, Root, Mask, CombinedNodes, Depth + 1, HasVariableMask,
-                DAG, DCI, Subtarget))
+                DAG, Subtarget))
           return Res;
   }
 
   // Attempt to constant fold all of the constant source ops.
   if (SDValue Cst = combineX86ShufflesConstants(
-          Ops, Mask, Root, HasVariableMask, DAG, DCI, Subtarget))
+          Ops, Mask, Root, HasVariableMask, DAG, Subtarget))
     return Cst;
 
   // We can only combine unary and binary shuffle mask cases.
@@ -29842,7 +29793,7 @@ static SDValue combineX86ShufflesRecursively(
 
   // Finally, try to combine into a single shuffle instruction.
   return combineX86ShuffleChain(Ops, Root, Mask, Depth, HasVariableMask, DAG,
-                                DCI, Subtarget);
+                                Subtarget);
 }
 
 /// \brief Get the PSHUF-style mask from PSHUF node.
@@ -30144,7 +30095,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         DemandedMask[i] = i;
       if (SDValue Res = combineX86ShufflesRecursively(
               {BC}, 0, BC, DemandedMask, {}, /*Depth*/ 1,
-              /*HasVarMask*/ false, DAG, DCI, Subtarget))
+              /*HasVarMask*/ false, DAG, Subtarget))
         return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
                            DAG.getBitcast(SrcVT, Res));
     }
@@ -30723,7 +30674,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // a particular chain.
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+            /*HasVarMask*/ false, DAG, Subtarget)) {
       DCI.CombineTo(N, Res);
       return SDValue();
     }
@@ -33548,9 +33499,9 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine as shuffle.
   SDValue Op(N, 0);
-  if (SDValue Res = combineX86ShufflesRecursively(
-          {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-          /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+  if (SDValue Res =
+          combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                        /*HasVarMask*/ false, DAG, Subtarget)) {
     DCI.CombineTo(N, Res);
     return SDValue();
   }
@@ -33612,7 +33563,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+            /*HasVarMask*/ false, DAG, Subtarget)) {
       DCI.CombineTo(N, Res);
       return SDValue();
     }
@@ -33651,9 +33602,9 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine PINSRB/PINSRW patterns to a shuffle.
   SDValue Op(N, 0);
-  if (SDValue Res = combineX86ShufflesRecursively(
-          {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-          /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+  if (SDValue Res =
+          combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                        /*HasVarMask*/ false, DAG, Subtarget)) {
     DCI.CombineTo(N, Res);
     return SDValue();
   }
@@ -34094,7 +34045,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+            /*HasVarMask*/ false, DAG, Subtarget)) {
       DCI.CombineTo(N, Res);
       return SDValue();
     }
@@ -34133,7 +34084,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
       if (SDValue Shuffle = combineX86ShufflesRecursively(
               {SrcVec}, 0, SrcVec, ShuffleMask, {}, /*Depth*/ 2,
-              /*HasVarMask*/ false, DAG, DCI, Subtarget))
+              /*HasVarMask*/ false, DAG, Subtarget))
         return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N), VT, Shuffle,
                            N->getOperand(0).getOperand(1));
     }
@@ -36414,7 +36365,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+            /*HasVarMask*/ false, DAG, Subtarget)) {
       DCI.CombineTo(N, Res);
       return SDValue();
     }
