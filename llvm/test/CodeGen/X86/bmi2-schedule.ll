@@ -9,8 +9,8 @@
 define i32 @test_bzhi_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_bzhi_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    bzhil %edi, (%rdx), %ecx # sched: [5:0.50]
-; GENERIC-NEXT:    bzhil %edi, %esi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    bzhil %edi, (%rdx), %ecx # sched: [5:1.00]
+; GENERIC-NEXT:    bzhil %edi, %esi, %eax # sched: [1:1.00]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -59,8 +59,8 @@ declare i32 @llvm.x86.bmi.bzhi.32(i32, i32)
 define i64 @test_bzhi_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_bzhi_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    bzhiq %rdi, (%rdx), %rcx # sched: [5:0.50]
-; GENERIC-NEXT:    bzhiq %rdi, %rsi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    bzhiq %rdi, (%rdx), %rcx # sched: [5:1.00]
+; GENERIC-NEXT:    bzhiq %rdi, %rsi, %rax # sched: [1:1.00]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

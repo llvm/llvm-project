@@ -343,7 +343,7 @@ void DispatchUnit::updateRAWDependencies(ReadState &RS,
   const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
   for (WriteState *WS : DependentWrites) {
     unsigned WriteResID = WS->getWriteResourceID();
-    int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.OpIndex, WriteResID);
+    int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
     WS->addUser(&RS, ReadAdvance);
   }
   // Prepare the set for another round.

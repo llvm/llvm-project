@@ -104,6 +104,11 @@ defm : SLMWriteResPair<WriteLZCNT,   [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WriteTZCNT,   [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WritePOPCNT,  [SLM_IEC_RSV0], 3>;
 
+// BMI1 BEXTR, BMI2 BZHI
+// NOTE: These don't exist on Silvermont. Ports are guesses.
+defm : SBWriteResPair<WriteBEXTR, [SLM_IEC_RSV0], 1>;
+defm : SBWriteResPair<WriteBZHI, [SLM_IEC_RSV0], 1>;
+
 // This is quite rough, latency depends on the dividend.
 defm : SLMWriteResPair<WriteIDiv, [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 4>;
 

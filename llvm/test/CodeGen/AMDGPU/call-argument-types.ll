@@ -475,8 +475,8 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 }
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
-; MESA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x600{{$}}
-; HSA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x600{{$}}
+; MESA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x800{{$}}
+; HSA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x800{{$}}
 
 ; GCN-DAG: v_mov_b32_e32 [[VAL0:v[0-9]+]], 3
 ; GCN-DAG: v_mov_b32_e32 [[VAL1:v[0-9]+]], 8

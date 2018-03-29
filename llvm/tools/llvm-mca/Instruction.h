@@ -60,8 +60,12 @@ struct WriteDescriptor {
 
 /// \brief A register read descriptor.
 struct ReadDescriptor {
-  // This field defaults to -1 if this is an implicit read.
+  // A MCOperand index. This is used by the Dispatch logic to identify register
+  // reads. This field defaults to -1 if this is an implicit read.
   int OpIndex;
+  // The actual "UseIdx". This field defaults to -1 if this is an implicit read.
+  // This is used by the scheduler to solve ReadAdvance queries.
+  int UseIndex;
   // This field is only set if this is an implicit read.
   unsigned RegisterID;
   // Scheduling Class Index. It is used to query the scheduling model for the
@@ -295,6 +299,14 @@ public:
   // Instruction issued. Transition to the IS_EXECUTING state, and update
   // all the definitions.
   void execute();
+
+  // Force a transition from the IS_AVAILABLE state to the IS_READY state if
+  // input operands are all ready. State transitions normally occur at the
+  // beginning of a new cycle (see method cycleEvent()). However, the scheduler
+  // may decide to promote instructions from the wait queue to the ready queue
+  // as the result of another issue event.  This method is called every time the
+  // instruction might have changed in state.
+  void update();
 
   bool isDispatched() const { return Stage == IS_AVAILABLE; }
   bool isReady() const { return Stage == IS_READY; }

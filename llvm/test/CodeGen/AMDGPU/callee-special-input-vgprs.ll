@@ -423,7 +423,7 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN: enable_vgpr_workitem_id = 0
 
 ; GCN: s_mov_b32 s33, s7
-; GCN: s_add_u32 s32, s33, 0x200{{$}}
+; GCN: s_add_u32 s32, s33, 0x400{{$}}
 
 ; GCN-NOT: s32
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}

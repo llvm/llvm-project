@@ -12,6 +12,7 @@ add_llvm_tool(llvm-pdbutil
   Analyze.cpp
   BytesOutputStyle.cpp
   DumpOutputStyle.cpp
+  ExplainOutputStyle.cpp
   InputFile.cpp
   llvm-pdbutil.cpp
   FormatUtil.cpp
