@@ -762,8 +762,17 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
 
 Module *ModuleMap::findModule(StringRef Name) const {
   llvm::StringMap<Module *>::const_iterator Known = Modules.find(Name);
-  if (Known != Modules.end())
-    return Known->getValue();
+  if (Known != Modules.end()) {
+    Module *M = Known->getValue();
+    // Notify callbacks that we found a module map for the module.
+    if (!M->DefinitionLoc.isInvalid())
+      for (const auto &Cb : Callbacks)
+        Cb->moduleMapFoundForModule(
+            *getContainingModuleMapFile(M), M,
+            SourceMgr.getFileCharacteristic(M->DefinitionLoc) ==
+                SrcMgr::C_System_ModuleMap);
+    return M;
+  }
 
   return nullptr;
 }
