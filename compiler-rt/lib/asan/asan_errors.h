@@ -23,6 +23,10 @@ namespace __asan {
 struct ErrorBase {
   ErrorBase() = default;
   explicit ErrorBase(u32 tid_) : tid(tid_) {}
+  ErrorBase(u32 tid_, int initial_score, const char *reason) : tid(tid_) {
+    scariness.Clear();
+    scariness.Scare(initial_score, reason);
+  }
   ScarinessScoreBase scariness;
   u32 tid;
 };
@@ -164,6 +168,105 @@ struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
   void Print();
 };
 
+struct ErrorCallocOverflow : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr count;
+  uptr size;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorCallocOverflow() = default;
+  ErrorCallocOverflow(u32 tid, BufferedStackTrace *stack_, uptr count_,
+                      uptr size_)
+      : ErrorBase(tid, 10, "calloc-overflow"),
+        stack(stack_),
+        count(count_),
+        size(size_) {}
+  void Print();
+};
+
+struct ErrorPvallocOverflow : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr size;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorPvallocOverflow() = default;
+  ErrorPvallocOverflow(u32 tid, BufferedStackTrace *stack_, uptr size_)
+      : ErrorBase(tid, 10, "pvalloc-overflow"),
+        stack(stack_),
+        size(size_) {}
+  void Print();
+};
+
+struct ErrorInvalidAllocationAlignment : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr alignment;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorInvalidAllocationAlignment() = default;
+  ErrorInvalidAllocationAlignment(u32 tid, BufferedStackTrace *stack_,
+                                  uptr alignment_)
+      : ErrorBase(tid, 10, "invalid-allocation-alignment"),
+        stack(stack_),
+        alignment(alignment_) {}
+  void Print();
+};
+
+struct ErrorInvalidPosixMemalignAlignment : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr alignment;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorInvalidPosixMemalignAlignment() = default;
+  ErrorInvalidPosixMemalignAlignment(u32 tid, BufferedStackTrace *stack_,
+                                     uptr alignment_)
+      : ErrorBase(tid, 10, "invalid-posix-memalign-alignment"),
+        stack(stack_),
+        alignment(alignment_) {}
+  void Print();
+};
+
+struct ErrorAllocationSizeTooBig : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr user_size;
+  uptr total_size;
+  uptr max_size;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorAllocationSizeTooBig() = default;
+  ErrorAllocationSizeTooBig(u32 tid, BufferedStackTrace *stack_,
+                            uptr user_size_, uptr total_size_, uptr max_size_)
+      : ErrorBase(tid, 10, "allocation-size-too-big"),
+        stack(stack_),
+        user_size(user_size_),
+        total_size(total_size_),
+        max_size(max_size_) {}
+  void Print();
+};
+
+struct ErrorRssLimitExceeded : ErrorBase {
+  const BufferedStackTrace *stack;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorRssLimitExceeded() = default;
+  ErrorRssLimitExceeded(u32 tid, BufferedStackTrace *stack_)
+      : ErrorBase(tid, 10, "rss-limit-exceeded"),
+        stack(stack_) {}
+  void Print();
+};
+
+struct ErrorOutOfMemory : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr requested_size;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorOutOfMemory() = default;
+  ErrorOutOfMemory(u32 tid, BufferedStackTrace *stack_, uptr requested_size_)
+      : ErrorBase(tid, 10, "out-of-memory"),
+        stack(stack_),
+        requested_size(requested_size_) {}
+  void Print();
+};
+
 struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
   // ErrorStringFunctionMemoryRangesOverlap doesn't own the stack trace.
   const BufferedStackTrace *stack;
@@ -300,6 +403,13 @@ struct ErrorGeneric : ErrorBase {
   macro(AllocTypeMismatch)                      \
   macro(MallocUsableSizeNotOwned)               \
   macro(SanitizerGetAllocatedSizeNotOwned)      \
+  macro(CallocOverflow)                         \
+  macro(PvallocOverflow)                        \
+  macro(InvalidAllocationAlignment)             \
+  macro(InvalidPosixMemalignAlignment)          \
+  macro(AllocationSizeTooBig)                   \
+  macro(RssLimitExceeded)                       \
+  macro(OutOfMemory)                            \
   macro(StringFunctionMemoryRangesOverlap)      \
   macro(StringFunctionSizeOverflow)             \
   macro(BadParamsToAnnotateContiguousContainer) \

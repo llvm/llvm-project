@@ -51,16 +51,16 @@ namespace {
 class AArch64ABSLongThunk final : public Thunk {
 public:
   AArch64ABSLongThunk(Symbol &Dest) : Thunk(Dest) {}
-  uint32_t size() const override { return 16; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 16; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
 };
 
 class AArch64ADRPThunk final : public Thunk {
 public:
   AArch64ADRPThunk(Symbol &Dest) : Thunk(Dest) {}
-  uint32_t size() const override { return 12; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 12; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
 };
 
@@ -70,8 +70,8 @@ class ARMV7ABSLongThunk final : public Thunk {
 public:
   ARMV7ABSLongThunk(Symbol &Dest) : Thunk(Dest) {}
 
-  uint32_t size() const override { return 12; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 12; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
   bool isCompatibleWith(RelType Type) const override;
 };
@@ -80,8 +80,8 @@ class ARMV7PILongThunk final : public Thunk {
 public:
   ARMV7PILongThunk(Symbol &Dest) : Thunk(Dest) {}
 
-  uint32_t size() const override { return 16; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 16; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
   bool isCompatibleWith(RelType Type) const override;
 };
@@ -90,8 +90,8 @@ class ThumbV7ABSLongThunk final : public Thunk {
 public:
   ThumbV7ABSLongThunk(Symbol &Dest) : Thunk(Dest) { Alignment = 2; }
 
-  uint32_t size() const override { return 10; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 10; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
   bool isCompatibleWith(RelType Type) const override;
 };
@@ -100,8 +100,8 @@ class ThumbV7PILongThunk final : public Thunk {
 public:
   ThumbV7PILongThunk(Symbol &Dest) : Thunk(Dest) { Alignment = 2; }
 
-  uint32_t size() const override { return 12; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 12; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
   bool isCompatibleWith(RelType Type) const override;
 };
@@ -111,8 +111,8 @@ class MipsThunk final : public Thunk {
 public:
   MipsThunk(Symbol &Dest) : Thunk(Dest) {}
 
-  uint32_t size() const override { return 16; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 16; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
   InputSection *getTargetInputSection() const override;
 };
@@ -122,8 +122,8 @@ class MicroMipsThunk final : public Thunk {
 public:
   MicroMipsThunk(Symbol &Dest) : Thunk(Dest) {}
 
-  uint32_t size() const override { return 14; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 14; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
   InputSection *getTargetInputSection() const override;
 };
@@ -133,8 +133,8 @@ class MicroMipsR6Thunk final : public Thunk {
 public:
   MicroMipsR6Thunk(Symbol &Dest) : Thunk(Dest) {}
 
-  uint32_t size() const override { return 12; }
-  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  uint32_t size() override { return 12; }
+  void writeTo(uint8_t *Buf) override;
   void addSymbols(ThunkSection &IS) override;
   InputSection *getTargetInputSection() const override;
 };
@@ -148,7 +148,7 @@ static uint64_t getAArch64ThunkDestVA(const Symbol &S) {
   return V;
 }
 
-void AArch64ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
+void AArch64ABSLongThunk::writeTo(uint8_t *Buf) {
   const uint8_t Data[] = {
     0x50, 0x00, 0x00, 0x58, //     ldr x16, L0
     0x00, 0x02, 0x1f, 0xd6, //     br  x16
@@ -173,7 +173,7 @@ void AArch64ABSLongThunk::addSymbols(ThunkSection &IS) {
 // clang and gcc do not support the large code model for position independent
 // code so it is safe to use this for position independent thunks without
 // worrying about the destination being more than 4Gb away.
-void AArch64ADRPThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
+void AArch64ADRPThunk::writeTo(uint8_t *Buf) {
   const uint8_t Data[] = {
       0x10, 0x00, 0x00, 0x90, // adrp x16, Dest R_AARCH64_ADR_PREL_PG_HI21(Dest)
       0x10, 0x02, 0x00, 0x91, // add  x16, x16, R_AARCH64_ADD_ABS_LO12_NC(Dest)
@@ -201,7 +201,7 @@ static uint64_t getARMThunkDestVA(const Symbol &S) {
   return SignExtend64<32>(V);
 }
 
-void ARMV7ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
+void ARMV7ABSLongThunk::writeTo(uint8_t *Buf) {
   const uint8_t Data[] = {
       0x00, 0xc0, 0x00, 0xe3, // movw         ip,:lower16:S
       0x00, 0xc0, 0x40, 0xe3, // movt         ip,:upper16:S
@@ -225,7 +225,7 @@ bool ARMV7ABSLongThunk::isCompatibleWith(RelType Type) const {
   return Type != R_ARM_THM_JUMP19 && Type != R_ARM_THM_JUMP24;
 }
 
-void ThumbV7ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
+void ThumbV7ABSLongThunk::writeTo(uint8_t *Buf) {
   const uint8_t Data[] = {
       0x40, 0xf2, 0x00, 0x0c, // movw         ip, :lower16:S
       0xc0, 0xf2, 0x00, 0x0c, // movt         ip, :upper16:S
@@ -249,7 +249,7 @@ bool ThumbV7ABSLongThunk::isCompatibleWith(RelType Type) const {
   return Type != R_ARM_JUMP24 && Type != R_ARM_PC24 && Type != R_ARM_PLT32;
 }
 
-void ARMV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
+void ARMV7PILongThunk::writeTo(uint8_t *Buf) {
   const uint8_t Data[] = {
       0xf0, 0xcf, 0x0f, 0xe3, // P:  movw ip,:lower16:S - (P + (L1-P) + 8)
       0x00, 0xc0, 0x40, 0xe3, //     movt ip,:upper16:S - (P + (L1-P) + 8)
@@ -276,7 +276,7 @@ bool ARMV7PILongThunk::isCompatibleWith(RelType Type) const {
   return Type != R_ARM_THM_JUMP19 && Type != R_ARM_THM_JUMP24;
 }
 
-void ThumbV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
+void ThumbV7PILongThunk::writeTo(uint8_t *Buf) {
   const uint8_t Data[] = {
       0x4f, 0xf6, 0xf4, 0x7c, // P:  movw ip,:lower16:S - (P + (L1-P) + 4)
       0xc0, 0xf2, 0x00, 0x0c, //     movt ip,:upper16:S - (P + (L1-P) + 4)
@@ -304,7 +304,7 @@ bool ThumbV7PILongThunk::isCompatibleWith(RelType Type) const {
 }
 
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
-void MipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
+void MipsThunk::writeTo(uint8_t *Buf) {
   uint64_t S = Destination.getVA();
   write32(Buf, 0x3c190000); // lui   $25, %hi(func)
   write32(Buf + 4, 0x08000000 | (S >> 2)); // j     func
@@ -327,7 +327,7 @@ InputSection *MipsThunk::getTargetInputSection() const {
 
 // Write microMIPS R2-R5 LA25 thunk code
 // to call PIC function from the non-PIC one.
-void MicroMipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
+void MicroMipsThunk::writeTo(uint8_t *Buf) {
   uint64_t S = Destination.getVA() | 1;
   write16(Buf, 0x41b9);       // lui   $25, %hi(func)
   write16(Buf + 4, 0xd400);   // j     func
@@ -352,7 +352,7 @@ InputSection *MicroMipsThunk::getTargetInputSection() const {
 
 // Write microMIPS R6 LA25 thunk code
 // to call PIC function from the non-PIC one.
-void MicroMipsR6Thunk::writeTo(uint8_t *Buf, ThunkSection &) const {
+void MicroMipsR6Thunk::writeTo(uint8_t *Buf) {
   uint64_t S = Destination.getVA() | 1;
   uint64_t P = ThunkSym->getVA();
   write16(Buf, 0x1320);       // lui   $25, %hi(func)

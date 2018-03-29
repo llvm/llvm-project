@@ -5,7 +5,7 @@
 # RUN: dd if=%t of=%t bs=1 count=0 seek=1M
 # RUN: rm -f %t.lib
 # RUN: cp %t %t2
-# RUN: llvm-ar -sym64-threshold=19 cr %t.lib %t %t2 %p/Inputs/trivial-object-test.elf-x86-64
+# RUN: SYM64_THRESHOLD=19 llvm-ar cr %t.lib %t %t2 %p/Inputs/trivial-object-test.elf-x86-64
 # RUN: llvm-nm --print-armap %t.lib | FileCheck %s
 # RUN: grep SYM64 %t.lib
 

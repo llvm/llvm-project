@@ -1,4 +1,4 @@
-//===--- Sanitizers.cpp - C Language Family Language Options ----*- C++ -*-===//
+//===- Sanitizers.cpp - C Language Family Language Options ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,9 +10,8 @@
 //  This file defines the classes from Sanitizers.h
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/Basic/Sanitizers.h"
-#include "clang/Basic/LLVM.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;

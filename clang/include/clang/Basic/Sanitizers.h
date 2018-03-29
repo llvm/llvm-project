@@ -1,4 +1,4 @@
-//===--- Sanitizers.h - C Language Family Language Options ------*- C++ -*-===//
+//===- Sanitizers.h - C Language Family Language Options --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the clang::SanitizerKind enum.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_SANITIZERS_H
@@ -18,10 +18,12 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
 
 namespace clang {
 
-typedef uint64_t SanitizerMask;
+using SanitizerMask = uint64_t;
 
 namespace SanitizerKind {
 
@@ -43,7 +45,7 @@ enum SanitizerOrdinal : uint64_t {
   const SanitizerMask ID##Group = 1ULL << SO_##ID##Group;
 #include "clang/Basic/Sanitizers.def"
 
-}
+} // namespace SanitizerKind
 
 struct SanitizerSet {
   /// \brief Check if a certain (single) sanitizer is enabled.
@@ -85,6 +87,6 @@ inline SanitizerMask getPPTransparentSanitizers() {
          SanitizerKind::Nullability | SanitizerKind::Undefined;
 }
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_BASIC_SANITIZERS_H

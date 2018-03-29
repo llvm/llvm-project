@@ -218,6 +218,10 @@ bool IsAllocatorOutOfMemory() {
   return atomic_load_relaxed(&allocator_out_of_memory);
 }
 
+void SetAllocatorOutOfMemory() {
+  atomic_store_relaxed(&allocator_out_of_memory, 1);
+}
+
 // Prints error message and kills the program.
 void NORETURN ReportAllocatorCannotReturnNull() {
   Report("%s's allocator is terminating the process instead of returning 0\n",
@@ -256,6 +260,12 @@ void NORETURN *DieOnFailure::OnBadRequest() {
 void NORETURN *DieOnFailure::OnOOM() {
   atomic_store_relaxed(&allocator_out_of_memory, 1);
   ReportAllocatorCannotReturnNull();
+}
+
+// Prints hint message.
+void PrintHintAllocatorCannotReturnNull(const char *options_name) {
+  Report("HINT: if you don't care about these errors you may set "
+         "%s=allocator_may_return_null=1\n", options_name);
 }
 
 } // namespace __sanitizer

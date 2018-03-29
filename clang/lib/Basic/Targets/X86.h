@@ -728,6 +728,11 @@ public:
     Builder.defineMacro("_M_X64", "100");
     Builder.defineMacro("_M_AMD64", "100");
   }
+
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override {
+    return CCK_MicrosoftX86_64;
+  }
 };
 
 // x86-64 MinGW target

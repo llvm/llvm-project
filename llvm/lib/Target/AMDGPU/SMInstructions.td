@@ -213,7 +213,15 @@ def S_DCACHE_WB_VOL : SM_Inval_Pseudo <"s_dcache_wb_vol", int_amdgcn_s_dcache_wb
 def S_MEMREALTIME   : SM_Time_Pseudo <"s_memrealtime", int_amdgcn_s_memrealtime>;
 } // SubtargetPredicate = isVI
 
+let SubtargetPredicate = HasFlatScratchInsts, Uses = [FLAT_SCR] in {
+defm S_SCRATCH_LOAD_DWORD    : SM_Pseudo_Loads <"s_scratch_load_dword",   SReg_64, SReg_32_XM0_XEXEC>;
+defm S_SCRATCH_LOAD_DWORDX2  : SM_Pseudo_Loads <"s_scratch_load_dwordx2", SReg_64, SReg_64_XEXEC>;
+defm S_SCRATCH_LOAD_DWORDX4  : SM_Pseudo_Loads <"s_scratch_load_dwordx4", SReg_64, SReg_128>;
 
+defm S_SCRATCH_STORE_DWORD   : SM_Pseudo_Stores <"s_scratch_store_dword",   SReg_64, SReg_32_XM0_XEXEC>;
+defm S_SCRATCH_STORE_DWORDX2 : SM_Pseudo_Stores <"s_scratch_store_dwordx2", SReg_64, SReg_64_XEXEC>;
+defm S_SCRATCH_STORE_DWORDX4 : SM_Pseudo_Stores <"s_scratch_store_dwordx4", SReg_64, SReg_128>;
+} // SubtargetPredicate = HasFlatScratchInsts
 
 //===----------------------------------------------------------------------===//
 // Scalar Memory Patterns
@@ -432,6 +440,13 @@ def S_DCACHE_WB_VOL_vi      : SMEM_Real_vi <0x23, S_DCACHE_WB_VOL>;
 def S_MEMTIME_vi            : SMEM_Real_vi <0x24, S_MEMTIME>;
 def S_MEMREALTIME_vi        : SMEM_Real_vi <0x25, S_MEMREALTIME>;
 
+defm S_SCRATCH_LOAD_DWORD    : SM_Real_Loads_vi <0x05, "S_SCRATCH_LOAD_DWORD">;
+defm S_SCRATCH_LOAD_DWORDX2  : SM_Real_Loads_vi <0x06, "S_SCRATCH_LOAD_DWORDX2">;
+defm S_SCRATCH_LOAD_DWORDX4  : SM_Real_Loads_vi <0x07, "S_SCRATCH_LOAD_DWORDX4">;
+
+defm S_SCRATCH_STORE_DWORD   : SM_Real_Stores_vi <0x15, "S_SCRATCH_STORE_DWORD">;
+defm S_SCRATCH_STORE_DWORDX2 : SM_Real_Stores_vi <0x16, "S_SCRATCH_STORE_DWORDX2">;
+defm S_SCRATCH_STORE_DWORDX4 : SM_Real_Stores_vi <0x17, "S_SCRATCH_STORE_DWORDX4">;
 
 //===----------------------------------------------------------------------===//
 // CI

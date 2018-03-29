@@ -1,4 +1,4 @@
-//===- ObjCRuntime.cpp - Objective-C Runtime Handling -----------*- C++ -*-===//
+//===- ObjCRuntime.cpp - Objective-C Runtime Handling ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,13 @@
 // target Objective-C runtime.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/VersionTuple.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
+#include <string>
 
 using namespace clang;
 

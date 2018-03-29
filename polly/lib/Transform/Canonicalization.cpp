@@ -18,6 +18,7 @@
 #include "polly/Options.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 using namespace polly;

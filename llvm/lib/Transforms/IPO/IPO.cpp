@@ -59,7 +59,6 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeSampleProfileLoaderLegacyPassPass(Registry);
   initializeFunctionImportLegacyPassPass(Registry);
   initializeWholeProgramDevirtPass(Registry);
-  initializeMetaRenamerPass(Registry);
 }
 
 void LLVMInitializeIPO(LLVMPassRegistryRef R) {

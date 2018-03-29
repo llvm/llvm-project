@@ -24,7 +24,7 @@ let PrintMethod = "printGlobalOperand" in {
 let isPseudo = 1 in {
 let isCodeGenOnly = 0 in
 def A2_iconst : Pseudo<(outs IntRegs:$Rd32),
-    (ins s27_2Imm:$Ii), "${Rd32}=iconst(#${Ii})">;
+    (ins s27_2Imm:$Ii), "${Rd32} = iconst(#${Ii})">;
 
 def DUPLEX_Pseudo : InstHexagon<(outs),
     (ins s32_0Imm:$offset), "DUPLEX", [], "", DUPLEX, TypePSEUDO>;
@@ -34,7 +34,7 @@ let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
     isAsmParserOnly = 1 in
 def TFRI64_V2_ext : InstHexagon<(outs DoubleRegs:$dst),
     (ins s32_0Imm:$src1, s8_0Imm:$src2),
-    "$dst=combine(#$src1,#$src2)", [], "",
+    "$dst = combine(#$src1,#$src2)", [], "",
     A2_combineii.Itinerary, TypeALU32_2op>, OpcodeHexagon;
 
 // HI/LO Instructions
@@ -44,7 +44,7 @@ class REG_IMMED<string RegHalf, bit Rs, bits<3> MajOp, bit MinOp,
                 InstHexagon rootInst>
   : InstHexagon<(outs IntRegs:$dst),
                 (ins u16_0Imm:$imm_value),
-                "$dst"#RegHalf#"=#$imm_value", [], "",
+                "$dst"#RegHalf#" = #$imm_value", [], "",
                 rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<5> dst;
     bits<32> imm_value;
@@ -316,7 +316,7 @@ def LDriw_pred : LDInst<(outs PredRegs:$dst),
 // Load modifier.
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
-def LDriw_mod : LDInst<(outs ModRegs:$dst),
+def LDriw_ctr : LDInst<(outs CtrRegs:$dst),
                         (ins IntRegs:$addr, s32_0Imm:$off),
                         ".error \"should not emit\"", []>;
 
@@ -465,8 +465,8 @@ def STriw_pred : STInst<(outs),
 // Store modifier.
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
-def STriw_mod : STInst<(outs),
-      (ins IntRegs:$addr, s32_0Imm:$off, ModRegs:$src1),
+def STriw_ctr : STInst<(outs),
+      (ins IntRegs:$addr, s32_0Imm:$off, CtrRegs:$src1),
       ".error \"should not emit\"", []>;
 
 let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
@@ -507,3 +507,46 @@ def DuplexIClassC:  InstDuplex < 0xC >;
 def DuplexIClassD:  InstDuplex < 0xD >;
 def DuplexIClassE:  InstDuplex < 0xE >;
 def DuplexIClassF:  InstDuplex < 0xF >;
+
+// Pseudos for circular buffer instructions. These are needed in order to
+// allocate the correct pair of CSx and Mx registers.
+multiclass NewCircularLoad<RegisterClass RC, MemAccessSize MS> {
+
+let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+    addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  def NAME#_pci : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_4403ca65>;
+
+  def NAME#_pcr : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_2fc0c436>;
+}
+}
+
+defm PS_loadrub : NewCircularLoad<IntRegs, ByteAccess>;
+defm PS_loadrb : NewCircularLoad<IntRegs, ByteAccess>;
+defm PS_loadruh : NewCircularLoad<IntRegs, HalfWordAccess>;
+defm PS_loadrh : NewCircularLoad<IntRegs, HalfWordAccess>;
+defm PS_loadri : NewCircularLoad<IntRegs, WordAccess>;
+defm PS_loadrd : NewCircularLoad<DoubleRegs, DoubleWordAccess>;
+
+multiclass NewCircularStore<RegisterClass RC, MemAccessSize MS> {
+
+let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+    addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  def NAME#_pci : STInst<(outs IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_9fdb5406>;
+
+  def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_f86c328a>;
+}
+}
+
+defm PS_storerb : NewCircularStore<IntRegs, ByteAccess>;
+defm PS_storerh : NewCircularStore<IntRegs, HalfWordAccess>;
+defm PS_storerf : NewCircularStore<IntRegs, HalfWordAccess>;
+defm PS_storeri : NewCircularStore<IntRegs, WordAccess>;
+defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;

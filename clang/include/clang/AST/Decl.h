@@ -3559,6 +3559,11 @@ class RecordDecl : public TagDecl {
   /// pass an object of this class.
   bool CanPassInRegisters : 1;
 
+  /// Indicates whether this struct is destroyed in the callee. This flag is
+  /// meaningless when Microsoft ABI is used since parameters are always
+  /// destroyed in the callee.
+  bool ParamDestroyedInCallee : 1;
+
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
              SourceLocation StartLoc, SourceLocation IdLoc,
@@ -3652,6 +3657,14 @@ public:
   /// Set that we can pass this RecordDecl in registers.
   void setCanPassInRegisters(bool CanPass) {
     CanPassInRegisters = CanPass;
+  }
+
+  bool isParamDestroyedInCallee() const {
+    return ParamDestroyedInCallee;
+  }
+
+  void setParamDestroyedInCallee(bool V) {
+    ParamDestroyedInCallee = V;
   }
 
   /// \brief Determines whether this declaration represents the
