@@ -191,17 +191,16 @@ struct MemberInfo {
   uint64_t byte_size;
   uint32_t byte_offset;
   MemberType member_type;
-  bool is_fragile;
 
   MemberInfo(MemberType member_type)
       : clang_type(), name(), byte_size(0), byte_offset(0),
-        member_type(member_type), is_fragile(false) {}
+        member_type(member_type) {}
 
   void Dump(uint32_t idx) {
-    printf("[%i] %12s +%u (%s) %s <%" PRIu64 "> %s\n", idx,
+    printf("[%i] %12s +%u (%s) %s <%" PRIu64 ">\n", idx,
            MemberTypeToCString(member_type), byte_offset,
            clang_type.GetTypeName().AsCString("<no type name>"),
-           name.AsCString("<NULL>"), byte_size, is_fragile ? "[fragile]" : "");
+           name.AsCString("<NULL>"), byte_size);
   }
 };
 
@@ -314,20 +313,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
   VALID_OR_RETURN(nullptr);
 
   if (type) {
-    // printf("CompilerType::GetCachedMemberInfo () for %s...",
-    // GetTypeName().c_str());
-    bool is_class = false;
-    bool is_protocol = false;
-    MemberInfoCache *member_info_cache = GetMemberInfoCache(GetASTContext());
-    MemberInfoCache::const_iterator pos = member_info_cache->find(type);
-    if (pos != member_info_cache->end()) {
-      // printf("cached: %p\n", pos->second.get());
-      return pos->second.get();
-    }
-
-    CachedMemberInfoSP member_infos_sp(new CachedMemberInfo());
-    // printf("creating in %p\n", member_infos_sp.get());
-
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
     std::vector<const swift::irgen::TypeInfo *> field_type_infos;
@@ -373,11 +358,19 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
 
     case swift::TypeKind::Protocol:
     case swift::TypeKind::ProtocolComposition: {
+      MemberInfoCache *member_info_cache = GetMemberInfoCache(GetASTContext());
+      MemberInfoCache::const_iterator pos = member_info_cache->find(type);
+      if (pos != member_info_cache->end()) {
+        // printf("cached: %p\n", pos->second.get());
+        return pos->second.get();
+      }
+
+      CachedMemberInfoSP member_infos_sp(new CachedMemberInfo());
+
       ProtocolInfo protocol_info;
       if (!GetProtocolTypeInfo(
               CompilerType(GetASTContext(), GetSwiftType(type)), protocol_info))
         break;
-      is_protocol = true;
       uint32_t num_children = protocol_info.m_num_storage_words;
 
       for (uint32_t idx = 0; idx < num_children; idx++) {
@@ -386,7 +379,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
             GetASTContext(), GetASTContext()->TheRawPointerType.getPointer());
         member_info.byte_size = member_info.clang_type.GetByteSize(nullptr);
         member_info.byte_offset = idx * member_info.byte_size;
-        member_info.is_fragile = false;
         StreamString child_name_stream;
 
         // Opaque existentials have m_num_payload_words != 0.
@@ -408,7 +400,10 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
         member_info.name = ConstString(child_name_stream.GetData());
         member_infos_sp->member_infos.push_back(member_info);
       }
-    } break;
+
+      member_info_cache->insert(std::make_pair(type, member_infos_sp));
+      return member_infos_sp.get();
+    }
 
     case swift::TypeKind::TypeVariable:
     case swift::TypeKind::Archetype:
@@ -421,43 +416,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     case swift::TypeKind::ArraySlice:
       assert(false && "Not a canonical type");
       break;
-    }
-    if (!member_infos_sp->member_infos.empty()) {
-      if (is_class) {
-        // If we have a class, then all offsets are fragile so we don't need to
-        // do layout since we will need to lookup the ivar offset symbol, or
-        // munge the runtime data to find the offsets.
-      } else if (!is_protocol) {
-        // Only do struct layout if we don't have a union since the only thing
-        // we need layout for currently is for the byte offset and the byte
-        // offset of everything in a union is zero.
-        // As for protocols, their fields are artificially generated from what a
-        // protocol_container contains in the Swift runtime itself, and it's
-        // just pointers, so no need to get fancy.
-        swift::irgen::LayoutStrategy layout_strategy =
-          swift::irgen::LayoutStrategy::Optimal;
-
-        swift::irgen::StructLayout layout(
-            GetIRGenModule(), swift_can_type,
-            swift::irgen::LayoutKind::NonHeapObject, layout_strategy,
-            field_type_infos);
-
-        const size_t num_elements = layout.getElements().size();
-        assert(num_elements == member_infos_sp->member_infos.size());
-        for (int ii = 0; ii < num_elements; ++ii) {
-          auto element = layout.getElements()[ii];
-          // check or crash
-          if (element.getKind() == swift::irgen::ElementLayout::Kind::Fixed)
-            member_infos_sp->member_infos[ii].byte_offset =
-                element.getByteOffset().getValue();
-          else
-            member_infos_sp->member_infos[ii].byte_offset =
-                0; // TODO: dynamic layout
-                   // member_infos_sp->member_infos[ii].Dump(ii);
-        }
-      }
-      member_info_cache->insert(std::make_pair(type, member_infos_sp));
-      return member_infos_sp.get();
     }
   }
   return nullptr;
@@ -7039,17 +6997,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
         else
           child_name.clear();
         child_byte_size = cached_member_info->member_infos[idx].byte_size;
-        // Check for fragile ivar offsets and look them up and cache them.
-        if (cached_member_info->member_infos[idx].is_fragile &&
-            cached_member_info->member_infos[idx].byte_offset == 0) {
-          CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
-          const int64_t fragile_ivar_offset = GetInstanceVariableOffset(
-              valobj, exe_ctx, compiler_type, child_name.c_str(),
-              cached_member_info->member_infos[idx].clang_type);
-          if (fragile_ivar_offset != LLDB_INVALID_IVAR_OFFSET)
-            cached_member_info->member_infos[idx].byte_offset =
-                fragile_ivar_offset;
-        }
         child_byte_offset = cached_member_info->member_infos[idx].byte_offset;
         child_bitfield_bit_size = 0;
         child_bitfield_bit_offset = 0;
