@@ -38,6 +38,16 @@
 
 namespace clang {
 namespace ast_matchers {
+
+AST_MATCHER_P(ObjCMessageExpr, hasAnySelectorMatcher, std::vector<std::string>,
+              Matches) {
+  std::string SelString = Node.getSelector().getAsString();
+  for (const std::string &S : Matches)
+    if (S == SelString)
+      return true;
+  return false;
+}
+
 namespace internal {
 
 bool NotUnaryOperator(const ast_type_traits::DynTypedNode &DynNode,
@@ -326,15 +336,6 @@ std::vector<std::string> vectorFromRefs(ArrayRef<const StringRef *> NameRefs) {
 Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs) {
   std::vector<std::string> Names = vectorFromRefs(NameRefs);
   return internal::Matcher<NamedDecl>(new internal::HasNameMatcher(Names));
-}
-
-AST_MATCHER_P(ObjCMessageExpr, hasAnySelectorMatcher, std::vector<std::string>,
-              Matches) {
-  std::string SelString = Node.getSelector().getAsString();
-  for (const std::string &S : Matches)
-    if (S == SelString)
-      return true;
-  return false;
 }
 
 Matcher<ObjCMessageExpr> hasAnySelectorFunc(
