@@ -142,7 +142,7 @@ public:
 
 protected:
   ArrayRef<Elf_Sym> ELFSyms;
-  uint32_t FirstNonLocal = 0;
+  uint32_t FirstGlobal = 0;
   ArrayRef<Elf_Word> SymtabSHNDX;
   StringRef StringTable;
   void initSymtab(ArrayRef<Elf_Shdr> Sections, const Elf_Shdr *Symtab);
@@ -165,6 +165,7 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == Base::ObjKind; }
 
   ArrayRef<Symbol *> getLocalSymbols();
+  ArrayRef<Symbol *> getGlobalSymbols();
 
   ObjFile(MemoryBufferRef M, StringRef ArchiveName);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
