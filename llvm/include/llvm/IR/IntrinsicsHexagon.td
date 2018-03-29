@@ -643,41 +643,6 @@ class Hexagon_df_dfdfdfqi_Intrinsic<string GCCIntSuffix>
 // This one below will not be auto-generated,
 // so make sure, you don't overwrite this one.
 //
-// BUILTIN_INFO(SI_to_SXTHI_asrh,SI_ftype_SI,1)
-//
-def int_hexagon_SI_to_SXTHI_asrh :
-Hexagon_si_si_Intrinsic<"SI_to_SXTHI_asrh">;
-//
-// BUILTIN_INFO_NONCONST(brev_ldd,PTR_ftype_PTRPTRSI,3)
-//
-def int_hexagon_brev_ldd :
-Hexagon_mem_memmemsi_Intrinsic<"brev_ldd">;
-//
-// BUILTIN_INFO_NONCONST(brev_ldw,PTR_ftype_PTRPTRSI,3)
-//
-def int_hexagon_brev_ldw :
-Hexagon_mem_memmemsi_Intrinsic<"brev_ldw">;
-//
-// BUILTIN_INFO_NONCONST(brev_ldh,PTR_ftype_PTRPTRSI,3)
-//
-def int_hexagon_brev_ldh :
-Hexagon_mem_memmemsi_Intrinsic<"brev_ldh">;
-//
-// BUILTIN_INFO_NONCONST(brev_lduh,PTR_ftype_PTRPTRSI,3)
-//
-def int_hexagon_brev_lduh :
-Hexagon_mem_memmemsi_Intrinsic<"brev_lduh">;
-//
-// BUILTIN_INFO_NONCONST(brev_ldb,PTR_ftype_PTRPTRSI,3)
-//
-def int_hexagon_brev_ldb :
-Hexagon_mem_memmemsi_Intrinsic<"brev_ldb">;
-//
-// BUILTIN_INFO_NONCONST(brev_ldub,PTR_ftype_PTRPTRSI,3)
-//
-def int_hexagon_brev_ldub :
-Hexagon_mem_memmemsi_Intrinsic<"brev_ldub">;
-//
 // BUILTIN_INFO_NONCONST(circ_ldd,PTR_ftype_PTRPTRSISI,4)
 //
 def int_hexagon_circ_ldd :
@@ -708,31 +673,6 @@ Hexagon_mem_memmemsisi_Intrinsic<"circ_ldb">;
 def int_hexagon_circ_ldub :
 Hexagon_mem_memmemsisi_Intrinsic<"circ_ldub">;
 
-//
-// BUILTIN_INFO_NONCONST(brev_stb,PTR_ftype_PTRSISI,3)
-//
-def int_hexagon_brev_stb :
-Hexagon_mem_memsisi_Intrinsic<"brev_stb">;
-//
-// BUILTIN_INFO_NONCONST(brev_sthhi,PTR_ftype_PTRSISI,3)
-//
-def int_hexagon_brev_sthhi :
-Hexagon_mem_memsisi_Intrinsic<"brev_sthhi">;
-//
-// BUILTIN_INFO_NONCONST(brev_sth,PTR_ftype_PTRSISI,3)
-//
-def int_hexagon_brev_sth :
-Hexagon_mem_memsisi_Intrinsic<"brev_sth">;
-//
-// BUILTIN_INFO_NONCONST(brev_stw,PTR_ftype_PTRSISI,3)
-//
-def int_hexagon_brev_stw :
-Hexagon_mem_memsisi_Intrinsic<"brev_stw">;
-//
-// BUILTIN_INFO_NONCONST(brev_std,PTR_ftype_PTRSISI,3)
-//
-def int_hexagon_brev_std :
-Hexagon_mem_memdisi_Intrinsic<"brev_std">;
 //
 // BUILTIN_INFO_NONCONST(circ_std,PTR_ftype_PTRDISISI,4)
 //
@@ -9339,6 +9279,27 @@ defm int_hexagon_S2_storerh : Hexagon_custom_circ_st_Intrinsic<llvm_i32_ty>;
 defm int_hexagon_S2_storerf : Hexagon_custom_circ_st_Intrinsic<llvm_i32_ty>;
 defm int_hexagon_S2_storeri : Hexagon_custom_circ_st_Intrinsic<llvm_i32_ty>;
 defm int_hexagon_S2_storerd : Hexagon_custom_circ_st_Intrinsic<llvm_i64_ty>;
+
+// The front-end emits the intrinsic call with only two arguments. The third
+// argument from the builtin is already used by front-end to write to memory
+// by generating a store.
+class Hexagon_custom_brev_ld_Intrinsic<LLVMType ElTy>
+ : Hexagon_NonGCC_Intrinsic<
+    [ElTy, llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty],
+    [IntrReadMem]>;
+
+def int_hexagon_L2_loadrub_pbr : Hexagon_custom_brev_ld_Intrinsic<llvm_i32_ty>;
+def int_hexagon_L2_loadrb_pbr : Hexagon_custom_brev_ld_Intrinsic<llvm_i32_ty>;
+def int_hexagon_L2_loadruh_pbr : Hexagon_custom_brev_ld_Intrinsic<llvm_i32_ty>;
+def int_hexagon_L2_loadrh_pbr : Hexagon_custom_brev_ld_Intrinsic<llvm_i32_ty>;
+def int_hexagon_L2_loadri_pbr : Hexagon_custom_brev_ld_Intrinsic<llvm_i32_ty>;
+def int_hexagon_L2_loadrd_pbr : Hexagon_custom_brev_ld_Intrinsic<llvm_i64_ty>;
+
+def int_hexagon_S2_storerb_pbr : Hexagon_mem_memsisi_Intrinsic<"brev_stb">;
+def int_hexagon_S2_storerh_pbr : Hexagon_mem_memsisi_Intrinsic<"brev_sth">;
+def int_hexagon_S2_storerf_pbr : Hexagon_mem_memsisi_Intrinsic<"brev_sthhi">;
+def int_hexagon_S2_storeri_pbr : Hexagon_mem_memsisi_Intrinsic<"brev_stw">;
+def int_hexagon_S2_storerd_pbr : Hexagon_mem_memdisi_Intrinsic<"brev_std">;
 
 
 ///

@@ -62,7 +62,7 @@ private:
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
-  void checkNoOverlappingSections();
+  void checkSectionOverlap();
   void fixSectionAlignments();
   void openFile();
   void writeTrapInstr();
@@ -458,7 +458,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 
   if (Config->CheckSections)
-    checkNoOverlappingSections();
+    checkSectionOverlap();
 
   // It does not make sense try to open the file if we have error already.
   if (errorCount())
@@ -1966,49 +1966,33 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
   }
 }
 
+// A helper struct for checkSectionOverlap.
+namespace {
+struct SectionOffset {
+  OutputSection *Sec;
+  uint64_t Offset;
+};
+} // namespace
+
 // Check whether sections overlap for a specific address range (file offsets,
 // load and virtual adresses).
-//
-// This is a helper function called by Writer::checkNoOverlappingSections().
-template <typename Getter, typename Predicate>
-static void checkForSectionOverlap(ArrayRef<OutputSection *> AllSections,
-                                   StringRef Kind, Getter GetStart,
-                                   Predicate ShouldSkip) {
-  std::vector<OutputSection *> Sections;
-  // By removing all zero-size sections we can simplify the check for overlap to
-  // just checking whether the section range contains the other section's start
-  // address. Additionally, it also slightly speeds up the checking since we
-  // don't bother checking for overlap with sections that can never overlap.
-  for (OutputSection *Sec : AllSections)
-    if (Sec->Size > 0 && !ShouldSkip(Sec))
-      Sections.push_back(Sec);
-
-  // Instead of comparing every OutputSection with every other output section
-  // we sort the sections by address (file offset or load/virtual address). This
-  // way we find all overlapping sections but only need one comparision with the
-  // next section in the common non-overlapping case. The only time we end up
-  // doing more than one iteration of the following nested loop is if there are
-  // overlapping sections.
+static void checkOverlap(StringRef Name, std::vector<SectionOffset> &Sections) {
   std::sort(Sections.begin(), Sections.end(),
-            [=](const OutputSection *A, const OutputSection *B) {
-              return GetStart(A) < GetStart(B);
+            [=](const SectionOffset &A, const SectionOffset &B) {
+              return A.Offset < B.Offset;
             });
-  for (size_t I = 0; I < Sections.size(); ++I) {
-    OutputSection *Sec = Sections[I];
-    uint64_t Start = GetStart(Sec);
-    for (auto *Other : ArrayRef<OutputSection *>(Sections).slice(I + 1)) {
-      // Since the sections are sorted by start address we only need to check
-      // whether the other sections starts before the end of Sec. If this is
-      // not the case we can break out of this loop since all following sections
-      // will also start after the end of Sec.
-      if (Start + Sec->Size <= GetStart(Other))
-        break;
-      errorOrWarn("section " + Sec->Name + " " + Kind +
-                  " range overlaps with " + Other->Name + "\n>>> " + Sec->Name +
-                  " range is " + rangeToString(Start, Sec->Size) + "\n>>> " +
-                  Other->Name + " range is " +
-                  rangeToString(GetStart(Other), Other->Size));
-    }
+
+  // Finding overlap is easy given a vector is sorted by start position.
+  // If an element starts before the end of the previous element, they overlap.
+  for (size_t I = 1, End = Sections.size(); I < End; ++I) {
+    SectionOffset A = Sections[I - 1];
+    SectionOffset B = Sections[I];
+    if (B.Offset < A.Offset + A.Sec->Size)
+      errorOrWarn(
+          "section " + A.Sec->Name + " " + Name + " range overlaps with " +
+          B.Sec->Name + "\n>>> " + A.Sec->Name + " range is " +
+          rangeToString(A.Offset, A.Sec->Size) + "\n>>> " + B.Sec->Name +
+          " range is " + rangeToString(B.Offset, B.Sec->Size));
   }
 }
 
@@ -2017,19 +2001,18 @@ static void checkForSectionOverlap(ArrayRef<OutputSection *> AllSections,
 // In this function we check that none of the output sections have overlapping
 // file offsets. For SHF_ALLOC sections we also check that the load address
 // ranges and the virtual address ranges don't overlap
-template <class ELFT> void Writer<ELFT>::checkNoOverlappingSections() {
+template <class ELFT> void Writer<ELFT>::checkSectionOverlap() {
   // First check for overlapping file offsets. In this case we need to skip
-  // Any section marked as SHT_NOBITS. These sections don't actually occupy
+  // any section marked as SHT_NOBITS. These sections don't actually occupy
   // space in the file so Sec->Offset + Sec->Size can overlap with others.
   // If --oformat binary is specified only add SHF_ALLOC sections are added to
   // the output file so we skip any non-allocated sections in that case.
-  checkForSectionOverlap(OutputSections, "file",
-                         [](const OutputSection *Sec) { return Sec->Offset; },
-                         [](const OutputSection *Sec) {
-                           return Sec->Type == SHT_NOBITS ||
-                                  (Config->OFormatBinary &&
-                                   (Sec->Flags & SHF_ALLOC) == 0);
-                         });
+  std::vector<SectionOffset> FileOffs;
+  for (OutputSection *Sec : OutputSections)
+    if (0 < Sec->Size && Sec->Type != SHT_NOBITS &&
+        (!Config->OFormatBinary || (Sec->Flags & SHF_ALLOC)))
+      FileOffs.push_back({Sec, Sec->Offset});
+  checkOverlap("file", FileOffs);
 
   // When linking with -r there is no need to check for overlapping virtual/load
   // addresses since those addresses will only be assigned when the final
@@ -2042,19 +2025,20 @@ template <class ELFT> void Writer<ELFT>::checkNoOverlappingSections() {
   // Furthermore, we also need to skip SHF_TLS sections since these will be
   // mapped to other addresses at runtime and can therefore have overlapping
   // ranges in the file.
-  auto SkipNonAllocSections = [](const OutputSection *Sec) {
-    return (Sec->Flags & SHF_ALLOC) == 0 || (Sec->Flags & SHF_TLS);
-  };
-  checkForSectionOverlap(OutputSections, "virtual address",
-                         [](const OutputSection *Sec) { return Sec->Addr; },
-                         SkipNonAllocSections);
+  std::vector<SectionOffset> VMAs;
+  for (OutputSection *Sec : OutputSections)
+    if (0 < Sec->Size && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
+      VMAs.push_back({Sec, Sec->Addr});
+  checkOverlap("virtual address", VMAs);
 
   // Finally, check that the load addresses don't overlap. This will usually be
   // the same as the virtual addresses but can be different when using a linker
   // script with AT().
-  checkForSectionOverlap(OutputSections, "load address",
-                         [](const OutputSection *Sec) { return Sec->getLMA(); },
-                         SkipNonAllocSections);
+  std::vector<SectionOffset> LMAs;
+  for (OutputSection *Sec : OutputSections)
+    if (0 < Sec->Size && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
+      LMAs.push_back({Sec, Sec->getLMA()});
+  checkOverlap("load address", LMAs);
 }
 
 // The entry point address is chosen in the following ways.

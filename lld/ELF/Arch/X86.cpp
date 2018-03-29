@@ -443,6 +443,7 @@ void RetpolinePic::writePltHeader(uint8_t *Buf) const {
       0x89, 0xc8,                               // 2b:   mov %ecx, %eax
       0x59,                                     // 2d:   pop %ecx
       0xc3,                                     // 2e:   ret
+      0xcc,                                     // 2f:   int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
@@ -456,12 +457,13 @@ void RetpolinePic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                             uint64_t PltEntryAddr, int32_t Index,
                             unsigned RelOff) const {
   const uint8_t Insn[] = {
-      0x50,                   // pushl %eax
-      0x8b, 0x83, 0, 0, 0, 0, // mov foo@GOT(%ebx), %eax
-      0xe8, 0,    0, 0, 0,    // call plt+0x20
-      0xe9, 0,    0, 0, 0,    // jmp plt+0x12
-      0x68, 0,    0, 0, 0,    // pushl $reloc_offset
-      0xe9, 0,    0, 0, 0,    // jmp plt+0
+      0x50,                            // pushl %eax
+      0x8b, 0x83, 0,    0,    0,    0, // mov foo@GOT(%ebx), %eax
+      0xe8, 0,    0,    0,    0,       // call plt+0x20
+      0xe9, 0,    0,    0,    0,       // jmp plt+0x12
+      0x68, 0,    0,    0,    0,       // pushl $reloc_offset
+      0xe9, 0,    0,    0,    0,       // jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc,    // int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
@@ -484,7 +486,7 @@ void RetpolineNoPic::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
 }
 
 void RetpolineNoPic::writePltHeader(uint8_t *Buf) const {
-  const uint8_t PltData[] = {
+  const uint8_t Insn[] = {
       0xff, 0x35, 0,    0,    0,    0, // 0:    pushl GOTPLT+4
       0x50,                            // 6:    pushl %eax
       0xa1, 0,    0,    0,    0,       // 7:    mov GOTPLT+8, %eax
@@ -500,8 +502,9 @@ void RetpolineNoPic::writePltHeader(uint8_t *Buf) const {
       0x89, 0xc8,                      // 2b:   mov %ecx, %eax
       0x59,                            // 2d:   pop %ecx
       0xc3,                            // 2e:   ret
+      0xcc,                            // 2f:   int3; padding
   };
-  memcpy(Buf, PltData, sizeof(PltData));
+  memcpy(Buf, Insn, sizeof(Insn));
 
   uint32_t GotPlt = InX::GotPlt->getVA();
   write32le(Buf + 2, GotPlt + 4);
@@ -512,12 +515,14 @@ void RetpolineNoPic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                               uint64_t PltEntryAddr, int32_t Index,
                               unsigned RelOff) const {
   const uint8_t Insn[] = {
-      0x50,             // 0:  pushl %eax
-      0xa1, 0, 0, 0, 0, // 1:  mov foo_in_GOT, %eax
-      0xe8, 0, 0, 0, 0, // 6:  call plt+0x20
-      0xe9, 0, 0, 0, 0, // b:  jmp plt+0x11
-      0x68, 0, 0, 0, 0, // 10: pushl $reloc_offset
-      0xe9, 0, 0, 0, 0, // 15: jmp plt+0
+      0x50,                         // 0:  pushl %eax
+      0xa1, 0,    0,    0,    0,    // 1:  mov foo_in_GOT, %eax
+      0xe8, 0,    0,    0,    0,    // 6:  call plt+0x20
+      0xe9, 0,    0,    0,    0,    // b:  jmp plt+0x11
+      0x68, 0,    0,    0,    0,    // 10: pushl $reloc_offset
+      0xe9, 0,    0,    0,    0,    // 15: jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 1a: int3; padding
+      0xcc,                         // 1f: int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 

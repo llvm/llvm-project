@@ -20,7 +20,7 @@ Parsing <http://en.wikipedia.org/wiki/Recursive_descent_parser>`_ and
 `Operator-Precedence
 Parsing <http://en.wikipedia.org/wiki/Operator-precedence_parser>`_ to
 parse the Kaleidoscope language (the latter for binary expressions and
-the former for everything else). Before we get to parsing though, lets
+the former for everything else). Before we get to parsing though, let's
 talk about the output of the parser: the Abstract Syntax Tree.
 
 The Abstract Syntax Tree (AST)
@@ -716,7 +716,7 @@ Intermediate Representation (IR) from the AST.
 Full Code Listing
 =================
 
-Here is the complete code listing for our running example. Because this 
+Here is the complete code listing for our running example. Because this
 uses the LLVM libraries, we need to link them in. To do this, we use the
 `llvm-config <http://llvm.org/cmds/llvm-config.html>`_ tool to inform
 our makefile/command line about which options to use:

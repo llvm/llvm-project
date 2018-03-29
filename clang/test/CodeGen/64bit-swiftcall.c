@@ -108,9 +108,7 @@ typedef struct {
 TEST(struct_1);
 // CHECK-LABEL: define swiftcc { i64, i64 } @return_struct_1() {{.*}}{
 // CHECK:   [[RET:%.*]] = alloca [[STRUCT1:%.*]], align 4
-// CHECK:   [[VAR:%.*]] = alloca [[STRUCT1]], align 4
 // CHECK:   call void @llvm.memset
-// CHECK:   call void @llvm.memcpy
 // CHECK:   [[CAST:%.*]] = bitcast [[STRUCT1]]* %retval to { i64, i64 }*
 // CHECK:   [[GEP0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 0
 // CHECK:   [[T0:%.*]] = load i64, i64* [[GEP0]], align 4
@@ -158,12 +156,8 @@ typedef struct {
 TEST(struct_2);
 // CHECK-LABEL: define swiftcc { i64, i64 } @return_struct_2() {{.*}}{
 // CHECK:   [[RET:%.*]] = alloca [[STRUCT2_TYPE]], align 4
-// CHECK:   [[VAR:%.*]] = alloca [[STRUCT2_TYPE]], align 4
-// CHECK:   [[CASTVAR:%.*]] = bitcast {{.*}} [[VAR]]
+// CHECK:   [[CASTVAR:%.*]] = bitcast {{.*}} [[RET]]
 // CHECK:   call void @llvm.memcpy{{.*}}({{.*}}[[CASTVAR]], {{.*}}[[STRUCT2_RESULT]]
-// CHECK:   [[CASTRET:%.*]] = bitcast {{.*}} [[RET]]
-// CHECK:   [[CASTVAR:%.*]] = bitcast {{.*}} [[VAR]]
-// CHECK:   call void @llvm.memcpy{{.*}}({{.*}}[[CASTRET]], {{.*}}[[CASTVAR]]
 // CHECK:   [[CAST:%.*]] = bitcast [[STRUCT2_TYPE]]* [[RET]] to { i64, i64 }*
 // CHECK:   [[GEP0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 0
 // CHECK:   [[T0:%.*]] = load i64, i64* [[GEP0]], align 4
@@ -214,12 +208,8 @@ typedef struct {
 TEST(struct_misaligned_1)
 // CHECK-LABEL: define swiftcc i64 @return_struct_misaligned_1()
 // CHECK:  [[RET:%.*]] = alloca [[STRUCT:%.*]], align 1
-// CHECK:  [[RES:%.*]] = alloca [[STRUCT]], align 1
-// CHECK:  [[CAST:%.*]] = bitcast [[STRUCT]]* [[RES]] to i8*
+// CHECK:  [[CAST:%.*]] = bitcast [[STRUCT]]* [[RET]] to i8*
 // CHECK:  call void @llvm.memset{{.*}}(i8* align 1 [[CAST]], i8 0, i64 5
-// CHECK:  [[CASTRET:%.*]] = bitcast [[STRUCT]]* [[RET]] to i8*
-// CHECK:  [[CASTRES:%.*]] = bitcast [[STRUCT]]* [[RES]] to i8*
-// CHECK:  call void @llvm.memcpy{{.*}}(i8* align 1 [[CASTRET]], i8* align 1 [[CASTRES]], i64 5
 // CHECK:  [[CAST:%.*]] = bitcast [[STRUCT]]* [[RET]] to { i64 }*
 // CHECK:  [[GEP:%.*]] = getelementptr inbounds { i64 }, { i64 }* [[CAST]], i32 0, i32 0
 // CHECK:  [[R0:%.*]] = load i64, i64* [[GEP]], align 1
@@ -267,12 +257,8 @@ typedef union {
 TEST(union_het_fp)
 // CHECK-LABEL: define swiftcc i64 @return_union_het_fp()
 // CHECK:  [[RET:%.*]] = alloca [[UNION:%.*]], align 8
-// CHECK:  [[RES:%.*]] = alloca [[UNION]], align 8
-// CHECK:  [[CAST:%.*]] = bitcast [[UNION]]* [[RES]] to i8*
+// CHECK:  [[CAST:%.*]] = bitcast [[UNION]]* [[RET]] to i8*
 // CHECK:  call void @llvm.memcpy{{.*}}(i8* align 8 [[CAST]]
-// CHECK:  [[CASTRET:%.*]] = bitcast [[UNION]]* [[RET]] to i8*
-// CHECK:  [[CASTRES:%.*]] = bitcast [[UNION]]* [[RES]] to i8*
-// CHECK:  call void @llvm.memcpy{{.*}}(i8* align 8 [[CASTRET]], i8* align 8 [[CASTRES]]
 // CHECK:  [[CAST:%.*]] = bitcast [[UNION]]* [[RET]] to { i64 }*
 // CHECK:  [[GEP:%.*]] = getelementptr inbounds { i64 }, { i64 }* [[CAST]], i32 0, i32 0
 // CHECK:  [[R0:%.*]] = load i64, i64* [[GEP]], align 8

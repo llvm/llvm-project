@@ -308,7 +308,40 @@ ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
 }
 
 const TargetInfo::GCCRegAlias AArch64TargetInfo::GCCRegAliases[] = {
-    {{"w31"}, "wsp"}, {{"x29"}, "fp"}, {{"x30"}, "lr"}, {{"x31"}, "sp"},
+    {{"w31"}, "wsp"},
+    {{"x31"}, "sp"},
+    // GCC rN registers are aliases of xN registers.
+    {{"r0"}, "x0"},
+    {{"r1"}, "x1"},
+    {{"r2"}, "x2"},
+    {{"r3"}, "x3"},
+    {{"r4"}, "x4"},
+    {{"r5"}, "x5"},
+    {{"r6"}, "x6"},
+    {{"r7"}, "x7"},
+    {{"r8"}, "x8"},
+    {{"r9"}, "x9"},
+    {{"r10"}, "x10"},
+    {{"r11"}, "x11"},
+    {{"r12"}, "x12"},
+    {{"r13"}, "x13"},
+    {{"r14"}, "x14"},
+    {{"r15"}, "x15"},
+    {{"r16"}, "x16"},
+    {{"r17"}, "x17"},
+    {{"r18"}, "x18"},
+    {{"r19"}, "x19"},
+    {{"r20"}, "x20"},
+    {{"r21"}, "x21"},
+    {{"r22"}, "x22"},
+    {{"r23"}, "x23"},
+    {{"r24"}, "x24"},
+    {{"r25"}, "x25"},
+    {{"r26"}, "x26"},
+    {{"r27"}, "x27"},
+    {{"r28"}, "x28"},
+    {{"r29", "x29"}, "fp"},
+    {{"r30", "x30"}, "lr"},
     // The S/D/Q and W/X registers overlap, but aren't really aliases; we
     // don't want to substitute one of these for a different-sized one.
 };

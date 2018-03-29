@@ -206,7 +206,7 @@ void bad_downcast_pointer(S *p) {
   // CHECK: %[[NONNULL:.*]] = icmp ne {{.*}}, null
   // CHECK: br i1 %[[NONNULL]],
 
-  // A null poiner access is guarded without -fsanitize=null.
+  // A null pointer access is guarded without -fsanitize=null.
   // DOWNCAST-NULL: %[[NONNULL:.*]] = icmp ne {{.*}}, null
   // DOWNCAST-NULL: br i1 %[[NONNULL]],
 

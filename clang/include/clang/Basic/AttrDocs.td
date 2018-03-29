@@ -273,7 +273,7 @@ def AllocSizeDocs : Documentation {
   let Content = [{
 The ``alloc_size`` attribute can be placed on functions that return pointers in
 order to hint to the compiler how many bytes of memory will be available at the
-returned poiner. ``alloc_size`` takes one or two arguments.
+returned pointer. ``alloc_size`` takes one or two arguments.
 
 - ``alloc_size(N)`` implies that argument number N equals the number of
   available bytes at the returned pointer.
@@ -311,7 +311,7 @@ def AllocAlignDocs : Documentation {
   let Content = [{
 Use ``__attribute__((alloc_align(<alignment>))`` on a function
 declaration to specify that the return value of the function (which must be a
-pointer type) is at least as aligned as the value of the indicated parameter. The 
+pointer type) is at least as aligned as the value of the indicated parameter. The
 parameter is given by its index in the list of formal parameters; the first
 parameter has index 1 unless the function is a C++ non-static member function,
 in which case the first parameter has index 2 to account for the implicit ``this``
@@ -330,7 +330,7 @@ parameter.
   void *Foo::b(void *v, size_t align) __attribute__((alloc_align(3)));
 
 Note that this attribute merely informs the compiler that a function always
-returns a sufficiently aligned pointer. It does not cause the compiler to 
+returns a sufficiently aligned pointer. It does not cause the compiler to
 emit code to enforce that alignment.  The behavior is undefined if the returned
 poitner is not sufficiently aligned.
   }];
@@ -913,10 +913,10 @@ in the metadata name for that object. The `objc_runtime_name`
 attribute allows annotated interfaces or protocols to use the
 specified string argument in the object's metadata name instead of the
 default name.
-        
+
 **Usage**: ``__attribute__((objc_runtime_name("MyLocalName")))``.  This attribute
 can only be placed before an @protocol or @interface declaration:
-        
+
 .. code-block:: objc
 
   __attribute__((objc_runtime_name("MyLocalName")))
@@ -2626,7 +2626,7 @@ The ``_Nullable`` nullability qualifier indicates that a value of the ``_Nullabl
 
     int fetch_or_zero(int * _Nullable ptr);
 
-a caller of ``fetch_or_zero`` can provide null. 
+a caller of ``fetch_or_zero`` can provide null.
   }];
 }
 
@@ -2861,7 +2861,7 @@ Use this attribute to indicate that the specified function has no
 caller-saved registers. That is, all registers are callee-saved except for
 registers used for passing parameters to the function or returning parameters
 from the function.
-The compiler saves and restores any modified registers that were not used for 
+The compiler saves and restores any modified registers that were not used for
 passing or returning arguments to the function.
 
 The user can call functions specified with the 'no_caller_saved_registers'
@@ -3298,7 +3298,7 @@ def ArtificialDocs : Documentation {
   let Content = [{
 The ``artificial`` attribute can be applied to an inline function. If such a
 function is inlined, the attribute indicates that debuggers should associate
-the resulting instructions with the call site, rather than with the 
+the resulting instructions with the call site, rather than with the
 corresponding line within the inlined callee.
   }];
 }

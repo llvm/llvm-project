@@ -385,7 +385,7 @@ llvm::Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
   BucketCount = AS.getU32(Offset);
   NameCount = AS.getU32(Offset);
   AbbrevTableSize = AS.getU32(Offset);
-  AugmentationStringSize = AS.getU32(Offset);
+  AugmentationStringSize = alignTo(AS.getU32(Offset), 4);
 
   if (!AS.isValidOffsetForDataOfSize(*Offset, AugmentationStringSize))
     return make_error<StringError>(
@@ -394,7 +394,6 @@ llvm::Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
   AugmentationString.resize(AugmentationStringSize);
   AS.getU8(Offset, reinterpret_cast<uint8_t *>(AugmentationString.data()),
            AugmentationStringSize);
-  *Offset = alignTo(*Offset, 4);
   return Error::success();
 }
 
@@ -535,7 +534,7 @@ DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
 
 Optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   if (Optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
-    return Off->getAsSectionOffset();
+    return Off->getAsReferenceUVal();
   return None;
 }
 

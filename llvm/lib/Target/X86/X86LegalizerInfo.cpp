@@ -15,9 +15,9 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/ValueTypes.h"
 
 using namespace llvm;
 using namespace TargetOpcode;
