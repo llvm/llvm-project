@@ -63,13 +63,6 @@ public:
   bool classifyReturnType(CGFunctionInfo &FI) const override;
 
   bool passClassIndirect(const CXXRecordDecl *RD) const {
-    // Clang <= 4 used the pre-C++11 rule, which ignores move operations.
-    // The PS4 platform ABI follows the behavior of Clang 3.2.
-    if (CGM.getCodeGenOpts().getClangABICompat() <=
-            CodeGenOptions::ClangABI::Ver4 ||
-        CGM.getTriple().getOS() == llvm::Triple::PS4)
-      return RD->hasNonTrivialDestructorForCall() ||
-             RD->hasNonTrivialCopyConstructorForCall();
     return !canCopyArgument(RD);
   }
 
