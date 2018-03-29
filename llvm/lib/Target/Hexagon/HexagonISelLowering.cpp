@@ -39,6 +39,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1744,6 +1745,81 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+// Bit-reverse Load Intrinsic: Check if the instruction is a bit reverse load
+// intrinsic.
+static bool isBrevLdIntrinsic(const Value *Inst) {
+  unsigned ID = cast<IntrinsicInst>(Inst)->getIntrinsicID();
+  return (ID == Intrinsic::hexagon_L2_loadrd_pbr ||
+          ID == Intrinsic::hexagon_L2_loadri_pbr ||
+          ID == Intrinsic::hexagon_L2_loadrh_pbr ||
+          ID == Intrinsic::hexagon_L2_loadruh_pbr ||
+          ID == Intrinsic::hexagon_L2_loadrb_pbr ||
+          ID == Intrinsic::hexagon_L2_loadrub_pbr);
+}
+
+// Bit-reverse Load Intrinsic :Crawl up and figure out the object from previous
+// instruction. So far we only handle bitcast, extract value and bit reverse
+// load intrinsic instructions. Should we handle CGEP ?
+static Value *getBrevLdObject(Value *V) {
+  if (Operator::getOpcode(V) == Instruction::ExtractValue ||
+      Operator::getOpcode(V) == Instruction::BitCast)
+    V = cast<Operator>(V)->getOperand(0);
+  else if (isa<IntrinsicInst>(V) && isBrevLdIntrinsic(V))
+    V = cast<Instruction>(V)->getOperand(0);
+  return V;
+}
+
+// Bit-reverse Load Intrinsic: For a PHI Node return either an incoming edge or
+// a back edge. If the back edge comes from the intrinsic itself, the incoming
+// edge is returned.
+static Value *returnEdge(const PHINode *PN, Value *IntrBaseVal) {
+  const BasicBlock *Parent = PN->getParent();
+  int Idx = -1;
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i < e; ++i) {
+    BasicBlock *Blk = PN->getIncomingBlock(i);
+    // Determine if the back edge is originated from intrinsic.
+    if (Blk == Parent) {
+      Value *BackEdgeVal = PN->getIncomingValue(i);
+      Value *BaseVal;
+      // Loop over till we return the same Value or we hit the IntrBaseVal.
+      do {
+        BaseVal = BackEdgeVal;
+        BackEdgeVal = getBrevLdObject(BackEdgeVal);
+      } while ((BaseVal != BackEdgeVal) && (IntrBaseVal != BackEdgeVal));
+      // If the getBrevLdObject returns IntrBaseVal, we should return the
+      // incoming edge.
+      if (IntrBaseVal == BackEdgeVal)
+        continue;
+      Idx = i;
+      break;
+    } else // Set the node to incoming edge.
+      Idx = i;
+  }
+  assert(Idx >= 0 && "Unexpected index to incoming argument in PHI");
+  return PN->getIncomingValue(Idx);
+}
+
+// Bit-reverse Load Intrinsic: Figure out the underlying object the base
+// pointer points to, for the bit-reverse load intrinsic. Setting this to
+// memoperand might help alias analysis to figure out the dependencies.
+static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
+  Value *IntrBaseVal = V;
+  Value *BaseVal;
+  // Loop over till we return the same Value, implies we either figure out
+  // the object or we hit a PHI
+  do {
+    BaseVal = V;
+    V = getBrevLdObject(V);
+  } while (BaseVal != V);
+
+  // Identify the object from PHINode.
+  if (const PHINode *PN = dyn_cast<PHINode>(V))
+    return returnEdge(PN, IntrBaseVal);
+  // For non PHI nodes, the object is the last value returned by getBrevLdObject
+  else
+    return V;
+}
+
 /// Given an intrinsic, checks if on the target the intrinsic will need to map
 /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
 /// true and store the intrinsic information into the IntrinsicInfo that was
@@ -1753,6 +1829,32 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                                MachineFunction &MF,
                                                unsigned Intrinsic) const {
   switch (Intrinsic) {
+  case Intrinsic::hexagon_L2_loadrd_pbr:
+  case Intrinsic::hexagon_L2_loadri_pbr:
+  case Intrinsic::hexagon_L2_loadrh_pbr:
+  case Intrinsic::hexagon_L2_loadruh_pbr:
+  case Intrinsic::hexagon_L2_loadrb_pbr:
+  case Intrinsic::hexagon_L2_loadrub_pbr: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
+    auto &Cont = I.getCalledFunction()->getParent()->getContext();
+    // The intrinsic function call is of the form { ElTy, i8* }
+    // @llvm.hexagon.L2.loadXX.pbr(i8*, i32). The pointer and memory access type
+    // should be derived from ElTy.
+    PointerType *PtrTy = I.getCalledFunction()
+                             ->getReturnType()
+                             ->getContainedType(0)
+                             ->getPointerTo();
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    llvm::Value *BasePtrVal = I.getOperand(0);
+    Info.ptrVal = getUnderLyingObjectForBrevLdIntr(BasePtrVal);
+    // The offset value comes through Modifier register. For now, assume the
+    // offset is 0.
+    Info.offset = 0;
+    Info.align = DL.getABITypeAlignment(Info.memVT.getTypeForEVT(Cont));
+    Info.flags = MachineMemOperand::MOLoad;
+    return true;
+  }
   case Intrinsic::hexagon_V6_vgathermw:
   case Intrinsic::hexagon_V6_vgathermw_128B:
   case Intrinsic::hexagon_V6_vgathermh:

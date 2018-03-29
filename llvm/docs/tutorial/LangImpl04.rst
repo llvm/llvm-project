@@ -203,7 +203,7 @@ Another good source of ideas can come from looking at the passes that
 experiment with passes from the command line, so you can see if they do
 anything.
 
-Now that we have reasonable code coming out of our front-end, lets talk
+Now that we have reasonable code coming out of our front-end, let's talk
 about executing it!
 
 Adding a JIT Compiler
@@ -335,7 +335,7 @@ Recall, however, that the module we created a few lines earlier (via
 ``InitializeModuleAndPassManager``) is still open and waiting for new code to be
 added.
 
-With just these two changes, lets see how Kaleidoscope works now!
+With just these two changes, let's see how Kaleidoscope works now!
 
 ::
 
@@ -514,7 +514,7 @@ In HandleDefinition, we add two lines to transfer the newly defined function to
 the JIT and open a new module. In HandleExtern, we just need to add one line to
 add the prototype to FunctionProtos.
 
-With these changes made, lets try our REPL again (I removed the dump of the
+With these changes made, let's try our REPL again (I removed the dump of the
 anonymous functions this time, you should get the idea by now :) :
 
 ::

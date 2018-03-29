@@ -15,126 +15,78 @@
 ;   r1 = memub(r0++m0:brev)
 ;   r1 = memb(r0++m0:brev)
 
-target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
-target triple = "hexagon"
+target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+target triple = "hexagon-unknown--elf"
 
-define i64 @foo(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
+; CHECK: @call_brev_ldd
+define i64* @call_brev_ldd(i64* %ptr, i64 %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %inputLR = alloca i64, align 8
-  %conv = zext i16 %filtMemLen to i32
-  %shr1 = lshr i32 %conv, 1
-  %idxprom = sext i16 %filtMemIndex to i32
-  %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
-  %0 = bitcast i16* %arrayidx to i8*
-  %1 = bitcast i64* %inputLR to i8*
-  %sub = sub i32 13, %shr1
-  %shl = shl i32 1, %sub
+  %0 = bitcast i64* %ptr to i8*
 ; CHECK: = memd(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %2 = call i8* @llvm.hexagon.brev.ldd(i8* %0, i8* %1, i32 %shl)
-  %3 = bitcast i8* %1 to i64*
-  %4 = load i64, i64* %3, align 8, !tbaa !0
-  ret i64 %4
+  %1 = tail call { i64, i8* } @llvm.hexagon.L2.loadrd.pbr(i8* %0, i32 %mod)
+  %2 = extractvalue { i64, i8* } %1, 1
+  %3 = bitcast i8* %2 to i64*
+  ret i64* %3
 }
 
-declare i8* @llvm.hexagon.brev.ldd(i8*, i8*, i32) nounwind
-
-define i32 @foo1(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
+; CHECK: @call_brev_ldw
+define i32* @call_brev_ldw(i32* %ptr, i32 %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %inputLR = alloca i32, align 4
-  %conv = zext i16 %filtMemLen to i32
-  %shr1 = lshr i32 %conv, 1
-  %idxprom = sext i16 %filtMemIndex to i32
-  %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
-  %0 = bitcast i16* %arrayidx to i8*
-  %1 = bitcast i32* %inputLR to i8*
-  %sub = sub i32 14, %shr1
-  %shl = shl i32 1, %sub
+  %0 = bitcast i32* %ptr to i8*
 ; CHECK: = memw(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %2 = call i8* @llvm.hexagon.brev.ldw(i8* %0, i8* %1, i32 %shl)
-  %3 = bitcast i8* %1 to i32*
-  %4 = load i32, i32* %3, align 4, !tbaa !2
-  ret i32 %4
+  %1 = tail call { i32, i8* } @llvm.hexagon.L2.loadri.pbr(i8* %0, i32 %mod)
+  %2 = extractvalue { i32, i8* } %1, 1
+  %3 = bitcast i8* %2 to i32*
+  ret i32* %3
 }
 
-declare i8* @llvm.hexagon.brev.ldw(i8*, i8*, i32) nounwind
-
-define signext i16 @foo2(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
+; CHECK: @call_brev_ldh
+define i16* @call_brev_ldh(i16* %ptr, i16 signext %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %inputLR = alloca i16, align 2
-  %conv = zext i16 %filtMemLen to i32
-  %shr1 = lshr i32 %conv, 1
-  %idxprom = sext i16 %filtMemIndex to i32
-  %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
-  %0 = bitcast i16* %arrayidx to i8*
-  %1 = bitcast i16* %inputLR to i8*
-  %sub = sub i32 15, %shr1
-  %shl = shl i32 1, %sub
-; CHECK: = memh(r{{[0-9]*}}++m0:brev)
-  %2 = call i8* @llvm.hexagon.brev.ldh(i8* %0, i8* %1, i32 %shl)
-  %3 = bitcast i8* %1 to i16*
-  %4 = load i16, i16* %3, align 2, !tbaa !3
-  ret i16 %4
+  %0 = bitcast i16* %ptr to i8*
+; CHECK: = memh(r{{[0-9]*}}++m{{[0-1]}}:brev)
+  %1 = tail call { i32, i8* } @llvm.hexagon.L2.loadrh.pbr(i8* %0, i32 %mod)
+  %2 = extractvalue { i32, i8* } %1, 1
+  %3 = bitcast i8* %2 to i16*
+  ret i16* %3
 }
 
-declare i8* @llvm.hexagon.brev.ldh(i8*, i8*, i32) nounwind
-
-define zeroext i16 @foo3(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
+; CHECK: @call_brev_lduh
+define i16* @call_brev_lduh(i16* %ptr, i16 zeroext %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %inputLR = alloca i16, align 2
-  %conv = zext i16 %filtMemLen to i32
-  %shr1 = lshr i32 %conv, 1
-  %idxprom = sext i16 %filtMemIndex to i32
-  %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
-  %0 = bitcast i16* %arrayidx to i8*
-  %1 = bitcast i16* %inputLR to i8*
-  %sub = sub i32 15, %shr1
-  %shl = shl i32 1, %sub
-; CHECK: = memuh(r{{[0-9]*}}++m0:brev)
-  %2 = call i8* @llvm.hexagon.brev.lduh(i8* %0, i8* %1, i32 %shl)
-  %3 = bitcast i8* %1 to i16*
-  %4 = load i16, i16* %3, align 2, !tbaa !3
-  ret i16 %4
+  %0 = bitcast i16* %ptr to i8*
+; CHECK: = memuh(r{{[0-9]*}}++m{{[0-1]}}:brev)
+  %1 = tail call { i32, i8* } @llvm.hexagon.L2.loadruh.pbr(i8* %0, i32 %mod)
+  %2 = extractvalue { i32, i8* } %1, 1
+  %3 = bitcast i8* %2 to i16*
+  ret i16* %3
 }
 
-declare i8* @llvm.hexagon.brev.lduh(i8*, i8*, i32) nounwind
-
-define zeroext i8 @foo4(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
+; CHECK: @call_brev_ldb
+define i8* @call_brev_ldb(i8* %ptr, i8 signext %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %inputLR = alloca i8, align 1
-  %conv = zext i16 %filtMemLen to i32
-  %shr1 = lshr i32 %conv, 1
-  %idxprom = sext i16 %filtMemIndex to i32
-  %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
-  %0 = bitcast i16* %arrayidx to i8*
-  %sub = sub nsw i32 16, %shr1
-  %shl = shl i32 1, %sub
-; CHECK: = memub(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = call i8* @llvm.hexagon.brev.ldub(i8* %0, i8* %inputLR, i32 %shl)
-  %2 = load i8, i8* %inputLR, align 1, !tbaa !0
-  ret i8 %2
-}
-
-declare i8* @llvm.hexagon.brev.ldub(i8*, i8*, i32) nounwind
-
-define signext i8 @foo5(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
-entry:
-  %inputLR = alloca i8, align 1
-  %conv = zext i16 %filtMemLen to i32
-  %shr1 = lshr i32 %conv, 1
-  %idxprom = sext i16 %filtMemIndex to i32
-  %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
-  %0 = bitcast i16* %arrayidx to i8*
-  %sub = sub nsw i32 16, %shr1
-  %shl = shl i32 1, %sub
 ; CHECK: = memb(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = call i8* @llvm.hexagon.brev.ldb(i8* %0, i8* %inputLR, i32 %shl)
-  %2 = load i8, i8* %inputLR, align 1, !tbaa !0
-  ret i8 %2
+  %0 = tail call { i32, i8* } @llvm.hexagon.L2.loadrb.pbr(i8* %ptr, i32 %mod)
+  %1 = extractvalue { i32, i8* } %0, 1
+  ret i8* %1
 }
 
-declare i8* @llvm.hexagon.brev.ldb(i8*, i8*, i32) nounwind
+; Function Attrs: nounwind readonly
+; CHECK: @call_brev_ldub
+define i8* @call_brev_ldub(i8* %ptr, i8 zeroext %dst, i32 %mod) local_unnamed_addr #0 {
+entry:
+; CHECK: = memub(r{{[0-9]*}}++m{{[0-1]}}:brev)
+  %0 = tail call { i32, i8* } @llvm.hexagon.L2.loadrub.pbr(i8* %ptr, i32 %mod)
+  %1 = extractvalue { i32, i8* } %0, 1
+  ret i8* %1
+}
 
-!0 = !{!"omnipotent char", !1}
-!1 = !{!"Simple C/C++ TBAA"}
-!2 = !{!"int", !0}
-!3 = !{!"short", !0}
+declare { i64, i8* } @llvm.hexagon.L2.loadrd.pbr(i8*, i32) #1
+declare { i32, i8* } @llvm.hexagon.L2.loadri.pbr(i8*, i32) #1
+declare { i32, i8* } @llvm.hexagon.L2.loadrh.pbr(i8*, i32) #1
+declare { i32, i8* } @llvm.hexagon.L2.loadruh.pbr(i8*, i32) #1
+declare { i32, i8* } @llvm.hexagon.L2.loadrb.pbr(i8*, i32) #1
+declare { i32, i8* } @llvm.hexagon.L2.loadrub.pbr(i8*, i32) #1
+
+attributes #0 = { nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="-hvx-double,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind readonly }

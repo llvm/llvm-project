@@ -65,7 +65,7 @@
 	.byte   17                      # DW_FORM_ref1
 	.byte	2                       # DW_IDX_type_unit
 	.byte   17                      # DW_FORM_ref1
-	.byte	2                       # DW_IDX_die_offset
+	.byte	2                       # DW_IDX_type_unit
 	.byte   5                       # DW_FORM_data2
 	.byte	5                       # DW_IDX_type_hash
 	.byte   6                       # DW_FORM_data4
