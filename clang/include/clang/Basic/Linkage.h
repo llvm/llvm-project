@@ -1,4 +1,4 @@
-//===--- Linkage.h - Linkage enumeration and utilities ----------*- C++ -*-===//
+//===- Linkage.h - Linkage enumeration and utilities ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,16 +6,15 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the Linkage enumeration and various utility functions.
-///
+//
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_BASIC_LINKAGE_H
 #define LLVM_CLANG_BASIC_LINKAGE_H
 
-#include <assert.h>
-#include <stdint.h>
 #include <utility>
 
 namespace clang {
@@ -125,6 +124,6 @@ inline Linkage minLinkage(Linkage L1, Linkage L2) {
   return L1 < L2 ? L1 : L2;
 }
 
-} // end namespace clang
+} // namespace clang
 
 #endif // LLVM_CLANG_BASIC_LINKAGE_H

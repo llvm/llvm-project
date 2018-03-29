@@ -87,7 +87,7 @@ public:
   static std::unique_ptr<WorkList> makeUnexploredFirstPriorityQueue();
 };
 
-} // end GR namespace
+} // end ento namespace
 
 } // end clang namespace
 

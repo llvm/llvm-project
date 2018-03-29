@@ -215,6 +215,8 @@ bool TargetTransformInfo::isProfitableToHoist(Instruction *I) const {
   return TTIImpl->isProfitableToHoist(I);
 }
 
+bool TargetTransformInfo::useAA() const { return TTIImpl->useAA(); }
+
 bool TargetTransformInfo::isTypeLegal(Type *Ty) const {
   return TTIImpl->isTypeLegal(Ty);
 }

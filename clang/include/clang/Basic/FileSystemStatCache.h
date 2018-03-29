@@ -1,4 +1,4 @@
-//===--- FileSystemStatCache.h - Caching for 'stat' calls -------*- C++ -*-===//
+//===- FileSystemStatCache.h - Caching for 'stat' calls ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the FileSystemStatCache interface.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_FILESYSTEMSTATCACHE_H
@@ -17,29 +17,38 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
+#include <cstdint>
+#include <ctime>
 #include <memory>
+#include <string>
+#include <utility>
 
 namespace clang {
 
 namespace vfs {
+
 class File;
 class FileSystem;
-}
+
+} // namespace vfs
 
 // FIXME: should probably replace this with vfs::Status
 struct FileData {
   std::string Name;
-  uint64_t Size;
-  time_t ModTime;
+  uint64_t Size = 0;
+  time_t ModTime = 0;
   llvm::sys::fs::UniqueID UniqueID;
-  bool IsDirectory;
-  bool IsNamedPipe;
-  bool InPCH;
-  bool IsVFSMapped; // FIXME: remove this when files support multiple names
-  FileData()
-      : Size(0), ModTime(0), IsDirectory(false), IsNamedPipe(false),
-        InPCH(false), IsVFSMapped(false) {}
+  bool IsDirectory = false;
+  bool IsNamedPipe = false;
+  bool InPCH = false;
+
+  // FIXME: remove this when files support multiple names
+  bool IsVFSMapped = false;
+
+  FileData() = default;
 };
 
 /// \brief Abstract interface for introducing a FileManager cache for 'stat'
@@ -47,15 +56,19 @@ struct FileData {
 /// improve performance.
 class FileSystemStatCache {
   virtual void anchor();
+
 protected:
   std::unique_ptr<FileSystemStatCache> NextStatCache;
 
 public:
-  virtual ~FileSystemStatCache() {}
+  virtual ~FileSystemStatCache() = default;
   
   enum LookupResult {
-    CacheExists,   ///< We know the file exists and its cached stat data.
-    CacheMissing   ///< We know that the file doesn't exist.
+    /// We know the file exists and its cached stat data.
+    CacheExists,
+
+    /// We know that the file doesn't exist.
+    CacheMissing
   };
 
   /// \brief Get the 'stat' information for the specified path, using the cache
@@ -115,8 +128,8 @@ public:
   /// \brief The set of stat() calls that have been seen.
   llvm::StringMap<FileData, llvm::BumpPtrAllocator> StatCalls;
 
-  typedef llvm::StringMap<FileData, llvm::BumpPtrAllocator>::const_iterator
-  iterator;
+  using iterator =
+      llvm::StringMap<FileData, llvm::BumpPtrAllocator>::const_iterator;
 
   iterator begin() const { return StatCalls.begin(); }
   iterator end() const { return StatCalls.end(); }
@@ -126,6 +139,6 @@ public:
                        vfs::FileSystem &FS) override;
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_BASIC_FILESYSTEMSTATCACHE_H

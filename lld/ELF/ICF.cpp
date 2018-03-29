@@ -162,6 +162,9 @@ template <class ELFT> static uint32_t getHash(InputSection *S) {
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
+  if (!S->Live || !(S->Flags & SHF_ALLOC) || (S->Flags & SHF_WRITE))
+    return false;
+
   // Don't merge read only data sections unless
   // --ignore-data-address-equality was passed.
   if (!(S->Flags & SHF_EXECINSTR) && !Config->IgnoreDataAddressEquality)
@@ -173,11 +176,12 @@ static bool isEligible(InputSection *S) {
   if (isa<SyntheticSection>(S))
     return false;
 
-  // .init and .fini contains instructions that must be executed to
-  // initialize and finalize the process. They cannot and should not
-  // be merged.
-  return S->Live && (S->Flags & SHF_ALLOC) && !(S->Flags & SHF_WRITE) &&
-         S->Name != ".init" && S->Name != ".fini";
+  // .init and .fini contains instructions that must be executed to initialize
+  // and finalize the process. They cannot and should not be merged.
+  if (S->Name == ".init" || S->Name == ".fini")
+    return false;
+
+  return true;
 }
 
 // Split an equivalence class into smaller classes.
