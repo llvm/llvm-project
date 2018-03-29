@@ -73,17 +73,29 @@ option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests."
 option(LLDB_TEST_USE_CUSTOM_C_COMPILER "Use the C compiler provided via LLDB_TEST_C_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 option(LLDB_TEST_USE_CUSTOM_CXX_COMPILER "Use the C++ compiler provided via LLDB_TEST_CXX_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 if(LLDB_INCLUDE_TESTS)
-  if (NOT LLDB_TEST_USE_CUSTOM_C_COMPILER AND TARGET clang)
-    set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLDB_DEFAULT_TEST_C_COMPILER "")
-  endif()
+  # BEGIN - Swift Mods
+  # The clang target is sometimes unavailable (rdar://38935299). Instead of
+  # failing the build when the target is missing, make the in-tree compiler the
+  # default compiler to test.
 
-  if (NOT LLDB_TEST_USE_CUSTOM_CXX_COMPILER AND TARGET clang)
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+  set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+  set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+
+  # If the build would have failed due to a missing clang target, log some
+  # diagnostics.
+  message(STATUS "lldb: Found SwiftConfig: ${Swift_FOUND}")
+  message(STATUS "lldb: Found ClangConfig: ${Clang_FOUND}")
+  if (TARGET clang)
+    message(STATUS "lldb: Found the clang target.")
   else()
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "")
+    message(WARNING "lldb: Could not find the clang target!")
+    message(STATUS "-> CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
+    message(STATUS "-> CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+    message(STATUS "-> LLVM_CONFIG: ${LLVM_CONFIG}")
+    message(STATUS "-> LLDB_PATH_TO_CLANG_SOURCE: ${LLDB_PATH_TO_CLANG_SOURCE}")
+    message(STATUS "-> LLVM_BINARY_DIR: ${LLVM_BINARY_DIR}")
   endif()
+  # END - Swift Mods
 
   set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
   set(LLDB_TEST_CXX_COMPILER "${LLDB_DEFAULT_TEST_CXX_COMPILER}" CACHE PATH "C++ Compiler to use for building LLDB test inferiors")
