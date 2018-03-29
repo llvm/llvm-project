@@ -160,6 +160,7 @@ class DFGImpl : public PPCallbacks {
   bool AddMissingHeaderDeps;
   bool SeenMissingHeader;
   bool IncludeModuleFiles;
+  bool SkipUnusedModuleMaps;
   DependencyOutputFormat OutputFormat;
   unsigned InputFileIndex;
 
@@ -176,6 +177,7 @@ public:
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps),
       SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
+      SkipUnusedModuleMaps(Opts.SkipUnusedModuleMaps),
       OutputFormat(Opts.OutputFormat),
       InputFileIndex(0) {
     for (const auto &ExtraDep : Opts.ExtraDeps) {
@@ -209,6 +211,7 @@ public:
   bool AddFilename(StringRef Filename);
   bool includeSystemHeaders() const { return IncludeSystemHeaders; }
   bool includeModuleFiles() const { return IncludeModuleFiles; }
+  bool skipUnusedModuleMaps() const { return SkipUnusedModuleMaps; }
 };
 
 class DFGMMCallback : public ModuleMapCallbacks {
@@ -217,7 +220,15 @@ public:
   DFGMMCallback(DFGImpl &Parent) : Parent(Parent) {}
   void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
                          bool IsSystem) override {
+    if (Parent.skipUnusedModuleMaps())
+      return;
     if (!IsSystem || Parent.includeSystemHeaders())
+      Parent.AddFilename(Entry.getName());
+  }
+  void moduleMapFoundForModule(const FileEntry &Entry, const Module *M,
+                               bool IsSystem) override {
+    if (Parent.skipUnusedModuleMaps() &&
+        (!IsSystem || Parent.includeSystemHeaders()))
       Parent.AddFilename(Entry.getName());
   }
 };

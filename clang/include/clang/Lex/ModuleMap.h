@@ -58,6 +58,14 @@ public:
   virtual void moduleMapFileRead(SourceLocation FileStart,
                                  const FileEntry &File, bool IsSystem) {}
 
+  /// Called when a module map file matches a module lookup
+  ///
+  /// \param File The file itself.
+  /// \param M The module found that matches this module map.
+  /// \param IsSystem Whether this is a module map from a system include path.
+  virtual void moduleMapFoundForModule(const FileEntry &File, const Module *M,
+                                       bool IsSystem) {}
+
   /// Called when a header is added during module map parsing.
   ///
   /// \param Filename The header file itself.
