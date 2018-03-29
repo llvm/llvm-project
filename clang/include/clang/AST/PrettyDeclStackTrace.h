@@ -13,31 +13,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SEMA_PRETTYDECLSTACKTRACE_H
-#define LLVM_CLANG_SEMA_PRETTYDECLSTACKTRACE_H
+#ifndef LLVM_CLANG_AST_PRETTYDECLSTACKTRACE_H
+#define LLVM_CLANG_AST_PRETTYDECLSTACKTRACE_H
 
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
 namespace clang {
 
+class ASTContext;
 class Decl;
-class Sema;
 class SourceManager;
 
 /// PrettyDeclStackTraceEntry - If a crash occurs in the parser while
 /// parsing something related to a declaration, include that
 /// declaration in the stack trace.
 class PrettyDeclStackTraceEntry : public llvm::PrettyStackTraceEntry {
-  Sema &S;
+  ASTContext &Context;
   Decl *TheDecl;
   SourceLocation Loc;
   const char *Message;
 
 public:
-  PrettyDeclStackTraceEntry(Sema &S, Decl *D, SourceLocation Loc,
+  PrettyDeclStackTraceEntry(ASTContext &Ctx, Decl *D, SourceLocation Loc,
                             const char *Msg)
-    : S(S), TheDecl(D), Loc(Loc), Message(Msg) {}
+    : Context(Ctx), TheDecl(D), Loc(Loc), Message(Msg) {}
 
   void print(raw_ostream &OS) const override;
 };
