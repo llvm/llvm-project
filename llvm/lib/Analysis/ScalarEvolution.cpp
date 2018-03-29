@@ -8720,13 +8720,13 @@ bool ScalarEvolution::isKnownViaInduction(ICmpInst::Predicate Pred,
   // if LHS contains unknown non-invariant SCEV then bail out.
   if (SplitLHS.first == getCouldNotCompute())
     return false;
-  assert (SplitLHS.first != getCouldNotCompute() && "Unexpected CNC");
+  assert (SplitLHS.second != getCouldNotCompute() && "Unexpected CNC");
   // Get init and post increment value for RHS.
   auto SplitRHS = SplitIntoInitAndPostInc(MDL, RHS);
   // if RHS contains unknown non-invariant SCEV then bail out.
   if (SplitRHS.first == getCouldNotCompute())
     return false;
-  assert (SplitRHS.first != getCouldNotCompute() && "Unexpected CNC");
+  assert (SplitRHS.second != getCouldNotCompute() && "Unexpected CNC");
   // It is possible that init SCEV contains an invariant load but it does
   // not dominate MDL and is not available at MDL loop entry, so we should
   // check it here.
