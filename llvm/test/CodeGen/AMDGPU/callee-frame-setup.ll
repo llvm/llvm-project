@@ -42,7 +42,7 @@ define void @callee_with_stack() #0 {
 ; GCN-DAG: v_writelane_b32 v32, s33,
 ; GCN-DAG: v_writelane_b32 v32, s34,
 ; GCN-DAG: v_writelane_b32 v32, s35,
-; GCN-DAG: s_add_u32 s32, s32, 0x300{{$}}
+; GCN-DAG: s_add_u32 s32, s32, 0x400{{$}}
 ; GCN-DAG: v_mov_b32_e32 v0, 0{{$}}
 ; GCN-DAG: buffer_store_dword v0, off, s[0:3], s5 offset:4{{$}}
 ; GCN-DAG: s_mov_b32 s33, s5
@@ -82,7 +82,7 @@ define void @callee_with_stack_and_call() #0 {
 ; GCN-DAG: v_readlane_b32 s34, v32, 1
 ; GCN-DAG: v_readlane_b32 s33, v32, 0
 ; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4
-; GCN: s_sub_u32 s32, s32, 0x200
+; GCN: s_sub_u32 s32, s32, 0x400
 
 ; GCN: s_setpc_b64
 define void @callee_no_stack_with_call() #0 {

@@ -2341,7 +2341,7 @@ let hasSideEffects = 0 in {
   let mayLoad = 1 in
   def rm : I<0xF3, MemMRM, (outs RC:$dst), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst|$dst, $src}"),
-             [], IIC_UNARY_MEM>, T8PS, VEX_4V, Sched<[WriteALULd, ReadAfterLd]>;
+             [], IIC_UNARY_MEM>, T8PS, VEX_4V, Sched<[WriteALULd]>;
 }
 }
 
@@ -2378,30 +2378,35 @@ let Predicates = [HasBMI] in {
 
 multiclass bmi_bextr_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
                           X86MemOperand x86memop, Intrinsic Int,
-                          PatFrag ld_frag> {
+                          PatFrag ld_frag, X86FoldableSchedWrite Sched> {
   def rr : I<opc, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, (Int RC:$src1, RC:$src2)), (implicit EFLAGS)], IIC_BIN_NONMEM>,
-             T8PS, VEX, Sched<[WriteALU]>;
+             T8PS, VEX, Sched<[Sched]>;
   def rm : I<opc, MRMSrcMem4VOp3, (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, (Int (ld_frag addr:$src1), RC:$src2)),
               (implicit EFLAGS)], IIC_BIN_MEM>, T8PS, VEX,
-             Sched<[WriteALULd, ReadAfterLd]>;
+             Sched<[Sched.Folded,
+                    // x86memop:$src1
+                    ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                    ReadDefault,
+                    // RC:$src2
+                    ReadAfterLd]>;
 }
 
 let Predicates = [HasBMI], Defs = [EFLAGS] in {
   defm BEXTR32 : bmi_bextr_bzhi<0xF7, "bextr{l}", GR32, i32mem,
-                                int_x86_bmi_bextr_32, loadi32>;
+                                int_x86_bmi_bextr_32, loadi32, WriteBEXTR>;
   defm BEXTR64 : bmi_bextr_bzhi<0xF7, "bextr{q}", GR64, i64mem,
-                                int_x86_bmi_bextr_64, loadi64>, VEX_W;
+                                int_x86_bmi_bextr_64, loadi64, WriteBEXTR>, VEX_W;
 }
 
 let Predicates = [HasBMI2], Defs = [EFLAGS] in {
   defm BZHI32 : bmi_bextr_bzhi<0xF5, "bzhi{l}", GR32, i32mem,
-                               int_x86_bmi_bzhi_32, loadi32>;
+                               int_x86_bmi_bzhi_32, loadi32, WriteBZHI>;
   defm BZHI64 : bmi_bextr_bzhi<0xF5, "bzhi{q}", GR64, i64mem,
-                               int_x86_bmi_bzhi_64, loadi64>, VEX_W;
+                               int_x86_bmi_bzhi_64, loadi64, WriteBZHI>, VEX_W;
 }
 
 def CountTrailingOnes : SDNodeXForm<imm, [{
@@ -2535,7 +2540,7 @@ multiclass tbm_ternary_imm_intr<bits<8> opc, RegisterClass RC, string OpcodeStr,
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
                 [(set RC:$dst, (Int (ld_frag addr:$src1), immoperator:$cntl))],
-           IIC_BIN_MEM>, XOP, XOPA, Sched<[WriteALULd, ReadAfterLd]>;
+           IIC_BIN_MEM>, XOP, XOPA, Sched<[WriteALULd]>;
 }
 
 defm BEXTRI32 : tbm_ternary_imm_intr<0x10, GR32, "bextr{l}", i32mem, loadi32,
@@ -2555,7 +2560,7 @@ let hasSideEffects = 0 in {
   let mayLoad = 1 in
   def rm : I<opc,  FormMem, (outs RC:$dst), (ins x86memop:$src),
              !strconcat(OpcodeStr,"\t{$src, $dst|$dst, $src}"),
-             [], IIC_BIN_MEM>, XOP_4V, XOP9, Sched<[WriteALULd, ReadAfterLd]>;
+             [], IIC_BIN_MEM>, XOP_4V, XOP9, Sched<[WriteALULd]>;
 }
 }
 

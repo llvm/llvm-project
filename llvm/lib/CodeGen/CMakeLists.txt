@@ -155,6 +155,7 @@ add_llvm_library(LLVMCodeGen
   TargetSubtargetInfo.cpp
   TwoAddressInstructionPass.cpp
   UnreachableBlockElim.cpp
+  ValueTypes.cpp
   VirtRegMap.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp

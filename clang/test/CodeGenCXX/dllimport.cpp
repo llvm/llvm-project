@@ -203,6 +203,8 @@ USEVAR(VarTmpl<ExplicitSpec_Imported>)
 // Functions
 //===----------------------------------------------------------------------===//
 
+// GNU-DAG: declare dso_local void @_ZdlPv(i8*)
+
 // Import function declaration.
 // MSC-DAG: declare dllimport void @"?decl@@YAXXZ"()
 // GNU-DAG: declare dllimport void @_Z4declv()

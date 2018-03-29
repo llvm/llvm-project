@@ -1348,16 +1348,13 @@ float16x8_t test_vbslq_f16(uint16x8_t a, float16x8_t b, float16x8_t c) {
 // CHECK-LABEL: test_vzip_f16
 // CHECK:   [[RETVAL:%.*]]  = alloca %struct.float16x4x2_t, align 8
 // CHECK:   [[__RET_I:%.*]] = alloca %struct.float16x4x2_t, align 8
-// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
+// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP1:%.*]]  = bitcast i8* [[TMP0]] to <4 x half>*
 // CHECK:   [[VZIP0_I:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // CHECK:   store <4 x half> [[VZIP0_I]], <4 x half>* [[TMP1]]
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <4 x half>, <4 x half>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
 // CHECK:   store <4 x half> [[VZIP1_I]], <4 x half>* [[TMP2]]
-// CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
-// CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false)
 float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
   return vzip_f16(a, b);
 }
@@ -1365,16 +1362,13 @@ float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
 // CHECK-LABEL: test_vzipq_f16
 // CHECK:   [[RETVAL:%.*]]  = alloca %struct.float16x8x2_t, align 16
 // CHECK:   [[__RET_I:%.*]] = alloca %struct.float16x8x2_t, align 16
-// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
+// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP1:%.*]]  = bitcast i8* [[TMP0]] to <8 x half>*
 // CHECK:   [[VZIP0_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // CHECK:   store <8 x half> [[VZIP0_I]], <8 x half>* [[TMP1]]
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x half>, <8 x half>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 // CHECK:   store <8 x half> [[VZIP1_I]], <8 x half>* [[TMP2]]
-// CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
-// CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false)
 float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
   return vzipq_f16(a, b);
 }
@@ -1382,16 +1376,13 @@ float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-LABEL: test_vuzp_f16
 // CHECK:   [[RETVAL:%.*]]  = alloca %struct.float16x4x2_t, align 8
 // CHECK:   [[__RET_I:%.*]] = alloca %struct.float16x4x2_t, align 8
-// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
+// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP1:%.*]]  = bitcast i8* [[TMP0]] to <4 x half>*
 // CHECK:   [[VZIP0_I:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // CHECK:   store <4 x half> [[VZIP0_I]], <4 x half>* [[TMP1]]
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <4 x half>, <4 x half>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 // CHECK:   store <4 x half> [[VZIP1_I]], <4 x half>* [[TMP2]]
-// CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
-// CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false)
 float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
   return vuzp_f16(a, b);
 }
@@ -1399,16 +1390,13 @@ float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
 // CHECK-LABEL: test_vuzpq_f16
 // CHECK:   [[RETVAL:%.*]]  = alloca %struct.float16x8x2_t, align 16
 // CHECK:   [[__RET_I:%.*]] = alloca %struct.float16x8x2_t, align 16
-// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
+// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP1:%.*]]  = bitcast i8* [[TMP0]] to <8 x half>*
 // CHECK:   [[VZIP0_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // CHECK:   store <8 x half> [[VZIP0_I]], <8 x half>* [[TMP1]]
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x half>, <8 x half>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 // CHECK:   store <8 x half> [[VZIP1_I]], <8 x half>* [[TMP2]]
-// CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
-// CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false)
 float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
   return vuzpq_f16(a, b);
 }
@@ -1416,16 +1404,13 @@ float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-LABEL: test_vtrn_f16
 // CHECK:   [[RETVAL:%.*]]  = alloca %struct.float16x4x2_t, align 8
 // CHECK:   [[__RET_I:%.*]] = alloca %struct.float16x4x2_t, align 8
-// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
+// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP1:%.*]]  = bitcast i8* [[TMP0]] to <4 x half>*
 // CHECK:   [[VZIP0_I:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 // CHECK:   store <4 x half> [[VZIP0_I]], <4 x half>* [[TMP1]]
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <4 x half>, <4 x half>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 // CHECK:   store <4 x half> [[VZIP1_I]], <4 x half>* [[TMP2]]
-// CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
-// CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false)
 float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
   return vtrn_f16(a, b);
 }
@@ -1433,16 +1418,13 @@ float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
 // CHECK-LABEL: test_vtrnq_f16
 // CHECK:   [[RETVAL:%.*]]  = alloca %struct.float16x8x2_t, align 16
 // CHECK:   [[__RET_I:%.*]] = alloca %struct.float16x8x2_t, align 16
-// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
+// CHECK:   [[TMP0:%.*]]  = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP1:%.*]]  = bitcast i8* [[TMP0]] to <8 x half>*
 // CHECK:   [[VZIP0_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 // CHECK:   store <8 x half> [[VZIP0_I]], <8 x half>* [[TMP1]] 
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x half>, <8 x half>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32>  <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 // CHECK:   store <8 x half> [[VZIP1_I]], <8 x half>* [[TMP2]]
-// CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
-// CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false)
 float16x8x2_t test_vtrnq_f16(float16x8_t a, float16x8_t b) {
   return vtrnq_f16(a, b);
 }

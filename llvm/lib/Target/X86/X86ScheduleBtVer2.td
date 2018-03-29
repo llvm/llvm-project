@@ -141,6 +141,10 @@ defm : JWriteResIntPair<WritePOPCNT,  [JALU01], 1>;
 defm : JWriteResIntPair<WriteLZCNT,   [JALU01], 1>;
 defm : JWriteResIntPair<WriteTZCNT,   [JALU01], 2, [2]>;
 
+// BMI1 BEXTR, BMI2 BZHI
+defm : JWriteResIntPair<WriteBEXTR, [JALU01], 1>;
+defm : JWriteResIntPair<WriteBZHI, [JALU01], 1>; // NOTE: Doesn't exist on Jaguar.
+
 def JWriteIMul64 : SchedWriteRes<[JALU1, JMul]> {
   let Latency = 6;
   let ResourceCycles = [1, 4];

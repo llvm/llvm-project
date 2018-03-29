@@ -299,7 +299,7 @@ class DefaultArgStorage {
 
   static ParmDecl *getParmOwningDefaultArg(ParmDecl *Parm) {
     const DefaultArgStorage &Storage = Parm->getDefaultArgStorage();
-    if (auto *Prev = Storage.ValueOrInherited.template dyn_cast<ParmDecl*>())
+    if (auto *Prev = Storage.ValueOrInherited.template dyn_cast<ParmDecl *>())
       Parm = Prev;
     assert(!Parm->getDefaultArgStorage()
                 .ValueOrInherited.template is<ParmDecl *>() &&
@@ -321,9 +321,9 @@ public:
   /// default argument is visible.
   ArgType get() const {
     const DefaultArgStorage *Storage = this;
-    if (auto *Prev = ValueOrInherited.template dyn_cast<ParmDecl*>())
+    if (const auto *Prev = ValueOrInherited.template dyn_cast<ParmDecl *>())
       Storage = &Prev->getDefaultArgStorage();
-    if (auto *C = Storage->ValueOrInherited.template dyn_cast<Chain*>())
+    if (const auto *C = Storage->ValueOrInherited.template dyn_cast<Chain *>())
       return C->Value;
     return Storage->ValueOrInherited.template get<ArgType>();
   }
@@ -331,9 +331,9 @@ public:
   /// Get the parameter from which we inherit the default argument, if any.
   /// This is the parameter on which the default argument was actually written.
   const ParmDecl *getInheritedFrom() const {
-    if (auto *D = ValueOrInherited.template dyn_cast<ParmDecl*>())
+    if (const auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>())
       return D;
-    if (auto *C = ValueOrInherited.template dyn_cast<Chain*>())
+    if (const auto *C = ValueOrInherited.template dyn_cast<Chain *>())
       return C->PrevDeclWithDefaultArg;
     return nullptr;
   }
@@ -443,7 +443,7 @@ public:
   }
 
   Expr *getAssociatedConstraints() const {
-    const TemplateDecl *const C = cast<TemplateDecl>(getCanonicalDecl());
+    const auto *const C = cast<TemplateDecl>(getCanonicalDecl());
     const auto *const CTDI =
         C->TemplateParams.dyn_cast<ConstrainedTemplateDeclInfo *>();
     return CTDI ? CTDI->getAssociatedConstraints() : nullptr;
@@ -466,6 +466,7 @@ public:
 
 protected:
   NamedDecl *TemplatedDecl;
+
   /// \brief The template parameter list and optional requires-clause
   /// associated with this declaration; alternatively, a
   /// \c ConstrainedTemplateDeclInfo if the associated constraints of the
@@ -1621,7 +1622,7 @@ public:
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY {
-    return SourceRange();
+    return {};
   }
 
   BuiltinTemplateKind getBuiltinTemplateKind() const { return BTK; }
@@ -1789,8 +1790,8 @@ public:
   llvm::PointerUnion<ClassTemplateDecl *,
                      ClassTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
-    if (SpecializedPartialSpecialization *PartialSpec
-          = SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
+    if (const auto *PartialSpec =
+            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return PartialSpec->PartialSpecialization;
 
     return SpecializedTemplate.get<ClassTemplateDecl*>();
@@ -1808,8 +1809,8 @@ public:
   /// deduced template arguments for the class template partial specialization
   /// itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
-    if (SpecializedPartialSpecialization *PartialSpec
-        = SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
+    if (const auto *PartialSpec =
+            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
@@ -1822,8 +1823,7 @@ public:
                           const TemplateArgumentList *TemplateArgs) {
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization*>() &&
            "Already set to a class template partial specialization!");
-    SpecializedPartialSpecialization *PS
-      = new (getASTContext()) SpecializedPartialSpecialization();
+    auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
     PS->PartialSpecialization = PartialSpec;
     PS->TemplateArgs = TemplateArgs;
     SpecializedTemplate = PS;
@@ -1984,7 +1984,7 @@ public:
   /// \c Outer<float>::Inner<U*>, this function would return
   /// \c Outer<T>::Inner<U*>.
   ClassTemplatePartialSpecializationDecl *getInstantiatedFromMember() const {
-    const ClassTemplatePartialSpecializationDecl *First =
+    const auto *First =
         cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
     return First->InstantiatedFromMember.getPointer();
   }
@@ -1995,8 +1995,7 @@ public:
 
   void setInstantiatedFromMember(
                           ClassTemplatePartialSpecializationDecl *PartialSpec) {
-    ClassTemplatePartialSpecializationDecl *First =
-        cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
+    auto *First = cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
     First->InstantiatedFromMember.setPointer(PartialSpec);
   }
 
@@ -2017,15 +2016,14 @@ public:
   /// struct X<int>::Inner<T*> { /* ... */ };
   /// \endcode
   bool isMemberSpecialization() {
-    ClassTemplatePartialSpecializationDecl *First =
+    const auto *First =
         cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
     return First->InstantiatedFromMember.getInt();
   }
 
   /// \brief Note that this member template is a specialization.
   void setMemberSpecialization() {
-    ClassTemplatePartialSpecializationDecl *First =
-        cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
+    auto *First = cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
     assert(First->InstantiatedFromMember.getPointer() &&
            "Only member templates can be member template specializations");
     return First->InstantiatedFromMember.setInt(true);
@@ -2627,7 +2625,7 @@ public:
   /// specialization which was specialized by this.
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
-    if (SpecializedPartialSpecialization *PartialSpec =
+    if (const auto *PartialSpec =
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return PartialSpec->PartialSpecialization;
 
@@ -2646,7 +2644,7 @@ public:
   /// return deduced template arguments for the variable template partial
   /// specialization itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
-    if (SpecializedPartialSpecialization *PartialSpec =
+    if (const auto *PartialSpec =
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return *PartialSpec->TemplateArgs;
 
@@ -2660,8 +2658,7 @@ public:
                           const TemplateArgumentList *TemplateArgs) {
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization *>() &&
            "Already set to a variable template partial specialization!");
-    SpecializedPartialSpecialization *PS =
-        new (getASTContext()) SpecializedPartialSpecialization();
+    auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
     PS->PartialSpecialization = PartialSpec;
     PS->TemplateArgs = TemplateArgs;
     SpecializedTemplate = PS;
@@ -2815,15 +2812,14 @@ public:
   /// \c Outer<float>::Inner<U*>, this function would return
   /// \c Outer<T>::Inner<U*>.
   VarTemplatePartialSpecializationDecl *getInstantiatedFromMember() const {
-    const VarTemplatePartialSpecializationDecl *First =
+    const auto *First =
         cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
     return First->InstantiatedFromMember.getPointer();
   }
 
   void
   setInstantiatedFromMember(VarTemplatePartialSpecializationDecl *PartialSpec) {
-    VarTemplatePartialSpecializationDecl *First =
-        cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
+    auto *First = cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
     First->InstantiatedFromMember.setPointer(PartialSpec);
   }
 
@@ -2844,15 +2840,14 @@ public:
   /// U* X<int>::Inner<T*> = (T*)(0) + 1;
   /// \endcode
   bool isMemberSpecialization() {
-    VarTemplatePartialSpecializationDecl *First =
+    const auto *First =
         cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
     return First->InstantiatedFromMember.getInt();
   }
 
   /// \brief Note that this member template is a specialization.
   void setMemberSpecialization() {
-    VarTemplatePartialSpecializationDecl *First =
-        cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
+    auto *First = cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
     assert(First->InstantiatedFromMember.getPointer() &&
            "Only member templates can be member template specializations");
     return First->InstantiatedFromMember.setInt(true);
@@ -3021,11 +3016,11 @@ public:
 };
 
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
-  if (auto *PD = P.dyn_cast<TemplateTypeParmDecl*>())
+  if (auto *PD = P.dyn_cast<TemplateTypeParmDecl *>())
     return PD;
-  if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl*>())
+  if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl *>())
     return PD;
-  return P.get<TemplateTemplateParmDecl*>();
+  return P.get<TemplateTemplateParmDecl *>();
 }
 
 inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {

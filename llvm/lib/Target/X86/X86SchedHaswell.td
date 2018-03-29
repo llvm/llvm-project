@@ -128,6 +128,10 @@ defm : HWWriteResPair<WriteLZCNT,   [HWPort1], 3>;
 defm : HWWriteResPair<WriteTZCNT,   [HWPort1], 3>;
 defm : HWWriteResPair<WritePOPCNT,  [HWPort1], 3>;
 
+// BMI1 BEXTR, BMI2 BZHI
+defm : HWWriteResPair<WriteBEXTR, [HWPort06,HWPort15], 2, [1,1], 2>;
+defm : HWWriteResPair<WriteBZHI, [HWPort15], 1>;
+
 // This is quite rough, latency depends on the dividend.
 defm : HWWriteResPair<WriteIDiv,  [HWPort0, HWDivider], 25, [1,10], 1, 4>;
 // Scalar and vector floating point.
@@ -844,7 +848,6 @@ def: InstRW<[HWWriteResGroup8], (instregex "ANDN(32|64)rr",
                                            "BLSI(32|64)rr",
                                            "BLSMSK(32|64)rr",
                                            "BLSR(32|64)rr",
-                                           "BZHI(32|64)rr",
                                            "LEA(16|32|64)(_32)?r",
                                            "MMX_PABSBrr",
                                            "MMX_PABSDrr",
@@ -1230,7 +1233,6 @@ def: InstRW<[HWWriteResGroup16], (instregex "ANDN(32|64)rm",
                                             "BLSI(32|64)rm",
                                             "BLSMSK(32|64)rm",
                                             "BLSR(32|64)rm",
-                                            "BZHI(32|64)rm",
                                             "MMX_PABSBrm",
                                             "MMX_PABSDrm",
                                             "MMX_PABSWrm",
@@ -1606,8 +1608,7 @@ def HWWriteResGroup34 : SchedWriteRes<[HWPort06,HWPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup34], (instregex "BEXTR(32|64)rr",
-                                            "BSWAP(16|32|64)r")>;
+def: InstRW<[HWWriteResGroup34], (instregex "BSWAP(16|32|64)r")>;
 
 def HWWriteResGroup35 : SchedWriteRes<[HWPort06,HWPort0156]> {
   let Latency = 2;
@@ -1710,13 +1711,6 @@ def HWWriteResGroup41 : SchedWriteRes<[HWPort6,HWPort23,HWPort0156]> {
 def: InstRW<[HWWriteResGroup41], (instregex "LRETQ",
                                             "RETL",
                                             "RETQ")>;
-
-def HWWriteResGroup42 : SchedWriteRes<[HWPort23,HWPort06,HWPort15]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[HWWriteResGroup42], (instregex "BEXTR(32|64)rm")>;
 
 def HWWriteResGroup43 : SchedWriteRes<[HWPort23,HWPort06,HWPort0156]> {
   let Latency = 7;

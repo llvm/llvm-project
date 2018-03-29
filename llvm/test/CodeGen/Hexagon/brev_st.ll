@@ -27,11 +27,11 @@ entry:
   %sub = sub i32 13, %shr2
   %shl = shl i32 1, %sub
 ; CHECK: memd(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = tail call i8* @llvm.hexagon.brev.std(i8* %0, i64 undef, i32 %shl)
+  %1 = tail call i8* @llvm.hexagon.S2.storerd.pbr(i8* %0, i64 undef, i32 %shl)
   ret i64 0
 }
 
-declare i8* @llvm.hexagon.brev.std(i8*, i64, i32) nounwind
+declare i8* @llvm.hexagon.S2.storerd.pbr(i8*, i64, i32) nounwind
 
 define i32 @foo1(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
 entry:
@@ -43,11 +43,11 @@ entry:
   %sub = sub i32 14, %shr1
   %shl = shl i32 1, %sub
 ; CHECK: memw(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = tail call i8* @llvm.hexagon.brev.stw(i8* %0, i32 undef, i32 %shl)
+  %1 = tail call i8* @llvm.hexagon.S2.storeri.pbr(i8* %0, i32 undef, i32 %shl)
   ret i32 0
 }
 
-declare i8* @llvm.hexagon.brev.stw(i8*, i32, i32) nounwind
+declare i8* @llvm.hexagon.S2.storeri.pbr(i8*, i32, i32) nounwind
 
 define signext i16 @foo2(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
 entry:
@@ -59,11 +59,11 @@ entry:
   %sub = sub i32 15, %shr2
   %shl = shl i32 1, %sub
 ; CHECK: memh(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = tail call i8* @llvm.hexagon.brev.sth(i8* %0, i32 0, i32 %shl)
+  %1 = tail call i8* @llvm.hexagon.S2.storerh.pbr(i8* %0, i32 0, i32 %shl)
   ret i16 0
 }
 
-declare i8* @llvm.hexagon.brev.sth(i8*, i32, i32) nounwind
+declare i8* @llvm.hexagon.S2.storerh.pbr(i8*, i32, i32) nounwind
 
 define signext i16 @foo3(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
 entry:
@@ -75,11 +75,11 @@ entry:
   %sub = sub i32 15, %shr2
   %shl = shl i32 1, %sub
 ; CHECK: memh(r{{[0-9]*}}++m{{[0-1]}}:brev) = r{{[0-9]*}}.h
-  %1 = tail call i8* @llvm.hexagon.brev.sthhi(i8* %0, i32 0, i32 %shl)
+  %1 = tail call i8* @llvm.hexagon.S2.storerf.pbr(i8* %0, i32 0, i32 %shl)
   ret i16 0
 }
 
-declare i8* @llvm.hexagon.brev.sthhi(i8*, i32, i32) nounwind
+declare i8* @llvm.hexagon.S2.storerf.pbr(i8*, i32, i32) nounwind
 
 define zeroext i8 @foo5(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
 entry:
@@ -91,11 +91,11 @@ entry:
   %sub = sub nsw i32 16, %shr2
   ; CHECK: memb(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %shl = shl i32 1, %sub
-  %1 = tail call i8* @llvm.hexagon.brev.stb(i8* %0, i32 0, i32 %shl)
+  %1 = tail call i8* @llvm.hexagon.S2.storerb.pbr(i8* %0, i32 0, i32 %shl)
   ret i8 0
 }
 
-declare i8* @llvm.hexagon.brev.stb(i8*, i32, i32) nounwind
+declare i8* @llvm.hexagon.S2.storerb.pbr(i8*, i32, i32) nounwind
 
 !0 = !{!"omnipotent char", !1}
 !1 = !{!"Simple C/C++ TBAA"}

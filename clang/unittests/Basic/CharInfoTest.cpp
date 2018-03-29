@@ -432,6 +432,7 @@ TEST(CharInfoTest, isValidIdentifier) {
   EXPECT_TRUE(isValidIdentifier("z"));
   EXPECT_TRUE(isValidIdentifier("A"));
   EXPECT_TRUE(isValidIdentifier("Z"));
+  EXPECT_TRUE(isValidIdentifier("$", /*AllowDollar=*/true));
 
   // 2 characters, '_' suffix
   EXPECT_FALSE(isValidIdentifier("._"));
@@ -448,6 +449,7 @@ TEST(CharInfoTest, isValidIdentifier) {
   EXPECT_TRUE(isValidIdentifier("z_"));
   EXPECT_TRUE(isValidIdentifier("A_"));
   EXPECT_TRUE(isValidIdentifier("Z_"));
+  EXPECT_TRUE(isValidIdentifier("$_", /*AllowDollar=*/true));
 
   // 2 characters, '_' prefix
   EXPECT_FALSE(isValidIdentifier("_."));
@@ -464,6 +466,7 @@ TEST(CharInfoTest, isValidIdentifier) {
   EXPECT_TRUE(isValidIdentifier("_z"));
   EXPECT_TRUE(isValidIdentifier("_A"));
   EXPECT_TRUE(isValidIdentifier("_Z"));
+  EXPECT_TRUE(isValidIdentifier("_$", /*AllowDollar=*/true));
 
   // 3 characters, '__' prefix
   EXPECT_FALSE(isValidIdentifier("__."));
@@ -480,6 +483,7 @@ TEST(CharInfoTest, isValidIdentifier) {
   EXPECT_TRUE(isValidIdentifier("__z"));
   EXPECT_TRUE(isValidIdentifier("__A"));
   EXPECT_TRUE(isValidIdentifier("__Z"));
+  EXPECT_TRUE(isValidIdentifier("__$", /*AllowDollar=*/true));
 
   // 3 characters, '_' prefix and suffix
   EXPECT_FALSE(isValidIdentifier("_._"));
@@ -496,4 +500,5 @@ TEST(CharInfoTest, isValidIdentifier) {
   EXPECT_TRUE(isValidIdentifier("_z_"));
   EXPECT_TRUE(isValidIdentifier("_A_"));
   EXPECT_TRUE(isValidIdentifier("_Z_"));
+  EXPECT_TRUE(isValidIdentifier("_$_", /*AllowDollar=*/true));
 }

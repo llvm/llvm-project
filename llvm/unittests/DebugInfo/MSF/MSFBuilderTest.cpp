@@ -384,10 +384,9 @@ TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocks) {
   EXPECT_EQ(StreamSize, L.StreamSizes[*SN]);
 
   for (uint32_t I = 0; I <= 3; ++I) {
-    // Pages from the regular FPM are allocated, while pages from the alt fpm
-    // are free.
+    // Pages from both FPMs are always allocated.
+    EXPECT_FALSE(L.FreePageMap.test(2 + I * 4096));
     EXPECT_FALSE(L.FreePageMap.test(1 + I * 4096));
-    EXPECT_TRUE(L.FreePageMap.test(2 + I * 4096));
   }
 
   for (uint32_t I = 1; I <= 3; ++I) {

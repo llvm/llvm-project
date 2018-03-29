@@ -2628,6 +2628,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_CUDAKernel:
     // FIXME: we should be mangling all of the above.
     return "";
 

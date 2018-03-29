@@ -189,6 +189,10 @@ extern llvm::cl::list<ModuleSubsection> DumpModuleSubsections;
 extern llvm::cl::opt<bool> DumpModuleSyms;
 } // namespace pdb2yaml
 
+namespace explain {
+extern llvm::cl::list<std::string> InputFilename;
+extern llvm::cl::opt<uint64_t> Offset;
+} // namespace explain
 }
 
 #endif

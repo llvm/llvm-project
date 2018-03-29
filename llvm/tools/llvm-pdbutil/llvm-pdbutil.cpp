@@ -16,6 +16,7 @@
 #include "Analyze.h"
 #include "BytesOutputStyle.h"
 #include "DumpOutputStyle.h"
+#include "ExplainOutputStyle.h"
 #include "InputFile.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
@@ -110,6 +111,9 @@ cl::SubCommand
 
 cl::SubCommand MergeSubcommand("merge",
                                "Merge multiple PDBs into a single PDB");
+
+cl::SubCommand ExplainSubcommand("explain",
+                                 "Explain the meaning of a file offset");
 
 cl::OptionCategory TypeCategory("Symbol Type Options");
 cl::OptionCategory FilterCategory("Filtering and Sorting Options");
@@ -605,6 +609,16 @@ cl::opt<std::string>
     PdbOutputFile("pdb", cl::desc("the name of the PDB file to write"),
                   cl::sub(MergeSubcommand));
 }
+
+namespace explain {
+cl::list<std::string> InputFilename(cl::Positional,
+                                    cl::desc("<input PDB file>"), cl::Required,
+                                    cl::sub(ExplainSubcommand));
+
+cl::opt<uint64_t> Offset("offset", cl::desc("The file offset to explain"),
+                         cl::sub(ExplainSubcommand), cl::Required,
+                         cl::OneOrMore);
+} // namespace explain
 }
 
 static ExitOnError ExitOnErr;
@@ -1074,6 +1088,14 @@ static void mergePdbs() {
   ExitOnErr(Builder.commit(OutFile));
 }
 
+static void explain() {
+  std::unique_ptr<IPDBSession> Session;
+  PDBFile &File = loadPDB(opts::explain::InputFilename.front(), Session);
+  auto O = llvm::make_unique<ExplainOutputStyle>(File, opts::explain::Offset);
+
+  ExitOnErr(O->dump());
+}
+
 static bool parseRange(StringRef Str,
                        Optional<opts::bytes::NumberRange> &Parsed) {
   if (Str.empty())
@@ -1248,6 +1270,8 @@ int main(int argc_, const char *argv_[]) {
       exit(1);
     }
     mergePdbs();
+  } else if (opts::ExplainSubcommand) {
+    explain();
   }
 
   outs().flush();
