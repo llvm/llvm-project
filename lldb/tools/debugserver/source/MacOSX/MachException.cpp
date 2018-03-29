@@ -86,8 +86,6 @@ extern "C" kern_return_t catch_mach_exception_raise_state_identity(
                    (uint64_t)(exc_data_count > 0 ? exc_data[0] : 0xBADDBADD),
                    (uint64_t)(exc_data_count > 1 ? exc_data[1] : 0xBADDBADD));
   }
-  mach_port_deallocate(mach_task_self(), task_port);
-  mach_port_deallocate(mach_task_self(), thread_port);
 
   return KERN_FAILURE;
 }

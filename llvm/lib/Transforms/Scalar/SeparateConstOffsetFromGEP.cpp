@@ -167,7 +167,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -347,9 +346,8 @@ class SeparateConstOffsetFromGEP : public FunctionPass {
 public:
   static char ID;
 
-  SeparateConstOffsetFromGEP(const TargetMachine *TM = nullptr,
-                             bool LowerGEP = false)
-      : FunctionPass(ID), TM(TM), LowerGEP(LowerGEP) {
+  SeparateConstOffsetFromGEP(bool LowerGEP = false)
+      : FunctionPass(ID), LowerGEP(LowerGEP) {
     initializeSeparateConstOffsetFromGEPPass(*PassRegistry::getPassRegistry());
   }
 
@@ -450,7 +448,6 @@ private:
   const DataLayout *DL = nullptr;
   DominatorTree *DT = nullptr;
   ScalarEvolution *SE;
-  const TargetMachine *TM;
 
   LoopInfo *LI;
   TargetLibraryInfo *TLI;
@@ -480,10 +477,8 @@ INITIALIZE_PASS_END(
     "Split GEPs to a variadic base and a constant offset for better CSE", false,
     false)
 
-FunctionPass *
-llvm::createSeparateConstOffsetFromGEPPass(const TargetMachine *TM,
-                                           bool LowerGEP) {
-  return new SeparateConstOffsetFromGEP(TM, LowerGEP);
+FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
+  return new SeparateConstOffsetFromGEP(LowerGEP);
 }
 
 bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
@@ -943,6 +938,10 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   if (!NeedsExtraction)
     return Changed;
+
+  TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*GEP->getFunction());
+
   // If LowerGEP is disabled, before really splitting the GEP, check whether the
   // backend supports the addressing mode we are about to produce. If no, this
   // splitting probably won't be beneficial.
@@ -951,9 +950,6 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // of variable indices. Therefore, we don't check for addressing modes in that
   // case.
   if (!LowerGEP) {
-    TargetTransformInfo &TTI =
-        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-            *GEP->getParent()->getParent());
     unsigned AddrSpace = GEP->getPointerAddressSpace();
     if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
                                    /*BaseGV=*/nullptr, AccumulativeByteOffset,
@@ -1016,7 +1012,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   if (LowerGEP) {
     // As currently BasicAA does not analyze ptrtoint/inttoptr, do not lower to
     // arithmetic operations if the target uses alias analysis in codegen.
-    if (TM && TM->getSubtargetImpl(*GEP->getParent()->getParent())->useAA())
+    if (TTI.useAA())
       lowerToSingleIndexGEPs(GEP, AccumulativeByteOffset);
     else
       lowerToArithmetics(GEP, AccumulativeByteOffset);

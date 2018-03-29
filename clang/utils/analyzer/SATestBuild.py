@@ -180,7 +180,7 @@ Checkers = ",".join([
     "nullability"
 ])
 
-Verbose = 1
+Verbose = 0
 
 #------------------------------------------------------------------------------
 # Test harness logic.

@@ -59,7 +59,7 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
 
   // If verbose assembly is enabled, we can print some informative comments.
   if (CommentStream)
-    EmitAnyX86InstComments(MI, *CommentStream, MII, getRegisterName);
+    EmitAnyX86InstComments(MI, *CommentStream, MII);
 }
 
 void X86IntelInstPrinter::printSSEAVXCC(const MCInst *MI, unsigned Op,

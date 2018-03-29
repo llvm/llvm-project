@@ -1,11 +1,13 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -std=c++1z -fobjc-arc -o - %s | FileCheck %s
 
 struct S0 {
+  ~S0();
   id f;
 };
 
 struct S1 {
   S1();
+  ~S1();
   S1(S0);
   id f;
 };

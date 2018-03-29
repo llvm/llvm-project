@@ -4083,6 +4083,7 @@ void Sema::BuildVariableInstantiation(
   NewVar->setTSCSpec(OldVar->getTSCSpec());
   NewVar->setInitStyle(OldVar->getInitStyle());
   NewVar->setCXXForRangeDecl(OldVar->isCXXForRangeDecl());
+  NewVar->setObjCForDecl(OldVar->isObjCForDecl());
   NewVar->setConstexpr(OldVar->isConstexpr());
   NewVar->setInitCapture(OldVar->isInitCapture());
   NewVar->setPreviousDeclInSameBlockScope(
@@ -4215,7 +4216,7 @@ void Sema::InstantiateVariableInitializer(
     }
 
     // We'll add an initializer to a for-range declaration later.
-    if (Var->isCXXForRangeDecl())
+    if (Var->isCXXForRangeDecl() || Var->isObjCForDecl())
       return;
 
     ActOnUninitializedDecl(Var);

@@ -172,12 +172,9 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 void call_small_arg_with_dtor() {
   small_arg_with_dtor(SmallWithDtor());
 }
-// The temporary is copied, so it's destroyed in the caller as well as the
-// callee.
 // WIN64-LABEL: define dso_local void @"?call_small_arg_with_dtor@@YAXXZ"()
 // WIN64:   call %struct.SmallWithDtor* @"??0SmallWithDtor@@QEAA@XZ"
 // WIN64:   call void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i32 %{{.*}})
-// WIN64:   call void @"??1SmallWithDtor@@QEAA@XZ"
 // WIN64:   ret void
 
 // Test that references aren't destroyed in the callee.
