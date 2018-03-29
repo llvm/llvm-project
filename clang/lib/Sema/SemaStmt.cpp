@@ -2878,9 +2878,6 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
 /// NRVO, or NULL if there is no such candidate.
 VarDecl *Sema::getCopyElisionCandidate(QualType ReturnType, Expr *E,
                                        bool AllowParamOrMoveConstructible) {
-  if (!getLangOpts().CPlusPlus)
-    return nullptr;
-
   // - in a return statement in a function [where] ...
   // ... the expression is the name of a non-volatile automatic object ...
   DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E->IgnoreParens());
