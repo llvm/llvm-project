@@ -55,16 +55,13 @@ public:
 
   // StringSwitch is not copyable.
   StringSwitch(const StringSwitch &) = delete;
-  void operator=(const StringSwitch &) = delete;
 
-  StringSwitch(StringSwitch &&other) {
-    *this = std::move(other);
-  }
-  StringSwitch &operator=(StringSwitch &&other) {
-    Str = std::move(other.Str);
-    Result = std::move(other.Result);
-    return *this;
-  }
+  // StringSwitch is not assignable due to 'Str' being 'const'.
+  void operator=(const StringSwitch &) = delete;
+  void operator=(StringSwitch &&other) = delete;
+
+  StringSwitch(StringSwitch &&other)
+    : Str(other.Str), Result(std::move(other.Result)) { }
 
   ~StringSwitch() = default;
 
