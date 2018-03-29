@@ -19,7 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/ValueTypes.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <vector>

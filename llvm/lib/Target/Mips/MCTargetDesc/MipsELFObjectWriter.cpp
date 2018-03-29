@@ -436,10 +436,10 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
     return;
 
   // Sort relocations by the address they are applied to.
-  std::sort(Relocs.begin(), Relocs.end(),
-            [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
-              return A.Offset < B.Offset;
-            });
+  llvm::sort(Relocs.begin(), Relocs.end(),
+             [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
+               return A.Offset < B.Offset;
+             });
 
   std::list<MipsRelocationEntry> Sorted;
   std::list<ELFRelocationEntry> Remainder;

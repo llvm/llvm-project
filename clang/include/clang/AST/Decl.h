@@ -937,6 +937,9 @@ protected:
     /// for-range statement.
     unsigned CXXForRangeDecl : 1;
 
+    /// Whether this variable is the for-in loop declaration in Objective-C.
+    unsigned ObjCForDecl : 1;
+
     /// Whether this variable is an ARC pseudo-__strong
     /// variable;  see isARCPseudoStrong() for details.
     unsigned ARCPseudoStrong : 1;
@@ -1332,6 +1335,16 @@ public:
   void setCXXForRangeDecl(bool FRD) {
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.CXXForRangeDecl = FRD;
+  }
+
+  /// \brief Determine whether this variable is a for-loop declaration for a
+  /// for-in statement in Objective-C.
+  bool isObjCForDecl() const {
+    return NonParmVarDeclBits.ObjCForDecl;
+  }
+
+  void setObjCForDecl(bool FRD) {
+    NonParmVarDeclBits.ObjCForDecl = FRD;
   }
 
   /// \brief Determine whether this variable is an ARC pseudo-__strong

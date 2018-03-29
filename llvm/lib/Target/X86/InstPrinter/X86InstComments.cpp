@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86InstComments.h"
+#include "X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "Utils/X86ShuffleDecode.h"
@@ -218,10 +219,13 @@ static unsigned getRegOperandNumElts(const MCInst *MI, unsigned ScalarSize,
   return getVectorRegSize(OpReg) / ScalarSize;
 }
 
+static const char *getRegName(unsigned Reg) {
+  return X86ATTInstPrinter::getRegisterName(Reg);
+}
+
 /// Wraps the destination register name with AVX512 mask/maskz filtering.
 static void printMasking(raw_ostream &OS, const MCInst *MI,
-                         const MCInstrInfo &MCII,
-                         const char *(*getRegName)(unsigned)) {
+                         const MCInstrInfo &MCII) {
   const MCInstrDesc &Desc = MCII.get(MI->getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
 
@@ -244,8 +248,7 @@ static void printMasking(raw_ostream &OS, const MCInst *MI,
     OS << " {z}";
 }
 
-static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS,
-                              const char *(*getRegName)(unsigned)) {
+static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS) {
   const char *Mul1Name = nullptr, *Mul2Name = nullptr, *AccName = nullptr;
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
@@ -495,15 +498,14 @@ static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS,
 /// newline terminated strings to the specified string if desired.  This
 /// information is shown in disassembly dumps when verbose assembly is enabled.
 bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
-                                  const MCInstrInfo &MCII,
-                                  const char *(*getRegName)(unsigned)) {
+                                  const MCInstrInfo &MCII) {
   // If this is a shuffle operation, the switch should fill in this state.
   SmallVector<int, 8> ShuffleMask;
   const char *DestName = nullptr, *Src1Name = nullptr, *Src2Name = nullptr;
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
 
-  if (printFMA3Comments(MI, OS, getRegName))
+  if (printFMA3Comments(MI, OS))
     return true;
 
   switch (MI->getOpcode()) {
@@ -1254,7 +1256,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   if (!DestName) DestName = Src1Name;
   if (DestName) {
     OS << DestName;
-    printMasking(OS, MI, MCII, getRegName);
+    printMasking(OS, MI, MCII);
   } else
     OS << "mem";
 

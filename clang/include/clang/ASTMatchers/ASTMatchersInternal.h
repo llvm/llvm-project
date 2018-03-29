@@ -731,6 +731,11 @@ class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
 ///        HasNameMatcher.
 Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs);
 
+/// \brief Trampoline function to use VariadicFunction<> to construct a
+///        hasAnySelector matcher.
+Matcher<ObjCMessageExpr> hasAnySelectorFunc(
+    ArrayRef<const StringRef *> NameRefs);
+
 /// \brief Matches declarations for QualType and CallExpr.
 ///
 /// Type argument DeclMatcherT is required by PolymorphicMatcherWithParam1 but

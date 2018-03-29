@@ -18,8 +18,6 @@ struct S bar() {
   // O0-NOT: @llvm.lifetime.end
 
   struct S r;
-  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[R_TMP:[^)]+]])
-
   // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[TMP1:[^)]+]])
   // O1: call void @foo
   r = foo();
@@ -35,7 +33,6 @@ struct S bar() {
   r = foo();
   // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[TMP3]])
 
-  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[R_TMP]])
   return r;
 }
 
@@ -51,11 +48,8 @@ struct S baz(int i, volatile int *j) {
   // O0-NOT: @llvm.lifetime.end
 
   struct S r;
-  // O1: %[[RESULT_ALLOCA:[^ ]+]] = alloca %struct.S
   // O1: %[[TMP1_ALLOCA:[^ ]+]] = alloca %struct.S
   // O1: %[[TMP2_ALLOCA:[^ ]+]] = alloca %struct.S
-  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[RESULT_ALLOCA]] to i8*
-  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
   // O1: br label %[[DO_BODY:.+]]
 
   do {
@@ -94,8 +88,6 @@ struct S baz(int i, volatile int *j) {
    } while (1);
 
   // O1: [[DO_END]]:
-  // O1: call void @llvm.memcpy
-  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[RESULT_ALLOCA]] to i8*
-  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
+  // O1-NEXT: ret void
   return r;
 }

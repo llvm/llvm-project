@@ -223,6 +223,9 @@ public:
   /// Get LLVM calling convention for OpenCL kernel.
   virtual unsigned getOpenCLKernelCallingConv() const;
 
+  /// Get LLVM calling convention for CUDA kernel.
+  virtual unsigned getCUDAKernelCallingConv() const;
+
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.
   /// \param QT is the clang QualType of the null pointer.
@@ -296,6 +299,11 @@ public:
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
                             llvm::Value *BlockLiteral) const;
+
+  /// \return true if the target supports alias from the unmangled name to the
+  /// mangled name of functions declared within an extern "C" region and marked
+  /// as 'used', and having internal linkage.
+  virtual bool shouldEmitStaticExternCAliases() const { return true; }
 };
 
 } // namespace CodeGen

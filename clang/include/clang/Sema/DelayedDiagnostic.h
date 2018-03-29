@@ -31,6 +31,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -138,14 +139,13 @@ public:
   void Destroy();
 
   static DelayedDiagnostic makeAvailability(AvailabilityResult AR,
-                                            SourceLocation Loc,
+                                            ArrayRef<SourceLocation> Locs,
                                             const NamedDecl *ReferringDecl,
                                             const NamedDecl *OffendingDecl,
                                             const ObjCInterfaceDecl *UnknownObjCClass,
                                             const ObjCPropertyDecl  *ObjCProperty,
                                             StringRef Msg,
                                             bool ObjCPropertyAccess);
-
 
   static DelayedDiagnostic makeAccess(SourceLocation Loc,
                                       const AccessedEntity &Entity) {
@@ -194,6 +194,12 @@ public:
     return StringRef(AvailabilityData.Message, AvailabilityData.MessageLen);
   }
 
+  ArrayRef<SourceLocation> getAvailabilitySelectorLocs() const {
+    assert(Kind == Availability && "Not an availability diagnostic.");
+    return llvm::makeArrayRef(AvailabilityData.SelectorLocs,
+                              AvailabilityData.NumSelectorLocs);
+  }
+
   AvailabilityResult getAvailabilityResult() const {
     assert(Kind == Availability && "Not an availability diagnostic.");
     return AvailabilityData.AR;
@@ -238,6 +244,8 @@ private:
     const ObjCPropertyDecl  *ObjCProperty;
     const char *Message;
     size_t MessageLen;
+    SourceLocation *SelectorLocs;
+    size_t NumSelectorLocs;
     AvailabilityResult AR;
     bool ObjCPropertyAccess;
   };

@@ -293,7 +293,10 @@ void Scheduler::cycleEvent(unsigned /* unused */) {
 
   updateIssuedQueue();
   updatePendingQueue();
-  issue();
+  bool InstructionsWerePromoted = false;
+  do {
+    InstructionsWerePromoted = issue();
+  } while(InstructionsWerePromoted);
 }
 
 #ifndef NDEBUG
@@ -357,7 +360,40 @@ void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {
   notifyInstructionExecuted(InstrIndex);
 }
 
-void Scheduler::issue() {
+bool Scheduler::promoteToReadyQueue() {
+  // Scan the set of waiting instructions and promote them to the
+  // ready queue if operands are all ready.
+  bool InstructionsWerePromoted = false;
+  for (auto I = WaitQueue.begin(), E = WaitQueue.end(); I != E;) {
+    const QueueEntryTy &Entry = *I;
+
+    // Check if this instruction is now ready. In case, force
+    // a transition in state using method 'update()'.
+    Entry.second->update();
+    bool IsReady = Entry.second->isReady();
+
+    const InstrDesc &Desc = Entry.second->getDesc();
+    bool IsMemOp = Desc.MayLoad || Desc.MayStore;
+    if (IsReady && IsMemOp)
+      IsReady &= LSU->isReady(Entry.first);
+
+    if (IsReady) {
+      notifyInstructionReady(Entry.first);
+      ReadyQueue[Entry.first] = Entry.second;
+      auto ToRemove = I;
+      ++I;
+      WaitQueue.erase(ToRemove);
+      InstructionsWerePromoted = true;
+    } else {
+      ++I;
+    }
+  }
+  
+  return InstructionsWerePromoted;
+}
+
+
+bool Scheduler::issue() {
   std::vector<unsigned> ToRemove;
   for (const QueueEntryTy QueueEntry : ReadyQueue) {
     // Give priority to older instructions in ReadyQueue. The ready queue is
@@ -371,33 +407,27 @@ void Scheduler::issue() {
     ToRemove.emplace_back(InstrIndex);
   }
 
+  if (ToRemove.empty())
+    return false;
+
   for (const unsigned InstrIndex : ToRemove)
     ReadyQueue.erase(InstrIndex);
+
+  // Instructions that have been issued during this cycle might have unblocked
+  // other dependent instructions. Dependent instructions
+  // may be issued during this same cycle if operands have ReadAdvance entries.
+  // Promote those instructions to the ReadyQueue and tell to the caller that
+  // we need another round of 'issue()'.
+  return promoteToReadyQueue();
 }
 
 void Scheduler::updatePendingQueue() {
-  // Scan the set of waiting instructions and promote them to the
-  // ready queue if operands are all ready.
-  for (auto I = WaitQueue.begin(), E = WaitQueue.end(); I != E;) {
-    const QueueEntryTy Entry = *I;
+  // Notify to instructions in the pending queue that a new cycle just
+  // started.
+  for (QueueEntryTy Entry : WaitQueue)
     Entry.second->cycleEvent();
 
-    const InstrDesc &Desc = Entry.second->getDesc();
-    bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-    bool IsReady = Entry.second->isReady();
-    if (IsReady && IsMemOp)
-      IsReady &= LSU->isReady(Entry.first);
-
-    if (IsReady) {
-      notifyInstructionReady(Entry.first);
-      ReadyQueue[Entry.first] = Entry.second;
-      auto ToRemove = I;
-      ++I;
-      WaitQueue.erase(ToRemove);
-    } else {
-      ++I;
-    }
-  }
+  promoteToReadyQueue();
 }
 
 void Scheduler::updateIssuedQueue() {

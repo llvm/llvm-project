@@ -62,6 +62,9 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- clang binary and libraries have been renamed from 7.0 to 7.
+  For example, the clang binary will be called clang-7 instead of clang-7.0.
+
 - ...
 
 New Compiler Flags

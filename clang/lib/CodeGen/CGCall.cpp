@@ -64,6 +64,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveMost: return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
   case CC_Swift: return llvm::CallingConv::Swift;
+  case CC_CUDAKernel: return CGM.getTargetCodeGenInfo().getCUDAKernelCallingConv();
   }
 }
 

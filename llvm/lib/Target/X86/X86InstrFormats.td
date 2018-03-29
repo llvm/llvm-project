@@ -208,8 +208,8 @@ class VEX_WIG  { bits<2> VEX_WPrefix = 2; }
 class VEX_4V : VEX { bit hasVEX_4V = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
-class EVEX : VEX { Encoding OpEnc = EncEVEX; }
-class EVEX_4V : VEX_4V { Encoding OpEnc = EncEVEX; }
+class EVEX   { Encoding OpEnc = EncEVEX; }
+class EVEX_4V : EVEX { bit hasVEX_4V = 1; }
 class EVEX_K { bit hasEVEX_K = 1; }
 class EVEX_KZ : EVEX_K { bit hasEVEX_Z = 1; }
 class EVEX_B { bit hasEVEX_B = 1; }
@@ -399,6 +399,13 @@ class Ii32<bits<8> o, Format f, dag outs, dag ins, string asm,
 class Ii32S<bits<8> o, Format f, dag outs, dag ins, string asm,
             list<dag> pattern, InstrItinClass itin = NoItinerary>
   : X86Inst<o, f, Imm32S, outs, ins, asm, itin> {
+  let Pattern = pattern;
+  let CodeSize = 3;
+}
+
+class Ii64<bits<8> o, Format f, dag outs, dag ins, string asm,
+           list<dag> pattern, InstrItinClass itin = NoItinerary>
+  : X86Inst<o, f, Imm64, outs, ins, asm, itin> {
   let Pattern = pattern;
   let CodeSize = 3;
 }
@@ -929,20 +936,9 @@ class RIi32 <bits<8> o, Format F, dag outs, dag ins, string asm,
 class RIi32S <bits<8> o, Format F, dag outs, dag ins, string asm,
               list<dag> pattern, InstrItinClass itin = NoItinerary>
       : Ii32S<o, F, outs, ins, asm, pattern, itin>, REX_W;
-
-class RIi64<bits<8> o, Format f, dag outs, dag ins, string asm,
+class RIi64<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern, InstrItinClass itin = NoItinerary>
-  : X86Inst<o, f, Imm64, outs, ins, asm, itin>, REX_W {
-  let Pattern = pattern;
-  let CodeSize = 3;
-}
-
-class RIi64_NOREX<bits<8> o, Format f, dag outs, dag ins, string asm,
-            list<dag> pattern, InstrItinClass itin = NoItinerary>
-  : X86Inst<o, f, Imm64, outs, ins, asm, itin> {
-  let Pattern = pattern;
-  let CodeSize = 3;
-}
+      : Ii64<o, F, outs, ins, asm, pattern, itin>, REX_W;
 
 class RS2I<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern, InstrItinClass itin = NoItinerary>
