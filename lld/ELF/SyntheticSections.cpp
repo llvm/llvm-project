@@ -2573,8 +2573,11 @@ void elf::mergeSections() {
     }
     (*I)->addSection(MS);
   }
-  for (auto *MS : MergeSections)
+  for (auto *MS : MergeSections) {
     MS->finalizeContents();
+    parallelForEach(MS->Sections,
+                    [](MergeInputSection *Sec) { Sec->initOffsetMap(); });
+  }
 
   std::vector<InputSectionBase *> &V = InputSections;
   V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
@@ -2626,8 +2629,8 @@ void ThunkSection::addThunk(Thunk *T) {
 }
 
 void ThunkSection::writeTo(uint8_t *Buf) {
-  for (const Thunk *T : Thunks)
-    T->writeTo(Buf + T->Offset, *this);
+  for (Thunk *T : Thunks)
+    T->writeTo(Buf + T->Offset);
 }
 
 InputSection *ThunkSection::getTargetInputSection() const {

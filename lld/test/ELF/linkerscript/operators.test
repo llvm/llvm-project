@@ -36,6 +36,8 @@ SECTIONS {
   _end = .;
   minus_rel = _end - 0x10;
   minus_abs = _end - _start;
+  max = MAX(11, 22);
+  min = MIN(11, 22);
 }
 
 # CHECK: 00000000000006 *ABS* 00000000 plus
@@ -66,6 +68,8 @@ SECTIONS {
 # CHECK: 0000000000fff0 *ABS* 00000000 datasegmentalign2
 # CHECK: 0000000000ffe0 .text 00000000 minus_rel
 # CHECK: 0000000000fff0 *ABS* 00000000 minus_abs
+# CHECK: 00000000000016 *ABS* 00000000 max
+# CHECK: 0000000000000b *ABS* 00000000 min
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script

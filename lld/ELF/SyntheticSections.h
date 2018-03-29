@@ -684,13 +684,12 @@ public:
 class MergeSyntheticSection : public SyntheticSection {
 public:
   void addSection(MergeInputSection *MS);
+  std::vector<MergeInputSection *> Sections;
 
 protected:
   MergeSyntheticSection(StringRef Name, uint32_t Type, uint64_t Flags,
                         uint32_t Alignment)
       : SyntheticSection(Flags, Type, Alignment, Name) {}
-
-  std::vector<MergeInputSection *> Sections;
 };
 
 class MergeTailSection final : public MergeSyntheticSection {
@@ -826,7 +825,7 @@ public:
   InputSection *getTargetInputSection() const;
 
 private:
-  std::vector<const Thunk *> Thunks;
+  std::vector<Thunk *> Thunks;
   size_t Size = 0;
 };
 
