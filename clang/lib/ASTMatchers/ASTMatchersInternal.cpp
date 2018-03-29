@@ -38,6 +38,16 @@
 
 namespace clang {
 namespace ast_matchers {
+
+AST_MATCHER_P(ObjCMessageExpr, hasAnySelectorMatcher, std::vector<std::string>,
+              Matches) {
+  std::string SelString = Node.getSelector().getAsString();
+  for (const std::string &S : Matches)
+    if (S == SelString)
+      return true;
+  return false;
+}
+
 namespace internal {
 
 bool NotUnaryOperator(const ast_type_traits::DynTypedNode &DynNode,
@@ -315,12 +325,22 @@ bool AnyOfVariadicOperator(const ast_type_traits::DynTypedNode &DynNode,
   return false;
 }
 
-Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs) {
+inline static
+std::vector<std::string> vectorFromRefs(ArrayRef<const StringRef *> NameRefs) {
   std::vector<std::string> Names;
   for (auto *Name : NameRefs)
     Names.emplace_back(*Name);
-  return internal::Matcher<NamedDecl>(
-      new internal::HasNameMatcher(std::move(Names)));
+  return Names;
+}
+
+Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs) {
+  std::vector<std::string> Names = vectorFromRefs(NameRefs);
+  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher(Names));
+}
+
+Matcher<ObjCMessageExpr> hasAnySelectorFunc(
+    ArrayRef<const StringRef *> NameRefs) {
+  return hasAnySelectorMatcher(vectorFromRefs(NameRefs));
 }
 
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
@@ -393,7 +413,8 @@ public:
   /// Return true if there are still any patterns left.
   bool consumeNameSuffix(StringRef NodeName, bool CanSkip) {
     for (size_t I = 0; I < Patterns.size();) {
-      if (internal::consumeNameSuffix(Patterns[I].P, NodeName) ||
+      if (::clang::ast_matchers::internal::consumeNameSuffix(Patterns[I].P,
+                                                             NodeName) ||
           CanSkip) {
         ++I;
       } else {
@@ -739,6 +760,9 @@ const internal::VariadicOperatorMatcherFunc<
 const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                  internal::hasAnyNameFunc>
     hasAnyName = {};
+const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>, StringRef,
+                                 internal::hasAnySelectorFunc>
+    hasAnySelector = {};
 const internal::ArgumentAdaptingMatcherFunc<internal::HasMatcher> has = {};
 const internal::ArgumentAdaptingMatcherFunc<internal::HasDescendantMatcher>
     hasDescendant = {};
