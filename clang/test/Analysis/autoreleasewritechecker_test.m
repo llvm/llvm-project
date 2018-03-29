@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -DARC -fobjc-arc -analyzer-checker=core,osx.cocoa.AutoreleaseWrite %s -fblocks -verify
+// RUN: %clang_analyze_cc1 -DARC -fobjc-arc -analyzer-checker=core,osx.cocoa.AutoreleaseWrite %s -triple x86_64-darwin -fblocks -verify
+// RUN: %clang_analyze_cc1 -DNOARC -analyzer-checker=core,osx.cocoa.AutoreleaseWrite %s -fblocks -triple x86_64-darwin -verify
 
 
 typedef signed char BOOL;
