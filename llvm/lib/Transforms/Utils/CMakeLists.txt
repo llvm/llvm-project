@@ -25,6 +25,7 @@ add_llvm_library(LLVMTransformUtils
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
   Local.cpp
+  LoopRotationUtils.cpp
   LoopSimplify.cpp
   LoopUnroll.cpp
   LoopUnrollPeel.cpp
