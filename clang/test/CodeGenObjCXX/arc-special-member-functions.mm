@@ -31,6 +31,8 @@ void test_ObjCMember_copy_construct_destruct(ObjCMember m1) {
 void test_ObjCMember_copy_assign(ObjCMember m1, ObjCMember m2) {
   // CHECK: {{call.*_ZN10ObjCMemberaSERKS_}}
   m1 = m2;
+  // CHECK-NEXT: call void @_ZN10ObjCMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN10ObjCMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 
@@ -58,6 +60,8 @@ void test_ObjCArrayMember_copy_construct_destruct(ObjCArrayMember m1) {
 void test_ObjCArrayMember_copy_assign(ObjCArrayMember m1, ObjCArrayMember m2) {
   // CHECK: {{call.*@_ZN15ObjCArrayMemberaSERKS_}}
   m1 = m2;
+  // CHECK-NEXT: call void @_ZN15ObjCArrayMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN15ObjCArrayMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 
@@ -79,7 +83,8 @@ void test_ObjCBlockMember_default_construct_destruct() {
 void test_ObjCBlockMember_copy_construct_destruct(ObjCBlockMember m1) {
   // CHECK: call void @_ZN15ObjCBlockMemberC1ERKS_
   ObjCBlockMember m2 = m1;
-  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 
@@ -87,6 +92,8 @@ void test_ObjCBlockMember_copy_construct_destruct(ObjCBlockMember m1) {
 void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
   // CHECK: {{call.*_ZN15ObjCBlockMemberaSERKS_}}
   m1 = m2;
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 

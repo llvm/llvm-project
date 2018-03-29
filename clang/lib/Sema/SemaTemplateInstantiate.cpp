@@ -18,11 +18,11 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 
@@ -2011,7 +2011,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   if (Inst.isInvalid())
     return true;
   assert(!Inst.isAlreadyInstantiating() && "should have been caught by caller");
-  PrettyDeclStackTraceEntry CrashInfo(*this, Instantiation, SourceLocation(),
+  PrettyDeclStackTraceEntry CrashInfo(Context, Instantiation, SourceLocation(),
                                       "instantiating class definition");
 
   // Enter the scope of this instantiation. We don't use
@@ -2238,7 +2238,7 @@ bool Sema::InstantiateEnum(SourceLocation PointOfInstantiation,
     return true;
   if (Inst.isAlreadyInstantiating())
     return false;
-  PrettyDeclStackTraceEntry CrashInfo(*this, Instantiation, SourceLocation(),
+  PrettyDeclStackTraceEntry CrashInfo(Context, Instantiation, SourceLocation(),
                                       "instantiating enum definition");
 
   // The instantiation is visible here, even if it was first declared in an
@@ -2314,7 +2314,7 @@ bool Sema::InstantiateInClassInitializer(
       << Instantiation;
     return true;
   }
-  PrettyDeclStackTraceEntry CrashInfo(*this, Instantiation, SourceLocation(),
+  PrettyDeclStackTraceEntry CrashInfo(Context, Instantiation, SourceLocation(),
                                       "instantiating default member init");
 
   // Enter the scope of this instantiation. We don't use PushDeclContext because
