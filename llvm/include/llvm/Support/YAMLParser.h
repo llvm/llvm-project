@@ -125,6 +125,11 @@ public:
   Node(unsigned int Type, std::unique_ptr<Document> &, StringRef Anchor,
        StringRef Tag);
 
+  // It's not safe to copy YAML nodes; the document is streamed and the position
+  // is part of the state.
+  Node(const Node &) = delete;
+  void operator=(const Node &) = delete;
+
   void *operator new(size_t Size, BumpPtrAllocator &Alloc,
                      size_t Alignment = 16) noexcept {
     return Alloc.Allocate(Size, Alignment);
