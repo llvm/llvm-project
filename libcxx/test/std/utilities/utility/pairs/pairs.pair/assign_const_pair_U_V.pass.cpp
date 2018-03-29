@@ -44,7 +44,7 @@ int main()
        assert(C::constructed == 0);
        assert(C::assigned == 1);
        assert(C::copy_assigned == 1);
-       assert(C::move_assigned == 0atu);
+       assert(C::move_assigned == 0);
        assert(p.first == 42);
        assert(p.second.value == -42);
     }
