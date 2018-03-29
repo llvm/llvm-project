@@ -2196,11 +2196,14 @@ LLVMValueRef LLVMInstructionClone(LLVMValueRef Inst) {
   return nullptr;
 }
 
-/*--.. Call and invoke instructions ........................................--*/
-
 unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
+  if (FuncletPadInst *FPI = dyn_cast<FuncletPadInst>(unwrap(Instr))) {
+    return FPI->getNumArgOperands();
+  }
   return CallSite(unwrap<Instruction>(Instr)).getNumArgOperands();
 }
+
+/*--.. Call and invoke instructions ........................................--*/
 
 unsigned LLVMGetInstructionCallConv(LLVMValueRef Instr) {
   return CallSite(unwrap<Instruction>(Instr)).getCallingConv();
@@ -2284,6 +2287,11 @@ LLVMBasicBlockRef LLVMGetNormalDest(LLVMValueRef Invoke) {
 }
 
 LLVMBasicBlockRef LLVMGetUnwindDest(LLVMValueRef Invoke) {
+  if (CleanupReturnInst *CRI = dyn_cast<CleanupReturnInst>(unwrap(Invoke))) {
+    return wrap(CRI->getUnwindDest());
+  } else if (CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(unwrap(Invoke))) {
+    return wrap(CSI->getUnwindDest());
+  }
   return wrap(unwrap<InvokeInst>(Invoke)->getUnwindDest());
 }
 
@@ -2292,6 +2300,11 @@ void LLVMSetNormalDest(LLVMValueRef Invoke, LLVMBasicBlockRef B) {
 }
 
 void LLVMSetUnwindDest(LLVMValueRef Invoke, LLVMBasicBlockRef B) {
+  if (CleanupReturnInst *CRI = dyn_cast<CleanupReturnInst>(unwrap(Invoke))) {
+    return CRI->setUnwindDest(unwrap(B));
+  } else if (CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(unwrap(Invoke))) {
+    return CSI->setUnwindDest(unwrap(B));
+  }
   unwrap<InvokeInst>(Invoke)->setUnwindDest(unwrap(B));
 }
 
@@ -2513,8 +2526,51 @@ LLVMValueRef LLVMBuildLandingPad(LLVMBuilderRef B, LLVMTypeRef Ty,
   return wrap(unwrap(B)->CreateLandingPad(unwrap(Ty), NumClauses, Name));
 }
 
+LLVMValueRef LLVMBuildCatchPad(LLVMBuilderRef B, LLVMValueRef ParentPad,
+                               LLVMValueRef *Args, unsigned NumArgs,
+                               const char *Name) {
+  return wrap(unwrap(B)->CreateCatchPad(unwrap(ParentPad),
+                                        makeArrayRef(unwrap(Args), NumArgs),
+                                        Name));
+}
+
+LLVMValueRef LLVMBuildCleanupPad(LLVMBuilderRef B, LLVMValueRef ParentPad,
+                                 LLVMValueRef *Args, unsigned NumArgs,
+                                 const char *Name) {
+  if (ParentPad == nullptr) {
+    Type *Ty = Type::getTokenTy(unwrap(B)->getContext());
+    ParentPad = wrap(Constant::getNullValue(Ty));
+  }
+  return wrap(unwrap(B)->CreateCleanupPad(unwrap(ParentPad),
+                                          makeArrayRef(unwrap(Args), NumArgs),
+                                          Name));
+}
+
 LLVMValueRef LLVMBuildResume(LLVMBuilderRef B, LLVMValueRef Exn) {
   return wrap(unwrap(B)->CreateResume(unwrap(Exn)));
+}
+
+LLVMValueRef LLVMBuildCatchSwitch(LLVMBuilderRef B, LLVMValueRef ParentPad,
+                                  LLVMBasicBlockRef UnwindBB,
+                                  unsigned NumHandlers, const char *Name) {
+  if (ParentPad == nullptr) {
+    Type *Ty = Type::getTokenTy(unwrap(B)->getContext());
+    ParentPad = wrap(Constant::getNullValue(Ty));
+  }
+  return wrap(unwrap(B)->CreateCatchSwitch(unwrap(ParentPad), unwrap(UnwindBB),
+                                           NumHandlers, Name));
+}
+
+LLVMValueRef LLVMBuildCatchRet(LLVMBuilderRef B, LLVMValueRef CatchPad,
+                               LLVMBasicBlockRef BB) {
+  return wrap(unwrap(B)->CreateCatchRet(unwrap<CatchPadInst>(CatchPad),
+                                        unwrap(BB)));
+}
+
+LLVMValueRef LLVMBuildCleanupRet(LLVMBuilderRef B, LLVMValueRef CatchPad,
+                                 LLVMBasicBlockRef BB) {
+  return wrap(unwrap(B)->CreateCleanupRet(unwrap<CleanupPadInst>(CatchPad),
+                                          unwrap(BB)));
 }
 
 LLVMValueRef LLVMBuildUnreachable(LLVMBuilderRef B) {
@@ -2549,6 +2605,40 @@ LLVMBool LLVMIsCleanup(LLVMValueRef LandingPad) {
 
 void LLVMSetCleanup(LLVMValueRef LandingPad, LLVMBool Val) {
   unwrap<LandingPadInst>(LandingPad)->setCleanup(Val);
+}
+
+void LLVMAddHandler(LLVMValueRef CatchSwitch, LLVMBasicBlockRef Dest) {
+  unwrap<CatchSwitchInst>(CatchSwitch)->addHandler(unwrap(Dest));
+}
+
+unsigned LLVMGetNumHandlers(LLVMValueRef CatchSwitch) {
+  return unwrap<CatchSwitchInst>(CatchSwitch)->getNumHandlers();
+}
+
+void LLVMGetHandlers(LLVMValueRef CatchSwitch, LLVMBasicBlockRef *Handlers) {
+  CatchSwitchInst *CSI = unwrap<CatchSwitchInst>(CatchSwitch);
+  for (CatchSwitchInst::handler_iterator I = CSI->handler_begin(),
+                                         E = CSI->handler_end(); I != E; ++I)
+    *Handlers++ = wrap(*I);
+}
+
+LLVMValueRef LLVMGetParentCatchSwitch(LLVMValueRef CatchPad) {
+  return wrap(unwrap<CatchPadInst>(CatchPad)->getCatchSwitch());
+}
+
+void LLVMSetParentCatchSwitch(LLVMValueRef CatchPad, LLVMValueRef CatchSwitch) {
+  unwrap<CatchPadInst>(CatchPad)
+    ->setCatchSwitch(unwrap<CatchSwitchInst>(CatchSwitch));
+}
+
+/*--.. Funclets ...........................................................--*/
+
+LLVMValueRef LLVMGetArgOperand(LLVMValueRef Funclet, unsigned i) {
+  return wrap(unwrap<FuncletPadInst>(Funclet)->getArgOperand(i));
+}
+
+void LLVMSetArgOperand(LLVMValueRef Funclet, unsigned i, LLVMValueRef value) {
+  unwrap<FuncletPadInst>(Funclet)->setArgOperand(i, unwrap(value));
 }
 
 /*--.. Arithmetic ..........................................................--*/

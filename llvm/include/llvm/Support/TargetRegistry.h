@@ -19,7 +19,7 @@
 #ifndef LLVM_SUPPORT_TARGETREGISTRY_H
 #define LLVM_SUPPORT_TARGETREGISTRY_H
 
-#include "llvm-c/Disassembler.h"
+#include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"

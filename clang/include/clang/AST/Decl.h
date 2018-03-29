@@ -937,6 +937,9 @@ protected:
     /// for-range statement.
     unsigned CXXForRangeDecl : 1;
 
+    /// Whether this variable is the for-in loop declaration in Objective-C.
+    unsigned ObjCForDecl : 1;
+
     /// Whether this variable is an ARC pseudo-__strong
     /// variable;  see isARCPseudoStrong() for details.
     unsigned ARCPseudoStrong : 1;
@@ -1332,6 +1335,16 @@ public:
   void setCXXForRangeDecl(bool FRD) {
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.CXXForRangeDecl = FRD;
+  }
+
+  /// \brief Determine whether this variable is a for-loop declaration for a
+  /// for-in statement in Objective-C.
+  bool isObjCForDecl() const {
+    return NonParmVarDeclBits.ObjCForDecl;
+  }
+
+  void setObjCForDecl(bool FRD) {
+    NonParmVarDeclBits.ObjCForDecl = FRD;
   }
 
   /// \brief Determine whether this variable is an ARC pseudo-__strong
@@ -3559,6 +3572,11 @@ class RecordDecl : public TagDecl {
   /// pass an object of this class.
   bool CanPassInRegisters : 1;
 
+  /// Indicates whether this struct is destroyed in the callee. This flag is
+  /// meaningless when Microsoft ABI is used since parameters are always
+  /// destroyed in the callee.
+  bool ParamDestroyedInCallee : 1;
+
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
              SourceLocation StartLoc, SourceLocation IdLoc,
@@ -3652,6 +3670,14 @@ public:
   /// Set that we can pass this RecordDecl in registers.
   void setCanPassInRegisters(bool CanPass) {
     CanPassInRegisters = CanPass;
+  }
+
+  bool isParamDestroyedInCallee() const {
+    return ParamDestroyedInCallee;
+  }
+
+  void setParamDestroyedInCallee(bool V) {
+    ParamDestroyedInCallee = V;
   }
 
   /// \brief Determines whether this declaration represents the

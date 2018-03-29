@@ -403,9 +403,7 @@ FunctionPass *createScalarizerPass();
 //
 // SeparateConstOffsetFromGEP - Split GEPs for better CSE
 //
-FunctionPass *
-createSeparateConstOffsetFromGEPPass(const TargetMachine *TM = nullptr,
-                                     bool LowerGEP = false);
+FunctionPass *createSeparateConstOffsetFromGEPPass(bool LowerGEP = false);
 
 //===----------------------------------------------------------------------===//
 //

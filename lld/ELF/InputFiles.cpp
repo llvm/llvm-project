@@ -233,7 +233,7 @@ ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB) : InputFile(K, MB) {
 
 template <class ELFT>
 typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalELFSyms() {
-  return makeArrayRef(ELFSyms.begin() + FirstNonLocal, ELFSyms.end());
+  return makeArrayRef(ELFSyms.begin() + FirstGlobal, ELFSyms.end());
 }
 
 template <class ELFT>
@@ -244,9 +244,9 @@ uint32_t ELFFileBase<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
 template <class ELFT>
 void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
                                    const Elf_Shdr *Symtab) {
-  FirstNonLocal = Symtab->sh_info;
+  FirstGlobal = Symtab->sh_info;
   ELFSyms = CHECK(getObj().symbols(Symtab), this);
-  if (FirstNonLocal == 0 || FirstNonLocal > ELFSyms.size())
+  if (FirstGlobal == 0 || FirstGlobal > ELFSyms.size())
     fatal(toString(this) + ": invalid sh_info in symbol table");
 
   StringTable =
@@ -262,7 +262,11 @@ ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
 template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getLocalSymbols() {
   if (this->Symbols.empty())
     return {};
-  return makeArrayRef(this->Symbols).slice(1, this->FirstNonLocal - 1);
+  return makeArrayRef(this->Symbols).slice(1, this->FirstGlobal - 1);
+}
+
+template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getGlobalSymbols() {
+  return makeArrayRef(this->Symbols).slice(this->FirstGlobal);
 }
 
 template <class ELFT>
@@ -792,14 +796,14 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
 // Parses ".gnu.version" section which is a parallel array for the symbol table.
 // If a given file doesn't have ".gnu.version" section, returns VER_NDX_GLOBAL.
 template <class ELFT> std::vector<uint32_t> SharedFile<ELFT>::parseVersyms() {
-  size_t Size = this->ELFSyms.size() - this->FirstNonLocal;
+  size_t Size = this->ELFSyms.size() - this->FirstGlobal;
   if (!VersymSec)
     return std::vector<uint32_t>(Size, VER_NDX_GLOBAL);
 
   const char *Base = this->MB.getBuffer().data();
   const Elf_Versym *Versym =
       reinterpret_cast<const Elf_Versym *>(Base + VersymSec->sh_offset) +
-      this->FirstNonLocal;
+      this->FirstGlobal;
 
   std::vector<uint32_t> Ret(Size);
   for (size_t I = 0; I < Size; ++I)
@@ -1174,11 +1178,11 @@ template <class ELFT> void LazyObjFile::addElfSymbols() {
       continue;
 
     typename ELFT::SymRange Syms = CHECK(Obj.symbols(&Sec), this);
-    uint32_t FirstNonLocal = Sec.sh_info;
+    uint32_t FirstGlobal = Sec.sh_info;
     StringRef StringTable =
         CHECK(Obj.getStringTableForSymtab(Sec, Sections), this);
 
-    for (const typename ELFT::Sym &Sym : Syms.slice(FirstNonLocal))
+    for (const typename ELFT::Sym &Sym : Syms.slice(FirstGlobal))
       if (Sym.st_shndx != SHN_UNDEF)
         Symtab->addLazyObject<ELFT>(CHECK(Sym.getName(StringTable), this),
                                     *this);
@@ -1208,11 +1212,11 @@ template <class ELFT> void elf::readJustSymbolsFile(MemoryBufferRef MB) {
       continue;
 
     Elf_Sym_Range Syms = CHECK(Obj.symbols(&Sec), ObjName);
-    uint32_t FirstNonLocal = Sec.sh_info;
+    uint32_t FirstGlobal = Sec.sh_info;
     StringRef StringTable =
         CHECK(Obj.getStringTableForSymtab(Sec, Sections), ObjName);
 
-    for (const Elf_Sym &Sym : Syms.slice(FirstNonLocal))
+    for (const Elf_Sym &Sym : Syms.slice(FirstGlobal))
       if (Sym.st_shndx != SHN_UNDEF)
         Symtab->addRegular(CHECK(Sym.getName(StringTable), ObjName),
                            Sym.st_other, Sym.getType(), Sym.st_value,

@@ -2027,8 +2027,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     }
 
     Decl *ThisDecl = Actions.ActOnDeclarator(getCurScope(), D);
-    if (IsForRangeLoop)
+    if (IsForRangeLoop) {
       Actions.ActOnCXXForRangeDecl(ThisDecl);
+    } else {
+      // Obj-C for loop
+      if (auto *VD = dyn_cast_or_null<VarDecl>(ThisDecl))
+        VD->setObjCForDecl(true);
+    }
     Actions.FinalizeDeclaration(ThisDecl);
     D.complete(ThisDecl);
     return Actions.FinalizeDeclaratorGroup(getCurScope(), DS, ThisDecl);

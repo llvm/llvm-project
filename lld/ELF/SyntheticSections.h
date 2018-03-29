@@ -825,7 +825,7 @@ public:
   InputSection *getTargetInputSection() const;
 
 private:
-  std::vector<const Thunk *> Thunks;
+  std::vector<Thunk *> Thunks;
   size_t Size = 0;
 };
 

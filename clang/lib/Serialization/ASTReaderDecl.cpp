@@ -743,6 +743,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setNonTrivialToPrimitiveCopy(Record.readInt());
   RD->setNonTrivialToPrimitiveDestroy(Record.readInt());
   RD->setCanPassInRegisters(Record.readInt());
+  RD->setParamDestroyedInCallee(Record.readInt());
   return Redecl;
 }
 
@@ -1278,6 +1279,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->NonParmVarDeclBits.ExceptionVar = Record.readInt();
     VD->NonParmVarDeclBits.NRVOVariable = Record.readInt();
     VD->NonParmVarDeclBits.CXXForRangeDecl = Record.readInt();
+    VD->NonParmVarDeclBits.ObjCForDecl = Record.readInt();
     VD->NonParmVarDeclBits.ARCPseudoStrong = Record.readInt();
     VD->NonParmVarDeclBits.IsInline = Record.readInt();
     VD->NonParmVarDeclBits.IsInlineSpecified = Record.readInt();
@@ -4109,6 +4111,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
           OldDD && (OldDD->Definition != RD ||
                     !Reader.PendingFakeDefinitionData.count(OldDD));
       RD->setCanPassInRegisters(Record.readInt());
+      RD->setParamDestroyedInCallee(Record.readInt());
       ReadCXXRecordDefinition(RD, /*Update*/true);
 
       // Visible update is handled separately.

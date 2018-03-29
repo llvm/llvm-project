@@ -829,60 +829,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     return RAA_Default;
 
   case llvm::Triple::x86_64:
-    bool CopyCtorIsTrivial = false, CopyCtorIsTrivialForCall = false;
-    bool DtorIsTrivialForCall = false;
-
-    // If a class has at least one non-deleted, trivial copy constructor, it
-    // is passed according to the C ABI. Otherwise, it is passed indirectly.
-    //
-    // Note: This permits classes with non-trivial copy or move ctors to be
-    // passed in registers, so long as they *also* have a trivial copy ctor,
-    // which is non-conforming.
-    if (RD->needsImplicitCopyConstructor()) {
-      if (!RD->defaultedCopyConstructorIsDeleted()) {
-        if (RD->hasTrivialCopyConstructor())
-          CopyCtorIsTrivial = true;
-        if (RD->hasTrivialCopyConstructorForCall())
-          CopyCtorIsTrivialForCall = true;
-      }
-    } else {
-      for (const CXXConstructorDecl *CD : RD->ctors()) {
-        if (CD->isCopyConstructor() && !CD->isDeleted()) {
-          if (CD->isTrivial())
-            CopyCtorIsTrivial = true;
-          if (CD->isTrivialForCall())
-            CopyCtorIsTrivialForCall = true;
-        }
-      }
-    }
-
-    if (RD->needsImplicitDestructor()) {
-      if (!RD->defaultedDestructorIsDeleted() &&
-          RD->hasTrivialDestructorForCall())
-        DtorIsTrivialForCall = true;
-    } else if (const auto *D = RD->getDestructor()) {
-      if (!D->isDeleted() && D->isTrivialForCall())
-        DtorIsTrivialForCall = true;
-    }
-
-    // If the copy ctor and dtor are both trivial-for-calls, pass direct.
-    if (CopyCtorIsTrivialForCall && DtorIsTrivialForCall)
-      return RAA_Default;
-
-    // If a class has a destructor, we'd really like to pass it indirectly
-    // because it allows us to elide copies.  Unfortunately, MSVC makes that
-    // impossible for small types, which it will pass in a single register or
-    // stack slot. Most objects with dtors are large-ish, so handle that early.
-    // We can't call out all large objects as being indirect because there are
-    // multiple x64 calling conventions and the C++ ABI code shouldn't dictate
-    // how we pass large POD types.
-
-    // Note: This permits small classes with nontrivial destructors to be
-    // passed in registers, which is non-conforming.
-    if (CopyCtorIsTrivial &&
-        getContext().getTypeSize(RD->getTypeForDecl()) <= 64)
-      return RAA_Default;
-    return RAA_Indirect;
+    return !canCopyArgument(RD) ? RAA_Indirect : RAA_Default;
   }
 
   llvm_unreachable("invalid enum");
