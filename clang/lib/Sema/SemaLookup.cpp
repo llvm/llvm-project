@@ -4766,7 +4766,7 @@ void TypoCorrectionConsumer::addCorrection(TypoCorrection Correction) {
 
       auto IsDeprecated = [](Decl *D) {
         while (D) {
-          if (D->isDeprecated())
+          if (D->isDeprecatedInAnyTargetPlatform())
             return true;
           D = llvm::dyn_cast_or_null<NamespaceDecl>(D->getDeclContext());
         }

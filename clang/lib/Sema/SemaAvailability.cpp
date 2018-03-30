@@ -44,6 +44,7 @@ static bool hasMatchingEnvironmentOrNone(const ASTContext &Context,
 }
 
 static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
+                                                  StringRef TargetPlatform,
                                                   const Decl *D) {
   AvailabilityAttr const *PartialMatch = nullptr;
   // Check each AvailabilityAttr to find the one for this platform.
@@ -73,8 +74,6 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
           RealizedPlatform = RealizedPlatform.slice(0, suffix);
       }
 
-      StringRef TargetPlatform = Context.getTargetInfo().getPlatformName();
-
       // Match the platform name.
       if (RealizedPlatform == TargetPlatform) {
         // Find the best matching attribute for this environment
@@ -96,9 +95,12 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
 /// \param ClassReceiver If we're checking the method of a class message
 /// send, the class. Otherwise nullptr.
 std::pair<AvailabilityResult, const NamedDecl *>
-Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
+Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, StringRef Platform,
+                                       const VersionTuple &PlatformVersion,
+                                       std::string *Message,
                                        ObjCInterfaceDecl *ClassReceiver) {
-  AvailabilityResult Result = D->getAvailability(Message);
+  AvailabilityResult Result =
+      D->getAvailability(Platform, PlatformVersion, Message);
 
   // For typedefs, if the typedef declaration appears available look
   // to the underlying type to see if it is more restrictive.
@@ -121,7 +123,9 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
         T = NextT;
         continue;
       }
-      Result = D->getAvailability(Message);
+      /* TO_UPSTREAM(iosmac) ON*/
+      Result = D->getAvailability(Platform, PlatformVersion, Message);
+      /* TO_UPSTREAM(iosmac) OFF*/
       break;
     }
   }
@@ -130,7 +134,7 @@ done:
   if (const auto *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
       D = IDecl->getDefinition();
-      Result = D->getAvailability(Message);
+      Result = D->getAvailability(Platform, PlatformVersion, Message);
     }
   }
 
@@ -138,7 +142,8 @@ done:
     if (Result == AR_Available) {
       const DeclContext *DC = ECD->getDeclContext();
       if (const auto *TheEnumDecl = dyn_cast<EnumDecl>(DC)) {
-        Result = TheEnumDecl->getAvailability(Message);
+        Result =
+            TheEnumDecl->getAvailability(Platform, PlatformVersion, Message);
         D = TheEnumDecl;
       }
     }
@@ -151,7 +156,7 @@ done:
       if (Init && Result == AR_Available && MD->isClassMethod() &&
           MD->getSelector() == ObjC().NSAPIObj->getNewSelector() &&
           MD->definedInNSObject(getASTContext())) {
-        Result = Init->getAvailability(Message);
+        Result = Init->getAvailability(Platform, PlatformVersion, Message);
         D = Init;
       }
     }
@@ -165,7 +170,8 @@ done:
 /// in a deprecated context, but not the other way around.
 static bool ShouldDiagnoseAvailabilityInContext(
     Sema &S, AvailabilityResult K, VersionTuple DeclVersion,
-    const IdentifierInfo *DeclEnv, Decl *Ctx, const NamedDecl *OffendingDecl) {
+    const IdentifierInfo *DeclEnv, Decl *Ctx, const NamedDecl *OffendingDecl,
+    StringRef TargetPlatform, const VersionTuple &TargetPlatformMinVersion) {
   assert(K != AR_Available && "Expected an unavailable declaration here!");
 
   // If this was defined using CF_OPTIONS, etc. then ignore the diagnostic.
@@ -198,19 +204,21 @@ static bool ShouldDiagnoseAvailabilityInContext(
 
   if (K == AR_Deprecated) {
     if (const auto *VD = dyn_cast<VarDecl>(OffendingDecl))
-      if (VD->isLocalVarDeclOrParm() && VD->isDeprecated())
+      if (VD->isLocalVarDeclOrParm() && VD->isDeprecatedInAnyTargetPlatform())
         return true;
   }
 
   // Checks if we should emit the availability diagnostic in the context of C.
   auto CheckContext = [&](const Decl *C) {
     if (K == AR_NotYetIntroduced) {
-      if (const AvailabilityAttr *AA = getAttrForPlatform(S.Context, C))
+      if (const AvailabilityAttr *AA =
+              getAttrForPlatform(S.Context, TargetPlatform, C))
         if (AA->getEffectiveIntroduced() >= DeclVersion &&
             AA->getEffectiveEnvironment() == DeclEnv)
           return true;
     } else if (K == AR_Deprecated) {
-      if (C->isDeprecated())
+      if (C->getAvailability(TargetPlatform, TargetPlatformMinVersion) ==
+          AR_Deprecated)
         return true;
     } else if (K == AR_Unavailable) {
       // It is perfectly fine to refer to an 'unavailable' Objective-C method
@@ -224,7 +232,8 @@ static bool ShouldDiagnoseAvailabilityInContext(
       }
     }
 
-    if (C->isUnavailable())
+    if (C->getAvailability(TargetPlatform, TargetPlatformMinVersion) ==
+        AR_Unavailable)
       return true;
     return false;
   };
@@ -257,8 +266,12 @@ static bool ShouldDiagnoseAvailabilityInContext(
 
 static unsigned getAvailabilityDiagnosticKind(
     const ASTContext &Context, const VersionTuple &DeploymentVersion,
-    const VersionTuple &DeclVersion, bool HasMatchingEnv) {
-  const auto &Triple = Context.getTargetInfo().getTriple();
+    const VersionTuple &DeclVersion, bool HasMatchingEnv,
+    bool IsTargetVariantCheck = false) {
+  const auto &Triple =
+      IsTargetVariantCheck
+          ? *Context.getTargetInfo().getDarwinTargetVariantTriple()
+          : Context.getTargetInfo().getTriple();
   VersionTuple ForceAvailabilityFromVersion;
   switch (Triple.getOS()) {
   // For iOS, emit the diagnostic even if -Wunguarded-availability is
@@ -395,129 +408,198 @@ createAttributeInsertion(const NamedDecl *D, const SourceManager &SM,
   return AttributeInsertion::createInsertionBefore(D);
 }
 
-/// Actually emit an availability diagnostic for a reference to an unavailable
-/// decl.
-///
-/// \param Ctx The context that the reference occurred in
-/// \param ReferringDecl The exact declaration that was referenced.
-/// \param OffendingDecl A related decl to \c ReferringDecl that has an
-/// availability attribute corresponding to \c K attached to it. Note that this
-/// may not be the same as ReferringDecl, i.e. if an EnumDecl is annotated and
-/// we refer to a member EnumConstantDecl, ReferringDecl is the EnumConstantDecl
-/// and OffendingDecl is the EnumDecl.
-static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
-                                      Decl *Ctx, const NamedDecl *ReferringDecl,
-                                      const NamedDecl *OffendingDecl,
-                                      StringRef Message,
-                                      ArrayRef<SourceLocation> Locs,
-                                      const ObjCInterfaceDecl *UnknownObjCClass,
-                                      const ObjCPropertyDecl *ObjCProperty,
-                                      bool ObjCPropertyAccess) {
-  // Diagnostics for deprecated or unavailable.
-  unsigned diag, diag_message, diag_fwdclass_message;
-  unsigned diag_available_here = diag::note_availability_specified_here;
-  SourceLocation NoteLocation = OffendingDecl->getLocation();
+/// Target-independent information about an availability diagnostic.
+struct PlatformAgnosticAvailabilityDiagInfo {
+  const NamedDecl *ReferringDecl;
+  ArrayRef<SourceLocation> Locs;
+  const ObjCInterfaceDecl *UnknownObjCClass;
+  bool ObjCPropertyAccess;
 
-  // Matches 'diag::note_property_attribute' options.
-  unsigned property_note_select;
+  PlatformAgnosticAvailabilityDiagInfo(
+      const NamedDecl *ReferringDecl, ArrayRef<SourceLocation> Locs,
+      const ObjCInterfaceDecl *UnknownObjCClass, bool ObjCPropertyAccess)
+      : ReferringDecl(ReferringDecl), Locs(Locs),
+        UnknownObjCClass(UnknownObjCClass),
+        ObjCPropertyAccess(ObjCPropertyAccess) {}
+};
 
-  // Matches diag::note_availability_specified_here.
-  unsigned available_here_select_kind;
+// Target-specific information about an availability diagnostic.
+struct PlatformSpecificAvailabilityDiag {
+  AvailabilityResult AR;
+  const NamedDecl *OffendingDecl;
+  std::string Message;
+  const ObjCPropertyDecl *ObjCProperty;
+  bool IsTargetVariantPlatform;
+
+  PlatformSpecificAvailabilityDiag(AvailabilityResult AR,
+                                   const NamedDecl *OffendingDecl,
+                                   std::string Message,
+                                   const ObjCPropertyDecl *ObjCProperty,
+                                   bool IsTargetVariantPlatform)
+      : AR(AR), OffendingDecl(OffendingDecl), Message(std::move(Message)),
+        ObjCProperty(ObjCProperty),
+        IsTargetVariantPlatform(IsTargetVariantPlatform) {}
+
+  PlatformSpecificAvailabilityDiag(AvailabilityResult AR,
+                                   const NamedDecl *OffendingDecl,
+                                   bool IsTargetVariantPlatform)
+      : AR(AR), OffendingDecl(OffendingDecl), ObjCProperty(nullptr),
+        IsTargetVariantPlatform(IsTargetVariantPlatform) {}
+
+  /// Returns the location of the note which points to the availability
+  /// attribute.
+  SourceLocation getNoteLocation(Sema &S) const {
+    const TargetInfo &TI = S.getASTContext().getTargetInfo();
+    StringRef Platform = IsTargetVariantPlatform ? TI.getTargetVariantPlatform()
+                                                 : TI.getPlatformName();
+    // The declaration can have multiple availability attributes, we are looking
+    // at one of them.
+    const AvailabilityAttr *A =
+        getAttrForPlatform(S.Context, Platform, OffendingDecl);
+    if (A && A->isInherited()) {
+      for (const Decl *Redecl = OffendingDecl->getMostRecentDecl(); Redecl;
+           Redecl = Redecl->getPreviousDecl()) {
+        const AvailabilityAttr *AForRedecl =
+            getAttrForPlatform(S.Context, Platform, Redecl);
+        if (AForRedecl && !AForRedecl->isInherited()) {
+          // If D is a declaration with inherited attributes, the note should
+          // point to the declaration with actual attributes.
+          return Redecl->getLocation();
+        }
+      }
+    }
+    return OffendingDecl->getLocation();
+  }
+};
+
+// Check if we have to emit an availability diagnostic for a particular target.
+static bool ShouldEmitAvailabilityWarning(
+    Sema &S, Decl *Ctx, const PlatformAgnosticAvailabilityDiagInfo &Info,
+    const PlatformSpecificAvailabilityDiag &PlatformInfo) {
+  const TargetInfo &TI = S.getASTContext().getTargetInfo();
+  StringRef Platform = PlatformInfo.IsTargetVariantPlatform
+                           ? TI.getTargetVariantPlatform()
+                           : TI.getPlatformName();
+  VersionTuple PlatformMinVersion =
+      PlatformInfo.IsTargetVariantPlatform
+          ? TI.getTargetVariantPlatformMinVersion()
+          : TI.getPlatformMinVersion();
 
   VersionTuple DeclVersion;
-  const AvailabilityAttr *AA = getAttrForPlatform(S.Context, OffendingDecl);
   const IdentifierInfo *IIEnv = nullptr;
-  if (AA) {
+  if (const AvailabilityAttr *AA =
+          getAttrForPlatform(S.Context, Platform, PlatformInfo.OffendingDecl)) {
     DeclVersion = AA->getEffectiveIntroduced();
     IIEnv = AA->getEffectiveEnvironment();
   }
 
-  if (!ShouldDiagnoseAvailabilityInContext(S, K, DeclVersion, IIEnv, Ctx,
-                                           OffendingDecl))
-    return;
+  return ShouldDiagnoseAvailabilityInContext(
+      S, PlatformInfo.AR, DeclVersion, IIEnv, Ctx, PlatformInfo.OffendingDecl,
+      Platform, PlatformMinVersion);
+}
 
-  SourceLocation Loc = Locs.front();
+/// Emits an availability diagnostic for a not yet introduced declaration.
+static void EmitNotIntroducedAvailabilityWarning(
+    Sema &S, Decl *Ctx, const PlatformAgnosticAvailabilityDiagInfo &Info,
+    const PlatformSpecificAvailabilityDiag &PlatformInfo,
+    const PlatformSpecificAvailabilityDiag *VariantPlatformInfo = nullptr) {
+  assert(PlatformInfo.AR == AR_NotYetIntroduced && "unexpected AR");
+  const TargetInfo &TI = S.Context.getTargetInfo();
+  StringRef TargetPlatform = PlatformInfo.IsTargetVariantPlatform
+                                 ? TI.getTargetVariantPlatform()
+                                 : TI.getPlatformName();
+  const AvailabilityAttr *AA = getAttrForPlatform(
+      S.getASTContext(), TargetPlatform, PlatformInfo.OffendingDecl);
+  assert(AA != nullptr && "expecting valid availability attribute");
+  VersionTuple Introduced = AA->getEffectiveIntroduced();
+  bool EnvironmentMatchesOrNone =
+      hasMatchingEnvironmentOrNone(S.getASTContext(), AA->getEffectiveAttr());
 
-  // The declaration can have multiple availability attributes, we are looking
-  // at one of them.
-  if (AA && AA->isInherited()) {
-    for (const Decl *Redecl = OffendingDecl->getMostRecentDecl(); Redecl;
-         Redecl = Redecl->getPreviousDecl()) {
-      const AvailabilityAttr *AForRedecl =
-          getAttrForPlatform(S.Context, Redecl);
-      if (AForRedecl && !AForRedecl->isInherited()) {
-        // If D is a declaration with inherited attributes, the note should
-        // point to the declaration with actual attributes.
-        NoteLocation = Redecl->getLocation();
-        break;
-      }
-    }
-  }
-
-  switch (K) {
-  case AR_NotYetIntroduced: {
+  std::string PlatformName(
+      AvailabilityAttr::getPrettyPlatformName(TargetPlatform));
+  llvm::StringRef TargetEnvironment(
+      llvm::Triple::getEnvironmentTypeName(TI.getTriple().getEnvironment()));
+  llvm::StringRef AttrEnvironment =
+      AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
+  bool UseEnvironment =
+      (!AttrEnvironment.empty() && !TargetEnvironment.empty());
+  unsigned DiagKind;
+  if (VariantPlatformInfo) {
+    DiagKind = diag::warn_zippered_unguarded_availability;
+  } else {
     // We would like to emit the diagnostic even if -Wunguarded-availability is
     // not specified for deployment targets >= to iOS 11 or equivalent or
     // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
     // later.
-    assert(AA != nullptr && "expecting valid availability attribute");
-    VersionTuple Introduced = AA->getEffectiveIntroduced();
-    bool EnvironmentMatchesOrNone =
-        hasMatchingEnvironmentOrNone(S.getASTContext(), AA->getEffectiveAttr());
-
-    const TargetInfo &TI = S.getASTContext().getTargetInfo();
-    std::string PlatformName(
-        AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    llvm::StringRef TargetEnvironment(
-        llvm::Triple::getEnvironmentTypeName(TI.getTriple().getEnvironment()));
-    llvm::StringRef AttrEnvironment =
-        AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
-    bool UseEnvironment =
-        (!AttrEnvironment.empty() && !TargetEnvironment.empty());
-
-    unsigned DiagKind = getAvailabilityDiagnosticKind(
+    // FIXME: Should we look at the target-variant platform here too
+    // potentially?
+    DiagKind = getAvailabilityDiagnosticKind(
         S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
         Introduced, EnvironmentMatchesOrNone);
+  }
 
-    S.Diag(Loc, DiagKind) << OffendingDecl << PlatformName
-                          << Introduced.getAsString() << UseEnvironment
-                          << TargetEnvironment;
+  VersionTuple VariantIntroduced;
+  if (VariantPlatformInfo)
+    VariantIntroduced =
+        getAttrForPlatform(S.getASTContext(), TI.getTargetVariantPlatform(),
+                           VariantPlatformInfo->OffendingDecl)
+            ->getIntroduced();
+  {
+    auto Diag = S.Diag(Info.Locs[0], DiagKind);
+    Diag << Info.ReferringDecl << PlatformName << Introduced.getAsString();
+    if (!VariantPlatformInfo)
+      Diag << UseEnvironment << TargetEnvironment;
+    else
+      Diag << AvailabilityAttr::getPrettyPlatformName(
+                  TI.getTargetVariantPlatform())
+           << VariantIntroduced.getAsString();
+  }
 
-    S.Diag(OffendingDecl->getLocation(),
+  S.Diag(PlatformInfo.OffendingDecl->getLocation(),
+         diag::note_partial_availability_specified_here)
+      << PlatformInfo.OffendingDecl << PlatformName << Introduced.getAsString()
+      << (PlatformInfo.IsTargetVariantPlatform
+              ? TI.getTargetVariantPlatformMinVersion()
+              : TI.getPlatformMinVersion())
+             .getAsString()
+      << UseEnvironment << AttrEnvironment << TargetEnvironment;
+  if (VariantPlatformInfo &&
+      VariantPlatformInfo->OffendingDecl != PlatformInfo.OffendingDecl)
+    S.Diag(VariantPlatformInfo->OffendingDecl->getLocation(),
            diag::note_partial_availability_specified_here)
-        << OffendingDecl << PlatformName << Introduced.getAsString()
-        << S.Context.getTargetInfo().getPlatformMinVersion().getAsString()
-        << UseEnvironment << AttrEnvironment << TargetEnvironment;
+        << VariantPlatformInfo->OffendingDecl
+        << AvailabilityAttr::getPrettyPlatformName(
+               TI.getTargetVariantPlatform())
+        << VariantIntroduced.getAsString()
+        << TI.getTargetVariantPlatformMinVersion().getAsString();
 
-    // Do not offer to silence the warning or fixits for HLSL
-    if (S.getLangOpts().HLSL)
+  // Do not offer to silence the warning or fixits for HLSL
+  if (S.getLangOpts().HLSL)
+    return;
+
+  if (const auto *Enclosing = findEnclosingDeclToAnnotate(Ctx)) {
+    if (const auto *TD = dyn_cast<TagDecl>(Enclosing))
+      if (TD->getDeclName().isEmpty()) {
+        S.Diag(TD->getLocation(),
+               diag::note_decl_unguarded_availability_silence)
+            << /*Anonymous*/ 1 << TD->getKindName();
+        return;
+      }
+    auto FixitNoteDiag = S.Diag(Enclosing->getLocation(),
+                                diag::note_decl_unguarded_availability_silence)
+                         << /*Named*/ 0 << Enclosing;
+    // Don't offer a fixit for declarations with availability attributes.
+    if (Enclosing->hasAttr<AvailabilityAttr>())
+      return;
+    Preprocessor &PP = S.getPreprocessor();
+    if (!PP.isMacroDefined("API_AVAILABLE"))
+      return;
+    std::optional<AttributeInsertion> Insertion = createAttributeInsertion(
+        Enclosing, S.getSourceManager(), S.getLangOpts());
+    if (!Insertion)
       return;
 
-    if (const auto *Enclosing = findEnclosingDeclToAnnotate(Ctx)) {
-      if (const auto *TD = dyn_cast<TagDecl>(Enclosing))
-        if (TD->getDeclName().isEmpty()) {
-          S.Diag(TD->getLocation(),
-                 diag::note_decl_unguarded_availability_silence)
-              << /*Anonymous*/ 1 << TD->getKindName();
-          return;
-        }
-      auto FixitNoteDiag =
-          S.Diag(Enclosing->getLocation(),
-                 diag::note_decl_unguarded_availability_silence)
-          << /*Named*/ 0 << Enclosing;
-      // Don't offer a fixit for declarations with availability attributes.
-      if (Enclosing->hasAttr<AvailabilityAttr>())
-        return;
-      Preprocessor &PP = S.getPreprocessor();
-      if (!PP.isMacroDefined("API_AVAILABLE"))
-        return;
-      std::optional<AttributeInsertion> Insertion = createAttributeInsertion(
-          Enclosing, S.getSourceManager(), S.getLangOpts());
-      if (!Insertion)
-        return;
-      StringRef PlatformName =
-          S.getASTContext().getTargetInfo().getPlatformName();
-
+    auto GetAvailablePlatform = [&](StringRef PlatformName) -> StringRef {
       // Apple's API_AVAILABLE macro expands roughly like this.
       // API_AVAILABLE(ios(17.0))
       // __attribute__((availability(__API_AVAILABLE_PLATFORM_ios(17.0)))
@@ -536,60 +618,120 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
             return PP.isMacroDefined((MacroPrefix + EquivalentPlatform).str());
           });
       if (AvailablePlatform == EquivalentPlatforms.end())
-        return;
-      std::string Introduced =
-          OffendingDecl->getVersionIntroduced().getAsString();
-      FixitNoteDiag << FixItHint::CreateInsertion(
-          Insertion->Loc,
-          (llvm::Twine(Insertion->Prefix) + "API_AVAILABLE(" +
-           *AvailablePlatform + "(" + Introduced + "))" + Insertion->Suffix)
-              .str());
-    }
-    return;
-  }
-  case AR_Deprecated:
-    // Suppress -Wdeprecated-declarations in implicit
-    // functions.
-    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
-        FD && FD->isImplicit())
+        return {};
+      return *AvailablePlatform;
+    };
+
+    StringRef PlatformName = GetAvailablePlatform(TargetPlatform);
+    if (PlatformName.empty())
       return;
 
-    if (ObjCPropertyAccess)
-      diag = diag::warn_property_method_deprecated;
-    else if (S.currentEvaluationContext().IsCaseExpr)
-      diag = diag::warn_deprecated_switch_case;
-    else
-      diag = diag::warn_deprecated;
+    std::string FixItText;
+    llvm::raw_string_ostream OS(FixItText);
+    OS << Insertion->Prefix << "API_AVAILABLE(" << PlatformName << '('
+       << Introduced.getAsString() << ')';
+    if (VariantPlatformInfo) {
+      StringRef VariantPlatformName =
+          GetAvailablePlatform(TI.getTargetVariantPlatform());
+      if (!VariantPlatformName.empty())
+        OS << ", " << VariantPlatformName << '('
+           << VariantIntroduced.getAsString() << ')';
+    }
+    OS << ')' << Insertion->Suffix;
+    FixitNoteDiag << FixItHint::CreateInsertion(Insertion->Loc, OS.str());
+  }
+}
 
-    diag_message = diag::warn_deprecated_message;
-    diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
-    property_note_select = /* deprecated */ 0;
-    available_here_select_kind = /* deprecated */ 2;
-    if (const auto *AL = OffendingDecl->getAttr<DeprecatedAttr>())
-      NoteLocation = AL->getLocation();
-    break;
+static void EmitZipperedNotIntroducedAvailabilityWarning(
+    Sema &S, Decl *Ctx, const PlatformAgnosticAvailabilityDiagInfo &Info,
+    const PlatformSpecificAvailabilityDiag &PlatformInfo,
+    const PlatformSpecificAvailabilityDiag &VariantPlatformInfo) {
+  EmitNotIntroducedAvailabilityWarning(S, Ctx, Info, PlatformInfo,
+                                       &VariantPlatformInfo);
+}
 
-  case AR_Unavailable:
-    diag = !ObjCPropertyAccess ? diag::err_unavailable
-                               : diag::err_property_method_unavailable;
+// Information about the diagnostic for a 'deprecated' or 'unavailable'.
+struct UnavailableDeprecatedAvailabilityDiag {
+  // Diagnostics for deprecated or unavailable.
+  unsigned diag, diag_message, diag_fwdclass_message;
+  unsigned diag_available_here = diag::note_availability_specified_here;
+
+  // Matches 'diag::note_property_attribute' options.
+  unsigned property_note_select;
+
+  // Matches diag::note_availability_specified_here.
+  unsigned available_here_select_kind;
+
+  // An optional note location for the note.
+  SourceLocation NoteLocation;
+
+  CharSourceRange UseRange;
+  StringRef Replacement;
+
+  UnavailableDeprecatedAvailabilityDiag(
+      Sema &S, const PlatformAgnosticAvailabilityDiagInfo &Info,
+      const PlatformSpecificAvailabilityDiag &PlatformInfo) {
+    const TargetInfo &TI = S.getASTContext().getTargetInfo();
+    StringRef TargetPlatform = PlatformInfo.IsTargetVariantPlatform
+                                   ? TI.getTargetVariantPlatform()
+                                   : TI.getPlatformName();
+    Replacement = "";
+    UseRange = CharSourceRange();
+    if (PlatformInfo.AR == AR_Deprecated) {
+      if (auto AL = PlatformInfo.OffendingDecl->getAttr<DeprecatedAttr>())
+        Replacement = AL->getReplacement();
+      if (auto AL = getAttrForPlatform(S.Context, TargetPlatform,
+                                       PlatformInfo.OffendingDecl))
+        Replacement = AL->getReplacement();
+
+      if (!Replacement.empty())
+        UseRange = CharSourceRange::getCharRange(
+            Info.Locs[0], S.getLocForEndOfToken(Info.Locs[0]));
+    }
+
+    if (PlatformInfo.AR == AR_Deprecated) {
+      if (Info.ObjCPropertyAccess)
+        diag = diag::warn_property_method_deprecated;
+      else if (S.currentEvaluationContext().IsCaseExpr)
+        diag = diag::warn_deprecated_switch_case;
+      else
+        diag = diag::warn_deprecated;
+
+      diag_message = diag::warn_deprecated_message;
+      diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
+      property_note_select = /* deprecated */ 0;
+      available_here_select_kind = /* deprecated */ 2;
+      if (const auto *AL =
+              PlatformInfo.OffendingDecl->getAttr<DeprecatedAttr>())
+        NoteLocation = AL->getLocation();
+      else
+        NoteLocation = PlatformInfo.getNoteLocation(S);
+      return;
+    }
+    assert(PlatformInfo.AR == AR_Unavailable && "unexpected AR");
+
+    diag = !Info.ObjCPropertyAccess ? diag::err_unavailable
+                                    : diag::err_property_method_unavailable;
     diag_message = diag::err_unavailable_message;
     diag_fwdclass_message = diag::warn_unavailable_fwdclass_message;
     property_note_select = /* unavailable */ 1;
     available_here_select_kind = /* unavailable */ 0;
+    NoteLocation = PlatformInfo.getNoteLocation(S);
 
-    if (auto AL = OffendingDecl->getAttr<UnavailableAttr>()) {
+    if (auto AL = PlatformInfo.OffendingDecl->getAttr<UnavailableAttr>()) {
       if (AL->isImplicit() && AL->getImplicitReason()) {
         // Most of these failures are due to extra restrictions in ARC;
         // reflect that in the primary diagnostic when applicable.
         auto flagARCError = [&] {
           if (S.getLangOpts().ObjCAutoRefCount &&
               S.getSourceManager().isInSystemHeader(
-                  OffendingDecl->getLocation()))
+                  PlatformInfo.OffendingDecl->getLocation()))
             diag = diag::err_unavailable_in_arc;
         };
 
         switch (AL->getImplicitReason()) {
-        case UnavailableAttr::IR_None: break;
+        case UnavailableAttr::IR_None:
+          break;
 
         case UnavailableAttr::IR_ARCForbiddenType:
           flagARCError();
@@ -620,55 +762,60 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         }
       }
     }
-    break;
-
-  case AR_Available:
-    llvm_unreachable("Warning for availability of available declaration?");
   }
+
+  bool operator==(const UnavailableDeprecatedAvailabilityDiag &Other) {
+    return diag == Other.diag && diag_message == Other.diag_message &&
+           diag_fwdclass_message == Other.diag_fwdclass_message &&
+           diag_available_here == Other.diag_available_here;
+  }
+};
+
+static void EmitUnavailableDeprecatedAvailabilityWarning(
+    Sema &S, StringRef Message,
+    const UnavailableDeprecatedAvailabilityDiag &Diag,
+    const PlatformAgnosticAvailabilityDiagInfo &Info,
+    const PlatformSpecificAvailabilityDiag &PlatformInfo,
+    const UnavailableDeprecatedAvailabilityDiag *VariantDiag = nullptr,
+    const PlatformSpecificAvailabilityDiag *VariantPlatformInfo = nullptr) {
+  // Create the fix-it only when the replacement on both platforms matches.
 
   SmallVector<FixItHint, 12> FixIts;
-  if (K == AR_Deprecated) {
-    StringRef Replacement;
-    if (auto AL = OffendingDecl->getAttr<DeprecatedAttr>())
-      Replacement = AL->getReplacement();
-    if (auto AL = getAttrForPlatform(S.Context, OffendingDecl))
-      Replacement = AL->getReplacement();
-
-    CharSourceRange UseRange;
-    if (!Replacement.empty())
-      UseRange =
-          CharSourceRange::getCharRange(Loc, S.getLocForEndOfToken(Loc));
-    if (UseRange.isValid()) {
-      if (const auto *MethodDecl = dyn_cast<ObjCMethodDecl>(ReferringDecl)) {
-        Selector Sel = MethodDecl->getSelector();
-        SmallVector<StringRef, 12> SelectorSlotNames;
-        std::optional<unsigned> NumParams = tryParseObjCMethodName(
-            Replacement, SelectorSlotNames, S.getLangOpts());
-        if (NumParams && *NumParams == Sel.getNumArgs()) {
-          assert(SelectorSlotNames.size() == Locs.size());
-          for (unsigned I = 0; I < Locs.size(); ++I) {
-            if (!Sel.getNameForSlot(I).empty()) {
-              CharSourceRange NameRange = CharSourceRange::getCharRange(
-                  Locs[I], S.getLocForEndOfToken(Locs[I]));
-              FixIts.push_back(FixItHint::CreateReplacement(
-                  NameRange, SelectorSlotNames[I]));
-            } else
-              FixIts.push_back(
-                  FixItHint::CreateInsertion(Locs[I], SelectorSlotNames[I]));
-          }
-        } else
-          FixIts.push_back(FixItHint::CreateReplacement(UseRange, Replacement));
+  if (Diag.UseRange.isValid() &&
+      (!VariantDiag || Diag.Replacement == VariantDiag->Replacement)) {
+    if (const auto *MethodDecl = dyn_cast<ObjCMethodDecl>(Info.ReferringDecl)) {
+      Selector Sel = MethodDecl->getSelector();
+      SmallVector<StringRef, 12> SelectorSlotNames;
+      std::optional<unsigned> NumParams = tryParseObjCMethodName(
+          Diag.Replacement, SelectorSlotNames, S.getLangOpts());
+      if (NumParams && *NumParams == Sel.getNumArgs()) {
+        assert(SelectorSlotNames.size() == Info.Locs.size());
+        for (unsigned I = 0; I < Info.Locs.size(); ++I) {
+          if (!Sel.getNameForSlot(I).empty()) {
+            CharSourceRange NameRange = CharSourceRange::getCharRange(
+                Info.Locs[I], S.getLocForEndOfToken(Info.Locs[I]));
+            FixIts.push_back(
+                FixItHint::CreateReplacement(NameRange, SelectorSlotNames[I]));
+          } else
+            FixIts.push_back(
+                FixItHint::CreateInsertion(Info.Locs[I], SelectorSlotNames[I]));
+        }
       } else
-        FixIts.push_back(FixItHint::CreateReplacement(UseRange, Replacement));
-    }
+        FixIts.push_back(
+            FixItHint::CreateReplacement(Diag.UseRange, Diag.Replacement));
+    } else
+      FixIts.push_back(
+          FixItHint::CreateReplacement(Diag.UseRange, Diag.Replacement));
   }
+
+  SourceLocation Loc = Info.Locs[0];
 
   // We emit deprecation warning for deprecated specializations
   // when their instantiation stacks originate outside
   // of a system header, even if the diagnostics is suppresed at the
   // point of definition.
   SourceLocation InstantiationLoc =
-      S.getTopMostPointOfInstantiation(ReferringDecl);
+      S.getTopMostPointOfInstantiation(Info.ReferringDecl);
   bool ShouldAllowWarningInSystemHeader =
       InstantiationLoc != Loc &&
       !S.getSourceManager().isInSystemHeader(InstantiationLoc);
@@ -687,23 +834,112 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   } SystemWarningOverrideRAII(S.getDiagnostics(),
                               ShouldAllowWarningInSystemHeader);
 
+  auto EmitObjCPropNote = [&]() {
+    if (PlatformInfo.ObjCProperty)
+      S.Diag(PlatformInfo.ObjCProperty->getLocation(),
+             diag::note_property_attribute)
+          << PlatformInfo.ObjCProperty->getDeclName()
+          << Diag.property_note_select;
+    if (VariantPlatformInfo && VariantPlatformInfo->ObjCProperty)
+      S.Diag(VariantPlatformInfo->ObjCProperty->getLocation(),
+             diag::note_property_attribute)
+          << VariantPlatformInfo->ObjCProperty->getDeclName()
+          << VariantDiag->property_note_select;
+  };
   if (!Message.empty()) {
-    S.Diag(Loc, diag_message) << ReferringDecl << Message << FixIts;
-    if (ObjCProperty)
-      S.Diag(ObjCProperty->getLocation(), diag::note_property_attribute)
-          << ObjCProperty->getDeclName() << property_note_select;
-  } else if (!UnknownObjCClass) {
-    S.Diag(Loc, diag) << ReferringDecl << FixIts;
-    if (ObjCProperty)
-      S.Diag(ObjCProperty->getLocation(), diag::note_property_attribute)
-          << ObjCProperty->getDeclName() << property_note_select;
+    S.Diag(Loc, Diag.diag_message) << Info.ReferringDecl << Message << FixIts;
+    EmitObjCPropNote();
+  } else if (!Info.UnknownObjCClass) {
+    S.Diag(Loc, Diag.diag) << Info.ReferringDecl << FixIts;
+    EmitObjCPropNote();
   } else {
-    S.Diag(Loc, diag_fwdclass_message) << ReferringDecl << FixIts;
-    S.Diag(UnknownObjCClass->getLocation(), diag::note_forward_class);
+    S.Diag(Loc, Diag.diag_fwdclass_message) << Info.ReferringDecl << FixIts;
+    S.Diag(Info.UnknownObjCClass->getLocation(), diag::note_forward_class);
   }
 
-  S.Diag(NoteLocation, diag_available_here)
-    << OffendingDecl << available_here_select_kind;
+  S.Diag(Diag.NoteLocation, Diag.diag_available_here)
+      << PlatformInfo.OffendingDecl << Diag.available_here_select_kind;
+  if (VariantDiag && VariantDiag->NoteLocation != Diag.NoteLocation)
+    S.Diag(VariantDiag->NoteLocation, VariantDiag->diag_available_here)
+        << VariantPlatformInfo->OffendingDecl
+        << VariantDiag->available_here_select_kind;
+}
+
+/// Actually emit an availability diagnostic for a reference to an unavailable
+/// decl.
+///
+/// \param Ctx The context that the reference occurred in
+/// \param ReferringDecl The exact declaration that was referenced.
+/// \param OffendingDecl A related decl to \c ReferringDecl that has an
+/// availability attribute corresponding to \c K attached to it. Note that this
+/// may not be the same as ReferringDecl, i.e. if an EnumDecl is annotated and
+/// we refer to a member EnumConstantDecl, ReferringDecl is the EnumConstantDecl
+/// and OffendingDecl is the EnumDecl.
+static void DoEmitAvailabilityWarning(
+    Sema &S, Decl *Ctx, const PlatformAgnosticAvailabilityDiagInfo &Info,
+    const PlatformSpecificAvailabilityDiag &PlatformInfo) {
+  if (!ShouldEmitAvailabilityWarning(S, Ctx, Info, PlatformInfo))
+    return;
+
+  if (PlatformInfo.AR == AR_NotYetIntroduced)
+    return EmitNotIntroducedAvailabilityWarning(S, Ctx, Info, PlatformInfo);
+  assert(PlatformInfo.AR != AR_Available &&
+         "expected an unavailable/deprecated AR");
+
+  if (PlatformInfo.AR == AR_Deprecated)
+    // Suppress -Wdeprecated-declarations in implicit
+    // functions.
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
+        FD && FD->isImplicit())
+      return;
+
+  UnavailableDeprecatedAvailabilityDiag Diag(S, Info, PlatformInfo);
+  EmitUnavailableDeprecatedAvailabilityWarning(S, PlatformInfo.Message, Diag,
+                                               Info, PlatformInfo);
+}
+
+static void DoEmitZipperedAvailabilityWarning(
+    Sema &S, Decl *Ctx, const PlatformAgnosticAvailabilityDiagInfo &Info,
+    const PlatformSpecificAvailabilityDiag &PlatformInfo,
+    const PlatformSpecificAvailabilityDiag &VariantPlatformInfo) {
+  assert(PlatformInfo.IsTargetVariantPlatform == false &&
+         VariantPlatformInfo.IsTargetVariantPlatform == true &&
+         "invalid zippered diag");
+  bool EmitP1 = ShouldEmitAvailabilityWarning(S, Ctx, Info, PlatformInfo);
+  bool EmitP2 =
+      ShouldEmitAvailabilityWarning(S, Ctx, Info, VariantPlatformInfo);
+  if (!EmitP1 && !EmitP2)
+    return;
+  if (EmitP1 && EmitP2) {
+    // Check if we can merge the diagnostic into one.
+    if (PlatformInfo.AR == VariantPlatformInfo.AR) {
+      if (PlatformInfo.AR == AR_NotYetIntroduced) {
+        EmitZipperedNotIntroducedAvailabilityWarning(S, Ctx, Info, PlatformInfo,
+                                                     VariantPlatformInfo);
+        return;
+      }
+      UnavailableDeprecatedAvailabilityDiag D1(S, Info, PlatformInfo);
+      UnavailableDeprecatedAvailabilityDiag D2(S, Info, VariantPlatformInfo);
+      if (D1 == D2) {
+        std::string Message;
+        llvm::raw_string_ostream OS(Message);
+        if (!PlatformInfo.Message.empty() &&
+            !VariantPlatformInfo.Message.empty())
+          OS << PlatformInfo.Message << " and " << VariantPlatformInfo.Message;
+        else if (!PlatformInfo.Message.empty())
+          OS << PlatformInfo.Message;
+        else if (!VariantPlatformInfo.Message.empty())
+          OS << VariantPlatformInfo.Message;
+        EmitUnavailableDeprecatedAvailabilityWarning(
+            S, OS.str(), D1, Info, PlatformInfo, &D2, &VariantPlatformInfo);
+        return;
+      }
+    }
+  }
+  if (EmitP1)
+    DoEmitAvailabilityWarning(S, Ctx, Info, PlatformInfo);
+  if (EmitP2)
+    DoEmitAvailabilityWarning(S, Ctx, Info, VariantPlatformInfo);
 }
 
 void Sema::handleDelayedAvailabilityCheck(DelayedDiagnostic &DD, Decl *Ctx) {
@@ -711,34 +947,39 @@ void Sema::handleDelayedAvailabilityCheck(DelayedDiagnostic &DD, Decl *Ctx) {
          "Expected an availability diagnostic here");
 
   DD.Triggered = true;
-  DoEmitAvailabilityWarning(
-      *this, DD.getAvailabilityResult(), Ctx, DD.getAvailabilityReferringDecl(),
-      DD.getAvailabilityOffendingDecl(), DD.getAvailabilityMessage(),
-      DD.getAvailabilitySelectorLocs(), DD.getUnknownObjCClass(),
-      DD.getObjCProperty(), false);
+  PlatformAgnosticAvailabilityDiagInfo Info(
+      DD.getAvailabilityReferringDecl(), DD.getAvailabilitySelectorLocs(),
+      DD.getUnknownObjCClass(), DD.getObjCPropertyAccess());
+  PlatformSpecificAvailabilityDiag PlatformInfo(
+      DD.getAvailabilityResult(), DD.getAvailabilityOffendingDecl(),
+      DD.getAvailabilityMessage().str(), DD.getObjCProperty(),
+      DD.isTargetVariantPlatform());
+  DoEmitAvailabilityWarning(*this, Ctx, Info, PlatformInfo);
 }
 
-static void EmitAvailabilityWarning(Sema &S, AvailabilityResult AR,
-                                    const NamedDecl *ReferringDecl,
-                                    const NamedDecl *OffendingDecl,
-                                    StringRef Message,
-                                    ArrayRef<SourceLocation> Locs,
-                                    const ObjCInterfaceDecl *UnknownObjCClass,
-                                    const ObjCPropertyDecl *ObjCProperty,
-                                    bool ObjCPropertyAccess) {
-  // Delay if we're currently parsing a declaration.
-  if (S.DelayedDiagnostics.shouldDelayDiagnostics()) {
-    S.DelayedDiagnostics.add(
-        DelayedDiagnostic::makeAvailability(
-            AR, Locs, ReferringDecl, OffendingDecl, UnknownObjCClass,
-            ObjCProperty, Message, ObjCPropertyAccess));
-    return;
-  }
+void Sema::handleZipperedDelayedAvailabilityCheck(DelayedDiagnostic &DD,
+                                                  DelayedDiagnostic &VariantDD,
+                                                  Decl *Ctx) {
+  assert(DD.Kind == DelayedDiagnostic::Availability &&
+         VariantDD.Kind == DelayedDiagnostic::Availability &&
+         "Expected an availability diagnostic here");
 
-  Decl *Ctx = cast<Decl>(S.getCurLexicalContext());
-  DoEmitAvailabilityWarning(S, AR, Ctx, ReferringDecl, OffendingDecl,
-                            Message, Locs, UnknownObjCClass, ObjCProperty,
-                            ObjCPropertyAccess);
+  DD.Triggered = true;
+  VariantDD.Triggered = true;
+  PlatformAgnosticAvailabilityDiagInfo Info(
+      DD.getAvailabilityReferringDecl(), DD.getAvailabilitySelectorLocs(),
+      DD.getUnknownObjCClass(), DD.getObjCPropertyAccess());
+  PlatformSpecificAvailabilityDiag PlatformInfo(
+      DD.getAvailabilityResult(), DD.getAvailabilityOffendingDecl(),
+      DD.getAvailabilityMessage().str(), DD.getObjCProperty(),
+      DD.isTargetVariantPlatform());
+  PlatformSpecificAvailabilityDiag VariantPlatformInfo(
+      VariantDD.getAvailabilityResult(),
+      VariantDD.getAvailabilityOffendingDecl(),
+      VariantDD.getAvailabilityMessage().str(), VariantDD.getObjCProperty(),
+      VariantDD.isTargetVariantPlatform());
+  DoEmitZipperedAvailabilityWarning(*this, Ctx, Info, PlatformInfo,
+                                    VariantPlatformInfo);
 }
 
 namespace {
@@ -816,8 +1057,28 @@ class DiagnoseUnguardedAvailability : public DynamicRecursiveASTVisitor {
   Decl *Ctx;
 
   /// Stack of potentially nested 'if (@available(...))'s.
-  SmallVector<VersionTuple, 8> AvailabilityStack;
+  struct ZipperedVersionTuple {
+    std::optional<VersionTuple> Version;
+    std::optional<VersionTuple> VariantVersion;
+
+    static ZipperedVersionTuple make(VersionTuple V) {
+      return {V, std::nullopt};
+    }
+    static ZipperedVersionTuple makeVariant(VersionTuple V) {
+      return {std::nullopt, V};
+    }
+    static ZipperedVersionTuple makeZippered(VersionTuple V,
+                                             VersionTuple VariantV) {
+      return {V, VariantV};
+    }
+  };
+  SmallVector<ZipperedVersionTuple, 8> AvailabilityStack;
   SmallVector<const Stmt *, 16> StmtStack;
+
+  void EmitNotYetIntroducedDiagnostic(
+      NamedDecl *D, SourceRange Range,
+      const PlatformSpecificAvailabilityDiag &PlatformInfo,
+      const PlatformSpecificAvailabilityDiag *VariantPlatformInfo = nullptr);
 
   void DiagnoseDeclAvailability(NamedDecl *D, SourceRange Range,
                                 ObjCInterfaceDecl *ClassReceiver = nullptr);
@@ -825,8 +1086,29 @@ class DiagnoseUnguardedAvailability : public DynamicRecursiveASTVisitor {
 public:
   DiagnoseUnguardedAvailability(Sema &SemaRef, Decl *Ctx)
       : SemaRef(SemaRef), Ctx(Ctx) {
+    const TargetInfo &TI = SemaRef.Context.getTargetInfo();
     AvailabilityStack.push_back(
-        SemaRef.Context.getTargetInfo().getPlatformMinVersion());
+        TI.hasTargetVariantPlatform()
+            ? ZipperedVersionTuple::makeZippered(
+                  TI.getPlatformMinVersion(),
+                  TI.getTargetVariantPlatformMinVersion())
+            : ZipperedVersionTuple::make(TI.getPlatformMinVersion()));
+  }
+
+  // Returns the OS version for the native/variant platform that's guarded by
+  // the @available
+  // checks.
+  const VersionTuple &getGuardedVersion(bool IsTargetVariantPlatform) {
+    if (!SemaRef.Context.getTargetInfo().hasTargetVariantPlatform())
+      return *AvailabilityStack.back().Version;
+    for (const auto &S : llvm::reverse(AvailabilityStack)) {
+      if (IsTargetVariantPlatform) {
+        if (S.VariantVersion)
+          return *S.VariantVersion;
+      } else if (S.Version)
+        return *S.Version;
+    }
+    llvm_unreachable("missing availability version guard");
   }
 
   bool TraverseStmt(Stmt *S) override {
@@ -882,143 +1164,226 @@ public:
   bool VisitTypeLoc(TypeLoc Ty) override;
 };
 
+void DiagnoseUnguardedAvailability::EmitNotYetIntroducedDiagnostic(
+    NamedDecl *D, SourceRange Range,
+    const PlatformSpecificAvailabilityDiag &PlatformInfo,
+    const PlatformSpecificAvailabilityDiag *VariantPlatformInfo) {
+  // We would like to emit the diagnostic even if -Wunguarded-availability is
+  // not specified for deployment targets >= to iOS 11 or equivalent or
+  // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
+  // later.
+  const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
+  StringRef PlatformNameStrRef = PlatformInfo.IsTargetVariantPlatform
+                                     ? TI.getTargetVariantPlatform()
+                                     : TI.getPlatformName();
+  auto *AA = getAttrForPlatform(SemaRef.getASTContext(), PlatformNameStrRef,
+                                PlatformInfo.OffendingDecl);
+  VersionTuple Introduced = AA->getEffectiveIntroduced();
+
+  std::string PlatformName(
+      AvailabilityAttr::getPrettyPlatformName(PlatformNameStrRef));
+  llvm::StringRef TargetEnvironment(TI.getTriple().getEnvironmentName());
+  bool EnvironmentMatchesOrNone = hasMatchingEnvironmentOrNone(
+      SemaRef.getASTContext(), AA->getEffectiveAttr());
+  llvm::StringRef AttrEnvironment =
+      AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
+  bool UseEnvironment =
+      (!AttrEnvironment.empty() && !TargetEnvironment.empty());
+
+  unsigned DiagKind =
+      VariantPlatformInfo
+          ? diag::warn_zippered_unguarded_availability
+          : getAvailabilityDiagnosticKind(
+                SemaRef.Context,
+                PlatformInfo.IsTargetVariantPlatform
+                    ? TI.getTargetVariantPlatformMinVersion()
+                    : TI.getPlatformMinVersion(),
+                Introduced, EnvironmentMatchesOrNone,
+                /*IsTargetVariantCheck=*/PlatformInfo.IsTargetVariantPlatform);
+
+  VersionTuple VariantIntroduced;
+  if (VariantPlatformInfo)
+    VariantIntroduced = getAttrForPlatform(SemaRef.getASTContext(),
+                                           TI.getTargetVariantPlatform(),
+                                           VariantPlatformInfo->OffendingDecl)
+                            ->getIntroduced();
+  {
+    auto Diag = SemaRef.Diag(Range.getBegin(), DiagKind)
+                << Range << D << PlatformName << Introduced.getAsString();
+    if (!VariantPlatformInfo)
+      Diag << UseEnvironment << TargetEnvironment;
+    else
+      Diag << AvailabilityAttr::getPrettyPlatformName(
+                  TI.getTargetVariantPlatform())
+           << VariantIntroduced.getAsString();
+  }
+
+  SemaRef.Diag(PlatformInfo.OffendingDecl->getLocation(),
+               diag::note_partial_availability_specified_here)
+      << PlatformInfo.OffendingDecl << PlatformName << Introduced.getAsString()
+      << (PlatformInfo.IsTargetVariantPlatform
+              ? TI.getTargetVariantPlatformMinVersion()
+              : TI.getPlatformMinVersion())
+             .getAsString()
+      << UseEnvironment << AttrEnvironment << TargetEnvironment;
+  if (VariantPlatformInfo &&
+      PlatformInfo.OffendingDecl != VariantPlatformInfo->OffendingDecl)
+    SemaRef.Diag(VariantPlatformInfo->OffendingDecl->getLocation(),
+                 diag::note_partial_availability_specified_here)
+        << VariantPlatformInfo->OffendingDecl
+        << AvailabilityAttr::getPrettyPlatformName(
+               TI.getTargetVariantPlatform())
+        << VariantIntroduced.getAsString()
+        << TI.getTargetVariantPlatformMinVersion().getAsString();
+
+  // Do not offer to silence the warning or fixits for HLSL
+  if (SemaRef.getLangOpts().HLSL)
+    return;
+
+  auto FixitDiag =
+      SemaRef.Diag(Range.getBegin(), diag::note_unguarded_available_silence)
+      << Range << D
+      << (SemaRef.getLangOpts().ObjC ? /*@available*/ 0
+                                     : /*__builtin_available*/ 1);
+
+  // Find the statement which should be enclosed in the if @available check.
+  if (StmtStack.empty())
+    return;
+  const Stmt *StmtOfUse = StmtStack.back();
+  const CompoundStmt *Scope = nullptr;
+  for (const Stmt *S : llvm::reverse(StmtStack)) {
+    if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
+      Scope = CS;
+      break;
+    }
+    if (isBodyLikeChildStmt(StmtOfUse, S)) {
+      // The declaration won't be seen outside of the statement, so we don't
+      // have to wrap the uses of any declared variables in if (@available).
+      // Therefore we can avoid setting Scope here.
+      break;
+    }
+    StmtOfUse = S;
+  }
+  const Stmt *LastStmtOfUse = nullptr;
+  if (isa<DeclStmt>(StmtOfUse) && Scope) {
+    for (const Decl *D : cast<DeclStmt>(StmtOfUse)->decls()) {
+      if (StmtUSEFinder::isContained(StmtStack.back(), D)) {
+        LastStmtOfUse = LastDeclUSEFinder::findLastStmtThatUsesDecl(D, Scope);
+        break;
+      }
+    }
+  }
+
+  const SourceManager &SM = SemaRef.getSourceManager();
+  SourceLocation IfInsertionLoc = SM.getExpansionLoc(StmtOfUse->getBeginLoc());
+  SourceLocation StmtEndLoc =
+      SM.getExpansionRange(
+            (LastStmtOfUse ? LastStmtOfUse : StmtOfUse)->getEndLoc())
+          .getEnd();
+  if (SM.getFileID(IfInsertionLoc) != SM.getFileID(StmtEndLoc))
+    return;
+
+  StringRef Indentation = Lexer::getIndentationForLine(IfInsertionLoc, SM);
+  const char *ExtraIndentation = "    ";
+  std::string FixItString;
+  llvm::raw_string_ostream FixItOS(FixItString);
+  StringRef FixItPlatformName;
+  VersionTuple FixItVersion;
+
+  if (AA->getInferredAttr()) {
+    FixItPlatformName = "anyAppleOS";
+    FixItVersion = AA->getIntroduced();
+  } else {
+    FixItPlatformName =
+        AvailabilityAttr::getPlatformNameSourceSpelling(PlatformName);
+    FixItVersion = Introduced;
+  }
+  FixItOS << "if ("
+          << (SemaRef.getLangOpts().ObjC ? "@available" : "__builtin_available")
+          << "(" << FixItPlatformName << " " << FixItVersion.getAsString();
+  if (VariantPlatformInfo)
+    FixItOS << ", "
+            << AvailabilityAttr::getPlatformNameSourceSpelling(
+                   TI.getTargetVariantPlatform())
+            << " " << VariantIntroduced.getAsString();
+  FixItOS << ", *)) {\n" << Indentation << ExtraIndentation;
+  FixitDiag << FixItHint::CreateInsertion(IfInsertionLoc, FixItOS.str());
+  SourceLocation ElseInsertionLoc = Lexer::findLocationAfterToken(
+      StmtEndLoc, tok::semi, SM, SemaRef.getLangOpts(),
+      /*SkipTrailingWhitespaceAndNewLine=*/false);
+  if (ElseInsertionLoc.isInvalid())
+    ElseInsertionLoc =
+        Lexer::getLocForEndOfToken(StmtEndLoc, 0, SM, SemaRef.getLangOpts());
+  FixItOS.str().clear();
+  FixItOS << "\n"
+          << Indentation << "} else {\n"
+          << Indentation << ExtraIndentation
+          << "// Fallback on earlier versions\n"
+          << Indentation << "}";
+  FixitDiag << FixItHint::CreateInsertion(ElseInsertionLoc, FixItOS.str());
+}
+
 void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     NamedDecl *D, SourceRange Range, ObjCInterfaceDecl *ReceiverClass) {
-  AvailabilityResult Result;
-  const NamedDecl *OffendingDecl;
-  std::tie(Result, OffendingDecl) =
-      SemaRef.ShouldDiagnoseAvailabilityOfDecl(D, nullptr, ReceiverClass);
-  if (Result != AR_Available) {
+  const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
+
+  auto CreatePlatformDiagInfo = [&](bool IsTargetVariantPlatform)
+      -> std::optional<PlatformSpecificAvailabilityDiag> {
+    AvailabilityResult Result;
+    const NamedDecl *OffendingDecl;
+    StringRef PlatformName = IsTargetVariantPlatform
+                                 ? TI.getTargetVariantPlatform()
+                                 : TI.getPlatformName();
+    const VersionTuple &PlatformMinVersion =
+        IsTargetVariantPlatform ? TI.getTargetVariantPlatformMinVersion()
+                                : TI.getPlatformMinVersion();
+    std::tie(Result, OffendingDecl) = SemaRef.ShouldDiagnoseAvailabilityOfDecl(
+        D, PlatformName, PlatformMinVersion, nullptr, ReceiverClass);
     // All other diagnostic kinds have already been handled in
     // DiagnoseAvailabilityOfDecl.
     if (Result != AR_NotYetIntroduced)
-      return;
+      return std::nullopt;
 
-    const AvailabilityAttr *AA =
-      getAttrForPlatform(SemaRef.getASTContext(), OffendingDecl);
+    const AvailabilityAttr *AA = getAttrForPlatform(
+        SemaRef.getASTContext(), PlatformName, OffendingDecl);
     assert(AA != nullptr && "expecting valid availability attribute");
     bool EnvironmentMatchesOrNone = hasMatchingEnvironmentOrNone(
         SemaRef.getASTContext(), AA->getEffectiveAttr());
     VersionTuple Introduced = AA->getEffectiveIntroduced();
 
-    if (EnvironmentMatchesOrNone && AvailabilityStack.back() >= Introduced)
-      return;
+    if (EnvironmentMatchesOrNone &&
+        getGuardedVersion(IsTargetVariantPlatform) >= Introduced)
+      return std::nullopt;
 
     // If the context of this function is less available than D, we should not
     // emit a diagnostic.
-    if (!ShouldDiagnoseAvailabilityInContext(SemaRef, Result, Introduced,
-                                             AA->getEffectiveEnvironment(), Ctx,
-                                             OffendingDecl))
-      return;
+    if (!ShouldDiagnoseAvailabilityInContext(
+            SemaRef, Result, Introduced, AA->getEffectiveEnvironment(), Ctx,
+            OffendingDecl, PlatformName, PlatformMinVersion))
+      return std::nullopt;
+    return PlatformSpecificAvailabilityDiag(Result, OffendingDecl,
+                                            IsTargetVariantPlatform);
+  };
 
-    const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
-    std::string PlatformName(
-        AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    llvm::StringRef TargetEnvironment(TI.getTriple().getEnvironmentName());
-    llvm::StringRef AttrEnvironment =
-        AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
-    bool UseEnvironment =
-        (!AttrEnvironment.empty() && !TargetEnvironment.empty());
+  std::optional<PlatformSpecificAvailabilityDiag> PlatformInfo =
+      CreatePlatformDiagInfo(/*IsTargetVariantPlatform=*/false);
+  std::optional<PlatformSpecificAvailabilityDiag> VariantPlatformInfo;
+  if (TI.hasTargetVariantPlatform())
+    VariantPlatformInfo =
+        CreatePlatformDiagInfo(/*IsTargetVariantPlatform=*/true);
+  if (!PlatformInfo && !VariantPlatformInfo)
+    return;
 
-    unsigned DiagKind = getAvailabilityDiagnosticKind(
-        SemaRef.Context,
-        SemaRef.Context.getTargetInfo().getPlatformMinVersion(), Introduced,
-        EnvironmentMatchesOrNone);
-
-    SemaRef.Diag(Range.getBegin(), DiagKind)
-        << Range << D << PlatformName << Introduced.getAsString()
-        << UseEnvironment << TargetEnvironment;
-
-    SemaRef.Diag(OffendingDecl->getLocation(),
-                 diag::note_partial_availability_specified_here)
-        << OffendingDecl << PlatformName << Introduced.getAsString()
-        << SemaRef.Context.getTargetInfo().getPlatformMinVersion().getAsString()
-        << UseEnvironment << AttrEnvironment << TargetEnvironment;
-
-    // Do not offer to silence the warning or fixits for HLSL
-    if (SemaRef.getLangOpts().HLSL)
-      return;
-
-    auto FixitDiag =
-        SemaRef.Diag(Range.getBegin(), diag::note_unguarded_available_silence)
-        << Range << D
-        << (SemaRef.getLangOpts().ObjC ? /*@available*/ 0
-                                       : /*__builtin_available*/ 1);
-
-    // Find the statement which should be enclosed in the if @available check.
-    if (StmtStack.empty())
-      return;
-    const Stmt *StmtOfUse = StmtStack.back();
-    const CompoundStmt *Scope = nullptr;
-    for (const Stmt *S : llvm::reverse(StmtStack)) {
-      if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
-        Scope = CS;
-        break;
-      }
-      if (isBodyLikeChildStmt(StmtOfUse, S)) {
-        // The declaration won't be seen outside of the statement, so we don't
-        // have to wrap the uses of any declared variables in if (@available).
-        // Therefore we can avoid setting Scope here.
-        break;
-      }
-      StmtOfUse = S;
-    }
-    const Stmt *LastStmtOfUse = nullptr;
-    if (isa<DeclStmt>(StmtOfUse) && Scope) {
-      for (const Decl *D : cast<DeclStmt>(StmtOfUse)->decls()) {
-        if (StmtUSEFinder::isContained(StmtStack.back(), D)) {
-          LastStmtOfUse = LastDeclUSEFinder::findLastStmtThatUsesDecl(D, Scope);
-          break;
-        }
-      }
-    }
-
-    const SourceManager &SM = SemaRef.getSourceManager();
-    SourceLocation IfInsertionLoc =
-        SM.getExpansionLoc(StmtOfUse->getBeginLoc());
-    SourceLocation StmtEndLoc =
-        SM.getExpansionRange(
-              (LastStmtOfUse ? LastStmtOfUse : StmtOfUse)->getEndLoc())
-            .getEnd();
-    if (SM.getFileID(IfInsertionLoc) != SM.getFileID(StmtEndLoc))
-      return;
-
-    StringRef Indentation = Lexer::getIndentationForLine(IfInsertionLoc, SM);
-    const char *ExtraIndentation = "    ";
-    std::string FixItString;
-    llvm::raw_string_ostream FixItOS(FixItString);
-    StringRef FixItPlatformName;
-    VersionTuple FixItVersion;
-
-    if (AA->getInferredAttr()) {
-      FixItPlatformName = "anyAppleOS";
-      FixItVersion = AA->getIntroduced();
-    } else {
-      FixItPlatformName = AvailabilityAttr::getPlatformNameSourceSpelling(
-          SemaRef.getASTContext().getTargetInfo().getPlatformName());
-      FixItVersion = AA->getEffectiveIntroduced();
-    }
-    FixItOS << "if ("
-            << (SemaRef.getLangOpts().ObjC ? "@available"
-                                           : "__builtin_available")
-            << "(" << FixItPlatformName << " " << FixItVersion.getAsString()
-            << ", *)) {\n"
-            << Indentation << ExtraIndentation;
-    FixitDiag << FixItHint::CreateInsertion(IfInsertionLoc, FixItOS.str());
-    SourceLocation ElseInsertionLoc = Lexer::findLocationAfterToken(
-        StmtEndLoc, tok::semi, SM, SemaRef.getLangOpts(),
-        /*SkipTrailingWhitespaceAndNewLine=*/false);
-    if (ElseInsertionLoc.isInvalid())
-      ElseInsertionLoc =
-          Lexer::getLocForEndOfToken(StmtEndLoc, 0, SM, SemaRef.getLangOpts());
-    FixItOS.str().clear();
-    FixItOS << "\n"
-            << Indentation << "} else {\n"
-            << Indentation << ExtraIndentation
-            << "// Fallback on earlier versions\n"
-            << Indentation << "}";
-    FixitDiag << FixItHint::CreateInsertion(ElseInsertionLoc, FixItOS.str());
+  if (PlatformInfo) {
+    if (VariantPlatformInfo)
+      EmitNotYetIntroducedDiagnostic(D, Range, *PlatformInfo,
+                                     &*VariantPlatformInfo);
+    else
+      EmitNotYetIntroducedDiagnostic(D, Range, *PlatformInfo);
+    return;
   }
+  if (VariantPlatformInfo)
+    EmitNotYetIntroducedDiagnostic(D, Range, *VariantPlatformInfo);
 }
 
 bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
@@ -1068,16 +1433,34 @@ ExtractedAvailabilityExpr extractAvailabilityExpr(const Expr *IfCond) {
 }
 
 bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
+  VersionTuple CondVersion;
+  VersionTuple VariantCondVersion;
+  if (auto *E = dyn_cast<ObjCAvailabilityCheckExpr>(If->getCond())) {
+    CondVersion = E->getVersion();
+    VariantCondVersion = E->getVariantVersion();
+
+    bool IsStar = CondVersion.empty() && VariantCondVersion.empty();
+    bool IsCondRedundant =
+        CondVersion <= getGuardedVersion(/*IsTargetVariantPlatform=*/false);
+    bool IsVariantCondRedundant =
+        VariantCondVersion.empty() ||
+        VariantCondVersion <=
+            getGuardedVersion(/*IsTargetVariantPlatform=*/true);
+    // If we're using the '*' case here or if this check is redundant, then we
+    // use the enclosing version to check both branches.
+    if (IsStar || (IsCondRedundant && IsVariantCondRedundant))
+      return TraverseStmt(If->getThen()) && TraverseStmt(If->getElse());
+  }
+
   ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(If->getCond());
   if (!IfCond.E) {
     // This isn't an availability checking 'if', we can just continue.
     return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
   }
-
-  VersionTuple CondVersion = IfCond.E->getVersion();
+  CondVersion = IfCond.E->getVersion();
   // If we're using the '*' case here or if this check is redundant, then we
   // use the enclosing version to check both branches.
-  if (CondVersion.empty() || CondVersion <= AvailabilityStack.back()) {
+  if (CondVersion.empty() || CondVersion <= AvailabilityStack.back().Version) {
     return TraverseStmt(If->getThen()) && TraverseStmt(If->getElse());
   }
 
@@ -1086,14 +1469,18 @@ bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
   if (IfCond.isNegated) {
     std::swap(Guarded, Unguarded);
   }
-
-  AvailabilityStack.push_back(CondVersion);
+  AvailabilityStack.push_back(ZipperedVersionTuple{
+      CondVersion.empty() ? std::nullopt
+                          : std::optional<VersionTuple>(CondVersion),
+      VariantCondVersion.empty()
+          ? std::nullopt
+          : std::optional<VersionTuple>(VariantCondVersion)});
   bool ShouldContinue = TraverseStmt(Guarded);
+
   AvailabilityStack.pop_back();
 
   return ShouldContinue && TraverseStmt(Unguarded);
 }
-
 } // end anonymous namespace
 
 void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
@@ -1133,40 +1520,91 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
                                       bool ObjCPropertyAccess,
                                       bool AvoidPartialAvailabilityChecks,
                                       ObjCInterfaceDecl *ClassReceiver) {
+  auto CreateAvailabilityDiagnostic = [&](bool IsTargetVariantPlatform)
+      -> std::optional<PlatformSpecificAvailabilityDiag> {
+    std::string Message;
+    AvailabilityResult Result;
+    const NamedDecl *OffendingDecl;
+    // See if this declaration is unavailable, deprecated, or partial.
+    const TargetInfo &TI = getASTContext().getTargetInfo();
+    StringRef Platform = IsTargetVariantPlatform ? TI.getTargetVariantPlatform()
+                                                 : TI.getPlatformName();
+    VersionTuple VT = IsTargetVariantPlatform
+                          ? TI.getTargetVariantPlatformMinVersion()
+                          : TI.getPlatformMinVersion();
+    std::tie(Result, OffendingDecl) = ShouldDiagnoseAvailabilityOfDecl(
+        D, Platform, VT, &Message, ClassReceiver);
+    if (Result == AR_Available)
+      return std::nullopt;
 
-  std::string Message;
-  AvailabilityResult Result;
-  const NamedDecl* OffendingDecl;
-  // See if this declaration is unavailable, deprecated, or partial.
-  std::tie(Result, OffendingDecl) =
-      ShouldDiagnoseAvailabilityOfDecl(D, &Message, ClassReceiver);
-  if (Result == AR_Available)
+    if (Result == AR_NotYetIntroduced) {
+      if (AvoidPartialAvailabilityChecks)
+        return std::nullopt;
+
+      // We need to know the @available context in the current function to
+      // diagnose this use, let DiagnoseUnguardedAvailabilityViolations do that
+      // when we're done parsing the current function.
+      if (FunctionScopeInfo *Context = getCurFunctionAvailabilityContext()) {
+        Context->HasPotentialAvailabilityViolations = true;
+        return std::nullopt;
+      }
+    }
+
+    const ObjCPropertyDecl *ObjCPDecl = nullptr;
+    if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+      if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
+        AvailabilityResult PDeclResult =
+            PD->getAvailability(Platform, VT, nullptr);
+        if (PDeclResult == Result)
+          ObjCPDecl = PD;
+      }
+    }
+
+    return PlatformSpecificAvailabilityDiag(Result, OffendingDecl,
+                                            std::move(Message), ObjCPDecl,
+                                            IsTargetVariantPlatform);
+  };
+  std::optional<PlatformSpecificAvailabilityDiag> TargetAvailabilityDiag =
+      CreateAvailabilityDiagnostic(/*IsTargetVariantPlatform=*/false);
+  std::optional<PlatformSpecificAvailabilityDiag> TargetVariantAvailabilityDiag;
+  if (getASTContext().getTargetInfo().hasTargetVariantPlatform())
+    TargetVariantAvailabilityDiag =
+        CreateAvailabilityDiagnostic(/*IsTargetVariantPlatform=*/true);
+  if (!TargetAvailabilityDiag && !TargetVariantAvailabilityDiag)
     return;
 
-  if (Result == AR_NotYetIntroduced) {
-    if (AvoidPartialAvailabilityChecks)
-      return;
+  PlatformAgnosticAvailabilityDiagInfo Info(D, Locs, UnknownObjCClass,
+                                            ObjCPropertyAccess);
 
-    // We need to know the @available context in the current function to
-    // diagnose this use, let DiagnoseUnguardedAvailabilityViolations do that
-    // when we're done parsing the current function.
-    if (FunctionScopeInfo *Context = getCurFunctionAvailabilityContext()) {
-      Context->HasPotentialAvailabilityViolations = true;
-      return;
-    }
+  // Delay if we're currently parsing a declaration.
+  if (DelayedDiagnostics.shouldDelayDiagnostics()) {
+    auto MakeDiag = [&](const PlatformSpecificAvailabilityDiag &PlatformInfo)
+        -> DelayedDiagnostic {
+      return DelayedDiagnostic::makeAvailability(
+          PlatformInfo.AR, Info.Locs, Info.ReferringDecl,
+          PlatformInfo.OffendingDecl, Info.UnknownObjCClass,
+          PlatformInfo.ObjCProperty, PlatformInfo.Message,
+          Info.ObjCPropertyAccess, PlatformInfo.IsTargetVariantPlatform);
+    };
+    if (TargetAvailabilityDiag)
+      DelayedDiagnostics.add(MakeDiag(*TargetAvailabilityDiag));
+    if (TargetVariantAvailabilityDiag)
+      DelayedDiagnostics.add(MakeDiag(*TargetVariantAvailabilityDiag));
+    return;
   }
 
-  const ObjCPropertyDecl *ObjCPDecl = nullptr;
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
-      AvailabilityResult PDeclResult = PD->getAvailability(nullptr);
-      if (PDeclResult == Result)
-        ObjCPDecl = PD;
+  Decl *Ctx = cast<Decl>(getCurLexicalContext());
+  if (TargetAvailabilityDiag) {
+    if (TargetVariantAvailabilityDiag) {
+      DoEmitZipperedAvailabilityWarning(*this, Ctx, Info,
+                                        *TargetAvailabilityDiag,
+                                        *TargetVariantAvailabilityDiag);
+      return;
     }
+    DoEmitAvailabilityWarning(*this, Ctx, Info, *TargetAvailabilityDiag);
   }
-
-  EmitAvailabilityWarning(*this, Result, D, OffendingDecl, Message, Locs,
-                          UnknownObjCClass, ObjCPDecl, ObjCPropertyAccess);
+  if (TargetVariantAvailabilityDiag)
+    DoEmitAvailabilityWarning(*this, Ctx, Info, *TargetVariantAvailabilityDiag);
 }
 
 void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,

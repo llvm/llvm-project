@@ -17205,7 +17205,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         };
         // Don't issue this warning for unavailable inits or direct subclasses
         // of NSObject.
-        if (!MD->isUnavailable() && !superIsNSObject(MD)) {
+        if (!MD->isUnavailabledForAllTargetPlatforms() &&
+            !superIsNSObject(MD)) {
           Diag(MD->getLocation(),
                diag::warn_objc_designated_init_missing_super_call);
           Diag(InitMethod->getLocation(),
@@ -17215,7 +17216,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       }
       if (FSI->ObjCWarnForNoInitDelegation) {
         // Don't issue this warning for unavailable inits.
-        if (!MD->isUnavailable())
+        if (!MD->isUnavailabledForAllTargetPlatforms())
           Diag(MD->getLocation(),
                diag::warn_objc_secondary_init_missing_init_call);
         FSI->ObjCWarnForNoInitDelegation = false;

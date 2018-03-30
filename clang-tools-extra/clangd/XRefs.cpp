@@ -1865,7 +1865,7 @@ static std::optional<TypeHierarchyItem>
 declToTypeHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   auto Result = declToHierarchyItem<TypeHierarchyItem>(ND, TUPath);
   if (Result) {
-    Result->deprecated = ND.isDeprecated();
+    Result->deprecated = ND.isDeprecatedInAnyTargetPlatform();
     // Compute the SymbolID and store it in the 'data' field.
     // This allows typeHierarchy/resolve to be used to
     // resolve children of items returned in a previous request
@@ -1880,7 +1880,7 @@ declToCallHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   auto Result = declToHierarchyItem<CallHierarchyItem>(ND, TUPath);
   if (!Result)
     return Result;
-  if (ND.isDeprecated())
+  if (ND.isDeprecatedInAnyTargetPlatform())
     Result->tags.push_back(SymbolTag::Deprecated);
   if (auto ID = getSymbolID(&ND))
     Result->data = ID.str();

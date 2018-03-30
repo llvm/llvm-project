@@ -1558,5 +1558,7 @@ DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,
 void DarwinARMTargetInfo::getOSDefines(const LangOptions &Opts,
                                        const llvm::Triple &Triple,
                                        MacroBuilder &Builder) const {
-  getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
+  getDarwinDefines(Builder, Opts, Triple, /*TargetVariantTriple=*/"",
+                   PlatformName, PlatformMinVersion, TargetVariantPlatform,
+                   TargetVariantPlatformMinVersion);
 }

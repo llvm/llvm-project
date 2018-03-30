@@ -5328,13 +5328,23 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
                           Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
 
+  VersionTuple VariantVersion;
+  if (Context.getTargetInfo().hasTargetVariantPlatform()) {
+    const llvm::Triple *VariantTriple =
+        Context.getTargetInfo().getDarwinTargetVariantTriple();
+    if (auto MaybeVariantVersion = FindSpecVersion(
+            Context.getTargetInfo().getTargetVariantPlatform(),
+            VariantTriple ? VariantTriple->getOS() : llvm::Triple::UnknownOS))
+      VariantVersion = *MaybeVariantVersion;
+  }
+
   // The use of `@available` in the enclosing context should be analyzed to
   // warn when it's used inappropriately (i.e. not if(@available)).
   if (FunctionScopeInfo *Context = SemaRef.getCurFunctionAvailabilityContext())
     Context->HasPotentialAvailabilityViolations = true;
 
-  return new (Context)
-      ObjCAvailabilityCheckExpr(Version, AtLoc, RParen, Context.BoolTy);
+  return new (Context) ObjCAvailabilityCheckExpr(Version, VariantVersion, AtLoc,
+                                                 RParen, Context.BoolTy);
 }
 
 /// Prepare a conversion of the given expression to an ObjC object

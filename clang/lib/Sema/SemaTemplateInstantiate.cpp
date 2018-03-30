@@ -4172,8 +4172,13 @@ bool Sema::InstantiateClassTemplateSpecialization(
   if (AlreadyInstantiating)
     return false;
 
+  const TargetInfo &TI = Context.getTargetInfo();
+  StringRef PlatformName = TI.getPlatformName();
+  const VersionTuple &PlatformMinVersion = TI.getPlatformMinVersion();
+
   bool HadAvaibilityWarning =
-      ShouldDiagnoseAvailabilityOfDecl(ClassTemplateSpec, nullptr, nullptr)
+      ShouldDiagnoseAvailabilityOfDecl(ClassTemplateSpec, PlatformName,
+                                       PlatformMinVersion, nullptr, nullptr)
           .first != AR_Available;
 
   ActionResult<CXXRecordDecl *> Pattern =
