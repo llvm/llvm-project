@@ -131,7 +131,8 @@ private:
 
 public:
   /// Consume the construction context layer, together with its parent layers,
-  /// and wrap it up into a complete construction context.
+  /// and wrap it up into a complete construction context. May return null
+  /// if layers do not form any supported construction context.
   static const ConstructionContext *
   createFromLayers(BumpVectorContext &C,
                    const ConstructionContextLayer *TopLayer);
