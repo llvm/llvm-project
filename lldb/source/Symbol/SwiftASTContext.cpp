@@ -18,6 +18,7 @@
 #include <set>
 #include <sstream>
 
+#include "swift/ABI/MetadataValues.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/DebuggerClient.h"
@@ -171,43 +172,6 @@ static inline swift::CanType GetCanonicalSwiftType(CompilerType type) {
   return ((swift::TypeBase *)type.GetOpaqueQualType())->getCanonicalType();
 }
 
-enum class MemberType : uint32_t { Invalid, BaseClass, Field };
-
-static const char *MemberTypeToCString(MemberType member_type) {
-  switch (member_type) {
-  case MemberType::Invalid:
-    return "invalid";
-  case MemberType::BaseClass:
-    return "base class";
-  case MemberType::Field:
-    return "field";
-  }
-  return "???";
-}
-
-struct MemberInfo {
-  CompilerType clang_type;
-  lldb_private::ConstString name;
-  uint64_t byte_size;
-  uint32_t byte_offset;
-  MemberType member_type;
-
-  MemberInfo(MemberType member_type)
-      : clang_type(), name(), byte_size(0), byte_offset(0),
-        member_type(member_type) {}
-
-  void Dump(uint32_t idx) {
-    printf("[%i] %12s +%u (%s) %s <%" PRIu64 ">\n", idx,
-           MemberTypeToCString(member_type), byte_offset,
-           clang_type.GetTypeName().AsCString("<no type name>"),
-           name.AsCString("<NULL>"), byte_size);
-  }
-};
-
-struct CachedMemberInfo {
-  std::vector<MemberInfo> member_infos;
-};
-
 struct EnumElementInfo {
   CompilerType clang_type;
   lldb_private::ConstString name;
@@ -236,31 +200,12 @@ struct EnumElementInfo {
 
 class SwiftEnumDescriptor;
 
-typedef std::shared_ptr<CachedMemberInfo> CachedMemberInfoSP;
 typedef std::shared_ptr<SwiftEnumDescriptor> SwiftEnumDescriptorSP;
-typedef llvm::DenseMap<lldb::opaque_compiler_type_t, CachedMemberInfoSP>
-    MemberInfoCache;
 typedef llvm::DenseMap<lldb::opaque_compiler_type_t, SwiftEnumDescriptorSP>
     EnumInfoCache;
-typedef std::shared_ptr<MemberInfoCache> MemberInfoCacheSP;
 typedef std::shared_ptr<EnumInfoCache> EnumInfoCacheSP;
-typedef llvm::DenseMap<const swift::ASTContext *, MemberInfoCacheSP>
-    ASTMemberInfoCacheMap;
 typedef llvm::DenseMap<const swift::ASTContext *, EnumInfoCacheSP>
     ASTEnumInfoCacheMap;
-
-static MemberInfoCache *GetMemberInfoCache(const swift::ASTContext *a) {
-  static ASTMemberInfoCacheMap g_cache;
-  static std::mutex g_mutex;
-  std::lock_guard<std::mutex> locker(g_mutex);
-  ASTMemberInfoCacheMap::iterator pos = g_cache.find(a);
-  if (pos == g_cache.end()) {
-    g_cache.insert(std::make_pair(
-        a, std::shared_ptr<MemberInfoCache>(new MemberInfoCache())));
-    return g_cache.find(a)->second.get();
-  }
-  return pos->second.get();
-}
 
 static EnumInfoCache *GetEnumInfoCache(const swift::ASTContext *a) {
   static ASTEnumInfoCacheMap g_cache;
@@ -307,118 +252,6 @@ llvm::ArrayRef<swift::VarDecl *> SwiftASTContext::GetStoredProperties(
   stored = std::vector<swift::VarDecl *>(stored_properties.begin(),
                                          stored_properties.end());
   return stored;
-}
-
-CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
-  VALID_OR_RETURN(nullptr);
-
-  if (type) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-
-    std::vector<const swift::irgen::TypeInfo *> field_type_infos;
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::Error:
-    case swift::TypeKind::BuiltinInteger:
-    case swift::TypeKind::BuiltinFloat:
-    case swift::TypeKind::BuiltinRawPointer:
-    case swift::TypeKind::BuiltinBridgeObject:
-    case swift::TypeKind::BuiltinNativeObject:
-    case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    case swift::TypeKind::BuiltinUnknownObject:
-    case swift::TypeKind::BuiltinVector:
-    case swift::TypeKind::UnownedStorage:
-    case swift::TypeKind::WeakStorage:
-    case swift::TypeKind::UnmanagedStorage:
-    case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Metatype:
-    case swift::TypeKind::Module:
-    case swift::TypeKind::Function:
-    case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::LValue:
-    case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::Enum:
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::ExistentialMetatype:
-    case swift::TypeKind::DynamicSelf:
-    case swift::TypeKind::SILBox:
-    case swift::TypeKind::SILFunction:
-    case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::InOut:
-    case swift::TypeKind::Unresolved:
-    case swift::TypeKind::Tuple:
-    case swift::TypeKind::Struct:
-    case swift::TypeKind::Class:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::BoundGenericClass:
-      assert(false &&
-             "Caller must only call this function with valid type_kind");
-      break;
-
-    case swift::TypeKind::Protocol:
-    case swift::TypeKind::ProtocolComposition: {
-      MemberInfoCache *member_info_cache = GetMemberInfoCache(GetASTContext());
-      MemberInfoCache::const_iterator pos = member_info_cache->find(type);
-      if (pos != member_info_cache->end()) {
-        // printf("cached: %p\n", pos->second.get());
-        return pos->second.get();
-      }
-
-      CachedMemberInfoSP member_infos_sp(new CachedMemberInfo());
-
-      ProtocolInfo protocol_info;
-      if (!GetProtocolTypeInfo(
-              CompilerType(GetASTContext(), GetSwiftType(type)), protocol_info))
-        break;
-      uint32_t num_children = protocol_info.m_num_storage_words;
-
-      for (uint32_t idx = 0; idx < num_children; idx++) {
-        MemberInfo member_info(MemberType::Field);
-        member_info.clang_type = CompilerType(
-            GetASTContext(), GetASTContext()->TheRawPointerType.getPointer());
-        member_info.byte_size = member_info.clang_type.GetByteSize(nullptr);
-        member_info.byte_offset = idx * member_info.byte_size;
-        StreamString child_name_stream;
-
-        // Opaque existentials have m_num_payload_words != 0.
-        if (idx < protocol_info.m_num_payload_words)
-          child_name_stream.Printf("payload_data_%u", idx);
-        else {
-          // After the payload, the first word is either the instance itself
-          // (for class or error existentials) or a metadata pointer
-          // (for opaque existentials).
-          //
-          // Class and opaque existentials have zero or more witness tables.
-          // Error existentials always store their witness table inline.
-          int l_idx = idx - protocol_info.m_num_payload_words;
-          if (l_idx == 0)
-            child_name_stream.Printf("instance_type");
-          else
-            child_name_stream.Printf("protocol_witness_%u", l_idx - 1);
-        }
-        member_info.name = ConstString(child_name_stream.GetData());
-        member_infos_sp->member_infos.push_back(member_info);
-      }
-
-      member_info_cache->insert(std::make_pair(type, member_infos_sp));
-      return member_infos_sp.get();
-    }
-
-    case swift::TypeKind::TypeVariable:
-    case swift::TypeKind::Archetype:
-      break;
-
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::NameAlias:
-    case swift::TypeKind::Paren:
-    case swift::TypeKind::Dictionary:
-    case swift::TypeKind::ArraySlice:
-      assert(false && "Not a canonical type");
-      break;
-    }
-  }
-  return nullptr;
 }
 
 class SwiftEnumDescriptor {
@@ -5263,8 +5096,7 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
 
     unsigned num_witness_tables = 0;
     for (auto protoTy : layout.getProtocols()) {
-      if (!protoTy->getDecl()->isObjC() &&
-          !protoTy->isAnyObject())
+      if (!protoTy->getDecl()->isObjC())
         num_witness_tables++;
     }
 
@@ -5279,8 +5111,9 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
     } else {
       // Opaque existential -- three words of inline storage, metadata and
       // witness tables
-      protocol_info.m_num_payload_words = 3;
-      protocol_info.m_num_storage_words = 3 + 1 + num_witness_tables;
+      protocol_info.m_num_payload_words = swift::NumWords_ValueBuffer;
+      protocol_info.m_num_storage_words =
+        swift::NumWords_ValueBuffer + 1 + num_witness_tables;
     }
 
     return true;
@@ -6247,10 +6080,13 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
 
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition: {
-    CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
-    if (cached_member_info)
-      return cached_member_info->member_infos.size();
-  } break;
+    ProtocolInfo protocol_info;
+    if (!GetProtocolTypeInfo(
+            CompilerType(GetASTContext(), GetSwiftType(type)), protocol_info))
+      break;
+
+    return protocol_info.m_num_storage_words;
+  }
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
@@ -6367,12 +6203,8 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   }
 
   case swift::TypeKind::Protocol:
-  case swift::TypeKind::ProtocolComposition: {
-    CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
-    if (cached_member_info) {
-      return cached_member_info->member_infos.size();
-    }
-  } break;
+  case swift::TypeKind::ProtocolComposition:
+    return GetNumChildren(type, /*omit_empty_base_classes=*/false);
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
@@ -6451,6 +6283,40 @@ static std::string GetTupleElementName(const swift::TupleType *tuple_type,
 static std::string GetSuperclassName(const CompilerType &superclass_type) {
   return superclass_type.GetUnboundType().GetTypeName()
     .AsCString("<no type name>");
+}
+
+/// Retrieve the type and name of a child of an existential type.
+static std::pair<CompilerType, std::string>
+GetExistentialTypeChild(swift::ASTContext *swift_ast_ctx,
+                        CompilerType type,
+                        const SwiftASTContext::ProtocolInfo &protocol_info,
+                        unsigned idx) {
+  assert(idx < protocol_info.m_num_storage_words &&
+         "caller is responsible for validating index");
+
+  // A payload word for a non-class, non-error existential.
+  if (idx < protocol_info.m_num_payload_words) {
+    std::string name;
+    llvm::raw_string_ostream(name) << "payload_data_" << idx;
+
+    auto raw_pointer = swift_ast_ctx->TheRawPointerType;
+    return { CompilerType(swift_ast_ctx, raw_pointer.getPointer()),
+             std::move(name) };
+  }
+
+  if (idx == protocol_info.m_num_payload_words) {
+    auto raw_pointer = swift_ast_ctx->TheRawPointerType;
+    return { CompilerType(swift_ast_ctx, raw_pointer.getPointer()),
+             "instance_type" };
+  }
+
+  // A witness table.
+  unsigned witness_table_idx = idx - protocol_info.m_num_payload_words - 1;
+  std::string name;
+  llvm::raw_string_ostream(name) << "protocol_witness_" << witness_table_idx;
+  auto raw_pointer = swift_ast_ctx->TheRawPointerType;
+  return { CompilerType(swift_ast_ctx, raw_pointer.getPointer()),
+           std::move(name) };
 }
 
 CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
@@ -6580,28 +6446,29 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
 
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition: {
-    CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
-    if (cached_member_info) {
-      const size_t num_members = cached_member_info->member_infos.size();
-      uint32_t actual_idx = idx;
-      if (num_members > 0 &&
-          cached_member_info->member_infos.front().member_type ==
-              MemberType::BaseClass)
-        ++actual_idx; // Skip base class since we are looking for fields only
-      if (actual_idx < num_members) {
-        if (cached_member_info->member_infos[actual_idx].name)
-          name = cached_member_info->member_infos[actual_idx].name.GetCString();
-        if (bit_offset_ptr)
-          *bit_offset_ptr =
-              cached_member_info->member_infos[actual_idx].byte_offset * 8;
-        if (bitfield_bit_size_ptr)
-          *bitfield_bit_size_ptr = 0;
-        if (is_bitfield_ptr)
-          *is_bitfield_ptr = false;
-        return cached_member_info->member_infos[actual_idx].clang_type;
-      }
-    }
-  } break;
+    ProtocolInfo protocol_info;
+    if (!GetProtocolTypeInfo(
+            CompilerType(GetASTContext(), GetSwiftType(type)), protocol_info))
+      break;
+
+    if (idx >= protocol_info.m_num_storage_words) break;
+
+    CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
+    CompilerType child_type;
+    std::tie(child_type, name) =
+      GetExistentialTypeChild(GetASTContext(), compiler_type, protocol_info,
+                              idx);
+
+    uint64_t child_size = child_type.GetByteSize(nullptr);
+    if (bit_offset_ptr)
+      *bit_offset_ptr = idx * child_size * 8;
+    if (bitfield_bit_size_ptr)
+      *bitfield_bit_size_ptr = 0;
+    if (is_bitfield_ptr)
+      *is_bitfield_ptr = false;
+
+    return child_type;
+  }
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
@@ -6988,28 +6855,31 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition: {
-    CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
-    if (cached_member_info) {
-      const size_t num_members = cached_member_info->member_infos.size();
-      if (idx < num_members) {
-        if (cached_member_info->member_infos[idx].name)
-          child_name = cached_member_info->member_infos[idx].name.GetCString();
-        else
-          child_name.clear();
-        child_byte_size = cached_member_info->member_infos[idx].byte_size;
-        child_byte_offset = cached_member_info->member_infos[idx].byte_offset;
-        child_bitfield_bit_size = 0;
-        child_bitfield_bit_offset = 0;
-        if ((child_is_base_class =
-                 cached_member_info->member_infos[idx].member_type ==
-                 MemberType::BaseClass)) {
-          language_flags |= LanguageFlags::eIgnoreInstancePointerness;
-        }
-        child_is_deref_of_parent = false;
-        return cached_member_info->member_infos[idx].clang_type;
-      }
-    }
-  } break;
+    ProtocolInfo protocol_info;
+    if (!GetProtocolTypeInfo(
+            CompilerType(GetASTContext(), GetSwiftType(type)), protocol_info))
+      break;
+
+    if (idx >= protocol_info.m_num_storage_words) break;
+
+    CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
+    CompilerType child_type;
+    std::tie(child_type, child_name) =
+      GetExistentialTypeChild(GetASTContext(), compiler_type, protocol_info,
+                              idx);
+
+    auto exe_ctx_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+
+    child_byte_size = child_type.GetByteSize(exe_ctx_scope);
+    child_byte_offset = idx * child_byte_size;
+    child_bitfield_bit_size = 0;
+    child_bitfield_bit_offset = 0;
+    child_is_base_class = false;
+    child_is_deref_of_parent = false;
+
+    return child_type;
+  }
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
@@ -7218,38 +7088,21 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
     case swift::TypeKind::Protocol:
     case swift::TypeKind::ProtocolComposition: {
-      CachedMemberInfo *cached_member_info = GetCachedMemberInfo(type);
-      if (cached_member_info) {
-        ConstString const_name(name);
-        const size_t num_members = cached_member_info->member_infos.size();
-        if (num_members > 0) {
-          for (size_t i = 0; i < num_members; ++i) {
-            const MemberInfo &member_info = cached_member_info->member_infos[i];
-            if (member_info.name) {
-              if (const_name == member_info.name) {
-                child_indexes.push_back(i);
-                return child_indexes.size();
-              }
-            }
-          }
-          // Check the base class if we have one...
-          if (cached_member_info->member_infos[0].member_type ==
-              MemberType::BaseClass) {
-            // Push index zero for the base class
-            child_indexes.push_back(0);
+      ProtocolInfo protocol_info;
+      if (!GetProtocolTypeInfo(CompilerType(GetASTContext(),
+                                            GetSwiftType(type)), protocol_info))
+        break;
 
-            if (cached_member_info->member_infos[0]
-                    .clang_type.GetIndexOfChildMemberWithName(
-                        name, omit_empty_base_classes, child_indexes)) {
-              // We did find an ivar in a superclass so just
-              // return the results!
-              return child_indexes.size();
-            }
-            // We didn't find an ivar matching "name" in our
-            // superclass, pop the superclass zero index that
-            // we pushed on above.
-            child_indexes.pop_back();
-          }
+      CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
+      for (unsigned idx : swift::range(protocol_info.m_num_storage_words)) {
+        CompilerType child_type;
+        std::string child_name;
+        std::tie(child_type, child_name) =
+          GetExistentialTypeChild(GetASTContext(), compiler_type,
+                                  protocol_info, idx);
+        if (name == child_name) {
+          child_indexes.push_back(idx);
+          return child_indexes.size();
         }
       }
     } break;
