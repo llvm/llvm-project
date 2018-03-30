@@ -1068,6 +1068,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back("-dependency-file");
     CmdArgs.push_back(DepFile);
+    CmdArgs.push_back("-skip-unused-modulemap-deps");
 
     // Add a default target if one wasn't specified.
     if (!Args.hasArg(options::OPT_MT) && !Args.hasArg(options::OPT_MQ)) {
