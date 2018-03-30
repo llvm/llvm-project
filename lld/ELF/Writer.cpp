@@ -2092,6 +2092,10 @@ static uint8_t getAbiVersion() {
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {
   uint8_t *Buf = Buffer->getBufferStart();
+  // For executable segments, the trap instructions are written before writing
+  // the header. Setting Elf header bytes to zero ensures that any unused bytes
+  // in header are zero-cleared, instead of having trap instructions.
+  memset(Buf, 0, sizeof(Elf_Ehdr));
   memcpy(Buf, "\177ELF", 4);
 
   // Write the ELF header.

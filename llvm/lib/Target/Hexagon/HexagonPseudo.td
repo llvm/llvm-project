@@ -102,6 +102,13 @@ def ENDLOOP1 : Endloop<(outs), (ins b30_2Imm:$offset),
                        []>;
 }
 
+let isBranch = 1, isTerminator = 1, hasSideEffects = 0,
+    Defs = [PC, LC0, LC1], Uses = [SA0, SA1, LC0, LC1] in {
+def ENDLOOP01 : Endloop<(outs), (ins b30_2Imm:$offset),
+                        ":endloop01",
+                        []>;
+}
+
 let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
     opExtendable = 0, hasSideEffects = 0 in
 class LOOP_iBase<string mnemonic, InstHexagon rootInst>

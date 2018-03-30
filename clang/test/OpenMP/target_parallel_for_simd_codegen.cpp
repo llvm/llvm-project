@@ -73,14 +73,14 @@
 // CHECK-DAG: @{{.*}} = private constant i8 0
 // CHECK-DAG: @{{.*}} = private constant i8 0
 
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK-NOT: @{{.+}} = constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
 // Check if offloading descriptor is created.
 // CHECK: [[ENTBEGIN:@.+]] = external constant [[ENTTY]]
@@ -91,7 +91,7 @@
 // CHECK: [[DESC:@.+]] = internal constant [[DSCTY]] { i32 1, [[DEVTY]]* getelementptr inbounds ([1 x [[DEVTY]]], [1 x [[DEVTY]]]* [[IMAGES]], i32 0, i32 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }, comdat($[[REGFN]])
 
 // Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* bitcast (void (i8*)* @[[REGFN]] to void ()*), i8* bitcast (void (i8*)* @[[REGFN]] to i8*) }]
+// CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @[[REGFN]], i8* bitcast (void ()* @[[REGFN]] to i8*) }]
 
 
 template<typename tx, typename ty>

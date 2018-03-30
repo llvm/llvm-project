@@ -13,7 +13,7 @@
 
 // expected-warning@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:1{{private submodule 'A.Private' in private module map, expected top-level module}}
 // expected-note@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:1{{rename 'A.Private' to ensure it can be found by name}}
-// CHECK: fix-it:"{{.*}}module.private.modulemap":{1:20-1:27}:"A_Private"
+// CHECK: fix-it:"{{.*}}module.private.modulemap":{1:18-1:27}:"A_Private"
 
 #ifndef HEADER
 #define HEADER

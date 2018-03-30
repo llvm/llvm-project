@@ -54,3 +54,91 @@ body:             |
     FLAT_STORE_DWORD %0, %13, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
+
+---
+# SDWA-LABEL: sdwa_preserve_keep
+# SDWA: flat_load_dword [[FIRST:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]
+# SDWA: flat_load_dword [[SECOND:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]
+
+# SDWA: v_and_b32_e32 [[AND:v[0-9]+]], 0xff, [[FIRST]]
+# SDWA: v_mov_b32_sdwa [[AND]], [[SECOND]] dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+
+# SDWA: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], [[AND]]
+
+name:            sdwa_preserve_keep
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vgpr_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 17, class: vgpr_32 }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
+
+    %2 = COPY $sgpr30_sgpr31
+    %1 = COPY $vgpr2_vgpr3
+    %0 = COPY $vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %4 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+
+    %9:vgpr_32 = V_LSHRREV_B16_e64 8, %3, implicit $exec
+    %10:sreg_32_xm0 = S_MOV_B32 255
+    %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
+    %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
+    FLAT_STORE_DWORD %0, %17, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    S_ENDPGM
+
+...
+---
+# SDWA-LABEL: sdwa_preserve_remove
+# SDWA: flat_load_dword [[FIRST:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]
+# SDWA: flat_load_dword [[SECOND:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]
+
+# SDWA: v_mov_b32_sdwa [[FIRST]], [[SECOND]] dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+
+# SDWA: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], [[FIRST]]
+
+name:            sdwa_preserve_remove
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vgpr_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 17, class: vgpr_32 }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
+
+    %2 = COPY $sgpr30_sgpr31
+    %1 = COPY $vgpr2_vgpr3
+    %0 = COPY $vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %4 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+
+    %9:vgpr_32 = V_LSHRREV_B16_e64 8, %3, implicit $exec
+    %10:sreg_32_xm0 = S_MOV_B32 65535
+    %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
+    %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
+    FLAT_STORE_DWORD %0, %17, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    S_ENDPGM
+
+...

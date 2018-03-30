@@ -686,6 +686,7 @@ struct FunCloner {
           LLVMGetHandlers(Src, Handlers);
           for (unsigned i = 0; i < NumHandlers; i++)
             LLVMAddHandler(Dst, DeclareBB(Handlers[i]));
+          free(Handlers);
         }
         break;
       }

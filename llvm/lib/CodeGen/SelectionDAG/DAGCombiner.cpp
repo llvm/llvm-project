@@ -16854,24 +16854,6 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     return !SCCC->isNullValue() ? N2 : N3;
   }
 
-  // Check to see if we can simplify the select into an fabs node
-  if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N1)) {
-    // Allow either -0.0 or 0.0
-    if (CFP->isZero()) {
-      // select (setg[te] X, +/-0.0), X, fneg(X) -> fabs
-      if ((CC == ISD::SETGE || CC == ISD::SETGT) &&
-          N0 == N2 && N3.getOpcode() == ISD::FNEG &&
-          N2 == N3.getOperand(0))
-        return DAG.getNode(ISD::FABS, DL, VT, N0);
-
-      // select (setl[te] X, +/-0.0), fneg(X), X -> fabs
-      if ((CC == ISD::SETLT || CC == ISD::SETLE) &&
-          N0 == N3 && N2.getOpcode() == ISD::FNEG &&
-          N2.getOperand(0) == N3)
-        return DAG.getNode(ISD::FABS, DL, VT, N3);
-    }
-  }
-
   // Turn "(a cond b) ? 1.0f : 2.0f" into "load (tmp + ((a cond b) ? 0 : 4)"
   // where "tmp" is a constant pool entry containing an array with 1.0 and 2.0
   // in it.  This is a win when the constant is not otherwise available because

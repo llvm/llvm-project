@@ -217,7 +217,8 @@ protected:
   /// \brief Creates offloading entry for the provided entry ID \a ID,
   /// address \a Addr, size \a Size, and flags \a Flags.
   virtual void createOffloadEntry(llvm::Constant *ID, llvm::Constant *Addr,
-                                  uint64_t Size, int32_t Flags);
+                                  uint64_t Size, int32_t Flags,
+                                  llvm::GlobalValue::LinkageTypes Linkage);
 
   /// \brief Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
@@ -382,22 +383,13 @@ private:
   ///                                         // entries (non inclusive).
   /// };
   QualType TgtBinaryDescriptorQTy;
-  /// Kind of the target registry entry.
-  enum OMPTargetRegionEntryKind {
-    /// Mark the entry as target region.
-    OMPTargetRegionEntryTargetRegion = 0x0,
-    /// Mark the entry as a global constructor.
-    OMPTargetRegionEntryCtor = 0x02,
-    /// Mark the entry as a global destructor.
-    OMPTargetRegionEntryDtor = 0x04,
-  };
   /// \brief Entity that registers the offloading constants that were emitted so
   /// far.
   class OffloadEntriesInfoManagerTy {
     CodeGenModule &CGM;
 
     /// \brief Number of entries registered so far.
-    unsigned OffloadingEntriesNum;
+    unsigned OffloadingEntriesNum = 0;
 
   public:
     /// Base class of the entries info.
@@ -407,69 +399,86 @@ private:
       enum OffloadingEntryInfoKinds : unsigned {
         /// Entry is a target region.
         OffloadingEntryInfoTargetRegion = 0,
+        /// Entry is a declare target variable.
+        OffloadingEntryInfoDeviceGlobalVar = 1,
         /// Invalid entry info.
         OffloadingEntryInfoInvalid = ~0u
       };
 
-      OffloadEntryInfo()
-          : Flags(OMPTargetRegionEntryTargetRegion), Order(~0u),
-            Kind(OffloadingEntryInfoInvalid) {}
+    protected:
+      OffloadEntryInfo() = delete;
+      explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind) : Kind(Kind) {}
       explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind, unsigned Order,
-                                OMPTargetRegionEntryKind Flags)
+                                uint32_t Flags)
           : Flags(Flags), Order(Order), Kind(Kind) {}
+      ~OffloadEntryInfo() = default;
 
+    public:
       bool isValid() const { return Order != ~0u; }
       unsigned getOrder() const { return Order; }
       OffloadingEntryInfoKinds getKind() const { return Kind; }
-      int32_t getFlags() const { return Flags; }
-      void setFlags(OMPTargetRegionEntryKind NewFlags) { Flags = NewFlags; }
+      uint32_t getFlags() const { return Flags; }
+      void setFlags(uint32_t NewFlags) { Flags = NewFlags; }
+      llvm::Constant *getAddress() const {
+        return cast_or_null<llvm::Constant>(Addr);
+      }
+      void setAddress(llvm::Constant *V) {
+        assert(!Addr.pointsToAliveValue() && "Address has been set before!");
+        Addr = V;
+      }
       static bool classof(const OffloadEntryInfo *Info) { return true; }
 
     private:
+      /// Address of the entity that has to be mapped for offloading.
+      llvm::WeakTrackingVH Addr;
+
       /// Flags associated with the device global.
-      OMPTargetRegionEntryKind Flags;
+      uint32_t Flags = 0u;
 
       /// Order this entry was emitted.
-      unsigned Order;
+      unsigned Order = ~0u;
 
-      OffloadingEntryInfoKinds Kind;
+      OffloadingEntryInfoKinds Kind = OffloadingEntryInfoInvalid;
     };
 
-    /// \brief Return true if a there are no entries defined.
+    /// Return true if a there are no entries defined.
     bool empty() const;
-    /// \brief Return number of entries defined so far.
+    /// Return number of entries defined so far.
     unsigned size() const { return OffloadingEntriesNum; }
-    OffloadEntriesInfoManagerTy(CodeGenModule &CGM)
-        : CGM(CGM), OffloadingEntriesNum(0) {}
+    OffloadEntriesInfoManagerTy(CodeGenModule &CGM) : CGM(CGM) {}
 
-    ///
-    /// Target region entries related.
-    ///
-    /// \brief Target region entries info.
-    class OffloadEntryInfoTargetRegion : public OffloadEntryInfo {
-      // \brief Address of the entity that has to be mapped for offloading.
-      llvm::Constant *Addr;
-      // \brief Address that can be used as the ID of the entry.
-      llvm::Constant *ID;
+    //
+    // Target region entries related.
+    //
+
+    /// Kind of the target registry entry.
+    enum OMPTargetRegionEntryKind : uint32_t {
+      /// Mark the entry as target region.
+      OMPTargetRegionEntryTargetRegion = 0x0,
+      /// Mark the entry as a global constructor.
+      OMPTargetRegionEntryCtor = 0x02,
+      /// Mark the entry as a global destructor.
+      OMPTargetRegionEntryDtor = 0x04,
+    };
+
+    /// Target region entries info.
+    class OffloadEntryInfoTargetRegion final : public OffloadEntryInfo {
+      /// Address that can be used as the ID of the entry.
+      llvm::Constant *ID = nullptr;
 
     public:
       OffloadEntryInfoTargetRegion()
-          : OffloadEntryInfo(OffloadingEntryInfoTargetRegion, ~0u,
-                             OMPTargetRegionEntryTargetRegion),
-            Addr(nullptr), ID(nullptr) {}
+          : OffloadEntryInfo(OffloadingEntryInfoTargetRegion) {}
       explicit OffloadEntryInfoTargetRegion(unsigned Order,
                                             llvm::Constant *Addr,
                                             llvm::Constant *ID,
                                             OMPTargetRegionEntryKind Flags)
           : OffloadEntryInfo(OffloadingEntryInfoTargetRegion, Order, Flags),
-            Addr(Addr), ID(ID) {}
-
-      llvm::Constant *getAddress() const { return Addr; }
-      llvm::Constant *getID() const { return ID; }
-      void setAddress(llvm::Constant *V) {
-        assert(!Addr && "Address has been set before!");
-        Addr = V;
+            ID(ID) {
+        setAddress(Addr);
       }
+
+      llvm::Constant *getID() const { return ID; }
       void setID(llvm::Constant *V) {
         assert(!ID && "ID has been set before!");
         ID = V;
@@ -478,25 +487,88 @@ private:
         return Info->getKind() == OffloadingEntryInfoTargetRegion;
       }
     };
-    /// \brief Initialize target region entry.
+
+    /// Initialize target region entry.
     void initializeTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
                                          StringRef ParentName, unsigned LineNum,
                                          unsigned Order);
-    /// \brief Register target region entry.
+    /// Register target region entry.
     void registerTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
                                        StringRef ParentName, unsigned LineNum,
                                        llvm::Constant *Addr, llvm::Constant *ID,
                                        OMPTargetRegionEntryKind Flags);
-    /// \brief Return true if a target region entry with the provided
-    /// information exists.
+    /// Return true if a target region entry with the provided information
+    /// exists.
     bool hasTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
                                   StringRef ParentName, unsigned LineNum) const;
     /// brief Applies action \a Action on all registered entries.
     typedef llvm::function_ref<void(unsigned, unsigned, StringRef, unsigned,
-                                    OffloadEntryInfoTargetRegion &)>
+                                    const OffloadEntryInfoTargetRegion &)>
         OffloadTargetRegionEntryInfoActTy;
     void actOnTargetRegionEntriesInfo(
         const OffloadTargetRegionEntryInfoActTy &Action);
+
+    //
+    // Device global variable entries related.
+    //
+
+    /// Kind of the global variable entry..
+    enum OMPTargetGlobalVarEntryKind : uint32_t {
+      /// Mark the entry as a to declare target.
+      OMPTargetGlobalVarEntryTo = 0x0,
+    };
+
+    /// Device global variable entries info.
+    class OffloadEntryInfoDeviceGlobalVar final : public OffloadEntryInfo {
+      /// Type of the global variable.
+     CharUnits VarSize;
+     llvm::GlobalValue::LinkageTypes Linkage;
+
+   public:
+     OffloadEntryInfoDeviceGlobalVar()
+         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar) {}
+     explicit OffloadEntryInfoDeviceGlobalVar(unsigned Order,
+                                              OMPTargetGlobalVarEntryKind Flags)
+         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar, Order, Flags) {}
+     explicit OffloadEntryInfoDeviceGlobalVar(
+         unsigned Order, llvm::Constant *Addr, CharUnits VarSize,
+         OMPTargetGlobalVarEntryKind Flags,
+         llvm::GlobalValue::LinkageTypes Linkage)
+         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar, Order, Flags),
+           VarSize(VarSize), Linkage(Linkage) {
+       setAddress(Addr);
+      }
+
+      CharUnits getVarSize() const { return VarSize; }
+      void setVarSize(CharUnits Size) { VarSize = Size; }
+      llvm::GlobalValue::LinkageTypes getLinkage() const { return Linkage; }
+      void setLinkage(llvm::GlobalValue::LinkageTypes LT) { Linkage = LT; }
+      static bool classof(const OffloadEntryInfo *Info) {
+        return Info->getKind() == OffloadingEntryInfoDeviceGlobalVar;
+      }
+    };
+
+    /// Initialize device global variable entry.
+    void initializeDeviceGlobalVarEntryInfo(StringRef Name,
+                                            OMPTargetGlobalVarEntryKind Flags,
+                                            unsigned Order);
+
+    /// Register device global variable entry.
+    void
+    registerDeviceGlobalVarEntryInfo(StringRef VarName, llvm::Constant *Addr,
+                                     CharUnits VarSize,
+                                     OMPTargetGlobalVarEntryKind Flags,
+                                     llvm::GlobalValue::LinkageTypes Linkage);
+    /// Checks if the variable with the given name has been registered already.
+    bool hasDeviceGlobalVarEntryInfo(StringRef VarName) const {
+      return OffloadEntriesDeviceGlobalVar.count(VarName) > 0;
+    }
+    /// Applies action \a Action on all registered entries.
+    typedef llvm::function_ref<void(StringRef,
+                                    const OffloadEntryInfoDeviceGlobalVar &)>
+        OffloadDeviceGlobalVarEntryInfoActTy;
+    void actOnDeviceGlobalVarEntriesInfo(
+        const OffloadDeviceGlobalVarEntryInfoActTy &Action);
 
   private:
     // Storage for target region entries kind. The storage is to be indexed by
@@ -511,6 +583,11 @@ private:
         OffloadEntriesTargetRegionPerDevice;
     typedef OffloadEntriesTargetRegionPerDevice OffloadEntriesTargetRegionTy;
     OffloadEntriesTargetRegionTy OffloadEntriesTargetRegion;
+    /// Storage for device global variable entries kind. The storage is to be
+    /// indexed by mangled name.
+    typedef llvm::StringMap<OffloadEntryInfoDeviceGlobalVar>
+        OffloadEntriesDeviceGlobalVarTy;
+    OffloadEntriesDeviceGlobalVarTy OffloadEntriesDeviceGlobalVar;
   };
   OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
 
@@ -967,8 +1044,7 @@ public:
 
   /// Returns the address of the variable marked as declare target with link
   /// clause.
-  virtual Address getAddrOfDeclareTargetLink(CodeGenFunction &CGF,
-                                             const VarDecl *VD);
+  virtual Address getAddrOfDeclareTargetLink(const VarDecl *VD);
 
   /// \brief Emit a code for initialization of threadprivate variable. It emits
   /// a call to runtime library which adds initial value to the newly created
@@ -1265,6 +1341,11 @@ public:
   /// Returns true if \a GD was dealt with successfully.
   /// \param GD Variable declaration to emit.
   virtual bool emitTargetGlobalVariable(GlobalDecl GD);
+
+  /// Checks if the provided global decl \a GD is a declare target variable and
+  /// registers it when emitting code for the host.
+  virtual void registerTargetGlobalVariable(const VarDecl *VD,
+                                            llvm::Constant *Addr);
 
   /// \brief Emit the global \a GD if it is meaningful for the target. Returns
   /// if it was emitted successfully.

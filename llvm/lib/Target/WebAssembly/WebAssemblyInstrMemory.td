@@ -303,222 +303,143 @@ def : LoadPatExternSymOffOnly<i64, extloadi32, LOAD32_U_I64>;
 
 let Defs = [ARGUMENTS] in {
 
+// Defines atomic and non-atomic stores, regular and truncating
+class WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode> :
+ I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$val), [],
+   !strconcat(Name, "\t${off}(${addr})${p2align}, $val"), Opcode>;
 // Basic store.
 // Note: WebAssembly inverts SelectionDAG's usual operand order.
-def STORE_I32  : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                            I32:$val), [],
-                   "i32.store\t${off}(${addr})${p2align}, $val", 0x36>;
-def STORE_I64  : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                            I64:$val), [],
-                   "i64.store\t${off}(${addr})${p2align}, $val", 0x37>;
-def STORE_F32  : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                            F32:$val), [],
-                   "f32.store\t${off}(${addr})${p2align}, $val", 0x38>;
-def STORE_F64  : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                            F64:$val), [],
-                   "f64.store\t${off}(${addr})${p2align}, $val", 0x39>;
+def STORE_I32  : WebAssemblyStore<I32, "i32.store", 0x36>;
+def STORE_I64  : WebAssemblyStore<I64, "i64.store", 0x37>;
+def STORE_F32  : WebAssemblyStore<F32, "f32.store", 0x38>;
+def STORE_F64  : WebAssemblyStore<F64, "f64.store", 0x39>;
 
 } // Defs = [ARGUMENTS]
 
 // Select stores with no constant offset.
-def : Pat<(store I32:$val, I32:$addr), (STORE_I32 0, 0, I32:$addr, I32:$val)>;
-def : Pat<(store I64:$val, I32:$addr), (STORE_I64 0, 0, I32:$addr, I64:$val)>;
-def : Pat<(store F32:$val, I32:$addr), (STORE_F32 0, 0, I32:$addr, F32:$val)>;
-def : Pat<(store F64:$val, I32:$addr), (STORE_F64 0, 0, I32:$addr, F64:$val)>;
+class StorePatNoOffset<ValueType ty, PatFrag node, I inst> :
+  Pat<(node ty:$val, I32:$addr), (inst 0, 0, $addr, $val)>;
+
+def : StorePatNoOffset<i32, store, STORE_I32>;
+def : StorePatNoOffset<i64, store, STORE_I64>;
+def : StorePatNoOffset<f32, store, STORE_F32>;
+def : StorePatNoOffset<f64, store, STORE_F64>;
 
 // Select stores with a constant offset.
-def : Pat<(store I32:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE_I32 0, imm:$off, I32:$addr, I32:$val)>;
-def : Pat<(store I64:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(store F32:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE_F32 0, imm:$off, I32:$addr, F32:$val)>;
-def : Pat<(store F64:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE_F64 0, imm:$off, I32:$addr, F64:$val)>;
-def : Pat<(store I32:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE_I32 0, imm:$off, I32:$addr, I32:$val)>;
-def : Pat<(store I64:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(store F32:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE_F32 0, imm:$off, I32:$addr, F32:$val)>;
-def : Pat<(store F64:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE_F64 0, imm:$off, I32:$addr, F64:$val)>;
-def : Pat<(store I32:$val, (regPlusGA I32:$addr,
-                                      (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE_I32 0, tglobaladdr:$off, I32:$addr, I32:$val)>;
-def : Pat<(store I64:$val, (regPlusGA I32:$addr,
-                                      (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE_I64 0, tglobaladdr:$off, I32:$addr, I64:$val)>;
-def : Pat<(store F32:$val, (regPlusGA I32:$addr,
-                                      (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE_F32 0, tglobaladdr:$off, I32:$addr, F32:$val)>;
-def : Pat<(store F64:$val, (regPlusGA I32:$addr,
-                                      (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE_F64 0, tglobaladdr:$off, I32:$addr, F64:$val)>;
-def : Pat<(store I32:$val, (add I32:$addr,
-                                (WebAssemblywrapper texternalsym:$off))),
-          (STORE_I32 0, texternalsym:$off, I32:$addr, I32:$val)>;
-def : Pat<(store I64:$val, (add I32:$addr,
-                                (WebAssemblywrapper texternalsym:$off))),
-          (STORE_I64 0, texternalsym:$off, I32:$addr, I64:$val)>;
-def : Pat<(store F32:$val, (add I32:$addr,
-                                (WebAssemblywrapper texternalsym:$off))),
-          (STORE_F32 0, texternalsym:$off, I32:$addr, F32:$val)>;
-def : Pat<(store F64:$val, (add I32:$addr,
-                                (WebAssemblywrapper texternalsym:$off))),
-          (STORE_F64 0, texternalsym:$off, I32:$addr, F64:$val)>;
+class StorePatImmOff<ValueType ty, PatFrag storekind, PatFrag operand, I inst> :
+  Pat<(storekind ty:$val, (operand I32:$addr, imm:$off)),
+      (inst 0, imm:$off, $addr, ty:$val)>;
+
+def : StorePatImmOff<i32, store, regPlusImm, STORE_I32>;
+def : StorePatImmOff<i64, store, regPlusImm, STORE_I64>;
+def : StorePatImmOff<f32, store, regPlusImm, STORE_F32>;
+def : StorePatImmOff<f64, store, regPlusImm, STORE_F64>;
+def : StorePatImmOff<i32, store, or_is_add, STORE_I32>;
+def : StorePatImmOff<i64, store, or_is_add, STORE_I64>;
+def : StorePatImmOff<f32, store, or_is_add, STORE_F32>;
+def : StorePatImmOff<f64, store, or_is_add, STORE_F64>;
+
+class StorePatGlobalAddr<ValueType ty, PatFrag storekind, I inst> :
+  Pat<(storekind ty:$val, (regPlusGA I32:$addr,
+                                     (WebAssemblywrapper tglobaladdr:$off))),
+      (inst 0, tglobaladdr:$off, I32:$addr, ty:$val)>;
+def : StorePatGlobalAddr<i32, store, STORE_I32>;
+def : StorePatGlobalAddr<i64, store, STORE_I64>;
+def : StorePatGlobalAddr<f32, store, STORE_F32>;
+def : StorePatGlobalAddr<f64, store, STORE_F64>;
+
+class StorePatExternalSym<ValueType ty, PatFrag storekind, I inst> :
+  Pat<(storekind ty:$val, (add I32:$addr,
+                               (WebAssemblywrapper texternalsym:$off))),
+      (inst 0, texternalsym:$off, I32:$addr, ty:$val)>;
+def : StorePatExternalSym<i32, store, STORE_I32>;
+def : StorePatExternalSym<i64, store, STORE_I64>;
+def : StorePatExternalSym<f32, store, STORE_F32>;
+def : StorePatExternalSym<f64, store, STORE_F64>;
 
 // Select stores with just a constant offset.
-def : Pat<(store I32:$val, imm:$off),
-          (STORE_I32 0, imm:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(store I64:$val, imm:$off),
-          (STORE_I64 0, imm:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(store F32:$val, imm:$off),
-          (STORE_F32 0, imm:$off, (CONST_I32 0), F32:$val)>;
-def : Pat<(store F64:$val, imm:$off),
-          (STORE_F64 0, imm:$off, (CONST_I32 0), F64:$val)>;
-def : Pat<(store I32:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE_I32 0, tglobaladdr:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(store I64:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE_I64 0, tglobaladdr:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(store F32:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE_F32 0, tglobaladdr:$off, (CONST_I32 0), F32:$val)>;
-def : Pat<(store F64:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE_F64 0, tglobaladdr:$off, (CONST_I32 0), F64:$val)>;
-def : Pat<(store I32:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE_I32 0, texternalsym:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(store I64:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE_I64 0, texternalsym:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(store F32:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE_F32 0, texternalsym:$off, (CONST_I32 0), F32:$val)>;
-def : Pat<(store F64:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE_F64 0, texternalsym:$off, (CONST_I32 0), F64:$val)>;
+class StorePatOffsetOnly<ValueType ty, PatFrag storekind, I inst> :
+  Pat<(storekind ty:$val, imm:$off),
+      (inst 0, imm:$off, (CONST_I32 0), ty:$val)>;
+def : StorePatOffsetOnly<i32, store, STORE_I32>;
+def : StorePatOffsetOnly<i64, store, STORE_I64>;
+def : StorePatOffsetOnly<f32, store, STORE_F32>;
+def : StorePatOffsetOnly<f64, store, STORE_F64>;
+
+class StorePatGlobalAddrOffOnly<ValueType ty, PatFrag storekind, I inst> :
+  Pat<(storekind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+      (inst 0, tglobaladdr:$off, (CONST_I32 0), ty:$val)>;
+def : StorePatGlobalAddrOffOnly<i32, store, STORE_I32>;
+def : StorePatGlobalAddrOffOnly<i64, store, STORE_I64>;
+def : StorePatGlobalAddrOffOnly<f32, store, STORE_F32>;
+def : StorePatGlobalAddrOffOnly<f64, store, STORE_F64>;
+
+class StorePatExternSymOffOnly<ValueType ty, PatFrag storekind, I inst> :
+  Pat<(storekind ty:$val, (WebAssemblywrapper texternalsym:$off)),
+      (inst 0, texternalsym:$off, (CONST_I32 0), ty:$val)>;
+def : StorePatExternSymOffOnly<i32, store, STORE_I32>;
+def : StorePatExternSymOffOnly<i64, store, STORE_I64>;
+def : StorePatExternSymOffOnly<f32, store, STORE_F32>;
+def : StorePatExternSymOffOnly<f64, store, STORE_F64>;
+
 
 let Defs = [ARGUMENTS] in {
 
 // Truncating store.
-def STORE8_I32  : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                             I32:$val), [],
-                    "i32.store8\t${off}(${addr})${p2align}, $val", 0x3a>;
-def STORE16_I32 : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                             I32:$val), [],
-                    "i32.store16\t${off}(${addr})${p2align}, $val", 0x3b>;
-def STORE8_I64  : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                             I64:$val), [],
-                    "i64.store8\t${off}(${addr})${p2align}, $val", 0x3c>;
-def STORE16_I64 : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                             I64:$val), [],
-                    "i64.store16\t${off}(${addr})${p2align}, $val", 0x3d>;
-def STORE32_I64 : I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr,
-                             I64:$val), [],
-                    "i64.store32\t${off}(${addr})${p2align}, $val", 0x3e>;
+def STORE8_I32 : WebAssemblyStore<I32, "i32.store8", 0x3a>;
+def STORE16_I32 : WebAssemblyStore<I32, "i32.store16", 0x3b>;
+def STORE8_I64 : WebAssemblyStore<I64, "i64.store8", 0x3c>;
+def STORE16_I64 : WebAssemblyStore<I64, "i64.store16", 0x3d>;
+def STORE32_I64 : WebAssemblyStore<I64, "i64.store32", 0x3e>;
 
 } // Defs = [ARGUMENTS]
 
 // Select truncating stores with no constant offset.
-def : Pat<(truncstorei8 I32:$val, I32:$addr),
-          (STORE8_I32 0, 0, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei16 I32:$val, I32:$addr),
-          (STORE16_I32 0, 0, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei8 I64:$val, I32:$addr),
-          (STORE8_I64 0, 0, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei16 I64:$val, I32:$addr),
-          (STORE16_I64 0, 0, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei32 I64:$val, I32:$addr),
-          (STORE32_I64 0, 0, I32:$addr, I64:$val)>;
+def : StorePatNoOffset<i32, truncstorei8, STORE8_I32>;
+def : StorePatNoOffset<i32, truncstorei16, STORE16_I32>;
+def : StorePatNoOffset<i64, truncstorei8, STORE8_I64>;
+def : StorePatNoOffset<i64, truncstorei16, STORE16_I64>;
+def : StorePatNoOffset<i64, truncstorei32, STORE32_I64>;
 
 // Select truncating stores with a constant offset.
-def : Pat<(truncstorei8 I32:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE8_I32 0, imm:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei16 I32:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE16_I32 0, imm:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei8 I64:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE8_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei16 I64:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE16_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei32 I64:$val, (regPlusImm I32:$addr, imm:$off)),
-          (STORE32_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei8 I32:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE8_I32 0, imm:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei16 I32:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE16_I32 0, imm:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei8 I64:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE8_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei16 I64:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE16_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei32 I64:$val, (or_is_add I32:$addr, imm:$off)),
-          (STORE32_I64 0, imm:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei8 I32:$val,
-                        (regPlusGA I32:$addr,
-                                   (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE8_I32 0, tglobaladdr:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei16 I32:$val,
-                         (regPlusGA I32:$addr,
-                                    (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE16_I32 0, tglobaladdr:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei8 I64:$val,
-                        (regPlusGA I32:$addr,
-                                   (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE8_I64 0, tglobaladdr:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei16 I64:$val,
-                         (regPlusGA I32:$addr,
-                                    (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE16_I64 0, tglobaladdr:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei32 I64:$val,
-                         (regPlusGA I32:$addr,
-                                    (WebAssemblywrapper tglobaladdr:$off))),
-          (STORE32_I64 0, tglobaladdr:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei8 I32:$val, (add I32:$addr,
-                                       (WebAssemblywrapper texternalsym:$off))),
-          (STORE8_I32 0, texternalsym:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei16 I32:$val,
-                         (add I32:$addr,
-                              (WebAssemblywrapper texternalsym:$off))),
-          (STORE16_I32 0, texternalsym:$off, I32:$addr, I32:$val)>;
-def : Pat<(truncstorei8 I64:$val,
-                        (add I32:$addr,
-                             (WebAssemblywrapper texternalsym:$off))),
-          (STORE8_I64 0, texternalsym:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei16 I64:$val,
-                         (add I32:$addr,
-                              (WebAssemblywrapper texternalsym:$off))),
-          (STORE16_I64 0, texternalsym:$off, I32:$addr, I64:$val)>;
-def : Pat<(truncstorei32 I64:$val,
-                         (add I32:$addr,
-                              (WebAssemblywrapper texternalsym:$off))),
-          (STORE32_I64 0, texternalsym:$off, I32:$addr, I64:$val)>;
+def : StorePatImmOff<i32, truncstorei8, regPlusImm, STORE8_I32>;
+def : StorePatImmOff<i32, truncstorei16, regPlusImm, STORE16_I32>;
+def : StorePatImmOff<i64, truncstorei8, regPlusImm, STORE8_I64>;
+def : StorePatImmOff<i64, truncstorei16, regPlusImm, STORE16_I64>;
+def : StorePatImmOff<i64, truncstorei32, regPlusImm, STORE32_I64>;
+def : StorePatImmOff<i32, truncstorei8, or_is_add, STORE8_I32>;
+def : StorePatImmOff<i32, truncstorei16, or_is_add, STORE16_I32>;
+def : StorePatImmOff<i64, truncstorei8, or_is_add, STORE8_I64>;
+def : StorePatImmOff<i64, truncstorei16, or_is_add, STORE16_I64>;
+def : StorePatImmOff<i64, truncstorei32, or_is_add, STORE32_I64>;
+
+def : StorePatGlobalAddr<i32, truncstorei8, STORE8_I32>;
+def : StorePatGlobalAddr<i32, truncstorei16, STORE16_I32>;
+def : StorePatGlobalAddr<i64, truncstorei8, STORE8_I64>;
+def : StorePatGlobalAddr<i64, truncstorei16, STORE16_I64>;
+def : StorePatGlobalAddr<i64, truncstorei32, STORE32_I64>;
+def : StorePatExternalSym<i32, truncstorei8, STORE8_I32>;
+def : StorePatExternalSym<i32, truncstorei16, STORE16_I32>;
+def : StorePatExternalSym<i64, truncstorei8, STORE8_I64>;
+def : StorePatExternalSym<i64, truncstorei16, STORE16_I64>;
+def : StorePatExternalSym<i64, truncstorei32, STORE32_I64>;
 
 // Select truncating stores with just a constant offset.
-def : Pat<(truncstorei8 I32:$val, imm:$off),
-          (STORE8_I32 0, imm:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(truncstorei16 I32:$val, imm:$off),
-          (STORE16_I32 0, imm:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(truncstorei8 I64:$val, imm:$off),
-          (STORE8_I64 0, imm:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei16 I64:$val, imm:$off),
-          (STORE16_I64 0, imm:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei32 I64:$val, imm:$off),
-          (STORE32_I64 0, imm:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei8 I32:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE8_I32 0, tglobaladdr:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(truncstorei16 I32:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE16_I32 0, tglobaladdr:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(truncstorei8 I64:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE8_I64 0, tglobaladdr:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei16 I64:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE16_I64 0, tglobaladdr:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei32 I64:$val, (WebAssemblywrapper tglobaladdr:$off)),
-          (STORE32_I64 0, tglobaladdr:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei8 I32:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE8_I32 0, texternalsym:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(truncstorei16 I32:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE16_I32 0, texternalsym:$off, (CONST_I32 0), I32:$val)>;
-def : Pat<(truncstorei8 I64:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE8_I64 0, texternalsym:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei16 I64:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE16_I64 0, texternalsym:$off, (CONST_I32 0), I64:$val)>;
-def : Pat<(truncstorei32 I64:$val, (WebAssemblywrapper texternalsym:$off)),
-          (STORE32_I64 0, texternalsym:$off, (CONST_I32 0), I64:$val)>;
+def : StorePatOffsetOnly<i32, truncstorei8, STORE8_I32>;
+def : StorePatOffsetOnly<i32, truncstorei16, STORE16_I32>;
+def : StorePatOffsetOnly<i64, truncstorei8, STORE8_I64>;
+def : StorePatOffsetOnly<i64, truncstorei16, STORE16_I64>;
+def : StorePatOffsetOnly<i64, truncstorei32, STORE32_I64>;
+def : StorePatGlobalAddrOffOnly<i32, truncstorei8, STORE8_I32>;
+def : StorePatGlobalAddrOffOnly<i32, truncstorei16, STORE16_I32>;
+def : StorePatGlobalAddrOffOnly<i64, truncstorei8, STORE8_I64>;
+def : StorePatGlobalAddrOffOnly<i64, truncstorei16, STORE16_I64>;
+def : StorePatGlobalAddrOffOnly<i64, truncstorei32, STORE32_I64>;
+def : StorePatExternSymOffOnly<i32, truncstorei8, STORE8_I32>;
+def : StorePatExternSymOffOnly<i32, truncstorei16, STORE16_I32>;
+def : StorePatExternSymOffOnly<i64, truncstorei8, STORE8_I64>;
+def : StorePatExternSymOffOnly<i64, truncstorei16, STORE16_I64>;
+def : StorePatExternSymOffOnly<i64, truncstorei32, STORE32_I64>;
 
 let Defs = [ARGUMENTS] in {
 

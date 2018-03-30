@@ -36,6 +36,8 @@ public:
 
   uint32_t getStreamSize() const;
 
+  const InfoStreamHeader *getHeader() const { return Header; }
+
   bool containsIdStream() const;
   PdbRaw_ImplVer getVersion() const;
   uint32_t getSignature() const;
@@ -56,23 +58,7 @@ public:
 private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
-  // PDB file format version.  We only support VC70.  See the enumeration
-  // `PdbRaw_ImplVer` for the other possible values.
-  uint32_t Version;
-
-  // A 32-bit signature unique across all PDBs.  This is generated with
-  // a call to time() when the PDB is written, but obviously this is not
-  // universally unique.
-  uint32_t Signature;
-
-  // The number of times the PDB has been written.  Might also be used to
-  // ensure that the PDB matches the executable.
-  uint32_t Age;
-
-  // Due to the aforementioned limitations with `Signature`, this is a new
-  // signature present on VC70 and higher PDBs which is guaranteed to be
-  // universally unique.
-  codeview::GUID Guid;
+  const InfoStreamHeader *Header;
 
   BinarySubstreamRef SubNamedStreams;
 

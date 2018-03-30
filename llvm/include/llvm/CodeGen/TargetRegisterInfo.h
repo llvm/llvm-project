@@ -1161,7 +1161,8 @@ struct VirtReg2IndexFunctor {
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
 Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
-                   unsigned SubRegIdx = 0);
+                   unsigned SubRegIdx = 0,
+                   const MachineRegisterInfo *MRI = nullptr);
 
 /// Create Printable object to print register units on a \ref raw_ostream.
 ///

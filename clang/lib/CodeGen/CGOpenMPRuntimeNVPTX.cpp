@@ -177,7 +177,21 @@ class CheckVarsEscapingDeclContext final
   RecordDecl *GlobalizedRD = nullptr;
   llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> MappedDeclsFields;
 
+  static llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
+  isDeclareTargetDeclaration(const ValueDecl *VD) {
+    for (const auto *D : VD->redecls()) {
+      if (!D->hasAttrs())
+        continue;
+      if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
+        return Attr->getMapType();
+    }
+    return llvm::None;
+  }
+
   void markAsEscaped(const ValueDecl *VD) {
+    // Do not globalize declare target variables.
+    if (isDeclareTargetDeclaration(VD))
+      return;
     VD = cast<ValueDecl>(VD->getCanonicalDecl());
     // Variables captured by value must be globalized.
     if (auto *CSI = CGF.CapturedStmtInfo) {
@@ -1117,7 +1131,8 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
 
 void CGOpenMPRuntimeNVPTX::createOffloadEntry(llvm::Constant *ID,
                                               llvm::Constant *Addr,
-                                              uint64_t Size, int32_t) {
+                                              uint64_t Size, int32_t,
+                                              llvm::GlobalValue::LinkageTypes) {
   auto *F = dyn_cast<llvm::Function>(Addr);
   // TODO: Add support for global variables on the device after declare target
   // support.
