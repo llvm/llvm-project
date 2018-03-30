@@ -200,18 +200,18 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
 
   switch (Type) {
   case R_PPC64_ADDR14: {
-    checkAlignment<4>(Loc, Val, Type);
+    checkAlignment(Loc, Val, 4, Type);
     // Preserve the AA/LK bits in the branch instruction
     uint8_t AALK = Loc[3];
     write16(Loc + 2, (AALK & 3) | (Val & 0xfffc));
     break;
   }
   case R_PPC64_ADDR16:
-    checkInt<16>(Loc, Val, Type);
+    checkInt(Loc, Val, 16, Type);
     write16(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
-    checkInt<16>(Loc, Val, Type);
+    checkInt(Loc, Val, 16, Type);
     write16(Loc, (read16(Loc) & 3) | (Val & ~3));
     break;
   case R_PPC64_ADDR16_HA:
@@ -243,7 +243,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_PPC64_ADDR32:
   case R_PPC64_REL32:
-    checkInt<32>(Loc, Val, Type);
+    checkInt(Loc, Val, 32, Type);
     write32(Loc, Val);
     break;
   case R_PPC64_ADDR64:
@@ -253,7 +253,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_PPC64_REL24: {
     uint32_t Mask = 0x03FFFFFC;
-    checkInt<24>(Loc, Val, Type);
+    checkInt(Loc, Val, 24, Type);
     write32(Loc, (read32(Loc) & ~Mask) | (Val & Mask));
     break;
   }
