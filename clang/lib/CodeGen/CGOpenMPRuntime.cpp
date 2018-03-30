@@ -2337,8 +2337,9 @@ llvm::Constant *CGOpenMPRuntime::createDispatchNextFunction(unsigned IVSize,
   return CGM.CreateRuntimeFunction(FnTy, Name);
 }
 
-Address CGOpenMPRuntime::getAddrOfDeclareTargetLink(CodeGenFunction &CGF,
-                                                    const VarDecl *VD) {
+Address CGOpenMPRuntime::getAddrOfDeclareTargetLink(const VarDecl *VD) {
+  if (CGM.getLangOpts().OpenMPSimd)
+    return Address::invalid();
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       isDeclareTargetDeclaration(VD);
   if (Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
@@ -2352,7 +2353,13 @@ Address CGOpenMPRuntime::getAddrOfDeclareTargetLink(CodeGenFunction &CGF,
       QualType PtrTy = CGM.getContext().getPointerType(VD->getType());
       Ptr = getOrCreateInternalVariable(CGM.getTypes().ConvertTypeForMem(PtrTy),
                                         PtrName);
-      CGF.CGM.addUsedGlobal(cast<llvm::GlobalValue>(Ptr));
+      if (!CGM.getLangOpts().OpenMPIsDevice) {
+        auto *GV = cast<llvm::GlobalVariable>(Ptr);
+        GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        GV->setInitializer(CGM.GetAddrOfGlobal(VD));
+      }
+      CGM.addUsedGlobal(cast<llvm::GlobalValue>(Ptr));
+      registerTargetGlobalVariable(VD, cast<llvm::Constant>(Ptr));
     }
     return Address(Ptr, CGM.getContext().getDeclAlign(VD));
   }
@@ -2613,7 +2620,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
     Out.clear();
     OffloadEntriesInfoManager.registerTargetRegionEntryInfo(
         DeviceID, FileID, Twine(Buffer, "_ctor").toStringRef(Out), Line, Ctor,
-        ID, OMPTargetRegionEntryCtor);
+        ID, OffloadEntriesInfoManagerTy::OMPTargetRegionEntryCtor);
   }
   if (VD->getType().isDestructedType() != QualType::DK_none) {
     llvm::Constant *Dtor;
@@ -2650,7 +2657,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
     Out.clear();
     OffloadEntriesInfoManager.registerTargetRegionEntryInfo(
         DeviceID, FileID, Twine(Buffer, "_dtor").toStringRef(Out), Line, Dtor,
-        ID, OMPTargetRegionEntryDtor);
+        ID, OffloadEntriesInfoManagerTy::OMPTargetRegionEntryDtor);
   }
   return CGM.getLangOpts().OpenMPIsDevice;
 }
@@ -3494,8 +3501,8 @@ enum KmpTaskTFields {
 } // anonymous namespace
 
 bool CGOpenMPRuntime::OffloadEntriesInfoManagerTy::empty() const {
-  // FIXME: Add other entries type when they become supported.
-  return OffloadEntriesTargetRegion.empty();
+  return OffloadEntriesTargetRegion.empty() &&
+         OffloadEntriesDeviceGlobalVar.empty();
 }
 
 /// \brief Initialize target region entry.
@@ -3528,10 +3535,10 @@ void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
     Entry.setAddress(Addr);
     Entry.setID(ID);
     Entry.setFlags(Flags);
-    return;
   } else {
-    OffloadEntryInfoTargetRegion Entry(OffloadingEntriesNum++, Addr, ID, Flags);
+    OffloadEntryInfoTargetRegion Entry(OffloadingEntriesNum, Addr, ID, Flags);
     OffloadEntriesTargetRegion[DeviceID][FileID][ParentName][LineNum] = Entry;
+    ++OffloadingEntriesNum;
   }
 }
 
@@ -3559,35 +3566,55 @@ bool CGOpenMPRuntime::OffloadEntriesInfoManagerTy::hasTargetRegionEntryInfo(
 void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::actOnTargetRegionEntriesInfo(
     const OffloadTargetRegionEntryInfoActTy &Action) {
   // Scan all target region entries and perform the provided action.
-  for (auto &D : OffloadEntriesTargetRegion)
-    for (auto &F : D.second)
-      for (auto &P : F.second)
-        for (auto &L : P.second)
+  for (const auto &D : OffloadEntriesTargetRegion)
+    for (const auto &F : D.second)
+      for (const auto &P : F.second)
+        for (const auto &L : P.second)
           Action(D.first, F.first, P.first(), L.first, L.second);
 }
 
-/// \brief Create a Ctor/Dtor-like function whose body is emitted through
-/// \a Codegen. This is used to emit the two functions that register and
-/// unregister the descriptor of the current compilation unit.
-static llvm::Function *
-createOffloadingBinaryDescriptorFunction(CodeGenModule &CGM, StringRef Name,
-                                         const RegionCodeGenTy &Codegen) {
-  auto &C = CGM.getContext();
-  FunctionArgList Args;
-  ImplicitParamDecl DummyPtr(C, C.VoidPtrTy, ImplicitParamDecl::Other);
-  Args.push_back(&DummyPtr);
+void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
+    initializeDeviceGlobalVarEntryInfo(StringRef Name,
+                                       OMPTargetGlobalVarEntryKind Flags,
+                                       unsigned Order) {
+  assert(CGM.getLangOpts().OpenMPIsDevice && "Initialization of entries is "
+                                             "only required for the device "
+                                             "code generation.");
+  OffloadEntriesDeviceGlobalVar.try_emplace(Name, Order, Flags);
+  ++OffloadingEntriesNum;
+}
 
-  CodeGenFunction CGF(CGM);
-  // Disable debug info for global (de-)initializer because they are not part of
-  // some particular construct.
-  CGF.disableDebugInfo();
-  auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
-  auto FTy = CGM.getTypes().GetFunctionType(FI);
-  auto *Fn = CGM.CreateGlobalInitOrDestructFunction(FTy, Name, FI);
-  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FI, Args);
-  Codegen(CGF);
-  CGF.FinishFunction();
-  return Fn;
+void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
+    registerDeviceGlobalVarEntryInfo(StringRef VarName, llvm::Constant *Addr,
+                                     CharUnits VarSize,
+                                     OMPTargetGlobalVarEntryKind Flags,
+                                     llvm::GlobalValue::LinkageTypes Linkage) {
+  if (CGM.getLangOpts().OpenMPIsDevice) {
+    auto &Entry = OffloadEntriesDeviceGlobalVar[VarName];
+    assert(Entry.isValid() && Entry.getFlags() == Flags &&
+           "Entry not initialized!");
+    assert((!Entry.getAddress() || Entry.getAddress() == Addr) &&
+           "Resetting with the new address.");
+    if (Entry.getAddress() && hasDeviceGlobalVarEntryInfo(VarName))
+      return;
+    Entry.setAddress(Addr);
+    Entry.setVarSize(VarSize);
+    Entry.setLinkage(Linkage);
+  } else {
+    if (hasDeviceGlobalVarEntryInfo(VarName))
+      return;
+    OffloadEntriesDeviceGlobalVar.try_emplace(
+        VarName, OffloadingEntriesNum, Addr, VarSize, Flags, Linkage);
+    ++OffloadingEntriesNum;
+  }
+}
+
+void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
+    actOnDeviceGlobalVarEntriesInfo(
+        const OffloadDeviceGlobalVarEntryInfoActTy &Action) {
+  // Scan all target region entries and perform the provided action.
+  for (const auto &E : OffloadEntriesDeviceGlobalVar)
+    Action(E.getKey(), E.getValue());
 }
 
 llvm::Function *
@@ -3626,8 +3653,8 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   ConstantInitBuilder DeviceImagesBuilder(CGM);
   auto DeviceImagesEntries = DeviceImagesBuilder.beginArray(DeviceImageTy);
 
-  for (unsigned i = 0; i < Devices.size(); ++i) {
-    StringRef T = Devices[i].getTriple();
+  for (llvm::Triple Device : Devices) {
+    StringRef T = Device.getTriple();
     auto *ImgBegin = new llvm::GlobalVariable(
         M, CGM.Int8Ty, /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage,
         /*Initializer=*/nullptr,
@@ -3674,25 +3701,45 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   // Emit code to register or unregister the descriptor at execution
   // startup or closing, respectively.
 
-  // Create a variable to drive the registration and unregistration of the
-  // descriptor, so we can reuse the logic that emits Ctors and Dtors.
-  auto *IdentInfo = &C.Idents.get(".omp_offloading.reg_unreg_var");
-  ImplicitParamDecl RegUnregVar(C, C.getTranslationUnitDecl(), SourceLocation(),
-                                IdentInfo, C.CharTy, ImplicitParamDecl::Other);
+  llvm::Function *UnRegFn;
+  {
+    FunctionArgList Args;
+    ImplicitParamDecl DummyPtr(C, C.VoidPtrTy, ImplicitParamDecl::Other);
+    Args.push_back(&DummyPtr);
 
-  auto *UnRegFn = createOffloadingBinaryDescriptorFunction(
-      CGM, ".omp_offloading.descriptor_unreg",
-      [&](CodeGenFunction &CGF, PrePostActionTy &) {
-        CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__tgt_unregister_lib),
-                            Desc);
-      });
-  auto *RegFn = createOffloadingBinaryDescriptorFunction(
-      CGM, ".omp_offloading.descriptor_reg",
-      [&](CodeGenFunction &CGF, PrePostActionTy &) {
-        CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__tgt_register_lib),
-                            Desc);
-        CGM.getCXXABI().registerGlobalDtor(CGF, RegUnregVar, UnRegFn, Desc);
-      });
+    CodeGenFunction CGF(CGM);
+    // Disable debug info for global (de-)initializer because they are not part
+    // of some particular construct.
+    CGF.disableDebugInfo();
+    auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+    auto FTy = CGM.getTypes().GetFunctionType(FI);
+    UnRegFn = CGM.CreateGlobalInitOrDestructFunction(
+        FTy, ".omp_offloading.descriptor_unreg", FI);
+    CGF.StartFunction(GlobalDecl(), C.VoidTy, UnRegFn, FI, Args);
+    CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__tgt_unregister_lib),
+                        Desc);
+    CGF.FinishFunction();
+  }
+  llvm::Function *RegFn;
+  {
+    CodeGenFunction CGF(CGM);
+    // Disable debug info for global (de-)initializer because they are not part
+    // of some particular construct.
+    CGF.disableDebugInfo();
+    auto &FI = CGM.getTypes().arrangeNullaryFunction();
+    llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
+    RegFn = CGM.CreateGlobalInitOrDestructFunction(
+        FTy, ".omp_offloading.descriptor_reg", FI);
+    CGF.StartFunction(GlobalDecl(), C.VoidTy, RegFn, FI, FunctionArgList());
+    CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__tgt_register_lib), Desc);
+    // Create a variable to drive the registration and unregistration of the
+    // descriptor, so we can reuse the logic that emits Ctors and Dtors.
+    ImplicitParamDecl RegUnregVar(C, C.getTranslationUnitDecl(),
+                                  SourceLocation(), nullptr, C.CharTy,
+                                  ImplicitParamDecl::Other);
+    CGM.getCXXABI().registerGlobalDtor(CGF, RegUnregVar, UnRegFn, Desc);
+    CGF.FinishFunction();
+  }
   if (CGM.supportsCOMDAT()) {
     // It is sufficient to call registration function only once, so create a
     // COMDAT group for registration/unregistration functions and associated
@@ -3709,9 +3756,9 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   return RegFn;
 }
 
-void CGOpenMPRuntime::createOffloadEntry(llvm::Constant *ID,
-                                         llvm::Constant *Addr, uint64_t Size,
-                                         int32_t Flags) {
+void CGOpenMPRuntime::createOffloadEntry(
+    llvm::Constant *ID, llvm::Constant *Addr, uint64_t Size, int32_t Flags,
+    llvm::GlobalValue::LinkageTypes Linkage) {
   StringRef Name = Addr->getName();
   auto *TgtOffloadEntryType = cast<llvm::StructType>(
       CGM.getTypes().ConvertTypeForMem(getTgtOffloadEntryQTy()));
@@ -3744,8 +3791,8 @@ void CGOpenMPRuntime::createOffloadEntry(llvm::Constant *ID,
   EntryInit.addInt(CGM.Int32Ty, Flags);
   EntryInit.addInt(CGM.Int32Ty, 0);
   llvm::GlobalVariable *Entry = EntryInit.finishAndCreateGlobal(
-      Twine(".omp_offloading.entry.") + Name, Align,
-      /*constant*/ true, llvm::GlobalValue::ExternalLinkage);
+      Twine(".omp_offloading.entry.", Name), Align,
+      /*Constant=*/true, Linkage);
 
   // The entry has to be created in the section the linker expects it to be.
   Entry->setSection(".omp_offloading.entries");
@@ -3767,62 +3814,96 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
 
   llvm::Module &M = CGM.getModule();
   llvm::LLVMContext &C = M.getContext();
-  SmallVector<OffloadEntriesInfoManagerTy::OffloadEntryInfo *, 16>
+  SmallVector<const OffloadEntriesInfoManagerTy::OffloadEntryInfo *, 16>
       OrderedEntries(OffloadEntriesInfoManager.size());
 
-  // Create the offloading info metadata node.
-  llvm::NamedMDNode *MD = M.getOrInsertNamedMetadata("omp_offload.info");
-
   // Auxiliary methods to create metadata values and strings.
-  auto GetMdInt = [&C](unsigned V) {
+  auto &&GetMDInt = [&C](unsigned V) {
     return llvm::ConstantAsMetadata::get(
         llvm::ConstantInt::get(llvm::Type::getInt32Ty(C), V));
   };
 
-  auto GetMdString = [&C](StringRef V) { return llvm::MDString::get(C, V); };
+  auto &&GetMDString = [&C](StringRef V) { return llvm::MDString::get(C, V); };
+
+  // Create the offloading info metadata node.
+  llvm::NamedMDNode *MD = M.getOrInsertNamedMetadata("omp_offload.info");
 
   // Create function that emits metadata for each target region entry;
-  auto &&TargetRegionMetadataEmitter = [&](
-      unsigned DeviceID, unsigned FileID, StringRef ParentName, unsigned Line,
-      OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion &E) {
-    llvm::SmallVector<llvm::Metadata *, 32> Ops;
-    // Generate metadata for target regions. Each entry of this metadata
-    // contains:
-    // - Entry 0 -> Kind of this type of metadata (0).
-    // - Entry 1 -> Device ID of the file where the entry was identified.
-    // - Entry 2 -> File ID of the file where the entry was identified.
-    // - Entry 3 -> Mangled name of the function where the entry was identified.
-    // - Entry 4 -> Line in the file where the entry was identified.
-    // - Entry 5 -> Order the entry was created.
-    // The first element of the metadata node is the kind.
-    Ops.push_back(GetMdInt(E.getKind()));
-    Ops.push_back(GetMdInt(DeviceID));
-    Ops.push_back(GetMdInt(FileID));
-    Ops.push_back(GetMdString(ParentName));
-    Ops.push_back(GetMdInt(Line));
-    Ops.push_back(GetMdInt(E.getOrder()));
+  auto &&TargetRegionMetadataEmitter =
+      [&C, MD, &OrderedEntries, &GetMDInt, &GetMDString](
+          unsigned DeviceID, unsigned FileID, StringRef ParentName,
+          unsigned Line,
+          const OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion &E) {
+        // Generate metadata for target regions. Each entry of this metadata
+        // contains:
+        // - Entry 0 -> Kind of this type of metadata (0).
+        // - Entry 1 -> Device ID of the file where the entry was identified.
+        // - Entry 2 -> File ID of the file where the entry was identified.
+        // - Entry 3 -> Mangled name of the function where the entry was
+        // identified.
+        // - Entry 4 -> Line in the file where the entry was identified.
+        // - Entry 5 -> Order the entry was created.
+        // The first element of the metadata node is the kind.
+        llvm::Metadata *Ops[] = {GetMDInt(E.getKind()), GetMDInt(DeviceID),
+                                 GetMDInt(FileID),      GetMDString(ParentName),
+                                 GetMDInt(Line),        GetMDInt(E.getOrder())};
 
-    // Save this entry in the right position of the ordered entries array.
-    OrderedEntries[E.getOrder()] = &E;
+        // Save this entry in the right position of the ordered entries array.
+        OrderedEntries[E.getOrder()] = &E;
 
-    // Add metadata to the named metadata node.
-    MD->addOperand(llvm::MDNode::get(C, Ops));
-  };
+        // Add metadata to the named metadata node.
+        MD->addOperand(llvm::MDNode::get(C, Ops));
+      };
 
   OffloadEntriesInfoManager.actOnTargetRegionEntriesInfo(
       TargetRegionMetadataEmitter);
 
-  for (auto *E : OrderedEntries) {
+  // Create function that emits metadata for each device global variable entry;
+  auto &&DeviceGlobalVarMetadataEmitter =
+      [&C, &OrderedEntries, &GetMDInt, &GetMDString,
+       MD](StringRef MangledName,
+           const OffloadEntriesInfoManagerTy::OffloadEntryInfoDeviceGlobalVar
+               &E) {
+        // Generate metadata for global variables. Each entry of this metadata
+        // contains:
+        // - Entry 0 -> Kind of this type of metadata (1).
+        // - Entry 1 -> Mangled name of the variable.
+        // - Entry 2 -> Declare target kind.
+        // - Entry 3 -> Order the entry was created.
+        // The first element of the metadata node is the kind.
+        llvm::Metadata *Ops[] = {
+            GetMDInt(E.getKind()), GetMDString(MangledName),
+            GetMDInt(E.getFlags()), GetMDInt(E.getOrder())};
+
+        // Save this entry in the right position of the ordered entries array.
+        OrderedEntries[E.getOrder()] = &E;
+
+        // Add metadata to the named metadata node.
+        MD->addOperand(llvm::MDNode::get(C, Ops));
+      };
+
+  OffloadEntriesInfoManager.actOnDeviceGlobalVarEntriesInfo(
+      DeviceGlobalVarMetadataEmitter);
+
+  for (const auto *E : OrderedEntries) {
     assert(E && "All ordered entries must exist!");
-    if (auto *CE =
+    if (const auto *CE =
             dyn_cast<OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion>(
                 E)) {
       assert(CE->getID() && CE->getAddress() &&
              "Entry ID and Addr are invalid!");
       createOffloadEntry(CE->getID(), CE->getAddress(), /*Size=*/0,
-                         CE->getFlags());
-    } else
+                         CE->getFlags(), llvm::GlobalValue::WeakAnyLinkage);
+    } else if (const auto *CE =
+                   dyn_cast<OffloadEntriesInfoManagerTy::
+                                OffloadEntryInfoDeviceGlobalVar>(E)) {
+      assert(CE->getAddress() && "Entry Addr is invalid!");
+      createOffloadEntry(CE->getAddress(), CE->getAddress(),
+                         CE->getVarSize().getQuantity(), CE->getFlags(),
+                         CE->getLinkage());
+    } else {
       llvm_unreachable("Unsupported entry kind.");
+    }
   }
 }
 
@@ -3854,27 +3935,35 @@ void CGOpenMPRuntime::loadOffloadInfoMetadata() {
     return;
 
   for (llvm::MDNode *MN : MD->operands()) {
-    auto GetMdInt = [MN](unsigned Idx) {
+    auto GetMDInt = [MN](unsigned Idx) {
       llvm::ConstantAsMetadata *V =
           cast<llvm::ConstantAsMetadata>(MN->getOperand(Idx));
       return cast<llvm::ConstantInt>(V->getValue())->getZExtValue();
     };
 
-    auto GetMdString = [MN](unsigned Idx) {
+    auto GetMDString = [MN](unsigned Idx) {
       llvm::MDString *V = cast<llvm::MDString>(MN->getOperand(Idx));
       return V->getString();
     };
 
-    switch (GetMdInt(0)) {
+    switch (GetMDInt(0)) {
     default:
       llvm_unreachable("Unexpected metadata!");
       break;
     case OffloadEntriesInfoManagerTy::OffloadEntryInfo::
         OffloadingEntryInfoTargetRegion:
       OffloadEntriesInfoManager.initializeTargetRegionEntryInfo(
-          /*DeviceID=*/GetMdInt(1), /*FileID=*/GetMdInt(2),
-          /*ParentName=*/GetMdString(3), /*Line=*/GetMdInt(4),
-          /*Order=*/GetMdInt(5));
+          /*DeviceID=*/GetMDInt(1), /*FileID=*/GetMDInt(2),
+          /*ParentName=*/GetMDString(3), /*Line=*/GetMDInt(4),
+          /*Order=*/GetMDInt(5));
+      break;
+    case OffloadEntriesInfoManagerTy::OffloadEntryInfo::
+        OffloadingEntryInfoDeviceGlobalVar:
+      OffloadEntriesInfoManager.initializeDeviceGlobalVarEntryInfo(
+          /*MangledName=*/GetMDString(1),
+          static_cast<OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind>(
+              /*Flags=*/GetMDInt(2)),
+          /*Order=*/GetMDInt(3));
       break;
     }
   }
@@ -6077,7 +6166,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   // Register the information for the entry associated with this target region.
   OffloadEntriesInfoManager.registerTargetRegionEntryInfo(
       DeviceID, FileID, ParentName, Line, OutlinedFn, OutlinedFnID,
-      OMPTargetRegionEntryTargetRegion);
+      OffloadEntriesInfoManagerTy::OMPTargetRegionEntryTargetRegion);
 }
 
 /// discard all CompoundStmts intervening between two constructs
@@ -6659,7 +6748,7 @@ public:
           (void)*Res;
           IsLink = true;
           BP = CGF.CGM.getOpenMPRuntime()
-                   .getAddrOfDeclareTargetLink(CGF, VD)
+                   .getAddrOfDeclareTargetLink(VD)
                    .getPointer();
         }
       }
@@ -7608,8 +7697,41 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
 
   // Do not to emit variable if it is not marked as declare target.
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-      isDeclareTargetDeclaration(cast<ValueDecl>(GD.getDecl()));
+      isDeclareTargetDeclaration(cast<VarDecl>(GD.getDecl()));
   return !Res || *Res == OMPDeclareTargetDeclAttr::MT_Link;
+}
+
+void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
+                                                   llvm::Constant *Addr) {
+  if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+          isDeclareTargetDeclaration(VD)) {
+    OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind Flags;
+    StringRef VarName;
+    CharUnits VarSize;
+    llvm::GlobalValue::LinkageTypes Linkage;
+    switch (*Res) {
+    case OMPDeclareTargetDeclAttr::MT_To:
+      Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo;
+      VarName = CGM.getMangledName(VD);
+      VarSize = CGM.getContext().getTypeSizeInChars(VD->getType());
+      Linkage = CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
+      break;
+    case OMPDeclareTargetDeclAttr::MT_Link:
+      // Map type 'to' because we do not map the original variable but the
+      // reference.
+      Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo;
+      if (!CGM.getLangOpts().OpenMPIsDevice) {
+        Addr =
+            cast<llvm::Constant>(getAddrOfDeclareTargetLink(VD).getPointer());
+      }
+      VarName = Addr->getName();
+      VarSize = CGM.getPointerSize();
+      Linkage = llvm::GlobalValue::WeakAnyLinkage;
+      break;
+    }
+    OffloadEntriesInfoManager.registerDeviceGlobalVarEntryInfo(
+        VarName, Addr, VarSize, Flags, Linkage);
+  }
 }
 
 bool CGOpenMPRuntime::emitTargetGlobal(GlobalDecl GD) {

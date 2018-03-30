@@ -118,6 +118,7 @@ struct MIToken {
     Identifier,
     IntegerType,
     NamedRegister,
+    NamedVirtualRegister,
     MachineBasicBlockLabel,
     MachineBasicBlock,
     PointerType,
@@ -170,7 +171,7 @@ public:
 
   bool isRegister() const {
     return Kind == NamedRegister || Kind == underscore ||
-           Kind == VirtualRegister;
+           Kind == NamedVirtualRegister || Kind == VirtualRegister;
   }
 
   bool isRegisterFlag() const {

@@ -63,6 +63,8 @@ public:
 
   PDB_Machine getMachineType() const;
 
+  const DbiStreamHeader *getHeader() const { return Header; }
+
   BinarySubstreamRef getSectionContributionData() const;
   BinarySubstreamRef getSecMapSubstreamData() const;
   BinarySubstreamRef getModiSubstreamData() const;

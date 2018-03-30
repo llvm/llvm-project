@@ -19,6 +19,7 @@ namespace llvm {
 
 namespace pdb {
 
+class DbiStream;
 class PDBFile;
 
 class ExplainOutputStyle : public OutputStyle {
@@ -46,6 +47,9 @@ private:
   void explainStreamDirectoryOffset();
   void explainStreamOffset(uint32_t Stream);
   void explainUnknownBlock();
+
+  void explainDbiStream(uint32_t StreamIdx, uint32_t OffsetInStream);
+  void explainPdbStream(uint32_t StreamIdx, uint32_t OffsetInStream);
 
   PDBFile &File;
   const uint64_t FileOffset;

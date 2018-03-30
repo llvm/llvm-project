@@ -859,9 +859,17 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       FunctionType *NewFT = getInstrumentedABI() == IA_Args
                                 ? getArgsFunctionType(FT)
                                 : FT;
+
+      // If the function being wrapped has local linkage, then preserve the
+      // function's linkage in the wrapper function.
+      GlobalValue::LinkageTypes wrapperLinkage =
+          F.hasLocalLinkage()
+              ? F.getLinkage()
+              : GlobalValue::LinkOnceODRLinkage;
+
       Function *NewF = buildWrapperFunction(
           &F, std::string("dfsw$") + std::string(F.getName()),
-          GlobalValue::LinkOnceODRLinkage, NewFT);
+          wrapperLinkage, NewFT);
       if (getInstrumentedABI() == IA_TLS)
         NewF->removeAttributes(AttributeList::FunctionIndex, ReadOnlyNoneAttrs);
 

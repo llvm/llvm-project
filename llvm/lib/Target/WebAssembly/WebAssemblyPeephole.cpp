@@ -50,6 +50,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyPeephole::ID = 0;
+INITIALIZE_PASS(WebAssemblyPeephole, DEBUG_TYPE,
+                "WebAssembly peephole optimizations", false, false)
+
 FunctionPass *llvm::createWebAssemblyPeephole() {
   return new WebAssemblyPeephole();
 }

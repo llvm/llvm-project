@@ -54,6 +54,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyCallIndirectFixup::ID = 0;
+INITIALIZE_PASS(WebAssemblyCallIndirectFixup, DEBUG_TYPE,
+                "Rewrite call_indirect argument orderings", false, false)
+
 FunctionPass *llvm::createWebAssemblyCallIndirectFixup() {
   return new WebAssemblyCallIndirectFixup();
 }

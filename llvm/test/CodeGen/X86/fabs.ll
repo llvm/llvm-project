@@ -27,67 +27,20 @@ define float @test1(float %X) {
   ret float %Y
 }
 
-define double @test2(double %X) {
+define x86_fp80 @test2(x86_fp80 %X) {
 ; X87-LABEL: test2:
-; X87:       # %bb.0:
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    fldz
-; X87-NEXT:    fchs
-; X87-NEXT:    fxch %st(1)
-; X87-NEXT:    fucom %st(1)
-; X87-NEXT:    fstp %st(1)
-; X87-NEXT:    fnstsw %ax
-; X87-NEXT:    # kill: def $ah killed $ah killed $ax
-; X87-NEXT:    sahf
-; X87-NEXT:    fld %st(0)
-; X87-NEXT:    fchs
-; X87-NEXT:    jae .LBB1_2
-; X87-NEXT:  # %bb.1:
-; X87-NEXT:    fstp %st(1)
-; X87-NEXT:    fldz
-; X87-NEXT:  .LBB1_2:
-; X87-NEXT:    fstp %st(0)
-; X87-NEXT:    retl
-;
-; X87UNSAFE-LABEL: test2:
-; X87UNSAFE:       # %bb.0:
-; X87UNSAFE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87UNSAFE-NEXT:    fabs
-; X87UNSAFE-NEXT:    retl
-;
-; X64-LABEL: test2:
-; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    movapd %xmm1, %xmm2
-; X64-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; X64-NEXT:    xorpd %xmm0, %xmm2
-; X64-NEXT:    cmplesd %xmm0, %xmm1
-; X64-NEXT:    movapd %xmm1, %xmm3
-; X64-NEXT:    andnpd %xmm2, %xmm3
-; X64-NEXT:    andpd %xmm0, %xmm1
-; X64-NEXT:    orpd %xmm3, %xmm1
-; X64-NEXT:    movapd %xmm1, %xmm0
-; X64-NEXT:    retq
-  %Y = fcmp oge double %X, -0.0
-  %Z = fsub double -0.0, %X
-  %Q = select i1 %Y, double %X, double %Z
-  ret double %Q
-}
-
-define x86_fp80 @test3(x86_fp80 %X) {
-; X87-LABEL: test3:
 ; X87:       # %bb.0:
 ; X87-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X87-NEXT:    fabs
 ; X87-NEXT:    retl
 ;
-; X87UNSAFE-LABEL: test3:
+; X87UNSAFE-LABEL: test2:
 ; X87UNSAFE:       # %bb.0:
 ; X87UNSAFE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X87UNSAFE-NEXT:    fabs
 ; X87UNSAFE-NEXT:    retl
 ;
-; X64-LABEL: test3:
+; X64-LABEL: test2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fabs

@@ -755,9 +755,14 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
       if (!MII->isDebugValue() && !MII->isImplicitDef())
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
-  }
-  else
+  } else {
     HexagonLowerToMC(MCII, MI, MCB, *this);
+  }
+
+  const MachineFunction &MF = *MI->getParent()->getParent();
+  const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  if (MI->isBundle() && HII.getBundleNoShuf(*MI))
+    HexagonMCInstrInfo::setMemReorderDisabled(MCB);
 
   bool Ok = HexagonMCInstrInfo::canonicalizePacket(
       MCII, *Subtarget, OutStreamer->getContext(), MCB, nullptr);

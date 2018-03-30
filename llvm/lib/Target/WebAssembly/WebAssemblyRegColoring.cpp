@@ -55,6 +55,9 @@ private:
 } // end anonymous namespace
 
 char WebAssemblyRegColoring::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegColoring, DEBUG_TYPE,
+                "Minimize number of registers used", false, false)
+
 FunctionPass *llvm::createWebAssemblyRegColoring() {
   return new WebAssemblyRegColoring();
 }

@@ -962,6 +962,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       DynamicBaseArg->getOption().getID() == OPT_dynamicbase_no)
     Config->DynamicBase = false;
 
+  // MSDN claims "/FIXED:NO is the default setting for a DLL, and /FIXED is the
+  // default setting for any other project type.", but link.exe defaults to
+  // /FIXED:NO for exe outputs as well. Match behavior, not docs.
   bool Fixed = Args.hasFlag(OPT_fixed, OPT_fixed_no, false);
   if (Fixed) {
     if (DynamicBaseArg &&
@@ -1028,8 +1031,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->Implib = Arg->getValue();
 
   // Handle /opt.
-  bool DoGC = !Args.hasArg(OPT_debug);
-  unsigned ICFLevel = 1; // 0: off, 1: limited, 2: on
+  bool DoGC = !Args.hasArg(OPT_debug) || Args.hasArg(OPT_profile);
+  unsigned ICFLevel =
+      Args.hasArg(OPT_profile) ? 0 : 1; // 0: off, 1: limited, 2: on
   for (auto *Arg : Args.filtered(OPT_opt)) {
     std::string Str = StringRef(Arg->getValue()).lower();
     SmallVector<StringRef, 1> Vec;
@@ -1144,13 +1148,24 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_allowisolation, OPT_allowisolation_no, true);
   Config->Incremental =
       Args.hasFlag(OPT_incremental, OPT_incremental_no,
-                   !Config->DoGC && !Config->DoICF && !Args.hasArg(OPT_order));
+                   !Config->DoGC && !Config->DoICF && !Args.hasArg(OPT_order) &&
+                       !Args.hasArg(OPT_profile));
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   Config->TerminalServerAware = Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   Config->DebugDwarf = Args.hasArg(OPT_debug_dwarf);
   Config->DebugGHashes = Args.hasArg(OPT_debug_ghash);
 
   Config->MapFile = getMapFile(Args);
+
+  if (Config->Incremental && Args.hasArg(OPT_profile)) {
+    warn("ignoring '/incremental' due to '/profile' specification");
+    Config->Incremental = false;
+  }
+
+  if (Config->Incremental && Args.hasArg(OPT_order)) {
+    warn("ignoring '/incremental' due to '/order' specification");
+    Config->Incremental = false;
+  }
 
   if (Config->Incremental && Config->DoGC) {
     warn("ignoring '/incremental' because REF is enabled; use '/opt:noref' to "
@@ -1161,11 +1176,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->Incremental && Config->DoICF) {
     warn("ignoring '/incremental' because ICF is enabled; use '/opt:noicf' to "
          "disable");
-    Config->Incremental = false;
-  }
-
-  if (Config->Incremental && Args.hasArg(OPT_order)) {
-    warn("ignoring '/INCREMENTAL' due to '/ORDER' specification");
     Config->Incremental = false;
   }
 

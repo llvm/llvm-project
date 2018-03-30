@@ -75,6 +75,17 @@ bool bugreporter::isDeclRefExprToReference(const Expr *E) {
   return false;
 }
 
+static const Expr *peelOffPointerArithmetic(const BinaryOperator *B) {
+  if (B->isAdditiveOp() && B->getType()->isPointerType()) {
+    if (B->getLHS()->getType()->isPointerType()) {
+      return B->getLHS();
+    } else if (B->getRHS()->getType()->isPointerType()) {
+      return B->getRHS();
+    }
+  }
+  return nullptr;
+}
+
 /// Given that expression S represents a pointer that would be dereferenced,
 /// try to find a sub-expression from which the pointer came from.
 /// This is used for tracking down origins of a null or undefined value:
@@ -101,14 +112,8 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       E = CE->getSubExpr();
     } else if (const auto *B = dyn_cast<BinaryOperator>(E)) {
       // Pointer arithmetic: '*(x + 2)' -> 'x') etc.
-      if (B->getType()->isPointerType()) {
-        if (B->getLHS()->getType()->isPointerType()) {
-          E = B->getLHS();
-        } else if (B->getRHS()->getType()->isPointerType()) {
-          E = B->getRHS();
-        } else {
-          break;
-        }
+      if (const Expr *Inner = peelOffPointerArithmetic(B)) {
+        E = Inner;
       } else {
         // Probably more arithmetic can be pattern-matched here,
         // but for now give up.
@@ -1412,6 +1417,11 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
       NI = NI->getFirstPred();
     } while (NI);
   }
+
+  if (auto *BO = dyn_cast<BinaryOperator>(Ex))
+    if (const Expr *SubEx = peelOffPointerArithmetic(BO))
+      return peelOffOuterExpr(SubEx, N);
+
   return Ex;
 }
 
