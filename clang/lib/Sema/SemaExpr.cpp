@@ -100,8 +100,8 @@ bool Sema::CanUseDecl(NamedDecl *D, bool TreatUnavailableAsInvalid) {
   }
 
   // See if this function is unavailable.
-  if (TreatUnavailableAsInvalid && D->getAvailability() == AR_Unavailable &&
-      cast<Decl>(CurContext)->getAvailability() != AR_Unavailable)
+  if (TreatUnavailableAsInvalid && D->isUnavailabledForAllTargetPlatforms() &&
+      !cast<Decl>(CurContext)->isUnavailabledForAllTargetPlatforms())
     return false;
 
   if (isa<UnresolvedUsingIfExistsDecl>(D))

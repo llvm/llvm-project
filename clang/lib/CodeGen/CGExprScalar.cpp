@@ -635,13 +635,20 @@ public:
 
   Value *VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
     VersionTuple Version = E->getVersion();
+    VersionTuple VariantVersion = E->getVariantVersion();
 
     // If we're checking for a platform older than our minimum deployment
     // target, we can fold the check away.
-    if (Version <= CGF.CGM.getTarget().getPlatformMinVersion())
+    if ((Version.empty() && VariantVersion.empty()) ||
+        (!Version.empty() &&
+         Version <= CGF.CGM.getTarget().getPlatformMinVersion() &&
+         (!CGF.CGM.getTarget().hasTargetVariantPlatform() ||
+          (!VariantVersion.empty() &&
+           VariantVersion <=
+               CGF.CGM.getTarget().getTargetVariantPlatformMinVersion()))))
       return llvm::ConstantInt::get(Builder.getInt1Ty(), 1);
 
-    return CGF.EmitBuiltinAvailable(Version);
+    return CGF.EmitBuiltinAvailable(Version, VariantVersion);
   }
 
   Value *VisitArraySubscriptExpr(ArraySubscriptExpr *E);

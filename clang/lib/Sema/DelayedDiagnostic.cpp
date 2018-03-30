@@ -20,15 +20,12 @@
 using namespace clang;
 using namespace sema;
 
-DelayedDiagnostic
-DelayedDiagnostic::makeAvailability(AvailabilityResult AR,
-                                    ArrayRef<SourceLocation> Locs,
-                                    const NamedDecl *ReferringDecl,
-                                    const NamedDecl *OffendingDecl,
-                                    const ObjCInterfaceDecl *UnknownObjCClass,
-                                    const ObjCPropertyDecl  *ObjCProperty,
-                                    StringRef Msg,
-                                    bool ObjCPropertyAccess) {
+DelayedDiagnostic DelayedDiagnostic::makeAvailability(
+    AvailabilityResult AR, ArrayRef<SourceLocation> Locs,
+    const NamedDecl *ReferringDecl, const NamedDecl *OffendingDecl,
+    const ObjCInterfaceDecl *UnknownObjCClass,
+    const ObjCPropertyDecl *ObjCProperty, StringRef Msg,
+    bool ObjCPropertyAccess, bool IsTargetVariantPlatform) {
   assert(!Locs.empty());
   DelayedDiagnostic DD;
   DD.Kind = Availability;
@@ -53,6 +50,7 @@ DelayedDiagnostic::makeAvailability(AvailabilityResult AR,
 
   DD.AvailabilityData.AR = AR;
   DD.AvailabilityData.ObjCPropertyAccess = ObjCPropertyAccess;
+  DD.AvailabilityData.IsTargetVariantPlatform = IsTargetVariantPlatform;
   return DD;
 }
 

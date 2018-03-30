@@ -134,14 +134,13 @@ public:
 
   void Destroy();
 
-  static DelayedDiagnostic makeAvailability(AvailabilityResult AR,
-                                            ArrayRef<SourceLocation> Locs,
-                                            const NamedDecl *ReferringDecl,
-                                            const NamedDecl *OffendingDecl,
-                                            const ObjCInterfaceDecl *UnknownObjCClass,
-                                            const ObjCPropertyDecl  *ObjCProperty,
-                                            StringRef Msg,
-                                            bool ObjCPropertyAccess);
+  static DelayedDiagnostic
+  makeAvailability(AvailabilityResult AR, ArrayRef<SourceLocation> Locs,
+                   const NamedDecl *ReferringDecl,
+                   const NamedDecl *OffendingDecl,
+                   const ObjCInterfaceDecl *UnknownObjCClass,
+                   const ObjCPropertyDecl *ObjCProperty, StringRef Msg,
+                   bool ObjCPropertyAccess, bool IsTargetVariantPlatform);
 
   static DelayedDiagnostic makeAccess(SourceLocation Loc,
                                       const AccessedEntity &Entity) {
@@ -232,6 +231,10 @@ public:
     return AvailabilityData.ObjCPropertyAccess;
   }
 
+  bool isTargetVariantPlatform() const {
+    return AvailabilityData.IsTargetVariantPlatform;
+  }
+
 private:
   struct AD {
     const NamedDecl *ReferringDecl;
@@ -244,6 +247,7 @@ private:
     size_t NumSelectorLocs;
     AvailabilityResult AR;
     bool ObjCPropertyAccess;
+    bool IsTargetVariantPlatform;
   };
 
   struct FTD {
