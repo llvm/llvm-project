@@ -1902,19 +1902,19 @@ void AsmPrinter::EmitModuleIdents(Module &M) {
 // Emission and print routines
 //
 
-/// EmitInt8 - Emit a byte directive and value.
+/// Emit a byte directive and value.
 ///
-void AsmPrinter::EmitInt8(int Value) const {
+void AsmPrinter::emitInt8(int Value) const {
   OutStreamer->EmitIntValue(Value, 1);
 }
 
-/// EmitInt16 - Emit a short directive and value.
-void AsmPrinter::EmitInt16(int Value) const {
+/// Emit a short directive and value.
+void AsmPrinter::emitInt16(int Value) const {
   OutStreamer->EmitIntValue(Value, 2);
 }
 
-/// EmitInt32 - Emit a long directive and value.
-void AsmPrinter::EmitInt32(int Value) const {
+/// Emit a long directive and value.
+void AsmPrinter::emitInt32(int Value) const {
   OutStreamer->EmitIntValue(Value, 4);
 }
 

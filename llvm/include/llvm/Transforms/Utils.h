@@ -116,6 +116,10 @@ extern char &LoopSimplifyID;
 //
 FunctionPass *createInstructionSimplifierPass();
 extern char &InstructionSimplifierID;
+
+/// This function returns a new pass that downgrades the debug info in the
+/// module to line tables only.
+ModulePass *createStripNonLineTableDebugInfoPass();
 }
 
 #endif

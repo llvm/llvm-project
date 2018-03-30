@@ -43,7 +43,7 @@ public:
   APByteStreamer(AsmPrinter &Asm) : AP(Asm) {}
   void EmitInt8(uint8_t Byte, const Twine &Comment) override {
     AP.OutStreamer->AddComment(Comment);
-    AP.EmitInt8(Byte);
+    AP.emitInt8(Byte);
   }
   void EmitSLEB128(uint64_t DWord, const Twine &Comment) override {
     AP.OutStreamer->AddComment(Comment);

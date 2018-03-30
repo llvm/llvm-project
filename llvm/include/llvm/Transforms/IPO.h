@@ -45,10 +45,6 @@ ModulePass *createStripSymbolsPass(bool OnlyDebugInfo = false);
 //
 ModulePass *createStripNonDebugSymbolsPass();
 
-/// This function returns a new pass that downgrades the debug info in the
-/// module to line tables only.
-ModulePass *createStripNonLineTableDebugInfoPass();
-
 //===----------------------------------------------------------------------===//
 //
 // This pass removes llvm.dbg.declare intrinsics.

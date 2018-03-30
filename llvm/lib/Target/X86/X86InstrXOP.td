@@ -287,7 +287,7 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
             [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                              (vt128 (bitconvert (loadv2i64 addr:$src3))))))]>,
-            XOP_4V, VEX_W, Sched<[WriteShuffleLd, ReadAfterLd]>;
+            XOP_4V, VEX_W, Sched<[WriteShuffleLd, ReadAfterLd, ReadAfterLd]>;
   def rmr : IXOPi8Reg<opc, MRMSrcMem, (outs VR128:$dst),
             (ins VR128:$src1, i128mem:$src2, VR128:$src3),
             !strconcat(OpcodeStr,
@@ -295,7 +295,12 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
             [(set VR128:$dst,
               (v16i8 (OpNode (vt128 VR128:$src1), (vt128 (bitconvert (loadv2i64 addr:$src2))),
                              (vt128 VR128:$src3))))]>,
-            XOP_4V, Sched<[WriteShuffleLd, ReadAfterLd]>;
+            XOP_4V, Sched<[WriteShuffleLd, ReadAfterLd,
+                           // 128mem:$src2
+                           ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                           ReadDefault,
+                           // VR128:$src3
+                           ReadAfterLd]>;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def rrr_REV : IXOPi8Reg<opc, MRMSrcRegOp4, (outs VR128:$dst),
@@ -325,14 +330,19 @@ multiclass xop4op_int<bits<8> opc, string OpcodeStr, RegisterClass RC,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set RC:$dst, (VT (or (and (load addr:$src3), RC:$src1),
                                    (X86andnp (load addr:$src3), RC:$src2))))]>,
-            XOP_4V, VEX_W, Sched<[WriteShuffleLd, ReadAfterLd]>;
+            XOP_4V, VEX_W, Sched<[WriteShuffleLd, ReadAfterLd, ReadAfterLd]>;
   def rmr : IXOPi8Reg<opc, MRMSrcMem, (outs RC:$dst),
             (ins RC:$src1, x86memop:$src2, RC:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set RC:$dst, (VT (or (and RC:$src3, RC:$src1),
                                    (X86andnp RC:$src3, (load addr:$src2)))))]>,
-            XOP_4V, Sched<[WriteShuffleLd, ReadAfterLd]>;
+            XOP_4V, Sched<[WriteShuffleLd, ReadAfterLd,
+                           // x86memop:$src2
+                           ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                           ReadDefault,
+                           // RC::$src3
+                           ReadAfterLd]>;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def rrr_REV : IXOPi8Reg<opc, MRMSrcRegOp4, (outs RC:$dst),
@@ -366,7 +376,7 @@ multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
           (VT (X86vpermil2 RC:$src1, RC:$src2,
                            (bitconvert (IntLdFrag addr:$src3)),
                            (i8 imm:$src4))))]>, VEX_W,
-        Sched<[WriteFShuffleLd, ReadAfterLd]>;
+        Sched<[WriteFShuffleLd, ReadAfterLd, ReadAfterLd]>;
   def mr : IXOP5<Opc, MRMSrcMem, (outs RC:$dst),
         (ins RC:$src1, fpmemop:$src2, RC:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
@@ -374,7 +384,11 @@ multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
         [(set RC:$dst,
           (VT (X86vpermil2 RC:$src1, (FPLdFrag addr:$src2),
                            RC:$src3, (i8 imm:$src4))))]>,
-        Sched<[WriteFShuffleLd, ReadAfterLd]>;
+        Sched<[WriteFShuffleLd, ReadAfterLd,
+               // fpmemop:$src2
+               ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+               // RC:$src3
+               ReadAfterLd]>;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def rr_REV : IXOP5<Opc, MRMSrcRegOp4, (outs RC:$dst),
