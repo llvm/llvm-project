@@ -1161,6 +1161,12 @@ void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
     ProtoLocs.push_back(ReadSourceLocation());
   CD->setProtocolList(ProtoRefs.data(), NumProtoRefs, ProtoLocs.data(),
                       Reader.getContext());
+
+  // Protocols in the class extension belong to the class.
+  if (NumProtoRefs > 0 && CD->ClassInterface && CD->IsClassExtension())
+    CD->ClassInterface->mergeClassExtensionProtocolList(
+        (ObjCProtocolDecl *const *)ProtoRefs.data(), NumProtoRefs,
+        Reader.getContext());
 }
 
 void ASTDeclReader::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) {
