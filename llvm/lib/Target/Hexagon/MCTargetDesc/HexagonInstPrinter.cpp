@@ -69,16 +69,17 @@ void HexagonInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
     OS << "\n";
   }
 
-  auto Separator = "";
   if (HexagonMCInstrInfo::isInnerLoop(*MI)) {
-    OS << Separator;
-    Separator = " ";
-    MCInst ME;
-    ME.setOpcode(Hexagon::ENDLOOP0);
-    printInstruction(&ME, OS);
-  }
-  if (HexagonMCInstrInfo::isOuterLoop(*MI)) {
-    OS << Separator;
+    if (HexagonMCInstrInfo::isOuterLoop(*MI)) {
+      MCInst ME;
+      ME.setOpcode(Hexagon::ENDLOOP01);
+      printInstruction(&ME, OS);
+    } else {
+      MCInst ME;
+      ME.setOpcode(Hexagon::ENDLOOP0);
+      printInstruction(&ME, OS);
+    }
+  } else if (HexagonMCInstrInfo::isOuterLoop(*MI)) {
     MCInst ME;
     ME.setOpcode(Hexagon::ENDLOOP1);
     printInstruction(&ME, OS);

@@ -1218,17 +1218,30 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
 //
 // We follow a simple but conservative heuristic to place ThunkSections at
 // offsets that are multiples of a Target specific branch range.
-// For an InputSectionRange that is smaller than the range, a single
+// For an InputSectionDescription that is smaller than the range, a single
 // ThunkSection at the end of the range will do.
+//
+// For an InputSectionDescription that is more than twice the size of the range,
+// we place the last ThunkSection at range bytes from the end of the
+// InputSectionDescription in order to increase the likelihood that the
+// distance from a thunk to its target will be sufficiently small to
+// allow for the creation of a short thunk.
 void ThunkCreator::createInitialThunkSections(
     ArrayRef<OutputSection *> OutputSections) {
   forEachInputSectionDescription(
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
         if (ISD->Sections.empty())
           return;
+        uint32_t ISDBegin = ISD->Sections.front()->OutSecOff;
+        uint32_t ISDEnd =
+            ISD->Sections.back()->OutSecOff + ISD->Sections.back()->getSize();
+        uint32_t LastThunkLowerBound = -1;
+        if (ISDEnd - ISDBegin > Target->ThunkSectionSpacing * 2)
+          LastThunkLowerBound = ISDEnd - Target->ThunkSectionSpacing;
+
         uint32_t ISLimit;
-        uint32_t PrevISLimit = ISD->Sections.front()->OutSecOff;
-        uint32_t ThunkUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
+        uint32_t PrevISLimit = ISDBegin;
+        uint32_t ThunkUpperBound = ISDBegin + Target->ThunkSectionSpacing;
 
         for (const InputSection *IS : ISD->Sections) {
           ISLimit = IS->OutSecOff + IS->getSize();
@@ -1236,6 +1249,8 @@ void ThunkCreator::createInitialThunkSections(
             addThunkSection(OS, ISD, PrevISLimit);
             ThunkUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
           }
+          if (ISLimit > LastThunkLowerBound)
+            break;
           PrevISLimit = ISLimit;
         }
         addThunkSection(OS, ISD, ISLimit);

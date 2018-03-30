@@ -739,7 +739,15 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "debug-use ";
     if (TargetRegisterInfo::isPhysicalRegister(getReg()) && isRenamable())
       OS << "renamable ";
-    OS << printReg(Reg, TRI);
+
+    const MachineRegisterInfo *MRI = nullptr;
+    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+        MRI = &MF->getRegInfo();
+      }
+    }
+
+    OS << printReg(Reg, TRI, 0, MRI);
     // Print the sub register.
     if (unsigned SubReg = getSubReg()) {
       if (TRI)

@@ -9,8 +9,8 @@
 // RUN: llvm-objdump -d %t2 -start-address=4194304 -stop-address=4194310 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK4 %s
 // RUN: llvm-objdump -d %t2 -start-address=16777216 -stop-address=16777270 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK5 %s
 // RUN: llvm-objdump -d %t2 -start-address=17825792 -stop-address=17825808 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK6 %s
-// RUN: llvm-objdump -d %t2 -start-address=31457280 -stop-address=31457286 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK7 %s
-// RUN: llvm-objdump -d %t2 -start-address=32505860 -stop-address=32505880 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK8 %s
+// RUN: llvm-objdump -d %t2 -start-address=20971524 -stop-address=20971532 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK7 %s
+// RUN: llvm-objdump -d %t2 -start-address=31457280 -stop-address=31457286 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK8 %s
 // RUN: llvm-objdump -d %t2 -start-address=35651584 -stop-address=35651594 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK9 %s
 // RUN: llvm-objdump -d %t2 -start-address=36700160 -stop-address=36700170 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK10 %s
 
@@ -105,6 +105,11 @@ _start:
  FUNCTION 16
  FUNCTION 17
  FUNCTION 18
+// Expect another precreated thunk section here
+// CHECK7: __Thumbv7ABSLongThunk_tfunc15:
+// CHECK7-NEXT:  1400004:       ff f4 fc bf     b.w     #-3145736 <tfunc15>
+// CHECK7: __Thumbv7ABSLongThunk_tfunc16:
+// CHECK7-NEXT:  1400008:       ff f5 fa bf     b.w     #-2097164 <tfunc16>
  FUNCTION 19
  FUNCTION 20
  FUNCTION 21
@@ -117,17 +122,12 @@ _start:
  FUNCTION 28
 // tfunc02 is > 16Mb away, expect range extension thunks in precreated thunk
 // section
-// CHECK7:  tfunc28:
-// CHECK7-NEXT:  1e00000:       70 47   bx      lr
-// CHECK7-NEXT:  1e00002:       00 f6 0d 90     b.w     #-14680038 <__Thumbv7ABSLongThunk_tfunc02>
+// CHECK8:  tfunc28:
+// CHECK8-NEXT:  1e00000:       70 47   bx      lr
+// CHECK8-NEXT:  1e00002:       00 f6 0d 90     b.w     #-14680038 <__Thumbv7ABSLongThunk_tfunc02>
 
  b.w tfunc02
  FUNCTION 29
-// Expect another precreated thunk section here
-// CHECK8: __Thumbv7ABSLongThunk_tfunc15:
-// CHECK8-NEXT:  1f00004:       ff f5 fc 97     b.w     #-14680072 <tfunc15>
-// CHECK8: __Thumbv7ABSLongThunk_tfunc16:
-// CHECK8-NEXT:  1f00008:       ff f6 fa 97     b.w     #-13631500 <tfunc16>
  FUNCTION 30
  FUNCTION 31
  FUNCTION 32
@@ -137,13 +137,13 @@ _start:
  bl tfunc16
 // CHECK9: tfunc32:
 // CHECK9:  2200000:    70 47   bx      lr
-// CHECK9-NEXT:  2200002:       ff f4 ff ff     bl      #-3145730
-// CHECK9-NEXT:  2200006:       ff f4 ff ff     bl      #-3145730
+// CHECK9-NEXT:  2200002:       ff f5 ff d7     bl      #-14680066
+// CHECK9-NEXT:  2200006:       ff f5 ff d7     bl      #-14680066
 
  FUNCTION 33
  bl tfunc15
  bl tfunc16
 // CHECK10: tfunc33:
 // CHECK10:  2300000:   70 47   bx      lr
-// CHECK10-NEXT:  2300002:      ff f7 ff f7     bl      #-4194306
-// CHECK10-NEXT:  2300006:      ff f7 ff f7     bl      #-4194306
+// CHECK10-NEXT:  2300002:      ff f4 ff d7     bl      #-15728642
+// CHECK10-NEXT:  2300006:      ff f4 ff d7     bl      #-15728642

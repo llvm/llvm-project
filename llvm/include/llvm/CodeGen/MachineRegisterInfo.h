@@ -20,6 +20,7 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/LowLevelType.h"
@@ -74,6 +75,13 @@ private:
   IndexedMap<std::pair<RegClassOrRegBank, MachineOperand *>,
              VirtReg2IndexFunctor>
       VRegInfo;
+
+  /// Map for recovering vreg name from vreg number.
+  /// This map is used by the MIR Printer.
+  IndexedMap<std::string, VirtReg2IndexFunctor> VReg2Name;
+
+  /// StringSet that is used to unique vreg names.
+  StringSet<> VRegNames;
 
   /// The flag is true upon \p UpdatedCSRs initialization
   /// and false otherwise.
@@ -418,6 +426,20 @@ public:
   /// specified register (it may be live-in).
   bool def_empty(unsigned RegNo) const { return def_begin(RegNo) == def_end(); }
 
+  StringRef getVRegName(unsigned Reg) const {
+    return VReg2Name.inBounds(Reg) ? StringRef(VReg2Name[Reg]) : "";
+  }
+
+  void insertVRegByName(StringRef Name, unsigned Reg) {
+    assert((Name.empty() || VRegNames.find(Name) == VRegNames.end()) &&
+           "Named VRegs Must be Unique.");
+    if (!Name.empty()) {
+      VRegNames.insert(Name);
+      VReg2Name.grow(Reg);
+      VReg2Name[Reg] = Name.str();
+    }
+  }
+
   /// Return true if there is exactly one operand defining the specified
   /// register.
   bool hasOneDef(unsigned RegNo) const {
@@ -722,7 +744,7 @@ public:
   /// temporarily while constructing machine instructions. Most operations are
   /// undefined on an incomplete register until one of setRegClass(),
   /// setRegBank() or setSize() has been called on it.
-  unsigned createIncompleteVirtualRegister();
+  unsigned createIncompleteVirtualRegister(StringRef Name = "");
 
   /// getNumVirtRegs - Return the number of virtual registers created.
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }

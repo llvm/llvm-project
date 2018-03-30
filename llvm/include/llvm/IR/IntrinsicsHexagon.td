@@ -431,13 +431,13 @@ class Hexagon_mem_memsisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty,
                            llvm_i32_ty],
-                          [IntrArgMemOnly]>;
+                          [IntrWriteMem]>;
 
 class Hexagon_mem_memdisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty,
                            llvm_i32_ty],
-                          [IntrArgMemOnly]>;
+                          [IntrWriteMem]>;
 
 class Hexagon_mem_memmemsisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
@@ -449,13 +449,13 @@ class Hexagon_mem_memsisisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrArgMemOnly]>;
+                          [IntrWriteMem]>;
 
 class Hexagon_mem_memdisisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrArgMemOnly]>;
+                          [IntrWriteMem]>;
 
 class Hexagon_v256_v256v256_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,

@@ -410,6 +410,16 @@ static bool isRegisterChar(char C) {
   return isIdentifierChar(C) && C != '.';
 }
 
+static Cursor lexNamedVirtualRegister(Cursor C, MIToken &Token) {
+  Cursor Range = C;
+  C.advance(); // Skip '%'
+  while (isRegisterChar(C.peek()))
+    C.advance();
+  Token.reset(MIToken::NamedVirtualRegister, Range.upto(C))
+      .setStringValue(Range.upto(C).drop_front(1)); // Drop the '%'
+  return C;
+}
+
 static Cursor maybeLexRegister(Cursor C, MIToken &Token,
                                ErrorCallbackType ErrorCallback) {
   if (C.peek() != '%' && C.peek() != '$')
@@ -419,7 +429,9 @@ static Cursor maybeLexRegister(Cursor C, MIToken &Token,
     if (isdigit(C.peek(1)))
       return lexVirtualRegister(C, Token);
 
-    // ErrorCallback(Token.location(), "Named vregs are not yet supported.");
+    if (isRegisterChar(C.peek(1)))
+      return lexNamedVirtualRegister(C, Token);
+
     return None;
   }
 

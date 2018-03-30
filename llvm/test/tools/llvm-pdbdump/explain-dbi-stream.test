@@ -1,0 +1,207 @@
+; RUN: llvm-pdbutil explain \
+; RUN: -offset=0xF000 \
+; RUN: -offset=0xF004 \
+; RUN: -offset=0xF008 \
+; RUN: -offset=0xF00C \
+; RUN: -offset=0xF00E \
+; RUN: -offset=0xF010 \
+; RUN: -offset=0xF012 \
+; RUN: -offset=0xF014 \
+; RUN: -offset=0xF016 \
+; RUN: -offset=0xF018 \
+; RUN: -offset=0xF01C \
+; RUN: -offset=0xF020 \
+; RUN: -offset=0xF024 \
+; RUN: -offset=0xF028 \
+; RUN: -offset=0xF02C \
+; RUN: -offset=0xF030 \
+; RUN: -offset=0xF034 \
+; RUN: -offset=0xF038 \
+; RUN: -offset=0xF03A \
+; RUN: -offset=0xF03C \
+; RUN: -offset=0xF03E \
+; RUN: -offset=0xF040 \
+; RUN: -offset=0xF0DC \
+; RUN: %p/Inputs/InjectedSource.pdb | FileCheck %s
+
+CHECK:      Block:Offset = F:0000.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 0/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 0/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the DBI Stream Version Signature.
+CHECK-NEXT:     The current value is -1.
+
+CHECK:      Block:Offset = F:0004.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 4/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 4/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the DBI Stream Version Header.
+CHECK-NEXT:     The current value is 19990903.
+
+CHECK:      Block:Offset = F:0008.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 8/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 8/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the age of the DBI Stream.
+CHECK-NEXT:     The current value is 1.
+
+CHECK:      Block:Offset = F:000C.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 12/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 12/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the index of the Global Symbol Stream.
+CHECK-NEXT:     The current value is 7.
+
+CHECK:      Block:Offset = F:000E.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 14/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 14/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the build number.
+CHECK-NEXT:     The current value is 36363.
+
+CHECK:      Block:Offset = F:0010.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 16/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 16/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the index of the Public Symbol Stream.
+CHECK-NEXT:     The current value is 8.
+
+CHECK:      Block:Offset = F:0012.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 18/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 18/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the version of mspdb.dll.
+CHECK-NEXT:     The current value is 25547.
+
+CHECK:      Block:Offset = F:0014.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 20/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 20/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the index of the Symbol Record Stream.
+CHECK-NEXT:     The current value is 9.
+
+CHECK:      Block:Offset = F:0016.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 22/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 22/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the rbld of mspdb.dll.
+CHECK-NEXT:     The current value is 0.
+
+CHECK:      Block:Offset = F:0018.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 24/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 24/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the size of the Module Info Substream.
+CHECK-NEXT:     The current value is 232.
+
+CHECK:      Block:Offset = F:001C.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 28/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 28/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the size of the Section Contribution Substream.
+CHECK-NEXT:     The current value is 172.
+
+CHECK:      Block:Offset = F:0020.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 32/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 32/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the size of the Section Map Substream.
+CHECK-NEXT:     The current value is 84.
+
+CHECK:      Block:Offset = F:0024.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 36/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 36/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the size of the File Info Substream.
+CHECK-NEXT:     The current value is 132.
+
+CHECK:      Block:Offset = F:0028.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 40/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 40/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the size of the Type Server Map.
+CHECK-NEXT:     The current value is 0.
+
+CHECK:      Block:Offset = F:002C.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 44/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 44/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the index of the MFC Type Server stream.
+CHECK-NEXT:     The current value is 0.
+
+CHECK:      Block:Offset = F:0030.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 48/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 48/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the size of the Optional Debug Stream array.
+CHECK-NEXT:     The current value is 22.
+
+CHECK:      Block:Offset = F:0034.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 52/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 52/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the size of the Edit & Continue Substream.
+CHECK-NEXT:     The current value is 75.
+
+CHECK:      Block:Offset = F:0038.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 56/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 56/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the DBI Stream flags.
+CHECK-NEXT:     The current value is 0.
+
+CHECK:      Block:Offset = F:003A.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 58/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 58/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains the machine type.
+CHECK-NEXT:     The current value is 34404.
+
+CHECK:      Block:Offset = F:003C.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 60/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 60/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains reserved data.
+CHECK-NEXT:     The current value is 0.
+
+CHECK:      Block:Offset = F:003E.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 62/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 62/64 of the DBI Stream Header.
+CHECK-NEXT:     which contains reserved data.
+CHECK-NEXT:     The current value is 0.
+
+CHECK:      Block:Offset = F:0040.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 64/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 0/232 of the Module Info Substream.
+CHECK-NEXT:     which contains the descriptor for module 0 (D:\sandbox\nvtest\nvtest\x64\Debug\nvtest.obj).
+
+CHECK:      Block:Offset = F:00DC.
+CHECK-NEXT: Address is in block 15 (allocated).
+CHECK-NEXT:   Address is at offset 220/781 of Stream 3 (DBI Stream).
+CHECK-NEXT:   Within the DBI stream:
+CHECK-NEXT:     address is at offset 156/232 of the Module Info Substream.
+CHECK-NEXT:     which contains the descriptor for module 1 (* Linker *).
