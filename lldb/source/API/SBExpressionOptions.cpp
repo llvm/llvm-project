@@ -133,6 +133,10 @@ bool SBExpressionOptions::GetREPLMode() const {
 
 void SBExpressionOptions::SetREPLMode(bool enable_repl_mode) {
   m_opaque_ap->SetREPLEnabled(enable_repl_mode);
+  // Don't trap exceptions in the REPL.  That would make it impossible
+  // to call any swift code whose underlying framework used exceptions.
+  if (enable_repl_mode == true)
+    SetTrapExceptions(false);
 }
 
 bool SBExpressionOptions::GetGenerateDebugInfo() {
