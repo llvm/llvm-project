@@ -110,6 +110,9 @@ public:
   std::string getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
                         uint64_t Offset);
 
+  // True if this is an argument for --just-symbols. Usually false.
+  bool JustSymbols = false;
+
 protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
@@ -201,6 +204,7 @@ private:
   void
   initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
   void initializeSymbols();
+  void initializeJustSymbols();
   void initializeDwarf();
   InputSectionBase *getRelocTarget(const Elf_Shdr &Sec);
   InputSectionBase *createInputSection(const Elf_Shdr &Sec);
@@ -339,9 +343,6 @@ public:
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
                             uint64_t OffsetInArchive = 0);
 InputFile *createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName);
-
-// For --just-symbols
-template <class ELFT> void readJustSymbolsFile(MemoryBufferRef MB);
 
 extern std::vector<BinaryFile *> BinaryFiles;
 extern std::vector<BitcodeFile *> BitcodeFiles;

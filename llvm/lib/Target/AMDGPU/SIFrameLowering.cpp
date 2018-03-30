@@ -13,6 +13,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -487,9 +488,43 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
   }
 }
 
+// Find a scratch register that we can use at the start of the prologue to
+// re-align the stack pointer.  We avoid using callee-save registers since they
+// may appear to be free when this is called from canUseAsPrologue (during
+// shrink wrapping), but then no longer be free when this is called from
+// emitPrologue.
+//
+// FIXME: This is a bit conservative, since in the above case we could use one
+// of the callee-save registers as a scratch temp to re-align the stack pointer,
+// but we would then have to make sure that we were in fact saving at least one
+// callee-save register in the prologue, which is additional complexity that
+// doesn't seem worth the benefit.
+static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock &MBB) {
+  MachineFunction *MF = MBB.getParent();
+
+  const SISubtarget &Subtarget = MF->getSubtarget<SISubtarget>();
+  const SIRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+  LivePhysRegs LiveRegs(TRI);
+  LiveRegs.addLiveIns(MBB);
+
+  // Mark callee saved registers as used so we will not choose them.
+  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(MF);
+  for (unsigned i = 0; CSRegs[i]; ++i)
+    LiveRegs.addReg(CSRegs[i]);
+
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  for (unsigned Reg : AMDGPU::SReg_32_XM0RegClass) {
+    if (LiveRegs.available(MRI, Reg))
+      return Reg;
+  }
+
+  return AMDGPU::NoRegister;
+}
+
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
-  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (FuncInfo->isEntryFunction()) {
     emitEntryFunctionPrologue(MF, MBB);
     return;
@@ -498,6 +533,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
 
   unsigned StackPtrReg = FuncInfo->getStackPtrOffsetReg();
   unsigned FramePtrReg = FuncInfo->getFrameOffsetReg();
@@ -505,8 +541,34 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc DL;
 
+  // XXX - Is this the right predicate?
+
   bool NeedFP = hasFP(MF);
-  if (NeedFP) {
+  uint32_t NumBytes = MFI.getStackSize();
+  uint32_t RoundedSize = NumBytes;
+  const bool NeedsRealignment = TRI.needsStackRealignment(MF);
+
+  if (NeedsRealignment) {
+    assert(NeedFP);
+    const unsigned Alignment = MFI.getMaxAlignment();
+
+    RoundedSize += Alignment;
+
+    unsigned ScratchSPReg = findScratchNonCalleeSaveRegister(MBB);
+    assert(ScratchSPReg != AMDGPU::NoRegister);
+
+    // s_add_u32 tmp_reg, s32, NumBytes
+    // s_and_b32 s32, tmp_reg, 0b111...0000
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_U32), ScratchSPReg)
+      .addReg(StackPtrReg)
+      .addImm((Alignment - 1) * ST.getWavefrontSize())
+      .setMIFlag(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_AND_B32), FramePtrReg)
+      .addReg(ScratchSPReg, RegState::Kill)
+      .addImm(-Alignment * ST.getWavefrontSize())
+      .setMIFlag(MachineInstr::FrameSetup);
+    FuncInfo->setIsStackRealigned(true);
+  } else if (NeedFP) {
     // If we need a base pointer, set it up here. It's whatever the value of
     // the stack pointer is at this point. Any variable size objects will be
     // allocated after this, so we can still use the base pointer to reference
@@ -516,11 +578,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
   }
 
-  uint32_t NumBytes = MFI.getStackSize();
-  if (NumBytes != 0 && hasSP(MF)) {
+  if (RoundedSize != 0 && hasSP(MF)) {
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_U32), StackPtrReg)
       .addReg(StackPtrReg)
-      .addImm(NumBytes * ST.getWavefrontSize())
+      .addImm(RoundedSize * ST.getWavefrontSize())
       .setMIFlag(MachineInstr::FrameSetup);
   }
 
@@ -566,10 +627,12 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   // it's really whether we need SP to be accurate or not.
 
   if (NumBytes != 0 && hasSP(MF)) {
+    uint32_t RoundedSize = FuncInfo->isStackRealigned() ?
+      NumBytes + MFI.getMaxAlignment() : NumBytes;
+
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_SUB_U32), StackPtrReg)
       .addReg(StackPtrReg)
-      .addImm(NumBytes * ST.getWavefrontSize())
-      .setMIFlag(MachineInstr::FrameDestroy);
+      .addImm(RoundedSize * ST.getWavefrontSize());
   }
 }
 
@@ -759,7 +822,8 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
 }
 
 bool SIFrameLowering::hasSP(const MachineFunction &MF) const {
+  const SIRegisterInfo *TRI = MF.getSubtarget<SISubtarget>().getRegisterInfo();
   // All stack operations are relative to the frame offset SGPR.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.hasCalls() || MFI.hasVarSizedObjects();
+  return MFI.hasCalls() || MFI.hasVarSizedObjects() || TRI->needsStackRealignment(MF);
 }

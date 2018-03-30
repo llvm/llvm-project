@@ -22,7 +22,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
