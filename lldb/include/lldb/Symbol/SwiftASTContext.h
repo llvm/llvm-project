@@ -45,7 +45,6 @@ class TypeInfo;
 }
 }
 
-struct CachedMemberInfo;
 class DWARFASTParser;
 class SwiftEnumDescriptor;
 
@@ -858,8 +857,6 @@ protected:
   SwiftTypeMap m_swift_type_map;
 
   ExtraTypeInformation GetExtraTypeInformation(void *type);
-
-  CachedMemberInfo *GetCachedMemberInfo(void *type);
 
   /// Record the set of stored properties for each nominal type declaration
   /// for which we've asked this question.
