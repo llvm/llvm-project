@@ -1509,10 +1509,9 @@ bool SwiftLanguageRuntime::IsValidErrorValue(
   if (!protocol_info.m_is_errortype)
     return false;
 
-  static ConstString g_instance_type_child_name("instance_type");
+  unsigned index = SwiftASTContext::ProtocolInfo::error_instance_index;
   ValueObjectSP instance_type_sp(
-      in_value.GetStaticValue()->GetChildMemberWithName(
-          g_instance_type_child_name, true));
+                  in_value.GetStaticValue()->GetChildAtIndex(index, true));
   if (!instance_type_sp)
     return false;
   lldb::addr_t metadata_location = instance_type_sp->GetValueAsUnsigned(0);
@@ -1792,10 +1791,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
                                               class_type_or_name, address);
 
   MetadataPromiseSP promise_sp;
-  static ConstString g_instance_type_child_name("instance_type");
   ValueObjectSP instance_type_sp(
-      in_value.GetStaticValue()->GetChildMemberWithName(
-          g_instance_type_child_name, true));
+                  in_value.GetStaticValue()->GetChildAtIndex(
+                                     protocol_info.m_num_payload_words, true));
   if (!instance_type_sp)
     return false;
   ValueObjectSP payload0_sp(

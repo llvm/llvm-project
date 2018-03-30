@@ -503,6 +503,10 @@ public:
     bool m_is_objc;
     bool m_is_anyobject;
     bool m_is_errortype;
+
+    /// The member index for the error value within an error
+    /// existential.
+    static constexpr unsigned error_instance_index = 0;
   };
 
   static bool GetProtocolTypeInfo(const CompilerType &type,
