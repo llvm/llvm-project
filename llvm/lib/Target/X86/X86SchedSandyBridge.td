@@ -119,6 +119,11 @@ defm : SBWriteResPair<WriteLZCNT,   [SBPort1], 3, [1], 1, 5>;
 defm : SBWriteResPair<WriteTZCNT,   [SBPort1], 3, [1], 1, 5>;
 defm : SBWriteResPair<WritePOPCNT,  [SBPort1], 3, [1], 1, 5>;
 
+// BMI1 BEXTR, BMI2 BZHI
+// NOTE: These don't exist on Sandy Bridge. Ports are guesses.
+defm : SBWriteResPair<WriteBEXTR, [SBPort05,SBPort1], 2, [1,1], 2>;
+defm : SBWriteResPair<WriteBZHI, [SBPort1], 1>;
+
 // Scalar and vector floating point.
 def  : WriteRes<WriteFStore,       [SBPort23, SBPort4]>;
 def  : WriteRes<WriteFLoad,        [SBPort23]> { let Latency = 6; }

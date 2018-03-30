@@ -399,7 +399,9 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
     MachineInstr *MI = &*I;
     ++I;
 
-    if (MI->isCopy()) {
+    // Analyze copies (which don't overlap themselves).
+    if (MI->isCopy() && !TRI->regsOverlap(MI->getOperand(0).getReg(),
+                                          MI->getOperand(1).getReg())) {
       unsigned Def = MI->getOperand(0).getReg();
       unsigned Src = MI->getOperand(1).getReg();
 

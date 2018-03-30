@@ -912,6 +912,12 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     case OPT_no_whole_archive:
       InWholeArchive = false;
       break;
+    case OPT_just_symbols:
+      if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue())) {
+        Files.push_back(createObjectFile(*MB));
+        Files.back()->JustSymbols = true;
+      }
+      break;
     case OPT_start_lib:
       InLib = true;
       break;
@@ -1073,12 +1079,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
     Symtab->fetchIfLazy<ELFT>(S);
-
-  // Handle the --just-symbols option. This may add absolute symbols
-  // to the symbol table.
-  for (auto *Arg : Args.filtered(OPT_just_symbols))
-    if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue()))
-      readJustSymbolsFile<ELFT>(*MB);
 
   // If an entry symbol is in a static archive, pull out that file now
   // to complete the symbol table. After this, no new names except a

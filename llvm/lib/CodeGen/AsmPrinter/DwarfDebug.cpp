@@ -1593,13 +1593,13 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   Asm->OutStreamer->EmitLabel(BeginLabel);
 
   Asm->OutStreamer->AddComment("DWARF Version");
-  Asm->EmitInt16(dwarf::DW_PUBNAMES_VERSION);
+  Asm->emitInt16(dwarf::DW_PUBNAMES_VERSION);
 
   Asm->OutStreamer->AddComment("Offset of Compilation Unit Info");
   emitSectionReference(*TheU);
 
   Asm->OutStreamer->AddComment("Compilation Unit Length");
-  Asm->EmitInt32(TheU->getLength());
+  Asm->emitInt32(TheU->getLength());
 
   // Emit the pubnames for this compilation unit.
   for (const auto &GI : Globals) {
@@ -1607,14 +1607,14 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     const DIE *Entity = GI.second;
 
     Asm->OutStreamer->AddComment("DIE offset");
-    Asm->EmitInt32(Entity->getOffset());
+    Asm->emitInt32(Entity->getOffset());
 
     if (GnuStyle) {
       dwarf::PubIndexEntryDescriptor Desc = computeIndexValue(TheU, Entity);
       Asm->OutStreamer->AddComment(
           Twine("Kind: ") + dwarf::GDBIndexEntryKindString(Desc.Kind) + ", " +
           dwarf::GDBIndexEntryLinkageString(Desc.Linkage));
-      Asm->EmitInt8(Desc.toBits());
+      Asm->emitInt8(Desc.toBits());
     }
 
     Asm->OutStreamer->AddComment("External Name");
@@ -1622,7 +1622,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   }
 
   Asm->OutStreamer->AddComment("End Mark");
-  Asm->EmitInt32(0);
+  Asm->emitInt32(0);
   Asm->OutStreamer->EmitLabel(EndLabel);
 }
 
@@ -1705,7 +1705,7 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
 void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry) {
   // Emit the size.
   Asm->OutStreamer->AddComment("Loc expr size");
-  Asm->EmitInt16(DebugLocs.getBytes(Entry).size());
+  Asm->emitInt16(DebugLocs.getBytes(Entry).size());
 
   // Emit the entry.
   APByteStreamer Streamer(*Asm);
@@ -1753,14 +1753,14 @@ void DwarfDebug::emitDebugLocDWO() {
       // rather than two. We could get fancier and try to, say, reuse an
       // address we know we've emitted elsewhere (the start of the function?
       // The start of the CU or CU subrange that encloses this range?)
-      Asm->EmitInt8(dwarf::DW_LLE_startx_length);
+      Asm->emitInt8(dwarf::DW_LLE_startx_length);
       unsigned idx = AddrPool.getIndex(Entry.BeginSym);
       Asm->EmitULEB128(idx);
       Asm->EmitLabelDifference(Entry.EndSym, Entry.BeginSym, 4);
 
       emitDebugLocEntryLocation(Entry);
     }
-    Asm->EmitInt8(dwarf::DW_LLE_end_of_list);
+    Asm->emitInt8(dwarf::DW_LLE_end_of_list);
   }
 }
 
@@ -1891,15 +1891,15 @@ void DwarfDebug::emitDebugARanges() {
 
     // For each compile unit, write the list of spans it covers.
     Asm->OutStreamer->AddComment("Length of ARange Set");
-    Asm->EmitInt32(ContentSize);
+    Asm->emitInt32(ContentSize);
     Asm->OutStreamer->AddComment("DWARF Arange version number");
-    Asm->EmitInt16(dwarf::DW_ARANGES_VERSION);
+    Asm->emitInt16(dwarf::DW_ARANGES_VERSION);
     Asm->OutStreamer->AddComment("Offset Into Debug Info Section");
     emitSectionReference(*CU);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->EmitInt8(PtrSize);
+    Asm->emitInt8(PtrSize);
     Asm->OutStreamer->AddComment("Segment Size (in bytes)");
-    Asm->EmitInt8(0);
+    Asm->emitInt8(0);
 
     Asm->OutStreamer->emitFill(Padding, 0xff);
 
@@ -2032,10 +2032,10 @@ void DwarfDebug::emitMacro(DIMacro &M) {
   Asm->OutStreamer->EmitBytes(Name);
   if (!Value.empty()) {
     // There should be one space between macro name and macro value.
-    Asm->EmitInt8(' ');
+    Asm->emitInt8(' ');
     Asm->OutStreamer->EmitBytes(Value);
   }
-  Asm->EmitInt8('\0');
+  Asm->emitInt8('\0');
 }
 
 void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
@@ -2068,7 +2068,7 @@ void DwarfDebug::emitDebugMacinfo() {
     }
   }
   Asm->OutStreamer->AddComment("End Of Macro List Mark");
-  Asm->EmitInt8(0);
+  Asm->emitInt8(0);
 }
 
 // DWARF5 Experimental Separate Dwarf emitters.

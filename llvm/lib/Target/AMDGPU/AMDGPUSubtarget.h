@@ -550,8 +550,13 @@ public:
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspecive of an arbitrary workitem, this
   // is 4-byte aligned.
+  //
+  // Only 4-byte alignment is really needed to access anything. Transformations
+  // on the pointer value itself may rely on the alignment / known low bits of
+  // the pointer. Set this to something above the minimum to avoid needing
+  // dynamic realignment in common cases.
   unsigned getStackAlignment() const {
-    return 4;
+    return 16;
   }
 
   bool enableMachineScheduler() const override {

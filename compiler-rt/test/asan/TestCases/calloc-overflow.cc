@@ -2,6 +2,8 @@
 // RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
 
+// REQUIRES: stable-runtime
+
 #include <stdio.h>
 #include <stdlib.h>
 

@@ -1263,7 +1263,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
   // Check existing Thunks for Sym to see if they can be reused
   for (Thunk *ET : *ThunkVec)
     if (ET->isCompatibleWith(Type) &&
-        Target->inBranchRange(Type, Src, ET->ThunkSym->getVA()))
+        Target->inBranchRange(Type, Src, ET->getThunkTargetSym()->getVA()))
       return std::make_pair(ET, false);
   // No existing compatible Thunk in range, create a new one
   Thunk *T = addThunk(Type, Sym);
@@ -1358,7 +1358,6 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
             bool IsNew;
             std::tie(T, IsNew) = getThunk(*Rel.Sym, Rel.Type, Src);
             if (IsNew) {
-              AddressesChanged = true;
               // Find or create a ThunkSection for the new Thunk
               ThunkSection *TS;
               if (auto *TIS = T->getTargetInputSection())
@@ -1366,13 +1365,18 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
               else
                 TS = getISDThunkSec(OS, IS, ISD, Rel.Type, Src);
               TS->addThunk(T);
-              Thunks[T->ThunkSym] = T;
+              Thunks[T->getThunkTargetSym()] = T;
             }
             // Redirect relocation to Thunk, we never go via the PLT to a Thunk
-            Rel.Sym = T->ThunkSym;
+            Rel.Sym = T->getThunkTargetSym();
             Rel.Expr = fromPlt(Rel.Expr);
           }
+        for (auto &P : ISD->ThunkSections)
+          AddressesChanged |= P.first->assignOffsets();
       });
+  for (auto &P : ThunkedSections)
+    AddressesChanged |= P.second->assignOffsets();
+
   // Merge all created synthetic ThunkSections back into OutputSection
   mergeThunks(OutputSections);
   ++Pass;

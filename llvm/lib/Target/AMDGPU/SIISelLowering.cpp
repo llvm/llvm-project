@@ -3464,10 +3464,6 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   return false;
 }
 
-static bool isDwordAligned(unsigned Alignment) {
-  return Alignment % 4 == 0;
-}
-
 //===----------------------------------------------------------------------===//
 // Custom DAG Lowering Operations
 //===----------------------------------------------------------------------===//
@@ -5385,21 +5381,23 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
          AMDGPUASI.PRIVATE_ADDRESS : AMDGPUASI.GLOBAL_ADDRESS;
 
   unsigned NumElements = MemVT.getVectorNumElements();
+
   if (AS == AMDGPUASI.CONSTANT_ADDRESS ||
       AS == AMDGPUASI.CONSTANT_ADDRESS_32BIT) {
-    if (!Op->isDivergent())
+    if (!Op->isDivergent() && Alignment >= 4)
       return SDValue();
     // Non-uniform loads will be selected to MUBUF instructions, so they
     // have the same legalization requirements as global and private
     // loads.
     //
   }
+
   if (AS == AMDGPUASI.CONSTANT_ADDRESS ||
       AS == AMDGPUASI.CONSTANT_ADDRESS_32BIT ||
       AS == AMDGPUASI.GLOBAL_ADDRESS) {
     if (Subtarget->getScalarizeGlobalBehavior() && !Op->isDivergent() &&
         !Load->isVolatile() && isMemOpHasNoClobberedMemOperand(Load) &&
-        isDwordAligned(Alignment))
+        Alignment >= 4)
       return SDValue();
     // Non-uniform loads will be selected to MUBUF instructions, so they
     // have the same legalization requirements as global and private

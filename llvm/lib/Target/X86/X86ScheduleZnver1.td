@@ -162,6 +162,10 @@ defm : ZnWriteResPair<WritePOPCNT,  [ZnALU], 1>;
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
 
+// BMI1 BEXTR, BMI2 BZHI
+defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1>;
+defm : ZnWriteResPair<WriteBZHI, [ZnALU], 1>;
+
 // IDIV
 def : WriteRes<WriteIDiv, [ZnALU2, ZnDivider]> {
   let Latency = 41;
@@ -562,19 +566,7 @@ def : InstRW<[ZnWriteBTRSCm], (instregex "BT(R|S|C)(16|32|64)m(r|i8)")>;
 // r,r.
 def : InstRW<[ZnWriteALULat2], (instregex "BLS(I|MSK|R)(32|64)rr")>;
 // r,m.
-def : InstRW<[ZnWriteALULat2Ld, ReadAfterLd], (instregex "BLS(I|MSK|R)(32|64)rm")>;
-
-// BEXTR.
-// r,r,r.
-def : InstRW<[WriteALU], (instregex "BEXTR(32|64)rr")>;
-// r,m,r.
-def : InstRW<[WriteALULd, ReadAfterLd], (instregex "BEXTR(32|64)rm")>;
-
-// BZHI.
-// r,r,r.
-def : InstRW<[WriteALU], (instregex "BZHI(32|64)rr")>;
-// r,m,r.
-def : InstRW<[WriteALULd, ReadAfterLd], (instregex "BZHI(32|64)rm")>;
+def : InstRW<[ZnWriteALULat2Ld], (instregex "BLS(I|MSK|R)(32|64)rm")>;
 
 // CLD STD.
 def : InstRW<[WriteALU], (instregex "STD", "CLD")>;
@@ -582,7 +574,7 @@ def : InstRW<[WriteALU], (instregex "STD", "CLD")>;
 // PDEP PEXT.
 // r,r,r.
 def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rr", "PEXT(32|64)rr")>;
-// r,m,r.
+// r,r,m.
 def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rm", "PEXT(32|64)rm")>;
 
 // ROR ROL.

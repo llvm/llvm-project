@@ -558,7 +558,7 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN-LABEL: {{^}}func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill:
 ; GCN: s_mov_b32 s5, s32
-; GCN: s_add_u32 s32, s32, 0x300
+; GCN: s_add_u32 s32, s32, 0x400
 
 ; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s14
 ; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-68-9][0-9]*]], s15

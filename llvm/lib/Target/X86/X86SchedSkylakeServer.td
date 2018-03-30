@@ -120,6 +120,10 @@ defm : SKXWriteResPair<WriteLZCNT,   [SKXPort1], 3>;
 defm : SKXWriteResPair<WriteTZCNT,   [SKXPort1], 3>;
 defm : SKXWriteResPair<WritePOPCNT,  [SKXPort1], 3>;
 
+// BMI1 BEXTR, BMI2 BZHI
+defm : SKXWriteResPair<WriteBEXTR, [SKXPort06,SKXPort15], 2, [1,1], 2>;
+defm : SKXWriteResPair<WriteBZHI, [SKXPort15], 1>;
+
 // Loads, stores, and moves, not folded with other operations.
 def : WriteRes<WriteLoad,  [SKXPort23]> { let Latency = 5; }
 def : WriteRes<WriteStore, [SKXPort237, SKXPort4]>;
@@ -1034,7 +1038,6 @@ def: InstRW<[SKXWriteResGroup8], (instregex "ANDN(32|64)rr",
                                             "BLSI(32|64)rr",
                                             "BLSMSK(32|64)rr",
                                             "BLSR(32|64)rr",
-                                            "BZHI(32|64)rr",
                                             "LEA(16|32|64)(_32)?r")>;
 
 def SKXWriteResGroup9 : SchedWriteRes<[SKXPort015]> {
@@ -1597,8 +1600,7 @@ def SKXWriteResGroup22 : SchedWriteRes<[SKXPort06,SKXPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup22], (instregex "BEXTR(32|64)rr",
-                                             "BSWAP(16|32|64)r")>;
+def: InstRW<[SKXWriteResGroup22], (instregex "BSWAP(16|32|64)r")>;
 
 def SKXWriteResGroup23 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let Latency = 2;
@@ -3094,7 +3096,6 @@ def: InstRW<[SKXWriteResGroup79], (instregex "ANDN(32|64)rm",
                                              "BLSI(32|64)rm",
                                              "BLSMSK(32|64)rm",
                                              "BLSR(32|64)rm",
-                                             "BZHI(32|64)rm",
                                              "MOVBE(16|32|64)rm")>;
 
 def SKXWriteResGroup80 : SchedWriteRes<[SKXPort23,SKXPort015]> {
@@ -3752,13 +3753,6 @@ def SKXWriteResGroup104 : SchedWriteRes<[SKXPort6,SKXPort23,SKXPort0156]> {
 }
 def: InstRW<[SKXWriteResGroup104], (instregex "LRETQ",
                                               "RETQ")>;
-
-def SKXWriteResGroup105 : SchedWriteRes<[SKXPort23,SKXPort06,SKXPort15]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[SKXWriteResGroup105], (instregex "BEXTR(32|64)rm")>;
 
 def SKXWriteResGroup106 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort237]> {
   let Latency = 7;

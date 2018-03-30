@@ -667,8 +667,7 @@ class QualType {
 
   const ExtQualsTypeCommonBase *getCommonPtr() const {
     assert(!isNull() && "Cannot retrieve a NULL type pointer");
-    uintptr_t CommonPtrVal
-      = reinterpret_cast<uintptr_t>(Value.getOpaqueValue());
+    auto CommonPtrVal = reinterpret_cast<uintptr_t>(Value.getOpaqueValue());
     CommonPtrVal &= ~(uintptr_t)((1 << TypeAlignmentInBits) - 1);
     return reinterpret_cast<ExtQualsTypeCommonBase*>(CommonPtrVal);
   }
@@ -3544,7 +3543,7 @@ private:
     assert(hasExtParameterInfos());
 
     // Find the end of the exception specification.
-    const char *ptr = reinterpret_cast<const char *>(exception_begin());
+    const auto *ptr = reinterpret_cast<const char *>(exception_begin());
     ptr += getExceptionSpecSize();
 
     return reinterpret_cast<const ExtParameterInfo *>(ptr);
@@ -5499,8 +5498,8 @@ public:
 
 inline ObjCInterfaceDecl *ObjCObjectType::getInterface() const {
   QualType baseType = getBaseType();
-  while (const ObjCObjectType *ObjT = baseType->getAs<ObjCObjectType>()) {
-    if (const ObjCInterfaceType *T = dyn_cast<ObjCInterfaceType>(ObjT))
+  while (const auto *ObjT = baseType->getAs<ObjCObjectType>()) {
+    if (const auto *T = dyn_cast<ObjCInterfaceType>(ObjT))
       return T->getDecl();
 
     baseType = ObjT->getBaseType();
@@ -5922,10 +5921,10 @@ inline Qualifiers::GC QualType::getObjCGCAttr() const {
 }
 
 inline FunctionType::ExtInfo getFunctionExtInfo(const Type &t) {
-  if (const PointerType *PT = t.getAs<PointerType>()) {
-    if (const FunctionType *FT = PT->getPointeeType()->getAs<FunctionType>())
+  if (const auto *PT = t.getAs<PointerType>()) {
+    if (const auto *FT = PT->getPointeeType()->getAs<FunctionType>())
       return FT->getExtInfo();
-  } else if (const FunctionType *FT = t.getAs<FunctionType>())
+  } else if (const auto *FT = t.getAs<FunctionType>())
     return FT->getExtInfo();
 
   return FunctionType::ExtInfo();
@@ -5970,7 +5969,7 @@ inline bool QualType::isAtLeastAsQualifiedAs(QualType other) const {
 ///   analysis, the expression designates the object or function
 ///   denoted by the reference, and the expression is an lvalue.
 inline QualType QualType::getNonReferenceType() const {
-  if (const ReferenceType *RefType = (*this)->getAs<ReferenceType>())
+  if (const auto *RefType = (*this)->getAs<ReferenceType>())
     return RefType->getPointeeType();
   else
     return *this;
@@ -6045,7 +6044,7 @@ inline bool Type::isRValueReferenceType() const {
 }
 
 inline bool Type::isFunctionPointerType() const {
-  if (const PointerType *T = getAs<PointerType>())
+  if (const auto *T = getAs<PointerType>())
     return T->getPointeeType()->isFunctionType();
   else
     return false;
@@ -6056,14 +6055,14 @@ inline bool Type::isMemberPointerType() const {
 }
 
 inline bool Type::isMemberFunctionPointerType() const {
-  if (const MemberPointerType* T = getAs<MemberPointerType>())
+  if (const auto *T = getAs<MemberPointerType>())
     return T->isMemberFunctionPointer();
   else
     return false;
 }
 
 inline bool Type::isMemberDataPointerType() const {
-  if (const MemberPointerType* T = getAs<MemberPointerType>())
+  if (const auto *T = getAs<MemberPointerType>())
     return T->isMemberDataPointer();
   else
     return false;
@@ -6135,31 +6134,31 @@ inline bool Type::isAtomicType() const {
 }
 
 inline bool Type::isObjCQualifiedIdType() const {
-  if (const ObjCObjectPointerType *OPT = getAs<ObjCObjectPointerType>())
+  if (const auto *OPT = getAs<ObjCObjectPointerType>())
     return OPT->isObjCQualifiedIdType();
   return false;
 }
 
 inline bool Type::isObjCQualifiedClassType() const {
-  if (const ObjCObjectPointerType *OPT = getAs<ObjCObjectPointerType>())
+  if (const auto *OPT = getAs<ObjCObjectPointerType>())
     return OPT->isObjCQualifiedClassType();
   return false;
 }
 
 inline bool Type::isObjCIdType() const {
-  if (const ObjCObjectPointerType *OPT = getAs<ObjCObjectPointerType>())
+  if (const auto *OPT = getAs<ObjCObjectPointerType>())
     return OPT->isObjCIdType();
   return false;
 }
 
 inline bool Type::isObjCClassType() const {
-  if (const ObjCObjectPointerType *OPT = getAs<ObjCObjectPointerType>())
+  if (const auto *OPT = getAs<ObjCObjectPointerType>())
     return OPT->isObjCClassType();
   return false;
 }
 
 inline bool Type::isObjCSelType() const {
-  if (const PointerType *OPT = getAs<PointerType>())
+  if (const auto *OPT = getAs<PointerType>())
     return OPT->getPointeeType()->isSpecificBuiltinType(BuiltinType::ObjCSel);
   return false;
 }
@@ -6222,13 +6221,13 @@ inline bool Type::isSpecificBuiltinType(unsigned K) const {
 }
 
 inline bool Type::isPlaceholderType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(this))
+  if (const auto *BT = dyn_cast<BuiltinType>(this))
     return BT->isPlaceholderType();
   return false;
 }
 
 inline const BuiltinType *Type::getAsPlaceholderType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(this))
+  if (const auto *BT = dyn_cast<BuiltinType>(this))
     if (BT->isPlaceholderType())
       return BT;
   return nullptr;
@@ -6236,38 +6235,38 @@ inline const BuiltinType *Type::getAsPlaceholderType() const {
 
 inline bool Type::isSpecificPlaceholderType(unsigned K) const {
   assert(BuiltinType::isPlaceholderTypeKind((BuiltinType::Kind) K));
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(this))
+  if (const auto *BT = dyn_cast<BuiltinType>(this))
     return (BT->getKind() == (BuiltinType::Kind) K);
   return false;
 }
 
 inline bool Type::isNonOverloadPlaceholderType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(this))
+  if (const auto *BT = dyn_cast<BuiltinType>(this))
     return BT->isNonOverloadPlaceholderType();
   return false;
 }
 
 inline bool Type::isVoidType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() == BuiltinType::Void;
   return false;
 }
 
 inline bool Type::isHalfType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() == BuiltinType::Half;
   // FIXME: Should we allow complex __fp16? Probably not.
   return false;
 }
 
 inline bool Type::isFloat16Type() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() == BuiltinType::Float16;
   return false;
 }
 
 inline bool Type::isNullPtrType() const {
-  if (const BuiltinType *BT = getAs<BuiltinType>())
+  if (const auto *BT = getAs<BuiltinType>())
     return BT->getKind() == BuiltinType::NullPtr;
   return false;
 }
@@ -6276,7 +6275,7 @@ bool IsEnumDeclComplete(EnumDecl *);
 bool IsEnumDeclScoped(EnumDecl *);
 
 inline bool Type::isIntegerType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Int128;
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
@@ -6289,7 +6288,7 @@ inline bool Type::isIntegerType() const {
 }
 
 inline bool Type::isScalarType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() > BuiltinType::Void &&
            BT->getKind() <= BuiltinType::NullPtr;
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType))
@@ -6304,20 +6303,20 @@ inline bool Type::isScalarType() const {
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Int128;
 
   // Check for a complete enum type; incomplete enum types are not properly an
   // enumeration type in the sense required here.
-  if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType))
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
 
   return false;  
 }
 
 inline bool Type::isBooleanType() const {
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() == BuiltinType::Bool;
   return false;
 }
@@ -6394,7 +6393,7 @@ template <typename T> const T *Type::getAs() const {
                 "ArrayType cannot be used with getAs!");
 
   // If this is directly a T type, return it.
-  if (const T *Ty = dyn_cast<T>(this))
+  if (const auto *Ty = dyn_cast<T>(this))
     return Ty;
 
   // If the canonical form of this type isn't the right kind, reject it.
@@ -6410,7 +6409,7 @@ template <typename T> const T *Type::getAsAdjusted() const {
   static_assert(!TypeIsArrayType<T>::value, "ArrayType cannot be used with getAsAdjusted!");
 
   // If this is directly a T type, return it.
-  if (const T *Ty = dyn_cast<T>(this))
+  if (const auto *Ty = dyn_cast<T>(this))
     return Ty;
 
   // If the canonical form of this type isn't the right kind, reject it.
@@ -6440,7 +6439,7 @@ template <typename T> const T *Type::getAsAdjusted() const {
 
 inline const ArrayType *Type::getAsArrayTypeUnsafe() const {
   // If this is directly an array type, return it.
-  if (const ArrayType *arr = dyn_cast<ArrayType>(this))
+  if (const auto *arr = dyn_cast<ArrayType>(this))
     return arr;
 
   // If the canonical form of this type isn't the right kind, reject it.
@@ -6456,14 +6455,14 @@ template <typename T> const T *Type::castAs() const {
   static_assert(!TypeIsArrayType<T>::value,
                 "ArrayType cannot be used with castAs!");
 
-  if (const T *ty = dyn_cast<T>(this)) return ty;
+  if (const auto *ty = dyn_cast<T>(this)) return ty;
   assert(isa<T>(CanonicalType));
   return cast<T>(getUnqualifiedDesugaredType());
 }
 
 inline const ArrayType *Type::castAsArrayTypeUnsafe() const {
   assert(isa<ArrayType>(CanonicalType));
-  if (const ArrayType *arr = dyn_cast<ArrayType>(this)) return arr;
+  if (const auto *arr = dyn_cast<ArrayType>(this)) return arr;
   return cast<ArrayType>(getUnqualifiedDesugaredType());
 }
 

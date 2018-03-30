@@ -231,15 +231,15 @@ StringRef dwarfgen::Generator::generate() {
     auto Length = CU->getLength();
     MC->setDwarfVersion(Version);
     assert(Length != -1U);
-    Asm->EmitInt32(Length);
-    Asm->EmitInt16(Version);
+    Asm->emitInt32(Length);
+    Asm->emitInt16(Version);
     if (Version <= 4) {
-      Asm->EmitInt32(0);
-      Asm->EmitInt8(CU->getAddressSize());
+      Asm->emitInt32(0);
+      Asm->emitInt8(CU->getAddressSize());
     } else {
-      Asm->EmitInt8(dwarf::DW_UT_compile);
-      Asm->EmitInt8(CU->getAddressSize());
-      Asm->EmitInt32(0);
+      Asm->emitInt8(dwarf::DW_UT_compile);
+      Asm->emitInt8(CU->getAddressSize());
+      Asm->emitInt32(0);
     }
     Asm->emitDwarfDIE(*CU->getUnitDIE().Die);
   }

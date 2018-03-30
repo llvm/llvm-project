@@ -72,6 +72,18 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}constant_load_v16i16_align2:
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_store_dwordx4
+; GCN-HSA: flat_store_dwordx4
+define amdgpu_kernel void @constant_load_v16i16_align2(<16 x i16> addrspace(4)* %ptr0) #0 {
+entry:
+  %ld =  load <16 x i16>, <16 x i16> addrspace(4)* %ptr0, align 2
+  store <16 x i16> %ld, <16 x i16> addrspace(1)* undef, align 32
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}constant_zextload_i16_to_i32:
 ; GCN-NOHSA: buffer_load_ushort
 ; GCN-NOHSA: buffer_store_dword

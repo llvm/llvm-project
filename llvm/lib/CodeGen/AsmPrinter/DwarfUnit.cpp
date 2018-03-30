@@ -1662,18 +1662,18 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
   Asm->OutStreamer->AddComment("Length of Unit");
-  Asm->EmitInt32(getHeaderSize() + getUnitDie().getSize());
+  Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
 
   Asm->OutStreamer->AddComment("DWARF version number");
   unsigned Version = DD->getDwarfVersion();
-  Asm->EmitInt16(Version);
+  Asm->emitInt16(Version);
 
   // DWARF v5 reorders the address size and adds a unit type.
   if (Version >= 5) {
     Asm->OutStreamer->AddComment("DWARF Unit Type");
-    Asm->EmitInt8(UT);
+    Asm->emitInt8(UT);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->EmitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI->getCodePointerSize());
   }
 
   // We share one abbreviations table across all units so it's always at the
@@ -1682,14 +1682,14 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   Asm->OutStreamer->AddComment("Offset Into Abbrev. Section");
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   if (UseOffsets)
-    Asm->EmitInt32(0);
+    Asm->emitInt32(0);
   else
     Asm->emitDwarfSymbolReference(
         TLOF.getDwarfAbbrevSection()->getBeginSymbol(), false);
 
   if (Version <= 4) {
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->EmitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI->getCodePointerSize());
   }
 }
 

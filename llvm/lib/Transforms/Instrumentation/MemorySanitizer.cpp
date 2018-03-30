@@ -234,6 +234,24 @@ static cl::opt<bool> ClWithComdat("msan-with-comdat",
        cl::desc("Place MSan constructors in comdat sections"),
        cl::Hidden, cl::init(false));
 
+// These options allow to specify custom memory map parameters
+// See MemoryMapParams for details.
+static cl::opt<unsigned long long> ClAndMask("msan-and-mask",
+       cl::desc("Define custom MSan AndMask"),
+       cl::Hidden, cl::init(0));
+
+static cl::opt<unsigned long long> ClXorMask("msan-xor-mask",
+       cl::desc("Define custom MSan XorMask"),
+       cl::Hidden, cl::init(0));
+
+static cl::opt<unsigned long long> ClShadowBase("msan-shadow-base",
+       cl::desc("Define custom MSan ShadowBase"),
+       cl::Hidden, cl::init(0));
+
+static cl::opt<unsigned long long> ClOriginBase("msan-origin-base",
+       cl::desc("Define custom MSan OriginBase"),
+       cl::Hidden, cl::init(0));
+
 static const char *const kMsanModuleCtorName = "msan.module_ctor";
 static const char *const kMsanInitName = "__msan_init";
 
@@ -449,6 +467,10 @@ private:
   /// \brief Memory map parameters used in application-to-shadow calculation.
   const MemoryMapParams *MapParams;
 
+  /// \brief Custom memory map parameters used when -msan-shadow-base or
+  // -msan-origin-base is provided.
+  MemoryMapParams CustomMapParams;
+
   MDNode *ColdCallWeights;
 
   /// \brief Branch weights for origin store.
@@ -576,55 +598,66 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
 bool MemorySanitizer::doInitialization(Module &M) {
   auto &DL = M.getDataLayout();
 
-  Triple TargetTriple(M.getTargetTriple());
-  switch (TargetTriple.getOS()) {
-    case Triple::FreeBSD:
-      switch (TargetTriple.getArch()) {
-        case Triple::x86_64:
-          MapParams = FreeBSD_X86_MemoryMapParams.bits64;
-          break;
-        case Triple::x86:
-          MapParams = FreeBSD_X86_MemoryMapParams.bits32;
-          break;
-        default:
-          report_fatal_error("unsupported architecture");
-      }
-      break;
-    case Triple::NetBSD:
-      switch (TargetTriple.getArch()) {
-        case Triple::x86_64:
-          MapParams = NetBSD_X86_MemoryMapParams.bits64;
-          break;
-        default:
-          report_fatal_error("unsupported architecture");
-      }
-      break;
-    case Triple::Linux:
-      switch (TargetTriple.getArch()) {
-        case Triple::x86_64:
-          MapParams = Linux_X86_MemoryMapParams.bits64;
-          break;
-        case Triple::x86:
-          MapParams = Linux_X86_MemoryMapParams.bits32;
-          break;
-        case Triple::mips64:
-        case Triple::mips64el:
-          MapParams = Linux_MIPS_MemoryMapParams.bits64;
-          break;
-        case Triple::ppc64:
-        case Triple::ppc64le:
-          MapParams = Linux_PowerPC_MemoryMapParams.bits64;
-          break;
-        case Triple::aarch64:
-        case Triple::aarch64_be:
-          MapParams = Linux_ARM_MemoryMapParams.bits64;
-          break;
-        default:
-          report_fatal_error("unsupported architecture");
-      }
-      break;
-    default:
-      report_fatal_error("unsupported operating system");
+  bool ShadowPassed = ClShadowBase.getNumOccurrences() > 0;
+  bool OriginPassed = ClOriginBase.getNumOccurrences() > 0;
+  // Check the overrides first
+  if (ShadowPassed || OriginPassed) {
+    CustomMapParams.AndMask = ClAndMask;
+    CustomMapParams.XorMask = ClXorMask;
+    CustomMapParams.ShadowBase = ClShadowBase;
+    CustomMapParams.OriginBase = ClOriginBase;
+    MapParams = &CustomMapParams;
+  } else {
+    Triple TargetTriple(M.getTargetTriple());
+    switch (TargetTriple.getOS()) {
+      case Triple::FreeBSD:
+        switch (TargetTriple.getArch()) {
+          case Triple::x86_64:
+            MapParams = FreeBSD_X86_MemoryMapParams.bits64;
+            break;
+          case Triple::x86:
+            MapParams = FreeBSD_X86_MemoryMapParams.bits32;
+            break;
+          default:
+            report_fatal_error("unsupported architecture");
+        }
+        break;
+      case Triple::NetBSD:
+        switch (TargetTriple.getArch()) {
+          case Triple::x86_64:
+            MapParams = NetBSD_X86_MemoryMapParams.bits64;
+            break;
+          default:
+            report_fatal_error("unsupported architecture");
+        }
+        break;
+      case Triple::Linux:
+        switch (TargetTriple.getArch()) {
+          case Triple::x86_64:
+            MapParams = Linux_X86_MemoryMapParams.bits64;
+            break;
+          case Triple::x86:
+            MapParams = Linux_X86_MemoryMapParams.bits32;
+            break;
+          case Triple::mips64:
+          case Triple::mips64el:
+            MapParams = Linux_MIPS_MemoryMapParams.bits64;
+            break;
+          case Triple::ppc64:
+          case Triple::ppc64le:
+            MapParams = Linux_PowerPC_MemoryMapParams.bits64;
+            break;
+          case Triple::aarch64:
+          case Triple::aarch64_be:
+            MapParams = Linux_ARM_MemoryMapParams.bits64;
+            break;
+          default:
+            report_fatal_error("unsupported architecture");
+        }
+        break;
+      default:
+        report_fatal_error("unsupported operating system");
+    }
   }
 
   C = &(M.getContext());
