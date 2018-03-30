@@ -430,7 +430,7 @@ void BlockDataRegion::dumpToStream(raw_ostream &os) const {
   for (BlockDataRegion::referenced_vars_iterator
          I = referenced_vars_begin(),
          E = referenced_vars_end(); I != E; ++I)
-    os << "(" << I.getCapturedRegion() << "," <<
+    os << "(" << I.getCapturedRegion() << "<-" <<
                  I.getOriginalRegion() << ") ";
   os << '}';
 }
@@ -483,7 +483,12 @@ void SymbolicRegion::dumpToStream(raw_ostream &os) const {
 }
 
 void VarRegion::dumpToStream(raw_ostream &os) const {
-  os << *cast<VarDecl>(D);
+  const auto *VD = cast<VarDecl>(D);
+  if (const auto *ID = VD->getIdentifier()) {
+    os << ID->getName();
+  } else {
+    os << "VarRegion{" << static_cast<const void*>(this) << '}';
+  }
 }
 
 LLVM_DUMP_METHOD void RegionRawOffset::dump() const {

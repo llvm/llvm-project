@@ -14,7 +14,7 @@
 
 #include "llvm/Transforms/Utils.h"
 #include "llvm-c/Initialization.h"
-#include "llvm-c/Transforms/Scalar.h"
+#include "llvm-c/Transforms/Utils.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"

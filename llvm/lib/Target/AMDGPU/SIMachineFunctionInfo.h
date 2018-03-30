@@ -142,6 +142,7 @@ private:
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
   bool HasNonSpillStackObjects = false;
+  bool IsStackRealigned = false;
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
@@ -493,6 +494,14 @@ public:
 
   void setHasNonSpillStackObjects(bool StackObject = true) {
     HasNonSpillStackObjects = StackObject;
+  }
+
+  bool isStackRealigned() const {
+    return IsStackRealigned;
+  }
+
+  void setIsStackRealigned(bool Realigned = true) {
+    IsStackRealigned = Realigned;
   }
 
   unsigned getNumSpilledSGPRs() const {

@@ -13,8 +13,6 @@
 
 #include "ARMInstPrinter.h"
 #include "Utils/ARMBaseInfo.h"
-#include "ARMBaseRegisterInfo.h"
-#include "ARMBaseRegisterInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "llvm/MC/MCAsmInfo.h"

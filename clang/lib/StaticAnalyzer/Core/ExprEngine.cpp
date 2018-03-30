@@ -2482,7 +2482,7 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     assert(Ex->isGLValue() || VD->getType()->isVoidType());
     const LocationContext *LocCtxt = Pred->getLocationContext();
     const Decl *D = LocCtxt->getDecl();
-    const auto *MD = D ? dyn_cast<CXXMethodDecl>(D) : nullptr;
+    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
     const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
     Optional<std::pair<SVal, QualType>> VInfo;
 

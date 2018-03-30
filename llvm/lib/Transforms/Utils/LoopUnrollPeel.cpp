@@ -221,6 +221,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::UnrollingPreferences &UP,
                             unsigned &TripCount, ScalarEvolution &SE) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
+  // Save the UP.PeelCount value set by the target in
+  // TTI.getUnrollingPreferences or by the flag -unroll-peel-count.
+  unsigned TargetPeelCount = UP.PeelCount;
   UP.PeelCount = 0;
   if (!canPeel(L))
     return;
@@ -240,7 +243,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     SmallDenseMap<PHINode *, unsigned> IterationsToInvariance;
     // Now go through all Phis to calculate their the number of iterations they
     // need to become invariants.
-    unsigned DesiredPeelCount = 0;
+    // Start the max computation with the UP.PeelCount value set by the target
+    // in TTI.getUnrollingPreferences or by the flag -unroll-peel-count.
+    unsigned DesiredPeelCount = TargetPeelCount;
     BasicBlock *BackEdge = L->getLoopLatch();
     assert(BackEdge && "Loop is not in simplified form?");
     for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {

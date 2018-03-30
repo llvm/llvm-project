@@ -135,7 +135,8 @@ public:
   bool shouldMangleStringLiteral(const StringLiteral *SL) override;
   void mangleCXXName(const NamedDecl *D, raw_ostream &Out) override;
   void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
-                                raw_ostream &) override;
+                                const MethodVFTableLocation &ML,
+                                raw_ostream &Out) override;
   void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
                    raw_ostream &) override;
   void mangleCXXDtorThunk(const CXXDestructorDecl *DD, CXXDtorType Type,
@@ -297,9 +298,8 @@ public:
   void mangleMemberDataPointer(const CXXRecordDecl *RD, const ValueDecl *VD);
   void mangleMemberFunctionPointer(const CXXRecordDecl *RD,
                                    const CXXMethodDecl *MD);
-  void mangleVirtualMemPtrThunk(
-      const CXXMethodDecl *MD,
-      const MicrosoftVTableContext::MethodVFTableLocation &ML);
+  void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
+                                const MethodVFTableLocation &ML);
   void mangleNumber(int64_t Number);
   void mangleTagTypeKind(TagTypeKind TK);
   void mangleArtificalTagType(TagTypeKind TK, StringRef UnqualifiedName,
@@ -607,7 +607,7 @@ MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
     if (MD->isVirtual()) {
       MicrosoftVTableContext *VTContext =
           cast<MicrosoftVTableContext>(getASTContext().getVTableContext());
-      const MicrosoftVTableContext::MethodVFTableLocation &ML =
+      const MethodVFTableLocation &ML =
           VTContext->getMethodVFTableLocation(GlobalDecl(MD));
       mangleVirtualMemPtrThunk(MD, ML);
       NVOffset = ML.VFPtrOffset.getQuantity();
@@ -644,8 +644,7 @@ MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
 }
 
 void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
-    const CXXMethodDecl *MD,
-    const MicrosoftVTableContext::MethodVFTableLocation &ML) {
+    const CXXMethodDecl *MD, const MethodVFTableLocation &ML) {
   // Get the vftable offset.
   CharUnits PointerWidth = getASTContext().toCharUnitsFromBits(
       getASTContext().getTargetInfo().getPointerWidth(0));
@@ -2775,14 +2774,9 @@ static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
   }
 }
 
-void
-MicrosoftMangleContextImpl::mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
-                                                     raw_ostream &Out) {
-  MicrosoftVTableContext *VTContext =
-      cast<MicrosoftVTableContext>(getASTContext().getVTableContext());
-  const MicrosoftVTableContext::MethodVFTableLocation &ML =
-      VTContext->getMethodVFTableLocation(GlobalDecl(MD));
-
+void MicrosoftMangleContextImpl::mangleVirtualMemPtrThunk(
+    const CXXMethodDecl *MD, const MethodVFTableLocation &ML,
+    raw_ostream &Out) {
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
   Mangler.getStream() << '?';

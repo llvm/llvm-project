@@ -479,41 +479,42 @@ struct VirtualBaseInfo {
   VPtrInfoVector VBPtrPaths;
 };
 
+struct MethodVFTableLocation {
+  /// If nonzero, holds the vbtable index of the virtual base with the vfptr.
+  uint64_t VBTableIndex;
+
+  /// If nonnull, holds the last vbase which contains the vfptr that the
+  /// method definition is adjusted to.
+  const CXXRecordDecl *VBase;
+
+  /// This is the offset of the vfptr from the start of the last vbase, or the
+  /// complete type if there are no virtual bases.
+  CharUnits VFPtrOffset;
+
+  /// Method's index in the vftable.
+  uint64_t Index;
+
+  MethodVFTableLocation()
+      : VBTableIndex(0), VBase(nullptr), VFPtrOffset(CharUnits::Zero()),
+        Index(0) {}
+
+  MethodVFTableLocation(uint64_t VBTableIndex, const CXXRecordDecl *VBase,
+                        CharUnits VFPtrOffset, uint64_t Index)
+      : VBTableIndex(VBTableIndex), VBase(VBase), VFPtrOffset(VFPtrOffset),
+        Index(Index) {}
+
+  bool operator<(const MethodVFTableLocation &other) const {
+    if (VBTableIndex != other.VBTableIndex) {
+      assert(VBase != other.VBase);
+      return VBTableIndex < other.VBTableIndex;
+    }
+    return std::tie(VFPtrOffset, Index) <
+           std::tie(other.VFPtrOffset, other.Index);
+  }
+};
+
 class MicrosoftVTableContext : public VTableContextBase {
 public:
-  struct MethodVFTableLocation {
-    /// If nonzero, holds the vbtable index of the virtual base with the vfptr.
-    uint64_t VBTableIndex;
-
-    /// If nonnull, holds the last vbase which contains the vfptr that the
-    /// method definition is adjusted to.
-    const CXXRecordDecl *VBase;
-
-    /// This is the offset of the vfptr from the start of the last vbase, or the
-    /// complete type if there are no virtual bases.
-    CharUnits VFPtrOffset;
-
-    /// Method's index in the vftable.
-    uint64_t Index;
-
-    MethodVFTableLocation()
-        : VBTableIndex(0), VBase(nullptr), VFPtrOffset(CharUnits::Zero()),
-          Index(0) {}
-
-    MethodVFTableLocation(uint64_t VBTableIndex, const CXXRecordDecl *VBase,
-                          CharUnits VFPtrOffset, uint64_t Index)
-        : VBTableIndex(VBTableIndex), VBase(VBase),
-          VFPtrOffset(VFPtrOffset), Index(Index) {}
-
-    bool operator<(const MethodVFTableLocation &other) const {
-      if (VBTableIndex != other.VBTableIndex) {
-        assert(VBase != other.VBase);
-        return VBTableIndex < other.VBTableIndex;
-      }
-      return std::tie(VFPtrOffset, Index) <
-             std::tie(other.VFPtrOffset, other.Index);
-    }
-  };
 
 private:
   ASTContext &Context;

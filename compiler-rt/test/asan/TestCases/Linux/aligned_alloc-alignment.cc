@@ -5,6 +5,8 @@
 // FIXME(alekseyshl): #0 frame does not look as expected on ppc64be, fix it.
 // UNSUPPORTED: android,powerpc64
 
+// REQUIRES: stable-runtime
+
 #include <stdio.h>
 #include <stdlib.h>
 

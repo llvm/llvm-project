@@ -366,18 +366,53 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII) {
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   // Find operand in instruction that matches source operand and replace it with
   // target operand. Set corresponding src_sel
-
+  bool IsPreserveSrc = false;
   MachineOperand *Src = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   MachineOperand *SrcSel = TII->getNamedOperand(MI, AMDGPU::OpName::src0_sel);
   MachineOperand *SrcMods =
       TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
   assert(Src && (Src->isReg() || Src->isImm()));
   if (!isSameReg(*Src, *getReplacedOperand())) {
-    // If this is not src0 then it should be src1
+    // If this is not src0 then it could be src1
     Src = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
     SrcSel = TII->getNamedOperand(MI, AMDGPU::OpName::src1_sel);
     SrcMods = TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
 
+    if (!Src ||
+        !isSameReg(*Src, *getReplacedOperand())) {
+      // It's possible this Src is a tied operand for
+      // UNUSED_PRESERVE, in which case we can either
+      // abandon the peephole attempt, or if legal we can
+      // copy the target operand into the tied slot
+      // if the preserve operation will effectively cause the same
+      // result by overwriting the rest of the dst.
+      MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+      MachineOperand *DstUnused =
+        TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
+
+      if (Dst &&
+          DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
+        // This will work if the tied src is acessing WORD_0, and the dst is
+        // writing WORD_1. Modifiers don't matter because all the bits that
+        // would be impacted are being overwritten by the dst.
+        // Any other case will not work.
+        SdwaSel DstSel = static_cast<SdwaSel>(
+            TII->getNamedImmOperand(MI, AMDGPU::OpName::dst_sel));
+        if (DstSel == AMDGPU::SDWA::SdwaSel::WORD_1 &&
+            getSrcSel() == AMDGPU::SDWA::SdwaSel::WORD_0) {
+          IsPreserveSrc = true;
+          auto DstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                   AMDGPU::OpName::vdst);
+          auto TiedIdx = MI.findTiedOperandIdx(DstIdx);
+          Src = &MI.getOperand(TiedIdx);
+          SrcSel = nullptr;
+          SrcMods = nullptr;
+        } else {
+          // Not legal to convert this src
+          return false;
+        }
+      }
+    }
     assert(Src && Src->isReg());
 
     if ((MI.getOpcode() == AMDGPU::V_MAC_F16_sdwa ||
@@ -388,11 +423,14 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
       return false;
     }
 
-    assert(isSameReg(*Src, *getReplacedOperand()) && SrcSel && SrcMods);
+    assert(isSameReg(*Src, *getReplacedOperand()) &&
+           (IsPreserveSrc || (SrcSel && SrcMods)));
   }
   copyRegOperand(*Src, *getTargetOperand());
-  SrcSel->setImm(getSrcSel());
-  SrcMods->setImm(getSrcMods(TII, Src));
+  if (!IsPreserveSrc) {
+    SrcSel->setImm(getSrcSel());
+    SrcMods->setImm(getSrcMods(TII, Src));
+  }
   getTargetOperand()->setIsKill(false);
   return true;
 }
@@ -857,6 +895,9 @@ bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI,
 
 bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
                                    const SDWAOperandsVector &SDWAOperands) {
+
+  DEBUG(dbgs() << "Convert instruction:" << MI);
+
   // Convert to sdwa
   int SDWAOpcode;
   unsigned Opcode = MI.getOpcode();
@@ -982,9 +1023,29 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     }
   }
 
+  // Check for a preserved register that needs to be copied.
+  auto DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
+  if (DstUnused &&
+      DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
+    // We expect, if we are here, that the instruction was already in it's SDWA form,
+    // with a tied operand.
+    assert(Dst && Dst->isTied());
+    assert(Opcode == static_cast<unsigned int>(SDWAOpcode));
+    // We also expect a vdst, since sdst can't preserve.
+    auto PreserveDstIdx = AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::vdst);
+    assert(PreserveDstIdx != -1);
+
+    auto TiedIdx = MI.findTiedOperandIdx(PreserveDstIdx);
+    auto Tied = MI.getOperand(TiedIdx);
+
+    SDWAInst.add(Tied);
+    SDWAInst->tieOperands(PreserveDstIdx, SDWAInst->getNumOperands() - 1);
+  }
+
   // Apply all sdwa operand patterns.
   bool Converted = false;
   for (auto &Operand : SDWAOperands) {
+    DEBUG(dbgs() << *SDWAInst << "\nOperand: " << *Operand);
     // There should be no intesection between SDWA operands and potential MIs
     // e.g.:
     // v_and_b32 v0, 0xff, v1 -> src:v1 sel:BYTE_0
@@ -1005,8 +1066,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     return false;
   }
 
-  DEBUG(dbgs() << "Convert instruction:" << MI
-               << "Into:" << *SDWAInst << '\n');
+  DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
   ++NumSDWAInstructionsPeepholed;
 
   MI.eraseFromParent();

@@ -30,6 +30,7 @@
 
 namespace lld {
 namespace elf {
+class Defined;
 class SharedSymbol;
 
 class SyntheticSection : public InputSection {
@@ -823,6 +824,7 @@ public:
   size_t getSize() const override { return Size; }
   void writeTo(uint8_t *Buf) override;
   InputSection *getTargetInputSection() const;
+  bool assignOffsets();
 
 private:
   std::vector<Thunk *> Thunks;
@@ -834,8 +836,8 @@ MergeInputSection *createCommentSection();
 void decompressSections();
 void mergeSections();
 
-Symbol *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
-                          uint64_t Size, InputSectionBase &Section);
+Defined *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
+                           uint64_t Size, InputSectionBase &Section);
 
 // Linker generated sections which can be used as inputs.
 struct InX {
