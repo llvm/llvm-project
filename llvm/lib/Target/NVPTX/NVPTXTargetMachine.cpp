@@ -44,6 +44,14 @@ static cl::opt<bool>
                                cl::desc("Disable load/store vectorizer"),
                                cl::init(false), cl::Hidden);
 
+// TODO: Remove this flag when we are confident with no regressions.
+static cl::opt<bool> DisableRequireStructuredCFG(
+    "disable-nvptx-require-structured-cfg",
+    cl::desc("Transitional flag to turn off NVPTX's requirement on preserving "
+             "structured CFG. The requirement should be disabled only when "
+             "unexpected regressions happen."),
+    cl::init(false), cl::Hidden);
+
 namespace llvm {
 
 void initializeNVVMIntrRangePass(PassRegistry&);
@@ -108,6 +116,8 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
     drvInterface = NVPTX::NVCL;
   else
     drvInterface = NVPTX::CUDA;
+  if (!DisableRequireStructuredCFG)
+    setRequiresStructuredCFG(true);
   initAsmInfo();
 }
 

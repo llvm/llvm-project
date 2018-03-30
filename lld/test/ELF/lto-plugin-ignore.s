@@ -5,7 +5,6 @@
 # RUN:   -plugin-opt=-pass-through=-lgcc -plugin-opt=-function-sections \
 # RUN:   -plugin-opt=-data-sections -plugin-opt=thinlto -o /dev/null
 
-# RUN: not ld.lld %t -plugin-opt=-data-sectionxxx \
-# RUN:   -plugin-opt=-function-sectionxxx 2>&1 | FileCheck %s
-# CHECK: Unknown command line argument '-data-sectionxxx'
-# CHECK: Unknown command line argument '-function-sectionxxx'
+# RUN: not ld.lld %t -plugin-opt=-abc -plugin-opt=-xyz 2>&1 | FileCheck %s
+# CHECK: error: --plugin-opt: ld.lld{{.*}}: Unknown command line argument '-abc'
+# CHECK: error: --plugin-opt: ld.lld{{.*}}: Unknown command line argument '-xyz'

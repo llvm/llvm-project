@@ -101,9 +101,12 @@ const ConstructionContext *ConstructionContext::createFromLayers(
     if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(S)) {
       // If the object requires destruction and is not lifetime-extended,
       // then it must have a BTE within its MTE.
-      assert(MTE->getType().getCanonicalType()
+      // FIXME: This should be an assertion.
+      if (!(MTE->getType().getCanonicalType()
                 ->getAsCXXRecordDecl()->hasTrivialDestructor() ||
-             MTE->getStorageDuration() != SD_FullExpression);
+             MTE->getStorageDuration() != SD_FullExpression))
+        return nullptr;
+
       assert(TopLayer->isLast());
       return create<TemporaryObjectConstructionContext>(C, nullptr, MTE);
     }

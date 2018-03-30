@@ -506,16 +506,19 @@ bool HexagonAsmParser::matchBundleOptions() {
         "supported with this architecture";
     StringRef Option = Parser.getTok().getString();
     auto IDLoc = Parser.getTok().getLoc();
-    if (Option.compare_lower("endloop0") == 0)
+    if (Option.compare_lower("endloop01") == 0) {
       HexagonMCInstrInfo::setInnerLoop(MCB);
-    else if (Option.compare_lower("endloop1") == 0)
       HexagonMCInstrInfo::setOuterLoop(MCB);
-    else if (Option.compare_lower("mem_noshuf") == 0)
+    } else if (Option.compare_lower("endloop0") == 0) {
+      HexagonMCInstrInfo::setInnerLoop(MCB);
+    } else if (Option.compare_lower("endloop1") == 0) {
+      HexagonMCInstrInfo::setOuterLoop(MCB);
+    } else if (Option.compare_lower("mem_noshuf") == 0) {
       if (getSTI().getFeatureBits()[Hexagon::FeatureMemNoShuf])
         HexagonMCInstrInfo::setMemReorderDisabled(MCB);
       else
         return getParser().Error(IDLoc, MemNoShuffMsg);
-    else
+    } else
       return getParser().Error(IDLoc, llvm::Twine("'") + Option +
                                           "' is not a valid bundle option");
     Lex();

@@ -615,9 +615,8 @@ cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
                                     cl::sub(ExplainSubcommand));
 
-cl::opt<uint64_t> Offset("offset", cl::desc("The file offset to explain"),
-                         cl::sub(ExplainSubcommand), cl::Required,
-                         cl::OneOrMore);
+cl::list<uint64_t> Offsets("offset", cl::desc("The file offset to explain"),
+                           cl::sub(ExplainSubcommand), cl::OneOrMore);
 } // namespace explain
 }
 
@@ -1091,9 +1090,12 @@ static void mergePdbs() {
 static void explain() {
   std::unique_ptr<IPDBSession> Session;
   PDBFile &File = loadPDB(opts::explain::InputFilename.front(), Session);
-  auto O = llvm::make_unique<ExplainOutputStyle>(File, opts::explain::Offset);
 
-  ExitOnErr(O->dump());
+  for (uint64_t Off : opts::explain::Offsets) {
+    auto O = llvm::make_unique<ExplainOutputStyle>(File, Off);
+
+    ExitOnErr(O->dump());
+  }
 }
 
 static bool parseRange(StringRef Str,

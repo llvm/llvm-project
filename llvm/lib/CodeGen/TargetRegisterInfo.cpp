@@ -86,14 +86,20 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
 namespace llvm {
 
 Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI,
-                   unsigned SubIdx) {
-  return Printable([Reg, TRI, SubIdx](raw_ostream &OS) {
+                   unsigned SubIdx, const MachineRegisterInfo *MRI) {
+  return Printable([Reg, TRI, SubIdx, MRI](raw_ostream &OS) {
     if (!Reg)
       OS << "$noreg";
     else if (TargetRegisterInfo::isStackSlot(Reg))
       OS << "SS#" << TargetRegisterInfo::stackSlot2Index(Reg);
-    else if (TargetRegisterInfo::isVirtualRegister(Reg))
-      OS << '%' << TargetRegisterInfo::virtReg2Index(Reg);
+    else if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      StringRef Name = MRI ? MRI->getVRegName(Reg) : "";
+      if (Name != "") {
+        OS << '%' << Name;
+      } else {
+        OS << '%' << TargetRegisterInfo::virtReg2Index(Reg);
+      }
+    }
     else if (!TRI)
       OS << '$' << "physreg" << Reg;
     else if (Reg < TRI->getNumRegs()) {
