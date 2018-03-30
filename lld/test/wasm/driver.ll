@@ -16,3 +16,7 @@ entry:
 ; RUN: not wasm-ld 2>&1 | FileCheck -check-prefix=BOTH %s
 ; BOTH:     error: no input files
 ; BOTH-NOT: error: no output file specified
+
+; RUN: not wasm-ld --export-table --import-table %t.o 2>&1 \
+; RUN:   | FileCheck -check-prefix=TABLE %s
+; TABLE: error: --import-table and --export-table may not be used together

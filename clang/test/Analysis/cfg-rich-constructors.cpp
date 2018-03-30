@@ -108,6 +108,9 @@ void simpleVariableInitializedByValue() {
   C c = C::get();
 }
 
+// FIXME: Find construction contexts for both branches in C++17.
+// Note that once it gets detected, the test for the get() branch would not
+// fail, because FileCheck allows partial matches.
 // CHECK: void simpleVariableWithTernaryOperator(bool coin)
 // CHECK:        [B1]
 // CXX11-NEXT:     1: [B4.2] ? [B2.5] : [B3.6]
@@ -122,7 +125,7 @@ void simpleVariableInitializedByValue() {
 // CXX11-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4])
 // CXX11-NEXT:     4: [B2.3]
 // CXX11-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.2], class C)
-// CXX17-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B1.2])
+// CXX17-NEXT:     3: [B2.2]()
 // CHECK:        [B3]
 // CHECK-NEXT:     1: 0
 // CHECK-NEXT:     2: [B3.1] (ImplicitCastExpr, NullToPointer, class C *)
@@ -130,7 +133,7 @@ void simpleVariableInitializedByValue() {
 // CXX11-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CXX11-NEXT:     5: [B3.4]
 // CXX11-NEXT:     6: [B3.5] (CXXConstructExpr, [B1.2], class C)
-// CXX17-NEXT:     3: [B3.2] (CXXConstructExpr, [B1.2], class C)
+// CXX17-NEXT:     3: [B3.2] (CXXConstructExpr, class C)
 // CXX17-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CHECK:        [B4]
 // CHECK-NEXT:     1: coin

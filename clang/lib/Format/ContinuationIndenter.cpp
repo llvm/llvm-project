@@ -896,12 +896,20 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return std::max(State.Stack.back().LastSpace, State.Stack.back().Indent);
   if (NextNonComment->is(TT_SelectorName)) {
     if (!State.Stack.back().ObjCSelectorNameFound) {
-      if (NextNonComment->LongestObjCSelectorName == 0)
-        return State.Stack.back().Indent;
-      return (Style.IndentWrappedFunctionNames
-                  ? std::max(State.Stack.back().Indent,
-                             State.FirstIndent + Style.ContinuationIndentWidth)
-                  : State.Stack.back().Indent) +
+      unsigned MinIndent = State.Stack.back().Indent;
+      if (Style.IndentWrappedFunctionNames)
+        MinIndent = std::max(MinIndent,
+                             State.FirstIndent + Style.ContinuationIndentWidth);
+      // If LongestObjCSelectorName is 0, we are indenting the first
+      // part of an ObjC selector (or a selector component which is
+      // not colon-aligned due to block formatting).
+      //
+      // Otherwise, we are indenting a subsequent part of an ObjC
+      // selector which should be colon-aligned to the longest
+      // component of the ObjC selector.
+      //
+      // In either case, we want to respect Style.IndentWrappedFunctionNames.
+      return MinIndent +
              std::max(NextNonComment->LongestObjCSelectorName,
                       NextNonComment->ColumnWidth) -
              NextNonComment->ColumnWidth;

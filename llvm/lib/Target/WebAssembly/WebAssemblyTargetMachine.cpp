@@ -49,9 +49,28 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
   RegisterTargetMachine<WebAssemblyTargetMachine> Y(
       getTheWebAssemblyTarget64());
 
-  // Register exception handling pass to opt
-  initializeWebAssemblyLowerEmscriptenEHSjLjPass(
-      *PassRegistry::getPassRegistry());
+  // Register backend passes
+  auto &PR = *PassRegistry::getPassRegistry();
+  initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
+  initializeLowerGlobalDtorsPass(PR);
+  initializeFixFunctionBitcastsPass(PR);
+  initializeOptimizeReturnedPass(PR);
+  initializeWebAssemblyArgumentMovePass(PR);
+  initializeWebAssemblySetP2AlignOperandsPass(PR);
+  initializeWebAssemblyReplacePhysRegsPass(PR);
+  initializeWebAssemblyPrepareForLiveIntervalsPass(PR);
+  initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
+  initializeWebAssemblyStoreResultsPass(PR);
+  initializeWebAssemblyRegStackifyPass(PR);
+  initializeWebAssemblyRegColoringPass(PR);
+  initializeWebAssemblyExplicitLocalsPass(PR);
+  initializeWebAssemblyFixIrreducibleControlFlowPass(PR);
+  initializeWebAssemblyCFGSortPass(PR);
+  initializeWebAssemblyCFGStackifyPass(PR);
+  initializeWebAssemblyLowerBrUnlessPass(PR);
+  initializeWebAssemblyRegNumberingPass(PR);
+  initializeWebAssemblyPeepholePass(PR);
+  initializeWebAssemblyCallIndirectFixupPass(PR);
 }
 
 //===----------------------------------------------------------------------===//

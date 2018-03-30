@@ -150,10 +150,11 @@ MachineRegisterInfo::recomputeRegClass(unsigned Reg) {
   return true;
 }
 
-unsigned MachineRegisterInfo::createIncompleteVirtualRegister() {
+unsigned MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
   unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);
   RegAllocHints.grow(Reg);
+  insertVRegByName(Name, Reg);
   return Reg;
 }
 

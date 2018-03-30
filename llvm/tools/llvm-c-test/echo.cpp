@@ -146,8 +146,8 @@ struct TypeCloner {
         return LLVMMetadataTypeInContext(Ctx);
       case LLVMX86_MMXTypeKind:
         return LLVMX86MMXTypeInContext(Ctx);
-      default:
-        break;
+      case LLVMTokenTypeKind:
+        return LLVMTokenTypeInContext(Ctx);
     }
 
     fprintf(stderr, "%d is not a supported typekind\n", Kind);
@@ -309,6 +309,13 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
   if (LLVMIsUndef(Cst)) {
     check_value_kind(Cst, LLVMUndefValueValueKind);
     return LLVMGetUndef(TypeCloner(M).Clone(Cst));
+  }
+
+  // Try null
+  if (LLVMIsNull(Cst)) {
+    check_value_kind(Cst, LLVMConstantTokenNoneValueKind);
+    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
+    return LLVMConstNull(Ty);
   }
 
   // Try float literal
@@ -629,6 +636,58 @@ struct FunCloner {
         for (unsigned i = 0; i < NumClauses; ++i)
           LLVMAddClause(Dst, CloneValue(LLVMGetClause(Src, i)));
         LLVMSetCleanup(Dst, LLVMIsCleanup(Src));
+        break;
+      }
+      case LLVMCleanupRet: {
+        LLVMValueRef CatchPad = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMBasicBlockRef Unwind = nullptr;
+        if (LLVMBasicBlockRef UDest = LLVMGetUnwindDest(Src))
+          Unwind = DeclareBB(UDest);
+        Dst = LLVMBuildCleanupRet(Builder, CatchPad, Unwind);
+        break;
+      }
+      case LLVMCatchRet: {
+        LLVMValueRef CatchPad = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMBasicBlockRef SuccBB = DeclareBB(LLVMGetSuccessor(Src, 0));
+        Dst = LLVMBuildCatchRet(Builder, CatchPad, SuccBB);
+        break;
+      }
+      case LLVMCatchPad: {
+        LLVMValueRef ParentPad = CloneValue(LLVMGetParentCatchSwitch(Src));
+        SmallVector<LLVMValueRef, 8> Args;
+        int ArgCount = LLVMGetNumArgOperands(Src);
+        for (int i = 0; i < ArgCount; i++)
+          Args.push_back(CloneValue(LLVMGetOperand(Src, i)));
+        Dst = LLVMBuildCatchPad(Builder, ParentPad,
+                                Args.data(), ArgCount, Name);
+        break;
+      }
+      case LLVMCleanupPad: {
+        LLVMValueRef ParentPad = CloneValue(LLVMGetOperand(Src, 0));
+        SmallVector<LLVMValueRef, 8> Args;
+        int ArgCount = LLVMGetNumArgOperands(Src);
+        for (int i = 0; i < ArgCount; i++)
+          Args.push_back(CloneValue(LLVMGetArgOperand(Src, i)));
+        Dst = LLVMBuildCleanupPad(Builder, ParentPad,
+                                  Args.data(), ArgCount, Name);
+        break;
+      }
+      case LLVMCatchSwitch: {
+        LLVMValueRef ParentPad = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMBasicBlockRef UnwindBB = nullptr;
+        if (LLVMBasicBlockRef UDest = LLVMGetUnwindDest(Src)) {
+          UnwindBB = DeclareBB(UDest);
+        }
+        unsigned NumHandlers = LLVMGetNumHandlers(Src);
+        Dst = LLVMBuildCatchSwitch(Builder, ParentPad, UnwindBB, NumHandlers, Name);
+        if (NumHandlers > 0) {
+          LLVMBasicBlockRef *Handlers = static_cast<LLVMBasicBlockRef*>(
+                       safe_malloc(NumHandlers * sizeof(LLVMBasicBlockRef)));
+          LLVMGetHandlers(Src, Handlers);
+          for (unsigned i = 0; i < NumHandlers; i++)
+            LLVMAddHandler(Dst, DeclareBB(Handlers[i]));
+          free(Handlers);
+        }
         break;
       }
       case LLVMExtractValue: {

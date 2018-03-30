@@ -13,8 +13,14 @@
 #include "StreamUtil.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Error.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -201,6 +207,20 @@ void ExplainOutputStyle::explainStreamOffset(uint32_t Stream) {
   P.formatLine("Address is at offset {0}/{1} of Stream {2} ({3}){4}.",
                StreamOff, Layout.Length, Stream, S.getLongName(),
                (StreamOff > Layout.Length) ? " in unused space" : "");
+  switch (S.getPurpose()) {
+  case StreamPurpose::DBI:
+    explainDbiStream(Stream, StreamOff);
+    break;
+  case StreamPurpose::PDB:
+    explainPdbStream(Stream, StreamOff);
+    break;
+  case StreamPurpose::IPI:
+  case StreamPurpose::TPI:
+  case StreamPurpose::ModuleStream:
+  case StreamPurpose::NamedStream:
+  default:
+    break;
+  }
 }
 
 void ExplainOutputStyle::explainStreamDirectoryOffset() {
@@ -217,4 +237,186 @@ void ExplainOutputStyle::explainStreamDirectoryOffset() {
 
 void ExplainOutputStyle::explainUnknownBlock() {
   P.formatLine("Address has unknown purpose.");
+}
+
+template <typename T>
+static void printStructField(LinePrinter &P, StringRef Label, T Value) {
+  P.formatLine("which contains {0}.", Label);
+  P.formatLine("The current value is {0}.", Value);
+}
+
+static void explainDbiHeaderOffset(LinePrinter &P, DbiStream &Dbi,
+                                   uint32_t Offset) {
+  const DbiStreamHeader *Header = Dbi.getHeader();
+  assert(Header != nullptr);
+
+  if (Offset < endof(DbiStreamHeader, VersionSignature))
+    printStructField(P, "the DBI Stream Version Signature",
+                     int32_t(Header->VersionSignature));
+  else if (Offset < endof(DbiStreamHeader, VersionHeader))
+    printStructField(P, "the DBI Stream Version Header",
+                     uint32_t(Header->VersionHeader));
+  else if (Offset < endof(DbiStreamHeader, Age))
+    printStructField(P, "the age of the DBI Stream", uint32_t(Header->Age));
+  else if (Offset < endof(DbiStreamHeader, GlobalSymbolStreamIndex))
+    printStructField(P, "the index of the Global Symbol Stream",
+                     uint16_t(Header->GlobalSymbolStreamIndex));
+  else if (Offset < endof(DbiStreamHeader, BuildNumber))
+    printStructField(P, "the build number", uint16_t(Header->BuildNumber));
+  else if (Offset < endof(DbiStreamHeader, PublicSymbolStreamIndex))
+    printStructField(P, "the index of the Public Symbol Stream",
+                     uint16_t(Header->PublicSymbolStreamIndex));
+  else if (Offset < endof(DbiStreamHeader, PdbDllVersion))
+    printStructField(P, "the version of mspdb.dll",
+                     uint16_t(Header->PdbDllVersion));
+  else if (Offset < endof(DbiStreamHeader, SymRecordStreamIndex))
+    printStructField(P, "the index of the Symbol Record Stream",
+                     uint16_t(Header->SymRecordStreamIndex));
+  else if (Offset < endof(DbiStreamHeader, PdbDllRbld))
+    printStructField(P, "the rbld of mspdb.dll", uint16_t(Header->PdbDllRbld));
+  else if (Offset < endof(DbiStreamHeader, ModiSubstreamSize))
+    printStructField(P, "the size of the Module Info Substream",
+                     int32_t(Header->ModiSubstreamSize));
+  else if (Offset < endof(DbiStreamHeader, SecContrSubstreamSize))
+    printStructField(P, "the size of the Section Contribution Substream",
+                     int32_t(Header->SecContrSubstreamSize));
+  else if (Offset < endof(DbiStreamHeader, SectionMapSize))
+    printStructField(P, "the size of the Section Map Substream",
+                     int32_t(Header->SectionMapSize));
+  else if (Offset < endof(DbiStreamHeader, FileInfoSize))
+    printStructField(P, "the size of the File Info Substream",
+                     int32_t(Header->FileInfoSize));
+  else if (Offset < endof(DbiStreamHeader, TypeServerSize))
+    printStructField(P, "the size of the Type Server Map",
+                     int32_t(Header->TypeServerSize));
+  else if (Offset < endof(DbiStreamHeader, MFCTypeServerIndex))
+    printStructField(P, "the index of the MFC Type Server stream",
+                     uint32_t(Header->MFCTypeServerIndex));
+  else if (Offset < endof(DbiStreamHeader, OptionalDbgHdrSize))
+    printStructField(P, "the size of the Optional Debug Stream array",
+                     int32_t(Header->OptionalDbgHdrSize));
+  else if (Offset < endof(DbiStreamHeader, ECSubstreamSize))
+    printStructField(P, "the size of the Edit & Continue Substream",
+                     int32_t(Header->ECSubstreamSize));
+  else if (Offset < endof(DbiStreamHeader, Flags))
+    printStructField(P, "the DBI Stream flags", uint16_t(Header->Flags));
+  else if (Offset < endof(DbiStreamHeader, MachineType))
+    printStructField(P, "the machine type", uint16_t(Header->MachineType));
+  else if (Offset < endof(DbiStreamHeader, Reserved))
+    printStructField(P, "reserved data", uint32_t(Header->Reserved));
+}
+
+static void explainDbiModiSubstreamOffset(LinePrinter &P, DbiStream &Dbi,
+                                          uint32_t Offset) {
+  VarStreamArray<DbiModuleDescriptor> ModuleDescriptors;
+  BinaryStreamRef ModiSubstreamData = Dbi.getModiSubstreamData().StreamData;
+  BinaryStreamReader Reader(ModiSubstreamData);
+
+  cantFail(Reader.readArray(ModuleDescriptors, ModiSubstreamData.getLength()));
+  auto Prev = ModuleDescriptors.begin();
+  assert(Prev.offset() == 0);
+  auto Current = Prev;
+  uint32_t Index = 0;
+  while (true) {
+    Prev = Current;
+    ++Current;
+    if (Current == ModuleDescriptors.end() || Offset < Current.offset())
+      break;
+    ++Index;
+  }
+
+  DbiModuleDescriptor &Descriptor = *Prev;
+  P.formatLine("which contains the descriptor for module {0} ({1}).", Index,
+               Descriptor.getModuleName());
+}
+
+template <typename T>
+static void dontExplain(LinePrinter &Printer, T &Stream, uint32_t Offset) {}
+
+template <typename T, typename SubstreamRangeT>
+static void explainSubstreamOffset(LinePrinter &P, uint32_t OffsetInStream,
+                                   T &Stream,
+                                   const SubstreamRangeT &Substreams) {
+  uint32_t SubOffset = OffsetInStream;
+  for (const auto &Entry : Substreams) {
+    if (Entry.Size <= 0)
+      continue;
+    uint32_t S = static_cast<uint32_t>(Entry.Size);
+    if (SubOffset < S) {
+      P.formatLine("address is at offset {0}/{1} of the {2}.", SubOffset, S,
+                   Entry.Label);
+      Entry.Explain(P, Stream, SubOffset);
+      return;
+    }
+    SubOffset -= S;
+  }
+}
+
+void ExplainOutputStyle::explainDbiStream(uint32_t StreamIdx,
+                                          uint32_t OffsetInStream) {
+  P.printLine("Within the DBI stream:");
+  DbiStream &Dbi = cantFail(File.getPDBDbiStream());
+  AutoIndent Indent(P);
+  const DbiStreamHeader *Header = Dbi.getHeader();
+  assert(Header != nullptr);
+
+  struct SubstreamInfo {
+    int32_t Size;
+    StringRef Label;
+    void (*Explain)(LinePrinter &, DbiStream &, uint32_t);
+  } Substreams[] = {
+      {sizeof(DbiStreamHeader), "DBI Stream Header", explainDbiHeaderOffset},
+      {int32_t(Header->ModiSubstreamSize), "Module Info Substream",
+       explainDbiModiSubstreamOffset},
+      {int32_t(Header->SecContrSubstreamSize), "Section Contribution Substream",
+       dontExplain<DbiStream>},
+      {int32_t(Header->SectionMapSize), "Section Map", dontExplain<DbiStream>},
+      {int32_t(Header->FileInfoSize), "File Info Substream",
+       dontExplain<DbiStream>},
+      {int32_t(Header->TypeServerSize), "Type Server Map Substream",
+       dontExplain<DbiStream>},
+      {int32_t(Header->ECSubstreamSize), "Edit & Continue Substream",
+       dontExplain<DbiStream>},
+      {int32_t(Header->OptionalDbgHdrSize), "Optional Debug Stream Array",
+       dontExplain<DbiStream>},
+  };
+
+  explainSubstreamOffset(P, OffsetInStream, Dbi, Substreams);
+}
+
+static void explainPdbStreamHeaderOffset(LinePrinter &P, InfoStream &Info,
+                                         uint32_t Offset) {
+  const InfoStreamHeader *Header = Info.getHeader();
+  assert(Header != nullptr);
+
+  if (Offset < endof(InfoStreamHeader, Version))
+    printStructField(P, "the PDB Stream Version Signature",
+                     uint32_t(Header->Version));
+  else if (Offset < endof(InfoStreamHeader, Signature))
+    printStructField(P, "the signature of the PDB Stream",
+                     uint32_t(Header->Signature));
+  else if (Offset < endof(InfoStreamHeader, Age))
+    printStructField(P, "the age of the PDB", uint32_t(Header->Age));
+  else if (Offset < endof(InfoStreamHeader, Guid))
+    printStructField(P, "the guid of the PDB", fmt_guid(Header->Guid.Guid));
+}
+
+void ExplainOutputStyle::explainPdbStream(uint32_t StreamIdx,
+                                          uint32_t OffsetInStream) {
+  P.printLine("Within the PDB stream:");
+  InfoStream &Info = cantFail(File.getPDBInfoStream());
+  AutoIndent Indent(P);
+
+  struct SubstreamInfo {
+    uint32_t Size;
+    StringRef Label;
+    void (*Explain)(LinePrinter &, InfoStream &, uint32_t);
+  } Substreams[] = {{sizeof(InfoStreamHeader), "PDB Stream Header",
+                     explainPdbStreamHeaderOffset},
+                    {Info.getNamedStreamMapByteSize(), "Named Stream Map",
+                     dontExplain<InfoStream>},
+                    {Info.getStreamSize(), "PDB Feature Signatures",
+                     dontExplain<InfoStream>}};
+
+  explainSubstreamOffset(P, OffsetInStream, Info, Substreams);
 }

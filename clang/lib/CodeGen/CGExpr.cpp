@@ -2219,7 +2219,7 @@ static Address emitDeclTargetLinkVarDeclLValue(CodeGenFunction &CGF,
       if (Attr->getMapType() == OMPDeclareTargetDeclAttr::MT_Link) {
         QualType PtrTy = CGF.getContext().getPointerType(VD->getType());
         Address Addr =
-            CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetLink(CGF, VD);
+            CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetLink(VD);
         return CGF.EmitLoadOfPointer(Addr, PtrTy->castAs<PointerType>());
       }
   }

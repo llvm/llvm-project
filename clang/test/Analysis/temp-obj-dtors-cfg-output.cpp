@@ -218,6 +218,9 @@ C &&foo2();
 // Don't try to figure out how to perform construction of the record here.
 const C &bar1() { return foo1(); } // no-crash
 C &&bar2() { return foo2(); } // no-crash
+const C &bar3(bool coin) {
+  return coin ? foo1() : foo1(); // no-crash
+}
 } // end namespace pass_references_through
 
 // CHECK:   [B1 (ENTRY)]

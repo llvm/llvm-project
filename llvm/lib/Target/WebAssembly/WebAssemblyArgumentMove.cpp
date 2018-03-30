@@ -60,6 +60,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyArgumentMove::ID = 0;
+INITIALIZE_PASS(WebAssemblyArgumentMove, DEBUG_TYPE,
+                "Move ARGUMENT instructions for WebAssembly", false, false)
+
 FunctionPass *llvm::createWebAssemblyArgumentMove() {
   return new WebAssemblyArgumentMove();
 }
