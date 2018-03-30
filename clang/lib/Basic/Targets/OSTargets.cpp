@@ -55,8 +55,10 @@ void getAppleMachODefines(MacroBuilder &Builder, const LangOptions &Opts,
 }
 
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
-                      const llvm::Triple &Triple, StringRef &PlatformName,
-                      VersionTuple &PlatformMinVersion) {
+                      const llvm::Triple &Triple, StringRef TargetVariantTriple,
+                      StringRef &PlatformName, VersionTuple &PlatformMinVersion,
+                      StringRef &TargetVariantPlatformName,
+                      VersionTuple &TargetVariantPlatformMinVersion) {
   getAppleMachODefines(Builder, Opts, Triple);
 
   // Darwin's libc doesn't have threads.h
@@ -67,6 +69,14 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   if (Triple.isMacOSX()) {
     Triple.getMacOSXVersion(OsVersion);
     PlatformName = "macos";
+    if (!TargetVariantTriple.empty()) {
+      llvm::Triple TVT(TargetVariantTriple);
+      if (TVT.getOS() == llvm::Triple::IOS &&
+          TVT.getEnvironment() == llvm::Triple::MacABI) {
+        TargetVariantPlatformName = "maccatalyst";
+        TargetVariantPlatformMinVersion = TVT.getiOSVersion();
+      }
+    }
   } else {
     OsVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());

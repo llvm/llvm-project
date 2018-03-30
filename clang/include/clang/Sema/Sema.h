@@ -2466,6 +2466,11 @@ public:
 
   void handleDelayedAvailabilityCheck(sema::DelayedDiagnostic &DD, Decl *Ctx);
 
+  void
+  handleZipperedDelayedAvailabilityCheck(sema::DelayedDiagnostic &DD,
+                                         sema::DelayedDiagnostic &VariantDD,
+                                         Decl *Ctx);
+
   /// Retrieve the current function, if any, that should be analyzed for
   /// potential availability violations.
   sema::FunctionScopeInfo *getCurFunctionAvailabilityContext();
@@ -2479,7 +2484,9 @@ public:
   void DiagnoseAvailabilityOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs);
 
   std::pair<AvailabilityResult, const NamedDecl *>
-  ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
+  ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, StringRef Platform,
+                                   const VersionTuple &PlatformVersion,
+                                   std::string *Message,
                                    ObjCInterfaceDecl *ClassReceiver);
   ///@}
 

@@ -758,6 +758,13 @@ public:
                   VersionTuple EnclosingVersion = VersionTuple(),
                   StringRef *RealizedPlatform = nullptr) const;
 
+  /// Determine the availability of the given declaration for the given
+  /// target platform and its minimum version.
+  AvailabilityResult
+  getAvailability(StringRef Platform, const VersionTuple &PlatformMinVersion,
+                  std::string *Message = nullptr,
+                  StringRef *RealizedPlatform = nullptr) const;
+
   /// Retrieve the version of the target platform in which this
   /// declaration was introduced.
   ///
@@ -766,14 +773,13 @@ public:
   /// attribute otherwise.
   VersionTuple getVersionIntroduced() const;
 
-  /// Determine whether this declaration is marked 'deprecated'.
+  /// \brief Determine whether this declaration is marked 'deprecated' in any
+  /// target platform that we're compiling for.
   ///
   /// \param Message If non-NULL and the declaration is deprecated,
   /// this will be set to the message describing why the declaration
   /// was deprecated (which may be empty).
-  bool isDeprecated(std::string *Message = nullptr) const {
-    return getAvailability(Message) == AR_Deprecated;
-  }
+  bool isDeprecatedInAnyTargetPlatform(std::string *Message = nullptr) const;
 
   /// Determine whether this declaration is marked 'unavailable'.
   ///
@@ -783,6 +789,10 @@ public:
   bool isUnavailable(std::string *Message = nullptr) const {
     return getAvailability(Message) == AR_Unavailable;
   }
+
+  /// \brief Determine whether this declaration is marked 'deprecated' for
+  /// all target platforms that we're compiling for.
+  bool isUnavailabledForAllTargetPlatforms() const;
 
   /// Determine whether this is a weak-imported symbol.
   ///

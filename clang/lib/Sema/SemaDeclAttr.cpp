@@ -3012,9 +3012,14 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       if (NewAttr)
         D->addAttr(NewAttr);
     }
-  } else if (S.Context.getTargetInfo().getTriple().getOS() ==
-                 llvm::Triple::IOS &&
-             S.Context.getTargetInfo().getTriple().isMacCatalystEnvironment()) {
+  } else if ((S.Context.getTargetInfo().getTriple().getOS() ==
+                  llvm::Triple::IOS &&
+              S.Context.getTargetInfo()
+                  .getTriple()
+                  .isMacCatalystEnvironment()) ||
+             (S.Context.getTargetInfo().hasTargetVariantPlatform() &&
+              S.Context.getTargetInfo().getTargetVariantPlatform() ==
+                  "maccatalyst")) {
     auto GetSDKInfo = [&]() {
       return S.getDarwinSDKInfoForAvailabilityChecking(AL.getRange().getBegin(),
                                                        "macOS");
@@ -9015,8 +9020,20 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
       case DelayedDiagnostic::Availability:
         // Don't bother giving deprecation/unavailable diagnostics if
         // the decl is invalid.
-        if (!decl->isInvalidDecl())
+        if (!decl->isInvalidDecl()) {
+          if (!diag.isTargetVariantPlatform() && (i + 1) != pool->pool_end()) {
+            DelayedDiagnostic &next = const_cast<DelayedDiagnostic &>(*(i + 1));
+            if (!next.Triggered && next.isTargetVariantPlatform() &&
+                diag.Loc == next.Loc &&
+                diag.getAvailabilityReferringDecl() ==
+                    next.getAvailabilityReferringDecl()) {
+              handleZipperedDelayedAvailabilityCheck(diag, next, decl);
+              ++i;
+              break;
+            }
+          }
           handleDelayedAvailabilityCheck(diag, decl);
+        }
         break;
 
       case DelayedDiagnostic::Access:

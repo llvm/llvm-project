@@ -5028,7 +5028,8 @@ public:
   enum class MSVCIntrin;
   llvm::Value *EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID, const CallExpr *E);
 
-  llvm::Value *EmitBuiltinAvailable(const VersionTuple &Version);
+  llvm::Value *EmitBuiltinAvailable(const VersionTuple &Version,
+                                    const VersionTuple &VariantVersion);
 
   llvm::Value *EmitObjCProtocolExpr(const ObjCProtocolExpr *E);
   llvm::Value *EmitObjCStringLiteral(const ObjCStringLiteral *E);

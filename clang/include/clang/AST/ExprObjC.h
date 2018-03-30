@@ -1736,13 +1736,18 @@ class ObjCAvailabilityCheckExpr : public Expr {
   friend class ASTStmtReader;
 
   VersionTuple VersionToCheck;
+  VersionTuple VariantVersionToCheck;
   SourceLocation AtLoc, RParen;
 
 public:
-  ObjCAvailabilityCheckExpr(VersionTuple VersionToCheck, SourceLocation AtLoc,
-                            SourceLocation RParen, QualType Ty)
+  ObjCAvailabilityCheckExpr(VersionTuple VersionToCheck,
+                            VersionTuple VariantVersionToCheck,
+                            SourceLocation AtLoc, SourceLocation RParen,
+                            QualType Ty)
       : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_PRValue, OK_Ordinary),
-        VersionToCheck(VersionToCheck), AtLoc(AtLoc), RParen(RParen) {
+        VersionToCheck(VersionToCheck),
+        VariantVersionToCheck(VariantVersionToCheck), AtLoc(AtLoc),
+        RParen(RParen) {
     setDependence(ExprDependence::None);
   }
 
@@ -1756,6 +1761,10 @@ public:
   /// This may be '*', in which case this should fold to true.
   bool hasVersion() const { return !VersionToCheck.empty(); }
   VersionTuple getVersion() const { return VersionToCheck; }
+
+  bool hasVariantVersion() const { return !VariantVersionToCheck.empty(); }
+
+  VersionTuple getVariantVersion() const { return VariantVersionToCheck; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

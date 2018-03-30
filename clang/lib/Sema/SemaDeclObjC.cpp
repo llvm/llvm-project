@@ -290,10 +290,13 @@ static void DiagnoseObjCImplementedDeprecations(Sema &S, const NamedDecl *ND,
   if (!ND)
     return;
   bool IsCategory = false;
+  // FIXME: Implement support for TVT.
+  StringRef Platform = S.getASTContext().getTargetInfo().getPlatformName();
+  VersionTuple PlatformVersionMin =
+      S.getASTContext().getTargetInfo().getPlatformMinVersion();
   StringRef RealizedPlatform;
   AvailabilityResult Availability = ND->getAvailability(
-      /*Message=*/nullptr, /*EnclosingVersion=*/VersionTuple(),
-      &RealizedPlatform);
+      Platform, PlatformVersionMin, /*Message=*/nullptr, &RealizedPlatform);
   if (Availability != AR_Deprecated) {
     if (isa<ObjCMethodDecl>(ND)) {
       if (Availability != AR_Unavailable)
@@ -310,7 +313,8 @@ static void DiagnoseObjCImplementedDeprecations(Sema &S, const NamedDecl *ND,
       return;
     }
     if (const auto *CD = dyn_cast<ObjCCategoryDecl>(ND)) {
-      if (!CD->getClassInterface()->isDeprecated())
+      if (CD->getClassInterface()->getAvailability(
+              Platform, PlatformVersionMin) != AR_Deprecated)
         return;
       ND = CD->getClassInterface();
       IsCategory = true;
@@ -2243,16 +2247,20 @@ void SemaObjC::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
     Diag(IVI->getLocation(), diag::err_inconsistent_ivar_count);
 }
 
-static bool shouldWarnUndefinedMethod(const ObjCMethodDecl *M) {
+static bool shouldWarnUndefinedMethod(Sema &S, const ObjCMethodDecl *M) {
   // No point warning no definition of method which is 'unavailable'.
-  return M->getAvailability() != AR_Unavailable;
+  // FIXME: We can warn on a definition of partially unavailable method.
+  return M->getAvailability(
+             S.getASTContext().getTargetInfo().getPlatformName(),
+             S.getASTContext().getTargetInfo().getPlatformMinVersion()) !=
+         AR_Unavailable;
 }
 
 static void WarnUndefinedMethod(Sema &S, ObjCImplDecl *Impl,
                                 ObjCMethodDecl *method, bool &IncompleteImpl,
                                 unsigned DiagID,
                                 NamedDecl *NeededFor = nullptr) {
-  if (!shouldWarnUndefinedMethod(method))
+  if (!shouldWarnUndefinedMethod(S, method))
     return;
 
   // FIXME: For now ignore 'IncompleteImpl'.
@@ -3372,13 +3380,18 @@ void SemaObjC::addMethodToGlobalList(ObjCMethodList *List,
 
       // For methods with the same declaration, the one that is deprecated
       // should be put in the front for better diagnostics.
-      if (Method->isDeprecated() && SameDeclaration &&
-          !ListWithSameDeclaration && !List->getMethod()->isDeprecated())
+      if (Method->isDeprecatedInAnyTargetPlatform() && SameDeclaration &&
+          !ListWithSameDeclaration &&
+          !List->getMethod()->isDeprecatedInAnyTargetPlatform())
         ListWithSameDeclaration = List;
 
-      if (Method->isUnavailable() && SameDeclaration &&
+      // FIXME: What about TVT?
+      if (Method->isUnavailabledForAllTargetPlatforms() && SameDeclaration &&
           !ListWithSameDeclaration &&
-          List->getMethod()->getAvailability() < AR_Deprecated)
+          List->getMethod()->getAvailability(
+              getASTContext().getTargetInfo().getPlatformName(),
+              getASTContext().getTargetInfo().getPlatformMinVersion()) <
+              AR_Deprecated)
         ListWithSameDeclaration = List;
       continue;
     }
@@ -3398,14 +3411,18 @@ void SemaObjC::addMethodToGlobalList(ObjCMethodList *List,
 
     // If a method is deprecated, push it in the global pool.
     // This is used for better diagnostics.
-    if (Method->isDeprecated()) {
-      if (!PrevObjCMethod->isDeprecated())
+    if (Method->isDeprecatedInAnyTargetPlatform()) {
+      if (!PrevObjCMethod->isDeprecatedInAnyTargetPlatform())
         List->setMethod(Method);
     }
+    // FIXME: What about TVT?
     // If the new method is unavailable, push it into global pool
     // unless previous one is deprecated.
-    if (Method->isUnavailable()) {
-      if (PrevObjCMethod->getAvailability() < AR_Deprecated)
+    if (Method->isUnavailabledForAllTargetPlatforms()) {
+      if (PrevObjCMethod->getAvailability(
+              getASTContext().getTargetInfo().getPlatformName(),
+              getASTContext().getTargetInfo().getPlatformMinVersion()) <
+          AR_Deprecated)
         List->setMethod(Method);
     }
 
