@@ -1,0 +1,3 @@
+module CppLib {
+  header "CppLibWrapper.h"
+}
