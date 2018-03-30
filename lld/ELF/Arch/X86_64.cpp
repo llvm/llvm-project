@@ -284,15 +284,15 @@ template <class ELFT>
 void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_X86_64_8:
-    checkUInt<8>(Loc, Val, Type);
+    checkUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_X86_64_16:
-    checkUInt<16>(Loc, Val, Type);
+    checkUInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;
   case R_X86_64_32:
-    checkUInt<32>(Loc, Val, Type);
+    checkUInt(Loc, Val, 32, Type);
     write32le(Loc, Val);
     break;
   case R_X86_64_32S:
@@ -308,7 +308,7 @@ void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_X86_64_TLSLD:
   case R_X86_64_DTPOFF32:
   case R_X86_64_SIZE32:
-    checkInt<32>(Loc, Val, Type);
+    checkInt(Loc, Val, 32, Type);
     write32le(Loc, Val);
     break;
   case R_X86_64_64:
@@ -500,6 +500,8 @@ template <class ELFT> void Retpoline<ELFT>::writePltHeader(uint8_t *Buf) const {
       0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 19:   int3; .align 16
       0x4c, 0x89, 0x1c, 0x24,                   // 20: next: mov %r11, (%rsp)
       0xc3,                                     // 24:   ret
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 25:   int3; padding
+      0xcc, 0xcc, 0xcc, 0xcc,                   // 2c:   int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
@@ -515,10 +517,11 @@ void Retpoline<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                                unsigned RelOff) const {
   const uint8_t Insn[] = {
       0x4c, 0x8b, 0x1d, 0, 0, 0, 0, // 0:  mov foo@GOTPLT(%rip), %r11
-      0xe8, 0,    0,    0, 0,       // 7:  callq plt+0x20
-      0xe9, 0,    0,    0, 0,       // c:  jmp plt+0x12
-      0x68, 0,    0,    0, 0,       // 11: pushq <relocation index>
-      0xe9, 0,    0,    0, 0,       // 16: jmp plt+0
+      0xe8, 0,    0,    0,    0,    // 7:  callq plt+0x20
+      0xe9, 0,    0,    0,    0,    // c:  jmp plt+0x12
+      0x68, 0,    0,    0,    0,    // 11: pushq <relocation index>
+      0xe9, 0,    0,    0,    0,    // 16: jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 1b: int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
@@ -546,6 +549,9 @@ void RetpolineZNow<ELFT>::writePltHeader(uint8_t *Buf) const {
       0xcc, 0xcc, 0xcc, 0xcc,       // c:    int3; .align 16
       0x4c, 0x89, 0x1c, 0x24,       // 10: next: mov %r11, (%rsp)
       0xc3,                         // 14:   ret
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 15:   int3; padding
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 1a:   int3; padding
+      0xcc,                         // 1f:   int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 }
@@ -555,8 +561,9 @@ void RetpolineZNow<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                                    uint64_t PltEntryAddr, int32_t Index,
                                    unsigned RelOff) const {
   const uint8_t Insn[] = {
-      0x4c, 0x8b, 0x1d, 0, 0, 0, 0, // mov foo@GOTPLT(%rip), %r11
-      0xe9, 0,    0,    0, 0,       // jmp plt+0
+      0x4c, 0x8b, 0x1d, 0,    0, 0, 0, // mov foo@GOTPLT(%rip), %r11
+      0xe9, 0,    0,    0,    0,       // jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc,          // int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 

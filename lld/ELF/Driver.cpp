@@ -601,6 +601,17 @@ static std::vector<StringRef> getSymbolOrderingFile(MemoryBufferRef MB) {
   return Names.takeVector();
 }
 
+static void parseClangOption(StringRef Opt, const Twine &Msg) {
+  std::string Err;
+  raw_string_ostream OS(Err);
+
+  const char *Argv[] = {Config->ProgName.data(), Opt.data()};
+  if (cl::ParseCommandLineOptions(2, Argv, "", &OS))
+    return;
+  OS.flush();
+  error(Msg + ": " + StringRef(Err).trim());
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
@@ -709,7 +720,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   // Parse LTO plugin-related options for compatibility with gold.
-  std::vector<const char *> LTOOptions({Config->ProgName.data()});
   for (auto *Arg : Args.filtered(OPT_plugin_opt)) {
     StringRef S = Arg->getValue();
     if (S == "disable-verify")
@@ -723,15 +733,15 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     else if (S.startswith("jobs="))
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
     else if (S.startswith("mcpu="))
-      LTOOptions.push_back(Saver.save("-" + S).data());
+      parseClangOption(Saver.save("-" + S), Arg->getSpelling());
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
              !S.startswith("-pass-through=") && !S.startswith("thinlto"))
-      LTOOptions.push_back(S.data());
+      parseClangOption(S, Arg->getSpelling());
   }
-  // Parse and evaluate -mllvm options.
+
+  // Parse -mllvm options.
   for (auto *Arg : Args.filtered(OPT_mllvm))
-    LTOOptions.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(LTOOptions.size(), LTOOptions.data());
+    parseClangOption(Arg->getValue(), Arg->getSpelling());
 
   if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + Twine(Config->LTOO));
@@ -912,6 +922,12 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     case OPT_no_whole_archive:
       InWholeArchive = false;
       break;
+    case OPT_just_symbols:
+      if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue())) {
+        Files.push_back(createObjectFile(*MB));
+        Files.back()->JustSymbols = true;
+      }
+      break;
     case OPT_start_lib:
       InLib = true;
       break;
@@ -1073,12 +1089,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
     Symtab->fetchIfLazy<ELFT>(S);
-
-  // Handle the --just-symbols option. This may add absolute symbols
-  // to the symbol table.
-  for (auto *Arg : Args.filtered(OPT_just_symbols))
-    if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue()))
-      readJustSymbolsFile<ELFT>(*MB);
 
   // If an entry symbol is in a static archive, pull out that file now
   // to complete the symbol table. After this, no new names except a

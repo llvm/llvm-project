@@ -255,15 +255,15 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkUInt<8>(Loc, Val, Type);
+    checkUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_386_PC8:
-    checkInt<8>(Loc, Val, Type);
+    checkInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_386_16:
-    checkUInt<16>(Loc, Val, Type);
+    checkUInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;
   case R_386_PC16:
@@ -277,7 +277,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // current location subtracted from it.
     // We just check that Val fits in 17 bits. This misses some cases, but
     // should have no false positives.
-    checkInt<17>(Loc, Val, Type);
+    checkInt(Loc, Val, 17, Type);
     write16le(Loc, Val);
     break;
   case R_386_32:
@@ -300,7 +300,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_386_TLS_LE_32:
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
-    checkInt<32>(Loc, Val, Type);
+    checkInt(Loc, Val, 32, Type);
     write32le(Loc, Val);
     break;
   default:
@@ -443,6 +443,7 @@ void RetpolinePic::writePltHeader(uint8_t *Buf) const {
       0x89, 0xc8,                               // 2b:   mov %ecx, %eax
       0x59,                                     // 2d:   pop %ecx
       0xc3,                                     // 2e:   ret
+      0xcc,                                     // 2f:   int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
@@ -456,12 +457,13 @@ void RetpolinePic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                             uint64_t PltEntryAddr, int32_t Index,
                             unsigned RelOff) const {
   const uint8_t Insn[] = {
-      0x50,                   // pushl %eax
-      0x8b, 0x83, 0, 0, 0, 0, // mov foo@GOT(%ebx), %eax
-      0xe8, 0,    0, 0, 0,    // call plt+0x20
-      0xe9, 0,    0, 0, 0,    // jmp plt+0x12
-      0x68, 0,    0, 0, 0,    // pushl $reloc_offset
-      0xe9, 0,    0, 0, 0,    // jmp plt+0
+      0x50,                            // pushl %eax
+      0x8b, 0x83, 0,    0,    0,    0, // mov foo@GOT(%ebx), %eax
+      0xe8, 0,    0,    0,    0,       // call plt+0x20
+      0xe9, 0,    0,    0,    0,       // jmp plt+0x12
+      0x68, 0,    0,    0,    0,       // pushl $reloc_offset
+      0xe9, 0,    0,    0,    0,       // jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc,    // int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
@@ -484,7 +486,7 @@ void RetpolineNoPic::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
 }
 
 void RetpolineNoPic::writePltHeader(uint8_t *Buf) const {
-  const uint8_t PltData[] = {
+  const uint8_t Insn[] = {
       0xff, 0x35, 0,    0,    0,    0, // 0:    pushl GOTPLT+4
       0x50,                            // 6:    pushl %eax
       0xa1, 0,    0,    0,    0,       // 7:    mov GOTPLT+8, %eax
@@ -500,8 +502,9 @@ void RetpolineNoPic::writePltHeader(uint8_t *Buf) const {
       0x89, 0xc8,                      // 2b:   mov %ecx, %eax
       0x59,                            // 2d:   pop %ecx
       0xc3,                            // 2e:   ret
+      0xcc,                            // 2f:   int3; padding
   };
-  memcpy(Buf, PltData, sizeof(PltData));
+  memcpy(Buf, Insn, sizeof(Insn));
 
   uint32_t GotPlt = InX::GotPlt->getVA();
   write32le(Buf + 2, GotPlt + 4);
@@ -512,12 +515,14 @@ void RetpolineNoPic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                               uint64_t PltEntryAddr, int32_t Index,
                               unsigned RelOff) const {
   const uint8_t Insn[] = {
-      0x50,             // 0:  pushl %eax
-      0xa1, 0, 0, 0, 0, // 1:  mov foo_in_GOT, %eax
-      0xe8, 0, 0, 0, 0, // 6:  call plt+0x20
-      0xe9, 0, 0, 0, 0, // b:  jmp plt+0x11
-      0x68, 0, 0, 0, 0, // 10: pushl $reloc_offset
-      0xe9, 0, 0, 0, 0, // 15: jmp plt+0
+      0x50,                         // 0:  pushl %eax
+      0xa1, 0,    0,    0,    0,    // 1:  mov foo_in_GOT, %eax
+      0xe8, 0,    0,    0,    0,    // 6:  call plt+0x20
+      0xe9, 0,    0,    0,    0,    // b:  jmp plt+0x11
+      0x68, 0,    0,    0,    0,    // 10: pushl $reloc_offset
+      0xe9, 0,    0,    0,    0,    // 15: jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 1a: int3; padding
+      0xcc,                         // 1f: int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
