@@ -6,11 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief This file contains the simple types necessary to represent the
 /// attributes associated with functions and their calls.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_ATTRIBUTES_H
@@ -35,7 +35,6 @@ namespace llvm {
 class AttrBuilder;
 class AttributeImpl;
 class AttributeListImpl;
-class AttributeList;
 class AttributeSetNode;
 template<typename T> struct DenseMapInfo;
 class Function;
@@ -203,15 +202,15 @@ inline Attribute unwrap(LLVMAttributeRef Attr) {
 /// copy. Adding and removing enum attributes is intended to be fast, but adding
 /// and removing string or integer attributes involves a FoldingSet lookup.
 class AttributeSet {
+  friend AttributeListImpl;
+  template <typename Ty> friend struct DenseMapInfo;
+
   // TODO: Extract AvailableAttrs from AttributeSetNode and store them here.
   // This will allow an efficient implementation of addAttribute and
   // removeAttribute for enum attrs.
 
   /// Private implementation pointer.
   AttributeSetNode *SetNode = nullptr;
-
-  friend AttributeListImpl;
-  template <typename Ty> friend struct DenseMapInfo;
 
 private:
   explicit AttributeSet(AttributeSetNode *ASN) : SetNode(ASN) {}
@@ -292,14 +291,14 @@ public:
 /// \class
 /// \brief Provide DenseMapInfo for AttributeSet.
 template <> struct DenseMapInfo<AttributeSet> {
-  static inline AttributeSet getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
+  static AttributeSet getEmptyKey() {
+    auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
     return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
   }
 
-  static inline AttributeSet getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
+  static AttributeSet getTombstoneKey() {
+    auto Val = static_cast<uintptr_t>(-2);
     Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
     return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
   }
@@ -333,7 +332,6 @@ private:
   friend class AttributeListImpl;
   friend class AttributeSet;
   friend class AttributeSetNode;
-
   template <typename Ty> friend struct DenseMapInfo;
 
   /// \brief The attributes that we are managing. This can be null to represent
@@ -652,14 +650,14 @@ public:
 /// \class
 /// \brief Provide DenseMapInfo for AttributeList.
 template <> struct DenseMapInfo<AttributeList> {
-  static inline AttributeList getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
+  static AttributeList getEmptyKey() {
+    auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
     return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
   }
 
-  static inline AttributeList getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
+  static AttributeList getTombstoneKey() {
+    auto Val = static_cast<uintptr_t>(-2);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
     return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
   }
@@ -691,9 +689,11 @@ class AttrBuilder {
 
 public:
   AttrBuilder() = default;
+
   AttrBuilder(const Attribute &A) {
     addAttribute(A);
   }
+
   AttrBuilder(AttributeList AS, unsigned Idx);
   AttrBuilder(AttributeSet AS);
 
@@ -800,18 +800,19 @@ public:
   using td_range = iterator_range<td_iterator>;
   using td_const_range = iterator_range<td_const_iterator>;
 
-  td_iterator td_begin()             { return TargetDepAttrs.begin(); }
-  td_iterator td_end()               { return TargetDepAttrs.end(); }
+  td_iterator td_begin() { return TargetDepAttrs.begin(); }
+  td_iterator td_end() { return TargetDepAttrs.end(); }
 
   td_const_iterator td_begin() const { return TargetDepAttrs.begin(); }
-  td_const_iterator td_end() const   { return TargetDepAttrs.end(); }
+  td_const_iterator td_end() const { return TargetDepAttrs.end(); }
 
   td_range td_attrs() { return td_range(td_begin(), td_end()); }
+
   td_const_range td_attrs() const {
     return td_const_range(td_begin(), td_end());
   }
 
-  bool td_empty() const              { return TargetDepAttrs.empty(); }
+  bool td_empty() const { return TargetDepAttrs.empty(); }
 
   bool operator==(const AttrBuilder &B);
   bool operator!=(const AttrBuilder &B) {

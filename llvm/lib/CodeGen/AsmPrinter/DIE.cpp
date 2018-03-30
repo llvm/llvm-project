@@ -584,8 +584,8 @@ void DIEString::print(raw_ostream &O) const {
 void DIEInlineString::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_string) {
     for (char ch : S)
-      AP->EmitInt8(ch);
-    AP->EmitInt8(0);
+      AP->emitInt8(ch);
+    AP->emitInt8(0);
     return;
   }
   llvm_unreachable("Expected valid string form");
@@ -691,9 +691,9 @@ unsigned DIELoc::ComputeSize(const AsmPrinter *AP) const {
 void DIELoc::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   switch (Form) {
   default: llvm_unreachable("Improper form for block");
-  case dwarf::DW_FORM_block1: Asm->EmitInt8(Size);    break;
-  case dwarf::DW_FORM_block2: Asm->EmitInt16(Size);   break;
-  case dwarf::DW_FORM_block4: Asm->EmitInt32(Size);   break;
+  case dwarf::DW_FORM_block1: Asm->emitInt8(Size);    break;
+  case dwarf::DW_FORM_block2: Asm->emitInt16(Size);   break;
+  case dwarf::DW_FORM_block4: Asm->emitInt32(Size);   break;
   case dwarf::DW_FORM_block:
   case dwarf::DW_FORM_exprloc:
     Asm->EmitULEB128(Size); break;
@@ -742,9 +742,9 @@ unsigned DIEBlock::ComputeSize(const AsmPrinter *AP) const {
 void DIEBlock::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   switch (Form) {
   default: llvm_unreachable("Improper form for block");
-  case dwarf::DW_FORM_block1: Asm->EmitInt8(Size);    break;
-  case dwarf::DW_FORM_block2: Asm->EmitInt16(Size);   break;
-  case dwarf::DW_FORM_block4: Asm->EmitInt32(Size);   break;
+  case dwarf::DW_FORM_block1: Asm->emitInt8(Size);    break;
+  case dwarf::DW_FORM_block2: Asm->emitInt16(Size);   break;
+  case dwarf::DW_FORM_block4: Asm->emitInt32(Size);   break;
   case dwarf::DW_FORM_block:  Asm->EmitULEB128(Size); break;
   case dwarf::DW_FORM_data16: break;
   }

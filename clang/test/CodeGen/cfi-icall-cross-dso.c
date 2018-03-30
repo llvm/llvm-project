@@ -39,6 +39,11 @@
 // MS-DIAG: call void @__cfi_slowpath_diag(i64 4195979634929632483, i8* %{{.*}}, {{.*}}@[[DATA]]{{.*}}) {{.*}}, !nosanitize
 // MS-TRAP: call void @__cfi_slowpath(i64 4195979634929632483, i8* %{{.*}}) {{.*}}, !nosanitize
 
+// ITANIUM-DIAG: declare void @__cfi_slowpath_diag(
+// ITANIUM-TRAP: declare void @__cfi_slowpath(
+// MS-DIAG: declare dso_local void @__cfi_slowpath_diag(
+// MS-TRAP: declare dso_local void @__cfi_slowpath(
+
 void caller(void (*f)()) {
   f();
 }

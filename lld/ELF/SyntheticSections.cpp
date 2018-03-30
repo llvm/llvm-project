@@ -264,8 +264,8 @@ InputSection *elf::createInterpSection() {
   return Sec;
 }
 
-Symbol *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
-                               uint64_t Size, InputSectionBase &Section) {
+Defined *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
+                                uint64_t Size, InputSectionBase &Section) {
   auto *S = make<Defined>(Section.File, Name, STB_LOCAL, STV_DEFAULT, Type,
                           Value, Size, &Section);
   if (InX::SymTab)
@@ -2621,11 +2621,8 @@ ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
 }
 
 void ThunkSection::addThunk(Thunk *T) {
-  uint64_t Off = alignTo(Size, T->Alignment);
-  T->Offset = Off;
   Thunks.push_back(T);
   T->addSymbols(*this);
-  Size = Off + T->size();
 }
 
 void ThunkSection::writeTo(uint8_t *Buf) {
@@ -2638,6 +2635,20 @@ InputSection *ThunkSection::getTargetInputSection() const {
     return nullptr;
   const Thunk *T = Thunks.front();
   return T->getTargetInputSection();
+}
+
+bool ThunkSection::assignOffsets() {
+  uint64_t Off = 0;
+  for (Thunk *T : Thunks) {
+    Off = alignTo(Off, T->Alignment);
+    T->setOffset(Off);
+    uint32_t Size = T->size();
+    T->getThunkTargetSym()->Size = Size;
+    Off += Size;
+  }
+  bool Changed = Off != Size;
+  Size = Off;
+  return Changed;
 }
 
 InputSection *InX::ARMAttributes;

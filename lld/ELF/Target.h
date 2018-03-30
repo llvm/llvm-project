@@ -176,29 +176,33 @@ static inline void reportRangeError(uint8_t *Loc, RelType Type, const Twine &V,
         Twine(Max).str() + "]" + Hint);
 }
 
-template <unsigned N>
-static void checkInt(uint8_t *Loc, int64_t V, RelType Type) {
-  if (!llvm::isInt<N>(V))
+// Sign-extend Nth bit all the way to MSB.
+inline int64_t signExtend(uint64_t V, int N) {
+  return int64_t(V << (64 - N)) >> (64 - N);
+}
+
+// Make sure that V can be represented as an N bit signed integer.
+inline void checkInt(uint8_t *Loc, int64_t V, int N, RelType Type) {
+  if (V != signExtend(V, N))
     reportRangeError(Loc, Type, Twine(V), llvm::minIntN(N), llvm::maxIntN(N));
 }
 
-template <unsigned N>
-static void checkUInt(uint8_t *Loc, uint64_t V, RelType Type) {
-  if (!llvm::isUInt<N>(V))
+// Make sure that V can be represented as an N bit unsigned integer.
+inline void checkUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
+  if ((V >> N) != 0)
     reportRangeError(Loc, Type, Twine(V), 0, llvm::maxUIntN(N));
 }
 
-template <unsigned N>
-static void checkIntUInt(uint8_t *Loc, uint64_t V, RelType Type) {
-  if (!llvm::isInt<N>(V) && !llvm::isUInt<N>(V))
-    // For the error message we should cast V to a signed integer so that error
-    // messages show a small negative value rather than an extremely large one
+// Make sure that V can be represented as an N bit signed or unsigned integer.
+inline void checkIntUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
+  // For the error message we should cast V to a signed integer so that error
+  // messages show a small negative value rather than an extremely large one
+  if (V != (uint64_t)signExtend(V, N) && (V >> N) != 0)
     reportRangeError(Loc, Type, Twine((int64_t)V), llvm::minIntN(N),
-                     llvm::maxUIntN(N));
+                     llvm::maxIntN(N));
 }
 
-template <unsigned N>
-static void checkAlignment(uint8_t *Loc, uint64_t V, RelType Type) {
+inline void checkAlignment(uint8_t *Loc, uint64_t V, int N, RelType Type) {
   if ((V & (N - 1)) != 0)
     error(getErrorLocation(Loc) + "improper alignment for relocation " +
           lld::toString(Type) + ": 0x" + llvm::utohexstr(V) +

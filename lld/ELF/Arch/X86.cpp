@@ -255,15 +255,15 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkUInt<8>(Loc, Val, Type);
+    checkUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_386_PC8:
-    checkInt<8>(Loc, Val, Type);
+    checkInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_386_16:
-    checkUInt<16>(Loc, Val, Type);
+    checkUInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;
   case R_386_PC16:
@@ -277,7 +277,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // current location subtracted from it.
     // We just check that Val fits in 17 bits. This misses some cases, but
     // should have no false positives.
-    checkInt<17>(Loc, Val, Type);
+    checkInt(Loc, Val, 17, Type);
     write16le(Loc, Val);
     break;
   case R_386_32:
@@ -300,7 +300,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_386_TLS_LE_32:
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
-    checkInt<32>(Loc, Val, Type);
+    checkInt(Loc, Val, 32, Type);
     write32le(Loc, Val);
     break;
   default:
