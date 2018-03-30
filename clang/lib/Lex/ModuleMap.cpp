@@ -1633,14 +1633,15 @@ namespace {
 /// in other ways (FooPrivate and Foo.Private), providing notes and fixits.
 static void diagnosePrivateModules(const ModuleMap &Map,
                                    DiagnosticsEngine &Diags,
-                                   const Module *ActiveModule) {
+                                   const Module *ActiveModule,
+                                   SourceLocation InlineParent) {
 
   auto GenNoteAndFixIt = [&](StringRef BadName, StringRef Canonical,
-                             const Module *M) {
+                             const Module *M, SourceRange ReplLoc) {
     auto D = Diags.Report(ActiveModule->DefinitionLoc,
                           diag::note_mmap_rename_top_level_private_module);
     D << BadName << M->Name;
-    D << FixItHint::CreateReplacement(ActiveModule->DefinitionLoc, Canonical);
+    D << FixItHint::CreateReplacement(ReplLoc, Canonical);
   };
 
   for (auto E = Map.module_begin(); E != Map.module_end(); ++E) {
@@ -1660,7 +1661,8 @@ static void diagnosePrivateModules(const ModuleMap &Map,
       Diags.Report(ActiveModule->DefinitionLoc,
                    diag::warn_mmap_mismatched_private_submodule)
           << FullName;
-      GenNoteAndFixIt(FullName, Canonical, M);
+      GenNoteAndFixIt(FullName, Canonical, M,
+                      SourceRange(InlineParent, ActiveModule->DefinitionLoc));
       continue;
     }
 
@@ -1670,7 +1672,8 @@ static void diagnosePrivateModules(const ModuleMap &Map,
       Diags.Report(ActiveModule->DefinitionLoc,
                    diag::warn_mmap_mismatched_private_module_name)
           << ActiveModule->Name;
-      GenNoteAndFixIt(ActiveModule->Name, Canonical, M);
+      GenNoteAndFixIt(ActiveModule->Name, Canonical, M,
+                      SourceRange(ActiveModule->DefinitionLoc));
     }
   }
 }
@@ -1756,6 +1759,7 @@ void ModuleMapParser::parseModuleDecl() {
   }
   
   Module *PreviousActiveModule = ActiveModule;  
+  SourceLocation LastInlineParentLoc = SourceLocation();
   if (Id.size() > 1) {
     // This module map defines a submodule. Go find the module of which it
     // is a submodule.
@@ -1766,6 +1770,7 @@ void ModuleMapParser::parseModuleDecl() {
         if (I == 0)
           TopLevelModule = Next;
         ActiveModule = Next;
+        LastInlineParentLoc = Id[I].second;
         continue;
       }
       
@@ -1885,7 +1890,7 @@ void ModuleMapParser::parseModuleDecl() {
                        StartLoc) &&
       (MapFileName.endswith("module.private.modulemap") ||
        MapFileName.endswith("module_private.map")))
-    diagnosePrivateModules(Map, Diags, ActiveModule);
+    diagnosePrivateModules(Map, Diags, ActiveModule, LastInlineParentLoc);
 
   bool Done = false;
   do {
