@@ -172,43 +172,6 @@ static inline swift::CanType GetCanonicalSwiftType(CompilerType type) {
   return ((swift::TypeBase *)type.GetOpaqueQualType())->getCanonicalType();
 }
 
-enum class MemberType : uint32_t { Invalid, BaseClass, Field };
-
-static const char *MemberTypeToCString(MemberType member_type) {
-  switch (member_type) {
-  case MemberType::Invalid:
-    return "invalid";
-  case MemberType::BaseClass:
-    return "base class";
-  case MemberType::Field:
-    return "field";
-  }
-  return "???";
-}
-
-struct MemberInfo {
-  CompilerType clang_type;
-  lldb_private::ConstString name;
-  uint64_t byte_size;
-  uint32_t byte_offset;
-  MemberType member_type;
-
-  MemberInfo(MemberType member_type)
-      : clang_type(), name(), byte_size(0), byte_offset(0),
-        member_type(member_type) {}
-
-  void Dump(uint32_t idx) {
-    printf("[%i] %12s +%u (%s) %s <%" PRIu64 ">\n", idx,
-           MemberTypeToCString(member_type), byte_offset,
-           clang_type.GetTypeName().AsCString("<no type name>"),
-           name.AsCString("<NULL>"), byte_size);
-  }
-};
-
-struct CachedMemberInfo {
-  std::vector<MemberInfo> member_infos;
-};
-
 struct EnumElementInfo {
   CompilerType clang_type;
   lldb_private::ConstString name;
@@ -237,31 +200,12 @@ struct EnumElementInfo {
 
 class SwiftEnumDescriptor;
 
-typedef std::shared_ptr<CachedMemberInfo> CachedMemberInfoSP;
 typedef std::shared_ptr<SwiftEnumDescriptor> SwiftEnumDescriptorSP;
-typedef llvm::DenseMap<lldb::opaque_compiler_type_t, CachedMemberInfoSP>
-    MemberInfoCache;
 typedef llvm::DenseMap<lldb::opaque_compiler_type_t, SwiftEnumDescriptorSP>
     EnumInfoCache;
-typedef std::shared_ptr<MemberInfoCache> MemberInfoCacheSP;
 typedef std::shared_ptr<EnumInfoCache> EnumInfoCacheSP;
-typedef llvm::DenseMap<const swift::ASTContext *, MemberInfoCacheSP>
-    ASTMemberInfoCacheMap;
 typedef llvm::DenseMap<const swift::ASTContext *, EnumInfoCacheSP>
     ASTEnumInfoCacheMap;
-
-static MemberInfoCache *GetMemberInfoCache(const swift::ASTContext *a) {
-  static ASTMemberInfoCacheMap g_cache;
-  static std::mutex g_mutex;
-  std::lock_guard<std::mutex> locker(g_mutex);
-  ASTMemberInfoCacheMap::iterator pos = g_cache.find(a);
-  if (pos == g_cache.end()) {
-    g_cache.insert(std::make_pair(
-        a, std::shared_ptr<MemberInfoCache>(new MemberInfoCache())));
-    return g_cache.find(a)->second.get();
-  }
-  return pos->second.get();
-}
 
 static EnumInfoCache *GetEnumInfoCache(const swift::ASTContext *a) {
   static ASTEnumInfoCacheMap g_cache;
@@ -308,70 +252,6 @@ llvm::ArrayRef<swift::VarDecl *> SwiftASTContext::GetStoredProperties(
   stored = std::vector<swift::VarDecl *>(stored_properties.begin(),
                                          stored_properties.end());
   return stored;
-}
-
-CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
-  VALID_OR_RETURN(nullptr);
-
-  if (type) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-
-    std::vector<const swift::irgen::TypeInfo *> field_type_infos;
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::Error:
-    case swift::TypeKind::BuiltinInteger:
-    case swift::TypeKind::BuiltinFloat:
-    case swift::TypeKind::BuiltinRawPointer:
-    case swift::TypeKind::BuiltinBridgeObject:
-    case swift::TypeKind::BuiltinNativeObject:
-    case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    case swift::TypeKind::BuiltinUnknownObject:
-    case swift::TypeKind::BuiltinVector:
-    case swift::TypeKind::UnownedStorage:
-    case swift::TypeKind::WeakStorage:
-    case swift::TypeKind::UnmanagedStorage:
-    case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Metatype:
-    case swift::TypeKind::Module:
-    case swift::TypeKind::Function:
-    case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::LValue:
-    case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::Enum:
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::ExistentialMetatype:
-    case swift::TypeKind::DynamicSelf:
-    case swift::TypeKind::SILBox:
-    case swift::TypeKind::SILFunction:
-    case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::InOut:
-    case swift::TypeKind::Unresolved:
-    case swift::TypeKind::Tuple:
-    case swift::TypeKind::Struct:
-    case swift::TypeKind::Class:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::BoundGenericClass:
-    case swift::TypeKind::Protocol:
-    case swift::TypeKind::ProtocolComposition:
-      assert(false &&
-             "Caller must only call this function with valid type_kind");
-      break;
-    case swift::TypeKind::TypeVariable:
-    case swift::TypeKind::Archetype:
-      break;
-
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::NameAlias:
-    case swift::TypeKind::Paren:
-    case swift::TypeKind::Dictionary:
-    case swift::TypeKind::ArraySlice:
-      assert(false && "Not a canonical type");
-      break;
-    }
-  }
-  return nullptr;
 }
 
 class SwiftEnumDescriptor {
