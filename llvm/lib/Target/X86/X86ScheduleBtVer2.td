@@ -717,14 +717,14 @@ def JWritePSHUFB: SchedWriteRes<[JFPU01, JVALU]> {
   let ResourceCycles = [1, 4];
   let NumMicroOps = 3;
 }
-def : InstRW<[JWritePSHUFB], (instrs PSHUFBrr, VPSHUFBrr)>;
+def : InstRW<[JWritePSHUFB], (instrs MMX_PSHUFBrr, PSHUFBrr, VPSHUFBrr)>;
 
 def JWritePSHUFBLd: SchedWriteRes<[JLAGU, JFPU01, JVALU]> {
   let Latency = 7;
   let ResourceCycles = [1, 1, 4];
   let NumMicroOps = 3;
 }
-def : InstRW<[JWritePSHUFBLd, ReadAfterLd], (instrs PSHUFBrm, VPSHUFBrm)>;
+def : InstRW<[JWritePSHUFBLd, ReadAfterLd], (instrs MMX_PSHUFBrm, PSHUFBrm, VPSHUFBrm)>;
 
 def JWriteVPERM: SchedWriteRes<[JFPU01, JFPX]> {
   let Latency = 2;

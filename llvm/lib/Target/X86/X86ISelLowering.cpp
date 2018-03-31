@@ -38693,7 +38693,7 @@ void X86TargetLowering::finalizeLowering(MachineFunction &MF) const {
   TargetLoweringBase::finalizeLowering(MF);
 }
 
-SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl, 
+SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
                                                   SDValue Value, SDValue Addr,
                                                   SelectionDAG &DAG) const {
   const Module *M = DAG.getMachineFunction().getMMI().getModule();
