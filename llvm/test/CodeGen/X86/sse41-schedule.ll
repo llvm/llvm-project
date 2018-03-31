@@ -4817,8 +4817,8 @@ define <4 x i32> @test_pmulld(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; SLM-LABEL: test_pmulld:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    pmulld %xmm1, %xmm0 # sched: [4:1.00]
-; SLM-NEXT:    pmulld (%rdi), %xmm0 # sched: [7:1.00]
+; SLM-NEXT:    pmulld %xmm1, %xmm0 # sched: [11:11.00]
+; SLM-NEXT:    pmulld (%rdi), %xmm0 # sched: [14:11.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_pmulld:
@@ -4883,14 +4883,14 @@ define <4 x i32> @test_pmulld(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; BTVER2-SSE-LABEL: test_pmulld:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    pmulld %xmm1, %xmm0 # sched: [2:1.00]
-; BTVER2-SSE-NEXT:    pmulld (%rdi), %xmm0 # sched: [7:1.00]
+; BTVER2-SSE-NEXT:    pmulld %xmm1, %xmm0 # sched: [4:2.00]
+; BTVER2-SSE-NEXT:    pmulld (%rdi), %xmm0 # sched: [9:2.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_pmulld:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vpmulld (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BTVER2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0 # sched: [4:2.00]
+; BTVER2-NEXT:    vpmulld (%rdi), %xmm0, %xmm0 # sched: [9:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_pmulld:

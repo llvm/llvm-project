@@ -245,7 +245,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_tanhf);
     }
 
-    // Win32 does *not* provide provide these functions, but they are
+    // Win32 does *not* provide these functions, but they are
     // generally available on POSIX-compliant systems:
     TLI.setUnavailable(LibFunc_access);
     TLI.setUnavailable(LibFunc_bcmp);

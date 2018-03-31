@@ -100,6 +100,7 @@ def  WriteVecMove  : SchedWrite;
 defm WriteVecALU   : X86SchedWritePair; // Vector integer ALU op, no logicals.
 defm WriteVecShift : X86SchedWritePair; // Vector integer shifts.
 defm WriteVecIMul  : X86SchedWritePair; // Vector integer multiply.
+defm WritePMULLD : X86SchedWritePair; // PMULLD
 defm WriteShuffle  : X86SchedWritePair; // Vector shuffles.
 defm WriteBlend  : X86SchedWritePair; // Vector blends.
 defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.

@@ -993,7 +993,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         // the calculated range then it means that the alloca usage moved
         // outside of the lifetime markers, or that the user has a bug.
         // NOTE: Alloca address calculations which happen outside the lifetime
-        // zone are are okay, despite the fact that we don't have a good way
+        // zone are okay, despite the fact that we don't have a good way
         // for validating all of the usages of the calculation.
 #ifndef NDEBUG
         bool TouchesMemory = I.mayLoad() || I.mayStore();

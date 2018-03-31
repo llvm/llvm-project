@@ -167,6 +167,7 @@ def  : WriteRes<WriteVecMove,        [BWPort015]>;
 defm : BWWriteResPair<WriteVecALU,   [BWPort15],  1>; // Vector integer ALU op, no logicals.
 defm : BWWriteResPair<WriteVecShift, [BWPort0],  1>; // Vector integer shifts.
 defm : BWWriteResPair<WriteVecIMul,  [BWPort0],   5>; // Vector integer multiply.
+defm : BWWriteResPair<WritePMULLD,   [BWPort0], 10, [2], 2, 5>; // PMULLD
 defm : BWWriteResPair<WriteShuffle,  [BWPort5],  1>; // Vector shuffles.
 defm : BWWriteResPair<WriteBlend,  [BWPort15],  1>; // Vector blends.
 defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2]>; // Vector variable blends.
@@ -2180,13 +2181,6 @@ def BWWriteResGroup113 : SchedWriteRes<[BWPort1,BWPort6,BWPort23,BWPort0156]> {
 def: InstRW<[BWWriteResGroup113], (instregex "LAR(16|32|64)rm",
                                              "LSL(16|32|64)rm")>;
 
-def BWWriteResGroup114 : SchedWriteRes<[BWPort0]> {
-  let Latency = 10;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def: InstRW<[BWWriteResGroup114], (instregex "(V?)PMULLD(Y?)rr")>;
-
 def BWWriteResGroup115 : SchedWriteRes<[BWPort0,BWPort23]> {
   let Latency = 10;
   let NumMicroOps = 2;
@@ -2461,13 +2455,6 @@ def BWWriteResGroup147 : SchedWriteRes<[BWPort0]> {
 def: InstRW<[BWWriteResGroup147], (instregex "DIVR_FPrST0",
                                              "DIVR_FST0r",
                                              "DIVR_FrST0")>;
-
-def BWWriteResGroup148 : SchedWriteRes<[BWPort0,BWPort23]> {
-  let Latency = 15;
-  let NumMicroOps = 3;
-  let ResourceCycles = [2,1];
-}
-def: InstRW<[BWWriteResGroup148], (instregex "(V?)PMULLDrm")>;
 
 def BWWriteResGroup149 : SchedWriteRes<[BWPort1,BWPort23,BWPort237,BWPort06,BWPort15,BWPort0156]> {
   let Latency = 15;

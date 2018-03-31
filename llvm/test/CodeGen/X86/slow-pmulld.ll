@@ -1215,34 +1215,32 @@ define <8 x i32> @test_mul_v8i32_v8i16_minsize(<8 x i16> %A) minsize {
 define <16 x i32> @test_mul_v16i32_v16i16_minsize(<16 x i16> %A) minsize {
 ; SLM32-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SLM32:       # %bb.0:
-; SLM32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SLM32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SLM32-NEXT:    movdqa {{.*#+}} xmm5 = [18778,18778,18778,18778]
+; SLM32-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; SLM32-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
 ; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLM32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SLM32-NEXT:    pmulld %xmm1, %xmm4
-; SLM32-NEXT:    pmulld %xmm1, %xmm0
-; SLM32-NEXT:    pmulld %xmm1, %xmm2
-; SLM32-NEXT:    pmulld %xmm1, %xmm3
-; SLM32-NEXT:    movdqa %xmm4, %xmm1
+; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero
+; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
+; SLM32-NEXT:    pmulld %xmm5, %xmm0
+; SLM32-NEXT:    pmulld %xmm5, %xmm2
+; SLM32-NEXT:    pmulld %xmm5, %xmm1
+; SLM32-NEXT:    pmulld %xmm5, %xmm3
 ; SLM32-NEXT:    retl
 ;
 ; SLM64-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SLM64:       # %bb.0:
-; SLM64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SLM64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SLM64-NEXT:    movdqa {{.*#+}} xmm5 = [18778,18778,18778,18778]
+; SLM64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; SLM64-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
 ; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLM64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SLM64-NEXT:    pmulld %xmm1, %xmm4
-; SLM64-NEXT:    pmulld %xmm1, %xmm0
-; SLM64-NEXT:    pmulld %xmm1, %xmm2
-; SLM64-NEXT:    pmulld %xmm1, %xmm3
-; SLM64-NEXT:    movdqa %xmm4, %xmm1
+; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero
+; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
+; SLM64-NEXT:    pmulld %xmm5, %xmm0
+; SLM64-NEXT:    pmulld %xmm5, %xmm2
+; SLM64-NEXT:    pmulld %xmm5, %xmm1
+; SLM64-NEXT:    pmulld %xmm5, %xmm3
 ; SLM64-NEXT:    retq
 ;
 ; SLOW32-LABEL: test_mul_v16i32_v16i16_minsize:
