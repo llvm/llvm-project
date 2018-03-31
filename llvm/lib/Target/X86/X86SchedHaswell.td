@@ -163,6 +163,7 @@ defm : HWWriteResPair<WriteVecShift, [HWPort0],  1>;
 defm : HWWriteResPair<WriteVecLogic, [HWPort015], 1>;
 defm : HWWriteResPair<WriteVecALU,   [HWPort15],  1>;
 defm : HWWriteResPair<WriteVecIMul,  [HWPort0],   5>;
+defm : HWWriteResPair<WritePMULLD,   [HWPort0], 10, [2], 2, 6>;
 defm : HWWriteResPair<WriteShuffle,  [HWPort5],  1>;
 defm : HWWriteResPair<WriteBlend,  [HWPort15],  1>;
 defm : HWWriteResPair<WriteShuffle256,  [HWPort5],  3>;
@@ -2679,20 +2680,6 @@ def HWWriteResGroup117 : SchedWriteRes<[HWPort0,HWPort1,HWPort5,HWPort23]> {
   let ResourceCycles = [1,1,1,1];
 }
 def: InstRW<[HWWriteResGroup117], (instregex "(V?)DPPDrmi")>;
-
-def HWWriteResGroup118 : SchedWriteRes<[HWPort0]> {
-  let Latency = 10;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def: InstRW<[HWWriteResGroup118], (instregex "(V?)PMULLD(Y?)rr")>;
-
-def HWWriteResGroup119 : SchedWriteRes<[HWPort0,HWPort23]> {
-  let Latency = 16;
-  let NumMicroOps = 3;
-  let ResourceCycles = [2,1];
-}
-def: InstRW<[HWWriteResGroup119], (instregex "(V?)PMULLDrm")>;
 
 def HWWriteResGroup119_1 : SchedWriteRes<[HWPort0,HWPort23]> {
   let Latency = 17;

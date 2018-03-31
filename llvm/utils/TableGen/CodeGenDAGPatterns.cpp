@@ -2660,7 +2660,7 @@ TreePatternNode *TreePattern::ParseTreePattern(Init *TheInit, StringRef OpName){
   // node (which is hard-coded to have either zero or one result).
   unsigned NumResults = GetNumNodeResults(Operator, CDP);
 
-  // If the operator is an intrinsic, then this is just syntactic sugar for for
+  // If the operator is an intrinsic, then this is just syntactic sugar for
   // (intrinsic_* <number>, ..children..).  Pick the right intrinsic node, and
   // convert the intrinsic name to a number.
   if (Operator->isSubClassOf("Intrinsic")) {

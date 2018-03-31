@@ -46,6 +46,10 @@ public:
 } // end anonymous namespace
 
 char WebAssemblySetP2AlignOperands::ID = 0;
+INITIALIZE_PASS(WebAssemblySetP2AlignOperands, DEBUG_TYPE,
+                "Set the p2align operands for WebAssembly loads and stores",
+                false, false)
+
 FunctionPass *llvm::createWebAssemblySetP2AlignOperands() {
   return new WebAssemblySetP2AlignOperands();
 }

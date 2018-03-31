@@ -195,7 +195,7 @@ def SSE_MPSADBW_ITINS : OpndItins<
   IIC_SSE_MPSADBW_RR, IIC_SSE_MPSADBW_RM
 >;
 
-let Sched = WriteVecIMul in
+let Sched = WritePMULLD in
 def SSE_PMULLD_ITINS : OpndItins<
   IIC_SSE_PMULLD_RR, IIC_SSE_PMULLD_RM
 >;

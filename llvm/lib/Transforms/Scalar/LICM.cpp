@@ -1335,7 +1335,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
         // If a store dominates all exit blocks, it is safe to sink.
         // As explained above, if an exit block was executed, a dominating
-        // store must have been been executed at least once, so we are not
+        // store must have been executed at least once, so we are not
         // introducing stores on paths that did not have them.
         // Note that this only looks at explicit exit blocks. If we ever
         // start sinking stores into unwind edges (see above), this will break.

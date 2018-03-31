@@ -4911,7 +4911,7 @@ define <8 x i32> @test_pmulld(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pmulld:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmulld %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmulld (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmulld (%rdi), %ymm0, %ymm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmulld:
