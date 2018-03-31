@@ -30,6 +30,7 @@ typedef typeof(sizeof(int)) size_t;
 void clang_analyzer_eval(int);
 
 int scanf(const char *restrict format, ...);
+void *memcpy(void *, const void *, unsigned long);
 
 //===----------------------------------------------------------------------===
 // strlen()
@@ -1173,6 +1174,7 @@ void strcat_symbolic_src_length(char *src) {
   clang_analyzer_eval(strlen(dst) >= 4); // expected-warning{{UNKNOWN}}
 }
 
+
 // The analyzer_eval call below should evaluate to true. Most likely the same
 // issue as the test above.
 void strncpy_exactly_matching_buffer2(char *y) {
@@ -1184,4 +1186,13 @@ void strncpy_exactly_matching_buffer2(char *y) {
 
 	// This time, we know that y fits in x anyway.
   clang_analyzer_eval(strlen(x) <= 3); // expected-warning{{UNKNOWN}}
+}
+
+struct S {
+  char f;
+};
+
+void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
+  int iAdd = (int) addr;
+  memcpy(((void *) &(s.f)), from, iAdd);
 }
