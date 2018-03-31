@@ -1869,7 +1869,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
     //     (Builtin.RawPointer) payload_data_1 = 0x0000000000000002
     //     (Builtin.RawPointer) payload_data_2 = 0x0000000000000000
     //     (Builtin.RawPointer) instance_type = 0x000000010054c2f8
-    //     (Builtin.RawPointer) protocol_witness_0 = 0x000000010054c100
+    //     (Builtin.RawPointer) witness_table_Proto = 0x000000010054c100
     // }
     // pick &payload_data_0
     // for a pointed-to protocol object, e.g.:
@@ -1878,7 +1878,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
     //     (Builtin.RawPointer) payload_data_1 = 0x0000000000000000
     //     (Builtin.RawPointer) payload_data_2 = 0x0000000000000000
     //     (Builtin.RawPointer) instance_type = 0x000000010054c648
-    //     (Builtin.RawPointer) protocol_witness_0 = 0x000000010054c7b0
+    //     (Builtin.RawPointer) witness_table_Proto = 0x000000010054c7b0
     // }
     // pick the value of payload_data_0
     switch (SwiftASTContext::GetAllocationStrategy(
