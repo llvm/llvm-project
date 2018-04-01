@@ -674,7 +674,7 @@ class raw_ostream;
       idx2MBBMap.push_back(IdxMBBPair(startIdx, mbb));
 
       renumberIndexes(newItr);
-      std::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
+      llvm::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
     }
 
     /// \brief Free the resources that were required to maintain a SlotIndex.
