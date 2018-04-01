@@ -1218,17 +1218,30 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
 //
 // We follow a simple but conservative heuristic to place ThunkSections at
 // offsets that are multiples of a Target specific branch range.
-// For an InputSectionRange that is smaller than the range, a single
+// For an InputSectionDescription that is smaller than the range, a single
 // ThunkSection at the end of the range will do.
+//
+// For an InputSectionDescription that is more than twice the size of the range,
+// we place the last ThunkSection at range bytes from the end of the
+// InputSectionDescription in order to increase the likelihood that the
+// distance from a thunk to its target will be sufficiently small to
+// allow for the creation of a short thunk.
 void ThunkCreator::createInitialThunkSections(
     ArrayRef<OutputSection *> OutputSections) {
   forEachInputSectionDescription(
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
         if (ISD->Sections.empty())
           return;
+        uint32_t ISDBegin = ISD->Sections.front()->OutSecOff;
+        uint32_t ISDEnd =
+            ISD->Sections.back()->OutSecOff + ISD->Sections.back()->getSize();
+        uint32_t LastThunkLowerBound = -1;
+        if (ISDEnd - ISDBegin > Target->ThunkSectionSpacing * 2)
+          LastThunkLowerBound = ISDEnd - Target->ThunkSectionSpacing;
+
         uint32_t ISLimit;
-        uint32_t PrevISLimit = ISD->Sections.front()->OutSecOff;
-        uint32_t ThunkUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
+        uint32_t PrevISLimit = ISDBegin;
+        uint32_t ThunkUpperBound = ISDBegin + Target->ThunkSectionSpacing;
 
         for (const InputSection *IS : ISD->Sections) {
           ISLimit = IS->OutSecOff + IS->getSize();
@@ -1236,6 +1249,8 @@ void ThunkCreator::createInitialThunkSections(
             addThunkSection(OS, ISD, PrevISLimit);
             ThunkUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
           }
+          if (ISLimit > LastThunkLowerBound)
+            break;
           PrevISLimit = ISLimit;
         }
         addThunkSection(OS, ISD, ISLimit);
@@ -1263,7 +1278,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
   // Check existing Thunks for Sym to see if they can be reused
   for (Thunk *ET : *ThunkVec)
     if (ET->isCompatibleWith(Type) &&
-        Target->inBranchRange(Type, Src, ET->ThunkSym->getVA()))
+        Target->inBranchRange(Type, Src, ET->getThunkTargetSym()->getVA()))
       return std::make_pair(ET, false);
   // No existing compatible Thunk in range, create a new one
   Thunk *T = addThunk(Type, Sym);
@@ -1358,7 +1373,6 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
             bool IsNew;
             std::tie(T, IsNew) = getThunk(*Rel.Sym, Rel.Type, Src);
             if (IsNew) {
-              AddressesChanged = true;
               // Find or create a ThunkSection for the new Thunk
               ThunkSection *TS;
               if (auto *TIS = T->getTargetInputSection())
@@ -1366,13 +1380,18 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
               else
                 TS = getISDThunkSec(OS, IS, ISD, Rel.Type, Src);
               TS->addThunk(T);
-              Thunks[T->ThunkSym] = T;
+              Thunks[T->getThunkTargetSym()] = T;
             }
             // Redirect relocation to Thunk, we never go via the PLT to a Thunk
-            Rel.Sym = T->ThunkSym;
+            Rel.Sym = T->getThunkTargetSym();
             Rel.Expr = fromPlt(Rel.Expr);
           }
+        for (auto &P : ISD->ThunkSections)
+          AddressesChanged |= P.first->assignOffsets();
       });
+  for (auto &P : ThunkedSections)
+    AddressesChanged |= P.second->assignOffsets();
+
   // Merge all created synthetic ThunkSections back into OutputSection
   mergeThunks(OutputSections);
   ++Pass;

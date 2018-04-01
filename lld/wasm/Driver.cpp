@@ -286,7 +286,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_check_signatures, OPT_no_check_signatures, false);
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
+  Config->ExportTable = Args.hasArg(OPT_export_table);
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
+  Config->ImportTable = Args.hasArg(OPT_import_table);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->GcSections =
@@ -296,11 +298,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
-  auto *TableArg = Args.getLastArg(OPT_import_table, OPT_export_table);
-  Config->ImportTable =
-      TableArg && TableArg->getOption().getID() == OPT_import_table;
-  Config->ExportTable =
-      TableArg && TableArg->getOption().getID() == OPT_export_table;
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
 
@@ -320,6 +317,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   if (Config->OutputFile.empty())
     error("no output file specified");
+
+  if (Config->ImportTable && Config->ExportTable)
+    error("--import-table and --export-table may not be used together");
 
   if (Config->Relocatable) {
     if (!Config->Entry.empty())
