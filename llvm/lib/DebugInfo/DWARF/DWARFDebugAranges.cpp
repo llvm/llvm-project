@@ -80,7 +80,7 @@ void DWARFDebugAranges::appendRange(uint32_t CUOffset, uint64_t LowPC,
 void DWARFDebugAranges::construct() {
   std::multiset<uint32_t> ValidCUs;  // Maintain the set of CUs describing
                                      // a current address range.
-  std::sort(Endpoints.begin(), Endpoints.end());
+  llvm::sort(Endpoints.begin(), Endpoints.end());
   uint64_t PrevAddress = -1ULL;
   for (const auto &E : Endpoints) {
     if (PrevAddress < E.Address && !ValidCUs.empty()) {

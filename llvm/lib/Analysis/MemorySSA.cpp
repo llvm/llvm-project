@@ -1338,10 +1338,10 @@ void MemorySSA::placePHINodes(
   SmallVector<BasicBlock *, 32> IDFBlocks;
   IDFs.calculate(IDFBlocks);
 
-  std::sort(IDFBlocks.begin(), IDFBlocks.end(),
-            [&BBNumbers](const BasicBlock *A, const BasicBlock *B) {
-              return BBNumbers.lookup(A) < BBNumbers.lookup(B);
-            });
+  llvm::sort(IDFBlocks.begin(), IDFBlocks.end(),
+             [&BBNumbers](const BasicBlock *A, const BasicBlock *B) {
+               return BBNumbers.lookup(A) < BBNumbers.lookup(B);
+             });
 
   // Now place MemoryPhi nodes.
   for (auto &BB : IDFBlocks)

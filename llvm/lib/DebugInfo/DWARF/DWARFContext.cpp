@@ -108,12 +108,12 @@ collectContributionData(DWARFContext::cu_iterator_range CUs,
   // Sort the contributions so that any invalid ones are placed at
   // the start of the contributions vector. This way they are reported
   // first.
-  std::sort(Contributions.begin(), Contributions.end(),
-            [](const Optional<StrOffsetsContributionDescriptor> &L,
-               const Optional<StrOffsetsContributionDescriptor> &R) {
-              if (L && R) return L->Base < R->Base;
-              return R.hasValue();
-            });
+  llvm::sort(Contributions.begin(), Contributions.end(),
+             [](const Optional<StrOffsetsContributionDescriptor> &L,
+                const Optional<StrOffsetsContributionDescriptor> &R) {
+               if (L && R) return L->Base < R->Base;
+               return R.hasValue();
+             });
 
   // Uniquify contributions, as it is possible that units (specifically
   // type units in dwo or dwp files) share contributions. We don't want
