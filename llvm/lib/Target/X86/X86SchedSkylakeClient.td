@@ -164,6 +164,7 @@ def  : WriteRes<WriteVecMove,         [SKLPort015]>;
 defm : SKLWriteResPair<WriteVecALU,   [SKLPort15],  1>; // Vector integer ALU op, no logicals.
 defm : SKLWriteResPair<WriteVecShift, [SKLPort0],  1>; // Vector integer shifts.
 defm : SKLWriteResPair<WriteVecIMul,  [SKLPort0],   5>; // Vector integer multiply.
+defm : SKLWriteResPair<WritePMULLD,   [SKLPort01], 10, [2], 2, 6>;
 defm : SKLWriteResPair<WriteShuffle,  [SKLPort5],  1>; // Vector shuffles.
 defm : SKLWriteResPair<WriteBlend,  [SKLPort15],  1>; // Vector blends.
 defm : SKLWriteResPair<WriteVarBlend,  [SKLPort5], 2, [2]>; // Vector variable blends.
@@ -1849,13 +1850,6 @@ def: InstRW<[SKLWriteResGroup105], (instregex "(V?)ROUNDPD(Y?)r",
                                               "(V?)ROUNDSDr",
                                               "(V?)ROUNDSSr")>;
 
-def SKLWriteResGroup105_2 : SchedWriteRes<[SKLPort01]> {
-  let Latency = 10;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def: InstRW<[SKLWriteResGroup105_2], (instregex "(V?)PMULLD(Y?)rr")>;
-
 def SKLWriteResGroup106 : SchedWriteRes<[SKLPort0,SKLPort23]> {
   let Latency = 8;
   let NumMicroOps = 2;
@@ -2558,13 +2552,6 @@ def: InstRW<[SKLWriteResGroup168], (instregex "(V?)ROUNDPDm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "(V?)ROUNDPSm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "(V?)ROUNDSDm")>;
 def: InstRW<[SKLWriteResGroup168], (instregex "(V?)ROUNDSSm")>;
-
-def SKLWriteResGroup168_2 : SchedWriteRes<[SKLPort23,SKLPort01]> {
-  let Latency = 16;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,2];
-}
-def: InstRW<[SKLWriteResGroup168_2], (instregex "(V?)PMULLDrm")>;
 
 def SKLWriteResGroup169 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23]> {
   let Latency = 14;

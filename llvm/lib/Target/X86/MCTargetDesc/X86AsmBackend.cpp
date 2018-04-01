@@ -663,8 +663,7 @@ protected:
         // instruction.
         CompactUnwindEncoding |= (SubtractInstrIdx & 0xFF) << 16;
 
-        // Encode any extra stack stack adjustments (done via push
-        // instructions).
+        // Encode any extra stack adjustments (done via push instructions).
         CompactUnwindEncoding |= (StackAdjust & 0x7) << 13;
       }
 

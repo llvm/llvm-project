@@ -414,7 +414,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                     VA.getLocVT().getStoreSizeInBits() >> 3);
       if (Flags.isByVal()) {
         // The argument is a struct passed by value. According to LLVM, "Arg"
-        // is is pointer.
+        // is a pointer.
         MemOpChains.push_back(CreateCopyOfByValArgument(Arg, MemAddr, Chain,
                                                         Flags, DAG, dl));
       } else {

@@ -1173,6 +1173,7 @@ void strcat_symbolic_src_length(char *src) {
   clang_analyzer_eval(strlen(dst) >= 4); // expected-warning{{UNKNOWN}}
 }
 
+
 // The analyzer_eval call below should evaluate to true. Most likely the same
 // issue as the test above.
 void strncpy_exactly_matching_buffer2(char *y) {

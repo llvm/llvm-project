@@ -155,9 +155,9 @@ static void combineWeight(Weight &W, const Weight &OtherW) {
 
 static void combineWeightsBySorting(WeightList &Weights) {
   // Sort so edges to the same node are adjacent.
-  std::sort(Weights.begin(), Weights.end(),
-            [](const Weight &L,
-               const Weight &R) { return L.TargetNode < R.TargetNode; });
+  llvm::sort(Weights.begin(), Weights.end(),
+             [](const Weight &L,
+                const Weight &R) { return L.TargetNode < R.TargetNode; });
 
   // Combine adjacent edges.
   WeightList::iterator O = Weights.begin();
@@ -702,7 +702,7 @@ static void findIrreducibleHeaders(
          "Expected irreducible CFG; -loop-info is likely invalid");
   if (Headers.size() == InSCC.size()) {
     // Every block is a header.
-    std::sort(Headers.begin(), Headers.end());
+    llvm::sort(Headers.begin(), Headers.end());
     return;
   }
 
@@ -736,8 +736,8 @@ static void findIrreducibleHeaders(
     Others.push_back(Irr.Node);
     DEBUG(dbgs() << "  => other = " << BFI.getBlockName(Irr.Node) << "\n");
   }
-  std::sort(Headers.begin(), Headers.end());
-  std::sort(Others.begin(), Others.end());
+  llvm::sort(Headers.begin(), Headers.end());
+  llvm::sort(Others.begin(), Others.end());
 }
 
 static void createIrreducibleLoop(

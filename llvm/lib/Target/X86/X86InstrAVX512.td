@@ -4505,7 +4505,7 @@ defm VPADDUS : avx512_binop_rm_vl_bw<0xDC, 0xDD, "vpaddus", X86addus,
 defm VPSUBUS : avx512_binop_rm_vl_bw<0xD8, 0xD9, "vpsubus", X86subus,
                                      SSE_INTALU_ITINS_P, HasBWI, 0>;
 defm VPMULLD : avx512_binop_rm_vl_d<0x40, "vpmulld", mul,
-                                    SSE_INTMUL_ITINS_P, HasAVX512, 1>, T8PD;
+                                    SSE_PMULLD_ITINS, HasAVX512, 1>, T8PD;
 defm VPMULLW : avx512_binop_rm_vl_w<0xD5, "vpmullw", mul,
                                     SSE_INTMUL_ITINS_P, HasBWI, 1>;
 defm VPMULLQ : avx512_binop_rm_vl_q<0x40, "vpmullq", mul,
