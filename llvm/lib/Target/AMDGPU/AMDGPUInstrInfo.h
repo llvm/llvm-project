@@ -53,6 +53,17 @@ public:
 
   static bool isUniformMMO(const MachineMemOperand *MMO);
 };
+
+namespace AMDGPU {
+
+struct RsrcIntrinsic {
+  unsigned Intr;
+  uint8_t RsrcArg;
+  bool IsImage;
+};
+const RsrcIntrinsic *lookupRsrcIntrinsicByIntr(unsigned Intr);
+
+} // end AMDGPU namespace
 } // End llvm namespace
 
 #endif

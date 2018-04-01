@@ -71,6 +71,10 @@ static cl::opt<unsigned> ImportInstrLimit(
     "import-instr-limit", cl::init(100), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import functions with less than N instructions"));
 
+static cl::opt<int> ImportCutoff(
+    "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
+    cl::desc("Only import first N functions if N>=0 (default -1)"));
+
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
                       cl::Hidden, cl::value_desc("x"),
@@ -276,10 +280,17 @@ static void computeImportForFunction(
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   computeImportForReferencedGlobals(Summary, DefinedGVSummaries, ImportList,
                                     ExportLists);
+  static int ImportCount = 0;
   for (auto &Edge : Summary.calls()) {
     ValueInfo VI = Edge.first;
     DEBUG(dbgs() << " edge -> " << VI.getGUID() << " Threshold:" << Threshold
                  << "\n");
+
+    if (ImportCutoff >= 0 && ImportCount >= ImportCutoff) {
+      DEBUG(dbgs() << "ignored! import-cutoff value of " << ImportCutoff
+                   << " reached.\n");
+      continue;
+    }
 
     VI = updateValueInfoForIndirectCalls(Index, VI);
     if (!VI)
@@ -342,6 +353,8 @@ static void computeImportForFunction(
     bool PreviouslyImported = ProcessedThreshold != 0;
     // Mark this function as imported in this module, with the current Threshold
     ProcessedThreshold = AdjThreshold;
+
+    ImportCount++;
 
     // Make exports in the source module.
     if (ExportLists) {

@@ -13,6 +13,7 @@ tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM AMDGPUGenRegisterBank.inc -gen-register-bank)
+tablegen(LLVM AMDGPUGenSearchableTables.inc -gen-searchable-tables)
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
 add_llvm_target(AMDGPUCodeGen
