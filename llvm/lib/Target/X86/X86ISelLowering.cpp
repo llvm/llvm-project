@@ -38717,22 +38717,30 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   if (VT != MVT::i16)
     return false;
 
-  bool Promote = false;
+  auto IsFoldableRMW = [](SDValue Load, SDValue Op) {
+    if (!Op.hasOneUse())
+      return false;
+    SDNode *User = *Op->use_begin();
+    if (!ISD::isNormalStore(User))
+      return false;
+    auto *Ld = cast<LoadSDNode>(Load);
+    auto *St = cast<StoreSDNode>(User);
+    return Ld->getBasePtr() == St->getBasePtr();
+  };
+
   bool Commute = false;
   switch (Op.getOpcode()) {
-  default: break;
+  default: return false;
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND:
-    Promote = true;
     break;
   case ISD::SHL:
   case ISD::SRL: {
     SDValue N0 = Op.getOperand(0);
     // Look out for (store (shl (load), x)).
-    if (MayFoldLoad(N0) && MayFoldIntoStore(Op))
+    if (MayFoldLoad(N0) && IsFoldableRMW(N0, Op))
       return false;
-    Promote = true;
     break;
   }
   case ISD::ADD:
@@ -38745,19 +38753,20 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   case ISD::SUB: {
     SDValue N0 = Op.getOperand(0);
     SDValue N1 = Op.getOperand(1);
-    if (!Commute && MayFoldLoad(N1))
-      return false;
     // Avoid disabling potential load folding opportunities.
-    if (MayFoldLoad(N0) && (!isa<ConstantSDNode>(N1) || MayFoldIntoStore(Op)))
+    if (MayFoldLoad(N1) &&
+        (!Commute || !isa<ConstantSDNode>(N0) ||
+         (Op.getOpcode() != ISD::MUL && IsFoldableRMW(N1, Op))))
       return false;
-    if (MayFoldLoad(N1) && (!isa<ConstantSDNode>(N0) || MayFoldIntoStore(Op)))
+    if (MayFoldLoad(N0) &&
+        ((Commute && !isa<ConstantSDNode>(N1)) ||
+         (Op.getOpcode() != ISD::MUL && IsFoldableRMW(N0, Op))))
       return false;
-    Promote = true;
   }
   }
 
   PVT = MVT::i32;
-  return Promote;
+  return true;
 }
 
 bool X86TargetLowering::

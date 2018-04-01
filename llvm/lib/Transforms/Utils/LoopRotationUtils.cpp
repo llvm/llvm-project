@@ -163,6 +163,27 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
   }
 }
 
+// Look for a phi which is only used outside the loop (via a LCSSA phi)
+// in the exit from the header. This means that rotating the loop can
+// remove the phi.
+static bool shouldRotateLoopExitingLatch(Loop *L) {
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *HeaderExit = Header->getTerminator()->getSuccessor(0);
+  if (L->contains(HeaderExit))
+    HeaderExit = Header->getTerminator()->getSuccessor(1);
+
+  for (auto &Phi : Header->phis()) {
+    // Look for uses of this phi in the loop/via exits other than the header.
+    if (llvm::any_of(Phi.users(), [HeaderExit](const User *U) {
+          return cast<Instruction>(U)->getParent() != HeaderExit;
+        }))
+      continue;
+    return true;
+  }
+
+  return false;
+}
+
 /// Rotate loop LP. Return true if the loop is rotated.
 ///
 /// \param SimplifiedLatch is true if the latch was just folded into the final
@@ -197,8 +218,9 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     return false;
 
   // Rotate if either the loop latch does *not* exit the loop, or if the loop
-  // latch was just simplified.
-  if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch)
+  // latch was just simplified. Or if we think it will be profitable.
+  if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch &&
+      !shouldRotateLoopExitingLatch(L))
     return false;
 
   // Check size of original header and reject loop if it is very big or we can't
