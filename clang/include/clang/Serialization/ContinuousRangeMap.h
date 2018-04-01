@@ -16,6 +16,7 @@
 #define LLVM_CLANG_SERIALIZATION_CONTINUOUSRANGEMAP_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cassert>

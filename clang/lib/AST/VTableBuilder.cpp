@@ -2367,6 +2367,8 @@ namespace {
 
 class VFTableBuilder {
 public:
+  typedef MicrosoftVTableContext::MethodVFTableLocation MethodVFTableLocation;
+
   typedef llvm::DenseMap<GlobalDecl, MethodVFTableLocation>
     MethodVFTableLocationsTy;
 
@@ -3542,9 +3544,10 @@ static void computeFullPathsForVFTables(ASTContext &Context,
   }
 }
 
-static bool vfptrIsEarlierInMDC(const ASTRecordLayout &Layout,
-                                const MethodVFTableLocation &LHS,
-                                const MethodVFTableLocation &RHS) {
+static bool
+vfptrIsEarlierInMDC(const ASTRecordLayout &Layout,
+                    const MicrosoftVTableContext::MethodVFTableLocation &LHS,
+                    const MicrosoftVTableContext::MethodVFTableLocation &RHS) {
   CharUnits L = LHS.VFPtrOffset;
   CharUnits R = RHS.VFPtrOffset;
   if (LHS.VBase)
@@ -3730,7 +3733,7 @@ MicrosoftVTableContext::getVFTableLayout(const CXXRecordDecl *RD,
   return *VFTableLayouts[id];
 }
 
-const MethodVFTableLocation &
+const MicrosoftVTableContext::MethodVFTableLocation &
 MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
   assert(cast<CXXMethodDecl>(GD.getDecl())->isVirtual() &&
          "Only use this method for virtual methods or dtors");
