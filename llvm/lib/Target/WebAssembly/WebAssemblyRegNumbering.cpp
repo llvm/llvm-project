@@ -51,6 +51,10 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyRegNumbering::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegNumbering, DEBUG_TYPE,
+                "Assigns WebAssembly register numbers for virtual registers",
+                false, false)
+
 FunctionPass *llvm::createWebAssemblyRegNumbering() {
   return new WebAssemblyRegNumbering();
 }

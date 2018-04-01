@@ -49,6 +49,7 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -57,6 +58,18 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "module-summary-analysis"
+
+// Option to force edges cold which will block importing when the
+// -import-cold-multiplier is set to 0. Useful for debugging.
+FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold =
+    FunctionSummary::FSHT_None;
+cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
+    "force-summary-edges-cold", cl::Hidden, cl::location(ForceSummaryEdgesCold),
+    cl::desc("Force all edges in the function summary to cold"),
+    cl::values(clEnumValN(FunctionSummary::FSHT_None, "none", "None."),
+               clEnumValN(FunctionSummary::FSHT_AllNonCritical,
+                          "all-non-critical", "All non-critical edges."),
+               clEnumValN(FunctionSummary::FSHT_All, "all", "All edges.")));
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
@@ -268,6 +281,8 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         auto ScaledCount = PSI->getProfileCount(&I, BFI);
         auto Hotness = ScaledCount ? getHotness(ScaledCount.getValue(), PSI)
                                    : CalleeInfo::HotnessType::Unknown;
+        if (ForceSummaryEdgesCold != FunctionSummary::FSHT_None)
+          Hotness = CalleeInfo::HotnessType::Cold;
 
         // Use the original CalledValue, in case it was an alias. We want
         // to record the call edge to the alias in that case. Eventually
@@ -318,7 +333,9 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   // sample PGO, to enable the same inlines as the profiled optimized binary.
   for (auto &I : F.getImportGUIDs())
     CallGraphEdges[Index.getOrInsertValueInfo(I)].updateHotness(
-        CalleeInfo::HotnessType::Critical);
+        ForceSummaryEdgesCold == FunctionSummary::FSHT_All
+            ? CalleeInfo::HotnessType::Cold
+            : CalleeInfo::HotnessType::Critical);
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport =

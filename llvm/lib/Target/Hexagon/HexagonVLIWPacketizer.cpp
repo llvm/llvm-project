@@ -530,6 +530,9 @@ bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
     return false;
 
   int64_t Offset = MI.getOperand(OPI).getImm();
+  if (!HII->isValidOffset(MI.getOpcode(), Offset+Incr, HRI))
+    return false;
+
   MI.getOperand(OPI).setImm(Offset + Incr);
   ChangedOffset = Offset;
   return true;

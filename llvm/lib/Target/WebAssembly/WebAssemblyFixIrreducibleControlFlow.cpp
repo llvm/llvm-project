@@ -71,6 +71,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyFixIrreducibleControlFlow::ID = 0;
+INITIALIZE_PASS(WebAssemblyFixIrreducibleControlFlow, DEBUG_TYPE,
+                "Removes irreducible control flow", false, false)
+
 FunctionPass *llvm::createWebAssemblyFixIrreducibleControlFlow() {
   return new WebAssemblyFixIrreducibleControlFlow();
 }

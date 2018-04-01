@@ -56,6 +56,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyCFGSort::ID = 0;
+INITIALIZE_PASS(WebAssemblyCFGSort, DEBUG_TYPE,
+                "Reorders blocks in topological order", false, false)
+
 FunctionPass *llvm::createWebAssemblyCFGSort() {
   return new WebAssemblyCFGSort();
 }

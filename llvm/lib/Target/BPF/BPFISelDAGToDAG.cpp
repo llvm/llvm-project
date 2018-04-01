@@ -609,7 +609,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
     //   %2 = PHI %0, <%bb.1>, %1, <%bb.3>
     // Trace each incoming definition, e.g., (%0, %bb.1) and (%1, %bb.3)
     // The AND operation can be removed if both %0 in %bb.1 and %1 in
-    // %bb.3 are defined with with a load matching the MaskN.
+    // %bb.3 are defined with a load matching the MaskN.
     DEBUG(dbgs() << "Check PHI Insn: "; MII->dump(); dbgs() << '\n');
     unsigned PrevReg = -1;
     for (unsigned i = 0; i < MII->getNumOperands(); ++i) {

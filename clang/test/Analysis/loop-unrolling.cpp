@@ -36,6 +36,29 @@ int simple_unroll2() {
   return 0;
 }
 
+int simple_unroll3_unsigned() {
+  int a[9];
+  int k = 42;
+  for (unsigned i = 0; i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{9}}
+    a[i] = 42;
+  }
+  int b = 22 / (k - 42); // expected-warning {{Division by zero}}
+  return 0;
+}
+
+int simple_unroll4_unsigned() {
+  int a[9];
+  int k = 42;
+  unsigned i;
+  for (i = (0); i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{9}}
+    a[i] = 42;
+  }
+  int b = 22 / (k - 42); // expected-warning {{Division by zero}}
+  return 0;
+}
+
 int simple_no_unroll1() {
   int a[9];
   int k = 42;

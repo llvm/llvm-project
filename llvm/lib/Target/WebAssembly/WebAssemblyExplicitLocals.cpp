@@ -60,6 +60,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyExplicitLocals::ID = 0;
+INITIALIZE_PASS(WebAssemblyExplicitLocals, DEBUG_TYPE,
+                "Convert registers to WebAssembly locals", false, false)
+
 FunctionPass *llvm::createWebAssemblyExplicitLocals() {
   return new WebAssemblyExplicitLocals();
 }

@@ -138,6 +138,7 @@ defm : SLMWriteResPair<WriteVecShift, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecLogic, [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecALU,   [SLM_FPC_RSV01],  1>;
 defm : SLMWriteResPair<WriteVecIMul,  [SLM_FPC_RSV0],   4>;
+defm : SLMWriteResPair<WritePMULLD,  [SLM_FPC_RSV0],   11, [11], 7>;
 defm : SLMWriteResPair<WriteShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;

@@ -57,6 +57,10 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyCFGStackify::ID = 0;
+INITIALIZE_PASS(WebAssemblyCFGStackify, DEBUG_TYPE,
+                "Insert BLOCK and LOOP markers for WebAssembly scopes",
+                false, false)
+
 FunctionPass *llvm::createWebAssemblyCFGStackify() {
   return new WebAssemblyCFGStackify();
 }

@@ -164,6 +164,7 @@ def  : WriteRes<WriteVecMove,         [SKXPort015]>;
 defm : SKXWriteResPair<WriteVecALU,   [SKXPort15],  1>; // Vector integer ALU op, no logicals.
 defm : SKXWriteResPair<WriteVecShift, [SKXPort0],  1>; // Vector integer shifts.
 defm : SKXWriteResPair<WriteVecIMul,  [SKXPort0],   5>; // Vector integer multiply.
+defm : SKXWriteResPair<WritePMULLD,   [SKXPort015], 10, [2], 2, 6>; // Vector integer multiply.
 defm : SKXWriteResPair<WriteShuffle,  [SKXPort5],  1>; // Vector shuffles.
 defm : SKXWriteResPair<WriteBlend,  [SKXPort15],  1>; // Vector blends.
 defm : SKXWriteResPair<WriteVarBlend,  [SKXPort5], 2, [2]>; // Vector variable blends.

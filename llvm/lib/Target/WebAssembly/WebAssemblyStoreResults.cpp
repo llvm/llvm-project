@@ -68,6 +68,9 @@ private:
 } // end anonymous namespace
 
 char WebAssemblyStoreResults::ID = 0;
+INITIALIZE_PASS(WebAssemblyStoreResults, DEBUG_TYPE,
+                "Optimize store result values for WebAssembly", false, false)
+
 FunctionPass *llvm::createWebAssemblyStoreResults() {
   return new WebAssemblyStoreResults();
 }

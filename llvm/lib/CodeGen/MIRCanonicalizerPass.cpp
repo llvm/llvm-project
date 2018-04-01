@@ -131,7 +131,43 @@ static unsigned GetDummyVReg(const MachineFunction &MF) {
   return ~0U;
 }
 
-static bool rescheduleCanonically(MachineBasicBlock *MBB) {
+static bool
+rescheduleLexographically(std::vector<MachineInstr *> instructions,
+                          MachineBasicBlock *MBB,
+                          std::function<MachineBasicBlock::iterator()> getPos) {
+
+  bool Changed = false;
+  std::map<std::string, MachineInstr*> StringInstrMap;
+
+  for (auto *II : instructions) {
+    std::string S;
+    raw_string_ostream OS(S);
+    II->print(OS);
+    OS.flush();
+
+    // Trim the assignment, or start from the begining in the case of a store.
+    const size_t i = S.find("=");
+    StringInstrMap.insert({(i == std::string::npos) ? S : S.substr(i), II});
+  }
+
+  for (auto &II : StringInstrMap) {
+
+    DEBUG({
+      dbgs() << "Splicing ";
+      II.second->dump();
+      dbgs() << " right before: ";
+      getPos()->dump();
+    });
+
+    Changed = true;
+    MBB->splice(getPos(), MBB, II.second);
+  }
+
+  return Changed;
+}
+
+static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
+                                  MachineBasicBlock *MBB) {
 
   bool Changed = false;
 
@@ -153,13 +189,59 @@ static bool rescheduleCanonically(MachineBasicBlock *MBB) {
     Instructions.push_back(&MI);
   }
 
+  std::vector<MachineInstr *> PseudoIdempotentInstructions;
+  std::vector<unsigned> PhysRegDefs;
+  for (auto *II : Instructions) {
+    for (unsigned i = 1; i < II->getNumOperands(); i++) {
+      MachineOperand &MO = II->getOperand(i);
+      if (!MO.isReg())
+        continue;
+
+      if (TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+        continue;
+
+      if (!MO.isDef())
+        continue;
+
+      PhysRegDefs.push_back(MO.getReg());
+    }
+  }
+
   for (auto *II : Instructions) {
     if (II->getNumOperands() == 0)
+      continue;
+    if (II->mayLoadOrStore())
       continue;
 
     MachineOperand &MO = II->getOperand(0);
     if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
       continue;
+    if (!MO.isDef())
+      continue;
+
+    bool IsPseudoIdempotent = true;
+    for (unsigned i = 1; i < II->getNumOperands(); i++) {
+
+      if (II->getOperand(i).isImm()) {
+        continue;
+      }
+
+      if (II->getOperand(i).isReg()) {
+        if (!TargetRegisterInfo::isVirtualRegister(II->getOperand(i).getReg()))
+          if (llvm::find(PhysRegDefs, II->getOperand(i).getReg()) ==
+                         PhysRegDefs.end()) {
+            continue;
+          }
+      }
+
+      IsPseudoIdempotent = false;
+      break;
+    }
+
+    if (IsPseudoIdempotent) {
+      PseudoIdempotentInstructions.push_back(II);
+      continue;
+    }
 
     DEBUG(dbgs() << "Operand " << 0 << " of "; II->dump(); MO.dump(););
 
@@ -194,9 +276,6 @@ static bool rescheduleCanonically(MachineBasicBlock *MBB) {
       if (DefI != BBE && UseI != BBE)
         break;
 
-      if ((&*BBI != Def) && (&*BBI != UseToBringDefCloserTo))
-        continue;
-
       if (&*BBI == Def) {
         DefI = BBI;
         continue;
@@ -221,6 +300,12 @@ static bool rescheduleCanonically(MachineBasicBlock *MBB) {
     Changed = true;
     MBB->splice(UseI, MBB, DefI);
   }
+
+  PseudoIdempotentInstCount = PseudoIdempotentInstructions.size();
+  DEBUG(dbgs() << "Rescheduling Idempotent Instructions Lexographically.";);
+  Changed |= rescheduleLexographically(
+      PseudoIdempotentInstructions, MBB,
+      [&]() -> MachineBasicBlock::iterator { return MBB->begin(); });
 
   return Changed;
 }
@@ -517,7 +602,8 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   DEBUG(dbgs() << "\n\n NEW BASIC BLOCK: " << MBB->getName() << "\n\n";);
 
   DEBUG(dbgs() << "MBB Before Scheduling:\n"; MBB->dump(););
-  Changed |= rescheduleCanonically(MBB);
+  unsigned IdempotentInstCount = 0;
+  Changed |= rescheduleCanonically(IdempotentInstCount, MBB);
   DEBUG(dbgs() << "MBB After Scheduling:\n"; MBB->dump(););
 
   std::vector<MachineInstr *> Candidates = populateCandidates(MBB);
@@ -579,6 +665,31 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
 
   auto VRegRenameMap = GetVRegRenameMap(VRegs, renamedInOtherBB, MRI, DummyRC);
   Changed |= doVRegRenaming(renamedInOtherBB, VRegRenameMap, MRI);
+
+  // Here we renumber the def vregs for the idempotent instructions from the top
+  // of the MachineBasicBlock so that they are named in the order that we sorted
+  // them alphabetically. Eventually we wont need SkipVRegs because we will use
+  // named vregs instead.
+  unsigned gap = 1;
+  SkipVRegs(gap, MRI, DummyRC);
+
+  auto MII = MBB->begin();
+  for (unsigned i = 0; i < IdempotentInstCount && MII != MBB->end(); ++i) {
+    MachineInstr &MI = *MII++;
+    Changed = true;
+    unsigned vRegToRename = MI.getOperand(0).getReg();
+    auto Rename = MRI.createVirtualRegister(MRI.getRegClass(vRegToRename));
+
+    std::vector<MachineOperand *> RenameMOs;
+    for (auto &MO : MRI.reg_operands(vRegToRename)) {
+      RenameMOs.push_back(&MO);
+    }
+
+    for (auto *MO : RenameMOs) {
+      MO->setReg(Rename);
+    }
+  }
+
   Changed |= doDefKillClear(MBB);
 
   DEBUG(dbgs() << "Updated MachineBasicBlock:\n"; MBB->dump(); dbgs() << "\n";);

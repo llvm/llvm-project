@@ -67,6 +67,10 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyRegStackify::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegStackify, DEBUG_TYPE,
+                "Reorder instructions to use the WebAssembly value stack",
+                false, false)
+
 FunctionPass *llvm::createWebAssemblyRegStackify() {
   return new WebAssemblyRegStackify();
 }
