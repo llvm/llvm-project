@@ -141,13 +141,15 @@ static internal::Matcher<Stmt> forLoopMatcher() {
   return forStmt(
              hasCondition(simpleCondition("initVarName")),
              // Initialization should match the form: 'int i = 6' or 'i = 42'.
-             hasLoopInit(anyOf(
-                 declStmt(hasSingleDecl(varDecl(
-                     allOf(hasInitializer(integerLiteral().bind("initNum")),
-                           equalsBoundNode("initVarName"))))),
-                 binaryOperator(hasLHS(declRefExpr(to(
-                                    varDecl(equalsBoundNode("initVarName"))))),
-                                hasRHS(integerLiteral().bind("initNum"))))),
+             hasLoopInit(
+                 anyOf(declStmt(hasSingleDecl(
+                           varDecl(allOf(hasInitializer(ignoringParenImpCasts(
+                                             integerLiteral().bind("initNum"))),
+                                         equalsBoundNode("initVarName"))))),
+                       binaryOperator(hasLHS(declRefExpr(to(varDecl(
+                                          equalsBoundNode("initVarName"))))),
+                                      hasRHS(ignoringParenImpCasts(
+                                          integerLiteral().bind("initNum")))))),
              // Incrementation should be a simple increment or decrement
              // operator call.
              hasIncrement(unaryOperator(

@@ -230,7 +230,7 @@ public:
   getThisArgumentTypeForMethod(const CXXMethodDecl *MD) override {
     MD = MD->getCanonicalDecl();
     if (MD->isVirtual() && !isa<CXXDestructorDecl>(MD)) {
-      const MethodVFTableLocation &ML =
+      MicrosoftVTableContext::MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(MD);
       // The vbases might be ordered differently in the final overrider object
       // and the complete object, so the "this" argument may sometimes point to
@@ -616,8 +616,9 @@ private:
   const VBTableGlobals &enumerateVBTables(const CXXRecordDecl *RD);
 
   /// \brief Generate a thunk for calling a virtual member function MD.
-  llvm::Function *EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
-                                         const MethodVFTableLocation &ML);
+  llvm::Function *EmitVirtualMemPtrThunk(
+      const CXXMethodDecl *MD,
+      const MicrosoftVTableContext::MethodVFTableLocation &ML);
 
 public:
   llvm::Type *ConvertMemberPointerType(const MemberPointerType *MPT) override;
@@ -1335,7 +1336,7 @@ MicrosoftCXXABI::getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) {
     LookupGD = GlobalDecl(DD, Dtor_Deleting);
   }
 
-  const MethodVFTableLocation &ML =
+  MicrosoftVTableContext::MethodVFTableLocation ML =
       CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
   CharUnits Adjustment = ML.VFPtrOffset;
 
@@ -1384,7 +1385,7 @@ Address MicrosoftCXXABI::adjustThisArgumentForVirtualFunctionCall(
     // with the base one, so look up the deleting one instead.
     LookupGD = GlobalDecl(DD, Dtor_Deleting);
   }
-  const MethodVFTableLocation &ML =
+  MicrosoftVTableContext::MethodVFTableLocation ML =
       CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
 
   CharUnits StaticOffset = ML.VFPtrOffset;
@@ -1850,7 +1851,8 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   llvm::Value *VTable = CGF.GetVTablePtr(VPtr, Ty, MethodDecl->getParent());
 
   MicrosoftVTableContext &VFTContext = CGM.getMicrosoftVTableContext();
-  const MethodVFTableLocation &ML = VFTContext.getMethodVFTableLocation(GD);
+  MicrosoftVTableContext::MethodVFTableLocation ML =
+      VFTContext.getMethodVFTableLocation(GD);
 
   // Compute the identity of the most derived class whose virtual table is
   // located at the MethodVFTableLocation ML.
@@ -1935,16 +1937,16 @@ MicrosoftCXXABI::enumerateVBTables(const CXXRecordDecl *RD) {
   return VBGlobals;
 }
 
-llvm::Function *
-MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
-                                        const MethodVFTableLocation &ML) {
+llvm::Function *MicrosoftCXXABI::EmitVirtualMemPtrThunk(
+    const CXXMethodDecl *MD,
+    const MicrosoftVTableContext::MethodVFTableLocation &ML) {
   assert(!isa<CXXConstructorDecl>(MD) && !isa<CXXDestructorDecl>(MD) &&
          "can't form pointers to ctors or virtual dtors");
 
   // Calculate the mangled name.
   SmallString<256> ThunkName;
   llvm::raw_svector_ostream Out(ThunkName);
-  getMangleContext().mangleVirtualMemPtrThunk(MD, ML, Out);
+  getMangleContext().mangleVirtualMemPtrThunk(MD, Out);
 
   // If the thunk has been generated previously, just return it.
   if (llvm::GlobalValue *GV = CGM.getModule().getNamedValue(ThunkName))
@@ -2758,7 +2760,7 @@ MicrosoftCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
     FirstField = CGM.GetAddrOfFunction(MD, Ty);
   } else {
     auto &VTableContext = CGM.getMicrosoftVTableContext();
-    const MethodVFTableLocation &ML =
+    MicrosoftVTableContext::MethodVFTableLocation ML =
         VTableContext.getMethodVFTableLocation(MD);
     FirstField = EmitVirtualMemPtrThunk(MD, ML);
     // Include the vfptr adjustment if the method is in a non-primary vftable.

@@ -1416,7 +1416,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       // deleting dtor.
       const auto *DD = dyn_cast<CXXDestructorDecl>(Method);
       GlobalDecl GD = DD ? GlobalDecl(DD, Dtor_Deleting) : GlobalDecl(Method);
-      const MethodVFTableLocation &ML =
+      MicrosoftVTableContext::MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
       VIndex = ML.Index;
 
