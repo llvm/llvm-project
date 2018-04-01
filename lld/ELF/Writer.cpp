@@ -1087,6 +1087,72 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   return SectionOrder;
 }
 
+// Sorts the sections in ISD according to the provided section order.
+static void
+sortISDBySectionOrder(InputSectionDescription *ISD,
+                      const DenseMap<const InputSectionBase *, int> &Order) {
+  std::vector<InputSection *> UnorderedSections;
+  std::vector<InputSection *> OrderedSections;
+  uint64_t UnorderedSize = 0;
+
+  for (InputSection *IS : ISD->Sections) {
+    if (!Order.count(IS)) {
+      UnorderedSections.push_back(IS);
+      UnorderedSize += IS->getSize();
+      continue;
+    }
+    OrderedSections.push_back(IS);
+  }
+  std::sort(OrderedSections.begin(), OrderedSections.end(),
+            [&](InputSection *A, InputSection *B) {
+              return Order.lookup(A) < Order.lookup(B);
+            });
+
+  // Find an insertion point for the ordered section list in the unordered
+  // section list. On targets with limited-range branches, this is the mid-point
+  // of the unordered section list. This decreases the likelihood that a range
+  // extension thunk will be needed to enter or exit the ordered region. If the
+  // ordered section list is a list of hot functions, we can generally expect
+  // the ordered functions to be called more often than the unordered functions,
+  // making it more likely that any particular call will be within range, and
+  // therefore reducing the number of thunks required.
+  //
+  // For example, imagine that you have 8MB of hot code and 32MB of cold code.
+  // If the layout is:
+  //
+  // 8MB hot
+  // 32MB cold
+  //
+  // only the first 8-16MB of the cold code (depending on which hot function it
+  // is actually calling) can call the hot code without a range extension thunk.
+  // However, if we use this layout:
+  //
+  // 16MB cold
+  // 8MB hot
+  // 16MB cold
+  //
+  // both the last 8-16MB of the first block of cold code and the first 8-16MB
+  // of the second block of cold code can call the hot code without a thunk. So
+  // we effectively double the amount of code that could potentially call into
+  // the hot code without a thunk.
+  size_t UnorderedInsPt = 0;
+  if (Target->ThunkSectionSpacing && !OrderedSections.empty()) {
+    uint64_t UnorderedPos = 0;
+    for (; UnorderedInsPt != UnorderedSections.size(); ++UnorderedInsPt) {
+      UnorderedPos += UnorderedSections[UnorderedInsPt]->getSize();
+      if (UnorderedPos > UnorderedSize / 2)
+        break;
+    }
+  }
+
+  std::copy(UnorderedSections.begin(),
+            UnorderedSections.begin() + UnorderedInsPt, ISD->Sections.begin());
+  std::copy(OrderedSections.begin(), OrderedSections.end(),
+            ISD->Sections.begin() + UnorderedInsPt);
+  std::copy(UnorderedSections.begin() + UnorderedInsPt, UnorderedSections.end(),
+            ISD->Sections.begin() + UnorderedInsPt + OrderedSections.size());
+}
+
 static void sortSection(OutputSection *Sec,
                         const DenseMap<const InputSectionBase *, int> &Order) {
   StringRef Name = Sec->Name;
@@ -1113,7 +1179,9 @@ static void sortSection(OutputSection *Sec,
   // Sort input sections by priority using the list provided
   // by --symbol-ordering-file.
   if (!Order.empty())
-    Sec->sort([&](InputSectionBase *S) { return Order.lookup(S); });
+    for (BaseCommand *B : Sec->SectionCommands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(B))
+        sortISDBySectionOrder(ISD, Order);
 }
 
 // If no layout was provided by linker script, we want to apply default

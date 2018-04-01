@@ -174,8 +174,8 @@ class AggressiveDeadCodeElimination {
   /// marked live.
   void markLiveBranchesFromControlDependences();
 
-  /// Remove instructions not marked live, return if any any instruction
-  /// was removed.
+  /// Remove instructions not marked live, return if any instruction was
+  /// removed.
   bool removeDeadInstructions();
 
   /// Identify connected sections of the control flow graph which have

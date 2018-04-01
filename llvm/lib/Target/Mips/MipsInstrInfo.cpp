@@ -598,7 +598,7 @@ bool MipsInstrInfo::verifyInstruction(const MachineInstr &MI,
     case Mips::DINS:
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 32);
     case Mips::DINSM:
-      // The ISA spec has a subtle difference difference between dinsm and dextm
+      // The ISA spec has a subtle difference between dinsm and dextm
       // in that it says:
       // 2 <= size <= 64 for 'dinsm' but 'dextm' has 32 < size <= 64.
       // To make the bounds checks similar, the range 1 < size <= 64 is checked
