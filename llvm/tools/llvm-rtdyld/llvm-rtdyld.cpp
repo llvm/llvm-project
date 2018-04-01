@@ -42,7 +42,7 @@ using namespace llvm::object;
 
 static cl::list<std::string>
 InputFileList(cl::Positional, cl::ZeroOrMore,
-              cl::desc("<input file>"));
+              cl::desc("<input files>"));
 
 enum ActionType {
   AC_Execute,

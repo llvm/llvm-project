@@ -10645,7 +10645,7 @@ void ScalarEvolution::findArrayDimensions(SmallVectorImpl<const SCEV *> &Terms,
   Terms.erase(std::unique(Terms.begin(), Terms.end()), Terms.end());
 
   // Put larger terms first.
-  std::sort(Terms.begin(), Terms.end(), [](const SCEV *LHS, const SCEV *RHS) {
+  llvm::sort(Terms.begin(), Terms.end(), [](const SCEV *LHS, const SCEV *RHS) {
     return numberOfTerms(LHS) > numberOfTerms(RHS);
   });
 

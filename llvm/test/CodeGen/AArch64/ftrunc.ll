@@ -4,8 +4,7 @@
 define float @trunc_unsigned_f32(float %x) {
 ; CHECK-LABEL: trunc_unsigned_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu w8, s0
-; CHECK-NEXT:    ucvtf s0, w8
+; CHECK-NEXT:    frintz s0, s0
 ; CHECK-NEXT:    ret
   %i = fptoui float %x to i32
   %r = uitofp i32 %i to float
@@ -15,8 +14,7 @@ define float @trunc_unsigned_f32(float %x) {
 define double @trunc_unsigned_f64(double %x) {
 ; CHECK-LABEL: trunc_unsigned_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu x8, d0
-; CHECK-NEXT:    ucvtf d0, x8
+; CHECK-NEXT:    frintz d0, d0
 ; CHECK-NEXT:    ret
   %i = fptoui double %x to i64
   %r = uitofp i64 %i to double
@@ -26,8 +24,7 @@ define double @trunc_unsigned_f64(double %x) {
 define float @trunc_signed_f32(float %x) {
 ; CHECK-LABEL: trunc_signed_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w8, s0
-; CHECK-NEXT:    scvtf s0, w8
+; CHECK-NEXT:    frintz s0, s0
 ; CHECK-NEXT:    ret
   %i = fptosi float %x to i32
   %r = sitofp i32 %i to float
@@ -37,8 +34,7 @@ define float @trunc_signed_f32(float %x) {
 define double @trunc_signed_f64(double %x) {
 ; CHECK-LABEL: trunc_signed_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    scvtf d0, x8
+; CHECK-NEXT:    frintz d0, d0
 ; CHECK-NEXT:    ret
   %i = fptosi double %x to i64
   %r = sitofp i64 %i to double
