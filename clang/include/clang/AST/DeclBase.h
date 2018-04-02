@@ -792,7 +792,7 @@ public:
 
   /// \brief Determine whether this declaration is marked 'deprecated' for
   /// all target platforms that we're compiling for.
-  bool isUnavailabledForAllTargetPlatforms() const;
+  bool isUnavailableForAllTargetPlatforms() const;
 
   /// Determine whether this is a weak-imported symbol.
   ///

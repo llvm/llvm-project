@@ -862,7 +862,7 @@ bool Decl::isDeprecatedInAnyTargetPlatform(std::string *Message) const {
               AR_Deprecated);
 }
 
-bool Decl::isUnavailabledForAllTargetPlatforms() const {
+bool Decl::isUnavailableForAllTargetPlatforms() const {
   const TargetInfo &TI = getASTContext().getTargetInfo();
   return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
              AR_Unavailable &&

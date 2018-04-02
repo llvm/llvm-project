@@ -3388,7 +3388,7 @@ void SemaObjC::addMethodToGlobalList(ObjCMethodList *List,
         ListWithSameDeclaration = List;
 
       // FIXME: What about TVT?
-      if (Method->isUnavailabledForAllTargetPlatforms() && SameDeclaration &&
+      if (Method->isUnavailableForAllTargetPlatforms() && SameDeclaration &&
           !ListWithSameDeclaration &&
           List->getMethod()->getAvailability(
               getASTContext().getTargetInfo().getPlatformName(),
@@ -3420,7 +3420,7 @@ void SemaObjC::addMethodToGlobalList(ObjCMethodList *List,
     // FIXME: What about TVT?
     // If the new method is unavailable, push it into global pool
     // unless previous one is deprecated.
-    if (Method->isUnavailabledForAllTargetPlatforms()) {
+    if (Method->isUnavailableForAllTargetPlatforms()) {
       if (PrevObjCMethod->getAvailability(
               getASTContext().getTargetInfo().getPlatformName(),
               getASTContext().getTargetInfo().getPlatformMinVersion()) <
