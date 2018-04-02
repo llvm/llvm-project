@@ -1927,7 +1927,7 @@ void SemaObjC::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl *IMPDecl,
                             /* property = */ Prop->getIdentifier(),
                             /* ivar = */ Prop->getDefaultSynthIvarName(Context),
                             Prop->getLocation(), Prop->getQueryKind()));
-    if (PIDecl && !Prop->isUnavailabledForAllTargetPlatforms()) {
+    if (PIDecl && !Prop->isUnavailableForAllTargetPlatforms()) {
       Diag(Prop->getLocation(), diag::warn_missing_explicit_synthesis);
       Diag(IMPDecl->getLocation(), diag::note_while_in_implementation);
     }
@@ -2075,7 +2075,7 @@ void SemaObjC::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl *IMPDecl,
     // Is there a matching property synthesize/dynamic?
     if (Prop->isInvalidDecl() ||
         Prop->getPropertyImplementation() == ObjCPropertyDecl::Optional ||
-        PropImplMap.count(Prop) || Prop->isUnavailabledForAllTargetPlatforms())
+        PropImplMap.count(Prop) || Prop->isUnavailableForAllTargetPlatforms())
       continue;
 
     // Diagnose unimplemented getters and setters.
@@ -2290,12 +2290,12 @@ void SemaObjC::DiagnoseMissingDesignatedInitOverrides(
       // marked as unavailable.
       bool Ignore = false;
       if (auto *IMD = IFD->getInstanceMethod(MD->getSelector())) {
-        Ignore = IMD->isUnavailabledForAllTargetPlatforms();
+        Ignore = IMD->isUnavailableForAllTargetPlatforms();
       } else {
         // Check the methods declared in the class extensions too.
         for (auto *Ext : IFD->visible_extensions())
           if (auto *IMD = Ext->getInstanceMethod(MD->getSelector())) {
-            Ignore = IMD->isUnavailabledForAllTargetPlatforms();
+            Ignore = IMD->isUnavailableForAllTargetPlatforms();
             break;
           }
       }

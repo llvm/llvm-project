@@ -163,7 +163,7 @@ static bool canRewriteToSubscriptSyntax(const ObjCInterfaceDecl *&IFace,
   IFace = maybeAdjustInterfaceForSubscriptingCheck(IFace, Rec, Ctx);
 
   if (const ObjCMethodDecl *MD = IFace->lookupInstanceMethod(subscriptSel)) {
-    if (!MD->isUnavailabledForAllTargetPlatforms())
+    if (!MD->isUnavailableForAllTargetPlatforms())
       return true;
   }
   return false;
