@@ -1267,7 +1267,6 @@ static void __kmp_atfork_parent(void) {
    clean data structures in initial states.  Don't worry about freeing memory
    allocated by parent, just abandon it to be safe. */
 static void __kmp_atfork_child(void) {
-  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
   __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
   /* TODO make sure this is done right for nested/sibling */
   // ATT:  Memory leaks are here? TODO: Check it and fix.

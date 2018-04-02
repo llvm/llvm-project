@@ -41,6 +41,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 
 #include <map>
 #include <vector>
@@ -2042,6 +2043,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
     const DWARFDIE &die,
     ClangASTContext::TemplateParameterInfos &template_param_infos) {
   const dw_tag_t tag = die.Tag();
+  bool is_template_template_argument = false;
 
   switch (tag) {
   case DW_TAG_GNU_template_parameter_pack: {
@@ -2057,11 +2059,15 @@ bool DWARFASTParserClang::ParseTemplateDIE(
     }
     return true;
   }
+  case DW_TAG_GNU_template_template_param:
+    is_template_template_argument = true;
+    LLVM_FALLTHROUGH;
   case DW_TAG_template_type_parameter:
   case DW_TAG_template_value_parameter: {
     DWARFAttributes attributes;
     const size_t num_attributes = die.GetAttributes(attributes);
     const char *name = nullptr;
+    const char *template_name = nullptr;
     CompilerType clang_type;
     uint64_t uval64 = 0;
     bool uval64_valid = false;
@@ -2074,6 +2080,11 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         case DW_AT_name:
           if (attributes.ExtractFormValueAtIndex(i, form_value))
             name = form_value.AsCString();
+          break;
+
+        case DW_AT_GNU_template_name:
+          if (attributes.ExtractFormValueAtIndex(i, form_value))
+            template_name = form_value.AsCString();
           break;
 
         case DW_AT_type:
@@ -2099,7 +2110,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
       if (!clang_type)
         clang_type = m_ast.GetBasicType(eBasicTypeVoid);
 
-      if (clang_type) {
+      if (!is_template_template_argument) {
         bool is_signed = false;
         if (name && name[0])
           template_param_infos.names.push_back(name);
@@ -2119,7 +2130,10 @@ bool DWARFASTParserClang::ParseTemplateDIE(
               clang::TemplateArgument(ClangUtil::GetQualType(clang_type)));
         }
       } else {
-        return false;
+        auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
+        template_param_infos.names.push_back(name);
+        template_param_infos.args.push_back(
+            clang::TemplateArgument(clang::TemplateName(tplt_type)));
       }
     }
   }
@@ -2146,6 +2160,7 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
     case DW_TAG_template_type_parameter:
     case DW_TAG_template_value_parameter:
     case DW_TAG_GNU_template_parameter_pack:
+    case DW_TAG_GNU_template_template_param:
       ParseTemplateDIE(die, template_param_infos);
       break;
 
