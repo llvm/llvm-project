@@ -1481,6 +1481,10 @@ private:
       MaxDwarfVersion = Version;
   }
 
+  /// Emit warnings as Dwarf compile units to leave a trail after linking.
+  bool emitPaperTrailWarnings(const DebugMapObject &DMO, const DebugMap &Map,
+                              OffsetsStringPool &StringPool);
+
   /// Keeps track of relocations.
   class RelocationManager {
     struct ValidReloc {
@@ -4118,6 +4122,64 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
   }
 }
 
+bool DwarfLinker::emitPaperTrailWarnings(const DebugMapObject &DMO,
+                                         const DebugMap &Map,
+                                         OffsetsStringPool &StringPool) {
+  if (DMO.getWarnings().empty() || !DMO.empty())
+    return false;
+
+  Streamer->switchToDebugInfoSection(/* Version */ 2);
+  DIE *CUDie = DIE::get(DIEAlloc, dwarf::DW_TAG_compile_unit);
+  CUDie->setOffset(11);
+  StringRef Producer = StringPool.internString("dsymutil");
+  StringRef File = StringPool.internString(DMO.getObjectFilename());
+  CUDie->addValue(DIEAlloc, dwarf::DW_AT_producer, dwarf::DW_FORM_strp,
+                  DIEInteger(StringPool.getStringOffset(Producer)));
+  DIEBlock *String = new (DIEAlloc) DIEBlock();
+  DIEBlocks.push_back(String);
+  for (auto &C : File)
+    String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
+                     DIEInteger(C));
+  String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
+                   DIEInteger(0));
+
+  CUDie->addValue(DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_string, String);
+  for (const auto &Warning : DMO.getWarnings()) {
+    DIE &ConstDie = CUDie->addChild(DIE::get(DIEAlloc, dwarf::DW_TAG_constant));
+    ConstDie.addValue(
+        DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_strp,
+        DIEInteger(StringPool.getStringOffset("dsymutil_warning")));
+    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_artificial, dwarf::DW_FORM_flag,
+                      DIEInteger(1));
+    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_const_value, dwarf::DW_FORM_strp,
+                      DIEInteger(StringPool.getStringOffset(Warning)));
+  }
+  unsigned Size = 4 /* FORM_strp */ + File.size() + 1 +
+                  DMO.getWarnings().size() * (4 + 1 + 4) +
+                  1 /* End of children */;
+  DIEAbbrev Abbrev = CUDie->generateAbbrev();
+  AssignAbbrev(Abbrev);
+  CUDie->setAbbrevNumber(Abbrev.getNumber());
+  Size += getULEB128Size(Abbrev.getNumber());
+  // Abbreviation ordering needed for classic compatibility.
+  for (auto &Child : CUDie->children()) {
+    Abbrev = Child.generateAbbrev();
+    AssignAbbrev(Abbrev);
+    Child.setAbbrevNumber(Abbrev.getNumber());
+    Size += getULEB128Size(Abbrev.getNumber());
+  }
+  CUDie->setSize(Size);
+  auto &Asm = Streamer->getAsmPrinter();
+  Asm.emitInt32(11 + CUDie->getSize() - 4);
+  Asm.emitInt16(2);
+  Asm.emitInt32(0);
+  Asm.emitInt8(Map.getTriple().isArch64Bit() ? 8 : 4);
+  Streamer->emitDIE(*CUDie);
+  OutputDebugInfoSize += 11 /* Header */ + Size;
+
+  return true;
+}
+
 bool DwarfLinker::link(const DebugMap &Map) {
   if (!createStreamer(Map.getTriple(), OutFile))
     return false;
@@ -4184,8 +4246,10 @@ bool DwarfLinker::link(const DebugMap &Map) {
       continue;
     }
 
-    if (!LinkContext.ObjectFile)
+    if (emitPaperTrailWarnings(LinkContext.DMO, Map, OffsetsStringPool))
+      continue;
 
+    if (!LinkContext.ObjectFile)
       continue;
 
     // Look for relocations that correspond to debug map entries.
@@ -4231,6 +4295,11 @@ bool DwarfLinker::link(const DebugMap &Map) {
       }
     }
   }
+
+  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway,
+  // to be able to emit papertrail warnings.
+  if (MaxDwarfVersion == 0)
+    MaxDwarfVersion = 3;
 
   ThreadPool pool(2);
 

@@ -335,6 +335,21 @@ v_sin_f16 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // VI9: v_cos_f16_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x94,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cos_f16 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
+// GFX9:   v_cvt_norm_i16_f16_dpp v5, |v1| quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x9a,0x0a,0x7e,0x01,0xe4,0x20,0x00]
+// NOSICI: error
+// NOVI:   error
+v_cvt_norm_i16_f16_dpp v5, |v1| quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+
+// GFX9:   v_cvt_norm_u16_f16_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x9c,0x0a,0x7e,0x01,0x1b,0x00,0x00]
+// NOSICI: error
+// NOVI:   error
+v_cvt_norm_u16_f16_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0x0 bank_mask:0x0
+
+// GFX9:   v_sat_pk_u8_i16_dpp v5, v1 row_ror:15 row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x9e,0x0a,0x7e,0x01,0x2f,0x01,0x00]
+// NOSICI: error
+// NOVI:   error
+v_sat_pk_u8_i16_dpp v5, v1 row_ror:15 row_mask:0x0 bank_mask:0x0
+
 //===----------------------------------------------------------------------===//
 // Check VOP2 opcodes
 //===----------------------------------------------------------------------===//

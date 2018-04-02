@@ -41,9 +41,6 @@
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
 #endif
-#if defined(HAVE_SYS_UIO_H) && defined(HAVE_WRITEV)
-#  include <sys/uio.h>
-#endif
 
 #if defined(__CYGWIN__)
 #include <io.h>

@@ -212,3 +212,267 @@ s_scratch_store_dwordx2 s[2:3], s[4:5], s101 glc
 s_scratch_store_dwordx4 s[4:7], s[4:5], s0 glc
 // GFX9: s_scratch_store_dwordx4 s[4:7], s[4:5], s0 glc ; encoding: [0x02,0x01,0x5d,0xc0,0x00,0x00,0x00,0x00]
 // NOSICIVI: error
+
+//===----------------------------------------------------------------------===//
+// s_atomic instructions
+//===----------------------------------------------------------------------===//
+
+s_atomic_add s5, s[2:3], s101
+// GFX9:     s_atomic_add s5, s[2:3], s101 ; encoding: [0x41,0x01,0x08,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_add s5, s[2:3], 0x0
+// GFX9:     s_atomic_add s5, s[2:3], 0x0 ; encoding: [0x41,0x01,0x0a,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_add s5, s[2:3], s0 glc
+// GFX9:     s_atomic_add s5, s[2:3], s0 glc ; encoding: [0x41,0x01,0x09,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_add_x2 s[10:11], s[2:3], s101
+// GFX9:     s_atomic_add_x2 s[10:11], s[2:3], s101 ; encoding: [0x81,0x02,0x88,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_and s5, s[2:3], s101
+// GFX9:     s_atomic_and s5, s[2:3], s101 ; encoding: [0x41,0x01,0x20,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_and_x2 s[10:11], s[2:3], 0x0
+// GFX9:     s_atomic_and_x2 s[10:11], s[2:3], 0x0 ; encoding: [0x81,0x02,0xa2,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_cmpswap s[10:11], s[2:3], s101
+// GFX9:     s_atomic_cmpswap s[10:11], s[2:3], s101 ; encoding: [0x81,0x02,0x04,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_cmpswap s[10:11], s[2:3], 0x0
+// GFX9:     s_atomic_cmpswap s[10:11], s[2:3], 0x0 ; encoding: [0x81,0x02,0x06,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_cmpswap s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_cmpswap s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0x05,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_cmpswap_x2 s[20:23], s[2:3], s101
+// GFX9:     s_atomic_cmpswap_x2 s[20:23], s[2:3], s101 ; encoding: [0x01,0x05,0x84,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_cmpswap_x2 s[20:23], s[2:3], 0x0
+// GFX9:     s_atomic_cmpswap_x2 s[20:23], s[2:3], 0x0 ; encoding: [0x01,0x05,0x86,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_cmpswap_x2 s[20:23], s[2:3], s0 glc
+// GFX9:     s_atomic_cmpswap_x2 s[20:23], s[2:3], s0 glc ; encoding: [0x01,0x05,0x85,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_dec s5, s[2:3], s0 glc
+// GFX9:     s_atomic_dec s5, s[2:3], s0 glc ; encoding: [0x41,0x01,0x31,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_dec_x2 s[10:11], s[2:3], s101
+// GFX9:     s_atomic_dec_x2 s[10:11], s[2:3], s101 ; encoding: [0x81,0x02,0xb0,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_inc s5, s[2:3], s0 glc
+// GFX9:     s_atomic_inc s5, s[2:3], s0 glc ; encoding: [0x41,0x01,0x2d,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_inc_x2 s[10:11], s[2:3], s101
+// GFX9:     s_atomic_inc_x2 s[10:11], s[2:3], s101 ; encoding: [0x81,0x02,0xac,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_or s5, s[2:3], 0x0
+// GFX9:     s_atomic_or s5, s[2:3], 0x0 ; encoding: [0x41,0x01,0x26,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_or_x2 s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_or_x2 s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0xa5,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_smax s5, s[2:3], s101
+// GFX9:     s_atomic_smax s5, s[2:3], s101 ; encoding: [0x41,0x01,0x18,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_smax_x2 s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_smax_x2 s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0x99,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_smin s5, s[2:3], s101
+// GFX9:     s_atomic_smin s5, s[2:3], s101 ; encoding: [0x41,0x01,0x10,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_smin_x2 s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_smin_x2 s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0x91,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_sub s5, s[2:3], s101
+// GFX9:     s_atomic_sub s5, s[2:3], s101 ; encoding: [0x41,0x01,0x0c,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_sub_x2 s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_sub_x2 s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0x8d,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_swap s5, s[2:3], s101
+// GFX9:     s_atomic_swap s5, s[2:3], s101 ; encoding: [0x41,0x01,0x00,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_swap_x2 s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_swap_x2 s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0x81,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_umax s5, s[2:3], s0 glc
+// GFX9:     s_atomic_umax s5, s[2:3], s0 glc ; encoding: [0x41,0x01,0x1d,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_umax_x2 s[10:11], s[2:3], s101
+// GFX9:     s_atomic_umax_x2 s[10:11], s[2:3], s101 ; encoding: [0x81,0x02,0x9c,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_umin s5, s[2:3], s101
+// GFX9:     s_atomic_umin s5, s[2:3], s101 ; encoding: [0x41,0x01,0x14,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_umin_x2 s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_umin_x2 s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0x95,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_xor s5, s[2:3], s101
+// GFX9:     s_atomic_xor s5, s[2:3], s101 ; encoding: [0x41,0x01,0x28,0xc2,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_atomic_xor_x2 s[10:11], s[2:3], s0 glc
+// GFX9:     s_atomic_xor_x2 s[10:11], s[2:3], s0 glc ; encoding: [0x81,0x02,0xa9,0xc2,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+//===----------------------------------------------------------------------===//
+// s_buffer_atomic instructions
+//===----------------------------------------------------------------------===//
+
+s_buffer_atomic_add s5, s[4:7], s101
+// GFX9:     s_buffer_atomic_add s5, s[4:7], s101 ; encoding: [0x42,0x01,0x08,0xc1,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_add s5, s[4:7], 0x0
+// GFX9:     s_buffer_atomic_add s5, s[4:7], 0x0 ; encoding: [0x42,0x01,0x0a,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_add s5, s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_add s5, s[4:7], s0 glc ; encoding: [0x42,0x01,0x09,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_add_x2 s[10:11], s[4:7], s0
+// GFX9:     s_buffer_atomic_add_x2 s[10:11], s[4:7], s0 ; encoding: [0x82,0x02,0x88,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_and s101, s[4:7], s0
+// GFX9:     s_buffer_atomic_and s101, s[4:7], s0 ; encoding: [0x42,0x19,0x20,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_and_x2 s[10:11], s[8:11], s0
+// GFX9:     s_buffer_atomic_and_x2 s[10:11], s[8:11], s0 ; encoding: [0x84,0x02,0xa0,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_cmpswap s[10:11], s[4:7], s0
+// GFX9:     s_buffer_atomic_cmpswap s[10:11], s[4:7], s0 ; encoding: [0x82,0x02,0x04,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_cmpswap s[10:11], s[4:7], 0x0
+// GFX9:     s_buffer_atomic_cmpswap s[10:11], s[4:7], 0x0 ; encoding: [0x82,0x02,0x06,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_cmpswap s[10:11], s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_cmpswap s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0x05,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_cmpswap_x2 s[20:23], s[4:7], s101
+// GFX9:     s_buffer_atomic_cmpswap_x2 s[20:23], s[4:7], s101 ; encoding: [0x02,0x05,0x84,0xc1,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_cmpswap_x2 s[20:23], s[4:7], 0x0
+// GFX9:     s_buffer_atomic_cmpswap_x2 s[20:23], s[4:7], 0x0 ; encoding: [0x02,0x05,0x86,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_cmpswap_x2 s[20:23], s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_cmpswap_x2 s[20:23], s[4:7], s0 glc ; encoding: [0x02,0x05,0x85,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_dec s5, s[4:7], s0
+// GFX9:     s_buffer_atomic_dec s5, s[4:7], s0 ; encoding: [0x42,0x01,0x30,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_dec_x2 s[10:11], s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_dec_x2 s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0xb1,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_inc s101, s[4:7], s0
+// GFX9:     s_buffer_atomic_inc s101, s[4:7], s0 ; encoding: [0x42,0x19,0x2c,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_inc_x2 s[10:11], s[4:7], 0x0
+// GFX9:     s_buffer_atomic_inc_x2 s[10:11], s[4:7], 0x0 ; encoding: [0x82,0x02,0xae,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_or s5, s[8:11], s0
+// GFX9:     s_buffer_atomic_or s5, s[8:11], s0 ; encoding: [0x44,0x01,0x24,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_or_x2 s[10:11], s[96:99], s0
+// GFX9:     s_buffer_atomic_or_x2 s[10:11], s[96:99], s0 ; encoding: [0xb0,0x02,0xa4,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_smax s5, s[4:7], s101
+// GFX9:     s_buffer_atomic_smax s5, s[4:7], s101 ; encoding: [0x42,0x01,0x18,0xc1,0x65,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_smax_x2 s[100:101], s[4:7], s0
+// GFX9:     s_buffer_atomic_smax_x2 s[100:101], s[4:7], s0 ; encoding: [0x02,0x19,0x98,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_smin s5, s[4:7], 0x0
+// GFX9:     s_buffer_atomic_smin s5, s[4:7], 0x0 ; encoding: [0x42,0x01,0x12,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_smin_x2 s[12:13], s[4:7], s0
+// GFX9:     s_buffer_atomic_smin_x2 s[12:13], s[4:7], s0 ; encoding: [0x02,0x03,0x90,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_sub s5, s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_sub s5, s[4:7], s0 glc ; encoding: [0x42,0x01,0x0d,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_sub_x2 s[10:11], s[4:7], s0
+// GFX9:     s_buffer_atomic_sub_x2 s[10:11], s[4:7], s0 ; encoding: [0x82,0x02,0x8c,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_swap s5, s[4:7], s0
+// GFX9:     s_buffer_atomic_swap s5, s[4:7], s0 ; encoding: [0x42,0x01,0x00,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_swap_x2 s[10:11], s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_swap_x2 s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0x81,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_umax s5, s[4:7], s0
+// GFX9:     s_buffer_atomic_umax s5, s[4:7], s0 ; encoding: [0x42,0x01,0x1c,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_umax_x2 s[10:11], s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_umax_x2 s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0x9d,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_umin s5, s[4:7], s0
+// GFX9:     s_buffer_atomic_umin s5, s[4:7], s0 ; encoding: [0x42,0x01,0x14,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_umin_x2 s[10:11], s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_umin_x2 s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0x95,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_xor s5, s[4:7], s0
+// GFX9:     s_buffer_atomic_xor s5, s[4:7], s0 ; encoding: [0x42,0x01,0x28,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:
+
+s_buffer_atomic_xor_x2 s[10:11], s[4:7], s0 glc
+// GFX9:     s_buffer_atomic_xor_x2 s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0xa9,0xc1,0x00,0x00,0x00,0x00]
+// NOSICIVI: error:

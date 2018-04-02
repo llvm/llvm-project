@@ -24,34 +24,14 @@
 #ifndef LLVM_C_DATATYPES_H
 #define LLVM_C_DATATYPES_H
 
-#cmakedefine HAVE_INTTYPES_H ${HAVE_INTTYPES_H}
-#cmakedefine HAVE_STDINT_H ${HAVE_STDINT_H}
-#cmakedefine HAVE_UINT64_T ${HAVE_UINT64_T}
-#cmakedefine HAVE_U_INT64_T ${HAVE_U_INT64_T}
-
 #ifdef __cplusplus
 #include <cmath>
 #else
 #include <math.h>
 #endif
 
-#ifdef __cplusplus
-#include <cinttypes>
-#else
-#ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
-#endif
-#endif
-
-#ifdef __cplusplus
-#include <cstdint>
-#else
-#ifdef HAVE_STDINT_H
 #include <stdint.h>
-#else
-#error "Compiler must provide an implementation of stdint.h"
-#endif
-#endif
 
 #ifndef _MSC_VER
 
@@ -74,15 +54,6 @@
 #undef INT64_MIN
 #endif
 
-/* Handle incorrect definition of uint64_t as u_int64_t */
-#ifndef HAVE_UINT64_T
-#ifdef HAVE_U_INT64_T
-typedef u_int64_t uint64_t;
-#else
-# error "Don't have a definition for uint64_t on this platform"
-#endif
-#endif
-
 #else /* _MSC_VER */
 #ifdef __cplusplus
 #include <cstddef>
@@ -98,22 +69,6 @@ typedef signed __int64 ssize_t;
 #else
 typedef signed int ssize_t;
 #endif /* _WIN64 */
-
-#ifndef HAVE_INTTYPES_H
-#define PRId64 "I64d"
-#define PRIi64 "I64i"
-#define PRIo64 "I64o"
-#define PRIu64 "I64u"
-#define PRIx64 "I64x"
-#define PRIX64 "I64X"
-
-#define PRId32 "d"
-#define PRIi32 "i"
-#define PRIo32 "o"
-#define PRIu32 "u"
-#define PRIx32 "x"
-#define PRIX32 "X"
-#endif /* HAVE_INTTYPES_H */
 
 #endif /* _MSC_VER */
 

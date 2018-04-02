@@ -48,11 +48,11 @@ define void @phiUsingLoads(i32* noalias nocapture readonly %A, i32* noalias noca
 ; CHECK-NEXT:    [[ARRAYIDX65:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX66:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[B]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP34:%.*]], <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP27:%.*]], <4 x i32>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ undef, [[ENTRY]] ], [ [[TMP34]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ undef, [[ENTRY]] ], [ [[TMP27]], [[FOR_INC]] ]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
@@ -103,23 +103,16 @@ define void @phiUsingLoads(i32* noalias nocapture readonly %A, i32* noalias noca
 ; CHECK-NEXT:    [[ARRAYIDX49:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX52:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i32* [[ARRAYIDX49]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP23:%.*]] = load <2 x i32>, <2 x i32>* [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX55:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP24]]
-; CHECK-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARRAYIDX55]], align 4
-; CHECK-NEXT:    [[TMP26:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX58:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP26]]
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32, i32* [[ARRAYIDX58]], align 4
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i32> [[TMP23]], i32 0
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x i32> undef, i32 [[TMP28]], i32 0
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x i32> [[TMP23]], i32 1
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP29]], i32 [[TMP30]], i32 1
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP25]], i32 2
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP27]], i32 3
+; CHECK-NEXT:    [[TMP22:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[ARRAYIDX55:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP23:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX58:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i32* [[ARRAYIDX49]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP25:%.*]] = load <4 x i32>, <4 x i32>* [[TMP24]], align 4
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x i32> [[TMP25]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP34]] = phi <4 x i32> [ [[TMP7]], [[IF_THEN]] ], [ [[TMP13]], [[IF_THEN14]] ], [ [[TMP19]], [[IF_THEN30]] ], [ [[TMP33]], [[IF_THEN46]] ], [ [[TMP2]], [[IF_ELSE43]] ]
+; CHECK-NEXT:    [[TMP27]] = phi <4 x i32> [ [[TMP7]], [[IF_THEN]] ], [ [[TMP13]], [[IF_THEN14]] ], [ [[TMP19]], [[IF_THEN30]] ], [ [[TMP26]], [[IF_THEN46]] ], [ [[TMP2]], [[IF_ELSE43]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
