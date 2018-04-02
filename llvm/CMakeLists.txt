@@ -744,9 +744,6 @@ configure_file(
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)
-configure_file(
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/DataTypes.h.cmake
-  ${LLVM_INCLUDE_DIR}/llvm-c/DataTypes.h)
 
 # Add target for generating source rpm package.
 set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in

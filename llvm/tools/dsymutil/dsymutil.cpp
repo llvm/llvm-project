@@ -147,6 +147,11 @@ static opt<std::string>
     Toolchain("toolchain", desc("Embed toolchain information in dSYM bundle."),
               cat(DsymCategory));
 
+static opt<bool>
+    PaperTrailWarnings("papertrail",
+                       desc("Embed warnings in the linked DWARF debug info."),
+                       cat(DsymCategory));
+
 static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (NoOutput)
     return true;
@@ -430,6 +435,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (getenv("RC_DEBUG_OPTIONS"))
+    PaperTrailWarnings = true;
+
+  if (PaperTrailWarnings && InputIsYAMLDebugMap)
+    warn_ostream() << "Paper trail warnings are not supported for YAML input";
+
   for (const auto &Arch : ArchFlags)
     if (Arch != "*" && Arch != "all" &&
         !llvm::object::MachOObjectFile::isValidArch(Arch)) {
@@ -445,8 +456,9 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    auto DebugMapPtrsOrErr = parseDebugMap(InputFile, ArchFlags, OsoPrependPath,
-                                           Verbose, InputIsYAMLDebugMap);
+    auto DebugMapPtrsOrErr =
+        parseDebugMap(InputFile, ArchFlags, OsoPrependPath, PaperTrailWarnings,
+                      Verbose, InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       error_ostream() << "cannot parse the debug map for '" << InputFile
