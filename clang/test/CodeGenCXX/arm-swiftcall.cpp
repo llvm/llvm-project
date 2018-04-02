@@ -113,3 +113,13 @@ TEST(struct_indirect_1)
 
 // Should not be byval.
 // CHECK-LABEL: define {{.*}} void @take_struct_indirect_1({{.*}}*{{( %.*)?}})
+
+// Do a simple standalone test here of a function definition to ensure that
+// we don't have problems due to failure to eagerly synthesize a copy
+// constructor declaration.
+class struct_trivial {
+  int x;
+};
+// CHECK-LABEL define void @test_struct_trivial(i32{{( %.*)?}})
+extern "C" SWIFTCALL
+void test_struct_trivial(struct_trivial triv) {}
