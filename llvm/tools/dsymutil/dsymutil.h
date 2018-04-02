@@ -59,7 +59,8 @@ struct LinkOptions {
 /// returned when the file is universal (aka fat) binary.
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 parseDebugMap(StringRef InputFile, ArrayRef<std::string> Archs,
-              StringRef PrependPath, bool Verbose, bool InputIsYAML);
+              StringRef PrependPath, bool PaperTrailWarnings, bool Verbose,
+              bool InputIsYAML);
 
 /// Dump the symbol table
 bool dumpStab(StringRef InputFile, ArrayRef<std::string> Archs,

@@ -3139,7 +3139,7 @@ define void @test_bt_btc_btr_bts_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    btq %rsi, %rdi # sched: [1:1.00]
 ; ATOM-NEXT:    btcq %rsi, %rdi # sched: [1:1.00]
-; ATOM-NEXT:    btrq %rsi, %rdi # sched: [0:?]
+; ATOM-NEXT:    btrq %rsi, %rdi # sched: [1:1.00]
 ; ATOM-NEXT:    btsq %rsi, %rdi # sched: [1:1.00]
 ; ATOM-NEXT:    btq %rsi, (%rdx) # sched: [9:4.50]
 ; ATOM-NEXT:    btcq %rsi, (%rdx) # sched: [11:5.50]

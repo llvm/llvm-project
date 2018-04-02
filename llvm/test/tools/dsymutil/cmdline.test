@@ -13,6 +13,7 @@ HELP: -no-swiftmodule-timestamp
 HELP: -num-threads=<n>
 HELP: -o=<filename>
 HELP: -oso-prepend-path=<path>
+HELP: -papertrail
 HELP: -symtab
 HELP: -toolchain
 HELP: -update

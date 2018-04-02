@@ -1337,45 +1337,61 @@ let Predicates = [HasBMI2] in {
 // ADCX and ADOX Instructions
 //
 let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
-    Constraints = "$src0 = $dst", AddedComplexity = 10 in {
+    Constraints = "$src1 = $dst", AddedComplexity = 10 in {
   let SchedRW = [WriteALU] in {
   def ADCX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
-             (ins GR32:$src0, GR32:$src), "adcx{l}\t{$src, $dst|$dst, $src}",
-             [(set GR32:$dst, EFLAGS,
-                 (X86adc_flag GR32:$src0, GR32:$src, EFLAGS))],
-             IIC_BIN_CARRY_NONMEM>, T8PD;
+                   (ins GR32:$src1, GR32:$src2),
+                   "adcx{l}\t{$src2, $dst|$dst, $src2}",
+                   [(set GR32:$dst, EFLAGS,
+                     (X86adc_flag GR32:$src1, GR32:$src2, EFLAGS))],
+                   IIC_BIN_CARRY_NONMEM>, T8PD;
   def ADCX64rr : RI<0xF6, MRMSrcReg, (outs GR64:$dst),
-             (ins GR64:$src0, GR64:$src), "adcx{q}\t{$src, $dst|$dst, $src}",
-             [(set GR64:$dst, EFLAGS,
-                 (X86adc_flag GR64:$src0, GR64:$src, EFLAGS))],
-             IIC_BIN_CARRY_NONMEM>, T8PD;
+                    (ins GR64:$src1, GR64:$src2),
+                    "adcx{q}\t{$src2, $dst|$dst, $src2}",
+                    [(set GR64:$dst, EFLAGS,
+                      (X86adc_flag GR64:$src1, GR64:$src2, EFLAGS))],
+                    IIC_BIN_CARRY_NONMEM>, T8PD;
 
   // We don't have patterns for ADOX yet.
-  def ADOX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src0, GR32:$src),
-             "adox{l}\t{$src, $dst|$dst, $src}", [], IIC_BIN_NONMEM>, T8XS;
+  let hasSideEffects = 0 in {
+  def ADOX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
+                   (ins GR32:$src1, GR32:$src2),
+                   "adox{l}\t{$src2, $dst|$dst, $src2}",
+                   [], IIC_BIN_CARRY_NONMEM>, T8XS;
 
-  def ADOX64rr : RI<0xF6, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src0, GR64:$src),
-             "adox{q}\t{$src, $dst|$dst, $src}", [], IIC_BIN_NONMEM>, T8XS;
+  def ADOX64rr : RI<0xF6, MRMSrcReg, (outs GR64:$dst),
+                    (ins GR64:$src1, GR64:$src2),
+                    "adox{q}\t{$src2, $dst|$dst, $src2}",
+                    [], IIC_BIN_CARRY_NONMEM>, T8XS;
+  } // hasSideEffects = 0
   } // SchedRW
 
-  let mayLoad = 1, SchedRW = [WriteALULd] in {
+  let mayLoad = 1, SchedRW = [WriteALULd, ReadAfterLd] in {
   def ADCX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst),
-             (ins GR32:$src0, i32mem:$src), "adcx{l}\t{$src, $dst|$dst, $src}",
-             [(set GR32:$dst, EFLAGS,
-                 (X86adc_flag GR32:$src0, (loadi32 addr:$src), EFLAGS))],
-             IIC_BIN_CARRY_MEM>, T8PD;
+                   (ins GR32:$src1, i32mem:$src2),
+                   "adcx{l}\t{$src2, $dst|$dst, $src2}",
+                   [(set GR32:$dst, EFLAGS,
+                     (X86adc_flag GR32:$src1, (loadi32 addr:$src2), EFLAGS))],
+                   IIC_BIN_CARRY_MEM>, T8PD;
 
   def ADCX64rm : RI<0xF6, MRMSrcMem, (outs GR64:$dst),
-             (ins GR64:$src0, i64mem:$src), "adcx{q}\t{$src, $dst|$dst, $src}",
-             [(set GR64:$dst, EFLAGS,
-                 (X86adc_flag GR64:$src0, (loadi64 addr:$src), EFLAGS))],
-             IIC_BIN_CARRY_MEM>, T8PD;
+                    (ins GR64:$src1, i64mem:$src2),
+                    "adcx{q}\t{$src2, $dst|$dst, $src2}",
+                    [(set GR64:$dst, EFLAGS,
+                      (X86adc_flag GR64:$src1, (loadi64 addr:$src2), EFLAGS))],
+                    IIC_BIN_CARRY_MEM>, T8PD;
 
   // We don't have patterns for ADOX yet.
-  def ADOX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst), (ins GR32:$src0, i32mem:$src),
-             "adox{l}\t{$src, $dst|$dst, $src}", [], IIC_BIN_MEM>, T8XS;
+  let hasSideEffects = 0 in {
+  def ADOX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst),
+                   (ins GR32:$src1, i32mem:$src2),
+                   "adox{l}\t{$src2, $dst|$dst, $src2}",
+                   [], IIC_BIN_CARRY_MEM>, T8XS;
 
-  def ADOX64rm : RI<0xF6, MRMSrcMem, (outs GR64:$dst), (ins GR64:$src0, i64mem:$src),
-             "adox{q}\t{$src, $dst|$dst, $src}", [], IIC_BIN_MEM>, T8XS;
-  }
+  def ADOX64rm : RI<0xF6, MRMSrcMem, (outs GR64:$dst),
+                    (ins GR64:$src1, i64mem:$src2),
+                    "adox{q}\t{$src2, $dst|$dst, $src2}",
+                    [], IIC_BIN_CARRY_MEM>, T8XS;
+  } // hasSideEffects = 0
+  } // mayLoad = 1, SchedRW = [WriteALULd]
 }
