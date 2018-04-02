@@ -89,12 +89,6 @@
 /* Define to 1 if you have the `getrusage' function. */
 #cmakedefine HAVE_GETRUSAGE ${HAVE_GETRUSAGE}
 
-/* Define to 1 if the system has the type `int64_t'. */
-#cmakedefine HAVE_INT64_T ${HAVE_INT64_T}
-
-/* Define to 1 if you have the <inttypes.h> header file. */
-#cmakedefine HAVE_INTTYPES_H ${HAVE_INTTYPES_H}
-
 /* Define to 1 if you have the `isatty' function. */
 #cmakedefine HAVE_ISATTY 1
 
@@ -191,17 +185,11 @@
 /* Define to 1 if you have the <signal.h> header file. */
 #cmakedefine HAVE_SIGNAL_H ${HAVE_SIGNAL_H}
 
-/* Define to 1 if you have the <stdint.h> header file. */
-#cmakedefine HAVE_STDINT_H ${HAVE_STDINT_H}
-
 /* Define to 1 if you have the `strerror' function. */
 #cmakedefine HAVE_STRERROR ${HAVE_STRERROR}
 
 /* Define to 1 if you have the `strerror_r' function. */
 #cmakedefine HAVE_STRERROR_R ${HAVE_STRERROR_R}
-
-/* Define to 1 if you have the `strtoll' function. */
-#cmakedefine HAVE_STRTOLL ${HAVE_STRTOLL}
 
 /* Define to 1 if you have the `sysconf' function. */
 #cmakedefine HAVE_SYSCONF ${HAVE_SYSCONF}
@@ -235,9 +223,6 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #cmakedefine HAVE_SYS_TYPES_H ${HAVE_SYS_TYPES_H}
 
-/* Define to 1 if you have the <sys/uio.h> header file. */
-#cmakedefine HAVE_SYS_UIO_H ${HAVE_SYS_UIO_H}
-
 /* Define if the setupterm() function is supported this platform. */
 #cmakedefine HAVE_TERMINFO ${HAVE_TERMINFO}
 
@@ -247,20 +232,11 @@
 /* Define to 1 if you have the <termios.h> header file. */
 #cmakedefine HAVE_TERMIOS_H ${HAVE_TERMIOS_H}
 
-/* Define to 1 if the system has the type `uint64_t'. */
-#cmakedefine HAVE_UINT64_T ${HAVE_UINT64_T}
-
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
 
-/* Define to 1 if the system has the type `u_int64_t'. */
-#cmakedefine HAVE_U_INT64_T ${HAVE_U_INT64_T}
-
 /* Define to 1 if you have the <valgrind/valgrind.h> header file. */
 #cmakedefine HAVE_VALGRIND_VALGRIND_H ${HAVE_VALGRIND_VALGRIND_H}
-
-/* Define to 1 if you have the `writev' function. */
-#cmakedefine HAVE_WRITEV ${HAVE_WRITEV}
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #cmakedefine HAVE_ZLIB_H ${HAVE_ZLIB_H}
@@ -406,12 +382,6 @@
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #cmakedefine RETSIGTYPE ${RETSIGTYPE}
-
-/* Define to a function replacing strtoll */
-#cmakedefine strtoll ${strtoll}
-
-/* Define to a function implementing strtoull */
-#cmakedefine strtoull ${strtoull}
 
 /* Define to a function implementing stricmp */
 #cmakedefine stricmp ${stricmp}

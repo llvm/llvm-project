@@ -277,8 +277,18 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
     WriteDescriptor &Write = ID.Writes[Index];
     Write.OpIndex = -1;
     Write.RegisterID = MCDesc.getImplicitDefs()[CurrentDef];
-    Write.Latency = ID.MaxLatency;
-    Write.SClassOrWriteResourceID = 0;
+    if (Index < NumWriteLatencyEntries) {
+      const MCWriteLatencyEntry &WLE =
+          *STI.getWriteLatencyEntry(&SCDesc, Index);
+      // Conservatively default to MaxLatency.
+      Write.Latency = WLE.Cycles == -1 ? ID.MaxLatency : WLE.Cycles;
+      Write.SClassOrWriteResourceID = WLE.WriteResourceID;
+    } else {
+      // Assign a default latency for this write.
+      Write.Latency = ID.MaxLatency;
+      Write.SClassOrWriteResourceID = 0;
+    }
+
     Write.IsOptionalDef = false;
     assert(Write.RegisterID != 0 && "Expected a valid phys register!");
     DEBUG(dbgs() << "\t\tOpIdx=" << Write.OpIndex << ", PhysReg="
@@ -349,9 +359,9 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
   for (unsigned CurrentUse = 0; CurrentUse < NumImplicitUses; ++CurrentUse) {
     ReadDescriptor &Read = ID.Reads[NumExplicitUses + CurrentUse];
     Read.OpIndex = -1;
-    Read.UseIndex = -1;
+    Read.UseIndex = NumExplicitUses + CurrentUse;
     Read.RegisterID = MCDesc.getImplicitUses()[CurrentUse];
-    Read.HasReadAdvanceEntries = false;
+    Read.HasReadAdvanceEntries = HasReadAdvanceEntries;
     Read.SchedClassID = SchedClassID;
     DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex
                  << ", RegisterID=" << Read.RegisterID << '\n');

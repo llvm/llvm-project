@@ -746,6 +746,7 @@ void DIEBlock::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_block2: Asm->emitInt16(Size);   break;
   case dwarf::DW_FORM_block4: Asm->emitInt32(Size);   break;
   case dwarf::DW_FORM_block:  Asm->EmitULEB128(Size); break;
+  case dwarf::DW_FORM_string: break;
   case dwarf::DW_FORM_data16: break;
   }
 
