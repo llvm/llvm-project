@@ -9023,7 +9023,8 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
         if (!decl->isInvalidDecl()) {
           if (!diag.isTargetVariantPlatform() && (i + 1) != pool->pool_end()) {
             DelayedDiagnostic &next = const_cast<DelayedDiagnostic &>(*(i + 1));
-            if (!next.Triggered && next.isTargetVariantPlatform() &&
+            if (next.Kind == DelayedDiagnostic::Availability &&
+                !next.Triggered && next.isTargetVariantPlatform() &&
                 diag.Loc == next.Loc &&
                 diag.getAvailabilityReferringDecl() ==
                     next.getAvailabilityReferringDecl()) {
