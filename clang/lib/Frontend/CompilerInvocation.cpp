@@ -2684,6 +2684,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver3_8);
       else if (Major <= 4)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver4);
+      else if (Major <= 6)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver6);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();

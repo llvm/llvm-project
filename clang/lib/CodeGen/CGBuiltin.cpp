@@ -2796,6 +2796,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_resume);
   case Builtin::BI__builtin_coro_frame:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_frame);
+  case Builtin::BI__builtin_coro_noop:
+    return EmitCoroutineIntrinsic(E, Intrinsic::coro_noop);
   case Builtin::BI__builtin_coro_free:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_free);
   case Builtin::BI__builtin_coro_destroy:

@@ -514,8 +514,8 @@ CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
 /// correct type, and the caller will bitcast the function to the correct
 /// prototype.
 const CGFunctionInfo &
-CodeGenTypes::arrangeMSMemberPointerThunk(const CXXMethodDecl *MD) {
-  assert(MD->isVirtual() && "only virtual memptrs have thunks");
+CodeGenTypes::arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD) {
+  assert(MD->isVirtual() && "only methods have thunks");
   CanQual<FunctionProtoType> FTP = GetFormalType(MD);
   CanQualType ArgTys[] = { GetThisType(Context, MD->getParent()) };
   return arrangeLLVMFunctionInfo(Context.VoidTy, /*instanceMethod=*/false,
@@ -906,8 +906,7 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
       CharUnits UnionSize = CharUnits::Zero();
 
       for (const auto *FD : RD->fields()) {
-        // Skip zero length bitfields.
-        if (FD->isBitField() && FD->getBitWidthValue(Context) == 0)
+        if (FD->isZeroLengthBitField(Context))
           continue;
         assert(!FD->isBitField() &&
                "Cannot expand structure with bit-field members.");
@@ -928,8 +927,7 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
       }
 
       for (const auto *FD : RD->fields()) {
-        // Skip zero length bitfields.
-        if (FD->isBitField() && FD->getBitWidthValue(Context) == 0)
+        if (FD->isZeroLengthBitField(Context))
           continue;
         assert(!FD->isBitField() &&
                "Cannot expand structure with bit-field members.");

@@ -2635,6 +2635,11 @@ public:
     BitField = false;
   }
 
+  /// Is this a zero-length bit-field? Such bit-fields aren't really bit-fields
+  /// at all and instead act as a separator between contiguous runs of other
+  /// bit-fields.
+  bool isZeroLengthBitField(const ASTContext &Ctx) const;
+
   /// Get the kind of (C++11) default member initializer that this field has.
   InClassInitStyle getInClassInitStyle() const {
     InitStorageKind storageKind = InitStorage.getInt();

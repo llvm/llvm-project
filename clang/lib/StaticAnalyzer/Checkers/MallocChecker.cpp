@@ -1231,7 +1231,7 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallExpr *CE,
   if (Att->getModule() != II_malloc)
     return nullptr;
 
-  ParamIdx *I = Att->args_begin(), *E = Att->args_end();
+  OwnershipAttr::args_iterator I = Att->args_begin(), E = Att->args_end();
   if (I != E) {
     return MallocMemAux(C, CE, CE->getArg(I->getASTIndex()), UndefinedVal(),
                         State);

@@ -1085,10 +1085,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //   T is a class type [...] with [...] no non-static data members other
     //   than bit-fields of length 0...
     if (data().Empty) {
-      if (!Field->isBitField() ||
-          (!Field->getBitWidth()->isTypeDependent() &&
-           !Field->getBitWidth()->isValueDependent() &&
-           Field->getBitWidthValue(Context) != 0))
+      if (!Field->isZeroLengthBitField(Context))
         data().Empty = false;
     }
   }
