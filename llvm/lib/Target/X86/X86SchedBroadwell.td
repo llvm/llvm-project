@@ -2014,15 +2014,15 @@ def BWWriteResGroup99 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort0156]> {
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,1,3];
 }
-def: InstRW<[BWWriteResGroup99], (instregex "ADC(8|16|32|64)mi",
-                                            "XCHG(8|16|32|64)rm")>;
+def: InstRW<[BWWriteResGroup99], (instregex "XCHG(8|16|32|64)rm")>;
 
 def BWWriteResGroup100 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort06,BWPort0156]> {
   let Latency = 8;
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,1,2,1];
 }
-def: InstRW<[BWWriteResGroup100], (instregex "ADC(8|16|32|64)mr",
+def: InstRW<[BWWriteResGroup100], (instregex "ADC(8|16|32|64)mi",
+                                             "ADC(8|16|32|64)mr",
                                              "CMPXCHG(8|16|32|64)rm",
                                              "ROL(8|16|32|64)mCL",
                                              "SAR(8|16|32|64)mCL",

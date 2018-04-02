@@ -44,16 +44,16 @@ static void initializeUsedResources(InstrDesc &ID,
 
   // Sort elements by mask popcount, so that we prioritize resource units over
   // resource groups, and smaller groups over larger groups.
-  std::sort(Worklist.begin(), Worklist.end(),
-            [](const ResourcePlusCycles &A, const ResourcePlusCycles &B) {
-              unsigned popcntA = countPopulation(A.first);
-              unsigned popcntB = countPopulation(B.first);
-              if (popcntA < popcntB)
-                return true;
-              if (popcntA > popcntB)
-                return false;
-              return A.first < B.first;
-            });
+  llvm::sort(Worklist.begin(), Worklist.end(),
+             [](const ResourcePlusCycles &A, const ResourcePlusCycles &B) {
+               unsigned popcntA = countPopulation(A.first);
+               unsigned popcntB = countPopulation(B.first);
+               if (popcntA < popcntB)
+                 return true;
+               if (popcntA > popcntB)
+                 return false;
+               return A.first < B.first;
+             });
 
   uint64_t UsedResourceUnits = 0;
 

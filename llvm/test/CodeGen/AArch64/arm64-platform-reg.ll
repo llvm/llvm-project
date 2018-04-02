@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=arm64-apple-ios -mattr=+reserve-x18 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=arm64-freebsd-gnu -mattr=+reserve-x18 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=arm64-linux-gnu -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-fuchsia -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=aarch64-windows -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE-X18
 
 ; x18 is reserved as a platform register on Darwin but not on other
