@@ -25,6 +25,13 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AMDGPUGenInstrInfo.inc"
 
+namespace llvm {
+namespace AMDGPU {
+#define GET_RSRCINTRINSIC_IMPL
+#include "AMDGPUGenSearchableTables.inc"
+}
+}
+
 // Pin the vtable to this file.
 void AMDGPUInstrInfo::anchor() {}
 

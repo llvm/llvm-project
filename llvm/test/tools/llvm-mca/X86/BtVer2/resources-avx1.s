@@ -1518,8 +1518,8 @@ vzeroupper
 # CHECK-NEXT:  1      7     1.00    *               	vpmulhuw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      2     1.00                    	vpmulhw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      7     1.00    *               	vpmulhw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      2     1.00                    	vpmulld	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      7     1.00    *               	vpmulld	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  3      4     2.00                    	vpmulld	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  3      9     2.00    *               	vpmulld	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      2     1.00                    	vpmullw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      7     1.00    *               	vpmullw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      2     1.00                    	vpmuludq	%xmm0, %xmm1, %xmm2
@@ -2221,8 +2221,8 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   	vpmulhuw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   	vpmulhw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   	vpmulhw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   	vpmulld	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   	vpmulld	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     2.50   0.50    -      -      -      -     0.50   0.50   2.00   	vpmulld	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     2.50   0.50   1.00    -      -      -     0.50   0.50   2.00   	vpmulld	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   	vpmullw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   	vpmullw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   	vpmuludq	%xmm0, %xmm1, %xmm2

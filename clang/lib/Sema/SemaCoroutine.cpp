@@ -1110,8 +1110,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
     PlacementArgs.push_back(PDRefExpr.get());
   }
-  S.FindAllocationFunctions(Loc, SourceRange(),
-                            /*UseGlobal*/ false, PromiseType,
+  S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Class,
+                            /*DeleteScope*/ Sema::AFS_Both, PromiseType,
                             /*isArray*/ false, PassAlignment, PlacementArgs,
                             OperatorNew, UnusedResult, /*Diagnose*/ false);
 
@@ -1121,10 +1121,21 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // an argument of type std::size_t."
   if (!OperatorNew && !PlacementArgs.empty()) {
     PlacementArgs.clear();
-    S.FindAllocationFunctions(Loc, SourceRange(),
-                              /*UseGlobal*/ false, PromiseType,
-                              /*isArray*/ false, PassAlignment,
-                              PlacementArgs, OperatorNew, UnusedResult);
+    S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Class,
+                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
+                              /*isArray*/ false, PassAlignment, PlacementArgs,
+                              OperatorNew, UnusedResult, /*Diagnose*/ false);
+  }
+
+  // [dcl.fct.def.coroutine]/7
+  // "The allocation function’s name is looked up in the scope of P. If this
+  // lookup fails, the allocation function’s name is looked up in the global
+  // scope."
+  if (!OperatorNew) {
+    S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Global,
+                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
+                              /*isArray*/ false, PassAlignment, PlacementArgs,
+                              OperatorNew, UnusedResult);
   }
 
   bool IsGlobalOverload =
@@ -1138,8 +1149,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       return false;
     PlacementArgs = {StdNoThrow};
     OperatorNew = nullptr;
-    S.FindAllocationFunctions(Loc, SourceRange(),
-                              /*UseGlobal*/ true, PromiseType,
+    S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Both,
+                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
                               /*isArray*/ false, PassAlignment, PlacementArgs,
                               OperatorNew, UnusedResult);
   }

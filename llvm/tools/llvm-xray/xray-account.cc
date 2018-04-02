@@ -282,79 +282,79 @@ void LatencyAccountant::exportStats(const XRayFileHeader &Header, F Fn) const {
   // Sort the data according to user-provided flags.
   switch (AccountSortOutput) {
   case SortField::FUNCID:
-    std::sort(Results.begin(), Results.end(),
-              [](const TupleType &L, const TupleType &R) {
-                if (AccountSortOrder == SortDirection::ASCENDING)
-                  return std::get<0>(L) < std::get<0>(R);
-                if (AccountSortOrder == SortDirection::DESCENDING)
-                  return std::get<0>(L) > std::get<0>(R);
-                llvm_unreachable("Unknown sort direction");
-              });
+    llvm::sort(Results.begin(), Results.end(),
+               [](const TupleType &L, const TupleType &R) {
+                 if (AccountSortOrder == SortDirection::ASCENDING)
+                   return std::get<0>(L) < std::get<0>(R);
+                 if (AccountSortOrder == SortDirection::DESCENDING)
+                   return std::get<0>(L) > std::get<0>(R);
+                 llvm_unreachable("Unknown sort direction");
+               });
     break;
   case SortField::COUNT:
-    std::sort(Results.begin(), Results.end(),
-              [](const TupleType &L, const TupleType &R) {
-                if (AccountSortOrder == SortDirection::ASCENDING)
-                  return std::get<1>(L) < std::get<1>(R);
-                if (AccountSortOrder == SortDirection::DESCENDING)
-                  return std::get<1>(L) > std::get<1>(R);
-                llvm_unreachable("Unknown sort direction");
-              });
+    llvm::sort(Results.begin(), Results.end(),
+               [](const TupleType &L, const TupleType &R) {
+                 if (AccountSortOrder == SortDirection::ASCENDING)
+                   return std::get<1>(L) < std::get<1>(R);
+                 if (AccountSortOrder == SortDirection::DESCENDING)
+                   return std::get<1>(L) > std::get<1>(R);
+                 llvm_unreachable("Unknown sort direction");
+               });
     break;
   default:
     // Here we need to look into the ResultRow for the rest of the data that
     // we want to sort by.
-    std::sort(Results.begin(), Results.end(),
-              [&](const TupleType &L, const TupleType &R) {
-                auto &LR = std::get<2>(L);
-                auto &RR = std::get<2>(R);
-                switch (AccountSortOutput) {
-                case SortField::COUNT:
-                  if (AccountSortOrder == SortDirection::ASCENDING)
-                    return LR.Count < RR.Count;
-                  if (AccountSortOrder == SortDirection::DESCENDING)
-                    return LR.Count > RR.Count;
-                  llvm_unreachable("Unknown sort direction");
-                case SortField::MIN:
-                  if (AccountSortOrder == SortDirection::ASCENDING)
-                    return LR.Min < RR.Min;
-                  if (AccountSortOrder == SortDirection::DESCENDING)
-                    return LR.Min > RR.Min;
-                  llvm_unreachable("Unknown sort direction");
-                case SortField::MED:
-                  if (AccountSortOrder == SortDirection::ASCENDING)
-                    return LR.Median < RR.Median;
-                  if (AccountSortOrder == SortDirection::DESCENDING)
-                    return LR.Median > RR.Median;
-                  llvm_unreachable("Unknown sort direction");
-                case SortField::PCT90:
-                  if (AccountSortOrder == SortDirection::ASCENDING)
-                    return LR.Pct90 < RR.Pct90;
-                  if (AccountSortOrder == SortDirection::DESCENDING)
-                    return LR.Pct90 > RR.Pct90;
-                  llvm_unreachable("Unknown sort direction");
-                case SortField::PCT99:
-                  if (AccountSortOrder == SortDirection::ASCENDING)
-                    return LR.Pct99 < RR.Pct99;
-                  if (AccountSortOrder == SortDirection::DESCENDING)
-                    return LR.Pct99 > RR.Pct99;
-                  llvm_unreachable("Unknown sort direction");
-                case SortField::MAX:
-                  if (AccountSortOrder == SortDirection::ASCENDING)
-                    return LR.Max < RR.Max;
-                  if (AccountSortOrder == SortDirection::DESCENDING)
-                    return LR.Max > RR.Max;
-                  llvm_unreachable("Unknown sort direction");
-                case SortField::SUM:
-                  if (AccountSortOrder == SortDirection::ASCENDING)
-                    return LR.Sum < RR.Sum;
-                  if (AccountSortOrder == SortDirection::DESCENDING)
-                    return LR.Sum > RR.Sum;
-                  llvm_unreachable("Unknown sort direction");
-                default:
-                  llvm_unreachable("Unsupported sort order");
-                }
-              });
+    llvm::sort(Results.begin(), Results.end(),
+               [&](const TupleType &L, const TupleType &R) {
+                 auto &LR = std::get<2>(L);
+                 auto &RR = std::get<2>(R);
+                 switch (AccountSortOutput) {
+                 case SortField::COUNT:
+                   if (AccountSortOrder == SortDirection::ASCENDING)
+                     return LR.Count < RR.Count;
+                   if (AccountSortOrder == SortDirection::DESCENDING)
+                     return LR.Count > RR.Count;
+                   llvm_unreachable("Unknown sort direction");
+                 case SortField::MIN:
+                   if (AccountSortOrder == SortDirection::ASCENDING)
+                     return LR.Min < RR.Min;
+                   if (AccountSortOrder == SortDirection::DESCENDING)
+                     return LR.Min > RR.Min;
+                   llvm_unreachable("Unknown sort direction");
+                 case SortField::MED:
+                   if (AccountSortOrder == SortDirection::ASCENDING)
+                     return LR.Median < RR.Median;
+                   if (AccountSortOrder == SortDirection::DESCENDING)
+                     return LR.Median > RR.Median;
+                   llvm_unreachable("Unknown sort direction");
+                 case SortField::PCT90:
+                   if (AccountSortOrder == SortDirection::ASCENDING)
+                     return LR.Pct90 < RR.Pct90;
+                   if (AccountSortOrder == SortDirection::DESCENDING)
+                     return LR.Pct90 > RR.Pct90;
+                   llvm_unreachable("Unknown sort direction");
+                 case SortField::PCT99:
+                   if (AccountSortOrder == SortDirection::ASCENDING)
+                     return LR.Pct99 < RR.Pct99;
+                   if (AccountSortOrder == SortDirection::DESCENDING)
+                     return LR.Pct99 > RR.Pct99;
+                   llvm_unreachable("Unknown sort direction");
+                 case SortField::MAX:
+                   if (AccountSortOrder == SortDirection::ASCENDING)
+                     return LR.Max < RR.Max;
+                   if (AccountSortOrder == SortDirection::DESCENDING)
+                     return LR.Max > RR.Max;
+                   llvm_unreachable("Unknown sort direction");
+                 case SortField::SUM:
+                   if (AccountSortOrder == SortDirection::ASCENDING)
+                     return LR.Sum < RR.Sum;
+                   if (AccountSortOrder == SortDirection::DESCENDING)
+                     return LR.Sum > RR.Sum;
+                   llvm_unreachable("Unknown sort direction");
+                 default:
+                   llvm_unreachable("Unsupported sort order");
+                 }
+               });
     break;
   }
 

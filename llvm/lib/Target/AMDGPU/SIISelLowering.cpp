@@ -570,6 +570,49 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
+  if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
+          AMDGPU::lookupRsrcIntrinsicByIntr(IntrID)) {
+    AttributeList Attr = Intrinsic::getAttributes(CI.getContext(),
+                                                  (Intrinsic::ID)IntrID);
+    if (Attr.hasFnAttribute(Attribute::ReadNone))
+      return false;
+
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+    if (RsrcIntr->IsImage) {
+      Info.ptrVal = MFI->getImagePSV(
+        *MF.getSubtarget<SISubtarget>().getInstrInfo(),
+        CI.getArgOperand(RsrcIntr->RsrcArg));
+      Info.align = 0;
+    } else {
+      Info.ptrVal = MFI->getBufferPSV(
+        *MF.getSubtarget<SISubtarget>().getInstrInfo(),
+        CI.getArgOperand(RsrcIntr->RsrcArg));
+    }
+
+    Info.flags = MachineMemOperand::MODereferenceable;
+    if (Attr.hasFnAttribute(Attribute::ReadOnly)) {
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      Info.memVT = MVT::getVT(CI.getType());
+      Info.flags |= MachineMemOperand::MOLoad;
+    } else if (Attr.hasFnAttribute(Attribute::WriteOnly)) {
+      Info.opc = ISD::INTRINSIC_VOID;
+      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
+      Info.flags |= MachineMemOperand::MOStore;
+    } else {
+      // Atomic
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      Info.memVT = MVT::getVT(CI.getType());
+      Info.flags = MachineMemOperand::MOLoad |
+                   MachineMemOperand::MOStore |
+                   MachineMemOperand::MODereferenceable;
+
+      // XXX - Should this be volatile without known ordering?
+      Info.flags |= MachineMemOperand::MOVolatile;
+    }
+    return true;
+  }
+
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
@@ -589,220 +632,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
 
-  // Image load.
-  case Intrinsic::amdgcn_image_load:
-  case Intrinsic::amdgcn_image_load_mip:
-
-  // Sample.
-  case Intrinsic::amdgcn_image_sample:
-  case Intrinsic::amdgcn_image_sample_cl:
-  case Intrinsic::amdgcn_image_sample_d:
-  case Intrinsic::amdgcn_image_sample_d_cl:
-  case Intrinsic::amdgcn_image_sample_l:
-  case Intrinsic::amdgcn_image_sample_b:
-  case Intrinsic::amdgcn_image_sample_b_cl:
-  case Intrinsic::amdgcn_image_sample_lz:
-  case Intrinsic::amdgcn_image_sample_cd:
-  case Intrinsic::amdgcn_image_sample_cd_cl:
-
-    // Sample with comparison.
-  case Intrinsic::amdgcn_image_sample_c:
-  case Intrinsic::amdgcn_image_sample_c_cl:
-  case Intrinsic::amdgcn_image_sample_c_d:
-  case Intrinsic::amdgcn_image_sample_c_d_cl:
-  case Intrinsic::amdgcn_image_sample_c_l:
-  case Intrinsic::amdgcn_image_sample_c_b:
-  case Intrinsic::amdgcn_image_sample_c_b_cl:
-  case Intrinsic::amdgcn_image_sample_c_lz:
-  case Intrinsic::amdgcn_image_sample_c_cd:
-  case Intrinsic::amdgcn_image_sample_c_cd_cl:
-
-    // Sample with offsets.
-  case Intrinsic::amdgcn_image_sample_o:
-  case Intrinsic::amdgcn_image_sample_cl_o:
-  case Intrinsic::amdgcn_image_sample_d_o:
-  case Intrinsic::amdgcn_image_sample_d_cl_o:
-  case Intrinsic::amdgcn_image_sample_l_o:
-  case Intrinsic::amdgcn_image_sample_b_o:
-  case Intrinsic::amdgcn_image_sample_b_cl_o:
-  case Intrinsic::amdgcn_image_sample_lz_o:
-  case Intrinsic::amdgcn_image_sample_cd_o:
-  case Intrinsic::amdgcn_image_sample_cd_cl_o:
-
-    // Sample with comparison and offsets.
-  case Intrinsic::amdgcn_image_sample_c_o:
-  case Intrinsic::amdgcn_image_sample_c_cl_o:
-  case Intrinsic::amdgcn_image_sample_c_d_o:
-  case Intrinsic::amdgcn_image_sample_c_d_cl_o:
-  case Intrinsic::amdgcn_image_sample_c_l_o:
-  case Intrinsic::amdgcn_image_sample_c_b_o:
-  case Intrinsic::amdgcn_image_sample_c_b_cl_o:
-  case Intrinsic::amdgcn_image_sample_c_lz_o:
-  case Intrinsic::amdgcn_image_sample_c_cd_o:
-  case Intrinsic::amdgcn_image_sample_c_cd_cl_o:
-
-    // Basic gather4
-  case Intrinsic::amdgcn_image_gather4:
-  case Intrinsic::amdgcn_image_gather4_cl:
-  case Intrinsic::amdgcn_image_gather4_l:
-  case Intrinsic::amdgcn_image_gather4_b:
-  case Intrinsic::amdgcn_image_gather4_b_cl:
-  case Intrinsic::amdgcn_image_gather4_lz:
-
-    // Gather4 with comparison
-  case Intrinsic::amdgcn_image_gather4_c:
-  case Intrinsic::amdgcn_image_gather4_c_cl:
-  case Intrinsic::amdgcn_image_gather4_c_l:
-  case Intrinsic::amdgcn_image_gather4_c_b:
-  case Intrinsic::amdgcn_image_gather4_c_b_cl:
-  case Intrinsic::amdgcn_image_gather4_c_lz:
-
-    // Gather4 with offsets
-  case Intrinsic::amdgcn_image_gather4_o:
-  case Intrinsic::amdgcn_image_gather4_cl_o:
-  case Intrinsic::amdgcn_image_gather4_l_o:
-  case Intrinsic::amdgcn_image_gather4_b_o:
-  case Intrinsic::amdgcn_image_gather4_b_cl_o:
-  case Intrinsic::amdgcn_image_gather4_lz_o:
-
-    // Gather4 with comparison and offsets
-  case Intrinsic::amdgcn_image_gather4_c_o:
-  case Intrinsic::amdgcn_image_gather4_c_cl_o:
-  case Intrinsic::amdgcn_image_gather4_c_l_o:
-  case Intrinsic::amdgcn_image_gather4_c_b_o:
-  case Intrinsic::amdgcn_image_gather4_c_b_cl_o:
-  case Intrinsic::amdgcn_image_gather4_c_lz_o: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = MFI->getImagePSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(1));
-    Info.align = 0;
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MODereferenceable;
-    return true;
-  }
-  case Intrinsic::amdgcn_image_store:
-  case Intrinsic::amdgcn_image_store_mip: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-    Info.ptrVal = MFI->getImagePSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(2));
-    Info.flags = MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable;
-    Info.align = 0;
-    return true;
-  }
-  case Intrinsic::amdgcn_image_atomic_swap:
-  case Intrinsic::amdgcn_image_atomic_add:
-  case Intrinsic::amdgcn_image_atomic_sub:
-  case Intrinsic::amdgcn_image_atomic_smin:
-  case Intrinsic::amdgcn_image_atomic_umin:
-  case Intrinsic::amdgcn_image_atomic_smax:
-  case Intrinsic::amdgcn_image_atomic_umax:
-  case Intrinsic::amdgcn_image_atomic_and:
-  case Intrinsic::amdgcn_image_atomic_or:
-  case Intrinsic::amdgcn_image_atomic_xor:
-  case Intrinsic::amdgcn_image_atomic_inc:
-  case Intrinsic::amdgcn_image_atomic_dec: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = MFI->getImagePSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(2));
-
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable;
-
-    // XXX - Should this be volatile without known ordering?
-    Info.flags |= MachineMemOperand::MOVolatile;
-    return true;
-  }
-  case Intrinsic::amdgcn_image_atomic_cmpswap: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = MFI->getImagePSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(3));
-
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable;
-
-    // XXX - Should this be volatile without known ordering?
-    Info.flags |= MachineMemOperand::MOVolatile;
-    return true;
-  }
-  case Intrinsic::amdgcn_tbuffer_load:
-  case Intrinsic::amdgcn_buffer_load:
-  case Intrinsic::amdgcn_buffer_load_format: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.ptrVal = MFI->getBufferPSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(0));
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MODereferenceable;
-
-    // There is a constant offset component, but there are additional register
-    // offsets which could break AA if we set the offset to anything non-0.
-    return true;
-  }
-  case Intrinsic::amdgcn_tbuffer_store:
-  case Intrinsic::amdgcn_buffer_store:
-  case Intrinsic::amdgcn_buffer_store_format: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_VOID;
-    Info.ptrVal = MFI->getBufferPSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(1));
-    Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-    Info.flags = MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable;
-    return true;
-  }
-  case Intrinsic::amdgcn_buffer_atomic_swap:
-  case Intrinsic::amdgcn_buffer_atomic_add:
-  case Intrinsic::amdgcn_buffer_atomic_sub:
-  case Intrinsic::amdgcn_buffer_atomic_smin:
-  case Intrinsic::amdgcn_buffer_atomic_umin:
-  case Intrinsic::amdgcn_buffer_atomic_smax:
-  case Intrinsic::amdgcn_buffer_atomic_umax:
-  case Intrinsic::amdgcn_buffer_atomic_and:
-  case Intrinsic::amdgcn_buffer_atomic_or:
-  case Intrinsic::amdgcn_buffer_atomic_xor: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.ptrVal = MFI->getBufferPSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(1));
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable |
-                 MachineMemOperand::MOVolatile;
-    return true;
-  }
-  case Intrinsic::amdgcn_buffer_atomic_cmpswap: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.ptrVal = MFI->getBufferPSV(
-      *MF.getSubtarget<SISubtarget>().getInstrInfo(),
-      CI.getArgOperand(2));
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable |
-                 MachineMemOperand::MOVolatile;
-    return true;
-  }
   default:
     return false;
   }

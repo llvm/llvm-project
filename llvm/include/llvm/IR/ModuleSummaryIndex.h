@@ -404,6 +404,13 @@ public:
   /// <CalleeValueInfo, CalleeInfo> call edge pair.
   using EdgeTy = std::pair<ValueInfo, CalleeInfo>;
 
+  /// Types for -force-summary-edges-cold debugging option.
+  enum ForceSummaryHotnessType : unsigned {
+    FSHT_None,
+    FSHT_AllNonCritical,
+    FSHT_All
+  };
+
   /// An "identifier" for a virtual function. This contains the type identifier
   /// represented as a GUID and the offset from the address point to the virtual
   /// function pointer, where "address point" is as defined in the Itanium ABI:

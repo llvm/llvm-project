@@ -10745,6 +10745,15 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
     }
   }
 
+  // fptosi rounds towards zero, so converting from FP to integer and back is
+  // the same as an 'ftrunc': sitofp (fptosi X) --> ftrunc X
+  // We only do this if the target has legal ftrunc, otherwise we'd likely be
+  // replacing casts with a libcall.
+  if (N0.getOpcode() == ISD::FP_TO_SINT &&
+      N0.getOperand(0).getValueType() == VT &&
+      TLI.isOperationLegal(ISD::FTRUNC, VT))
+    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
+
   return SDValue();
 }
 
@@ -10783,6 +10792,15 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
       return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
     }
   }
+
+  // fptoui rounds towards zero, so converting from FP to integer and back is
+  // the same as an 'ftrunc': uitofp (fptoui X) --> ftrunc X
+  // We only do this if the target has legal ftrunc, otherwise we'd likely be
+  // replacing casts with a libcall.
+  if (N0.getOpcode() == ISD::FP_TO_UINT &&
+      N0.getOperand(0).getValueType() == VT &&
+      TLI.isOperationLegal(ISD::FTRUNC, VT))
+    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
 
   return SDValue();
 }

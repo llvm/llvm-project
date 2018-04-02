@@ -46,13 +46,13 @@ define float @f32_no_estimate(float %x) #0 {
 ; SANDY-LABEL: f32_no_estimate:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [6:0.50]
-; SANDY-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [14:1.00]
+; SANDY-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [14:14.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: f32_no_estimate:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
-; HASWELL-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [13:1.00]
+; HASWELL-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [13:7.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-NO-FMA-LABEL: f32_no_estimate:
@@ -64,13 +64,13 @@ define float @f32_no_estimate(float %x) #0 {
 ; KNL-LABEL: f32_no_estimate:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
-; KNL-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [13:1.00]
+; KNL-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [13:7.00]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: f32_no_estimate:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
-; SKX-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [11:1.00]
+; SKX-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [11:3.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast float 1.0, %x
   ret float %div
@@ -309,13 +309,13 @@ define <4 x float> @v4f32_no_estimate(<4 x float> %x) #0 {
 ; SANDY-LABEL: v4f32_no_estimate:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovaps {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [6:0.50]
-; SANDY-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [14:1.00]
+; SANDY-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [14:14.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v4f32_no_estimate:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1] sched: [6:0.50]
-; HASWELL-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [13:1.00]
+; HASWELL-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [13:7.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-NO-FMA-LABEL: v4f32_no_estimate:
@@ -327,13 +327,13 @@ define <4 x float> @v4f32_no_estimate(<4 x float> %x) #0 {
 ; KNL-LABEL: v4f32_no_estimate:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1] sched: [6:0.50]
-; KNL-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [13:1.00]
+; KNL-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [13:7.00]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: v4f32_no_estimate:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1] sched: [6:0.50]
-; SKX-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [11:1.00]
+; SKX-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [11:3.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <4 x float> %div
@@ -577,13 +577,13 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; SANDY-LABEL: v8f32_no_estimate:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovaps {{.*#+}} ymm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [7:0.50]
-; SANDY-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [29:2.00]
+; SANDY-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [29:28.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v8f32_no_estimate:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; HASWELL-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [21:2.00]
+; HASWELL-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [21:14.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-NO-FMA-LABEL: v8f32_no_estimate:
@@ -595,13 +595,13 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; KNL-LABEL: v8f32_no_estimate:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; KNL-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [21:2.00]
+; KNL-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [21:14.00]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: v8f32_no_estimate:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; SKX-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [11:1.00]
+; SKX-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [11:5.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <8 x float> %div

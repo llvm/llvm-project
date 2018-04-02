@@ -86,7 +86,7 @@ static cl::opt<bool>
     PrintModuleScope("print-module-scope",
                      cl::desc("When printing IR for print-[before|after]{-all} "
                               "always print a module IR"),
-                     cl::init(false));
+                     cl::init(false), cl::Hidden);
 
 static cl::list<std::string>
     PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),

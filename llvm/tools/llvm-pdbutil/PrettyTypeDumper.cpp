@@ -128,7 +128,7 @@ filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
   }
 
   if (Comp)
-    std::sort(Filtered.begin(), Filtered.end(), Comp);
+    llvm::sort(Filtered.begin(), Filtered.end(), Comp);
   return Filtered;
 }
 

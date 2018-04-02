@@ -804,62 +804,6 @@ struct good_promise_nonstatic_member_custom_new_operator {
   void *operator new(SizeT, coroutine_nonstatic_member_struct &, double);
 };
 
-struct bad_promise_nonstatic_member_mismatched_custom_new_operator {
-  coro<bad_promise_nonstatic_member_mismatched_custom_new_operator> get_return_object();
-  suspend_always initial_suspend();
-  suspend_always final_suspend();
-  void return_void();
-  void unhandled_exception();
-  // expected-note@+1 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
-  void *operator new(SizeT, double);
-};
-
-struct coroutine_nonstatic_member_struct {
-  coro<good_promise_nonstatic_member_custom_new_operator>
-  good_coroutine_calls_nonstatic_member_custom_new_operator(double) {
-    co_return;
-  }
-
-  coro<bad_promise_nonstatic_member_mismatched_custom_new_operator>
-  bad_coroutine_calls_nonstatic_member_mistmatched_custom_new_operator(double) {
-    // expected-error@-1 {{no matching function for call to 'operator new'}}
-    co_return;
-  }
-};
-
-struct bad_promise_mismatched_custom_new_operator {
-  coro<bad_promise_mismatched_custom_new_operator> get_return_object();
-  suspend_always initial_suspend();
-  suspend_always final_suspend();
-  void return_void();
-  void unhandled_exception();
-  // expected-note@+1 {{candidate function not viable: requires 4 arguments, but 1 was provided}}
-  void *operator new(SizeT, double, float, int);
-};
-
-coro<bad_promise_mismatched_custom_new_operator>
-bad_coroutine_calls_mismatched_custom_new_operator(double) {
-  // expected-error@-1 {{no matching function for call to 'operator new'}}
-  co_return;
-}
-
-struct bad_promise_throwing_custom_new_operator {
-  static coro<bad_promise_throwing_custom_new_operator> get_return_object_on_allocation_failure();
-  coro<bad_promise_throwing_custom_new_operator> get_return_object();
-  suspend_always initial_suspend();
-  suspend_always final_suspend();
-  void return_void();
-  void unhandled_exception();
-  // expected-error@+1 {{'operator new' is required to have a non-throwing noexcept specification when the promise type declares 'get_return_object_on_allocation_failure()'}}
-  void *operator new(SizeT, double, float, int);
-};
-
-coro<bad_promise_throwing_custom_new_operator>
-bad_coroutine_calls_throwing_custom_new_operator(double, float, int) {
-  // expected-note@-1 {{call to 'operator new' implicitly required by coroutine function here}}
-  co_return;
-}
-
 struct good_promise_noexcept_custom_new_operator {
   static coro<good_promise_noexcept_custom_new_operator> get_return_object_on_allocation_failure();
   coro<good_promise_noexcept_custom_new_operator> get_return_object();

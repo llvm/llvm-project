@@ -39,7 +39,7 @@ NonRelocatableStringpool::getEntries() const {
   Result.reserve(Strings.size());
   for (const auto &E : Strings)
     Result.emplace_back(E);
-  std::sort(
+  llvm::sort(
       Result.begin(), Result.end(),
       [](const DwarfStringPoolEntryRef A, const DwarfStringPoolEntryRef B) {
         return A.getIndex() < B.getIndex();
