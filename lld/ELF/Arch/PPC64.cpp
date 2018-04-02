@@ -93,6 +93,8 @@ PPC64::PPC64() {
   // And because the lowest non-zero 256M boundary is 0x10000000, PPC64 linkers
   // use 0x10000000 as the starting address.
   DefaultImageBase = 0x10000000;
+
+  TrapInstr = 0x7fe00008;
 }
 
 static uint32_t getEFlags(InputFile *File) {
