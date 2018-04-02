@@ -1,5 +1,5 @@
 {
-    "regexs" : [".*github.*apple.*swift-lldb.*swift-5.0-branch.*"],
+    "regexs" : [".*github.*apple.*swift-lldb.*swift-4.2-branch.*"],
     "repos" : [
         {"name": "llvm",
          "vcs": "git",
@@ -14,7 +14,7 @@
         {"name": "swift",
          "vcs": "git",
          "url": "https://github.com/apple/swift.git",
-         "ref": "swift-5.0-branch"},
+         "ref": "swift-4.2-branch"},
 
         {"name": "cmark",
          "vcs": "git",
