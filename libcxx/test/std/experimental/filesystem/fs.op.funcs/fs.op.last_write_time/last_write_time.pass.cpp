@@ -17,7 +17,6 @@
 // void last_write_time(const path& p, file_time_type new_type,
 //                      std::error_code& ec) noexcept;
 
-
 #include "filesystem_include.hpp"
 #include <type_traits>
 #include <chrono>
@@ -32,7 +31,6 @@
 #include <iostream>
 
 using namespace fs;
-
 
 std::pair<std::time_t, std::time_t> GetTimes(path const& p) {
     using Clock = file_time_type::clock;
