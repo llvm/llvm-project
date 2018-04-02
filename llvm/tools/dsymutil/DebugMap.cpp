@@ -63,9 +63,10 @@ void DebugMapObject::print(raw_ostream &OS) const {
   Entries.reserve(Symbols.getNumItems());
   for (const auto &Sym : make_range(Symbols.begin(), Symbols.end()))
     Entries.push_back(std::make_pair(Sym.getKey(), Sym.getValue()));
-  std::sort(
-      Entries.begin(), Entries.end(),
-      [](const Entry &LHS, const Entry &RHS) { return LHS.first < RHS.first; });
+  llvm::sort(Entries.begin(), Entries.end(),
+             [](const Entry &LHS, const Entry &RHS) {
+               return LHS.first < RHS.first;
+             });
   for (const auto &Sym : Entries) {
     if (Sym.second.ObjectAddress)
       OS << format("\t%016" PRIx64, uint64_t(*Sym.second.ObjectAddress));

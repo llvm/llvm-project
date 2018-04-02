@@ -134,6 +134,32 @@ extern "C" void f1a(promise_matching_placement_new_tag, int x, float y , double 
   co_return;
 }
 
+// Declare a placement form operator new, such as the one described in
+// C++ 18.6.1.3.1, which takes a void* argument.
+void* operator new(SizeT __sz, void *__p) noexcept;
+
+struct promise_matching_global_placement_new_tag {};
+struct dummy {};
+template<>
+struct std::experimental::coroutine_traits<void, promise_matching_global_placement_new_tag, dummy*> {
+  struct promise_type {
+    void get_return_object() {}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+  };
+};
+
+// A coroutine that takes a single pointer argument should not invoke this
+// placement form operator. [dcl.fct.def.coroutine]/7 dictates that lookup for
+// allocation functions matching the coroutine function's signature be done
+// within the scope of the promise type's class.
+// CHECK-LABEL: f1b(
+extern "C" void f1b(promise_matching_global_placement_new_tag, dummy *) {
+  // CHECK: call i8* @_Znwm(i64
+  co_return;
+}
+
 struct promise_delete_tag {};
 
 template<>

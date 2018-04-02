@@ -2783,7 +2783,7 @@ define <16 x float> @ubto16f32(<16 x i32> %a) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovd2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpmovm2d %k0, %zmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpsrld $31, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsrld $31, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vcvtdq2ps %zmm0, %zmm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2804,7 +2804,7 @@ define <16 x double> @ubto16f64(<16 x i32> %a) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovd2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpmovm2d %k0, %zmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpsrld $31, %zmm0, %zmm1 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsrld $31, %zmm0, %zmm1 # sched: [1:1.00]
 ; GENERIC-NEXT:    vcvtdq2pd %ymm1, %zmm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    vextracti64x4 $1, %zmm1, %ymm1 # sched: [1:1.00]
 ; GENERIC-NEXT:    vcvtdq2pd %ymm1, %zmm1 # sched: [4:1.00]
@@ -4246,7 +4246,7 @@ define   <16 x i32> @zext_16i1_to_16xi32(i16 %b) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    kmovd %edi, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpmovm2d %k0, %zmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpsrld $31, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsrld $31, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: zext_16i1_to_16xi32:
@@ -4265,7 +4265,7 @@ define   <8 x i64> @zext_8i1_to_8xi64(i8 %b) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    kmovd %edi, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpmovm2q %k0, %zmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpsrlq $63, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsrlq $63, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: zext_8i1_to_8xi64:
@@ -4303,7 +4303,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; GENERIC-LABEL: trunc_16i32_to_16i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpslld $31, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpslld $31, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovd2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -4493,7 +4493,7 @@ define void @extload_v8i64(<8 x i8>* %a, <8 x i64>* %res) {
 define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; GENERIC-LABEL: test21:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpsllw $7, %zmm2, %zmm2 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsllw $7, %zmm2, %zmm2 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %zmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z} # sched: [1:0.33]
 ; GENERIC-NEXT:    kshiftrq $32, %k1, %k1 # sched: [1:1.00]
@@ -4659,7 +4659,7 @@ define <32 x i16> @zext_32xi1_to_32xi16(<32 x i16> %x, <32 x i16> %y) #0 {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpeqw %zmm1, %zmm0, %k0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovm2w %k0, %zmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpsrlw $15, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsrlw $15, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: zext_32xi1_to_32xi16:
@@ -7919,7 +7919,7 @@ define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
 define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
 ; GENERIC-LABEL: store_32i1_1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpsllw $15, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsllw $15, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovw2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovd %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
@@ -7942,7 +7942,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ;
 ; GENERIC-LABEL: store_64i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpsllw $7, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpsllw $7, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovq %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]

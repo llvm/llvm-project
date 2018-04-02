@@ -1381,8 +1381,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
       }
     }
 
-    std::sort(DataMappingSymsAddr.begin(), DataMappingSymsAddr.end());
-    std::sort(TextMappingSymsAddr.begin(), TextMappingSymsAddr.end());
+    llvm::sort(DataMappingSymsAddr.begin(), DataMappingSymsAddr.end());
+    llvm::sort(TextMappingSymsAddr.begin(), TextMappingSymsAddr.end());
 
     if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
@@ -1407,7 +1407,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     }
 
     // Sort relocations by address.
-    std::sort(Rels.begin(), Rels.end(), RelocAddressLess);
+    llvm::sort(Rels.begin(), Rels.end(), RelocAddressLess);
 
     StringRef SegmentName = "";
     if (const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj)) {

@@ -1829,7 +1829,8 @@ def BTR32rr : I<0xB3, MRMDestReg, (outs GR32:$dst), (ins GR32:$src1, GR32:$src2)
                 "btr{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>,
                 OpSize32, TB, NotMemoryFoldable;
 def BTR64rr : RI<0xB3, MRMDestReg, (outs GR64:$dst), (ins GR64:$src1, GR64:$src2),
-                 "btr{q}\t{$src2, $src1|$src1, $src2}", []>, TB, NotMemoryFoldable;
+                 "btr{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>, TB,
+                 NotMemoryFoldable;
 } // SchedRW
 
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteALULd, WriteRMW] in {
