@@ -80,9 +80,6 @@
 /* Define to 1 if you have the `futimes' function. */
 #cmakedefine HAVE_FUTIMES ${HAVE_FUTIMES}
 
-/* Define to 1 if you have the `getcwd' function. */
-#cmakedefine HAVE_GETCWD ${HAVE_GETCWD}
-
 /* Define to 1 if you have the `getpagesize' function. */
 #cmakedefine HAVE_GETPAGESIZE ${HAVE_GETPAGESIZE}
 
@@ -91,9 +88,6 @@
 
 /* Define to 1 if you have the `getrusage' function. */
 #cmakedefine HAVE_GETRUSAGE ${HAVE_GETRUSAGE}
-
-/* Define to 1 if you have the `gettimeofday' function. */
-#cmakedefine HAVE_GETTIMEOFDAY ${HAVE_GETTIMEOFDAY}
 
 /* Define to 1 if the system has the type `int64_t'. */
 #cmakedefine HAVE_INT64_T ${HAVE_INT64_T}
@@ -148,15 +142,6 @@
 
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 #cmakedefine HAVE_MALLOC_ZONE_STATISTICS ${HAVE_MALLOC_ZONE_STATISTICS}
-
-/* Define to 1 if you have the `mkdtemp' function. */
-#cmakedefine HAVE_MKDTEMP ${HAVE_MKDTEMP}
-
-/* Define to 1 if you have the `mkstemp' function. */
-#cmakedefine HAVE_MKSTEMP ${HAVE_MKSTEMP}
-
-/* Define to 1 if you have the `mktemp' function. */
-#cmakedefine HAVE_MKTEMP ${HAVE_MKTEMP}
 
 /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
 #cmakedefine HAVE_NDIR_H ${HAVE_NDIR_H}

@@ -122,6 +122,11 @@ typedef enum {
 } LLVMDWARFEmissionKind;
 
 /**
+ * An LLVM DWARF type encoding.
+ */
+typedef unsigned LLVMDWARFTypeEncoding;
+
+/**
  * The current debug metadata version number.
  */
 unsigned LLVMDebugMetadataVersion(void);
@@ -226,6 +231,325 @@ LLVMMetadataRef
 LLVMDIBuilderCreateDebugLocation(LLVMContextRef Ctx, unsigned Line,
                                  unsigned Column, LLVMMetadataRef Scope,
                                  LLVMMetadataRef InlinedAt);
+
+/**
+ * Create subroutine type.
+ * \param File            The file in which the subroutine resides.
+ * \param ParameterTypes  An array of subroutine parameter types. This
+ *                        includes return type at 0th index.
+ * \param NumParameterTypes The number of parameter types in \c ParameterTypes
+ * \param Flags           E.g.: \c LLVMDIFlagLValueReference.
+ *                        These flags are used to emit dwarf attributes.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
+                                  LLVMMetadataRef File,
+                                  LLVMMetadataRef *ParameterTypes,
+                                  unsigned NumParameterTypes,
+                                  LLVMDIFlags Flags);
+
+/**
+ * Create debugging information entry for an enumeration.
+ * \param Builder        The DIBuilder.
+ * \param Scope          Scope in which this enumeration is defined.
+ * \param Name           Enumeration name.
+ * \param NameLen        Length of enumeration name.
+ * \param File           File where this member is defined.
+ * \param LineNumber     Line number.
+ * \param SizeInBits     Member size.
+ * \param AlignInBits    Member alignment.
+ * \param Elements       Enumeration elements.
+ * \param NumElements    Number of enumeration elements.
+ * \param UnderlyingType Underlying type of a C++11/ObjC fixed enum.
+ * \param UniqueIdentifier A unique identifier for the enum.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
+    unsigned SizeInBits, unsigned AlignInBits, LLVMMetadataRef *Elements,
+    unsigned NumElements, LLVMMetadataRef ClassTy);
+
+/**
+ * Create debugging information entry for a union.
+ * \param Builder      The DIBuilder.
+ * \param Scope        Scope in which this union is defined.
+ * \param Name         Union name.
+ * \param NameLen      Length of union name.
+ * \param File         File where this member is defined.
+ * \param LineNumber   Line number.
+ * \param SizeInBits   Member size.
+ * \param AlignInBits  Member alignment.
+ * \param Flags        Flags to encode member attribute, e.g. private
+ * \param Elements     Union elements.
+ * \param NumElements  Number of union elements.
+ * \param RunTimeLang  Optional parameter, Objective-C runtime version.
+ * \param UniqueIdentifier A unique identifier for the union.
+ * \param UniqueIdentifierLen Length of unique identifier.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateUnionType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
+    unsigned SizeInBits, unsigned AlignInBits, LLVMDIFlags Flags,
+    LLVMMetadataRef *Elements, unsigned NumElements, unsigned RunTimeLang,
+     const char *UniqueId, size_t UniqueIdLen);
+
+
+/**
+ * Create debugging information entry for an array.
+ * \param Builder      The DIBuilder.
+ * \param Size         Array size.
+ * \param AlignInBits  Alignment.
+ * \param Ty           Element type.
+ * \param Subscripts   Subscripts.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, unsigned Size,
+                             unsigned AlignInBits, LLVMMetadataRef Ty,
+                             LLVMMetadataRef *Subscripts,
+                             unsigned NumSubscripts);
+
+/**
+ * Create debugging information entry for a vector type.
+ * \param Builder      The DIBuilder.
+ * \param Size         Vector size.
+ * \param AlignInBits  Alignment.
+ * \param Ty           Element type.
+ * \param Subscripts   Subscripts.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateVectorType(LLVMDIBuilderRef Builder, unsigned Size,
+                              unsigned AlignInBits, LLVMMetadataRef Ty,
+                              LLVMMetadataRef *Subscripts,
+                              unsigned NumSubscripts);
+
+/**
+ * Create a DWARF unspecified type.
+ * \param Builder   The DIBuilder.
+ * \param Name      The unspecified type's name.
+ * \param NameLen   Length of type name.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateUnspecifiedType(LLVMDIBuilderRef Builder, const char *Name,
+                                   size_t NameLen);
+
+/**
+ * Create debugging information entry for a basic
+ * type.
+ * \param Builder     The DIBuilder.
+ * \param Name        Type name.
+ * \param Name        Length of type name.
+ * \param SizeInBits  Size of the type.
+ * \param Encoding    DWARF encoding code, e.g. \c LLVMDWARFTypeEncoding_float.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
+                             size_t NameLen, unsigned SizeInBits,
+                             LLVMDWARFTypeEncoding Encoding);
+
+/**
+ * Create debugging information entry for a pointer.
+ * \param Builder     The DIBuilder.
+ * \param PointeeTy         Type pointed by this pointer.
+ * \param SizeInBits        Size.
+ * \param AlignInBits       Alignment. (optional, pass 0 to ignore)
+ * \param DWARFAddressSpace DWARF address space. (optional, pass 0 to ignore)
+ * \param Name              Pointer type name. (optional)
+ * \param Name              Length of pointer type name. (optional)
+ */
+LLVMMetadataRef LLVMDIBuilderCreatePointerType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy,
+    unsigned SizeInBits, unsigned AlignInBits, unsigned AddressSpace,
+    const char *Name, size_t NameLen);
+
+/**
+ * Create debugging information entry for a struct.
+ * \param Builder     The DIBuilder.
+ * \param Scope        Scope in which this struct is defined.
+ * \param Name         Struct name.
+ * \param Name         Struct name length.
+ * \param File         File where this member is defined.
+ * \param LineNumber   Line number.
+ * \param SizeInBits   Member size.
+ * \param AlignInBits  Member alignment.
+ * \param Flags        Flags to encode member attribute, e.g. private
+ * \param Elements     Struct elements.
+ * \param RunTimeLang  Optional parameter, Objective-C runtime version.
+ * \param VTableHolder The object containing the vtable for the struct.
+ * \param UniqueIdentifier A unique identifier for the struct.
+ * \param UniqueIdentifierLen Length of the unique identifier for the struct.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateStructType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
+    unsigned SizeInBits, unsigned AlignInBits, LLVMDIFlags Flags,
+    LLVMMetadataRef DerivedFrom, LLVMMetadataRef *Elements,
+    unsigned NumElements, unsigned RunTimeLang, LLVMMetadataRef VTableHolder,
+    const char *UniqueId, size_t UniqueIdLen);
+
+/**
+ * Create debugging information entry for a member.
+ * \param Builder      The DIBuilder.
+ * \param Scope        Member scope.
+ * \param Name         Member name.
+ * \param File         File where this member is defined.
+ * \param LineNo       Line number.
+ * \param SizeInBits   Member size.
+ * \param AlignInBits  Member alignment.
+ * \param OffsetInBits Member offset.
+ * \param Flags        Flags to encode member attribute, e.g. private
+ * \param Ty           Parent type.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateMemberType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo,
+    unsigned SizeInBits, unsigned AlignInBits, unsigned OffsetInBits,
+    LLVMDIFlags Flags, LLVMMetadataRef Ty);
+
+/**
+ * Create debugging information entry for a
+ * C++ static data member.
+ * \param Builder      The DIBuilder.
+ * \param Scope        Member scope.
+ * \param Name         Member name.
+ * \param Name         Length of member name.
+ * \param File         File where this member is declared.
+ * \param LineNo       Line number.
+ * \param Ty           Type of the static member.
+ * \param Flags        Flags to encode member attribute, e.g. private.
+ * \param Val          Const initializer of the member.
+ * \param AlignInBits  Member alignment.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateStaticMemberType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
+    LLVMMetadataRef Type, LLVMDIFlags Flags, LLVMValueRef ConstantVal,
+    unsigned AlignInBits);
+
+/**
+ * Create debugging information entry for a pointer to member.
+ * \param Builder      The DIBuilder.
+ * \param PointeeType Type pointed to by this pointer.
+ * \param Class Type for which this pointer points to members of.
+ * \param SizeInBits  Size.
+ * \param AlignInBits Alignment. (optional)
+ * \param Flags Flags.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateMemberPointerType(LLVMDIBuilderRef Builder,
+                                     LLVMMetadataRef PointeeType,
+                                     LLVMMetadataRef ClassType,
+                                     unsigned SizeInBits,
+                                     unsigned AlignInBits,
+                                     LLVMDIFlags Flags);
+
+/**
+ * Create a new DIType* with the "object pointer"
+ * flag set.
+ * \param Builder   The DIBuilder.
+ * \param Type      The underlying type to which this pointer points.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                     LLVMMetadataRef Type);
+
+/**
+ * Create debugging information entry for a qualified
+ * type, e.g. 'const int'.
+ * \param Tag         Tag identifing type,
+ *                    e.g. LLVMDWARFTypeQualifier_volatile_type
+ * \param FromTy      Base Type.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateQualifiedType(LLVMDIBuilderRef Builder, unsigned Tag,
+                                 LLVMMetadataRef Type);
+
+/**
+ * Create debugging information entry for a c++
+ * style reference or rvalue reference type.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateReferenceType(LLVMDIBuilderRef Builder, unsigned Tag,
+                                 LLVMMetadataRef Type);
+
+/**
+ * Create C++11 nullptr type.
+ * \param Builder   The DIBuilder.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateNullPtrType(LLVMDIBuilderRef Builder);
+
+/**
+ * Create a temporary forward-declared type.
+ * \param Builder   The DIBuilder.
+ * \param Tag       A unique tag for this type.
+ * \param Name      Type name.
+ * \param NameLen   Length of type name.
+ * \param Scope     Type scope.
+ * \param File      File where this type is defined.
+ * \param Line      Line number where this type is defined.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateReplaceableCompositeType(
+    LLVMDIBuilderRef Builder, unsigned Tag, const char *Name,
+    size_t NameLen, LLVMMetadataRef Scope, LLVMMetadataRef File, unsigned Line,
+    unsigned RuntimeLang, unsigned SizeInBits, unsigned AlignInBits,
+    LLVMDIFlags Flags, const char *UniqueIdentifier,
+    size_t UniqueIdentifierLen);
+
+/**
+ * Create debugging information entry for a bit field member.
+ * \param Builder             The DIBuilder.
+ * \param Scope               Member scope.
+ * \param Name                Member name.
+ * \param NameLen             Length of member name.
+ * \param File                File where this member is defined.
+ * \param LineNo              Line number.
+ * \param SizeInBits          Member size.
+ * \param OffsetInBits        Member offset.
+ * \param StorageOffsetInBits Member storage offset.
+ * \param Flags               Flags to encode member attribute.
+ * \param Type                Parent type.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateBitFieldMemberType(LLVMDIBuilderRef Builder,
+                                      LLVMMetadataRef Scope,
+                                      const char *Name, size_t NameLen,
+                                      LLVMMetadataRef File, unsigned LineNumber,
+                                      unsigned SizeInBits,
+                                      unsigned OffsetInBits,
+                                      unsigned StorageOffsetInBits,
+                                      LLVMDIFlags Flags, LLVMMetadataRef Type);
+
+/**
+ * Create debugging information entry for a class.
+ * \param Scope        Scope in which this class is defined.
+ * \param Name         class name.
+ * \param File         File where this member is defined.
+ * \param LineNumber   Line number.
+ * \param SizeInBits   Member size.
+ * \param AlignInBits  Member alignment.
+ * \param OffsetInBits Member offset.
+ * \param Flags        Flags to encode member attribute, e.g. private
+ * \param Elements     class members.
+ * \param DerivedFrom  Debug info of the base class of this type.
+ * \param TemplateParms Template type parameters.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateClassType(LLVMDIBuilderRef Builder,
+    LLVMMetadataRef Scope, const char *Name, size_t NameLen,
+    LLVMMetadataRef File, unsigned LineNumber, unsigned SizeInBits,
+    unsigned AlignInBits, unsigned OffsetInBits, LLVMDIFlags Flags,
+    LLVMMetadataRef *Elements, unsigned NumElements,
+    LLVMMetadataRef DerivedFrom, LLVMMetadataRef TemplateParamsNode);
+
+/**
+ * Create a new DIType* with "artificial" flag set.
+ * \param Builder     The DIBuilder.
+ * \param Type        The underlying type.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
+                                  LLVMMetadataRef Type);
 
 #ifdef __cplusplus
 } /* end extern "C" */

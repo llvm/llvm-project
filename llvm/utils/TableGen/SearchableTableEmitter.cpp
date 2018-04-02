@@ -13,12 +13,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "CodeGenIntrinsics.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -30,6 +32,7 @@ namespace {
 
 class SearchableTableEmitter {
   RecordKeeper &Records;
+  DenseMap<Init *, std::unique_ptr<CodeGenIntrinsic>> Intrinsics;
 
 public:
   SearchableTableEmitter(RecordKeeper &R) : Records(R) {}
@@ -53,8 +56,11 @@ private:
       return "0x" + utohexstr(getAsInt(BI));
     else if (BitInit *BI = dyn_cast<BitInit>(I))
       return BI->getValue() ? "true" : "false";
-    else if (CodeInit *CI = dyn_cast<CodeInit>(I)) {
+    else if (CodeInit *CI = dyn_cast<CodeInit>(I))
       return CI->getValue();
+    else if (DefInit *DI = dyn_cast<DefInit>(I)) {
+      if (DI->getDef()->isSubClassOf("Intrinsic"))
+        return "Intrinsic::" + getIntrinsic(I).EnumName;
     }
     PrintFatalError(SMLoc(),
                     "invalid field type, expected: string, bits, bit or code");
@@ -65,6 +71,23 @@ private:
     if (!isa<StringInit>(I))
       return PrimaryRep;
     return StringRef(PrimaryRep).upper();
+  }
+
+  bool isIntrinsic(Init *I) {
+    if (DefInit *DI = dyn_cast<DefInit>(I))
+      return DI->getDef()->isSubClassOf("Intrinsic");
+    return false;
+  }
+
+  CodeGenIntrinsic &getIntrinsic(Init *I) {
+    std::unique_ptr<CodeGenIntrinsic> &Intr = Intrinsics[I];
+    if (!Intr)
+      Intr = make_unique<CodeGenIntrinsic>(cast<DefInit>(I)->getDef());
+    return *Intr;
+  }
+
+  bool isIntegral(Init *I) {
+    return isa<BitsInit>(I) || isIntrinsic(I);
   }
 
   std::string searchableFieldType(Init *I) {
@@ -83,7 +106,8 @@ private:
       else
         PrintFatalError(SMLoc(), "bitfield too large to search");
       return "uint" + utostr(NumBits) + "_t";
-    }
+    } else if (isIntrinsic(I))
+      return "unsigned";
     PrintFatalError(SMLoc(), "Unknown type to search by");
   }
 
@@ -158,6 +182,15 @@ void SearchableTableEmitter::emitSearchTable(
                        return getAsInt(cast<BitsInit>(LHS.first)) <
                               getAsInt(cast<BitsInit>(RHS.first));
                      });
+  } else if (isIntrinsic(SearchTable[0].first)) {
+    std::stable_sort(SearchTable.begin(), SearchTable.end(),
+                     [this](const SearchTableEntry &LHS,
+                            const SearchTableEntry &RHS) {
+                       CodeGenIntrinsic &LHSi = getIntrinsic(LHS.first);
+                       CodeGenIntrinsic &RHSi = getIntrinsic(RHS.first);
+                       return std::tie(LHSi.TargetPrefix, LHSi.Name) <
+                              std::tie(RHSi.TargetPrefix, RHSi.Name);
+                     });
   } else {
     std::stable_sort(SearchTable.begin(), SearchTable.end(),
                      [this](const SearchTableEntry &LHS,
@@ -176,7 +209,7 @@ void SearchableTableEmitter::emitSearchTable(
 
 void SearchableTableEmitter::emitLookupFunction(StringRef Name, StringRef Field,
                                                 Init *I, raw_ostream &OS) {
-  bool IsIntegral = isa<BitsInit>(I);
+  bool IsIntegral = isIntegral(I);
   std::string FieldType = searchableFieldType(I);
   std::string PairType = "std::pair<" + FieldType + ", int>";
 
@@ -219,7 +252,7 @@ void SearchableTableEmitter::emitLookupFunction(StringRef Name, StringRef Field,
 void SearchableTableEmitter::emitLookupDeclaration(StringRef Name,
                                                    StringRef Field, Init *I,
                                                    raw_ostream &OS) {
-  bool IsIntegral = isa<BitsInit>(I);
+  bool IsIntegral = isIntegral(I);
   std::string FieldType = searchableFieldType(I);
   OS << "const " << Name << " *"
      << "lookup" << Name << "By" << Field;

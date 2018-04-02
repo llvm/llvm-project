@@ -615,8 +615,12 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
     MVT::SimpleValueType VT;
     if (TyEl->isSubClassOf("LLVMMatchType")) {
       unsigned MatchTy = TyEl->getValueAsInt("Number");
-      assert(MatchTy < OverloadedVTs.size() &&
-             "Invalid matching number!");
+      if (MatchTy >= OverloadedVTs.size()) {
+        PrintError(R->getLoc(),
+                   "Parameter #" + Twine(i) + " has out of bounds matching "
+                   "number " + Twine(MatchTy));
+        PrintFatalError(Twine("ParamTypes is ") + TypeList->getAsString());
+      }
       VT = OverloadedVTs[MatchTy];
       // It only makes sense to use the extended and truncated vector element
       // variants with iAny types; otherwise, if the intrinsic is not

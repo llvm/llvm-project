@@ -1069,7 +1069,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
 
   // The object addresses where sorted, but again, the linked
   // addresses might end up in a different order.
-  std::sort(Ranges.begin(), Ranges.end());
+  llvm::sort(Ranges.begin(), Ranges.end());
 
   if (!Ranges.empty()) {
     MS->SwitchSection(MC->getObjectFileInfo()->getDwarfARangesSection());
@@ -2407,7 +2407,7 @@ bool DwarfLinker::RelocationManager::findValidRelocs(
   // the file, this allows us to just keep an index in the relocation
   // array that we advance during our walk, rather than resorting to
   // some associative container. See DwarfLinker::NextValidReloc.
-  std::sort(ValidRelocs.begin(), ValidRelocs.end());
+  llvm::sort(ValidRelocs.begin(), ValidRelocs.end());
   return true;
 }
 

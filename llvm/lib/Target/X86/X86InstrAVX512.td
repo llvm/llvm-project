@@ -799,7 +799,7 @@ multiclass vextract_for_size_split<int Opcode,
                                    X86VectorVTInfo From, X86VectorVTInfo To,
                                    SDPatternOperator vextract_extract,
                                    SDPatternOperator vextract_for_mask,
-                                   OpndItins itins> {
+                                   SchedWrite SchedRR, SchedWrite SchedMR> {
 
   let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
     defm rr : AVX512_maskable_split<Opcode, MRMDestReg, To, (outs To.RC:$dst),
@@ -808,7 +808,7 @@ multiclass vextract_for_size_split<int Opcode,
                 "$idx, $src1", "$src1, $idx",
                 (vextract_extract:$idx (From.VT From.RC:$src1), (iPTR imm)),
                 (vextract_for_mask:$idx (From.VT From.RC:$src1), (iPTR imm)),
-                itins.rr>, AVX512AIi8Base, EVEX, Sched<[itins.Sched]>;
+                NoItinerary>, AVX512AIi8Base, EVEX, Sched<[SchedRR]>;
 
     def mr  : AVX512AIi8<Opcode, MRMDestMem, (outs),
                     (ins To.MemOp:$dst, From.RC:$src1, u8imm:$idx),
@@ -816,8 +816,8 @@ multiclass vextract_for_size_split<int Opcode,
                         "\t{$idx, $src1, $dst|$dst, $src1, $idx}",
                     [(store (To.VT (vextract_extract:$idx
                                     (From.VT From.RC:$src1), (iPTR imm))),
-                             addr:$dst)], itins.rm>, EVEX,
-                    Sched<[itins.Sched.Folded, ReadAfterLd]>;
+                             addr:$dst)], NoItinerary>, EVEX,
+                    Sched<[SchedMR]>;
 
     let mayStore = 1, hasSideEffects = 0 in
     def mrk : AVX512AIi8<Opcode, MRMDestMem, (outs),
@@ -826,8 +826,8 @@ multiclass vextract_for_size_split<int Opcode,
                      "vextract" # To.EltTypeName # "x" # To.NumElts #
                           "\t{$idx, $src1, $dst {${mask}}|"
                           "$dst {${mask}}, $src1, $idx}",
-                    [], itins.rm>, EVEX_K, EVEX,
-                    Sched<[itins.Sched.Folded, ReadAfterLd]>;
+                    [], NoItinerary>, EVEX_K, EVEX,
+                    Sched<[SchedMR]>;
   }
 }
 
@@ -835,8 +835,8 @@ multiclass vextract_for_size_split<int Opcode,
 multiclass vextract_for_size<int Opcode, X86VectorVTInfo From,
                              X86VectorVTInfo To,
                              SDPatternOperator vextract_extract,
-                             OpndItins itins> :
-  vextract_for_size_split<Opcode, From, To, vextract_extract, vextract_extract, itins>;
+                             SchedWrite SchedRR, SchedWrite SchedMR> :
+  vextract_for_size_split<Opcode, From, To, vextract_extract, vextract_extract, SchedRR, SchedMR>;
 
 // Codegen pattern for the alternative types
 multiclass vextract_for_size_lowering<string InstrStr, X86VectorVTInfo From,
@@ -856,24 +856,24 @@ multiclass vextract_for_size_lowering<string InstrStr, X86VectorVTInfo From,
 
 multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
                              ValueType EltVT64, int Opcode256,
-                             OpndItins itins> {
+                             SchedWrite SchedRR, SchedWrite SchedMR> {
   let Predicates = [HasAVX512] in {
     defm NAME # "32x4Z" : vextract_for_size<Opcode128,
                                    X86VectorVTInfo<16, EltVT32, VR512>,
                                    X86VectorVTInfo< 4, EltVT32, VR128X>,
-                                   vextract128_extract, itins>,
+                                   vextract128_extract, SchedRR, SchedMR>,
                                        EVEX_V512, EVEX_CD8<32, CD8VT4>;
     defm NAME # "64x4Z" : vextract_for_size<Opcode256,
                                    X86VectorVTInfo< 8, EltVT64, VR512>,
                                    X86VectorVTInfo< 4, EltVT64, VR256X>,
-                                   vextract256_extract, itins>,
+                                   vextract256_extract, SchedRR, SchedMR>,
                                        VEX_W, EVEX_V512, EVEX_CD8<64, CD8VT4>;
   }
   let Predicates = [HasVLX] in
     defm NAME # "32x4Z256" : vextract_for_size<Opcode128,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
                                  X86VectorVTInfo< 4, EltVT32, VR128X>,
-                                 vextract128_extract, itins>,
+                                 vextract128_extract, SchedRR, SchedMR>,
                                      EVEX_V256, EVEX_CD8<32, CD8VT4>;
 
   // Even with DQI we'd like to only use these instructions for masking.
@@ -881,7 +881,7 @@ multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
     defm NAME # "64x2Z256" : vextract_for_size_split<Opcode128,
                                  X86VectorVTInfo< 4, EltVT64, VR256X>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 null_frag, vextract128_extract, itins>,
+                                 null_frag, vextract128_extract, SchedRR, SchedMR>,
                                      VEX_W, EVEX_V256, EVEX_CD8<64, CD8VT2>;
 
   // Even with DQI we'd like to only use these instructions for masking.
@@ -889,28 +889,18 @@ multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
     defm NAME # "64x2Z" : vextract_for_size_split<Opcode128,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 null_frag, vextract128_extract, itins>,
+                                 null_frag, vextract128_extract, SchedRR, SchedMR>,
                                      VEX_W, EVEX_V512, EVEX_CD8<64, CD8VT2>;
     defm NAME # "32x8Z" : vextract_for_size_split<Opcode256,
                                  X86VectorVTInfo<16, EltVT32, VR512>,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
-                                 null_frag, vextract256_extract, itins>,
+                                 null_frag, vextract256_extract, SchedRR, SchedMR>,
                                      EVEX_V512, EVEX_CD8<32, CD8VT8>;
   }
 }
 
-// FIXME: Is there a better scheduler itinerary for VEXTRACTF/VEXTRACTI?
-let Sched = WriteFShuffle256 in
-def AVX512_VEXTRACTF : OpndItins<
-  IIC_SSE_SHUFP, IIC_SSE_SHUFP
->;
-let Sched = WriteShuffle256 in
-def AVX512_VEXTRACTI : OpndItins<
-  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
->;
-
-defm VEXTRACTF : vextract_for_type<f32, 0x19, f64, 0x1b, AVX512_VEXTRACTF>;
-defm VEXTRACTI : vextract_for_type<i32, 0x39, i64, 0x3b, AVX512_VEXTRACTI>;
+defm VEXTRACTF : vextract_for_type<f32, 0x19, f64, 0x1b, WriteFShuffle256, WriteFStore>;
+defm VEXTRACTI : vextract_for_type<i32, 0x39, i64, 0x3b, WriteShuffle256, WriteVecStore>;
 
 // extract_subvector codegen patterns with the alternative types.
 // Even with AVX512DQ we'll still use these for unmasked operations.
@@ -1117,14 +1107,14 @@ def VEXTRACTPSZrr : AVX512AIi8<0x17, MRMDestReg, (outs GR32:$dst),
       (ins VR128X:$src1, u8imm:$src2),
       "vextractps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
       [(set GR32:$dst, (extractelt (bc_v4i32 (v4f32 VR128X:$src1)), imm:$src2))],
-      IIC_SSE_EXTRACTPS_RR>, EVEX, VEX_WIG, Sched<[WriteFShuffle]>;
+      IIC_SSE_EXTRACTPS_RR>, EVEX, VEX_WIG, Sched<[WriteFBlend]>;
 
 def VEXTRACTPSZmr : AVX512AIi8<0x17, MRMDestMem, (outs),
       (ins f32mem:$dst, VR128X:$src1, u8imm:$src2),
       "vextractps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
       [(store (extractelt (bc_v4i32 (v4f32 VR128X:$src1)), imm:$src2),
                           addr:$dst)], IIC_SSE_EXTRACTPS_RM>,
-      EVEX, VEX_WIG, EVEX_CD8<32, CD8VT1>, Sched<[WriteFShuffleLd]>;
+      EVEX, VEX_WIG, EVEX_CD8<32, CD8VT1>, Sched<[WriteFBlendLd, WriteRMW]>;
 
 //===---------------------------------------------------------------------===//
 // AVX-512 BROADCAST
@@ -5707,17 +5697,22 @@ multiclass avx512_var_shift_w<bits<8> opc, string OpcodeStr,
   }
 }
 
-defm VPSLLV : avx512_var_shift_types<0x47, "vpsllv", shl, SSE_INTSHIFT_P>,
-              avx512_var_shift_w<0x12, "vpsllvw", shl, SSE_INTSHIFT_P>;
+let Sched = WriteVarVecShift in
+def AVX512_VARSHIFT_P : OpndItins<
+  IIC_SSE_INTSH_P_RR, IIC_SSE_INTSH_P_RM
+>;
 
-defm VPSRAV : avx512_var_shift_types<0x46, "vpsrav", sra, SSE_INTSHIFT_P>,
-              avx512_var_shift_w<0x11, "vpsravw", sra, SSE_INTSHIFT_P>;
+defm VPSLLV : avx512_var_shift_types<0x47, "vpsllv", shl, AVX512_VARSHIFT_P>,
+              avx512_var_shift_w<0x12, "vpsllvw", shl, AVX512_VARSHIFT_P>;
 
-defm VPSRLV : avx512_var_shift_types<0x45, "vpsrlv", srl, SSE_INTSHIFT_P>,
-              avx512_var_shift_w<0x10, "vpsrlvw", srl, SSE_INTSHIFT_P>;
+defm VPSRAV : avx512_var_shift_types<0x46, "vpsrav", sra, AVX512_VARSHIFT_P>,
+              avx512_var_shift_w<0x11, "vpsravw", sra, AVX512_VARSHIFT_P>;
 
-defm VPRORV : avx512_var_shift_types<0x14, "vprorv", rotr, SSE_INTSHIFT_P>;
-defm VPROLV : avx512_var_shift_types<0x15, "vprolv", rotl, SSE_INTSHIFT_P>;
+defm VPSRLV : avx512_var_shift_types<0x45, "vpsrlv", srl, AVX512_VARSHIFT_P>,
+              avx512_var_shift_w<0x10, "vpsrlvw", srl, AVX512_VARSHIFT_P>;
+
+defm VPRORV : avx512_var_shift_types<0x14, "vprorv", rotr, AVX512_VARSHIFT_P>;
+defm VPROLV : avx512_var_shift_types<0x15, "vprolv", rotl, AVX512_VARSHIFT_P>;
 
 defm : avx512_var_shift_lowering<avx512vl_i64_info, "VPSRAVQ", sra, [HasAVX512, NoVLX]>;
 defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSLLVW", shl, [HasBWI, NoVLX]>;

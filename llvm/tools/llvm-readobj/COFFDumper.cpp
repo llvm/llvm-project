@@ -607,8 +607,8 @@ void COFFDumper::cacheRelocations() {
       RelocMap[Section].push_back(Reloc);
 
     // Sort relocations by address.
-    std::sort(RelocMap[Section].begin(), RelocMap[Section].end(),
-              relocAddressLess);
+    llvm::sort(RelocMap[Section].begin(), RelocMap[Section].end(),
+               relocAddressLess);
   }
 }
 

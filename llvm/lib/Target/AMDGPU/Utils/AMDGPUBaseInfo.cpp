@@ -946,54 +946,20 @@ AMDGPUAS getAMDGPUAS(const Module &M) {
   return getAMDGPUAS(Triple(M.getTargetTriple()));
 }
 
+namespace {
+
+struct SourceOfDivergence {
+  unsigned Intr;
+};
+const SourceOfDivergence *lookupSourceOfDivergenceByIntr(unsigned Intr);
+
+#define GET_SOURCEOFDIVERGENCE_IMPL
+#include "AMDGPUGenSearchableTables.inc"
+
+} // end anonymous namespace
+
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
-  switch (IntrID) {
-  case Intrinsic::amdgcn_workitem_id_x:
-  case Intrinsic::amdgcn_workitem_id_y:
-  case Intrinsic::amdgcn_workitem_id_z:
-  case Intrinsic::amdgcn_interp_mov:
-  case Intrinsic::amdgcn_interp_p1:
-  case Intrinsic::amdgcn_interp_p2:
-  case Intrinsic::amdgcn_mbcnt_hi:
-  case Intrinsic::amdgcn_mbcnt_lo:
-  case Intrinsic::r600_read_tidig_x:
-  case Intrinsic::r600_read_tidig_y:
-  case Intrinsic::r600_read_tidig_z:
-  case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec:
-  case Intrinsic::amdgcn_ds_fadd:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
-  case Intrinsic::amdgcn_image_atomic_swap:
-  case Intrinsic::amdgcn_image_atomic_add:
-  case Intrinsic::amdgcn_image_atomic_sub:
-  case Intrinsic::amdgcn_image_atomic_smin:
-  case Intrinsic::amdgcn_image_atomic_umin:
-  case Intrinsic::amdgcn_image_atomic_smax:
-  case Intrinsic::amdgcn_image_atomic_umax:
-  case Intrinsic::amdgcn_image_atomic_and:
-  case Intrinsic::amdgcn_image_atomic_or:
-  case Intrinsic::amdgcn_image_atomic_xor:
-  case Intrinsic::amdgcn_image_atomic_inc:
-  case Intrinsic::amdgcn_image_atomic_dec:
-  case Intrinsic::amdgcn_image_atomic_cmpswap:
-  case Intrinsic::amdgcn_buffer_atomic_swap:
-  case Intrinsic::amdgcn_buffer_atomic_add:
-  case Intrinsic::amdgcn_buffer_atomic_sub:
-  case Intrinsic::amdgcn_buffer_atomic_smin:
-  case Intrinsic::amdgcn_buffer_atomic_umin:
-  case Intrinsic::amdgcn_buffer_atomic_smax:
-  case Intrinsic::amdgcn_buffer_atomic_umax:
-  case Intrinsic::amdgcn_buffer_atomic_and:
-  case Intrinsic::amdgcn_buffer_atomic_or:
-  case Intrinsic::amdgcn_buffer_atomic_xor:
-  case Intrinsic::amdgcn_buffer_atomic_cmpswap:
-  case Intrinsic::amdgcn_ps_live:
-  case Intrinsic::amdgcn_ds_swizzle:
-    return true;
-  default:
-    return false;
-  }
+  return lookupSourceOfDivergenceByIntr(IntrID);
 }
 } // namespace AMDGPU
 } // namespace llvm

@@ -5832,7 +5832,7 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   return false;
 }
 
-static X86::CondCode getCondFromBranchOpc(unsigned BrOpc) {
+X86::CondCode X86::getCondFromBranchOpc(unsigned BrOpc) {
   switch (BrOpc) {
   default: return X86::COND_INVALID;
   case X86::JE_1:  return X86::COND_E;
@@ -5855,7 +5855,7 @@ static X86::CondCode getCondFromBranchOpc(unsigned BrOpc) {
 }
 
 /// Return condition code of a SET opcode.
-static X86::CondCode getCondFromSETOpc(unsigned Opc) {
+X86::CondCode X86::getCondFromSETOpc(unsigned Opc) {
   switch (Opc) {
   default: return X86::COND_INVALID;
   case X86::SETAr:  case X86::SETAm:  return X86::COND_A;
@@ -6216,7 +6216,7 @@ void X86InstrInfo::replaceBranchWithTailCall(
     if (!I->isBranch())
       assert(0 && "Can't find the branch to replace!");
 
-    X86::CondCode CC = getCondFromBranchOpc(I->getOpcode());
+    X86::CondCode CC = X86::getCondFromBranchOpc(I->getOpcode());
     assert(BranchCond.size() == 1);
     if (CC != BranchCond[0].getImm())
       continue;
@@ -6323,7 +6323,7 @@ bool X86InstrInfo::AnalyzeBranchImpl(
     }
 
     // Handle conditional branches.
-    X86::CondCode BranchCode = getCondFromBranchOpc(I->getOpcode());
+    X86::CondCode BranchCode = X86::getCondFromBranchOpc(I->getOpcode());
     if (BranchCode == X86::COND_INVALID)
       return true;  // Can't handle indirect branch.
 
@@ -6519,7 +6519,7 @@ unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (I->isDebugValue())
       continue;
     if (I->getOpcode() != X86::JMP_1 &&
-        getCondFromBranchOpc(I->getOpcode()) == X86::COND_INVALID)
+        X86::getCondFromBranchOpc(I->getOpcode()) == X86::COND_INVALID)
       break;
     // Remove the branch.
     I->eraseFromParent();
@@ -7555,9 +7555,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
     if (IsCmpZero || IsSwapped) {
       // We decode the condition code from opcode.
       if (Instr.isBranch())
-        OldCC = getCondFromBranchOpc(Instr.getOpcode());
+        OldCC = X86::getCondFromBranchOpc(Instr.getOpcode());
       else {
-        OldCC = getCondFromSETOpc(Instr.getOpcode());
+        OldCC = X86::getCondFromSETOpc(Instr.getOpcode());
         if (OldCC != X86::COND_INVALID)
           OpcIsSET = true;
         else
