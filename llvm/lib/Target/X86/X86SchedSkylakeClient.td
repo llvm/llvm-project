@@ -2076,19 +2076,13 @@ def: InstRW<[SKLWriteResGroup117], (instregex "ROL(8|16|32|64)mCL",
                                               "SHL(8|16|32|64)mCL",
                                               "SHR(8|16|32|64)mCL")>;
 
-def SKLWriteResGroup118 : SchedWriteRes<[SKLPort4,SKLPort23,SKLPort237,SKLPort0156]> {
-  let Latency = 8;
-  let NumMicroOps = 6;
-  let ResourceCycles = [1,1,1,3];
-}
-def: InstRW<[SKLWriteResGroup118], (instregex "ADC(8|16|32|64)mi")>;
-
 def SKLWriteResGroup119 : SchedWriteRes<[SKLPort4,SKLPort23,SKLPort237,SKLPort06,SKLPort0156]> {
   let Latency = 8;
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,1,2,1];
 }
-def: InstRW<[SKLWriteResGroup119], (instregex "ADC(8|16|32|64)mr",
+def: InstRW<[SKLWriteResGroup119], (instregex "ADC(8|16|32|64)mi",
+                                              "ADC(8|16|32|64)mr",
                                               "CMPXCHG(8|16|32|64)rm",
                                               "SBB(8|16|32|64)mi",
                                               "SBB(8|16|32|64)mr")>;
