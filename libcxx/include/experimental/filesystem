@@ -721,24 +721,31 @@ public:
     typedef _VSTD::string_view __string_view;
     static _LIBCPP_CONSTEXPR value_type preferred_separator = '/';
 
+    enum class _LIBCPP_ENUM_VIS format : unsigned char {
+      auto_format,
+      native_format,
+      generic_format
+    };
+
     // constructors and destructor
     _LIBCPP_INLINE_VISIBILITY path() _NOEXCEPT {}
     _LIBCPP_INLINE_VISIBILITY path(const path& __p)      : __pn_(__p.__pn_) {}
     _LIBCPP_INLINE_VISIBILITY path(path&& __p) _NOEXCEPT : __pn_(_VSTD::move(__p.__pn_)) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    path(string_type&& __s) _NOEXCEPT : __pn_(_VSTD::move(__s)) {}
+    path(string_type&& __s, format = format::auto_format) _NOEXCEPT
+        : __pn_(_VSTD::move(__s)) {}
 
     template <
         class _Source,
         class = _EnableIfPathable<_Source, void>
         >
-    path(const _Source& __src) {
+    path(const _Source& __src, format = format::auto_format) {
         _SourceCVT<_Source>::__append_source(__pn_, __src);
     }
 
     template <class _InputIt>
-    path(_InputIt __first, _InputIt __last) {
+    path(_InputIt __first, _InputIt __last, format = format::auto_format) {
         typedef typename iterator_traits<_InputIt>::value_type _ItVal;
         _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
     }
@@ -747,9 +754,11 @@ public:
     template <class _Source,
               class = _EnableIfPathable<_Source, void>
              >
-        path(const _Source& __src, const locale& __loc);
+        path(const _Source& __src, const locale& __loc,
+             format = format::auto_format);
     template <class _InputIt>
-        path(_InputIt __first, _InputIt _last, const locale& __loc);
+        path(_InputIt __first, _InputIt _last, const locale& __loc,
+             format = format::auto_format);
 
     _LIBCPP_INLINE_VISIBILITY
     ~path() = default;
