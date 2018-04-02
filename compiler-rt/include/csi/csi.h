@@ -40,6 +40,7 @@ typedef struct {
   csi_id_t num_task_exit;
   csi_id_t num_detach_continue;
   csi_id_t num_sync;
+  csi_id_t num_alloca;
 } instrumentation_counts_t;
 
 // Property bitfields.
@@ -162,6 +163,14 @@ WEAK void __csi_detach_continue(const csi_id_t detach_continue_id,
 
 WEAK void __csi_sync(const csi_id_t sync_id);
 
+WEAK void __csi_after_alloca(const csi_id_t alloca_id,
+                        const void *addr,
+                        uint64_t total_size,
+                        uint64_t isStaticAlloca);
+
+WEAK void __csi_before_alloca(const csi_id_t alloca_id,
+                         uint64_t isStaticAlloca);
+
 // This struct is mirrored in ComprehensiveStaticInstrumentation.cpp,
 // FrontEndDataTable::getSourceLocStructType.
 typedef struct {
@@ -189,6 +198,7 @@ const source_loc_t * __csi_get_task_source_loc(const csi_id_t task_id);
 const source_loc_t * __csi_get_task_exit_source_loc(const csi_id_t task_exit_id);
 const source_loc_t * __csi_get_detach_continue_source_loc(const csi_id_t detach_continue_id);
 const source_loc_t * __csi_get_sync_source_loc(const csi_id_t sync_id);
+const source_loc_t * __csi_get_alloca_source_loc(const csi_id_t alloca_id);
 const sizeinfo_t *__csi_get_bb_sizeinfo(const csi_id_t bb_id);
 
 // Load property:

@@ -38,6 +38,7 @@ typedef enum {
     FED_TYPE_TASK_EXIT,
     FED_TYPE_DETACH_CONTINUE,
     FED_TYPE_SYNC,
+    FED_TYPE_ALLOCA,
     NUM_FED_TYPES // Must be last
 } fed_type_t;
 // A SizeInfo table is a flat list of SizeInfo entries, indexed by a CSI ID.
@@ -340,6 +341,11 @@ const source_loc_t *__csi_get_sync_source_loc(const csi_id_t sync_id) {
 CSIRT_API
 const sizeinfo_t *__csi_get_bb_sizeinfo(const csi_id_t bb_id) {
   return get_sizeinfo_entry(SIZEINFO_TYPE_BASICBLOCK, bb_id);
+}
+
+CSIRT_API
+const source_loc_t * __csi_get_alloca_source_loc(const csi_id_t alloca_id) {
+  return get_fed_entry(FED_TYPE_ALLOCA, alloca_id);
 }
 
 EXTERN_C_END
