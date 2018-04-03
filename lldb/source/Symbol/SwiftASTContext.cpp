@@ -4050,13 +4050,6 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                      .getPointer();
 
     if (found_type) {
-      // If we have an inout type at the top level, turn it into an lvalue type.
-      // Function parameters that are inout are treated the same as mutable vars
-      // here.
-      if (auto *inout_type = found_type->getAs<swift::InOutType>()) {
-        found_type = swift::LValueType::get(inout_type->getObjectType());
-      }
-
       CacheDemangledType(mangled_name.GetCString(), found_type);
       CompilerType result_type(ast_ctx, found_type);
       if (log)
@@ -5632,12 +5625,12 @@ SwiftASTContext::GetTypeInfo(void *type,
         eTypeHasValue | eTypeIsScalar | eTypeIsPointer | eTypeIsArchetype;
     break;
 
-  case swift::TypeKind::InOut:
   case swift::TypeKind::LValue:
     if (pointee_or_element_clang_type)
       *pointee_or_element_clang_type = GetNonReferenceType(type);
     swift_flags |= eTypeHasChildren | eTypeIsReference | eTypeHasValue;
     break;
+  case swift::TypeKind::InOut:
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
@@ -6000,8 +5993,6 @@ CompilerType SwiftASTContext::GetPointerType(void *type) {
     const swift::TypeKind type_kind = swift_type->getKind();
     if (type_kind == swift::TypeKind::BuiltinRawPointer)
       return CompilerType(GetASTContext(), swift_type);
-    else if (type_kind == swift::TypeKind::Struct)
-      return CompilerType(GetASTContext(), swift::InOutType::get(swift_type));
   }
   return CompilerType();
 }
