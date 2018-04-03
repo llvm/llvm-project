@@ -46,7 +46,6 @@ namespace elf {
 
 using llvm::object::Archive;
 
-class Lazy;
 class Symbol;
 
 // If -reproduce option is given, all input files are written

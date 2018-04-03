@@ -75,7 +75,6 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
 bool HexagonTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  Features["hvx-double"] = false;
   Features["long-calls"] = false;
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);

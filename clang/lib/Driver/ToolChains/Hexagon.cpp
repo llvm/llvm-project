@@ -37,12 +37,6 @@ static StringRef getDefaultHvxLength(StringRef Cpu) {
 }
 
 static void handleHVXWarnings(const Driver &D, const ArgList &Args) {
-  // Handle deprecated HVX double warnings.
-  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_double))
-    D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args) << "-mhvx-length=128B";
-  if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx_double))
-    D.Diag(diag::warn_drv_deprecated_arg) << A->getAsString(Args) << "-mno-hvx";
   // Handle the unsupported values passed to mhvx-length.
   if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ)) {
     StringRef Val = A->getValue();
@@ -63,14 +57,13 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
   StringRef HVXFeature, HVXLength;
   StringRef Cpu(toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
 
-  // Handle -mhvx, -mhvx=, -mno-hvx, -mno-hvx-double.
-  if (Arg *A = Args.getLastArg(
-          options::OPT_mno_hexagon_hvx, options::OPT_mno_hexagon_hvx_double,
-          options::OPT_mhexagon_hvx, options::OPT_mhexagon_hvx_EQ)) {
-    if (A->getOption().matches(options::OPT_mno_hexagon_hvx) ||
-        A->getOption().matches(options::OPT_mno_hexagon_hvx_double)) {
+  // Handle -mhvx, -mhvx=, -mno-hvx.
+  if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx,
+                               options::OPT_mhexagon_hvx,
+                               options::OPT_mhexagon_hvx_EQ)) {
+    if (A->getOption().matches(options::OPT_mno_hexagon_hvx))
       return;
-    } else if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ)) {
+    if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ)) {
       HasHVX = true;
       HVXFeature = Cpu = A->getValue();
       HVXFeature = Args.MakeArgString(llvm::Twine("+hvx") + HVXFeature.lower());
@@ -81,16 +74,13 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     Features.push_back(HVXFeature);
   }
 
-  // Handle -mhvx-length=, -mhvx-double.
-  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ,
-                               options::OPT_mhexagon_hvx_double)) {
+  // Handle -mhvx-length=.
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ)) {
     // These falgs are valid only if HVX in enabled.
     if (!HasHVX)
       D.Diag(diag::err_drv_invalid_hvx_length);
     else if (A->getOption().matches(options::OPT_mhexagon_hvx_length_EQ))
       HVXLength = A->getValue();
-    else if (A->getOption().matches(options::OPT_mhexagon_hvx_double))
-      HVXLength = "128b";
   }
   // Default hvx-length based on Cpu.
   else if (HasHVX)

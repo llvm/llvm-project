@@ -467,8 +467,7 @@ void ReExec() {
   UNIMPLEMENTED();
 }
 
-void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
-}
+void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
 
 bool StackSizeIsUnlimited() {
   UNIMPLEMENTED();

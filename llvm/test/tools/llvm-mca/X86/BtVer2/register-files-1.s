@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=5 -verbose -timeline < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=5 -verbose -register-file-stats -timeline < %s | FileCheck %s
 
 vaddps %xmm0, %xmm0, %xmm0
 vmulps %xmm0, %xmm0, %xmm0
@@ -6,13 +6,30 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK: Iterations:     5
 # CHECK-NEXT: Instructions:   10
 
+
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0
+# CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
+# CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
+# CHECK-NEXT: LQ      - Load queue full:                           0
+# CHECK-NEXT: SQ      - Store queue full:                          0
+# CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
-# CHECK:      Register File statistics.
-# CHECK-NEXT: Register File #0
-# CHECK-NEXT:   Total number of mappings created: 10
-# CHECK-NEXT:   Max number of mappings used:      10
+
+# CHECK:      Register File statistics:
+# CHECK-NEXT: Total number of mappings created:   10
+# CHECK-NEXT: Max number of mappings used:        10
+
+# CHECK:      *  Register File #1 -- FpuPRF:
+# CHECK-NEXT:    Number of physical registers:     72
+# CHECK-NEXT:    Total number of mappings created: 10
+# CHECK-NEXT:    Max number of mappings used:      10
+
+# CHECK:      *  Register File #2 -- IntegerPRF:
+# CHECK-NEXT:    Number of physical registers:     64
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+
 
 # CHECK: Timeline view:
 # CHECK-NEXT:     	          0123456789        

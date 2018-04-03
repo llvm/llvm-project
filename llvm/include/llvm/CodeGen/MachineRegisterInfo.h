@@ -714,7 +714,8 @@ public:
 
   /// createVirtualRegister - Create and return a new virtual register in the
   /// function with the specified register class.
-  unsigned createVirtualRegister(const TargetRegisterClass *RegClass);
+  unsigned createVirtualRegister(const TargetRegisterClass *RegClass,
+                                 StringRef Name = "");
 
   /// Accessor for VRegToType. This accessor should only be used
   /// by global-isel related work.
@@ -733,7 +734,7 @@ public:
 
   /// Create and return a new generic virtual register with low-level
   /// type \p Ty.
-  unsigned createGenericVirtualRegister(LLT Ty);
+  unsigned createGenericVirtualRegister(LLT Ty, StringRef Name = "");
 
   /// Remove all types associated to virtual registers (after instruction
   /// selection and constraining of all generic virtual registers).

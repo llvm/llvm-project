@@ -223,9 +223,6 @@ public:
   /// Get LLVM calling convention for OpenCL kernel.
   virtual unsigned getOpenCLKernelCallingConv() const;
 
-  /// Get LLVM calling convention for CUDA kernel.
-  virtual unsigned getCUDAKernelCallingConv() const;
-
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.
   /// \param QT is the clang QualType of the null pointer.

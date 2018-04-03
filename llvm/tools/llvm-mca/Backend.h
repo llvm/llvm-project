@@ -69,7 +69,7 @@ public:
                                          LoadQueueSize, StoreQueueSize,
                                          AssumeNoAlias)),
         DU(llvm::make_unique<DispatchUnit>(
-            this, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
+            this, STI, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
             RegisterFileSize, MaxRetirePerCycle, DispatchWidth, HWS.get())),
         SM(Source), Cycles(0) {
     HWS->setDispatchUnit(DU.get());

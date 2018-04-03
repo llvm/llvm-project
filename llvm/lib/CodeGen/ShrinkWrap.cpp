@@ -219,6 +219,11 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+      MachineFunctionProperties::Property::NoVRegs);
+  }
+
   StringRef getPassName() const override { return "Shrink Wrapping analysis"; }
 
   /// \brief Perform the shrink-wrapping analysis and update

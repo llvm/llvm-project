@@ -207,12 +207,6 @@ void Symbol::parseSymbolVersion() {
           Verstr);
 }
 
-InputFile *Lazy::fetch() {
-  if (auto *Sym = dyn_cast<LazyArchive>(this))
-    return Sym->fetch();
-  return cast<LazyObjFile>(File)->fetch();
-}
-
 InputFile *LazyArchive::fetch() { return cast<ArchiveFile>(File)->fetch(Sym); }
 
 uint8_t Symbol::computeBinding() const {

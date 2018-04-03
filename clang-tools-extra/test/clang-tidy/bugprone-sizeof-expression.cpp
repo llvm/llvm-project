@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: [{key: bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression, value: 1}]}" --
 
 class C {
   int size() { return sizeof(this); }
@@ -14,6 +14,62 @@ extern short B[10];
 #pragma pack(1)
 struct  S { char a, b, c; };
 
+enum E { E_VALUE = 0 };
+enum class EC { VALUE = 0 };
+
+bool AsBool() { return false; }
+int AsInt() { return 0; }
+E AsEnum() { return E_VALUE; }
+EC AsEnumClass() { return EC::VALUE; }
+S AsStruct() { return {}; }
+
+struct M {
+  int AsInt() { return 0; }
+  E AsEnum() { return E_VALUE; }
+  S AsStruct() { return {}; }
+};
+
+int ReturnOverload(int) { return {}; }
+S ReturnOverload(S) { return {}; }
+
+template <class T>
+T ReturnTemplate(T) { return {}; }
+
+template <class T>
+bool TestTrait1() {
+  return sizeof(ReturnOverload(T{})) == sizeof(A);
+}
+
+template <class T>
+bool TestTrait2() {
+  return sizeof(ReturnTemplate(T{})) == sizeof(A);
+}
+
+template <class T>
+bool TestTrait3() {
+  return sizeof(ReturnOverload(0)) == sizeof(T{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
+}
+
+template <class T>
+bool TestTrait4() {
+  return sizeof(ReturnTemplate(0)) == sizeof(T{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
+}
+
+bool TestTemplates() {
+  bool b = true;
+  b &= TestTrait1<int>();
+  b &= TestTrait1<S>();
+  b &= TestTrait2<int>();
+  b &= TestTrait2<S>();
+  b &= TestTrait3<int>();
+  b &= TestTrait3<S>();
+  b &= TestTrait4<int>();
+  b &= TestTrait4<S>();
+  return b;
+}
+
 int Test1(const char* ptr) {
   int sum = 0;
   sum += sizeof(LEN);
@@ -22,6 +78,18 @@ int Test1(const char* ptr) {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(K)'
   sum += sizeof(sum, LEN);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(..., ...)'
+  sum += sizeof(AsBool());
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
+  sum += sizeof(AsInt());
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
+  sum += sizeof(AsEnum());
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
+  sum += sizeof(AsEnumClass());
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
+  sum += sizeof(M{}.AsInt());
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
+  sum += sizeof(M{}.AsEnum());
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
   sum += sizeof(sizeof(X));
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(sizeof(...))'
   sum += sizeof(LEN + sizeof(X));
@@ -171,6 +239,8 @@ int ValidExpressions() {
   if (sizeof(A) < 10)
     sum += sizeof(A);
   sum += sizeof(int);
+  sum += sizeof(AsStruct());
+  sum += sizeof(M{}.AsStruct());
   sum += sizeof(A[sizeof(A) / sizeof(int)]);
   sum += sizeof(&A[sizeof(A) / sizeof(int)]);
   sum += sizeof(sizeof(0));  // Special case: sizeof size_t.
