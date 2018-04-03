@@ -36,18 +36,11 @@ def ExtensionHVXV62: SubtargetFeature<"hvxv62", "HexagonHVXVersion",
 def ExtensionHVXV65: SubtargetFeature<"hvxv65", "HexagonHVXVersion",
       "Hexagon::ArchEnum::V65", "Hexagon HVX instructions",
       [ExtensionHVX,ExtensionHVXV60, ExtensionHVXV62]>;
-def ExtensionHVX64B
-    : SubtargetFeature<"hvx-length64b", "UseHVX64BOps", "true",
-                       "Hexagon HVX 64B instructions", [ExtensionHVX]>;
-def ExtensionHVX128B
-    : SubtargetFeature<"hvx-length128b", "UseHVX128BOps", "true",
-                       "Hexagon HVX 128B instructions", [ExtensionHVX]>;
 
-// This is an alias to ExtensionHVX128B to accept the hvx-double as
-// an acceptable subtarget feature.
-def ExtensionHVXDbl
-    : SubtargetFeature<"hvx-double", "UseHVX128BOps", "true",
-                       "Hexagon HVX 128B instructions", [ExtensionHVX128B]>;
+def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
+      "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
+def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
+      "true", "Hexagon HVX 128B instructions", [ExtensionHVX]>;
 
 def FeaturePackets: SubtargetFeature<"packets", "UsePackets", "true",
       "Support for instruction packets">;
@@ -55,9 +48,9 @@ def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
       "Use constant-extended calls">;
 def FeatureMemNoShuf: SubtargetFeature<"mem_noshuf", "HasMemNoShuf", "false",
       "Supports mem_noshuf feature">;
-def FeatureNVJ : SubtargetFeature<"nvj", "UseNewValueJumps", "true",
+def FeatureNVJ: SubtargetFeature<"nvj", "UseNewValueJumps", "true",
       "Support for new-value jumps", [FeaturePackets]>;
-def FeatureDuplex : SubtargetFeature<"duplex", "EnableDuplex", "true",
+def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
 def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
       "true", "Reserve register R19">;
@@ -81,10 +74,8 @@ def UseHVXV62          : Predicate<"HST->useHVXOps()">,
 def UseHVXV65          : Predicate<"HST->useHVXOps()">,
                          AssemblerPredicate<"ExtensionHVXV65">;
 
-def Hvx64     : HwMode<"+hvx-length64b">;
-def Hvx64old  : HwMode<"-hvx-double">;
-def Hvx128    : HwMode<"+hvx-length128b">;
-def Hvx128old : HwMode<"+hvx-double">;
+def Hvx64:  HwMode<"+hvx-length64b">;
+def Hvx128: HwMode<"+hvx-length128b">;
 
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.

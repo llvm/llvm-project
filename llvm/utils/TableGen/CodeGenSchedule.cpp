@@ -211,6 +211,9 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
   DEBUG(dbgs() << "\n+++ RESOURCE DEFINITIONS (collectProcResources) +++\n");
   collectProcResources();
 
+  // Find register file definitions for each processor.
+  collectRegisterFiles();
+
   checkCompleteness();
 }
 
@@ -1482,6 +1485,30 @@ void CodeGenSchedModels::verifyProcResourceGroups(CodeGenProcModel &PM) {
                           + " but no supergroup contains both.");
         }
       }
+    }
+  }
+}
+
+// Collect all the RegisterFile definitions available in this target.
+void CodeGenSchedModels::collectRegisterFiles() {
+  RecVec RegisterFileDefs = Records.getAllDerivedDefinitions("RegisterFile");
+
+  // RegisterFiles is the vector of CodeGenRegisterFile.
+  for (Record *RF : RegisterFileDefs) {
+    // For each register file definition, construct a CodeGenRegisterFile object
+    // and add it to the appropriate scheduling model.
+    CodeGenProcModel &PM = getProcModel(RF->getValueAsDef("SchedModel"));
+    PM.RegisterFiles.emplace_back(CodeGenRegisterFile(RF->getName(),RF));
+    CodeGenRegisterFile &CGRF = PM.RegisterFiles.back();
+
+    // Now set the number of physical registers as well as the cost of registers
+    // in each register class.
+    CGRF.NumPhysRegs = RF->getValueAsInt("NumPhysRegs");
+    RecVec RegisterClasses = RF->getValueAsListOfDefs("RegClasses");
+    std::vector<int64_t> RegisterCosts = RF->getValueAsListOfInts("RegCosts");
+    for (unsigned I = 0, E = RegisterClasses.size(); I < E; ++I) {
+      int Cost = RegisterCosts.size() > I ? RegisterCosts[I] : 1;
+      CGRF.Costs.emplace_back(RegisterClasses[I], Cost);
     }
   }
 }

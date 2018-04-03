@@ -324,6 +324,11 @@ static Expected<LinkOptions> getOptions() {
         inconvertibleErrorCode());
   }
 
+  if (NumThreads == 0)
+    Options.Threads = llvm::thread::hardware_concurrency();
+  if (DumpDebugMap || Verbose)
+    Options.Threads = 1;
+
   return Options;
 }
 
@@ -480,12 +485,8 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    if (NumThreads == 0)
-      NumThreads = llvm::thread::hardware_concurrency();
-    if (DumpDebugMap || Verbose)
-      NumThreads = 1;
-    NumThreads = std::min<unsigned>(NumThreads, DebugMapPtrsOrErr->size());
-
+    NumThreads =
+        std::min<unsigned>(OptionsOrErr->Threads, DebugMapPtrsOrErr->size());
     llvm::ThreadPool Threads(NumThreads);
 
     // If there is more than one link to execute, we need to generate

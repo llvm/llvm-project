@@ -36,7 +36,6 @@ def look_for_indirect(file):
             print line
     return
 
-# Compare the debug info between two files.
 def main(args):
     # No options currently other than the binary.
     parser = optparse.OptionParser("%prog [options] <binary>")

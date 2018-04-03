@@ -612,7 +612,8 @@ public:
            const decltype(NumOpsWantToKeepOrder)::value_type &D2) {
           return D1.second < D2.second;
         });
-    if (I == NumOpsWantToKeepOrder.end() || I->getSecond() <= NumOpsWantToKeepOriginalOrder)
+    if (I == NumOpsWantToKeepOrder.end() ||
+        I->getSecond() <= NumOpsWantToKeepOriginalOrder)
       return None;
 
     return makeArrayRef(I->getFirst());
@@ -5704,7 +5705,8 @@ public:
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, IgnoreList);
       Optional<ArrayRef<unsigned>> Order = V.bestOrder();
-      if (Order) {
+      // TODO: Handle orders of size less than number of elements in the vector.
+      if (Order && Order->size() == VL.size()) {
         // TODO: reorder tree nodes without tree rebuilding.
         SmallVector<Value *, 4> ReorderedOps(VL.size());
         llvm::transform(*Order, ReorderedOps.begin(),
@@ -6214,7 +6216,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
       // Try to vectorize them.
       unsigned NumElts = (SameTypeIt - IncIt);
-      DEBUG(dbgs() << "SLP: Trying to vectorize starting at PHIs (" << NumElts << ")\n");
+      DEBUG(dbgs() << "SLP: Trying to vectorize starting at PHIs (" << NumElts
+                   << ")\n");
       // The order in which the phi nodes appear in the program does not matter.
       // So allow tryToVectorizeList to reorder them if it is beneficial. This
       // is done when there are exactly two elements since tryToVectorizeList

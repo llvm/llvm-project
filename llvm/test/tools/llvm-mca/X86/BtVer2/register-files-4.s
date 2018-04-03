@@ -1,9 +1,9 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -register-file-size=5 -iterations=2 -verbose -register-file-stats -timeline < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=22 -verbose -register-file-stats -timeline -timeline-max-iterations=3 < %s | FileCheck %s
 
 idiv %eax
 
-# CHECK:      Iterations:     2
-# CHECK-NEXT: Instructions:   2
+# CHECK:      Iterations:     22
+# CHECK-NEXT: Instructions:   22
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -18,7 +18,7 @@ idiv %eax
 
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      26
+# CHECK-NEXT: RAT     - Register unavailable:                      6
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
@@ -27,8 +27,8 @@ idiv %eax
 
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:   6
-# CHECK-NEXT: Max number of mappings used:        3
+# CHECK-NEXT: Total number of mappings created:   66
+# CHECK-NEXT: Max number of mappings used:        63
 
 # CHECK:      *  Register File #1 -- FpuPRF:
 # CHECK-NEXT:    Number of physical registers:     72
@@ -37,13 +37,13 @@ idiv %eax
 
 # CHECK:      *  Register File #2 -- IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     64
-# CHECK-NEXT:    Total number of mappings created: 6
-# CHECK-NEXT:    Max number of mappings used:      3
+# CHECK-NEXT:    Total number of mappings created: 66
+# CHECK-NEXT:    Max number of mappings used:      63
 
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:    	          0123456789          0123456789          01234
-# CHECK-NEXT: Index	0123456789          0123456789          0123456789     
-
-# CHECK:      [0,0]	DeeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .   .	idivl	%eax
-# CHECK:      [1,0]	.    .    .    .    .    . DeeeeeeeeeeeeeeeeeeeeeeeeeER	idivl	%eax
+# CHECK-NEXT:      	          0123456789          0123456789          0123456789          01234567
+# CHECK-NEXT: Index	0123456789          0123456789          0123456789          0123456789        
+# CHECK:      [0,0]	DeeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .    .    .    .    .    . .	idivl	%eax
+# CHECK:      [1,0]	.D========================eeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    . .	idivl	%eax
+# CHECK:      [2,0]	. D================================================eeeeeeeeeeeeeeeeeeeeeeeeeER	idivl	%eax
