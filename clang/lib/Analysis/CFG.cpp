@@ -736,12 +736,12 @@ private:
     if (BuildOpts.AddRichCXXConstructors) {
       if (const ConstructionContextLayer *Layer =
               ConstructionContextMap.lookup(CE)) {
-        const ConstructionContext *CC =
-            ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
-                                                  Layer);
-        B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
         cleanupConstructionContext(CE);
-        return;
+        if (const auto *CC = ConstructionContext::createFromLayers(
+                cfg->getBumpVectorContext(), Layer)) {
+          B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
+          return;
+        }
       }
     }
 
@@ -757,12 +757,12 @@ private:
       if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE, *Context)) {
         if (const ConstructionContextLayer *Layer =
                 ConstructionContextMap.lookup(CE)) {
-          const ConstructionContext *CC =
-              ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
-                                                    Layer);
-          B->appendCXXRecordTypedCall(CE, CC, cfg->getBumpVectorContext());
           cleanupConstructionContext(CE);
-          return;
+          if (const auto *CC = ConstructionContext::createFromLayers(
+                  cfg->getBumpVectorContext(), Layer)) {
+            B->appendCXXRecordTypedCall(CE, CC, cfg->getBumpVectorContext());
+            return;
+          }
         }
       }
     }
