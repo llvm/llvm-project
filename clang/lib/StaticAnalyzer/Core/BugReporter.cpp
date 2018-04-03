@@ -192,8 +192,9 @@ using LocationContextMap =
 /// that aren't needed.  Return true if afterwards the path contains
 /// "interesting stuff" which means it shouldn't be pruned from the parent path.
 static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
-                                LocationContextMap &LCM) {
-  bool containsSomethingInteresting = false;
+                                LocationContextMap &LCM,
+                                bool IsInteresting = false) {
+  bool containsSomethingInteresting = IsInteresting;
   const unsigned N = pieces.size();
 
   for (unsigned i = 0 ; i < N ; ++i) {
@@ -207,12 +208,8 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
         auto &call = cast<PathDiagnosticCallPiece>(*piece);
         // Check if the location context is interesting.
         assert(LCM.count(&call.path));
-        if (R->isInteresting(LCM[&call.path])) {
-          containsSomethingInteresting = true;
-          break;
-        }
-
-        if (!removeUnneededCalls(call.path, R, LCM))
+        if (!removeUnneededCalls(call.path, R, LCM,
+                                 R->isInteresting(LCM[&call.path])))
           continue;
 
         containsSomethingInteresting = true;
@@ -220,7 +217,7 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
       }
       case PathDiagnosticPiece::Macro: {
         auto &macro = cast<PathDiagnosticMacroPiece>(*piece);
-        if (!removeUnneededCalls(macro.subPieces, R, LCM))
+        if (!removeUnneededCalls(macro.subPieces, R, LCM, IsInteresting))
           continue;
         containsSomethingInteresting = true;
         break;

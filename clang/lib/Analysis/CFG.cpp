@@ -736,12 +736,12 @@ private:
     if (BuildOpts.AddRichCXXConstructors) {
       if (const ConstructionContextLayer *Layer =
               ConstructionContextMap.lookup(CE)) {
-        const ConstructionContext *CC =
-            ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
-                                                  Layer);
-        B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
         cleanupConstructionContext(CE);
-        return;
+        if (const auto *CC = ConstructionContext::createFromLayers(
+                cfg->getBumpVectorContext(), Layer)) {
+          B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
+          return;
+        }
       }
     }
 
@@ -757,12 +757,12 @@ private:
       if (CFGCXXRecordTypedCall::isCXXRecordTypedCall(CE, *Context)) {
         if (const ConstructionContextLayer *Layer =
                 ConstructionContextMap.lookup(CE)) {
-          const ConstructionContext *CC =
-              ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
-                                                    Layer);
-          B->appendCXXRecordTypedCall(CE, CC, cfg->getBumpVectorContext());
           cleanupConstructionContext(CE);
-          return;
+          if (const auto *CC = ConstructionContext::createFromLayers(
+                  cfg->getBumpVectorContext(), Layer)) {
+            B->appendCXXRecordTypedCall(CE, CC, cfg->getBumpVectorContext());
+            return;
+          }
         }
       }
     }
@@ -1302,6 +1302,15 @@ void CFGBuilder::findConstructionContexts(
   }
   case Stmt::ConditionalOperatorClass: {
     auto *CO = cast<ConditionalOperator>(Child);
+    if (!dyn_cast_or_null<MaterializeTemporaryExpr>(Layer->getTriggerStmt())) {
+      // If the object returned by the conditional operator is not going to be a
+      // temporary object that needs to be immediately materialized, then
+      // it must be C++17 with its mandatory copy elision. Do not yet promise
+      // to support this case.
+      assert(!CO->getType()->getAsCXXRecordDecl() || CO->isGLValue() ||
+             Context->getLangOpts().CPlusPlus17);
+      break;
+    }
     findConstructionContexts(Layer, CO->getLHS());
     findConstructionContexts(Layer, CO->getRHS());
     break;

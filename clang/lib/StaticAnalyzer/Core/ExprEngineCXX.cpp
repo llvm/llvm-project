@@ -203,13 +203,24 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       // TODO: What exactly happens when we are? Does the temporary object live
       // long enough in the region store in this case? Would checkers think
       // that this object immediately goes out of scope?
-      // TODO: We assume that the call site has a temporary object construction
-      // context. This is no longer true in C++17 or when copy elision is
-      // performed. We may need to unwrap multiple stack frames here and we
-      // won't necessarily end up with a temporary at the end.
       const LocationContext *TempLCtx = LCtx;
-      if (const LocationContext *CallerLCtx =
-              LCtx->getCurrentStackFrame()->getParent()) {
+      const StackFrameContext *SFC = LCtx->getCurrentStackFrame();
+      if (const LocationContext *CallerLCtx = SFC->getParent()) {
+        auto RTC = (*SFC->getCallSiteBlock())[SFC->getIndex()]
+                       .getAs<CFGCXXRecordTypedCall>();
+        if (!RTC) {
+          // We were unable to find the correct construction context for the
+          // call in the parent stack frame. This is equivalent to not being
+          // able to find construction context at all.
+          CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
+        } else if (!isa<TemporaryObjectConstructionContext>(
+                       RTC->getConstructionContext())) {
+          // FXIME: The return value is constructed directly into a
+          // non-temporary due to C++17 mandatory copy elision. This is not
+          // implemented yet.
+          assert(getContext().getLangOpts().CPlusPlus17);
+          CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
+        }
         TempLCtx = CallerLCtx;
       }
       CallOpts.IsTemporaryCtorOrDtor = true;
