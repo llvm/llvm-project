@@ -20,6 +20,7 @@
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -1598,7 +1599,7 @@ public:
   /// \brief If the class is a local class [class.local], returns
   /// the enclosing function declaration.
   const FunctionDecl *isLocalClass() const {
-    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
       return RD->isLocalClass();
 
     return dyn_cast<FunctionDecl>(getDeclContext());
@@ -2393,7 +2394,7 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
 
   /// \brief Get the initializer.
-  Expr *getInit() const { return static_cast<Expr*>(Init); }
+  Expr *getInit() const { return static_cast<Expr *>(Init); }
 };
 
 /// Description of a constructor that was inherited from a base class.
@@ -3047,14 +3048,14 @@ public:
 
   /// \brief Retrieve the namespace declaration aliased by this directive.
   NamespaceDecl *getNamespace() {
-    if (NamespaceAliasDecl *AD = dyn_cast<NamespaceAliasDecl>(Namespace))
+    if (auto *AD = dyn_cast<NamespaceAliasDecl>(Namespace))
       return AD->getNamespace();
 
     return cast<NamespaceDecl>(Namespace);
   }
 
   const NamespaceDecl *getNamespace() const {
-    return const_cast<NamespaceAliasDecl*>(this)->getNamespace();
+    return const_cast<NamespaceAliasDecl *>(this)->getNamespace();
   }
 
   /// Returns the location of the alias name, i.e. 'foo' in
