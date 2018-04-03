@@ -297,8 +297,6 @@ public:
       : Lazy(LazyObjectKind, File, Name, Type) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyObjectKind; }
-
-  InputFile *fetch();
 };
 
 // Some linker-generated symbols need to be created as

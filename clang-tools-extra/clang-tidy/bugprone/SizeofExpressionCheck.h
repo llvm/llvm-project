@@ -29,6 +29,7 @@ public:
 
 private:
   const bool WarnOnSizeOfConstant;
+  const bool WarnOnSizeOfIntegerExpression;
   const bool WarnOnSizeOfThis;
   const bool WarnOnSizeOfCompareToConstant;
 };
