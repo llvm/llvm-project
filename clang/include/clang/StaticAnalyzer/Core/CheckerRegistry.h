@@ -1,4 +1,4 @@
-//===--- CheckerRegistry.h - Maintains all available checkers ---*- C++ -*-===//
+//===- CheckerRegistry.h - Maintains all available checkers -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,6 +12,9 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include <cstddef>
 #include <vector>
 
 // FIXME: move this information to an HTML file in docs/.
@@ -64,8 +67,9 @@
 #endif
 
 namespace clang {
-class DiagnosticsEngine;
+
 class AnalyzerOptions;
+class DiagnosticsEngine;
 
 namespace ento {
 
@@ -81,17 +85,18 @@ class CheckerRegistry {
 public:
   /// Initialization functions perform any necessary setup for a checker.
   /// They should include a call to CheckerManager::registerChecker.
-  typedef void (*InitializationFunction)(CheckerManager &);
+  using InitializationFunction = void (*)(CheckerManager &);
+
   struct CheckerInfo {
     InitializationFunction Initialize;
     StringRef FullName;
     StringRef Desc;
 
     CheckerInfo(InitializationFunction fn, StringRef name, StringRef desc)
-    : Initialize(fn), FullName(name), Desc(desc) {}
+        : Initialize(fn), FullName(name), Desc(desc) {}
   };
 
-  typedef std::vector<CheckerInfo> CheckerInfoList;
+  using CheckerInfoList = std::vector<CheckerInfo>;
 
 private:
   template <typename T>
@@ -136,7 +141,8 @@ private:
   mutable llvm::StringMap<size_t> Packages;
 };
 
-} // end namespace ento
-} // end namespace clang
+} // namespace ento
 
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_STATICANALYZER_CORE_CHECKERREGISTRY_H
