@@ -794,6 +794,11 @@ template void SymbolTable::addLazyObject<ELF32BE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64LE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64BE>(StringRef, LazyObjFile &);
 
+template void SymbolTable::fetchLazy<ELF32LE>(Symbol *);
+template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
+template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
+template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);
+
 template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile<ELF32LE> &,
                                               const typename ELF32LE::Sym &,
                                               uint32_t Alignment, uint32_t);

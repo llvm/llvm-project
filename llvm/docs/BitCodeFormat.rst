@@ -1056,6 +1056,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 55: ``sanitize_hwaddress``
 * code 56: ``nocf_check``
 * code 57: ``optforfuzzing``
+* code 58: ``shadowcallstack``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
