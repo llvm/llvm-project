@@ -75,6 +75,10 @@ SCRUB_X86_SHUFFLES_RE = (
     re.compile(
         r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = .*)$',
         flags=re.M))
+SCRUB_X86_SPILL_RELOAD_RE = (
+    re.compile(
+        r'-?\d+\(%([er])[sb]p\)(.*(?:Spill|Reload))$',
+        flags=re.M))
 SCRUB_X86_SP_RE = re.compile(r'\d+\(%(esp|rsp)\)')
 SCRUB_X86_RIP_RE = re.compile(r'[.\w]+\(%rip\)')
 SCRUB_X86_LCP_RE = re.compile(r'\.LCPI[0-9]+_[0-9]+')
@@ -88,6 +92,9 @@ def scrub_asm_x86(asm, args):
   asm = string.expandtabs(asm, 2)
   # Detect shuffle asm comments and hide the operands in favor of the comments.
   asm = SCRUB_X86_SHUFFLES_RE.sub(r'\1 {{.*#+}} \2', asm)
+  # Detect stack spills and reloads and hide their exact offset and whether
+  # they used the stack pointer or frame pointer.
+  asm = SCRUB_X86_SPILL_RELOAD_RE.sub(r'{{[-0-9]+}}(%\1{{[sb]}}p)\2', asm)
   # Generically match the stack offset of a memory operand.
   asm = SCRUB_X86_SP_RE.sub(r'{{[0-9]+}}(%\1)', asm)
   # Generically match a RIP-relative memory operand.
