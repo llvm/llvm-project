@@ -4050,7 +4050,8 @@ static llvm::Value *emitIsPlatformVersionAtLeast(CodeGenFunction &CGF,
 
 llvm::Value *
 CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version,
-                                      const VersionTuple &VariantVersion) {
+                                      const VersionTuple &VariantVersion,
+                                      bool UseTargetVariantCheck) {
   // Darwin uses the new __isPlatformVersionAtLeast family of routines.
   if (CGM.getTarget().getTriple().isOSDarwin() &&
       !CGM.getTarget().hasTargetVariantPlatform())
@@ -4085,7 +4086,10 @@ CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version,
 
   llvm::Value *Check = nullptr;
   if (!Args.empty()) {
-    Check = EmitNounwindRuntimeCall(CGM.IsOSVersionAtLeastFn, Args);
+    Check = EmitNounwindRuntimeCall(UseTargetVariantCheck
+                                        ? CGM.IsTargetVariantOSVersionAtLeastFn
+                                        : CGM.IsOSVersionAtLeastFn,
+                                    Args);
   }
   llvm::Value *VariantCheck = nullptr;
   if (!VariantArgs.empty()) {

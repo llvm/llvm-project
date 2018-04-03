@@ -5029,7 +5029,8 @@ public:
   llvm::Value *EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitBuiltinAvailable(const VersionTuple &Version,
-                                    const VersionTuple &VariantVersion);
+                                    const VersionTuple &VariantVersion,
+                                    bool UseTargetVariantCheck);
 
   llvm::Value *EmitObjCProtocolExpr(const ObjCProtocolExpr *E);
   llvm::Value *EmitObjCStringLiteral(const ObjCStringLiteral *E);
