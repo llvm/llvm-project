@@ -18,9 +18,8 @@ namespace {
 
 TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
 
-  SymbolStringPool SP;
-  ExecutionSession ES(SP);
-  auto Foo = SP.intern("foo");
+  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  auto Foo = ES.getSymbolStringPool().intern("foo");
 
   VSO V;
   SymbolMap Defs;

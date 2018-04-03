@@ -179,8 +179,7 @@ private:
 TEST(ObjectTransformLayerTest, Main) {
   MockBaseLayer M;
 
-  SymbolStringPool SSP;
-  ExecutionSession ES(SSP);
+  ExecutionSession ES(std::make_shared<SymbolStringPool>());
 
   // Create one object transform layer using a transform (as a functor)
   // that allocates new objects, and deals in unique pointers.

@@ -612,7 +612,8 @@ public:
            const decltype(NumOpsWantToKeepOrder)::value_type &D2) {
           return D1.second < D2.second;
         });
-    if (I == NumOpsWantToKeepOrder.end() || I->getSecond() <= NumOpsWantToKeepOriginalOrder)
+    if (I == NumOpsWantToKeepOrder.end() ||
+        I->getSecond() <= NumOpsWantToKeepOriginalOrder)
       return None;
 
     return makeArrayRef(I->getFirst());
@@ -1614,13 +1615,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         return;
       }
       if (!CurrentOrder.empty()) {
-#ifndef NDEBUG
-        dbgs() << "SLP: Reusing or shuffling of reordered extract sequence "
-                  "with order";
-        for (unsigned Idx : CurrentOrder)
-          dbgs() << " " << Idx;
-        dbgs() << "\n";
-#endif // NDEBUG
+        DEBUG({
+          dbgs() << "SLP: Reusing or shuffling of reordered extract sequence "
+                    "with order";
+          for (unsigned Idx : CurrentOrder)
+            dbgs() << " " << Idx;
+          dbgs() << "\n";
+        });
         // Insert new order with initial value 0, if it does not exist,
         // otherwise return the iterator to the existing one.
         auto StoredCurrentOrderAndNum =
@@ -2519,13 +2520,13 @@ int BoUpSLP::getSpillCost() {
         LiveValues.insert(cast<Instruction>(&*J));
     }
 
-    DEBUG(
+    DEBUG({
       dbgs() << "SLP: #LV: " << LiveValues.size();
       for (auto *X : LiveValues)
         dbgs() << " " << X->getName();
       dbgs() << ", Looking at ";
       Inst->dump();
-      );
+    });
 
     // Now find the sequence of instructions between PrevInst and Inst.
     BasicBlock::reverse_iterator InstIt = ++Inst->getIterator().getReverse(),
@@ -4430,24 +4431,9 @@ void BoUpSLP::computeMinimumValueSizes() {
   // additional roots that require investigating in Roots.
   SmallVector<Value *, 32> ToDemote;
   SmallVector<Value *, 4> Roots;
-  for (auto *Root : TreeRoot) {
-    // Do not include top zext/sext/trunc operations to those to be demoted, it
-    // produces noise cast<vect>, trunc <vect>, exctract <vect>, cast <extract>
-    // sequence.
-    if (isa<Constant>(Root))
-      continue;
-    auto *I = dyn_cast<Instruction>(Root);
-    if (!I || !I->hasOneUse() || !Expr.count(I))
-      return;
-    if (isa<ZExtInst>(I) || isa<SExtInst>(I))
-      continue;
-    if (auto *TI = dyn_cast<TruncInst>(I)) {
-      Roots.push_back(TI->getOperand(0));
-      continue;
-    }
+  for (auto *Root : TreeRoot)
     if (!collectValuesToDemote(Root, Expr, ToDemote, Roots))
       return;
-  }
 
   // The maximum bit width required to represent all the values that can be
   // demoted without loss of precision. It would be safe to truncate the roots
@@ -4476,7 +4462,11 @@ void BoUpSLP::computeMinimumValueSizes() {
   // We start by looking at each entry that can be demoted. We compute the
   // maximum bit width required to store the scalar by using ValueTracking to
   // compute the number of high-order bits we can truncate.
-  if (MaxBitWidth == DL->getTypeSizeInBits(TreeRoot[0]->getType())) {
+  if (MaxBitWidth == DL->getTypeSizeInBits(TreeRoot[0]->getType()) &&
+      llvm::all_of(TreeRoot, [](Value *R) {
+        assert(R->hasOneUse() && "Root should have only one use!");
+        return isa<GetElementPtrInst>(R->user_back());
+      })) {
     MaxBitWidth = 8u;
 
     // Determine if the sign bit of all the roots is known to be zero. If not,
@@ -5715,7 +5705,8 @@ public:
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, IgnoreList);
       Optional<ArrayRef<unsigned>> Order = V.bestOrder();
-      if (Order) {
+      // TODO: Handle orders of size less than number of elements in the vector.
+      if (Order && Order->size() == VL.size()) {
         // TODO: reorder tree nodes without tree rebuilding.
         SmallVector<Value *, 4> ReorderedOps(VL.size());
         llvm::transform(*Order, ReorderedOps.begin(),
@@ -6225,7 +6216,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
       // Try to vectorize them.
       unsigned NumElts = (SameTypeIt - IncIt);
-      DEBUG(errs() << "SLP: Trying to vectorize starting at PHIs (" << NumElts << ")\n");
+      DEBUG(dbgs() << "SLP: Trying to vectorize starting at PHIs (" << NumElts
+                   << ")\n");
       // The order in which the phi nodes appear in the program does not matter.
       // So allow tryToVectorizeList to reorder them if it is beneficial. This
       // is done when there are exactly two elements since tryToVectorizeList

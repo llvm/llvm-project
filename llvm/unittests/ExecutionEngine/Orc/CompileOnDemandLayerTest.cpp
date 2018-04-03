@@ -59,8 +59,7 @@ TEST(CompileOnDemandLayerTest, FindSymbol) {
 
   DummyCallbackManager CallbackMgr;
 
-  SymbolStringPool SSP;
-  ExecutionSession ES(SSP);
+  ExecutionSession ES(std::make_shared<SymbolStringPool>());
 
   auto GetResolver =
       [](orc::VModuleKey) -> std::shared_ptr<llvm::orc::SymbolResolver> {

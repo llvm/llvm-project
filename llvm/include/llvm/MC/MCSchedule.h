@@ -128,6 +128,51 @@ struct MCSchedClassDesc {
   }
 };
 
+/// Specify the cost of a register definition in terms of number of physical
+/// register allocated at register renaming stage. For example, AMD Jaguar.
+/// natively supports 128-bit data types, and operations on 256-bit registers
+/// (i.e. YMM registers) are internally split into two COPs (complex operations)
+/// and each COP updates a physical register. Basically, on Jaguar, a YMM
+/// register write effectively consumes two physical registers. That means,
+/// the cost of a YMM write in the BtVer2 model is 2.
+struct MCRegisterCostEntry {
+  unsigned RegisterClassID;
+  unsigned Cost;
+};
+
+/// A register file descriptor.
+///
+/// This struct allows to describe processor register files. In particular, it
+/// helps describing the size of the register file, as well as the cost of
+/// allocating a register file at register renaming stage.
+/// FIXME: this struct can be extended to provide information about the number
+/// of read/write ports to the register file.  A value of zero for field
+/// 'NumPhysRegs' means: this register file has an unbounded number of physical
+/// registers.
+struct MCRegisterFileDesc {
+  const char *Name;
+  uint16_t NumPhysRegs;
+  uint16_t NumRegisterCostEntries;
+  // Index of the first cost entry in MCExtraProcessorInfo::RegisterCostTable.
+  uint16_t RegisterCostEntryIdx;
+};
+
+/// Provide extra details about the machine processor.
+///
+/// This is a collection of "optional" processor information that is not
+/// normally used by the LLVM machine schedulers, but that can be consumed by
+/// external tools like llvm-mca to improve the quality of the peformance
+/// analysis.
+/// In future, the plan is to extend this struct with extra information (for
+/// example: maximum number of instructions retired per cycle; actual size of
+/// the reorder buffer; etc.).
+struct MCExtraProcessorInfo {
+  const MCRegisterFileDesc *RegisterFiles;
+  unsigned NumRegisterFiles;
+  const MCRegisterCostEntry *RegisterCostTable;
+  unsigned NumRegisterCostEntries;
+};
+
 /// Machine model for scheduling, bundling, and heuristics.
 ///
 /// The machine model directly provides basic information about the
@@ -198,10 +243,20 @@ struct MCSchedModel {
   friend class InstrItineraryData;
   const InstrItinerary *InstrItineraries;
 
+  const MCExtraProcessorInfo *ExtraProcessorInfo;
+
+  bool hasExtraProcessorInfo() const { return ExtraProcessorInfo; }
+
   unsigned getProcessorID() const { return ProcID; }
 
   /// Does this machine model include instruction-level scheduling.
   bool hasInstrSchedModel() const { return SchedClassTable; }
+
+  const MCExtraProcessorInfo &getExtraProcessorInfo() const {
+    assert(hasExtraProcessorInfo() &&
+           "No extra information available for this model");
+    return *ExtraProcessorInfo;
+  }
 
   /// Return true if this machine model data for all instructions with a
   /// scheduling class (itinerary class or SchedRW list).

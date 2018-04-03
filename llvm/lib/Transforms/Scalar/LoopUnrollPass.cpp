@@ -978,6 +978,9 @@ static LoopUnrollResult tryToUnrollLoop(
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
     return LoopUnrollResult::Unmodified;
 
+  if (UP.PeelCount && !canPeel(L))
+    UP.PeelCount = 0;
+
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
 

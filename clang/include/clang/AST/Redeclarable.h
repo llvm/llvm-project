@@ -321,7 +321,7 @@ public:
   /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   decl_type *getFirstDecl() {
-    decl_type *D = static_cast<decl_type*>(this);
+    auto *D = static_cast<decl_type *>(this);
     if (!D->isFromASTFile())
       return D;
     return cast<decl_type>(getPrimaryMergedDecl(const_cast<decl_type*>(D)));
@@ -330,7 +330,7 @@ public:
   /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   const decl_type *getFirstDecl() const {
-    const decl_type *D = static_cast<const decl_type*>(this);
+    const auto *D = static_cast<const decl_type *>(this);
     if (!D->isFromASTFile())
       return D;
     return cast<decl_type>(getPrimaryMergedDecl(const_cast<decl_type*>(D)));

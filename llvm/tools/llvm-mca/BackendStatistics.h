@@ -23,11 +23,6 @@
 /// GROUP   - Static restrictions on the dispatch group: 0
 ///
 ///
-/// Register Alias Table:
-/// Total number of mappings created: 210
-/// Max number of mappings used:      35
-///
-///
 /// Dispatch Logic - number of cycles where we saw N instructions dispatched:
 /// [# dispatched], [# cycles]
 ///  0,              15  (11.5%)
@@ -57,19 +52,17 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_BACKENDSTATISTICS_H
 #define LLVM_TOOLS_LLVM_MCA_BACKENDSTATISTICS_H
 
-#include "Backend.h"
 #include "View.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/raw_ostream.h"
-#include <map>
 
 namespace mca {
 
 class BackendStatistics : public View {
   const llvm::MCSubtargetInfo &STI;
 
-  using Histogram = std::map<unsigned, unsigned>;
+  using Histogram = llvm::DenseMap<unsigned, unsigned>;
   Histogram DispatchGroupSizePerCycle;
   Histogram RetiredPerCycle;
   Histogram IssuedPerCycle;
@@ -103,22 +96,11 @@ class BackendStatistics : public View {
     NumRetired = 0;
   }
 
-  // Used to track the number of physical registers used in a register file.
-  struct RegisterFileUsage {
-    unsigned TotalMappings;
-    unsigned MaxUsedMappings;
-    unsigned CurrentlyUsedMappings;
-  };
-
-  // There is one entry for each register file implemented by the processor.
-  llvm::SmallVector<RegisterFileUsage, 4> RegisterFiles;
-
   void printRetireUnitStatistics(llvm::raw_ostream &OS) const;
   void printDispatchUnitStatistics(llvm::raw_ostream &OS) const;
   void printSchedulerStatistics(llvm::raw_ostream &OS) const;
 
   void printDispatchStalls(llvm::raw_ostream &OS) const;
-  void printRATStatistics(llvm::raw_ostream &OS) const;
   void printRCUStatistics(llvm::raw_ostream &OS, const Histogram &Histogram,
                           unsigned Cycles) const;
   void printDispatchUnitUsage(llvm::raw_ostream &OS, const Histogram &Stats,
@@ -131,10 +113,7 @@ class BackendStatistics : public View {
 public:
   BackendStatistics(const llvm::MCSubtargetInfo &sti)
       : STI(sti), NumDispatched(0), NumIssued(0), NumRetired(0), NumCycles(0),
-        HWStalls(HWStallEvent::LastGenericEvent),
-        // TODO: The view currently assumes a single register file. This will
-        // change in future.
-        RegisterFiles(1) {}
+        HWStalls(HWStallEvent::LastGenericEvent) { }
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;
 
@@ -157,7 +136,6 @@ public:
 
   void printView(llvm::raw_ostream &OS) const override {
     printDispatchStalls(OS);
-    printRATStatistics(OS);
     printDispatchUnitStatistics(OS);
     printSchedulerStatistics(OS);
     printRetireUnitStatistics(OS);

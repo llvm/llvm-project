@@ -240,8 +240,11 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
     I2->takeName(&*I);
   }
 
-  // Patch the pointer to LLVM function in debug info descriptor.
-  NF->setSubprogram(Fn.getSubprogram());
+  // Clone metadatas from the old function, including debug info descriptor.
+  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+  Fn.getAllMetadata(MDs);
+  for (auto MD : MDs)
+    NF->addMetadata(MD.first, *MD.second);
 
   // Fix up any BlockAddresses that refer to the function.
   Fn.replaceAllUsesWith(ConstantExpr::getBitCast(NF, Fn.getType()));
@@ -863,9 +866,6 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
   NF->takeName(F);
 
-  // Patch the pointer to LLVM function in debug info descriptor.
-  NF->setSubprogram(F->getSubprogram());
-
   // Loop over all of the callers of the function, transforming the call sites
   // to pass in a smaller number of arguments into the new function.
   std::vector<Value*> Args;
@@ -1057,6 +1057,12 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
         ReturnInst::Create(F->getContext(), RetVal, RI);
         BB.getInstList().erase(RI);
       }
+
+  // Clone metadatas from the old function, including debug info descriptor.
+  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+  F->getAllMetadata(MDs);
+  for (auto MD : MDs)
+    NF->addMetadata(MD.first, *MD.second);
 
   // Now that the old function is dead, delete it.
   F->eraseFromParent();

@@ -342,8 +342,7 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
     break;
   }
   bool UseHvx = false;
-  for (unsigned F : {ExtensionHVX, ExtensionHVX64B, ExtensionHVX128B,
-                     ExtensionHVXDbl}) {
+  for (unsigned F : {ExtensionHVX, ExtensionHVX64B, ExtensionHVX128B}) {
     if (!FB.test(F))
       continue;
     UseHvx = true;

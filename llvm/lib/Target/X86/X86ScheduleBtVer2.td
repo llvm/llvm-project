@@ -38,6 +38,16 @@ def JSAGU : ProcResource<1>; // Integer Pipe3: SAGU (also handles 3-operand LEA)
 def JFPU0 : ProcResource<1>; // Vector/FPU Pipe0: VALU0/VIMUL/FPA
 def JFPU1 : ProcResource<1>; // Vector/FPU Pipe1: VALU1/STC/FPM
 
+// The Integer PRF for Jaguar is 64 entries, and it holds the architectural and
+// speculative version of the 64-bit integer registers.
+// Reference: www.realworldtech.com/jaguar/4/
+def IntegerPRF : RegisterFile<64, [GR8, GR16, GR32, GR64, CCR]>;
+
+// The Jaguar FP Retire Queue renames SIMD and FP uOps onto a pool of 72 SSE
+// registers. Operations on 256-bit data types are cracked into two COPs.
+// Reference: www.realworldtech.com/jaguar/4/
+def FpuPRF: RegisterFile<72, [VR64, VR128, VR256], [1, 1, 2]>;
+
 // Integer Pipe Scheduler
 def JALU01 : ProcResGroup<[JALU0, JALU1]> {
   let BufferSize=20;

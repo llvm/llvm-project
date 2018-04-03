@@ -162,13 +162,14 @@ unsigned MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
 /// function with the specified register class.
 ///
 unsigned
-MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass){
+MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
+                                           StringRef Name) {
   assert(RegClass && "Cannot create register without RegClass!");
   assert(RegClass->isAllocatable() &&
          "Virtual register RegClass must be allocatable.");
 
   // New virtual register number.
-  unsigned Reg = createIncompleteVirtualRegister();
+  unsigned Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = RegClass;
   if (TheDelegate)
     TheDelegate->MRI_NoteNewVirtualRegister(Reg);
@@ -189,9 +190,9 @@ void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
 }
 
 unsigned
-MachineRegisterInfo::createGenericVirtualRegister(LLT Ty) {
+MachineRegisterInfo::createGenericVirtualRegister(LLT Ty, StringRef Name) {
   // New virtual register number.
-  unsigned Reg = createIncompleteVirtualRegister();
+  unsigned Reg = createIncompleteVirtualRegister(Name);
   // FIXME: Should we use a dummy register class?
   VRegInfo[Reg].first = static_cast<RegisterBank *>(nullptr);
   getVRegToType()[Reg] = Ty;

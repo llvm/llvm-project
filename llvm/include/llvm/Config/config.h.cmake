@@ -43,10 +43,6 @@
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #cmakedefine01 LLVM_ENABLE_DIA_SDK
 
-/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
-   */
-#cmakedefine HAVE_DIRENT_H ${HAVE_DIRENT_H}
-
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #cmakedefine HAVE_DLFCN_H ${HAVE_DLFCN_H}
 
@@ -95,9 +91,6 @@
 /* Define to 1 if you have the `edit' library (-ledit). */
 #cmakedefine HAVE_LIBEDIT ${HAVE_LIBEDIT}
 
-/* Define to 1 if you have the `psapi' library (-lpsapi). */
-#cmakedefine HAVE_LIBPSAPI ${HAVE_LIBPSAPI}
-
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #cmakedefine HAVE_LIBPTHREAD ${HAVE_LIBPTHREAD}
 
@@ -106,9 +99,6 @@
 
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP ${HAVE_PTHREAD_SETNAME_NP}
-
-/* Define to 1 if you have the `shell32' library (-lshell32). */
-#cmakedefine HAVE_LIBSHELL32 ${HAVE_LIBSHELL32}
 
 /* Define to 1 if you have the `z' library (-lz). */
 #cmakedefine HAVE_LIBZ ${HAVE_LIBZ}
@@ -136,9 +126,6 @@
 
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 #cmakedefine HAVE_MALLOC_ZONE_STATISTICS ${HAVE_MALLOC_ZONE_STATISTICS}
-
-/* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
-#cmakedefine HAVE_NDIR_H ${HAVE_NDIR_H}
 
 /* Define to 1 if you have the `posix_fallocate' function. */
 #cmakedefine HAVE_POSIX_FALLOCATE ${HAVE_POSIX_FALLOCATE}
@@ -194,19 +181,11 @@
 /* Define to 1 if you have the `sysconf' function. */
 #cmakedefine HAVE_SYSCONF ${HAVE_SYSCONF}
 
-/* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
-   */
-#cmakedefine HAVE_SYS_DIR_H ${HAVE_SYS_DIR_H}
-
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #cmakedefine HAVE_SYS_IOCTL_H ${HAVE_SYS_IOCTL_H}
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
-
-/* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
-   */
-#cmakedefine HAVE_SYS_NDIR_H ${HAVE_SYS_NDIR_H}
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #cmakedefine HAVE_SYS_PARAM_H ${HAVE_SYS_PARAM_H}
@@ -370,9 +349,6 @@
 
 /* Define to the full name and version of this package. */
 #cmakedefine PACKAGE_STRING "${PACKAGE_STRING}"
-
-/* Define to the one symbol short name of this package. */
-#undef PACKAGE_TARNAME
 
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION "${PACKAGE_VERSION}"

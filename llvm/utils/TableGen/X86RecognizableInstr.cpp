@@ -40,7 +40,7 @@ static uint8_t byteFromBitsInit(BitsInit &init) {
   uint8_t ret = 0;
 
   for (index = 0; index < width; index++) {
-    if (static_cast<BitInit*>(init.getBit(index))->getValue())
+    if (cast<BitInit>(init.getBit(index))->getValue())
       ret |= mask;
 
     mask <<= 1;
@@ -243,8 +243,12 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = EVEX_KB(IC_EVEX_XD);
     else if (OpPrefix == X86Local::XS)
       insnContext = EVEX_KB(IC_EVEX_XS);
-    else
+    else if (OpPrefix == X86Local::PS)
       insnContext = EVEX_KB(IC_EVEX);
+    else {
+      errs() << "Instruction does not use a prefix: " << Name << "\n";
+      llvm_unreachable("Invalid prefix");
+    }
     /// eof EVEX
   } else if (Encoding == X86Local::VEX || Encoding == X86Local::XOP) {
     if (HasVEX_LPrefix && VEX_WPrefix == X86Local::VEX_W1) {

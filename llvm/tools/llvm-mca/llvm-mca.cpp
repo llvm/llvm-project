@@ -25,6 +25,7 @@
 #include "BackendStatistics.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
+#include "RegisterFileStatistics.h"
 #include "ResourcePressureView.h"
 #include "SummaryView.h"
 #include "TimelineView.h"
@@ -90,6 +91,11 @@ static cl::opt<unsigned>
                      cl::desc("Maximum number of temporary registers which can "
                               "be used for register mappings"),
                      cl::init(0));
+
+static cl::opt<bool>
+    PrintRegisterFileStats("register-file-stats",
+                           cl::desc("Print register file statistics"),
+                           cl::init(false));
 
 static cl::opt<bool>
     PrintResourcePressureView("resource-pressure",
@@ -369,6 +375,9 @@ int main(int argc, char **argv) {
 
   if (PrintModeVerbose)
     Printer->addView(llvm::make_unique<mca::BackendStatistics>(*STI));
+
+  if (PrintRegisterFileStats)
+    Printer->addView(llvm::make_unique<mca::RegisterFileStatistics>(*STI));
 
   if (PrintResourcePressureView)
     Printer->addView(

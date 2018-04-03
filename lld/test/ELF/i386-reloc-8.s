@@ -10,6 +10,6 @@
 // CHECK-NEXT:   1000 ff
 
 // RUN: not ld.lld -shared %t %t2 -o %t4 2>&1 | FileCheck --check-prefix=ERROR %s
-// ERROR: relocation R_386_8 out of range: 256 is not in [0, 255]
+// ERROR: relocation R_386_8 out of range: 256 is not in [-128, 127]
 
 .byte foo

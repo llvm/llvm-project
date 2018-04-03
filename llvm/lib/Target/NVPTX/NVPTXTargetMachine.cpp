@@ -238,9 +238,11 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&TailDuplicateID);
   disablePass(&StackMapLivenessID);
   disablePass(&LiveDebugValuesID);
+  disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
+  disablePass(&ShrinkWrapID);
 
   // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
   // it here does nothing.  But since we need it for correctness when lowering

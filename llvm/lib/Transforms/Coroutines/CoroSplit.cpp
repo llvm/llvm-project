@@ -250,7 +250,7 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   auto *FnTy = cast<FunctionType>(FnPtrTy->getElementType());
 
   Function *NewF =
-      Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
+      Function::Create(FnTy, GlobalValue::LinkageTypes::ExternalLinkage,
                        F.getName() + Suffix, M);
   NewF->addParamAttr(0, Attribute::NonNull);
   NewF->addParamAttr(0, Attribute::NoAlias);
@@ -265,7 +265,7 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   SmallVector<ReturnInst *, 4> Returns;
 
   CloneFunctionInto(NewF, &F, VMap, /*ModuleLevelChanges=*/true, Returns);
-  NewF->setDSOLocal(true);
+  NewF->setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
 
   // Remove old returns.
   for (ReturnInst *Return : Returns)

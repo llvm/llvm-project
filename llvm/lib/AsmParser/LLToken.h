@@ -214,6 +214,7 @@ enum Kind {
   kw_sspreq,
   kw_sspstrong,
   kw_safestack,
+  kw_shadowcallstack,
   kw_sret,
   kw_sanitize_thread,
   kw_sanitize_memory,

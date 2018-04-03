@@ -88,5 +88,5 @@ declare { i32, i8* } @llvm.hexagon.L2.loadruh.pbr(i8*, i32) #1
 declare { i32, i8* } @llvm.hexagon.L2.loadrb.pbr(i8*, i32) #1
 declare { i32, i8* } @llvm.hexagon.L2.loadrub.pbr(i8*, i32) #1
 
-attributes #0 = { nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="-hvx-double,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readonly "target-cpu"="hexagonv60" }
 attributes #1 = { nounwind readonly }
