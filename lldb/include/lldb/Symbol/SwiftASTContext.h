@@ -510,7 +510,10 @@ public:
 
     /// The member index for the error value within an error
     /// existential.
-    static constexpr unsigned error_instance_index = 0;
+    static constexpr uint32_t error_instance_index = 0;
+
+    /// Retrieve the index at which the instance type occurs.
+    uint32_t GetInstanceTypeIndex() const { return m_num_payload_words; }
   };
 
   static bool GetProtocolTypeInfo(const CompilerType &type,

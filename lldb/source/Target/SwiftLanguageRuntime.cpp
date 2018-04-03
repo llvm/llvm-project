@@ -1793,7 +1793,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
   MetadataPromiseSP promise_sp;
   ValueObjectSP instance_type_sp(
                   in_value.GetStaticValue()->GetChildAtIndex(
-                                     protocol_info.m_num_payload_words, true));
+                                  protocol_info.GetInstanceTypeIndex(), true));
   if (!instance_type_sp)
     return false;
   ValueObjectSP payload0_sp(
