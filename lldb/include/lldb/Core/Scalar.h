@@ -50,13 +50,13 @@ public:
     e_ulong,
     e_slonglong,
     e_ulonglong,
+    e_sint128,
+    e_uint128,
+    e_sint256,
+    e_uint256,
     e_float,
     e_double,
-    e_long_double,
-    e_uint128,
-    e_sint128,
-    e_uint256,
-    e_sint256
+    e_long_double
   };
 
   //------------------------------------------------------------------
@@ -164,8 +164,6 @@ public:
   }
 
   bool Promote(Scalar::Type type);
-
-  bool Cast(Scalar::Type type);
 
   bool MakeSigned();
 

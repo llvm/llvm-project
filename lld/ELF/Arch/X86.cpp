@@ -255,7 +255,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkUInt(Loc, Val, 8, Type);
+    checkIntUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_386_PC8:
@@ -263,7 +263,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     *Loc = Val;
     break;
   case R_386_16:
-    checkUInt(Loc, Val, 16, Type);
+    checkIntUInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;
   case R_386_PC16:

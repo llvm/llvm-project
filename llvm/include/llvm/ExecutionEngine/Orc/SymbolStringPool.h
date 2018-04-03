@@ -27,6 +27,9 @@ class SymbolStringPtr;
 class SymbolStringPool {
   friend class SymbolStringPtr;
 public:
+  /// @brief Destroy a SymbolStringPool.
+  ~SymbolStringPool();
+
   /// @brief Create a symbol string pointer from the given string.
   SymbolStringPtr intern(StringRef S);
 
@@ -107,6 +110,13 @@ inline bool operator!=(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
 
 inline bool operator<(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
   return LHS.S < RHS.S;
+}
+
+inline SymbolStringPool::~SymbolStringPool() {
+#ifndef NDEBUG
+  clearDeadEntries();
+  assert(Pool.empty() && "Dangling references at pool destruction time");
+#endif // NDEBUG
 }
 
 inline SymbolStringPtr SymbolStringPool::intern(StringRef S) {

@@ -780,10 +780,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_OpenCLKernel:
       // Do nothing. These CCs are not available as attributes.
       break;
-    case CC_CUDAKernel:
-      // ToDo: print this before the function.
-      OS << " __global__";
-      break;
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
       break;

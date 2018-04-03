@@ -3316,18 +3316,6 @@ getCCForDeclaratorChunk(Sema &S, Declarator &D,
   CallingConv CC = S.Context.getDefaultCallingConvention(FTI.isVariadic,
                                                          IsCXXInstanceMethod);
 
-  // Attribute AT_CUDAGlobal affects the calling convention for AMDGPU targets.
-  // This is the simplest place to infer calling convention for CUDA kernels.
-  if (S.getLangOpts().CUDA && S.getLangOpts().CUDAIsDevice) {
-    for (const AttributeList *Attr = D.getDeclSpec().getAttributes().getList();
-         Attr; Attr = Attr->getNext()) {
-      if (Attr->getKind() == AttributeList::AT_CUDAGlobal) {
-        CC = CC_CUDAKernel;
-        break;
-      }
-    }
-  }
-
   // Attribute AT_OpenCLKernel affects the calling convention for SPIR
   // and AMDGPU targets, hence it cannot be treated as a calling
   // convention attribute. This is the simplest place to infer

@@ -2294,10 +2294,6 @@ Hexagon
 
 Enable Hexagon Vector eXtensions
 
-.. option:: -mhvx-double, -mno-hvx-double
-
-Enable Hexagon Double Vector eXtensions
-
 .. option:: -mhvx-length=<arg>
 
 Set Hexagon Vector Length

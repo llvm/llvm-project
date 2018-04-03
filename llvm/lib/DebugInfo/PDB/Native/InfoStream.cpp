@@ -86,10 +86,10 @@ Error InfoStream::reload() {
 
 uint32_t InfoStream::getStreamSize() const { return Stream->getLength(); }
 
-uint32_t InfoStream::getNamedStreamIndex(llvm::StringRef Name) const {
+Expected<uint32_t> InfoStream::getNamedStreamIndex(llvm::StringRef Name) const {
   uint32_t Result;
   if (!NamedStreams.get(Name, Result))
-    return 0;
+    return make_error<RawError>(raw_error_code::no_stream);
   return Result;
 }
 

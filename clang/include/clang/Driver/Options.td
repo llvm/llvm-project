@@ -2504,13 +2504,6 @@ def mpackets : Flag<["-"], "mpackets">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Enable generation of instruction packets">;
 def mno_packets : Flag<["-"], "mno-packets">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Disable generation of instruction packets">;
-// hvx-double deprecrated flag.
-def mhexagon_hvx_double : Flag<[ "-" ], "mhvx-double">,
-  Group<m_hexagon_Features_HVX_Group>,
-  HelpText<"Enable Hexagon Double Vector eXtensions">;
-def mno_hexagon_hvx_double : Flag<[ "-" ], "mno-hvx-double">,
-  Group<m_hexagon_Features_HVX_Group>,
-  HelpText<"Disable Hexagon Double Vector eXtensions">;
 
 
 // X86 feature flags

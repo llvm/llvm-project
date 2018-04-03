@@ -1391,6 +1391,7 @@ BUILTIN(__builtin_coro_promise, "v*v*IiIb", "n")
 
 BUILTIN(__builtin_coro_size, "z", "n")
 BUILTIN(__builtin_coro_frame, "v*", "n")
+BUILTIN(__builtin_coro_noop, "v*", "n")
 BUILTIN(__builtin_coro_free, "v*v*", "n")
 
 BUILTIN(__builtin_coro_id, "v*Iiv*v*v*", "n")

@@ -114,8 +114,8 @@ for.end19:                                        ; preds = %for.inc17, %entry
 ;;    }
 
 ;; Not tightly nested. Do not interchange.
-;; Not interchanged hence the phi's in the inner loop will not be split. Check for the same.
-; CHECK: Not interchanging loops. Cannot prove legality.
+;; Not interchanged hence the phi's in the inner loop will not be split.
+; CHECK: Outer loops with reductions are not supported currently.
 
 define void @reduction_03(i32 %N)  {
 entry:
@@ -173,8 +173,8 @@ for.end19:                                        ; preds = %for.cond1.for.inc17
 ;;        Y+=X;
 ;;      }
 
-;; Not interchanged hence the phi's in the inner loop will not be split. Check for the same.
-; CHECK: Not interchanging loops. Cannot prove legality.
+;; Not interchanged hence the phi's in the inner loop will not be split.
+; CHECK: Only inner loops with induction or reduction PHI nodes are supported currently.
 
 define void @reduction_04(i32 %N) {
 entry:

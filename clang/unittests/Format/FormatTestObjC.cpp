@@ -1021,7 +1021,16 @@ TEST_F(FormatTestObjC, ObjCDictLiterals) {
                "  a12345 = @{a12345 : a12345};\n"
                "}");
   verifyFormat("int Foo() {\n"
+               "  a12345 = @{a12345 : @(a12345)};\n"
+               "}");
+  verifyFormat("int Foo() {\n"
                "  a12345 = @{(Foo *)a12345 : @(a12345)};\n"
+               "}");
+  verifyFormat("int Foo() {\n"
+               "  a12345 = @{@(a12345) : a12345};\n"
+               "}");
+  verifyFormat("int Foo() {\n"
+               "  a12345 = @{@(a12345) : @YES};\n"
                "}");
   Style.SpacesInContainerLiterals = false;
   verifyFormat("int Foo() {\n"

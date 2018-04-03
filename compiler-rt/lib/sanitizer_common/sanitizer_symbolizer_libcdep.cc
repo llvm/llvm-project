@@ -145,11 +145,6 @@ const char *Symbolizer::Demangle(const char *name) {
   return PlatformDemangle(name);
 }
 
-void Symbolizer::PrepareForSandboxing() {
-  BlockingMutexLock l(&mu_);
-  PlatformPrepareForSandboxing();
-}
-
 bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
                                                    const char **module_name,
                                                    uptr *module_offset,

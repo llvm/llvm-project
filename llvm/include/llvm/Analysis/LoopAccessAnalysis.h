@@ -667,6 +667,20 @@ int64_t getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
                      const ValueToValueMap &StridesMap = ValueToValueMap(),
                      bool Assume = false, bool ShouldCheckWrap = true);
 
+/// \brief Attempt to sort the pointers in \p VL and return the sorted indices
+/// in \p SortedIndices, if reordering is required.
+///
+/// Returns 'true' if sorting is legal, otherwise returns 'false'.
+///
+/// For example, for a given \p VL of memory accesses in program order, a[i+4],
+/// a[i+0], a[i+1] and a[i+7], this function will sort the \p VL and save the
+/// sorted indices in \p SortedIndices as a[i+0], a[i+1], a[i+4], a[i+7] and
+/// saves the mask for actual memory accesses in program order in
+/// \p SortedIndices as <1,2,0,3>
+bool sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
+                     ScalarEvolution &SE,
+                     SmallVectorImpl<unsigned> &SortedIndices);
+
 /// \brief Returns true if the memory operations \p A and \p B are consecutive.
 /// This is a simple API that does not depend on the analysis pass. 
 bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,

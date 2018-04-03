@@ -445,8 +445,6 @@ const char *Symbolizer::PlatformDemangle(const char *name) {
   return DemangleSwiftAndCXX(name);
 }
 
-void Symbolizer::PlatformPrepareForSandboxing() {}
-
 static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
   const char *path = common_flags()->external_symbolizer_path;
   const char *binary_name = path ? StripModuleName(path) : "";

@@ -1087,6 +1087,67 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
   return Stride;
 }
 
+bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
+                           ScalarEvolution &SE,
+                           SmallVectorImpl<unsigned> &SortedIndices) {
+  assert(llvm::all_of(
+             VL, [](const Value *V) { return V->getType()->isPointerTy(); }) &&
+         "Expected list of pointer operands.");
+  SmallVector<std::pair<int64_t, Value *>, 4> OffValPairs;
+  OffValPairs.reserve(VL.size());
+
+  // Walk over the pointers, and map each of them to an offset relative to
+  // first pointer in the array.
+  Value *Ptr0 = VL[0];
+  const SCEV *Scev0 = SE.getSCEV(Ptr0);
+  Value *Obj0 = GetUnderlyingObject(Ptr0, DL);
+
+  llvm::SmallSet<int64_t, 4> Offsets;
+  for (auto *Ptr : VL) {
+    // TODO: Outline this code as a special, more time consuming, version of
+    // computeConstantDifference() function.
+    if (Ptr->getType()->getPointerAddressSpace() !=
+        Ptr0->getType()->getPointerAddressSpace())
+      return false;
+    // If a pointer refers to a different underlying object, bail - the
+    // pointers are by definition incomparable.
+    Value *CurrObj = GetUnderlyingObject(Ptr, DL);
+    if (CurrObj != Obj0)
+      return false;
+
+    const SCEV *Scev = SE.getSCEV(Ptr);
+    const auto *Diff = dyn_cast<SCEVConstant>(SE.getMinusSCEV(Scev, Scev0));
+    // The pointers may not have a constant offset from each other, or SCEV
+    // may just not be smart enough to figure out they do. Regardless,
+    // there's nothing we can do.
+    if (!Diff)
+      return false;
+
+    // Check if the pointer with the same offset is found.
+    int64_t Offset = Diff->getAPInt().getSExtValue();
+    if (!Offsets.insert(Offset).second)
+      return false;
+    OffValPairs.emplace_back(Offset, Ptr);
+  }
+  SortedIndices.clear();
+  SortedIndices.resize(VL.size());
+  std::iota(SortedIndices.begin(), SortedIndices.end(), 0);
+
+  // Sort the memory accesses and keep the order of their uses in UseOrder.
+  std::stable_sort(SortedIndices.begin(), SortedIndices.end(),
+                   [&OffValPairs](unsigned Left, unsigned Right) {
+                     return OffValPairs[Left].first < OffValPairs[Right].first;
+                   });
+
+  // Check if the order is consecutive already.
+  if (llvm::all_of(SortedIndices, [&SortedIndices](const unsigned I) {
+        return I == SortedIndices[I];
+      }))
+    SortedIndices.clear();
+
+  return true;
+}
+
 /// Take the address space operand from the Load/Store instruction.
 /// Returns -1 if this is not a valid Load/Store instruction.
 static unsigned getAddressSpaceOperand(Value *I) {

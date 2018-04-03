@@ -30,6 +30,7 @@ namespace clang {
   class CXXDestructorDecl;
   class CXXMethodDecl;
   class FunctionDecl;
+  struct MethodVFTableLocation;
   class NamedDecl;
   class ObjCMethodDecl;
   class StringLiteral;
@@ -201,7 +202,8 @@ public:
                                                    raw_ostream &Out) = 0;
 
   virtual void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
-                                        raw_ostream &) = 0;
+                                        const MethodVFTableLocation &ML,
+                                        raw_ostream &Out) = 0;
 
   virtual void mangleCXXVirtualDisplacementMap(const CXXRecordDecl *SrcRD,
                                                const CXXRecordDecl *DstRD,

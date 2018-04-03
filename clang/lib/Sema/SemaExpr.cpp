@@ -25,7 +25,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -1658,16 +1657,6 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   bool RefersToCapturedVariable =
       isa<VarDecl>(D) &&
       NeedToCaptureVariable(cast<VarDecl>(D), NameInfo.getLoc());
-
-  // Drop CUDA kernel calling convention since it is invisible to the user
-  // in DRE.
-  if (const auto *FT = Ty->getAs<FunctionType>()) {
-    if (FT->getCallConv() == CC_CUDAKernel) {
-      FT = Context.adjustFunctionType(FT,
-                                      FT->getExtInfo().withCallingConv(CC_C));
-      Ty = QualType(FT, Ty.getQualifiers().getAsOpaqueValue());
-    }
-  }
 
   DeclRefExpr *E;
   if (isa<VarTemplateSpecializationDecl>(D)) {

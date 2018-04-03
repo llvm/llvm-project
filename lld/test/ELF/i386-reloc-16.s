@@ -10,6 +10,6 @@
 // CHECK-NEXT:   1000 42
 
 // RUN: not ld.lld -shared %t %t2 -o %t4 2>&1 | FileCheck --check-prefix=ERROR %s
-// ERROR: relocation R_386_16 out of range: 65536 is not in [0, 65535]
+// ERROR: relocation R_386_16 out of range: 65536 is not in [-32768, 32767]
 
 .short foo

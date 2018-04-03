@@ -4301,8 +4301,6 @@ bool DwarfLinker::link(const DebugMap &Map) {
   if (MaxDwarfVersion == 0)
     MaxDwarfVersion = 3;
 
-  ThreadPool pool(2);
-
   // These variables manage the list of processed object files.
   // The mutex and condition variable are to ensure that this is thread safe.
   std::mutex ProcessedFilesMutex;
@@ -4310,7 +4308,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
   BitVector ProcessedFiles(NumObjects, false);
 
   // Now do analyzeContextInfo in parallel as it is particularly expensive.
-  pool.async([&]() {
+  auto AnalyzeLambda = [&]() {
     for (unsigned i = 0, e = NumObjects; i != e; ++i) {
       auto &LinkContext = ObjectContexts[i];
 
@@ -4331,13 +4329,13 @@ bool DwarfLinker::link(const DebugMap &Map) {
       ProcessedFiles.set(i);
       ProcessedFilesConditionVariable.notify_one();
     }
-  });
+  };
 
   // And then the remaining work in serial again.
   // Note, although this loop runs in serial, it can run in parallel with
   // the analyzeContextInfo loop so long as we process files with indices >=
   // than those processed by analyzeContextInfo.
-  pool.async([&]() {
+  auto CloneLambda = [&]() {
     for (unsigned i = 0, e = NumObjects; i != e; ++i) {
       {
         std::unique_lock<std::mutex> LockGuard(ProcessedFilesMutex);
@@ -4397,9 +4395,20 @@ bool DwarfLinker::link(const DebugMap &Map) {
       Streamer->emitAppleTypes(AppleTypes);
       Streamer->emitAppleObjc(AppleObjc);
     }
-  });
+  };
 
-  pool.wait();
+  // FIXME: The DwarfLinker can have some very deep recursion that can max
+  // out the (significantly smaller) stack when using threads. We don't
+  // want this limitation when we only have a single thread.
+  if (Options.Threads == 1) {
+    AnalyzeLambda();
+    CloneLambda();
+  } else {
+    ThreadPool pool(2);
+    pool.async(AnalyzeLambda);
+    pool.async(CloneLambda);
+    pool.wait();
+  }
 
   return Options.NoOutput ? true : Streamer->finish(Map);
 }

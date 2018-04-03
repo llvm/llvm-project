@@ -199,6 +199,18 @@ static cl::opt<bool> ClHandleICmpExact("msan-handle-icmp-exact",
        cl::desc("exact handling of relational integer ICmp"),
        cl::Hidden, cl::init(false));
 
+// When compiling the Linux kernel, we sometimes see false positives related to
+// MSan being unable to understand that inline assembly calls may initialize
+// local variables.
+// This flag makes the compiler conservatively unpoison every memory location
+// passed into an assembly call. Note that this may cause false positives.
+// Because it's impossible to figure out the array sizes, we can only unpoison
+// the first sizeof(type) bytes for each type* pointer.
+static cl::opt<bool> ClHandleAsmConservative(
+    "msan-handle-asm-conservative",
+    cl::desc("conservative handling of inline assembly"), cl::Hidden,
+    cl::init(false));
+
 // This flag controls whether we check the shadow of the address
 // operand of load or store. Such bugs are very rare, since load from
 // a garbage address typically results in SEGV, but still happen
@@ -2758,7 +2770,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // outputs as clean. Note that any side effects of the inline asm that are
       // not immediately visible in its constraints are not handled.
       if (Call->isInlineAsm()) {
-        visitInstruction(I);
+        if (ClHandleAsmConservative)
+          visitAsmInstruction(I);
+        else
+          visitInstruction(I);
         return;
       }
 
@@ -3081,6 +3096,39 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitCatchReturnInst(CatchReturnInst &CRI) {
     DEBUG(dbgs() << "CatchReturn: " << CRI << "\n");
     // Nothing to do here.
+  }
+
+  void visitAsmInstruction(Instruction &I) {
+    // Conservative inline assembly handling: check for poisoned shadow of
+    // asm() arguments, then unpoison the result and all the memory locations
+    // pointed to by those arguments.
+    CallInst *CI = dyn_cast<CallInst>(&I);
+
+    for (size_t i = 0, n = CI->getNumOperands(); i < n; i++) {
+      Value *Operand = CI->getOperand(i);
+      if (Operand->getType()->isSized())
+        insertShadowCheck(Operand, &I);
+    }
+    setShadow(&I, getCleanShadow(&I));
+    setOrigin(&I, getCleanOrigin());
+    IRBuilder<> IRB(&I);
+    IRB.SetInsertPoint(I.getNextNode());
+    for (size_t i = 0, n = CI->getNumOperands(); i < n; i++) {
+      Value *Operand = CI->getOperand(i);
+      Type *OpType = Operand->getType();
+      if (!OpType->isPointerTy())
+        continue;
+      Type *ElType = OpType->getPointerElementType();
+      if (!ElType->isSized())
+        continue;
+      Value *ShadowPtr, *OriginPtr;
+      std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
+          Operand, IRB, ElType, /*Alignment*/ 1, /*isStore*/ true);
+      Value *CShadow = getCleanShadow(ElType);
+      IRB.CreateStore(
+          CShadow,
+          IRB.CreatePointerCast(ShadowPtr, CShadow->getType()->getPointerTo()));
+    }
   }
 
   void visitInstruction(Instruction &I) {

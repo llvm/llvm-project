@@ -2791,7 +2791,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Gv                     Set __vectorcall as a default calling convention
       /Gw-                    Don't put each data item in its own section
       /Gw                     Put each data item in its own section
-      /GX-                    Enable exception handling
+      /GX-                    Disable exception handling
       /GX                     Enable exception handling
       /Gy-                    Don't put each function in its own section
       /Gy                     Put each function in its own section

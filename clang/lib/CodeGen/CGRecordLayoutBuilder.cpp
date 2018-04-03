@@ -294,8 +294,7 @@ void CGRecordLowering::lowerUnion() {
   // been doing and cause lit tests to change.
   for (const auto *Field : D->fields()) {
     if (Field->isBitField()) {
-      // Skip 0 sized bitfields.
-      if (Field->getBitWidthValue(Context) == 0)
+      if (Field->isZeroLengthBitField(Context))
         continue;
       llvm::Type *FieldType = getStorageType(Field);
       if (LayoutSize < getSize(FieldType))
@@ -380,7 +379,7 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
     for (; Field != FieldEnd; ++Field) {
       uint64_t BitOffset = getFieldBitOffset(*Field);
       // Zero-width bitfields end runs.
-      if (Field->getBitWidthValue(Context) == 0) {
+      if (Field->isZeroLengthBitField(Context)) {
         Run = FieldEnd;
         continue;
       }
@@ -431,7 +430,7 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
       if (Field == FieldEnd)
         break;
       // Any non-zero-length bitfield can start a new run.
-      if (Field->getBitWidthValue(Context) != 0) {
+      if (!Field->isZeroLengthBitField(Context)) {
         Run = Field;
         StartBitOffset = getFieldBitOffset(*Field);
         Tail = StartBitOffset + Field->getBitWidthValue(Context);
@@ -452,7 +451,7 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
     // Otherwise, try to add bitfields to the run.
     if (!StartFieldAsSingleRun && Field != FieldEnd &&
         !IsBetterAsSingleFieldRun(Field) &&
-        (Field->getBitWidthValue(Context) != 0 ||
+        (!Field->isZeroLengthBitField(Context) ||
          (!Context.getTargetInfo().useZeroLengthBitfieldAlignment() &&
           !Context.getTargetInfo().useBitFieldTypeAlignment())) &&
         Tail == getFieldBitOffset(*Field)) {
@@ -811,7 +810,7 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
       continue;
 
     // Don't inspect zero-length bitfields.
-    if (FD->getBitWidthValue(getContext()) == 0)
+    if (FD->isZeroLengthBitField(getContext()))
       continue;
 
     const CGBitFieldInfo &Info = RL->getBitFieldInfo(FD);

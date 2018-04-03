@@ -125,9 +125,10 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
   static const char *const CoroIntrinsics[] = {
       "llvm.coro.alloc",   "llvm.coro.begin",   "llvm.coro.destroy",
       "llvm.coro.done",    "llvm.coro.end",     "llvm.coro.frame",
-      "llvm.coro.free",    "llvm.coro.id",      "llvm.coro.param",
-      "llvm.coro.promise", "llvm.coro.resume",  "llvm.coro.save",
-      "llvm.coro.size",    "llvm.coro.subfn.addr", "llvm.coro.suspend",
+      "llvm.coro.free",    "llvm.coro.id",      "llvm.coro.noop",
+      "llvm.coro.param",   "llvm.coro.promise", "llvm.coro.resume",
+      "llvm.coro.save",    "llvm.coro.size",    "llvm.coro.subfn.addr",
+      "llvm.coro.suspend",
   };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
 }

@@ -51,10 +51,14 @@ class RegisterFile {
   // This is where information related to the various register files is kept.
   // This set always contains at least one register file at index #0. That
   // register file "sees" all the physical registers declared by the target, and
-  // (by default) it allows an unbound number of mappings.
+  // (by default) it allows an unbounded number of mappings.
   // Users can limit the number of mappings that can be created by register file
   // #0 through the command line flag `-register-file-size`.
   llvm::SmallVector<RegisterMappingTracker, 4> RegisterFiles;
+
+  // This pair is used to identify the owner of a physical register, as well as
+  // the cost of using that register file.
+  using IndexPlusCostPairTy = std::pair<unsigned, unsigned>;
 
   // RegisterMapping objects are mainly used to track physical register
   // definitions. A WriteState object describes a register definition, and it is
@@ -62,16 +66,14 @@ class RegisterFile {
   // object also specifies the set of register files.  The mapping between
   // physreg and register files is done using a "register file mask".
   //
-  // A register file mask identifies a set of register files. Each bit of the
-  // mask representation references a specific register file.
-  // For example:
-  //    0b0001     -->  Register file #0
-  //    0b0010     -->  Register file #1
-  //    0b0100     -->  Register file #2
+  // A register file index identifies a user defined register file.
+  // There is one index per RegisterMappingTracker, and index #0 is reserved to
+  // the default unified register file.
   //
-  // Note that this implementation allows register files to overlap.
-  // The maximum number of register files allowed by this implementation is 32.
-  using RegisterMapping = std::pair<WriteState *, unsigned>;
+  // This implementation does not allow overlapping register files. The only
+  // register file that is allowed to overlap with other register files is
+  // register file #0.
+  using RegisterMapping = std::pair<WriteState *, IndexPlusCostPairTy>;
 
   // This map contains one entry for each physical register defined by the
   // processor scheduling model.
@@ -95,24 +97,32 @@ class RegisterFile {
   // The list of register classes is then converted by the tablegen backend into
   // a list of register class indices. That list, along with the number of
   // available mappings, is then used to create a new RegisterMappingTracker.
-  void addRegisterFile(llvm::ArrayRef<unsigned> RegisterClasses,
-                       unsigned NumTemps);
+  void
+  addRegisterFile(llvm::ArrayRef<llvm::MCRegisterCostEntry> RegisterClasses,
+                  unsigned NumPhysRegs);
 
-  // Allocates a new register mapping in every register file specified by the
-  // register file mask. This method is called from addRegisterMapping.
-  void createNewMappings(unsigned RegisterFileMask,
+  // Allocates register mappings in register file specified by the
+  // IndexPlusCostPairTy object. This method is called from addRegisterMapping.
+  void createNewMappings(IndexPlusCostPairTy IPC,
                          llvm::MutableArrayRef<unsigned> UsedPhysRegs);
 
-  // Removes a previously allocated mapping from each register file in the
-  // RegisterFileMask set. This method is called from invalidateRegisterMapping.
-  void removeMappings(unsigned RegisterFileMask,
+  // Removes a previously allocated mapping from the register file referenced
+  // by the IndexPlusCostPairTy object. This method is called from
+  // invalidateRegisterMapping.
+  void removeMappings(IndexPlusCostPairTy IPC,
                       llvm::MutableArrayRef<unsigned> FreedPhysRegs);
 
+  // Create an instance of RegisterMappingTracker for every register file
+  // specified by the processor model.
+  // If no register file is specified, then this method creates a single
+  // register file with an unbounded number of registers.
+  void initialize(const llvm::MCSchedModel &SM, unsigned NumRegs);
+
 public:
-  RegisterFile(const llvm::MCRegisterInfo &mri, unsigned TempRegs = 0)
-      : MRI(mri), RegisterMappings(MRI.getNumRegs(), {nullptr, 0U}) {
-    addRegisterFile({}, TempRegs);
-    // TODO: teach the scheduling models how to specify multiple register files.
+  RegisterFile(const llvm::MCSchedModel &SM, const llvm::MCRegisterInfo &mri,
+               unsigned NumRegs = 0)
+      : MRI(mri), RegisterMappings(mri.getNumRegs(), {nullptr, {0, 0}}) {
+    initialize(SM, NumRegs);
   }
 
   // Creates a new register mapping for RegID.
@@ -245,7 +255,7 @@ class DispatchUnit {
   std::unique_ptr<RetireControlUnit> RCU;
   Backend *Owner;
 
-  bool checkRAT(unsigned Index, const Instruction &Desc);
+  bool checkRAT(unsigned Index, const Instruction &Inst);
   bool checkRCU(unsigned Index, const InstrDesc &Desc);
   bool checkScheduler(unsigned Index, const InstrDesc &Desc);
 
@@ -254,13 +264,14 @@ class DispatchUnit {
                                    llvm::ArrayRef<unsigned> UsedPhysRegs);
 
 public:
-  DispatchUnit(Backend *B, const llvm::MCRegisterInfo &MRI,
-               unsigned MicroOpBufferSize, unsigned RegisterFileSize,
-               unsigned MaxRetirePerCycle, unsigned MaxDispatchWidth,
-               Scheduler *Sched)
+  DispatchUnit(Backend *B, const llvm::MCSubtargetInfo &STI,
+               const llvm::MCRegisterInfo &MRI, unsigned MicroOpBufferSize,
+               unsigned RegisterFileSize, unsigned MaxRetirePerCycle,
+               unsigned MaxDispatchWidth, Scheduler *Sched)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
         CarryOver(0U), SC(Sched),
-        RAT(llvm::make_unique<RegisterFile>(MRI, RegisterFileSize)),
+        RAT(llvm::make_unique<RegisterFile>(STI.getSchedModel(), MRI,
+                                            RegisterFileSize)),
         RCU(llvm::make_unique<RetireControlUnit>(MicroOpBufferSize,
                                                  MaxRetirePerCycle, this)),
         Owner(B) {}

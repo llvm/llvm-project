@@ -340,6 +340,31 @@ v_sin_f16 v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 // GFX89: v_cos_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 ; encoding: [0xf9,0x94,0x02,0x7e,0x00,0x06,0x05,0x00]
 v_cos_f16 v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 
+// GFX9:   v_cvt_norm_i16_f16_sdwa v5, -v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD ; encoding: [0xf9,0x9a,0x0a,0x7e,0x01,0x06,0x16,0x00]
+// NOSICI: error
+// NOVI:   error
+v_cvt_norm_i16_f16_sdwa v5, -v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
+
+// GFX9:   v_cvt_norm_i16_f16_sdwa v5, |v1| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD ; encoding: [0xf9,0x9a,0x0a,0x7e,0x01,0x06,0x26,0x00]
+// NOSICI: error
+// NOVI:   error
+v_cvt_norm_i16_f16_sdwa v5, |v1| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
+
+// GFX9:   v_cvt_norm_u16_f16_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x9c,0x0a,0x7e,0x01,0x16,0x06,0x00]
+// NOSICI: error
+// NOVI:   error
+v_cvt_norm_u16_f16_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+
+// GFX9:   v_cvt_norm_u16_f16_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 ; encoding: [0xf9,0x9c,0x0a,0x7e,0x01,0x06,0x05,0x00]
+// NOSICI: error
+// NOVI:   error
+v_cvt_norm_u16_f16_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+
+// GFX9:   v_sat_pk_u8_i16_sdwa v5, sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD ; encoding: [0xf9,0x9e,0x0a,0x7e,0x01,0x06,0x0e,0x00]
+// NOSICI: error
+// NOVI:   error
+v_sat_pk_u8_i16_sdwa v5, sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
+
 //===----------------------------------------------------------------------===//
 // Check VOP2 opcodes
 //===----------------------------------------------------------------------===//

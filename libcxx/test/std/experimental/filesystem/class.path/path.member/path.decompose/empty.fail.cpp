@@ -18,6 +18,7 @@
 // UNSUPPORTED: clang-3.3, clang-3.4, clang-3.5, clang-3.6, clang-3.7, clang-3.8
 
 #include "filesystem_include.hpp"
+
 #include "test_macros.h"
 
 int main ()

@@ -126,7 +126,7 @@ namespace X86Local {
   };
 
   enum {
-    PS = 1, PD = 2, XS = 3, XD = 4
+    PD = 1, XS = 2, XD = 3, PS = 4
   };
 
   enum {

@@ -397,21 +397,21 @@ namespace X86II {
     // no prefix.
     //
     OpPrefixShift = AdSizeShift + 2,
-    OpPrefixMask  = 0x7 << OpPrefixShift,
+    OpPrefixMask  = 0x3 << OpPrefixShift,
 
-    // PS, PD - Prefix code for packed single and double precision vector
-    // floating point operations performed in the SSE registers.
-    PS = 1 << OpPrefixShift, PD = 2 << OpPrefixShift,
+    // PD - Prefix code for packed double precision vector floating point
+    // operations performed in the SSE registers.
+    PD = 1 << OpPrefixShift,
 
     // XS, XD - These prefix codes are for single and double precision scalar
     // floating point operations performed in the SSE registers.
-    XS = 3 << OpPrefixShift,  XD = 4 << OpPrefixShift,
+    XS = 2 << OpPrefixShift,  XD = 3 << OpPrefixShift,
 
     //===------------------------------------------------------------------===//
     // OpMap - This field determines which opcode map this instruction
     // belongs to. i.e. one-byte, two-byte, 0x0f 0x38, 0x0f 0x3a, etc.
     //
-    OpMapShift = OpPrefixShift + 3,
+    OpMapShift = OpPrefixShift + 2,
     OpMapMask  = 0x7 << OpMapShift,
 
     // OB - OneByte - Set if this instruction has a one byte opcode.

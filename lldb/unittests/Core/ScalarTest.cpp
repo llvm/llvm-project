@@ -73,6 +73,12 @@ TEST(ScalarTest, CastOperations) {
   ASSERT_EQ((unsigned long)a, a_scalar.ULong());
   ASSERT_EQ((signed long long)a, a_scalar.SLongLong());
   ASSERT_EQ((unsigned long long)a, a_scalar.ULongLong());
+
+  int a2 = 23;
+  Scalar a2_scalar(a2);
+  ASSERT_EQ((float)a2, a2_scalar.Float());
+  ASSERT_EQ((double)a2, a2_scalar.Double());
+  ASSERT_EQ((long double)a2, a2_scalar.LongDouble());
 }
 
 TEST(ScalarTest, ExtractBitfield) {
@@ -139,4 +145,43 @@ TEST(ScalarTest, Division) {
   Scalar r = lhs / rhs;
   EXPECT_TRUE(r.IsValid());
   EXPECT_EQ(r, Scalar(2.5));
+}
+
+TEST(ScalarTest, Promotion) {
+  static Scalar::Type int_types[] = {
+      Scalar::e_sint,    Scalar::e_uint,      Scalar::e_slong,
+      Scalar::e_ulong,   Scalar::e_slonglong, Scalar::e_ulonglong,
+      Scalar::e_sint128, Scalar::e_uint128,   Scalar::e_sint256,
+      Scalar::e_uint256,
+      Scalar::e_void // sentinel
+  };
+
+  static Scalar::Type float_types[] = {
+      Scalar::e_float, Scalar::e_double, Scalar::e_long_double,
+      Scalar::e_void // sentinel
+  };
+
+  for (int i = 0; int_types[i] != Scalar::e_void; ++i) {
+    for (int j = 0; float_types[j] != Scalar::e_void; ++j) {
+      Scalar lhs(2);
+      EXPECT_TRUE(lhs.Promote(int_types[i])) << "int promotion #" << i;
+      Scalar rhs(0.5f);
+      EXPECT_TRUE(rhs.Promote(float_types[j])) << "float promotion #" << j;
+      Scalar x(2.5f);
+      EXPECT_TRUE(x.Promote(float_types[j]));
+      EXPECT_EQ(lhs + rhs, x);
+    }
+  }
+
+  for (int i = 0; float_types[i] != Scalar::e_void; ++i) {
+    for (int j = 0; float_types[j] != Scalar::e_void; ++j) {
+      Scalar lhs(2);
+      EXPECT_TRUE(lhs.Promote(float_types[i])) << "float promotion #" << i;
+      Scalar rhs(0.5f);
+      EXPECT_TRUE(rhs.Promote(float_types[j])) << "float promotion #" << j;
+      Scalar x(2.5f);
+      EXPECT_TRUE(x.Promote(float_types[j]));
+      EXPECT_EQ(lhs + rhs, x);
+    }
+  }
 }

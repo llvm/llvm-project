@@ -526,14 +526,6 @@ lookup(const std::vector<VSO *> VSOs, SymbolStringPtr Name,
     return ResultMap.takeError();
 }
 
-ExecutionSession::ExecutionSession(SymbolStringPool &SSP) : SSP(SSP) {}
-
-VModuleKey ExecutionSession::allocateVModule() { return ++LastKey; }
-
-void ExecutionSession::releaseVModule(VModuleKey VMod) {
-  // FIXME: Recycle keys.
-}
-
 void ExecutionSession::logErrorsToStdErr(Error Err) {
   logAllUnhandledErrors(std::move(Err), errs(), "JIT session error: ");
 }

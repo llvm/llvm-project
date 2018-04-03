@@ -83,14 +83,14 @@ void checkBeginEndBasic() {
   }
   {
     path p("//root_name//first_dir////second_dir");
-    const path expect[] = {"//root_name", "/", "first_dir", "second_dir"};
+    const path expect[] = {"/", "root_name", "first_dir", "second_dir"};
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
     assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
 
   }
   {
     path p("////foo/bar/baz///");
-    const path expect[] = {"/", "foo", "bar", "baz", "."};
+    const path expect[] = {"/", "foo", "bar", "baz", ""};
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
     assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
 
