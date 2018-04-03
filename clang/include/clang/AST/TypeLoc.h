@@ -85,7 +85,7 @@ public:
   template<typename T>
   T getAs() const {
     if (!T::isKind(*this))
-      return T();
+      return {};
     T t;
     TypeLoc& tl = t;
     tl = *this;
@@ -276,7 +276,7 @@ public:
   UnqualTypeLoc getUnqualifiedLoc() const {
     unsigned align =
         TypeLoc::getLocalAlignmentForType(QualType(getTypePtr(), 0));
-    uintptr_t dataInt = reinterpret_cast<uintptr_t>(Data);
+    auto dataInt = reinterpret_cast<uintptr_t>(Data);
     dataInt = llvm::alignTo(dataInt, align);
     return UnqualTypeLoc(getTypePtr(), reinterpret_cast<void*>(dataInt));
   }
@@ -429,7 +429,7 @@ protected:
   }
 
   void *getNonLocalData() const {
-    uintptr_t data = reinterpret_cast<uintptr_t>(Base::Data);
+    auto data = reinterpret_cast<uintptr_t>(Base::Data);
     data += asDerived()->getLocalDataSize();
     data = llvm::alignTo(data, getNextTypeAlign());
     return reinterpret_cast<void*>(data);

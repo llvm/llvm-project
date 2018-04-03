@@ -112,7 +112,11 @@ func TestDebugLoc(t *testing.T) {
 	}()
 	file := d.CreateFile("dummy_file", "dummy_dir")
 	voidInfo := d.CreateBasicType(DIBasicType{Name: "void"})
-	typeInfo := d.CreateSubroutineType(DISubroutineType{file, []Metadata{voidInfo}})
+	typeInfo := d.CreateSubroutineType(DISubroutineType{
+		File:       file,
+		Parameters: []Metadata{voidInfo},
+		Flags:      0,
+	})
 	scope := d.CreateFunction(file, DIFunction{
 		Name:         "foo",
 		LinkageName:  "foo",

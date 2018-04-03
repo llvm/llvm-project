@@ -3691,6 +3691,11 @@ unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
   return getBitWidth()->EvaluateKnownConstInt(Ctx).getZExtValue();
 }
 
+bool FieldDecl::isZeroLengthBitField(const ASTContext &Ctx) const {
+  return isUnnamedBitfield() && !getBitWidth()->isValueDependent() &&
+         getBitWidthValue(Ctx) == 0;
+}
+
 unsigned FieldDecl::getFieldIndex() const {
   const FieldDecl *Canonical = getCanonicalDecl();
   if (Canonical != this)

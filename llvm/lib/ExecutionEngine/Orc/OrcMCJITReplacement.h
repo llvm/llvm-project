@@ -225,7 +225,8 @@ public:
   OrcMCJITReplacement(std::shared_ptr<MCJITMemoryManager> MemMgr,
                       std::shared_ptr<LegacyJITSymbolResolver> ClientResolver,
                       std::unique_ptr<TargetMachine> TM)
-      : ExecutionEngine(TM->createDataLayout()), ES(SSP), TM(std::move(TM)),
+      : ExecutionEngine(TM->createDataLayout()),
+        TM(std::move(TM)),
         MemMgr(
             std::make_shared<MCJITReplacementMemMgr>(*this, std::move(MemMgr))),
         Resolver(std::make_shared<LinkingORCResolver>(*this)),
@@ -450,7 +451,6 @@ private:
   using CompileLayerT = IRCompileLayer<ObjectLayerT, orc::SimpleCompiler>;
   using LazyEmitLayerT = LazyEmittingLayer<CompileLayerT>;
 
-  SymbolStringPool SSP;
   ExecutionSession ES;
 
   std::unique_ptr<TargetMachine> TM;

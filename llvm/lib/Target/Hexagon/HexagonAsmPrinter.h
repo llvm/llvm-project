@@ -18,7 +18,8 @@
 #include "HexagonSubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include <memory>
+#include "llvm/MC/MCStreamer.h"
+#include <utility>
 
 namespace llvm {
 
@@ -32,7 +33,8 @@ class TargetMachine;
 
   public:
     explicit HexagonAsmPrinter(TargetMachine &TM,
-                               std::unique_ptr<MCStreamer> Streamer);
+                               std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer)) {}
 
     bool runOnMachineFunction(MachineFunction &Fn) override {
       Subtarget = &Fn.getSubtarget<HexagonSubtarget>();
@@ -43,13 +45,11 @@ class TargetMachine;
       return "Hexagon Assembly Printer";
     }
 
-    bool isBlockOnlyReachableByFallthrough(
-                                   const MachineBasicBlock *MBB) const override;
+    bool isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB)
+          const override;
 
     void EmitInstruction(const MachineInstr *MI) override;
-
-    void HexagonProcessInstruction(MCInst &Inst,
-                                   const MachineInstr &MBB);
+    void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -58,8 +58,6 @@ class TargetMachine;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                unsigned AsmVariant, const char *ExtraCode,
                                raw_ostream &OS) override;
-
-    static const char *getRegisterName(unsigned RegNo);
   };
 
 } // end namespace llvm

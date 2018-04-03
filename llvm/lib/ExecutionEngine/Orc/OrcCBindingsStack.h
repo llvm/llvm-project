@@ -200,7 +200,7 @@ public:
   OrcCBindingsStack(TargetMachine &TM,
                     std::unique_ptr<CompileCallbackMgr> CCMgr,
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)
-      : ES(SSP), DL(TM.createDataLayout()),
+      : DL(TM.createDataLayout()),
         IndirectStubsMgr(IndirectStubsMgrBuilder()), CCMgr(std::move(CCMgr)),
         ObjectLayer(ES,
                     [this](orc::VModuleKey K) {
@@ -421,7 +421,6 @@ private:
     logAllUnhandledErrors(std::move(Err), errs(), "ORC error: ");
   };
 
-  orc::SymbolStringPool SSP;
   orc::ExecutionSession ES;
 
   DataLayout DL;

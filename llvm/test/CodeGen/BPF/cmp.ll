@@ -97,7 +97,7 @@ define zeroext i8 @minu(i8 zeroext %a, i8 zeroext %b) #0 {
   %a.b = select i1 %1, i8 %a, i8 %b
   ret i8 %a.b
 ; CHECK-LABEL:minu:
-; CHECK: if r{{[0-9]+}} {{<|>}} 100
+; CHECK: if r{{[0-9]+}} {{<|>}} r{{[0-9]+}}
 }
 
 ; Function Attrs: nounwind readnone uwtable

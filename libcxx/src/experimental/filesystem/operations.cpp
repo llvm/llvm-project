@@ -10,8 +10,10 @@
 #include "experimental/filesystem"
 #include "iterator"
 #include "fstream"
-#include "type_traits"
 #include "random"  /* for unique_path */
+#include "string_view"
+#include "type_traits"
+#include "vector"
 #include "cstdlib"
 #include "climits"
 
@@ -55,6 +57,250 @@
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
 filesystem_error::~filesystem_error() {}
+
+
+namespace { namespace parser
+{
+
+using string_view_t = path::__string_view;
+using string_view_pair = pair<string_view_t, string_view_t>;
+using PosPtr = path::value_type const*;
+
+struct PathParser {
+  enum ParserState : unsigned char {
+    // Zero is a special sentinel value used by default constructed iterators.
+    PS_BeforeBegin = 1,
+    PS_InRootName,
+    PS_InRootDir,
+    PS_InFilenames,
+    PS_InTrailingSep,
+    PS_AtEnd
+  };
+
+  const string_view_t Path;
+  string_view_t RawEntry;
+  ParserState State;
+
+private:
+  PathParser(string_view_t P, ParserState State) noexcept
+      : Path(P), State(State) {}
+
+public:
+  PathParser(string_view_t P, string_view_t E, unsigned char S)
+      : Path(P), RawEntry(E), State(static_cast<ParserState>(S)) {
+    // S cannot be '0' or PS_BeforeBegin.
+  }
+
+  static PathParser CreateBegin(string_view_t P) noexcept {
+    PathParser PP(P, PS_BeforeBegin);
+    PP.increment();
+    return PP;
+  }
+
+  static PathParser CreateEnd(string_view_t P) noexcept {
+    PathParser PP(P, PS_AtEnd);
+    return PP;
+  }
+
+  PosPtr peek() const noexcept {
+    auto TkEnd = getNextTokenStartPos();
+    auto End = getAfterBack();
+    return TkEnd == End ? nullptr : TkEnd;
+  }
+
+  void increment() noexcept {
+    const PosPtr End = getAfterBack();
+    const PosPtr Start = getNextTokenStartPos();
+    if (Start == End)
+      return makeState(PS_AtEnd);
+
+    switch (State) {
+    case PS_BeforeBegin: {
+      PosPtr TkEnd = consumeSeparator(Start, End);
+      if (TkEnd)
+        return makeState(PS_InRootDir, Start, TkEnd);
+      else
+        return makeState(PS_InFilenames, Start, consumeName(Start, End));
+    }
+    case PS_InRootDir:
+      return makeState(PS_InFilenames, Start, consumeName(Start, End));
+
+    case PS_InFilenames: {
+      PosPtr SepEnd = consumeSeparator(Start, End);
+      if (SepEnd != End) {
+        PosPtr TkEnd = consumeName(SepEnd, End);
+        if (TkEnd)
+          return makeState(PS_InFilenames, SepEnd, TkEnd);
+      }
+      return makeState(PS_InTrailingSep, Start, SepEnd);
+    }
+
+    case PS_InTrailingSep:
+      return makeState(PS_AtEnd);
+
+    case PS_InRootName:
+    case PS_AtEnd:
+      _LIBCPP_UNREACHABLE();
+    }
+  }
+
+  void decrement() noexcept {
+    const PosPtr REnd = getBeforeFront();
+    const PosPtr RStart = getCurrentTokenStartPos() - 1;
+    if (RStart == REnd) // we're decrementing the begin
+      return makeState(PS_BeforeBegin);
+
+    switch (State) {
+    case PS_AtEnd: {
+      // Try to consume a trailing separator or root directory first.
+      if (PosPtr SepEnd = consumeSeparator(RStart, REnd)) {
+        if (SepEnd == REnd)
+          return makeState(PS_InRootDir, Path.data(), RStart + 1);
+        return makeState(PS_InTrailingSep, SepEnd + 1, RStart + 1);
+      } else {
+        PosPtr TkStart = consumeName(RStart, REnd);
+        return makeState(PS_InFilenames, TkStart + 1, RStart + 1);
+      }
+    }
+    case PS_InTrailingSep:
+      return makeState(PS_InFilenames, consumeName(RStart, REnd) + 1, RStart + 1);
+    case PS_InFilenames: {
+      PosPtr SepEnd = consumeSeparator(RStart, REnd);
+      if (SepEnd == REnd)
+        return makeState(PS_InRootDir, Path.data(), RStart + 1);
+      PosPtr TkEnd = consumeName(SepEnd, REnd);
+      return makeState(PS_InFilenames, TkEnd + 1, SepEnd + 1);
+    }
+    case PS_InRootDir:
+      // return makeState(PS_InRootName, Path.data(), RStart + 1);
+    case PS_InRootName:
+    case PS_BeforeBegin:
+      _LIBCPP_UNREACHABLE();
+    }
+  }
+
+  /// \brief Return a view with the "preferred representation" of the current
+  ///   element. For example trailing separators are represented as a '.'
+  string_view_t operator*() const noexcept {
+    switch (State) {
+    case PS_BeforeBegin:
+    case PS_AtEnd:
+      return "";
+    case PS_InRootDir:
+      return "/";
+    case PS_InTrailingSep:
+      return "";
+    case PS_InRootName:
+    case PS_InFilenames:
+      return RawEntry;
+    }
+    _LIBCPP_UNREACHABLE();
+  }
+
+  explicit operator bool() const noexcept {
+    return State != PS_BeforeBegin && State != PS_AtEnd;
+  }
+
+  PathParser& operator++() noexcept {
+    increment();
+    return *this;
+  }
+
+  PathParser& operator--() noexcept {
+    decrement();
+    return *this;
+  }
+
+  bool inRootPath() const noexcept {
+    return State == PS_InRootDir || State == PS_InRootName;
+  }
+
+private:
+  void makeState(ParserState NewState, PosPtr Start, PosPtr End) noexcept {
+    State = NewState;
+    RawEntry = string_view_t(Start, End - Start);
+  }
+  void makeState(ParserState NewState) noexcept {
+    State = NewState;
+    RawEntry = {};
+  }
+
+  PosPtr getAfterBack() const noexcept {
+    return Path.data() + Path.size();
+  }
+
+  PosPtr getBeforeFront() const noexcept {
+    return Path.data() - 1;
+  }
+
+  /// \brief Return a pointer to the first character after the currently
+  ///   lexed element.
+  PosPtr getNextTokenStartPos() const noexcept {
+    switch (State) {
+    case PS_BeforeBegin:
+      return Path.data();
+    case PS_InRootName:
+    case PS_InRootDir:
+    case PS_InFilenames:
+      return &RawEntry.back() + 1;
+    case PS_InTrailingSep:
+    case PS_AtEnd:
+      return getAfterBack();
+    }
+    _LIBCPP_UNREACHABLE();
+  }
+
+  /// \brief Return a pointer to the first character in the currently lexed
+  ///   element.
+  PosPtr getCurrentTokenStartPos() const noexcept {
+    switch (State) {
+    case PS_BeforeBegin:
+    case PS_InRootName:
+      return &Path.front();
+    case PS_InRootDir:
+    case PS_InFilenames:
+    case PS_InTrailingSep:
+      return &RawEntry.front();
+    case PS_AtEnd:
+      return &Path.back() + 1;
+    }
+    _LIBCPP_UNREACHABLE();
+  }
+
+  PosPtr consumeSeparator(PosPtr P, PosPtr End) const noexcept {
+    if (P == End || *P != '/')
+      return nullptr;
+    const int Inc = P < End ? 1 : -1;
+    P += Inc;
+    while (P != End && *P == '/')
+      P += Inc;
+    return P;
+  }
+
+  PosPtr consumeName(PosPtr P, PosPtr End) const noexcept {
+    if (P == End || *P == '/')
+      return nullptr;
+    const int Inc = P < End ? 1 : -1;
+    P += Inc;
+    while (P != End && *P != '/')
+      P += Inc;
+    return P;
+  }
+};
+
+string_view_pair separate_filename(string_view_t const & s) {
+    if (s == "." || s == ".." || s.empty()) return string_view_pair{s, ""};
+    auto pos = s.find_last_of('.');
+    if (pos == string_view_t::npos || pos == 0)
+        return string_view_pair{s, string_view_t{}};
+    return string_view_pair{s.substr(0, pos), s.substr(pos)};
+}
+
+string_view_t createView(PosPtr S, PosPtr E) noexcept {
+  return {S, static_cast<size_t>(E - S) + 1};
+}
+
+}} // namespace parser
 
 
 //                       POSIX HELPERS
@@ -186,14 +432,33 @@ bool copy_file_impl(const path& from, const path& to, perms from_perms,
 }} // end namespace detail
 
 using detail::set_or_throw;
+using parser::string_view_t;
+using parser::PathParser;
+using parser::createView;
 
-path __canonical(path const & orig_p, const path& base, std::error_code *ec)
+static path __do_absolute(const path& p, path *cwd, std::error_code *ec) {
+  if (ec) ec->clear();
+    if (p.is_absolute())
+      return p;
+    *cwd = __current_path(ec);
+    if (ec && *ec)
+      return {};
+    return (*cwd) / p;
+}
+
+path __absolute(const path& p, std::error_code *ec) {
+    path cwd;
+    return __do_absolute(p, &cwd, ec);
+}
+
+path __canonical(path const & orig_p, std::error_code *ec)
 {
-    path p = absolute(orig_p, base);
+    path cwd;
+    path p = __do_absolute(orig_p, &cwd, ec);
     char buff[PATH_MAX + 1];
     char *ret;
     if ((ret = ::realpath(p.c_str(), buff)) == nullptr) {
-        set_or_throw(ec, "canonical", orig_p, base);
+        set_or_throw(ec, "canonical", orig_p, cwd);
         return {};
     }
     if (ec) ec->clear();
@@ -791,11 +1056,6 @@ file_status __symlink_status(const path& p, std::error_code *ec) {
     return detail::posix_lstat(p, ec);
 }
 
-path __system_complete(const path& p, std::error_code *ec) {
-    if (ec) ec->clear();
-    return absolute(p, current_path());
-}
-
 path __temp_directory_path(std::error_code* ec) {
   const char* env_paths[] = {"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
   const char* ret = nullptr;
@@ -820,34 +1080,393 @@ path __temp_directory_path(std::error_code* ec) {
   return p;
 }
 
-// An absolute path is composed according to the table in [fs.op.absolute].
-path absolute(const path& p, const path& base) {
-    auto root_name = p.root_name();
-    auto root_dir = p.root_directory();
 
-    if (!root_name.empty() && !root_dir.empty())
-      return p;
+path __weakly_canonical(const path& p, std::error_code *ec) {
+  if (p.empty())
+    return __canonical("", ec);
 
-    auto abs_base = base.is_absolute() ? base : absolute(base);
+  path result;
+  path tmp;
+  tmp.__reserve(p.native().size());
+  auto PP = PathParser::CreateEnd(p.native());
+  --PP;
+  std::vector<string_view_t> DNEParts;
 
-    /* !has_root_name && !has_root_dir */
-    if (root_name.empty() && root_dir.empty())
-    {
-      return abs_base / p;
+  while (PP.State != PathParser::PS_BeforeBegin) {
+    tmp.assign(createView(p.native().data(), &PP.RawEntry.back()));
+    std::error_code m_ec;
+    file_status st = __status(tmp, &m_ec);
+    if (!status_known(st)) {
+      set_or_throw(m_ec, ec, "weakly_canonical", p);
+      return {};
+    } else if (exists(st)) {
+      result = __canonical(tmp, ec);
+      break;
     }
-    else if (!root_name.empty()) /* has_root_name && !has_root_dir */
-    {
-      return  root_name / abs_base.root_directory()
-              /
-              abs_base.relative_path() / p.relative_path();
-    }
-    else /* !has_root_name && has_root_dir */
-    {
-      if (abs_base.has_root_name())
-        return abs_base.root_name() / p;
-      // else p is absolute,  return outside of block
-    }
-    return p;
+    DNEParts.push_back(*PP);
+    --PP;
+  }
+  if (PP.State == PathParser::PS_BeforeBegin)
+    result = __canonical("", ec);
+  if (ec) ec->clear();
+  if (DNEParts.empty())
+    return result;
+  for (auto It=DNEParts.rbegin(); It != DNEParts.rend(); ++It)
+    result /= *It;
+  return result.lexically_normal();
 }
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                            path definitions
+///////////////////////////////////////////////////////////////////////////////
+
+constexpr path::value_type path::preferred_separator;
+
+path & path::replace_extension(path const & replacement)
+{
+    path p = extension();
+    if (not p.empty()) {
+      __pn_.erase(__pn_.size() - p.native().size());
+    }
+    if (!replacement.empty()) {
+        if (replacement.native()[0] != '.') {
+            __pn_ += ".";
+        }
+        __pn_.append(replacement.__pn_);
+    }
+    return *this;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// path.decompose
+
+string_view_t path::__root_name() const
+{
+    auto PP = PathParser::CreateBegin(__pn_);
+    if (PP.State == PathParser::PS_InRootName)
+      return *PP;
+    return {};
+}
+
+string_view_t path::__root_directory() const
+{
+    auto PP = PathParser::CreateBegin(__pn_);
+    if (PP.State == PathParser::PS_InRootName)
+      ++PP;
+    if (PP.State == PathParser::PS_InRootDir)
+      return *PP;
+    return {};
+}
+
+string_view_t path::__root_path_raw() const
+{
+    auto PP = PathParser::CreateBegin(__pn_);
+    if (PP.State == PathParser::PS_InRootName) {
+      auto NextCh = PP.peek();
+      if (NextCh && *NextCh == '/') {
+        ++PP;
+        return createView(__pn_.data(), &PP.RawEntry.back());
+      }
+      return PP.RawEntry;
+    }
+    if (PP.State == PathParser::PS_InRootDir)
+      return *PP;
+    return {};
+}
+
+static bool ConsumeRootDir(PathParser* PP) {
+  while (PP->State <= PathParser::PS_InRootDir)
+    ++(*PP);
+  return PP->State == PathParser::PS_AtEnd;
+}
+
+string_view_t path::__relative_path() const
+{
+    auto PP = PathParser::CreateBegin(__pn_);
+    if (ConsumeRootDir(&PP))
+      return {};
+    return createView(PP.RawEntry.data(), &__pn_.back());
+}
+
+string_view_t path::__parent_path() const
+{
+    if (empty())
+      return {};
+    // Determine if we have a root path but not a relative path. In that case
+    // return *this.
+    {
+      auto PP = PathParser::CreateBegin(__pn_);
+      if (ConsumeRootDir(&PP))
+        return __pn_;
+    }
+    // Otherwise remove a single element from the end of the path, and return
+    // a string representing that path
+    {
+      auto PP = PathParser::CreateEnd(__pn_);
+      --PP;
+      if (PP.RawEntry.data() == __pn_.data())
+        return {};
+      --PP;
+      return createView(__pn_.data(), &PP.RawEntry.back());
+    }
+}
+
+string_view_t path::__filename() const
+{
+    if (empty()) return {};
+    {
+      PathParser PP = PathParser::CreateBegin(__pn_);
+      if (ConsumeRootDir(&PP))
+        return {};
+    }
+    return *(--PathParser::CreateEnd(__pn_));
+}
+
+string_view_t path::__stem() const
+{
+    return parser::separate_filename(__filename()).first;
+}
+
+string_view_t path::__extension() const
+{
+    return parser::separate_filename(__filename()).second;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// path.gen
+
+
+enum PathPartKind : unsigned char {
+  PK_None,
+  PK_RootSep,
+  PK_Filename,
+  PK_Dot,
+  PK_DotDot,
+  PK_TrailingSep
+};
+
+static PathPartKind ClassifyPathPart(string_view_t Part) {
+  if (Part.empty())
+    return PK_TrailingSep;
+  if (Part == ".")
+    return PK_Dot;
+  if (Part == "..")
+    return PK_DotDot;
+  if (Part == "/")
+    return PK_RootSep;
+  return PK_Filename;
+}
+
+path path::lexically_normal() const {
+  if (__pn_.empty())
+    return *this;
+
+  using PartKindPair = std::pair<string_view_t, PathPartKind>;
+  std::vector<PartKindPair> Parts;
+  // Guess as to how many elements the path has to avoid reallocating.
+  Parts.reserve(32);
+
+  // Track the total size of the parts as we collect them. This allows the
+  // resulting path to reserve the correct amount of memory.
+  size_t NewPathSize = 0;
+  auto AddPart = [&](PathPartKind K, string_view_t P) {
+    NewPathSize += P.size();
+    Parts.emplace_back(P, K);
+  };
+  auto LastPartKind = [&]() {
+    if (Parts.empty())
+      return PK_None;
+    return Parts.back().second;
+  };
+
+  bool MaybeNeedTrailingSep = false;
+  // Build a stack containing the remaining elements of the path, popping off
+  // elements which occur before a '..' entry.
+  for (auto PP = PathParser::CreateBegin(__pn_); PP; ++PP) {
+    auto Part = *PP;
+    PathPartKind Kind = ClassifyPathPart(Part);
+    switch (Kind) {
+    case PK_Filename:
+    case PK_RootSep: {
+      // Add all non-dot and non-dot-dot elements to the stack of elements.
+      AddPart(Kind, Part);
+      MaybeNeedTrailingSep = false;
+      break;
+    }
+    case PK_DotDot: {
+      // Only push a ".." element if there are no elements preceding the "..",
+      // or if the preceding element is itself "..".
+      auto LastKind = LastPartKind();
+      if (LastKind == PK_Filename) {
+        NewPathSize -= Parts.back().first.size();
+        Parts.pop_back();
+      } else if (LastKind != PK_RootSep)
+        AddPart(PK_DotDot, "..");
+      MaybeNeedTrailingSep = LastKind == PK_Filename;
+      break;
+    }
+    case PK_Dot:
+    case PK_TrailingSep: {
+      MaybeNeedTrailingSep = true;
+      break;
+    }
+    case PK_None:
+      _LIBCPP_UNREACHABLE();
+    }
+  }
+  // [fs.path.generic]p6.8: If the path is empty, add a dot.
+  if (Parts.empty())
+     return ".";
+
+  // [fs.path.generic]p6.7: If the last filename is dot-dot, remove any
+  // trailing directory-separator.
+  bool NeedTrailingSep = MaybeNeedTrailingSep && LastPartKind() == PK_Filename;
+
+  path Result;
+  Result.__pn_.reserve(Parts.size() + NewPathSize + NeedTrailingSep);
+  for (auto &PK : Parts)
+    Result /= PK.first;
+
+  if (NeedTrailingSep)
+    Result /= "";
+
+  return Result;
+}
+
+static int DetermineLexicalElementCount(PathParser PP) {
+  int Count = 0;
+  for (; PP; ++PP) {
+    auto Elem = *PP;
+    if (Elem == "..")
+      --Count;
+    else if (Elem != ".")
+      ++Count;
+  }
+  return Count;
+}
+
+path path::lexically_relative(const path& base) const {
+  { // perform root-name/root-directory mismatch checks
+    auto PP = PathParser::CreateBegin(__pn_);
+    auto PPBase = PathParser::CreateBegin(base.__pn_);
+    auto CheckIterMismatchAtBase = [&]() {
+        return PP.State != PPBase.State && (
+            PP.inRootPath() || PPBase.inRootPath());
+    };
+    if (PP.State == PathParser::PS_InRootName &&
+        PPBase.State == PathParser::PS_InRootName) {
+      if (*PP != *PPBase)
+        return {};
+    } else if (CheckIterMismatchAtBase())
+      return {};
+
+    if (PP.inRootPath()) ++PP;
+    if (PPBase.inRootPath()) ++PPBase;
+    if (CheckIterMismatchAtBase())
+      return {};
+  }
+
+  // Find the first mismatching element
+  auto PP = PathParser::CreateBegin(__pn_);
+  auto PPBase = PathParser::CreateBegin(base.__pn_);
+  while (PP && PPBase && PP.State == PPBase.State &&
+         *PP == *PPBase) {
+    ++PP;
+    ++PPBase;
+  }
+
+  // If there is no mismatch, return ".".
+  if (!PP && !PPBase)
+    return ".";
+
+  // Otherwise, determine the number of elements, 'n', which are not dot or
+  // dot-dot minus the number of dot-dot elements.
+  int ElemCount = DetermineLexicalElementCount(PPBase);
+  if (ElemCount < 0)
+    return {};
+
+  // return a path constructed with 'n' dot-dot elements, followed by the the
+  // elements of '*this' after the mismatch.
+  path Result;
+  // FIXME: Reserve enough room in Result that it won't have to re-allocate.
+  while (ElemCount--)
+    Result /= "..";
+  for (; PP; ++PP)
+    Result /= *PP;
+  return Result;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// path.comparisons
+int path::__compare(string_view_t __s) const {
+    auto PP = PathParser::CreateBegin(__pn_);
+    auto PP2 = PathParser::CreateBegin(__s);
+    while (PP && PP2) {
+        int res = (*PP).compare(*PP2);
+        if (res != 0) return res;
+        ++PP; ++PP2;
+    }
+    if (PP.State == PP2.State && !PP)
+        return 0;
+    if (!PP)
+        return -1;
+    return 1;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// path.nonmembers
+size_t hash_value(const path& __p) noexcept {
+  auto PP = PathParser::CreateBegin(__p.native());
+  size_t hash_value = 0;
+  std::hash<string_view_t> hasher;
+  while (PP) {
+    hash_value = __hash_combine(hash_value, hasher(*PP));
+    ++PP;
+  }
+  return hash_value;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// path.itr
+path::iterator path::begin() const
+{
+    auto PP = PathParser::CreateBegin(__pn_);
+    iterator it;
+    it.__path_ptr_ = this;
+    it.__state_ = PP.State;
+    it.__entry_ = PP.RawEntry;
+    it.__stashed_elem_.__assign_view(*PP);
+    return it;
+}
+
+path::iterator path::end() const
+{
+    iterator it{};
+    it.__state_ = PathParser::PS_AtEnd;
+    it.__path_ptr_ = this;
+    return it;
+}
+
+path::iterator& path::iterator::__increment() {
+  static_assert(__at_end == PathParser::PS_AtEnd, "");
+  PathParser PP(__path_ptr_->native(), __entry_, __state_);
+  ++PP;
+  __state_ = PP.State;
+  __entry_ = PP.RawEntry;
+  __stashed_elem_.__assign_view(*PP);
+  return *this;
+}
+
+path::iterator& path::iterator::__decrement() {
+  PathParser PP(__path_ptr_->native(), __entry_, __state_);
+  --PP;
+  __state_ = PP.State;
+  __entry_ = PP.RawEntry;
+  __stashed_elem_.__assign_view(*PP);
+  return *this;
+}
+
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_FILESYSTEM

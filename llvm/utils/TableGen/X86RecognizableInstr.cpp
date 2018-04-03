@@ -40,7 +40,7 @@ static uint8_t byteFromBitsInit(BitsInit &init) {
   uint8_t ret = 0;
 
   for (index = 0; index < width; index++) {
-    if (static_cast<BitInit*>(init.getBit(index))->getValue())
+    if (cast<BitInit>(init.getBit(index))->getValue())
       ret |= mask;
 
     mask <<= 1;

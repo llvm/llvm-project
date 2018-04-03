@@ -846,8 +846,8 @@ LLVMMetadataRef LLVMDIBuilderCreateStructType(
 
 LLVMMetadataRef LLVMDIBuilderCreateMemberType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
-    size_t NameLen, LLVMMetadataRef File, unsigned LineNo, uint64_t SizeInBits,
-    uint32_t AlignInBits, uint64_t OffsetInBits, LLVMDIFlags Flags,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo, unsigned SizeInBits,
+    unsigned AlignInBits, unsigned OffsetInBits, LLVMDIFlags Flags,
     LLVMMetadataRef Ty) {
   return wrap(unwrap(Builder)->createMemberType(unwrapDI<DIScope>(Scope),
       {Name, NameLen}, unwrapDI<DIFile>(File), LineNo, SizeInBits, AlignInBits,
@@ -881,11 +881,11 @@ LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
 
 LLVMMetadataRef
 LLVMDIBuilderCreateReplaceableCompositeType(
-    LLVMDIBuilderRef Builder, unsigned Tag, const char *Name, size_t NameLen,
-    LLVMMetadataRef Scope, LLVMMetadataRef File, unsigned Line,
+    LLVMDIBuilderRef Builder, unsigned Tag, const char *Name,
+    size_t NameLen, LLVMMetadataRef Scope, LLVMMetadataRef File, unsigned Line,
     unsigned RuntimeLang, unsigned SizeInBits, unsigned AlignInBits,
     LLVMDIFlags Flags, const char *UniqueIdentifier,
-    unsigned UniqueIdentifierLen) {
+    size_t UniqueIdentifierLen) {
   return wrap(unwrap(Builder)->createReplaceableCompositeType(
                   Tag, {Name, NameLen}, unwrapDI<DIScope>(Scope),
                   unwrapDI<DIFile>(File), Line, RuntimeLang, SizeInBits,

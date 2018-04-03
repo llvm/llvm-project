@@ -481,16 +481,6 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
-  // Add __clang_analyzer__ macro definition for compatibility with the clang
-  // static analyzer.
-  ArgumentsAdjuster ClangTidyMacroDefinitionInserter =
-      [&Context](const CommandLineArguments &Args, StringRef Filename) {
-        ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
-        CommandLineArguments AdjustedArgs = Args;
-        AdjustedArgs.emplace_back("-D__clang_analyzer__");
-        return AdjustedArgs;
-      };
-
   // Add extra arguments passed by the clang-tidy command-line.
   ArgumentsAdjuster PerFileExtraArgumentsInserter =
       [&Context](const CommandLineArguments &Args, StringRef Filename) {
@@ -525,7 +515,6 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
         return AdjustedArgs;
       };
 
-  Tool.appendArgumentsAdjuster(ClangTidyMacroDefinitionInserter);
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
   Tool.appendArgumentsAdjuster(PluginArgumentsRemover);
   if (Profile)

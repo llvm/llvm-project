@@ -370,7 +370,10 @@ Expected<PDBStringTable &> PDBFile::getStringTable() {
     if (!IS)
       return IS.takeError();
 
-    uint32_t NameStreamIndex = IS->getNamedStreamIndex("/names");
+    Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex("/names");
+    if (!ExpectedNSI)
+      return ExpectedNSI.takeError();
+    uint32_t NameStreamIndex = *ExpectedNSI;
 
     auto NS =
         safelyCreateIndexedStream(ContainerLayout, *Buffer, NameStreamIndex);
@@ -445,7 +448,13 @@ bool PDBFile::hasPDBStringTable() {
   auto IS = getPDBInfoStream();
   if (!IS)
     return false;
-  return IS->getNamedStreamIndex("/names") < getNumStreams();
+  Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex("/names");
+  if (!ExpectedNSI) {
+    consumeError(ExpectedNSI.takeError());
+    return false;
+  }
+  assert(*ExpectedNSI < getNumStreams());
+  return true;
 }
 
 /// Wrapper around MappedBlockStream::createIndexedStream() that checks if a

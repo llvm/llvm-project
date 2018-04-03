@@ -939,16 +939,27 @@ static It fastUpperBound(It First, It Last, const T &Value, Compare Comp) {
 }
 
 // Do binary search to get a section piece at a given input offset.
-SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
-  if (Data.size() <= Offset)
-    fatal(toString(this) + ": entry is past the end of the section");
+static SectionPiece *findSectionPiece(MergeInputSection *Sec, uint64_t Offset) {
+  if (Sec->Data.size() <= Offset)
+    fatal(toString(Sec) + ": entry is past the end of the section");
 
   // Find the element this offset points to.
   auto I = fastUpperBound(
-      Pieces.begin(), Pieces.end(), Offset,
+      Sec->Pieces.begin(), Sec->Pieces.end(), Offset,
       [](const uint64_t &A, const SectionPiece &B) { return A < B.InputOff; });
   --I;
   return &*I;
+}
+
+SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
+  // Find a piece starting at a given offset.
+  auto It = OffsetMap.find(Offset);
+  if (It != OffsetMap.end())
+    return &Pieces[It->second];
+
+  // If Offset is not at beginning of a section piece, it is not in the map.
+  // In that case we need to search from the original section piece vector.
+  return findSectionPiece(this, Offset);
 }
 
 // Returns the offset in an output section for a given input offset.
@@ -965,7 +976,8 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.
-  const SectionPiece &Piece = *getSectionPiece(Offset);
+  const SectionPiece &Piece =
+      *findSectionPiece(const_cast<MergeInputSection *>(this), Offset);
   if (!Piece.Live)
     return 0;
 

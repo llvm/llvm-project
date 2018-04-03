@@ -327,10 +327,11 @@ public:
   /// @brief Construct an ExecutionEngine.
   ///
   /// SymbolStringPools may be shared between ExecutionSessions.
-  ExecutionSession(SymbolStringPool &SSP);
+  ExecutionSession(std::shared_ptr<SymbolStringPool> SSP = nullptr)
+    : SSP(SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>()) {}
 
   /// @brief Returns the SymbolStringPool for this ExecutionSession.
-  SymbolStringPool &getSymbolStringPool() const { return SSP; }
+  SymbolStringPool &getSymbolStringPool() const { return *SSP; }
 
   /// @brief Set the error reporter function.
   void setErrorReporter(ErrorReporter ReportError) {
@@ -343,17 +344,17 @@ public:
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
   /// @brief Allocate a module key for a new module to add to the JIT.
-  VModuleKey allocateVModule();
+  VModuleKey allocateVModule() { return ++LastKey; }
 
   /// @brief Return a module key to the ExecutionSession so that it can be
   ///        re-used. This should only be done once all resources associated
   ////       with the original key have been released.
-  void releaseVModule(VModuleKey Key);
+  void releaseVModule(VModuleKey Key) { /* FIXME: Recycle keys */ }
 
 public:
   static void logErrorsToStdErr(Error Err);
 
-  SymbolStringPool &SSP;
+  std::shared_ptr<SymbolStringPool> SSP;
   VModuleKey LastKey = 0;
   ErrorReporter ReportError = logErrorsToStdErr;
 };
