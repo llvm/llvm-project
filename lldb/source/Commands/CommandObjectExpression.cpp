@@ -405,7 +405,7 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
     // We only tell you about the FixIt if we applied it.  The compiler errors
     // will suggest the FixIt if it parsed.
     if (error_stream && !m_fixed_expression.empty() &&
-        target->GetEnableNotifyAboutFixIts()) {
+        (m_fixed_expression != expr) && target->GetEnableNotifyAboutFixIts()) {
       if (success == eExpressionCompleted)
         error_stream->Printf(
             "  Fix-it applied, fixed expression was: \n    %s\n",

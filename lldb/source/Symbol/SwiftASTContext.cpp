@@ -1275,7 +1275,8 @@ static bool DeserializeCompilerFlags(SwiftASTContext &swift_ast, Module &module,
 }
 
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
-                                                   Module &module) {
+                                                   Module &module,
+                                                   Target *target) {
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
@@ -1302,7 +1303,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     }
   }
 
-  std::shared_ptr<SwiftASTContext> swift_ast_sp(new SwiftASTContext());
+  std::shared_ptr<SwiftASTContext> swift_ast_sp(
+      target ? (new SwiftASTContextForExpressions(*target))
+             : new SwiftASTContext());
 
   swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
@@ -1748,7 +1751,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                 llvm::dyn_cast_or_null<SwiftASTContext>(
                     sym_file->GetTypeSystemForLanguage(
                         lldb::eLanguageTypeSwift));
-            if (ast_context) {
+            if (ast_context && !ast_context->HasErrors()) {
               if (use_all_compiler_flags ||
                   target.GetExecutableModulePointer() == module_sp.get()) {
                 for (size_t msi = 0,
