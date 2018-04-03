@@ -1,4 +1,5 @@
 // Check that SDKROOT is used to define the default for -isysroot on Darwin.
+// REQUIRES: system-darwin
 //
 // RUN: rm -rf %t.tmpdir
 // RUN: mkdir -p %t.tmpdir
