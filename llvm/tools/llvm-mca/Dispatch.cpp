@@ -25,53 +25,99 @@ using namespace llvm;
 
 namespace mca {
 
-void RegisterFile::addRegisterFile(ArrayRef<unsigned> RegisterClasses,
-                                   unsigned NumTemps) {
-  unsigned RegisterFileIndex = RegisterFiles.size();
-  assert(RegisterFileIndex < 32 && "Too many register files!");
-  RegisterFiles.emplace_back(NumTemps);
+void RegisterFile::initialize(const MCSchedModel &SM, unsigned NumRegs) {
+  // Create a default register file that "sees" all the machine registers
+  // declared by the target. The number of physical registers in the default
+  // register file is set equal to `NumRegs`. A value of zero for `NumRegs`
+  // means: this register file has an unbounded number of physical registers.
+  addRegisterFile({} /* all registers */, NumRegs);
+  if (!SM.hasExtraProcessorInfo())
+    return;
 
-  // Special case where there are no register classes specified.
-  // An empty register class set means *all* registers.
-  if (RegisterClasses.empty()) {
-    for (std::pair<WriteState *, unsigned> &Mapping : RegisterMappings)
-      Mapping.second |= 1U << RegisterFileIndex;
-  } else {
-    for (const unsigned RegClassIndex : RegisterClasses) {
-      const MCRegisterClass &RC = MRI.getRegClass(RegClassIndex);
-      for (const MCPhysReg Reg : RC)
-        RegisterMappings[Reg].second |= 1U << RegisterFileIndex;
+  // For each user defined register file, allocate a RegisterMappingTracker
+  // object. The size of every register file, as well as the mapping between
+  // register files and register classes is specified via tablegen.
+  const MCExtraProcessorInfo &Info = SM.getExtraProcessorInfo();
+  for (unsigned I = 0, E = Info.NumRegisterFiles; I < E; ++I) {
+    const MCRegisterFileDesc &RF = Info.RegisterFiles[I];
+    // Skip invalid register files with zero physical registers.
+    unsigned Length = RF.NumRegisterCostEntries;
+    if (!RF.NumPhysRegs)
+      continue;
+    // The cost of a register definition is equivalent to the number of
+    // physical registers that are allocated at register renaming stage.
+    const MCRegisterCostEntry *FirstElt =
+        &Info.RegisterCostTable[RF.RegisterCostEntryIdx];
+    addRegisterFile(ArrayRef<MCRegisterCostEntry>(FirstElt, Length),
+                    RF.NumPhysRegs);
+  }
+}
+
+void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
+                                   unsigned NumPhysRegs) {
+  // A default register file is always allocated at index #0. That register file
+  // is mainly used to count the total number of mappings created by all
+  // register files at runtime. Users can limit the number of available physical
+  // registers in register file #0 through the command line flag
+  // `-register-file-size`.
+  unsigned RegisterFileIndex = RegisterFiles.size();
+  RegisterFiles.emplace_back(NumPhysRegs);
+
+  // Special case where there is no register class identifier in the set.
+  // An empty set of register classes means: this register file contains all
+  // the physical registers specified by the target.
+  if (Entries.empty()) {
+    for (std::pair<WriteState *, IndexPlusCostPairTy> &Mapping : RegisterMappings)
+      Mapping.second = std::make_pair(RegisterFileIndex, 1U);
+    return;
+  }
+
+  // Now update the cost of individual registers.
+  for (const MCRegisterCostEntry &RCE : Entries) {
+    const MCRegisterClass &RC = MRI.getRegClass(RCE.RegisterClassID);
+    for (const MCPhysReg Reg : RC) {
+      IndexPlusCostPairTy &Entry = RegisterMappings[Reg].second;
+      if (Entry.first) {
+        // The only register file that is allowed to overlap is the default
+        // register file at index #0. The analysis is inaccurate if register
+        // files overlap.
+        errs() << "warning: register " << MRI.getName(Reg)
+               << " defined in multiple register files.";
+      }
+      Entry.first = RegisterFileIndex;
+      Entry.second = RCE.Cost;
     }
   }
 }
 
-void RegisterFile::createNewMappings(unsigned RegisterFileMask,
+void RegisterFile::createNewMappings(IndexPlusCostPairTy Entry,
                                      MutableArrayRef<unsigned> UsedPhysRegs) {
-  assert(RegisterFileMask && "RegisterFileMask cannot be zero!");
-  // Notify each register file that contains RegID.
-  do {
-    unsigned NextRegisterFile = llvm::PowerOf2Floor(RegisterFileMask);
-    unsigned RegisterFileIndex = llvm::countTrailingZeros(NextRegisterFile);
+  unsigned RegisterFileIndex = Entry.first;
+  unsigned Cost = Entry.second;
+  if (RegisterFileIndex) {
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
-    RMT.NumUsedMappings++;
-    UsedPhysRegs[RegisterFileIndex]++;
-    RegisterFileMask ^= NextRegisterFile;
-  } while (RegisterFileMask);
+    RMT.NumUsedMappings += Cost;
+    UsedPhysRegs[RegisterFileIndex] += Cost;
+  }
+
+  // Now update the default register mapping tracker.
+  RegisterFiles[0].NumUsedMappings += Cost;
+  UsedPhysRegs[0] += Cost;
 }
 
-void RegisterFile::removeMappings(unsigned RegisterFileMask,
+void RegisterFile::removeMappings(IndexPlusCostPairTy Entry,
                                   MutableArrayRef<unsigned> FreedPhysRegs) {
-  assert(RegisterFileMask && "RegisterFileMask cannot be zero!");
-  // Notify each register file that contains RegID.
-  do {
-    unsigned NextRegisterFile = llvm::PowerOf2Floor(RegisterFileMask);
-    unsigned RegisterFileIndex = llvm::countTrailingZeros(NextRegisterFile);
+  unsigned RegisterFileIndex = Entry.first;
+  unsigned Cost = Entry.second;
+  if (RegisterFileIndex) {
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
-    assert(RMT.NumUsedMappings);
-    RMT.NumUsedMappings--;
-    FreedPhysRegs[RegisterFileIndex]++;
-    RegisterFileMask ^= NextRegisterFile;
-  } while (RegisterFileMask);
+    RMT.NumUsedMappings -= Cost;
+    FreedPhysRegs[RegisterFileIndex] += Cost;
+  }
+
+  // Now update the default register mapping tracker.
+  RegisterFiles[0].NumUsedMappings -= Cost;
+  FreedPhysRegs[0] += Cost;
 }
 
 void RegisterFile::addRegisterMapping(WriteState &WS,
@@ -145,32 +191,30 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
 }
 
 unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
-  SmallVector<unsigned, 4> NumTemporaries(getNumRegisterFiles());
+  SmallVector<unsigned, 4> NumPhysRegs(getNumRegisterFiles());
 
   // Find how many new mappings must be created for each register file.
   for (const unsigned RegID : Regs) {
-    unsigned RegisterFileMask = RegisterMappings[RegID].second;
-    do {
-      unsigned NextRegisterFileID = llvm::PowerOf2Floor(RegisterFileMask);
-      NumTemporaries[llvm::countTrailingZeros(NextRegisterFileID)]++;
-      RegisterFileMask ^= NextRegisterFileID;
-    } while (RegisterFileMask);
+    const IndexPlusCostPairTy &Entry = RegisterMappings[RegID].second;
+    if (Entry.first)
+      NumPhysRegs[Entry.first] += Entry.second;
+    NumPhysRegs[0] += Entry.second;
   }
 
   unsigned Response = 0;
   for (unsigned I = 0, E = getNumRegisterFiles(); I < E; ++I) {
-    unsigned Temporaries = NumTemporaries[I];
-    if (!Temporaries)
+    unsigned NumRegs = NumPhysRegs[I];
+    if (!NumRegs)
       continue;
 
     const RegisterMappingTracker &RMT = RegisterFiles[I];
     if (!RMT.TotalMappings) {
-      // The register file has an unbound number of microarchitectural
+      // The register file has an unbounded number of microarchitectural
       // registers.
       continue;
     }
 
-    if (RMT.TotalMappings < Temporaries) {
+    if (RMT.TotalMappings < NumRegs) {
       // The current register file is too small. This may occur if the number of
       // microarchitectural registers in register file #0 was changed by the
       // users via flag -reg-file-size. Alternatively, the scheduling model
@@ -179,7 +223,7 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
           "Not enough microarchitectural registers in the register file");
     }
 
-    if (RMT.TotalMappings < RMT.NumUsedMappings + Temporaries)
+    if (RMT.TotalMappings < (RMT.NumUsedMappings + NumRegs))
       Response |= (1U << I);
   }
 
@@ -190,7 +234,8 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
 void RegisterFile::dump() const {
   for (unsigned I = 0, E = MRI.getNumRegs(); I < E; ++I) {
     const RegisterMapping &RM = RegisterMappings[I];
-    dbgs() << MRI.getName(I) << ", " << I << ", Map=" << RM.second << ", ";
+    dbgs() << MRI.getName(I) << ", " << I << ", Map=" << RM.second.first
+           << ", ";
     if (RM.first)
       RM.first->dump();
     else

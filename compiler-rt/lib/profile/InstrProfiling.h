@@ -106,6 +106,10 @@ void INSTR_PROF_VALUE_PROF_FUNC(
 #include "InstrProfData.inc"
     );
 
+void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
+                                            uint32_t CounterIndex,
+                                            uint64_t CounterValue);
+
 /*!
  * \brief Write instrumentation data to the current file.
  *

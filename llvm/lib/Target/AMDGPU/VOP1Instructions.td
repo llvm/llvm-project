@@ -382,6 +382,10 @@ let SubtargetPredicate = isGFX9 in {
 def V_SWAP_B32 : VOP1_Pseudo <"v_swap_b32", VOP_SWAP_I32, [], 1>;
 }
 
+defm V_SAT_PK_U8_I16    : VOP1Inst<"v_sat_pk_u8_i16", VOP_I32_I32>;
+defm V_CVT_NORM_I16_F16 : VOP1Inst<"v_cvt_norm_i16_f16", VOP_I16_F16>;
+defm V_CVT_NORM_U16_F16 : VOP1Inst<"v_cvt_norm_u16_f16", VOP_I16_F16>;
+
 } // End SubtargetPredicate = isGFX9
 
 //===----------------------------------------------------------------------===//
@@ -611,6 +615,10 @@ defm V_FRACT_F16         : VOP1_Real_vi <0x48>;
 defm V_SIN_F16           : VOP1_Real_vi <0x49>;
 defm V_COS_F16           : VOP1_Real_vi <0x4a>;
 defm V_SWAP_B32          : VOP1Only_Real_vi <0x51>;
+
+defm V_SAT_PK_U8_I16     : VOP1_Real_vi<0x4f>;
+defm V_CVT_NORM_I16_F16  : VOP1_Real_vi<0x4d>;
+defm V_CVT_NORM_U16_F16  : VOP1_Real_vi<0x4e>;
 
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,

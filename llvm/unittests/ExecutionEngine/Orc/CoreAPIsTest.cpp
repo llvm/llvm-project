@@ -335,8 +335,8 @@ TEST(CoreAPIsTest, TestLookupWithUnthreadedMaterialization) {
   constexpr JITTargetAddress FakeFooAddr = 0xdeadbeef;
   JITEvaluatedSymbol FooSym(FakeFooAddr, JITSymbolFlags::Exported);
 
-  SymbolStringPool SSP;
-  auto Foo = SSP.intern("foo");
+  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  auto Foo = ES.getSymbolStringPool().intern("foo");
 
   auto MU = llvm::make_unique<SimpleMaterializationUnit>(
       [=]() {
@@ -355,7 +355,6 @@ TEST(CoreAPIsTest, TestLookupWithUnthreadedMaterialization) {
 
   cantFail(V.defineLazy(std::move(MU)));
 
-  ExecutionSession ES(SSP);
   auto FooLookupResult =
       cantFail(lookup({&V}, Foo, MaterializeOnCurrentThread(ES)));
 
@@ -370,8 +369,8 @@ TEST(CoreAPIsTest, TestLookupWithThreadedMaterialization) {
   constexpr JITTargetAddress FakeFooAddr = 0xdeadbeef;
   JITEvaluatedSymbol FooSym(FakeFooAddr, JITSymbolFlags::Exported);
 
-  SymbolStringPool SSP;
-  auto Foo = SSP.intern("foo");
+  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  auto Foo = ES.getSymbolStringPool().intern("foo");
 
   auto MU = llvm::make_unique<SimpleMaterializationUnit>(
       [=]() {
@@ -389,8 +388,6 @@ TEST(CoreAPIsTest, TestLookupWithThreadedMaterialization) {
   VSO V;
 
   cantFail(V.defineLazy(std::move(MU)));
-
-  ExecutionSession ES(SSP);
 
   std::thread MaterializationThread;
   auto MaterializeOnNewThread = [&](VSO &V,

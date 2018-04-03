@@ -1,5 +1,6 @@
 # REQUIRES: llvm-64-bits
 # REQUIRES: system-linux
+# REQUIRES: shell
 
 # RUN: yaml2obj %s > %t
 # RUN: dd if=%t of=%t bs=1 count=0 seek=1M

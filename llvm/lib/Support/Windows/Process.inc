@@ -24,14 +24,7 @@
 #include <psapi.h>
 #include <shellapi.h>
 
-#ifdef __MINGW32__
- #if (HAVE_LIBPSAPI != 1)
-  #error "libpsapi.a should be present"
- #endif
- #if (HAVE_LIBSHELL32 != 1)
-  #error "libshell32.a should be present"
- #endif
-#else
+#if !defined(__MINGW32__)
  #pragma comment(lib, "psapi.lib")
  #pragma comment(lib, "shell32.lib")
 #endif

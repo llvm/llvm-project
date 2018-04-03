@@ -44,8 +44,7 @@ public:
   using CompileLayerT = IRCompileLayer<ObjLayerT, SimpleCompiler>;
 
   KaleidoscopeJIT()
-      : ES(SSP),
-        Resolver(createLegacyLookupResolver(
+      : Resolver(createLegacyLookupResolver(
             [this](const std::string &Name) {
               return ObjectLayer.findSymbol(Name, true);
             },
@@ -126,7 +125,6 @@ private:
     return nullptr;
   }
 
-  SymbolStringPool SSP;
   ExecutionSession ES;
   std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;

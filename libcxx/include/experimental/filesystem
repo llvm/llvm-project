@@ -76,11 +76,11 @@
 
     // operational functions
 
-    path absolute(const path& p, const path& base=current_path());
+    path absolute(const path& p);
+    path absolute(const path& p, error_code &ec);
 
-    path canonical(const path& p, const path& base = current_path());
+    path canonical(const path& p);
     path canonical(const path& p, error_code& ec);
-    path canonical(const path& p, const path& base, error_code& ec);
 
     void copy(const path& from, const path& to);
     void copy(const path& from, const path& to, error_code& ec);
@@ -185,8 +185,16 @@
     void permissions(const path& p, perms prms, perm_options opts,
                      error_code& ec);
 
+    path proximate(const path& p, error_code& ec);
+    path proximate(const path& p, const path& base = current_path());
+    path proximate(const path& p, const path& base, error_code &ec);
+
     path read_symlink(const path& p);
     path read_symlink(const path& p, error_code& ec);
+
+    path relative(const path& p, error_code& ec);
+    path relative(const path& p, const path& base=current_path());
+    path relative(const path& p, const path& base, error_code& ec);
 
     bool remove(const path& p);
     bool remove(const path& p, error_code& ec) _NOEXCEPT;
@@ -211,11 +219,12 @@
     file_status  symlink_status(const path& p);
     file_status  symlink_status(const path& p, error_code& ec) _NOEXCEPT;
 
-    path system_complete(const path& p);
-    path system_complete(const path& p, error_code& ec);
-
     path temp_directory_path();
     path temp_directory_path(error_code& ec);
+
+    path weakly_canonical(path const& p);
+    path weakly_canonical(path const& p, error_code& ec);
+
 
 } } } }  // namespaces std::experimental::filesystem::v1
 
@@ -712,24 +721,31 @@ public:
     typedef _VSTD::string_view __string_view;
     static _LIBCPP_CONSTEXPR value_type preferred_separator = '/';
 
+    enum class _LIBCPP_ENUM_VIS format : unsigned char {
+      auto_format,
+      native_format,
+      generic_format
+    };
+
     // constructors and destructor
     _LIBCPP_INLINE_VISIBILITY path() _NOEXCEPT {}
     _LIBCPP_INLINE_VISIBILITY path(const path& __p)      : __pn_(__p.__pn_) {}
     _LIBCPP_INLINE_VISIBILITY path(path&& __p) _NOEXCEPT : __pn_(_VSTD::move(__p.__pn_)) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    path(string_type&& __s) _NOEXCEPT : __pn_(_VSTD::move(__s)) {}
+    path(string_type&& __s, format = format::auto_format) _NOEXCEPT
+        : __pn_(_VSTD::move(__s)) {}
 
     template <
         class _Source,
         class = _EnableIfPathable<_Source, void>
         >
-    path(const _Source& __src) {
+    path(const _Source& __src, format = format::auto_format) {
         _SourceCVT<_Source>::__append_source(__pn_, __src);
     }
 
     template <class _InputIt>
-    path(_InputIt __first, _InputIt __last) {
+    path(_InputIt __first, _InputIt __last, format = format::auto_format) {
         typedef typename iterator_traits<_InputIt>::value_type _ItVal;
         _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
     }
@@ -738,9 +754,11 @@ public:
     template <class _Source,
               class = _EnableIfPathable<_Source, void>
              >
-        path(const _Source& __src, const locale& __loc);
+        path(const _Source& __src, const locale& __loc,
+             format = format::auto_format);
     template <class _InputIt>
-        path(_InputIt __first, _InputIt _last, const locale& __loc);
+        path(_InputIt __first, _InputIt _last, const locale& __loc,
+             format = format::auto_format);
 
     _LIBCPP_INLINE_VISIBILITY
     ~path() = default;
@@ -796,26 +814,26 @@ public:
 
 private:
     template <class _ECharT>
-    void __append_sep_if_needed(_ECharT __first_or_null) {
-        const _ECharT __null_val = {};
-        bool __append_sep = !empty()                       &&
-                            !__is_separator(__pn_.back())  &&
-                            __first_or_null != __null_val  && // non-empty
-                            !__is_separator(__first_or_null);
-        if (__append_sep)
-            __pn_ += preferred_separator;
+    static bool __source_is_absolute(_ECharT __first_or_null) {
+        return __is_separator(__first_or_null);
     }
 
 public:
     // appends
     path& operator/=(const path& __p) {
-        _LIBCPP_ASSERT(!__p.has_root_name(),
-                      "cannot append to a path with a root name");
-        __append_sep_if_needed(__p.empty() ? char{} : __p.__pn_[0]);
+        if (__p.is_absolute()) {
+          __pn_ = __p.__pn_;
+          return *this;
+        }
+        if (has_filename())
+          __pn_ += preferred_separator;
         __pn_ += __p.native();
         return *this;
     }
 
+    // FIXME: Use _LIBCPP_DIAGNOSE_WARNING to produce a diagnostic when __src
+    // is known at compile time to be "/' since the user almost certainly intended
+    // to append a separator instead of overwriting the path with "/"
     template <class _Source>
     _LIBCPP_INLINE_VISIBILITY
     _EnableIfPathable<_Source>
@@ -828,7 +846,10 @@ public:
     append(const _Source& __src) {
         using _Traits = __is_pathable<_Source>;
         using _CVT = _PathCVT<_SourceChar<_Source>>;
-        __append_sep_if_needed(_Traits::__first_or_null(__src));
+        if (__source_is_absolute(_Traits::__first_or_null(__src)))
+          __pn_.clear();
+        else if (has_filename())
+          __pn_ += preferred_separator;
         _CVT::__append_source(__pn_, __src);
         return *this;
     }
@@ -838,10 +859,11 @@ public:
         typedef typename iterator_traits<_InputIt>::value_type _ItVal;
         static_assert(__can_convert_char<_ItVal>::value, "Must convertible");
         using _CVT = _PathCVT<_ItVal>;
-        if (__first != __last) {
-            __append_sep_if_needed(*__first);
-            _CVT::__append_range(__pn_, __first, __last);
-        }
+        if (__first != __last && __source_is_absolute(*__first))
+          __pn_.clear();
+        else if (has_filename())
+          __pn_ += preferred_separator;
+        _CVT::__append_range(__pn_, __first, __last);
         return *this;
     }
 
@@ -916,10 +938,9 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     path& remove_filename() {
-      if (__pn_.size() == __root_path_raw().size())
-        clear();
-      else
-        __pn_ = __parent_path();
+      auto __fname = __filename();
+      if (!__fname.empty())
+        __pn_.erase(__fname.data() - __pn_.data());
       return *this;
     }
 
@@ -934,6 +955,10 @@ public:
     void  swap(path& __rhs) _NOEXCEPT {
         __pn_.swap(__rhs.__pn_);
     }
+
+    // private helper to allow reserving memory in the path
+    _LIBCPP_INLINE_VISIBILITY
+    void __reserve(size_t __s) { __pn_.reserve(__s); }
 
     // native format observers
     _LIBCPP_INLINE_VISIBILITY
@@ -1022,6 +1047,17 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY bool is_absolute()        const { return has_root_directory(); }
     _LIBCPP_INLINE_VISIBILITY bool is_relative()        const { return !is_absolute(); }
+
+    // relative paths
+    path lexically_normal() const;
+    path lexically_relative(const path& __base) const;
+
+    _LIBCPP_INLINE_VISIBILITY path lexically_proximate(const path& __base) const {
+      path __result = this->lexically_relative(__base);
+      if (__result.native().empty())
+        return *this;
+      return __result;
+    }
 
     // iterators
     class _LIBCPP_TYPE_VIS iterator;
@@ -1277,7 +1313,9 @@ void __throw_filesystem_error(_Args&&...)
 // operational functions
 
 _LIBCPP_FUNC_VIS
-path __canonical(const path&, const path&, error_code *__ec=nullptr);
+path __absolute(const path&, error_code *__ec=nullptr);
+_LIBCPP_FUNC_VIS
+path __canonical(const path&, error_code *__ec=nullptr);
 _LIBCPP_FUNC_VIS
 void __copy(const path& __from, const path& __to, copy_options __opt,
         error_code *__ec=nullptr);
@@ -1342,6 +1380,8 @@ _LIBCPP_FUNC_VIS
 path __system_complete(const path&, error_code *__ec=nullptr);
 _LIBCPP_FUNC_VIS
 path __temp_directory_path(error_code *__ec=nullptr);
+_LIBCPP_FUNC_VIS
+path __weakly_canonical(path const& __p, error_code *__ec=nullptr);
 
 inline _LIBCPP_INLINE_VISIBILITY
 path current_path() {
@@ -1363,24 +1403,24 @@ void current_path(const path& __p, error_code& __ec) _NOEXCEPT {
     __current_path(__p, &__ec);
 }
 
-_LIBCPP_FUNC_VIS
-path absolute(const path&, const path& __p2 = current_path());
+inline _LIBCPP_INLINE_VISIBILITY
+path absolute(const path& __p) {
+  return __absolute(__p);
+}
 
 inline _LIBCPP_INLINE_VISIBILITY
-path canonical(const path& __p, const path& __base = current_path()) {
-    return __canonical(__p, __base);
+path absolute(const path& __p, error_code &__ec) {
+  return __absolute(__p, &__ec);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+path canonical(const path& __p) {
+    return __canonical(__p);
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
 path canonical(const path& __p, error_code& __ec) {
-    path __base = __current_path(&__ec);
-    if (__ec) return {};
-    return __canonical(__p, __base, &__ec);
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-path canonical(const path& __p, const path& __base, error_code& __ec) {
-    return __canonical(__p, __base, &__ec);
+    return __canonical(__p, &__ec);
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1492,7 +1532,8 @@ void create_symlink(const path& __to, const path& __new) {
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-void create_symlink(const path& __to, const path& __new, error_code& __ec) _NOEXCEPT {
+void create_symlink(const path& __to, const path& __new,
+                    error_code& __ec) _NOEXCEPT {
     return __create_symlink(__to, __new, &__ec);
 }
 
@@ -1716,6 +1757,27 @@ void permissions(const path& __p, perms __prms, perm_options __opts,
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
+path proximate(const path& __p, const path& __base, error_code& __ec) {
+   path __tmp = __weakly_canonical(__p, &__ec);
+  if (__ec)
+    return {};
+  path __tmp_base = __weakly_canonical(__base, &__ec);
+  if (__ec)
+    return {};
+  return __tmp.lexically_proximate(__tmp_base);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+path proximate(const path& __p, error_code& __ec) {
+  return proximate(__p, current_path(), __ec);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+path proximate(const path& __p, const path& __base = current_path()) {
+  return __weakly_canonical(__p).lexically_proximate(__weakly_canonical(__base));
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
 path read_symlink(const path& __p) {
     return __read_symlink(__p);
 }
@@ -1724,6 +1786,29 @@ inline _LIBCPP_INLINE_VISIBILITY
 path read_symlink(const path& __p, error_code& __ec) {
     return __read_symlink(__p, &__ec);
 }
+
+
+inline _LIBCPP_INLINE_VISIBILITY
+path relative(const path& __p, const path& __base, error_code& __ec) {
+  path __tmp = __weakly_canonical(__p, &__ec);
+  if (__ec)
+    return path();
+  path __tmpbase = __weakly_canonical(__base, &__ec);
+  if (__ec)
+    return path();
+  return __tmp.lexically_relative(__tmpbase);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+path relative(const path& __p, error_code& __ec) {
+  return relative(__p, current_path(), __ec);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+path relative(const path& __p, const path& __base=current_path()) {
+  return __weakly_canonical(__p).lexically_relative(__weakly_canonical(__base));
+}
+
 
 inline _LIBCPP_INLINE_VISIBILITY
 bool remove(const path& __p) {
@@ -1796,16 +1881,6 @@ file_status symlink_status(const path& __p, error_code& __ec) _NOEXCEPT {
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-path system_complete(const path& __p) {
-    return __system_complete(__p);
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-path system_complete(const path& __p, error_code& __ec) {
-    return __system_complete(__p, &__ec);
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
 path temp_directory_path() {
     return __temp_directory_path();
 }
@@ -1813,6 +1888,16 @@ path temp_directory_path() {
 inline _LIBCPP_INLINE_VISIBILITY
 path temp_directory_path(error_code& __ec) {
     return __temp_directory_path(&__ec);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+path weakly_canonical(path const& __p) {
+  return __weakly_canonical(__p);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+path weakly_canonical(path const& __p, error_code& __ec) {
+  return __weakly_canonical(__p, &__ec);
 }
 
 

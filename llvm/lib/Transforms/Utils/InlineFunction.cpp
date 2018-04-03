@@ -1826,6 +1826,10 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     if (CallInst *CI = dyn_cast<CallInst>(TheCall))
       CallSiteTailKind = CI->getTailCallKind();
 
+    // For inlining purposes, the "notail" marker is the same as no marker.
+    if (CallSiteTailKind == CallInst::TCK_NoTail)
+      CallSiteTailKind = CallInst::TCK_None;
+
     for (Function::iterator BB = FirstNewBlock, E = Caller->end(); BB != E;
          ++BB) {
       for (auto II = BB->begin(); II != BB->end();) {
@@ -1885,6 +1889,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
         //    f -> musttail g ->     tail f  ==>  f ->     tail f
         //    f ->          g -> musttail f  ==>  f ->          f
         //    f ->          g ->     tail f  ==>  f ->          f
+        //
+        // Inlined notail calls should remain notail calls.
         CallInst::TailCallKind ChildTCK = CI->getTailCallKind();
         if (ChildTCK != CallInst::TCK_NoTail)
           ChildTCK = std::min(CallSiteTailKind, ChildTCK);

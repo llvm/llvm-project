@@ -1708,6 +1708,11 @@ example:
     entity to fine grain the HW control flow protection mechanism. The flag
     is target independant and currently appertains to a function or function
     pointer.
+``shadowcallstack``
+    This attribute indicates that the ShadowCallStack checks are enabled for
+    the function. The instrumentation checks that the return address for the
+    function has not changed between the function prolog and eiplog. It is
+    currently x86_64-specific.
 
 .. _glattrs:
 
@@ -8371,18 +8376,17 @@ Semantics:
 
 The '``fptrunc``' instruction casts a ``value`` from a larger
 :ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
-<t_floating>` type. If the value cannot fit (i.e. overflows) within the
-destination type, ``ty2``, then the results are undefined. If the cast produces
-an inexact result, how rounding is performed (e.g. truncation, also known as
-round to zero) is undefined.
+<t_floating>` type.  
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`.
 
 Example:
 """"""""
 
 .. code-block:: llvm
 
-      %X = fptrunc double 123.0 to float         ; yields float:123.0
-      %Y = fptrunc double 1.0E+300 to float      ; yields undefined
+      %X = fptrunc double 16777217.0 to float    ; yields float:16777216.0
+      %Y = fptrunc double 1.0E+300 to half       ; yields half:+infinity
 
 '``fpext .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

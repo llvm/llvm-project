@@ -90,6 +90,7 @@ class SubtargetEmitter {
   void EmitItineraries(raw_ostream &OS,
                        std::vector<std::vector<InstrItinerary>>
                          &ProcItinLists);
+  void EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel, raw_ostream &OS);
   void EmitProcessorProp(raw_ostream &OS, const Record *R, StringRef Name,
                          char Separator);
   void EmitProcessorResourceSubUnits(const CodeGenProcModel &ProcModel,
@@ -602,6 +603,61 @@ void SubtargetEmitter::EmitProcessorResourceSubUnits(
     OS << "  // " << PRDef->getName() << "\n";
   }
   OS << "};\n";
+}
+
+void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
+                                              raw_ostream &OS) {
+  if (llvm::all_of(ProcModel.RegisterFiles, [](const CodeGenRegisterFile &RF) {
+        return RF.hasDefaultCosts();
+      }))
+    return;
+
+  // Print the RegisterCost table first.
+  OS << "\n// {RegisterClassID, Register Cost}\n";
+  OS << "static const llvm::MCRegisterCostEntry " << ProcModel.ModelName
+     << "RegisterCosts"
+     << "[] = {\n";
+
+  for (const CodeGenRegisterFile &RF : ProcModel.RegisterFiles) {
+    // Skip register files with a default cost table.
+    if (RF.hasDefaultCosts())
+      continue;
+    // Add entries to the cost table.
+    for (const CodeGenRegisterCost &RC : RF.Costs) {
+      OS << "  { ";
+      Record *Rec = RC.RCDef;
+      if (Rec->getValue("Namespace"))
+        OS << Rec->getValueAsString("Namespace") << "::";
+      OS << Rec->getName() << "RegClassID, " << RC.Cost << "},\n";
+    }
+  }
+  OS << "};\n";
+
+  // Now generate a table with register file info.
+  OS << "\n // {Name, #PhysRegs, #CostEntries, IndexToCostTbl}\n";
+  OS << "static const llvm::MCRegisterFileDesc " << ProcModel.ModelName
+     << "RegisterFiles"
+     << "[] = {\n"
+     << "  { \"InvalidRegisterFile\", 0, 0, 0 },\n";
+  unsigned CostTblIndex = 0;
+
+  for (const CodeGenRegisterFile &RD : ProcModel.RegisterFiles) {
+    OS << "  { ";
+    OS << '"' << RD.Name << '"' << ", " << RD.NumPhysRegs << ", ";
+    unsigned NumCostEntries = RD.Costs.size();
+    OS << NumCostEntries << ", " << CostTblIndex << "},\n";
+    CostTblIndex += NumCostEntries;
+  }
+  OS << "};\n";
+
+  // Now generate a table for the extra processor info.
+  OS << "\nstatic const llvm::MCExtraProcessorInfo " << ProcModel.ModelName
+     << "ExtraInfo = {\n  " << ProcModel.ModelName << "RegisterFiles,\n  "
+     << (1 + ProcModel.RegisterFiles.size())
+     << ", // Number of register files.\n  "
+     << ProcModel.ModelName << "RegisterCosts,\n  " << CostTblIndex
+     << " // Number of register cost entries.\n"
+     << "};\n";
 }
 
 void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
@@ -1157,6 +1213,9 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
 void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
   // For each processor model.
   for (const CodeGenProcModel &PM : SchedModels.procModels()) {
+    // Emit extra processor info if available.
+    if (PM.hasExtraProcessorInfo())
+      EmitExtraProcessorInfo(PM, OS);
     // Emit processor resource table.
     if (PM.hasInstrSchedModel())
       EmitProcessorResources(PM, OS);
@@ -1197,9 +1256,13 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
       OS << "  nullptr, nullptr, 0, 0,"
          << " // No instruction-level machine model.\n";
     if (PM.hasItineraries())
-      OS << "  " << PM.ItinsDef->getName() << "\n";
+      OS << "  " << PM.ItinsDef->getName() << ",\n";
     else
-      OS << "  nullptr // No Itinerary\n";
+      OS << "  nullptr, // No Itinerary\n";
+    if (PM.hasExtraProcessorInfo())
+      OS << "  &" << PM.ModelName << "ExtraInfo\n";
+    else
+      OS << "  nullptr  // No extra processor descriptor\n";
     OS << "};\n";
   }
 }

@@ -42,7 +42,6 @@ namespace orc {
 
 class KaleidoscopeJIT {
 private:
-  SymbolStringPool SSP;
   ExecutionSession ES;
   std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;
@@ -57,8 +56,7 @@ private:
 
 public:
   KaleidoscopeJIT()
-      : ES(SSP),
-        Resolver(createLegacyLookupResolver(
+      : Resolver(createLegacyLookupResolver(
             [this](const std::string &Name) -> JITSymbol {
               if (auto Sym = OptimizeLayer.findSymbol(Name, false))
                 return Sym;

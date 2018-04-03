@@ -880,6 +880,32 @@ Example:
     %phi = phi i8* [ null, %entry ], [ %alloc, %coro.alloc ]
     %frame = call i8* @llvm.coro.begin(token %id, i8* %phi)
 
+.. _coro.noop:
+
+'llvm.coro.noop' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i8* @llvm.coro.noop()
+
+Overview:
+"""""""""
+
+The '``llvm.coro.noop``' intrinsic returns an address of the coroutine frame of
+a coroutine that does nothing when resumed or destroyed.
+
+Arguments:
+""""""""""
+
+None
+
+Semantics:
+""""""""""
+
+This intrinsic is lowered to refer to a private constant coroutine frame. The
+resume and destroy handlers for this frame are empty functions that do nothing.
+Note that in different translation units llvm.coro.noop may return different pointers.
+
 .. _coro.frame:
 
 'llvm.coro.frame' Intrinsic

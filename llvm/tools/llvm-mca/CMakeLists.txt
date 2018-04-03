@@ -21,6 +21,7 @@ add_llvm_tool(llvm-mca
   InstructionTables.cpp
   LSUnit.cpp
   llvm-mca.cpp
+  RegisterFileStatistics.cpp
   ResourcePressureView.cpp
   Scheduler.cpp
   Support.cpp

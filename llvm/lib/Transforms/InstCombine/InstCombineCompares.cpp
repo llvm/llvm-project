@@ -2457,6 +2457,45 @@ Instruction *InstCombiner::foldICmpSelectConstant(ICmpInst &Cmp,
   return nullptr;
 }
 
+Instruction *InstCombiner::foldICmpBitCastConstant(ICmpInst &Cmp,
+                                                   BitCastInst *Bitcast,
+                                                   const APInt &C) {
+  // Folding: icmp <pred> iN X, C
+  //  where X = bitcast <M x iK> (shufflevector <M x iK> %vec, undef, SC)) to iN
+  //    and C is a splat of a K-bit pattern
+  //    and SC is a constant vector = <C', C', C', ..., C'>
+  // Into:
+  //   %E = extractelement <M x iK> %vec, i32 C'
+  //   icmp <pred> iK %E, trunc(C)
+  if (!Bitcast->getType()->isIntegerTy() ||
+      !Bitcast->getSrcTy()->isIntOrIntVectorTy())
+    return nullptr;
+
+  Value *BCIOp = Bitcast->getOperand(0);
+  Value *Vec = nullptr;     // 1st vector arg of the shufflevector
+  Constant *Mask = nullptr; // Mask arg of the shufflevector
+  if (match(BCIOp,
+            m_ShuffleVector(m_Value(Vec), m_Undef(), m_Constant(Mask)))) {
+    // Check whether every element of Mask is the same constant
+    if (auto *Elem = dyn_cast_or_null<ConstantInt>(Mask->getSplatValue())) {
+      auto *VecTy = cast<VectorType>(BCIOp->getType());
+      auto *EltTy = cast<IntegerType>(VecTy->getElementType());
+      auto Pred = Cmp.getPredicate();
+      if (C.isSplat(EltTy->getBitWidth())) {
+        // Fold the icmp based on the value of C
+        // If C is M copies of an iK sized bit pattern,
+        // then:
+        //   =>  %E = extractelement <N x iK> %vec, i32 Elem
+        //       icmp <pred> iK %SplatVal, <pattern>
+        Value *Extract = Builder.CreateExtractElement(Vec, Elem);
+        Value *NewC = ConstantInt::get(EltTy, C.trunc(EltTy->getBitWidth()));
+        return new ICmpInst(Pred, Extract, NewC);
+      }
+    }
+  }
+  return nullptr;
+}
+
 /// Try to fold integer comparisons with a constant operand: icmp Pred X, C
 /// where X is some kind of instruction.
 Instruction *InstCombiner::foldICmpInstWithConstant(ICmpInst &Cmp) {
@@ -2528,6 +2567,11 @@ Instruction *InstCombiner::foldICmpInstWithConstant(ICmpInst &Cmp) {
 
   if (auto *TI = dyn_cast<TruncInst>(Cmp.getOperand(0))) {
     if (Instruction *I = foldICmpTruncConstant(Cmp, TI, *C))
+      return I;
+  }
+
+  if (auto *BCI = dyn_cast<BitCastInst>(Cmp.getOperand(0))) {
+    if (Instruction *I = foldICmpBitCastConstant(Cmp, BCI, *C))
       return I;
   }
 
@@ -3005,17 +3049,22 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   // icmp (X-Y), X -> icmp 0, Y for equalities or if there is no overflow.
   if (A == Op1 && NoOp0WrapProblem)
     return new ICmpInst(Pred, Constant::getNullValue(Op1->getType()), B);
-
   // icmp X, (X-Y) -> icmp Y, 0 for equalities or if there is no overflow.
   if (C == Op0 && NoOp1WrapProblem)
     return new ICmpInst(Pred, D, Constant::getNullValue(Op0->getType()));
+
+  // (A - B) >u A --> A <u B
+  if (A == Op1 && Pred == ICmpInst::ICMP_UGT)
+    return new ICmpInst(ICmpInst::ICMP_ULT, A, B);
+  // C <u (C - D) --> C <u D
+  if (C == Op0 && Pred == ICmpInst::ICMP_ULT)
+    return new ICmpInst(ICmpInst::ICMP_ULT, C, D);
 
   // icmp (Y-X), (Z-X) -> icmp Y, Z for equalities or if there is no overflow.
   if (B && D && B == D && NoOp0WrapProblem && NoOp1WrapProblem &&
       // Try not to increase register pressure.
       BO0->hasOneUse() && BO1->hasOneUse())
     return new ICmpInst(Pred, A, C);
-
   // icmp (X-Y), (X-Z) -> icmp Z, Y for equalities or if there is no overflow.
   if (A && C && A == C && NoOp0WrapProblem && NoOp1WrapProblem &&
       // Try not to increase register pressure.

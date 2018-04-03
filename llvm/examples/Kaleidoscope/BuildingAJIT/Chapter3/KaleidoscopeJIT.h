@@ -46,7 +46,6 @@ namespace orc {
 
 class KaleidoscopeJIT {
 private:
-  SymbolStringPool SSP;
   ExecutionSession ES;
   std::map<VModuleKey, std::shared_ptr<SymbolResolver>> Resolvers;
   std::unique_ptr<TargetMachine> TM;
@@ -64,7 +63,7 @@ private:
 
 public:
   KaleidoscopeJIT()
-      : ES(SSP), TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+      : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
         ObjectLayer(ES,
                     [this](VModuleKey K) {
                       return RTDyldObjectLinkingLayer::Resources{

@@ -1481,6 +1481,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
                  .getTypePtr());
       Changed = true;
     }
+
     // Convert FromFPT's ExtParameterInfo if necessary. The conversion is valid
     // only if the ExtParameterInfo lists of the two function prototypes can be
     // merged and the merged list is identical to ToFPT's ExtParameterInfo list.

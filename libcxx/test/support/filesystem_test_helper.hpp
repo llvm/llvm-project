@@ -9,7 +9,6 @@
 #include <random>
 #include <chrono>
 
-
 // static test helpers
 
 #ifndef LIBCXX_FILESYSTEM_STATIC_TEST_ROOT
@@ -398,6 +397,10 @@ void SleepFor(std::chrono::seconds dur) {
     const auto wake_time = Clock::now() + dur;
     while (Clock::now() < wake_time)
         ;
+}
+
+inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
+  return LHS.native() == RHS.native();
 }
 
 #endif /* FILESYSTEM_TEST_HELPER_HPP */

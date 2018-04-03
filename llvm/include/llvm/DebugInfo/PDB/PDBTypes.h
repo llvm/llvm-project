@@ -111,7 +111,7 @@ enum PDB_NameSearchFlags {
 /// Specifies the hash algorithm that a source file from a PDB was hashed with.
 /// This corresponds to the CV_SourceChksum_t enumeration and are documented
 /// here: https://msdn.microsoft.com/en-us/library/e96az21x.aspx
-enum class PDB_Checksum { None = 0, MD5 = 1, SHA1 = 2 };
+enum class PDB_Checksum { None = 0, MD5 = 1, SHA1 = 2, SHA256 = 3 };
 
 /// These values correspond to the CV_CPU_TYPE_e enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
@@ -225,6 +225,7 @@ enum class PDB_LocType {
   IlRel,
   MetaData,
   Constant,
+  RegRelAliasIndir,
   Max
 };
 
@@ -234,11 +235,24 @@ enum class PDB_UdtType { Struct, Class, Union, Interface };
 
 /// These values correspond to the StackFrameTypeEnum enumeration, and are
 /// documented here: https://msdn.microsoft.com/en-us/library/bc5207xw.aspx.
-enum class PDB_StackFrameType { FPO, KernelTrap, KernelTSS, EBP, FrameData };
+enum class PDB_StackFrameType : uint16_t {
+  FPO,
+  KernelTrap,
+  KernelTSS,
+  EBP,
+  FrameData,
+  Unknown = 0xffff
+};
 
-/// These values correspond to the StackFrameTypeEnum enumeration, and are
-/// documented here: https://msdn.microsoft.com/en-us/library/bc5207xw.aspx.
-enum class PDB_MemoryType { Code, Data, Stack, HeapCode };
+/// These values correspond to the MemoryTypeEnum enumeration, and are
+/// documented here: https://msdn.microsoft.com/en-us/library/ms165609.aspx.
+enum class PDB_MemoryType : uint16_t {
+  Code,
+  Data,
+  Stack,
+  HeapCode,
+  Any = 0xffff
+};
 
 /// These values correspond to the Basictype enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/4szdtzc3.aspx
@@ -268,7 +282,7 @@ enum class PDB_BuiltinType {
 /// These values correspond to the flags that can be combined to control the
 /// return of an undecorated name for a C++ decorated name, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/kszfk0fs.aspx
-enum PDB_UndnameFlags: uint32_t {
+enum PDB_UndnameFlags : uint32_t {
   Undname_Complete = 0x0,
   Undname_NoLeadingUnderscores = 0x1,
   Undname_NoMsKeywords = 0x2,

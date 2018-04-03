@@ -26,6 +26,7 @@ namespace llvm {
 class CodeGenTarget;
 class CodeGenSchedModels;
 class CodeGenInstruction;
+class CodeGenRegisterClass;
 
 using RecVec = std::vector<Record*>;
 using RecIter = std::vector<Record*>::const_iterator;
@@ -157,6 +158,38 @@ struct CodeGenSchedClass {
 #endif
 };
 
+/// Represent the cost of allocating a register of register class RCDef.
+///
+/// The cost of allocating a register is equivalent to the number of physical
+/// registers used by the register renamer. Register costs are defined at
+/// register class granularity.
+struct CodeGenRegisterCost {
+  Record *RCDef;
+  unsigned Cost;
+  CodeGenRegisterCost(Record *RC, unsigned RegisterCost)
+      : RCDef(RC), Cost(RegisterCost) {}
+  CodeGenRegisterCost(const CodeGenRegisterCost &) = default;
+  CodeGenRegisterCost &operator=(const CodeGenRegisterCost &) = delete;
+};
+
+/// A processor register file.
+///
+/// This class describes a processor register file. Register file information is
+/// currently consumed by external tools like llvm-mca to predict dispatch
+/// stalls due to register pressure.
+struct CodeGenRegisterFile {
+  std::string Name;
+  Record *RegisterFileDef;
+
+  unsigned NumPhysRegs;
+  std::vector<CodeGenRegisterCost> Costs;
+
+  CodeGenRegisterFile(StringRef name, Record *def)
+      : Name(name), RegisterFileDef(def), NumPhysRegs(0) {}
+
+  bool hasDefaultCosts() const { return Costs.empty(); }
+};
+
 // Processor model.
 //
 // ModelName is a unique name used to name an instantiation of MCSchedModel.
@@ -199,6 +232,9 @@ struct CodeGenProcModel {
   // Per-operand machine model resources associated with this processor.
   RecVec ProcResourceDefs;
 
+  // List of Register Files.
+  std::vector<CodeGenRegisterFile> RegisterFiles;
+
   CodeGenProcModel(unsigned Idx, std::string Name, Record *MDef,
                    Record *IDef) :
     Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef) {}
@@ -209,6 +245,10 @@ struct CodeGenProcModel {
 
   bool hasInstrSchedModel() const {
     return !WriteResDefs.empty() || !ItinRWDefs.empty();
+  }
+
+  bool hasExtraProcessorInfo() const {
+    return !RegisterFiles.empty();
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;
@@ -395,6 +435,8 @@ private:
   unsigned findRWForSequence(ArrayRef<unsigned> Seq, bool IsRead);
 
   void collectSchedClasses();
+
+  void collectRegisterFiles();
 
   std::string createSchedClassName(Record *ItinClassDef,
                                    ArrayRef<unsigned> OperWrites,

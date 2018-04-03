@@ -442,3 +442,20 @@ class SchedAlias<SchedReadWrite match, SchedReadWrite alias> {
   SchedReadWrite AliasRW = alias;
   SchedMachineModel SchedModel = ?;
 }
+
+// Alow the definition of processor register files.
+// Each processor register file declares the number of physical registers, as
+// well as a optional register cost information. The cost of a register R is the
+// number of physical registers used to rename R (at register renaming stage).
+// That value defaults to 1, to all the registers contained in the register
+// file. The set of target register files is inferred from the list of register
+// classes. Register costs are defined at register class granularity. An empty
+// list of register classes means that this register file contains all the
+// registers defined by the target.
+class RegisterFile<int numPhysRegs, list<RegisterClass> Classes = [],
+                   list<int> Costs = []> {
+  list<RegisterClass> RegClasses = Classes;
+  list<int> RegCosts = Costs;
+  int NumPhysRegs = numPhysRegs;
+  SchedMachineModel SchedModel = ?;
+}

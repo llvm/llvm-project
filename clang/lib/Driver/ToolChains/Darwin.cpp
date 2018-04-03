@@ -1211,6 +1211,9 @@ struct DarwinPlatform {
   /// Returns true if the target OS was explicitly specified.
   bool isExplicitlySpecified() const { return Kind <= DeploymentTargetEnv; }
 
+  /// Returns true if the simulator environment can be inferred from the arch.
+  bool canInferSimulatorFromArch() const { return Kind != InferredFromSDK; }
+
   /// Adds the -m<os>-version-min argument to the compiler invocation.
   void addOSVersionMinArgument(DerivedArgList &Args, const OptTable &Opts) {
     if (Argument)
@@ -1280,8 +1283,12 @@ struct DarwinPlatform {
     return Result;
   }
   static DarwinPlatform createFromSDK(DarwinPlatformKind Platform,
-                                      StringRef Value) {
-    return DarwinPlatform(InferredFromSDK, Platform, Value);
+                                      StringRef Value,
+                                      bool IsSimulator = false) {
+    DarwinPlatform Result(InferredFromSDK, Platform, Value);
+    if (IsSimulator)
+      Result.Environment = DarwinEnvironmentKind::Simulator;
+    return Result;
   }
   static DarwinPlatform createFromArch(llvm::Triple::OSType OS,
                                        StringRef Value) {
@@ -1437,14 +1444,20 @@ Optional<DarwinPlatform> inferDeploymentTargetFromSDK(DerivedArgList &Args) {
   if (StartVer != StringRef::npos && EndVer > StartVer) {
     StringRef Version = SDK.slice(StartVer, EndVer + 1);
     if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
-      return DarwinPlatform::createFromSDK(Darwin::IPhoneOS, Version);
+      return DarwinPlatform::createFromSDK(
+          Darwin::IPhoneOS, Version,
+          /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
     else if (SDK.startswith("MacOSX"))
       return DarwinPlatform::createFromSDK(Darwin::MacOS,
                                            getSystemOrSDKMacOSVersion(Version));
     else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
-      return DarwinPlatform::createFromSDK(Darwin::WatchOS, Version);
+      return DarwinPlatform::createFromSDK(
+          Darwin::WatchOS, Version,
+          /*IsSimulator=*/SDK.startswith("WatchSimulator"));
     else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
-      return DarwinPlatform::createFromSDK(Darwin::TvOS, Version);
+      return DarwinPlatform::createFromSDK(
+          Darwin::TvOS, Version,
+          /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
   }
   return None;
 }
@@ -1645,6 +1658,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   DarwinEnvironmentKind Environment = OSTarget->getEnvironment();
   // Recognize iOS targets with an x86 architecture as the iOS simulator.
   if (Environment == NativeEnvironment && Platform != MacOS &&
+      OSTarget->canInferSimulatorFromArch() &&
       (getTriple().getArch() == llvm::Triple::x86 ||
        getTriple().getArch() == llvm::Triple::x86_64))
     Environment = Simulator;

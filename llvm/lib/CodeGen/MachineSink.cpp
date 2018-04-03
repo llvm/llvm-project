@@ -953,6 +953,11 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+      MachineFunctionProperties::Property::NoVRegs);
+  }
+
 private:
   /// Track which registers have been modified and used.
   BitVector ModifiedRegs, UsedRegs;
