@@ -1509,10 +1509,9 @@ bool SwiftLanguageRuntime::IsValidErrorValue(
   if (!protocol_info.m_is_errortype)
     return false;
 
-  static ConstString g_instance_type_child_name("instance_type");
+  unsigned index = SwiftASTContext::ProtocolInfo::error_instance_index;
   ValueObjectSP instance_type_sp(
-      in_value.GetStaticValue()->GetChildMemberWithName(
-          g_instance_type_child_name, true));
+                  in_value.GetStaticValue()->GetChildAtIndex(index, true));
   if (!instance_type_sp)
     return false;
   lldb::addr_t metadata_location = instance_type_sp->GetValueAsUnsigned(0);
@@ -1792,10 +1791,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
                                               class_type_or_name, address);
 
   MetadataPromiseSP promise_sp;
-  static ConstString g_instance_type_child_name("instance_type");
   ValueObjectSP instance_type_sp(
-      in_value.GetStaticValue()->GetChildMemberWithName(
-          g_instance_type_child_name, true));
+                  in_value.GetStaticValue()->GetChildAtIndex(
+                                  protocol_info.GetInstanceTypeIndex(), true));
   if (!instance_type_sp)
     return false;
   ValueObjectSP payload0_sp(
@@ -1871,7 +1869,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
     //     (Builtin.RawPointer) payload_data_1 = 0x0000000000000002
     //     (Builtin.RawPointer) payload_data_2 = 0x0000000000000000
     //     (Builtin.RawPointer) instance_type = 0x000000010054c2f8
-    //     (Builtin.RawPointer) protocol_witness_0 = 0x000000010054c100
+    //     (Builtin.RawPointer) witness_table_Proto = 0x000000010054c100
     // }
     // pick &payload_data_0
     // for a pointed-to protocol object, e.g.:
@@ -1880,7 +1878,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
     //     (Builtin.RawPointer) payload_data_1 = 0x0000000000000000
     //     (Builtin.RawPointer) payload_data_2 = 0x0000000000000000
     //     (Builtin.RawPointer) instance_type = 0x000000010054c648
-    //     (Builtin.RawPointer) protocol_witness_0 = 0x000000010054c7b0
+    //     (Builtin.RawPointer) witness_table_Proto = 0x000000010054c7b0
     // }
     // pick the value of payload_data_0
     switch (SwiftASTContext::GetAllocationStrategy(

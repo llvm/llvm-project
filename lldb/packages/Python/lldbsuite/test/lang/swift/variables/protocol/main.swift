@@ -28,7 +28,11 @@ struct Point2D : PointUtils {
     
 }
 
-class Point3D : PointUtils {
+class PointSuperclass {
+  var superData: Int = 17
+}
+
+class Point3D : PointSuperclass, PointUtils {
     var x : Float
     var y : Float
     var z : Float
@@ -46,10 +50,15 @@ class Point3D : PointUtils {
     
 }
 
-func takes_protocol(_ loc2d : PointUtils,_ loc3d : PointUtils) {
+func takes_protocol(_ loc2d : PointUtils,_ loc3d : PointUtils,
+  _ loc3dCB : AnyObject & PointUtils,
+  _ loc3dSuper : PointSuperclass & PointUtils
+) {
     let sum2d = loc2d.sumOfCoordinates()
     let sum3d = loc3d.sumOfCoordinates()
-    print("hello \(sum2d) \(sum3d)") // Set breakpoint here
+    let sum3dCB = loc3dCB.sumOfCoordinates()
+    let sum3dSuper = loc3dSuper.sumOfCoordinates()
+    print("hello \(sum2d) \(sum3d) \(sum3dSuper)") // Set breakpoint here
 }
 
 func main() {
@@ -57,7 +66,7 @@ func main() {
     var loc2d = Point2D(1.25, 2.5)
     var loc3d = Point3D(1.25, 2.5, 1.25)
 
-    takes_protocol (loc2d, loc3d)
+  takes_protocol (loc2d, loc3d, loc3d, loc3d)
 }
 
 main()
