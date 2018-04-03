@@ -392,14 +392,12 @@ def executeBuiltinDiff(cmd, cmd_shenv):
         encoding = None
         filelines = []
         for file in filepaths:
-            compare_bytes = False
-            encoding = None
             try:
                 with open(file, 'r') as f:
                     filelines.append(f.readlines())
             except UnicodeDecodeError:
                 try:
-                    with open(file, 'r', encoding="utf-8") as f:
+                    with io.open(file, 'r', encoding="utf-8") as f:
                         filelines.append(f.readlines())
                     encoding = "utf-8"
                 except:
@@ -416,7 +414,7 @@ def executeBuiltinDiff(cmd, cmd_shenv):
             with open(file, 'rb') as f:
                 filelines.append(f.readlines())
 
-        exitCode = 0 
+        exitCode = 0
         if hasattr(difflib, 'diff_bytes'):
             # python 3.5 or newer
             diffs = difflib.diff_bytes(difflib.unified_diff, filelines[0], filelines[1], filepaths[0].encode(), filepaths[1].encode())
@@ -434,10 +432,14 @@ def executeBuiltinDiff(cmd, cmd_shenv):
     def compareTwoTextFiles(filepaths, encoding):
         filelines = []
         for file in filepaths:
-            with io.open(file, 'r', encoding=encoding) as f:
-                filelines.append(f.readlines())
+            if encoding is None:
+                with open(file, 'r') as f:
+                    filelines.append(f.readlines())
+            else:
+                with io.open(file, 'r', encoding=encoding) as f:
+                    filelines.append(f.readlines())
 
-        exitCode = 0 
+        exitCode = 0
         def compose2(f, g):
             return lambda x: f(g(x))
 

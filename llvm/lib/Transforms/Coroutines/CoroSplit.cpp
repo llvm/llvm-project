@@ -392,7 +392,7 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
   Module *M = OrigF.getParent();
   auto *FnTy = Shape.getResumeFunctionType();
 
-  auto *F = Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
+  auto *F = Function::Create(FnTy, GlobalValue::LinkageTypes::ExternalLinkage,
                              OrigF.getName() + Suffix);
 
   M->getFunctionList().insert(InsertBefore, F);
@@ -595,7 +595,7 @@ void CoroCloner::create() {
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
   CloneFunctionInto(NewF, &OrigF, VMap, /*ModuleLevelChanges=*/true, Returns);
-  NewF->setDSOLocal(true);
+  NewF->setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
 
   NewF->setLinkage(savedLinkage);
   NewF->setVisibility(savedVisibility);

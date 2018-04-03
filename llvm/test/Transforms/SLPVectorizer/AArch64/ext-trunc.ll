@@ -9,20 +9,24 @@ define void @test(<4 x i16> %a, <4 x i16> %b, i64* %p) {
 ; Make sure types of sub and its sources are not extended.
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Z0:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[Z1:%.*]] = zext <4 x i16> [[B:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[SUB0:%.*]] = sub nsw <4 x i64> [[Z0]], [[Z1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[SUB0]], i32 0
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[Z0:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[Z1:%.*]] = zext <4 x i16> [[B:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[SUB0:%.*]] = sub nsw <4 x i32> [[Z0]], [[Z1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[SUB0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, i64* [[GEP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[SUB0]], i32 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[SUB0]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[GEP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[SUB0]], i32 2
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[SUB0]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[SUB0]], i32 3
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[SUB0]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[LOAD3:%.*]] = load i64, i64* [[GEP3]], align 4
 ; CHECK-NEXT:    call void @foo(i64 [[LOAD0]], i64 [[LOAD1]], i64 [[LOAD2]], i64 [[LOAD3]])
 ; CHECK-NEXT:    ret void

@@ -283,7 +283,6 @@ public:
 
   static bool classof(const Symbol *S) { return S->kind() == LazyArchiveKind; }
 
-  ArchiveFile &getFile();
   InputFile *fetch();
 
 private:
@@ -299,7 +298,6 @@ public:
 
   static bool classof(const Symbol *S) { return S->kind() == LazyObjectKind; }
 
-  LazyObjFile &getFile();
   InputFile *fetch();
 };
 
