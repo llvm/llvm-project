@@ -59,11 +59,6 @@ bool ColorizeReports() {
          (internal_strcmp(flag, "auto") == 0 && ReportSupportsColors());
 }
 
-static void (*sandboxing_callback)();
-void SetSandboxingCallback(void (*f)()) {
-  sandboxing_callback = f;
-}
-
 void ReportErrorSummary(const char *error_type, const StackTrace *stack,
                         const char *alt_tool_name) {
 #if !SANITIZER_GO
@@ -369,11 +364,16 @@ void ScopedErrorReportLock::CheckLocked() {
   CommonSanitizerReportMutex.CheckLocked();
 }
 
+static void (*sandboxing_callback)();
+void SetSandboxingCallback(void (*f)()) {
+  sandboxing_callback = f;
+}
+
 }  // namespace __sanitizer
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,
                              __sanitizer_sandbox_arguments *args) {
-  __sanitizer::PrepareForSandboxing(args);
+  __sanitizer::PlatformPrepareForSandboxing(args);
   if (__sanitizer::sandboxing_callback)
     __sanitizer::sandboxing_callback();
 }

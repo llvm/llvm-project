@@ -92,14 +92,6 @@ Position pos(int line, int character) {
   return Res;
 }
 
-/// Matches diagnostic that has exactly one fix with the same range and message
-/// as the diagnostic itself.
-testing::Matcher<const clangd::Diag &> DiagWithEqualFix(clangd::Range Range,
-                                                        std::string Replacement,
-                                                        std::string Message) {
-  return AllOf(Diag(Range, Message), WithFix(Fix(Range, Replacement, Message)));
-}
-
 TEST(DiagnosticsTest, DiagnosticRanges) {
   // Check we report correct ranges, including various edge-cases.
   Annotations Test(R"cpp(
@@ -111,19 +103,19 @@ o]]();
       $unk[[unknown]]();
     }
   )cpp");
-  llvm::errs() << Test.code();
   EXPECT_THAT(
       buildDiags(Test.code()),
       ElementsAre(
           // This range spans lines.
-          AllOf(DiagWithEqualFix(
-                    Test.range("typo"), "foo",
-                    "use of undeclared identifier 'goo'; did you mean 'foo'?"),
+          AllOf(Diag(Test.range("typo"),
+                     "use of undeclared identifier 'goo'; did you mean 'foo'?"),
+                WithFix(
+                    Fix(Test.range("typo"), "foo", "change 'go\\ o' to 'foo'")),
                 // This is a pretty normal range.
                 WithNote(Diag(Test.range("decl"), "'foo' declared here"))),
           // This range is zero-width, and at the end of a line.
-          DiagWithEqualFix(Test.range("semicolon"), ";",
-                           "expected ';' after expression"),
+          AllOf(Diag(Test.range("semicolon"), "expected ';' after expression"),
+                WithFix(Fix(Test.range("semicolon"), ";", "insert ';'"))),
           // This range isn't provided by clang, we expand to the token.
           Diag(Test.range("unk"), "use of undeclared identifier 'unknown'")));
 }
@@ -131,8 +123,9 @@ o]]();
 TEST(DiagnosticsTest, FlagsMatter) {
   Annotations Test("[[void]] main() {}");
   EXPECT_THAT(buildDiags(Test.code()),
-              ElementsAre(DiagWithEqualFix(Test.range(), "int",
-                                           "'main' must return 'int'")));
+              ElementsAre(AllOf(Diag(Test.range(), "'main' must return 'int'"),
+                                WithFix(Fix(Test.range(), "int",
+                                            "change 'void' to 'int'")))));
   // Same code built as C gets different diagnostics.
   EXPECT_THAT(
       buildDiags(Test.code(), {"-x", "c"}),

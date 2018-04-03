@@ -281,7 +281,7 @@ void SetStackSizeLimitInBytes(uptr limit);
 bool AddressSpaceIsUnlimited();
 void SetAddressSpaceUnlimited();
 void AdjustStackSize(void *attr);
-void PrepareForSandboxing(__sanitizer_sandbox_arguments *args);
+void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args);
 void SetSandboxingCallback(void (*f)());
 
 void InitializeCoverage(bool enabled, const char *coverage_dir);

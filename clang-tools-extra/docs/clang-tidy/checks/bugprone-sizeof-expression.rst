@@ -22,6 +22,36 @@ programmer was probably to simply get the integer and not its size.
   char buf[BUFLEN];
   memset(buf, 0, sizeof(BUFLEN));  // sizeof(42) ==> sizeof(int)
 
+Suspicious usage of 'sizeof(expr)'
+----------------------------------
+
+In cases, where there is an enum or integer to represent a type, a common
+mistake is to query the ``sizeof`` on the integer or enum that represents the
+type that should be used by ``sizeof``. This results in the size of the integer
+and not of the type the integer represents:
+
+.. code-block:: c++
+
+  enum data_type {
+    FLOAT_TYPE,
+    DOUBLE_TYPE
+  };
+
+  struct data {
+    data_type type;
+    void* buffer;
+    data_type get_type() {
+      return type;
+    }
+  };
+
+  void f(data d, int numElements) {
+    // should be sizeof(float) or sizeof(double), depending on d.get_type()
+    int numBytes = numElements * sizeof(d.get_type());
+    ...
+  }
+
+
 Suspicious usage of 'sizeof(this)'
 ----------------------------------
 
@@ -141,6 +171,11 @@ Options
 
    When non-zero, the check will warn on an expression like
    ``sizeof(CONSTANT)``. Default is `1`.
+
+.. option:: WarnOnSizeOfIntegerExpression
+
+   When non-zero, the check will warn on an expression like ``sizeof(expr)``
+   where the expression results in an integer. Default is `0`.
 
 .. option:: WarnOnSizeOfThis
 
