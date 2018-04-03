@@ -548,9 +548,8 @@ void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &F,
     S->Binding = STB_WEAK;
     return;
   }
-  std::pair<MemoryBufferRef, uint64_t> MBInfo = F.getMember(&Sym);
-  if (!MBInfo.first.getBuffer().empty())
-    addFile<ELFT>(createObjectFile(MBInfo.first, F.getName(), MBInfo.second));
+  if (InputFile *File = F.fetch(Sym))
+    addFile<ELFT>(File);
 }
 
 template <class ELFT>

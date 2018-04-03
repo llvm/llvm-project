@@ -208,23 +208,12 @@ void Symbol::parseSymbolVersion() {
 }
 
 InputFile *Lazy::fetch() {
-  if (auto *S = dyn_cast<LazyArchive>(this))
-    return S->fetch();
-  return cast<LazyObject>(this)->fetch();
+  if (auto *Sym = dyn_cast<LazyArchive>(this))
+    return Sym->fetch();
+  return cast<LazyObjFile>(File)->fetch();
 }
 
-InputFile *LazyArchive::fetch() {
-  auto *F = cast<ArchiveFile>(File);
-  std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
-
-  // getMember returns an empty buffer if the member was already
-  // read from the library.
-  if (MBInfo.first.getBuffer().empty())
-    return nullptr;
-  return createObjectFile(MBInfo.first, F->getName(), MBInfo.second);
-}
-
-InputFile *LazyObject::fetch() { return cast<LazyObjFile>(File)->fetch(); }
+InputFile *LazyArchive::fetch() { return cast<ArchiveFile>(File)->fetch(Sym); }
 
 uint8_t Symbol::computeBinding() const {
   if (Config->Relocatable)
