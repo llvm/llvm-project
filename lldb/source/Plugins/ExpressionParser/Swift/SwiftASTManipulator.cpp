@@ -1340,10 +1340,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
           variable.m_type.GetTypeSystem());
 
-      CompilerType referent_type;
-
-      if (swift_ast_ctx)
-        referent_type = swift_ast_ctx->GetReferentType(variable.m_type);
+      CompilerType referent_type = variable.m_type;
 
       // One tricky bit here is that this var may be an argument to the function
       // whose context we are
