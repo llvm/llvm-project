@@ -297,7 +297,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     return D;
   };
 
-  auto AddFix = [&]() -> bool {
+  auto AddFix = [&](bool SyntheticMessage) -> bool {
     assert(!Info.getFixItHints().empty() &&
            "diagnostic does not have attached fix-its");
     if (!InsideMainFile)
@@ -312,7 +312,27 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     }
 
     llvm::SmallString<64> Message;
-    Info.FormatDiagnostic(Message);
+    // If requested and possible, create a message like "change 'foo' to 'bar'".
+    if (SyntheticMessage && Info.getNumFixItHints() == 1) {
+      const auto &FixIt = Info.getFixItHint(0);
+      bool Invalid = false;
+      StringRef Remove = Lexer::getSourceText(
+          FixIt.RemoveRange, Info.getSourceManager(), *LangOpts, &Invalid);
+      StringRef Insert = FixIt.CodeToInsert;
+      if (!Invalid) {
+        llvm::raw_svector_ostream M(Message);
+        if (!Remove.empty() && !Insert.empty())
+          M << "change '" << Remove << "' to '" << Insert << "'";
+        else if (!Remove.empty())
+          M << "remove '" << Remove << "'";
+        else if (!Insert.empty())
+          M << "insert '" << Insert << "'";
+        // Don't allow source code to inject newlines into diagnostics.
+        std::replace(Message.begin(), Message.end(), '\n', ' ');
+      }
+    }
+    if (Message.empty()) // either !SytheticMessage, or we failed to make one.
+      Info.FormatDiagnostic(Message);
     LastDiag->Fixes.push_back(Fix{Message.str(), std::move(Edits)});
     return true;
   };
@@ -325,7 +345,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     FillDiagBase(*LastDiag);
 
     if (!Info.getFixItHints().empty())
-      AddFix();
+      AddFix(true /* try to invent a message instead of repeating the diag */);
   } else {
     // Handle a note to an existing diagnostic.
     if (!LastDiag) {
@@ -337,7 +357,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (!Info.getFixItHints().empty()) {
       // A clang note with fix-it is not a separate diagnostic in clangd. We
       // attach it as a Fix to the main diagnostic instead.
-      if (!AddFix())
+      if (!AddFix(false /* use the note as the message */))
         IgnoreDiagnostics::log(DiagLevel, Info);
     } else {
       // A clang note without fix-its corresponds to clangd::Note.

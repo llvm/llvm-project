@@ -309,12 +309,12 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
       if (!Config->GcSections)
         SS->getFile<ELFT>().IsNeeded = true;
   }
-  if (auto *L = dyn_cast<Lazy>(S)) {
+  if (S->isLazy()) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
     if (Binding == STB_WEAK)
-      L->Type = Type;
-    else if (InputFile *F = L->fetch())
+      S->Type = Type;
+    else if (InputFile *F = Symtab->fetchIfLazy(S))
       addFile<ELFT>(F);
   }
   return S;
@@ -574,16 +574,15 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
     addFile<ELFT>(F);
 }
 
-// If we already saw this symbol, force loading its file.
-template <class ELFT> void SymbolTable::fetchIfLazy(StringRef Name) {
-  if (Symbol *B = find(Name)) {
-    // Mark the symbol not to be eliminated by LTO
-    // even if it is a bitcode symbol.
-    B->IsUsedInRegularObj = true;
-    if (auto *L = dyn_cast<Lazy>(B))
-      if (InputFile *File = L->fetch())
-        addFile<ELFT>(File);
-  }
+InputFile *SymbolTable::fetchIfLazy(Symbol *Sym) {
+  // Mark the symbol not to be eliminated by LTO
+  // even if it is a bitcode symbol.
+  Sym->IsUsedInRegularObj = true;
+  if (LazyArchive *L = dyn_cast<LazyArchive>(Sym))
+    return L->fetch();
+  if (LazyObject *L = dyn_cast<LazyObject>(Sym))
+    return cast<LazyObjFile>(L->File)->fetch();
+  return nullptr;
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol
@@ -806,8 +805,3 @@ template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile<ELF64LE> &,
 template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> &,
                                               const typename ELF64BE::Sym &,
                                               uint32_t Alignment, uint32_t);
-
-template void SymbolTable::fetchIfLazy<ELF32LE>(StringRef);
-template void SymbolTable::fetchIfLazy<ELF32BE>(StringRef);
-template void SymbolTable::fetchIfLazy<ELF64LE>(StringRef);
-template void SymbolTable::fetchIfLazy<ELF64BE>(StringRef);

@@ -1081,12 +1081,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
-    Symtab->fetchIfLazy<ELFT>(S);
+    if (Symbol *Sym = Symtab->find(S))
+      if (InputFile *F = Symtab->fetchIfLazy(Sym))
+        Symtab->addFile<ELFT>(F);
 
   // If an entry symbol is in a static archive, pull out that file now
   // to complete the symbol table. After this, no new names except a
   // few linker-synthesized ones will be added to the symbol table.
-  Symtab->fetchIfLazy<ELFT>(Config->Entry);
+  if (Symbol *Sym = Symtab->find(Config->Entry))
+    if (InputFile *F = Symtab->fetchIfLazy(Sym))
+      Symtab->addFile<ELFT>(F);
 
   // Return if there were name resolution errors.
   if (errorCount())

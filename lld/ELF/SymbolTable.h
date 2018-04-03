@@ -77,7 +77,8 @@ public:
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
-  template <class ELFT> void fetchIfLazy(StringRef Name);
+  InputFile *fetchIfLazy(Symbol *Sym);
+
   void scanVersionScript();
 
   Symbol *find(StringRef Name);
