@@ -73,6 +73,8 @@ void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::UnrollingPreferences &UP,
                       unsigned &TripCount, ScalarEvolution &SE);
 
+bool canPeel(Loop *L);
+
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
               DominatorTree *DT, AssumptionCache *AC, bool PreserveLCSSA);
 

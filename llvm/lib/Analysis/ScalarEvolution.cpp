@@ -6884,63 +6884,12 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                       bool AllowPredicates) {
-  // Okay, we've chosen an exiting block.  See what condition causes us to exit
-  // at this block and remember the exit block and whether all other targets
-  // lead to the loop header.
-  bool MustExecuteLoopHeader = true;
-  BasicBlock *Exit = nullptr;
-  for (auto *SBB : successors(ExitingBlock))
-    if (!L->contains(SBB)) {
-      if (Exit) // Multiple exit successors.
-        return getCouldNotCompute();
-      Exit = SBB;
-    } else if (SBB != L->getHeader()) {
-      MustExecuteLoopHeader = false;
-    }
-
-  // At this point, we know we have a conditional branch that determines whether
-  // the loop is exited.  However, we don't know if the branch is executed each
-  // time through the loop.  If not, then the execution count of the branch will
-  // not be equal to the trip count of the loop.
-  //
-  // Currently we check for this by checking to see if the Exit branch goes to
-  // the loop header.  If so, we know it will always execute the same number of
-  // times as the loop.  We also handle the case where the exit block *is* the
-  // loop header.  This is common for un-rotated loops.
-  //
-  // If both of those tests fail, walk up the unique predecessor chain to the
-  // header, stopping if there is an edge that doesn't exit the loop. If the
-  // header is reached, the execution count of the branch will be equal to the
-  // trip count of the loop.
-  //
-  //  More extensive analysis could be done to handle more cases here.
-  //
-  if (!MustExecuteLoopHeader && ExitingBlock != L->getHeader()) {
-    // The simple checks failed, try climbing the unique predecessor chain
-    // up to the header.
-    bool Ok = false;
-    for (BasicBlock *BB = ExitingBlock; BB; ) {
-      BasicBlock *Pred = BB->getUniquePredecessor();
-      if (!Pred)
-        return getCouldNotCompute();
-      TerminatorInst *PredTerm = Pred->getTerminator();
-      for (const BasicBlock *PredSucc : PredTerm->successors()) {
-        if (PredSucc == BB)
-          continue;
-        // If the predecessor has a successor that isn't BB and isn't
-        // outside the loop, assume the worst.
-        if (L->contains(PredSucc))
-          return getCouldNotCompute();
-      }
-      if (Pred == L->getHeader()) {
-        Ok = true;
-        break;
-      }
-      BB = Pred;
-    }
-    if (!Ok)
-      return getCouldNotCompute();
-  }
+  assert(L->contains(ExitingBlock) && "Exit count for non-loop block?");
+  // If our exiting block does not dominate the latch, then its connection with
+  // loop's exit limit may be far from trivial.
+  const BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch || !DT.dominates(ExitingBlock, Latch))
+    return getCouldNotCompute();
 
   bool IsOnlyExit = (L->getExitingBlock() != nullptr);
   TerminatorInst *Term = ExitingBlock->getTerminator();
@@ -6955,9 +6904,19 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
         /*ControlsExit=*/IsOnlyExit, AllowPredicates);
   }
 
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(Term))
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(Term)) {
+    // For switch, make sure that there is a single exit from the loop.
+    BasicBlock *Exit = nullptr;
+    for (auto *SBB : successors(ExitingBlock))
+      if (!L->contains(SBB)) {
+        if (Exit) // Multiple exit successors.
+          return getCouldNotCompute();
+        Exit = SBB;
+      }
+    assert(Exit && "Exiting block must have at least one exit");
     return computeExitLimitFromSingleExitSwitch(L, SI, Exit,
                                                 /*ControlsExit=*/IsOnlyExit);
+  }
 
   return getCouldNotCompute();
 }
@@ -8709,11 +8668,12 @@ bool ScalarEvolution::isKnownViaInduction(ICmpInst::Predicate Pred,
               DT.dominates(L2->getHeader(), L1->getHeader())) &&
              "Domination relationship is not a linear order");
 #endif
-  
-  const Loop *MDL = *std::max_element(LoopsUsed.begin(), LoopsUsed.end(),
-                                        [&](const Loop *L1, const Loop *L2) {
-                         return DT.dominates(L1->getHeader(), L2->getHeader());
-                       });
+
+  const Loop *MDL =
+      *std::max_element(LoopsUsed.begin(), LoopsUsed.end(),
+                        [&](const Loop *L1, const Loop *L2) {
+         return DT.properlyDominates(L1->getHeader(), L2->getHeader());
+       });
 
   // Get init and post increment value for LHS.
   auto SplitLHS = SplitIntoInitAndPostInc(MDL, LHS);
