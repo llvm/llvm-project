@@ -457,8 +457,9 @@ bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
 
   DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);
 
-  SwiftASTContext *lldb_swift_ast =
-      process_sp->GetTarget().GetScratchSwiftASTContext(error);
+  SwiftASTContext *lldb_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
+      process_sp->GetTarget().GetScratchTypeSystemForLanguage(
+          &error, eLanguageTypeSwift));
   if (!lldb_swift_ast)
     return false;
   CompilerType string_guts_type = lldb_swift_ast->GetTypeFromMangledTypename(
