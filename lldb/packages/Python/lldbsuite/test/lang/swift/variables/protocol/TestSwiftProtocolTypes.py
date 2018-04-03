@@ -24,7 +24,6 @@ class TestSwiftProtocolTypes(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.skipIfOutOfTreeDebugserver
     def test_swift_protocol_types(self):
         """Test support for protocol types"""
         self.build()
@@ -66,8 +65,8 @@ class TestSwiftProtocolTypes(TestBase):
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
-                             '(Builtin.RawPointer) instance_type = 0x',
-                             '(Builtin.RawPointer) protocol_witness_0 = 0x'])
+                             '(Any.Type) instance_type = 0x',
+                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
 
         self.expect("frame variable --dynamic-type run-target loc2d",
                     substrs=['Point2D) loc2d =',
@@ -78,8 +77,8 @@ class TestSwiftProtocolTypes(TestBase):
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
-                             '(Builtin.RawPointer) instance_type = 0x',
-                             '(Builtin.RawPointer) protocol_witness_0 = 0x'])
+                             '(Any.Type) instance_type = 0x',
+                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
 
         self.expect(
             "frame variable --dynamic-type run-target loc3d",
@@ -94,22 +93,28 @@ class TestSwiftProtocolTypes(TestBase):
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
-                             '(Builtin.RawPointer) instance_type = 0x',
-                             '(Builtin.RawPointer) protocol_witness_0 = 0x'])
+                             '(Any.Type) instance_type = 0x',
+                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
 
         self.expect("expression --dynamic-type run-target -- loc2d",
                     substrs=['Point2D) $R',
                              'x = 1.25', 'y = 2.5'])
 
-        self.expect("expression --raw-output --show-types -- loc3d",
-                    substrs=['(PointUtils) $R',
-                             '(Builtin.RawPointer) payload_data_0 = 0x',
-                             '(Builtin.RawPointer) payload_data_1 = 0x',
-                             '(Builtin.RawPointer) payload_data_2 = 0x',
-                             '(Builtin.RawPointer) instance_type = 0x',
-                             '(Builtin.RawPointer) protocol_witness_0 = 0x'])
+        self.expect("expression --raw-output --show-types -- loc3dCB",
+                    substrs=['(PointUtils & AnyObject) $R',
+                             '(Builtin.RawPointer) instance = 0x',
+                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
 
-        self.expect("expression --dynamic-type run-target -- loc3d",
+        self.expect("expression --dynamic-type run-target -- loc3dCB",
+                    substrs=['Point3D) $R', 'x = 1.25', 'y = 2.5', 'z = 1.25'])
+
+        self.expect("expression --raw-output --show-types -- loc3dSuper",
+                    substrs=['(a.PointSuperclass & PointUtils) $R',
+                             '(a.PointSuperclass) instance = 0x',
+                             '(Swift.Int) superData = ',
+                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
+
+        self.expect("expression --dynamic-type run-target -- loc3dSuper",
                     substrs=['Point3D) $R', 'x = 1.25', 'y = 2.5', 'z = 1.25'])
 
 if __name__ == '__main__':

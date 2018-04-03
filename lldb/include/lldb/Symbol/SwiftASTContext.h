@@ -503,6 +503,17 @@ public:
     bool m_is_objc;
     bool m_is_anyobject;
     bool m_is_errortype;
+
+    /// The superclass bound, which can only be non-null when this is
+    /// a class-bound existential.
+    CompilerType m_superclass;
+
+    /// The member index for the error value within an error
+    /// existential.
+    static constexpr uint32_t error_instance_index = 0;
+
+    /// Retrieve the index at which the instance type occurs.
+    uint32_t GetInstanceTypeIndex() const { return m_num_payload_words; }
   };
 
   static bool GetProtocolTypeInfo(const CompilerType &type,

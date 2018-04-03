@@ -5094,6 +5094,11 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
     protocol_info.m_is_anyobject = layout.isAnyObject();
     protocol_info.m_is_errortype = layout.isErrorExistential();
 
+    if (layout.superclass) {
+      protocol_info.m_superclass =
+        CompilerType(ast->GetASTContext(), layout.superclass.getPointer());
+    }
+
     unsigned num_witness_tables = 0;
     for (auto protoTy : layout.getProtocols()) {
       if (!protoTy->getDecl()->isObjC())
@@ -6304,16 +6309,52 @@ GetExistentialTypeChild(swift::ASTContext *swift_ast_ctx,
              std::move(name) };
   }
 
-  if (idx == protocol_info.m_num_payload_words) {
-    auto raw_pointer = swift_ast_ctx->TheRawPointerType;
-    return { CompilerType(swift_ast_ctx, raw_pointer.getPointer()),
-             "instance_type" };
+   // The instance for a class-bound existential.
+  if (idx == 0 && protocol_info.m_is_class_only) {
+    CompilerType class_type;
+    if (protocol_info.m_superclass) {
+      class_type = protocol_info.m_superclass;
+    } else {
+      auto raw_pointer = swift_ast_ctx->TheRawPointerType;
+      class_type = CompilerType(swift_ast_ctx, raw_pointer.getPointer());
+    }
+
+    return { class_type, "instance" };
   }
 
-  // A witness table.
+  // The instance for an error existential.
+  if (idx == 0 && protocol_info.m_is_errortype) {
+    auto raw_pointer = swift_ast_ctx->TheRawPointerType;
+    return { CompilerType(swift_ast_ctx, raw_pointer.getPointer()),
+             "error_instance" };
+  }
+
+  // The metatype for a non-class, non-error existential.
+  if (idx && idx == protocol_info.m_num_payload_words) {
+    // The metatype for a non-class, non-error existential.
+    auto any_metatype =
+      swift::ExistentialMetatypeType::get(swift_ast_ctx->TheAnyType);
+    return { CompilerType(swift_ast_ctx, any_metatype), "instance_type" };
+  }
+
+  // A witness table. Figure out which protocol it corresponds to.
   unsigned witness_table_idx = idx - protocol_info.m_num_payload_words - 1;
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  swift::ExistentialLayout layout = swift_can_type.getExistentialLayout();
+
   std::string name;
-  llvm::raw_string_ostream(name) << "protocol_witness_" << witness_table_idx;
+  for (auto protoType : layout.getProtocols()) {
+    auto proto = protoType->getDecl();
+    if (proto->isObjC()) continue;
+
+    if (witness_table_idx == 0) {
+      llvm::raw_string_ostream(name) << "witness_table_"
+                                     << proto->getBaseName().userFacingName();
+      break;
+    }
+    --witness_table_idx;
+  }
+
   auto raw_pointer = swift_ast_ctx->TheRawPointerType;
   return { CompilerType(swift_ast_ctx, raw_pointer.getPointer()),
            std::move(name) };
