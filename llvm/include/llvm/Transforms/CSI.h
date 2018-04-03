@@ -32,6 +32,7 @@ static const char *const CsiBasicBlockBaseIdName = "__csi_unit_bb_base_id";
 static const char *const CsiCallsiteBaseIdName = "__csi_unit_callsite_base_id";
 static const char *const CsiLoadBaseIdName = "__csi_unit_load_base_id";
 static const char *const CsiStoreBaseIdName = "__csi_unit_store_base_id";
+static const char *const CsiAllocaIdName = "__csi_unit_alloca_base_id";
 static const char *const CsiDetachBaseIdName = "__csi_unit_detach_base_id";
 static const char *const CsiTaskBaseIdName = "__csi_unit_task_base_id";
 static const char *const CsiTaskExitBaseIdName =
@@ -566,6 +567,7 @@ public:
         CsiBBExit(nullptr), CsiBeforeCallsite(nullptr),
         CsiAfterCallsite(nullptr), CsiBeforeRead(nullptr),
         CsiAfterRead(nullptr), CsiBeforeWrite(nullptr), CsiAfterWrite(nullptr),
+	CsiBeforeAlloca(nullptr), CsiAfterAlloca(nullptr),
         MemmoveFn(nullptr), MemcpyFn(nullptr), MemsetFn(nullptr),
         InitCallsiteToFunction(nullptr), RTUnitInit(nullptr)
   {}
@@ -600,6 +602,7 @@ protected:
   void initializeFuncHooks();
   void initializeBasicBlockHooks();
   void initializeCallsiteHooks();
+  void initializeAllocaHooks();
   void initializeMemIntrinsicsHooks();
   void initializeTapirHooks();
   /// @}
@@ -649,6 +652,7 @@ protected:
   void instrumentAtomic(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(Instruction *I);
   void instrumentCallsite(Instruction *I, DominatorTree *DT);
+  void instrumentAlloca(Instruction *I);
   void instrumentBasicBlock(BasicBlock &BB);
   void instrumentDetach(DetachInst *DI, DominatorTree *DT);
   void instrumentSync(SyncInst *SI);
@@ -671,10 +675,12 @@ protected:
   CSIOptions Options;
 
   FrontEndDataTable FunctionFED, FunctionExitFED, BasicBlockFED, CallsiteFED,
-    LoadFED, StoreFED, DetachFED, TaskFED, TaskExitFED, DetachContinueFED,
+    LoadFED, StoreFED, 
+    AllocaFED, 
+    DetachFED, TaskFED, TaskExitFED, DetachContinueFED,
     SyncFED;
 
-  SmallVector<Constant *, 11> UnitFedTables;
+  SmallVector<Constant *, 12> UnitFedTables;
 
   SizeTable BBSize;
   SmallVector<Constant *, 1> UnitSizeTables;
@@ -685,6 +691,7 @@ protected:
   Function *CsiBeforeCallsite, *CsiAfterCallsite;
   Function *CsiBeforeRead, *CsiAfterRead;
   Function *CsiBeforeWrite, *CsiAfterWrite;
+  Function *CsiBeforeAlloca, *CsiAfterAlloca;
   Function *CsiDetach, *CsiDetachContinue;
   Function *CsiTaskEntry, *CsiTaskExit;
   Function *CsiSync;

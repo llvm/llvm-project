@@ -57,6 +57,9 @@ static cl::opt<bool>  ClInstrumentMemIntrinsics(
 static cl::opt<bool>  ClInstrumentTapir(
     "csi-instrument-tapir", cl::init(true),
     cl::desc("Instrument tapir constructs"), cl::Hidden);
+static cl::opt<bool>  ClInstrumentAllocas(
+    "csi-instrument-alloca", cl::init(true),
+    cl::desc("Instrument allocas"), cl::Hidden);
 
 namespace {
 
@@ -68,6 +71,7 @@ static CSIOptions OverrideFromCL(CSIOptions Options) {
   Options.InstrumentAtomics |= ClInstrumentAtomics;
   Options.InstrumentMemIntrinsics |= ClInstrumentMemIntrinsics;
   Options.InstrumentTapir |= ClInstrumentTapir;
+  Options.InstrumentAllocas |= ClInstrumentAllocas;
   return Options;
 }
 
@@ -436,6 +440,20 @@ void CSIImpl::initializeCallsiteHooks() {
   CsiAfterCallsite = M.getOrInsertFunction("__csi_after_call", IRB.getVoidTy(),
                                            IRB.getInt64Ty(), IRB.getInt64Ty(),
                                            PropertyTy);
+}
+
+void CSIImpl::initializeAllocaHooks() {
+  LLVMContext &C = M.getContext();
+  IRBuilder<> IRB(C);
+  //Only for before alloca
+  Type *AddrType = IRB.getInt8PtrTy();
+
+  CsiBeforeAlloca = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_before_alloca", IRB.getVoidTy(), IRB.getInt64Ty(),
+                            IRB.getInt64Ty()));
+  CsiAfterAlloca = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_after_alloca", IRB.getVoidTy(), IRB.getInt64Ty(), AddrType, IntptrTy,
+                            IRB.getInt64Ty()));
 }
 
 // Load and store hook initialization
@@ -816,6 +834,35 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
   }
 }
 
+void CSIImpl::instrumentAlloca(Instruction *I) {
+  IRBuilder<> IRB(I);
+  LLVMContext &C = IRB.getContext();
+  const DataLayout &D = I->getFunction()->getParent()->getDataLayout();
+  AllocaInst* AI = cast<AllocaInst>(I);
+
+  uint64_t LocalId = AllocaFED.add(*I);
+  Value *CsiId = AllocaFED.localToGlobalId(LocalId, IRB);
+
+  Value* IsStaticAlloca = ConstantInt::get(Type::getInt64Ty(C),AI->isStaticAlloca());
+
+  //Retrieve element size for target layout
+  Value* ElementSize = ConstantInt::get(Type::getInt64Ty(C),D.getTypeAllocSize(AI->getAllocatedType())); 
+  //Retrieve number of elements, defaults to 1 for non-arrays
+  Value* NumElements = IRB.CreateIntCast(AI->getArraySize(), Type::getInt64Ty(C), false);
+  //Multiply for total size
+  Value *TotalSize = IRB.CreateMul(NumElements,ElementSize);
+
+  insertConditionalHookCall(I, CsiBeforeAlloca, {CsiId,IsStaticAlloca});
+  BasicBlock::iterator Iter(I);
+  Iter++;
+  IRB.SetInsertPoint(&*Iter);
+
+  Type *AddrType = IRB.getInt8PtrTy();
+  Value *Addr = IRB.CreatePointerCast(I, AddrType);
+
+  insertConditionalHookCall(&*Iter, CsiAfterAlloca, {CsiId,Addr, TotalSize, IsStaticAlloca});
+}
+
 void CSIImpl::instrumentSync(SyncInst *SI) {
   IRBuilder<> IRB(SI);
   // Get the ID of this sync.
@@ -847,6 +894,7 @@ void CSIImpl::initializeFEDTables() {
   CallsiteFED = FrontEndDataTable(M, CsiCallsiteBaseIdName);
   LoadFED = FrontEndDataTable(M, CsiLoadBaseIdName);
   StoreFED = FrontEndDataTable(M, CsiStoreBaseIdName);
+  AllocaFED = FrontEndDataTable(M, CsiAllocaIdName);
   DetachFED = FrontEndDataTable(M, CsiDetachBaseIdName);
   TaskFED = FrontEndDataTable(M, CsiTaskBaseIdName);
   TaskExitFED = FrontEndDataTable(M, CsiTaskExitBaseIdName);
@@ -904,6 +952,8 @@ void CSIImpl::initializeCsi() {
     initializeMemIntrinsicsHooks();
   if (Options.InstrumentTapir)
     initializeTapirHooks();
+  if (Options.InstrumentAllocas)
+    initializeAllocaHooks();
 
   FunctionType *FnType =
     FunctionType::get(Type::getVoidTy(M.getContext()), {}, false);
@@ -972,6 +1022,8 @@ void CSIImpl::collectUnitFEDTables() {
       fedTableToUnitFedTable(M, UnitFedTableType, DetachContinueFED));
   UnitFedTables.push_back(
       fedTableToUnitFedTable(M, UnitFedTableType, SyncFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, AllocaFED));
 }
 
 // Create a struct type to match the unit_obj_entry_t type in csirt.c.
@@ -1267,6 +1319,7 @@ void CSIImpl::instrumentFunction(Function &F) {
   SmallVector<Instruction*, 8> AtomicAccesses;
   SmallVector<DetachInst*, 8> Detaches;
   SmallVector<SyncInst*, 8> Syncs;
+  SmallVector<Instruction *, 8> Allocas;
   bool MaySpawn = false;
 
   changeCallsToInvokes(F);
@@ -1294,6 +1347,8 @@ void CSIImpl::instrumentFunction(Function &F) {
         }
         computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores,
                                       DL);
+      } else if (isa<AllocaInst>(I)) {
+        Allocas.push_back(&I);
       }
     }
     computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores, DL);
@@ -1337,6 +1392,10 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (Options.InstrumentCalls)
     for (Instruction *I : Callsites)
       instrumentCallsite(I, DT);
+
+  if (Options.InstrumentAllocas)
+    for (Instruction *I : Allocas)
+      instrumentAlloca(I);
 
   // Instrument function entry/exit points.
   if (Options.InstrumentFuncEntryExit) {
