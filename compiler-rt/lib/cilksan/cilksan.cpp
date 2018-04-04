@@ -572,6 +572,13 @@ void cilksan_clear_shadow_memory(size_t start, size_t size) {
   shadow_memory.clear(start,size);
 }
 
+void cilksan_record_alloc(size_t start, size_t size) {
+  DBG_TRACE(DEBUG_MEMORY, "cilksan_record_alloc(%p, %ld)\n",
+            start, size);
+  FrameData_t *f = frame_stack.head();
+  shadow_memory.record_alloc(start, size, f, call_stack);
+}
+
 static void print_cilksan_stat() {
   // std::cout << "max sync block size seen: "
   //           << accounted_max_sync_block_size

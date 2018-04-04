@@ -33,6 +33,7 @@ private:
 
   Dictionary *my_read_dict;
   Dictionary *my_write_dict;
+  Dictionary *my_alloc_dict;
 
   value_type00 *find(bool is_read, uintptr_t addr);
   value_type00 *find_group(bool is_read, uintptr_t addr, size_t max_size,
@@ -61,6 +62,9 @@ public:
                                 value_type00 *dst);
   bool does_access_exists(bool is_read, uintptr_t addr, size_t mem_size);
   void clear(size_t start, size_t size);
+  void record_alloc(size_t start, size_t size,
+                    FrameData_t *f,
+                    const call_stack_t &call_stack);
   void check_race_with_prev_read(const csi_id_t acc_id,
                                  uintptr_t addr, size_t mem_size, bool on_stack,
                                  FrameData_t *f,

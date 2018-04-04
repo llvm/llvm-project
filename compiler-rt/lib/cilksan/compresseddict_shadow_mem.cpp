@@ -20,6 +20,7 @@ CompressedDictShadowMem::CompressedDictShadowMem() {
         case 2:
             my_read_dict = new Static_Dictionary();
             my_write_dict = new Static_Dictionary();
+            my_alloc_dict = new Static_Dictionary();
             break;
     }
 }
@@ -119,6 +120,12 @@ void CompressedDictShadowMem::clear(size_t start, size_t size) {
   //}
 }
 
+void CompressedDictShadowMem::record_alloc(size_t start, size_t size,
+                                           FrameData_t *f,
+                                           const call_stack_t &call_stack) {
+  my_alloc_dict->set(start, size, MemoryAccess_t(f->Sbag, 0, call_stack));
+}
+
 // prev_read: are we checking with previous reads or writes?
 // is_read: is the current access read or write?
 void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,
@@ -150,9 +157,11 @@ void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,
         // We don't need to check for this because we clear shadow memory;
         // non-shared stack can't race because earlier one would've been cleared
 
+        auto alloc_access = my_alloc_dict->find(shifted_addr)->getLoc();
         if (prev_read) // checking the current access with previous reads
           report_race(access->getLoc(),
                       AccessLoc_t(acc_id, call_stack),
+                      alloc_access,
                       shifted_addr, RW_RACE);
         else {  // check the current access with previous writes
           if (is_read) // the current access is a read
@@ -269,9 +278,11 @@ void CompressedDictShadowMem::check_and_update_write(
 
       // SPBagInterface *cur_node = func->get_node();
       if (lca->is_PBag()) {
+        auto alloc_access = my_alloc_dict->find(shifted_addr)->getLoc();
         // check the current access with previous writes
         report_race(access->getLoc(),
                     AccessLoc_t(acc_id, call_stack),
+                    alloc_access,
                     shifted_addr, WW_RACE);
       }
 
@@ -303,5 +314,6 @@ void CompressedDictShadowMem::destruct() {
   //my_write_dict->destruct();
   delete my_read_dict;
   delete my_write_dict;
+  delete my_alloc_dict;
   MemoryAccess_t::cleanup_freelist();
 }

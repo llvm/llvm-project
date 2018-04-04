@@ -331,6 +331,20 @@ int get_call_stack_divergence_pt(
 
 extern void print_current_function_info();
 
+static std::unique_ptr<CallID_t[]> get_call_stack(const AccessLoc_t &instrAddr) {
+  int stack_size = instrAddr.call_stack.size();
+  std::unique_ptr<CallID_t[]> call_stack(new CallID_t[stack_size]);
+  {
+    call_stack_node_t *call_stack_node = instrAddr.call_stack.tail;
+    for (int i = stack_size - 1;
+         i >= 0;
+         --i, call_stack_node = call_stack_node->prev) {
+      call_stack[i] = call_stack_node->id;
+    }
+  }
+  return call_stack;
+}
+
 static void print_race_info(const RaceInfo_t& race) {
   std::cerr << "Race detected at address "
     // << (is_on_stack(race.addr) ? "stack address " : "address ")
@@ -363,27 +377,9 @@ static void print_race_info(const RaceInfo_t& race) {
 
   // Extract the two call stacks
   int first_call_stack_size = race.first_inst.call_stack.size();
-  std::unique_ptr<CallID_t[]> first_call_stack(
-      new CallID_t[first_call_stack_size]);
-  {
-    call_stack_node_t *call_stack_node = race.first_inst.call_stack.tail;
-    for (int i = first_call_stack_size - 1;
-         i >= 0;
-         --i, call_stack_node = call_stack_node->prev) {
-      first_call_stack[i] = call_stack_node->id;
-    }
-  }
   int second_call_stack_size = race.second_inst.call_stack.size();
-  std::unique_ptr<CallID_t[]> second_call_stack(
-      new CallID_t[second_call_stack_size]);
-  {
-    call_stack_node_t *call_stack_node = race.second_inst.call_stack.tail;
-    for (int i = second_call_stack_size - 1;
-         i >= 0;
-         --i, call_stack_node = call_stack_node->prev) {
-      second_call_stack[i] = call_stack_node->id;
-    }
-  }
+  auto first_call_stack = get_call_stack(race.first_inst);
+  auto second_call_stack = get_call_stack(race.second_inst);
 
   // Determine where the two call stacks diverge
   int divergence = get_call_stack_divergence_pt(
@@ -441,6 +437,13 @@ static void print_race_info(const RaceInfo_t& race) {
                 << std::endl;
   }
 
+  if (race.alloc_inst.acc_loc) {
+    auto alloc_call_stack = get_call_stack(race.alloc_inst);
+    for (int i = race.alloc_inst.call_stack.size() - 1; i >= 0; --i)
+      std::cerr << "    " << get_info_on_call(alloc_call_stack[i])
+                << std::endl;
+  }
+
   std::cerr << std::endl;
 
   // print_current_function_info();
@@ -448,12 +451,13 @@ static void print_race_info(const RaceInfo_t& race) {
 
 // Log the race detected
 void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
+                 const AccessLoc_t &alloc_inst,
                  uint64_t addr, enum RaceType_t race_type) {
   bool found = false;
   uint64_t key =
     first_inst < second_inst ?
                  first_inst.getID() : second_inst.getID();
-  RaceInfo_t race(first_inst, std::move(second_inst), addr, race_type);
+  RaceInfo_t race(first_inst, std::move(second_inst), alloc_inst, addr, race_type);
 
   std::pair<RaceMap_t::iterator, RaceMap_t::iterator> range;
   range = races_found.equal_range(key);
@@ -474,6 +478,11 @@ void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
     print_race_info(race);
     races_found.insert(std::make_pair(key, race));
   }
+}
+
+void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
+                 uint64_t addr, enum RaceType_t race_type) {
+  report_race(first_inst, std::move(second_inst), AccessLoc_t(), addr, race_type);
 }
 
 // Report viewread race

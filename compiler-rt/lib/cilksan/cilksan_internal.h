@@ -405,13 +405,15 @@ public:
 typedef struct RaceInfo_t {
   const AccessLoc_t first_inst;  // instruction addr of the first access
   const AccessLoc_t second_inst; // instruction addr of the second access
+  const AccessLoc_t alloc_inst;  // instruction addr of memory allocation
   uintptr_t addr;          // addr of memory location that got raced on
   enum RaceType_t type;    // type of race
 
   RaceInfo_t(const AccessLoc_t &_first, AccessLoc_t &&_second,
+             const AccessLoc_t &_alloc,
              uintptr_t _addr, enum RaceType_t _type)
-      : first_inst(_first), second_inst(_second), addr(_addr),
-        type(_type)
+      : first_inst(_first), second_inst(_second), alloc_inst(_alloc),
+        addr(_addr), type(_type)
   {
     // std::cerr << "RaceInfo_t constructing (" << first_inst << ", " << second_inst << ")\n";
   }
@@ -432,8 +434,9 @@ typedef struct RaceInfo_t {
     // Angelina: It turns out that, Cilkscreen does not care about the race
     // types.  As long as the access instructions are the same, it's considered
     // as a duplicate.
-    if ((first_inst == other.first_inst && second_inst == other.second_inst) ||
-        (first_inst == other.second_inst && second_inst == other.first_inst)) {
+    if (((first_inst == other.first_inst && second_inst == other.second_inst) ||
+         (first_inst == other.second_inst && second_inst == other.first_inst)) &&
+        alloc_inst == other.alloc_inst) {
       return true;
     }
     return false;
@@ -442,6 +445,9 @@ typedef struct RaceInfo_t {
 
 // defined in print_addr.cpp
 void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
+                 uintptr_t addr, enum RaceType_t race_type);
+void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
+                 const AccessLoc_t &alloc_inst,
                  uintptr_t addr, enum RaceType_t race_type);
 
 // public functions
@@ -462,6 +468,7 @@ void cilksan_do_leave_stolen_callback();
 void cilksan_do_read(const csi_id_t load_id, uintptr_t addr, size_t len);
 void cilksan_do_write(const csi_id_t store_id, uintptr_t addr, size_t len);
 void cilksan_clear_shadow_memory(size_t start, size_t end);
+void cilksan_record_alloc(size_t start, size_t end);
 // void cilksan_do_function_entry(uint64_t an_address);
 // void cilksan_do_function_exit();
 #endif // __CILKSAN_INTERNAL_H__

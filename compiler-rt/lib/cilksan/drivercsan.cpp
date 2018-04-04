@@ -554,6 +554,7 @@ CILKSAN_API void* malloc(size_t s) {
     disable_checking();
     malloc_sizes.insert({(uintptr_t)r, new_size});
     // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
+    cilksan_record_alloc((size_t)r, new_size);
     cilksan_clear_shadow_memory((size_t)r, new_size);
     enable_checking();
   }
