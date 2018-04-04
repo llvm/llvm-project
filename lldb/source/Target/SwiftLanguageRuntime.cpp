@@ -1182,7 +1182,9 @@ SwiftLanguageRuntime::GetMemoryReader() {
 
 SwiftASTContext *SwiftLanguageRuntime::GetScratchSwiftASTContext() {
   Status error;
-  return m_process->GetTarget().GetScratchSwiftASTContext(error);
+  return llvm::dyn_cast_or_null<SwiftASTContext>(
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+          &error, eLanguageTypeSwift));
 }
 
 SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
@@ -2982,7 +2984,9 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
     if (mangled_name.GuessLanguage() == lldb::eLanguageTypeSwift) {
       Status error;
       Target &target = frame.GetThread()->GetProcess()->GetTarget();
-      SwiftASTContext *swift_ast = target.GetScratchSwiftASTContext(error);
+      ExecutionContext exe_ctx(frame);
+      SwiftASTContext *swift_ast =
+          target.GetScratchSwiftASTContext(error, frame);
       if (swift_ast) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
             mangled_name.GetMangledName().AsCString(), error);
@@ -3100,8 +3104,9 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
 {
   ValueObjectSP error_valobj_sp;
   Status error;
-  SwiftASTContext *ast_context =
-      m_process->GetTarget().GetScratchSwiftASTContext(error);
+  SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+          &error, eLanguageTypeSwift));
   if (!ast_context || error.Fail())
     return error_valobj_sp;
 
@@ -3120,9 +3125,13 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
   }
 
   if (persistent && error_valobj_sp) {
-    PersistentExpressionState *persistent_state =
-        m_process->GetTarget().GetPersistentExpressionStateForLanguage(
-            eLanguageTypeSwift);
+    ExecutionContext ctx =
+      error_valobj_sp->GetExecutionContextRef().Lock(false);
+    auto *exe_scope = ctx.GetBestExecutionContextScope();
+    if (!exe_scope)
+      return error_valobj_sp;
+    auto *persistent_state =
+        m_process->GetTarget().GetSwiftPersistentExpressionState(*exe_scope);
 
     ConstString persistent_variable_name(
         persistent_state->GetNextPersistentVariableName(true));
@@ -3177,7 +3186,8 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
     frame_sp->CalculateExecutionContext(exe_ctx);
     DataExtractor data;
 
-    SwiftASTContext *ast_context = target->GetScratchSwiftASTContext(error);
+    SwiftASTContext *ast_context = target->GetScratchSwiftASTContext(
+        error, *frame_sp);
     if (!ast_context || error.Fail())
       return error_valobj_sp;
 
@@ -3207,8 +3217,9 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
 void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
                                                lldb::addr_t addr) {
   Status ast_context_error;
-  SwiftASTContext *ast_context =
-      target.GetScratchSwiftASTContext(ast_context_error);
+  SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
+      target.GetScratchTypeSystemForLanguage(&ast_context_error,
+                                             eLanguageTypeSwift));
 
   if (ast_context_error.Success() && ast_context &&
       !ast_context->HasFatalErrors()) {
