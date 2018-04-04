@@ -125,7 +125,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // we need to make sure the Target's SwiftASTContext has been setup BEFORE
     // we do any Swift name lookups
     if (m_target) {
-      SwiftASTContext *swift_ast_ctx = m_target->GetScratchSwiftASTContext(err);
+      SwiftASTContext *swift_ast_ctx = m_target->GetScratchSwiftASTContext(
+          err, *frame);
       if (!swift_ast_ctx) {
         if (log)
           log->Printf("  [SUE::SC] NULL Swift AST Context");
@@ -336,6 +337,14 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   }
 }
 
+static SwiftPersistentExpressionState *
+GetPersistentState(Target *target, ExecutionContext &exe_ctx) {
+  auto exe_scope = exe_ctx.GetBestExecutionContextScope();
+  if (!exe_scope)
+    return nullptr;
+  return target->GetSwiftPersistentExpressionState(*exe_scope);
+}
+
 bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionContext &exe_ctx,
                                 lldb_private::ExecutionPolicy execution_policy,
@@ -347,22 +356,19 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   Status err;
 
   InstallContext(exe_ctx);
-
-  if (Target *target = exe_ctx.GetTargetPtr()) {
-    if (PersistentExpressionState *persistent_state =
-            target->GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeSwift)) {
-      m_result_delegate.RegisterPersistentState(persistent_state);
-      m_error_delegate.RegisterPersistentState(persistent_state);
-    } else {
-      diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
-          "couldn't start parsing (no persistent data)");
-      return false;
-    }
+  Target *target = exe_ctx.GetTargetPtr();
+  if (!target) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "couldn't start parsing (no target)");
+    return false;
+  }
+  if (auto *persistent_state = GetPersistentState(target, exe_ctx)) {
+    persistent_state->AddHandLoadedModule(ConstString("Swift"));
+    m_result_delegate.RegisterPersistentState(persistent_state);
+    m_error_delegate.RegisterPersistentState(persistent_state);
   } else {
     diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                  "couldn't start parsing (no target)");
+                                 "couldn't start parsing (no persistent data)");
     return false;
   }
 
@@ -399,17 +405,6 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   if (log)
     log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
-
-  ////////////////////////////////////
-  // Set up the target and compiler
-  //
-
-  Target *target = exe_ctx.GetTargetPtr();
-
-  if (!target) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError, "invalid target\n");
-    return false;
-  }
 
   //////////////////////////
   // Parse the expression
@@ -448,17 +443,20 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     exe_scope = exe_ctx.GetTargetPtr();
   } while (0);
 
-  std::unique_ptr<ExpressionParser> parser(
-      new SwiftExpressionParser(exe_scope, *this, m_options));
+  m_parser =
+      llvm::make_unique<SwiftExpressionParser>(exe_scope, *this, m_options);
 
-  unsigned num_errors = parser->Parse(
-      diagnostic_manager, first_body_line, 
+  unsigned error_code = m_parser->Parse(
+      diagnostic_manager, first_body_line,
       first_body_line + source_code->GetNumBodyLines(), line_offset);
 
-  if (num_errors) {
+  if (error_code == 2) {
+    m_fixed_text = m_expr_text;
+    return false;
+  } else if (error_code) {
     // Calculate the fixed expression string at this point:
     if (diagnostic_manager.HasFixIts()) {
-      if (parser->RewriteExpression(diagnostic_manager)) {
+      if (m_parser->RewriteExpression(diagnostic_manager)) {
         size_t fixed_start;
         size_t fixed_end;
         const std::string &fixed_expression =
@@ -472,12 +470,10 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return false;
   }
 
-  //////////////////////////////////////////////////////////////////////////////////////////
-  // Prepare the output of the parser for execution, evaluating it statically if
-  // possible
-  //
 
-  Status jit_error = parser->PrepareForExecution(
+  // Prepare the output of the parser for execution, evaluating it statically if
+  // possible.
+  Status jit_error = m_parser->PrepareForExecution(
       m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
       m_can_interpret, execution_policy);
 
@@ -506,9 +502,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       // execution
       // unit to determine whether it needs to live in the process.
 
-      llvm::cast<SwiftPersistentExpressionState>(
-          exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(
-              lldb::eLanguageTypeSwift))
+      GetPersistentState(exe_ctx.GetTargetPtr(), exe_ctx)
           ->RegisterExecutionUnit(m_execution_unit_sp);
     }
   }
@@ -618,9 +612,8 @@ lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
     lldb::TargetSP target_sp = exe_scope->CalculateTarget();
 
     if (target_sp) {
-      if (PersistentExpressionState *persistent_state =
-              target_sp->GetPersistentExpressionStateForLanguage(
-                  lldb::eLanguageTypeSwift)) {
+      if (auto *persistent_state =
+              target_sp->GetSwiftPersistentExpressionState(*exe_scope)) {
         if (error_is_valid) {
           persistent_state->RemovePersistentVariable(in_result_sp);
           result_sp = in_error_sp;

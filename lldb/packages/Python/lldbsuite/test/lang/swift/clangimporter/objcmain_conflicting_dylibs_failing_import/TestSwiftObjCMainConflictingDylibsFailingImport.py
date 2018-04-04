@@ -54,22 +54,24 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         # amalgamated target header search options from all dylibs.
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, bar_breakpoint)
-        frame = threads[0].GetFrameAtIndex(0)
-        value = frame.EvaluateExpression("bar")
-        self.assertFalse(value.GetError().Success())
-        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
         # This works becaue the Module-SwiftASTContext uses the dylib flags.
         self.expect("fr var bar", "expected result", substrs=["42"])
-
+        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
+        # This initially fails with the shared scratch context and is
+        # then retried with the per-dylib scratch context.
+        self.expect("p bar", "expected result", substrs=["42"])
+        self.expect("p $R0", "expected result", substrs=["42"])
+        self.expect("p $R1", "expected result", substrs=["42"])
+        
         # This works by accident because the search paths are in the right order.
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Foo.swift'))
         process.Continue()
-        self.assertFalse(value.GetError().Success())
-        self.expect("p foo", "expected result", substrs=["23"])
-        # This works becaue the Module-SwiftASTContext uses the dylib flags.
         self.expect("fr var foo", "expected result", substrs=["23"])
+        self.expect("p foo", "expected result", substrs=["23"])
+        self.expect("p $R0", "expected result", substrs=["23"])
+        self.expect("p $R1", "expected result", substrs=["23"])
 
 if __name__ == '__main__':
     import atexit

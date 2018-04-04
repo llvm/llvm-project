@@ -917,7 +917,13 @@ public:
             : lldb::eLanguageTypeObjC_plus_plus;
 
     Status type_system_error;
-    TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
+    TypeSystem *type_system;
+    
+    if (lang == lldb::eLanguageTypeSwift) {
+      Status error;
+      type_system = target_sp->GetScratchSwiftASTContext(error, *frame_sp);
+    } else
+      type_system = target_sp->GetScratchTypeSystemForLanguage(
         &type_system_error, m_type.GetMinimumLanguage());
 
     if (!type_system) {
@@ -928,8 +934,12 @@ public:
       return;
     }
 
-    PersistentExpressionState *persistent_state =
-        type_system->GetPersistentExpressionState();
+    PersistentExpressionState *persistent_state;
+    if (lang == lldb::eLanguageTypeSwift)
+      persistent_state =
+        target_sp->GetSwiftPersistentExpressionState(*frame_sp);
+    else
+      persistent_state = type_system->GetPersistentExpressionState();
 
     if (!persistent_state) {
       err.SetErrorString("Couldn't dematerialize a result variable: "
