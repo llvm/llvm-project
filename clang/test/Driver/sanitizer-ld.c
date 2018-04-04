@@ -557,6 +557,21 @@
 // CHECK-SAFESTACK-LINUX: "-lpthread"
 // CHECK-SAFESTACK-LINUX: "-ldl"
 
+// RUN: %clang -fsanitize=shadow-call-stack %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux -fuse-ld=ld \
+// RUN:   | FileCheck --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-X86-64 %s
+// CHECK-SHADOWCALLSTACK-LINUX-X86-64-NOT: error:
+
+// RUN: %clang -fsanitize=shadow-call-stack %s -### -o %t.o 2>&1 \
+// RUN:     -target x86-unknown-linux -fuse-ld=ld \
+// RUN:   | FileCheck --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-X86 %s
+// CHECK-SHADOWCALLSTACK-LINUX-X86: error: unsupported option '-fsanitize=shadow-call-stack' for target 'x86-unknown-linux'
+
+// RUN: %clang -fsanitize=shadow-call-stack %s -### -o %t.o 2>&1 \
+// RUN:     -fsanitize=safe-stack -target x86_64-unknown-linux -fuse-ld=ld \
+// RUN:   | FileCheck --check-prefix=CHECK-SHADOWCALLSTACK-SAFESTACK %s
+// CHECK-SHADOWCALLSTACK-SAFESTACK: error: invalid argument '-fsanitize=shadow-call-stack' not allowed with '-fsanitize=safe-stack'
+
 // RUN: %clang -fsanitize=cfi -fsanitize-stats %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \

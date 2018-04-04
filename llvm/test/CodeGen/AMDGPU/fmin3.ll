@@ -85,6 +85,23 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(half addrspace(1)* %out, half ad
 ; Checks whether the test passes; performMinMaxCombine() should not optimize vector patterns of min3
 ; since there are no pack instructions for fmin3.
 ; GCN-LABEL: {{^}}no_fmin3_v2f16:
+
+; SI: v_cvt_f16_f32_e32
+; SI: v_min_f32_e32
+; SI-NEXT: v_min_f32_e32
+; SI-NEXT: v_min3_f32
+; SI-NEXT: v_min3_f32
+
+; VI: v_min_f16_e32
+; VI-NEXT: v_min_f16_e32
+; VI-NEXT: v_min_f16_e32
+; VI-NEXT: v_min_f16_e32
+; VI-NEXT: v_min_f16_e32
+; VI-NEXT: v_min_f16_e32
+
+; GFX9: v_pk_min_f16
+; GFX9: v_pk_min_f16
+; GFX9: v_pk_min_f16
 define <2 x half> @no_fmin3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) {
 entry:
   %min = tail call fast <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)

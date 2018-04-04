@@ -23749,9 +23749,6 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
 
     SDValue SetCC = getSETCC(X86::COND_O, SDValue(Sum.getNode(), 2), DL, DAG);
 
-    if (N->getValueType(1) == MVT::i1)
-      SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
-
     return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
   }
   }
@@ -23761,9 +23758,6 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   SDValue Sum = DAG.getNode(BaseOp, DL, VTs, LHS, RHS);
 
   SDValue SetCC = getSETCC(Cond, SDValue(Sum.getNode(), 1), DL, DAG);
-
-  if (N->getValueType(1) == MVT::i1)
-    SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
 
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }

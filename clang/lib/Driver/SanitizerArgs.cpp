@@ -343,7 +343,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(Scudo, Address | HWAddress | Leak | Thread | Memory |
                                 KernelAddress | Efficiency),
       std::make_pair(SafeStack, Address | HWAddress | Leak | Thread | Memory |
-                                    KernelAddress | Efficiency)};
+                                    KernelAddress | Efficiency),
+      std::make_pair(ShadowCallStack, Address | HWAddress | Leak | Thread |
+                                          Memory | KernelAddress | Efficiency |
+                                          SafeStack)};
 
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
