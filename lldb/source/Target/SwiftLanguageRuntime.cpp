@@ -1843,9 +1843,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
       return false;
 
     lldb::addr_t class_metadata_ptr = payload0_sp->GetAddressOf();
-    if (class_metadata_ptr == LLDB_INVALID_ADDRESS || class_metadata_ptr == 0)
-      return false;
-    address.SetRawAddress(class_metadata_ptr);
+    if (class_metadata_ptr && class_metadata_ptr != LLDB_INVALID_ADDRESS)
+      address.SetRawAddress(class_metadata_ptr);
 
     class_type_or_name.SetCompilerType(type.GetPointerType());
     return class_type_or_name.GetCompilerType().IsValid();
