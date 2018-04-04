@@ -7,8 +7,10 @@ except ImportError:
 
 def convertToCaretAndMNotation(data):
    newdata = StringIO()
-   for char in data:
-       intval = ord(char)
+   if isinstance(data, str):
+       data = bytearray(data)
+
+   for intval in data:
        if intval == 9 or intval == 10:
            newdata.write(chr(intval))
            continue
@@ -23,7 +25,7 @@ def convertToCaretAndMNotation(data):
        else:
            newdata.write(chr(intval))
 
-   return newdata.getvalue();
+   return newdata.getvalue().encode()
 
 
 def main(argv):
@@ -42,13 +44,19 @@ def main(argv):
         if option == "-v" or option == "--show-nonprinting":
             show_nonprinting = True;
 
+    writer = getattr(sys.stdout, 'buffer', None)
+    if writer is None:
+        writer = sys.stdout
+        if sys.platform == "win32":
+            import os, msvcrt
+            msvcrt.setmode(sys.stdout.fileno(),os.O_BINARY)
     for filename in filenames:
         try:
             fileToCat = open(filename,"rb")
             contents = fileToCat.read()
             if show_nonprinting:
                 contents = convertToCaretAndMNotation(contents)
-            sys.stdout.write(contents)
+            writer.write(contents)
             sys.stdout.flush()
             fileToCat.close()
         except IOError as error:

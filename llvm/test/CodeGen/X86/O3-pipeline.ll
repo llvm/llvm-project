@@ -142,6 +142,7 @@
 ; CHECK-NEXT:       ReachingDefAnalysis
 ; CHECK-NEXT:       X86 Execution Dependency Fix
 ; CHECK-NEXT:       BreakFalseDeps
+; CHECK-NEXT:       Shadow Call Stack
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
 ; CHECK-NEXT:       X86 vzeroupper inserter
 ; CHECK-NEXT:       MachineDominator Tree Construction

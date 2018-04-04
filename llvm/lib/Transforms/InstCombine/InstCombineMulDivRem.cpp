@@ -491,43 +491,74 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);
 
-  // Reassociate constant RHS with another constant to form constant expression.
-  // FIXME: These folds do not require all FMF.
-  if (I.isFast() && match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP()) {
-    Constant *C1;
-    if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
-      // (C1 / X) * C --> (C * C1) / X
-      Constant *CC1 = ConstantExpr::getFMul(C, C1);
-      if (CC1->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(CC1, X, &I);
-    }
-    if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
-      // (X / C1) * C --> X * (C / C1)
-      Constant *CDivC1 = ConstantExpr::getFDiv(C, C1);
-      if (CDivC1->isNormalFP())
-        return BinaryOperator::CreateFMulFMF(X, CDivC1, &I);
+  if (I.hasAllowReassoc()) {
+    // Reassociate constant RHS with another constant to form constant
+    // expression.
+    if (match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP()) {
+      Constant *C1;
+      if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
+        // (C1 / X) * C --> (C * C1) / X
+        Constant *CC1 = ConstantExpr::getFMul(C, C1);
+        if (CC1->isNormalFP())
+          return BinaryOperator::CreateFDivFMF(CC1, X, &I);
+      }
+      if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
+        // (X / C1) * C --> X * (C / C1)
+        Constant *CDivC1 = ConstantExpr::getFDiv(C, C1);
+        if (CDivC1->isNormalFP())
+          return BinaryOperator::CreateFMulFMF(X, CDivC1, &I);
 
-      // If the constant was a denormal, try reassociating differently.
-      // (X / C1) * C --> X / (C1 / C)
-      Constant *C1DivC = ConstantExpr::getFDiv(C1, C);
-      if (Op0->hasOneUse() && C1DivC->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
+        // If the constant was a denormal, try reassociating differently.
+        // (X / C1) * C --> X / (C1 / C)
+        Constant *C1DivC = ConstantExpr::getFDiv(C1, C);
+        if (Op0->hasOneUse() && C1DivC->isNormalFP())
+          return BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
+      }
+
+      // We do not need to match 'fadd C, X' and 'fsub X, C' because they are
+      // canonicalized to 'fadd X, C'. Distributing the multiply may allow
+      // further folds and (X * C) + C2 is 'fma'.
+      if (match(Op0, m_OneUse(m_FAdd(m_Value(X), m_Constant(C1))))) {
+        // (X + C1) * C --> (X * C) + (C * C1)
+        Constant *CC1 = ConstantExpr::getFMul(C, C1);
+        Value *XC = Builder.CreateFMulFMF(X, C, &I);
+        return BinaryOperator::CreateFAddFMF(XC, CC1, &I);
+      }
+      if (match(Op0, m_OneUse(m_FSub(m_Constant(C1), m_Value(X))))) {
+        // (C1 - X) * C --> (C * C1) - (X * C)
+        Constant *CC1 = ConstantExpr::getFMul(C, C1);
+        Value *XC = Builder.CreateFMulFMF(X, C, &I);
+        return BinaryOperator::CreateFSubFMF(CC1, XC, &I);
+      }
     }
 
-    // We do not need to match 'fadd C, X' and 'fsub X, C' because they are
-    // canonicalized to 'fadd X, C'. Distributing the multiply may allow further
-    // folds and (X * C) + C2 is 'fma'.
-    if (match(Op0, m_OneUse(m_FAdd(m_Value(X), m_Constant(C1))))) {
-      // (X + C1) * C --> (X * C) + (C * C1)
-      Constant *CC1 = ConstantExpr::getFMul(C, C1);
-      Value *XC = Builder.CreateFMulFMF(X, C, &I);
-      return BinaryOperator::CreateFAddFMF(XC, CC1, &I);
+    // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
+    // nnan disallows the possibility of returning a number if both operands are
+    // negative (in that case, we should return NaN).
+    if (I.hasNoNaNs() &&
+        match(Op0, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(X)))) &&
+        match(Op1, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(Y))))) {
+      Value *XY = Builder.CreateFMulFMF(X, Y, &I);
+      Value *Sqrt = Builder.CreateIntrinsic(Intrinsic::sqrt, { XY }, &I);
+      return replaceInstUsesWith(I, Sqrt);
     }
-    if (match(Op0, m_OneUse(m_FSub(m_Constant(C1), m_Value(X))))) {
-      // (C1 - X) * C --> (C * C1) - (X * C)
-      Constant *CC1 = ConstantExpr::getFMul(C, C1);
-      Value *XC = Builder.CreateFMulFMF(X, C, &I);
-      return BinaryOperator::CreateFSubFMF(CC1, XC, &I);
+
+    // (X*Y) * X => (X*X) * Y where Y != X
+    //  The purpose is two-fold:
+    //   1) to form a power expression (of X).
+    //   2) potentially shorten the critical path: After transformation, the
+    //  latency of the instruction Y is amortized by the expression of X*X,
+    //  and therefore Y is in a "less critical" position compared to what it
+    //  was before the transformation.
+    if (match(Op0, m_OneUse(m_c_FMul(m_Specific(Op1), m_Value(Y)))) &&
+        Op1 != Y) {
+      Value *XX = Builder.CreateFMulFMF(Op1, Op1, &I);
+      return BinaryOperator::CreateFMulFMF(XX, Y, &I);
+    }
+    if (match(Op1, m_OneUse(m_c_FMul(m_Specific(Op0), m_Value(Y)))) &&
+        Op0 != Y) {
+      Value *XX = Builder.CreateFMulFMF(Op0, Op0, &I);
+      return BinaryOperator::CreateFMulFMF(XX, Y, &I);
     }
   }
 
@@ -549,37 +580,6 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       Log2->copyFastMathFlags(&I);
       Value *LogXTimesY = Builder.CreateFMulFMF(Log2, Y, &I);
       return BinaryOperator::CreateFSubFMF(LogXTimesY, Y, &I);
-    }
-  }
-
-  // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
-  // nnan disallows the possibility of returning a number if both operands are
-  // negative (in that case, we should return NaN).
-  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
-      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(X)))) &&
-      match(Op1, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(Y))))) {
-    Value *XY = Builder.CreateFMulFMF(X, Y, &I);
-    Value *Sqrt = Builder.CreateIntrinsic(Intrinsic::sqrt, { XY }, &I);
-    return replaceInstUsesWith(I, Sqrt);
-  }
-
-  // (X*Y) * X => (X*X) * Y where Y != X
-  //  The purpose is two-fold:
-  //   1) to form a power expression (of X).
-  //   2) potentially shorten the critical path: After transformation, the
-  //  latency of the instruction Y is amortized by the expression of X*X,
-  //  and therefore Y is in a "less critical" position compared to what it
-  //  was before the transformation.
-  if (I.hasAllowReassoc()) {
-    if (match(Op0, m_OneUse(m_c_FMul(m_Specific(Op1), m_Value(Y)))) &&
-        Op1 != Y) {
-      Value *XX = Builder.CreateFMulFMF(Op1, Op1, &I);
-      return BinaryOperator::CreateFMulFMF(XX, Y, &I);
-    }
-    if (match(Op1, m_OneUse(m_c_FMul(m_Specific(Op0), m_Value(Y)))) &&
-        Op0 != Y) {
-      Value *XX = Builder.CreateFMulFMF(Op0, Op0, &I);
-      return BinaryOperator::CreateFMulFMF(XX, Y, &I);
     }
   }
 

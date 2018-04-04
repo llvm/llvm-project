@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -90,11 +91,22 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// other stack allocations.
   bool CalleeSaveStackHasFreeSpace = false;
 
+  /// \brief Has a value when it is known whether or not the function uses a
+  /// redzone, and no value otherwise.
+  /// Initialized during frame lowering, unless the function has the noredzone
+  /// attribute, in which case it is set to false at construction.
+  Optional<bool> HasRedZone;
+
 public:
   AArch64FunctionInfo() = default;
 
   explicit AArch64FunctionInfo(MachineFunction &MF) {
     (void)MF;
+
+    // If we already know that the function doesn't have a redzone, set
+    // HasRedZone here.
+    if (MF.getFunction().hasFnAttribute(Attribute::NoRedZone))
+      HasRedZone = false;
   }
 
   unsigned getBytesInStackArgArea() const { return BytesInStackArgArea; }
@@ -132,6 +144,9 @@ public:
     return NumLocalDynamicTLSAccesses;
   }
 
+  Optional<bool> hasRedZone() const { return HasRedZone; }
+  void setHasRedZone(bool s) { HasRedZone = s; }
+  
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
   void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
 

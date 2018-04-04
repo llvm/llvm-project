@@ -21,6 +21,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 
 using namespace llvm;
 
@@ -45,7 +46,7 @@ void HexagonTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP) {
   UP.Runtime = UP.Partial = true;
   // Only try to peel innermost loops with small runtime trip counts.
-  if (L && L->empty() &&
+  if (L && L->empty() && canPeel(L) &&
       SE.getSmallConstantTripCount(L) == 0 &&
       SE.getSmallConstantMaxTripCount(L) > 0 &&
       SE.getSmallConstantMaxTripCount(L) <= 5) {

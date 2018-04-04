@@ -50,6 +50,11 @@ FunctionPass *createX86FloatingPointStackifierPass();
 /// transition penalty between functions encoded with AVX and SSE.
 FunctionPass *createX86IssueVZeroUpperPass();
 
+/// This pass instruments the function prolog to save the return address to a
+/// 'shadow call stack' and the function epilog to check that the return address
+/// did not change during function execution.
+FunctionPass *createShadowCallStackPass();
+
 /// This pass inserts ENDBR instructions before indirect jump/call
 /// destinations as part of CET IBT mechanism.
 FunctionPass *createX86IndirectBranchTrackingPass();

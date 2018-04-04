@@ -84,9 +84,38 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(half addrspace(1)* %out, half ad
   ret void
 }
 
+; Checks whether the test passes; performMinMaxCombine() should not optimize vector patterns of max3
+; since there are no pack instructions for fmax3.
+; GCN-LABEL: {{^}}no_fmax3_v2f16:
+
+; SI: v_cvt_f16_f32_e32
+; SI: v_max_f32_e32
+; SI-NEXT: v_max_f32_e32
+; SI-NEXT: v_max3_f32
+; SI-NEXT: v_max3_f32
+
+; VI: v_max_f16_e32
+; VI-NEXT: v_max_f16_e32
+; VI-NEXT: v_max_f16_e32
+; VI-NEXT: v_max_f16_e32
+; VI-NEXT: v_max_f16_e32
+; VI-NEXT: v_max_f16_e32
+
+; GFX9: v_pk_max_f16
+; GFX9-NEXT: v_pk_max_f16
+; GFX9-NEXT: v_pk_max_f16
+define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) {
+entry:
+  %max = tail call fast <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
+  %max1 = tail call fast <2 x half> @llvm.maxnum.v2f16(<2 x half> %c, <2 x half> %max)
+  %res = tail call fast <2 x half> @llvm.maxnum.v2f16(<2 x half> %max1, <2 x half> %d)
+  ret <2 x half> %res
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.maxnum.f32(float, float) #1
 declare half @llvm.maxnum.f16(half, half) #1
+declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
