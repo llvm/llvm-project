@@ -674,6 +674,12 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     if (!imported_self_type.IsValid())
       break;
 
+    // This might be a referenced type, in which case we really want to extend
+    // the referent:
+    imported_self_type =
+        llvm::cast<SwiftASTContext>(imported_self_type.GetTypeSystem())
+            ->GetReferentType(imported_self_type);
+
     // If we are extending a generic class it's going to be a metatype, and we
     // have to grab the instance type:
     imported_self_type =
