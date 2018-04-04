@@ -1091,6 +1091,9 @@ public:
   GetPersistentExpressionStateForLanguage(lldb::LanguageType language);
 #endif
 
+  SwiftPersistentExpressionState *
+  GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope);
+
   const TypeSystemMap &GetTypeSystemMap();
 
   // Creates a UserExpression for the given language, the rest of the parameters
@@ -1147,22 +1150,23 @@ public:
 #ifdef __clang_analyzer__
   // See GetScratchTypeSystemForLanguage()
   SwiftASTContext *
-  GetScratchSwiftASTContext(Status &error, bool create_on_demand = true,
+  GetScratchSwiftASTContext(Status &error, ExecutionContextScope &exe_scope,
+                            bool create_on_demand = true,
                             const char *extra_options = nullptr)
       __attribute__((always_inline)) {
-    SwiftASTContext *ret =
-        GetScratchSwiftASTContextImpl(error, create_on_demand, extra_options);
+    SwiftASTContext *ret = GetScratchSwiftASTContextImpl(
+        error, exe_scope, create_on_demand, extra_options);
 
     return ret ? ret : nullptr;
   }
 
   SwiftASTContext *
-  GetScratchSwiftASTContextImpl(Status &error, bool create_on_demand = true,
-                                const char *extra_options = nullptr);
+  GetScratchSwiftASTContextImpl(Status &error, ExecutionContextScope &exe_scope,
+                                bool create_on_demand = true);
 #else
-  SwiftASTContext *
-  GetScratchSwiftASTContext(Status &error, bool create_on_demand = true,
-                            const char *extra_options = nullptr);
+  SwiftASTContext *GetScratchSwiftASTContext(Status &error,
+                                             ExecutionContextScope &exe_scope,
+                                             bool create_on_demand = true);
 #endif
 
   //----------------------------------------------------------------------
@@ -1337,6 +1341,15 @@ public:
 
   void SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp);
 
+  /// Enable the use of a separate sscratch type system per lldb::Module.
+  void SetUseScratchTypesystemPerModule(bool value) {
+    m_use_scratch_typesystem_per_module = value;
+  }
+  bool UseScratchTypesystemPerModule() const {
+    return m_use_scratch_typesystem_per_module;
+  }
+
+
 protected:
   //------------------------------------------------------------------
   /// Implementing of ModuleList::Notifier.
@@ -1407,6 +1420,11 @@ protected:
   bool m_valid;
   bool m_suppress_stop_hooks;
   bool m_is_dummy_target;
+
+  bool m_use_scratch_typesystem_per_module = false;
+  typedef std::pair<lldb_private::Module *, char> ModuleLanguage;
+  llvm::DenseMap<ModuleLanguage, lldb::TypeSystemSP>
+      m_scratch_typesystem_for_module;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

@@ -125,9 +125,11 @@ public:
 
   /// Create a SwiftASTContext from a Module.  This context is used
   /// for frame variable ans uses ClangImporter options specific to
-  /// this lldb::Module.
+  /// this lldb::Module.  The optional target is to create a
+  /// module-specific scract context.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module &module);
+                                           Module &module,
+                                           Target *target = nullptr);
   /// Create a SwiftASTContext from a Target.  This context is global
   /// and used for the expression evaluator.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,

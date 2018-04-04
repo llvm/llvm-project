@@ -272,8 +272,8 @@ Status SwiftREPL::DoInitialization() {
   Status error;
 
   if (!m_compiler_options.empty()) {
-    (void)m_target.GetScratchSwiftASTContext(error, true,
-                                             m_compiler_options.c_str());
+    (void)m_target.GetScratchTypeSystemForLanguage(
+        &error, eLanguageTypeSwift, true, m_compiler_options.c_str());
   }
 
   return error;
@@ -527,8 +527,8 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
 #define USE_SEPARATE_AST_FOR_COMPLETION
 #if defined(USE_SEPARATE_AST_FOR_COMPLETION)
   if (!m_swift_ast_sp) {
-    SwiftASTContext *target_swift_ast =
-        m_target.GetScratchSwiftASTContext(error);
+    SwiftASTContext *target_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
+        m_target.GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift));
     if (target_swift_ast)
       m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
   }
