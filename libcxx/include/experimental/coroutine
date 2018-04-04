@@ -294,7 +294,7 @@ using noop_coroutine_handle = coroutine_handle<noop_coroutine_promise>;
 
 inline _LIBCPP_INLINE_VISIBILITY
 noop_coroutine_handle noop_coroutine() _NOEXCEPT {
-  return {};
+  return noop_coroutine_handle();
 }
 #endif // __has_builtin(__builtin_coro_noop)
 
