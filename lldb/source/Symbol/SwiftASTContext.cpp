@@ -107,22 +107,6 @@
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 
-#ifdef LLDB_CONFIGURATION_DEBUG
-#define VALID_OR_RETURN(value)                                                 \
-  do {                                                                         \
-    lldbassert(!HasFatalErrors());                                             \
-    if (HasFatalErrors()) {                                                    \
-      return (value);                                                          \
-    }                                                                          \
-  } while (0)
-#define VALID_OR_RETURN_VOID()                                                 \
-  do {                                                                         \
-    lldbassert(!HasFatalErrors());                                             \
-    if (HasFatalErrors()) {                                                    \
-      return;                                                                  \
-    }                                                                          \
-  } while (0)
-#else
 #define VALID_OR_RETURN(value)                                                 \
   do {                                                                         \
     if (HasFatalErrors()) {                                                    \
@@ -135,7 +119,6 @@
       return;                                                                  \
     }                                                                          \
   } while (0)
-#endif
 
 using namespace lldb;
 using namespace lldb_private;
