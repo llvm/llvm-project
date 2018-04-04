@@ -114,7 +114,9 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
 
-        self.check_variable("in_struct", True, 12345)
+        # Inout sugar is currently not preserved by the compiler so
+        # the inout type appears as direct.
+        self.check_variable("in_struct", False, 12345)
         
         
 
