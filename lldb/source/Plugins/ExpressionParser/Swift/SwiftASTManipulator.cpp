@@ -1333,14 +1333,13 @@ bool SwiftASTManipulator::AddExternalVariables(
       // The access pattern for these types is the same as for the referent
       // type, so it is fine to
       // just strip it off.
-      // FIXME: If this is a weak managed type, then it could ostensibly go away
-      // out from under us,
-      // but for now we aren't playing with reference counts to keep things
-      // alive in the expression parser.
       SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
           variable.m_type.GetTypeSystem());
 
-      CompilerType referent_type = variable.m_type;
+      CompilerType referent_type;
+
+      if (swift_ast_ctx)
+        referent_type = swift_ast_ctx->GetReferentType(variable.m_type);
 
       // One tricky bit here is that this var may be an argument to the function
       // whose context we are
