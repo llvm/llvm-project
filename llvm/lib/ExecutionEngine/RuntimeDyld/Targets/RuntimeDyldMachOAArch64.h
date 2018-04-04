@@ -32,17 +32,28 @@ public:
   unsigned getStubAlignment() override { return 8; }
 
   /// Extract the addend encoded in the instruction / memory location.
-  int64_t decodeAddend(const RelocationEntry &RE) const {
+  Expected<int64_t> decodeAddend(const RelocationEntry &RE) const {
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
     unsigned NumBytes = 1 << RE.Size;
     int64_t Addend = 0;
     // Verify that the relocation has the correct size and alignment.
     switch (RE.RelType) {
-    default:
-      llvm_unreachable("Unsupported relocation type!");
+    default: {
+      std::string ErrMsg;
+      {
+        raw_string_ostream ErrStream(ErrMsg);
+        ErrStream << "Unsupported relocation type: "
+                  << getRelocName(RE.RelType);
+      }
+      return make_error<StringError>(std::move(ErrMsg),
+                                     inconvertibleErrorCode());
+    }
     case MachO::ARM64_RELOC_UNSIGNED:
-      assert((NumBytes == 4 || NumBytes == 8) && "Invalid relocation size.");
+      if (NumBytes != 4 && NumBytes != 8)
+        return make_error<StringError>("Invalid relocation size for "
+                                       "ARM64_RELOC_UNSIGNED",
+                                       inconvertibleErrorCode());
       break;
     case MachO::ARM64_RELOC_BRANCH26:
     case MachO::ARM64_RELOC_PAGE21:
@@ -282,7 +293,10 @@ public:
       return processSubtractRelocation(SectionID, RelI, Obj, ObjSectionToID);
 
     RelocationEntry RE(getRelocationEntry(SectionID, Obj, RelI));
-    RE.Addend = decodeAddend(RE);
+    if (auto Addend = decodeAddend(RE))
+      RE.Addend = *Addend;
+    else
+      return Addend.takeError();
 
     assert((ExplicitAddend == 0 || RE.Addend == 0) && "Relocation has "\
       "ARM64_RELOC_ADDEND and embedded addend in the instruction.");
@@ -461,6 +475,23 @@ private:
     addRelocationForSection(R, SectionAID);
 
     return ++RelI;
+  }
+
+  static const char *getRelocName(uint32_t RelocType) {
+    switch (RelocType) {
+      case MachO::ARM64_RELOC_UNSIGNED: return "ARM64_RELOC_UNSIGNED";
+      case MachO::ARM64_RELOC_SUBTRACTOR: return "ARM64_RELOC_SUBTRACTOR";
+      case MachO::ARM64_RELOC_BRANCH26: return "ARM64_RELOC_BRANCH26";
+      case MachO::ARM64_RELOC_PAGE21: return "ARM64_RELOC_PAGE21";
+      case MachO::ARM64_RELOC_PAGEOFF12: return "ARM64_RELOC_PAGEOFF12";
+      case MachO::ARM64_RELOC_GOT_LOAD_PAGE21: return "ARM64_RELOC_GOT_LOAD_PAGE21";
+      case MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12: return "ARM64_RELOC_GOT_LOAD_PAGEOFF12";
+      case MachO::ARM64_RELOC_POINTER_TO_GOT: return "ARM64_RELOC_POINTER_TO_GOT";
+      case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21: return "ARM64_RELOC_TLVP_LOAD_PAGE21";
+      case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12: return "ARM64_RELOC_TLVP_LOAD_PAGEOFF12";
+      case MachO::ARM64_RELOC_ADDEND: return "ARM64_RELOC_ADDEND";
+    }
+    return "Unrecognized arm64 addend";
   }
 
 };

@@ -2816,8 +2816,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (!isSigned) {
       switch (NVT.SimpleTy) {
       default: llvm_unreachable("Unsupported VT!");
-      case MVT::i8:  Opc = X86::MUL8r;  MOpc = X86::MUL8m;  break;
-      case MVT::i16: Opc = X86::MUL16r; MOpc = X86::MUL16m; break;
       case MVT::i32: Opc = hasBMI2 ? X86::MULX32rr : X86::MUL32r;
                      MOpc = hasBMI2 ? X86::MULX32rm : X86::MUL32m; break;
       case MVT::i64: Opc = hasBMI2 ? X86::MULX64rr : X86::MUL64r;
@@ -2826,8 +2824,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     } else {
       switch (NVT.SimpleTy) {
       default: llvm_unreachable("Unsupported VT!");
-      case MVT::i8:  Opc = X86::IMUL8r;  MOpc = X86::IMUL8m;  break;
-      case MVT::i16: Opc = X86::IMUL16r; MOpc = X86::IMUL16m; break;
       case MVT::i32: Opc = X86::IMUL32r; MOpc = X86::IMUL32m; break;
       case MVT::i64: Opc = X86::IMUL64r; MOpc = X86::IMUL64m; break;
       }
@@ -2836,14 +2832,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     unsigned SrcReg, LoReg, HiReg;
     switch (Opc) {
     default: llvm_unreachable("Unknown MUL opcode!");
-    case X86::IMUL8r:
-    case X86::MUL8r:
-      SrcReg = LoReg = X86::AL; HiReg = X86::AH;
-      break;
-    case X86::IMUL16r:
-    case X86::MUL16r:
-      SrcReg = LoReg = X86::AX; HiReg = X86::DX;
-      break;
     case X86::IMUL32r:
     case X86::MUL32r:
       SrcReg = LoReg = X86::EAX; HiReg = X86::EDX;

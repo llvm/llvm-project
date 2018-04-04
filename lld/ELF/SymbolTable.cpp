@@ -296,19 +296,21 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
   uint8_t Visibility = getVisibility(StOther);
   std::tie(S, WasInserted) =
       insert(Name, Type, Visibility, CanOmitFromDynSym, File);
+
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
   if (WasInserted || (isa<SharedSymbol>(S) && Visibility != STV_DEFAULT)) {
     replaceSymbol<Undefined>(S, File, Name, Binding, StOther, Type);
     return S;
   }
+
   if (S->isShared() || S->isLazy() || (S->isUndefined() && Binding != STB_WEAK))
     S->Binding = Binding;
-  if (Binding != STB_WEAK) {
+
+  if (!Config->GcSections && Binding != STB_WEAK)
     if (auto *SS = dyn_cast<SharedSymbol>(S))
-      if (!Config->GcSections)
-        SS->getFile<ELFT>().IsNeeded = true;
-  }
+      SS->getFile<ELFT>().IsNeeded = true;
+
   if (S->isLazy()) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
@@ -383,7 +385,11 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N, Type, getVisibility(StOther),
                                     /*CanOmitFromDynSym*/ false, &File);
+
   int Cmp = compareDefined(S, WasInserted, Binding, N);
+  if (Cmp < 0)
+    return S;
+
   if (Cmp > 0) {
     auto *Bss = make<BssSection>("COMMON", Size, Alignment);
     Bss->File = &File;
@@ -391,24 +397,25 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
     InputSections.push_back(Bss);
 
     replaceSymbol<Defined>(S, &File, N, Binding, StOther, Type, 0, Size, Bss);
-  } else if (Cmp == 0) {
-    auto *D = cast<Defined>(S);
-    auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
-    if (!Bss) {
-      // Non-common symbols take precedence over common symbols.
-      if (Config->WarnCommon)
-        warn("common " + S->getName() + " is overridden");
-      return S;
-    }
+    return S;
+  }
 
+  auto *D = cast<Defined>(S);
+  auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
+  if (!Bss) {
+    // Non-common symbols take precedence over common symbols.
     if (Config->WarnCommon)
-      warn("multiple common of " + D->getName());
+      warn("common " + S->getName() + " is overridden");
+    return S;
+  }
 
-    Bss->Alignment = std::max(Bss->Alignment, Alignment);
-    if (Size > Bss->Size) {
-      D->File = Bss->File = &File;
-      D->Size = Bss->Size = Size;
-    }
+  if (Config->WarnCommon)
+    warn("multiple common of " + D->getName());
+
+  Bss->Alignment = std::max(Bss->Alignment, Alignment);
+  if (Size > Bss->Size) {
+    D->File = Bss->File = &File;
+    D->Size = Bss->Size = Size;
   }
   return S;
 }

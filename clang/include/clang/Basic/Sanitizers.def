@@ -110,6 +110,9 @@ SANITIZER_GROUP("cfi", CFI,
 // Safe Stack
 SANITIZER("safe-stack", SafeStack)
 
+// Shadow Call Stack
+SANITIZER("shadow-call-stack", ShadowCallStack)
+
 // -fsanitize=undefined includes all the sanitizers which have low overhead, no
 // ABI or address space layout implications, and only catch undefined behavior.
 SANITIZER_GROUP("undefined", Undefined,

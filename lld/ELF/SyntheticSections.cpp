@@ -2438,10 +2438,15 @@ void MergeTailSection::finalizeContents() {
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding StringPiece for easy access.
-  for (MergeInputSection *Sec : Sections)
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
-      if (Sec->Pieces[I].Live)
-        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
+  for (MergeInputSection *Sec : Sections) {
+    Sec->OffsetMap.reserve(Sec->Pieces.size());
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
+      SectionPiece &P = Sec->Pieces[I];
+      Sec->OffsetMap[P.InputOff] = I;
+      if (P.Live)
+        P.OutputOff = Builder.getOffset(Sec->getData(I));
+    }
+  }
 }
 
 void MergeNoTailSection::writeTo(uint8_t *Buf) {
@@ -2494,10 +2499,13 @@ void MergeNoTailSection::finalizeContents() {
   // So far, section pieces have offsets from beginning of shards, but
   // we want offsets from beginning of the whole section. Fix them.
   parallelForEach(Sections, [&](MergeInputSection *Sec) {
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
-      if (Sec->Pieces[I].Live)
-        Sec->Pieces[I].OutputOff +=
-            ShardOffsets[getShardId(Sec->Pieces[I].Hash)];
+    Sec->OffsetMap.reserve(Sec->Pieces.size());
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
+      SectionPiece &P = Sec->Pieces[I];
+      Sec->OffsetMap[P.InputOff] = I;
+      if (P.Live)
+        P.OutputOff += ShardOffsets[getShardId(P.Hash)];
+    }
   });
 }
 
@@ -2573,11 +2581,8 @@ void elf::mergeSections() {
     }
     (*I)->addSection(MS);
   }
-  for (auto *MS : MergeSections) {
+  for (auto *MS : MergeSections)
     MS->finalizeContents();
-    parallelForEach(MS->Sections,
-                    [](MergeInputSection *Sec) { Sec->initOffsetMap(); });
-  }
 
   std::vector<InputSectionBase *> &V = InputSections;
   V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());

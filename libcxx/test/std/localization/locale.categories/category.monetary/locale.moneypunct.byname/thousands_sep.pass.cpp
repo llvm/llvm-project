@@ -92,7 +92,6 @@ int main()
         Fwt f(LOCALE_en_US_UTF_8, 1);
         assert(f.thousands_sep() == L',');
     }
-
     {
         Fnf f(LOCALE_fr_FR_UTF_8, 1);
         assert(f.thousands_sep() == ' ');
@@ -101,13 +100,19 @@ int main()
         Fnt f(LOCALE_fr_FR_UTF_8, 1);
         assert(f.thousands_sep() == ' ');
     }
+// The below tests work around GLIBC's use of U202F as mon_thousands_sep.
+#if defined(TEST_HAS_GLIBC) && TEST_GLIBC_PREREQ(2, 27)
+    const wchar_t fr_sep = L'\u202F';
+#else
+    const wchar_t fr_sep = L' ';
+#endif
     {
         Fwf f(LOCALE_fr_FR_UTF_8, 1);
-        assert(f.thousands_sep() == L' ');
+        assert(f.thousands_sep() == fr_sep);
     }
     {
         Fwt f(LOCALE_fr_FR_UTF_8, 1);
-        assert(f.thousands_sep() == L' ');
+        assert(f.thousands_sep() == fr_sep);
     }
 // The below tests work around GLIBC's use of U00A0 as mon_thousands_sep
 // and U002E as mon_decimal_point.
@@ -116,6 +121,11 @@ int main()
 #ifndef TEST_HAS_GLIBC
     const char sep = ' ';
     const wchar_t wsep = L' ';
+#elif TEST_GLIBC_PREREQ(2, 27)
+    // FIXME libc++ specifically works around \u00A0 by translating it into
+    // a regular space.
+    const char sep = ' ';
+    const wchar_t wsep = L'\u202F';
 #else
     // FIXME libc++ specifically works around \u00A0 by translating it into
     // a regular space.

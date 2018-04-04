@@ -4221,6 +4221,9 @@ void Sema::InstantiateVariableInitializer(
 
     ActOnUninitializedDecl(Var);
   }
+
+  if (getLangOpts().CUDA)
+    checkAllowedCUDAInitializer(Var);
 }
 
 /// \brief Instantiate the definition of the given variable from its
