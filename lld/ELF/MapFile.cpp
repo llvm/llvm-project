@@ -200,7 +200,7 @@ void elf::writeMapFile() {
       }
 
       if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
-        writeHeader(OS, OSec->Addr + Cmd->Offset, Cmd->Size, 1);
+        writeHeader(OS, Cmd->Addr, Cmd->Size, 1);
         OS << Indent8 << Cmd->CommandString << '\n';
         continue;
       }

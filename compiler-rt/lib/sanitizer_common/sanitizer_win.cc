@@ -23,13 +23,10 @@
 #include <stdlib.h>
 
 #include "sanitizer_common.h"
-#include "sanitizer_dbghelp.h"
 #include "sanitizer_file.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_placement_new.h"
-#include "sanitizer_stacktrace.h"
-#include "sanitizer_symbolizer.h"
 #include "sanitizer_win_defs.h"
 
 // A macro to tell the compiler that this part of the code cannot be reached,
@@ -839,54 +836,6 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
   *tls_size = 0;
 #endif
 }
-
-#if !SANITIZER_GO
-void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
-  CHECK_GE(max_depth, 2);
-  // FIXME: CaptureStackBackTrace might be too slow for us.
-  // FIXME: Compare with StackWalk64.
-  // FIXME: Look at LLVMUnhandledExceptionFilter in Signals.inc
-  size = CaptureStackBackTrace(1, Min(max_depth, kStackTraceMax),
-                               (void **)&trace_buffer[0], 0);
-  if (size == 0)
-    return;
-
-  // Skip the RTL frames by searching for the PC in the stacktrace.
-  uptr pc_location = LocatePcInTrace(pc);
-  PopStackFrames(pc_location);
-}
-
-void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
-                                                    u32 max_depth) {
-  CONTEXT ctx = *(CONTEXT *)context;
-  STACKFRAME64 stack_frame;
-  memset(&stack_frame, 0, sizeof(stack_frame));
-
-  InitializeDbgHelpIfNeeded();
-
-  size = 0;
-#if defined(_WIN64)
-  int machine_type = IMAGE_FILE_MACHINE_AMD64;
-  stack_frame.AddrPC.Offset = ctx.Rip;
-  stack_frame.AddrFrame.Offset = ctx.Rbp;
-  stack_frame.AddrStack.Offset = ctx.Rsp;
-#else
-  int machine_type = IMAGE_FILE_MACHINE_I386;
-  stack_frame.AddrPC.Offset = ctx.Eip;
-  stack_frame.AddrFrame.Offset = ctx.Ebp;
-  stack_frame.AddrStack.Offset = ctx.Esp;
-#endif
-  stack_frame.AddrPC.Mode = AddrModeFlat;
-  stack_frame.AddrFrame.Mode = AddrModeFlat;
-  stack_frame.AddrStack.Mode = AddrModeFlat;
-  while (StackWalk64(machine_type, GetCurrentProcess(), GetCurrentThread(),
-                     &stack_frame, &ctx, NULL, SymFunctionTableAccess64,
-                     SymGetModuleBase64, NULL) &&
-         size < Min(max_depth, kStackTraceMax)) {
-    trace_buffer[size++] = (uptr)stack_frame.AddrPC.Offset;
-  }
-}
-#endif  // #if !SANITIZER_GO
 
 void ReportFile::Write(const char *buffer, uptr length) {
   SpinMutexLock l(mu);
