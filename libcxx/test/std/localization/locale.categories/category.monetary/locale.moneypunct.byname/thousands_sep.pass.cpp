@@ -118,6 +118,9 @@ int main()
 // and U002E as mon_decimal_point.
 // TODO: Fix thousands_sep for 'char'.
 // related to https://gcc.gnu.org/bugzilla/show_bug.cgi?id=16006
+#ifndef TEST_GLIBC_PREREQ
+#define TEST_GLIBC_PREREQ(x, y) 0
+#endif
 #ifndef TEST_HAS_GLIBC
     const char sep = ' ';
     const wchar_t wsep = L' ';
