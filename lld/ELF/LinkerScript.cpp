@@ -788,9 +788,9 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   for (BaseCommand *Base : Sec->SectionCommands) {
     // This handles the assignments to symbol or to the dot.
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
-      Cmd->Offset = Dot - Ctx->OutSec->Addr;
+      Cmd->Addr = Dot;
       assignSymbol(Cmd, true);
-      Cmd->Size = Dot - Ctx->OutSec->Addr - Cmd->Offset;
+      Cmd->Size = Dot - Cmd->Addr;
       continue;
     }
 
