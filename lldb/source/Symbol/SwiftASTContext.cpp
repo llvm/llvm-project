@@ -5041,6 +5041,10 @@ SwiftASTContext::GetReferentType(const CompilerType &compiler_type) {
   if (compiler_type.IsValid() &&
       llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
+    swift::TypeBase *swift_type = swift_can_type.getPointer();
+    if (swift_type && llvm::isa<swift::WeakStorageType>(swift_type))
+      return compiler_type;
+
     auto ref_type = swift_can_type->getReferenceStorageReferent();
     return CompilerType(GetASTContext(), ref_type);
   }
