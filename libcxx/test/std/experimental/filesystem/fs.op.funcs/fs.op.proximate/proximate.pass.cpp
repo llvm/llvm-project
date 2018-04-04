@@ -102,9 +102,17 @@ TEST_CASE(basic_test) {
     std::error_code ec = GetTestEC();
     fs::path p(TC.input);
     const fs::path output = fs::proximate(p, TC.base, ec);
-    TEST_CHECK(!ec);
-    TEST_CHECK(PathEq(output, TC.expect));
-    if (!PathEq(output, TC.expect)) {
+    if (ec) {
+      TEST_CHECK(!ec);
+      std::cerr << "TEST CASE #" << ID << " FAILED: \n";
+      std::cerr << "  Input: '" << TC.input << "'\n";
+      std::cerr << "  Base: '" << TC.base << "'\n";
+      std::cerr << "  Expected: '" << TC.expect << "'\n";
+
+      std::cerr << std::endl;
+    } else if (!PathEq(output, TC.expect)) {
+      TEST_CHECK(PathEq(output, TC.expect));
+
       const path canon_input = fs::weakly_canonical(TC.input);
       const path canon_base = fs::weakly_canonical(TC.base);
       const path lexically_p = canon_input.lexically_proximate(canon_base);
