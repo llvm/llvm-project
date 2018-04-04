@@ -1092,21 +1092,23 @@ static void
 sortISDBySectionOrder(InputSectionDescription *ISD,
                       const DenseMap<const InputSectionBase *, int> &Order) {
   std::vector<InputSection *> UnorderedSections;
-  std::vector<InputSection *> OrderedSections;
+  std::vector<std::pair<InputSection *, int>> OrderedSections;
   uint64_t UnorderedSize = 0;
 
   for (InputSection *IS : ISD->Sections) {
-    if (!Order.count(IS)) {
+    auto I = Order.find(IS);
+    if (I == Order.end()) {
       UnorderedSections.push_back(IS);
       UnorderedSize += IS->getSize();
       continue;
     }
-    OrderedSections.push_back(IS);
+    OrderedSections.push_back({IS, I->second});
   }
-  std::sort(OrderedSections.begin(), OrderedSections.end(),
-            [&](InputSection *A, InputSection *B) {
-              return Order.lookup(A) < Order.lookup(B);
-            });
+  std::sort(
+      OrderedSections.begin(), OrderedSections.end(),
+      [&](std::pair<InputSection *, int> A, std::pair<InputSection *, int> B) {
+        return A.second < B.second;
+      });
 
   // Find an insertion point for the ordered section list in the unordered
   // section list. On targets with limited-range branches, this is the mid-point
@@ -1135,22 +1137,23 @@ sortISDBySectionOrder(InputSectionDescription *ISD,
   // of the second block of cold code can call the hot code without a thunk. So
   // we effectively double the amount of code that could potentially call into
   // the hot code without a thunk.
-  size_t UnorderedInsPt = 0;
+  size_t InsPt = 0;
   if (Target->ThunkSectionSpacing && !OrderedSections.empty()) {
     uint64_t UnorderedPos = 0;
-    for (; UnorderedInsPt != UnorderedSections.size(); ++UnorderedInsPt) {
-      UnorderedPos += UnorderedSections[UnorderedInsPt]->getSize();
+    for (; InsPt != UnorderedSections.size(); ++InsPt) {
+      UnorderedPos += UnorderedSections[InsPt]->getSize();
       if (UnorderedPos > UnorderedSize / 2)
         break;
     }
   }
 
-  std::copy(UnorderedSections.begin(),
-            UnorderedSections.begin() + UnorderedInsPt, ISD->Sections.begin());
-  std::copy(OrderedSections.begin(), OrderedSections.end(),
-            ISD->Sections.begin() + UnorderedInsPt);
-  std::copy(UnorderedSections.begin() + UnorderedInsPt, UnorderedSections.end(),
-            ISD->Sections.begin() + UnorderedInsPt + OrderedSections.size());
+  ISD->Sections.clear();
+  for (InputSection *IS : makeArrayRef(UnorderedSections).slice(0, InsPt))
+    ISD->Sections.push_back(IS);
+  for (std::pair<InputSection *, int> P : OrderedSections)
+    ISD->Sections.push_back(P.first);
+  for (InputSection *IS : makeArrayRef(UnorderedSections).slice(InsPt))
+    ISD->Sections.push_back(IS);
 }
 
 static void sortSection(OutputSection *Sec,
