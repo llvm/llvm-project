@@ -985,6 +985,13 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
           continue;
         DEBUG(dbgs() << "Loops with call instructions cannot be interchanged "
                      << "safely.");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "CallInst",
+                                          CI->getDebugLoc(),
+                                          CI->getParent())
+                 << "Cannot interchange loops due to call instruction.";
+        });
+
         return false;
       }
 

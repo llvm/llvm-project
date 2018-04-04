@@ -985,12 +985,6 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
   return Piece.OutputOff + Addend;
 }
 
-void MergeInputSection::initOffsetMap() {
-  OffsetMap.reserve(Pieces.size());
-  for (size_t I = 0; I < Pieces.size(); ++I)
-    OffsetMap[Pieces[I].InputOff] = I;
-}
-
 template InputSection::InputSection(ObjFile<ELF32LE> &, const ELF32LE::Shdr &,
                                     StringRef);
 template InputSection::InputSection(ObjFile<ELF32BE> &, const ELF32BE::Shdr &,

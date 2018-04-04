@@ -1708,6 +1708,11 @@ example:
     entity to fine grain the HW control flow protection mechanism. The flag
     is target independant and currently appertains to a function or function
     pointer.
+``shadowcallstack``
+    This attribute indicates that the ShadowCallStack checks are enabled for
+    the function. The instrumentation checks that the return address for the
+    function has not changed between the function prolog and eiplog. It is
+    currently x86_64-specific.
 
 .. _glattrs:
 
