@@ -238,14 +238,6 @@ def isEnabled(debug_flavor, target_platform, configuration, decorators):
     # If the debug flavor is skipped, skip the test.
     if debug_flavor in configuration.skipCategories:
         return False
-
-    # If there are any decorators, and we're in swift PR testing mode, skip the
-    # test. We do this because we cannot run x-failed or skipped tests during
-    # PR testing, and we have no other way to prevent this from happening.
-    if configuration.useCategories and 'swiftpr' in configuration.categoriesList:
-        if decorators:
-            return False
-
     return True
 
 def MakeInlineTest(__file, __globals, decorators=None):
