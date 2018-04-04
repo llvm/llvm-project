@@ -25,6 +25,7 @@ class TestSwiftExpressionScopes(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_expression_scopes(self):
         """Tests that swift expressions resolve scoped variables correctly"""
         self.build()
