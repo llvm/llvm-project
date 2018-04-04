@@ -1275,6 +1275,31 @@ static bool DeserializeCompilerFlags(SwiftASTContext &swift_ast, Module &module,
   }
 }
 
+void SwiftASTContext::RemapClangImporterOptions(
+    const PathMappingList &path_map) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  auto &options = GetClangImporterOptions();
+  std::string remapped;
+  if (path_map.RemapPath(options.BridgingHeader, remapped)) {
+    if (log)
+      log->Printf("remapped %s -> %s", options.BridgingHeader.c_str(),
+                  remapped.c_str());
+    options.BridgingHeader = remapped;
+  }
+  for (auto &arg_string : options.ExtraArgs) {
+    StringRef prefix;
+    StringRef arg = arg_string;
+    if (arg.consume_front("-I"))
+      prefix = "-I";
+    if (path_map.RemapPath(arg, remapped)) {
+      if (log)
+        log->Printf("remapped %s -> %s%s", arg.str().c_str(),
+                    prefix.str().c_str(), remapped.c_str());
+      arg_string = prefix.str()+remapped;
+    }
+  }
+}
+
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Module &module) {
   if (!SwiftASTContextSupportsLanguage(language))
@@ -1488,6 +1513,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     }
   }
 
+  // Apply source path remappings ofund in the module's dSYM.
+  swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
+  
   if (!swift_ast_sp->GetClangImporter()) {
     if (log) {
       log->Printf("((Module*)%p) [%s]->GetSwiftASTContext() returning NULL "
@@ -1812,6 +1840,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     compiler_invocation.parseArgs(extra_args_ref,
                                   swift_ast_sp->GetDiagnosticEngine());
   }
+
+  // Apply source path remappings ofund in the target settings.
+  swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
 
   // This needs to happen once all the import paths are set, or otherwise no
   // modules will be found.
