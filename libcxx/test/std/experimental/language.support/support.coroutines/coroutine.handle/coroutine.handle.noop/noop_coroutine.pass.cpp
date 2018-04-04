@@ -10,6 +10,8 @@
 
 // UNSUPPORTED: c++98, c++03, c++11
 // XFAIL: clang-5, clang-6
+// UNSUPPORTED: ubsan
+
 // <experimental/coroutine>
 // struct noop_coroutine_promise;
 // using noop_coroutine_handle = coroutine_handle<noop_coroutine_promise>;
@@ -19,7 +21,10 @@
 #include <cassert>
 #include <type_traits>
 
+#if __has_builtin(__builtin_coro_noop)
+
 namespace coro = std::experimental::coroutines_v1;
+
 
 static_assert(std::is_same<coro::coroutine_handle<coro::noop_coroutine_promise>, coro::noop_coroutine_handle>::value, "");
 static_assert(std::is_same<decltype(coro::noop_coroutine()), coro::noop_coroutine_handle>::value, "");
@@ -64,3 +69,8 @@ int main()
   assert(coro::coroutine_handle<>::from_address(h.address()) == base);
 }
 
+#else
+
+int main() {}
+
+#endif //  __has_builtin(__builtin_coro_noop)
